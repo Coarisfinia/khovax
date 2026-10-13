@@ -42,6 +42,9 @@ func run(_tree: SceneTree) -> String:
 		_check_replay_validation,
 		_check_rehash,
 		_check_golden_replays,
+		_check_map_file,
+		_check_generated_maps,
+		_check_terrain_blocks,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -118,7 +121,9 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
-		"grid_radius": func(state: GameState) -> void: state.grid_radius += 1,
+		"map terrain": func(state: GameState) -> void: state.map.terrain[START] = HexMap.WATER,
+		"map tile": func(state: GameState) -> void: state.map.terrain[Vector2i(9, 9)] = 0,
+		"map start": func(state: GameState) -> void: state.map.starts[0] += Vector2i.ONE,
 		"next_entity_id": func(state: GameState) -> void: state.next_entity_id += 1,
 		"entity id": func(state: GameState) -> void: state.player(0).id += 1,
 		"entity slot": func(state: GameState) -> void: state.player(0).slot += 1,
@@ -670,6 +675,87 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
+## The basic instance's map file reads as the disc it draws, with the players' starts, and a
+## broken map file says what is wrong.
+func _check_map_file() -> String:
+	var map: HexMap = Instances.basic(42).map
+	var starts: Array[Vector2i] = [
+		Vector2i(1, -1),
+		Vector2i(-1, 1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+	]
+	if map.sorted_tiles() != HexMap.disc(RADIUS).sorted_tiles() or map.starts != starts:
+		return "maps/basic.map isn't the disc of radius 3 with its four starts"
+	var broken: Dictionary[String, String] = {
+		". . .": "a map file starts with",
+		"origin 0 0
+. .. .": "'.' in row 0 sits between two tiles",
+		"origin 0 0
+. ? .": "'?' in row 0 isn't a map symbol",
+		"origin 0 0
+. 2 .": "the player starts aren't numbered",
+	}
+	for text: String in broken:
+		if not HexMap.parse(text).problem.begins_with(broken[text]):
+			return "map file %s gave: %s" % [text.c_escape(), HexMap.parse(text).problem]
+	return ""
+
+
+## Generated islands: the same seed gives the same map, other seeds other maps, every one has the
+## wanted size and connects all its ground to the starts, and rocks never sit on a start.
+func _check_generated_maps() -> String:
+	var hashes: Dictionary[int, bool] = {}
+	for seed_value: int in 12:
+		var map: HexMap = _island(seed_value)
+		hashes[hash(map.hash_values())] = true
+		if map.hash_values() != _island(seed_value).hash_values():
+			return "seed %d gave two different maps" % seed_value
+		var problem: String = _island_problem(map)
+		if not problem.is_empty():
+			return "seed %d: %s" % [seed_value, problem]
+	if hashes.size() < 12:
+		return "12 seeds gave only %d different maps" % hashes.size()
+	var wilds: GameState = Instances.create(Instances.WILDS, 5, 4)
+	if wilds == null or wilds.player(3).tile != wilds.map.starts[3]:
+		return "the wilds instance didn't start four players on its map's starts"
+	return ""
+
+
+## The wilds' island for this seed.
+func _island(seed_value: int) -> HexMap:
+	return MapGenerator.island(seed_value, Instances.WILDS_SIZE, Instances.WILDS_ROCKS)
+
+
+## Why a generated island breaks a rule, or "".
+func _island_problem(map: HexMap) -> String:
+	if map.size() != Instances.WILDS_SIZE or map.size() > HexMap.MAX_TILES:
+		return "%d tiles, not %d" % [map.size(), Instances.WILDS_SIZE]
+	var walkable: int = 0
+	for tile: Vector2i in map.sorted_tiles():
+		walkable += 1 if map.is_walkable(tile) else 0
+	if map.reachable(map.starts[0]).size() != walkable:
+		return "some ground can't be reached from the start"
+	if map.starts.size() != GameState.MAX_PLAYERS:
+		return "%d starts, not one per player" % map.starts.size()
+	for start: Vector2i in map.starts:
+		if not map.is_walkable(start):
+			return "start %s isn't ground" % start
+	return ""
+
+
+## Water and rock stop a walker like the map's edge does.
+func _check_terrain_blocks() -> String:
+	var state: GameState = _state(42)
+	state.map.terrain[START + Hex.DIRECTIONS[EAST]] = HexMap.WATER
+	state.map.terrain[START + Hex.DIRECTIONS[WEST]] = HexMap.BLOCKED
+	_walk(state, EAST, 1)
+	_walk(state, WEST, 1)
+	if _tile(state) != START:
+		return "the player walked onto water or rock, to %s" % _tile(state)
+	return ""
+
+
 ## The next `count` 32-bit values.
 func _draws(rng: Rng, count: int) -> Array[int]:
 	var values: Array[int] = []
@@ -708,7 +794,7 @@ func _state(seed_value: int) -> GameState:
 
 ## A state with these features and one player, in slot 0 on START.
 func _state_with(ordered: Array[Feature], seed_value: int) -> GameState:
-	var state: GameState = GameState.new(RADIUS, seed_value, ordered)
+	var state: GameState = GameState.new(HexMap.disc(RADIUS), seed_value, ordered)
 	var _player: Entity = state.add_entity(0, START)
 	return state
 

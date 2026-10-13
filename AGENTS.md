@@ -177,8 +177,14 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
-- **Instances** (`sim/instances/`): which map, which players start where, and which features in
-  which order. A new mechanic is a new feature that instances list; it never grows the core.
+- **Maps** (#36, `HexMap`): which tiles exist, each tile's terrain (ground, water, rock) and the
+  players' starts. Rules ask `state.map` (`is_walkable`, `has_tile`), never a distance from the
+  origin, so a map can have any shape. Hand-made maps are text files in `maps/` (format in
+  `HexMap.parse`); generated ones come from `MapGenerator`, from the seed's own map stream. The
+  map is in the state hash.
+- **Instances** (`sim/instances/`): which map (a file or a generator with its parameters) and which
+  features in which order; players start on the map's starts. A new mechanic is a new feature that
+  instances list; it never grows the core.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.

@@ -10,7 +10,8 @@ const MAX_PLAYERS: int = 4
 
 var tick: int = 0
 var rng_seed: int = 0
-var grid_radius: int = 0
+## Which tiles exist and their terrain (#36). It doesn't change during a run yet.
+var map: HexMap
 ## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
 var next_entity_id: int = 1
 ## Every entity, in id order. Rules always go through entities in this order, never in a
@@ -28,8 +29,8 @@ var events: Array[RefCounted] = []
 var problem: String = ""
 
 
-func _init(radius: int, seed_value: int, ordered: Array[Feature]) -> void:
-	grid_radius = radius
+func _init(level: HexMap, seed_value: int, ordered: Array[Feature]) -> void:
+	map = level
 	rng_seed = seed_value
 	problem = order_problem(ordered)
 	if not problem.is_empty():
@@ -51,10 +52,6 @@ static func order_problem(ordered: Array[Feature]) -> String:
 				return "feature %d needs feature %d before it" % [each.id(), needed]
 		seen.append(each.id())
 	return ""
-
-
-func has_tile(tile: Vector2i) -> bool:
-	return Hex.distance(Vector2i.ZERO, tile) <= grid_radius
 
 
 ## Adds an entity owned by `slot` (or Entity.NO_SLOT) on `tile`, with the next id, and lets every
@@ -117,9 +114,13 @@ func set_enabled(id: int, on: bool) -> void:
 
 ## A fingerprint of the whole state, the same on every platform: two runs from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, every entity in id order and, in order, every feature's id, on/off and state.
+## every core value, the map, every entity in id order and, in order, every feature's id, on/off and
+## state.
 func state_hash() -> int:
-	var values: Array[int] = [tick, rng_seed, grid_radius, next_entity_id, entities.size()]
+	var values: Array[int] = [tick, rng_seed]
+	values.append_array(map.hash_values())
+	values.append(next_entity_id)
+	values.append(entities.size())
 	for each: Entity in entities:
 		values.append(each.id)
 		values.append(each.slot)
