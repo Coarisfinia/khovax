@@ -20,6 +20,20 @@ static func distance(a: Vector2i, b: Vector2i) -> int:
 	return maxi(maxi(absi(d.x), absi(d.y)), absi(d.x + d.y))
 
 
+## The direction closest to `input`, a screen-space vector (x right, y up), as one of DIRECTIONS
+## (entry i points at i * 60 degrees); Vector2i.ZERO without input. Straight up or down lies
+## exactly between two directions: the row picks one, so holding it zigzags along one column.
+## This turns analog input into an integer step; the simulation only ever sees the step.
+static func direction_toward(input: Vector2, from: Vector2i) -> Vector2i:
+	if input.is_zero_approx():
+		return Vector2i.ZERO
+	var sixths: float = fposmod(rad_to_deg(input.angle()), 360.0) / 60.0
+	var index: int = roundi(sixths)
+	if is_equal_approx(sixths - floorf(sixths), 0.5):
+		index = floori(sixths) + posmod(from.y, 2)
+	return DIRECTIONS[posmod(index, 6)]
+
+
 ## Every tile within `radius` steps of `center`, center first, then ring by ring.
 static func disc(radius: int, center: Vector2i = Vector2i.ZERO) -> Array[Vector2i]:
 	var tiles: Array[Vector2i] = [center]
