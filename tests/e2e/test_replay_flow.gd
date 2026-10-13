@@ -349,9 +349,9 @@ func _check_player_slots() -> String:
 ## values, and seeding gives fixed values. A changed algorithm or seeding fails here, since it
 ## would change every replay.
 func _check_rng_reference() -> String:
-	var reference: Array[int] = [11_520, 0, 5_927_040, 70_819_200, 2_031_721_883, 1_637_235_492]
+	var published: Array[int] = [11_520, 0, 5_927_040, 70_819_200, 2_031_721_883, 1_637_235_492]
 	var state: Array[int] = [1, 2, 3, 4]
-	if _draws(Rng.from_words(state), reference.size()) != reference:
+	if _draws(Rng.from_words(state), published.size()) != published:
 		return "the generator doesn't match xoshiro128**'s reference values"
 	var seeded: Dictionary[Vector2i, Array] = {
 		Vector2i(42, 0): [110_243_625, 433_212_580, 1_876_866_330],
