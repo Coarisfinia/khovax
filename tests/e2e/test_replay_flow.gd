@@ -605,7 +605,7 @@ func _check_replay_validation() -> String:
 	var recorded: Replay = _recorded_run()
 	var text: String = recorded.to_text()
 	var unchecked: Replay = Replay.parse(text)
-	unchecked.checkpoints.erase(unchecked.ticks)
+	var _erased: bool = unchecked.checkpoints.erase(unchecked.ticks)
 	var invalid_move: Replay = Replay.parse(text)
 	invalid_move.changes[2] = Hex.DIRECTIONS.size() + 3
 	var cases: Dictionary[String, String] = {

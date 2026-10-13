@@ -171,12 +171,15 @@ static func _shape_problem(data: Dictionary) -> String:
 		if not _all_numbers(data.get(key)):
 			return "not a replay: its %s aren't a list of numbers" % key
 	var hashes: Variant = data.get("checkpoints", {})
-	if not hashes is Dictionary or not _valid_checkpoints(hashes):
+	if not _valid_checkpoints(hashes):
 		return "not a replay: its checkpoints aren't ticks with hashes"
 	return ""
 
 
-static func _valid_checkpoints(by_tick: Dictionary) -> bool:
+static func _valid_checkpoints(hashes: Variant) -> bool:
+	if not hashes is Dictionary:
+		return false
+	var by_tick: Dictionary = hashes
 	for tick: Variant in by_tick:
 		if not str(tick).is_valid_int() or not str(by_tick[tick]).is_valid_int():
 			return false
