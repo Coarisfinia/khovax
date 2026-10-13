@@ -42,6 +42,8 @@ func run(_tree: SceneTree) -> String:
 		_check_replay_validation,
 		_check_rehash,
 		_check_golden_replays,
+		_check_map_file,
+		_check_terrain_blocks,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -118,7 +120,9 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
-		"grid_radius": func(state: GameState) -> void: state.grid_radius += 1,
+		"map terrain": func(state: GameState) -> void: state.map.terrain[START] = HexMap.WATER,
+		"map tile": func(state: GameState) -> void: state.map.terrain[Vector2i(9, 9)] = 0,
+		"map start": func(state: GameState) -> void: state.map.starts[0] += Vector2i.ONE,
 		"next_entity_id": func(state: GameState) -> void: state.next_entity_id += 1,
 		"entity id": func(state: GameState) -> void: state.player(0).id += 1,
 		"entity slot": func(state: GameState) -> void: state.player(0).slot += 1,
@@ -670,6 +674,56 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
+## The basic instance's map file reads as the disc it draws, with the players' starts, and a
+## broken map file says what is wrong.
+func _check_map_file() -> String:
+	var map: HexMap = Instances.basic(42).map
+	var starts: Array[Vector2i] = [
+		Vector2i(1, -1),
+		Vector2i(-1, 1),
+		Vector2i(-1, 0),
+		Vector2i(1, 0),
+	]
+	if map.sorted_tiles() != HexMap.disc(RADIUS).sorted_tiles() or map.starts != starts:
+		return "maps/basic.map isn't the disc of radius 3 with its four starts"
+	var broken: Dictionary[String, String] = {
+		". . .": "a map file starts with",
+		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
+		"origin 0 0\n. ? .": "'?' in row 0 isn't a map symbol",
+		"origin 0 0\n. 2 .": "the player starts aren't numbered",
+		"origin nope 3\n. .": "a map file starts with",
+		"origin 0 0\n1 . 1": "player 1's start is marked twice",
+	}
+	for text: String in broken:
+		if not HexMap.parse(text).problem.begins_with(broken[text]):
+			return "map file %s gave: %s" % [text.c_escape(), HexMap.parse(text).problem]
+	# Tiles left of the origin and rows above it have negative coordinates.
+	var left: HexMap = HexMap.parse("origin 4 1\n ~ ^\n1 . .")
+	var expected: Dictionary[Vector2i, int] = {
+		Vector2i(-1, -1): HexMap.WATER,
+		Vector2i(0, -1): HexMap.BLOCKED,
+		Vector2i(-2, 0): HexMap.GROUND,
+		Vector2i(-1, 0): HexMap.GROUND,
+		Vector2i(0, 0): HexMap.GROUND,
+	}
+	var start: Array[Vector2i] = [Vector2i(-2, 0)]
+	if left.terrain != expected or left.starts != start:
+		return "negative coordinates read as %s, starts %s" % [left.terrain, left.starts]
+	return ""
+
+
+## Water and rock stop a walker like the map's edge does.
+func _check_terrain_blocks() -> String:
+	var state: GameState = _state(42)
+	state.map.terrain[START + Hex.DIRECTIONS[EAST]] = HexMap.WATER
+	state.map.terrain[START + Hex.DIRECTIONS[WEST]] = HexMap.BLOCKED
+	_walk(state, EAST, 1)
+	_walk(state, WEST, 1)
+	if _tile(state) != START:
+		return "the player walked onto water or rock, to %s" % _tile(state)
+	return ""
+
+
 ## The next `count` 32-bit values.
 func _draws(rng: Rng, count: int) -> Array[int]:
 	var values: Array[int] = []
@@ -708,7 +762,7 @@ func _state(seed_value: int) -> GameState:
 
 ## A state with these features and one player, in slot 0 on START.
 func _state_with(ordered: Array[Feature], seed_value: int) -> GameState:
-	var state: GameState = GameState.new(RADIUS, seed_value, ordered)
+	var state: GameState = GameState.new(HexMap.disc(RADIUS), seed_value, ordered)
 	var _player: Entity = state.add_entity(0, START)
 	return state
 

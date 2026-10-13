@@ -22,6 +22,7 @@ func run(tree: SceneTree) -> String:
 		_check_cube_placement,
 		_check_cube_in_view,
 		_check_state_drives_view,
+		_check_terrain_colors,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -76,15 +77,15 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	if grid.radius != 3 or grid.tile_count() != 37:
-		var counts: Array[int] = [grid.radius, grid.tile_count()]
-		return "grid has radius %d and %d tiles, expected 3 rings and 37 tiles" % counts
+	# The basic instance's map, maps/basic.map: a disc of 3 rings.
+	if grid.tile_count() != 37:
+		return "the grid has %d tiles, expected the basic map's 37" % grid.tile_count()
 	var mesh: CylinderMesh = grid.tile_mesh()
 	var tile_radius: float = HexLayout.SIZE * HexGrid.TILE_SCALE
 	if mesh.radial_segments != 6 or not is_equal_approx(mesh.top_radius, tile_radius):
 		return "the tiles are not hexagonal prisms of the tile size"
 	var lift: Vector3 = Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
-	for tile: Vector2i in Hex.disc(grid.radius):
+	for tile: Vector2i in Hex.disc(3):
 		if not grid.has_tile(tile):
 			return "tile %s is missing" % tile
 		if not grid.tile_transform(tile).origin.is_equal_approx(HexLayout.to_world(tile) + lift):
@@ -137,18 +138,44 @@ func _check_cube_in_view(main: Node) -> String:
 	return ""
 
 
-## The simulation's state is the truth: the grid shows its size and the cube stands on its tile.
+## The simulation's state is the truth: the grid shows its map and the cube stands on its tile.
 func _check_state_drives_view(main: Node) -> String:
 	var driver: GameDriver = main.get_node_or_null("Driver") as GameDriver
 	if driver == null or driver.state == null:
 		return "no GameDriver named Driver with a state"
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
-	if grid.radius != driver.state.grid_radius:
-		return "the grid shows radius %d, the state has %d" % [
-			grid.radius,
-			driver.state.grid_radius,
-		]
+	if grid.shown_map() != driver.state.map:
+		return "the grid shows another map than the state's"
+	for tile: Vector2i in driver.state.map.sorted_tiles():
+		if not grid.has_tile(tile):
+			return "the state's map has tile %s, the grid doesn't" % tile
 	var cube: HexPiece = main.get_node("Cube") as HexPiece
 	if cube.tile != driver.state.player(0).tile:
 		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player(0).tile]
+	return ""
+
+
+## The grid draws each tile in its terrain's color, and follows the state to another map.
+func _check_terrain_colors(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var map: HexMap = HexMap.disc(1)
+	map.terrain[Vector2i(1, 0)] = HexMap.WATER
+	map.terrain[Vector2i(-1, 0)] = HexMap.BLOCKED
+	driver.state.map = map
+	grid.show_state()
+	if grid.tile_count() != map.size():
+		return "the grid didn't follow the state to another map"
+	var expected: Dictionary[Vector2i, Color] = {
+		Vector2i(0, 0): grid.tile_color,
+		Vector2i(1, 0): grid.water_color,
+		Vector2i(-1, 0): grid.rock_color,
+	}
+	for tile: Vector2i in expected:
+		if grid.tile_color_of(tile) != expected[tile]:
+			return "tile %s is drawn %s, not its terrain's %s" % [
+				tile,
+				grid.tile_color_of(tile),
+				expected[tile],
+			]
 	return ""

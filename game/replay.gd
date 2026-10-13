@@ -100,6 +100,9 @@ func rehash() -> String:
 	if problem.is_empty():
 		checkpoints.clear()
 		problem = _run(false)
+	# A replay that couldn't be played must never be written with empty checkpoints.
+	if problem.is_empty() and (played == null or not checkpoints.has(ticks)):
+		problem = "the replay couldn't be played under the current rules"
 	if problem.is_empty():
 		rules = Simulation.RULES_VERSION
 		features = _feature_ids(played)
