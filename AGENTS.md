@@ -17,11 +17,13 @@ way; add to it when something bites.
   contain personal data. Editing a slip away isn't enough, because GitHub keeps the edit history.
 - **The agent works as `flixbox-ai-agent[bot]`** (the private GitHub App "Flixbox [AI Agent]"): it
   commits, pushes, opens and updates pull requests, comments and reads CI as the bot, never with the
-  owner's account. Commits made by hand use the owner's GitHub noreply address, never the
+  owner's account. Commits the owner makes by hand use the owner's GitHub noreply address, never the
   machine-global work email.
 - **Tokens:** `agent-gh-token` (in `~/.local/bin`) signs a JWT with the app's private key
   (`~/.config/khovax-agent/app.pem`, App ID in `app-id` next to it) and prints a 1-hour installation
-  token scoped to this repository only, cached for 50 minutes. `agent-gh` is `gh` with that token.
+  token, cached for 50 minutes. The token is scoped to this repository only and to the permissions
+  the agent needs (contents, pull requests, issues and workflows: write; actions: read), so it can't
+  change settings even if the App could. `agent-gh` is `gh` with that token.
   The key is never read, printed, committed or sent anywhere except GitHub's token endpoint.
 - **Each clone or worktree**, once after creating it:
 
@@ -97,8 +99,8 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Watch CI in the background** (`gh run watch <run-id> --exit-status`) and act on the result: read a
-  failing job with `gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
+- **Watch CI in the background** (`agent-gh run watch <run-id> --exit-status`) and act on the result:
+  read a failing job with `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
 
 ### Review and merge
 
@@ -132,7 +134,8 @@ background; only wait in the foreground for a result the very next step needs.
 - **A crashed test script leaves the SceneTree running forever.** Every CI step that runs Godot needs
   a `timeout`, and every job a `timeout-minutes`.
 - **Commit the `.uid` files** Godot creates next to scripts and resources.
-- **Pushing anything under `.github/workflows/` needs the `workflow` scope** on the GitHub token
+- **Pushing anything under `.github/workflows/` needs workflow rights.** The bot has them through the
+  App's Workflows permission. For the owner's own login it is the `workflow` scope
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository.
@@ -143,5 +146,6 @@ background; only wait in the foreground for a result the very next step needs.
 
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't
   available.
-- **`git push` hung on a Windows credential prompt.** `gh auth setup-git` makes git use the `gh`
-  login instead.
+- **`git push` hung on a Windows credential prompt.** In this repository the repo-local credential
+  helper above avoids it. For the owner's own pushes elsewhere, `gh auth setup-git` makes git use the
+  `gh` login.
