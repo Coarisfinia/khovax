@@ -25,10 +25,26 @@ func _process(delta: float) -> void:
 func advance(delta: float, input: Vector2) -> void:
 	if piece == null or grid == null:
 		return
-	if _progress < 1.0:
-		_progress = minf(1.0, _progress + delta / STEP_SECONDS)
+	# Time is spent in steps. Time left over when a step ends goes into the next one, and the next
+	# step starts at once, so a held direction walks at a constant speed even when frames stutter.
+	var time: float = delta / STEP_SECONDS
+	if _progress >= 1.0:
+		_start_step(input)
+	while _progress < 1.0 and time > 0.0:
+		var used: float = minf(time, 1.0 - _progress)
+		_progress += used
+		time -= used
 		piece.position = _from.lerp(piece.tile_position(), _progress)
-		return
+		if _progress >= 1.0:
+			_start_step(input)
+
+
+func is_moving() -> bool:
+	return _progress < 1.0
+
+
+## Starts a step toward the input's direction, unless there is no input or it would leave the grid.
+func _start_step(input: Vector2) -> void:
 	var next: Vector2i = piece.tile + Hex.direction_toward(input, piece.tile)
 	if next == piece.tile or not grid.has_tile(next):
 		return
@@ -36,7 +52,3 @@ func advance(delta: float, input: Vector2) -> void:
 	_progress = 0.0
 	piece.tile = next
 	piece.position = _from
-
-
-func is_moving() -> bool:
-	return _progress < 1.0

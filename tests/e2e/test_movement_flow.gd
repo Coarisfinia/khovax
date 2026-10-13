@@ -8,6 +8,18 @@ const STEP: float = 1.0 / 60.0
 ## Long enough to walk further than the grid allows in any one direction.
 const HOLD_STEPS: int = 300
 const ACTIONS: Array[String] = ["move_up", "move_down", "move_left", "move_right"]
+const PHYSICAL_KEYS: Dictionary[String, Key] = {
+	"move_up": KEY_W,
+	"move_down": KEY_S,
+	"move_left": KEY_A,
+	"move_right": KEY_D,
+}
+const ARROW_KEYS: Dictionary[String, Key] = {
+	"move_up": KEY_UP,
+	"move_down": KEY_DOWN,
+	"move_left": KEY_LEFT,
+	"move_right": KEY_RIGHT,
+}
 
 var _main: Node
 var _cube: HexPiece
@@ -36,7 +48,7 @@ func run(tree: SceneTree) -> String:
 	# Stepped by hand from here on.
 	_mover.set_process(false)
 
-	var result: String = _check_key_reaches_action()
+	var result: String = _check_bindings()
 	if result.is_empty():
 		result = _check_paths()
 	_release_all()
@@ -45,24 +57,45 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-func _check_key_reaches_action() -> String:
+## Every action has exactly its WASD key (by physical position) and its arrow key, and a real key
+## event for each one presses the action.
+func _check_bindings() -> String:
 	for action: String in ACTIONS:
-		if not InputMap.has_action(action) or InputMap.action_get_events(action).size() < 2:
-			return "action %s is missing or lacks its key and arrow events" % action
-	var key: InputEventKey = InputEventKey.new()
-	key.physical_keycode = KEY_D
-	key.pressed = true
-	Input.parse_input_event(key)
+		var physical: Key = PHYSICAL_KEYS[action]
+		var arrow: Key = ARROW_KEYS[action]
+		var has_physical: bool = false
+		var has_arrow: bool = false
+		for event: InputEvent in InputMap.action_get_events(action):
+			var key: InputEventKey = event as InputEventKey
+			if key != null:
+				has_physical = has_physical or key.physical_keycode == physical
+				has_arrow = has_arrow or key.keycode == arrow
+		if not has_physical or not has_arrow:
+			return "%s isn't bound to both its WASD key and its arrow key" % action
+		if not _press_reaches(
+			physical,
+			KEY_NONE,
+			action,
+		) or not _press_reaches(KEY_NONE, arrow, action):
+			return "a real key event doesn't press %s" % action
+	return ""
+
+
+## Sends a real key press, checks it pressed the action, and releases it again.
+func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
+	var press: InputEventKey = InputEventKey.new()
+	press.physical_keycode = physical
+	press.keycode = logical
+	press.pressed = true
+	Input.parse_input_event(press)
 	Input.flush_buffered_events()
-	var pressed: bool = Input.is_action_pressed("move_right")
+	var pressed: bool = Input.is_action_pressed(action)
 	# A fresh event: Godot refuses to parse the same event object twice in one frame.
-	var release: InputEventKey = key.duplicate() as InputEventKey
+	var release: InputEventKey = press.duplicate() as InputEventKey
 	release.pressed = false
 	Input.parse_input_event(release)
 	Input.flush_buffered_events()
-	if not pressed:
-		return "pressing D doesn't press move_right"
-	return ""
+	return pressed
 
 
 ## Each walk starts where the previous one stopped: (1, -1) is the cube's start tile.
@@ -79,6 +112,17 @@ func _check_paths() -> String:
 		Walk.new(
 			["move_down", "move_left"],
 			[Vector2i(2, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)],
+		),		# Straight up and back down through both row parities: north-west and north-east in turn,
+		# then south-east and south-west, each zigzag staying in its column.
+		Walk.new(
+			["move_up"],
+			[Vector2i(-2, 2), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(0, -2),
+				Vector2i(1, -3)],
+		),
+		Walk.new(
+			["move_down"],
+			[Vector2i(1, -2), Vector2i(0, -1), Vector2i(0, 0), Vector2i(-1, 1), Vector2i(-1, 2),
+				Vector2i(-2, 3)],
 		),
 	]
 	for walk: Walk in walks:
