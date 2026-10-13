@@ -149,6 +149,6 @@ func _check_state_drives_view(main: Node) -> String:
 			driver.state.grid_radius,
 		]
 	var cube: HexPiece = main.get_node("Cube") as HexPiece
-	if cube.tile != driver.state.player_tile:
-		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player_tile]
+	if cube.tile != driver.state.player(0).tile:
+		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player(0).tile]
 	return ""
