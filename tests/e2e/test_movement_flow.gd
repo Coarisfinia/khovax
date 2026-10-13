@@ -8,6 +8,8 @@ const STEP: float = 1.0 / 60.0
 ## Long enough to walk further than the grid allows in any one direction.
 const HOLD_STEPS: int = 300
 const ACTIONS: Array[String] = ["move_up", "move_down", "move_left", "move_right"]
+## Where the touch legs put their finger down, in screen pixels.
+const TOUCH_ORIGIN: Vector2 = Vector2(400.0, 300.0)
 const PHYSICAL_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_W,
 	"move_down": KEY_S,
@@ -25,6 +27,7 @@ var _main: Node
 var _cube: HexPiece
 var _mover: HexMover
 var _grid: HexGrid
+var _stick: TouchStick
 
 
 func _input() -> Vector2:
@@ -42,9 +45,10 @@ func run(tree: SceneTree) -> String:
 	_cube = _main.get_node_or_null("Cube") as HexPiece
 	_mover = _main.get_node_or_null("Cube/Mover") as HexMover
 	_grid = _main.get_node_or_null("HexGrid") as HexGrid
-	if _cube == null or _mover == null or _grid == null:
+	_stick = _main.get_node_or_null("Hud/TouchStick") as TouchStick
+	if _cube == null or _mover == null or _grid == null or _stick == null:
 		_main.queue_free()
-		return "the main scene needs a HexPiece Cube, its HexMover child Mover, and a HexGrid"
+		return "the main scene needs a Cube with its Mover, a HexGrid and a Hud/TouchStick"
 	# Stepped by hand from here on.
 	_mover.set_process(false)
 
@@ -130,14 +134,60 @@ func _check_paths() -> String:
 		var result: String = _walk(walk.keys, walk.path)
 		if not result.is_empty():
 			return "holding %s: %s" % [walk.keys, result]
+	return _check_touch_paths()
+
+
+## The touch stick continues from where the keys stopped, at (-2, 3).
+func _check_touch_paths() -> String:
+	var result: String = _walk_by_touch(
+		Vector2(TouchStick.RADIUS, 0.0),
+		[Vector2i(-1, 3), Vector2i(0, 3)],
+	)
+	if not result.is_empty():
+		return "dragging right: " + result
+	# Screen y grows downwards: dragging up the screen walks up the grid, zigzagging.
+	var up: Array[Vector2i] = [
+		Vector2i(
+			0,
+			2,
+		), Vector2i(1, 1), Vector2i(1, 0), Vector2i(2, -1), Vector2i(2, -2), Vector2i(3, -3),
+	]
+	result = _walk_by_touch(Vector2(0.0, -TouchStick.RADIUS), up)
+	if not result.is_empty():
+		return "dragging up: " + result
+	# A short drag stays inside the actions' dead zone and doesn't walk.
+	result = _walk_by_touch(Vector2(TouchStick.RADIUS * 0.1, 0.0), [])
+	if not result.is_empty():
+		return "a tiny drag: " + result
 	return ""
 
 
-## Holds the keys long enough to reach the grid's edge and checks the tiles visited, in order,
-## and that the drawn position never jumps.
+## Holds the keys and checks the walk.
 func _walk(keys: Array[String], expected: Array[Vector2i]) -> String:
 	for key: String in keys:
 		Input.action_press(key)
+	return _hold(expected, _release_all)
+
+
+## Touches the screen, drags by `drag` pixels and holds there, the way a thumb steers the touch
+## stick, then checks the walk and that lifting the finger stops it.
+func _walk_by_touch(drag: Vector2, expected: Array[Vector2i]) -> String:
+	_send_touch(TOUCH_ORIGIN, true)
+	var moved: InputEventScreenDrag = InputEventScreenDrag.new()
+	moved.position = TOUCH_ORIGIN + drag
+	Input.parse_input_event(moved)
+	Input.flush_buffered_events()
+	if not _stick.is_held():
+		return "the touch stick didn't pick up the finger"
+	var result: String = _hold(expected, _lift_finger)
+	if result.is_empty() and (_stick.is_held() or not _input().is_zero_approx()):
+		result = "lifting the finger didn't release the stick and its actions"
+	return result
+
+
+## Keeps the input held long enough to reach the grid's edge, then releases it with `release` and
+## checks the tiles visited, in order, and that the drawn position never jumped.
+func _hold(expected: Array[Vector2i], release: Callable) -> String:
 	# Starts with the tile the walk leaves from; dropped again before comparing.
 	var visited: Array[Vector2i] = [_cube.tile]
 	var max_step: float = Hex.SIZE * sqrt(3.0) * STEP / HexMover.STEP_SECONDS + 0.0001
@@ -148,7 +198,7 @@ func _walk(keys: Array[String], expected: Array[Vector2i]) -> String:
 		jumped = jumped or before.distance_to(_cube.position) > max_step
 		if visited[visited.size() - 1] != _cube.tile:
 			visited.append(_cube.tile)
-	_release_all()
+	release.call()
 	_finish_step()
 	visited.pop_front()
 	if jumped:
@@ -158,6 +208,18 @@ func _walk(keys: Array[String], expected: Array[Vector2i]) -> String:
 	if not _cube.position.is_equal_approx(_cube.tile_position()):
 		return "the cube didn't come to rest on its tile"
 	return ""
+
+
+func _lift_finger() -> void:
+	_send_touch(TOUCH_ORIGIN, false)
+
+
+func _send_touch(point: Vector2, pressed: bool) -> void:
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.position = point
+	touch.pressed = pressed
+	Input.parse_input_event(touch)
+	Input.flush_buffered_events()
 
 
 func _finish_step() -> void:
