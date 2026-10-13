@@ -18,6 +18,7 @@ func run(tree: SceneTree) -> String:
 		_check_disc_sizes,
 		_check_known_positions,
 		_check_grid,
+		_check_grid_colors,
 		_check_cube_placement,
 		_check_cube_in_view,
 		_check_state_drives_view,
@@ -88,6 +89,18 @@ func _check_grid(main: Node) -> String:
 			return "tile %s is missing" % tile
 		if not grid.tile_transform(tile).origin.is_equal_approx(HexLayout.to_world(tile) + lift):
 			return "tile %s is not at its world position" % tile
+	return ""
+
+
+## The trail colors are per-instance colors, which only show with both of these on. The colors
+## themselves can't be read back from the MultiMesh under the headless dummy renderer.
+func _check_grid_colors(main: Node) -> String:
+	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var material: StandardMaterial3D = grid.tile_mesh().material as StandardMaterial3D
+	if not grid.tile_multimesh().use_colors or material == null:
+		return "the tile MultiMesh doesn't use per-instance colors"
+	if not material.vertex_color_use_as_albedo:
+		return "the tile material ignores the per-instance colors"
 	return ""
 
 

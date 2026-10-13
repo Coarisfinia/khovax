@@ -17,6 +17,7 @@ func run(_tree: SceneTree) -> String:
 		_check_same_commands_same_state,
 		_check_hash_sees_changes,
 		_check_hash_covers_fields,
+		_check_trail,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -98,6 +99,9 @@ func _check_hash_covers_fields() -> String:
 		"move_from.x": func(state: GameState) -> void: state.move_from.x += 1,
 		"move_from.y": func(state: GameState) -> void: state.move_from.y += 1,
 		"move_ticks_left": func(state: GameState) -> void: state.move_ticks_left += 1,
+		"trail": func(state: GameState) -> void: state.trail[Vector2i.ZERO] = true,
+		# Same size, other tile: the hash must see the coordinates, not only how many there are.
+		"trail tile": func(state: GameState) -> void: state.trail = { Vector2i.ZERO: true },
 	}
 	for field: String in changes:
 		var state: GameState = _fresh_state()
@@ -105,6 +109,44 @@ func _check_hash_covers_fields() -> String:
 		if state.state_hash() == base:
 			return "changing %s didn't change the state hash" % field
 	return ""
+
+
+## The trail starts with the start tile, gains every tile moved onto, and walking back over it
+## changes nothing. Its hash doesn't depend on the order it was walked in.
+func _check_trail() -> String:
+	var state: GameState = _fresh_state()
+	var only_start: Array[Vector2i] = [START]
+	if state.trail_tiles() != only_start:
+		return "a new state's trail is %s, not just the start tile" % [state.trail_tiles()]
+	var east: Vector2i = Hex.DIRECTIONS[EAST]
+	_walk(state, EAST, 2)
+	var after_two: Array[Vector2i] = [START, START + east, START + 2 * east]
+	after_two.sort()
+	if state.trail_tiles() != after_two:
+		return "after two moves the trail is %s, expected %s" % [state.trail_tiles(), after_two]
+	_walk(state, (EAST + 3) % Hex.DIRECTIONS.size(), 1)
+	if state.trail_tiles() != after_two:
+		return "walking back over the trail changed it to %s" % [state.trail_tiles()]
+	var reordered: GameState = _fresh_state()
+	reordered.trail = {}
+	var shuffled: Array[Vector2i] = [START + 2 * east, START, START + east]
+	for tile: Vector2i in shuffled:
+		reordered.trail[tile] = true
+	var ordered: GameState = _fresh_state()
+	ordered.trail = {}
+	for tile: Vector2i in after_two:
+		ordered.trail[tile] = true
+	if reordered.state_hash() != ordered.state_hash():
+		return "the same trail walked in a different order hashes differently"
+	return ""
+
+
+## Moves `moves` tiles in one direction, waiting for each move to arrive.
+func _walk(state: GameState, direction: int, moves: int) -> void:
+	for _move: int in moves:
+		Simulation.step(state, _commands(direction))
+		while state.is_moving():
+			Simulation.step(state, _commands(Command.NO_MOVE))
 
 
 func _fresh_state() -> GameState:

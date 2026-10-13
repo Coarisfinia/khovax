@@ -1,4 +1,5 @@
-## A flat hex grid of `radius` rings around the origin, one hexagonal tile per cell.
+## A flat hex grid of `radius` rings around the origin, one hexagonal tile per cell. Tiles on the
+## simulation's trail show in the trail color.
 ## A tool script, so the grid also shows in the editor.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
@@ -12,29 +13,40 @@ const TILE_HEIGHT: float = 0.1
 ## Tiles are drawn slightly smaller than their cell, so the gaps read as grid lines.
 const TILE_SCALE: float = 0.94
 const TILES_NODE: String = "Tiles"
+const NO_TRAIL: Dictionary[Vector2i, bool] = {}
 
 @export_range(0, 12) var radius: int = 3:
 	set(value):
 		radius = value
 		if is_node_ready():
 			_build()
-## The grid shows the size of this driver's simulation; without one (e.g. in the editor), `radius`.
+## The grid shows the size and the trail of this driver's simulation; without one (e.g. in the
+## editor), `radius` and no trail.
 @export var driver: GameDriver
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
-		_material.albedo_color = value
+		if is_node_ready():
+			_show_trail(_current_trail())
+@export var trail_color: Color = Color(0.86, 0.74, 0.36):
+	set(value):
+		trail_color = value
+		if is_node_ready():
+			_show_trail(_current_trail())
 
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
 var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
-## Each tile's transform, as given to the MultiMesh. Kept here because a MultiMesh can't be read
-## back under the headless dummy renderer.
+## Each tile's MultiMesh instance, transform and color, as given to the MultiMesh. Kept here
+## because a MultiMesh can't be read back under the headless dummy renderer.
+var _index: Dictionary[Vector2i, int] = {}
 var _transforms: Dictionary[Vector2i, Transform3D] = {}
+var _colors: Dictionary[Vector2i, Color] = {}
 
 
 func _ready() -> void:
-	_material.albedo_color = tile_color
+	# Each tile's color comes from its MultiMesh instance.
+	_material.vertex_color_use_as_albedo = true
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6
 	_mesh.rings = 1
@@ -45,6 +57,7 @@ func _ready() -> void:
 	_tiles.name = TILES_NODE
 	_tiles.multimesh = MultiMesh.new()
 	_tiles.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	_tiles.multimesh.use_colors = true
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
 	# Only now, with the MultiMesh in place: the node already counts as ready during _ready, so the
@@ -55,8 +68,18 @@ func _ready() -> void:
 		_build()
 
 
+func _process(_delta: float) -> void:
+	if not Engine.is_editor_hint():
+		show_state()
+
+
+## Colors the tiles from the current state. Called every frame; tests call it after stepping.
+func show_state() -> void:
+	_show_trail(_current_trail())
+
+
 func has_tile(tile: Vector2i) -> bool:
-	return _transforms.has(tile)
+	return _index.has(tile)
 
 
 func tile_count() -> int:
@@ -68,16 +91,48 @@ func tile_transform(tile: Vector2i) -> Transform3D:
 	return _transforms.get(tile, Transform3D.IDENTITY)
 
 
+## The color the tile is drawn in; transparent black when the tile isn't on the grid.
+func tile_color_of(tile: Vector2i) -> Color:
+	return _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0))
+
+
 func tile_mesh() -> CylinderMesh:
 	return _mesh
 
 
+## The MultiMesh drawing the tiles: its instance colors only show with `use_colors` on it and
+## vertex colors as albedo on the tile material.
+func tile_multimesh() -> MultiMesh:
+	return _tiles.multimesh
+
+
 func _build() -> void:
 	var tiles: Array[Vector2i] = Hex.disc(radius)
+	_index.clear()
 	_transforms.clear()
+	_colors.clear()
 	_tiles.multimesh.instance_count = tiles.size()
 	for i: int in tiles.size():
 		var tile: Vector2i = tiles[i]
 		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
+		_index[tile] = i
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
+	_show_trail(_current_trail())
+
+
+## The driver's trail, or none without a driver (e.g. in the editor).
+func _current_trail() -> Dictionary[Vector2i, bool]:
+	if driver != null and driver.state != null:
+		return driver.state.trail
+	return NO_TRAIL
+
+
+## Gives every tile its color: the trail color on the trail, the tile color elsewhere. Only tiles
+## whose color changes are sent to the MultiMesh.
+func _show_trail(trail: Dictionary[Vector2i, bool]) -> void:
+	for tile: Vector2i in _index:
+		var color: Color = trail_color if trail.has(tile) else tile_color
+		if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
+			_colors[tile] = color
+			_tiles.multimesh.set_instance_color(_index[tile], color)
