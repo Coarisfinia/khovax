@@ -48,10 +48,11 @@ func _ready() -> void:
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
 	# Only now, with the MultiMesh in place: the node already counts as ready during _ready, so the
-	# radius setter rebuilds right away.
-	if driver != null and driver.state != null:
+	# radius setter rebuilds right away. Either way the grid is built exactly once here.
+	if driver != null and driver.state != null and driver.state.grid_radius != radius:
 		radius = driver.state.grid_radius
-	_build()
+	else:
+		_build()
 
 
 func has_tile(tile: Vector2i) -> bool:

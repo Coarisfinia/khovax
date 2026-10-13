@@ -37,12 +37,12 @@ jobs:
       - name: Keep the simulation deterministic
         # sim/ holds the rules: plain RefCounted classes without nodes, input, time, engine or OS
         # state, global randomness, frame delta or floats (see AGENTS.md, "Architecture").
-        # Comments are stripped first, so the rules can be explained in them.
+        # Comments are stripped first (a # outside strings), so the rules can be explained in them.
         run: |
           forbidden='\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
           failed=0
           while read -r file; do
-            code=$(sed 's/#.*$//' "$file")
+            code=$(perl -pe 's/^((?:[^"'"'"'#]|"(?:\\.|[^"\\])*"|'"'"'(?:\\.|[^'"'"'\\])*'"'"')*)#.*$/$1/' "$file")
             if ! grep -qx 'extends RefCounted' <<< "$code"; then
               echo "::error file=${file}::sim/ scripts extend RefCounted"
               failed=1
