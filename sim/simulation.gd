@@ -31,3 +31,4 @@ static func _start_move(state: GameState, command: Command) -> void:
 	state.move_from = state.player_tile
 	state.player_tile = next
 	state.move_ticks_left = MOVE_TICKS
+	state.trail[next] = true

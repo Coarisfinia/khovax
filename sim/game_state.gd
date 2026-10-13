@@ -11,6 +11,8 @@ var player_tile: Vector2i = Vector2i.ZERO
 var move_from: Vector2i = Vector2i.ZERO
 ## Ticks until the player's current move arrives; 0 when standing on `player_tile`.
 var move_ticks_left: int = 0
+## Every tile the player has stood on or moved onto, as a set: the trail that rings are drawn with.
+var trail: Dictionary[Vector2i, bool] = {}
 
 
 func _init(radius: int, start: Vector2i, seed_value: int) -> void:
@@ -18,6 +20,7 @@ func _init(radius: int, start: Vector2i, seed_value: int) -> void:
 	player_tile = start
 	move_from = start
 	rng_seed = seed_value
+	trail[start] = true
 
 
 func has_tile(tile: Vector2i) -> bool:
@@ -26,6 +29,14 @@ func has_tile(tile: Vector2i) -> bool:
 
 func is_moving() -> bool:
 	return move_ticks_left > 0
+
+
+## The trail's tiles, sorted, so their order never depends on how the trail was walked.
+func trail_tiles() -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	tiles.assign(trail.keys())
+	tiles.sort()
+	return tiles
 
 
 ## A fingerprint of the whole state, the same on every platform: two runs from the same start
@@ -41,7 +52,11 @@ func state_hash() -> int:
 		move_from.x,
 		move_from.y,
 		move_ticks_left,
+		trail.size(),
 	]
+	for tile: Vector2i in trail_tiles():
+		values.append(tile.x)
+		values.append(tile.y)
 	var result: int = 2_166_136_261
 	for value: int in values:
 		result = _mix(result, value & 0xffff_ffff)
