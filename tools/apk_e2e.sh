@@ -11,8 +11,9 @@ result_line='KHOVAX_APK_E2E: (PASS|FAIL .*)$'
 adb install -r "$apk"
 adb logcat -c
 # The app's launcher activity, as the device resolves it: Godot's activity class itself isn't
-# exported, the launcher entry is.
-activity=$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$package" | tail -1 | tr -d '')
+# exported, the launcher entry is. adb ends its lines with carriage returns.
+activity=$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$package" \
+  | tail -1 | tr -d '\r')
 echo "launching $activity"
 # The flag reaches the game as a command-line argument through the launch intent.
 adb shell am start -n "$activity" --esa command_line_params --khovax-apk-test
