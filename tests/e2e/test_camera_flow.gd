@@ -118,8 +118,8 @@ func _check_under_moved_parent() -> String:
 ## The engine's own frames drive the camera through _process, and it stays placed.
 func _check_runs_by_itself(tree: SceneTree) -> String:
 	_camera.set_process(true)
-	for _i: int in 10:
-		await tree.process_frame
+	# A few frames' worth of time, so _process runs several times.
+	await tree.create_timer(0.2).timeout
 	return _check_placed()
 
 
