@@ -5,6 +5,12 @@ extends Node
 ## and steps the state. It processes before everything else (process_priority in main.tscn), so
 ## the state is current when views draw.
 
+## After every tick, with the tick's number and the events the features raised in it, in order:
+## how views learn about one-shot moments (a catch, a ring breaking) to play an effect. Every tick
+## is announced exactly once, however many ticks a frame runs. `events` is the view's own copy,
+## and the events themselves must only be read.
+signal ticked(tick: int, events: Array[RefCounted])
+
 ## Ticks one frame may run; more real time than this is dropped.
 const MAX_TICKS_PER_FRAME: int = 5
 
@@ -42,6 +48,10 @@ func advance(delta: float) -> void:
 			commands.append(null)
 		commands.append(input.command(state))
 		Simulation.step(state, commands)
+		# A copy: the simulation clears its list when the next tick starts.
+		var events: Array[RefCounted] = []
+		events.assign(state.events)
+		ticked.emit(state.tick, events)
 	# After a long frame (a hitch, a backgrounded tab), the rest of the time is dropped rather than
 	# caught up, which would freeze the game in a growing backlog. It only shifts when ticks run;
 	# what they do still depends on the commands alone.

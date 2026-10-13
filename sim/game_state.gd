@@ -18,9 +18,10 @@ var next_entity_id: int = 1
 var entities: Array[Entity] = []
 ## The instance's features, in the order they step each tick.
 var features: Array[Feature] = []
-## What happened during the current tick, in order, for features later in the order. Transient:
-## cleared when a tick starts and derived from the tick's own changes, so it is not part of the
-## state's contract or its hash.
+## What happened during the current tick, in order, for features later in the order; the driver
+## hands a copy to views after the tick (GameDriver.ticked). Transient: cleared when a tick starts
+## and derived from the tick's own changes, so it is not part of the state's contract or its hash,
+## though a replay raises the same events.
 var events: Array[RefCounted] = []
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
 ## features and must not be run: Instances.create refuses it.

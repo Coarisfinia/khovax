@@ -36,6 +36,7 @@ func run(_tree: SceneTree) -> String:
 		_check_streams_apart,
 		_check_rounding,
 		_check_largest_amounts,
+		_check_events_replay,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -515,6 +516,34 @@ func _check_largest_amounts() -> String:
 	if Fixed.mul_div(most, Fixed.ONE, 1) != most * Fixed.ONE:
 		return "the largest ring power per segment overflowed"
 	return ""
+
+
+## Events are part of what a replay reproduces, though not of the hash: the same start and commands
+## raise the same events, tick by tick.
+func _check_events_replay() -> String:
+	var first: Array[int] = _event_log(42)
+	if first.is_empty():
+		return "the scripted moves raised no events, so the check proves little"
+	if _event_log(42) != first:
+		return "the same start and commands raised different events"
+	return ""
+
+
+## Every move event of a replay, as tick, entity, from and to, in order.
+func _event_log(seed_value: int) -> Array[int]:
+	var state: GameState = _state(seed_value)
+	# Not "log": that would shadow the global log() and fail the script check.
+	var raised: Array[int] = []
+	for direction: int in _moves():
+		Simulation.step(state, _commands(direction))
+		for event: RefCounted in state.events:
+			var moved: EntityMoved = event as EntityMoved
+			if moved != null:
+				var values: Array[int] = [state.tick, moved.entity_id, moved.from.x, moved.from.y]
+				values.append(moved.to.x)
+				values.append(moved.to.y)
+				raised.append_array(values)
+	return raised
 
 
 ## The next `count` 32-bit values.
