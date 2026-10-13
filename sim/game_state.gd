@@ -1,14 +1,21 @@
 class_name GameState
 extends RefCounted
-## The core of the simulation's state, in integers: the tick, the seed, the map and the player,
+## The core of the simulation's state, in integers: the tick, the seed, the map and the entities,
 ## plus the instance's features, which hold every game rule and their own state. The core holds no
 ## game rule itself. The presentation reads the state and never writes it.
 ## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
 
+## Players in one run, each in its own slot; a tick's commands are indexed by slot.
+const MAX_PLAYERS: int = 4
+
 var tick: int = 0
 var rng_seed: int = 0
 var grid_radius: int = 0
-var player_tile: Vector2i = Vector2i.ZERO
+## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
+var next_entity_id: int = 1
+## Every entity, in id order. Rules always go through entities in this order, never in a
+## dictionary's or a hash's order, so every machine runs them the same way.
+var entities: Array[Entity] = []
 ## The instance's features, in the order they step each tick.
 var features: Array[Feature] = []
 ## What happened during the current tick, in order, for features later in the order. Transient:
@@ -20,9 +27,8 @@ var events: Array[RefCounted] = []
 var problem: String = ""
 
 
-func _init(radius: int, start: Vector2i, seed_value: int, ordered: Array[Feature]) -> void:
+func _init(radius: int, seed_value: int, ordered: Array[Feature]) -> void:
 	grid_radius = radius
-	player_tile = start
 	rng_seed = seed_value
 	problem = order_problem(ordered)
 	if not problem.is_empty():
@@ -50,6 +56,48 @@ func has_tile(tile: Vector2i) -> bool:
 	return Hex.distance(Vector2i.ZERO, tile) <= grid_radius
 
 
+## Adds an entity owned by `slot` (or Entity.NO_SLOT) on `tile`, with the next id, and lets every
+## feature, on or off, set up its data for it. A slot's entity is that player, so each slot has at
+## most one: returns null, adding nothing, for a slot out of range or already taken.
+func add_entity(slot: int, tile: Vector2i) -> Entity:
+	if slot != Entity.NO_SLOT and (slot < 0 or slot >= MAX_PLAYERS or player(slot) != null):
+		return null
+	var added: Entity = Entity.new(next_entity_id, slot, tile)
+	next_entity_id += 1
+	# Ids only grow, so appending keeps the list in id order.
+	entities.append(added)
+	for each: Feature in features:
+		each.entity_added(self, added)
+	return added
+
+
+## Removes the entity with this id, and every feature's data for it. The other entities keep
+## their ids.
+func remove_entity(id: int) -> void:
+	for i: int in entities.size():
+		if entities[i].id == id:
+			entities.remove_at(i)
+			for each: Feature in features:
+				each.entity_removed(self, id)
+			return
+
+
+## The entity with this id, or null.
+func entity(id: int) -> Entity:
+	for candidate: Entity in entities:
+		if candidate.id == id:
+			return candidate
+	return null
+
+
+## The entity the player in this slot controls, or null when the slot is empty.
+func player(slot: int) -> Entity:
+	for candidate: Entity in entities:
+		if candidate.slot == slot:
+			return candidate
+	return null
+
+
 ## The instance's feature with this id from Features, or null when the instance doesn't have it.
 func feature(id: int) -> Feature:
 	for candidate: Feature in features:
@@ -68,9 +116,14 @@ func set_enabled(id: int, on: bool) -> void:
 
 ## A fingerprint of the whole state, the same on every platform: two runs from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value and, in order, every feature's id, on/off and state.
+## every core value, every entity in id order and, in order, every feature's id, on/off and state.
 func state_hash() -> int:
-	var values: Array[int] = [tick, rng_seed, grid_radius, player_tile.x, player_tile.y]
+	var values: Array[int] = [tick, rng_seed, grid_radius, next_entity_id, entities.size()]
+	for each: Entity in entities:
+		values.append(each.id)
+		values.append(each.slot)
+		values.append(each.tile.x)
+		values.append(each.tile.y)
 	for each: Feature in features:
 		values.append(each.id())
 		values.append(1 if each.enabled else 0)

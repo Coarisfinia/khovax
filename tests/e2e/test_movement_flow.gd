@@ -117,33 +117,33 @@ func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
 
 ## Each walk starts where the previous one stopped: (1, -1) is the cube's start tile.
 func _check_paths() -> String:
-	var walks: Array[Walk] = [
-		Walk.new(["move_left"], [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)]),
-		Walk.new(
+	var walks: Array[Leg] = [
+		Leg.new(["move_left"], [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)]),
+		Leg.new(
 			["move_right"],
 			[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(2, -1), Vector2i(3, -1)],
 		),
 		# Straight up from an odd row starts north-west; the next north-east step would leave the
 		# grid.
-		Walk.new(["move_up"], [Vector2i(3, -2)]),
-		Walk.new(
+		Leg.new(["move_up"], [Vector2i(3, -2)]),
+		Leg.new(
 			["move_down", "move_left"],
 			[Vector2i(2, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)],
 		),
 		# Straight up and back down through both row parities: north-west and north-east in turn,
 		# then south-east and south-west, each zigzag staying in its column.
-		Walk.new(
+		Leg.new(
 			["move_up"],
 			[Vector2i(-2, 2), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(0, -2),
 				Vector2i(1, -3)],
 		),
-		Walk.new(
+		Leg.new(
 			["move_down"],
 			[Vector2i(1, -2), Vector2i(0, -1), Vector2i(0, 0), Vector2i(-1, 1), Vector2i(-1, 2),
 				Vector2i(-2, 3)],
 		),
 	]
-	for walk: Walk in walks:
+	for walk: Leg in walks:
 		var result: String = _walk(walk.keys, walk.path)
 		if not result.is_empty():
 			return "holding %s: %s" % [walk.keys, result]
@@ -228,7 +228,8 @@ func _check_trail() -> String:
 	var expected: Array[Vector2i] = []
 	expected.assign(_walked.keys())
 	expected.sort()
-	var trail: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var feature: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var trail: Trail = feature.trail(_driver.state.player(0).id)
 	if trail.sorted_tiles() != expected:
 		return "the trail is %s, expected %s" % [trail.sorted_tiles(), expected]
 	_trail_view.show_state()
@@ -345,7 +346,7 @@ func _step() -> void:
 
 ## The player's tile in the simulation.
 func _tile() -> Vector2i:
-	return _driver.state.player_tile
+	return _driver.state.player(0).tile
 
 
 func _release_all() -> void:
@@ -354,7 +355,7 @@ func _release_all() -> void:
 
 
 ## One leg of the walk: the actions held, and the tiles the cube must visit, in order.
-class Walk:
+class Leg:
 	extends RefCounted
 
 	var keys: Array[String]

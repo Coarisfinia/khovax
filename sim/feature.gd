@@ -25,8 +25,20 @@ func start(_state: GameState) -> void:
 	return
 
 
-## Advances the feature by one tick, after the features before it in the order.
+## Advances the feature by one tick, after the features before it in the order. `commands` holds
+## each player slot's command, indexed by slot (see Command.of).
 func step(_state: GameState, _commands: Array[Command]) -> void:
+	return
+
+
+## Called when an entity is added, also while the feature is off: sets up the feature's data for
+## it, like a component. Data kept per entity id stays in step with the entities that way.
+func entity_added(_state: GameState, _entity: Entity) -> void:
+	return
+
+
+## Called when an entity is removed, also while the feature is off: drops its data for it.
+func entity_removed(_state: GameState, _id: int) -> void:
 	return
 
 

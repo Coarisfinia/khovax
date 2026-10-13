@@ -8,7 +8,7 @@ extends RefCounted
 const TICKS_PER_SECOND: int = 20
 
 
-## Advances `state` by one tick. `commands` holds one command per player; there is one player.
+## Advances `state` by one tick. `commands` holds each player slot's command, indexed by slot.
 static func step(state: GameState, commands: Array[Command]) -> void:
 	state.tick += 1
 	state.events.clear()
