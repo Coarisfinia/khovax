@@ -112,7 +112,8 @@ func _check_paths() -> String:
 		Walk.new(
 			["move_down", "move_left"],
 			[Vector2i(2, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)],
-		),		# Straight up and back down through both row parities: north-west and north-east in turn,
+		),
+		# Straight up and back down through both row parities: north-west and north-east in turn,
 		# then south-east and south-west, each zigzag staying in its column.
 		Walk.new(
 			["move_up"],
