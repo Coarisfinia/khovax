@@ -1,9 +1,8 @@
 ## A flat hex grid of `radius` rings around the origin, one hexagonal tile per cell.
 ## A tool script, so the grid also shows in the editor.
 ##
-## The tiles are generated from `radius` and live under a child container that has no owner: they
-## are never saved into the scene, only rebuilt. Only that container's children are ever removed,
-## so nodes added to the grid by hand are left alone.
+## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
+## The tiles are rebuilt from `radius` and never saved; nodes added to the grid by hand are kept.
 @tool
 class_name HexGrid
 extends Node3D
@@ -19,54 +18,59 @@ const TILES_NODE: String = "Tiles"
 		radius = value
 		if is_node_ready():
 			_build()
-
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
 		_material.albedo_color = value
 
-var _material := StandardMaterial3D.new()
-var _tiles := Node3D.new()
+var _material: StandardMaterial3D = StandardMaterial3D.new()
+var _mesh: CylinderMesh = CylinderMesh.new()
+var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
+## Each tile's transform, as given to the MultiMesh. Kept here because a MultiMesh can't be read
+## back under the headless dummy renderer.
+var _transforms: Dictionary[Vector2i, Transform3D] = {}
 
 
 func _ready() -> void:
 	_material.albedo_color = tile_color
+	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
+	_mesh.radial_segments = 6
+	_mesh.rings = 1
+	_mesh.top_radius = Hex.SIZE * TILE_SCALE
+	_mesh.bottom_radius = Hex.SIZE * TILE_SCALE
+	_mesh.height = TILE_HEIGHT
+	_mesh.material = _material
 	_tiles.name = TILES_NODE
+	_tiles.multimesh = MultiMesh.new()
+	_tiles.multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
 	_build()
 
 
-func tile_node(tile: Vector2i) -> MeshInstance3D:
-	return _tiles.get_node_or_null(_tile_name(tile)) as MeshInstance3D
+func has_tile(tile: Vector2i) -> bool:
+	return _transforms.has(tile)
 
 
 func tile_count() -> int:
-	return _tiles.get_child_count()
+	return _tiles.multimesh.instance_count
+
+
+## The tile's transform relative to the grid; the identity basis when the tile isn't on the grid.
+func tile_transform(tile: Vector2i) -> Transform3D:
+	return _transforms.get(tile, Transform3D.IDENTITY)
+
+
+func tile_mesh() -> CylinderMesh:
+	return _mesh
 
 
 func _build() -> void:
-	# Freed right away rather than queued: the tiles have no owner, so the editor holds no
-	# references to them, and the rebuilt tiles reuse the same names.
-	for child: Node in _tiles.get_children():
-		_tiles.remove_child(child)
-		child.free()
-
-	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
-	var mesh := CylinderMesh.new()
-	mesh.radial_segments = 6
-	mesh.rings = 1
-	mesh.top_radius = Hex.SIZE * TILE_SCALE
-	mesh.bottom_radius = Hex.SIZE * TILE_SCALE
-	mesh.height = TILE_HEIGHT
-	mesh.material = _material
-
-	for tile: Vector2i in Hex.disc(radius):
-		var node := MeshInstance3D.new()
-		node.name = _tile_name(tile)
-		node.mesh = mesh
-		node.position = Hex.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
-		_tiles.add_child(node)
-
-
-static func _tile_name(tile: Vector2i) -> String:
-	return "Tile_%d_%d" % [tile.x, tile.y]
+	var tiles: Array[Vector2i] = Hex.disc(radius)
+	_transforms.clear()
+	_tiles.multimesh.instance_count = tiles.size()
+	for i: int in tiles.size():
+		var tile: Vector2i = tiles[i]
+		var center: Vector3 = Hex.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
+		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
+		_tiles.multimesh.set_instance_transform(i, _transforms[tile])

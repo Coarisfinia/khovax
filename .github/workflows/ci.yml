@@ -10,6 +10,9 @@ permissions:
 
 env:
   GODOT_VERSION: 4.7.2
+  # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
+  GDSTYLE_VERSION: 0.3.3
+  GDSTYLE_SHA256: afc3c7a1b9fba219a2eeb2b3896470babffe010b6cf9f3a8c9526a2f6155d64c
 
 jobs:
   headless:
@@ -17,6 +20,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install gdstyle
+        run: |
+          curl -fsSL -o /tmp/gdstyle.tar.gz \
+            "https://github.com/atelico/gdstyle/releases/download/v${GDSTYLE_VERSION}/gdstyle-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${GDSTYLE_SHA256}  /tmp/gdstyle.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/gdstyle.tar.gz -C /usr/local/bin gdstyle
+
+      - name: Lint GDScript
+        run: gdstyle check --no-color .
+
+      - name: Check GDScript formatting
+        run: gdstyle fmt --check .
 
       - name: Cache Godot
         id: cache-godot
@@ -36,6 +52,14 @@ jobs:
 
       - name: Import project
         run: timeout 120 ~/godot/godot --headless --path . --import
+
+      - name: Check every script with Godot's warnings as errors
+        # Also catches scripts that no test loads.
+        run: |
+          git ls-files '*.gd' | while read -r script; do
+            timeout 60 ~/godot/godot --headless --path . --check-only -s "res://${script}" \
+              || { echo "::error file=${script}::fails Godot's script check"; exit 1; }
+          done
 
       - name: Run e2e tests
         # timeout guards against a script error in the runner leaving the SceneTree running forever

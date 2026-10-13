@@ -8,7 +8,6 @@ extends Node3D
 	set(value):
 		tile = value
 		_place()
-
 ## Distance from this node's origin down to its bottom, e.g. half a cube's height.
 @export var base_offset: float = 0.5:
 	set(value):

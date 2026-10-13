@@ -1,0 +1,13 @@
+{
+    "version": "0.3.3",
+    "description": "Linter and formatter for GDScript (Godot 4.x)",
+    "homepage": "https://github.com/atelico/gdstyle",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/atelico/gdstyle/releases/download/v0.3.3/gdstyle-x86_64-pc-windows-msvc.zip",
+            "hash": "7227fd4be2bad8c53f07998c5b1ff917d8d6895fe3ab70c76685c28ea2716952"
+        }
+    },
+    "bin": "gdstyle.exe"
+}
