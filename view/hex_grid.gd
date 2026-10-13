@@ -27,8 +27,12 @@ const NO_TRAIL: Dictionary[Vector2i, bool] = {}
 	set(value):
 		tile_color = value
 		if is_node_ready():
-			_show_trail(NO_TRAIL)
-@export var trail_color: Color = Color(0.86, 0.74, 0.36)
+			_show_trail(_current_trail())
+@export var trail_color: Color = Color(0.86, 0.74, 0.36):
+	set(value):
+		trail_color = value
+		if is_node_ready():
+			_show_trail(_current_trail())
 
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
@@ -71,8 +75,7 @@ func _process(_delta: float) -> void:
 
 ## Colors the tiles from the current state. Called every frame; tests call it after stepping.
 func show_state() -> void:
-	if driver != null and driver.state != null:
-		_show_trail(driver.state.trail)
+	_show_trail(_current_trail())
 
 
 func has_tile(tile: Vector2i) -> bool:
@@ -97,6 +100,12 @@ func tile_mesh() -> CylinderMesh:
 	return _mesh
 
 
+## The MultiMesh drawing the tiles: its instance colors only show with `use_colors` on it and
+## vertex colors as albedo on the tile material.
+func tile_multimesh() -> MultiMesh:
+	return _tiles.multimesh
+
+
 func _build() -> void:
 	var tiles: Array[Vector2i] = Hex.disc(radius)
 	_index.clear()
@@ -109,8 +118,14 @@ func _build() -> void:
 		_index[tile] = i
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
-	_show_trail(NO_TRAIL)
-	show_state()
+	_show_trail(_current_trail())
+
+
+## The driver's trail, or none without a driver (e.g. in the editor).
+func _current_trail() -> Dictionary[Vector2i, bool]:
+	if driver != null and driver.state != null:
+		return driver.state.trail
+	return NO_TRAIL
 
 
 ## Gives every tile its color: the trail color on the trail, the tile color elsewhere. Only tiles

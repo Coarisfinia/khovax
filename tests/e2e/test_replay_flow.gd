@@ -100,6 +100,8 @@ func _check_hash_covers_fields() -> String:
 		"move_from.y": func(state: GameState) -> void: state.move_from.y += 1,
 		"move_ticks_left": func(state: GameState) -> void: state.move_ticks_left += 1,
 		"trail": func(state: GameState) -> void: state.trail[Vector2i.ZERO] = true,
+		# Same size, other tile: the hash must see the coordinates, not only how many there are.
+		"trail tile": func(state: GameState) -> void: state.trail = { Vector2i.ZERO: true },
 	}
 	for field: String in changes:
 		var state: GameState = _fresh_state()
