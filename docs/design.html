@@ -315,16 +315,16 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li><strong>Strong monster, small ring, close range.</strong> Reward and risk rise together without extra rules, and the health bar is what makes it tense.</li>
   <li><strong>Groups are a gamble.</strong> One big ring around five weak monsters is efficient but may burst. Several small rings are safe but slow.</li>
   <li><strong>Positioning before closing.</strong> Lure monsters toward the middle of the ring so their pressure lands on thick, far-away walls.</li>
-  <li><strong>Active reinforcement</strong> <span class="badge pro">Proposed</span>. While the seal runs, standing on a wall segment reinforces it, which is strong but puts you right where the monster is pushing.</li>
+  <li><strong>Active reinforcement</strong> <span class="badge dec">Decided</span>. While the seal runs, standing on a wall segment reinforces it, which is strong but puts you right where the monster is pushing.</li>
   <li><strong>Co-op herding.</strong> Trails from several players can join into one ring. One player herds, another closes it.</li>
 </ul>
 
 <h2 id="enrage"><span class="n">04</span>Enrage <span class="badge dec">Decided</span></h2>
 <p>Fleeing is boring, so a failed ring <strong>always</strong> enrages the monsters inside.</p>
 <ul>
-  <li>Enraged monsters get more strength and speed, partially heal, and target the <strong>player</strong> directly rather than companions. <span class="badge pro">Proposed</span></li>
-  <li>Enrage stacks with each further failed ring. <span class="badge pro">Proposed</span></li>
-  <li>Catching an enraged monster anyway grants a permanent trait such as <strong>"Tempered"</strong> with stronger passives, so failure becomes a high-risk opportunity. <span class="badge pro">Proposed</span></li>
+  <li>Enraged monsters get more strength and speed, partially heal, and target the <strong>player</strong> directly rather than companions. <span class="badge dec">Decided</span></li>
+  <li>Enrage stacks with each further failed ring. <span class="badge dec">Decided</span></li>
+  <li>Catching an enraged monster anyway grants a permanent trait such as <strong>"Tempered"</strong> with stronger passives, so failure becomes a high-risk opportunity. <span class="badge dec">Decided</span></li>
 </ul>
 
 <h2 id="companions"><span class="n">05</span>Companions <span class="badge dec">Decided</span></h2>
@@ -332,7 +332,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <ul>
   <li><strong>False swipe by default.</strong> Companions fight on their own, but their basic attacks never take a wild monster below 1 HP.</li>
   <li><strong>Lethal toggle per companion.</strong> For threats you don't want to catch, or an enrage that gets out of hand.</li>
-  <li><strong>Manual special attacks.</strong> The player triggers each companion's special attack. Specials can kill, which makes them a deliberate tradeoff. <span class="badge pro">Proposed</span></li>
+  <li><strong>Manual special attacks.</strong> The player triggers each companion's special attack. Specials can kill, which makes them a deliberate tradeoff. <span class="badge dec">Decided</span></li>
   <li><strong>Killed wild monsters are gone for good.</strong> They turn grey (fainted), can't be caught, and drop crafting materials.</li>
 </ul>
 
@@ -467,7 +467,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <h2 id="open"><span class="n">13</span>Open questions</h2>
 <ul>
   <li>Final game name. "khovax" is a permanent codename for the repo and code; the player-facing name can change at any time without touching git.</li>
-  <li>Enrage details: stat multipliers, stacking cap, and whether "Tempered" ships.</li>
+  <li>Enrage tuning: stat multipliers, heal amount and stacking cap. The final name and effects of the "Tempered" trait.</li>
   <li>All tuning constants for ring power, integrity, pressure and seal time.</li>
   <li>Tick rate: 10, 15 or 20 per second.</li>
   <li>Test framework: GUT or gdUnit4, to be confirmed against their current state.</li>
@@ -483,7 +483,10 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <tr><td>Language</td><td>GDScript only</td><td>C# can't export to web, and one language is wanted everywhere</td></tr>
 <tr><td>Simulation</td><td>Fully deterministic, integer math, fixed ticks</td><td>Lockstep co-op, replays, e2e testing</td></tr>
 <tr><td>Catching</td><td>Walk a ring; bigger rings are weaker</td><td>A novel mechanic that fits the hex grid, with risk that scales with reward</td></tr>
-<tr><td>Ring failure</td><td>Always enrage</td><td>Fleeing is boring</td></tr>
+<tr><td>Ring failure</td><td>Always enrage: stronger, faster, partial heal, targets the player, stacks per failure</td><td>Fleeing is boring</td></tr>
+<tr><td>Enraged catch</td><td>Grants a permanent trait ("Tempered") with stronger passives</td><td>Failure becomes a high-risk opportunity</td></tr>
+<tr><td>Sealing</td><td>Active reinforcement by standing on a wall segment</td><td>Keeps the player engaged, with risk, during the seal</td></tr>
+<tr><td>Specials</td><td>Triggered manually and can kill</td><td>A deliberate tradeoff against the catch</td></tr>
 <tr><td>Player combat</td><td>None. Move, catch, trigger specials</td><td>Catching is the skill</td></tr>
 <tr><td>Companions</td><td>Fight by themselves, false swipe by default, lethal toggle</td><td>Weakening feeds into catching</td></tr>
 <tr><td>Killed wild monsters</td><td>Grey, uncatchable, drop materials</td><td>A real "catch or harvest" decision</td></tr>
