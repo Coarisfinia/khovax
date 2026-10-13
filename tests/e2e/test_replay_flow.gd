@@ -30,7 +30,10 @@ func run(_tree: SceneTree) -> String:
 		_check_player_slots,
 		_check_rng_reference,
 		_check_rng_ranges,
+		_check_rng_rejection,
+		_check_rng_bounds,
 		_check_rolls_replay,
+		_check_streams_apart,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -358,7 +361,7 @@ func _check_rng_reference() -> String:
 	for key: Vector2i in seeded:
 		var expected: Array[int] = []
 		expected.assign(seeded[key])
-		if _draws(Rng.new(key.x, key.y), expected.size()) != expected:
+		if _seeded_draws(key.x, key.y, expected.size()) != expected:
 			return "seed %d, stream %d gives other values than before" % [key.x, key.y]
 	return ""
 
@@ -388,6 +391,40 @@ func _check_rng_ranges() -> String:
 	return ""
 
 
+## below() draws again rather than folding a draw in with modulo: with 2^31 + 1 values, every draw
+## at or above 2^31 + 1 (about half of them) is rejected, and the next draw is used.
+func _check_rng_rejection() -> String:
+	var count: int = (Rng.SPAN >> 1) + 1
+	var rng: Rng = Rng.new(42, 0)
+	var raw: Rng = Rng.new(42, 0)
+	var rejected: int = 0
+	for _draw: int in 20:
+		var drawn: int = raw.next_u32()
+		while drawn >= count:
+			rejected += 1
+			drawn = raw.next_u32()
+		if rng.below(count) != drawn:
+			return "below(2^31 + 1) didn't skip exactly the draws it must reject"
+	if rejected == 0:
+		return "no draw was rejected, so the check proves nothing"
+	return ""
+
+
+## The widest ranges, 2^32 values, work at both ends of the signed 64-bit integers.
+func _check_rng_bounds() -> String:
+	var rng: Rng = Rng.new(42, 0)
+	var lowest: int = -9_223_372_036_854_775_807 - 1
+	var highest: int = 9_223_372_036_854_775_807
+	for _draw: int in 100:
+		var low_end: int = rng.between(lowest, lowest + Rng.SPAN - 1)
+		if low_end < lowest or low_end > lowest + Rng.SPAN - 1:
+			return "between() at the lowest integers gave %d" % low_end
+		var high_end: int = rng.between(highest - Rng.SPAN + 1, highest)
+		if high_end < highest - Rng.SPAN + 1:
+			return "between() at the highest integers gave %d" % high_end
+	return ""
+
+
 ## A feature rolling from its own stream every tick replays to the same state, its stream is in
 ## the hash, and another seed rolls differently.
 func _check_rolls_replay() -> String:
@@ -402,6 +439,32 @@ func _check_rolls_replay() -> String:
 	if state.state_hash() == before:
 		return "the generator's state isn't in the hash"
 	return ""
+
+
+## Streams keep systems apart: a feature rolling more often never changes another one's rolls.
+func _check_streams_apart() -> String:
+	var calm: GameState = _two_dice(1)
+	var busy: GameState = _two_dice(3)
+	for _tick: int in 50:
+		Simulation.step(calm, _commands(Command.NO_MOVE))
+		Simulation.step(busy, _commands(Command.NO_MOVE))
+	var other: int = Dice.ID + 1
+	if calm.feature(other).hash_values() != busy.feature(other).hash_values():
+		return "more rolls in one feature shifted another feature's rolls"
+	if calm.feature(Dice.ID).hash_values() == busy.feature(Dice.ID).hash_values():
+		return "the busier dice didn't roll more"
+	return ""
+
+
+## A state with two dice features: the first rolls `rolls` times a tick, the second once.
+func _two_dice(rolls: int) -> GameState:
+	var ordered: Array[Feature] = [Dice.new(Dice.ID, rolls), Dice.new(Dice.ID + 1, 1)]
+	return _state_with(ordered, 42)
+
+
+## The first `count` values of a freshly seeded stream.
+func _seeded_draws(seed_value: int, stream: int, count: int) -> Array[int]:
+	return _draws(Rng.new(seed_value, stream), count)
 
 
 ## The next `count` 32-bit values.
@@ -526,23 +589,31 @@ class BossPhase:
 		return values
 
 
-## A test rule that rolls a die every tick from its own stream, like monster behavior will.
+## A test rule that rolls a die `rolls` times every tick from its own stream, like monster
+## behavior will.
 class Dice:
 	extends Feature
 
 	const ID: int = 1001
 
+	var feature_id: int = ID
+	var rolls: int = 1
 	var rng: Rng
 	var last: int = 0
 
+	func _init(id_value: int = ID, rolls_per_tick: int = 1) -> void:
+		feature_id = id_value
+		rolls = rolls_per_tick
+
 	func id() -> int:
-		return ID
+		return feature_id
 
 	func start(state: GameState) -> void:
-		rng = Rng.new(state.rng_seed, ID)
+		rng = Rng.new(state.rng_seed, feature_id)
 
 	func step(_state: GameState, _commands: Array[Command]) -> void:
-		last = rng.between(1, 6)
+		for _roll: int in rolls:
+			last = rng.between(1, 6)
 
 	func hash_values() -> Array[int]:
 		var values: Array[int] = [last]

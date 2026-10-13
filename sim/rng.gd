@@ -30,11 +30,20 @@ func _init(seed_value: int, stream: int) -> void:
 		words[i] = _fmix(key)
 
 
-## A generator in exactly this state, e.g. to check it against the reference implementation.
+## A generator in exactly this state, to check it against the reference implementation; rules
+## seed theirs with `new`. Null (with an error) unless `state` is four 32-bit words, not all zero:
+## the generator can never leave the all-zero state.
 static func from_words(state: Array[int]) -> Rng:
+	var valid: bool = state.size() == 4
+	var nonzero: bool = false
+	for word: int in state:
+		valid = valid and word >= 0 and word <= MASK
+		nonzero = nonzero or word != 0
+	if not valid or not nonzero:
+		push_error("Rng.from_words needs four 32-bit words, not all zero: %s" % [state])
+		return null
 	var generator: Rng = Rng.new(0, 0)
-	for i: int in generator.words.size():
-		generator.words[i] = state[i] & MASK
+	generator.words.assign(state)
 	return generator
 
 
@@ -65,22 +74,41 @@ func below(count: int) -> int:
 	return drawn % count
 
 
-## A value from `low` to `high`, both included, every one equally likely.
+## A value from `low` to `high`, both included, every one equally likely. At most 2^32 values
+## apart; `low` (with an error) otherwise.
 func between(low: int, high: int) -> int:
+	# Checked without computing high - low first, which overflows for far-apart signed bounds:
+	# with low below zero, low + SPAN - 1 can't overflow, and with both at or above zero,
+	# high - low can't.
+	var too_wide: bool = high > low + SPAN - 1 if low < 0 else high - low >= SPAN
+	if high < low or too_wide:
+		push_error("Rng.between needs low <= high, at most 2^32 values: %d, %d" % [low, high])
+		return low
 	return low + below(high - low + 1)
 
 
-## True in `numerator` out of `denominator` cases, e.g. chance(3, 10) for 30 %.
+## True in `numerator` out of `denominator` cases, e.g. chance(3, 10) for 30 %. The denominator
+## is 1 to 2^32 and the numerator 0 to the denominator; false (with an error) otherwise.
 func chance(numerator: int, denominator: int) -> bool:
+	if numerator < 0 or numerator > denominator or denominator < 1 or denominator > SPAN:
+		push_error("Rng.chance needs 0 <= %d <= %d <= 2^32" % [numerator, denominator])
+		return false
 	return below(denominator) < numerator
 
 
 ## An index into `weights`, each picked in proportion to its weight. Weights are 0 or more and
-## add up to 1 to 2^32.
+## add up to 1 to 2^32; 0 (with an error) otherwise.
 func pick_weighted(weights: Array[int]) -> int:
 	var total: int = 0
 	for weight: int in weights:
+		# Each check before adding, so the total never overflows.
+		if weight < 0 or weight > SPAN - total:
+			total = SPAN + 1
+			break
 		total += weight
+	if total < 1 or total > SPAN:
+		push_error("Rng.pick_weighted needs weights of 0 or more adding up to 1 to 2^32")
+		return 0
 	var roll: int = below(total)
 	for i: int in weights.size():
 		if roll < weights[i]:
