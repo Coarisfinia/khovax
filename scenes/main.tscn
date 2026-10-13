@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://scenes/hex_piece.gd" id="2_piece"]
 [ext_resource type="Script" path="res://scenes/follow_camera.gd" id="3_camera"]
 [ext_resource type="Script" path="res://scenes/hex_mover.gd" id="4_mover"]
+[ext_resource type="Script" path="res://scenes/touch_stick.gd" id="5_stick"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sgp6g"]
 albedo_color = Color(0.94, 0.45, 0.16, 1)
@@ -34,3 +35,15 @@ target = NodePath("../Cube")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
 transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)
+
+[node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
+
+[node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_stick")
