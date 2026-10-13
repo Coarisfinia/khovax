@@ -381,6 +381,19 @@ func _check_moves_announced(from: Vector2i) -> String:
 		at = moved.to
 	if at != _tile():
 		return "the announced moves end on %s, the player on %s" % [at, _tile()]
+	return _check_recording()
+
+
+## The driver recorded the whole flow, keys and touches alike: saved and loaded, the recording
+## plays back to exactly the state the flow ended in.
+func _check_recording() -> String:
+	_driver.recording.finish(_driver.state)
+	var loaded: Replay = Replay.parse(_driver.recording.to_text())
+	var problem: String = loaded.play()
+	if not problem.is_empty():
+		return "the flow's recording didn't play back: " + problem
+	if loaded.played.state_hash() != _driver.state.state_hash():
+		return "the flow's recording played back to another state"
 	return ""
 
 

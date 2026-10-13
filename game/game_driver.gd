@@ -19,12 +19,17 @@ const MAX_TICKS_PER_FRAME: int = 5
 @export var input: LocalInput
 
 var state: GameState
+## Every tick of this run so far, to play back (#35).
+var recording: Replay
 var _accumulated: float = 0.0
 
 
 func _ready() -> void:
 	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
 	state = Instances.create(instance, 0)
+	if state != null:
+		recording = Replay.new(instance, 0)
+		recording.begin(state)
 
 
 func _process(delta: float) -> void:
@@ -48,6 +53,7 @@ func advance(delta: float) -> void:
 			commands.append(null)
 		commands.append(input.command(state))
 		Simulation.step(state, commands)
+		recording.record(state, commands)
 		# A copy: the simulation clears its list when the next tick starts.
 		var events: Array[RefCounted] = []
 		events.assign(state.events)
