@@ -19,6 +19,8 @@ func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
 	var player: Entity = driver.state.player(slot)
+	# A slot nobody plays in shows nothing.
+	visible = player != null
 	if player == null:
 		return
 	tile = player.tile

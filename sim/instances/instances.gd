@@ -17,12 +17,11 @@ const BASIC_STARTS: Array[Vector2i] = [
 ## A new state for the named instance with `players` players in slots 0 and up, or null (with an
 ## error) for an unknown name, a player count out of range or an invalid feature order.
 static func create(instance_name: String, seed_value: int, players: int = 1) -> GameState:
-	if players < 1 or players > GameState.MAX_PLAYERS:
-		push_error("an instance takes 1 to %d players, not %d" % [GameState.MAX_PLAYERS, players])
-		return null
-	var state: GameState = basic(seed_value, players) if instance_name == BASIC else null
-	if state == null:
+	if instance_name != BASIC:
 		push_error("unknown instance: " + instance_name)
+		return null
+	var state: GameState = basic(seed_value, players)
+	if state == null:
 		return null
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -30,8 +29,12 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	return state
 
 
-## The current playground: a disc of radius 3, walking, and a trail per player.
-static func basic(seed_value: int, players: int) -> GameState:
+## The current playground: a disc of radius 3, walking, and a trail per player. Null (with an
+## error) for a player count out of range.
+static func basic(seed_value: int, players: int = 1) -> GameState:
+	if players < 1 or players > GameState.MAX_PLAYERS:
+		push_error("an instance takes 1 to %d players, not %d" % [GameState.MAX_PLAYERS, players])
+		return null
 	var ordered: Array[Feature] = [MovementFeature.new(), TrailFeature.new()]
 	var state: GameState = GameState.new(3, seed_value, ordered)
 	for slot: int in players:

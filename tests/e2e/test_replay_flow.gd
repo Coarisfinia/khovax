@@ -27,6 +27,7 @@ func run(_tree: SceneTree) -> String:
 		_check_switch_within_tick,
 		_check_players_move_at_once,
 		_check_entity_ids_stay,
+		_check_player_slots,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -301,6 +302,10 @@ func _check_entity_ids_stay() -> String:
 		return "a new entity got the id %d again" % added.id
 	if state.player(1) != added or _movement(state).walk(added.id) == null:
 		return "a player added during a run doesn't walk in its slot"
+	return _check_id_order(state)
+
+
+func _check_id_order(state: GameState) -> String:
 	var order: Array[int] = []
 	for each: Entity in state.entities:
 		order.append(each.id)
@@ -309,6 +314,25 @@ func _check_entity_ids_stay() -> String:
 	sorted.sort()
 	if order != sorted:
 		return "the entities aren't in id order: %s" % [order]
+	return ""
+
+
+## Each slot has at most one player: a taken or out-of-range slot adds nothing, while any number
+## of entities can belong to no player.
+func _check_player_slots() -> String:
+	var state: GameState = _state(42)
+	var before: int = state.state_hash()
+	var refused: Array[int] = [0, -2, GameState.MAX_PLAYERS]
+	for slot: int in refused:
+		if state.add_entity(slot, START) != null:
+			return "slot %d took another entity" % slot
+	if state.state_hash() != before:
+		return "a refused entity still changed the state"
+	var unowned: Entity = state.add_entity(Entity.NO_SLOT, START)
+	if unowned == null or state.add_entity(Entity.NO_SLOT, START) == null:
+		return "entities without a player were refused"
+	if _movement(state).walk(unowned.id) != null:
+		return "an entity without a player got a walk"
 	return ""
 
 

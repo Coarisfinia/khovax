@@ -57,8 +57,11 @@ func has_tile(tile: Vector2i) -> bool:
 
 
 ## Adds an entity owned by `slot` (or Entity.NO_SLOT) on `tile`, with the next id, and lets every
-## feature, on or off, set up its data for it.
+## feature, on or off, set up its data for it. A slot's entity is that player, so each slot has at
+## most one: returns null, adding nothing, for a slot out of range or already taken.
 func add_entity(slot: int, tile: Vector2i) -> Entity:
+	if slot != Entity.NO_SLOT and (slot < 0 or slot >= MAX_PLAYERS or player(slot) != null):
+		return null
 	var added: Entity = Entity.new(next_entity_id, slot, tile)
 	next_entity_id += 1
 	# Ids only grow, so appending keeps the list in id order.
