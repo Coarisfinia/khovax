@@ -271,16 +271,18 @@ func _check_players_move_at_once() -> String:
 		Simulation.step(state, only_first)
 	if second.tile != start_second + Hex.DIRECTIONS[WEST]:
 		return "a slot without a command still moved its player"
-	var hashes: Array[int] = []
-	for _run: int in 2:
-		var replayed: GameState = Instances.basic(42, 2)
-		for direction: int in _moves():
-			var other: int = (direction + 2) % Hex.DIRECTIONS.size()
-			Simulation.step(replayed, _slot_commands(direction, other))
-		hashes.append(replayed.state_hash())
-	if hashes[0] != hashes[1]:
+	if _two_player_hash() != _two_player_hash():
 		return "two players with the same commands gave different states"
 	return ""
+
+
+## The final state hash of two players replaying the scripted moves, each its own way.
+func _two_player_hash() -> int:
+	var state: GameState = Instances.basic(42, 2)
+	for direction: int in _moves():
+		var other: int = (direction + 2) % Hex.DIRECTIONS.size()
+		Simulation.step(state, _slot_commands(direction, other))
+	return state.state_hash()
 
 
 ## Entity ids are stable: removing an entity keeps the others' ids and drops every feature's data
