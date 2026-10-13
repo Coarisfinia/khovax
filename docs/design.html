@@ -420,7 +420,16 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <figcaption>Figure 3. The simulation is a pure layer with no nodes. Rendering only reads from it. The game and the tests drive the same code.</figcaption>
 </figure>
 <ul>
-  <li>Game logic runs in fixed ticks (10–20 per second) on integer hex coordinates. Godot physics is never used for gameplay because it isn't deterministic across platforms.</li>
+  <li><strong>Four strictly separated layers</strong> <span class="badge dec">Decided</span> (#26):
+    <ul>
+      <li><strong>Input</strong> (<code>input/</code>): keys, the touch stick and later controllers press the same actions, which become one integer <em>command</em> per player per tick.</li>
+      <li><strong>Simulation</strong> (<code>sim/</code>): the rules step the state from the commands, 20 ticks per second, in integers only. There are no nodes, time, input or floats, and CI enforces this.</li>
+      <li><strong>Presentation</strong> (<code>view/</code>): scenes only read the state, and they interpolate between ticks so movement glides.</li>
+      <li><strong>Driver</strong> (<code>game/</code>): runs whole ticks from real time. Real time decides when ticks happen, never what they do.</li>
+    </ul>
+  </li>
+  <li>The starting state plus every tick's commands is a replay. The same replay always ends with the same state hash, which is the basis for lockstep co-op and desync detection.</li>
+  <li>Godot physics is never used for gameplay because it isn't deterministic across platforms.</li>
   <li>All randomness comes from one seeded RNG that lives in the simulation state.</li>
   <li>GDScript's 64-bit <code>int</code> is enough for fixed-point math.</li>
 </ul>

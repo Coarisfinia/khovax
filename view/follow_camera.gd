@@ -5,7 +5,8 @@ extends Camera3D
 ## target on the ground plane, but only once the target leaves a dead zone around the camera's
 ## focus, and then with a capped speed and a low acceleration: no snapping, shaking or zooming,
 ## because the game is designed around motion sickness.
-## A tool script, so the angle also shows in the editor. It only follows while the game runs.
+## A tool script, so the angle also shows in the editor. It only follows while the game runs, and
+## processes after the views (process_priority in main.tscn), so it follows where they drew.
 
 ## The target to follow; the camera starts centered on it.
 @export var target: Node3D

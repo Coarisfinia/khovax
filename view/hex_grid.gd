@@ -18,6 +18,8 @@ const TILES_NODE: String = "Tiles"
 		radius = value
 		if is_node_ready():
 			_build()
+## The grid shows the size of this driver's simulation; without one (e.g. in the editor), `radius`.
+@export var driver: GameDriver
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
@@ -36,8 +38,8 @@ func _ready() -> void:
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6
 	_mesh.rings = 1
-	_mesh.top_radius = Hex.SIZE * TILE_SCALE
-	_mesh.bottom_radius = Hex.SIZE * TILE_SCALE
+	_mesh.top_radius = HexLayout.SIZE * TILE_SCALE
+	_mesh.bottom_radius = HexLayout.SIZE * TILE_SCALE
 	_mesh.height = TILE_HEIGHT
 	_mesh.material = _material
 	_tiles.name = TILES_NODE
@@ -45,7 +47,12 @@ func _ready() -> void:
 	_tiles.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
-	_build()
+	# Only now, with the MultiMesh in place: the node already counts as ready during _ready, so the
+	# radius setter rebuilds right away. Either way the grid is built exactly once here.
+	if driver != null and driver.state != null and driver.state.grid_radius != radius:
+		radius = driver.state.grid_radius
+	else:
+		_build()
 
 
 func has_tile(tile: Vector2i) -> bool:
@@ -71,6 +78,6 @@ func _build() -> void:
 	_tiles.multimesh.instance_count = tiles.size()
 	for i: int in tiles.size():
 		var tile: Vector2i = tiles[i]
-		var center: Vector3 = Hex.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
+		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
