@@ -36,6 +36,13 @@ var _trail_view: TrailView
 ## Every tile the player has stood on in this flow: the start tile and every tile walked onto.
 var _walked: Dictionary[Vector2i, bool] = {}
 var _stick: TouchStick
+## Every tick the driver announced while recording, and the moves among their events.
+var _announced: Array[int] = []
+var _moves: Array[EntityMoved] = []
+## Each announced tick's event list as received, and its size then: a later tick must not change
+## an earlier tick's list (the simulation reuses its own list every tick).
+var _batches: Array[Array] = []
+var _batch_sizes: Array[int] = []
 
 
 func _input() -> Vector2:
@@ -329,7 +336,69 @@ func _check_driver_timing() -> String:
 			carried_ticks,
 			carried_fraction,
 		]
+	return _check_tick_events()
+
+
+## Views learn about each tick's one-shot events from the driver: every tick exactly once and in
+## order, across frames that run no tick, one, several, or part of one, and the moves among the
+## events are exactly the walk the player made.
+func _check_tick_events() -> String:
+	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
+	var frames: Array[float] = [0.0, tick_seconds, tick_seconds * 3.5, 0.0, tick_seconds * 0.5]
+	var start: int = _driver.state.tick
+	var from: Vector2i = _tile()
+	var action: String = _open_side()
+	_announced.clear()
+	_moves.clear()
+	_batches.clear()
+	_batch_sizes.clear()
+	if _driver.ticked.connect(_record) != OK:
+		return "couldn't listen to the driver's ticks"
+	Input.action_press(action)
+	for frame: float in frames:
+		_driver.advance(frame)
+	Input.action_release(action)
+	_driver.ticked.disconnect(_record)
+	var expected: Array[int] = []
+	for tick: int in range(start + 1, _driver.state.tick + 1):
+		expected.append(tick)
+	if expected.is_empty() or _announced != expected:
+		return "the driver announced ticks %s, expected %s" % [_announced, expected]
+	for i: int in _batches.size():
+		if _batches[i].size() != _batch_sizes[i]:
+			return "tick %d's events changed after it was announced" % _announced[i]
+	return _check_moves_announced(from)
+
+
+## The announced moves chain from where the player stood to where it stands now.
+func _check_moves_announced(from: Vector2i) -> String:
+	if _moves.is_empty():
+		return "walking raised no announced move"
+	var at: Vector2i = from
+	for moved: EntityMoved in _moves:
+		if moved.from != at or moved.entity_id != _driver.state.player(0).id:
+			return "an announced move doesn't follow the walk: %s to %s" % [moved.from, moved.to]
+		at = moved.to
+	if at != _tile():
+		return "the announced moves end on %s, the player on %s" % [at, _tile()]
 	return ""
+
+
+func _record(tick: int, events: Array[RefCounted]) -> void:
+	_announced.append(tick)
+	_batches.append(events)
+	_batch_sizes.append(events.size())
+	for event: RefCounted in events:
+		var moved: EntityMoved = event as EntityMoved
+		if moved != null:
+			_moves.append(moved)
+
+
+## The side the player can walk to from where it stands: right, unless that is off the grid.
+func _open_side() -> String:
+	var right: int = HexInput.direction_toward(Vector2.RIGHT, _tile())
+	var next: Vector2i = _tile() + Hex.DIRECTIONS[right]
+	return "move_right" if _driver.state.has_tile(next) else "move_left"
 
 
 func _finish_step() -> void:
