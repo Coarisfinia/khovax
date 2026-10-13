@@ -34,8 +34,6 @@ var _transforms: Dictionary[Vector2i, Transform3D] = {}
 
 
 func _ready() -> void:
-	if driver != null and driver.state != null:
-		radius = driver.state.grid_radius
 	_material.albedo_color = tile_color
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6
@@ -49,6 +47,10 @@ func _ready() -> void:
 	_tiles.multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
+	# Only now, with the MultiMesh in place: the node already counts as ready during _ready, so the
+	# radius setter rebuilds right away.
+	if driver != null and driver.state != null:
+		radius = driver.state.grid_radius
 	_build()
 
 
