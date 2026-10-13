@@ -45,7 +45,8 @@ static func parse(text: String) -> HexMap:
 	var header: PackedStringArray = PackedStringArray()
 	if not rows.is_empty():
 		header = rows[0].split(" ")
-	if header.size() != 3 or header[0] != "origin":
+	var numbers: bool = header.size() == 3 and header[1].is_valid_int() and header[2].is_valid_int()
+	if not numbers or header[0] != "origin":
 		map.problem = "a map file starts with \"origin <column> <row>\""
 		return map
 	var starts_by_slot: Dictionary[int, Vector2i] = {}
@@ -139,6 +140,8 @@ func _parse_row(
 			return "'%s' in row %d isn't a map symbol" % [symbol, r]
 		var tile: Vector2i = Vector2i(Fixed.div_floor(doubled, 2), r)
 		terrain[tile] = SYMBOLS.get(symbol, GROUND)
+		if slot >= 0 and starts_by_slot.has(slot):
+			return "player %d's start is marked twice" % (slot + 1)
 		if slot >= 0:
 			starts_by_slot[slot] = tile
 	if terrain.size() > MAX_TILES:

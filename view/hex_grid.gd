@@ -76,8 +76,14 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	# The map is the simulation's; follow it if a run brings another one.
-	if not Engine.is_editor_hint() and _shown_map() != _map:
+	if not Engine.is_editor_hint():
+		show_state()
+
+
+## Shows the state's map: the map is the simulation's, so the grid follows it if a run brings
+## another one. Called every frame; tests call it after changing the state.
+func show_state() -> void:
+	if _shown_map() != _map:
 		_build(_shown_map())
 
 

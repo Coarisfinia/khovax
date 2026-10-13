@@ -695,10 +695,28 @@ func _check_map_file() -> String:
 . ? .": "'?' in row 0 isn't a map symbol",
 		"origin 0 0
 . 2 .": "the player starts aren't numbered",
+		"origin nope 3
+. .": "a map file starts with",
+		"origin 0 0
+1 . 1": "player 1's start is marked twice",
 	}
 	for text: String in broken:
 		if not HexMap.parse(text).problem.begins_with(broken[text]):
 			return "map file %s gave: %s" % [text.c_escape(), HexMap.parse(text).problem]
+	# Tiles left of the origin and rows above it have negative coordinates.
+	var left: HexMap = HexMap.parse("origin 4 1
+~ ^
+1 . .")
+	var expected: Dictionary[Vector2i, int] = {
+		Vector2i(-1, -1): HexMap.WATER,
+		Vector2i(0, -1): HexMap.BLOCKED,
+		Vector2i(-2, 0): HexMap.GROUND,
+		Vector2i(-1, 0): HexMap.GROUND,
+		Vector2i(0, 0): HexMap.GROUND,
+	}
+	var start: Array[Vector2i] = [Vector2i(-2, 0)]
+	if left.terrain != expected or left.starts != start:
+		return "negative coordinates read as %s, starts %s" % [left.terrain, left.starts]
 	return ""
 
 

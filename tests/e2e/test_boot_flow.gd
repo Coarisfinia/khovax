@@ -22,6 +22,7 @@ func run(tree: SceneTree) -> String:
 		_check_cube_placement,
 		_check_cube_in_view,
 		_check_state_drives_view,
+		_check_terrain_colors,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -151,4 +152,30 @@ func _check_state_drives_view(main: Node) -> String:
 	var cube: HexPiece = main.get_node("Cube") as HexPiece
 	if cube.tile != driver.state.player(0).tile:
 		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player(0).tile]
+	return ""
+
+
+## The grid draws each tile in its terrain's color, and follows the state to another map.
+func _check_terrain_colors(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var map: HexMap = HexMap.disc(1)
+	map.terrain[Vector2i(1, 0)] = HexMap.WATER
+	map.terrain[Vector2i(-1, 0)] = HexMap.BLOCKED
+	driver.state.map = map
+	grid.show_state()
+	if grid.tile_count() != map.size():
+		return "the grid didn't follow the state to another map"
+	var expected: Dictionary[Vector2i, Color] = {
+		Vector2i(0, 0): grid.tile_color,
+		Vector2i(1, 0): grid.water_color,
+		Vector2i(-1, 0): grid.rock_color,
+	}
+	for tile: Vector2i in expected:
+		if grid.tile_color_of(tile) != expected[tile]:
+			return "tile %s is drawn %s, not its terrain's %s" % [
+				tile,
+				grid.tile_color_of(tile),
+				expected[tile],
+			]
 	return ""
