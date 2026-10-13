@@ -6,11 +6,17 @@ extends RefCounted
 const BASIC: String = "basic"
 
 
-## A new state for the named instance, or null for an unknown name.
+## A new state for the named instance, or null (with an error) for an unknown name or an invalid
+## feature order.
 static func create(instance_name: String, seed_value: int) -> GameState:
-	if instance_name == BASIC:
-		return basic(seed_value)
-	return null
+	var state: GameState = basic(seed_value) if instance_name == BASIC else null
+	if state == null:
+		push_error("unknown instance: " + instance_name)
+		return null
+	if not state.problem.is_empty():
+		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
+		return null
+	return state
 
 
 ## The current playground: a disc of radius 3, walking, and a trail.

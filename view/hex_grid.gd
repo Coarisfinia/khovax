@@ -65,6 +65,13 @@ func _ready() -> void:
 		_build()
 
 
+func _process(_delta: float) -> void:
+	# The map's size is the simulation's; follow it if a rule changes it during a run.
+	if not Engine.is_editor_hint() and driver != null and driver.state != null:
+		if driver.state.grid_radius != radius:
+			radius = driver.state.grid_radius
+
+
 ## Colors the tiles in `colors` and gives every other tile the tile color. Only tiles whose color
 ## changes are sent to the MultiMesh.
 func paint(colors: Dictionary[Vector2i, Color]) -> void:

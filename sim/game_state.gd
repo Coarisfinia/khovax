@@ -11,17 +11,21 @@ var grid_radius: int = 0
 var player_tile: Vector2i = Vector2i.ZERO
 ## The instance's features, in the order they step each tick.
 var features: Array[Feature] = []
-## What happened during the current tick, in order, for features later in the order.
+## What happened during the current tick, in order, for features later in the order. Transient:
+## cleared when a tick starts and derived from the tick's own changes, so it is not part of the
+## state's contract or its hash.
 var events: Array[RefCounted] = []
+## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
+## features and must not be run: Instances.create refuses it.
+var problem: String = ""
 
 
 func _init(radius: int, start: Vector2i, seed_value: int, ordered: Array[Feature]) -> void:
 	grid_radius = radius
 	player_tile = start
 	rng_seed = seed_value
-	var problem: String = order_problem(ordered)
+	problem = order_problem(ordered)
 	if not problem.is_empty():
-		push_error("invalid feature order: " + problem)
 		return
 	features = ordered
 	for each: Feature in features:

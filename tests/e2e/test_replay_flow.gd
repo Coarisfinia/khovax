@@ -23,6 +23,8 @@ func run(_tree: SceneTree) -> String:
 		_check_feature_order,
 		_check_switching_features,
 		_check_instance_without_trail,
+		_check_invalid_order_state,
+		_check_switch_within_tick,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -202,6 +204,42 @@ func _check_instance_without_trail() -> String:
 	return ""
 
 
+## A state built with an invalid order says why, has no features to run, and the instance factory
+## refuses unknown instances.
+func _check_invalid_order_state() -> String:
+	var trail_first: Array[Feature] = [TrailFeature.new(), MovementFeature.new()]
+	var state: GameState = GameState.new(RADIUS, START, 42, trail_first)
+	if state.problem.is_empty() or not state.features.is_empty():
+		return "a state with an invalid feature order looks runnable"
+	var valid: GameState = _state(42)
+	if not valid.problem.is_empty():
+		return "a valid state reports a problem: " + valid.problem
+	return ""
+
+
+## A rule switching a feature inside a tick applies to that feature's next step in the same tick:
+## a boss phase stepping before movement stops the player from moving on that very tick.
+func _check_switch_within_tick() -> String:
+	# Holding east, the first move arrives on tick 1 + MOVE_TICKS and the next one would start on
+	# that same tick. The boss phase begins exactly then: had the switch waited for the next tick,
+	# the second move would have started.
+	var ordered: Array[Feature] = [
+		BossPhase.new(1 + MovementFeature.MOVE_TICKS),
+		MovementFeature.new(),
+		TrailFeature.new(),
+	]
+	var state: GameState = GameState.new(RADIUS, START, 42, ordered)
+	Simulation.step(state, _commands(EAST))
+	var first: Vector2i = state.player_tile
+	for _tick: int in MovementFeature.MOVE_TICKS:
+		Simulation.step(state, _commands(EAST))
+	if first != START + Hex.DIRECTIONS[EAST]:
+		return "the player didn't move before the boss phase began"
+	if state.player_tile != first or _movement(state).enabled:
+		return "the boss phase didn't stop movement within its tick"
+	return ""
+
+
 ## Moves `moves` tiles in one direction, waiting for each move to arrive.
 func _walk(state: GameState, direction: int, moves: int) -> void:
 	for _move: int in moves:
@@ -245,3 +283,25 @@ func _moves() -> Array[int]:
 func _commands(direction: int) -> Array[Command]:
 	var commands: Array[Command] = [Command.new(direction)]
 	return commands
+
+
+## A test rule like a boss phase: from tick `from_tick` on, it switches movement off, inside the
+## tick and before movement steps.
+class BossPhase:
+	extends Feature
+
+	var from_tick: int = 0
+
+	func _init(start_tick: int) -> void:
+		from_tick = start_tick
+
+	func id() -> int:
+		return 1000
+
+	func step(state: GameState, _commands: Array[Command]) -> void:
+		if state.tick >= from_tick:
+			state.set_enabled(Features.MOVEMENT, false)
+
+	func hash_values() -> Array[int]:
+		var values: Array[int] = [from_tick]
+		return values

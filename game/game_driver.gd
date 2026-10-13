@@ -17,9 +17,8 @@ var _accumulated: float = 0.0
 
 
 func _ready() -> void:
+	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
 	state = Instances.create(instance, 0)
-	if state == null:
-		push_error("unknown instance: " + instance)
 
 
 func _process(delta: float) -> void:
