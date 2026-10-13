@@ -74,6 +74,9 @@ issue assigned to the owner. Nothing waits only in a chat. **Read the issue and 
 before starting work on it**: the owner decides things in comments, and the description alone can be
 out of date.
 
+**Tech debt comes before new features** (owner's rule). When picking the next issue, open
+`tech-debt` issues (refactors, cleanups, tooling, bugs) go first, then features.
+
 **Keep going without being asked.** Once a pull request is merged, take the next issue. Tech debt,
 refactors and bugs come before new features. Ask only for decisions that belong to the owner (game
 design, scope, security trade-offs).
@@ -137,8 +140,12 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Testing and CI
 
-- **e2e tests are full flows, not many small tests.** Start with a minimal runner of our own. Once
-  there are five or more full flows of real game mechanics, switch to a test framework (owner's rule).
+- **Every user flow has one coherent e2e test** (owner's rule): one flow for booting into the
+  world, one for moving on the hex grid, one for a full catch or combat encounter, and so on. A
+  change to an area extends the flow that covers it with new steps; a new flow file
+  (`tests/e2e/test_<flow>.gd`) is only for a new user flow. No collections of small unrelated tests.
+- **Start with a minimal runner of our own.** Once there are five or more full flows of real game
+  mechanics, switch to a test framework (owner's rule).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
 - **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
   runs Godot needs a `timeout`, and every job a `timeout-minutes`.
