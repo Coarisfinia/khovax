@@ -25,7 +25,7 @@ way; add to it when something bites.
   the agent needs (contents, pull requests, issues and workflows: write; actions: read), so it can't
   change settings even if the App could. `agent-gh` is `gh` with that token.
   The key is never read, printed, committed or sent anywhere except GitHub's token endpoint.
-- **Each clone or worktree**, once after creating it:
+- **Each clone**, once after cloning (its worktrees share the clone's config):
 
   ```sh
   git config user.name 'flixbox-ai-agent[bot]'
@@ -51,6 +51,12 @@ You own a pull request from the moment you open it until it is merged. "Pushed" 
 
 **One issue, one pull request** (owner's rule). Every pull request says `Closes #n` for its issue and
 is assigned to the owner (`--assignee Flixbox`).
+
+**Every branch is a worktree next to `main/`** (owner's rule, the same layout as the owner's other
+repositories). The container folder `project-khovax/` holds `main/` (the primary checkout, always on
+`main`), `assets/` (the `assets` branch) and one `<issue>-<slug>/` worktree per open branch, created
+with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
+Never create or switch branches inside `main/`.
 
 **One pull request at a time** (owner's rule). Never stack pull requests or work on two open ones in
 parallel: pull requests are squash-merged, which rewrites the history a stacked branch is built on. Open
@@ -102,8 +108,8 @@ background; only wait in the foreground for a result the very next step needs.
 - **Every pull request that changes what the player sees shows it** in its description as a
   screenshot. Render it locally with `godot --path . --write-movie <file>.png --quit-after 3`, since
   headless runs have no renderer. It writes numbered frames (`<file>00000000.png`, …); use the last
-  one, and publish it on the `assets` branch (an orphan branch that is
-  never merged): `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
+  one, and publish it on the `assets` branch (an orphan branch that is never merged), through the
+  `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead.
 
 ### After every push

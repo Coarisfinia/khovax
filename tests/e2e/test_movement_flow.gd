@@ -32,6 +32,8 @@ var _main: Node
 var _cube: PlayerView
 var _driver: GameDriver
 var _grid: HexGrid
+## Every tile the player has stood on in this flow: the start tile and every tile walked onto.
+var _walked: Dictionary[Vector2i, bool] = {}
 var _stick: TouchStick
 
 
@@ -57,6 +59,8 @@ func run(tree: SceneTree) -> String:
 	# Stepped by hand from here on.
 	_driver.set_process(false)
 	_cube.set_process(false)
+	_grid.set_process(false)
+	_walked = { _tile(): true }
 
 	var result: String = _check_bindings()
 	if result.is_empty():
@@ -210,6 +214,27 @@ func _hold(expected: Array[Vector2i], release: Callable) -> String:
 		return "visited %s, expected %s" % [visited, expected]
 	if not _cube.position.is_equal_approx(_cube.tile_position()):
 		return "the cube didn't come to rest on its tile"
+	for tile: Vector2i in visited:
+		_walked[tile] = true
+	return _check_trail()
+
+
+## The trail is exactly the start tile and every tile walked onto so far, and the grid shows those
+## tiles, and only those, in the trail color.
+func _check_trail() -> String:
+	var expected: Array[Vector2i] = []
+	expected.assign(_walked.keys())
+	expected.sort()
+	if _driver.state.trail_tiles() != expected:
+		return "the trail is %s, expected %s" % [_driver.state.trail_tiles(), expected]
+	_grid.show_state()
+	for tile: Vector2i in Hex.disc(_driver.state.grid_radius):
+		var color: Color = _grid.trail_color if _walked.has(tile) else _grid.tile_color
+		if _grid.tile_color_of(tile) != color:
+			return "tile %s isn't drawn in the %s color" % [
+				tile,
+				"trail" if _walked.has(tile) else "tile",
+			]
 	return ""
 
 
