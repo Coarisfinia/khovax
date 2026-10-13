@@ -13,6 +13,8 @@ env:
   # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
   GDSTYLE_VERSION: 0.3.3
   GDSTYLE_SHA256: afc3c7a1b9fba219a2eeb2b3896470babffe010b6cf9f3a8c9526a2f6155d64c
+  # Godot's export templates for GODOT_VERSION, from the release's SHA512-SUMS.txt.
+  GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
 
 jobs:
   headless:
@@ -86,3 +88,84 @@ jobs:
       - name: Run e2e tests
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
+
+  android:
+    # A debug APK to install on a phone (#59), exported with Godot's Android export templates, the
+    # Android SDK and Java already on the runner, and a throwaway debug key: no secrets.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+
+      - name: Cache the Android export templates
+        id: cache-templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-android-${{ env.GODOT_VERSION }}
+
+      - name: Download the Android export templates
+        # The archive holds every platform's templates; only Android's are kept, so the cache stays small.
+        if: steps.cache-templates.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
+          target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$target"
+          unzip -q -j /tmp/templates.tpz \
+            templates/android_debug.apk templates/android_release.apk templates/version.txt -d "$target"
+
+      - name: Point Godot at the runner's Android SDK and Java
+        run: |
+          mkdir -p ~/.config/godot
+          for file in editor_settings-4.tres "editor_settings-${GODOT_VERSION%.*}.tres"; do
+            cat > ~/.config/godot/"$file" <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          SETTINGS
+          done
+
+      - name: Make a throwaway debug key
+        run: |
+          keytool -genkeypair -v -keystore /tmp/debug.keystore -storepass android \
+            -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Import project
+        run: timeout 120 ~/godot/godot --headless --path . --import
+
+      - name: Export the debug APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          mkdir -p build
+          timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
+          test -s build/khovax.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: khovax-debug-apk
+          path: build/khovax.apk
+          retention-days: 14

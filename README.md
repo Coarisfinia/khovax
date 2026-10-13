@@ -23,6 +23,15 @@ manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash
 
 Open the project in Godot (`godot --path . --editor`), or run it directly with `godot --path .`.
 
+## On an Android phone
+
+CI builds a debug APK on every pull request and every push to `main`:
+1. Open the run on the repository's Actions tab (the `ci` workflow).
+2. Download the `khovax-debug-apk` artifact (a zip with `khovax.apk` inside; kept for 14 days).
+3. Copy the APK to the phone and open it. Android asks once to allow installs from that source (the file manager or browser).
+
+It's signed with a throwaway debug key made in each CI run. Installing a newer build over an older one fails because the keys differ, so uninstall the old one first.
+
 ## Tests
 
 The e2e tests run headless. A fresh checkout needs one import first:
