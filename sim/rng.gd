@@ -13,7 +13,9 @@ extends RefCounted
 const MASK: int = 0xffff_ffff
 ## 2^32: how many values one draw can give.
 const SPAN: int = 0x1_0000_0000
-const GOLDEN_GAMMA: int = 0x9e37_79b9
+## 2^32 divided by the golden ratio (0x9e3779b9), written in decimal: in hex, CI's check for float
+## literals would read its digits as an exponent.
+const GOLDEN_GAMMA: int = 2_654_435_769
 
 ## The generator's four 32-bit words.
 var words: Array[int] = [0, 0, 0, 0]
