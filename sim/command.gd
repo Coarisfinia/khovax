@@ -26,6 +26,11 @@ static func from_values(values: Array[int]) -> Command:
 	return Command.new(values[0])
 
 
+## Whether the command is one a player can give: no move, or one of the six directions.
+func is_valid() -> bool:
+	return move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
+
+
 ## The command of the player in `slot` this tick, or null: a slot without a command (no player
 ## there, or none received) does nothing.
 static func of(commands: Array[Command], slot: int) -> Command:

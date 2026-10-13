@@ -28,7 +28,7 @@ func _ready() -> void:
 	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
 	state = Instances.create(instance, 0)
 	if state != null:
-		recording = Replay.new(instance, 0, 1)
+		recording = Replay.new(instance, 0)
 		recording.begin(state)
 
 

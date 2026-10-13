@@ -34,16 +34,19 @@ var played: GameState
 var _last: Dictionary[int, Array] = {}
 
 
-## A replay of a run of this instance, seed and player count.
-func _init(instance_name: String = "", seed_number: int = 0, player_count: int = 1) -> void:
+## A replay of a run of this instance and seed.
+func _init(instance_name: String = "", seed_number: int = 0) -> void:
 	instance = instance_name
 	seed_value = seed_number
-	players = player_count
 
 
-## Starts recording from `state`, the run's starting state.
+## Starts recording from `state`, the run's starting state: its players and features.
 func begin(state: GameState) -> void:
 	features = _feature_ids(state)
+	players = 0
+	for each: Entity in state.entities:
+		if each.slot != Entity.NO_SLOT:
+			players += 1
 
 
 ## Records one tick, right after it ran with `commands`.
@@ -81,6 +84,9 @@ func play() -> String:
 		)
 	if problem.is_empty():
 		problem = _setup_problem()
+	# Without a final checkpoint, a cut-off replay would pass without any state being compared.
+	if problem.is_empty() and not checkpoints.has(ticks):
+		problem = "the replay has no checkpoint at its last tick %d" % ticks
 	if problem.is_empty():
 		problem = _run(true)
 	return problem
@@ -131,8 +137,8 @@ static func parse(text: String) -> Replay:
 		replay.problem = "not a replay"
 		return replay
 	var data: Dictionary = parsed
-	if not data.has_all(REQUIRED) or not data.get("changes") is Array:
-		replay.problem = "not a replay: it lacks one of %s or its changes" % [REQUIRED]
+	replay.problem = _shape_problem(data)
+	if not replay.problem.is_empty():
 		return replay
 	var format: int = _int(data["format"])
 	if format != FORMAT:
@@ -145,12 +151,50 @@ static func parse(text: String) -> Replay:
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
-	var hashes: Variant = data.get("checkpoints")
-	if hashes is Dictionary:
-		var by_tick: Dictionary = hashes
-		for tick: Variant in by_tick:
-			replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
+	var by_tick: Dictionary = data.get("checkpoints", {})
+	for tick: Variant in by_tick:
+		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
+
+
+## Why `data` doesn't have a replay's shape, or "": every field there and of its type, rather than
+## silently read as 0.
+static func _shape_problem(data: Dictionary) -> String:
+	if not data.has_all(REQUIRED):
+		return "not a replay: it lacks one of %s" % [REQUIRED]
+	for key: String in ["format", "rules", "players", "ticks"]:
+		if not _is_number(data[key]):
+			return "not a replay: its %s isn't a number" % key
+	if not data["seed"] is String or not str(data["seed"]).is_valid_int():
+		return "not a replay: its seed isn't a whole number"
+	for key: String in ["changes", "features"]:
+		if not _all_numbers(data.get(key)):
+			return "not a replay: its %s aren't a list of numbers" % key
+	var hashes: Variant = data.get("checkpoints", {})
+	if not hashes is Dictionary or not _valid_checkpoints(hashes):
+		return "not a replay: its checkpoints aren't ticks with hashes"
+	return ""
+
+
+static func _valid_checkpoints(by_tick: Dictionary) -> bool:
+	for tick: Variant in by_tick:
+		if not str(tick).is_valid_int() or not str(by_tick[tick]).is_valid_int():
+			return false
+	return true
+
+
+static func _is_number(value: Variant) -> bool:
+	return value is int or value is float
+
+
+static func _all_numbers(values: Variant) -> bool:
+	if not values is Array:
+		return false
+	var items: Array = values
+	for item: Variant in items:
+		if not _is_number(item):
+			return false
+	return true
 
 
 ## Why the replay can't be set up in this build, or "".
@@ -165,6 +209,10 @@ func _setup_problem() -> String:
 			return "a recorded command is out of order or outside the run"
 		if changes[i + 1] < 0 or changes[i + 1] >= players:
 			return "a recorded command is for slot %d of %d players" % [changes[i + 1], players]
+		var values: Array[int] = []
+		values.assign(changes.slice(i + 2, i + STRIDE))
+		if not Command.from_values(values).is_valid():
+			return "a recorded command at tick %d is invalid: %s" % [changes[i], values]
 	return ""
 
 
