@@ -1,9 +1,10 @@
 class_name GameDriver
 extends Node
-## Runs the simulation at its fixed tick rate. Real time only decides when ticks happen, never what
-## they do: each tick takes the local player's command (later also the network's or a replay's)
-## and steps the state. It processes before everything else (process_priority in main.tscn), so
-## the state is current when views draw.
+## Runs the simulation at its fixed tick rate, in lockstep (#38). Real time only decides when ticks
+## happen, never what they do: before each tick it polls its command sources (the local player,
+## later network peers or a replay), and runs the tick once every player's command for it is
+## known. It processes before everything else (process_priority in main.tscn), so the state is
+## current when views draw.
 
 ## After every tick, with the tick's number and the events the features raised in it, in order:
 ## how views learn about one-shot moments (a catch, a ring breaking) to play an effect. Every tick
@@ -13,12 +14,24 @@ signal ticked(tick: int, events: Array[RefCounted])
 
 ## Ticks one frame may run; more real time than this is dropped.
 const MAX_TICKS_PER_FRAME: int = 5
+## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
+const HASH_HISTORY: int = 100
 
 ## The instance to run, by name from Instances.
 @export var instance: String = Instances.BASIC
 @export var input: LocalInput
+## Players in the run, in slots 0 and up. Each slot needs a command source, or ticks wait for it.
+@export_range(1, GameState.MAX_PLAYERS) var players: int = 1
+## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
+@export_range(0, 20) var input_delay: int = 0
 
 var state: GameState
+## Where every slot's commands come from; the local player's by default. Tests replace them.
+var sources: Array[CommandSource] = []
+var schedule: CommandSchedule
+## The state hash after each of the last HASH_HISTORY ticks, by tick: the basis for spotting a
+## desync between players later.
+var hashes: Dictionary[int, int] = {}
 ## Every tick of this run so far, to play back (#35).
 var recording: Replay
 var _accumulated: float = 0.0
@@ -26,10 +39,13 @@ var _accumulated: float = 0.0
 
 func _ready() -> void:
 	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
-	state = Instances.create(instance, 0)
+	state = Instances.create(instance, 0, players)
 	if state != null:
 		recording = Replay.new(instance, 0)
 		recording.begin(state)
+	schedule = CommandSchedule.new(players, input_delay)
+	if input != null:
+		sources.append(LocalSource.new(input))
 
 
 func _process(delta: float) -> void:
@@ -44,24 +60,32 @@ func advance(delta: float) -> void:
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
 	var ticks: int = 0
-	while _accumulated >= tick_seconds and ticks < MAX_TICKS_PER_FRAME:
+	while _accumulated >= tick_seconds and ticks < MAX_TICKS_PER_FRAME and _step():
 		_accumulated -= tick_seconds
 		ticks += 1
-		# Indexed by slot; the other slots stay empty until co-op brings their commands.
-		var commands: Array[Command] = []
-		for _slot: int in input.slot:
-			commands.append(null)
-		commands.append(input.command(state))
-		Simulation.step(state, commands)
-		recording.record(state, commands)
-		# A copy: the simulation clears its list when the next tick starts.
-		var events: Array[RefCounted] = []
-		events.assign(state.events)
-		ticked.emit(state.tick, events)
 	# After a long frame (a hitch, a backgrounded tab), the rest of the time is dropped rather than
 	# caught up, which would freeze the game in a growing backlog. It only shifts when ticks run;
 	# what they do still depends on the commands alone.
 	_accumulated = minf(_accumulated, tick_seconds)
+
+
+## Runs the next tick if every player's command for it is known; returns whether it ran.
+func _step() -> bool:
+	var tick: int = state.tick + 1
+	for source: CommandSource in sources:
+		source.poll(schedule, tick, state)
+	if not schedule.is_complete(tick):
+		return false
+	var commands: Array[Command] = schedule.take(tick)
+	Simulation.step(state, commands)
+	recording.record(state, commands)
+	hashes[tick] = state.state_hash()
+	var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
+	# A copy: the simulation clears its list when the next tick starts.
+	var events: Array[RefCounted] = []
+	events.assign(state.events)
+	ticked.emit(state.tick, events)
+	return true
 
 
 ## How far real time is into the next tick, from 0 to 1: views draw between ticks with it.

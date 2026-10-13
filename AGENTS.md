@@ -198,11 +198,14 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   conversion. One-shot moments (a catch, a ring breaking, a hit) reach views as the tick's events
   through the driver's `ticked(tick, events)` signal (#34): every tick exactly once, in order,
   however many ticks a frame runs. Effects play from those; lasting looks come from the state.
-- **`game/`, the driver:** `GameDriver` runs whole ticks from accumulated real time and collects
-  the commands. Real time decides when ticks happen, never what they do. Later, network and replay
-  commands come in here too. It records every run (`GameDriver.recording`, a `Replay`, #35): the
-  instance, seed, players, rules version and features, every change of a slot's command, and the
-  state hash at checkpoints. `Replay.play()` plays one back headless and names the first
+- **`game/`, the driver:** `GameDriver` runs whole ticks from accumulated real time, in lockstep
+  (#38). Real time decides when ticks happen, never what they do. Before each tick it polls its
+  `CommandSource`s (the local player's `LocalSource`; later network peers or a replay), which put
+  commands into the `CommandSchedule` `input_delay` ticks ahead; a tick runs only once every
+  player's command for it is known, and a command once put is final. It keeps the last ticks' state
+  hashes (`hashes`) for desync checks. It records every run (`GameDriver.recording`, a `Replay`,
+  #35): the instance, seed, players, rules version and features, every change of a slot's command,
+  and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
 - A new mechanic puts its rules and data into a feature in `sim/features/` with a replay check, its
   controls into `input/` as commands, and its look into its own view in `view/` (like `TrailView`,
