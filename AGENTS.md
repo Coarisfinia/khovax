@@ -15,6 +15,10 @@ way; add to it when something bites.
 
 - **The repository is public.** Issues, pull requests, comments, commits, code and tests never
   contain personal data. Editing a slip away isn't enough, because GitHub keeps the edit history.
+- **No brand names of other games or products** in issues, pull requests, comments, commits, code,
+  tests or docs (owner's rule): describe the idea instead ("instanced maps", "comic-style cel
+  shading with ink outlines", "monster catching"). The tools the project uses (Godot, GitHub, scoop,
+  gdstyle, Codex) are dependencies, not references, and are fine.
 - **The agent works as `flixbox-ai-agent[bot]`** (the private GitHub App "Flixbox [AI Agent]"): it
   commits, pushes, opens and updates pull requests, comments and reads CI as the bot, never with the
   owner's account. Commits the owner makes by hand use the owner's GitHub noreply address, never the
@@ -147,12 +151,22 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
               game/ driver: fixed ticks
 ```
 
-- **`sim/`, the simulation:** the rules (`Simulation.step(state, commands)`), the state
-  (`GameState`) and the grid math (`Hex`). Plain `RefCounted` classes, integers only, durations in
-  ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`, `Engine`, `OS`, global
-  randomness, frame `delta` or `float`: CI greps for them. Randomness, once a rule needs it, comes
-  from a generator kept in `GameState`. `GameState.state_hash()` fingerprints the whole state; a
-  new field goes into the hash too.
+- **`sim/`, the simulation:** the core (`Simulation.step(state, commands)`, `GameState`, the grid
+  math `Hex`) and the features. Plain `RefCounted` classes (or subclasses of `sim/` classes),
+  integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
+  `Engine`, `OS`, global randomness, frame `delta` or `float`: CI greps for them. Randomness, once a
+  rule needs it, comes from a generator kept in `GameState`. `GameState.state_hash()` fingerprints
+  the whole state; a new value goes into the hash too (`Feature.hash_values()` for a feature's).
+- **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
+  off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
+  tick, the seed, the map, the player and the instance's features in their step order. A feature
+  (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
+  a `step` called in order each tick, the features it `requires` earlier in the order, and its
+  `hash_values`. Features talk through the tick's `events` (e.g. `PlayerMoved`), not by reaching
+  into each other. Whether a feature is on is state: only rules switch it, inside a tick
+  (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
+- **Instances** (`sim/instances/`): which map, which start and which features in which order. A new
+  mechanic is a new feature that instances list; it never grows the core.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   integers only. The starting state plus every tick's commands is a replay.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
@@ -164,8 +178,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **`game/`, the driver:** `GameDriver` runs whole ticks from accumulated real time and collects
   the commands. Real time decides when ticks happen, never what they do. Later, network and replay
   commands come in here too.
-- A new mechanic puts its rules and data into `sim/` with a replay check, its controls into
-  `input/` as commands, and its look into `view/`.
+- A new mechanic puts its rules and data into a feature in `sim/features/` with a replay check, its
+  controls into `input/` as commands, and its look into its own view in `view/` (like `TrailView`,
+  which paints the trail onto `HexGrid`; `HexGrid` itself only draws tiles).
 
 ## Lessons learned
 

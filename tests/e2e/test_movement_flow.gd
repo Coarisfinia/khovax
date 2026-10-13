@@ -7,7 +7,7 @@ extends RefCounted
 
 const STEP: float = 1.0 / 60.0
 ## Seconds to walk from one tile to the next.
-const MOVE_SECONDS: float = float(Simulation.MOVE_TICKS) / Simulation.TICKS_PER_SECOND
+const MOVE_SECONDS: float = float(MovementFeature.MOVE_TICKS) / Simulation.TICKS_PER_SECOND
 ## Long enough to walk further than the grid allows in any one direction.
 const HOLD_STEPS: int = 300
 const ACTIONS: Array[String] = ["move_up", "move_down", "move_left", "move_right"]
@@ -32,6 +32,7 @@ var _main: Node
 var _cube: PlayerView
 var _driver: GameDriver
 var _grid: HexGrid
+var _trail_view: TrailView
 ## Every tile the player has stood on in this flow: the start tile and every tile walked onto.
 var _walked: Dictionary[Vector2i, bool] = {}
 var _stick: TouchStick
@@ -52,14 +53,16 @@ func run(tree: SceneTree) -> String:
 	_cube = _main.get_node_or_null("Cube") as PlayerView
 	_driver = _main.get_node_or_null("Driver") as GameDriver
 	_grid = _main.get_node_or_null("HexGrid") as HexGrid
+	_trail_view = _main.get_node_or_null("TrailView") as TrailView
 	_stick = _main.get_node_or_null("Hud/TouchStick") as TouchStick
-	if _cube == null or _driver == null or _grid == null or _stick == null:
+	var nodes: Array[Node] = [_cube, _driver, _grid, _trail_view, _stick]
+	if nodes.has(null):
 		_main.queue_free()
-		return "the main scene needs a Cube with its Mover, a HexGrid and a Hud/TouchStick"
+		return "the main scene needs Cube, Driver, HexGrid, TrailView and Hud/TouchStick"
 	# Stepped by hand from here on.
 	_driver.set_process(false)
 	_cube.set_process(false)
-	_grid.set_process(false)
+	_trail_view.set_process(false)
 	_walked = { _tile(): true }
 
 	var result: String = _check_bindings()
@@ -225,11 +228,12 @@ func _check_trail() -> String:
 	var expected: Array[Vector2i] = []
 	expected.assign(_walked.keys())
 	expected.sort()
-	if _driver.state.trail_tiles() != expected:
-		return "the trail is %s, expected %s" % [_driver.state.trail_tiles(), expected]
-	_grid.show_state()
+	var trail: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	if trail.sorted_tiles() != expected:
+		return "the trail is %s, expected %s" % [trail.sorted_tiles(), expected]
+	_trail_view.show_state()
 	for tile: Vector2i in Hex.disc(_driver.state.grid_radius):
-		var color: Color = _grid.trail_color if _walked.has(tile) else _grid.tile_color
+		var color: Color = _trail_view.trail_color if _walked.has(tile) else _grid.tile_color
 		if _grid.tile_color_of(tile) != color:
 			return "tile %s isn't drawn in the %s color" % [
 				tile,

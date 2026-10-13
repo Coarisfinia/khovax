@@ -1,0 +1,8 @@
+class_name Features
+extends RefCounted
+## Stable numbers for every feature. They go into state hashes and replays, so a number is never
+## reused or changed once a feature has shipped.
+
+const NONE: int = 0
+const MOVEMENT: int = 1
+const TRAIL: int = 2
