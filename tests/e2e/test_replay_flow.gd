@@ -34,6 +34,8 @@ func run(_tree: SceneTree) -> String:
 		_check_rng_bounds,
 		_check_rolls_replay,
 		_check_streams_apart,
+		_check_rounding,
+		_check_largest_amounts,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -465,6 +467,54 @@ func _two_dice(rolls: int) -> GameState:
 ## The first `count` values of a freshly seeded stream.
 func _seeded_draws(seed_value: int, stream: int, count: int) -> Array[int]:
 	return _draws(Rng.new(seed_value, stream), count)
+
+
+## Every division rounds down, toward negative infinity, whatever the signs; ratios and scales
+## are in thousandths.
+func _check_rounding() -> String:
+	# Dividend, divisor, quotient rounded down.
+	var cases: Array[Vector3i] = [
+		Vector3i(7, 2, 3),
+		Vector3i(-7, 2, -4),
+		Vector3i(7, -2, -4),
+		Vector3i(-7, -2, 3),
+		Vector3i(6, 3, 2),
+		Vector3i(-6, 3, -2),
+		Vector3i(0, 5, 0),
+		Vector3i(-1, 1000, -1),
+	]
+	for each: Vector3i in cases:
+		if Fixed.div_floor(each.x, each.y) != each.z:
+			return "%d / %d gave %d, not %d" % [
+				each.x,
+				each.y,
+				Fixed.div_floor(each.x, each.y),
+				each.z,
+			]
+	if Fixed.ratio(1, 3) != 333 or Fixed.ratio(2, 3) != 666 or Fixed.ratio(-1, 3) != -334:
+		return "ratios in thousandths don't round down"
+	if Fixed.scale(10, 1500) != 15 or Fixed.scale(7, 500) != 3 or Fixed.scale(-7, 500) != -4:
+		return "scaling by thousandths doesn't round down"
+	# The design report's pressure: strength × hp / max_hp, here 300 × 2 / 3.
+	if Fixed.mul_div(300, 2, 3) != 200 or Fixed.mul_div(1, 1, 3) != 0:
+		return "multiply, then divide, lost or kept the wrong part"
+	return ""
+
+
+## The largest amounts the formulas can see multiply without overflowing.
+func _check_largest_amounts() -> String:
+	var most: int = Fixed.MAX_AMOUNT
+	if Fixed.mul_div(most, most, most) != most:
+		return "the largest amounts overflowed when multiplied"
+	if Fixed.mul_div(-most, most, 1) != -most * most:
+		return "the most negative product came out wrong"
+	# 10^18 / 7, rounded down.
+	if Fixed.mul_div(most, most, 7) != 142_857_142_857_142_857:
+		return "a large product divided wrongly"
+	# The design report's segment integrity: ring power × ONE / perimeter, at its extremes.
+	if Fixed.mul_div(most, Fixed.ONE, 1) != most * Fixed.ONE:
+		return "the largest ring power per segment overflowed"
+	return ""
 
 
 ## The next `count` 32-bit values.
