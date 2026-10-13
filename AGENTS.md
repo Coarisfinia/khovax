@@ -165,7 +165,9 @@ background; only wait in the foreground for a result the very next step needs.
 - **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
-- **Commit the `.uid` files** Godot creates next to scripts and resources.
+- **Commit the `.uid` files** Godot creates next to scripts and resources. Godot only writes them on an
+  import, so after adding a script run `godot --headless --path . --import` before committing. It
+  generates files rather than checking anything, so it doesn't fall under not rerunning CI locally.
 - **Pushing anything under `.github/workflows/` needs workflow rights.** The bot has them through the
   App's Workflows permission. For the owner's own login it is the `workflow` scope
   (`gh auth refresh -h github.com -s workflow`).
