@@ -37,6 +37,8 @@ func put(tick: int, slot: int, command: Command) -> void:
 
 
 func has(tick: int, slot: int) -> bool:
+	if slot < 0 or slot >= players:
+		return false
 	return _ticks.has(tick) and _ticks[tick][slot] != null
 
 

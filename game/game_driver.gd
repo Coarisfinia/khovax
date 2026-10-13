@@ -64,8 +64,10 @@ func advance(delta: float) -> void:
 		_accumulated -= tick_seconds
 		ticks += 1
 	# After a long frame (a hitch, a backgrounded tab), the rest of the time is dropped rather than
-	# caught up, which would freeze the game in a growing backlog. It only shifts when ticks run;
-	# what they do still depends on the commands alone.
+	# caught up, which would freeze the game in a growing backlog. Waiting for a late player's
+	# command works the same way: the game holds, at most one tick's time stays due, and once the
+	# command arrives that tick runs and the normal pace resumes, without a burst of catching up.
+	# This only shifts when ticks run; what they do still depends on the commands alone.
 	_accumulated = minf(_accumulated, tick_seconds)
 
 

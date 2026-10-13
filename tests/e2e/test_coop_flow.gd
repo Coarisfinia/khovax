@@ -1,8 +1,9 @@
 extends RefCounted
 ## Co-op flow (#38): two players in the main scene, both fed to the driver by command sources and
-## run in lockstep. They walk at once, each with its own trail and its own view. With an input
-## delay, commands land later and the game is exactly the plain run of those commands; a late
-## player's ticks wait for their commands, then catch up to the same game. Time is stepped by hand,
+## run in lockstep, with an input delay. They walk at once, each with its own trail and its own
+## view, and a key press moves the local player only once the delay has passed. The game is exactly
+## the plain run of the delayed commands; a late player's ticks wait for their commands, then the
+## game catches up to the same run. Time is stepped by hand,
 ## one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -21,7 +22,7 @@ var _views: Array[PlayerView] = []
 
 func run(tree: SceneTree) -> String:
 	_tree = tree
-	var result: String = await _start(0)
+	var result: String = await _start(DELAY)
 	if result.is_empty():
 		result = _check_two_players_walk()
 	_main.queue_free()
@@ -31,7 +32,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_input_delay()
 	_main.queue_free()
 	if result.is_empty():
-		result = await _start(0)
+		result = await _start(DELAY)
 	if result.is_empty():
 		result = _check_late_player()
 	_main.queue_free()
@@ -40,6 +41,7 @@ func run(tree: SceneTree) -> String:
 
 ## The local player walks east with the keys while the second player's source walks west, in the
 ## same ticks: each moves by its own slot's command, leaves its own trail, and has its own view.
+## The keys' first command lands only after the input delay: the first ticks stand still.
 func _check_two_players_walk() -> String:
 	var west: Array[int] = []
 	for _tick: int in TICKS:
@@ -47,7 +49,10 @@ func _check_two_players_walk() -> String:
 	_driver.sources = [LocalSource.new(_driver.input), ScriptedSource.new(1, west)]
 	var starts: Array[Vector2i] = [_driver.state.player(0).tile, _driver.state.player(1).tile]
 	Input.action_press("move_right")
-	_run_frames(TICKS)
+	_run_frames(DELAY)
+	if _driver.state.player(0).tile != starts[0]:
+		return "the local player moved before the input delay had passed"
+	_run_frames(TICKS - DELAY)
 	Input.action_release("move_right")
 	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
 	for slot: int in 2:
@@ -85,19 +90,29 @@ func _check_input_delay() -> String:
 	return ""
 
 
-## A player whose commands are late holds the game: no tick runs without them. Once they arrive,
-## the game catches up and is the same as if they had been on time.
+## A player whose commands are late holds the game: no tick runs without them past the delay's
+## head start, and waiting time doesn't pile up. Once they arrive, the game catches up at most one
+## held tick at a time and is the same as if they had been on time.
 func _check_late_player() -> String:
 	var late: ScriptedSource = ScriptedSource.new(1, _script(2))
 	late.missed_polls = LATE_POLLS
 	_driver.sources = [ScriptedSource.new(0, _script(1)), late]
+	# One poll a frame: the first DELAY frames run the delay's idle head start, the rest of the
+	# missed polls hold the game for the late player.
 	_run_frames(LATE_POLLS)
-	if _driver.state.tick != 0:
-		return "%d ticks ran without the late player's commands" % _driver.state.tick
+	if _driver.state.tick != DELAY or _driver.tick_fraction() != 1.0:
+		return "while waiting, %d ticks ran and time piled up to %f ticks" % [
+			_driver.state.tick,
+			_driver.tick_fraction(),
+		]
+	var before: int = _driver.state.tick
+	_driver.advance(STEP)
+	if _driver.state.tick - before > 2:
+		return "recovering ran %d ticks in one frame" % (_driver.state.tick - before)
 	for _frame: int in TICKS * 2:
 		if _driver.state.tick < TICKS:
 			_driver.advance(STEP)
-	if _driver.state.tick != TICKS or _driver.state.state_hash() != _plain_hash(0):
+	if _driver.state.tick != TICKS or _driver.state.state_hash() != _plain_hash(DELAY):
 		return "after catching up, the game isn't the on-time run"
 	return ""
 
@@ -142,9 +157,14 @@ func _plain_hash(delay: int) -> int:
 		var moves: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
 		if index >= 0:
 			moves = [first[index], second[index]]
-		var commands: Array[Command] = [Command.new(moves[0]), Command.new(moves[1])]
-		Simulation.step(state, commands)
+		Simulation.step(state, _commands(moves))
 	return state.state_hash()
+
+
+## One tick's commands for the two slots.
+func _commands(moves: Array[int]) -> Array[Command]:
+	var commands: Array[Command] = [Command.new(moves[0]), Command.new(moves[1])]
+	return commands
 
 
 ## A fixed mix of moves and pauses, different for each `variant`.
@@ -170,6 +190,9 @@ class ScriptedSource:
 		slot = player_slot
 		moves = scripted
 
+	static func _command(move: int) -> Command:
+		return Command.new(move)
+
 	func poll(schedule: CommandSchedule, tick: int, _state: GameState) -> void:
 		if missed_polls > 0:
 			missed_polls -= 1
@@ -177,5 +200,5 @@ class ScriptedSource:
 		while _next <= tick:
 			var index: int = _next - 1
 			var move: int = moves[index] if index < moves.size() else Command.NO_MOVE
-			schedule.put(_next + schedule.delay, slot, Command.new(move))
+			schedule.put(_next + schedule.delay, slot, _command(move))
 			_next += 1
