@@ -5,6 +5,8 @@ extends RefCounted
 ## the starting state, is a replay.
 
 const NO_MOVE: int = -1
+## How many integers a command is in a replay (to_values).
+const VALUE_COUNT: int = 1
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -12,6 +14,16 @@ var move: int = NO_MOVE
 
 func _init(direction: int = NO_MOVE) -> void:
 	move = direction
+
+
+## The command as integers, for replays: from_values turns them back into the same command.
+func to_values() -> Array[int]:
+	var values: Array[int] = [move]
+	return values
+
+
+static func from_values(values: Array[int]) -> Command:
+	return Command.new(values[0])
 
 
 ## The command of the player in `slot` this tick, or null: a slot without a command (no player

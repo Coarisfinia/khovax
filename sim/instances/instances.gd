@@ -14,10 +14,15 @@ const BASIC_STARTS: Array[Vector2i] = [
 ]
 
 
+## Whether an instance of this name exists.
+static func exists(instance_name: String) -> bool:
+	return instance_name == BASIC
+
+
 ## A new state for the named instance with `players` players in slots 0 and up, or null (with an
 ## error) for an unknown name, a player count out of range or an invalid feature order.
 static func create(instance_name: String, seed_value: int, players: int = 1) -> GameState:
-	if instance_name != BASIC:
+	if not exists(instance_name):
 		push_error("unknown instance: " + instance_name)
 		return null
 	var state: GameState = basic(seed_value, players)
