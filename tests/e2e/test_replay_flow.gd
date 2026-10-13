@@ -37,6 +37,11 @@ func run(_tree: SceneTree) -> String:
 		_check_rounding,
 		_check_largest_amounts,
 		_check_events_replay,
+		_check_replay_round_trip,
+		_check_replay_refusals,
+		_check_replay_validation,
+		_check_rehash,
+		_check_golden_replays,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -553,6 +558,116 @@ func _event_values(event: RefCounted) -> Array:
 		if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			values.append(event.get(property_name))
 	return values
+
+
+## A recorded run survives saving and loading, and plays back to exactly the same state; a
+## changed command makes playback name the first checkpoint that differs.
+func _check_replay_round_trip() -> String:
+	var recorded: Replay = _recorded_run()
+	var loaded: Replay = Replay.parse(recorded.to_text())
+	var problem: String = loaded.play()
+	if not problem.is_empty():
+		return "a saved and loaded replay didn't play back: " + problem
+	if loaded.played.state_hash() != recorded.played.state_hash():
+		return "the played-back run ended in another state than the recorded one"
+	var tampered: Replay = Replay.parse(recorded.to_text())
+	# The first change is tick 1, slot 0: walking another way changes the game from there.
+	tampered.changes[2] = (tampered.changes[2] + 2) % Hex.DIRECTIONS.size()
+	if not tampered.play().begins_with("tick %d:" % Replay.CHECKPOINT_TICKS):
+		return "a changed command played without a mismatch at the first checkpoint"
+	return ""
+
+
+## Playback refuses, with a clear message, what this build can't play as recorded.
+func _check_replay_refusals() -> String:
+	var text: String = _recorded_run().to_text()
+	var cases: Dictionary[String, String] = {
+		"not json": "not a replay",
+		"{}": "not a replay",
+		text.replace("\"format\": %d" % Replay.FORMAT, "\"format\": 99"): "replay format 99",
+		text.replace(
+			"\"rules\": %d" % Simulation.RULES_VERSION,
+			"\"rules\": 0",
+		): "recorded with rules",
+		text.replace("\"basic\"", "\"nowhere\""): "instance nowhere",
+		text.replace("\"players\": 2", "\"players\": 9"): "instance basic with 9 players",
+	}
+	for case: String in cases:
+		var problem: String = Replay.parse(case).play()
+		if not problem.begins_with(cases[case]):
+			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
+	return ""
+
+
+## Playback refuses replays it can't verify or whose values are malformed, rather than reading
+## them as zeros or playing commands a player can't give.
+func _check_replay_validation() -> String:
+	var recorded: Replay = _recorded_run()
+	var text: String = recorded.to_text()
+	var unchecked: Replay = Replay.parse(text)
+	var _erased: bool = unchecked.checkpoints.erase(unchecked.ticks)
+	var invalid_move: Replay = Replay.parse(text)
+	invalid_move.changes[2] = Hex.DIRECTIONS.size() + 3
+	var cases: Dictionary[String, String] = {
+		unchecked.to_text(): "the replay has no checkpoint at its last tick",
+		invalid_move.to_text(): "a recorded command at tick 1 is invalid",
+		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
+		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
+		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
+	}
+	for case: String in cases:
+		var problem: String = Replay.parse(case).play()
+		if not problem.begins_with(cases[case]):
+			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
+	return ""
+
+
+## Rehashing, as tests/replays/rehash.gd does for golden replays, fills in the checkpoints of a
+## replay that has only its start and commands; under unchanged rules they are the recorded ones.
+func _check_rehash() -> String:
+	var recorded: Replay = _recorded_run()
+	var bare: Replay = Replay.parse(recorded.to_text())
+	bare.checkpoints.clear()
+	var problem: String = bare.rehash()
+	if not problem.is_empty():
+		return "rehashing failed: " + problem
+	if bare.checkpoints != recorded.checkpoints:
+		return "rehashing under the same rules gave other checkpoints"
+	if not Replay.parse(bare.to_text()).play().is_empty():
+		return "a rehashed replay doesn't play back"
+	return ""
+
+
+## Every golden replay in tests/replays/ plays back to its recorded checkpoints. One that fails
+## means the rules changed what it does: on purpose, bump Simulation.RULES_VERSION and rehash
+## (tests/replays/rehash.gd), and say why in the pull request.
+func _check_golden_replays() -> String:
+	var folder: String = "res://tests/replays/"
+	var played: int = 0
+	for file_name: String in DirAccess.get_files_at(folder):
+		if file_name.ends_with(".replay"):
+			var text: String = FileAccess.get_file_as_string(folder + file_name)
+			var problem: String = Replay.parse(text).play()
+			if not problem.is_empty():
+				return "golden replay %s: %s" % [file_name, problem]
+			played += 1
+	if played == 0:
+		return "no golden replays in " + folder
+	return ""
+
+
+## A run of two players walking the scripted moves, recorded and played once.
+func _recorded_run() -> Replay:
+	var state: GameState = Instances.create(Instances.BASIC, 42, 2)
+	var recorded: Replay = Replay.new(Instances.BASIC, 42)
+	recorded.begin(state)
+	for direction: int in _moves():
+		var commands: Array[Command] = _slot_commands(direction, Command.NO_MOVE)
+		Simulation.step(state, commands)
+		recorded.record(state, commands)
+	recorded.finish(state)
+	recorded.played = state
+	return recorded
 
 
 ## The next `count` 32-bit values.

@@ -192,7 +192,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   however many ticks a frame runs. Effects play from those; lasting looks come from the state.
 - **`game/`, the driver:** `GameDriver` runs whole ticks from accumulated real time and collects
   the commands. Real time decides when ticks happen, never what they do. Later, network and replay
-  commands come in here too.
+  commands come in here too. It records every run (`GameDriver.recording`, a `Replay`, #35): the
+  instance, seed, players, rules version and features, every change of a slot's command, and the
+  state hash at checkpoints. `Replay.play()` plays one back headless and names the first
+  difference, or why this build can't play it (format, rules version, instance, features).
 - A new mechanic puts its rules and data into a feature in `sim/features/` with a replay check, its
   controls into `input/` as commands, and its look into its own view in `view/` (like `TrailView`,
   which paints the trail onto `HexGrid`; `HexGrid` itself only draws tiles).
@@ -248,6 +251,11 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository.
+- **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
+  matching means a change altered what the game does. If that is on purpose, bump
+  `Simulation.RULES_VERSION`, rehash them (`godot --headless --path . -s
+  res://tests/replays/rehash.gd`) and say in the pull request why the game plays out differently.
+  Never rehash to make a surprise go away.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
 
