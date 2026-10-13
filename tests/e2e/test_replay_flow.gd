@@ -110,7 +110,7 @@ func _check_hash_covers_fields() -> String:
 		"entity slot": func(state: GameState) -> void: state.player(0).slot += 1,
 		"entity tile.x": func(state: GameState) -> void: state.player(0).tile.x += 1,
 		"entity tile.y": func(state: GameState) -> void: state.player(0).tile.y += 1,
-		"an entity more": func(state: GameState) -> void: state.add_entity(Entity.NO_SLOT, START),
+		"an entity more": _add_unowned,
 		"walk from.x": func(state: GameState) -> void: _player_walk(state).from.x += 1,
 		"walk from.y": func(state: GameState) -> void: _player_walk(state).from.y += 1,
 		"walk ticks_left": func(state: GameState) -> void: _player_walk(state).ticks_left += 1,
@@ -273,10 +273,11 @@ func _check_players_move_at_once() -> String:
 		return "a slot without a command still moved its player"
 	var hashes: Array[int] = []
 	for _run: int in 2:
-		var run: GameState = Instances.basic(42, 2)
+		var replayed: GameState = Instances.basic(42, 2)
 		for direction: int in _moves():
-			Simulation.step(run, _slot_commands(direction, (direction + 2) % Hex.DIRECTIONS.size()))
-		hashes.append(run.state_hash())
+			var other: int = (direction + 2) % Hex.DIRECTIONS.size()
+			Simulation.step(replayed, _slot_commands(direction, other))
+		hashes.append(replayed.state_hash())
 	if hashes[0] != hashes[1]:
 		return "two players with the same commands gave different states"
 	return ""
@@ -353,8 +354,13 @@ func _state(seed_value: int) -> GameState:
 ## A state with these features and one player, in slot 0 on START.
 func _state_with(ordered: Array[Feature], seed_value: int) -> GameState:
 	var state: GameState = GameState.new(RADIUS, seed_value, ordered)
-	state.add_entity(0, START)
+	var _player: Entity = state.add_entity(0, START)
 	return state
+
+
+## Adds an entity no player owns.
+func _add_unowned(state: GameState) -> void:
+	var _added: Entity = state.add_entity(Entity.NO_SLOT, START)
 
 
 ## The tile of the player in slot 0.

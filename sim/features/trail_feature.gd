@@ -30,7 +30,7 @@ func entity_added(_state: GameState, added: Entity) -> void:
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
-	trails.erase(removed_id)
+	var _dropped: bool = trails.erase(removed_id)
 
 
 ## The entity's trail, or null when it has none.

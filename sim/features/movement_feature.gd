@@ -36,7 +36,7 @@ func entity_added(_state: GameState, added: Entity) -> void:
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
-	walks.erase(removed_id)
+	var _dropped: bool = walks.erase(removed_id)
 
 
 ## The entity's walk, or null when it doesn't walk.

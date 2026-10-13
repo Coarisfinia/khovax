@@ -38,5 +38,6 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 	var ordered: Array[Feature] = [MovementFeature.new(), TrailFeature.new()]
 	var state: GameState = GameState.new(3, seed_value, ordered)
 	for slot: int in players:
-		state.add_entity(slot, BASIC_STARTS[slot])
+		# Can't be refused: the count is checked above and every slot is new.
+		var _player: Entity = state.add_entity(slot, BASIC_STARTS[slot])
 	return state

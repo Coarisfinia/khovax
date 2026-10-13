@@ -38,8 +38,9 @@ func advance(delta: float) -> void:
 		ticks += 1
 		# Indexed by slot; the other slots stay empty until co-op brings their commands.
 		var commands: Array[Command] = []
-		commands.resize(input.slot + 1)
-		commands[input.slot] = input.command(state)
+		for _slot: int in input.slot:
+			commands.append(null)
+		commands.append(input.command(state))
 		Simulation.step(state, commands)
 	# After a long frame (a hitch, a backgrounded tab), the rest of the time is dropped rather than
 	# caught up, which would freeze the game in a growing backlog. It only shifts when ticks run;
