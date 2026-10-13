@@ -10,6 +10,8 @@ const HOLD_STEPS: int = 300
 const ACTIONS: Array[String] = ["move_up", "move_down", "move_left", "move_right"]
 ## Where the touch legs put their finger down, in screen pixels.
 const TOUCH_ORIGIN: Vector2 = Vector2(400.0, 300.0)
+## The steering finger: not 0, so a check that ignores the index would be caught.
+const FINGER: int = 1
 const PHYSICAL_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_W,
 	"move_down": KEY_S,
@@ -159,7 +161,7 @@ func _check_touch_paths() -> String:
 	result = _walk_by_touch(Vector2(TouchStick.RADIUS * 0.1, 0.0), [])
 	if not result.is_empty():
 		return "a tiny drag: " + result
-	return ""
+	return _check_touch_details()
 
 
 ## Holds the keys and checks the walk.
@@ -172,11 +174,8 @@ func _walk(keys: Array[String], expected: Array[Vector2i]) -> String:
 ## Touches the screen, drags by `drag` pixels and holds there, the way a thumb steers the touch
 ## stick, then checks the walk and that lifting the finger stops it.
 func _walk_by_touch(drag: Vector2, expected: Array[Vector2i]) -> String:
-	_send_touch(TOUCH_ORIGIN, true)
-	var moved: InputEventScreenDrag = InputEventScreenDrag.new()
-	moved.position = TOUCH_ORIGIN + drag
-	Input.parse_input_event(moved)
-	Input.flush_buffered_events()
+	_send_touch(FINGER, TOUCH_ORIGIN, true)
+	_send_drag(FINGER, TOUCH_ORIGIN + drag)
 	if not _stick.is_held():
 		return "the touch stick didn't pick up the finger"
 	var result: String = _hold(expected, _lift_finger)
@@ -211,15 +210,60 @@ func _hold(expected: Array[Vector2i], release: Callable) -> String:
 
 
 func _lift_finger() -> void:
-	_send_touch(TOUCH_ORIGIN, false)
+	_send_touch(FINGER, TOUCH_ORIGIN, false)
 
 
-func _send_touch(point: Vector2, pressed: bool) -> void:
+func _send_touch(finger: int, point: Vector2, pressed: bool, canceled: bool = false) -> void:
 	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.index = finger
 	touch.position = point
 	touch.pressed = pressed
+	touch.canceled = canceled
 	Input.parse_input_event(touch)
 	Input.flush_buffered_events()
+
+
+func _send_drag(finger: int, point: Vector2) -> void:
+	var drag: InputEventScreenDrag = InputEventScreenDrag.new()
+	drag.index = finger
+	drag.position = point
+	Input.parse_input_event(drag)
+	Input.flush_buffered_events()
+
+
+## Analog strength, a second finger, a canceled touch, and a key held through a touch.
+func _check_touch_details() -> String:
+	_send_touch(FINGER, TOUCH_ORIGIN, true)
+	_send_drag(FINGER, TOUCH_ORIGIN + Vector2(TouchStick.RADIUS * 0.5, 0.0))
+	var strength: float = Input.get_action_raw_strength("move_right")
+	# A second finger touching and dragging elsewhere must not take over the steering.
+	_send_touch(FINGER + 1, Vector2(900.0, 100.0), true)
+	_send_drag(FINGER + 1, Vector2(900.0, 300.0))
+	var kept: bool = _stick.steering().is_equal_approx(Vector2(0.5, 0.0))
+	_send_touch(FINGER + 1, Vector2(900.0, 300.0), false)
+	var still_held: bool = _stick.is_held()
+	_send_touch(FINGER, TOUCH_ORIGIN, true, true)
+	var canceled: bool = not _stick.is_held() and _input().is_zero_approx()
+	if not is_equal_approx(strength, 0.5):
+		return "half the drag radius pressed move_right at %f, not 0.5" % strength
+	if not kept or not still_held:
+		return "a second finger took over or ended the steering"
+	if not canceled:
+		return "a canceled touch didn't release the stick"
+	return _check_key_survives_touch()
+
+
+## A key held while a finger steers on the other axis stays held after the finger lifts.
+func _check_key_survives_touch() -> String:
+	Input.action_press("move_left")
+	_send_touch(FINGER, TOUCH_ORIGIN, true)
+	_send_drag(FINGER, TOUCH_ORIGIN + Vector2(0.0, TouchStick.RADIUS))
+	_send_touch(FINGER, TOUCH_ORIGIN, false)
+	var held: bool = Input.is_action_pressed("move_left")
+	Input.action_release("move_left")
+	if not held:
+		return "steering by touch released a key held at the same time"
+	return ""
 
 
 func _finish_step() -> void:

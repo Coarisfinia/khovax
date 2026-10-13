@@ -16,6 +16,8 @@ var _finger: int = -1
 var _origin: Vector2 = Vector2.ZERO
 ## Screen-space steering, x right and y up, at most length 1.
 var _steer: Vector2 = Vector2.ZERO
+## The movement actions the stick itself is pressing.
+var _own: Array[String] = []
 
 
 func _ready() -> void:
@@ -49,11 +51,13 @@ func steering() -> Vector2:
 
 
 func _on_touch(touch: InputEventScreenTouch) -> void:
-	if touch.pressed and not is_held():
+	# A touch the system cancels (e.g. for a gesture) ends like a lifted finger.
+	var down: bool = touch.pressed and not touch.canceled
+	if down and not is_held():
 		_finger = touch.index
 		_origin = touch.position
 		_steer_toward(touch.position)
-	elif not touch.pressed and touch.index == _finger:
+	elif not down and touch.index == _finger:
 		_finger = -1
 		_steer_toward(_origin)
 
@@ -67,11 +71,24 @@ func _steer_toward(point: Vector2) -> void:
 	queue_redraw()
 
 
-## Presses one of two opposite actions with the axis value's strength and releases the other.
+## Presses one of two opposite actions with the axis value's strength. Only actions the stick
+## pressed itself are released, so a key held at the same time stays held.
 func _press(positive: String, negative: String, value: float) -> void:
-	Input.action_release(positive)
-	Input.action_release(negative)
+	_release_own(positive)
+	_release_own(negative)
 	if value > 0.0:
-		Input.action_press(positive, value)
+		_press_own(positive, value)
 	elif value < 0.0:
-		Input.action_press(negative, -value)
+		_press_own(negative, -value)
+
+
+func _press_own(action: String, strength: float) -> void:
+	Input.action_press(action, strength)
+	if not _own.has(action):
+		_own.append(action)
+
+
+func _release_own(action: String) -> void:
+	if _own.has(action):
+		Input.action_release(action)
+		_own.erase(action)
