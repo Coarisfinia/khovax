@@ -1,10 +1,13 @@
 extends RefCounted
-## Movement flow: the movement actions walk the cube from tile to tile along a known path, gliding
-## between tiles without jumps, zigzagging along a column for straight up, and stopping at the
-## grid's edge. Real key events reach the actions too. Time is stepped by hand, so the flow is
-## deterministic.
+## Movement flow, through every layer: keys and the touch stick press the movement actions, the
+## local input turns them into commands, the simulation walks the player from tile to tile along a
+## known path, zigzagging along a column for straight up and stopping at the grid's edge, and the
+## view glides the cube between tiles without jumps. Real key and touch events reach the actions
+## too. Time is stepped by hand, so the flow is deterministic.
 
 const STEP: float = 1.0 / 60.0
+## Seconds to walk from one tile to the next.
+const MOVE_SECONDS: float = float(Simulation.MOVE_TICKS) / Simulation.TICKS_PER_SECOND
 ## Long enough to walk further than the grid allows in any one direction.
 const HOLD_STEPS: int = 300
 const ACTIONS: Array[String] = ["move_up", "move_down", "move_left", "move_right"]
@@ -26,8 +29,8 @@ const ARROW_KEYS: Dictionary[String, Key] = {
 }
 
 var _main: Node
-var _cube: HexPiece
-var _mover: HexMover
+var _cube: PlayerView
+var _driver: GameDriver
 var _grid: HexGrid
 var _stick: TouchStick
 
@@ -44,15 +47,16 @@ func run(tree: SceneTree) -> String:
 	_main = scene.instantiate()
 	tree.root.add_child(_main)
 	await tree.process_frame
-	_cube = _main.get_node_or_null("Cube") as HexPiece
-	_mover = _main.get_node_or_null("Cube/Mover") as HexMover
+	_cube = _main.get_node_or_null("Cube") as PlayerView
+	_driver = _main.get_node_or_null("Driver") as GameDriver
 	_grid = _main.get_node_or_null("HexGrid") as HexGrid
 	_stick = _main.get_node_or_null("Hud/TouchStick") as TouchStick
-	if _cube == null or _mover == null or _grid == null or _stick == null:
+	if _cube == null or _driver == null or _grid == null or _stick == null:
 		_main.queue_free()
 		return "the main scene needs a Cube with its Mover, a HexGrid and a Hud/TouchStick"
 	# Stepped by hand from here on.
-	_mover.set_process(false)
+	_driver.set_process(false)
+	_cube.set_process(false)
 
 	var result: String = _check_bindings()
 	if result.is_empty():
@@ -188,15 +192,15 @@ func _walk_by_touch(drag: Vector2, expected: Array[Vector2i]) -> String:
 ## checks the tiles visited, in order, and that the drawn position never jumped.
 func _hold(expected: Array[Vector2i], release: Callable) -> String:
 	# Starts with the tile the walk leaves from; dropped again before comparing.
-	var visited: Array[Vector2i] = [_cube.tile]
-	var max_step: float = Hex.SIZE * sqrt(3.0) * STEP / HexMover.STEP_SECONDS + 0.0001
+	var visited: Array[Vector2i] = [_tile()]
+	var max_step: float = HexLayout.SIZE * sqrt(3.0) * STEP / MOVE_SECONDS + 0.0001
 	var jumped: bool = false
 	for _i: int in HOLD_STEPS:
 		var before: Vector3 = _cube.position
-		_mover.advance(STEP, _input())
+		_step()
 		jumped = jumped or before.distance_to(_cube.position) > max_step
-		if visited[visited.size() - 1] != _cube.tile:
-			visited.append(_cube.tile)
+		if visited[visited.size() - 1] != _tile():
+			visited.append(_tile())
 	release.call()
 	_finish_step()
 	visited.pop_front()
@@ -263,13 +267,56 @@ func _check_key_survives_touch() -> String:
 	Input.action_release("move_left")
 	if not held:
 		return "steering by touch released a key held at the same time"
+	return _check_driver_timing()
+
+
+## The driver runs whole ticks from real time: a long frame runs at most MAX_TICKS_PER_FRAME ticks
+## and drops the rest, a remainder carries over to the next frame, and tick_fraction says how far
+## real time is into the next tick.
+func _check_driver_timing() -> String:
+	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
+	var start: int = _driver.state.tick
+	_driver.advance(60.0)
+	var long_frame_ticks: int = _driver.state.tick - start
+	# The capped frame leaves exactly one tick's time, which the next frame runs.
+	_driver.advance(0.0)
+	start = _driver.state.tick
+	_driver.advance(tick_seconds * 0.6)
+	var early_ticks: int = _driver.state.tick - start
+	var early_fraction: float = _driver.tick_fraction()
+	_driver.advance(tick_seconds * 0.6)
+	var carried_ticks: int = _driver.state.tick - start
+	var carried_fraction: float = _driver.tick_fraction()
+	if long_frame_ticks != GameDriver.MAX_TICKS_PER_FRAME:
+		return "a 60 s frame ran %d ticks, not %d" % [
+			long_frame_ticks,
+			GameDriver.MAX_TICKS_PER_FRAME,
+		]
+	if early_ticks != 0 or not is_equal_approx(early_fraction, 0.6):
+		return "0.6 of a tick ran %d ticks with fraction %f" % [early_ticks, early_fraction]
+	if carried_ticks != 1 or not is_equal_approx(carried_fraction, 0.2):
+		return "the remainder didn't carry over: %d ticks, fraction %f" % [
+			carried_ticks,
+			carried_fraction,
+		]
 	return ""
 
 
 func _finish_step() -> void:
-	var steps: int = ceili(HexMover.STEP_SECONDS / STEP) + 1
+	var steps: int = ceili(MOVE_SECONDS / STEP) + 2
 	for _i: int in steps:
-		_mover.advance(STEP, Vector2.ZERO)
+		_step()
+
+
+## One frame: the driver runs the ticks it adds up to, and the view draws the state.
+func _step() -> void:
+	_driver.advance(STEP)
+	_cube.show_state()
+
+
+## The player's tile in the simulation.
+func _tile() -> Vector2i:
+	return _driver.state.player_tile
 
 
 func _release_all() -> void:

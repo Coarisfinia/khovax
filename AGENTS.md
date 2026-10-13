@@ -74,8 +74,14 @@ issue assigned to the owner. Nothing waits only in a chat. **Read the issue and 
 before starting work on it**: the owner decides things in comments, and the description alone can be
 out of date.
 
+**`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
+everything else, tech debt included.
+
 **Tech debt comes before new features** (owner's rule). When picking the next issue, open
 `tech-debt` issues (refactors, cleanups, tooling, bugs) go first, then features.
+
+**Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
+owner.
 
 **Keep going without being asked.** Once a pull request is merged, take the next issue. Tech debt,
 refactors and bugs come before new features. Ask only for decisions that belong to the owner (game
@@ -124,6 +130,37 @@ background; only wait in the foreground for a result the very next step needs.
   the owner's approval, never enable auto-merge. The approval stays valid through later pushes (owner's
   rule), so check the comments again before enabling auto-merge after a fix.
 
+## Architecture
+
+Game logic and control logic are strictly separated (owner's rule, #26), so that the same start
+and the same commands always give the same game: for replays, lockstep co-op and tests.
+
+```
+devices -> input/ -> Command -> sim/ -> GameState -> view/
+                        ^
+              game/ driver: fixed ticks
+```
+
+- **`sim/`, the simulation:** the rules (`Simulation.step(state, commands)`), the state
+  (`GameState`) and the grid math (`Hex`). Plain `RefCounted` classes, integers only, durations in
+  ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`, `Engine`, `OS`, global
+  randomness, frame `delta` or `float`: CI greps for them. Randomness, once a rule needs it, comes
+  from a generator kept in `GameState`. `GameState.state_hash()` fingerprints the whole state; a
+  new field goes into the hash too.
+- **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
+  integers only. The starting state plus every tick's commands is a replay.
+- **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
+  (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
+  command, and `HexInput.direction_toward` is where floats become a hex direction.
+- **`view/`, the presentation:** scenes that read the state and draw it, interpolating between ticks
+  (`GameDriver.tick_fraction()`). They never write the state. `HexLayout` is the only tile-to-world
+  conversion.
+- **`game/`, the driver:** `GameDriver` runs whole ticks from accumulated real time and collects
+  the commands. Real time decides when ticks happen, never what they do. Later, network and replay
+  commands come in here too.
+- A new mechanic puts its rules and data into `sim/` with a replay check, its controls into
+  `input/` as commands, and its look into `view/`.
+
 ## Lessons learned
 
 ### Game architecture
@@ -144,9 +181,7 @@ background; only wait in the foreground for a result the very next step needs.
   in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
 - **The headless renderer is a dummy**: a MultiMesh's instance transforms can't be read back, so
   code that tests need to inspect keeps its own copy of what it gave the renderer.
-- **The simulation is deterministic**: integer or fixed-point math only, fixed ticks, one seeded RNG
-  that lives in the simulation state, no Godot physics in gameplay. Simulation code is pure (no
-  nodes); rendering only reads its state.
+- **The simulation is deterministic**: see "Architecture" above. No Godot physics in gameplay.
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
