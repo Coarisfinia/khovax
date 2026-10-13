@@ -55,8 +55,10 @@ func _check_key_reaches_action() -> String:
 	Input.parse_input_event(key)
 	Input.flush_buffered_events()
 	var pressed: bool = Input.is_action_pressed("move_right")
-	key.pressed = false
-	Input.parse_input_event(key)
+	# A fresh event: Godot refuses to parse the same event object twice in one frame.
+	var release: InputEventKey = key.duplicate() as InputEventKey
+	release.pressed = false
+	Input.parse_input_event(release)
 	Input.flush_buffered_events()
 	if not pressed:
 		return "pressing D doesn't press move_right"
@@ -65,24 +67,24 @@ func _check_key_reaches_action() -> String:
 
 ## Each walk starts where the previous one stopped: (1, -1) is the cube's start tile.
 func _check_paths() -> String:
-	var walks: Array[Dictionary] = [
-		{ "keys": ["move_left"], "path": [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)] },
-		{"keys": ["move_right"], "path": [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1),
-				Vector2i(2, -1), Vector2i(3, -1)]},
+	var walks: Array[Walk] = [
+		Walk.new(["move_left"], [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)]),
+		Walk.new(
+			["move_right"],
+			[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(2, -1), Vector2i(3, -1)],
+		),
 		# Straight up from an odd row starts north-west; the next north-east step would leave the
 		# grid.
-		{ "keys": ["move_up"], "path": [Vector2i(3, -2)] },
-		{"keys": ["move_down", "move_left"], "path": [Vector2i(2, -1), Vector2i(1, 0),
-				Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)]},
+		Walk.new(["move_up"], [Vector2i(3, -2)]),
+		Walk.new(
+			["move_down", "move_left"],
+			[Vector2i(2, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)],
+		),
 	]
-	for walk: Dictionary in walks:
-		var keys: Array[String] = []
-		keys.assign(walk["keys"])
-		var expected: Array[Vector2i] = []
-		expected.assign(walk["path"])
-		var result: String = _walk(keys, expected)
+	for walk: Walk in walks:
+		var result: String = _walk(walk.keys, walk.path)
 		if not result.is_empty():
-			return "holding %s: %s" % [keys, result]
+			return "holding %s: %s" % [walk.keys, result]
 	return ""
 
 
@@ -91,14 +93,15 @@ func _check_paths() -> String:
 func _walk(keys: Array[String], expected: Array[Vector2i]) -> String:
 	for key: String in keys:
 		Input.action_press(key)
-	var visited: Array[Vector2i] = []
+	# Starts with the tile the walk leaves from; dropped again before comparing.
+	var visited: Array[Vector2i] = [_cube.tile]
 	var max_step: float = Hex.SIZE * sqrt(3.0) * STEP / HexMover.STEP_SECONDS + 0.0001
 	var jumped: bool = false
 	for _i: int in HOLD_STEPS:
 		var before: Vector3 = _cube.position
 		_mover.advance(STEP, _input())
 		jumped = jumped or before.distance_to(_cube.position) > max_step
-		if visited.is_empty() or visited[visited.size() - 1] != _cube.tile:
+		if visited[visited.size() - 1] != _cube.tile:
 			visited.append(_cube.tile)
 	_release_all()
 	_finish_step()
@@ -121,3 +124,15 @@ func _finish_step() -> void:
 func _release_all() -> void:
 	for action: String in ACTIONS:
 		Input.action_release(action)
+
+
+## One leg of the walk: the actions held, and the tiles the cube must visit, in order.
+class Walk:
+	extends RefCounted
+
+	var keys: Array[String]
+	var path: Array[Vector2i]
+
+	func _init(held: Array[String], tiles: Array[Vector2i]) -> void:
+		keys = held
+		path = tiles
