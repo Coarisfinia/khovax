@@ -689,24 +689,17 @@ func _check_map_file() -> String:
 		return "maps/basic.map isn't the disc of radius 3 with its four starts"
 	var broken: Dictionary[String, String] = {
 		". . .": "a map file starts with",
-		"origin 0 0
-. .. .": "'.' in row 0 sits between two tiles",
-		"origin 0 0
-. ? .": "'?' in row 0 isn't a map symbol",
-		"origin 0 0
-. 2 .": "the player starts aren't numbered",
-		"origin nope 3
-. .": "a map file starts with",
-		"origin 0 0
-1 . 1": "player 1's start is marked twice",
+		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
+		"origin 0 0\n. ? .": "'?' in row 0 isn't a map symbol",
+		"origin 0 0\n. 2 .": "the player starts aren't numbered",
+		"origin nope 3\n. .": "a map file starts with",
+		"origin 0 0\n1 . 1": "player 1's start is marked twice",
 	}
 	for text: String in broken:
 		if not HexMap.parse(text).problem.begins_with(broken[text]):
 			return "map file %s gave: %s" % [text.c_escape(), HexMap.parse(text).problem]
 	# Tiles left of the origin and rows above it have negative coordinates.
-	var left: HexMap = HexMap.parse("origin 4 1
-~ ^
-1 . .")
+	var left: HexMap = HexMap.parse("origin 4 1\n ~ ^\n1 . .")
 	var expected: Dictionary[Vector2i, int] = {
 		Vector2i(-1, -1): HexMap.WATER,
 		Vector2i(0, -1): HexMap.BLOCKED,
