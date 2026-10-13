@@ -100,7 +100,7 @@ a { color: var(--accent); }
 <header class="hero">
   <p class="eyebrow">Design report · codename khovax</p>
   <h1>Catch, don't fight.</h1>
-  <p class="lede">A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings around them. Your companions do the fighting, the simulation is fully deterministic, and co-op runs PoE-style instances on web, mobile and PC.</p>
+  <p class="lede">A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings around them. Your companions do the fighting, the simulation is fully deterministic, and co-op runs seeded, instanced maps on web, mobile and PC.</p>
   <div class="meta"><span>Status: pre-production, nothing implemented</span><span>Last updated: 2026-10-13</span><span>Engine: Godot 4 · GDScript</span></div>
   <div class="legend-row"><span><span class="badge dec">Decided</span> agreed in design talks</span><span><span class="badge pro">Proposed</span> suggestion, not yet confirmed</span></div>
   <ol class="toc">
@@ -359,7 +359,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <p>Co-op maximum: 4 players × 3 companions = 12 on screen. That's manageable because they only false swipe by default.</p>
 
 <h3>When a companion faints</h3>
-<p>A fainted companion is out for the rest of the instance and returns at the hub. An optional <strong>hardcore league</strong> with permadeath sits alongside, PoE style.</p>
+<p>A fainted companion is out for the rest of the instance and returns at the hub. An optional <strong>hardcore league</strong> with permadeath sits alongside.</p>
 
 <h2 id="toolkit"><span class="n">06</span>Player toolkit</h2>
 <p>The player's abilities come from companion passives and crafting, never from attacking directly. All of them plug into the ring system:</p>
@@ -383,7 +383,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 
 <h2 id="world"><span class="n">08</span>World &amp; co-op <span class="badge dec">Decided</span></h2>
 <ul>
-  <li><strong>PoE-style instances.</strong> A hub plus seeded instanced maps. Seed plus party inputs fully determine a run, so replays and shareable seeds come for free.</li>
+  <li><strong>Instanced maps.</strong> A hub plus seeded instanced maps. Seed plus party inputs fully determine a run, so replays and shareable seeds come for free.</li>
   <li><strong>Single player is the default,</strong> with co-op for up to 4 players. In single player the simulation runs locally with no network layer.</li>
   <li><strong>Lockstep netcode.</strong> Clients send only inputs, with a small input delay. The slow pacing hides it well.</li>
   <li><strong>Transport:</strong> browsers only allow WebSocket or WebRTC. Start with a small WebSocket relay that only forwards inputs. Later it can run the same simulation headless to verify. <span class="badge dec">Decided</span></li>
@@ -428,6 +428,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
       <li><strong>Driver</strong> (<code>game/</code>): runs whole ticks from real time. Real time decides when ticks happen, never what they do.</li>
     </ul>
   </li>
+  <li><strong>Every game rule is a modular feature</strong> <span class="badge dec">Decided</span> (#30): movement, the trail, and later catching, rings and monsters. An instance lists the features it has. Each one can be switched on or off, also during a run, so a boss stage can enable and disable mechanics on the fly. The core holds no game rule.</li>
   <li>The starting state plus every tick's commands is a replay. The same replay always ends with the same state hash, which is the basis for lockstep co-op and desync detection.</li>
   <li>Godot physics is never used for gameplay because it isn't deterministic across platforms.</li>
   <li>All randomness comes from one seeded RNG that lives in the simulation state.</li>
@@ -437,7 +438,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <h3>Rendering</h3>
 <ul>
   <li><strong>Compatibility renderer everywhere.</strong> The web only supports Compatibility (WebGL2), so one look across all platforms means building for it from the start.</li>
-  <li><strong>Borderlands-style cel shading:</strong> a toon ramp with 2–3 hard light bands, inverted-hull outlines and painted hatching textures. No screen-space edge detection, which is expensive or unavailable in Compatibility.</li>
+  <li><strong>Comic-style cel shading:</strong> a toon ramp with 2–3 hard light bands, inverted-hull outlines and painted hatching textures. No screen-space edge detection, which is expensive or unavailable in Compatibility.</li>
   <li>A slow, fixed camera keeps even weak phones comfortable.</li>
 </ul>
 
@@ -500,11 +501,11 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <tr><td>Killed wild monsters</td><td>Grey, uncatchable, drop materials</td><td>A real "catch or harvest" decision</td></tr>
 <tr><td>Abilities</td><td>Each species has a player passive and a self passive</td><td>The team is the build</td></tr>
 <tr><td>Slots</td><td>1 at start, +1 lore quest, +1 at level 50 with a quest</td><td>Paced build growth</td></tr>
-<tr><td>Fainting</td><td>Out for the instance; optional hardcore league</td><td>Forgiving default, PoE-style challenge</td></tr>
+<tr><td>Fainting</td><td>Out for the instance; optional hardcore league</td><td>Forgiving default, with an opt-in hard challenge</td></tr>
 <tr><td>Co-op</td><td>Up to 4 players, single player default</td><td>Lockstep stays simple</td></tr>
 <tr><td>Camera</td><td>Extremely slow, fixed angle, no shake, low acceleration, dead zone. No room-by-room mode</td><td>Motion sickness. Room-by-room doesn't fit the many screen sizes (phone, PC)</td></tr>
 <tr><td>Transport</td><td>WebSocket relay that forwards inputs only</td><td>Works in browsers, simpler than WebRTC</td></tr>
-<tr><td>Art</td><td>Cartoony, Borderlands-style cel shading</td><td>Distinct look that works in the Compatibility renderer</td></tr>
+<tr><td>Art</td><td>Cartoony, comic-style cel shading with ink outlines</td><td>Distinct look that works in the Compatibility renderer</td></tr>
 <tr><td>Legendaries</td><td>Covenant, echo trail and field journal mechanics</td><td>Variety beyond the core ring</td></tr>
 <tr><td>Process</td><td>Solo, Claude-centric, GitHub, heavy headless e2e testing</td><td>Fast iteration with confidence</td></tr>
 <tr><td>Installs</td><td>scoop</td><td>Windows dev machine; Homebrew isn't available</td></tr>

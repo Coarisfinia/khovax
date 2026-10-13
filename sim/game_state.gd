@@ -1,62 +1,76 @@
 class_name GameState
 extends RefCounted
-## Everything the simulation knows, in integers. The presentation reads it and never writes it.
+## The core of the simulation's state, in integers: the tick, the seed, the map and the player,
+## plus the instance's features, which hold every game rule and their own state. The core holds no
+## game rule itself. The presentation reads the state and never writes it.
 ## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
 
 var tick: int = 0
 var rng_seed: int = 0
 var grid_radius: int = 0
 var player_tile: Vector2i = Vector2i.ZERO
-## The tile the player's current move started from.
-var move_from: Vector2i = Vector2i.ZERO
-## Ticks until the player's current move arrives; 0 when standing on `player_tile`.
-var move_ticks_left: int = 0
-## Every tile the player has stood on or moved onto, as a set: the trail that rings are drawn with.
-var trail: Dictionary[Vector2i, bool] = {}
+## The instance's features, in the order they step each tick.
+var features: Array[Feature] = []
+## What happened during the current tick, in order, for features later in the order.
+var events: Array[RefCounted] = []
 
 
-func _init(radius: int, start: Vector2i, seed_value: int) -> void:
+func _init(radius: int, start: Vector2i, seed_value: int, ordered: Array[Feature]) -> void:
 	grid_radius = radius
 	player_tile = start
-	move_from = start
 	rng_seed = seed_value
-	trail[start] = true
+	var problem: String = order_problem(ordered)
+	if not problem.is_empty():
+		push_error("invalid feature order: " + problem)
+		return
+	features = ordered
+	for each: Feature in features:
+		each.start(self)
+
+
+## Why `ordered` isn't a valid feature order (a feature twice, or one before a feature it
+## requires), or "" when it is.
+static func order_problem(ordered: Array[Feature]) -> String:
+	var seen: Array[int] = []
+	for each: Feature in ordered:
+		if seen.has(each.id()):
+			return "feature %d appears twice" % each.id()
+		for needed: int in each.requires():
+			if not seen.has(needed):
+				return "feature %d needs feature %d before it" % [each.id(), needed]
+		seen.append(each.id())
+	return ""
 
 
 func has_tile(tile: Vector2i) -> bool:
 	return Hex.distance(Vector2i.ZERO, tile) <= grid_radius
 
 
-func is_moving() -> bool:
-	return move_ticks_left > 0
+## The instance's feature with this id from Features, or null when the instance doesn't have it.
+func feature(id: int) -> Feature:
+	for candidate: Feature in features:
+		if candidate.id() == id:
+			return candidate
+	return null
 
 
-## The trail's tiles, sorted, so their order never depends on how the trail was walked.
-func trail_tiles() -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
-	tiles.assign(trail.keys())
-	tiles.sort()
-	return tiles
+## Switches a feature on or off. Only rules call this, inside a tick; it applies from the
+## feature's next step on. Does nothing for a feature the instance doesn't have.
+func set_enabled(id: int, on: bool) -> void:
+	var target: Feature = feature(id)
+	if target != null:
+		target.enabled = on
 
 
 ## A fingerprint of the whole state, the same on every platform: two runs from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every field, in integers only.
+## every core value and, in order, every feature's id, on/off and state.
 func state_hash() -> int:
-	var values: Array[int] = [
-		tick,
-		rng_seed,
-		grid_radius,
-		player_tile.x,
-		player_tile.y,
-		move_from.x,
-		move_from.y,
-		move_ticks_left,
-		trail.size(),
-	]
-	for tile: Vector2i in trail_tiles():
-		values.append(tile.x)
-		values.append(tile.y)
+	var values: Array[int] = [tick, rng_seed, grid_radius, player_tile.x, player_tile.y]
+	for each: Feature in features:
+		values.append(each.id())
+		values.append(1 if each.enabled else 0)
+		values.append_array(each.hash_values())
 	var result: int = 2_166_136_261
 	for value: int in values:
 		result = _mix(result, value & 0xffff_ffff)

@@ -1,5 +1,5 @@
-## A flat hex grid of `radius` rings around the origin, one hexagonal tile per cell. Tiles on the
-## simulation's trail show in the trail color.
+## A flat hex grid of `radius` rings around the origin, one hexagonal tile per cell. It only draws
+## tiles: features color tiles through `paint` (e.g. TrailView), and know nothing about each other.
 ## A tool script, so the grid also shows in the editor.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
@@ -13,30 +13,27 @@ const TILE_HEIGHT: float = 0.1
 ## Tiles are drawn slightly smaller than their cell, so the gaps read as grid lines.
 const TILE_SCALE: float = 0.94
 const TILES_NODE: String = "Tiles"
-const NO_TRAIL: Dictionary[Vector2i, bool] = {}
+const NO_PAINT: Dictionary[Vector2i, Color] = {}
 
 @export_range(0, 12) var radius: int = 3:
 	set(value):
 		radius = value
 		if is_node_ready():
 			_build()
-## The grid shows the size and the trail of this driver's simulation; without one (e.g. in the
-## editor), `radius` and no trail.
+## The grid shows the size of this driver's map; without one (e.g. in the editor), `radius`.
 @export var driver: GameDriver
+## The color of every tile nothing paints.
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
 		if is_node_ready():
-			_show_trail(_current_trail())
-@export var trail_color: Color = Color(0.86, 0.74, 0.36):
-	set(value):
-		trail_color = value
-		if is_node_ready():
-			_show_trail(_current_trail())
+			paint(_paint)
 
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
 var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
+## The colors last painted onto tiles.
+var _paint: Dictionary[Vector2i, Color] = {}
 ## Each tile's MultiMesh instance, transform and color, as given to the MultiMesh. Kept here
 ## because a MultiMesh can't be read back under the headless dummy renderer.
 var _index: Dictionary[Vector2i, int] = {}
@@ -68,14 +65,15 @@ func _ready() -> void:
 		_build()
 
 
-func _process(_delta: float) -> void:
-	if not Engine.is_editor_hint():
-		show_state()
-
-
-## Colors the tiles from the current state. Called every frame; tests call it after stepping.
-func show_state() -> void:
-	_show_trail(_current_trail())
+## Colors the tiles in `colors` and gives every other tile the tile color. Only tiles whose color
+## changes are sent to the MultiMesh.
+func paint(colors: Dictionary[Vector2i, Color]) -> void:
+	_paint = colors
+	for tile: Vector2i in _index:
+		var color: Color = colors.get(tile, tile_color)
+		if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
+			_colors[tile] = color
+			_tiles.multimesh.set_instance_color(_index[tile], color)
 
 
 func has_tile(tile: Vector2i) -> bool:
@@ -118,21 +116,4 @@ func _build() -> void:
 		_index[tile] = i
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
-	_show_trail(_current_trail())
-
-
-## The driver's trail, or none without a driver (e.g. in the editor).
-func _current_trail() -> Dictionary[Vector2i, bool]:
-	if driver != null and driver.state != null:
-		return driver.state.trail
-	return NO_TRAIL
-
-
-## Gives every tile its color: the trail color on the trail, the tile color elsewhere. Only tiles
-## whose color changes are sent to the MultiMesh.
-func _show_trail(trail: Dictionary[Vector2i, bool]) -> void:
-	for tile: Vector2i in _index:
-		var color: Color = trail_color if trail.has(tile) else tile_color
-		if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
-			_colors[tile] = color
-			_tiles.multimesh.set_instance_color(_index[tile], color)
+	paint(_paint)

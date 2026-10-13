@@ -19,8 +19,10 @@ func show_state() -> void:
 		return
 	var state: GameState = driver.state
 	tile = state.player_tile
-	if state.is_moving():
-		var whole_ticks: int = Simulation.MOVE_TICKS - state.move_ticks_left
+	# Without movement in the instance, the player simply stands on its tile.
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	if movement != null and movement.is_moving():
+		var whole_ticks: int = MovementFeature.MOVE_TICKS - movement.move_ticks_left
 		var ticks_done: float = whole_ticks + driver.tick_fraction()
-		var done: float = clampf(ticks_done / Simulation.MOVE_TICKS, 0.0, 1.0)
-		position = position_on(state.move_from).lerp(tile_position(), done)
+		var done: float = clampf(ticks_done / MovementFeature.MOVE_TICKS, 0.0, 1.0)
+		position = position_on(movement.move_from).lerp(tile_position(), done)

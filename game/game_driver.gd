@@ -8,8 +8,8 @@ extends Node
 ## Ticks one frame may run; more real time than this is dropped.
 const MAX_TICKS_PER_FRAME: int = 5
 
-@export var grid_radius: int = 3
-@export var start_tile: Vector2i = Vector2i(1, -1)
+## The instance to run, by name from Instances.
+@export var instance: String = Instances.BASIC
 @export var input: LocalInput
 
 var state: GameState
@@ -17,7 +17,9 @@ var _accumulated: float = 0.0
 
 
 func _ready() -> void:
-	state = GameState.new(grid_radius, start_tile, 0)
+	state = Instances.create(instance, 0)
+	if state == null:
+		push_error("unknown instance: " + instance)
 
 
 func _process(delta: float) -> void:
@@ -27,6 +29,8 @@ func _process(delta: float) -> void:
 ## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
 ## frame; tests call it with fixed steps.
 func advance(delta: float) -> void:
+	if state == null:
+		return
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
 	var ticks: int = 0
