@@ -32,7 +32,7 @@ func run(tree: SceneTree) -> String:
 	_grid = _main.get_node_or_null("HexGrid") as HexGrid
 	if _cube == null or _mover == null or _grid == null:
 		_main.queue_free()
-		return "the main scene needs a HexPiece Cube with a HexMover child named Mover, and a HexGrid"
+		return "the main scene needs a HexPiece Cube, its HexMover child Mover, and a HexGrid"
 	# Stepped by hand from here on.
 	_mover.set_process(false)
 
