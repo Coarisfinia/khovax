@@ -99,8 +99,11 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Keep the project watcher running in the background**, as the owner's laptop-wide agent notes
-  describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
+- **Keep the project watcher running in the background**: the household-brain watcher
+  ([`watch-project.ts`](https://github.com/Flixbox/household-brain/blob/main/packages/tooling/src/watch-project.ts);
+  its events and what to do about each are in household-brain's
+  [`AGENTS.md`](https://github.com/Flixbox/household-brain/blob/main/AGENTS.md), "When the watcher
+  reports"). Set it up as the owner's laptop-wide agent notes describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
   On a failing CI run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it
   locally, fix it, and push once.
 
