@@ -64,12 +64,14 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Run the e2e tests locally** (see the README). They run headless and finish in seconds.
+- **Run the e2e tests locally**, headless, before pushing (the e2e runner and its README command arrive
+  with #2).
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
   screenshot. Render it locally with `godot --path . --write-movie <file>.png --quit-after 3`, since
-  headless runs have no renderer, and publish it on the `assets` branch (an orphan branch that is
+  headless runs have no renderer. It writes numbered frames (`<file>00000000.png`, …); use the last
+  one, and publish it on the `assets` branch (an orphan branch that is
   never merged): `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead.
 
@@ -105,12 +107,11 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Testing and CI
 
-- **e2e tests are full flows, not many small tests.** The runner is a minimal one of our own
-  (`tests/e2e/run_e2e.gd`). Once there are five or more full flows of real game mechanics, switch to
-  a test framework (owner's rule).
+- **e2e tests are full flows, not many small tests.** Start with a minimal runner of our own. Once
+  there are five or more full flows of real game mechanics, switch to a test framework (owner's rule).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
-- **A crashed test script leaves the SceneTree running forever.** Every CI step that runs Godot has a
-  `timeout`, and every job a `timeout-minutes`.
+- **A crashed test script leaves the SceneTree running forever.** Every CI step that runs Godot needs
+  a `timeout`, and every job a `timeout-minutes`.
 - **Commit the `.uid` files** Godot creates next to scripts and resources.
 - **Pushing anything under `.github/workflows/` needs the `workflow` scope** on the GitHub token
   (`gh auth refresh -h github.com -s workflow`).

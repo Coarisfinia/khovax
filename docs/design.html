@@ -391,7 +391,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 </ul>
 
 <h2 id="comfort"><span class="n">09</span>Camera &amp; comfort <span class="badge dec">Decided</span></h2>
-<p>The camera is extremely slow because the target player, starting with the developer, gets motion sick. That makes comfort a hard design rule rather than a setting:</p>
+<p>The camera is extremely slow for players prone to motion sickness. That makes comfort a hard design rule rather than a setting:</p>
 <ul>
   <li>Fixed top-down angle, no rotation.</li>
   <li>Low camera acceleration and no snapping. A dead zone means the camera only moves when you near the edge. <span class="badge dec">Decided</span></li>
@@ -457,9 +457,9 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <tbody>
 <tr><td>0</td><td>Install tools (scoop), create the GitHub repo and CI</td><td>Headless Godot runs in CI</td></tr>
 <tr><td>1</td><td>Hex grid, deterministic tick loop, seeded RNG</td><td>Two runs of the same seed hash identically</td></tr>
-<tr><td>2</td><td>Trail drawing, loop detection, flood fill for "inside"</td><td>Unit tests cover open, closed and nested loops</td></tr>
+<tr><td>2</td><td>Trail drawing, loop detection, flood fill for "inside"</td><td>e2e flows cover open, closed and nested loops</td></tr>
 <tr><td>3</td><td>Sealing phase with pressure and integrity</td><td>The situations table above is reproduced by tests</td></tr>
-<tr><td>4</td><td>Replay format, state hash, first golden replays in GUT</td><td>A replay fails loudly when a rule changes</td></tr>
+<tr><td>4</td><td>Replay format, state hash, first golden replays in the e2e runner</td><td>A replay fails loudly when a rule changes</td></tr>
 <tr><td>5</td><td>Minimal debug view: hexes, dots, lines</td><td>The ring can be played and felt by hand</td></tr>
 </tbody></table></div>
 

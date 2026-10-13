@@ -10,7 +10,7 @@ Status: pre-production.
 
 ## Running it
 
-Install the tools with [scoop](https://scoop.sh) (Windows):
+Install the tools with [scoop](https://scoop.sh) (Windows). The project targets Godot 4.7.x, the version CI pins:
 
 ```sh
 scoop bucket add extras
