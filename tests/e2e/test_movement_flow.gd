@@ -39,6 +39,10 @@ var _stick: TouchStick
 ## Every tick the driver announced while recording, and the moves among their events.
 var _announced: Array[int] = []
 var _moves: Array[EntityMoved] = []
+## Each announced tick's event list as received, and its size then: a later tick must not change
+## an earlier tick's list (the simulation reuses its own list every tick).
+var _batches: Array[Array] = []
+var _batch_sizes: Array[int] = []
 
 
 func _input() -> Vector2:
@@ -346,7 +350,10 @@ func _check_tick_events() -> String:
 	var action: String = _open_side()
 	_announced.clear()
 	_moves.clear()
-	_driver.ticked.connect(_record)
+	_batches.clear()
+	_batch_sizes.clear()
+	if _driver.ticked.connect(_record) != OK:
+		return "couldn't listen to the driver's ticks"
 	Input.action_press(action)
 	for frame: float in frames:
 		_driver.advance(frame)
@@ -357,6 +364,9 @@ func _check_tick_events() -> String:
 		expected.append(tick)
 	if expected.is_empty() or _announced != expected:
 		return "the driver announced ticks %s, expected %s" % [_announced, expected]
+	for i: int in _batches.size():
+		if _batches[i].size() != _batch_sizes[i]:
+			return "tick %d's events changed after it was announced" % _announced[i]
 	return _check_moves_announced(from)
 
 
@@ -376,6 +386,8 @@ func _check_moves_announced(from: Vector2i) -> String:
 
 func _record(tick: int, events: Array[RefCounted]) -> void:
 	_announced.append(tick)
+	_batches.append(events)
+	_batch_sizes.append(events.size())
 	for event: RefCounted in events:
 		var moved: EntityMoved = event as EntityMoved
 		if moved != null:

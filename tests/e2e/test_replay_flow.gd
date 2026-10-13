@@ -521,7 +521,7 @@ func _check_largest_amounts() -> String:
 ## Events are part of what a replay reproduces, though not of the hash: the same start and commands
 ## raise the same events, tick by tick.
 func _check_events_replay() -> String:
-	var first: Array[int] = _event_log(42)
+	var first: Array = _event_log(42)
 	if first.is_empty():
 		return "the scripted moves raised no events, so the check proves little"
 	if _event_log(42) != first:
@@ -529,21 +529,30 @@ func _check_events_replay() -> String:
 	return ""
 
 
-## Every move event of a replay, as tick, entity, from and to, in order.
-func _event_log(seed_value: int) -> Array[int]:
+## Every event of a replay, in order: its tick, its class and the values of its script variables,
+## so any kind of event counts, not only the kinds that exist today.
+func _event_log(seed_value: int) -> Array:
 	var state: GameState = _state(seed_value)
 	# Not "log": that would shadow the global log() and fail the script check.
-	var raised: Array[int] = []
+	var raised: Array = []
 	for direction: int in _moves():
 		Simulation.step(state, _commands(direction))
 		for event: RefCounted in state.events:
-			var moved: EntityMoved = event as EntityMoved
-			if moved != null:
-				var values: Array[int] = [state.tick, moved.entity_id, moved.from.x, moved.from.y]
-				values.append(moved.to.x)
-				values.append(moved.to.y)
-				raised.append_array(values)
+			raised.append(state.tick)
+			raised.append(_event_values(event))
 	return raised
+
+
+## An event's class and the values of its script variables, in declaration order.
+func _event_values(event: RefCounted) -> Array:
+	var script_of: Script = event.get_script()
+	var values: Array = [script_of.get_global_name()]
+	for property: Dictionary in event.get_property_list():
+		var usage: int = property["usage"]
+		var property_name: String = property["name"]
+		if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			values.append(event.get(property_name))
+	return values
 
 
 ## The next `count` 32-bit values.
