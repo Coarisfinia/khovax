@@ -36,6 +36,7 @@ func run(_tree: SceneTree) -> String:
 		_check_streams_apart,
 		_check_rounding,
 		_check_largest_amounts,
+		_check_events_replay,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -515,6 +516,43 @@ func _check_largest_amounts() -> String:
 	if Fixed.mul_div(most, Fixed.ONE, 1) != most * Fixed.ONE:
 		return "the largest ring power per segment overflowed"
 	return ""
+
+
+## Events are part of what a replay reproduces, though not of the hash: the same start and commands
+## raise the same events, tick by tick.
+func _check_events_replay() -> String:
+	var first: Array = _event_log(42)
+	if first.is_empty():
+		return "the scripted moves raised no events, so the check proves little"
+	if _event_log(42) != first:
+		return "the same start and commands raised different events"
+	return ""
+
+
+## Every event of a replay, in order: its tick, its class and the values of its script variables,
+## so any kind of event counts, not only the kinds that exist today.
+func _event_log(seed_value: int) -> Array:
+	var state: GameState = _state(seed_value)
+	# Not "log": that would shadow the global log() and fail the script check.
+	var raised: Array = []
+	for direction: int in _moves():
+		Simulation.step(state, _commands(direction))
+		for event: RefCounted in state.events:
+			raised.append(state.tick)
+			raised.append(_event_values(event))
+	return raised
+
+
+## An event's class and the values of its script variables, in declaration order.
+func _event_values(event: RefCounted) -> Array:
+	var script_of: Script = event.get_script()
+	var values: Array = [script_of.get_global_name()]
+	for property: Dictionary in event.get_property_list():
+		var usage: int = property["usage"]
+		var property_name: String = property["name"]
+		if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			values.append(event.get(property_name))
+	return values
 
 
 ## The next `count` 32-bit values.
