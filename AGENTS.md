@@ -85,8 +85,7 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Run the e2e tests locally**, headless, before pushing (the e2e runner and its README command arrive
-  with #2).
+- **Run the e2e tests locally**, headless, before pushing (the command is in the README).
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
@@ -99,8 +98,18 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Watch CI in the background** (`agent-gh run watch <run-id> --exit-status`) and act on the result:
-  read a failing job with `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
+- **Keep the project watcher running in the background** and let its exit wake you. It is the
+  household-brain watcher (`Flixbox/household-brain`, `packages/tooling/src/watch-project.ts`), run
+  for this repository; the guide to set it up is in the user-level `~/.claude/CLAUDE.md`:
+
+  ```sh
+  cd ~/.local/share/household-brain && REPO=Flixbox/khovax GH=agent-gh ACTIVITY_GH=gh OWNER=Flixbox \n    SELF='flixbox-ai-agent[bot]' WORKFLOW=ci.yml bun packages/tooling/src/watch-project.ts
+  ```
+
+  It reports one event and exits (new PRs, CI results, approvals, comments, conflicts, `main`
+  moving, issues); handle it and start it again. Don't poll by hand alongside it. On a failing CI
+  run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it,
+  and push once.
 
 ### Review and merge
 
@@ -109,7 +118,10 @@ background; only wait in the foreground for a result the very next step needs.
   description what was addressed. Four review rounds is the soft cap.
 - **Every comment gets an answer.** Fix what is asked in one push, then reply saying what changed. If
   a comment needs the owner's decision, say so and leave it open.
-- **The owner merges** (squash). Never merge without the owner's go-ahead.
+- **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
+  unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
+  `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
+  the owner's approval, never enable auto-merge.
 
 ## Lessons learned
 
@@ -141,6 +153,16 @@ background; only wait in the foreground for a result the very next step needs.
   runners to this public repository.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
+
+### Repository and accounts
+
+- **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
+  approval given after the last push, review threads resolved, the `headless` check from GitHub
+  Actions green on a branch that is up to date with `main`, squash merges only, no force-push or
+  deletion. The required check is named after the CI job: renaming the job means changing the
+  ruleset in the same PR (owner's `gh`).
+- **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
+  them.
 
 ### Toolchain
 

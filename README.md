@@ -18,3 +18,15 @@ scoop install godot gh git
 ```
 
 Open the project in Godot (`godot --path . --editor`), or run it directly with `godot --path .`.
+
+## Tests
+
+The e2e tests run headless. A fresh checkout needs one import first:
+
+```sh
+godot --headless --path . --import
+godot --headless --path . -s res://tests/e2e/run_e2e.gd
+```
+
+Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
+pull request.
