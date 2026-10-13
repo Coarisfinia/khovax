@@ -28,6 +28,9 @@ func run(_tree: SceneTree) -> String:
 		_check_players_move_at_once,
 		_check_entity_ids_stay,
 		_check_player_slots,
+		_check_rng_reference,
+		_check_rng_ranges,
+		_check_rolls_replay,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -339,6 +342,90 @@ func _check_player_slots() -> String:
 	return ""
 
 
+## The generator is xoshiro128**: from a given state it gives the reference implementation's
+## values, and seeding gives fixed values. A changed algorithm or seeding fails here, since it
+## would change every replay.
+func _check_rng_reference() -> String:
+	var reference: Array[int] = [11_520, 0, 5_927_040, 70_819_200, 2_031_721_883, 1_637_235_492]
+	var state: Array[int] = [1, 2, 3, 4]
+	if _draws(Rng.from_words(state), reference.size()) != reference:
+		return "the generator doesn't match xoshiro128**'s reference values"
+	var seeded: Dictionary[Vector2i, Array] = {
+		Vector2i(42, 0): [110_243_625, 433_212_580, 1_876_866_330],
+		Vector2i(42, 1): [4_072_672_004, 3_458_259_917, 3_159_487_900],
+		Vector2i(-1, 7): [436_908_351, 602_727_565, 1_259_044_426],
+	}
+	for key: Vector2i in seeded:
+		var expected: Array[int] = []
+		expected.assign(seeded[key])
+		if _draws(Rng.new(key.x, key.y), expected.size()) != expected:
+			return "seed %d, stream %d gives other values than before" % [key.x, key.y]
+	return ""
+
+
+## Ranges stay in bounds and reach every value; chances and weighted picks respect their odds.
+func _check_rng_ranges() -> String:
+	var rng: Rng = Rng.new(42, 0)
+	var seen: Dictionary[int, bool] = {}
+	for _draw: int in 700:
+		var value: int = rng.between(-3, 3)
+		if value < -3 or value > 3:
+			return "between(-3, 3) gave %d" % value
+		seen[value] = true
+	if seen.size() != 7:
+		return "between(-3, 3) never gave some values: %s" % [seen.keys()]
+	for _draw: int in 100:
+		if rng.below(1) != 0 or rng.below(Rng.SPAN) >= Rng.SPAN:
+			return "below() left its range at the edges"
+		if rng.chance(0, 10) or not rng.chance(10, 10):
+			return "a chance of 0 or 1 didn't hold"
+	var picked: Dictionary[int, bool] = {}
+	var weights: Array[int] = [0, 5, 0, 1]
+	for _draw: int in 200:
+		picked[rng.pick_weighted(weights)] = true
+	if picked.has(0) or picked.has(2) or not picked.has(1) or not picked.has(3):
+		return "weighted picks gave %s for weights %s" % [picked.keys(), weights]
+	return ""
+
+
+## A feature rolling from its own stream every tick replays to the same state, its stream is in
+## the hash, and another seed rolls differently.
+func _check_rolls_replay() -> String:
+	if _dice_hash(42) != _dice_hash(42):
+		return "rolls from the same seed gave different states"
+	if _dice_hash(42) == _dice_hash(43):
+		return "another seed rolled the same"
+	var state: GameState = _dice_state(42)
+	var before: int = state.state_hash()
+	var dice: Dice = state.feature(Dice.ID) as Dice
+	dice.rng.words[3] ^= 1
+	if state.state_hash() == before:
+		return "the generator's state isn't in the hash"
+	return ""
+
+
+## The next `count` 32-bit values.
+func _draws(rng: Rng, count: int) -> Array[int]:
+	var values: Array[int] = []
+	for _draw: int in count:
+		values.append(rng.next_u32())
+	return values
+
+
+## A state with movement and a feature rolling dice, one player on START.
+func _dice_state(seed_value: int) -> GameState:
+	var ordered: Array[Feature] = [MovementFeature.new(), Dice.new()]
+	return _state_with(ordered, seed_value)
+
+
+## The hash after a run of rolls.
+func _dice_hash(seed_value: int) -> int:
+	var state: GameState = _dice_state(seed_value)
+	for direction: int in _moves():
+		Simulation.step(state, _commands(direction))
+	return state.state_hash()
+
+
 ## Moves `moves` tiles in one direction, waiting for each move to arrive.
 func _walk(state: GameState, direction: int, moves: int) -> void:
 	for _move: int in moves:
@@ -436,4 +523,28 @@ class BossPhase:
 
 	func hash_values() -> Array[int]:
 		var values: Array[int] = [from_tick]
+		return values
+
+
+## A test rule that rolls a die every tick from its own stream, like monster behavior will.
+class Dice:
+	extends Feature
+
+	const ID: int = 1001
+
+	var rng: Rng
+	var last: int = 0
+
+	func id() -> int:
+		return ID
+
+	func start(state: GameState) -> void:
+		rng = Rng.new(state.rng_seed, ID)
+
+	func step(_state: GameState, _commands: Array[Command]) -> void:
+		last = rng.between(1, 6)
+
+	func hash_values() -> Array[int]:
+		var values: Array[int] = [last]
+		values.append_array(rng.hash_values())
 		return values
