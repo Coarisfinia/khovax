@@ -117,8 +117,8 @@ background; only wait in the foreground for a result the very next step needs.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
-  the owner's approval, never enable auto-merge. A push after the approval dismisses it (the
-  ruleset wants the approval after the last push), so a fix after approval needs a new approval.
+  the owner's approval, never enable auto-merge. The approval stays valid through later pushes (owner's
+  rule), so check the comments again before enabling auto-merge after a fix.
 
 ## Lessons learned
 
@@ -157,7 +157,7 @@ background; only wait in the foreground for a result the very next step needs.
 ### Repository and accounts
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval given after the last push, review threads resolved, the `headless` check from GitHub
+  approval (later pushes don't dismiss it), review threads resolved, the `headless` check from GitHub
   Actions green on a branch that is up to date with `main`, squash merges only, no force-push or
   deletion. The required check is named after the CI job: renaming the job means changing the
   ruleset in the same PR (owner's `gh`).
