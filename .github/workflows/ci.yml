@@ -166,9 +166,47 @@ jobs:
           mkdir -p build
           timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
           test -s build/khovax.apk
+          # The test APK for the emulator: x86_64, with the APK's e2e flow (tests/apk/) inside.
+          timeout 300 ~/godot/godot --headless --path . --export-debug "Android Test" build/khovax-test.apk
+          test -s build/khovax-test.apk
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-debug-apk
           path: build/khovax.apk
           retention-days: 14
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: khovax-test-apk
+          path: build/khovax-test.apk
+          retention-days: 3
+
+  apk-e2e:
+    # The one e2e flow on the APK (#61), on an Android emulator: the test APK's flow walks the player
+    # with the touch stick from a fixed seed and must end in the state the headless run pins.
+    needs: android
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: khovax-test-apk
+          path: build
+
+      - name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the APK's e2e flow on an emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk
