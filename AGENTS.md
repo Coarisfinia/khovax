@@ -129,8 +129,17 @@ background; only wait in the foreground for a result the very next step needs.
 
 - **GDScript only, no C#.** Godot's C# projects can't export to the web, and the project keeps one
   language for all code.
-- **Static typing is enforced**: `untyped_declaration` is an error in `project.godot`. Type every
-  variable, parameter and return value.
+- **Every GDScript warning is an error** (`project.godot`), and **every gdstyle rule is an error**
+  (`gdstyle.toml`), the opt-in ones included (owner's rule). Type every variable, parameter and
+  return value explicitly (no `:=`: `inferred_declaration` is an error too). A rule or warning only
+  gets relaxed when it truly conflicts with another one, with the conflict named next to it.
+  Inconvenience is not a reason. A suppression is a `# gdstyle:ignore=<rule>` or
+  `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
+- **Before pushing, run `gdstyle fmt .` and `gdstyle check .`**. gdstyle is installed with scoop from
+  `tools/scoop/gdstyle.json`; its version is pinned there and in CI (with the archive's checksum),
+  so bump both together.
+- **The headless renderer is a dummy**: a MultiMesh's instance transforms can't be read back, so
+  code that tests need to inspect keeps its own copy of what it gave the renderer.
 - **The simulation is deterministic**: integer or fixed-point math only, fixed ticks, one seeded RNG
   that lives in the simulation state, no Godot physics in gameplay. Simulation code is pure (no
   nodes); rendering only reads its state.

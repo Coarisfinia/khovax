@@ -1,0 +1,70 @@
+# gdstyle configuration (https://github.com/atelico/gdstyle), pinned by tools/scoop/gdstyle.json
+# and in CI. Owner's rule: every rule is enabled at error severity, the opt-in ones included. A rule
+# only gets relaxed when it truly conflicts with another enabled rule or a Godot setting, and then
+# the comment next to it names the conflict. Inconvenience is not a reason.
+
+max_line_length = 100
+use_tabs = true
+max_function_length = 50
+max_file_length = 1000
+max_parameters = 5
+exclude = [".godot", "addons"]
+
+[rules]
+"syntax/lex-error" = "error"
+"syntax/reserved-identifier" = "error"
+"naming/class-name-pascal-case" = "error"
+"naming/function-name-snake-case" = "error"
+"naming/variable-name-snake-case" = "error"
+"naming/constant-name-screaming-case" = "error"
+"naming/signal-name-snake-case" = "error"
+"naming/enum-name-pascal-case" = "error"
+"naming/enum-member-screaming-case" = "error"
+"naming/file-name-snake-case" = "error"
+"naming/signal-past-tense" = "error"
+"naming/private-underscore-prefix" = "error"
+"naming/node-name-pascal-case" = "error"
+"format/max-line-length" = "error"
+"format/trailing-whitespace" = "error"
+"format/trailing-newline" = "error"
+"format/no-tabs-as-spaces" = "error"
+"format/boolean-operators" = "error"
+"format/double-quotes" = "error"
+"format/comment-spacing" = "error"
+"format/no-unnecessary-parens" = "error"
+"format/number-literals" = "error"
+"format/one-statement-per-line" = "error"
+"format/blank-lines" = "error"
+"format/trailing-comma" = "error"
+"format/operator-spacing" = "error"
+"format/colon-spacing" = "error"
+"format/comma-spacing" = "error"
+"format/brace-spacing" = "error"
+"format/call-paren-spacing" = "error"
+"format/float-literal-zeros" = "error"
+"format/large-number-underscores" = "error"
+"format/enum-one-per-line" = "error"
+"order/class-member-order" = "error"
+"quality/max-function-length" = "error"
+"quality/max-file-length" = "error"
+"quality/max-parameters" = "error"
+"quality/unnecessary-pass" = "error"
+"quality/no-debug-print" = "error"
+"quality/self-comparison" = "error"
+"quality/no-self-assign" = "error"
+"quality/duplicate-dict-key" = "error"
+"quality/duplicated-load" = "error"
+"quality/type-hint" = "error"
+"quality/empty-function" = "error"
+"quality/max-class-variables" = "error"
+"quality/max-public-methods" = "error"
+"quality/max-inner-classes" = "error"
+"quality/no-else-return" = "error"
+"quality/unreachable-code" = "error"
+"quality/await-in-loop" = "error"
+"quality/allocation-in-loop" = "error"
+"quality/process-get-node" = "error"
+"quality/max-nesting-depth" = "error"
+"quality/max-returns" = "error"
+"quality/max-branches" = "error"
+"quality/max-local-variables" = "error"

@@ -1,26 +1,19 @@
+# gdstyle:ignore-file=quality/no-debug-print
+# The runner's report on stdout is what it is for, not leftover debug printing.
+extends SceneTree
 ## Headless e2e runner. Runs every tests/e2e/test_*.gd and exits non-zero on failure.
 ## Usage: godot --headless --path . -s res://tests/e2e/run_e2e.gd
 ## Each test script extends RefCounted and defines `func run(tree: SceneTree) -> String`,
 ## returning "" on success or a failure message. `run` may await.
 ## Any error logged while a test runs (script errors, push_error, engine errors) fails it too:
 ## a function that hits a script error returns its type's default, which for String is "".
-extends SceneTree
 
-const TEST_DIR := "res://tests/e2e"
+const TEST_DIR: String = "res://tests/e2e"
 ## A test running longer than this is named and fails the whole run, instead of the CI timeout
 ## killing Godot without saying which test hung.
-const TEST_TIMEOUT_SECONDS := 60.0
+const TEST_TIMEOUT_SECONDS: float = 60.0
 
-
-class ErrorCounter extends Logger:
-	var count: int = 0
-
-	func _log_error(_function: String, _file: String, _line: int, _code: String, _rationale: String,
-			_editor_notify: bool, _error_type: int, _script_backtraces: Array[ScriptBacktrace]) -> void:
-		count += 1
-
-
-var _errors := ErrorCounter.new()
+var _errors: ErrorCounter = ErrorCounter.new()
 var _current: String = ""
 
 
@@ -28,26 +21,36 @@ func _initialize() -> void:
 	OS.add_logger(_errors)
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
-	var count: int = 0
-	var failed: int = 0
+	var tests: Array[String] = []
 	for file: String in files:
-		if not (file.begins_with("test_") and file.ends_with(".gd")):
-			continue
-		count += 1
-		var message: String = await _run_test(file)
-		if message.is_empty():
-			print("PASS  ", file)
-		else:
-			failed += 1
-			printerr("FAIL  ", file, ": ", message)
-	if count == 0:
+		if file.begins_with("test_") and file.ends_with(".gd"):
+			tests.append(file)
+	if tests.is_empty():
 		printerr("no tests found in ", TEST_DIR)
-	print("%d passed, %d failed" % [count - failed, failed])
-	quit(1 if failed > 0 or count == 0 else 0)
+		quit(1)
+		return
+	var failed: int = await _run_from(tests, 0)
+	print("%d passed, %d failed" % [tests.size() - failed, failed])
+	quit(1 if failed > 0 else 0)
+
+
+## Runs the tests from `index` on, one after another, and returns how many failed.
+func _run_from(tests: Array[String], index: int) -> int:
+	if index >= tests.size():
+		return 0
+	var file: String = tests[index]
+	var message: String = await _run_test(file)
+	if message.is_empty():
+		print("PASS  ", file)
+	else:
+		printerr("FAIL  ", file, ": ", message)
+	var failed_here: int = 0 if message.is_empty() else 1
+	var failed_after: int = await _run_from(tests, index + 1)
+	return failed_here + failed_after
 
 
 func _run_test(file: String) -> String:
-	var script: GDScript = load(TEST_DIR.path_join(file))
+	var script: GDScript = load(TEST_DIR.path_join(file)) as GDScript
 	if script == null or not script.can_instantiate():
 		return "script failed to load"
 	if script.get_instance_base_type() != &"RefCounted":
@@ -57,13 +60,17 @@ func _run_test(file: String) -> String:
 		return "no run(tree: SceneTree) -> String method"
 
 	_current = file
-	var watchdog := create_timer(TEST_TIMEOUT_SECONDS)
-	watchdog.timeout.connect(_on_timeout.bind(file))
+	var watchdog: SceneTreeTimer = create_timer(TEST_TIMEOUT_SECONDS)
+	var connected: int = watchdog.timeout.connect(_on_timeout.bind(file))
+	if connected != OK:
+		return "could not start the watchdog"
 	var errors_before: int = _errors.count
-	var message: String = await test.run(self)
+	var run: Callable = Callable(test, "run")
+	var message: String = await run.call(self)
 	_current = ""
 
-	# Whatever a test left in the tree (e.g. after an error before its own cleanup) must not reach the next one.
+	# Whatever a test left in the tree (e.g. after an error before its own cleanup) must not
+	# reach the next one.
 	for child: Node in root.get_children():
 		child.queue_free()
 	await process_frame
@@ -78,3 +85,23 @@ func _on_timeout(file: String) -> void:
 	if _current == file:
 		printerr("FAIL  ", file, ": still running after %d s" % int(TEST_TIMEOUT_SECONDS))
 		quit(1)
+
+
+class ErrorCounter:
+	extends Logger
+
+	var count: int = 0
+
+	# The parameters are Logger's virtual method signature, fixed by the engine.
+	# gdstyle:ignore=quality/max-parameters
+	func _log_error(
+		_function: String,
+		_file: String,
+		_line: int,
+		_code: String,
+		_rationale: String,
+		_editor_notify: bool,
+		_error_type: int,
+		_script_backtraces: Array[ScriptBacktrace],
+	) -> void:
+		count += 1
