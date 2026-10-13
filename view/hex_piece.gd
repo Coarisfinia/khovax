@@ -21,7 +21,12 @@ func _ready() -> void:
 
 ## Where the piece stands when it is on its tile, relative to its parent.
 func tile_position() -> Vector3:
-	return Hex.to_world(tile) + Vector3(0.0, HexGrid.TILE_HEIGHT + base_offset, 0.0)
+	return position_on(tile)
+
+
+## Where the piece stands on any tile, relative to its parent.
+func position_on(on_tile: Vector2i) -> Vector3:
+	return HexLayout.to_world(on_tile) + Vector3(0.0, HexGrid.TILE_HEIGHT + base_offset, 0.0)
 
 
 func _place() -> void:

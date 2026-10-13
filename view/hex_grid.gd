@@ -36,8 +36,8 @@ func _ready() -> void:
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6
 	_mesh.rings = 1
-	_mesh.top_radius = Hex.SIZE * TILE_SCALE
-	_mesh.bottom_radius = Hex.SIZE * TILE_SCALE
+	_mesh.top_radius = HexLayout.SIZE * TILE_SCALE
+	_mesh.bottom_radius = HexLayout.SIZE * TILE_SCALE
 	_mesh.height = TILE_HEIGHT
 	_mesh.material = _material
 	_tiles.name = TILES_NODE
@@ -71,6 +71,6 @@ func _build() -> void:
 	_tiles.multimesh.instance_count = tiles.size()
 	for i: int in tiles.size():
 		var tile: Vector2i = tiles[i]
-		var center: Vector3 = Hex.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
+		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])

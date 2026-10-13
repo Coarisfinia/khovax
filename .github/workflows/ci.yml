@@ -34,6 +34,15 @@ jobs:
       - name: Check GDScript formatting
         run: gdstyle fmt --check .
 
+      - name: Keep the simulation deterministic
+        # sim/ holds the rules: no nodes, input, time, engine or OS state, global randomness, frame
+        # delta or floats (see AGENTS.md, "Architecture").
+        run: |
+          if grep -nE '\bextends +(Node|Node2D|Node3D|Control|Object)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]' sim/*.gd; then
+            echo "::error::sim/ must stay deterministic: see the lines above"
+            exit 1
+          fi
+
       - name: Cache Godot
         id: cache-godot
         uses: actions/cache@v4
