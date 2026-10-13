@@ -38,5 +38,5 @@ jobs:
         run: timeout 120 ~/godot/godot --headless --path . --import
 
       - name: Run e2e tests
-        # timeout guards against a crashed test leaving the SceneTree running forever
+        # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd

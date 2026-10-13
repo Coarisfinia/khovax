@@ -29,4 +29,4 @@ godot --headless --path . -s res://tests/e2e/run_e2e.gd
 ```
 
 Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
-pull request.
+pull request and every push to `main`.

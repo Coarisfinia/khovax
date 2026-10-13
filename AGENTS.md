@@ -36,7 +36,8 @@ way; add to it when something bites.
   ```
 
 - **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
-- **What the bot doesn't do:** change repository settings or merge. Settings changes the owner asks
+- **What the bot doesn't do:** change repository settings or merge directly. It only enables
+  auto-merge after the owner's approval. Settings changes the owner asks
   for are made with the owner's `gh` login.
 - **In Git Bash, `gh api` takes endpoints without a leading slash** (`installation/repositories`):
   the shell rewrites `/path` into a Windows file path.
@@ -52,7 +53,7 @@ You own a pull request from the moment you open it until it is merged. "Pushed" 
 is assigned to the owner (`--assignee Flixbox`).
 
 **One pull request at a time** (owner's rule). Never stack pull requests or work on two open ones in
-parallel: the owner merges with squash, which rewrites the history a stacked branch is built on. Open
+parallel: pull requests are squash-merged, which rewrites the history a stacked branch is built on. Open
 the next one as soon as the previous one is merged.
 
 **One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
@@ -103,7 +104,8 @@ background; only wait in the foreground for a result the very next step needs.
   for this repository; the guide to set it up is in the user-level `~/.claude/CLAUDE.md`:
 
   ```sh
-  cd ~/.local/share/household-brain && REPO=Flixbox/khovax GH=agent-gh ACTIVITY_GH=gh OWNER=Flixbox \n    SELF='flixbox-ai-agent[bot]' WORKFLOW=ci.yml bun packages/tooling/src/watch-project.ts
+  cd ~/.local/share/household-brain && REPO=Flixbox/khovax GH=agent-gh ACTIVITY_GH=gh OWNER=Flixbox \
+    SELF='flixbox-ai-agent[bot]' WORKFLOW=ci.yml bun packages/tooling/src/watch-project.ts
   ```
 
   It reports one event and exits (new PRs, CI results, approvals, comments, conflicts, `main`
@@ -121,7 +123,8 @@ background; only wait in the foreground for a result the very next step needs.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
-  the owner's approval, never enable auto-merge.
+  the owner's approval, never enable auto-merge. A push after the approval dismisses it (the
+  ruleset wants the approval after the last push), so a fix after approval needs a new approval.
 
 ## Lessons learned
 
@@ -143,8 +146,11 @@ background; only wait in the foreground for a result the very next step needs.
 - **e2e tests are full flows, not many small tests.** Start with a minimal runner of our own. Once
   there are five or more full flows of real game mechanics, switch to a test framework (owner's rule).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
-- **A crashed test script leaves the SceneTree running forever.** Every CI step that runs Godot needs
-  a `timeout`, and every job a `timeout-minutes`.
+- **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
+  runs Godot needs a `timeout`, and every job a `timeout-minutes`.
+- **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
+  a test can't signal success by returning nothing. The runner counts logged errors during each test
+  (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
 - **Commit the `.uid` files** Godot creates next to scripts and resources.
 - **Pushing anything under `.github/workflows/` needs workflow rights.** The bot has them through the
   App's Workflows permission. For the owner's own login it is the `workflow` scope
