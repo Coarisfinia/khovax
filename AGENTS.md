@@ -159,16 +159,22 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   the whole state; a new value goes into the hash too (`Feature.hash_values()` for a feature's).
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
-  tick, the seed, the map, the player and the instance's features in their step order. A feature
+  tick, the seed, the map, the entities and the instance's features in their step order. A feature
   (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
-  `hash_values`. Features talk through the tick's `events` (e.g. `PlayerMoved`), not by reaching
+  `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
-- **Instances** (`sim/instances/`): which map, which start and which features in which order. A new
-  mechanic is a new feature that instances list; it never grows the core.
+- **Entities** (#31): everything in the world (players, later the ball, monsters, totems) is an
+  `Entity` with a stable id, never reused, an owning player slot (0–3, or none) and a tile. A
+  feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
+  dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
+  (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
+- **Instances** (`sim/instances/`): which map, which players start where, and which features in
+  which order. A new mechanic is a new feature that instances list; it never grows the core.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
-  integers only. The starting state plus every tick's commands is a replay.
+  indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
+  commands is a replay.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.

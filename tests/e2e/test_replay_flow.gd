@@ -25,6 +25,8 @@ func run(_tree: SceneTree) -> String:
 		_check_instance_without_trail,
 		_check_invalid_order_state,
 		_check_switch_within_tick,
+		_check_players_move_at_once,
+		_check_entity_ids_stay,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -40,7 +42,7 @@ func _check_move_timing() -> String:
 	var arrivals: Array[Vector2i] = []
 	for _tick: int in 3 * MovementFeature.MOVE_TICKS + 1:
 		Simulation.step(state, _commands(EAST))
-		arrivals.append(state.player_tile)
+		arrivals.append(_tile(state))
 	var expected_second: Vector2i = START + 2 * Hex.DIRECTIONS[EAST]
 	if arrivals[0] != START + Hex.DIRECTIONS[EAST]:
 		return "the first move didn't start on the first tick"
@@ -48,8 +50,8 @@ func _check_move_timing() -> String:
 		return "the second move started before the first one arrived"
 	if arrivals[MovementFeature.MOVE_TICKS] != expected_second:
 		return "the second move didn't start right as the first one arrived"
-	if state.player_tile != expected_second or _movement(state).is_moving():
-		return "the player didn't stop at the grid's edge, at %s" % state.player_tile
+	if _tile(state) != expected_second or _player_walk(state).is_moving():
+		return "the player didn't stop at the grid's edge, at %s" % _tile(state)
 	return ""
 
 
@@ -58,7 +60,7 @@ func _check_invalid_commands() -> String:
 	var invalid: Array[int] = [-5, Command.NO_MOVE, Hex.DIRECTIONS.size(), 99]
 	for direction: int in invalid:
 		Simulation.step(state, _commands(direction))
-	if state.player_tile != START or _movement(state).is_moving():
+	if _tile(state) != START or _player_walk(state).is_moving():
 		return "an invalid or empty command moved the player"
 	return ""
 
@@ -71,7 +73,7 @@ func _check_same_commands_same_state() -> String:
 	var last: GameState = _state(42)
 	for direction: int in _moves():
 		Simulation.step(last, _commands(direction))
-	if last.player_tile == START and not _movement(last).is_moving():
+	if _tile(last) == START and not _player_walk(last).is_moving():
 		return "the scripted commands never moved the player, so the replay proves little"
 	return ""
 
@@ -102,14 +104,20 @@ func _check_hash_covers_fields() -> String:
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
 		"grid_radius": func(state: GameState) -> void: state.grid_radius += 1,
-		"player_tile.x": func(state: GameState) -> void: state.player_tile.x += 1,
-		"player_tile.y": func(state: GameState) -> void: state.player_tile.y += 1,
-		"move_from.x": func(state: GameState) -> void: _movement(state).move_from.x += 1,
-		"move_from.y": func(state: GameState) -> void: _movement(state).move_from.y += 1,
-		"move_ticks_left": func(state: GameState) -> void: _movement(state).move_ticks_left += 1,
+		"next_entity_id": func(state: GameState) -> void: state.next_entity_id += 1,
+		"entity id": func(state: GameState) -> void: state.player(0).id += 1,
+		"entity slot": func(state: GameState) -> void: state.player(0).slot += 1,
+		"entity tile.x": func(state: GameState) -> void: state.player(0).tile.x += 1,
+		"entity tile.y": func(state: GameState) -> void: state.player(0).tile.y += 1,
+		"an entity more": func(state: GameState) -> void: state.add_entity(Entity.NO_SLOT, START),
+		"walk from.x": func(state: GameState) -> void: _player_walk(state).from.x += 1,
+		"walk from.y": func(state: GameState) -> void: _player_walk(state).from.y += 1,
+		"walk ticks_left": func(state: GameState) -> void: _player_walk(state).ticks_left += 1,
+		"walk dropped": func(state: GameState) -> void: _movement(state).walks.clear(),
 		"trail": func(state: GameState) -> void: _trail(state).tiles[Vector2i.ZERO] = true,
 		# Same size, other tile: the hash must see the coordinates, not only how many there are.
 		"trail tile": func(state: GameState) -> void: _trail(state).tiles = { Vector2i.ZERO: true },
+		"trail dropped": func(state: GameState) -> void: _trails(state).trails.clear(),
 		"movement off": func(state: GameState) -> void: state.set_enabled(Features.MOVEMENT, false),
 		"trail off": func(state: GameState) -> void: state.set_enabled(Features.TRAIL, false),
 	}
@@ -171,13 +179,13 @@ func _check_switching_features() -> String:
 	var state: GameState = _state(42)
 	state.set_enabled(Features.MOVEMENT, false)
 	_walk(state, EAST, 1)
-	if state.player_tile != START:
+	if _tile(state) != START:
 		return "the player moved with movement switched off"
 	state.set_enabled(Features.MOVEMENT, true)
 	state.set_enabled(Features.TRAIL, false)
 	_walk(state, EAST, 1)
 	var moved_to: Vector2i = START + Hex.DIRECTIONS[EAST]
-	if state.player_tile != moved_to:
+	if _tile(state) != moved_to:
 		return "movement didn't come back when switched on again"
 	if _trail(state).tiles.has(moved_to):
 		return "the trail grew while switched off"
@@ -193,13 +201,13 @@ func _check_switching_features() -> String:
 ## An instance without the trail still walks, and simply has no trail.
 func _check_instance_without_trail() -> String:
 	var ordered: Array[Feature] = [MovementFeature.new()]
-	var state: GameState = GameState.new(RADIUS, START, 42, ordered)
+	var state: GameState = _state_with(ordered, 42)
 	_walk(state, EAST, 1)
 	if state.feature(Features.TRAIL) != null:
 		return "an instance without the trail has one"
-	if state.player_tile != START + Hex.DIRECTIONS[EAST]:
+	if _tile(state) != START + Hex.DIRECTIONS[EAST]:
 		return "an instance without the trail didn't walk"
-	if Instances.basic(42).feature(Features.TRAIL) == null:
+	if Instances.basic(42, 1).feature(Features.TRAIL) == null:
 		return "the basic instance lost its trail"
 	return ""
 
@@ -208,7 +216,7 @@ func _check_instance_without_trail() -> String:
 ## refuses unknown instances.
 func _check_invalid_order_state() -> String:
 	var trail_first: Array[Feature] = [TrailFeature.new(), MovementFeature.new()]
-	var state: GameState = GameState.new(RADIUS, START, 42, trail_first)
+	var state: GameState = _state_with(trail_first, 42)
 	if state.problem.is_empty() or not state.features.is_empty():
 		return "a state with an invalid feature order looks runnable"
 	var valid: GameState = _state(42)
@@ -228,15 +236,79 @@ func _check_switch_within_tick() -> String:
 		MovementFeature.new(),
 		TrailFeature.new(),
 	]
-	var state: GameState = GameState.new(RADIUS, START, 42, ordered)
+	var state: GameState = _state_with(ordered, 42)
 	Simulation.step(state, _commands(EAST))
-	var first: Vector2i = state.player_tile
+	var first: Vector2i = _tile(state)
 	for _tick: int in MovementFeature.MOVE_TICKS:
 		Simulation.step(state, _commands(EAST))
 	if first != START + Hex.DIRECTIONS[EAST]:
 		return "the player didn't move before the boss phase began"
-	if state.player_tile != first or _movement(state).enabled:
+	if _tile(state) != first or _movement(state).enabled:
 		return "the boss phase didn't stop movement within its tick"
+	return ""
+
+
+## Co-op: every player is moved by the command in its own slot, all in the same tick, each with
+## its own trail; a slot without a command stands still. Two players replay deterministically.
+func _check_players_move_at_once() -> String:
+	var state: GameState = Instances.basic(42, 2)
+	var first: Entity = state.player(0)
+	var second: Entity = state.player(1)
+	var start_first: Vector2i = first.tile
+	var start_second: Vector2i = second.tile
+	Simulation.step(state, _slot_commands(EAST, WEST))
+	if first.tile != start_first + Hex.DIRECTIONS[EAST]:
+		return "the player in slot 0 didn't follow its own command"
+	if second.tile != start_second + Hex.DIRECTIONS[WEST]:
+		return "the player in slot 1 didn't move in the same tick by its own command"
+	var trails: TrailFeature = _trails(state)
+	var shared: bool = trails.trail(first.id).tiles.has(second.tile)
+	if shared or trails.trail(second.id).tiles.has(first.tile):
+		return "the players share a trail"
+	var only_first: Array[Command] = [Command.new(WEST)]
+	for _tick: int in MovementFeature.MOVE_TICKS:
+		Simulation.step(state, only_first)
+	if second.tile != start_second + Hex.DIRECTIONS[WEST]:
+		return "a slot without a command still moved its player"
+	var hashes: Array[int] = []
+	for _run: int in 2:
+		var run: GameState = Instances.basic(42, 2)
+		for direction: int in _moves():
+			Simulation.step(run, _slot_commands(direction, (direction + 2) % Hex.DIRECTIONS.size()))
+		hashes.append(run.state_hash())
+	if hashes[0] != hashes[1]:
+		return "two players with the same commands gave different states"
+	return ""
+
+
+## Entity ids are stable: removing an entity keeps the others' ids and drops every feature's data
+## for it, and a new entity never gets a removed one's id.
+func _check_entity_ids_stay() -> String:
+	var state: GameState = Instances.basic(42, 3)
+	var ids: Array[int] = []
+	for each: Entity in state.entities:
+		ids.append(each.id)
+	var removed: int = ids[1]
+	state.remove_entity(removed)
+	if state.entity(removed) != null or state.entity(ids[0]) == null:
+		return "removing an entity took the wrong one"
+	if state.entity(ids[2]) == null:
+		return "removing an entity took the wrong one"
+	if _movement(state).walk(removed) != null or _trails(state).trail(removed) != null:
+		return "a removed entity's walk or trail stayed behind"
+	var added: Entity = state.add_entity(1, START)
+	if ids.has(added.id):
+		return "a new entity got the id %d again" % added.id
+	if state.player(1) != added or _movement(state).walk(added.id) == null:
+		return "a player added during a run doesn't walk in its slot"
+	var order: Array[int] = []
+	for each: Entity in state.entities:
+		order.append(each.id)
+	var sorted: Array[int] = []
+	sorted.assign(order)
+	sorted.sort()
+	if order != sorted:
+		return "the entities aren't in id order: %s" % [order]
 	return ""
 
 
@@ -244,22 +316,43 @@ func _check_switch_within_tick() -> String:
 func _walk(state: GameState, direction: int, moves: int) -> void:
 	for _move: int in moves:
 		Simulation.step(state, _commands(direction))
-		while _movement(state).is_moving():
+		while _player_walk(state).is_moving():
 			Simulation.step(state, _commands(Command.NO_MOVE))
 
 
 ## A state with movement and the trail, like the basic instance, on this flow's own map and start.
 func _state(seed_value: int) -> GameState:
 	var ordered: Array[Feature] = [MovementFeature.new(), TrailFeature.new()]
-	return GameState.new(RADIUS, START, seed_value, ordered)
+	return _state_with(ordered, seed_value)
+
+
+## A state with these features and one player, in slot 0 on START.
+func _state_with(ordered: Array[Feature], seed_value: int) -> GameState:
+	var state: GameState = GameState.new(RADIUS, seed_value, ordered)
+	state.add_entity(0, START)
+	return state
+
+
+## The tile of the player in slot 0.
+func _tile(state: GameState) -> Vector2i:
+	return state.player(0).tile
 
 
 func _movement(state: GameState) -> MovementFeature:
 	return state.feature(Features.MOVEMENT) as MovementFeature
 
 
-func _trail(state: GameState) -> TrailFeature:
+func _player_walk(state: GameState) -> Walk:
+	return _movement(state).walk(state.player(0).id)
+
+
+func _trails(state: GameState) -> TrailFeature:
 	return state.feature(Features.TRAIL) as TrailFeature
+
+
+## The trail of the player in slot 0.
+func _trail(state: GameState) -> Trail:
+	return _trails(state).trail(state.player(0).id)
 
 
 ## The state hash after every tick.
@@ -280,8 +373,15 @@ func _moves() -> Array[int]:
 	return moves
 
 
+## One tick's commands with one player, in slot 0.
 func _commands(direction: int) -> Array[Command]:
 	var commands: Array[Command] = [Command.new(direction)]
+	return commands
+
+
+## One tick's commands for slots 0 and 1.
+func _slot_commands(first: int, second: int) -> Array[Command]:
+	var commands: Array[Command] = [Command.new(first), Command.new(second)]
 	return commands
 
 

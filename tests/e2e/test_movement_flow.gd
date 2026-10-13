@@ -228,7 +228,8 @@ func _check_trail() -> String:
 	var expected: Array[Vector2i] = []
 	expected.assign(_walked.keys())
 	expected.sort()
-	var trail: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var feature: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var trail: Trail = feature.trail(_driver.state.player(0).id)
 	if trail.sorted_tiles() != expected:
 		return "the trail is %s, expected %s" % [trail.sorted_tiles(), expected]
 	_trail_view.show_state()
@@ -345,7 +346,7 @@ func _step() -> void:
 
 ## The player's tile in the simulation.
 func _tile() -> Vector2i:
-	return _driver.state.player_tile
+	return _driver.state.player(0).tile
 
 
 func _release_all() -> void:

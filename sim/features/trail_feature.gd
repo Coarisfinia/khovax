@@ -1,10 +1,11 @@
 class_name TrailFeature
 extends Feature
-## The trail: every tile the player has stood on or moved onto, as a set. Rings are drawn with it.
-## It grows from PlayerMoved events, so it comes after movement in an instance's order. Walking
-## over it again changes nothing yet.
+## The trails: each player's trail holds every tile that player has stood on or moved onto. Rings
+## are drawn with them. They grow from EntityMoved events, so the trail comes after movement in an
+## instance's order. Walking over a trail again changes nothing yet.
 
-var tiles: Dictionary[Vector2i, bool] = {}
+## Every player's trail, by entity id.
+var trails: Dictionary[int, Trail] = {}
 
 
 func id() -> int:
@@ -16,28 +17,37 @@ func requires() -> Array[int]:
 	return needed
 
 
-func start(state: GameState) -> void:
-	tiles[state.player_tile] = true
-
-
 func step(state: GameState, _commands: Array[Command]) -> void:
 	for event: RefCounted in state.events:
-		var moved: PlayerMoved = event as PlayerMoved
-		if moved != null:
-			tiles[moved.to] = true
+		var moved: EntityMoved = event as EntityMoved
+		if moved != null and trails.has(moved.entity_id):
+			trails[moved.entity_id].tiles[moved.to] = true
 
 
-## The trail's tiles, sorted, so their order never depends on how the trail was walked.
-func sorted_tiles() -> Array[Vector2i]:
-	var sorted: Array[Vector2i] = []
-	sorted.assign(tiles.keys())
-	sorted.sort()
-	return sorted
+func entity_added(_state: GameState, added: Entity) -> void:
+	if added.slot != Entity.NO_SLOT:
+		trails[added.id] = Trail.new(added.tile)
+
+
+func entity_removed(_state: GameState, removed_id: int) -> void:
+	trails.erase(removed_id)
+
+
+## The entity's trail, or null when it has none.
+func trail(entity_id: int) -> Trail:
+	return trails.get(entity_id)
 
 
 func hash_values() -> Array[int]:
-	var values: Array[int] = [tiles.size()]
-	for tile: Vector2i in sorted_tiles():
-		values.append(tile.x)
-		values.append(tile.y)
+	var ids: Array[int] = []
+	ids.assign(trails.keys())
+	ids.sort()
+	var values: Array[int] = [ids.size()]
+	for each: int in ids:
+		var tiles: Array[Vector2i] = trails[each].sorted_tiles()
+		values.append(each)
+		values.append(tiles.size())
+		for tile: Vector2i in tiles:
+			values.append(tile.x)
+			values.append(tile.y)
 	return values
