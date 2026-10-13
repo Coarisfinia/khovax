@@ -36,6 +36,18 @@ func _check_hex_math() -> String:
 	for tile: Vector2i in Hex.ring(2):
 		if Hex.distance(origin, tile) != 2:
 			return "ring tile %s is not 2 steps away" % tile
+	# Known pointy-top positions, written out rather than computed, so a wrong conversion
+	# (flat-top, rotated or mirrored) can't pass by agreeing with itself.
+	var half_width: float = Hex.SIZE * sqrt(3.0) / 2.0
+	var known: Dictionary[Vector2i, Vector3] = {
+		Vector2i(1, 0): Vector3(2.0 * half_width, 0.0, 0.0),
+		Vector2i(0, 1): Vector3(half_width, 0.0, 1.5 * Hex.SIZE),
+		Vector2i(1, -1): Vector3(half_width, 0.0, -1.5 * Hex.SIZE),
+		Vector2i(-1, 2): Vector3(0.0, 0.0, 3.0 * Hex.SIZE),
+	}
+	for tile: Vector2i in known:
+		if not Hex.to_world(tile).is_equal_approx(known[tile]):
+			return "tile %s is at %s, expected %s" % [tile, Hex.to_world(tile), known[tile]]
 	return ""
 
 
@@ -43,13 +55,15 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	var tiles: Array[Vector2i] = Hex.disc(grid.radius)
-	if grid.get_child_count() != tiles.size():
-		return "grid has %d tiles, expected %d" % [grid.get_child_count(), tiles.size()]
-	for tile: Vector2i in tiles:
+	if grid.radius != 3 or grid.tile_count() != 37:
+		return "grid has radius %d and %d tiles, expected 3 rings and 37 tiles" % [grid.radius, grid.tile_count()]
+	for tile: Vector2i in Hex.disc(grid.radius):
 		var node: MeshInstance3D = grid.tile_node(tile)
 		if node == null:
 			return "tile %s is missing" % tile
+		var mesh: CylinderMesh = node.mesh as CylinderMesh
+		if mesh == null or mesh.radial_segments != 6 or not is_equal_approx(mesh.top_radius, Hex.SIZE * HexGrid.TILE_SCALE):
+			return "tile %s is not a hexagonal prism of the tile size" % tile
 		if not node.global_position.is_equal_approx(Hex.to_world(tile) + Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)):
 			return "tile %s is not at its world position" % tile
 	return ""

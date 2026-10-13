@@ -74,6 +74,9 @@ issue assigned to the owner. Nothing waits only in a chat. **Read the issue and 
 before starting work on it**: the owner decides things in comments, and the description alone can be
 out of date.
 
+**Tech debt comes before new features** (owner's rule). When picking the next issue, open
+`tech-debt` issues (refactors, cleanups, tooling, bugs) go first, then features.
+
 **Keep going without being asked.** Once a pull request is merged, take the next issue. Tech debt,
 refactors and bugs come before new features. Ask only for decisions that belong to the owner (game
 design, scope, security trade-offs).
