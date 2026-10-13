@@ -154,8 +154,11 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **`sim/`, the simulation:** the core (`Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features. Plain `RefCounted` classes (or subclasses of `sim/` classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
-  `Engine`, `OS`, global randomness, frame `delta` or `float`: CI greps for them. Randomness, once a
-  rule needs it, comes from a generator kept in `GameState`. `GameState.state_hash()` fingerprints
+  `Engine`, `OS`, global randomness, frame `delta` or `float`: CI greps for them. Randomness comes
+  from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
+  `Rng.new(state.rng_seed, id())` in `start`, keeps it in its state and hashes it, and draws only
+  inside its step; streams keep one system's rolls from shifting another's. Ranges use
+  `below`/`between` (no modulo bias), never `next_u32() % n`. `GameState.state_hash()` fingerprints
   the whole state; a new value goes into the hash too (`Feature.hash_values()` for a feature's).
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
