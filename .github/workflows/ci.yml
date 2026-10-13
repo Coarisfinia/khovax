@@ -14,6 +14,7 @@ env:
 jobs:
   headless:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -33,5 +34,9 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: Godot version
-        run: ~/godot/godot --headless --version
+      - name: Import project
+        run: timeout 120 ~/godot/godot --headless --path . --import
+
+      - name: Run e2e tests
+        # timeout guards against a script error in the runner leaving the SceneTree running forever
+        run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
