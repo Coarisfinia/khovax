@@ -36,7 +36,8 @@ way; add to it when something bites.
   ```
 
 - **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
-- **What the bot doesn't do:** change repository settings or merge. Settings changes the owner asks
+- **What the bot doesn't do:** change repository settings or merge directly. It only enables
+  auto-merge after the owner's approval. Settings changes the owner asks
   for are made with the owner's `gh` login.
 - **In Git Bash, `gh api` takes endpoints without a leading slash** (`installation/repositories`):
   the shell rewrites `/path` into a Windows file path.
@@ -52,7 +53,7 @@ You own a pull request from the moment you open it until it is merged. "Pushed" 
 is assigned to the owner (`--assignee Flixbox`).
 
 **One pull request at a time** (owner's rule). Never stack pull requests or work on two open ones in
-parallel: the owner merges with squash, which rewrites the history a stacked branch is built on. Open
+parallel: pull requests are squash-merged, which rewrites the history a stacked branch is built on. Open
 the next one as soon as the previous one is merged.
 
 **One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
@@ -85,8 +86,7 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Run the e2e tests locally**, headless, before pushing (the e2e runner and its README command arrive
-  with #2).
+- **Run the e2e tests locally**, headless, before pushing (the command is in the README).
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
@@ -99,17 +99,26 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Watch CI in the background** (`agent-gh run watch <run-id> --exit-status`) and act on the result:
-  read a failing job with `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
+- **Keep the project watcher running in the background**: the household-brain watcher
+  ([`watch-project.ts`](https://github.com/Flixbox/household-brain/blob/main/packages/tooling/src/watch-project.ts);
+  its events and what to do about each are in household-brain's
+  [`AGENTS.md`](https://github.com/Flixbox/household-brain/blob/main/AGENTS.md), "When the watcher
+  reports"). Set it up as the owner's laptop-wide agent notes describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
+  On a failing CI run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it
+  locally, fix it, and push once.
 
 ### Review and merge
 
-- **Every pull request gets one reviewer agent**: read-only, reporting findings with severity and
+- **Every pull request gets one review**, by Codex as the laptop-wide agent notes describe: read-only, reporting findings with severity and
   evidence. Fix blockers and should-fix items before merge, in one push, and say in the PR
   description what was addressed. Four review rounds is the soft cap.
 - **Every comment gets an answer.** Fix what is asked in one push, then reply saying what changed. If
   a comment needs the owner's decision, say so and leave it open.
-- **The owner merges** (squash). Never merge without the owner's go-ahead.
+- **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
+  unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
+  `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
+  the owner's approval, never enable auto-merge. The approval stays valid through later pushes (owner's
+  rule), so check the comments again before enabling auto-merge after a fix.
 
 ## Lessons learned
 
@@ -131,8 +140,11 @@ background; only wait in the foreground for a result the very next step needs.
 - **e2e tests are full flows, not many small tests.** Start with a minimal runner of our own. Once
   there are five or more full flows of real game mechanics, switch to a test framework (owner's rule).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
-- **A crashed test script leaves the SceneTree running forever.** Every CI step that runs Godot needs
-  a `timeout`, and every job a `timeout-minutes`.
+- **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
+  runs Godot needs a `timeout`, and every job a `timeout-minutes`.
+- **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
+  a test can't signal success by returning nothing. The runner counts logged errors during each test
+  (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
 - **Commit the `.uid` files** Godot creates next to scripts and resources.
 - **Pushing anything under `.github/workflows/` needs workflow rights.** The bot has them through the
   App's Workflows permission. For the owner's own login it is the `workflow` scope
@@ -141,6 +153,16 @@ background; only wait in the foreground for a result the very next step needs.
   runners to this public repository.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
+
+### Repository and accounts
+
+- **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
+  approval (later pushes don't dismiss it), review threads resolved, the `headless` check from GitHub
+  Actions green on a branch that is up to date with `main`, squash merges only, no force-push or
+  deletion. The required check is named after the CI job: renaming the job means changing the
+  ruleset in the same PR (owner's `gh`).
+- **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
+  them.
 
 ### Toolchain
 
