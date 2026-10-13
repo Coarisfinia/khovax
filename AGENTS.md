@@ -70,8 +70,10 @@ the next one as soon as the previous one is merged.
 refactors and tooling tweaks get their own issue and their own pull request later, never along for the
 ride.
 
-**Keep each pull request low in complexity.** Prefer the simplest solution that does the job, and
-Godot's built-in way over a hand-built one.
+**Keep each pull request low in complexity: a concise unit of progress, no bloat** (owner's rule).
+Prefer the simplest solution that does the job, and Godot's built-in way over a hand-built one. When
+an issue turns out bigger than one such unit, build the core now and file the rest as its own
+issue.
 
 **No pull requests that only change docs.** A change to this file, the README or the design report
 rides along with the next real pull request, and that pull request's description says so.
@@ -179,12 +181,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
 - **Maps** (#36, `HexMap`): which tiles exist, each tile's terrain (ground, water, rock) and the
   players' starts. Rules ask `state.map` (`is_walkable`, `has_tile`), never a distance from the
-  origin, so a map can have any shape. Hand-made maps are text files in `maps/` (format in
-  `HexMap.parse`); generated ones come from `MapGenerator`, from the seed's own map stream. The
-  map is in the state hash.
-- **Instances** (`sim/instances/`): which map (a file or a generator with its parameters) and which
-  features in which order; players start on the map's starts. A new mechanic is a new feature that
-  instances list; it never grows the core.
+  origin, so a map can have any shape. Maps are hand-made text files in `maps/` (format in
+  `HexMap.parse`); instanced layouts will be assembled from hand-made pieces, the whole layout
+  turned by the run's seed (#57). The map is in the state hash.
+- **Instances** (`sim/instances/`): which map (a file in `maps/`) and which features in which
+  order; players start on the map's starts. A new mechanic is a new feature that instances list;
+  it never grows the core.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.

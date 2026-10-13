@@ -2,8 +2,7 @@ class_name HexMap
 extends RefCounted
 ## An instance's map (#36): which tiles exist, each one's terrain as a small integer, and where the
 ## players start. Rules ask the map, never the distance from the origin, so a map can have any
-## shape. Hand-made maps are text files (maps/*.map, read with `parse`); generated ones come from
-## MapGenerator, from the instance's seed.
+## shape. Maps are hand-made text files (maps/*.map, read with `parse`).
 
 const GROUND: int = 0
 const WATER: int = 1

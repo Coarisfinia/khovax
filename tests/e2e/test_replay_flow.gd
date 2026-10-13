@@ -43,7 +43,6 @@ func run(_tree: SceneTree) -> String:
 		_check_rehash,
 		_check_golden_replays,
 		_check_map_file,
-		_check_generated_maps,
 		_check_terrain_blocks,
 	]
 	for step: Callable in steps:
@@ -710,48 +709,6 @@ func _check_map_file() -> String:
 	var start: Array[Vector2i] = [Vector2i(-2, 0)]
 	if left.terrain != expected or left.starts != start:
 		return "negative coordinates read as %s, starts %s" % [left.terrain, left.starts]
-	return ""
-
-
-## Generated islands: the same seed gives the same map, other seeds other maps, every one has the
-## wanted size and connects all its ground to the starts, and rocks never sit on a start.
-func _check_generated_maps() -> String:
-	var hashes: Dictionary[int, bool] = {}
-	for seed_value: int in 12:
-		var map: HexMap = _island(seed_value)
-		hashes[hash(map.hash_values())] = true
-		if map.hash_values() != _island(seed_value).hash_values():
-			return "seed %d gave two different maps" % seed_value
-		var problem: String = _island_problem(map)
-		if not problem.is_empty():
-			return "seed %d: %s" % [seed_value, problem]
-	if hashes.size() < 12:
-		return "12 seeds gave only %d different maps" % hashes.size()
-	var wilds: GameState = Instances.create(Instances.WILDS, 5, 4)
-	if wilds == null or wilds.player(3).tile != wilds.map.starts[3]:
-		return "the wilds instance didn't start four players on its map's starts"
-	return ""
-
-
-## The wilds' island for this seed.
-func _island(seed_value: int) -> HexMap:
-	return MapGenerator.island(seed_value, Instances.WILDS_SIZE, Instances.WILDS_ROCKS)
-
-
-## Why a generated island breaks a rule, or "".
-func _island_problem(map: HexMap) -> String:
-	if map.size() != Instances.WILDS_SIZE or map.size() > HexMap.MAX_TILES:
-		return "%d tiles, not %d" % [map.size(), Instances.WILDS_SIZE]
-	var walkable: int = 0
-	for tile: Vector2i in map.sorted_tiles():
-		walkable += 1 if map.is_walkable(tile) else 0
-	if map.reachable(map.starts[0]).size() != walkable:
-		return "some ground can't be reached from the start"
-	if map.starts.size() != GameState.MAX_PLAYERS:
-		return "%d starts, not one per player" % map.starts.size()
-	for start: Vector2i in map.starts:
-		if not map.is_walkable(start):
-			return "start %s isn't ground" % start
 	return ""
 
 
