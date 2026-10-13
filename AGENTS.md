@@ -158,8 +158,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
   `Rng.new(state.rng_seed, id())` in `start`, keeps it in its state and hashes it, and draws only
   inside its step; streams keep one system's rolls from shifting another's. Ranges use
-  `below`/`between` (no modulo bias), never `next_u32() % n`. `GameState.state_hash()` fingerprints
-  the whole state; a new value goes into the hash too (`Feature.hash_values()` for a feature's).
+  `below`/`between` (no modulo bias), never `next_u32() % n`. **Numbers** (#33, `Fixed`): amounts
+  (HP, strength, power, damage) are whole integers up to `Fixed.MAX_AMOUNT`, fractions are in
+  thousandths (`Fixed.ONE`), and every division rounds down through `Fixed` (`mul_div`, `ratio`,
+  `scale`, `div_floor`), multiplying first and dividing last; never `/` on ints elsewhere.
+  `GameState.state_hash()` fingerprints the whole state; a new value goes into the hash too
+  (`Feature.hash_values()` for a feature's).
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
   tick, the seed, the map, the entities and the instance's features in their step order. A feature
@@ -227,6 +231,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
 - **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
   runs Godot needs a `timeout`, and every job a `timeout-minutes`.
+- **Local names that shadow a base-class method or property fail the script check**: `reference`,
+  `position`, `script`, `name`, and the test's own `run` have all bitten. So have discarded return
+  values (`erase`, `resize`, a method returning the thing it added): assign them to a `_`-prefixed
+  local, and an inner test class named like a global one (`Walk`).
 - **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.

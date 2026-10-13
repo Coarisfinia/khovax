@@ -291,12 +291,13 @@ a { color: var(--accent); }
 
 <h3>Rules as integer math <span class="badge pro">Proposed numbers</span></h3>
 <pre><code>ring_power     = 100 + level * 20 (+ bonuses from companion passives)
-seg_integrity  = ring_power * 1000 / perimeter        # fixed-point, no floats
-pressure(m)    = m.strength * m.hp / m.max_hp         # false swipe lowers this
+seg_integrity  = mul_div(ring_power, ONE, perimeter)       # thousandths of a power point
+pressure(m)    = m.strength * ratio(m.hp, m.max_hp)        # thousandths too; false swipe lowers it
 each tick:       every monster adds pressure(m) to its nearest wall segment
                  segment.damage >= seg_integrity  -&gt;  ring breaks, everyone inside enrages
-seal_ticks     = 40 + total_pressure_inside / 10      # more resistance takes longer to seal
+seal_ticks     = 40 + div_floor(total_pressure_inside, 10 * ONE)   # more resistance seals slower
 co-op:           ring_power sums every player standing on the ring</code></pre>
+<p><strong>Units</strong> <span class="badge dec">Decided</span> (#33): amounts (HP, strength, ring power, damage) are whole integers of at most 10<sup>9</sup>, so any two multiply safely in 64 bits. Fractions are in thousandths (<code>ONE</code> = 1000 is 100 %), so wall integrity and pressure compare in the same unit. Every division rounds down, through <code>Fixed</code> (<code>mul_div</code>, <code>ratio</code>, <code>div_floor</code>): multiply first, divide last.</p>
 <p>The structure is decided, but every constant is a placeholder to tune with the headless prototype. Player level scales ring power only moderately on purpose. The bigger power jumps should come from companion passives, so builds matter more than grinding.</p>
 
 <h3>How situations play out</h3>
@@ -431,8 +432,8 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li><strong>Every game rule is a modular feature</strong> <span class="badge dec">Decided</span> (#30): movement, the trail, and later catching, rings and monsters. An instance lists the features it has. Each one can be switched on or off, also during a run, so a boss stage can enable and disable mechanics on the fly. The core holds no game rule.</li>
   <li>The starting state plus every tick's commands is a replay. The same replay always ends with the same state hash, which is the basis for lockstep co-op and desync detection.</li>
   <li>Godot physics is never used for gameplay because it isn't deterministic across platforms.</li>
-  <li>All randomness comes from one seeded RNG that lives in the simulation state.</li>
-  <li>GDScript's 64-bit <code>int</code> is enough for fixed-point math.</li>
+  <li>All randomness comes from the run's seed, through integer generators (xoshiro128**) that live in the simulation state, one stream per feature (#32).</li>
+  <li>GDScript's 64-bit <code>int</code> is enough for fixed-point math: fractions in thousandths, every division rounded down (#33).</li>
 </ul>
 
 <h3>Rendering</h3>
