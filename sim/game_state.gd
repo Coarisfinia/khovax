@@ -29,7 +29,8 @@ func is_moving() -> bool:
 
 
 ## A fingerprint of the whole state, the same on every platform: two runs from the same start
-## with the same commands must end with the same hash. A 32-bit FNV-1a over every field.
+## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
+## every field, in integers only.
 func state_hash() -> int:
 	var values: Array[int] = [
 		tick,
@@ -43,5 +44,10 @@ func state_hash() -> int:
 	]
 	var result: int = 2_166_136_261
 	for value: int in values:
-		result = ((result ^ (value & 0xffff_ffff)) * 16_777_619) & 0xffff_ffff
+		result = _mix(result, value & 0xffff_ffff)
+		result = _mix(result, (value >> 32) & 0xffff_ffff)
 	return result
+
+
+static func _mix(current: int, word: int) -> int:
+	return ((current ^ word) * 16_777_619) & 0xffff_ffff

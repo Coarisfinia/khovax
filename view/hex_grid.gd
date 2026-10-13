@@ -18,6 +18,8 @@ const TILES_NODE: String = "Tiles"
 		radius = value
 		if is_node_ready():
 			_build()
+## The grid shows the size of this driver's simulation; without one (e.g. in the editor), `radius`.
+@export var driver: GameDriver
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
@@ -32,6 +34,8 @@ var _transforms: Dictionary[Vector2i, Transform3D] = {}
 
 
 func _ready() -> void:
+	if driver != null and driver.state != null:
+		radius = driver.state.grid_radius
 	_material.albedo_color = tile_color
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6

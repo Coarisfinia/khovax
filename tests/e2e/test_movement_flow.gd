@@ -267,6 +267,38 @@ func _check_key_survives_touch() -> String:
 	Input.action_release("move_left")
 	if not held:
 		return "steering by touch released a key held at the same time"
+	return _check_driver_timing()
+
+
+## The driver runs whole ticks from real time: a long frame runs at most MAX_TICKS_PER_FRAME ticks
+## and drops the rest, a remainder carries over to the next frame, and tick_fraction says how far
+## real time is into the next tick.
+func _check_driver_timing() -> String:
+	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
+	var start: int = _driver.state.tick
+	_driver.advance(60.0)
+	var long_frame_ticks: int = _driver.state.tick - start
+	# The capped frame leaves exactly one tick's time, which the next frame runs.
+	_driver.advance(0.0)
+	start = _driver.state.tick
+	_driver.advance(tick_seconds * 0.6)
+	var early_ticks: int = _driver.state.tick - start
+	var early_fraction: float = _driver.tick_fraction()
+	_driver.advance(tick_seconds * 0.6)
+	var carried_ticks: int = _driver.state.tick - start
+	var carried_fraction: float = _driver.tick_fraction()
+	if long_frame_ticks != GameDriver.MAX_TICKS_PER_FRAME:
+		return "a 60 s frame ran %d ticks, not %d" % [
+			long_frame_ticks,
+			GameDriver.MAX_TICKS_PER_FRAME,
+		]
+	if early_ticks != 0 or not is_equal_approx(early_fraction, 0.6):
+		return "0.6 of a tick ran %d ticks with fraction %f" % [early_ticks, early_fraction]
+	if carried_ticks != 1 or not is_equal_approx(carried_fraction, 0.2):
+		return "the remainder didn't carry over: %d ticks, fraction %f" % [
+			carried_ticks,
+			carried_fraction,
+		]
 	return ""
 
 

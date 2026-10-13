@@ -16,6 +16,7 @@ func run(_tree: SceneTree) -> String:
 		_check_invalid_commands,
 		_check_same_commands_same_state,
 		_check_hash_sees_changes,
+		_check_hash_covers_fields,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -82,6 +83,32 @@ func _check_hash_sees_changes() -> String:
 	if _replay(moves, 43)[0] == baseline[0]:
 		return "a different seed didn't change the state hash"
 	return ""
+
+
+## Changing any single field changes the hash, including bits above the lowest 32.
+func _check_hash_covers_fields() -> String:
+	var base: int = GameState.new(RADIUS, START, 42).state_hash()
+	var changes: Dictionary[String, Callable] = {
+		"tick": func(state: GameState) -> void: state.tick += 1,
+		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
+		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
+		"grid_radius": func(state: GameState) -> void: state.grid_radius += 1,
+		"player_tile.x": func(state: GameState) -> void: state.player_tile.x += 1,
+		"player_tile.y": func(state: GameState) -> void: state.player_tile.y += 1,
+		"move_from.x": func(state: GameState) -> void: state.move_from.x += 1,
+		"move_from.y": func(state: GameState) -> void: state.move_from.y += 1,
+		"move_ticks_left": func(state: GameState) -> void: state.move_ticks_left += 1,
+	}
+	for field: String in changes:
+		var state: GameState = _fresh_state()
+		changes[field].call(state)
+		if state.state_hash() == base:
+			return "changing %s didn't change the state hash" % field
+	return ""
+
+
+func _fresh_state() -> GameState:
+	return GameState.new(RADIUS, START, 42)
 
 
 ## The state hash after every tick.
