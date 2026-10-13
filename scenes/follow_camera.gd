@@ -58,10 +58,18 @@ func advance(delta: float) -> void:
 	_place()
 
 
-func _place() -> void:
+## The camera's world transform for the current focus: `focus` and the target are in world space,
+## so the camera is placed in world space too, whatever its parent's transform.
+func expected_transform() -> Transform3D:
 	var pitch: float = deg_to_rad(pitch_degrees)
-	position = focus + Vector3(0.0, sin(pitch), cos(pitch)) * distance
-	rotation = Vector3(-pitch, 0.0, 0.0)
+	var offset: Vector3 = Vector3(0.0, sin(pitch), cos(pitch)) * distance
+	return Transform3D(Basis.from_euler(Vector3(-pitch, 0.0, 0.0)), focus + offset)
+
+
+func _place() -> void:
+	# Setters run while the scene loads, before the camera is in the tree; _ready places it again.
+	if is_inside_tree():
+		global_transform = expected_transform()
 
 
 static func _on_ground(point: Vector3) -> Vector3:
