@@ -28,7 +28,7 @@ func _ready() -> void:
 
 
 func _report(result: String) -> void:
-	# gdstyle:ignore=quality/no-debug-print
 	# CI reads the result from the device log, which is where print goes on Android.
+	# gdstyle:ignore=quality/no-debug-print
 	print("KHOVAX_APK_E2E: " + ("PASS" if result.is_empty() else "FAIL " + result))
 	get_tree().quit(0 if result.is_empty() else 1)
