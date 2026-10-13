@@ -7,3 +7,14 @@ A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings ar
 The design report lives in [`docs/design.html`](docs/design.html).
 
 Status: pre-production.
+
+## Running it
+
+Install the tools with [scoop](https://scoop.sh) (Windows). The project targets Godot 4.7.x, the version CI pins:
+
+```sh
+scoop bucket add extras
+scoop install godot gh git
+```
+
+Open the project in Godot (`godot --path . --editor`), or run it directly with `godot --path .`.

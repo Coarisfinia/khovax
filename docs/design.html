@@ -386,17 +386,16 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li><strong>PoE-style instances.</strong> A hub plus seeded instanced maps. Seed plus party inputs fully determine a run, so replays and shareable seeds come for free.</li>
   <li><strong>Single player is the default,</strong> with co-op for up to 4 players. In single player the simulation runs locally with no network layer.</li>
   <li><strong>Lockstep netcode.</strong> Clients send only inputs, with a small input delay. The slow pacing hides it well.</li>
-  <li><strong>Transport:</strong> browsers only allow WebSocket or WebRTC. Start with a small WebSocket relay that only forwards inputs. Later it can run the same simulation headless to verify. <span class="badge pro">Proposed</span></li>
+  <li><strong>Transport:</strong> browsers only allow WebSocket or WebRTC. Start with a small WebSocket relay that only forwards inputs. Later it can run the same simulation headless to verify. <span class="badge dec">Decided</span></li>
   <li><strong>Desync detection:</strong> clients compare state hashes every N ticks.</li>
 </ul>
 
 <h2 id="comfort"><span class="n">09</span>Camera &amp; comfort <span class="badge dec">Decided</span></h2>
-<p>The camera is extremely slow because the target player, starting with the developer, gets motion sick. That makes comfort a hard design rule rather than a setting:</p>
+<p>The camera is extremely slow for players prone to motion sickness. That makes comfort a hard design rule rather than a setting:</p>
 <ul>
   <li>Fixed top-down angle, no rotation.</li>
-  <li>Low camera acceleration and no snapping. A dead zone means the camera only moves when you near the edge. <span class="badge pro">Proposed</span></li>
+  <li>Low camera acceleration and no snapping. A dead zone means the camera only moves when you near the edge. <span class="badge dec">Decided</span></li>
   <li>No screen shake, no zoom pulses, no camera-driven hit effects. Impact is shown on the characters instead.</li>
-  <li>An optional static "room by room" camera mode. <span class="badge pro">Proposed</span></li>
 </ul>
 
 <h2 id="tech"><span class="n">10</span>Tech stack <span class="badge dec">Decided</span></h2>
@@ -447,7 +446,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li><strong>Golden replays:</strong> "player catches a burrower in co-op" becomes a file. When a mechanic changes, the hash diff shows it immediately.</li>
   <li><strong>Desync tests:</strong> the same replay runs twice and on several platforms in CI, and the hashes must match.</li>
   <li><strong>Data validation:</strong> every species definition is checked for valid passives, specials and stats.</li>
-  <li><strong>Framework:</strong> GUT or gdUnit4, both of which run headless. GUT is the leaning for its simple CLI output. <span class="badge pro">Proposed</span></li>
+  <li><strong>Framework:</strong> a minimal runner of our own to start with. Once there are five or more full flows of real game mechanics, switch to a framework such as GUT or gdUnit4. <span class="badge dec">Decided</span></li>
   <li>Web export smoke tests in CI.</li>
 </ul>
 
@@ -458,9 +457,9 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <tbody>
 <tr><td>0</td><td>Install tools (scoop), create the GitHub repo and CI</td><td>Headless Godot runs in CI</td></tr>
 <tr><td>1</td><td>Hex grid, deterministic tick loop, seeded RNG</td><td>Two runs of the same seed hash identically</td></tr>
-<tr><td>2</td><td>Trail drawing, loop detection, flood fill for "inside"</td><td>Unit tests cover open, closed and nested loops</td></tr>
+<tr><td>2</td><td>Trail drawing, loop detection, flood fill for "inside"</td><td>e2e flows cover open, closed and nested loops</td></tr>
 <tr><td>3</td><td>Sealing phase with pressure and integrity</td><td>The situations table above is reproduced by tests</td></tr>
-<tr><td>4</td><td>Replay format, state hash, first golden replays in GUT</td><td>A replay fails loudly when a rule changes</td></tr>
+<tr><td>4</td><td>Replay format, state hash, first golden replays in the e2e runner</td><td>A replay fails loudly when a rule changes</td></tr>
 <tr><td>5</td><td>Minimal debug view: hexes, dots, lines</td><td>The ring can be played and felt by hand</td></tr>
 </tbody></table></div>
 
@@ -470,7 +469,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li>Enrage tuning: stat multipliers, heal amount and stacking cap. The final name and effects of the "Tempered" trait.</li>
   <li>All tuning constants for ring power, integrity, pressure and seal time.</li>
   <li>Tick rate: 10, 15 or 20 per second.</li>
-  <li>Test framework: GUT or gdUnit4, to be confirmed against their current state.</li>
+  <li>Which test framework to switch to once there are five or more full flows.</li>
   <li>Hub design, crafting economy and loot tables.</li>
   <li>Art pipeline for the cel-shaded models.</li>
 </ul>
@@ -494,7 +493,8 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <tr><td>Slots</td><td>1 at start, +1 lore quest, +1 at level 50 with a quest</td><td>Paced build growth</td></tr>
 <tr><td>Fainting</td><td>Out for the instance; optional hardcore league</td><td>Forgiving default, PoE-style challenge</td></tr>
 <tr><td>Co-op</td><td>Up to 4 players, single player default</td><td>Lockstep stays simple</td></tr>
-<tr><td>Camera</td><td>Extremely slow, fixed angle, no shake</td><td>Motion sickness</td></tr>
+<tr><td>Camera</td><td>Extremely slow, fixed angle, no shake, low acceleration, dead zone. No room-by-room mode</td><td>Motion sickness. Room-by-room doesn't fit the many screen sizes (phone, PC)</td></tr>
+<tr><td>Transport</td><td>WebSocket relay that forwards inputs only</td><td>Works in browsers, simpler than WebRTC</td></tr>
 <tr><td>Art</td><td>Cartoony, Borderlands-style cel shading</td><td>Distinct look that works in the Compatibility renderer</td></tr>
 <tr><td>Legendaries</td><td>Covenant, echo trail and field journal mechanics</td><td>Variety beyond the core ring</td></tr>
 <tr><td>Process</td><td>Solo, Claude-centric, GitHub, heavy headless e2e testing</td><td>Fast iteration with confidence</td></tr>
