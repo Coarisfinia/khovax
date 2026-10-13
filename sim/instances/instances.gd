@@ -32,7 +32,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		push_error("instance %s has a broken map: %s" % [instance_name, map.problem])
 		return null
 	if players < 1 or players > map.starts.size():
-		push_error("instance %s takes 1 to %d players, not %d" % [instance_name, map.starts.size(), players])
+		var limits: Array = [instance_name, map.starts.size(), players]
+		push_error("instance %s takes 1 to %d players, not %d" % limits)
 		return null
 	var ordered: Array[Feature] = [MovementFeature.new(), TrailFeature.new()]
 	var state: GameState = GameState.new(map, seed_value, ordered)
