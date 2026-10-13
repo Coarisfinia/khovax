@@ -1,12 +1,12 @@
-## Hex grid math. Tiles are addressed by integer axial coordinates (q, r) as Vector2i, so the
-## deterministic simulation can work on them without floats. Pointy-top hexes on the XZ ground plane.
-## The tile-to-world conversion lives only here; it is for rendering, never for simulation logic.
 class_name Hex
 extends RefCounted
+## Hex grid math. Tiles are addressed by integer axial coordinates (q, r) as Vector2i, so the
+## deterministic simulation can work on them without floats. Pointy-top hexes on the XZ ground
+## plane.
+## The tile-to-world conversion lives only here; it is for rendering, never for simulation logic.
 
 ## World distance from a tile's center to its corners.
 const SIZE: float = 1.0
-
 const DIRECTIONS: Array[Vector2i] = [
 	Vector2i(1, 0), Vector2i(1, -1), Vector2i(0, -1),
 	Vector2i(-1, 0), Vector2i(-1, 1), Vector2i(0, 1),
@@ -14,8 +14,10 @@ const DIRECTIONS: Array[Vector2i] = [
 
 
 static func distance(a: Vector2i, b: Vector2i) -> int:
+	# The largest of the three cube-coordinate differences: the same as half their sum, without a
+	# division.
 	var d: Vector2i = a - b
-	return (absi(d.x) + absi(d.y) + absi(d.x + d.y)) / 2
+	return maxi(maxi(absi(d.x), absi(d.y)), absi(d.x + d.y))
 
 
 ## Every tile within `radius` steps of `center`, center first, then ring by ring.
