@@ -70,16 +70,16 @@ func _check_same_commands_same_state() -> String:
 ## Changing one command, or the seed, must change the hashes.
 func _check_hash_sees_changes() -> String:
 	var moves: Array[int] = _moves()
-	var reference: Array[int] = _replay(moves, 42)
+	var baseline: Array[int] = _replay(moves, 42)
 	var changed: Array[int] = []
 	changed.assign(moves)
 	# The first command: the player stands still then, so it is never ignored like a command
 	# that arrives mid-move.
 	changed[0] = (changed[0] + 1) % Hex.DIRECTIONS.size()
-	var last: int = reference.size() - 1
-	if _replay(changed, 42)[last] == reference[last]:
+	var last: int = baseline.size() - 1
+	if _replay(changed, 42)[last] == baseline[last]:
 		return "changing one command didn't change the final state hash"
-	if _replay(moves, 43)[0] == reference[0]:
+	if _replay(moves, 43)[0] == baseline[0]:
 		return "a different seed didn't change the state hash"
 	return ""
 
