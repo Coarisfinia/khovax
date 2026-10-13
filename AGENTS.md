@@ -89,7 +89,8 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Run the e2e tests locally**, headless, before pushing (the command is in the README).
+- **Don't rerun locally what CI runs** (owner's rule): lint, the script check and the e2e tests run
+  on every push. Push and let CI check. Run them locally only to reproduce a CI failure.
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
@@ -135,9 +136,9 @@ background; only wait in the foreground for a result the very next step needs.
   gets relaxed when it truly conflicts with another one, with the conflict named next to it.
   Inconvenience is not a reason. A suppression is a `# gdstyle:ignore=<rule>` or
   `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
-- **Before pushing, run `gdstyle fmt .` and `gdstyle check .`**. gdstyle is installed with scoop from
-  `tools/scoop/gdstyle.json`; its version is pinned there and in CI (with the archive's checksum),
-  so bump both together.
+- **Before pushing, run `gdstyle fmt .`**: it fixes the formatting rather than only checking it.
+  gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned there and
+  in CI (with the archive's checksum), so bump both together.
 - **Godot rewrites `project.godot` in its own form** whenever it runs: its own order, no comments,
   and settings equal to their default left out (four warnings are errors by default). Keep the file
   in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
