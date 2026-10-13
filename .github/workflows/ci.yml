@@ -13,13 +13,18 @@ env:
   # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
   GDSTYLE_VERSION: 0.3.3
   GDSTYLE_SHA256: afc3c7a1b9fba219a2eeb2b3896470babffe010b6cf9f3a8c9526a2f6155d64c
+  # Checksums of Godot's Linux editor and export templates for GODOT_VERSION, from the release's
+  # SHA512-SUMS.txt; bump them with the version. The cache keys include them, so a cache only ever
+  # holds what was verified against them.
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+  GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
 
 jobs:
   headless:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install gdstyle
         run: |
@@ -58,10 +63,10 @@ jobs:
 
       - name: Cache Godot
         id: cache-godot
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/godot
-          key: godot-${{ env.GODOT_VERSION }}-linux
+          key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
 
       - name: Download Godot
         if: steps.cache-godot.outputs.cache-hit != 'true'
@@ -69,6 +74,7 @@ jobs:
           mkdir -p ~/godot
           curl -fsSL -o /tmp/godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
@@ -86,3 +92,83 @@ jobs:
       - name: Run e2e tests
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
+
+  android:
+    # A debug APK to install on a phone (#59), exported with Godot's Android export templates, the
+    # Android SDK and Java already on the runner, and a throwaway debug key: no secrets.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
+
+      - name: Download Godot
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+
+      - name: Cache the Android export templates
+        id: cache-templates
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-android-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}
+
+      - name: Download the Android export templates
+        # The archive holds every platform's templates; only Android's are kept, so the cache stays small.
+        if: steps.cache-templates.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
+          target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$target"
+          unzip -q -j /tmp/templates.tpz \
+            templates/android_debug.apk templates/android_release.apk templates/version.txt -d "$target"
+
+      - name: Point Godot at the runner's Android SDK and Java
+        run: |
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.tres <<SETTINGS
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
+          SETTINGS
+
+      - name: Make a throwaway debug key
+        run: |
+          keytool -genkeypair -v -keystore /tmp/debug.keystore -storepass android \
+            -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Import project
+        run: timeout 120 ~/godot/godot --headless --path . --import
+
+      - name: Export the debug APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          mkdir -p build
+          timeout 300 ~/godot/godot --headless --path . --export-debug "Android" build/khovax.apk
+          test -s build/khovax.apk
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: khovax-debug-apk
+          path: build/khovax.apk
+          retention-days: 14

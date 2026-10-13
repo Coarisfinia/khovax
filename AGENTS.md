@@ -262,6 +262,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (`gh auth refresh -h github.com -s workflow`).
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository.
+- **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
+  comment), and Godot, its export templates and gdstyle by checksum, with cache keys that include
+  the checksum. Bump a version and its checksum together.
 - **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
   matching means a change altered what the game does. If that is on purpose, bump
   `Simulation.RULES_VERSION`, rehash them (`godot --headless --path . -s
