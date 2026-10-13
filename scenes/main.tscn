@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sgp6g"]
+albedo_color = Color(0.94, 0.45, 0.16, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_o5qli"]
+
+[node name="Main" type="Node3D" unique_id=1635831808]
+
+[node name="Cube" type="MeshInstance3D" parent="." unique_id=1715359208]
+transform = Transform3D(0.81915206, 0, 0.57357645, 0, 1, 0, -0.57357645, 0, 0.81915206, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_sgp6g")
+mesh = SubResource("BoxMesh_o5qli")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=833248369]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 4, 4)
+current = true
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
+transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)
