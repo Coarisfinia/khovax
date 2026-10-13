@@ -99,23 +99,14 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Keep the project watcher running in the background** and let its exit wake you. It is the
-  household-brain watcher (`Flixbox/household-brain`, `packages/tooling/src/watch-project.ts`), run
-  for this repository; the guide to set it up is in the user-level `~/.claude/CLAUDE.md`:
-
-  ```sh
-  cd ~/.local/share/household-brain && REPO=Flixbox/khovax GH=agent-gh ACTIVITY_GH=gh OWNER=Flixbox \
-    SELF='flixbox-ai-agent[bot]' WORKFLOW=ci.yml bun packages/tooling/src/watch-project.ts
-  ```
-
-  It reports one event and exits (new PRs, CI results, approvals, comments, conflicts, `main`
-  moving, issues); handle it and start it again. Don't poll by hand alongside it. On a failing CI
-  run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it,
-  and push once.
+- **Keep the project watcher running in the background**, as the owner's laptop-wide agent notes
+  describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
+  On a failing CI run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it
+  locally, fix it, and push once.
 
 ### Review and merge
 
-- **Every pull request gets one reviewer agent**: read-only, reporting findings with severity and
+- **Every pull request gets one review**, by Codex as the laptop-wide agent notes describe: read-only, reporting findings with severity and
   evidence. Fix blockers and should-fix items before merge, in one push, and say in the PR
   description what was addressed. Four review rounds is the soft cap.
 - **Every comment gets an answer.** Fix what is asked in one push, then reply saying what changed. If
