@@ -138,6 +138,9 @@ background; only wait in the foreground for a result the very next step needs.
 - **Before pushing, run `gdstyle fmt .` and `gdstyle check .`**. gdstyle is installed with scoop from
   `tools/scoop/gdstyle.json`; its version is pinned there and in CI (with the archive's checksum),
   so bump both together.
+- **Godot rewrites `project.godot` in its own form** whenever it runs: its own order, no comments,
+  and settings equal to their default left out (four warnings are errors by default). Keep the file
+  in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
 - **The headless renderer is a dummy**: a MultiMesh's instance transforms can't be read back, so
   code that tests need to inspect keeps its own copy of what it gave the renderer.
 - **The simulation is deterministic**: integer or fixed-point math only, fixed ticks, one seeded RNG
