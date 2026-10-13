@@ -41,10 +41,12 @@ jobs:
         run: |
           forbidden='\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
           failed=0
+          # A sim/ script extends RefCounted, or another class of sim/ (e.g. Feature).
+          sim_classes=$(grep -rh '^class_name ' sim | awk '{print $2}' | paste -sd'|' -)
           while read -r file; do
             code=$(perl -pe 's/^((?:[^"'"'"'#]|"(?:\\.|[^"\\])*"|'"'"'(?:\\.|[^'"'"'\\])*'"'"')*)#.*$/$1/' "$file")
-            if ! grep -qx 'extends RefCounted' <<< "$code"; then
-              echo "::error file=${file}::sim/ scripts extend RefCounted"
+            if ! grep -qxE "extends (RefCounted|${sim_classes})" <<< "$code"; then
+              echo "::error file=${file}::sim/ scripts extend RefCounted or a class of sim/"
               failed=1
             fi
             if grep -nE "$forbidden" <<< "$code"; then
