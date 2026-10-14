@@ -1,0 +1,12 @@
+# Credits
+
+The assets this game uses, with their authors and licenses. Generated from each pack's
+`assets/<pack>/SOURCE.md` by `tools/credits.gd`; don't edit it by hand.
+
+## KayKit Adventurers Character Pack 1.0
+
+- **Files:** `assets/kaykit-adventurers/`
+- **Author:** Kay Lousberg (www.kaylousberg.com)
+- **Source:** https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+  (`addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb`)
+- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
