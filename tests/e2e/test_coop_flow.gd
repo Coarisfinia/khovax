@@ -135,6 +135,8 @@ func _start(delay: int) -> String:
 	await _tree.process_frame
 	if _driver.state == null or _driver.state.player(1) == null:
 		return "the driver didn't start a run with two players"
+	if second.model == null or second.model == first.model or second.model.get_parent() != second:
+		return "the second player's view doesn't have a character model of its own"
 	_driver.set_process(false)
 	for view: PlayerView in _views:
 		view.set_process(false)

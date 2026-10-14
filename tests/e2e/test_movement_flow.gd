@@ -223,6 +223,8 @@ func _hold(expected: Array[Vector2i], release: Callable) -> String:
 			visited.append(_tile())
 	release.call()
 	_finish_step()
+	# Where the last step left from: the tile before the last one visited.
+	var last_from: Vector2i = visited[maxi(visited.size() - 2, 0)]
 	visited.pop_front()
 	if jumped:
 		return "the player jumped instead of gliding"
@@ -232,13 +234,13 @@ func _hold(expected: Array[Vector2i], release: Callable) -> String:
 		return "the player didn't come to rest on its tile"
 	for tile: Vector2i in visited:
 		_walked[tile] = true
-	var result: String = _check_look(not expected.is_empty(), ran)
+	var result: String = _check_look(not expected.is_empty(), ran, last_from)
 	return result if not result.is_empty() else _check_trail()
 
 
 ## The character runs while it walks, idles once it stands, and ends up facing the way it last
 ## walked, turned there smoothly by the frames in between.
-func _check_look(walked: bool, ran: bool) -> String:
+func _check_look(walked: bool, ran: bool, last_from: Vector2i) -> String:
 	if ran != walked:
 		return "the character %s while walking" % ("didn't run" if walked else "ran without")
 	if _player_view.current_clip() != PlayerView.IDLE:
@@ -246,9 +248,11 @@ func _check_look(walked: bool, ran: bool) -> String:
 			_player_view.current_clip(),
 			PlayerView.IDLE,
 		]
-	var turned: float = _player_view.model.rotation.y
-	if walked and absf(angle_difference(turned, _player_view.facing)) > 0.01:
-		return "the character faces %f, not where it walked (%f)" % [turned, _player_view.facing]
+	# The model's own front, in the world, points along the last step it walked.
+	var front: Vector3 = _player_view.model.global_basis * Vector3.MODEL_FRONT
+	var step: Vector3 = _player_view.tile_position() - _player_view.position_on(last_from)
+	if walked and front.normalized().dot(step.normalized()) < 0.999:
+		return "the character faces %s, not where it walked (%s)" % [front, step]
 	return ""
 
 

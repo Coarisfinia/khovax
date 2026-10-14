@@ -38,10 +38,9 @@ func _ready() -> void:
 		var node: Node3D = model.find_child(part) as Node3D
 		if node != null:
 			node.visible = false
+	# The clips loop by the model's import settings (Rogue.glb.import), not by changing the
+	# imported animations here, which every instance shares.
 	_animations = model.find_child("AnimationPlayer") as AnimationPlayer
-	if _animations != null:
-		for clip: StringName in [IDLE, MOVE]:
-			_animations.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 
 
 func _process(delta: float) -> void:
@@ -70,6 +69,8 @@ func show_state() -> void:
 		var ticks_done: float = whole_ticks + driver.tick_fraction()
 		var done: float = clampf(ticks_done / MovementFeature.MOVE_TICKS, 0.0, 1.0)
 		position = position_on(walk.from).lerp(tile_position(), done)
+		# The yaw that turns the model's front (+Z, Vector3.MODEL_FRONT, as glTF models face)
+		# toward the walk.
 		var heading: Vector3 = tile_position() - position_on(walk.from)
 		facing = atan2(heading.x, heading.z)
 	_play(MOVE if moving else IDLE)
@@ -88,5 +89,8 @@ func turn(delta: float) -> void:
 
 
 func _play(clip: StringName) -> void:
-	if _animations != null and _animations.current_animation != clip:
+	# A model without the clip simply doesn't animate.
+	if _animations == null or not _animations.has_animation(clip):
+		return
+	if _animations.current_animation != clip:
 		_animations.play(clip, 0.15)
