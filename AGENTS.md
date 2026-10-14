@@ -201,9 +201,11 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   commands is a replay.
 - **`meta/`, the layers above a run** (#37): the player's `Profile` (captured monsters, materials,
   unlocked slots) lasts between runs. A run is the profile's party plus an instance and a seed
-  (`Instances.create`): deterministic, like everything in `sim/`. **Whatever the player obtains is
-  saved at once** (owner, #73): each catch or find is a `Gain`, which `ProfileKeeper.take` applies
-  and saves atomically right away, so a crash mid-run loses nothing; `finish_run` counts the run. The profile is saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and
+  (`Instances.create`): deterministic, like everything in `sim/`. Each catch or find is a `Gain`,
+  which `ProfileKeeper.take` applies at once; **saves are debounced** (owner, #73): the first gain
+  after a quiet spell is saved right away, later ones at most once per
+  `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the background flush
+  what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and
   ids only: a newer format is refused, and an older one is migrated in `Profile.parse` once a second
   format exists. Content data (species, items) comes in #72.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions

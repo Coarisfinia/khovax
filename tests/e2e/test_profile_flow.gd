@@ -32,20 +32,35 @@ func run(_tree: SceneTree) -> String:
 	return result
 
 
-## Whatever the player obtains is on disk at once, before the run ends: a crash right after a
-## catch keeps it (owner, #73). A finished run is counted and saved too.
+## Saving is debounced (owner, #73): the first catch after a quiet spell is on disk at once, a burst
+## right after it is saved together once SAVE_INTERVAL_MSEC has passed, and ending a run flushes
+## whatever is pending.
 func _check_kept_at_once() -> String:
 	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
-	var problem: String = keeper.take(_result(["moss_toad"], { "crystal": 1 }))
+	var problem: String = keeper.take(_result(["moss_toad"], {}), 0)
+	if not problem.is_empty() or _monsters_on_disk() != 1:
+		return "the first catch wasn't on disk right away: " + problem
+	for ms: int in range(100, 5000, 100):
+		problem += keeper.take(_result(["moss_toad"], {}), ms)
+	var interval: int = ProfileKeeper.SAVE_INTERVAL_MSEC
+	problem += keeper.save_if_due(interval - 1)
+	if not problem.is_empty() or _monsters_on_disk() != 1:
+		return "a burst of catches was saved before the interval passed: " + problem
+	problem = keeper.save_if_due(interval)
+	if not problem.is_empty() or _monsters_on_disk() != 50:
+		return "the burst wasn't saved once the interval passed: " + problem
+	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.finish_run()
 	var on_disk: Profile = SaveStore.load_profile(SAVE_PATH)
-	if not problem.is_empty() or on_disk.captured_monsters.size() != 1:
-		return "a catch wasn't on disk right after it happened: " + problem
-	problem = keeper.finish_run()
-	on_disk = SaveStore.load_profile(SAVE_PATH)
 	var _removed: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-	if not problem.is_empty() or on_disk.runs_finished != 1:
-		return "a finished run wasn't counted and saved: " + problem
+	if (not problem.is_empty()
+			or on_disk.runs_finished != 1
+			or on_disk.captured_monsters.size() != 51):
+		return "finishing the run didn't flush the pending catch: " + problem
 	return ""
+
+
+func _monsters_on_disk() -> int:
+	return SaveStore.load_profile(SAVE_PATH).captured_monsters.size()
 
 
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
