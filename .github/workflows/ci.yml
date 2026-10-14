@@ -314,7 +314,8 @@ jobs:
     needs: [headless, android, apk-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
-    # One deploy at a time, in order: a newer one waits instead of cancelling one under way.
+    # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
+    # older one waiting, since only the latest build matters.
     concurrency:
       group: pages
       cancel-in-progress: false
