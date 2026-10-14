@@ -38,18 +38,26 @@ var _accumulated: float = 0.0
 
 
 func _ready() -> void:
-	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
-	state = Instances.create(instance, 0, players)
-	if state != null:
-		recording = Replay.new(instance, 0)
-		recording.begin(state)
-	schedule = CommandSchedule.new(players, input_delay)
+	start(0)
 	if input != null:
 		sources.append(LocalSource.new(input))
 
 
 func _process(delta: float) -> void:
 	advance(delta)
+
+
+## Starts a fresh run of the instance from `seed_value`: the APK test (#61) starts its own with a
+## fixed seed. The command sources stay.
+func start(seed_value: int) -> void:
+	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
+	state = Instances.create(instance, seed_value, players)
+	if state != null:
+		recording = Replay.new(instance, seed_value)
+		recording.begin(state)
+	schedule = CommandSchedule.new(players, input_delay)
+	hashes.clear()
+	_accumulated = 0.0
 
 
 ## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
