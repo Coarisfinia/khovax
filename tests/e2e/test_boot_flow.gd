@@ -26,6 +26,7 @@ func run(tree: SceneTree) -> String:
 		_check_state_drives_view,
 		_check_ball,
 		_check_ball_removed,
+		_check_toon_look,
 		_check_terrain_colors,
 	]
 	var result: String = ""
@@ -214,6 +215,28 @@ func _check_ball_removed(main: Node) -> String:
 	view.show_state()
 	if not feature.monsters.is_empty() or view.balls.has(monster_id):
 		return "a removed wild monster left its ball or its entry behind"
+	return ""
+
+
+## The comic look (#14) is on everything shown: the tiles, the ball and every part of the character
+## use toon shading and the one shared ink outline.
+func _check_toon_look(main: Node) -> String:
+	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var materials: Array[Material] = [grid.tile_mesh().material]
+	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
+	for ball: HexPiece in view.balls.values():
+		var shape: MeshInstance3D = ball.get_child(0) as MeshInstance3D
+		materials.append(shape.mesh.surface_get_material(0))
+	var player: PlayerView = main.get_node("Player") as PlayerView
+	for node: Node in player.model.find_children("*", "MeshInstance3D", true, false):
+		var part: MeshInstance3D = node as MeshInstance3D
+		for surface: int in part.mesh.get_surface_count():
+			materials.append(part.get_active_material(surface))
+	for material: Material in materials:
+		var toon: StandardMaterial3D = material as StandardMaterial3D
+		var shaded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
+		if not shaded or toon.next_pass != Toon.outline():
+			return "a shown material lacks the toon shading or the shared ink outline"
 	return ""
 
 

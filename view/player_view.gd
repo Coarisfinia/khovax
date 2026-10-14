@@ -34,6 +34,7 @@ func _ready() -> void:
 	super()
 	if model == null:
 		return
+	Toon.apply_to_model(model)
 	for part: String in HIDDEN_PARTS:
 		var node: Node3D = model.find_child(part) as Node3D
 		if node != null:

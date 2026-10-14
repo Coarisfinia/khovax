@@ -24,6 +24,7 @@ func _ready() -> void:
 	_mesh.height = RADIUS * 2.0
 	var material: StandardMaterial3D = StandardMaterial3D.new()
 	material.albedo_color = ball_color
+	Toon.apply(material)
 	_mesh.material = material
 
 
