@@ -140,6 +140,9 @@ func _start(delay: int) -> String:
 	_driver.set_process(false)
 	for view: PlayerView in _views:
 		view.set_process(false)
+	# The first real frame may have run a tick on real time already; start over on the flow's own
+	# clock, as _ready does.
+	_driver.start(0)
 	return ""
 
 
