@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels that pull request's run for the previous commit. Every run
+# on main gets its own group, so none is ever cancelled or queued behind another.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   GODOT_VERSION: 4.7.2
   # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
