@@ -24,7 +24,10 @@ func requires() -> Array[int]:
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	# Only a trail that grew this tick can have closed a ring, in the order the moves happened.
+	# A ring can only close when its player moves, so rings are checked per move, in the order
+	# movement raised them: entity id order, so when two players close rings around the same
+	# monster in one tick, the earlier one catches it. (A monster that comes to stand inside an
+	# old ring later is caught on that player's next move.) Copied, as catches add events.
 	for event: RefCounted in state.events.duplicate():
 		var moved: EntityMoved = event as EntityMoved
 		if moved == null or trails.trail(moved.entity_id) == null:
