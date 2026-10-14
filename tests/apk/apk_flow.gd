@@ -2,9 +2,9 @@ extends RefCounted
 ## The one e2e flow on the APK (#61): the main scene, a fixed seed, and the touch stick walking the
 ## player, tick by tick, so the game is exactly the same everywhere. It checks that the player
 ## walked, the trail grew and the camera follows, and that the game ended in exactly the expected
-## state. It runs on an Android emulator in CI (game/test_mode.gd, started with
-## --khovax-apk-test), and headless in the required check (tests/e2e/test_apk_flow.gd), which also
-## pins EXPECTED_HASH: a pass on the device means Android plays the very same game.
+## state. It runs on an Android emulator in CI (started by game/test_mode.gd in the test APK), and
+## headless in the required check (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a
+## pass on the device means Android plays the very same game.
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)

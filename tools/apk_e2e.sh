@@ -15,8 +15,8 @@ adb logcat -c
 activity=$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$package" \
   | tail -1 | tr -d '\r')
 echo "launching $activity"
-# The flag reaches the game as a command-line argument through the launch intent.
-adb shell am start -n "$activity" --esa command_line_params --khovax-apk-test
+# The test APK plays its flow on every start (game/test_mode.gd).
+adb shell am start -n "$activity"
 result=""
 deadline=$((SECONDS + 180))
 while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
