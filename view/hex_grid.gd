@@ -59,6 +59,7 @@ var _colors: Dictionary[Vector2i, Color] = {}
 func _ready() -> void:
 	# Each tile's color comes from its MultiMesh instance.
 	_material.vertex_color_use_as_albedo = true
+	Toon.apply(_material)
 	# A cylinder with six segments is a hexagonal prism, already pointy-top like Hex.
 	_mesh.radial_segments = 6
 	_mesh.rings = 1
