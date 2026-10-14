@@ -310,12 +310,11 @@ func _check_entity_ids_stay() -> String:
 	var ids: Array[int] = []
 	for each: Entity in state.entities:
 		ids.append(each.id)
-	var removed: int = ids[1]
+	# The player in slot 1, with entities before and after it (the wild monster, other players).
+	var removed: int = state.player(1).id
 	state.remove_entity(removed)
-	if state.entity(removed) != null or state.entity(ids[0]) == null:
-		return "removing an entity took the wrong one"
-	if state.entity(ids[2]) == null:
-		return "removing an entity took the wrong one"
+	if state.entity(removed) != null or ids.size() != state.entities.size() + 1:
+		return "removing an entity took the wrong one or more than one"
 	if _movement(state).walk(removed) != null or _trails(state).trail(removed) != null:
 		return "a removed entity's walk or trail stayed behind"
 	var added: Entity = state.add_entity(1, START)

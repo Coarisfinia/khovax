@@ -439,6 +439,9 @@ func _check_blocked_by_ball() -> String:
 	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
 	movement.walk(player.id).from = Vector2i.ZERO
 	_cube.show_state()
+	# Placed by hand, not walked: only tiles walked from here on are expected on top of the trail.
+	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	_walked = trails.trail(player.id).tiles.duplicate()
 	var result: String = _walk(["move_left"], [Vector2i(-1, 0)])
 	if not result.is_empty():
 		return "walking toward the ball: " + result
