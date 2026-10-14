@@ -6,3 +6,4 @@ extends RefCounted
 const NONE: int = 0
 const MOVEMENT: int = 1
 const TRAIL: int = 2
+const WILD_MONSTERS: int = 3

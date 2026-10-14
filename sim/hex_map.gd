@@ -11,11 +11,15 @@ const BLOCKED: int = 2
 const MAX_TILES: int = 4096
 ## The characters of a map file, by terrain; a digit 1 to 4 is ground where that player starts.
 const SYMBOLS: Dictionary[String, int] = { ".": GROUND, "~": WATER, "^": BLOCKED }
+## Ground where a wild monster stands when the run begins (WildMonsterFeature, #19).
+const WILD_MONSTER: String = "m"
 
 ## Every tile's terrain, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
+## Where wild monsters stand when the run begins, in the map file's reading order.
+var wild_monsters: Array[Vector2i] = []
 ## Why the map file couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -34,7 +38,8 @@ static func disc(radius: int) -> HexMap:
 ## is `origin <column> <row>`: the character there is tile (0, 0). Every further line is one row r
 ## of the map, from the origin row's r = 0 down; a tile sits on every second column (doubled
 ## coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~` water,
-## `^` blocked, a digit 1 to 4 a player's start on ground, and a space no tile.
+## `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, and a
+## space no tile.
 static func parse(text: String) -> HexMap:
 	var map: HexMap = HexMap.new()
 	var rows: Array[String] = []
@@ -116,6 +121,10 @@ func hash_values() -> Array[int]:
 	for start: Vector2i in starts:
 		values.append(start.x)
 		values.append(start.y)
+	values.append(wild_monsters.size())
+	for spot: Vector2i in wild_monsters:
+		values.append(spot.x)
+		values.append(spot.y)
 	return values
 
 
@@ -135,10 +144,13 @@ func _parse_row(
 		var slot: int = symbol.to_int() - 1 if symbol.is_valid_int() else -1
 		if posmod(doubled, 2) != 0:
 			return "'%s' in row %d sits between two tiles" % [symbol, r]
-		if not SYMBOLS.has(symbol) and (slot < 0 or slot >= GameState.MAX_PLAYERS):
+		var known: bool = SYMBOLS.has(symbol) or symbol == WILD_MONSTER
+		if not known and (slot < 0 or slot >= GameState.MAX_PLAYERS):
 			return "'%s' in row %d isn't a map symbol" % [symbol, r]
 		var tile: Vector2i = Vector2i(Fixed.div_floor(doubled, 2), r)
 		terrain[tile] = SYMBOLS.get(symbol, GROUND)
+		if symbol == WILD_MONSTER:
+			wild_monsters.append(tile)
 		if slot >= 0 and starts_by_slot.has(slot):
 			return "player %d's start is marked twice" % (slot + 1)
 		if slot >= 0:

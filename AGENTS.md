@@ -183,16 +183,18 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
-- **Entities** (#31): everything in the world (players, later the ball, monsters, totems) is an
+- **Entities** (#31): everything in the world (players, wild monsters, later totems) is an
   `Entity` with a stable id, never reused, an owning player slot (0–3, or none) and a tile. A
   feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
-- **Maps** (#36, `HexMap`): which tiles exist, each tile's terrain (ground, water, rock) and the
-  players' starts. Rules ask `state.map` (`is_walkable`, `has_tile`), never a distance from the
-  origin, so a map can have any shape. Maps are hand-made text files in `maps/` (format in
-  `HexMap.parse`); instanced layouts will be assembled from hand-made pieces, the whole layout
-  turned by the run's seed (#57). The map is in the state hash.
+- **Maps** (#36, `HexMap`): which tiles exist, each tile's terrain (ground, water, rock), the
+  players' starts and where wild monsters stand (`WildMonsterFeature` places them, #19; anything
+  that isn't a player blocks walkers, players pass through each other). Rules ask `state.map`
+  (`is_walkable`, `has_tile`), never a distance from the origin, so a map can have any shape. Maps
+  are hand-made text files in `maps/` (format in `HexMap.parse`); instanced layouts will be
+  assembled from hand-made pieces, the whole layout turned by the run's seed (#57). The map is in
+  the state hash.
 - **Instances** (`sim/instances/`): which map (a file in `maps/`) and which features in which
   order; players start on the map's starts. A new mechanic is a new feature that instances list;
   it never grows the core.

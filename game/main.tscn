@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://view/follow_camera.gd" id="5_camera"]
 [ext_resource type="Script" path="res://input/touch_stick.gd" id="6_stick"]
 [ext_resource type="Script" path="res://view/trail_view.gd" id="7_trail"]
+[ext_resource type="Script" path="res://view/wild_monster_view.gd" id="8_wild"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sgp6g"]
 albedo_color = Color(0.94, 0.45, 0.16, 1)
@@ -31,6 +32,10 @@ driver = NodePath("../Driver")
 script = ExtResource("7_trail")
 driver = NodePath("../Driver")
 grid = NodePath("../HexGrid")
+
+[node name="WildMonsterView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1408221635]
+script = ExtResource("8_wild")
+driver = NodePath("../Driver")
 
 [node name="Cube" type="MeshInstance3D" parent="." node_paths=PackedStringArray("driver") unique_id=1715359208]
 transform = Transform3D(0.8660254, 0, 0.5, 0, 1, 0, -0.5, 0, 0.8660254, 0, 0, 0)

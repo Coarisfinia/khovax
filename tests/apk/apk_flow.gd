@@ -17,7 +17,7 @@ const LEG_TICKS: int = 20
 const FINGER: int = 0
 ## The state hash after the scripted walk; when a rule change alters it on purpose, update it with
 ## the golden replays (see AGENTS.md).
-const EXPECTED_HASH: int = 3_313_556_164
+const EXPECTED_HASH: int = 2_476_267_193
 
 
 ## Runs the flow in `main` (the running main scene) and announces the result with `finished`.

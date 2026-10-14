@@ -1,7 +1,8 @@
 extends RefCounted
 ## Movement flow, through every layer: keys and the touch stick press the movement actions, the
 ## local input turns them into commands, the simulation walks the player from tile to tile along a
-## known path, zigzagging along a column for straight up and stopping at the grid's edge, and the
+## known path, zigzagging along a column for straight up and stopping at the grid's edge and at a
+## wild monster's ball, and the
 ## view glides the cube between tiles without jumps. Real key and touch events reach the actions
 ## too. Time is stepped by hand, so the flow is deterministic.
 
@@ -75,6 +76,8 @@ func run(tree: SceneTree) -> String:
 	var result: String = _check_bindings()
 	if result.is_empty():
 		result = _check_paths()
+	if result.is_empty():
+		result = _check_blocked_by_ball()
 	_release_all()
 	_main.queue_free()
 	await tree.process_frame
@@ -426,6 +429,23 @@ func _finish_step() -> void:
 func _step() -> void:
 	_driver.advance(STEP)
 	_cube.show_state()
+
+
+## A wild monster's ball blocks the way (#19): walking left along its row from (0, 0) stops on
+## (-1, 0), next to the ball on (-2, 0), however long the key is held.
+func _check_blocked_by_ball() -> String:
+	var player: Entity = _driver.state.player(0)
+	player.tile = Vector2i.ZERO
+	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
+	movement.walk(player.id).from = Vector2i.ZERO
+	_cube.show_state()
+	# Placed by hand, not walked: only tiles walked from here on are expected on top of the trail.
+	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	_walked = trails.trail(player.id).tiles.duplicate()
+	var result: String = _walk(["move_left"], [Vector2i(-1, 0)])
+	if not result.is_empty():
+		return "walking toward the ball: " + result
+	return ""
 
 
 ## The player's tile in the simulation.
