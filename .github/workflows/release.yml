@@ -1,7 +1,7 @@
 name: release
 
-# A version tag (v1.2.3) makes a GitHub release with the Windows and web builds attached (#21, #22). The tag must
-# match application/config/version in project.godot; the README says how to cut one. The build
+# A version tag (v1.2.3) makes a GitHub release with the Windows and web builds attached (#21,
+# #22). The tag must match application/config/version in project.godot; the README says how to cut one. The build
 # runs read-only; only the release job, which runs no project code, may write.
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
             exit 1
           fi
 
-      - name: Download Godot and the Windows and web export templates
+      - name: Download Godot and the export templates the presets use
         # Not cached: releases are rare, and a release is built from verified downloads only.
         run: |
           curl -fsSL -o /tmp/godot.zip \
@@ -50,7 +50,8 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          unzip -q -j /tmp/templates.tpz templates/windows_release_x86_64.exe             templates/web_nothreads_release.zip templates/version.txt -d "$target"
+          mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
+          unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: Import project
         run: |

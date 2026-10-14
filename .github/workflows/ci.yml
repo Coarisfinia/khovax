@@ -169,16 +169,17 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: Cache the Android, Windows and web export templates
+      - name: Cache the export templates the presets use
         id: cache-templates
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/godot/export_templates
-          key: godot-templates-android-windows-web-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}
+          # A preset added or changed makes a new cache, with the templates it needs.
+          key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles('export_presets.cfg') }}
 
-      - name: Download the Android, Windows and web export templates
-        # The archive holds every platform's templates; only the ones exported here are kept, so the
-        # cache stays small.
+      - name: Download the export templates the presets use
+        # The archive holds every platform's templates; only those export_presets.cfg needs are kept
+        # (tools/export_templates.sh reads them from it), so the cache stays small.
         if: steps.cache-templates.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/templates.tpz \
@@ -186,8 +187,8 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          unzip -q -j /tmp/templates.tpz \
-            templates/android_debug.apk templates/android_release.apk             templates/windows_release_x86_64.exe templates/web_nothreads_release.zip             templates/version.txt -d "$target"
+          mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
+          unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: Point Godot at the runner's Android SDK and Java
         run: |
