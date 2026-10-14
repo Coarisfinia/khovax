@@ -146,6 +146,10 @@ background; only wait in the foreground for a result the very next step needs.
   `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
   the owner's approval, never enable auto-merge. The approval stays valid through later pushes (owner's
   rule), so check the comments again before enabling auto-merge after a fix.
+- **Read the reviews themselves to see an approval** (`gh api repos/Flixbox/khovax/pulls/<n>/reviews`),
+  never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
+  empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
+  An approval often arrives together with review comments, and the watcher reports only those.
 
 ## Architecture
 
@@ -207,8 +211,15 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the background flush
   what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
-  refused, and an older one is migrated in `Profile.parse` once a second format exists. Content data
-  (species, items) comes in #72.
+  refused, and an older one is migrated in `Profile.parse` once a second format exists.
+  Content data (species, items) is read in `meta/` too (below).
+- **Content data** (#72): species and, later, items are JSONC files in `data/<kind>/`, one per
+  entry and named after its id, with a JSON Schema in `data/schemas/<kind>.schema.json`. Not Godot
+  resources (owner, #72: no engine lock-in). `meta/` reads them (`Content`, comments stripped by
+  `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
+  schema with `jv` (pinned, verified), after `tools/data_to_json.gd` strips the comments with the
+  same stripper; the content flow checks what a schema can't (ids matching files and unique, types
+  from the chart, never two types of one family).
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.
@@ -254,6 +265,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
+  until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
+  reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
+  shared camera), and what a player obtains goes into their own profile.
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
