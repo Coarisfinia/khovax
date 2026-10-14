@@ -336,6 +336,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   checks from GitHub Actions green on a branch that is up to date with `main`, squash merges only, no
   force-push or deletion. The required checks are named after the CI jobs: renaming a job means
   changing the ruleset in the same PR (owner's `gh`).
+- **Release tags are immutable:** the tag ruleset "immutable release tags" (`refs/tags/v*`, owner,
+  #91) blocks deleting, moving and force-updating them, with no bypass; creating one is allowed.
+  A wrong release gets a new version, never a moved tag.
 - **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
   them.
 
