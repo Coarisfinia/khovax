@@ -1,7 +1,8 @@
 extends RefCounted
 ## Profile flow (#37): the player's profile across runs. A new profile starts with one slot and
-## nothing caught; a finished run's result adds its catches, with ids that are never reused, and its
-## materials; the profile survives saving and loading; and a save it can't trust is refused.
+## nothing caught; every gain adds its catches, with ids that are never reused, and its materials,
+## and is on disk at once; the profile survives saving and loading; and a save it can't trust is
+## refused.
 
 const SAVE_PATH: String = "user://test_profile.json"
 
@@ -13,17 +14,17 @@ func run(_tree: SceneTree) -> String:
 	var applied: String = profile.apply(_result(["ember_fox", "moss_toad"], { "crystal": 2 }))
 	applied += profile.apply(_result(["ember_fox"], { "crystal": 1, "feather": 3 }))
 	if not applied.is_empty():
-		return "a valid run result was refused: " + applied
+		return "a valid gain was refused: " + applied
 	var ids: Array[int] = []
 	for monster: CapturedMonster in profile.captured_monsters:
 		ids.append(monster.id)
 	var expected: Array[int] = [1, 2, 3]
 	var expected_materials: Dictionary[String, int] = { "crystal": 3, "feather": 3 }
 	if ids != expected or profile.materials != expected_materials:
-		return "two runs gave monsters %s and materials %s" % [ids, profile.materials]
-	if profile.runs_finished != 2:
-		return "the profile counted %d finished runs, not 2" % profile.runs_finished
-	var result: String = _check_bad_results(profile)
+		return "two gains gave monsters %s and materials %s" % [ids, profile.materials]
+	var result: String = _check_kept_at_once()
+	if result.is_empty():
+		result = _check_bad_results(profile)
 	if result.is_empty():
 		result = _check_save(profile)
 	if result.is_empty():
@@ -31,23 +32,39 @@ func run(_tree: SceneTree) -> String:
 	return result
 
 
-## A run result the profile couldn't save is refused whole, and the profile stays as it was.
+## Whatever the player obtains is on disk at once, before the run ends: a crash right after a
+## catch keeps it (owner, #73). A finished run is counted and saved too.
+func _check_kept_at_once() -> String:
+	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
+	var problem: String = keeper.take(_result(["moss_toad"], { "crystal": 1 }))
+	var on_disk: Profile = SaveStore.load_profile(SAVE_PATH)
+	if not problem.is_empty() or on_disk.captured_monsters.size() != 1:
+		return "a catch wasn't on disk right after it happened: " + problem
+	problem = keeper.finish_run()
+	on_disk = SaveStore.load_profile(SAVE_PATH)
+	var _removed: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	if not problem.is_empty() or on_disk.runs_finished != 1:
+		return "a finished run wasn't counted and saved: " + problem
+	return ""
+
+
+## A gain the profile couldn't save is refused whole, and the profile stays as it was.
 func _check_bad_results(profile: Profile) -> String:
 	var before: String = profile.to_text()
-	var bad: Array[RunResult] = [
+	var bad: Array[Gain] = [
 		_result(["ember_fox", ""], {}),
 		_result([], { "crystal": -1 }),
 		_result([], { "": 1 }),
 		_result([], { "crystal": Profile.MAX_NUMBER }),
 	]
-	for result: RunResult in bad:
+	for result: Gain in bad:
 		if profile.apply(result).is_empty():
-			return "a bad run result was taken over: %s %s" % [
+			return "a bad gain was taken over: %s %s" % [
 				result.caught_species,
 				result.materials,
 			]
 	if profile.to_text() != before:
-		return "a refused run result still changed the profile"
+		return "a refused gain still changed the profile"
 	return ""
 
 
@@ -91,8 +108,8 @@ func _check_refused() -> String:
 	return ""
 
 
-func _result(species: Array, materials: Dictionary) -> RunResult:
-	var result: RunResult = RunResult.new()
+func _result(species: Array, materials: Dictionary) -> Gain:
+	var result: Gain = Gain.new()
 	result.caught_species.assign(species)
 	result.materials.assign(materials)
 	return result

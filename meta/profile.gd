@@ -1,7 +1,8 @@
 class_name Profile
 extends RefCounted
-## The player's profile (#37): what lasts between runs, outside the simulation. It changes only at a
-## run's boundaries, when a run's result is applied, never per tick. Integers and ids only, like
+## The player's profile (#37): what lasts between runs, outside the simulation. It changes when the
+## player obtains something in a run (a Gain, saved at once by ProfileKeeper so a crash loses
+## nothing) and when a run finishes, never because of a tick itself. Integers and ids only, like
 ## everything that feeds a simulation. Saved as versioned JSON: a save in a newer format is refused,
 ## and once a second format exists, an older one is brought up to date in `parse`, one step at a
 ## time, before it's read.
@@ -27,10 +28,10 @@ var runs_finished: int = 0
 var problem: String = ""
 
 
-## Takes over what a finished run brought back: its catches and materials. Returns why the result
-## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
-## result couldn't be loaded again.
-func apply(result: RunResult) -> String:
+## Takes over what the player just obtained: its catches and materials. Returns why the gain can't
+## be taken over, or "", and changes nothing when it can't: a profile that took over a bad gain
+## couldn't be loaded again. Callers save right after (ProfileKeeper).
+func apply(result: Gain) -> String:
 	var problem: String = _result_problem(result)
 	if not problem.is_empty():
 		return problem
@@ -38,7 +39,6 @@ func apply(result: RunResult) -> String:
 		_capture(species)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
-	runs_finished += 1
 	return ""
 
 
@@ -50,9 +50,9 @@ func _capture(species: String) -> void:
 
 ## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
 ## than the save can hold), or "".
-func _result_problem(result: RunResult) -> String:
-	if next_monster_id + result.caught_species.size() > MAX_NUMBER or runs_finished >= MAX_NUMBER:
-		return "the profile can't hold more monsters or runs"
+func _result_problem(result: Gain) -> String:
+	if next_monster_id + result.caught_species.size() > MAX_NUMBER:
+		return "the profile can't hold more monsters"
 	for species: String in result.caught_species:
 		if species.is_empty():
 			return "a caught monster has no species"
