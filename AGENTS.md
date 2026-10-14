@@ -261,6 +261,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
+  until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
+  reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
+  shared camera), and what a player obtains goes into their own profile.
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
