@@ -4,8 +4,8 @@ extends SceneTree
 ## The load test (#101): the load instance (maps/load.map, a big map full of wild monsters, with
 ## the same rules as every instance) under four players walking by script.
 ##
-## Headless, it times the simulation: every tick and every feature's share, and runs twice to
-## check both end in the same state hash:
+## Headless, it times the simulation: every tick (on an untimed run) and every feature's share (on
+## a timed one), leaving out a warm-up, and checks both runs end in the same state hash:
 ##   godot --headless --path . -s res://tools/load_test.gd -- ticks=2000
 ## Rendered, it runs the real main scene on the load instance and times frames:
 ##   godot --path . -s res://tools/load_test.gd -- rendered seconds=20
@@ -15,6 +15,8 @@ const SEED: int = 101
 const PLAYERS: int = 4
 ## Ticks each scripted walk keeps one direction before turning.
 const LEG_TICKS: int = 12
+## The first ticks or frames, left out of the statistics: loading and first-use costs.
+const WARM_UP: int = 20
 const ACTIONS: Array[String] = ["move_right", "move_up", "move_left", "move_down"]
 
 var _ticks: int = 2000
@@ -23,6 +25,7 @@ var _seconds: float = 20.0
 var _started_usec: int = 0
 var _last_usec: int = 0
 var _frames: Array[int] = []
+var _driver: GameDriver
 
 
 func _process(_delta: float) -> bool:
@@ -32,8 +35,8 @@ func _process(_delta: float) -> bool:
 	_frames.append(now - _last_usec)
 	_last_usec = now
 	# One action held at a time, turning every LEG_TICKS ticks' worth of time.
-	var ticks_so_far: float = (now - _started_usec) / 1_000_000.0 * Simulation.TICKS_PER_SECOND
-	var leg: int = floori(ticks_so_far / LEG_TICKS)
+	# Turns by the simulation's own ticks, so a slow frame doesn't skip a turn.
+	var leg: int = floori(float(_driver.state.tick) / LEG_TICKS)
 	for i: int in ACTIONS.size():
 		if i == leg % ACTIONS.size():
 			Input.action_press(ACTIONS[i])
@@ -46,8 +49,13 @@ func _process(_delta: float) -> bool:
 
 
 func _report_rendered() -> void:
-	print("rendered load: %d frames in %.1f s" % [_frames.size(), _seconds])
-	_print_spread("frame", _frames)
+	var elapsed: float = (_last_usec - _started_usec) / 1_000_000.0
+	print("rendered load: %d frames in %.1f s, the first %d left out" % [
+		_frames.size(),
+		elapsed,
+		WARM_UP,
+	])
+	_print_spread("frame", _frames.slice(WARM_UP))
 
 
 func _initialize() -> void:
@@ -73,9 +81,10 @@ func _run_headless() -> void:
 		first.entities,
 		first.catches,
 	])
-	_print_spread("tick", first.ticks)
+	# Tick times from the untimed run, so they carry no observer overhead.
+	_print_spread("tick", second.ticks.slice(WARM_UP))
 	for feature_id: int in first.features:
-		var per_tick: float = first.features[feature_id] / float(_ticks)
+		var per_tick: float = first.features[feature_id] / float(_ticks - WARM_UP)
 		print("  feature %d: %.1f us per tick" % [feature_id, per_tick])
 	var same: bool = first.end_hash == second.end_hash
 	print("end state hash %d, %s" % [first.end_hash, "same in both runs" if same else "DIFFERS"])
@@ -91,6 +100,7 @@ func _simulate(timed: bool) -> LoadRun:
 		var commands: Array[Command] = _commands(tick)
 		var start: int = Time.get_ticks_usec()
 		run.mark = start
+		run.counting = tick >= WARM_UP
 		Simulation.step(state, commands, run.observe if timed else Callable())
 		run.ticks.append(Time.get_ticks_usec() - start)
 		run.count_catches(state.events)
@@ -111,8 +121,8 @@ func _commands(tick: int) -> Array[Command]:
 func _start_rendered() -> void:
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
-	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	driver.instance = Instances.LOAD
+	_driver = main.get_node("Driver") as GameDriver
+	_driver.instance = Instances.LOAD
 	# Uncapped, so the frame times show the real cost, not the display's refresh rate.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	root.add_child(main)
@@ -150,11 +160,14 @@ class LoadRun:
 	var end_hash: int = 0
 	## When the last feature finished, or the tick started.
 	var mark: int = 0
+	## Whether this tick counts, past the warm-up.
+	var counting: bool = false
 
 	## Called by Simulation.step after each feature: adds the time since the last mark to it.
-	func observe(feature: Feature) -> void:
+	func observe(feature_id: int) -> void:
 		var now: int = Time.get_ticks_usec()
-		features[feature.id()] = features.get(feature.id(), 0) + now - mark
+		if counting:
+			features[feature_id] = features.get(feature_id, 0) + now - mark
 		mark = now
 
 	func count_catches(events: Array[RefCounted]) -> void:
