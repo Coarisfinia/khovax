@@ -66,6 +66,11 @@ Never create or switch branches inside `main/`.
 parallel: pull requests are squash-merged, which rewrites the history a stacked branch is built on. Open
 the next one as soon as the previous one is merged.
 
+**While a pull request waits for the owner's review, prepare exactly one next one** (owner's rule),
+so the owner can review it right away: in its own worktree, branched from `main`, fully built and
+reviewed by Codex locally, but not pushed or opened. Once the open one merges, update the prepared
+branch onto the new `main` (`git rebase origin/main`), check it still holds, push it and open it.
+
 **One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
 refactors and tooling tweaks get their own issue and their own pull request later, never along for the
 ride.
@@ -239,6 +244,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
+  teams, states) also gets a symbol or a shape, so the game stays colorblind friendly.
+- **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
+  are medium-poly; only small things that don't read from the top-down camera may be low poly.
+  Low-poly packs are placeholders. Every asset in the repository has a license that allows it
+  here (CC0, CC BY with credit), kept next to it.
 
 ### Testing and CI
 
