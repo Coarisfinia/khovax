@@ -278,7 +278,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
-  here (CC0, CC BY with credit), kept next to it.
+  here (CC0, CC BY with credit), kept next to it. **Each pack lives in `assets/<pack>/`** with its
+  license file and a `SOURCE.md` (title, then `- **Author:**`, `- **Source:**`, `- **License:**`);
+  `CREDITS.md` is generated from those by `tools/credits.gd`, and CI fails when it's out of date
+  (owner, #69/#70). Commit only what the game uses, not whole packs.
 
 ### Testing and CI
 

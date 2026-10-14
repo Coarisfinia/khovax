@@ -98,6 +98,16 @@ jobs:
             exit 1
           fi
 
+      - name: Check CREDITS.md matches the assets' source notes
+        # tools/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
+        # was added or changed without regenerating the credits.
+        run: |
+          timeout 60 ~/godot/godot --headless --path . -s res://tools/credits.gd
+          if ! git diff --exit-code CREDITS.md || [ -n "$(git status --porcelain CREDITS.md)" ]; then
+            echo "::error file=CREDITS.md::out of date: run tools/credits.gd and commit the result"
+            exit 1
+          fi
+
       - name: Check the content data against its schemas
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
         # each data/<folder>/ file against data/schemas/<folder>.schema.json.
