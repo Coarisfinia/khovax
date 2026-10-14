@@ -140,9 +140,10 @@ func tile_multimesh() -> MultiMesh:
 	return _tiles.multimesh
 
 
-## The running game's map, or the editor's preview disc.
+## The running game's map, or the editor's preview disc. In the editor (and a headless import) the
+## driver isn't running: GameDriver isn't a tool script, so it has no state to read there.
 func _shown_map() -> HexMap:
-	if driver != null and driver.state != null:
+	if not Engine.is_editor_hint() and driver != null and driver.state != null:
 		return driver.state.map
 	if _map == null or _map.size() != Hex.disc(radius).size():
 		return HexMap.disc(radius)
