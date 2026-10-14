@@ -7,7 +7,9 @@ extends RefCounted
 ## The playground: the hand-made map maps/basic.map, walking, a trail per player, the wild
 ## monsters the map places, and catching them with a ring.
 const BASIC: String = "basic"
-const NAMES: Array[String] = [BASIC]
+## The load test's (#101): a big map full of wild monsters, the same rules as every instance.
+const LOAD: String = "load"
+const NAMES: Array[String] = [BASIC, LOAD]
 const MAPS: String = "res://maps/"
 
 

@@ -64,6 +64,19 @@ godot --headless --path . -s res://tests/e2e/run_e2e.gd
 Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
 pull request and every push to `main`.
 
+### Load test
+
+On demand, not in CI: the `load` instance (a big map full of wild monsters, the game's own rules)
+under four players walking by script. Headless it times every tick and each rule's share, and checks
+two runs end in the same state; rendered it times frames, uncapped:
+
+```sh
+godot --headless --path . -s res://tools/load_test.gd -- ticks=2000
+godot --path . -s res://tools/load_test.gd -- rendered seconds=20
+```
+
+Measurements go into the pull request or issue that made them, not into docs.
+
 ## Linting
 
 ```sh
