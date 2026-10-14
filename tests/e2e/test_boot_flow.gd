@@ -1,6 +1,6 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the cube standing on one tile, in view of
-## the camera.
+## the camera, and a wild monster's ball resting on its own tile.
 
 
 func run(tree: SceneTree) -> String:
@@ -22,6 +22,7 @@ func run(tree: SceneTree) -> String:
 		_check_cube_placement,
 		_check_cube_in_view,
 		_check_state_drives_view,
+		_check_ball,
 		_check_terrain_colors,
 	]
 	var result: String = ""
@@ -152,6 +153,35 @@ func _check_state_drives_view(main: Node) -> String:
 	var cube: HexPiece = main.get_node("Cube") as HexPiece
 	if cube.tile != driver.state.player(0).tile:
 		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player(0).tile]
+	return ""
+
+
+## The basic map's wild monster (#19) is a ball resting on its tile, (-2, 0), with room for a ring
+## around it: all six neighbors are ground on the map.
+func _check_ball(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: WildMonsterView = main.get_node_or_null("WildMonsterView") as WildMonsterView
+	var feature: WildMonsterFeature = (
+		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	)
+	if view == null or feature == null or feature.monsters.size() != 1:
+		return "the main scene needs a WildMonsterView, and the basic map one wild monster"
+	var monster: Entity = driver.state.entity(feature.monsters[0])
+	var spot: Vector2i = Vector2i(-2, 0)
+	if monster.tile != spot or monster.slot != Entity.NO_SLOT:
+		return "the wild monster stands on %s, not on %s, or a player owns it" % [
+			monster.tile,
+			spot,
+		]
+	for direction: Vector2i in Hex.DIRECTIONS:
+		if not driver.state.map.is_walkable(spot + direction):
+			return "no ring fits around the ball: %s isn't ground" % (spot + direction)
+	var ball: HexPiece = view.balls.get(monster.id)
+	if ball == null or not ball.is_visible_in_tree() or ball.tile != spot:
+		return "no ball shown on the wild monster's tile"
+	var bottom: float = ball.global_position.y - WildMonsterView.RADIUS
+	if not is_equal_approx(bottom, HexGrid.TILE_HEIGHT):
+		return "the ball's bottom is at %f, not on the tile's top" % bottom
 	return ""
 
 

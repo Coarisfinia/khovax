@@ -674,7 +674,8 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
-## The basic instance's map file reads as the disc it draws, with the players' starts, and a
+## The basic instance's map file reads as the disc it draws, with the players' starts and its wild
+## monster, and a
 ## broken map file says what is wrong.
 func _check_map_file() -> String:
 	var map: HexMap = Instances.basic(42).map
@@ -686,6 +687,8 @@ func _check_map_file() -> String:
 	]
 	if map.sorted_tiles() != HexMap.disc(RADIUS).sorted_tiles() or map.starts != starts:
 		return "maps/basic.map isn't the disc of radius 3 with its four starts"
+	if map.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
+		return "maps/basic.map's wild monster isn't on (-2, 0): %s" % [map.wild_monsters]
 	var broken: Dictionary[String, String] = {
 		". . .": "a map file starts with",
 		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
