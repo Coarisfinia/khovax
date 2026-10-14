@@ -2,7 +2,8 @@ class_name TrailFeature
 extends Feature
 ## The trails: each player's trail holds every tile that player has stood on or moved onto. Rings
 ## are drawn with them. They grow from EntityMoved events, so the trail comes after movement in an
-## instance's order. Walking over a trail again changes nothing yet.
+## instance's order. Walking over a trail again changes nothing yet; a catch starts the catcher's
+## trail over (CatchFeature).
 
 ## Every player's trail, by entity id.
 var trails: Dictionary[int, Trail] = {}
@@ -31,6 +32,12 @@ func entity_added(_state: GameState, added: Entity) -> void:
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = trails.erase(removed_id)
+
+
+## Starts the entity's trail over, with only `tile` on it. Does nothing for an entity without one.
+func restart(entity_id: int, tile: Vector2i) -> void:
+	if trails.has(entity_id):
+		trails[entity_id] = Trail.new(tile)
 
 
 ## The entity's trail, or null when it has none.
