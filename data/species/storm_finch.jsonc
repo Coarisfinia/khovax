@@ -1,0 +1,8 @@
+/* A placeholder dual-type species: quick and frail. Breeze and Mana come from two different
+   families, as dual types must. */
+{
+	"id": "storm_finch",
+	"types": ["breeze", "mana"],
+	"hp": 60,
+	"strength": 70
+}
