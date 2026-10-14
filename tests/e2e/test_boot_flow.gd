@@ -1,5 +1,6 @@
 extends RefCounted
-## Boot flow: the main scene boots into a hex grid with the cube standing on one tile, in view of
+## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
+## in view of
 ## the camera, and a wild monster's ball resting on its own tile.
 
 
@@ -19,8 +20,9 @@ func run(tree: SceneTree) -> String:
 		_check_known_positions,
 		_check_grid,
 		_check_grid_colors,
-		_check_cube_placement,
-		_check_cube_in_view,
+		_check_player_placement,
+		_check_player_model,
+		_check_player_in_view,
 		_check_state_drives_view,
 		_check_ball,
 		_check_ball_removed,
@@ -107,40 +109,51 @@ func _check_grid_colors(main: Node) -> String:
 	return ""
 
 
-func _check_cube_placement(main: Node) -> String:
-	var cube: HexPiece = main.get_node_or_null("Cube") as HexPiece
-	if cube == null:
-		return "no HexPiece named Cube"
+## The player's character stands on its tile: centered on it, feet on the tile's top.
+func _check_player_placement(main: Node) -> String:
+	var player: PlayerView = main.get_node_or_null("Player") as PlayerView
+	if player == null or player.model == null:
+		return "no PlayerView named Player with a model"
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
-	if not grid.has_tile(cube.tile):
-		return "the cube's tile %s is not on the grid" % cube.tile
-	var center: Vector3 = HexLayout.to_world(cube.tile)
-	var position: Vector3 = cube.global_position
-	if not Vector2(position.x, position.z).is_equal_approx(Vector2(center.x, center.z)):
-		return "the cube is not centered on tile %s" % cube.tile
-	var mesh: BoxMesh = (main.get_node("Cube") as MeshInstance3D).mesh as BoxMesh
-	var bottom: float = position.y - mesh.size.y / 2.0
-	if not is_equal_approx(bottom, HexGrid.TILE_HEIGHT):
-		return "the cube's bottom is at %f, not on the tile's top (%f)" % [
-			bottom,
+	if not grid.has_tile(player.tile):
+		return "the player's tile %s is not on the grid" % player.tile
+	var center: Vector3 = HexLayout.to_world(player.tile)
+	var feet: Vector3 = player.global_position
+	if not Vector2(feet.x, feet.z).is_equal_approx(Vector2(center.x, center.z)):
+		return "the player is not centered on tile %s" % player.tile
+	if not is_equal_approx(feet.y, HexGrid.TILE_HEIGHT):
+		return "the player's feet are at %f, not on the tile's top (%f)" % [
+			feet.y,
 			HexGrid.TILE_HEIGHT,
 		]
 	return ""
 
 
-func _check_cube_in_view(main: Node) -> String:
-	var cube: Node3D = main.get_node("Cube") as Node3D
-	if not cube.is_visible_in_tree():
-		return "the cube is not visible"
-	var camera: Camera3D = main.get_viewport().get_camera_3d()
-	if camera == null:
-		return "no active camera"
-	if not camera.is_position_in_frustum(cube.global_position):
-		return "the cube is outside the camera frustum"
+## The character carries none of the model's weapons and idles while it stands.
+func _check_player_model(main: Node) -> String:
+	var player: PlayerView = main.get_node("Player") as PlayerView
+	for part: String in PlayerView.HIDDEN_PARTS:
+		var node: Node3D = player.model.find_child(part) as Node3D
+		if node == null or node.visible:
+			return "the model's %s is missing or shown" % part
+	if player.current_clip() != PlayerView.IDLE:
+		return "the standing player plays %s, not %s" % [player.current_clip(), PlayerView.IDLE]
 	return ""
 
 
-## The simulation's state is the truth: the grid shows its map and the cube stands on its tile.
+func _check_player_in_view(main: Node) -> String:
+	var player: Node3D = main.get_node("Player") as Node3D
+	if not player.is_visible_in_tree():
+		return "the player is not visible"
+	var camera: Camera3D = main.get_viewport().get_camera_3d()
+	if camera == null:
+		return "no active camera"
+	if not camera.is_position_in_frustum(player.global_position):
+		return "the player is outside the camera frustum"
+	return ""
+
+
+## The simulation's state is the truth: the grid shows its map and the player stands on its tile.
 func _check_state_drives_view(main: Node) -> String:
 	var driver: GameDriver = main.get_node_or_null("Driver") as GameDriver
 	if driver == null or driver.state == null:
@@ -151,9 +164,12 @@ func _check_state_drives_view(main: Node) -> String:
 	for tile: Vector2i in driver.state.map.sorted_tiles():
 		if not grid.has_tile(tile):
 			return "the state's map has tile %s, the grid doesn't" % tile
-	var cube: HexPiece = main.get_node("Cube") as HexPiece
-	if cube.tile != driver.state.player(0).tile:
-		return "the cube is on %s, the player on %s" % [cube.tile, driver.state.player(0).tile]
+	var shown: HexPiece = main.get_node("Player") as HexPiece
+	if shown.tile != driver.state.player(0).tile:
+		return "the player is drawn on %s, but stands on %s" % [
+			shown.tile,
+			driver.state.player(0).tile,
+		]
 	return ""
 
 

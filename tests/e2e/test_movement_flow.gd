@@ -3,7 +3,7 @@ extends RefCounted
 ## local input turns them into commands, the simulation walks the player from tile to tile along a
 ## known path, zigzagging along a column for straight up and stopping at the grid's edge and at a
 ## wild monster's ball, and the
-## view glides the cube between tiles without jumps. Real key and touch events reach the actions
+## view glides the player between tiles without jumps. Real key and touch events reach the actions
 ## too. Time is stepped by hand, so the flow is deterministic.
 
 const STEP: float = 1.0 / 60.0
@@ -30,7 +30,7 @@ const ARROW_KEYS: Dictionary[String, Key] = {
 }
 
 var _main: Node
-var _cube: PlayerView
+var _player_view: PlayerView
 var _driver: GameDriver
 var _grid: HexGrid
 var _trail_view: TrailView
@@ -58,18 +58,18 @@ func run(tree: SceneTree) -> String:
 	_main = scene.instantiate()
 	tree.root.add_child(_main)
 	await tree.process_frame
-	_cube = _main.get_node_or_null("Cube") as PlayerView
+	_player_view = _main.get_node_or_null("Player") as PlayerView
 	_driver = _main.get_node_or_null("Driver") as GameDriver
 	_grid = _main.get_node_or_null("HexGrid") as HexGrid
 	_trail_view = _main.get_node_or_null("TrailView") as TrailView
 	_stick = _main.get_node_or_null("Hud/TouchStick") as TouchStick
-	var nodes: Array[Node] = [_cube, _driver, _grid, _trail_view, _stick]
+	var nodes: Array[Node] = [_player_view, _driver, _grid, _trail_view, _stick]
 	if nodes.has(null):
 		_main.queue_free()
-		return "the main scene needs Cube, Driver, HexGrid, TrailView and Hud/TouchStick"
+		return "the main scene needs Player, Driver, HexGrid, TrailView and Hud/TouchStick"
 	# Stepped by hand from here on.
 	_driver.set_process(false)
-	_cube.set_process(false)
+	_player_view.set_process(false)
 	_trail_view.set_process(false)
 	_walked = { _tile(): true }
 
@@ -125,7 +125,7 @@ func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
 	return pressed
 
 
-## Each walk starts where the previous one stopped: (1, -1) is the cube's start tile.
+## Each walk starts where the previous one stopped: (1, -1) is the player's start tile.
 func _check_paths() -> String:
 	var walks: Array[Leg] = [
 		Leg.new(["move_left"], [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)]),
@@ -206,30 +206,54 @@ func _walk_by_touch(drag: Vector2, expected: Array[Vector2i]) -> String:
 
 
 ## Keeps the input held long enough to reach the grid's edge, then releases it with `release` and
-## checks the tiles visited, in order, and that the drawn position never jumped.
+## checks the tiles visited, in order, that the drawn position never jumped, and the character's
+## look (#79).
 func _hold(expected: Array[Vector2i], release: Callable) -> String:
 	# Starts with the tile the walk leaves from; dropped again before comparing.
 	var visited: Array[Vector2i] = [_tile()]
 	var max_step: float = HexLayout.SIZE * sqrt(3.0) * STEP / MOVE_SECONDS + 0.0001
 	var jumped: bool = false
+	var ran: bool = false
 	for _i: int in HOLD_STEPS:
-		var before: Vector3 = _cube.position
+		var before: Vector3 = _player_view.position
 		_step()
-		jumped = jumped or before.distance_to(_cube.position) > max_step
+		jumped = jumped or before.distance_to(_player_view.position) > max_step
+		ran = ran or _player_view.current_clip() == PlayerView.MOVE
 		if visited[visited.size() - 1] != _tile():
 			visited.append(_tile())
 	release.call()
 	_finish_step()
+	# Where the last step left from: the tile before the last one visited.
+	var last_from: Vector2i = visited[maxi(visited.size() - 2, 0)]
 	visited.pop_front()
 	if jumped:
-		return "the cube jumped instead of gliding"
+		return "the player jumped instead of gliding"
 	if visited != expected:
 		return "visited %s, expected %s" % [visited, expected]
-	if not _cube.position.is_equal_approx(_cube.tile_position()):
-		return "the cube didn't come to rest on its tile"
+	if not _player_view.position.is_equal_approx(_player_view.tile_position()):
+		return "the player didn't come to rest on its tile"
 	for tile: Vector2i in visited:
 		_walked[tile] = true
-	return _check_trail()
+	var result: String = _check_look(not expected.is_empty(), ran, last_from)
+	return result if not result.is_empty() else _check_trail()
+
+
+## The character runs while it walks, idles once it stands, and ends up facing the way it last
+## walked, turned there smoothly by the frames in between.
+func _check_look(walked: bool, ran: bool, last_from: Vector2i) -> String:
+	if ran != walked:
+		return "the character %s while walking" % ("didn't run" if walked else "ran without")
+	if _player_view.current_clip() != PlayerView.IDLE:
+		return "the standing character plays %s, not %s" % [
+			_player_view.current_clip(),
+			PlayerView.IDLE,
+		]
+	# The model's own front, in the world, points along the last step it walked.
+	var front: Vector3 = _player_view.model.global_basis * Vector3.MODEL_FRONT
+	var step: Vector3 = _player_view.tile_position() - _player_view.position_on(last_from)
+	if walked and front.normalized().dot(step.normalized()) < 0.999:
+		return "the character faces %s, not where it walked (%s)" % [front, step]
+	return ""
 
 
 ## The trail is exactly the start tile and every tile walked onto so far, and the grid shows those
@@ -428,7 +452,8 @@ func _finish_step() -> void:
 ## One frame: the driver runs the ticks it adds up to, and the view draws the state.
 func _step() -> void:
 	_driver.advance(STEP)
-	_cube.show_state()
+	_player_view.show_state()
+	_player_view.turn(STEP)
 
 
 ## A wild monster's ball blocks the way (#19): walking left along its row from (0, 0) stops on
@@ -438,7 +463,7 @@ func _check_blocked_by_ball() -> String:
 	player.tile = Vector2i.ZERO
 	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
 	movement.walk(player.id).from = Vector2i.ZERO
-	_cube.show_state()
+	_player_view.show_state()
 	# Placed by hand, not walked: only tiles walked from here on are expected on top of the trail.
 	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
 	_walked = trails.trail(player.id).tiles.duplicate()
@@ -458,7 +483,7 @@ func _release_all() -> void:
 		Input.action_release(action)
 
 
-## One leg of the walk: the actions held, and the tiles the cube must visit, in order.
+## One leg of the walk: the actions held, and the tiles the player must visit, in order.
 class Leg:
 	extends RefCounted
 

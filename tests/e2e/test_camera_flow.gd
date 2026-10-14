@@ -1,6 +1,7 @@
 extends RefCounted
-## Camera flow: the camera looks down at the cube from a fixed 65 degree angle, stays put while the
-## cube moves inside its dead zone, and follows smoothly once the cube leaves it, without jumps,
+## Camera flow: the camera looks down at the player from a fixed 65 degree angle, stays put while
+## the
+## player moves inside its dead zone, and follows smoothly once the player leaves it, without jumps,
 ## sudden speed changes or any rotation, also under a moved and turned parent. Time is stepped by
 ## hand, so the flow is deterministic; one last step lets the engine's own frames drive it.
 
@@ -15,7 +16,7 @@ const SETTLED: float = 0.01
 
 var _main: Node3D
 var _camera: FollowCamera
-var _cube: HexPiece
+var _player_view: HexPiece
 var _start_basis: Basis
 
 
@@ -28,10 +29,10 @@ func run(tree: SceneTree) -> String:
 	tree.root.add_child(_main)
 	await tree.process_frame
 	_camera = _main.get_viewport().get_camera_3d() as FollowCamera
-	_cube = _main.get_node_or_null("Cube") as HexPiece
-	if _camera == null or _cube == null:
+	_player_view = _main.get_node_or_null("Player") as HexPiece
+	if _camera == null or _player_view == null:
 		_main.queue_free()
-		return "the main scene needs a FollowCamera as its active camera and a HexPiece Cube"
+		return "the main scene needs a FollowCamera as its active camera and a HexPiece Player"
 	# Stepped by hand until the last step.
 	_camera.set_process(false)
 	_start_basis = _camera.global_basis
@@ -65,25 +66,25 @@ func _check_angle() -> String:
 
 
 func _check_starts_on_target() -> String:
-	if not _camera.focus.is_equal_approx(_ground(_cube.global_position)):
-		return "the camera doesn't start centered on the cube"
+	if not _camera.focus.is_equal_approx(_ground(_player_view.global_position)):
+		return "the camera doesn't start centered on the player"
 	return _check_placed()
 
 
 ## A neighboring tile is closer than the dead zone's radius: the camera must not move at all.
 func _check_dead_zone() -> String:
-	_cube.tile += Vector2i(1, 0)
+	_player_view.tile += Vector2i(1, 0)
 	var before: Vector3 = _camera.global_position
 	_advance(120)
 	if not _camera.global_position.is_equal_approx(before):
-		return "the camera moved while the cube was inside the dead zone"
+		return "the camera moved while the player was inside the dead zone"
 	return ""
 
 
 ## A tile far away: the camera follows with capped speed and acceleration, stays placed at its
-## focus with the fixed angle on every step, and ends with the cube back inside the dead zone.
+## focus with the fixed angle on every step, and ends with the player back inside the dead zone.
 func _check_follows_smoothly() -> String:
-	_cube.tile = Vector2i(-3, 3)
+	_player_view.tile = Vector2i(-3, 3)
 	var previous_speed: float = 0.0
 	for _i: int in 1200:
 		var before: Vector3 = _camera.global_position
@@ -97,9 +98,9 @@ func _check_follows_smoothly() -> String:
 		var placed: String = _check_placed()
 		if not placed.is_empty():
 			return placed
-	var left: float = _camera.focus.distance_to(_ground(_cube.global_position))
+	var left: float = _camera.focus.distance_to(_ground(_player_view.global_position))
 	if left > _camera.dead_zone_radius + SETTLED:
-		return "after 20 s the cube is still %f from the camera's focus" % left
+		return "after 20 s the player is still %f from the camera's focus" % left
 	return ""
 
 
@@ -112,9 +113,9 @@ func _check_under_moved_parent() -> String:
 	var placed: String = _check_placed()
 	if not placed.is_empty():
 		return "under a moved parent: " + placed
-	var left: float = _camera.focus.distance_to(_ground(_cube.global_position))
+	var left: float = _camera.focus.distance_to(_ground(_player_view.global_position))
 	if left > _camera.dead_zone_radius + SETTLED:
-		return "under a moved parent the cube is %f from the camera's focus" % left
+		return "under a moved parent the player is %f from the camera's focus" % left
 	return ""
 
 
