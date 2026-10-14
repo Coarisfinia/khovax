@@ -125,9 +125,9 @@ func _start(delay: int) -> String:
 	_driver = _main.get_node("Driver") as GameDriver
 	_driver.players = 2
 	_driver.input_delay = delay
-	var first: PlayerView = _main.get_node("Cube") as PlayerView
+	var first: PlayerView = _main.get_node("Player") as PlayerView
 	var second: PlayerView = first.duplicate() as PlayerView
-	second.name = "Cube2"
+	second.name = "Player2"
 	second.slot = 1
 	_main.add_child(second)
 	_views = [first, second]
