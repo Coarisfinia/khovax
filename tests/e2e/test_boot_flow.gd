@@ -26,6 +26,7 @@ func run(tree: SceneTree) -> String:
 		_check_state_drives_view,
 		_check_ball,
 		_check_toon_look,
+		_check_ink_outline,
 		_check_ball_removed,
 		_check_terrain_colors,
 	]
@@ -241,6 +242,11 @@ func _check_toon_look(main: Node) -> String:
 			return "a shown material lacks the toon light bands"
 		if toon.next_pass != Toon.outline():
 			return "a shown material lacks the shared ink outline"
+	return ""
+
+
+## The shared ink outline is the inverted hull: back faces of a slightly grown mesh, unlit, in ink.
+func _check_ink_outline(_main: Node) -> String:
 	var ink: StandardMaterial3D = Toon.outline()
 	var grown: bool = ink.grow and ink.grow_amount > 0.0
 	var hull: bool = ink.cull_mode == BaseMaterial3D.CULL_FRONT and grown
