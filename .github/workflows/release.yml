@@ -24,11 +24,12 @@ jobs:
       zip: ${{ steps.export.outputs.zip }}
       web: ${{ steps.export.outputs.web }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Check the tag matches the game's version
+      - name: "🏷️ Check the tag matches the game's version"
         # The version is read from [application] only, and must be a plain x.y.z.
         run: |
           version=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' project.godot)
@@ -37,7 +38,7 @@ jobs:
             exit 1
           fi
 
-      - name: Download Godot and the export templates the presets use
+      - name: "⬇️ Download Godot and the export templates"
         # Not cached: releases are rare, and a release is built from verified downloads only.
         run: |
           curl -fsSL -o /tmp/godot.zip \
@@ -53,7 +54,7 @@ jobs:
           mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
-      - name: Import project
+      - name: "📦 Import the project"
         run: |
           timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
           test "${PIPESTATUS[0]}" -eq 0
@@ -62,7 +63,7 @@ jobs:
             exit 1
           fi
 
-      - name: Export and zip the Windows and web builds
+      - name: "📦 Windows + web: export and zip the release builds"
         id: export
         # Files are named after the game's display name, so renaming the game needs no change here;
         # only letters, digits, dots, dashes and underscores are kept, and never a leading dash.
@@ -84,9 +85,10 @@ jobs:
           (cd build/web && zip -q -r -- "../${web}" .)
           echo "web=${web}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: "⬆️ 📦 Release builds: upload (the Windows and web zips)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: release-windows
+          name: release-builds
           path: |
             build/${{ steps.export.outputs.zip }}
             build/${{ steps.export.outputs.web }}
@@ -100,11 +102,12 @@ jobs:
       # Only this job may create the release; it checks out and runs nothing from the repository.
       contents: write
     steps:
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - name: "⬇️ 📦 Release builds: download"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: release-windows
+          name: release-builds
 
-      - name: Create the release
+      - name: "🚀 Create the GitHub release"
         env:
           GH_TOKEN: ${{ github.token }}
           ZIP: ${{ needs.build.outputs.zip }}
