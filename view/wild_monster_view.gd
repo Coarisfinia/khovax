@@ -41,10 +41,12 @@ func show_state() -> void:
 	if feature != null:
 		shown = feature.monsters
 	for entity_id: int in balls.keys():
-		if not shown.has(entity_id):
+		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
 			balls[entity_id].queue_free()
 			var _dropped: bool = balls.erase(entity_id)
 	for entity_id: int in shown:
+		if driver.state.entity(entity_id) == null:
+			continue
 		if not balls.has(entity_id):
 			balls[entity_id] = _add_ball()
 		balls[entity_id].tile = driver.state.entity(entity_id).tile

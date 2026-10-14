@@ -23,6 +23,7 @@ func run(tree: SceneTree) -> String:
 		_check_cube_in_view,
 		_check_state_drives_view,
 		_check_ball,
+		_check_ball_removed,
 		_check_terrain_colors,
 	]
 	var result: String = ""
@@ -182,6 +183,21 @@ func _check_ball(main: Node) -> String:
 	var bottom: float = ball.global_position.y - WildMonsterView.RADIUS
 	if not is_equal_approx(bottom, HexGrid.TILE_HEIGHT):
 		return "the ball's bottom is at %f, not on the tile's top" % bottom
+	return ""
+
+
+## A wild monster that leaves the world (caught, later) takes its ball and its entry with it.
+func _check_ball_removed(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
+	var feature: WildMonsterFeature = (
+		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	)
+	var monster_id: int = feature.monsters[0]
+	driver.state.remove_entity(monster_id)
+	view.show_state()
+	if not feature.monsters.is_empty() or view.balls.has(monster_id):
+		return "a removed wild monster left its ball or its entry behind"
 	return ""
 
 

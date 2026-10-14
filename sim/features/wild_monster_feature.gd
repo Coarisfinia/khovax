@@ -2,7 +2,9 @@ class_name WildMonsterFeature
 extends Feature
 ## Wild monsters (#19): when the run begins, one stands on every spot the map marks for it, as an
 ## entity no player controls. For now each is a stand-in ball that just stands there; walkers
-## can't step onto its tile (MovementFeature), and a later rule catches it (#20).
+## can't step onto its tile (MovementFeature), and a later rule catches it (#20). Like every
+## feature, switched off it keeps its state: the monsters stay where they are, and only its own
+## rules (catching, later) stop.
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
