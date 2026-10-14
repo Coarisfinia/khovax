@@ -1,14 +1,20 @@
+# gdstyle:ignore-file=quality/no-debug-print
+# The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
-## Writes every content data file (data/**/*.jsonc) as plain JSON into build/data-json/, with the
-## comments stripped by the game's own stripper (Jsonc), so CI can check each one against its
-## schema: godot --headless --path . -s res://tools/data_to_json.gd
+## Writes every content data file (data/<kind>/*.jsonc) as plain JSON into build/data-json/,
+## with the comments stripped by the game's own stripper (Jsonc), so CI can check each one against
+## its schema: godot --headless --path . -s res://tools/data_to_json.gd
 
 const SOURCE: String = "res://data/"
 const TARGET: String = "res://build/data-json/"
 
 
 func _init() -> void:
-	var failed: int = 0
+	# Content lives exactly one folder deep (data/<kind>/<id>.jsonc), as CI checks it; anything
+	# elsewhere would go unchecked, so it fails instead.
+	var failed: int = DirAccess.get_files_at(SOURCE).size()
+	if failed > 0:
+		printerr("files directly in data/ aren't content: put them in data/<kind>/")
 	for folder: String in DirAccess.get_directories_at(SOURCE):
 		if folder != "schemas":
 			failed += _convert(folder)
@@ -19,7 +25,9 @@ func _init() -> void:
 func _convert(folder: String) -> int:
 	var target: String = TARGET + folder + "/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target))
-	var failed: int = 0
+	var failed: int = DirAccess.get_directories_at(SOURCE + folder).size()
+	if failed > 0:
+		printerr("data/%s/ has subfolders, which content can't have" % folder)
 	for file_name: String in DirAccess.get_files_at(SOURCE + folder):
 		if file_name.ends_with(".jsonc"):
 			var source: String = SOURCE + folder + "/" + file_name

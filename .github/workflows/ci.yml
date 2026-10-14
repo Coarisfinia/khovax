@@ -100,9 +100,13 @@ jobs:
           mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv
           jv=$(find /tmp/jv -type f -name jv | head -1)
           timeout 60 ~/godot/godot --headless --path . -s res://tools/data_to_json.gd
+          # Godot exits 0 even when a script fails to compile, so check every file was converted.
+          test "$(find data -name '*.jsonc' | wc -l)" -eq "$(find build/data-json -name '*.json' | wc -l)"
           for folder in build/data-json/*/; do
             name=$(basename "$folder")
-            "$jv" "data/schemas/${name}.schema.json" "$folder"*.json
+            for file in "$folder"*.json; do
+              "$jv" "data/schemas/${name}.schema.json" "$file"
+            done
           done
 
       - name: Check every script with Godot's warnings as errors

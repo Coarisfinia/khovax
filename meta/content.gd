@@ -5,6 +5,8 @@ extends RefCounted
 ## their file, types from the type chart, and two types never from the same family.
 
 const SPECIES_DIR: String = "res://data/species/"
+## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
+const SPECIES_FIELDS: Array[String] = ["id", "types", "hp", "strength"]
 ## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
 ## Families have no names; each is shown as an icon in a circle on its color.
 const FAMILIES: Array[Array] = [
@@ -48,8 +50,14 @@ func add_species(file_id: String, text: String) -> String:
 	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
 		return "not a JSON object"
 	var data: Dictionary = json.data
+	for key: Variant in data:
+		if not SPECIES_FIELDS.has(str(key)):
+			return "field %s isn't a species field" % key
+	var id: Variant = data.get("id")
+	if not id is String or not _is_id(id):
+		return "its id must be lowercase words joined by underscores"
 	var entry: Species = Species.new()
-	entry.id = str(data.get("id", ""))
+	entry.id = id
 	entry.hp = _amount(data.get("hp"))
 	entry.strength = _amount(data.get("strength"))
 	var types: Variant = data.get("types")
@@ -75,6 +83,12 @@ func _check_types(entry: Species) -> String:
 		families.append(family)
 	species[entry.id] = entry
 	return ""
+
+
+## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.
+static func _is_id(text: String) -> bool:
+	var pattern: RegEx = RegEx.create_from_string("^[a-z][a-z0-9_]*$")
+	return pattern.search(text) != null
 
 
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.
