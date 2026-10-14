@@ -102,6 +102,7 @@ func _check_together() -> String:
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
 	var caught: Array[WildMonsterCaught] = []
+	var standing: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
 	# The second player's ring is a step shorter, so it waits a step and both close at once.
 	for i: int in RING.size():
 		var moves: Array[int] = [_toward(first, RING[i]), Command.NO_MOVE]
@@ -109,7 +110,7 @@ func _check_together() -> String:
 			moves[1] = _toward(second, SECOND_RING[i - 1])
 		for tick: int in MovementFeature.MOVE_TICKS:
 			# Each step's move is given on its first tick only.
-			var both: Array[int] = moves if tick == 0 else [Command.NO_MOVE, Command.NO_MOVE]
+			var both: Array[int] = moves if tick == 0 else standing
 			Simulation.step(state, _commands(both))
 			for event: RefCounted in state.events:
 				if event is WildMonsterCaught:
@@ -144,6 +145,11 @@ func _check_view(tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
 	driver.set_process(false)
+	# Drawn now, not left to whether a frame has passed yet.
+	view.show_state()
+	if view.balls.size() != 1:
+		main.queue_free()
+		return "the main scene doesn't show the wild monster's ball"
 	var ball: HexPiece = view.balls.values()[0]
 	var _events: Array[RefCounted] = _walk(driver.state, RING)
 	view.show_state()
