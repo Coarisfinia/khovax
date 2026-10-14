@@ -169,15 +169,16 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: Cache the Android export templates
+      - name: Cache the Android and Windows export templates
         id: cache-templates
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/godot/export_templates
-          key: godot-templates-android-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}
+          key: godot-templates-android-windows-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}
 
-      - name: Download the Android export templates
-        # The archive holds every platform's templates; only Android's are kept, so the cache stays small.
+      - name: Download the Android and Windows export templates
+        # The archive holds every platform's templates; only the ones exported here are kept, so the
+        # cache stays small.
         if: steps.cache-templates.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/templates.tpz \
@@ -186,7 +187,7 @@ jobs:
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
           unzip -q -j /tmp/templates.tpz \
-            templates/android_debug.apk templates/android_release.apk templates/version.txt -d "$target"
+            templates/android_debug.apk templates/android_release.apk             templates/windows_release_x86_64.exe templates/version.txt -d "$target"
 
       - name: Point Godot at the runner's Android SDK and Java
         run: |
@@ -232,6 +233,19 @@ jobs:
         with:
           name: khovax-debug-apk
           path: build/khovax.apk
+          retention-days: 14
+
+      - name: Export the Windows build
+        # The release's build (#21), exported on every push too, so the preset can't break unseen.
+        # One .exe with the game embedded; release.yml exports it the same way for a version tag.
+        run: |
+          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
+          test -s build/khovax.exe
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: khovax-windows
+          path: build/khovax.exe
           retention-days: 14
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -1,0 +1,77 @@
+name: release
+
+# A version tag (v1.2.3) makes a GitHub release with the Windows build attached (#21). The tag must
+# match application/config/version in project.godot; the README says how to cut one.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2
+  # The same checksums as in ci.yml; bump them together with the version.
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+  GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+
+jobs:
+  release:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    permissions:
+      # Only this job may create the release.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the tag matches the game's version
+        run: |
+          version=$(sed -n 's/^config\/version="\(.*\)"$/\1/p' project.godot)
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} doesn't match config/version ${version} in project.godot"
+            exit 1
+          fi
+
+      - name: Download Godot and the Windows export template
+        # Not cached: releases are rare, and a release is built from verified downloads only.
+        run: |
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
+          target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$target"
+          unzip -q -j /tmp/templates.tpz templates/windows_release_x86_64.exe templates/version.txt -d "$target"
+
+      - name: Import project
+        run: |
+          timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "SCRIPT ERROR" /tmp/import.log; then
+            echo "::error::a script failed during the import"
+            exit 1
+          fi
+
+      - name: Export the Windows build
+        run: |
+          mkdir -p build
+          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
+          test -s build/khovax.exe
+          # The zip is named after the game's display name, so renaming the game needs no change here.
+          name=$(sed -n 's/^config\/name="\(.*\)"$/\1/p' project.godot | tr ' ' '-')
+          echo "ZIP=build/${name}-${GITHUB_REF_NAME}-windows-x86_64.zip" >> "$GITHUB_ENV"
+          echo "EXE=${name}.exe" >> "$GITHUB_ENV"
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/khovax.exe "build/${EXE}"
+          (cd build && zip -q "$(basename "$ZIP")" "$EXE")
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --generate-notes
