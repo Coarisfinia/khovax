@@ -19,10 +19,15 @@ func requires() -> Array[int]:
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
-	for event: RefCounted in state.events:
+	# Copied, as the loop adds TrailGrew events to the same list.
+	for event: RefCounted in state.events.duplicate():
 		var moved: EntityMoved = event as EntityMoved
-		if moved != null and trails.has(moved.entity_id):
-			trails[moved.entity_id].tiles[moved.to] = true
+		if moved == null or not trails.has(moved.entity_id):
+			continue
+		var tiles: Dictionary[Vector2i, bool] = trails[moved.entity_id].tiles
+		if not tiles.has(moved.to):
+			tiles[moved.to] = true
+			state.events.append(_grew(moved))
 
 
 func entity_added(_state: GameState, added: Entity) -> void:
@@ -32,6 +37,11 @@ func entity_added(_state: GameState, added: Entity) -> void:
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = trails.erase(removed_id)
+
+
+## The event for a trail that grew by the tile `moved` walked onto.
+static func _grew(moved: EntityMoved) -> TrailGrew:
+	return TrailGrew.new(moved.entity_id, moved.from, moved.to)
 
 
 ## Starts the entity's trail over, with only `tile` on it. Does nothing for an entity without one.
