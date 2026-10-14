@@ -41,8 +41,8 @@ way; add to it when something bites.
 
 - **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
-  After the approval it enables auto-merge, or merges itself when auto-merge stalls (below). Settings changes the owner asks
-  for are made with the owner's `gh` login.
+  After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
+  Settings changes the owner asks for are made with the owner's `gh` login.
 - **In Git Bash, `gh api` takes endpoints without a leading slash** (`installation/repositories`):
   the shell rewrites `/path` into a Windows file path.
 - **Name other repositories' issues and pull requests only as code text** (`` `owner/repo#123` ``),
@@ -144,10 +144,10 @@ background; only wait in the foreground for a result the very next step needs.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
-  the owner's approval, never enable auto-merge. **If it doesn't merge** although the PR is approved,
-  CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls), merge it
-  yourself: `agent-gh pr merge <n> --squash` (owner, #99). The approval stays valid through later pushes (owner's
-  rule), so check the comments again before enabling auto-merge after a fix.
+  the owner's approval, never enable auto-merge. **If it doesn't merge** although the PR is
+  approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
+  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The approval stays valid through
+  later pushes (owner's rule), so check the comments again before enabling auto-merge after a fix.
 - **Read the reviews themselves to see an approval** (`gh api repos/Flixbox/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
