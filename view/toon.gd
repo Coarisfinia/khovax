@@ -14,11 +14,13 @@ const OUTLINE_WIDTH: float = 0.04
 static var _outline: StandardMaterial3D = null
 
 
-## Gives `material` the toon look: banded light and the ink outline.
+## Gives `material` the toon look: banded light and the ink outline. A transparent material gets
+## no outline: an opaque ink silhouette would show through it.
 static func apply(material: StandardMaterial3D) -> void:
 	material.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
 	material.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	material.next_pass = outline()
+	if material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+		material.next_pass = outline()
 
 
 ## Gives every mesh under `root` the toon look, on its own copies of the imported materials, so

@@ -25,8 +25,8 @@ func run(tree: SceneTree) -> String:
 		_check_player_in_view,
 		_check_state_drives_view,
 		_check_ball,
-		_check_ball_removed,
 		_check_toon_look,
+		_check_ball_removed,
 		_check_terrain_colors,
 	]
 	var result: String = ""
@@ -232,11 +232,21 @@ func _check_toon_look(main: Node) -> String:
 		var part: MeshInstance3D = node as MeshInstance3D
 		for surface: int in part.mesh.get_surface_count():
 			materials.append(part.get_active_material(surface))
+	if materials.size() < 3:
+		return "the toon check found no ball or no character to look at"
 	for material: Material in materials:
 		var toon: StandardMaterial3D = material as StandardMaterial3D
-		var shaded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
-		if not shaded or toon.next_pass != Toon.outline():
-			return "a shown material lacks the toon shading or the shared ink outline"
+		var banded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
+		if not banded or toon.specular_mode != BaseMaterial3D.SPECULAR_TOON:
+			return "a shown material lacks the toon light bands"
+		if toon.next_pass != Toon.outline():
+			return "a shown material lacks the shared ink outline"
+	var ink: StandardMaterial3D = Toon.outline()
+	var hull: bool = ink.cull_mode == BaseMaterial3D.CULL_FRONT and ink.grow and ink.grow_amount > 0.0
+	if (not hull
+			or ink.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED
+			or ink.albedo_color != Toon.INK):
+		return "the ink outline isn't an unlit, grown back-face hull in the ink color"
 	return ""
 
 
