@@ -318,9 +318,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   runners to this public repository.
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
   comment), and Godot, its export templates and gdstyle by checksum, with cache keys that include
-  the checksum. Bump a version and its checksum together. The runner image is named explicitly
-  (`ubuntu-26.04`, not `ubuntu-latest`), so a new image arrives on purpose, with the APK build
-  checked, not on GitHub's date.
+  the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both. The
+  runner image is named explicitly (`ubuntu-26.04`, not `ubuntu-latest`), so a new image arrives on
+  purpose, with the APK build checked, not on GitHub's date.
 - **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
   matching means a change altered what the game does. If that is on purpose, bump
   `Simulation.RULES_VERSION`, rehash them (`godot --headless --path . -s
