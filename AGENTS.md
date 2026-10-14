@@ -146,6 +146,10 @@ background; only wait in the foreground for a result the very next step needs.
   `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
   the owner's approval, never enable auto-merge. The approval stays valid through later pushes (owner's
   rule), so check the comments again before enabling auto-merge after a fix.
+- **Read the reviews themselves to see an approval** (`gh api repos/Flixbox/khovax/pulls/<n>/reviews`),
+  never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
+  empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
+  An approval often arrives together with review comments, and the watcher reports only those.
 
 ## Architecture
 
