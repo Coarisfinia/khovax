@@ -89,7 +89,14 @@ jobs:
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
       - name: Import project
-        run: timeout 120 ~/godot/godot --headless --path . --import
+        # Tool scripts run during the import too; a script error there passes silently otherwise.
+        run: |
+          timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "SCRIPT ERROR" /tmp/import.log; then
+            echo "::error::a script failed during the import"
+            exit 1
+          fi
 
       - name: Check the content data against its schemas
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
@@ -183,7 +190,14 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Import project
-        run: timeout 120 ~/godot/godot --headless --path . --import
+        # Tool scripts run during the import too; a script error there passes silently otherwise.
+        run: |
+          timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "SCRIPT ERROR" /tmp/import.log; then
+            echo "::error::a script failed during the import"
+            exit 1
+          fi
 
       - name: Export the debug APK
         env:
