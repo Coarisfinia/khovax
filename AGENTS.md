@@ -199,6 +199,13 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
+- **`meta/`, the layers above a run** (#37): the player's `Profile` (captured monsters, materials,
+  unlocked slots) lasts between runs and changes only at a run's boundaries, never per tick. A run
+  is the profile's party plus an instance and a seed (`Instances.create`): deterministic, like
+  everything in `sim/`. Its end gives a `RunResult` (catches, materials), which `Profile.apply`
+  takes over. The profile is saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and
+  ids only: a newer format is refused, and an older one is migrated in `Profile.parse` once a second
+  format exists. Content data (species, items) comes in #72.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.
