@@ -34,22 +34,23 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install gdstyle
+      - name: "🧰 Install gdstyle (the linter)"
         run: |
           curl -fsSL -o /tmp/gdstyle.tar.gz \
             "https://github.com/atelico/gdstyle/releases/download/v${GDSTYLE_VERSION}/gdstyle-x86_64-unknown-linux-gnu.tar.gz"
           echo "${GDSTYLE_SHA256}  /tmp/gdstyle.tar.gz" | sha256sum --check
           sudo tar xzf /tmp/gdstyle.tar.gz -C /usr/local/bin gdstyle
 
-      - name: Lint GDScript
+      - name: "🔍 Lint GDScript"
         run: gdstyle check --no-color .
 
-      - name: Check GDScript formatting
+      - name: "🎨 Check GDScript formatting"
         run: gdstyle fmt --check .
 
-      - name: Keep the simulation deterministic
+      - name: "🎲 Check the simulation stays deterministic"
         # sim/ holds the rules: plain RefCounted classes without nodes, input, time, engine or OS
         # state, global randomness, frame delta or floats (see AGENTS.md, "Architecture").
         # Comments are stripped first (a # outside strings), so the rules can be explained in them.
@@ -71,14 +72,14 @@ jobs:
           done < <(find sim -name '*.gd')
           exit "$failed"
 
-      - name: Cache Godot
+      - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/godot
           key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
 
-      - name: Download Godot
+      - name: "⬇️ Download Godot (Linux editor)"
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/godot
@@ -88,7 +89,7 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: Import project
+      - name: "📦 Import the project"
         # Tool scripts run during the import too; a script error there passes silently otherwise.
         run: |
           timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
@@ -98,7 +99,7 @@ jobs:
             exit 1
           fi
 
-      - name: Check CREDITS.md matches the assets' source notes
+      - name: "📜 Check CREDITS.md matches the assets"
         # tools/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
         # was added or changed without regenerating the credits.
         run: |
@@ -114,7 +115,7 @@ jobs:
             exit 1
           fi
 
-      - name: Check the content data against its schemas
+      - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
         # each data/<folder>/ file against data/schemas/<folder>.schema.json.
         run: |
@@ -132,7 +133,7 @@ jobs:
             done
           done
 
-      - name: Check every script with Godot's warnings as errors
+      - name: "🔎 Check every script (warnings as errors)"
         # Also catches scripts that no test loads.
         run: |
           git ls-files '*.gd' | while read -r script; do
@@ -140,7 +141,7 @@ jobs:
               || { echo "::error file=${script}::fails Godot's script check"; exit 1; }
           done
 
-      - name: Run e2e tests
+      - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
 
@@ -150,16 +151,17 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Cache Godot
+      - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/godot
           key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
 
-      - name: Download Godot
+      - name: "⬇️ Download Godot (Linux editor)"
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/godot
@@ -169,7 +171,7 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: Cache the export templates the presets use
+      - name: "💾 Cache the export templates"
         id: cache-templates
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -177,7 +179,7 @@ jobs:
           # A preset added or changed makes a new cache, with the templates it needs.
           key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles('export_presets.cfg') }}
 
-      - name: Download the export templates the presets use
+      - name: "⬇️ Download the export templates"
         # The archive holds every platform's templates; only those export_presets.cfg needs are kept
         # (tools/export_templates.sh reads them from it), so the cache stays small.
         if: steps.cache-templates.outputs.cache-hit != 'true'
@@ -190,7 +192,7 @@ jobs:
           mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
-      - name: Point Godot at the runner's Android SDK and Java
+      - name: "🤖 Android: point Godot at the SDK and Java"
         run: |
           mkdir -p ~/.config/godot
           cat > ~/.config/godot/editor_settings-4.tres <<SETTINGS
@@ -201,13 +203,13 @@ jobs:
           export/android/java_sdk_path = "${JAVA_HOME_17_X64}"
           SETTINGS
 
-      - name: Make a throwaway debug key
+      - name: "🔑 Android: make a throwaway debug key"
         run: |
           keytool -genkeypair -v -keystore /tmp/debug.keystore -storepass android \
             -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Import project
+      - name: "📦 Import the project"
         # Tool scripts run during the import too; a script error there passes silently otherwise.
         run: |
           timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
@@ -217,7 +219,7 @@ jobs:
             exit 1
           fi
 
-      - name: Export the debug APK
+      - name: "🤖 Android: export the debug APK and the test APK"
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /tmp/debug.keystore
           GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
@@ -230,20 +232,21 @@ jobs:
           timeout 300 ~/godot/godot --headless --path . --export-debug "Android Test" build/khovax-test.apk
           test -s build/khovax-test.apk
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: "⬆️ 🤖 Android debug APK: upload (khovax-debug-apk)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-debug-apk
           path: build/khovax.apk
           retention-days: 14
 
-      - name: Export the Windows build
+      - name: "🪟 Windows: export the release build"
         # The release's build (#21), exported on every push too, so the preset can't break unseen.
         # One .exe with the game embedded; release.yml exports it the same way for a version tag.
         run: |
           timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
           test -s build/khovax.exe
 
-      - name: Export the web build
+      - name: "🌐 Web: export the release build"
         # Single-threaded (#22): it runs without SharedArrayBuffer, so static hosts that can't send
         # cross-origin isolation headers (GitHub Pages) serve it as is.
         run: |
@@ -251,19 +254,22 @@ jobs:
           timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: "⬆️ 🌐 Web build: upload (khovax-web)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-web
           path: build/web/
           retention-days: 14
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: "⬆️ 🪟 Windows build: upload (khovax-windows)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-windows
           path: build/khovax.exe
           retention-days: 14
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: "⬆️ 🧪 Android test APK: upload (khovax-test-apk)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: khovax-test-apk
           path: build/khovax-test.apk
@@ -276,20 +282,22 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      - name: "⬇️ 🧪 Android test APK: download (khovax-test-apk)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: khovax-test-apk
           path: build
 
-      - name: Let the emulator use KVM
+      - name: "⚙️ Emulator: enable KVM"
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run the APK's e2e flow on an emulator
+      - name: "📱 Android test APK: run the e2e flow on an emulator"
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
