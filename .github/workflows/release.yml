@@ -1,8 +1,8 @@
 name: release
 
 # A version tag (v1.2.3) makes a GitHub release with the Windows and web builds attached (#21,
-# #22). The tag must match application/config/version in project.godot; the README says how to cut one. The build
-# runs read-only; only the release job, which runs no project code, may write.
+# #22). The tag must match application/config/version in project.godot; the README says how to
+# cut one. The build runs read-only; only the release job, which runs no project code, may write.
 on:
   push:
     tags: ["v*"]
