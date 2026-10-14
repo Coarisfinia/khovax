@@ -1,5 +1,6 @@
 extends RefCounted
-## Movement flow, through every layer: keys and the touch stick press the movement actions, the
+## Movement flow, through every layer: keys, the touch stick and a gamepad press the movement
+## actions, the
 ## local input turns them into commands, the simulation walks the player from tile to tile along a
 ## known path, zigzagging along a column for straight up and stopping at the grid's edge and at a
 ## wild monster's ball, and the
@@ -21,6 +22,19 @@ const PHYSICAL_KEYS: Dictionary[String, Key] = {
 	"move_down": KEY_S,
 	"move_left": KEY_A,
 	"move_right": KEY_D,
+}
+## The left stick's direction per action; screen y grows downwards, so up is a negative y.
+const STICK: Dictionary[String, Vector2] = {
+	"move_up": Vector2(0.0, -1.0),
+	"move_down": Vector2(0.0, 1.0),
+	"move_left": Vector2(-1.0, 0.0),
+	"move_right": Vector2(1.0, 0.0),
+}
+const D_PAD: Dictionary[String, JoyButton] = {
+	"move_up": JOY_BUTTON_DPAD_UP,
+	"move_down": JOY_BUTTON_DPAD_DOWN,
+	"move_left": JOY_BUTTON_DPAD_LEFT,
+	"move_right": JOY_BUTTON_DPAD_RIGHT,
 }
 const ARROW_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_UP,
@@ -75,9 +89,13 @@ func run(tree: SceneTree) -> String:
 
 	var result: String = _check_bindings()
 	if result.is_empty():
+		result = _check_gamepad_bindings()
+	if result.is_empty():
 		result = _check_paths()
 	if result.is_empty():
 		result = _check_blocked_by_ball()
+	if result.is_empty():
+		result = _check_stick_walk()
 	_release_all()
 	_main.queue_free()
 	await tree.process_frame
@@ -123,6 +141,77 @@ func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
 	Input.parse_input_event(release)
 	Input.flush_buffered_events()
 	return pressed
+
+
+## Every action also has its left-stick direction and its D-pad button (#11), and a real D-pad
+## press reaches it, like keys and the touch stick do.
+func _check_gamepad_bindings() -> String:
+	for i: int in ACTIONS.size():
+		var action: String = ACTIONS[i]
+		var stick: Vector2 = STICK[action]
+		var has_stick: bool = false
+		var has_button: bool = false
+		for event: InputEvent in InputMap.action_get_events(action):
+			var motion: InputEventJoypadMotion = event as InputEventJoypadMotion
+			var button: InputEventJoypadButton = event as InputEventJoypadButton
+			if motion != null:
+				# The left stick's own axis for the direction, never another stick or a trigger.
+				var axis: JoyAxis = JOY_AXIS_LEFT_X if stick.x != 0.0 else JOY_AXIS_LEFT_Y
+				var axis_value: float = stick.x if axis == JOY_AXIS_LEFT_X else stick.y
+				var matches: bool = motion.axis == axis and is_equal_approx(
+					motion.axis_value,
+					axis_value,
+				)
+				has_stick = has_stick or matches
+			if button != null:
+				has_button = has_button or button.button_index == D_PAD[action]
+		if not has_stick or not has_button or not _button_reaches(D_PAD[action], action):
+			return "%s isn't bound to its stick direction and its D-pad button" % action
+	return ""
+
+
+## Whether a real press of the joypad button presses the action.
+func _button_reaches(index: JoyButton, action: String) -> bool:
+	var press: InputEventJoypadButton = InputEventJoypadButton.new()
+	press.button_index = index
+	press.pressed = true
+	Input.parse_input_event(press)
+	Input.flush_buffered_events()
+	var pressed: bool = Input.is_action_pressed(action)
+	var release: InputEventJoypadButton = press.duplicate() as InputEventJoypadButton
+	release.pressed = false
+	Input.parse_input_event(release)
+	Input.flush_buffered_events()
+	return pressed
+
+
+## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from
+## (-1, 0), next to the ball, the player runs along the row to the grid's edge; letting go stops it.
+func _check_stick_walk() -> String:
+	_send_stick(Vector2(0.15, 0.0))
+	var drift: String = _hold([], _send_stick.bind(Vector2.ZERO))
+	if not drift.is_empty():
+		return "a stick drifting inside the dead zone: " + drift
+	_send_stick(Vector2(1.0, 0.0))
+	var result: String = _hold(
+		[Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
+		_send_stick.bind(Vector2.ZERO),
+	)
+	return "pushing the stick right: " + result if not result.is_empty() else ""
+
+
+## Moves the left stick to `to`, as a real joypad's events would: one event per axis.
+func _send_stick(to: Vector2) -> void:
+	_send_axis(JOY_AXIS_LEFT_X, to.x)
+	_send_axis(JOY_AXIS_LEFT_Y, to.y)
+	Input.flush_buffered_events()
+
+
+func _send_axis(axis: JoyAxis, value: float) -> void:
+	var motion: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	motion.axis = axis
+	motion.axis_value = value
+	Input.parse_input_event(motion)
 
 
 ## Each walk starts where the previous one stopped: (1, -1) is the player's start tile.
