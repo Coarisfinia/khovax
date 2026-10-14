@@ -13,9 +13,17 @@ const RULES_VERSION: int = 4
 
 
 ## Advances `state` by one tick. `commands` holds each player slot's command, indexed by slot.
-static func step(state: GameState, commands: Array[Command]) -> void:
+## `after_each`, if given, is called with each feature's id right after it steps: an observer that
+## measures (the load test, #101). It gets only the id, never the feature, so it can't change it.
+static func step(
+	state: GameState,
+	commands: Array[Command],
+	after_each: Callable = Callable(),
+) -> void:
 	state.tick += 1
 	state.events.clear()
 	for feature: Feature in state.features:
 		if feature.enabled:
 			feature.step(state, commands)
+			if after_each.is_valid():
+				after_each.call(feature.id())
