@@ -23,6 +23,9 @@ func _init() -> void:
 	var failed: int = 0
 	var packs: PackedStringArray = DirAccess.get_directories_at(ASSETS)
 	packs.sort()
+	if packs.is_empty():
+		printerr("no asset packs in assets/: the credits would be empty")
+		failed += 1
 	for pack: String in packs:
 		var entry: String = _entry(pack)
 		if entry.is_empty():
@@ -38,7 +41,9 @@ func _init() -> void:
 
 ## One pack's credits from its source note, or "" when the note lacks a title or a field.
 func _entry(pack: String) -> String:
-	var note: String = FileAccess.get_file_as_string(ASSETS + pack + "/SOURCE.md")
+	# Line endings normalized, so a note saved on Windows gives the same credits.
+	var path: String = ASSETS + pack + "/SOURCE.md"
+	var note: String = FileAccess.get_file_as_string(path).replace("\r", "")
 	var lines: PackedStringArray = note.split("\n")
 	if lines.is_empty() or not lines[0].begins_with("# "):
 		return ""
@@ -51,10 +56,11 @@ func _entry(pack: String) -> String:
 	return entry
 
 
-## The field's line and its indented continuation lines, or "" when the note doesn't have it.
+## The field's line and its continuation lines (indented by two spaces), or "" when the note
+## doesn't have it or leaves it empty.
 func _field(lines: PackedStringArray, field: String) -> String:
 	for i: int in lines.size():
-		if lines[i].begins_with(field):
+		if lines[i].begins_with(field) and not lines[i].trim_prefix(field).strip_edges().is_empty():
 			var found: String = lines[i].strip_edges(false, true) + "\n"
 			var next: int = i + 1
 			while next < lines.size() and lines[next].begins_with("  "):

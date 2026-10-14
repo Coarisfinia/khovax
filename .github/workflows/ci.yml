@@ -102,7 +102,13 @@ jobs:
         # tools/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
         # was added or changed without regenerating the credits.
         run: |
-          timeout 60 ~/godot/godot --headless --path . -s res://tools/credits.gd
+          # Godot exits 0 on a script error, which would leave an old CREDITS.md looking current.
+          timeout 60 ~/godot/godot --headless --path . -s res://tools/credits.gd 2>&1 | tee /tmp/credits.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "SCRIPT ERROR" /tmp/credits.log; then
+            echo "::error file=tools/credits.gd::the credits tool hit a script error"
+            exit 1
+          fi
           if ! git diff --exit-code CREDITS.md || [ -n "$(git status --porcelain CREDITS.md)" ]; then
             echo "::error file=CREDITS.md::out of date: run tools/credits.gd and commit the result"
             exit 1
