@@ -242,7 +242,8 @@ func _check_toon_look(main: Node) -> String:
 		if toon.next_pass != Toon.outline():
 			return "a shown material lacks the shared ink outline"
 	var ink: StandardMaterial3D = Toon.outline()
-	var hull: bool = ink.cull_mode == BaseMaterial3D.CULL_FRONT and ink.grow and ink.grow_amount > 0.0
+	var grown: bool = ink.grow and ink.grow_amount > 0.0
+	var hull: bool = ink.cull_mode == BaseMaterial3D.CULL_FRONT and grown
 	if (not hull
 			or ink.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED
 			or ink.albedo_color != Toon.INK):
