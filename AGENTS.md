@@ -187,6 +187,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **Instances** (`sim/instances/`): which map (a file in `maps/`) and which features in which
   order; players start on the map's starts. A new mechanic is a new feature that instances list;
   it never grows the core.
+- **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
+  these is meant. A `species` is what every monster is, captured or not; a `captured_monster` was
+  caught by the player; a `wild_monster` can still be caught; an `ally_monster` fights on the
+  player's side but isn't captured and can't be. They're names, not necessarily separate classes.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
@@ -238,12 +242,19 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 
 ### Testing and CI
 
-- **Every user flow has one coherent e2e test** (owner's rule): one flow for booting into the
-  world, one for moving on the hex grid, one for a full catch or combat encounter, and so on. A
-  change to an area extends the flow that covers it with new steps; a new flow file
-  (`tests/e2e/test_<flow>.gd`) is only for a new user flow. No collections of small unrelated tests.
-- **Start with a minimal runner of our own.** Once there are five or more full flows of real game
-  mechanics, switch to a test framework (owner's rule).
+- **Every user flow has one coherent e2e test, headless** (owner's rule): one flow for booting
+  into the world, one for moving on the hex grid, one for a full catch or combat encounter, and so
+  on. A change to an area extends the flow that covers it with new steps; a new flow file
+  (`tests/e2e/test_<flow>.gd`) is only for a new user flow. No collections of small unrelated tests,
+  and no separate unit tests while the flows already check the same things (owner, #61).
+- **Exactly one e2e flow runs on the APK** (owner's rule, #61): `tests/apk/apk_flow.gd`, on an
+  Android emulator in CI (`apk-e2e`, started by `game/test_mode.gd` in the test APK only). It
+  starts from a fixed seed, scripts its touches per tick, and must end in `EXPECTED_HASH`, which
+  the same flow pins headless (`tests/e2e/test_apk_flow.gd`). A rule change that moves it updates
+  it on purpose, like the golden replays. Everything else stays headless. `apk-e2e` is a required
+  check: it passed on its first run, and the owner asked to enforce it then.
+- **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
+  for now (#61).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
 - **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
   runs Godot needs a `timeout`, and every job a `timeout-minutes`.
@@ -278,10 +289,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 ### Repository and accounts
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless` check from GitHub
-  Actions green on a branch that is up to date with `main`, squash merges only, no force-push or
-  deletion. The required check is named after the CI job: renaming the job means changing the
-  ruleset in the same PR (owner's `gh`).
+  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
+  checks from GitHub Actions green on a branch that is up to date with `main`, squash merges only, no
+  force-push or deletion. The required checks are named after the CI jobs: renaming a job means
+  changing the ruleset in the same PR (owner's `gh`).
 - **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
   them.
 
