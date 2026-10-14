@@ -2,11 +2,13 @@ class_name WildMonsterView
 extends Node3D
 ## The wild monsters' look (#19): for now a ball for each, resting on its tile, its color standing
 ## out from the tiles, the trail and the players (and it's round, so it doesn't rely on color
-## alone). It follows the wild monster feature's state: a ball appears for each wild monster and
-## goes when it does. It only reads the state.
+## alone). It follows the wild monster feature's state: a ball appears for each wild monster and,
+## when it goes (caught, #20), shrinks away calmly: no flash, no shake. It only reads the state.
 
 ## The ball's radius, in world units.
 const RADIUS: float = 0.4
+## How long a ball takes to shrink away once its wild monster is gone.
+const FADE_SECONDS: float = 0.4
 
 @export var driver: GameDriver
 @export var ball_color: Color = Color(0.62, 0.32, 0.8)
@@ -42,7 +44,7 @@ func show_state() -> void:
 		shown = feature.monsters
 	for entity_id: int in balls.keys():
 		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
-			balls[entity_id].queue_free()
+			_fade_out(balls[entity_id])
 			var _dropped: bool = balls.erase(entity_id)
 	for entity_id: int in shown:
 		if driver.state.entity(entity_id) == null:
@@ -50,6 +52,13 @@ func show_state() -> void:
 		if not balls.has(entity_id):
 			balls[entity_id] = _add_ball()
 		balls[entity_id].tile = driver.state.entity(entity_id).tile
+
+
+## Shrinks a ball away and frees it.
+func _fade_out(ball: HexPiece) -> void:
+	var tween: Tween = create_tween()
+	var _shrink: PropertyTweener = tween.tween_property(ball, "scale", Vector3.ZERO, FADE_SECONDS)
+	var _free: CallbackTweener = tween.tween_callback(ball.queue_free)
 
 
 ## A new ball, standing on its tile once it's given one.
