@@ -251,7 +251,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   Android emulator in CI (`apk-e2e`, started by `game/test_mode.gd` in the test APK only). It
   starts from a fixed seed, scripts its touches per tick, and must end in `EXPECTED_HASH`, which
   the same flow pins headless (`tests/e2e/test_apk_flow.gd`). A rule change that moves it updates
-  it on purpose, like the golden replays. Everything else stays headless.
+  it on purpose, like the golden replays. Everything else stays headless. `apk-e2e` is a required
+  check: it passed on its first run, and the owner asked to enforce it then.
 - **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
   for now (#61).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
@@ -288,10 +289,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 ### Repository and accounts
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless` check from GitHub
-  Actions green on a branch that is up to date with `main`, squash merges only, no force-push or
-  deletion. The required check is named after the CI job: renaming the job means changing the
-  ruleset in the same PR (owner's `gh`).
+  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
+  checks from GitHub Actions green on a branch that is up to date with `main`, squash merges only, no
+  force-push or deletion. The required checks are named after the CI jobs: renaming a job means
+  changing the ruleset in the same PR (owner's `gh`).
 - **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
   them.
 
