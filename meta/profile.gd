@@ -35,12 +35,17 @@ func apply(result: RunResult) -> String:
 	if not problem.is_empty():
 		return problem
 	for species: String in result.caught_species:
-		captured_monsters.append(CapturedMonster.new(next_monster_id, species))
-		next_monster_id += 1
+		_capture(species)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	runs_finished += 1
 	return ""
+
+
+## Adds a newly captured monster of `species`, with the next id.
+func _capture(species: String) -> void:
+	captured_monsters.append(CapturedMonster.new(next_monster_id, species))
+	next_monster_id += 1
 
 
 ## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
