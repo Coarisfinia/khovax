@@ -30,11 +30,11 @@ var problem: String = ""
 
 ## Takes over what the player just obtained: its catches and materials. Returns why the gain can't
 ## be taken over, or "", and changes nothing when it can't: a profile that took over a bad gain
-## couldn't be loaded again. Callers save right after (ProfileKeeper).
+## couldn't be loaded again. ProfileKeeper saves it.
 func apply(result: Gain) -> String:
-	var problem: String = _result_problem(result)
-	if not problem.is_empty():
-		return problem
+	var refusal: String = _result_problem(result)
+	if not refusal.is_empty():
+		return refusal
 	for species: String in result.caught_species:
 		_capture(species)
 	for material: String in result.materials:
