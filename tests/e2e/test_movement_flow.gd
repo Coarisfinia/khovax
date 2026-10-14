@@ -155,8 +155,14 @@ func _check_gamepad_bindings() -> String:
 			var motion: InputEventJoypadMotion = event as InputEventJoypadMotion
 			var button: InputEventJoypadButton = event as InputEventJoypadButton
 			if motion != null:
-				var axis_value: float = stick.x if motion.axis == JOY_AXIS_LEFT_X else stick.y
-				has_stick = has_stick or is_equal_approx(motion.axis_value, axis_value)
+				# The left stick's own axis for the direction, never another stick or a trigger.
+				var axis: JoyAxis = JOY_AXIS_LEFT_X if stick.x != 0.0 else JOY_AXIS_LEFT_Y
+				var axis_value: float = stick.x if axis == JOY_AXIS_LEFT_X else stick.y
+				var matches: bool = motion.axis == axis and is_equal_approx(
+					motion.axis_value,
+					axis_value,
+				)
+				has_stick = has_stick or matches
 			if button != null:
 				has_button = has_button or button.button_index == D_PAD[action]
 		if not has_stick or not has_button or not _button_reaches(D_PAD[action], action):
@@ -179,9 +185,13 @@ func _button_reaches(index: JoyButton, action: String) -> bool:
 	return pressed
 
 
-## The left stick walks too: pushed right from (-1, 0), next to the ball, the player runs along the
-## row to the grid's edge; letting go stops it.
+## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from
+## (-1, 0), next to the ball, the player runs along the row to the grid's edge; letting go stops it.
 func _check_stick_walk() -> String:
+	_send_stick(Vector2(0.15, 0.0))
+	var drift: String = _hold([], _send_stick.bind(Vector2.ZERO))
+	if not drift.is_empty():
+		return "a stick drifting inside the dead zone: " + drift
 	_send_stick(Vector2(1.0, 0.0))
 	var result: String = _hold(
 		[Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
