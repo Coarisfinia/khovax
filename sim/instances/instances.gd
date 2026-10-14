@@ -4,8 +4,8 @@ extends RefCounted
 ## step order. The players start on the map's starts. An instance switches game rules on and off
 ## by listing them, and they can change during a run.
 
-## The playground: the hand-made map maps/basic.map, walking, a trail per player, and the wild
-## monsters the map places.
+## The playground: the hand-made map maps/basic.map, walking, a trail per player, the wild
+## monsters the map places, and catching them with a ring.
 const BASIC: String = "basic"
 const NAMES: Array[String] = [BASIC]
 const MAPS: String = "res://maps/"
@@ -35,6 +35,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		MovementFeature.new(),
 		TrailFeature.new(),
 		WildMonsterFeature.new(),
+		CatchFeature.new(),
 	]
 	var state: GameState = GameState.new(map, seed_value, ordered)
 	if not state.problem.is_empty():

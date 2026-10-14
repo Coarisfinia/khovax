@@ -181,7 +181,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
-  into each other. Whether a feature is on is state: only rules switch it, inside a tick
+  into each other: a feature may read the features it `requires` and change them only through
+  their public methods (e.g. `CatchFeature` restarts a trail with `TrailFeature.restart`), never
+  their fields. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
 - **Entities** (#31): everything in the world (players, wild monsters, later totems) is an
   `Entity` with a stable id, never reused, an owning player slot (0–3, or none) and a tile. A
