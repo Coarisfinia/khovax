@@ -8,6 +8,10 @@ The design report lives in [`docs/design.html`](docs/design.html).
 
 Status: pre-production.
 
+## License
+
+The code is released into the public domain under [the Unlicense](LICENSE). Assets added later keep their own licenses, next to them.
+
 ## Running it
 
 Install the tools with [scoop](https://scoop.sh) (Windows). The project targets Godot 4.7.x, the version CI pins:
