@@ -36,6 +36,18 @@ CI builds a debug APK on every pull request and every push to `main`:
 
 It's signed with a throwaway debug key made in each CI run. Installing a newer build over an older one fails because the keys differ, so uninstall the old one first.
 
+## On Windows
+
+CI builds the Windows version on every pull request and every push to `main`, as the `khovax-windows` artifact on the run's page (a zip with one `khovax.exe`; kept for 14 days). Unzip it and run the `.exe`. It isn't signed, so Windows SmartScreen asks once: "More info", then "Run anyway".
+
+## Cutting a release
+
+A release is a GitHub release with the Windows build attached, made by `.github/workflows/release.yml`:
+1. Set the new version in `project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
+2. Once that's merged, tag that commit on `main` with the same version and push the tag:
+   `git tag v0.2.0 && git push origin v0.2.0`.
+3. The workflow checks the tag against `config/version`, exports the build, and creates the release with a zip named after the game. The release notes list the merged pull requests.
+
 ## Tests
 
 The e2e tests run headless. A fresh checkout needs one import first:

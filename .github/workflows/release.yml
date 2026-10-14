@@ -1,0 +1,109 @@
+name: release
+
+# A version tag (v1.2.3) makes a GitHub release with the Windows build attached (#21). The tag must
+# match application/config/version in project.godot; the README says how to cut one. The build
+# runs read-only; only the release job, which runs no project code, may write.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2
+  # The same checksums as in ci.yml; bump them together with the version.
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
+  GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    outputs:
+      zip: ${{ steps.export.outputs.zip }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the tag matches the game's version
+        # The version is read from [application] only, and must be a plain x.y.z.
+        run: |
+          version=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' project.godot)
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} doesn't match config/version \"${version}\" (x.y.z) in project.godot"
+            exit 1
+          fi
+
+      - name: Download Godot and the Windows export template
+        # Not cached: releases are rare, and a release is built from verified downloads only.
+        run: |
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          curl -fsSL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
+          target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$target"
+          unzip -q -j /tmp/templates.tpz templates/windows_release_x86_64.exe templates/version.txt -d "$target"
+
+      - name: Import project
+        run: |
+          timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -q "SCRIPT ERROR" /tmp/import.log; then
+            echo "::error::a script failed during the import"
+            exit 1
+          fi
+
+      - name: Export and zip the Windows build
+        id: export
+        # Files are named after the game's display name, so renaming the game needs no change here;
+        # only letters, digits, dots, dashes and underscores are kept, and never a leading dash.
+        run: |
+          mkdir -p build/zip
+          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
+          test -s build/khovax.exe
+          name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' project.godot \
+            | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
+          name=${name:-khovax}
+          cp build/khovax.exe "build/zip/${name}.exe"
+          zip="${name}-${GITHUB_REF_NAME}-windows-x86_64.zip"
+          (cd build/zip && zip -q -- "../${zip}" "${name}.exe")
+          echo "zip=${zip}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-windows
+          path: build/${{ steps.export.outputs.zip }}
+          retention-days: 3
+
+  release:
+    needs: build
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      # Only this job may create the release; it checks out and runs nothing from the repository.
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-windows
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ZIP: ${{ needs.build.outputs.zip }}
+        run: |
+          # The tag must still point at the commit that was built: a tag moved since then fails.
+          tagged=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
+          if [ "$tagged" != "$GITHUB_SHA" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} now points at ${tagged}, not the built ${GITHUB_SHA}"
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$GITHUB_REF_NAME" --generate-notes
