@@ -2,7 +2,8 @@ extends RefCounted
 ## Catch flow (#20): the player walks a ring around the basic map's wild monster, the ball at
 ## (-2, 0), and catches it: the monster leaves the world, the catch is announced, the trail starts
 ## over, and the ball shrinks away. An open ring, a walk that only touches the ball, and a ring
-## around another tile catch nothing. Catching is deterministic.
+## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
+## first gets the monster (owner, #84). Catching is deterministic.
 
 ## The six tiles around the ball, walked in a ring from the player's start at (1, -1).
 const RING: Array[Vector2i] = [
@@ -12,6 +13,15 @@ const RING: Array[Vector2i] = [
 	Vector2i(-3, 0),
 	Vector2i(-3, 1),
 	Vector2i(-2, 1),
+	Vector2i(-1, 0),
+]
+## The second player's ring around the ball, from its start at (-1, 1): one step shorter.
+const SECOND_RING: Array[Vector2i] = [
+	Vector2i(-2, 1),
+	Vector2i(-3, 1),
+	Vector2i(-3, 0),
+	Vector2i(-2, -1),
+	Vector2i(-1, -1),
 	Vector2i(-1, 0),
 ]
 ## A ring around (1, 1), with no wild monster inside.
@@ -32,6 +42,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_other_ring()
 	if result.is_empty():
 		result = _check_catch()
+	if result.is_empty():
+		result = _check_together()
 	if result.is_empty():
 		result = await _check_view(tree)
 	return result
@@ -81,6 +93,46 @@ func _check_catch() -> String:
 	if again.state_hash() != state.state_hash():
 		return "the same catch gave two different states"
 	return ""
+
+
+## Two players close their rings around the ball in the same tick: the one who joined first (the
+## lower entity id) catches it, and only their trail starts over.
+func _check_together() -> String:
+	var state: GameState = Instances.basic(42, 2)
+	var first: Entity = state.player(0)
+	var second: Entity = state.player(1)
+	var caught: Array[WildMonsterCaught] = []
+	# The second player's ring is a step shorter, so it waits a step and both close at once.
+	for i: int in RING.size():
+		var moves: Array[int] = [_toward(first, RING[i]), Command.NO_MOVE]
+		if i > 0:
+			moves[1] = _toward(second, SECOND_RING[i - 1])
+		for tick: int in MovementFeature.MOVE_TICKS:
+			# Each step's move is given on its first tick only.
+			var both: Array[int] = moves if tick == 0 else [Command.NO_MOVE, Command.NO_MOVE]
+			Simulation.step(state, _commands(both))
+			for event: RefCounted in state.events:
+				if event is WildMonsterCaught:
+					caught.append(event as WildMonsterCaught)
+	if caught.size() != 1 or caught[0].catcher_id != first.id:
+		return "two players closing rings at once: caught %d times, not once by the first" % [
+			caught.size(),
+		]
+	var second_trail: Trail = _trails(state).trail(second.id)
+	if _trails(state).trail(first.id).tiles.size() != 1 or second_trail.tiles.size() == 1:
+		return "the catcher's trail didn't start over, or the other player's did"
+	return ""
+
+
+## One command per slot, from each slot's move.
+func _commands(moves: Array[int]) -> Array[Command]:
+	var commands: Array[Command] = []
+	commands.assign(moves.map(func(move: int) -> Command: return Command.new(move)))
+	return commands
+
+
+func _toward(walker: Entity, next: Vector2i) -> int:
+	return Hex.DIRECTIONS.find(next - walker.tile)
 
 
 ## The ball doesn't blink out: it shrinks away calmly, and then it's gone.
