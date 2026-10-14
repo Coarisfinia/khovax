@@ -24,6 +24,10 @@ env:
   # holds what was verified against them.
   GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
   GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+  # jv, the JSON Schema validator for the content data (#72); the checksum is of its Linux release
+  # archive, as GitHub records it for the release asset.
+  JV_VERSION: 6.0.3
+  JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
 
 jobs:
   headless:
@@ -86,6 +90,20 @@ jobs:
 
       - name: Import project
         run: timeout 120 ~/godot/godot --headless --path . --import
+
+      - name: Check the content data against its schemas
+        # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
+        # each data/<folder>/ file against data/schemas/<folder>.schema.json.
+        run: |
+          curl -fsSL -o /tmp/jv.tar.gz             "https://github.com/santhosh-tekuri/jsonschema/releases/download/v${JV_VERSION}/jv-v${JV_VERSION}-linux-amd64.tar.gz"
+          echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
+          mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv
+          jv=$(find /tmp/jv -type f -name jv | head -1)
+          timeout 60 ~/godot/godot --headless --path . -s res://tools/data_to_json.gd
+          for folder in build/data-json/*/; do
+            name=$(basename "$folder")
+            "$jv" "data/schemas/${name}.schema.json" "$folder"*.json
+          done
 
       - name: Check every script with Godot's warnings as errors
         # Also catches scripts that no test loads.

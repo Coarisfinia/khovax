@@ -207,8 +207,15 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the background flush
   what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
-  refused, and an older one is migrated in `Profile.parse` once a second format exists. Content data
-  (species, items) comes in #72.
+  refused, and an older one is migrated in `Profile.parse` once a second format exists.
+  Content data (species, items) is read in `meta/` too (below).
+- **Content data** (#72): species and, later, items are JSONC files in `data/<kind>/`, one per
+  entry and named after its id, with a JSON Schema in `data/schemas/<kind>.schema.json`. Not Godot
+  resources (owner, #72: no engine lock-in). `meta/` reads them (`Content`, comments stripped by
+  `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
+  schema with `jv` (pinned, verified), after `tools/data_to_json.gd` strips the comments with the
+  same stripper; the content flow checks what a schema can't (ids matching files and unique, types
+  from the chart, never two types of one family).
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.
