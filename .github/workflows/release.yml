@@ -1,8 +1,8 @@
 name: release
 
-# A version tag (v1.2.3) makes a GitHub release with the Windows build attached (#21). The tag must
-# match application/config/version in project.godot; the README says how to cut one. The build
-# runs read-only; only the release job, which runs no project code, may write.
+# A version tag (v1.2.3) makes a GitHub release with the Windows and web builds attached (#21,
+# #22). The tag must match application/config/version in project.godot; the README says how to
+# cut one. The build runs read-only; only the release job, which runs no project code, may write.
 on:
   push:
     tags: ["v*"]
@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 20
     outputs:
       zip: ${{ steps.export.outputs.zip }}
+      web: ${{ steps.export.outputs.web }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,7 +37,7 @@ jobs:
             exit 1
           fi
 
-      - name: Download Godot and the Windows export template
+      - name: Download Godot and the export templates the presets use
         # Not cached: releases are rare, and a release is built from verified downloads only.
         run: |
           curl -fsSL -o /tmp/godot.zip \
@@ -49,7 +50,8 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          unzip -q -j /tmp/templates.tpz templates/windows_release_x86_64.exe templates/version.txt -d "$target"
+          mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
+          unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: Import project
         run: |
@@ -60,7 +62,7 @@ jobs:
             exit 1
           fi
 
-      - name: Export and zip the Windows build
+      - name: Export and zip the Windows and web builds
         id: export
         # Files are named after the game's display name, so renaming the game needs no change here;
         # only letters, digits, dots, dashes and underscores are kept, and never a leading dash.
@@ -75,11 +77,19 @@ jobs:
           zip="${name}-${GITHUB_REF_NAME}-windows-x86_64.zip"
           (cd build/zip && zip -q -- "../${zip}" "${name}.exe")
           echo "zip=${zip}" >> "$GITHUB_OUTPUT"
+          mkdir -p build/web
+          timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
+          web="${name}-${GITHUB_REF_NAME}-web.zip"
+          (cd build/web && zip -q -r -- "../${web}" .)
+          echo "web=${web}" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-windows
-          path: build/${{ steps.export.outputs.zip }}
+          path: |
+            build/${{ steps.export.outputs.zip }}
+            build/${{ steps.export.outputs.web }}
           retention-days: 3
 
   release:
@@ -98,6 +108,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ZIP: ${{ needs.build.outputs.zip }}
+          WEB: ${{ needs.build.outputs.web }}
         run: |
           # The tag must still point at the commit that was built: a tag moved since then fails.
           tagged=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
@@ -105,5 +116,5 @@ jobs:
             echo "::error::tag ${GITHUB_REF_NAME} now points at ${tagged}, not the built ${GITHUB_SHA}"
             exit 1
           fi
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" --verify-tag \
+          gh release create "$GITHUB_REF_NAME" "$ZIP" "$WEB" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$GITHUB_REF_NAME" --generate-notes
