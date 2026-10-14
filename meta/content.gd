@@ -54,10 +54,11 @@ func add_species(file_id: String, text: String) -> String:
 		if not SPECIES_FIELDS.has(str(key)):
 			return "field %s isn't a species field" % key
 	var id: Variant = data.get("id")
-	if not id is String or not _is_id(id):
+	var text_id: String = id if id is String else ""
+	if not _is_id(text_id):
 		return "its id must be lowercase words joined by underscores"
 	var entry: Species = Species.new()
-	entry.id = id
+	entry.id = text_id
 	entry.hp = _amount(data.get("hp"))
 	entry.strength = _amount(data.get("strength"))
 	var types: Variant = data.get("types")
