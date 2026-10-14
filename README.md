@@ -6,7 +6,7 @@ A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings ar
 
 The design report lives in [`docs/design.html`](docs/design.html).
 
-Status: pre-production.
+Status: pre-production. **Play the latest build in your browser: https://flixbox.github.io/khovax/**
 
 ## License
 
@@ -41,6 +41,8 @@ It's signed with a throwaway debug key made in each CI run. Installing a newer b
 CI builds the Windows version on every pull request and every push to `main`, as the `khovax-windows` artifact on the run's page (a zip with one `khovax.exe`; kept for 14 days). Unzip it and run the `.exe`. It isn't signed, so Windows SmartScreen asks once: "More info", then "Run anyway".
 
 ## In a browser
+
+**Play it at https://flixbox.github.io/khovax/**: every push to `main` that passes all checks deploys there.
 
 CI builds the web version on every pull request and every push to `main`, as the `khovax-web` artifact (kept for 14 days). Browsers won't run it from a file, so serve the unzipped folder: `python -m http.server 8000` inside it, then open http://localhost:8000. It's single-threaded, so it needs no special server headers. Every release attaches the same build as a zip.
 
