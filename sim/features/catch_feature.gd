@@ -30,9 +30,10 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	# A ring can only close when its player's trail grows, so rings are checked per new trail
 	# tile, in the order the moves happened: entity id order, so when two players close rings
-	# around the same monster in one tick, the earlier one catches it. (A monster that comes to
-	# stand inside an old ring later is caught when that player's trail next grows.) Copied, as
-	# catches add events.
+	# around the same monster in one tick, the earlier one catches it. This relies on wild monsters
+	# standing still: every monster inside a ring was caught when the ring closed. A rule that
+	# moves monsters must also check when a monster steps into an old ring. Copied, as catches add
+	# events.
 	for event: RefCounted in state.events.duplicate():
 		var grew: TrailGrew = event as TrailGrew
 		if grew == null or trails.trail(grew.entity_id) == null:
@@ -77,8 +78,9 @@ static func outside(
 	return reached
 
 
-## The map's edge: every tile next to where the map ends, in a fixed order. The map doesn't change
-## during a run, so it's worked out once per map; derived from the map, so not part of the hash.
+## The map's edge: every tile next to where the map ends, in a fixed order. Maps don't change
+## during a run (a rule that edits one in place must clear this cache), so it's worked out once
+## per map, and a replaced map is noticed. Derived from the map, so not part of the hash.
 func _edge_of(map: HexMap) -> Array[Vector2i]:
 	if map != _edge_map:
 		_edge_map = map
