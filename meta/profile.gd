@@ -11,6 +11,9 @@ const FORMAT: int = 1
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
+## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
+## whole number up to 2^53 exactly, and this stays far below it.
+const MAX_NUMBER: int = Fixed.MAX_AMOUNT
 
 var unlocked_slots: int = START_SLOTS
 ## Every captured monster, in the order caught.
@@ -24,14 +27,35 @@ var runs_finished: int = 0
 var problem: String = ""
 
 
-## Takes over what a finished run brought back: its catches and materials.
-func apply(result: RunResult) -> void:
+## Takes over what a finished run brought back: its catches and materials. Returns why the result
+## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
+## result couldn't be loaded again.
+func apply(result: RunResult) -> String:
+	var problem: String = _result_problem(result)
+	if not problem.is_empty():
+		return problem
 	for species: String in result.caught_species:
 		captured_monsters.append(CapturedMonster.new(next_monster_id, species))
 		next_monster_id += 1
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	runs_finished += 1
+	return ""
+
+
+## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
+## than the save can hold), or "".
+func _result_problem(result: RunResult) -> String:
+	if next_monster_id + result.caught_species.size() > MAX_NUMBER or runs_finished >= MAX_NUMBER:
+		return "the profile can't hold more monsters or runs"
+	for species: String in result.caught_species:
+		if species.is_empty():
+			return "a caught monster has no species"
+	for material: String in result.materials:
+		var count: int = result.materials[material]
+		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:
+			return "material %s has an invalid count" % material
+	return ""
 
 
 func to_text() -> String:
@@ -78,8 +102,9 @@ func _read(data: Dictionary) -> String:
 	unlocked_slots = _int(data.get("unlocked_slots"))
 	next_monster_id = _int(data.get("next_monster_id"))
 	runs_finished = _int(data.get("runs_finished"))
-	if unlocked_slots < START_SLOTS or unlocked_slots > MAX_SLOTS or runs_finished < 0:
-		return "the save's slots or run count are out of range"
+	var counters_valid: bool = next_monster_id >= 1 and runs_finished >= 0
+	if unlocked_slots < START_SLOTS or unlocked_slots > MAX_SLOTS or not counters_valid:
+		return "the save's slots, next id or run count are out of range"
 	var monsters: Variant = data.get("captured_monsters")
 	var stored: Variant = data.get("materials")
 	if not monsters is Array or not stored is Dictionary:
@@ -93,8 +118,8 @@ func _read(data: Dictionary) -> String:
 	var by_name: Dictionary = stored
 	for material: Variant in by_name:
 		var count: int = _int(by_name[material])
-		if count < 0:
-			return "material %s has a negative count" % material
+		if count < 0 or str(material).is_empty():
+			return "material %s has an invalid count" % material
 		materials[str(material)] = count
 	return ""
 
@@ -121,9 +146,13 @@ static func _monster(entry: Variant) -> CapturedMonster:
 	return monster
 
 
-## A JSON number (or anything else) as an integer; -1 for anything that isn't a number.
+## A whole JSON number from 0 to MAX_NUMBER as an integer; -1 for anything else, so a fraction or
+## an out-of-range number is refused instead of rounded.
 static func _int(value: Variant) -> int:
 	if not (value is int or value is float):
 		return -1
-	var number: int = type_convert(value, TYPE_INT)
-	return number
+	var number: float = value
+	if number != floorf(number) or number < 0.0 or number > MAX_NUMBER:
+		return -1
+	var whole: int = type_convert(value, TYPE_INT)
+	return whole

@@ -13,9 +13,19 @@ static func load_profile(path: String = PROFILE_PATH) -> Profile:
 	return Profile.parse(FileAccess.get_file_as_string(path))
 
 
-## Saves the profile; returns why it couldn't, or "".
+## Saves the profile; returns why it couldn't, or "". The new save is written next to the old one
+## first and only then takes its place, so a crash or a full disk mid-write never loses the last
+## good save.
 static func save_profile(profile: Profile, path: String = PROFILE_PATH) -> String:
-	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	var temporary: String = path + ".tmp"
+	var file: FileAccess = FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null or not file.store_string(profile.to_text() + "\n"):
-		return "couldn't write %s" % path
+		return "couldn't write %s" % temporary
+	file.close()
+	var moved: Error = DirAccess.rename_absolute(
+		ProjectSettings.globalize_path(temporary),
+		ProjectSettings.globalize_path(path),
+	)
+	if moved != OK:
+		return "couldn't replace %s with the new save" % path
 	return ""
