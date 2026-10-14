@@ -21,7 +21,8 @@ func _init() -> void:
 	quit(1 if failed > 0 else 0)
 
 
-## Converts one folder's files; returns how many couldn't be written.
+## Converts one folder's files; returns how many couldn't be written or aren't JSONC (a stray file
+## would go unchecked).
 func _convert(folder: String) -> int:
 	var target: String = TARGET + folder + "/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target))
@@ -29,7 +30,10 @@ func _convert(folder: String) -> int:
 	if failed > 0:
 		printerr("data/%s/ has subfolders, which content can't have" % folder)
 	for file_name: String in DirAccess.get_files_at(SOURCE + folder):
-		if file_name.ends_with(".jsonc"):
+		if not file_name.ends_with(".jsonc"):
+			printerr("data/%s/%s isn't a .jsonc file" % [folder, file_name])
+			failed += 1
+		else:
 			var source: String = SOURCE + folder + "/" + file_name
 			var text: String = Jsonc.strip(FileAccess.get_file_as_string(source))
 			var file: FileAccess = FileAccess.open(
