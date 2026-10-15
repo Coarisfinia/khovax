@@ -13,6 +13,8 @@ const MAX_TILES: int = 4096
 const SYMBOLS: Dictionary[String, int] = { ".": GROUND, "~": WATER, "^": BLOCKED }
 ## Ground where a wild monster stands when the run begins (WildMonsterFeature, #19).
 const WILD_MONSTER: String = "m"
+## The start of a region piece's connector line.
+const CONNECTOR: String = "connector "
 
 ## Every tile's terrain, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
@@ -20,6 +22,10 @@ var terrain: Dictionary[Vector2i, int] = {}
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the run begins, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
+## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
+## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
+## arranging uses them up, so a region in a state has none and they aren't hashed.
+var connectors: Array[Vector3i] = []
 ## Why the region file couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -39,12 +45,16 @@ static func disc(radius: int) -> Region:
 ## row r of the region, from the origin row's r = 0 down; a tile sits on every second column
 ## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
 ## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, and
-## a space no tile.
+## a space no tile. A region piece adds a line `connector <q> <r> <side>` for each connector.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
+	var connector_lines: Array[String] = []
 	for line: String in text.split("\n"):
-		if not line.strip_edges().begins_with("#") and not line.strip_edges().is_empty():
+		var content: String = line.strip_edges()
+		if content.begins_with(CONNECTOR):
+			connector_lines.append(content)
+		elif not content.begins_with("#") and not content.is_empty():
 			rows.append(line.trim_suffix("\r"))
 	var header: PackedStringArray = PackedStringArray()
 	if not rows.is_empty():
@@ -68,6 +78,10 @@ static func parse(text: String) -> Region:
 			region.problem = "the player starts aren't numbered 1, 2, 3, … without gaps"
 			return region
 		region.starts.append(starts_by_slot[slot])
+	for line: String in connector_lines:
+		region.problem = region._parse_connector(line)
+		if not region.problem.is_empty():
+			return region
 	return region
 
 
@@ -110,6 +124,38 @@ func reachable(start: Vector2i) -> Array[Vector2i]:
 	return found
 
 
+## This region turned `turns` times by 60 degrees around the origin, with everything on it.
+func turned(turns: int) -> Region:
+	var region: Region = Region.new()
+	for tile: Vector2i in sorted_tiles():
+		region.terrain[Hex.turn(tile, turns)] = terrain[tile]
+	region.starts.assign(starts.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)))
+	region.wild_monsters.assign(
+		wild_monsters.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
+	)
+	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
+	return region
+
+
+## Whether `piece`, moved by `offset`, would lie on tiles this region doesn't have yet.
+func fits(piece: Region, offset: Vector2i) -> bool:
+	for tile: Vector2i in piece.terrain:
+		if terrain.has(tile + offset):
+			return false
+	return true
+
+
+## Adds `piece`, moved by `offset`, with its wild monsters and connectors. The players' starts
+## stay this region's own. Callers check `fits` first.
+func place(piece: Region, offset: Vector2i) -> void:
+	for tile: Vector2i in piece.sorted_tiles():
+		terrain[tile + offset] = piece.terrain[tile]
+	for spot: Vector2i in piece.wild_monsters:
+		wild_monsters.append(spot + offset)
+	for connector: Vector3i in piece.connectors:
+		connectors.append(connector + Vector3i(offset.x, offset.y, 0))
+
+
 ## Every value of the region, for the state hash, in a fixed order.
 func hash_values() -> Array[int]:
 	var values: Array[int] = [terrain.size()]
@@ -126,6 +172,30 @@ func hash_values() -> Array[int]:
 		values.append(spot.x)
 		values.append(spot.y)
 	return values
+
+
+## Reads one `connector <q> <r> <side>` line; returns why it can't, or "". A connector sits on a
+## ground tile and opens to a side where the piece has no tile.
+func _parse_connector(line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	var numbers: bool = parts.size() == 4
+	for part: String in parts.slice(1):
+		numbers = numbers and part.is_valid_int()
+	if not numbers:
+		return "a connector line reads \"connector <q> <r> <side>\": " + line
+	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	var side: int = parts[3].to_int()
+	if side < 0 or side >= Hex.DIRECTIONS.size():
+		return "connector side %d isn't 0 to 5" % side
+	if not is_walkable(tile) or has_tile(tile + Hex.DIRECTIONS[side]):
+		return "connector %s doesn't open from ground to the edge on side %d" % [tile, side]
+	connectors.append(Vector3i(tile.x, tile.y, side))
+	return ""
+
+
+static func _turned_connector(connector: Vector3i, turns: int) -> Vector3i:
+	var tile: Vector2i = Hex.turn(Vector2i(connector.x, connector.y), turns)
+	return Vector3i(tile.x, tile.y, posmod(connector.z + turns, Hex.DIRECTIONS.size()))
 
 
 ## Reads one row of a region file into the region; returns why it can't, or "".

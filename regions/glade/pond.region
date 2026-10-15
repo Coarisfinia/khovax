@@ -1,0 +1,11 @@
+# A pond in the glade (#57): water in the middle, ground around it, open on three sides.
+# Format: see Region.parse (sim/region.gd).
+origin 4 2
+  . . .
+ . . . .
+. . ~ ~ .
+ . . . .
+  . . .
+connector 2 0 0
+connector -2 0 3
+connector 0 2 5

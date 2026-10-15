@@ -196,9 +196,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   players' starts and where wild monsters stand (`WildMonsterFeature` places them, #19; anything
   that isn't a player blocks walkers, players pass through each other). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
-  Regions are hand-made text files in `regions/` (format in `Region.parse`); they will be arranged
-  from hand-made region pieces, the whole region turned by the run's seed (#57). The region is in
-  the state hash.
+  A region is a hand-made text file in `regions/` (format in `Region.parse`), or arranged from
+  hand-made region pieces in `regions/<blueprint>/` by `RegionArranger`: the seed fits them together
+  at their connectors and turns the whole region (#57), from its own random stream. The region is
+  in the state hash; its connectors are used up by arranging.
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
@@ -314,6 +315,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `position`, `script`, `name`, and the test's own `run` have all bitten. So have discarded return
   values (`erase`, `resize`, a method returning the thing it added): assign them to a `_`-prefixed
   local, and an inner test class named like a global one (`Walk`).
+- **gdstyle can accept what Godot's parser refuses**: a multi-line lambda inside a call's arguments
+  passed `gdstyle check` but failed the script check ("Unindent doesn't match"). Write a loop, or a
+  one-line lambda.
 - **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
