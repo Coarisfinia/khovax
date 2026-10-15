@@ -155,9 +155,10 @@ jobs:
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
 
-  android:
-    # A debug APK to install on a phone (#59), exported with Godot's Android export templates, the
-    # Android SDK and Java already on the runner, and a throwaway debug key: no secrets.
+  export:
+    # Every platform's build, from one Godot and export templates download (#168): the debug APK
+    # to install on a phone (#59, with the Android SDK and Java already on the runner and a
+    # throwaway debug key: no secrets), and the desktop, web and test builds the e2e jobs run.
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
@@ -328,7 +329,7 @@ jobs:
   apk-e2e:
     # The one e2e flow on the APK (#61), on an Android emulator: the test APK's flow walks the player
     # with the touch stick from a fixed seed and must end in the state the headless run pins.
-    needs: android
+    needs: export
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
@@ -362,7 +363,7 @@ jobs:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual
     # display with Mesa's software OpenGL, so the renderer really draws. The test build quits with
     # the flow's result as its exit code (game/test_mode.gd).
-    needs: android
+    needs: export
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -385,7 +386,7 @@ jobs:
   web-e2e:
     # The same device flow on the web build (#102), in headless Chrome: it must end in the state the
     # headless run pins, with nothing on the browser's console marked as an error.
-    needs: android
+    needs: export
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -435,10 +436,10 @@ jobs:
 
   pages:
     # The playable web build at https://flixbox.github.io/khovax/ (#23): on every push to main whose
-    # checks all pass, the web build the android job just exported is published as it is, not
+    # checks all pass, the web build the export job just made is published as it is, not
     # built again. Pull requests never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [headless, android, apk-e2e, web-e2e]
+    needs: [headless, export, apk-e2e, web-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
