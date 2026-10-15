@@ -16,6 +16,7 @@ func run(tree: SceneTree) -> String:
 	await tree.process_frame
 
 	var steps: Array[Callable] = [
+		_check_world_seed,
 		_check_neighbors,
 		_check_disc_sizes,
 		_check_known_positions,
@@ -46,6 +47,26 @@ func run(tree: SceneTree) -> String:
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## A fresh world rolls its own seed (#213), but the flows set one, so they all boot on seed 0.
+func _check_world_seed(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	if driver.world == null or driver.world.world_seed != 0:
+		return "the flows' main scene didn't boot on the fixed seed 0"
+	if GameDriver.new_seed() != 0:
+		return "with a fixed seed set, a fresh world doesn't take it"
+	GameDriver.fixed_seed = GameDriver.ROLLED_SEED
+	var first: int = GameDriver.new_seed()
+	var second: int = GameDriver.new_seed()
+	GameDriver.fixed_seed = 0
+	for rolled: int in [first, second]:
+		if rolled < 0 or rolled > 0xffffffff:
+			return "a rolled seed is outside 32 bits: %d" % rolled
+	# Both 0 by chance is one in 2^64.
+	if first == 0 and second == 0:
+		return "a fresh world doesn't roll its seed"
+	return ""
 
 
 func _check_neighbors(_main: Node) -> String:
