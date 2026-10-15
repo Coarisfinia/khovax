@@ -292,8 +292,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   on. A change to an area extends the flow that covers it with new steps; a new flow file
   (`tests/e2e/test_<flow>.gd`) is only for a new user flow. No collections of small unrelated tests,
   and no separate unit tests while the flows already check the same things (owner, #61).
-- **Exactly one e2e flow runs on the APK** (owner's rule, #61): `tests/apk/apk_flow.gd`, on an
-  Android emulator in CI (`apk-e2e`, started by `game/test_mode.gd` in the test APK only). It
+- **Exactly one e2e flow runs on the devices** (owner's rule, #61, #102): `tests/apk/apk_flow.gd`,
+  on an Android emulator (`apk-e2e`) and in headless Chrome (`web-e2e`, `tests/web/web_e2e.ts`) in
+  CI, started by `game/test_mode.gd` in the test builds only (the `e2e_test` export feature). It
   starts from a fixed seed, scripts its touches per tick, and must end in `EXPECTED_HASH`, which
   the same flow pins headless (`tests/e2e/test_apk_flow.gd`). A rule change that moves it updates
   it on purpose, like the golden replays. Everything else stays headless. `apk-e2e` is a required

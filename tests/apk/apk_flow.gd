@@ -1,10 +1,11 @@
 extends RefCounted
-## The one e2e flow on the APK (#61): the main scene, a fixed seed, and the touch stick walking the
-## player, tick by tick, so the game is exactly the same everywhere. It checks that the player
-## walked, the trail grew and the camera follows, and that the game ended in exactly the expected
-## state. It runs on an Android emulator in CI (started by game/test_mode.gd in the test APK), and
-## headless in the required check (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a
-## pass on the device means Android plays the very same game.
+## The one e2e flow on the devices (#61, #102): the main scene, a fixed seed, and the touch stick
+## walking the player, tick by tick, so the game is exactly the same everywhere. It checks that the
+## player walked, the trail grew and the camera follows, and that the game ended in exactly the
+## expected state. It runs on an Android emulator and in headless Chrome in CI (started by
+## game/test_mode.gd in the test APK and the test web build), and headless in the required check
+## (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a pass on a device means it plays
+## the very same game.
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)
@@ -21,13 +22,13 @@ const EXPECTED_HASH: int = 1_014_516_516
 
 
 ## Runs the flow in `main` (the running main scene) and announces the result with `finished`.
-## Callers that only load this script by path (the APK's test mode) start it this way.
+## Callers that only load this script by path (the test builds' mode) start it this way.
 func begin(main: Node, tree: SceneTree) -> void:
 	finished.emit(await run(main, tree))
 
 
-## Walks the scripted path in `main` and returns why it failed, or "". Real time passes once at the
-## end, for the camera to follow.
+## Walks the scripted path in `main` and returns why it failed, or "". Each tick waits for its
+## real time, so the walk plays at the game's speed and the web run's video shows it.
 func run(main: Node, tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var camera: Camera3D = main.get_node("Camera3D") as Camera3D
@@ -37,11 +38,7 @@ func run(main: Node, tree: SceneTree) -> String:
 	var start: Vector2i = driver.state.player(0).tile
 	var camera_before: Vector3 = camera.global_position
 	_touch(origin, true)
-	for leg: Vector2 in LEGS:
-		_drag(origin + leg * TouchStick.RADIUS)
-		_run_ticks(driver, LEG_TICKS)
-	_touch(origin, false)
-	_run_ticks(driver, LEG_TICKS)
+	await _play(driver, tree, origin, 0, 0)
 	# Frames pass in real time here, so the views and the camera catch up with the state.
 	await tree.create_timer(1.5).timeout
 	return _result(driver, camera, start, camera_before)
@@ -67,9 +64,22 @@ func _result(
 	return ""
 
 
-func _run_ticks(driver: GameDriver, ticks: int) -> void:
-	for _tick: int in ticks:
-		driver.advance(STEP)
+## Plays the walk from tick `tick` of leg `leg` on, one tick per its real time: each leg drags the
+## finger, then the finger lifts for one more leg's ticks. Recursive, since the ticks come one
+## after another by design.
+func _play(driver: GameDriver, tree: SceneTree, origin: Vector2, leg: int, tick: int) -> void:
+	if leg > LEGS.size():
+		return
+	if tick == 0 and leg < LEGS.size():
+		_drag(origin + LEGS[leg] * TouchStick.RADIUS)
+	elif tick == 0:
+		_touch(origin, false)
+	driver.advance(STEP)
+	await tree.create_timer(STEP).timeout
+	if tick + 1 < LEG_TICKS:
+		await _play(driver, tree, origin, leg, tick + 1)
+	else:
+		await _play(driver, tree, origin, leg + 1, 0)
 
 
 func _touch(point: Vector2, pressed: bool) -> void:

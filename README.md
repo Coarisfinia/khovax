@@ -70,6 +70,19 @@ godot --headless --path . -s res://tests/e2e/run_e2e.gd
 Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
 pull request and every push to `main`.
 
+### On the web build
+
+CI also plays the device flow on the web test build in headless Chrome (`web-e2e`). To run it
+yourself, with Bun (`scoop install bun`) and a
+[chrome-headless-shell](https://googlechromelabs.github.io/chrome-for-testing/) download (the
+version CI pins in `.github/workflows/ci.yml`):
+
+```sh
+godot --headless --path . --export-release "Web Test" build/web-test/index.html
+bun install --cwd tests/web
+CHROME=<path to chrome-headless-shell> bun tests/web/web_e2e.ts build/web-test
+```
+
 ### Load test
 
 On demand, not in CI: the `load` instance (a big map full of wild monsters, the game's own rules)
