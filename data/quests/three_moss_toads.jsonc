@@ -1,0 +1,6 @@
+// A placeholder quest with a step that counts up, until real quests exist.
+{
+	"id": "three_moss_toads",
+	"name": "Catch three moss toads",
+	"steps": [{ "condition": "caught", "species": "moss_toad", "count": 3 }]
+}

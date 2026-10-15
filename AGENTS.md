@@ -239,11 +239,14 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   to the background flushes what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
   refused, and an older one is migrated in `Profile.parse`, one format at a time.
+  **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
+  (catches, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
+  data) from them, so progress is saved and debounced like any gain.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
   ones), and a player's choice overrides it until they choose Auto again.
-  Content data (species, items) is read in `meta/` too (below).
-- **Content data** (#72): species, loot tables, tile blueprints and, later, items are JSONC files
+  Content data (species, quests, items) is read in `meta/` too (below).
+- **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC files
   in `data/<kind>/`, one per entry and named after its id, with a JSON Schema in
   `data/schemas/<kind>.schema.json`. Not Godot resources (owner, #72: no engine lock-in). `meta/`
   reads them (`Content`, comments stripped by `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
@@ -271,8 +274,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   commands into the `CommandSchedule` `input_delay` ticks ahead; a tick runs only once every
   player's command for it is known, and a command once put is final. It keeps the last ticks' state
   hashes (`hashes`) for desync checks. Its events also go onto the `EventBus` (#184), which hands
-  them to subscribers by topic a frame later, publish/subscribe: the profile now, quest tracking
-  later. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
+  them to subscribers by topic a frame later, publish/subscribe: `ProfileHolder` takes this
+  machine's player's catches and chests from it, which advance their quests too. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
   #35): the starting instance, seed, players, rules version and features, every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
