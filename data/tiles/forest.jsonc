@@ -1,0 +1,7 @@
+// Forest: ground under trees, a darker green. Walkable, and sight passes through it.
+{
+	"id": "forest",
+	"color": "#3d6b38",
+	"model": "res://assets/kaykit-hexagon/trees_A_large.gltf",
+	"traits": { "walkable": true }
+}

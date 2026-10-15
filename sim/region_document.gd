@@ -15,6 +15,8 @@ extends RefCounted
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
+## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
+##   stand for it, an emoji too
 ## where <side> is one of SIDES. The document is read into Region.parse's compact form.
 
 const TILES: String = "## Tiles"
@@ -158,6 +160,8 @@ static func _trigger_line(clause: String, where: String) -> String:
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
 static func _line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
+	if TileKinds.index_of(meaning) >= 0:
+		return "%s%s %s" % [Region.TILE, where, meaning]
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
 	var side: int = -1
 	for word: String in words:

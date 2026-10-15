@@ -1,10 +1,12 @@
 class_name Region
 extends RefCounted
-## An instance's region (#36): which tiles exist, each one's terrain as a small integer, and where
-## the players start. Rules ask the region, never the distance from the origin, so a region can have
-## any shape. Regions are hand-made Markdown files (regions/*.md, read by RegionDocument into the
+## An instance's region (#36): which tiles exist, each one's kind (a tile blueprint, numbered by
+## TileKinds, #116), and where the players start. Rules ask the region, never the distance from
+## the origin, so a region can have any shape. Regions are hand-made Markdown files (regions/*.md,
+## read by RegionDocument into the
 ## compact form `parse` reads, #145).
 
+## The built-in kinds' numbers, as TileKinds.BUILT_IN lists them; rock blocks sight (FogFeature).
 const GROUND: int = 0
 const WATER: int = 1
 const BLOCKED: int = 2
@@ -24,8 +26,10 @@ const EXIT: String = "exit "
 const SPECIES: String = "species "
 ## The start of a tile trigger's line (#181, #183).
 const TRIGGER: String = "trigger "
+## The start of a line placing a tile blueprint on a tile (#116).
+const TILE: String = "tile "
 
-## Every tile's terrain, by tile.
+## Every tile's kind, its number in TileKinds, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
@@ -74,16 +78,20 @@ static func disc(radius: int) -> Region:
 ## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
 ## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, `species <q> <r>
 ## <species id>` for a wild monster spot whose species it names, and `trigger <q> <r> <when>
-## <action> <amount>` for each tile trigger.
+## <action> <amount>` for each tile trigger. A line `tile <q> <r> <tile blueprint id>` makes a
+## tile of the grid that kind, before the other lines are read.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
 	var connector_lines: Array[String] = []
+	var tile_lines: Array[String] = []
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
 		var keyed: bool = (content.begins_with(EXIT) or content.begins_with(SPECIES)
 				or content.begins_with(TRIGGER))
-		if content.begins_with(CONNECTOR) or keyed:
+		if content.begins_with(TILE):
+			tile_lines.append(content)
+		elif content.begins_with(CONNECTOR) or keyed:
 			connector_lines.append(content)
 		elif not content.begins_with("#") and not content.is_empty():
 			rows.append(line.trim_suffix("\r"))
@@ -109,7 +117,7 @@ static func parse(text: String) -> Region:
 			region.problem = "the player starts aren't numbered 1, 2, 3, … without gaps"
 			return region
 		region.starts.append(starts_by_slot[slot])
-	for line: String in connector_lines:
+	for line: String in tile_lines + connector_lines:
 		region.problem = region._parse_keyed(line)
 		if not region.problem.is_empty():
 			return region
@@ -120,9 +128,9 @@ func has_tile(tile: Vector2i) -> bool:
 	return terrain.has(tile)
 
 
-## Whether a walker can stand on the tile: ground, and on the region.
+## Whether a walker can stand on the tile: on the region, and of a walkable kind.
 func is_walkable(tile: Vector2i) -> bool:
-	return terrain.get(tile, BLOCKED) == GROUND
+	return terrain.has(tile) and TileKinds.is_walkable(terrain[tile])
 
 
 func size() -> int:
@@ -261,9 +269,11 @@ func _parse_connector(line: String) -> String:
 	return ""
 
 
-## Reads one keyed line: a connector, an exit, a named species or a trigger. Returns why it can't,
-## or "".
+## Reads one keyed line: a tile's kind, a connector, an exit, a named species or a trigger.
+## Returns why it can't, or "".
 func _parse_keyed(line: String) -> String:
+	if line.begins_with(TILE):
+		return _parse_tile(line)
 	if line.begins_with(SPECIES):
 		return _parse_species(line)
 	if line.begins_with(TRIGGER):
@@ -287,6 +297,21 @@ func _parse_trigger(line: String) -> String:
 	if not is_walkable(tile) or parts[5].to_int() < 1:
 		return "trigger %s isn't on ground or acts on nothing" % tile
 	triggers.append(TileTrigger.new(tile, parts[3], parts[4], parts[5].to_int()))
+	return ""
+
+
+## Reads one `tile <q> <r> <tile blueprint id>` line; returns why it can't, or "". It gives a tile
+## of the grid its kind.
+func _parse_tile(line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	var numbers: bool = parts.size() == 4 and parts[1].is_valid_int() and parts[2].is_valid_int()
+	if not numbers:
+		return "a tile line reads \"tile <q> <r> <tile blueprint id>\": " + line
+	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	var kind: int = TileKinds.index_of(parts[3])
+	if not has_tile(tile) or kind < 0:
+		return "tile %s isn't on the region, or %s isn't a tile blueprint" % [tile, parts[3]]
+	terrain[tile] = kind
 	return ""
 
 

@@ -3,6 +3,8 @@ extends RefCounted
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; and broken entries are refused. Loot
 ## tables (#90) load, roll the same for the same stream, and a blank rolls on the instance's table.
+## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
+## and broken ones are refused.
 
 
 func run(_tree: SceneTree) -> String:
@@ -20,7 +22,53 @@ func run(_tree: SceneTree) -> String:
 		result = _check_loot_refused()
 	if result.is_empty():
 		result = _check_wild_species(content)
+	if result.is_empty():
+		result = _check_tiles()
 	return result
+
+
+## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
+## numbers and walkability; forest is walkable with its trees; and broken blueprints are refused.
+func _check_tiles() -> String:
+	var content: Content = Content.load_tiles()
+	if not content.problem.is_empty():
+		return "the tile blueprints didn't load: " + content.problem
+	var walkable: Dictionary[String, bool] = {
+		"ground": true,
+		"water": false,
+		"rock": false,
+		"forest": true,
+	}
+	for id: String in walkable:
+		var kind: int = TileKinds.index_of(id)
+		if not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]:
+			return "tile blueprint %s is missing or not as walkable as written" % id
+	var numbers: Array[int] = [Region.GROUND, Region.WATER, Region.BLOCKED]
+	for kind: int in numbers:
+		if TileKinds.blueprint(kind).id != TileKinds.BUILT_IN[kind]:
+			return "the built-in tile kinds don't keep their numbers"
+	if TileKinds.all().size() != content.tiles.size() or content.tiles["forest"].model.is_empty():
+		return "not every tile blueprint is a kind, or the forest has no trees"
+	return _check_tiles_refused()
+
+
+## Tile blueprints with a wrong id, color, trait or model are refused, with a reason.
+func _check_tiles_refused() -> String:
+	var tile: String = "{\"id\": \"%s\", \"color\": \"%s\", \"traits\": {%s}%s}"
+	var walks: String = "\"walkable\": true"
+	var cases: Dictionary[String, String] = {
+		tile % ["y", "#000000", walks, ""]: "its id must",
+		tile % ["x", "green", walks, ""]: "its color",
+		tile % ["x", "#000000", "", ""]: "its traits",
+		tile % ["x", "#000000", walks + ", \"swims\": true", ""]: "field swims",
+		tile % ["x", "#000000", walks, ", \"model\": \"res://none.glb\""]: "its model",
+		tile % ["x", "#000000", walks, ", \"size\": 1"]: "field size",
+	}
+	for text: String in cases:
+		var problem: String = TileBlueprint.parse("x", text).problem
+		if not problem.begins_with(cases[text]):
+			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
 
 
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint

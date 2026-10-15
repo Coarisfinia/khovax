@@ -6,15 +6,16 @@ The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, op
 
 ```
   k . L
- . . . .
+ . . 🌲 .
 x . 1 . j
  . 2 . 3
-  . 4 .
+  . 4 🌲
 ```
 
 ## Legend
 
 - `.`: ground
+- `🌲`: forest
 - `1` to `4`: where players 1 to 4 start
 - `j`: joins another piece to the east
 - `x`: exit to the west, to basic

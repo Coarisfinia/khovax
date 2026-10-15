@@ -1,0 +1,6 @@
+// Water: nobody walks it, but sight passes over it. Built in: `~` in a region file.
+{
+	"id": "water",
+	"color": "#4073b3",
+	"traits": { "walkable": false }
+}

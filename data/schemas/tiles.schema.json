@@ -1,0 +1,35 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Flixbox/khovax/data/schemas/tiles.schema.json",
+	"title": "Tile blueprint",
+	"description": "A kind of tile a region is made of (#116): its look and its traits. One file per kind, named after its id; a region's legend places it by its id.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "color", "traits"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"color": {
+			"description": "The tile's ground color, as #rrggbb.",
+			"type": "string",
+			"pattern": "^#[0-9a-f]{6}$"
+		},
+		"model": {
+			"description": "A decoration drawn on every tile of this kind: a res:// path to a model under assets/.",
+			"type": "string",
+			"pattern": "^res://assets/.+[.](gltf|glb)$"
+		},
+		"traits": {
+			"description": "What the kind does in the game.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["walkable"],
+			"properties": {
+				"walkable": { "description": "Whether walkers can stand on it.", "type": "boolean" }
+			}
+		}
+	}
+}
