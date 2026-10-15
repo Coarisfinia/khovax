@@ -80,7 +80,7 @@ func _check_input_delay() -> String:
 		return "the driver ran %d ticks, not %d" % [_driver.state.tick, TICKS]
 	if _driver.state.state_hash() != _plain_hash(DELAY):
 		return "with an input delay, the game isn't the plain run of the delayed commands"
-	if _driver.hashes.get(TICKS, 0) != _driver.state.state_hash():
+	if _driver.hashes.get(TICKS, 0) != _driver.world.state_hash():
 		return "the driver didn't keep the last tick's hash"
 	if _driver.hashes.size() > GameDriver.HASH_HISTORY:
 		return "the driver keeps %d hashes, more than %d" % [
@@ -154,7 +154,11 @@ func _run_frames(frames: int) -> void:
 ## The final hash of the plain run: the scripts' commands applied `delay` ticks late, standing
 ## still before.
 func _plain_hash(delay: int) -> int:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 0, 2)
+	var state: GameState = World.new(
+		0,
+		InstanceBlueprints.BASIC,
+		2,
+	).instances[InstanceBlueprints.BASIC]
 	var first: Array[int] = _script(1)
 	var second: Array[int] = _script(2)
 	for tick: int in range(1, TICKS + 1):

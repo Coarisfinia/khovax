@@ -662,15 +662,15 @@ func _check_golden_replays() -> String:
 
 ## A run of two players walking the scripted moves, recorded and played once.
 func _recorded_run() -> Replay:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 42, 2)
+	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
-	recorded.begin(state)
+	recorded.begin(world)
 	for direction: int in _moves():
 		var commands: Array[Command] = _slot_commands(direction, Command.NO_MOVE)
-		Simulation.step(state, commands)
-		recorded.record(state, commands)
-	recorded.finish(state)
-	recorded.played = state
+		world.step(commands)
+		recorded.record(world, commands)
+	recorded.finish(world)
+	recorded.played = world
 	return recorded
 
 

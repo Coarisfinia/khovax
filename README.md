@@ -6,7 +6,7 @@ A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings ar
 
 The design report lives in [`docs/design.html`](docs/design.html).
 
-Status: pre-production. **Play the latest build in your browser: https://flixbox.github.io/khovax/**
+Status: pre-production. **[Play the latest build in your browser](https://flixbox.github.io/khovax/)**
 
 ## License
 

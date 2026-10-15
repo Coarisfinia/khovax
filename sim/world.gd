@@ -9,6 +9,8 @@ extends RefCounted
 
 ## The run's seed, which every instance's own seed is drawn from.
 var run_seed: int = 0
+## Ticks the world has run. An instance nobody is in doesn't step, so its own tick can lag behind.
+var tick: int = 0
 ## Every loaded instance, by blueprint name.
 var instances: Dictionary[String, GameState] = {}
 ## Why the world couldn't be set up, or "" when it could.
@@ -55,6 +57,7 @@ func active() -> Array[String]:
 ## every player who walked out through an exit into the instance it leads to (#154). Moving them
 ## only after every instance has stepped means no one steps twice in a tick.
 func step(commands: Array[Command]) -> void:
+	tick += 1
 	var leaving: Array[Array] = []
 	for instance_name: String in active():
 		var state: GameState = instances[instance_name]
@@ -106,7 +109,7 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 
 ## A fingerprint of every loaded instance, in name order, each with its name.
 func state_hash() -> int:
-	var result: int = 2_166_136_261
+	var result: int = _mix(2_166_136_261, tick)
 	for instance_name: String in _sorted_names():
 		result = _mix(result, name_code(instance_name))
 		result = _mix(result, instances[instance_name].state_hash())
