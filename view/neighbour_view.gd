@@ -3,7 +3,8 @@ extends Node3D
 ## The instances next door (#188, seamless world #155): every instance an exit of the local
 ## player's instance leads to is drawn at its place in the world (`World.offset`), as a HexGrid of
 ## its own, so the ground goes on past the exits. Only the directly connected ones (owner's rule).
-## Their ground is unexplored, so it lies under FogCloud's thick cloud.
+## Under FogCloud, their ground lies under thick cloud, or light fog where this machine's player
+## explored it before (FogView keeps that per instance, #190).
 ##
 ## A neighbour's region is read with `InstanceBlueprints.region_of` and the world's seed for it,
 ## never by loading the instance: the world's hash covers every loaded instance, so loading one
@@ -13,6 +14,8 @@ extends Node3D
 
 ## Each neighbour's grid, by blueprint name, placed relative to the local instance.
 var grids: Dictionary[String, HexGrid] = {}
+## How far each neighbour's tiles are shifted into the local instance's coordinates, by name.
+var shifts: Dictionary[String, Vector2i] = {}
 ## The instance the neighbours were found for.
 var _state: GameState
 ## Every neighbour tile in the local instance's coordinates.
@@ -38,13 +41,14 @@ func show_state() -> void:
 		remove_child(old)
 		old.queue_free()
 	grids.clear()
+	shifts.clear()
 	_placed.clear()
 	if state == null:
 		return
 	if driver.world != _world:
 		_world = driver.world
 		_regions.clear()
-	var current: String = _name_of(state)
+	var current: String = name_of(_world, state)
 	for target: String in state.region.exit_blueprints:
 		if not grids.has(target):
 			grids[target] = _grid_for(target, current)
@@ -61,6 +65,7 @@ func _grid_for(target: String, current: String) -> HexGrid:
 	if not _regions.has(target):
 		_regions[target] = InstanceBlueprints.region_of(target, _world.seed_for(target))
 	var shift: Vector2i = _world.offset(target) - _world.offset(current)
+	shifts[target] = shift
 	var neighbour: HexGrid = HexGrid.new()
 	neighbour.fixed_region = _regions[target]
 	neighbour.name = target
@@ -71,9 +76,9 @@ func _grid_for(target: String, current: String) -> HexGrid:
 	return neighbour
 
 
-## The blueprint name the world keeps `state` under.
-func _name_of(state: GameState) -> String:
-	for instance_name: String in _world.instances:
-		if _world.instances[instance_name] == state:
+## The blueprint name `world` keeps `state` under, or "".
+static func name_of(world: World, state: GameState) -> String:
+	for instance_name: String in world.instances:
+		if world.instances[instance_name] == state:
 			return instance_name
 	return ""

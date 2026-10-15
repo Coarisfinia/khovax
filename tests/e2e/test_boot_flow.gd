@@ -1,7 +1,8 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
 ## in view of the camera, a wild monster's figure standing on its own tile, the instance next door
-## drawn beyond its exit under the cloud, and the exploration music rising from silence.
+## drawn beyond its exit under the cloud, and the exploration music rising from silence. The ground
+## explored in an instance stays under light fog, also when it lies next door.
 
 
 func run(tree: SceneTree) -> String:
@@ -30,6 +31,7 @@ func run(tree: SceneTree) -> String:
 		_check_fog,
 		_check_neighbour_grids,
 		_check_neighbour_cloud,
+		_check_remembered_ground,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
 		_check_music,
@@ -392,6 +394,72 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	if not dark:
 		return "a tile never seen isn't under thick cloud, or a revealed one isn't seen before"
 	return ""
+
+
+## Explored ground is remembered per instance (#190): walking into the glade, the basic instance's
+## ground seen before, now next door, lies under light fog; walking back, the basic instance's
+## ground out of sight is still seen before, and next door the glade's explored ground lies under
+## light fog and its unexplored ground under thick cloud.
+func _check_remembered_ground(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var fog: FogView = main.get_node("FogView") as FogView
+	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
+	var light: Vector2 = Vector2(0.0, 1.0)
+	# Seen while the fog was checked, and out of sight there for a while.
+	var far: Vector2i = Vector2i(-3, 0)
+	fog.show_state(10.0)
+	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east into the glade.
+	for direction: int in [0, 1, 0]:
+		_walk_in(driver.world, direction)
+	fog.show_state(10.0)
+	if NeighbourView.name_of(driver.world, driver.state) != InstanceBlueprints.GLADE:
+		return "walking east out of the basic instance didn't lead into the glade"
+	var next_door: Vector2i = far + view.shifts[InstanceBlueprints.BASIC]
+	if fog.cloud.fog_on(next_door) != light:
+		return "the basic instance's explored ground next door isn't under light fog"
+	var glade_seen: Array[Vector2i] = _split_by_sight(driver.state, true)
+	var glade_unseen: Array[Vector2i] = _split_by_sight(driver.state, false)
+	if glade_seen.is_empty() or glade_unseen.is_empty():
+		return "expected some of the glade in sight and some not on arrival"
+	_walk_in(driver.world, 3)
+	fog.show_state(10.0)
+	var shift: Vector2i = view.shifts.get(InstanceBlueprints.GLADE, Vector2i.ZERO)
+	var glade_light: bool = fog.cloud.fog_on(glade_seen[0] + shift) == light
+	if not glade_light or fog.cloud.fog_on(glade_unseen[0] + shift) != Vector2(1.0, 0.0):
+		return "next door, the glade's explored ground isn't light fog and its unexplored thick"
+	return _check_out_of_sight(fog, far)
+
+
+## Why `far` in the instance shown, out of every ally's sight, isn't under light fog, or "".
+func _check_out_of_sight(view: FogView, far: Vector2i) -> String:
+	var fog: FogFeature = view.driver.state.feature(Features.FOG) as FogFeature
+	var everything: Array = fog.visible[0]
+	fog.visible[0] = [view.driver.state.player(0).tile]
+	view.show_state(10.0)
+	var remembered: Vector2 = view.cloud.fog_on(far)
+	fog.visible[0] = everything
+	view.show_state(10.0)
+	if remembered != Vector2(0.0, 1.0):
+		return "back in the basic instance, ground explored before isn't under light fog"
+	return ""
+
+
+## The tiles of `state`'s region that an ally sees (`seen`), or that none does.
+func _split_by_sight(state: GameState, seen: bool) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	for tile: Vector2i in state.region.sorted_tiles():
+		if FogView.ally_sees(state, tile) == seen:
+			tiles.append(tile)
+	return tiles
+
+
+## Walks player 0 one step in `direction`, through `world`, until they stand still again.
+func _walk_in(world: World, direction: int) -> void:
+	var moving: Array[Command] = [Command.new(direction)]
+	var still: Array[Command] = [Command.new(Command.NO_MOVE)]
+	world.step(moving)
+	for _tick: int in MovementFeature.MOVE_TICKS + 1:
+		world.step(still)
 
 
 ## A post stands on every lookout (#181): none in the basic instance, which has no lookout, and one
