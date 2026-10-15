@@ -41,7 +41,10 @@ func show_state() -> void:
 			continue
 		if not figures.has(entity_id):
 			figures[entity_id] = _add_figure()
-		figures[entity_id].tile = driver.state.entity(entity_id).tile
+		var spot: Vector2i = driver.state.entity(entity_id).tile
+		figures[entity_id].tile = spot
+		# Hidden in the fog until an ally sees it (#137).
+		figures[entity_id].visible = FogView.ally_sees(driver.state, spot)
 
 
 ## Shrinks a figure away and frees it.
