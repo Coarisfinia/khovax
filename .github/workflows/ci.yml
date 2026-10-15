@@ -339,7 +339,9 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # ANGLE on the software GPU: the plain software GPU (swiftshader_indirect) caps fragment
+          # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
+          emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk
 
