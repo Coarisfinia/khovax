@@ -95,15 +95,18 @@ func _step() -> bool:
 	if not schedule.is_complete(tick):
 		return false
 	var commands: Array[Command] = schedule.take(tick)
+	var before: GameState = state
 	world.step(commands)
 	recording.record(world, commands)
 	hashes[tick] = world.state_hash()
 	var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
-	# A copy of the local player's instance's events: the simulation clears its list when the next
-	# tick starts.
+	# A copy of the local player's instance's events (the simulation clears its list when the next
+	# tick starts): the instance they were in, and the one they walked into if they left it.
 	var events: Array[RefCounted] = []
-	if state != null:
-		events.assign(state.events)
+	if before != null:
+		events.assign(before.events)
+	if state != null and state != before:
+		events.append_array(state.events)
 	ticked.emit(world.tick, events)
 	return true
 
