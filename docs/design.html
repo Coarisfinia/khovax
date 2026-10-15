@@ -442,7 +442,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 <h3>Rendering</h3>
 <ul>
   <li><strong>Compatibility renderer everywhere.</strong> The web only supports Compatibility (WebGL2), so one look across all platforms means building for it from the start.</li>
-  <li><strong>Comic-style cel shading:</strong> a toon ramp with 2–3 hard light bands, inverted-hull outlines and painted hatching textures. No screen-space edge detection, which is expensive or unavailable in Compatibility.</li>
+  <li><strong>Comic-style cel shading:</strong> a toon ramp with 2–3 hard light bands, ink outlines and painted hatching textures. The outline is one screen-space pass where the depth jumps (#166): it works in Compatibility and on any model, open meshes like a cape included, where per-mesh inverted hulls doubled or tore.</li>
   <li>A slow, fixed camera keeps even weak phones comfortable.</li>
 </ul>
 
