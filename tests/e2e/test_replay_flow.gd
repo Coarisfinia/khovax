@@ -897,6 +897,9 @@ func _check_fog_follows() -> String:
 	fog.visible[0] = before
 	if state.state_hash() == hashed:
 		return "the state hash doesn't see a change in sight"
+	state.remove_entity(state.player(0).id)
+	if fog.visible.has(0):
+		return "a player who left kept their sight"
 	return ""
 
 

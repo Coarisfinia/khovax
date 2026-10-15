@@ -38,6 +38,11 @@ func entity_added(state: GameState, added: Entity) -> void:
 		_update(state)
 
 
+## A player who leaves loses their sight at once, so a slot rejoining never starts with it.
+func entity_removed(state: GameState, _removed_id: int) -> void:
+	_update(state)
+
+
 ## Whether the player in `slot` sees `tile`.
 func sees(slot: int, tile: Vector2i) -> bool:
 	return visible.has(slot) and visible[slot].has(tile)
