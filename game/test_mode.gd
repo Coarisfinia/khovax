@@ -1,11 +1,10 @@
 extends Node
-## The test builds' mode (#61, #102): in the test APK and the test web build, the game plays the
-## device e2e flow instead of waiting for a player, prints KHOVAX_E2E: PASS or FAIL with the reason
-## for CI to read (from the device log on Android, from the browser console on the web), and quits.
-## Only the test builds have it: their export presets ("Android Test", "Web Test") add the
-## TEST_BUILD feature and carry the flow (tests/apk/). In every other build this does nothing. No
-## launch flag is needed: Android starts the game through a launcher activity that drops intent
-## extras.
+## The test builds' mode (#61, #102, #113): in a test build, the game plays the device e2e flow
+## instead of waiting for a player, prints KHOVAX_E2E: PASS or FAIL with the reason for CI to read
+## (from the device log, the browser console or stdout), and quits with it as the exit code. Only
+## the test builds have it: their export presets in export_presets.cfg add the TEST_BUILD feature
+## and carry the flow (tests/apk/). In every other build this does nothing. No launch flag is
+## needed: Android starts the game through a launcher activity that drops intent extras.
 
 ## The export feature only the test builds' presets set.
 const TEST_BUILD: String = "e2e_test"
