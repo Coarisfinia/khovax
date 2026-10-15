@@ -112,6 +112,10 @@ func _check_refused(world: World) -> String:
 		# Another seed arranges other regions, which the saved tiles may not even fit.
 		_changed(data, "seed", [0, SEED + 1]): "",
 		text.replace("\"tick\":%d" % world.tick, "\"tick\":0.5"): "not a world save",
+		# Beyond what a double holds exactly: it would come back rounded.
+		text.replace("\"tick\":%d" % world.tick, "\"tick\":9007199254740993"): "not a world save",
+		# The world's hash doesn't cover where it starts, so only the check for it notices.
+		_changed(_fresh_data(), "start", InstanceBlueprints.GLADE): "the starting instance",
 		"not a world": "not a world save",
 		"{}": "format isn't",
 	}
@@ -120,6 +124,11 @@ func _check_refused(world: World) -> String:
 		if problem.is_empty() or not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
+
+
+## A fresh world's data, with only its starting instance loaded.
+static func _fresh_data() -> Dictionary:
+	return World.new(SEED, InstanceBlueprints.BASIC).to_data()
 
 
 ## `data` as text, with `key` set to `value`.
@@ -150,6 +159,8 @@ func _check_resumed(tree: SceneTree, world: World) -> String:
 		result = _check_recorded(driver)
 	if result.is_empty():
 		result = _check_debounced(driver, keeper)
+	if result.is_empty():
+		result = _check_flush_waits(driver, keeper)
 	main.queue_free()
 	await tree.process_frame
 	return result
@@ -186,6 +197,23 @@ func _check_debounced(driver: GameDriver, keeper: WorldKeeper) -> String:
 	return ""
 
 
+## Quitting or going to the background saves at once (`flush`), and the next regular save waits
+## a full interval from then.
+func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
+	var interval: int = ProfileKeeper.SAVE_INTERVAL_MSEC
+	driver.advance(STEP)
+	var problem: String = keeper.flush(interval * 2 + 10)
+	var flushed: int = _saved_tick()
+	driver.advance(STEP)
+	problem += keeper.save_if_due(interval * 3)
+	if not problem.is_empty() or flushed != driver.world.tick - 1 or _saved_tick() != flushed:
+		return "the world was saved again before an interval after a flush: " + problem
+	problem = keeper.save_if_due(interval * 3 + 10)
+	if not problem.is_empty() or _saved_tick() != driver.world.tick:
+		return "the world wasn't saved an interval after a flush: " + problem
+	return ""
+
+
 ## The tick of the world saved in the flow's file.
 static func _saved_tick() -> int:
 	return WorldSave.load_from(WORLD_PATH).tick
@@ -201,6 +229,10 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	if result.is_empty():
 		var rules: int = Simulation.RULES_VERSION + 1
 		result = await _boots_fresh(tree, _changed(data, "rules", rules), true)
+	if result.is_empty():
+		# A world with a second player, while the session has one: their commands would be missing.
+		var pair: World = World.new(SEED, InstanceBlueprints.BASIC, 2)
+		result = await _boots_fresh(tree, WorldSave.to_text(pair), true)
 	return result
 
 

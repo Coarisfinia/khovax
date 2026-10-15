@@ -6,8 +6,11 @@ extends RefCounted
 ## refused whole (World.from_data) rather than half-read or crashing. A reader of a nested value
 ## reports to the reader it came from, so the outermost one holds the first problem of them all.
 
-## The largest whole number a save holds: JSON numbers are doubles, exact up to 2^53.
-const MOST: int = 9_007_199_254_740_992
+## The largest whole number a save holds, 2^52 - 1: JSON numbers are doubles, and below 2^52 every
+## whole number is exact and a half is still told apart from it, so a bigger number, which would
+## come back rounded, is refused instead. Nothing saved comes near it: hashes, seed halves and
+## random words are 32-bit.
+const MOST: int = 4_503_599_627_370_495
 
 ## What is read.
 var data: Dictionary = {}

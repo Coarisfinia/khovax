@@ -75,11 +75,12 @@ func start(seed_value: int) -> void:
 
 
 ## Resumes the saved world `saved` where it was left (#119), as WorldKeeper loaded it; returns why
-## it can't, or "", and changes nothing then. Its recording starts from the saved world.
+## it can't, or "", and changes nothing then. Its players must be exactly the session's slots, so
+## every player in it gets commands. Its recording starts from the saved world.
 func resume(saved: World) -> String:
-	for slot: int in players:
-		if saved.player(slot) == null:
-			return "the saved world has no player in slot %d" % slot
+	for slot: int in GameState.MAX_PLAYERS:
+		if (saved.player(slot) != null) != (slot < players):
+			return "the saved world's players aren't the session's %d" % players
 	world = saved
 	recording = Replay.new(saved.start_name, saved.world_seed)
 	recording.start_world = saved.to_data()

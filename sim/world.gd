@@ -257,6 +257,9 @@ static func from_data(data: Dictionary) -> World:
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	for entry: DataReader in read.entries("instances"):
 		world._load_instance(entry)
+	# The starting instance stays loaded: replays and the driver start from it.
+	if not read.failed() and not world.instances.has(start):
+		read.fail("the starting instance %s isn't among the saved ones" % start)
 	var saved_hash: int = read.whole("hash", 0, 0xffff_ffff)
 	if not read.failed() and world.state_hash() != saved_hash:
 		read.fail("the world doesn't hash as it did when saved: its content changed since")

@@ -29,7 +29,7 @@ func _process(_delta: float) -> void:
 func _notification(what: int) -> void:
 	var leaving: bool = what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE
 	if leaving or what == NOTIFICATION_APPLICATION_PAUSED:
-		_report(flush())
+		_report(flush(Time.get_ticks_msec()))
 
 
 ## The saved world to resume, or null for a fresh one: when no world is kept, none is saved yet,
@@ -50,18 +50,19 @@ func saved_world() -> World:
 ## Saves the driver's world if it moved since the last save and that save is at least
 ## SAVE_INTERVAL_MSEC old; returns why it couldn't, or "".
 func save_if_due(now_msec: int) -> String:
-	if now_msec - _last_save_msec < ProfileKeeper.SAVE_INTERVAL_MSEC or not _moved():
+	if now_msec - _last_save_msec < ProfileKeeper.SAVE_INTERVAL_MSEC:
 		return ""
-	_last_save_msec = now_msec
-	return flush()
+	return flush(now_msec)
 
 
-## Saves the driver's world now if it moved since the last save; returns why it couldn't, or "".
-func flush() -> String:
+## Saves the driver's world now, at `now_msec`, if it moved since the last save; returns why it
+## couldn't, or "". The next regular save waits a full interval from here.
+func flush(now_msec: int) -> String:
 	if not _moved():
 		return ""
 	var problem: String = WorldSave.save(driver.world, path())
 	if problem.is_empty():
+		_last_save_msec = now_msec
 		_saved_world = driver.world
 		_saved_tick = driver.world.tick
 	return problem
