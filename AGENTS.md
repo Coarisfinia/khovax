@@ -182,7 +182,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `GameState.state_hash()` fingerprints the whole state; a new value goes into the hash too
   (`Feature.hash_values()` for a feature's).
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
-  off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
+  off per instance, also during a session (e.g. a boss phase). The core holds no game rule: only the
   tick, the seed, the region, the entities and the instance's features in their step order. A feature
   (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
@@ -210,7 +210,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   in the state hash; its connectors are used up by arranging. **Exits** (#140) lead
   to another blueprint, which has the way back on the opposite side (`exit_problem`); every instance
   in that web is unturned, so an exit always leads out the same way (#120). A player who walks out
-  through one (`ExitFeature`, an `ExitTaken` event) is moved by the run's `World` into the instance
+  through one (`ExitFeature`, an `ExitTaken` event) is moved by the `World` into the instance
   it leads to, onto its way back (#154).
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
@@ -227,16 +227,18 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
-- **`meta/`, the layers above a run** (#37): the player's `Profile` (captured monsters, materials,
-  unlocked slots) lasts between runs. A run is the profile's party plus an instance and a seed
-  (`InstanceBlueprints.create`): deterministic, like everything in `sim/`. Each catch or find is a
+- **`meta/`, the layers above the simulation** (#37): the player's `Profile` (captured monsters,
+  materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
+  persistent `World`, built from a seed, deterministic like everything in `sim/`. A **session** is
+  the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
+  technical and never shown to the player. Each catch or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
   profile at boot and takes this machine's player's catches from the tick's events, #132); **saves
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones
-  at most once per `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the
-  background flush what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
+  at most once per `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending the session (quitting) or going
+  to the background flushes what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
-  refused, and an older one is migrated in `Profile.parse` once a second format exists.
+  refused, and an older one is migrated in `Profile.parse`, one format at a time.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
   ones), and a player's choice overrides it until they choose Auto again.
@@ -257,7 +259,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   conversion. One-shot moments (a catch, a ring breaking, a hit) reach views as the tick's events
   through the driver's `ticked(tick, events)` signal (#34): every tick exactly once, in order,
   however many ticks a frame runs. Effects play from those; lasting looks come from the state.
-- **`game/`, the driver:** `GameDriver` runs whole ticks of the run's `World` (#148, #158) from
+- **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` (#148, #158) from
   accumulated real time, in lockstep (#38); its `state` is the instance this machine's player is in,
   which the views draw. Real time decides when ticks happen, never what they do. Before each tick it polls its
   `CommandSource`s (the local player's `LocalSource`; later network peers or a replay), which put
@@ -265,7 +267,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   player's command for it is known, and a command once put is final. It keeps the last ticks' state
   hashes (`hashes`) for desync checks. Its events also go onto the `EventBus` (#184), which hands
   them to subscribers by topic a frame later, publish/subscribe: the profile now, quest tracking
-  later. Subscribers never change the run; views keep the driver's `ticked` signal. It records every run (`GameDriver.recording`, a `Replay`,
+  later. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
   #35): the starting instance, seed, players, rules version and features, every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).

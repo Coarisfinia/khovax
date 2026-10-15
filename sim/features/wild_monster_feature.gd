@@ -1,12 +1,12 @@
 class_name WildMonsterFeature
 extends Feature
-## Wild monsters (#19): when the run begins, one stands on every spot the region marks for it, as an
-## entity no player controls, and each is of a species (#133). A spot whose region piece names its
-## species gets that one (a boss arena pins its boss); every other spot rolls one from the
+## Wild monsters (#19): when the instance loads, one stands on every spot the region marks for it,
+## as an entity no player controls, and each is of a species (#133). A spot whose region piece names
+## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
-## species. For now each just stands there (its look is a placeholder, #85); walkers can't step
-## onto its tile (MovementFeature), and a later rule catches it (#20). Like every feature, switched
-## off it keeps its state: the monsters stay where they are, and only its own rules stop.
+## species. For now each just stands there (its look is a placeholder, #85); walkers can't step onto
+## its tile (MovementFeature), and a later rule catches it (#20). Like every feature, switched off
+## it keeps its state: the monsters stay where they are, and only its own rules stop.
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
@@ -15,7 +15,7 @@ var roster: Array[String] = []
 var weights: Array[int] = []
 ## Each wild monster's species id, by entity id.
 var _species: Dictionary[int, String] = {}
-## Every species id this run can place, sorted: the hash counts a species by its place here.
+## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 
 

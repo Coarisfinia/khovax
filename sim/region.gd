@@ -12,7 +12,7 @@ const BLOCKED: int = 2
 const MAX_TILES: int = 4096
 ## The characters of a region file, by terrain; a digit 1 to 4 is ground where that player starts.
 const SYMBOLS: Dictionary[String, int] = { ".": GROUND, "~": WATER, "^": BLOCKED }
-## Ground where a wild monster stands when the run begins (WildMonsterFeature, #19).
+## Ground where a wild monster stands when the instance loads (WildMonsterFeature, #19).
 const WILD_MONSTER: String = "m"
 ## Ground where a treasure chest stands, placed by hand (ChestFeature, #124).
 const CHEST: String = "c"
@@ -29,14 +29,14 @@ const TRIGGER: String = "trigger "
 var terrain: Dictionary[Vector2i, int] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
-## Where wild monsters stand when the run begins, in the region file's reading order.
+## Where wild monsters stand when the instance loads, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
 ## The species a region piece names for some of its wild monster spots, by spot (#133); every other
 ## spot rolls one from its blueprint's list. Not hashed here: the wild monster feature hashes each
 ## wild monster's species.
 var named_species: Dictionary[Vector2i, String] = {}
-## Where treasure chests stand when the run begins, in the region file's reading order. Not hashed
-## here: the chest feature takes them over and hashes the ones still closed.
+## Where treasure chests stand when the instance loads, in the region file's reading order. Not
+## hashed here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
 ## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
@@ -45,7 +45,7 @@ var connectors: Array[Vector3i] = []
 ## Ways out into another instance (#120, #140): like a connector, (q, r) is a ground tile on the
 ## edge and z the side it leads out of, and `exit_blueprints` holds the blueprint each leads to.
 ## Unlike connectors they stay after arranging. Not hashed: they come from the blueprint's files and
-## never change during a run.
+## never change during a session.
 var exits: Array[Vector3i] = []
 var exit_blueprints: Array[String] = []
 ## Tile triggers (#183), each written in its piece's legend, in the region file's reading order:

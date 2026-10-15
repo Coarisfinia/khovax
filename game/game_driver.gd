@@ -2,10 +2,10 @@ class_name GameDriver
 extends Node
 ## Runs the simulation at its fixed tick rate, in lockstep (#38). Real time only decides when ticks
 ## happen, never what they do: before each tick it polls its command sources (the local player,
-## later network peers or a replay), and runs the tick once every player's command for it is
-## known. It processes before everything else (process_priority in main.tscn), so the state is
-## current when views draw. A run is a world (#148, #158): every instance a player is in steps, and
-## the views follow this machine's player into whichever instance they walk.
+## later network peers or a replay), and runs the tick once every player's command for it is known.
+## It processes before everything else (process_priority in main.tscn), so the state is current when
+## views draw. A session plays one world (#148, #158): every instance a player is in steps, and the
+## views follow this machine's player into whichever instance they walk.
 
 ## After every tick, with the tick's number and the events the features raised in it, in order:
 ## how views learn about one-shot moments (a catch, a ring breaking) to play an effect. Every tick
@@ -18,17 +18,17 @@ const MAX_TICKS_PER_FRAME: int = 5
 ## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
 const HASH_HISTORY: int = 100
 
-## The instance the run starts in, by name from InstanceBlueprints.
+## The instance the session starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
 @export var input: LocalInput
-## Players in the run, in slots 0 and up. Each slot needs a command source, or ticks wait for it.
+## Players in the session, in slots 0 and up. Each slot needs a command source, or ticks wait.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
 @export_range(0, 20) var input_delay: int = 0
 
-## The run: every instance it has loaded.
+## The world: every instance it has loaded.
 var world: World
-## The instance this machine's player is in now, which the views draw; null without a run.
+## The instance this machine's player is in now, which the views draw; null without a world.
 var state: GameState:
 	get:
 		return _local_instance()
@@ -38,7 +38,7 @@ var schedule: CommandSchedule
 ## The state hash after each of the last HASH_HISTORY ticks, by tick: the basis for spotting a
 ## desync between players later.
 var hashes: Dictionary[int, int] = {}
-## Every tick of this run so far, to play back (#35).
+## Every tick of this session so far, to play back (#35).
 var recording: Replay
 var _accumulated: float = 0.0
 
@@ -53,11 +53,11 @@ func _process(delta: float) -> void:
 	advance(delta)
 
 
-## Starts a fresh run, in the starting instance, from `seed_value`: the APK test (#61) starts its
-## own with a fixed seed. The command sources stay.
+## Starts a fresh session, in the starting instance, from `seed_value`: the APK test (#61) starts
+## its own with a fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
 	world = World.new(seed_value, instance, players)
-	# No run for an unknown or invalid instance, which InstanceBlueprints.create reports.
+	# No world for an unknown or invalid instance, which InstanceBlueprints.create reports.
 	if not world.problem.is_empty():
 		world = null
 	if world != null:

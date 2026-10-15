@@ -1,7 +1,7 @@
 class_name ChestFeature
 extends Feature
 ## Treasure chests (#124): placed by hand in region pieces (`c`), opened by the first player who
-## walks onto one. An opened chest bursts into loot and **every player in the run gets their own
+## walks onto one. An opened chest bursts into loot and **every player in the session gets their own
 ## roll** on the instance's loot table (owner, #124), not only the one who opened it. The rolls
 ## come from the feature's own random stream (#32), so a replay opens the same chests with the
 ## same loot; a ChestOpened event says who got what, and each player's loot goes into their own

@@ -1,7 +1,7 @@
 extends RefCounted
 ## Chest flow (#124): the glade's region pieces place treasure chests by hand, and they stay on
 ## their pieces however the seed arranges and turns them. A player who walks onto a chest opens it:
-## it bursts into loot, every player in the run gets their own roll on the glade's loot table
+## it bursts into loot, every player in the session gets their own roll on the glade's loot table
 ## (owner, #124), and the chest is gone, so walking there again opens nothing. The same seed opens
 ## the same chest with the same loot. Instances without a loot table have no chests. This
 ## machine's player's own loot lands in their profile and its save; the others' doesn't (#74).
@@ -113,8 +113,8 @@ func _first_loot() -> String:
 	return "none" if opened == null else str(opened.loot)
 
 
-## A chest opened in a run: the driver's ticked events bring this machine's player (slot 0) their
-## own roll, into the profile and its save at once, and not slot 1's.
+## A chest opened in a session: the driver's ticked events bring this machine's player (slot 0)
+## their own roll, into the profile and its save at once, and not slot 1's.
 func _check_saved(tree: SceneTree) -> String:
 	SaveStore.remove(SAVE_PATH)
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))

@@ -5,7 +5,7 @@ extends RefCounted
 ## could change under us). Every value stays below 2^63, so GDScript's signed 64-bit ints never
 ## overflow: that is why it is xoshiro128** on 32-bit words rather than a 64-bit generator.
 ##
-## Each system that rolls owns its own stream, seeded from the run's seed and a stream number
+## Each system that rolls owns its own stream, seeded from the instance's seed and a stream number
 ## (a feature uses its id: `Rng.new(state.rng_seed, id())` in `start`), keeps it in its state and
 ## puts `hash_values()` into its own. Adding a roll to one system never shifts another's rolls.
 ## Draw only inside a tick's step, so the order of draws is the feature order.

@@ -81,8 +81,8 @@ func _process(_delta: float) -> void:
 		show_state()
 
 
-## Shows the state's region: the region is the simulation's, so the grid follows it if a run brings
-## another one. Called every frame; tests call it after changing the state.
+## Shows the state's region: the region is the simulation's, so the grid follows it if the world
+## brings another one. Called every frame; tests call it after changing the state.
 func show_state() -> void:
 	if _shown_region() != _region:
 		_build(_shown_region())

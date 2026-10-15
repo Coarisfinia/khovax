@@ -1,5 +1,5 @@
 extends RefCounted
-## Profile flow (#37): the player's profile across runs. A new profile starts with one slot and
+## Profile flow (#37): the player's profile across sessions. A new profile starts with one slot and
 ## nothing caught; every gain adds its catches, with ids that are never reused, and its materials,
 ## and is on disk at once; the profile survives saving and loading; a save it can't trust is
 ## refused; and a damaged save falls back to the newest intact generation before it (#179).
@@ -30,14 +30,16 @@ func run(_tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_refused()
 	if result.is_empty():
+		result = _check_migrated()
+	if result.is_empty():
 		result = _check_recovered()
 	SaveStore.remove(SAVE_PATH)
 	return result
 
 
 ## Saving is debounced (owner, #73): the first catch after a quiet spell is on disk at once, a burst
-## right after it is saved together once SAVE_INTERVAL_MSEC has passed, and ending a run flushes
-## whatever is pending.
+## right after it is saved together once SAVE_INTERVAL_MSEC has passed, and ending the session
+## flushes whatever is pending.
 func _check_kept_at_once() -> String:
 	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
 	var problem: String = keeper.take(_result(["moss_toad"], {}), 0)
@@ -52,13 +54,11 @@ func _check_kept_at_once() -> String:
 	problem = keeper.save_if_due(interval)
 	if not problem.is_empty() or _monsters_on_disk() != 50:
 		return "the burst wasn't saved once the interval passed: " + problem
-	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.finish_run()
+	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.end_session()
 	var on_disk: Profile = SaveStore.load_profile(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
-	if (not problem.is_empty()
-			or on_disk.runs_finished != 1
-			or on_disk.captured_monsters.size() != 51):
-		return "finishing the run didn't flush the pending catch: " + problem
+	if not problem.is_empty() or on_disk.captured_monsters.size() != 51:
+		return "ending the session didn't flush the pending catch: " + problem
 	return ""
 
 
@@ -110,7 +110,7 @@ func _check_refused() -> String:
 	var text: String = Profile.new().to_text()
 	var cases: Dictionary[String, String] = {
 		"not json": "not a profile save",
-		text.replace("\"format\": 1", "\"format\": 99"): "save format 99",
+		text.replace("\"format\": 2", "\"format\": 99"): "save format 99",
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 7"): "the save's slots",
 		text.replace(
 			"\"captured_monsters\": []",
@@ -123,6 +123,18 @@ func _check_refused() -> String:
 		var problem: String = Profile.parse(case).problem
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
+	return ""
+
+
+## A save in format 1, which still counted finished runs, loads into the current format (#197).
+func _check_migrated() -> String:
+	var text: String = Profile.new().to_text()
+	var old: String = text.replace("\"format\": 2", "\"format\": 1, \"runs_finished\": 3")
+	if old == text:
+		return "the format-1 save wasn't made from the current save"
+	var loaded: Profile = Profile.parse(old)
+	if not loaded.problem.is_empty() or loaded.to_text() != text:
+		return "a format-1 save didn't load: " + loaded.problem
 	return ""
 
 

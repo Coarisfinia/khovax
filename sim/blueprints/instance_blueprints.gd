@@ -1,11 +1,11 @@
 class_name InstanceBlueprints
 extends RefCounted
-## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region
-## and the features an instance has, in their step order. The region is a fixed region file,
-## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, unless
-## the blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
-## blueprint switches game rules on and off by listing them, and they can change during a run. One
-## with an instance loot table (#90) has treasure chests too, rolling on it (#124).
+## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region and
+## the features an instance has, in their step order. The region is a fixed region file,
+## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, unless the
+## blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
+## blueprint switches game rules on and off by listing them, and they can change during a session.
+## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
 ## The playground: the hand-made region regions/basic.md, walking, a trail per player, the wild
 ## monsters the region places, catching them with a ring, and fog of war.

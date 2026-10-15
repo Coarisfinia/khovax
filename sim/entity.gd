@@ -7,7 +7,7 @@ extends RefCounted
 ## The owner of an entity no player controls.
 const NO_SLOT: int = -1
 
-## Unique for the whole run and never reused, so replays and hashes can name entities.
+## Unique for the whole session and never reused, so replays and hashes can name entities.
 var id: int = 0
 ## The player slot (0 to GameState.MAX_PLAYERS - 1) that controls the entity, or NO_SLOT.
 var slot: int = NO_SLOT
