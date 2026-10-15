@@ -44,7 +44,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var walker: Entity = state.entity(moved.entity_id)
 		if walker != null and walker.slot != Entity.NO_SLOT:
 			chests.erase(moved.to)
-			state.events.append(ChestOpened.new(moved.to, walker.id, _roll_for_players(state)))
+			state.events.append(_open(state, moved.to, walker.id))
 
 
 func hash_values() -> Array[int]:
@@ -56,6 +56,11 @@ func hash_values() -> Array[int]:
 	return values
 
 
+## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event.
+func _open(state: GameState, tile: Vector2i, opener_id: int) -> ChestOpened:
+	return ChestOpened.new(tile, opener_id, _roll_for_players(state))
+
+
 ## Every player's loot from one chest, by slot, in slot order so the stream rolls the same way.
 func _roll_for_players(state: GameState) -> Dictionary[int, Dictionary]:
 	var loot: Dictionary[int, Dictionary] = {}
@@ -64,7 +69,7 @@ func _roll_for_players(state: GameState) -> Dictionary[int, Dictionary]:
 			continue
 		var found: Dictionary[String, int] = {}
 		for _roll: int in ROLLS_PER_PLAYER:
-			var drawn: Dictionary[String, int] = table.roll(_rng, null)
+			var drawn: Dictionary[String, int] = table.roll(_rng, table)
 			for item: String in drawn:
 				var had: int = found.get(item, 0)
 				found[item] = had + drawn[item]
