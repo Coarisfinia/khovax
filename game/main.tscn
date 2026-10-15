@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://view/trail_view.gd" id="7_trail"]
 [ext_resource type="Script" path="res://view/wild_monster_view.gd" id="8_wild"]
 [ext_resource type="PackedScene" path="res://assets/kaykit-adventurers/Rogue.glb" id="9_rogue"]
+[ext_resource type="Script" path="res://view/music.gd" id="10_music"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -50,6 +51,9 @@ target = NodePath("../Player")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
 transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)
+
+[node name="Music" type="AudioStreamPlayer" parent="." unique_id=1926104357]
+script = ExtResource("10_music")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
 

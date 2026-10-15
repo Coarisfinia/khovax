@@ -3,6 +3,15 @@
 The assets this game uses, with their authors and licenses. Generated from each pack's
 `assets/<pack>/SOURCE.md` by `tools/credits.gd`; don't edit it by hand.
 
+## Exploration Theme
+
+- **Files:** `assets/exploration-theme/`
+- **Author:** Cleyton Kauffman (https://soundcloud.com/cleytonkauffman)
+- **Source:** https://opengameart.org/content/exploration-theme (`Exploration Theme.ogg` from
+  `exploration_theme.zip`)
+- **License:** CC0 1.0, see `LICENSE.txt` next to this file (the pack names the license; the file
+  is its legal text). Credit is welcome, not required.
+
 ## KayKit Adventurers Character Pack 1.0
 
 - **Files:** `assets/kaykit-adventurers/`
