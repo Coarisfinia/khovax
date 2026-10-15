@@ -1,5 +1,5 @@
 extends RefCounted
-## Catch flow (#20): the player walks a ring around the basic map's wild monster, the ball at
+## Catch flow (#20): the player walks a ring around the basic region's wild monster, the ball at
 ## (-2, 0), and catches it: the monster leaves the world, the catch is announced, the trail starts
 ## over, and the ball shrinks away. An open ring, a walk that only touches the ball, and a ring
 ## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
@@ -51,7 +51,7 @@ func run(tree: SceneTree) -> String:
 
 ## Every ring tile but the last: the walk passes right by the ball and catches nothing.
 func _check_open_ring() -> String:
-	var state: GameState = Instances.basic(42)
+	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = _walk(state, RING.slice(0, RING.size() - 1))
 	if _wild(state).monsters.size() != 1:
 		return "an open ring caught the wild monster"
@@ -60,7 +60,7 @@ func _check_open_ring() -> String:
 
 ## A closed ring around another tile leaves the ball alone, and the trail keeps growing.
 func _check_other_ring() -> String:
-	var state: GameState = Instances.basic(42)
+	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = _walk(state, OTHER_RING)
 	var trail: Trail = _trails(state).trail(state.player(0).id)
 	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
@@ -72,7 +72,7 @@ func _check_other_ring() -> String:
 ## announced with who caught it, the trail starts over from the catcher's tile, and the same walk
 ## always ends in the same state.
 func _check_catch() -> String:
-	var state: GameState = Instances.basic(42)
+	var state: GameState = InstanceBlueprints.basic(42)
 	var monster_id: int = _wild(state).monsters[0]
 	var events: Array[RefCounted] = _walk(state, RING)
 	var player: Entity = state.player(0)
@@ -88,7 +88,7 @@ func _check_catch() -> String:
 	var trail: Trail = _trails(state).trail(player.id)
 	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):
 		return "the trail didn't start over after the catch: %s" % [trail.sorted_tiles()]
-	var again: GameState = Instances.basic(42)
+	var again: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = _walk(again, RING)
 	if again.state_hash() != state.state_hash():
 		return "the same catch gave two different states"
@@ -98,7 +98,7 @@ func _check_catch() -> String:
 ## Two players close their rings around the ball in the same tick: the one who joined first (the
 ## lower entity id) catches it, and only their trail starts over.
 func _check_together() -> String:
-	var state: GameState = Instances.basic(42, 2)
+	var state: GameState = InstanceBlueprints.basic(42, 2)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
 	var caught: Array[WildMonsterCaught] = []

@@ -1,6 +1,6 @@
 class_name GameState
 extends RefCounted
-## The core of the simulation's state, in integers: the tick, the seed, the map and the entities,
+## The core of the simulation's state, in integers: the tick, the seed, the region and the entities,
 ## plus the instance's features, which hold every game rule and their own state. The core holds no
 ## game rule itself. The presentation reads the state and never writes it.
 ## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
@@ -11,7 +11,7 @@ const MAX_PLAYERS: int = 4
 var tick: int = 0
 var rng_seed: int = 0
 ## Which tiles exist and their terrain (#36). It doesn't change during a run yet.
-var map: HexMap
+var region: Region
 ## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
 var next_entity_id: int = 1
 ## Every entity, in id order. Rules always go through entities in this order, never in a
@@ -25,12 +25,12 @@ var features: Array[Feature] = []
 ## though a replay raises the same events.
 var events: Array[RefCounted] = []
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
-## features and must not be run: Instances.create refuses it.
+## features and must not be run: InstanceBlueprints.create refuses it.
 var problem: String = ""
 
 
-func _init(level: HexMap, seed_value: int, ordered: Array[Feature]) -> void:
-	map = level
+func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> void:
+	region = start_region
 	rng_seed = seed_value
 	problem = order_problem(ordered)
 	if not problem.is_empty():
@@ -112,13 +112,13 @@ func set_enabled(id: int, on: bool) -> void:
 		target.enabled = on
 
 
-## A fingerprint of the whole state, the same on every platform: two runs from the same start
-## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, the map, every entity in id order and, in order, every feature's id, on/off and
+## A fingerprint of the whole state, the same on every platform: two runs from the same start with
+## the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of every
+## core value, the region, every entity in id order and, in order, every feature's id, on/off and
 ## state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
-	values.append_array(map.hash_values())
+	values.append_array(region.hash_values())
 	values.append(next_entity_id)
 	values.append(entities.size())
 	for each: Entity in entities:

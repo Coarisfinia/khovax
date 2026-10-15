@@ -1,6 +1,6 @@
 # The playground: a disc of radius 3, all ground. Digits mark where players 1 to 4 start, and m
 # where a wild monster stands (a ball for now, #19), with room to walk a ring around it.
-# Format: see HexMap.parse (sim/hex_map.gd).
+# Format: see Region.parse (sim/region.gd).
 origin 6 3
    . . . .
   . . . . .

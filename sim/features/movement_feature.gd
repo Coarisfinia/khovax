@@ -3,7 +3,7 @@ extends Feature
 ## Walking tile by tile, for every entity with a walk (its movement component): a move command
 ## starts a step to the neighboring tile, which takes MOVE_TICKS ticks to arrive. A move that
 ## arrives is followed by the next one in the same tick, so a held direction walks without pauses.
-## The map's edge, water and rock stop a walker, and so does a tile where something other than a
+## The region's edge, water and rock stop a walker, and so does a tile where something other than a
 ## player stands (a wild monster, #19); players walk through each other, so co-op players never
 ## block one another. Each started step raises an EntityMoved event.
 ## Walkers go in entity id order, each moved by the command of the player slot that owns it.
@@ -63,7 +63,7 @@ func _start_move(state: GameState, walker: Entity, current: Walk, command: Comma
 	if command.move < 0 or command.move >= Hex.DIRECTIONS.size():
 		return
 	var next: Vector2i = walker.tile + Hex.DIRECTIONS[command.move]
-	if not state.map.is_walkable(next) or _is_occupied(state, next):
+	if not state.region.is_walkable(next) or _is_occupied(state, next):
 		return
 	current.from = walker.tile
 	walker.tile = next
