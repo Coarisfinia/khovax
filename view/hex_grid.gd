@@ -25,6 +25,9 @@ const NO_PAINT: Dictionary[Vector2i, Color] = {}
 ## The grid shows this driver's region; without one (e.g. in the editor), a disc of `radius` rings.
 @export var driver: GameDriver
 
+## A region to show instead of the driver's, e.g. a neighbouring instance's (NeighbourView, #188);
+## set before the grid enters the tree.
+var fixed_region: Region
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
 var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
@@ -123,9 +126,12 @@ func tile_multimesh() -> MultiMesh:
 	return _tiles.multimesh
 
 
-## The running game's region, or the editor's preview disc. In the editor (and a headless import)
-## the driver isn't running: GameDriver isn't a tool script, so it has no state to read there.
+## The fixed region, the running game's region, or the editor's preview disc. In the editor (and a
+## headless import) the driver isn't running: GameDriver isn't a tool script, so it has no state to
+## read there.
 func _shown_region() -> Region:
+	if fixed_region != null:
+		return fixed_region
 	if not Engine.is_editor_hint() and driver != null and driver.state != null:
 		return driver.state.region
 	if _region == null or _region.size() != Hex.disc(radius).size():
