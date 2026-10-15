@@ -5,6 +5,8 @@ extends RefCounted
 ## (owner, #124), and the chest is gone, so walking there again opens nothing. The same seed opens
 ## the same chest with the same loot. Instances without a loot table have no chests. This
 ## machine's player's own loot lands in their profile and its save; the others' doesn't (#74).
+## The chests show (#135): one on every closed chest's tile, and an opened one bursts into this
+## machine's player's own loot, each item named with its amount, and sinks away.
 
 const SEED: int = 7
 ## Where the flow's profile is saved, apart from the player's own.
@@ -129,10 +131,36 @@ func _check_saved(tree: SceneTree) -> String:
 	var result: String = ""
 	if saved.materials != OWN_LOOT:
 		result = "the profile saved %s from the chest, not %s" % [saved.materials, OWN_LOOT]
+	if result.is_empty():
+		result = _check_shown(main.get_node("ChestView") as ChestView, driver)
 	main.queue_free()
 	await tree.process_frame
 	_gone = DirAccess.remove_absolute(save)
 	return result
+
+
+## The chest view shows the burst of this machine's player's own loot only, and in the glade a
+## chest on every closed chest's tile, which sinks away once it's opened.
+func _check_shown(view: ChestView, driver: GameDriver) -> String:
+	var texts: Array[String] = []
+	for burst: Label3D in view.bursts:
+		texts.append(burst.text)
+	var expected: Array[String] = [ChestView.loot_text(OWN_LOOT)]
+	if texts != expected or expected[0] != "+2 moss":
+		return "the opened chest burst into %s, not this player's %s" % [texts, expected]
+	driver.instance = InstanceBlueprints.GLADE
+	driver.start(SEED)
+	view.show_state()
+	var chests: ChestFeature = driver.state.feature(Features.CHESTS) as ChestFeature
+	var shown: Array[Vector2i] = view.figures.keys()
+	if shown != chests.chests:
+		return "the glade shows chests on %s, not on %s" % [shown, chests.chests]
+	var opened: Vector2i = chests.chests[0]
+	chests.chests.erase(opened)
+	view.show_state()
+	if view.figures.has(opened):
+		return "an opened chest stayed on %s" % opened
+	return ""
 
 
 ## A tick's events with one chest opened: OWN_LOOT for slot 0, a berry for slot 1.
