@@ -2,12 +2,12 @@ class_name InstanceBlueprints
 extends RefCounted
 ## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region
 ## and the features an instance has, in their step order. The region is a fixed region file,
-## regions/<name>.region, or region pieces in regions/<name>/ that the seed arranges and, unless
+## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, unless
 ## the blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
 ## blueprint switches game rules on and off by listing them, and they can change during a run. One
 ## with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
-## The playground: the hand-made region regions/basic.region, walking, a trail per player, the wild
+## The playground: the hand-made region regions/basic.md, walking, a trail per player, the wild
 ## monsters the region places, catching them with a ring, and fog of war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
@@ -33,7 +33,7 @@ const WILD_SPECIES: Dictionary[String, Dictionary] = {
 }
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
-const START_PIECE: String = "start.region"
+const START_PIECE: String = "start.md"
 
 
 ## Whether a blueprint of this name exists.
@@ -84,13 +84,13 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 ## arranged, the start piece first and the others by file name, and turned unless it's UNTURNED.
 ## Its `problem` says what's wrong.
 static func region_of(instance_name: String, seed_value: int) -> Region:
-	var path: String = REGIONS + instance_name + ".region"
+	var path: String = REGIONS + instance_name + ".md"
 	if FileAccess.file_exists(path):
-		return Region.parse(FileAccess.get_file_as_string(path))
+		return RegionDocument.parse(FileAccess.get_file_as_string(path))
 	var folder: String = REGIONS + instance_name + "/"
 	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
-		if file.ends_with(".region") and file != START_PIECE:
+		if file.ends_with(".md") and file != START_PIECE:
 			files.append(file)
 	files.sort()
 	files.push_front(START_PIECE)
@@ -148,7 +148,7 @@ static func _loot_table(table_id: String) -> LootTable:
 
 
 static func _piece(path: String) -> Region:
-	var piece: Region = Region.parse(FileAccess.get_file_as_string(path))
+	var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
 	if not piece.problem.is_empty():
 		piece.problem = "%s: %s" % [path, piece.problem]
 	return piece
