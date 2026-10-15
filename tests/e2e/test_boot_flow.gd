@@ -238,10 +238,13 @@ func _check_wild_monster_removed(main: Node) -> String:
 
 
 ## The comic look (#14) is on everything shown: the tiles and every part of the wild monsters' and
-## the character's models use toon shading and the one shared ink outline.
+## the character's models use toon shading. The tiles carry the shared ink outline as their next
+## pass; every model part has an outline hull of its own (#162).
 func _check_toon_look(main: Node) -> String:
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
 	var materials: Array[Material] = [grid.tile_mesh().material]
+	if (grid.tile_mesh().material as StandardMaterial3D).next_pass != Toon.outline():
+		return "the tiles lack the shared ink outline"
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
 	var player: PlayerView = main.get_node("Player") as PlayerView
 	var models: Array[Node] = [player.model]
@@ -250,6 +253,10 @@ func _check_toon_look(main: Node) -> String:
 	for model: Node in models:
 		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 			var part: MeshInstance3D = node as MeshInstance3D
+			if part.name == Toon.HULL:
+				continue
+			if part.get_node_or_null(Toon.HULL) == null:
+				return "model part %s has no outline hull" % part.name
 			for surface: int in part.mesh.get_surface_count():
 				materials.append(part.get_active_material(surface))
 	if view.figures.is_empty() or materials.size() < 3:
@@ -259,8 +266,24 @@ func _check_toon_look(main: Node) -> String:
 		var banded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
 		if not banded or toon.specular_mode != BaseMaterial3D.SPECULAR_TOON:
 			return "a shown material lacks the toon light bands"
-		if toon.next_pass != Toon.outline():
-			return "a shown material lacks the shared ink outline"
+	return _check_hull_closed(player.model.find_child("Rogue_Head", true, false) as MeshInstance3D)
+
+
+## The head's outline hull (#162) can't tear: every vertex at one position grows the same way, and
+## it's drawn in the shared ink outline.
+func _check_hull_closed(head: MeshInstance3D) -> String:
+	var hull: MeshInstance3D = head.get_node_or_null(Toon.HULL) as MeshInstance3D
+	if hull == null or hull.material_override != Toon.outline():
+		return "the head has no outline hull in ink"
+	var arrays: Array = hull.mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var first: Dictionary[Vector3, Vector3] = {}
+	for i: int in vertices.size():
+		var normal: Vector3 = first.get(vertices[i], normals[i])
+		if not normal.is_equal_approx(normals[i]):
+			return "the head's outline hull tears at %s" % vertices[i]
+		first[vertices[i]] = normal
 	return ""
 
 
