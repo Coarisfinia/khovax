@@ -1,8 +1,8 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports its measurements on stdout; that is what it is for.
 extends SceneTree
-## The load test (#101): the load instance (maps/load.map, a big map full of wild monsters, with
-## the same rules as every instance) under four players walking by script.
+## The load test (#101): the load instance (regions/load.region, a big region full of wild monsters,
+## with the same rules as every instance) under four players walking by script.
 ##
 ## Headless, it times the simulation: every tick (on an untimed run) and every feature's share (on
 ## a timed one), leaving out a warm-up, and checks both runs end in the same state hash:
@@ -93,7 +93,7 @@ func _run_headless() -> void:
 
 ## One headless run, timed when `timed`.
 func _simulate(timed: bool) -> LoadRun:
-	var state: GameState = Instances.create(Instances.LOAD, SEED, PLAYERS)
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.LOAD, SEED, PLAYERS)
 	var run: LoadRun = LoadRun.new()
 	run.entities = state.entities.size()
 	for tick: int in _ticks:
@@ -122,7 +122,7 @@ func _start_rendered() -> void:
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
 	_driver = main.get_node("Driver") as GameDriver
-	_driver.instance = Instances.LOAD
+	_driver.instance = InstanceBlueprints.LOAD
 	# Uncapped, so the frame times show the real cost, not the display's refresh rate.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	root.add_child(main)

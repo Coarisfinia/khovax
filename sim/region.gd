@@ -1,15 +1,15 @@
-class_name HexMap
+class_name Region
 extends RefCounted
-## An instance's map (#36): which tiles exist, each one's terrain as a small integer, and where the
-## players start. Rules ask the map, never the distance from the origin, so a map can have any
-## shape. Maps are hand-made text files (maps/*.map, read with `parse`).
+## An instance's region (#36): which tiles exist, each one's terrain as a small integer, and where
+## the players start. Rules ask the region, never the distance from the origin, so a region can have
+## any shape. Regions are hand-made text files (regions/*.region, read with `parse`).
 
 const GROUND: int = 0
 const WATER: int = 1
 const BLOCKED: int = 2
-## The most tiles a map may have: generators and map files stay within it.
+## The most tiles a region may have: generators and region files stay within it.
 const MAX_TILES: int = 4096
-## The characters of a map file, by terrain; a digit 1 to 4 is ground where that player starts.
+## The characters of a region file, by terrain; a digit 1 to 4 is ground where that player starts.
 const SYMBOLS: Dictionary[String, int] = { ".": GROUND, "~": WATER, "^": BLOCKED }
 ## Ground where a wild monster stands when the run begins (WildMonsterFeature, #19).
 const WILD_MONSTER: String = "m"
@@ -18,30 +18,30 @@ const WILD_MONSTER: String = "m"
 var terrain: Dictionary[Vector2i, int] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
-## Where wild monsters stand when the run begins, in the map file's reading order.
+## Where wild monsters stand when the run begins, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
-## Why the map file couldn't be read, or "" when it could.
+## Why the region file couldn't be read, or "" when it could.
 var problem: String = ""
 
 
 ## A disc of ground tiles of `radius` rings around the origin, with the players starting at its
 ## middle and around it.
-static func disc(radius: int) -> HexMap:
-	var map: HexMap = HexMap.new()
+static func disc(radius: int) -> Region:
+	var region: Region = Region.new()
 	for tile: Vector2i in Hex.disc(radius):
-		map.terrain[tile] = GROUND
-	map.starts = map.reachable(Vector2i.ZERO).slice(0, GameState.MAX_PLAYERS)
-	return map
+		region.terrain[tile] = GROUND
+	region.starts = region.reachable(Vector2i.ZERO).slice(0, GameState.MAX_PLAYERS)
+	return region
 
 
-## A map read from a map file's text. Lines starting with `#` are comments. The first other line
-## is `origin <column> <row>`: the character there is tile (0, 0). Every further line is one row r
-## of the map, from the origin row's r = 0 down; a tile sits on every second column (doubled
-## coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~` water,
-## `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, and a
-## space no tile.
-static func parse(text: String) -> HexMap:
-	var map: HexMap = HexMap.new()
+## A region read from a region file's text. Lines starting with `#` are comments. The first other
+## line is `origin <column> <row>`: the character there is tile (0, 0). Every further line is one
+## row r of the region, from the origin row's r = 0 down; a tile sits on every second column
+## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
+## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, and
+## a space no tile.
+static func parse(text: String) -> Region:
+	var region: Region = Region.new()
 	var rows: Array[String] = []
 	for line: String in text.split("\n"):
 		if not line.strip_edges().begins_with("#") and not line.strip_edges().is_empty():
@@ -51,31 +51,31 @@ static func parse(text: String) -> HexMap:
 		header = rows[0].split(" ")
 	var numbers: bool = header.size() == 3 and header[1].is_valid_int() and header[2].is_valid_int()
 	if not numbers or header[0] != "origin":
-		map.problem = "a map file starts with \"origin <column> <row>\""
-		return map
+		region.problem = "a region file starts with \"origin <column> <row>\""
+		return region
 	var starts_by_slot: Dictionary[int, Vector2i] = {}
 	for i: int in range(1, rows.size()):
-		map.problem = map._parse_row(
+		region.problem = region._parse_row(
 			rows[i],
 			i - 1 - header[2].to_int(),
 			header[1].to_int(),
 			starts_by_slot,
 		)
-		if not map.problem.is_empty():
-			return map
+		if not region.problem.is_empty():
+			return region
 	for slot: int in starts_by_slot.size():
 		if not starts_by_slot.has(slot):
-			map.problem = "the player starts aren't numbered 1, 2, 3, … without gaps"
-			return map
-		map.starts.append(starts_by_slot[slot])
-	return map
+			region.problem = "the player starts aren't numbered 1, 2, 3, … without gaps"
+			return region
+		region.starts.append(starts_by_slot[slot])
+	return region
 
 
 func has_tile(tile: Vector2i) -> bool:
 	return terrain.has(tile)
 
 
-## Whether a walker can stand on the tile: ground, and on the map.
+## Whether a walker can stand on the tile: ground, and on the region.
 func is_walkable(tile: Vector2i) -> bool:
 	return terrain.get(tile, BLOCKED) == GROUND
 
@@ -84,7 +84,7 @@ func size() -> int:
 	return terrain.size()
 
 
-## The map's tiles, sorted, so their order never depends on how the map was built.
+## The region's tiles, sorted, so their order never depends on how the region was built.
 func sorted_tiles() -> Array[Vector2i]:
 	var sorted: Array[Vector2i] = []
 	sorted.assign(terrain.keys())
@@ -110,7 +110,7 @@ func reachable(start: Vector2i) -> Array[Vector2i]:
 	return found
 
 
-## Every value of the map, for the state hash, in a fixed order.
+## Every value of the region, for the state hash, in a fixed order.
 func hash_values() -> Array[int]:
 	var values: Array[int] = [terrain.size()]
 	for tile: Vector2i in sorted_tiles():
@@ -128,7 +128,7 @@ func hash_values() -> Array[int]:
 	return values
 
 
-## Reads one row of a map file into the map; returns why it can't, or "".
+## Reads one row of a region file into the region; returns why it can't, or "".
 func _parse_row(
 	row: String,
 	r: int,
@@ -146,7 +146,7 @@ func _parse_row(
 			return "'%s' in row %d sits between two tiles" % [symbol, r]
 		var known: bool = SYMBOLS.has(symbol) or symbol == WILD_MONSTER
 		if not known and (slot < 0 or slot >= GameState.MAX_PLAYERS):
-			return "'%s' in row %d isn't a map symbol" % [symbol, r]
+			return "'%s' in row %d isn't a region symbol" % [symbol, r]
 		var tile: Vector2i = Vector2i(Fixed.div_floor(doubled, 2), r)
 		terrain[tile] = SYMBOLS.get(symbol, GROUND)
 		if symbol == WILD_MONSTER:
@@ -156,5 +156,5 @@ func _parse_row(
 		if slot >= 0:
 			starts_by_slot[slot] = tile
 	if terrain.size() > MAX_TILES:
-		return "the map has more than %d tiles" % MAX_TILES
+		return "the region has more than %d tiles" % MAX_TILES
 	return ""

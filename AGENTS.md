@@ -16,7 +16,7 @@ way; add to it when something bites.
 - **The repository is public.** Issues, pull requests, comments, commits, code and tests never
   contain personal data. Editing a slip away isn't enough, because GitHub keeps the edit history.
 - **No brand names of other games or products** in issues, pull requests, comments, commits, code,
-  tests or docs (owner's rule): describe the idea instead ("instanced maps", "comic-style cel
+  tests or docs (owner's rule): describe the idea instead ("instanced regions", "comic-style cel
   shading with ink outlines", "monster catching"). The tools the project uses (Godot, GitHub, scoop,
   gdstyle, Codex) are dependencies, not references, and are fine.
 - **The agent works as `flixbox-ai-agent[bot]`** (the private GitHub App "Flixbox [AI Agent]"): it
@@ -179,7 +179,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (`Feature.hash_values()` for a feature's).
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a run (e.g. a boss phase). The core holds no game rule: only the
-  tick, the seed, the map, the entities and the instance's features in their step order. A feature
+  tick, the seed, the region, the entities and the instance's features in their step order. A feature
   (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
@@ -192,26 +192,31 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
-- **Maps** (#36, `HexMap`): which tiles exist, each tile's terrain (ground, water, rock), the
+- **Regions** (#36, `Region`): which tiles exist, each tile's terrain (ground, water, rock), the
   players' starts and where wild monsters stand (`WildMonsterFeature` places them, #19; anything
-  that isn't a player blocks walkers, players pass through each other). Rules ask `state.map`
-  (`is_walkable`, `has_tile`), never a distance from the origin, so a map can have any shape. Maps
-  are hand-made text files in `maps/` (format in `HexMap.parse`); instanced layouts will be
-  assembled from hand-made pieces, the whole layout turned by the run's seed (#57). The map is in
+  that isn't a player blocks walkers, players pass through each other). Rules ask `state.region`
+  (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
+  Regions are hand-made text files in `regions/` (format in `Region.parse`); they will be arranged
+  from hand-made region pieces, the whole region turned by the run's seed (#57). The region is in
   the state hash.
-- **Instances** (`sim/instances/`): which map (a file in `maps/`) and which features in which
-  order; players start on the map's starts. A new mechanic is a new feature that instances list;
-  it never grows the core.
+- **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
+  `regions/`) and which features in which order; players start on the region's starts. A new
+  mechanic is a new feature that blueprints list; it never grows the core.
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
   these is meant. A `species` is what every monster is, captured or not; a `captured_monster` was
   caught by the player; a `wild_monster` can still be caught; an `ally_monster` fights on the
   player's side but isn't captured and can't be. They're names, not necessarily separate classes.
+- **The place you play in** (owner's rule, #57, #117): **"map" is banned** in code and docs, except
+  for a **map item**, an item drop that adds modifiers to an instance blueprint (#120). An
+  **instance blueprint** is what an instance is loaded from (its region pieces and features); an
+  **instance** is a loaded one (its region and state, #119); the **region** is the arranged place;
+  a **region piece** is a hand-made piece a region is arranged from.
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
 - **`meta/`, the layers above a run** (#37): the player's `Profile` (captured monsters, materials,
   unlocked slots) lasts between runs. A run is the profile's party plus an instance and a seed
-  (`Instances.create`): deterministic, like everything in `sim/`. Each catch or find is a `Gain`,
+  (`InstanceBlueprints.create`): deterministic, like everything in `sim/`. Each catch or find is a `Gain`,
   which `ProfileKeeper.take` applies at once; **saves are debounced** (owner, #73): the first gain
   after a quiet spell is saved right away, later ones at most once per
   `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the background flush

@@ -85,7 +85,7 @@ CHROME=<path to chrome-headless-shell> bun tests/web/web_e2e.ts build/web-test
 
 ### Load test
 
-On demand, not in CI: the `load` instance (a big map full of wild monsters, the game's own rules)
+On demand, not in CI: the `load` instance (a big region full of wild monsters, the game's own rules)
 under four players walking by script. Headless it times every tick and each rule's share, and checks
 two runs end in the same state; rendered it times frames, uncapped:
 

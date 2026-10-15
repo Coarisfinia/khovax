@@ -205,7 +205,7 @@ static func _all_numbers(values: Variant) -> bool:
 
 ## Why the replay can't be set up in this build, or "".
 func _setup_problem() -> String:
-	if not Instances.exists(instance) or players < 1 or players > GameState.MAX_PLAYERS:
+	if not InstanceBlueprints.exists(instance) or players < 1 or players > GameState.MAX_PLAYERS:
 		return "instance %s with %d players doesn't exist in this build" % [instance, players]
 	if changes.size() % STRIDE != 0:
 		return "the recorded commands are cut off"
@@ -225,7 +225,7 @@ func _setup_problem() -> String:
 ## Steps through every tick with the recorded commands. With `check`, compares the checkpoints
 ## and returns the first mismatch; without, records new ones.
 func _run(check: bool) -> String:
-	played = Instances.create(instance, seed_value, players)
+	played = InstanceBlueprints.create(instance, seed_value, players)
 	if check and _feature_ids(played) != features:
 		return "the instance's features are now %s, recorded with %s" % [
 			_feature_ids(played),

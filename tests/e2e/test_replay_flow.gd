@@ -120,9 +120,9 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
-		"map terrain": func(state: GameState) -> void: state.map.terrain[START] = HexMap.WATER,
-		"map tile": func(state: GameState) -> void: state.map.terrain[Vector2i(9, 9)] = 0,
-		"map start": func(state: GameState) -> void: state.map.starts[0] += Vector2i.ONE,
+		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
+		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
+		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
 		"next_entity_id": func(state: GameState) -> void: state.next_entity_id += 1,
 		"entity id": func(state: GameState) -> void: state.player(0).id += 1,
 		"entity slot": func(state: GameState) -> void: state.player(0).slot += 1,
@@ -226,7 +226,7 @@ func _check_instance_without_trail() -> String:
 		return "an instance without the trail has one"
 	if _tile(state) != START + Hex.DIRECTIONS[EAST]:
 		return "an instance without the trail didn't walk"
-	if Instances.basic(42, 1).feature(Features.TRAIL) == null:
+	if InstanceBlueprints.basic(42, 1).feature(Features.TRAIL) == null:
 		return "the basic instance lost its trail"
 	return ""
 
@@ -270,7 +270,7 @@ func _check_switch_within_tick() -> String:
 ## Co-op: every player is moved by the command in its own slot, all in the same tick, each with
 ## its own trail; a slot without a command stands still. Two players replay deterministically.
 func _check_players_move_at_once() -> String:
-	var state: GameState = Instances.basic(42, 2)
+	var state: GameState = InstanceBlueprints.basic(42, 2)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
 	var start_first: Vector2i = first.tile
@@ -296,7 +296,7 @@ func _check_players_move_at_once() -> String:
 
 ## The final state hash of two players replaying the scripted moves, each its own way.
 func _two_player_hash() -> int:
-	var state: GameState = Instances.basic(42, 2)
+	var state: GameState = InstanceBlueprints.basic(42, 2)
 	for direction: int in _moves():
 		var other: int = (direction + 2) % Hex.DIRECTIONS.size()
 		Simulation.step(state, _slot_commands(direction, other))
@@ -306,7 +306,7 @@ func _two_player_hash() -> int:
 ## Entity ids are stable: removing an entity keeps the others' ids and drops every feature's data
 ## for it, and a new entity never gets a removed one's id.
 func _check_entity_ids_stay() -> String:
-	var state: GameState = Instances.basic(42, 3)
+	var state: GameState = InstanceBlueprints.basic(42, 3)
 	var ids: Array[int] = []
 	for each: Entity in state.entities:
 		ids.append(each.id)
@@ -661,8 +661,8 @@ func _check_golden_replays() -> String:
 
 ## A run of two players walking the scripted moves, recorded and played once.
 func _recorded_run() -> Replay:
-	var state: GameState = Instances.create(Instances.BASIC, 42, 2)
-	var recorded: Replay = Replay.new(Instances.BASIC, 42)
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 42, 2)
+	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(state)
 	for direction: int in _moves():
 		var commands: Array[Command] = _slot_commands(direction, Command.NO_MOVE)
@@ -673,40 +673,39 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
-## The basic instance's map file reads as the disc it draws, with the players' starts and its wild
-## monster, and a
-## broken map file says what is wrong.
+## The basic instance's region file reads as the disc it draws, with the players' starts and its
+## wild monster, and a broken region file says what is wrong.
 func _check_map_file() -> String:
-	var map: HexMap = Instances.basic(42).map
+	var region: Region = InstanceBlueprints.basic(42).region
 	var starts: Array[Vector2i] = [
 		Vector2i(1, -1),
 		Vector2i(-1, 1),
 		Vector2i(-1, 0),
 		Vector2i(1, 0),
 	]
-	if map.sorted_tiles() != HexMap.disc(RADIUS).sorted_tiles() or map.starts != starts:
-		return "maps/basic.map isn't the disc of radius 3 with its four starts"
-	if map.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
-		return "maps/basic.map's wild monster isn't on (-2, 0): %s" % [map.wild_monsters]
+	if region.sorted_tiles() != Region.disc(RADIUS).sorted_tiles() or region.starts != starts:
+		return "regions/basic.region isn't the disc of radius 3 with its four starts"
+	if region.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
+		return "regions/basic.region's wild monster isn't on (-2, 0): %s" % [region.wild_monsters]
 	var broken: Dictionary[String, String] = {
-		". . .": "a map file starts with",
+		". . .": "a region file starts with",
 		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
-		"origin 0 0\n. ? .": "'?' in row 0 isn't a map symbol",
+		"origin 0 0\n. ? .": "'?' in row 0 isn't a region symbol",
 		"origin 0 0\n. 2 .": "the player starts aren't numbered",
-		"origin nope 3\n. .": "a map file starts with",
+		"origin nope 3\n. .": "a region file starts with",
 		"origin 0 0\n1 . 1": "player 1's start is marked twice",
 	}
 	for text: String in broken:
-		if not HexMap.parse(text).problem.begins_with(broken[text]):
-			return "map file %s gave: %s" % [text.c_escape(), HexMap.parse(text).problem]
+		if not Region.parse(text).problem.begins_with(broken[text]):
+			return "region file %s gave: %s" % [text.c_escape(), Region.parse(text).problem]
 	# Tiles left of the origin and rows above it have negative coordinates.
-	var left: HexMap = HexMap.parse("origin 4 1\n ~ ^\n1 . .")
+	var left: Region = Region.parse("origin 4 1\n ~ ^\n1 . .")
 	var expected: Dictionary[Vector2i, int] = {
-		Vector2i(-1, -1): HexMap.WATER,
-		Vector2i(0, -1): HexMap.BLOCKED,
-		Vector2i(-2, 0): HexMap.GROUND,
-		Vector2i(-1, 0): HexMap.GROUND,
-		Vector2i(0, 0): HexMap.GROUND,
+		Vector2i(-1, -1): Region.WATER,
+		Vector2i(0, -1): Region.BLOCKED,
+		Vector2i(-2, 0): Region.GROUND,
+		Vector2i(-1, 0): Region.GROUND,
+		Vector2i(0, 0): Region.GROUND,
 	}
 	var start: Array[Vector2i] = [Vector2i(-2, 0)]
 	if left.terrain != expected or left.starts != start:
@@ -714,11 +713,11 @@ func _check_map_file() -> String:
 	return ""
 
 
-## Water and rock stop a walker like the map's edge does.
+## Water and rock stop a walker like the region's edge does.
 func _check_terrain_blocks() -> String:
 	var state: GameState = _state(42)
-	state.map.terrain[START + Hex.DIRECTIONS[EAST]] = HexMap.WATER
-	state.map.terrain[START + Hex.DIRECTIONS[WEST]] = HexMap.BLOCKED
+	state.region.terrain[START + Hex.DIRECTIONS[EAST]] = Region.WATER
+	state.region.terrain[START + Hex.DIRECTIONS[WEST]] = Region.BLOCKED
 	_walk(state, EAST, 1)
 	_walk(state, WEST, 1)
 	if _tile(state) != START:
@@ -756,7 +755,8 @@ func _walk(state: GameState, direction: int, moves: int) -> void:
 			Simulation.step(state, _commands(Command.NO_MOVE))
 
 
-## A state with movement and the trail, like the basic instance, on this flow's own map and start.
+## A state with movement and the trail, like the basic instance, on this flow's own region and
+## start.
 func _state(seed_value: int) -> GameState:
 	var ordered: Array[Feature] = [MovementFeature.new(), TrailFeature.new()]
 	return _state_with(ordered, seed_value)
@@ -764,7 +764,7 @@ func _state(seed_value: int) -> GameState:
 
 ## A state with these features and one player, in slot 0 on START.
 func _state_with(ordered: Array[Feature], seed_value: int) -> GameState:
-	var state: GameState = GameState.new(HexMap.disc(RADIUS), seed_value, ordered)
+	var state: GameState = GameState.new(Region.disc(RADIUS), seed_value, ordered)
 	var _player: Entity = state.add_entity(0, START)
 	return state
 

@@ -17,8 +17,8 @@ const MAX_TICKS_PER_FRAME: int = 5
 ## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
 const HASH_HISTORY: int = 100
 
-## The instance to run, by name from Instances.
-@export var instance: String = Instances.BASIC
+## The instance to run, by name from InstanceBlueprints.
+@export var instance: String = InstanceBlueprints.BASIC
 @export var input: LocalInput
 ## Players in the run, in slots 0 and up. Each slot needs a command source, or ticks wait for it.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
@@ -50,8 +50,9 @@ func _process(delta: float) -> void:
 ## Starts a fresh run of the instance from `seed_value`: the APK test (#61) starts its own with a
 ## fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
-	# Null for an unknown or invalid instance, which Instances.create reports; nothing runs then.
-	state = Instances.create(instance, seed_value, players)
+	# Null for an unknown or invalid instance, which InstanceBlueprints.create reports; nothing runs
+	# then.
+	state = InstanceBlueprints.create(instance, seed_value, players)
 	if state != null:
 		recording = Replay.new(instance, seed_value)
 		recording.begin(state)

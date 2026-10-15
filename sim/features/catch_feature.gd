@@ -1,8 +1,8 @@
 class_name CatchFeature
 extends Feature
 ## Catching (#20): when a player's trail closes a ring around a wild monster, the monster is caught.
-## Enclosed means the monster's tile can't reach the map's edge without crossing that player's
-## trail: one flood fill from the edge over the map's tiles, whatever their terrain, so only the
+## Enclosed means the monster's tile can't reach the region's edge without crossing that player's
+## trail: one flood fill from the edge over the region's tiles, whatever their terrain, so only the
 ## trail encloses. The caught monster leaves the world (a WildMonsterCaught event says who caught
 ## it) and the catcher's trail starts over from where it stands. Each player rings on their own
 ## trail. Strength, pressure, sealing and enrage build on this later (design report).
@@ -11,9 +11,9 @@ extends Feature
 ## the catcher's trail over through TrailFeature.restart: features later in the order change an
 ## earlier one only through its public methods.
 
-## The edge of `_edge_map`, cached by _edge_of.
+## The edge of `_edge_region`, cached by _edge_of.
 var _edge: Array[Vector2i] = []
-var _edge_map: HexMap = null
+var _edge_region: Region = null
 
 
 func id() -> int:
@@ -42,7 +42,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if wild.monsters.is_empty() or not _may_close(trail, grew):
 			continue
 		# One flood per move, for every monster at once (#104).
-		var reachable: Dictionary[Vector2i, bool] = outside(state.map, trail, _edge_of(state.map))
+		var edge: Array[Vector2i] = _edge_of(state.region)
+		var reachable: Dictionary[Vector2i, bool] = outside(state.region, trail, edge)
 		var caught: Array[int] = []
 		for monster_id: int in wild.monsters:
 			var spot: Vector2i = state.entity(monster_id).tile
@@ -54,11 +55,11 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			trails.restart(grew.entity_id, state.entity(grew.entity_id).tile)
 
 
-## Every tile off the trail that can reach the map's edge (a tile next to where the map ends)
+## Every tile off the trail that can reach the region's edge (a tile next to where the region ends)
 ## without stepping on the trail: one flood from the edge inward. A tile off the trail and not in
 ## it is enclosed by the trail.
 static func outside(
-	map: HexMap,
+	region: Region,
 	trail: Trail,
 	edge: Array[Vector2i],
 ) -> Dictionary[Vector2i, bool]:
@@ -72,28 +73,29 @@ static func outside(
 		var current: Vector2i = open.pop_back()
 		for direction: Vector2i in Hex.DIRECTIONS:
 			var next: Vector2i = current + direction
-			if map.has_tile(next) and not reached.has(next) and not trail.tiles.has(next):
+			if region.has_tile(next) and not reached.has(next) and not trail.tiles.has(next):
 				reached[next] = true
 				open.append(next)
 	return reached
 
 
-## The map's edge: every tile next to where the map ends, in a fixed order. Maps don't change
-## during a run (a rule that edits one in place must clear this cache), so it's worked out once
-## per map, and a replaced map is noticed. Derived from the map, so not part of the hash.
-func _edge_of(map: HexMap) -> Array[Vector2i]:
-	if map != _edge_map:
-		_edge_map = map
+## The region's edge: every tile next to where the region ends, in a fixed order. Regions don't
+## change during a run (a rule that edits one in place must clear this cache), so it's worked out
+## once per region, and a replaced region is noticed. Derived from the region, so not part of the
+## hash.
+func _edge_of(region: Region) -> Array[Vector2i]:
+	if region != _edge_region:
+		_edge_region = region
 		_edge.clear()
-		for tile: Vector2i in map.sorted_tiles():
-			if _on_edge(map, tile):
+		for tile: Vector2i in region.sorted_tiles():
+			if _on_edge(region, tile):
 				_edge.append(tile)
 	return _edge
 
 
-static func _on_edge(map: HexMap, tile: Vector2i) -> bool:
+static func _on_edge(region: Region, tile: Vector2i) -> bool:
 	for direction: Vector2i in Hex.DIRECTIONS:
-		if not map.has_tile(tile + direction):
+		if not region.has_tile(tile + direction):
 			return true
 	return false
 

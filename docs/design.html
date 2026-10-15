@@ -100,7 +100,7 @@ a { color: var(--accent); }
 <header class="hero">
   <p class="eyebrow">Design report · codename khovax</p>
   <h1>Catch, don't fight.</h1>
-  <p class="lede">A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings around them. Your companions do the fighting, the simulation is fully deterministic, and co-op runs seeded, instanced maps on web, mobile and PC.</p>
+  <p class="lede">A top-down, real-time ARPG on a hex grid. You catch monsters by walking rings around them. Your companions do the fighting, the simulation is fully deterministic, and co-op runs seeded, instanced regions on web, mobile and PC.</p>
   <div class="meta"><span>Status: pre-production, nothing implemented</span><span>Last updated: 2026-10-13</span><span>Engine: Godot 4 · GDScript</span></div>
   <div class="legend-row"><span><span class="badge dec">Decided</span> agreed in design talks</span><span><span class="badge pro">Proposed</span> suggestion, not yet confirmed</span></div>
   <ol class="toc">
@@ -384,7 +384,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
 
 <h2 id="world"><span class="n">08</span>World &amp; co-op <span class="badge dec">Decided</span></h2>
 <ul>
-  <li><strong>Instanced maps.</strong> A hub plus seeded instanced maps. Seed plus party inputs fully determine a run, so replays and shareable seeds come for free.</li>
+  <li><strong>Instanced regions.</strong> A hub plus seeded instanced regions. Seed plus party inputs fully determine a run, so replays and shareable seeds come for free.</li>
   <li><strong>Single player is the default,</strong> with co-op for up to 4 players. In single player the simulation runs locally with no network layer.</li>
   <li><strong>Lockstep netcode.</strong> Clients send only inputs, with a small input delay. The slow pacing hides it well.</li>
   <li><strong>Transport:</strong> browsers only allow WebSocket or WebRTC. Start with a small WebSocket relay that only forwards inputs. Later it can run the same simulation headless to verify. <span class="badge dec">Decided</span></li>
@@ -432,7 +432,7 @@ co-op:           ring_power sums every player standing on the ring</code></pre>
   <li><strong>Every game rule is a modular feature</strong> <span class="badge dec">Decided</span> (#30): movement, the trail, and later catching, rings and monsters. An instance lists the features it has. Each one can be switched on or off, also during a run, so a boss stage can enable and disable mechanics on the fly. The core holds no game rule.</li>
   <li>The starting state plus every tick's commands is a replay. The same replay always ends with the same state hash, which is the basis for lockstep co-op and desync detection. The driver records every run; golden replays in the tests pin down what the game does, and a rules version makes an old replay fail clearly instead of silently (#35).</li>
   <li>Godot physics is never used for gameplay because it isn't deterministic across platforms.</li>
-  <li><strong>Maps are data</strong> <span class="badge dec">Decided</span> (#36): which hexes exist and their terrain (ground, water, rock), any shape. Maps are hand-made text files. Instanced layouts are assembled from hand-made pieces (each piece hand-made down to monster and loot placement), turned to fit together, and the whole layout is turned by the run's seed so each run feels like a new place (#57).</li>
+  <li><strong>Regions are data</strong> <span class="badge dec">Decided</span> (#36, #117): which hexes exist and their terrain (ground, water, rock), any shape. "Map" isn't used for them: an <em>instance blueprint</em> is what an instance is loaded from, an <em>instance</em> is a loaded one, its <em>region</em> is the arranged place, and a <em>region piece</em> is a hand-made piece of one. Each blueprint has a set of region pieces, each hand-made down to its tile variants, monster and loot placement, with one or more entry and exit points (a side can be both). The seed arranges them so the points fit together, and turns the whole region, so each run feels like a new place (#57).</li>
   <li>All randomness comes from the run's seed, through integer generators (xoshiro128**) that live in the simulation state, one stream per feature (#32).</li>
   <li>GDScript's 64-bit <code>int</code> is enough for fixed-point math: fractions in thousandths, every division rounded down (#33).</li>
 </ul>
