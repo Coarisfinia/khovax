@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dahb66qss2gsh"
-path="res://.godot/imported/trees_A_cut.gltf-64f6447ef8b81a5f2d064650f42c84ca.scn"
+uid="uid://d3jmkc0tg4cqy"
+path="res://.godot/imported/tree_single_B_cut.gltf-780cf9d191539a72f762adbe9a0bd8c5.scn"
 
 [deps]
 
-source_file="res://assets/kaykit-hexagon/trees_A_cut.gltf"
-dest_files=["res://.godot/imported/trees_A_cut.gltf-64f6447ef8b81a5f2d064650f42c84ca.scn"]
+source_file="res://assets/kaykit-hexagon/tree_single_B_cut.gltf"
+dest_files=["res://.godot/imported/tree_single_B_cut.gltf-780cf9d191539a72f762adbe9a0bd8c5.scn"]
 
 [params]
 

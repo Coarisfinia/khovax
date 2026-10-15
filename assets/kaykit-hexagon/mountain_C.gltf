@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "rock_single_E"
+            "name" : "mountain_C"
         }
     ],
     "materials" : [
@@ -32,7 +32,7 @@
     ],
     "meshes" : [
         {
-            "name" : "rock_single_E",
+            "name" : "mountain_C",
             "primitives" : [
                 {
                     "attributes" : {
@@ -63,61 +63,61 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 121,
+            "count" : 360,
             "max" : [
-                0.23278957605361938,
-                0.19468727707862854,
-                0.1627117246389389
+                0.9073365330696106,
+                1.50800359249115,
+                1.005179524421692
             ],
             "min" : [
-                -0.2553517520427704,
-                -9.38796074478887e-05,
-                -0.18480737507343292
+                -0.8512817621231079,
+                1.341104507446289e-07,
+                -1.0178070068359375
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 121,
+            "count" : 360,
             "type" : "VEC2"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 121,
+            "count" : 360,
             "type" : "VEC3"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 213,
+            "count" : 600,
             "type" : "SCALAR"
         }
     ],
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 1452,
+            "byteLength" : 4320,
             "byteOffset" : 0,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 968,
-            "byteOffset" : 1452,
+            "byteLength" : 2880,
+            "byteOffset" : 4320,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 1452,
-            "byteOffset" : 2420,
+            "byteLength" : 4320,
+            "byteOffset" : 7200,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 426,
-            "byteOffset" : 3872,
+            "byteLength" : 1200,
+            "byteOffset" : 11520,
             "target" : 34963
         }
     ],
@@ -129,8 +129,8 @@
     ],
     "buffers" : [
         {
-            "byteLength" : 4300,
-            "uri" : "rock_single_E.bin"
+            "byteLength" : 12720,
+            "uri" : "mountain_C.bin"
         }
     ]
 }

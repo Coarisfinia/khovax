@@ -501,15 +501,15 @@ func _check_lookouts(main: Node) -> String:
 	return _check_decorations(main)
 
 
-## Each decorated kind's model (forest, shrubs, boulder, stumps) stands on exactly the glade's tiles
-## of that kind, cel-shaded, each shown once an ally has seen it.
+## Each decorated kind's model (forest, shrubs, boulder, stump) stands on exactly the glade's tiles
+## of that kind, at its blueprint's scale, cel-shaded, each shown once an ally has seen it.
 func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	view.show_state()
 	var region: Region = driver.state.region
 	var decorated: Array[Vector2i] = []
-	for id: String in ["forest", "shrubs", "boulder", "stumps"]:
+	for id: String in ["forest", "shrubs", "boulder", "stump"]:
 		var tiles: Array[Vector2i] = []
 		for tile: Vector2i in region.sorted_tiles():
 			if region.terrain[tile] == TileKinds.number_of(id):
@@ -517,10 +517,13 @@ func _check_decorations(main: Node) -> String:
 		if tiles.is_empty():
 			return "the glade has no %s" % id
 		for tile: Vector2i in tiles:
-			var model: String = TileLooks.of(region.terrain[tile]).model
-			if (not view.figures.has(tile)
-					or view.figures[tile].get_child(0).scene_file_path != model):
-				return "the %s on %s has no model, or another one" % [id, tile]
+			var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
+			var size: Vector3 = Vector3.ONE * TileDecorations.MODEL_SCALE * blueprint.scale
+			var model: Node3D = null
+			if view.figures.has(tile):
+				model = view.figures[tile].get_child(0) as Node3D
+			if model == null or model.scene_file_path != blueprint.model or model.scale != size:
+				return "the %s on %s has no model, another one, or another size" % [id, tile]
 		decorated.append_array(tiles)
 	decorated.sort()
 	var shown: Array[Vector2i] = []

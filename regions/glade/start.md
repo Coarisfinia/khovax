@@ -16,7 +16,7 @@ x . 1 . j
 
 - `.`: ground
 - `🌲`: forest
-- `🪵`: stumps
+- `🪵`: stump
 - `1` to `4`: where players 1 to 4 start
 - `j`: joins another piece to the east
 - `x`: exit to the west, to basic

@@ -1,6 +1,6 @@
 # Glade: pond
 
-A pond in the glade (#57): water in the middle, ground around it, a treasure chest on its far bank (#124), a little forest (#116) on its south side with stumps and shrubs (#205) and a boulder by the chest, open on three sides.
+A pond in the glade (#57): water in the middle, ground around it, a treasure chest on its far bank (#124), a little forest (#116) on its south side with a stump and shrubs (#205) and a boulder by the chest, open on three sides.
 
 ## Tiles
 
@@ -17,7 +17,7 @@ k . ~ ~ j
 - `.`: ground
 - `🌲`: forest
 - `🌳`: shrubs
-- `🪵`: stumps
+- `🪵`: stump
 - `🪨`: boulder
 - `~`: water
 - `c`: a treasure chest

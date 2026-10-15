@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "trees_A_cut"
+            "name" : "tree_single_B_cut"
         }
     ],
     "materials" : [
@@ -32,7 +32,7 @@
     ],
     "meshes" : [
         {
-            "name" : "trees_A_cut",
+            "name" : "tree_single_B_cut",
             "primitives" : [
                 {
                     "attributes" : {
@@ -63,61 +63,61 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 540,
+            "count" : 49,
             "max" : [
-                0.8208099603652954,
-                0.19642479717731476,
-                0.8323991298675537
+                0.09036973863840103,
+                0.13664501905441284,
+                0.09502077847719193
             ],
             "min" : [
-                -0.8429771661758423,
-                -0.013254642486572266,
-                -0.8523083329200745
+                -0.09037060290575027,
+                -0.09999983757734299,
+                -0.09502086788415909
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 540,
+            "count" : 49,
             "type" : "VEC2"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 540,
+            "count" : 49,
             "type" : "VEC3"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 864,
+            "count" : 114,
             "type" : "SCALAR"
         }
     ],
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 6480,
+            "byteLength" : 588,
             "byteOffset" : 0,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 4320,
-            "byteOffset" : 6480,
+            "byteLength" : 392,
+            "byteOffset" : 588,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 6480,
-            "byteOffset" : 10800,
+            "byteLength" : 588,
+            "byteOffset" : 980,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 1728,
-            "byteOffset" : 17280,
+            "byteLength" : 228,
+            "byteOffset" : 1568,
             "target" : 34963
         }
     ],
@@ -129,8 +129,8 @@
     ],
     "buffers" : [
         {
-            "byteLength" : 19008,
-            "uri" : "trees_A_cut.bin"
+            "byteLength" : 1796,
+            "uri" : "tree_single_B_cut.bin"
         }
     ]
 }

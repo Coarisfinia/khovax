@@ -72,7 +72,7 @@ func _check_quests() -> String:
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
 ## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
-## stumps are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
+## a stump are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
 ## names exists. Broken blueprints, and two with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
@@ -85,7 +85,7 @@ func _check_tiles() -> String:
 		"forest": true,
 		"shrubs": true,
 		"boulder": false,
-		"stumps": true,
+		"stump": true,
 	}
 	var plain: Array[String] = ["ground", "water", "rock"]
 	for id: String in walkable:
@@ -106,7 +106,7 @@ func _check_tiles() -> String:
 	return result if not result.is_empty() else _check_tile_numbers_unique()
 
 
-## Tile blueprints with a wrong id, number, color or trait are refused, with a reason.
+## Tile blueprints with a wrong id, number, color, scale or trait are refused, with a reason.
 func _check_tiles_refused() -> String:
 	var tile: String = "{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
 	var walks: String = "\"walkable\": true"
@@ -119,6 +119,9 @@ func _check_tiles_refused() -> String:
 		tile % ["x", "9", "#000000", "", ""]: "its traits",
 		tile % ["x", "9", "#000000", walks + ", \"swims\": true", ""]: "field swims",
 		tile % ["x", "9", "#000000", walks, ", \"size\": 1"]: "field size",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 0"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 9"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
 	}
 	for text: String in cases:
 		var problem: String = TileBlueprint.parse("x", text).problem

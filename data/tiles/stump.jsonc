@@ -1,0 +1,9 @@
+// Stump: ground clutter, a felled tree's stump. Walkable, and sight passes over it.
+{
+	"id": "stump",
+	"number": 6, // permanent: never reused or changed once shipped
+	"color": "#6b8a4a",
+	"model": "res://assets/kaykit-hexagon/tree_single_B_cut.gltf",
+	"scale": 4, // the pack's stump is too small to read from the camera
+	"traits": { "walkable": true }
+}

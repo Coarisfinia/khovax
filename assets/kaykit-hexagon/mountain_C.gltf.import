@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://df485nv6c8k7k"
-path="res://.godot/imported/rock_single_E.gltf-ae39c61759461a450f32dd5ca42c0c22.scn"
+uid="uid://b8bhr450p5np3"
+path="res://.godot/imported/mountain_C.gltf-0afd50977828ef51e167ac04152feaf0.scn"
 
 [deps]
 
-source_file="res://assets/kaykit-hexagon/rock_single_E.gltf"
-dest_files=["res://.godot/imported/rock_single_E.gltf-ae39c61759461a450f32dd5ca42c0c22.scn"]
+source_file="res://assets/kaykit-hexagon/mountain_C.gltf"
+dest_files=["res://.godot/imported/mountain_C.gltf-0afd50977828ef51e167ac04152feaf0.scn"]
 
 [params]
 
