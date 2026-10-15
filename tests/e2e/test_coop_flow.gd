@@ -3,8 +3,8 @@ extends RefCounted
 ## run in lockstep, with an input delay. They walk at once, each with its own trail and its own
 ## view, and a key press moves the local player only once the delay has passed. The game is exactly
 ## the plain run of the delayed commands; a late player's ticks wait for their commands, then the
-## game catches up to the same run. Time is stepped by hand,
-## one tick a frame.
+## game catches up to the same run. Two players on one tile each stand at their own spot inside it
+## (#151). Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 const TICKS: int = 60
@@ -35,6 +35,11 @@ func run(tree: SceneTree) -> String:
 		result = await _start(DELAY)
 	if result.is_empty():
 		result = _check_late_player()
+	_main.queue_free()
+	if result.is_empty():
+		result = await _start(DELAY)
+	if result.is_empty():
+		result = _check_shared_tile()
 	_main.queue_free()
 	return result
 
@@ -115,6 +120,41 @@ func _check_late_player() -> String:
 	if _driver.state.tick != TICKS or _driver.state.state_hash() != _plain_hash(DELAY):
 		return "after catching up, the game isn't the on-time run"
 	return ""
+
+
+## Two players on one tile each stand at their own spot inside it, easing there; once one walks
+## off, the other eases back to the tile's center.
+func _check_shared_tile() -> String:
+	var shared: Vector2i = _driver.state.player(0).tile
+	_driver.state.player(1).tile = shared
+	_views[0].ease_spot(STEP)
+	var first_step: float = _views[0].spot.length()
+	if first_step <= 0.0 or first_step >= PlayerView.SPOTS[0].length():
+		return "a player snapped to its spot instead of easing there (%.3f)" % first_step
+	_settle()
+	var first: Vector3 = _views[0].position
+	var second: Vector3 = _views[1].position
+	var center: Vector3 = _views[0].tile_position()
+	var inside: float = HexLayout.SIZE * 0.5
+	if first.is_equal_approx(second):
+		return "two players on one tile are drawn at the same spot"
+	if first.distance_to(center) > inside or second.distance_to(center) > inside:
+		return "a player's spot lies outside its shared tile"
+	_driver.state.player(1).tile = shared + Hex.DIRECTIONS[EAST]
+	_settle()
+	if not _views[0].position.is_equal_approx(center):
+		return "a player alone on its tile didn't ease back to the center"
+	return ""
+
+
+## Lets the views ease to their spots: a second of frames.
+func _settle() -> void:
+	for _frame: int in Simulation.TICKS_PER_SECOND:
+		for view: PlayerView in _views:
+			view.show_state()
+			view.ease_spot(STEP)
+	for view: PlayerView in _views:
+		view.show_state()
 
 
 ## The main scene with two players, a view for each, and `delay` ticks of input delay; stepped by
