@@ -23,20 +23,21 @@ func run(_tree: SceneTree) -> String:
 	var east: bool = basic.exits.size() == 1 and basic.exits[0] == Vector3i(3, -2, 0)
 	if not east or basic.exit_blueprints[0] != InstanceBlueprints.GLADE:
 		return "the basic instance's east edge doesn't lead to the glade: %s" % [basic.exits]
-	var result: String = _check_glade_exit()
-	if result.is_empty():
-		result = _check_refused()
-	if result.is_empty():
-		result = _check_exits_reachable()
-	if result.is_empty():
-		result = _check_web_connected()
-	if result.is_empty():
-		result = _check_world()
-	if result.is_empty():
-		result = _check_documents()
-	if result.is_empty():
-		result = _check_walk_through()
-	return result
+	var steps: Array[Callable] = [
+		_check_glade_exit,
+		_check_refused,
+		_check_exits_reachable,
+		_check_web_connected,
+		_check_world,
+		_check_documents,
+		_check_walk_through,
+		_check_layout,
+	]
+	for step: Callable in steps:
+		var result: String = step.call()
+		if not result.is_empty():
+			return result
+	return ""
 
 
 ## Walking through exits (#154): from the basic instance's start, onto its exit on (3, -2) and on
@@ -177,6 +178,36 @@ func _check_world() -> String:
 func _still() -> Array[Command]:
 	var commands: Array[Command] = [Command.new(Command.NO_MOVE)]
 	return commands
+
+
+## The web lies in one world (#187): the glade sits so that walking out of the basic instance's east
+## exit lands next to it on the glade's way back, and for every seed no two instances overlap.
+func _check_layout() -> String:
+	for seed_value: int in SEEDS:
+		var problem: String = _layout_problem(seed_value)
+		if not problem.is_empty():
+			return "seed %d: %s" % [seed_value, problem]
+	var world: World = World.new(7, InstanceBlueprints.BASIC)
+	var basic: Region = InstanceBlueprints.region_of(
+		InstanceBlueprints.BASIC,
+		world.seed_for("basic"),
+	)
+	var glade: Region = InstanceBlueprints.region_of(
+		InstanceBlueprints.GLADE,
+		world.seed_for(InstanceBlueprints.GLADE),
+	)
+	var exit: Vector3i = basic.exits[0]
+	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
+	var back: Vector2i = Vector2i(glade.exits[0].x, glade.exits[0].y)
+	var landing: Vector2i = back + world.offset(InstanceBlueprints.GLADE)
+	if world.offset(InstanceBlueprints.BASIC) != Vector2i.ZERO or landing != outside:
+		return "walking out of the basic instance's east exit doesn't land on the glade's way back"
+	return ""
+
+
+## Why seed `seed_value`'s web can't be laid out as one world, or "".
+func _layout_problem(seed_value: int) -> String:
+	return World.new(seed_value, InstanceBlueprints.BASIC).layout_problem()
 
 
 ## For every seed the glade's way back is on its west side, where the region ends.
