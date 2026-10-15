@@ -1,7 +1,7 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
-## in view of the camera, a wild monster's figure standing on its own tile, and the exploration
-## music rising from silence.
+## in view of the camera, a wild monster's figure standing on its own tile, the instance next door
+## drawn beyond its exit under the cloud, and the exploration music rising from silence.
 
 
 func run(tree: SceneTree) -> String:
@@ -28,10 +28,13 @@ func run(tree: SceneTree) -> String:
 		_check_toon_look,
 		_check_ink_outline,
 		_check_fog,
+		_check_neighbour_grids,
+		_check_neighbour_cloud,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
 		_check_music,
 		_check_lookouts,
+		_check_neighbour_follows,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -447,3 +450,57 @@ func _toon_shaded(model: Node) -> bool:
 				return false
 			surfaces += 1
 	return surfaces > 0
+
+
+## The instance next door (#188): the neighbour view draws the glade, the basic instance's only
+## neighbour, with all its tiles, its way back right beside the basic instance's east exit, read
+## without loading it into the world.
+func _check_neighbour_grids(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: NeighbourView = main.get_node_or_null("NeighbourView") as NeighbourView
+	if view == null:
+		return "the main scene has no NeighbourView"
+	view.show_state()
+	var glade: HexGrid = view.grids.get(InstanceBlueprints.GLADE)
+	var region: Region = InstanceBlueprints.region_of(
+		InstanceBlueprints.GLADE,
+		driver.world.seed_for(InstanceBlueprints.GLADE),
+	)
+	if view.grids.size() != 1 or glade == null or glade.tile_count() != region.size():
+		return "the neighbours drawn aren't the whole glade alone: %s" % [view.grids.keys()]
+	var exit: Vector3i = driver.state.region.exits[0]
+	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
+	var back: Vector2i = Vector2i(region.exits[0].x, region.exits[0].y)
+	var drawn: Vector3 = glade.position + glade.tile_transform(back).origin
+	var lift: Vector3 = Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
+	if not glade.has_tile(back) or not drawn.is_equal_approx(HexLayout.to_world(outside) + lift):
+		return "the glade's way back is drawn at %s, not beside the basic instance's exit" % drawn
+	if driver.world.instances.size() != 1:
+		return "drawing the neighbours loaded an instance into the world"
+	return ""
+
+
+## Neighbours are unexplored ground: every tile of theirs lies under thick cloud.
+func _check_neighbour_cloud(main: Node) -> String:
+	var view: NeighbourView = main.get_node("NeighbourView") as NeighbourView
+	var fog: FogView = main.get_node("FogView") as FogView
+	fog.show_state(10.0)
+	var placed: Array[Vector2i] = view.placed_tiles()
+	if placed.is_empty():
+		return "no neighbour tiles to cover"
+	for tile: Vector2i in placed:
+		if fog.cloud.fog_on(tile) != Vector2(1.0, 0.0):
+			return "neighbour tile %s isn't under thick cloud: %s" % [tile, fog.cloud.fog_on(tile)]
+	return ""
+
+
+## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
+func _check_neighbour_follows(main: Node) -> String:
+	var view: NeighbourView = main.get_node("NeighbourView") as NeighbourView
+	view.show_state()
+	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
+	if view.grids.size() != 1 or basic == null or basic.tile_count() != 37:
+		return "in the glade, the neighbours drawn aren't the basic instance: %s" % [
+			view.grids.keys(),
+		]
+	return ""
