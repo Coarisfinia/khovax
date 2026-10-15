@@ -107,4 +107,4 @@ func _label_of(msaa: int) -> String:
 
 
 func _forget() -> void:
-	var _gone: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS_PATH))
+	SaveStore.remove(SETTINGS_PATH)

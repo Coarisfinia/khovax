@@ -1,8 +1,8 @@
 extends RefCounted
 ## Profile flow (#37): the player's profile across runs. A new profile starts with one slot and
 ## nothing caught; every gain adds its catches, with ids that are never reused, and its materials,
-## and is on disk at once; the profile survives saving and loading; and a save it can't trust is
-## refused.
+## and is on disk at once; the profile survives saving and loading; a save it can't trust is
+## refused; and a damaged save falls back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 
@@ -29,6 +29,9 @@ func run(_tree: SceneTree) -> String:
 		result = _check_save(profile)
 	if result.is_empty():
 		result = _check_refused()
+	if result.is_empty():
+		result = _check_recovered()
+	SaveStore.remove(SAVE_PATH)
 	return result
 
 
@@ -51,7 +54,7 @@ func _check_kept_at_once() -> String:
 		return "the burst wasn't saved once the interval passed: " + problem
 	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.finish_run()
 	var on_disk: Profile = SaveStore.load_profile(SAVE_PATH)
-	var _removed: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	SaveStore.remove(SAVE_PATH)
 	if (not problem.is_empty()
 			or on_disk.runs_finished != 1
 			or on_disk.captured_monsters.size() != 51):
@@ -89,7 +92,7 @@ func _check_save(profile: Profile) -> String:
 	if not problem.is_empty():
 		return problem
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
-	var _removed: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	SaveStore.remove(SAVE_PATH)
 	if not loaded.problem.is_empty() or loaded.to_text() != profile.to_text():
 		return "the loaded profile differs from the saved one: " + loaded.problem
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
@@ -128,3 +131,44 @@ func _result(species: Array, materials: Dictionary) -> Gain:
 	result.caught_species.assign(species)
 	result.materials.assign(materials)
 	return result
+
+
+## A damaged newest save, tampered with or cut short, falls back to the newest intact generation
+## before it; with every generation damaged the save is refused; and a plain save from before
+## checksums still loads.
+func _check_recovered() -> String:
+	SaveStore.remove(SAVE_PATH)
+	var older: Profile = Profile.new()
+	var _first: String = older.apply(_result(["moss_toad"], {}))
+	var newer: Profile = Profile.new()
+	var _second: String = newer.apply(_result(["moss_toad", "ember_fox"], {}))
+	var problem: String = SaveStore.save_profile(older, SAVE_PATH)
+	problem += SaveStore.save_profile(newer, SAVE_PATH)
+	var newest: String = FileAccess.get_file_as_string(SAVE_PATH)
+	var damaged_saves: Array[String] = [
+		newest.replace("ember_fox", "ember_cat"),
+		newest.left(40),
+		newest.replace("\"save\": 1", "\"saved\": 1"),
+	]
+	for damaged: String in damaged_saves:
+		_write(SAVE_PATH, damaged)
+		var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
+		if not problem.is_empty() or loaded.loaded_generation != 1:
+			return "a damaged newest save didn't fall back a generation: " + problem
+		if loaded.to_text() != older.to_text():
+			return "the fallback isn't the save before the damaged one"
+	for file: String in [SAVE_PATH, SAVE_PATH + ".1"]:
+		_write(file, "{}")
+	if SaveStore.load_profile(SAVE_PATH).problem.is_empty():
+		return "a save with every generation damaged was read"
+	SaveStore.remove(SAVE_PATH)
+	_write(SAVE_PATH, newer.to_text())
+	if SaveStore.load_profile(SAVE_PATH).to_text() != newer.to_text():
+		return "a plain save from before checksums didn't load"
+	return ""
+
+
+func _write(path: String, text: String) -> void:
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	var _stored: bool = file.store_string(text)
+	file.close()
