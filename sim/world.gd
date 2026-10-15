@@ -2,13 +2,18 @@ class_name World
 extends RefCounted
 ## The world (#139, #148): every instance it has loaded, by blueprint name, each a GameState of
 ## its own. Each tick it steps every instance a player is in, in name order, and leaves the others
-## loaded but still (until #119 purges them). Every instance's seed comes from the world's seed and
-## its name, so the same world loads the same instance the same way however and whenever it's
-## reached. Players walk from one instance into the next through exits (#154). Deterministic, like
-## everything in sim/.
+## loaded but still, until one has been left behind for PURGE_TICKS: then it is purged (#212).
+## Every instance's seed comes from the world's seed, its name and its generation, which goes up
+## with each purge, so the same world loads the same instance the same way however and whenever
+## it's reached, and a purged one comes back arranged anew. Players walk from one instance into
+## the next through exits (#154). Deterministic, like everything in sim/.
 
-## The format of the world's save data (`to_data`); data in another one is refused.
-const FORMAT: int = 1
+## The format of the world's save data (`to_data`); data in another one is refused. Format 1 had no
+## purging; its saves were played by older rules, which `from_data` refuses anyway.
+const FORMAT: int = 2
+## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
+## ticks, which only pass while the game is played, never while it's closed.
+const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
 
 ## The world's seed, which every instance's own seed is drawn from.
 var world_seed: int = 0
@@ -18,8 +23,12 @@ var tick: int = 0
 var instances: Dictionary[String, GameState] = {}
 ## Why the world couldn't be set up, or "" when it could.
 var problem: String = ""
-## The blueprint the world starts in: the origin of the world's layout (#187).
+## The blueprint the world starts in: the origin of the world's layout (#187). Never purged.
 var start_name: String = ""
+## How often each blueprint's instance has been purged, by name; none for one never purged.
+var generations: Dictionary[String, int] = {}
+## The world tick each loaded instance nobody is in was left behind (or loaded empty), by name.
+var left_at: Dictionary[String, int] = {}
 ## Each reachable instance's place in the world, worked out once (`offset`).
 var _offsets: Dictionary[String, Vector2i] = {}
 ## Each blueprint's region for the world's seed, arranged once for the layout.
@@ -42,10 +51,21 @@ func _init(seed_value: int, start: String, players: int = 1) -> void:
 	instances[start] = first
 
 
-## The seed of the instance loaded from the blueprint `instance_name`: drawn from the world's seed,
-## with the name as the stream.
+## The seed of the instance loaded from the blueprint `instance_name` at its current generation:
+## drawn from the world's seed, with the name as the stream. Generation n takes the stream's next
+## draw after n purges, so generation 0 keeps the first draw, the seed every instance had before
+## purging.
 func seed_for(instance_name: String) -> int:
-	return Rng.new(world_seed, name_code(instance_name)).next_u32()
+	var stream: Rng = Rng.new(world_seed, name_code(instance_name))
+	var drawn: int = stream.next_u32()
+	for _purged: int in generation(instance_name):
+		drawn = stream.next_u32()
+	return drawn
+
+
+## How often the instance of `instance_name` has been purged (#212).
+func generation(instance_name: String) -> int:
+	return generations.get(instance_name, 0)
 
 
 ## The instance loaded from `instance_name`, loading it with nobody in it the first time, or null
@@ -56,6 +76,7 @@ func instance(instance_name: String) -> GameState:
 		if loaded == null:
 			return null
 		instances[instance_name] = loaded
+		left_at[instance_name] = tick
 	return instances[instance_name]
 
 
@@ -153,7 +174,8 @@ func active() -> Array[String]:
 
 ## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
 ## every player who walked out through an exit into the instance it leads to (#154). Moving them
-## only after every instance has stepped means no one steps twice in a tick.
+## only after every instance has stepped means no one steps twice in a tick. Last, it purges what
+## has been left behind long enough.
 func step(commands: Array[Command]) -> void:
 	tick += 1
 	var leaving: Array[Array] = []
@@ -167,6 +189,26 @@ func step(commands: Array[Command]) -> void:
 		var from: String = move[0]
 		var taken: ExitTaken = move[1]
 		_walk_through(from, taken)
+	_purge_left_behind()
+
+
+## Notes when each instance was left behind, and purges every one but the starting instance that
+## nobody has been in for PURGE_TICKS (#212): it is dropped, and its next visit loads it fresh at
+## its next generation. Anyone entering it before then resets the count.
+func _purge_left_behind() -> void:
+	for instance_name: String in _sorted_names():
+		if _has_player(instances[instance_name]):
+			var _entered: bool = left_at.erase(instance_name)
+		elif not left_at.has(instance_name):
+			left_at[instance_name] = tick
+		elif instance_name != start_name and tick - left_at[instance_name] >= PURGE_TICKS:
+			var _dropped: bool = instances.erase(instance_name)
+			var _forgotten: bool = left_at.erase(instance_name)
+			generations[instance_name] = generation(instance_name) + 1
+			# Its region is arranged anew, so the layout is worked out again from it.
+			var _arranged: bool = _regions.erase(instance_name)
+			_offsets.clear()
+			_layout_problem = ""
 
 
 ## The player in `slot`, in whichever instance they are, or null.
@@ -205,31 +247,47 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	var _arrived: Entity = target.add_entity(taken.slot, arrival)
 
 
-## A fingerprint of every loaded instance, in name order, each with its name.
+## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
+## it, when it was left behind; then every purged blueprint's generation.
 func state_hash() -> int:
 	var result: int = _mix(2_166_136_261, tick)
 	for instance_name: String in _sorted_names():
 		result = _mix(result, name_code(instance_name))
 		result = _mix(result, instances[instance_name].state_hash())
+		if left_at.has(instance_name):
+			result = _mix(result, left_at[instance_name])
+	for purged: String in _sorted(generations.keys()):
+		result = _mix(_mix(result, name_code(purged)), generations[purged])
 	return result
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
 ## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
 ## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, every loaded instance
-## in name order with its state (GameState.to_data), the rules version it was played by and its
-## hash, which `from_data` checks. Regions aren't saved: no rule changes one while it's loaded,
+## in name order with its state (GameState.to_data) and the tick it was left behind (-1 while
+## someone is in it), every purged blueprint's generation, the rules version it was played by and
+## its hash, which `from_data` checks. Regions aren't saved: no rule changes one while it's loaded,
 ## so each is arranged again from its blueprint and seed.
 func to_data() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for instance_name: String in _sorted_names():
-		saved.append({ "name": instance_name, "state": instances[instance_name].to_data() })
+		saved.append(
+			{
+				"name": instance_name,
+				"state": instances[instance_name].to_data(),
+				"left_at": left_at.get(instance_name, -1),
+			},
+		)
+	var purged: Array[Dictionary] = []
+	for instance_name: String in _sorted(generations.keys()):
+		purged.append({ "name": instance_name, "generation": generations[instance_name] })
 	return {
 		"format": FORMAT,
 		"rules": Simulation.RULES_VERSION,
 		"seed": [(world_seed >> 32) & 0xffff_ffff, world_seed & 0xffff_ffff],
 		"start": start_name,
 		"tick": tick,
+		"generations": purged,
 		"instances": saved,
 		"hash": state_hash(),
 	}
@@ -255,6 +313,9 @@ static func from_data(data: Dictionary) -> World:
 	var world: World = World.new((halves[0] << 32) | halves[1], start, 0)
 	world.instances.clear()
 	world.tick = read.whole("tick", 0, DataReader.MOST)
+	# Generations first: they decide the seeds the instances are loaded with.
+	for entry: DataReader in read.entries("generations"):
+		world._load_generation(entry)
 	for entry: DataReader in read.entries("instances"):
 		world._load_instance(entry)
 	# The starting instance stays loaded: replays and the driver start from it.
@@ -278,6 +339,27 @@ func _load_instance(entry: DataReader) -> void:
 		return
 	loaded.load_data(entry.read("state"))
 	instances[instance_name] = loaded
+	# Left behind exactly when nobody is in it, and not so long ago that a step would have purged
+	# it.
+	var left: int = entry.whole("left_at", -1, tick)
+	if _has_player(loaded) != (left < 0):
+		entry.fail("instance %s's left_at %d doesn't fit who is in it" % [instance_name, left])
+	elif left >= 0 and instance_name != start_name and tick - left >= PURGE_TICKS:
+		entry.fail("instance %s was left behind long enough to be purged" % instance_name)
+	elif left >= 0:
+		left_at[instance_name] = left
+
+
+## Restores the generation of the purged blueprint `entry` names; the starting instance is never
+## purged. An instance is purged at most once per PURGE_TICKS, which also keeps `seed_for`'s draws
+## few.
+func _load_generation(entry: DataReader) -> void:
+	var instance_name: String = entry.text("name")
+	var known: bool = InstanceBlueprints.exists(instance_name) and instance_name != start_name
+	if not known or generations.has(instance_name):
+		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
+		return
+	generations[instance_name] = entry.whole("generation", 1, Fixed.div_floor(tick, PURGE_TICKS))
 
 
 ## An empty world refused for `why`.
@@ -296,8 +378,12 @@ static func name_code(instance_name: String) -> int:
 
 
 func _sorted_names() -> Array[String]:
+	return _sorted(instances.keys())
+
+
+static func _sorted(keys: Array) -> Array[String]:
 	var names: Array[String] = []
-	names.assign(instances.keys())
+	names.assign(keys)
 	names.sort()
 	return names
 

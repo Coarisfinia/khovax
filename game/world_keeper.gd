@@ -18,9 +18,8 @@ static var default_path: String = WorldSave.PATH
 
 ## Where this keeper keeps the world, or "" for `default_path`; tests point it elsewhere.
 var save_path: String = ""
-## What this machine's player has explored in `_explored_world`, per instance by blueprint name:
-## the tiles seen there (`explored_in`).
-var explored: Dictionary[String, Dictionary] = {}
+## What this machine's player has explored in `_explored_world` (`explored_in`).
+var explored: ExploredGround = ExploredGround.new()
 var _explored_world: World = null
 ## The world last saved and its tick then, so a world that hasn't moved isn't saved again.
 var _saved_world: World = null
@@ -42,7 +41,7 @@ func _notification(what: int) -> void:
 ## or the save is refused. A refused save is warned about; the fresh world's saves replace it.
 func saved_world() -> World:
 	# Nothing explored is kept unless the saved world is resumed.
-	explored = {}
+	explored = ExploredGround.new()
 	_explored_world = null
 	if path().is_empty():
 		return null
@@ -57,15 +56,17 @@ func saved_world() -> World:
 		var problem: String = WorldSave.load_explored(path(), explored)
 		if not problem.is_empty():
 			push_warning("the explored ground can't be read, so none is remembered: " + problem)
+		# What was seen in an instance purged since won't fit its ground when it comes back.
+		explored.forget_purged(saved)
 	return saved
 
 
 ## The ground explored in `world`, to remember into: what was saved with it when it's the world
 ## resumed, and nothing yet in any other (a fresh one, or one started as the saved one was refused).
-func explored_in(world: World) -> Dictionary[String, Dictionary]:
+func explored_in(world: World) -> ExploredGround:
 	if world != _explored_world:
 		_explored_world = world
-		explored = {}
+		explored = ExploredGround.new()
 	return explored
 
 
