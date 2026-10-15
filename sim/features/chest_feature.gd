@@ -57,6 +57,25 @@ func hash_values() -> Array[int]:
 	return values
 
 
+## The chests still closed, in their order, and the stream's state.
+func save_values() -> Dictionary:
+	return { "chests": DataReader.flat(chests), "rng": _rng.hash_values() }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	var closed: Array[Vector2i] = values.tiles("chests", state.region)
+	for chest: Vector2i in closed:
+		if not state.region.chests.has(chest) or closed.count(chest) > 1:
+			values.fail("a saved chest on %s isn't one of the region's" % chest)
+			return
+	chests = closed
+	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
+	if restored == null:
+		values.fail("the chests' random stream isn't four 32-bit words, not all zero")
+		return
+	_rng = restored
+
+
 ## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event.
 func _open(state: GameState, tile: Vector2i, opener_id: int) -> ChestOpened:
 	return ChestOpened.new(tile, opener_id, _roll_for_players(state))

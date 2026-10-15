@@ -77,6 +77,35 @@ func hash_values() -> Array[int]:
 	return values
 
 
+## Where each player's sight was worked out from, by slot, and the revealed tiles. The visible
+## tiles follow from where they were seen from, so they're worked out again on loading.
+func save_values() -> Dictionary:
+	var seen: Array[int] = []
+	for slot: int in GameState.MAX_PLAYERS:
+		if _seen_from.has(slot):
+			seen.append_array([slot, _seen_from[slot].x, _seen_from[slot].y])
+	return { "seen_from": seen, "revealed": DataReader.flat(revealed) }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	visible.clear()
+	_seen_from.clear()
+	var seen: Array[int] = values.wholes("seen_from", -DataReader.MOST, DataReader.MOST)
+	if seen.size() % 3 != 0:
+		values.fail("a player's sight is cut off")
+		return
+	for i: int in range(0, seen.size(), 3):
+		var slot: int = seen[i]
+		var from: Vector2i = Vector2i(seen[i + 1], seen[i + 2])
+		if state.player(slot) == null or _seen_from.has(slot) or not state.region.has_tile(from):
+			values.fail("the sight of slot %d isn't of one player in the region" % slot)
+			return
+		_seen_from[slot] = from
+		visible[slot] = sight(state.region, from, SIGHT_RADIUS)
+	revealed = values.tiles("revealed", state.region)
+	revealed.sort()
+
+
 ## Works out again the sight of every player who moved; players who left lose theirs.
 func _update(state: GameState) -> void:
 	for slot: int in GameState.MAX_PLAYERS:

@@ -14,6 +14,9 @@ const FLOW: String = "res://tests/apk/apk_flow.gd"
 func _ready() -> void:
 	if not OS.has_feature(TEST_BUILD):
 		return
+	# The flow plays a fresh world from a fixed seed: it never resumes or overwrites a saved one.
+	# Autoloads are ready before the main scene, so its keeper never sees the default.
+	WorldKeeper.default_path = ""
 	if not ResourceLoader.exists(FLOW):
 		_report("this build has no device test flow")
 		return

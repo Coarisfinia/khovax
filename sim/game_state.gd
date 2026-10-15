@@ -112,6 +112,75 @@ func set_enabled(id: int, on: bool) -> void:
 		target.enabled = on
 
 
+## The instance's state as save data (#119): its tick, its entities as id, slot, q and r in id
+## order, the next entity id, and each feature's id, on/off and state, in order. The seed and the
+## region follow from the world's seed and the blueprint, so they aren't saved.
+func to_data() -> Dictionary:
+	var flat: Array[int] = []
+	for each: Entity in entities:
+		flat.append_array([each.id, each.slot, each.tile.x, each.tile.y])
+	var saved: Array[Dictionary] = []
+	for each: Feature in features:
+		saved.append({
+			"id": each.id(),
+			"enabled": 1 if each.enabled else 0,
+			"values": each.save_values(),
+		})
+	return {
+		"tick": tick,
+		"next_entity_id": next_entity_id,
+		"entities": flat,
+		"features": saved,
+	}
+
+
+## Restores what `to_data` saved into this state, freshly loaded from the same blueprint and seed:
+## its tick and entities, then each feature's state. Bad data is reported to `data`.
+func load_data(data: DataReader) -> void:
+	tick = data.whole("tick", 0, DataReader.MOST)
+	next_entity_id = data.whole("next_entity_id", 1, DataReader.MOST)
+	var flat: Array[int] = data.wholes("entities", -DataReader.MOST, DataReader.MOST)
+	if flat.size() % 4 != 0:
+		data.fail("an entity is cut off")
+		return
+	entities.clear()
+	for i: int in range(0, flat.size(), 4):
+		var problem_here: String = _entity_problem(flat[i], flat[i + 1], flat[i + 2], flat[i + 3])
+		if not problem_here.is_empty():
+			data.fail(problem_here)
+			return
+		entities.append(_restored(flat[i], flat[i + 1], Vector2i(flat[i + 2], flat[i + 3])))
+	var saved: Array[DataReader] = data.entries("features")
+	if saved.size() != features.size():
+		data.fail("the instance has %d features, the save %d" % [features.size(), saved.size()])
+		return
+	for i: int in features.size():
+		if saved[i].whole("id", 0, DataReader.MOST) != features[i].id():
+			data.fail("the instance's features are in another order than the save's")
+			return
+		features[i].enabled = saved[i].whole("enabled", 0, 1) == 1
+		features[i].load_values(self, saved[i].read("values"))
+
+
+## Why an entity with these values can't follow the ones restored so far, or "": ids grow and
+## stay below the next id, a slot has one entity at most, and it stands on the region.
+func _entity_problem(id: int, slot: int, q: int, r: int) -> String:
+	var last: int = entities[entities.size() - 1].id if not entities.is_empty() else 0
+	if id <= last or id >= next_entity_id:
+		return "entity %d is out of order or not below the next id" % id
+	if (slot < Entity.NO_SLOT
+			or slot >= MAX_PLAYERS
+			or (slot != Entity.NO_SLOT and player(slot) != null)):
+		return "entity %d is of slot %d, which is invalid or taken" % [id, slot]
+	if not region.has_tile(Vector2i(q, r)):
+		return "entity %d stands off the region" % id
+	return ""
+
+
+static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
+	return Entity.new(id, slot, tile)
+
+
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
 ## every core value, the region, every entity in id order and, in order, every feature's id, on/off

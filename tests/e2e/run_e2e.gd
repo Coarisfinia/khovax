@@ -19,6 +19,9 @@ var _current: String = ""
 
 func _initialize() -> void:
 	OS.add_logger(_errors)
+	# The flows never resume or overwrite a world on this device's disk; the resume flow points its
+	# keeper at a test file of its own.
+	WorldKeeper.default_path = ""
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
 	var tests: Array[String] = []
@@ -76,9 +79,19 @@ func _run_test(file: String) -> String:
 	await process_frame
 
 	var new_errors: int = _errors.count - errors_before
+	var missing: Array[String] = _errors.expected.duplicate()
+	_errors.expected.clear()
 	if message.is_empty() and new_errors > 0:
-		return "%d error(s) logged during the test" % new_errors
+		message = "%d error(s) logged during the test" % new_errors
+	elif message.is_empty() and not missing.is_empty():
+		message = "expected warnings never came: %s" % [missing]
 	return message
+
+
+## Lets the running flow expect a warning containing `fragment` (ErrorCounter.expect): it then
+## doesn't fail the flow, and the flow fails if it never comes. Flows call it through their tree.
+func expect_warning(fragment: String) -> void:
+	_errors.expect(fragment)
 
 
 func _on_timeout(file: String) -> void:
