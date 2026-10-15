@@ -121,7 +121,8 @@ background; only wait in the foreground for a result the very next step needs.
   that never shows a window (owner's rule: the owner works on the same PC, and off-screen
   positions get clamped onto a second monitor): it sets `root.mode = Window.MODE_MINIMIZED`, runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
-  `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Publish it on
+  `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Run it with
+  `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead.
