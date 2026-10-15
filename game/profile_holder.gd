@@ -7,7 +7,8 @@ extends Node
 ## their own profiles on their own machines (#74). A save that can't be read is reported and left
 ## alone, never overwritten.
 
-@export var driver: GameDriver
+## Where this machine's player's catches and finds come from (#184).
+@export var bus: EventBus
 ## Whose catches are this machine's player's.
 @export var input: LocalInput
 
@@ -28,7 +29,8 @@ func _ready() -> void:
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
-	var _connected: int = driver.ticked.connect(_on_ticked)
+	bus.subscribe(&"WildMonsterCaught", _on_event)
+	bus.subscribe(&"ChestOpened", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -40,16 +42,17 @@ func _notification(what: int) -> void:
 	var leaving: bool = what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE
 	var backgrounded: bool = what == NOTIFICATION_APPLICATION_PAUSED
 	if keeper != null and (leaving or backgrounded):
+		# Events still queued would otherwise be lost with the game.
+		bus.flush()
 		_report(keeper.flush())
 
 
-func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+func _on_event(event: RefCounted) -> void:
 	if keeper == null:
 		return
-	for event: RefCounted in events:
-		var gain: Gain = _gain_of(event)
-		if gain != null:
-			_report(keeper.take(gain, Time.get_ticks_msec()))
+	var gain: Gain = _gain_of(event)
+	if gain != null:
+		_report(keeper.take(gain, Time.get_ticks_msec()))
 
 
 ## What this machine's player gains from `event`, or null when it isn't theirs: their catch, or
@@ -58,8 +61,7 @@ func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterCaught:
 		var caught: WildMonsterCaught = event as WildMonsterCaught
-		var catcher: Entity = driver.state.entity(caught.catcher_id)
-		if catcher != null and catcher.slot == input.slot:
+		if caught.catcher_slot == input.slot:
 			gain.caught_species.append(caught.species)
 	elif event is ChestOpened:
 		var loot: Dictionary = (event as ChestOpened).loot.get(input.slot, {})
