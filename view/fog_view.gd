@@ -7,7 +7,7 @@ extends Node
 ## sickness). Wild monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
 ## It only reads the state: what was seen before is remembered here, per machine and per instance
 ## (#190), so coming back to an instance, or looking at one next door (NeighbourView), shows the
-## ground explored there under light fog.
+## ground explored there under light fog. The keeper saves it with the world (#215).
 
 ## How bright a tile is drawn: seen now, seen before, never seen.
 const VISIBLE: float = 1.0
@@ -18,12 +18,14 @@ const EASE_PER_SECOND: float = 1.5
 
 @export var driver: GameDriver
 @export var cloud: FogCloud
+## Keeps what was seen with the world, so it lasts beyond the session; none in tests that build a
+## fog view alone, which then remembers for the session only.
+@export var keeper: WorldKeeper
 
 ## Each tile's brightness as drawn now.
 var brightness: Dictionary[Vector2i, float] = {}
 ## Every tile an ally has seen, per instance by blueprint name, in the world shown. It's what this
-## machine's player has seen, kept for the session only: saving it comes with the world's
-## persistence (#119).
+## machine's player has seen, not the world's state: the keeper's `explored_in`.
 var _seen_in: Dictionary[String, Dictionary] = {}
 ## Every tile an ally has seen in the instance shown: its entry in `_seen_in`.
 var _seen: Dictionary[Vector2i, bool] = {}
@@ -46,9 +48,9 @@ func show_state(delta: float) -> void:
 		cloud.show_fog(null, brightness)
 		return
 	if driver.world != _world:
-		# A new world: nothing in it has been seen yet.
+		# Another world: what was seen in it before, saved with it if it was resumed.
 		_world = driver.world
-		_seen_in.clear()
+		_seen_in = _explored_in(_world)
 		_region = null
 	if driver.state.region != _region:
 		_switch_to(driver.state)
@@ -58,6 +60,14 @@ func show_state(delta: float) -> void:
 		brightness[tile] = move_toward(now, target, EASE_PER_SECOND * delta)
 	_remember_next_door()
 	cloud.show_fog(_region, brightness)
+
+
+## What was seen in `world` before: the keeper's, or nothing yet without one.
+func _explored_in(world: World) -> Dictionary[String, Dictionary]:
+	if keeper != null:
+		return keeper.explored_in(world)
+	var fresh: Dictionary[String, Dictionary] = {}
+	return fresh
 
 
 ## Starts drawing the instance `state`, with what was seen in it before.
