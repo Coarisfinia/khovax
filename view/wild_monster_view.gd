@@ -1,73 +1,65 @@
 class_name WildMonsterView
 extends Node3D
-## The wild monsters' look (#19): for now a ball for each, resting on its tile, its color standing
-## out from the tiles, the trail and the players (and it's round, so it doesn't rely on color
-## alone). It follows the wild monster feature's state: a ball appears for each wild monster and,
-## when it goes (caught, #20), shrinks away calmly: no flash, no shake. It only reads the state.
+## The wild monsters' look (#19): for now a placeholder figure for each (#85), standing on its tile
+## and idling, its shape standing out from the players' (so it doesn't rely on color alone). It
+## follows the wild monster feature's state: a figure appears for each wild monster and, when it
+## goes (caught, #20), shrinks away calmly: no flash, no shake. It only reads the state.
 
-## The ball's radius, in world units.
-const RADIUS: float = 0.4
-## How long a ball takes to shrink away once its wild monster is gone.
+## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
+## The placeholder model every wild monster wears until species get their own looks.
+const MODEL: PackedScene = preload("res://assets/kaykit-skeletons/Skeleton_Minion.glb")
+const IDLE: StringName = &"Idle"
 
 @export var driver: GameDriver
-@export var ball_color: Color = Color(0.62, 0.32, 0.8)
 
-## The ball shown for each wild monster, by entity id.
-var balls: Dictionary[int, HexPiece] = {}
-var _mesh: SphereMesh
-
-
-func _ready() -> void:
-	_mesh = SphereMesh.new()
-	_mesh.radius = RADIUS
-	_mesh.height = RADIUS * 2.0
-	var material: StandardMaterial3D = StandardMaterial3D.new()
-	material.albedo_color = ball_color
-	Toon.apply(material)
-	_mesh.material = material
+## The figure shown for each wild monster, by entity id: a piece on the tile holding the model.
+var figures: Dictionary[int, HexPiece] = {}
 
 
 func _process(_delta: float) -> void:
 	show_state()
 
 
-## Matches the balls to the current state. Called every frame; tests call it after stepping.
+## Matches the figures to the current state. Called every frame; tests call it after stepping.
 func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
-	# An instance without wild monsters shows no balls.
+	# An instance without wild monsters shows no figures.
 	var shown: Array[int] = []
 	if feature != null:
 		shown = feature.monsters
-	for entity_id: int in balls.keys():
+	for entity_id: int in figures.keys():
 		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
-			_fade_out(balls[entity_id])
-			var _dropped: bool = balls.erase(entity_id)
+			_fade_out(figures[entity_id])
+			var _dropped: bool = figures.erase(entity_id)
 	for entity_id: int in shown:
 		if driver.state.entity(entity_id) == null:
 			continue
-		if not balls.has(entity_id):
-			balls[entity_id] = _add_ball()
-		balls[entity_id].tile = driver.state.entity(entity_id).tile
+		if not figures.has(entity_id):
+			figures[entity_id] = _add_figure()
+		figures[entity_id].tile = driver.state.entity(entity_id).tile
 
 
-## Shrinks a ball away and frees it.
-func _fade_out(ball: HexPiece) -> void:
+## Shrinks a figure away and frees it.
+func _fade_out(figure: HexPiece) -> void:
 	var tween: Tween = create_tween()
-	var _shrink: PropertyTweener = tween.tween_property(ball, "scale", Vector3.ZERO, FADE_SECONDS)
-	var _free: CallbackTweener = tween.tween_callback(ball.queue_free)
+	var _shrink: PropertyTweener = tween.tween_property(figure, "scale", Vector3.ZERO, FADE_SECONDS)
+	var _free: CallbackTweener = tween.tween_callback(figure.queue_free)
 
 
-## A new ball, standing on its tile once it's given one.
-func _add_ball() -> HexPiece:
+## A new figure, standing on its tile once it's given one, in the comic look and idling.
+func _add_figure() -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
-	piece.base_offset = RADIUS
-	var ball: MeshInstance3D = MeshInstance3D.new()
-	ball.mesh = _mesh
-	piece.add_child(ball)
+	piece.base_offset = 0.0
+	var model: Node3D = MODEL.instantiate() as Node3D
+	Toon.apply_to_model(model)
+	piece.add_child(model)
 	add_child(piece)
+	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
+	if animations != null and animations.has_animation(IDLE):
+		animations.play(IDLE)
 	return piece

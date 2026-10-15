@@ -1,6 +1,6 @@
 class_name Entity
 extends RefCounted
-## Something in the world with a stable id: the players now, later the ball, monsters and totems.
+## Something in the world with a stable id: the players, wild monsters and later totems.
 ## The core keeps only what every entity has (its id, its owner and its tile); features keep their
 ## own data per entity id, like components (e.g. MovementFeature's walks).
 

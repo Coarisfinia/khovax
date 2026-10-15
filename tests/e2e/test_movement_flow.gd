@@ -2,7 +2,7 @@ extends RefCounted
 ## Movement flow, through every layer: keys, the touch stick and a gamepad press the movement
 ## actions, the local input turns them into commands, the simulation walks the player from tile to
 ## tile along a known path, zigzagging along a column for straight up and stopping at the grid's
-## edge and at a wild monster's ball, and the view glides the player between tiles without jumps.
+## edge and at a wild monster, and the view glides the player between tiles without jumps.
 ## Real key and touch events reach the actions too. Time is stepped by hand, so the flow is
 ## deterministic.
 
@@ -92,7 +92,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_paths()
 	if result.is_empty():
-		result = _check_blocked_by_ball()
+		result = _check_blocked_by_wild_monster()
 	if result.is_empty():
 		result = _check_stick_walk()
 	_release_all()
@@ -185,7 +185,8 @@ func _button_reaches(index: JoyButton, action: String) -> bool:
 
 
 ## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from
-## (-1, 0), next to the ball, the player runs along the row to the grid's edge; letting go stops it.
+## (-1, 0), next to the wild monster, the player runs along the row to the grid's edge; letting go
+## stops it.
 func _check_stick_walk() -> String:
 	_send_stick(Vector2(0.15, 0.0))
 	var drift: String = _hold([], _send_stick.bind(Vector2.ZERO))
@@ -544,9 +545,9 @@ func _step() -> void:
 	_player_view.turn(STEP)
 
 
-## A wild monster's ball blocks the way (#19): walking left along its row from (0, 0) stops on
-## (-1, 0), next to the ball on (-2, 0), however long the key is held.
-func _check_blocked_by_ball() -> String:
+## A wild monster blocks the way (#19): walking left along its row from (0, 0) stops on
+## (-1, 0), next to the wild monster on (-2, 0), however long the key is held.
+func _check_blocked_by_wild_monster() -> String:
 	var player: Entity = _driver.state.player(0)
 	player.tile = Vector2i.ZERO
 	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
@@ -557,7 +558,7 @@ func _check_blocked_by_ball() -> String:
 	_walked = trails.trail(player.id).tiles.duplicate()
 	var result: String = _walk(["move_left"], [Vector2i(-1, 0)])
 	if not result.is_empty():
-		return "walking toward the ball: " + result
+		return "walking toward the wild monster: " + result
 	return ""
 
 
