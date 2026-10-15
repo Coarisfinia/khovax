@@ -3,14 +3,17 @@ extends Feature
 ## Fog of war (#65): every tick, each player sees the tiles within their sight radius that a
 ## straight line reaches from where they stand without passing over rock. Water doesn't block
 ## sight, and the rock itself is seen. Visibility is simulation state (owner, #65): it's in the
-## state hash, the same on every machine, and rules or region features can change it later. How it
-## is drawn (remembered tiles, allies' sight, monsters in fog) is the view's, still to decide.
+## state hash, the same on every machine. An instance's scripted event can reveal an area (#177):
+## its tiles count as seen before for every player, also in the state hash. How it is drawn
+## (remembered tiles, allies' sight, monsters in fog) is FogView's.
 
 ## How far every player sees, in steps, until traits from captured monsters change it (#65).
 const SIGHT_RADIUS: int = 5
 
 ## Each player's visible tiles, by slot, in a fixed order (Hex.disc's).
 var visible: Dictionary[int, Array] = {}
+## Tiles an event revealed to every player, sorted, each once (#177).
+var revealed: Array[Vector2i] = []
 ## Where each player stood when their sight was last worked out, by slot.
 var _seen_from: Dictionary[int, Vector2i] = {}
 
@@ -43,6 +46,15 @@ func entity_removed(state: GameState, _removed_id: int) -> void:
 	_update(state)
 
 
+## Reveals `tiles` of the region to every player: from now on they count as seen before. Only an
+## instance's rules call it, inside a tick (#30), so every machine reveals the same.
+func reveal(state: GameState, tiles: Array[Vector2i]) -> void:
+	for tile: Vector2i in tiles:
+		if state.region.has_tile(tile) and not revealed.has(tile):
+			revealed.append(tile)
+	revealed.sort()
+
+
 ## Whether the player in `slot` sees `tile`.
 func sees(slot: int, tile: Vector2i) -> bool:
 	return visible.has(slot) and visible[slot].has(tile)
@@ -54,6 +66,12 @@ func hash_values() -> Array[int]:
 		var tiles: Array = visible.get(slot, [])
 		values.append(tiles.size())
 		for tile: Vector2i in tiles:
+			values.append(tile.x)
+			values.append(tile.y)
+	# Only once something is revealed, so the hash of every run without a reveal stays as it was.
+	if not revealed.is_empty():
+		values.append(revealed.size())
+		for tile: Vector2i in revealed:
 			values.append(tile.x)
 			values.append(tile.y)
 	return values
