@@ -1,7 +1,9 @@
 class_name Replay
 extends RefCounted
 ## A recorded run: how it started and every tick's commands for every player, enough to play it
-## again and end in exactly the same state (#35). The driver records every run; golden replays in
+## again and end in exactly the same state (#35). A run is a world (#158): it starts in one
+## instance and steps every instance a player walks into. The driver records every run; golden
+## replays in
 ## tests/replays/ are played by CI. Saved as JSON text, with the seed and the hashes as strings,
 ## since JSON numbers can't hold every 64-bit integer exactly.
 
@@ -24,12 +26,12 @@ var ticks: int = 0
 ## Every change of a slot's command, STRIDE integers each, in tick and slot order. A slot keeps its
 ## last command until it changes, so standing still or holding a direction costs nothing.
 var changes: Array[int] = []
-## The state hash at checkpoint ticks, by tick.
+## The world's hash at checkpoint ticks, by tick.
 var checkpoints: Dictionary[int, int] = {}
 ## Why the replay can't be read or played, or "" when it can.
 var problem: String = ""
-## The state at the end of the last play() or rehash().
-var played: GameState
+## The world at the end of the last play() or rehash().
+var played: World
 ## Each slot's last recorded command values, while recording.
 var _last: Dictionary[int, Array] = {}
 
@@ -40,8 +42,10 @@ func _init(instance_name: String = "", seed_number: int = 0) -> void:
 	seed_value = seed_number
 
 
-## Starts recording from `state`, the run's starting state: its players and features.
-func begin(state: GameState) -> void:
+## Starts recording from `world`, the run at its start: its starting instance's players and
+## features.
+func begin(world: World) -> void:
+	var state: GameState = world.instances[instance]
 	features = _feature_ids(state)
 	players = 0
 	for each: Entity in state.entities:
@@ -49,9 +53,9 @@ func begin(state: GameState) -> void:
 			players += 1
 
 
-## Records one tick, right after it ran with `commands`.
-func record(state: GameState, commands: Array[Command]) -> void:
-	ticks = state.tick
+## Records one tick, right after `world` ran it with `commands`.
+func record(world: World, commands: Array[Command]) -> void:
+	ticks = world.tick
 	var idle: Command = Command.new()
 	for slot: int in players:
 		var command: Command = Command.of(commands, slot)
@@ -65,12 +69,12 @@ func record(state: GameState, commands: Array[Command]) -> void:
 			changes.append(slot)
 			changes.append_array(values)
 	if ticks % CHECKPOINT_TICKS == 0:
-		checkpoints[ticks] = state.state_hash()
+		checkpoints[ticks] = world.state_hash()
 
 
-## Ends recording: the final state's hash becomes the last checkpoint.
-func finish(state: GameState) -> void:
-	checkpoints[state.tick] = state.state_hash()
+## Ends recording: the world's final hash becomes the last checkpoint.
+func finish(world: World) -> void:
+	checkpoints[world.tick] = world.state_hash()
 
 
 ## Plays the replay from its start, as fast as possible, and checks every checkpoint. Returns why
@@ -105,7 +109,7 @@ func rehash() -> String:
 		problem = "the replay couldn't be played under the current rules"
 	if problem.is_empty():
 		rules = Simulation.RULES_VERSION
-		features = _feature_ids(played)
+		features = _feature_ids(played.instances[instance])
 	return problem
 
 
@@ -225,12 +229,12 @@ func _setup_problem() -> String:
 ## Steps through every tick with the recorded commands. With `check`, compares the checkpoints
 ## and returns the first mismatch; without, records new ones.
 func _run(check: bool) -> String:
-	played = InstanceBlueprints.create(instance, seed_value, players)
-	if check and _feature_ids(played) != features:
-		return "the instance's features are now %s, recorded with %s" % [
-			_feature_ids(played),
-			features,
-		]
+	played = World.new(seed_value, instance, players)
+	if not played.problem.is_empty():
+		return played.problem
+	var start: Array[int] = _feature_ids(played.instances[instance])
+	if check and start != features:
+		return "the instance's features are now %s, recorded with %s" % [start, features]
 	# Every slot starts idle; a recorded change replaces its command rather than changing it.
 	var idle: Command = Command.new()
 	var commands: Array[Command] = []
@@ -243,14 +247,14 @@ func _run(check: bool) -> String:
 			values.assign(changes.slice(next + 2, next + STRIDE))
 			commands[changes[next + 1]] = Command.from_values(values)
 			next += STRIDE
-		Simulation.step(played, commands)
+		played.step(commands)
 		var mismatch: String = _checkpoint(check)
 		if not mismatch.is_empty():
 			return mismatch
 	return ""
 
 
-## Compares or records the checkpoint at the played state's tick, if there is one.
+## Compares or records the checkpoint at the played world's tick, if there is one.
 func _checkpoint(check: bool) -> String:
 	var tick: int = played.tick
 	var current: int = played.state_hash()
