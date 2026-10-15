@@ -339,20 +339,27 @@ func _load_instance(entry: DataReader) -> void:
 		return
 	loaded.load_data(entry.read("state"))
 	instances[instance_name] = loaded
+	# Left behind exactly when nobody is in it, and not so long ago that a step would have purged
+	# it.
 	var left: int = entry.whole("left_at", -1, tick)
-	if left >= 0:
+	if _has_player(loaded) != (left < 0):
+		entry.fail("instance %s's left_at %d doesn't fit who is in it" % [instance_name, left])
+	elif left >= 0 and instance_name != start_name and tick - left >= PURGE_TICKS:
+		entry.fail("instance %s was left behind long enough to be purged" % instance_name)
+	elif left >= 0:
 		left_at[instance_name] = left
 
 
-## Restores the generation of the purged blueprint `entry` names. An instance is purged at most
-## once per PURGE_TICKS, which also keeps `seed_for`'s draws few.
+## Restores the generation of the purged blueprint `entry` names; the starting instance is never
+## purged. An instance is purged at most once per PURGE_TICKS, which also keeps `seed_for`'s draws
+## few.
 func _load_generation(entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
-	var purges: int = entry.whole("generation", 1, Fixed.div_floor(tick, PURGE_TICKS))
-	if not InstanceBlueprints.exists(instance_name) or generations.has(instance_name):
-		entry.fail("purged instance %s doesn't exist or is saved twice" % instance_name)
+	var known: bool = InstanceBlueprints.exists(instance_name) and instance_name != start_name
+	if not known or generations.has(instance_name):
+		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return
-	generations[instance_name] = purges
+	generations[instance_name] = entry.whole("generation", 1, Fixed.div_floor(tick, PURGE_TICKS))
 
 
 ## An empty world refused for `why`.

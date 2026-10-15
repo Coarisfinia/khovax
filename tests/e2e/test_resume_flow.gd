@@ -112,7 +112,9 @@ func _check_round_trip(world: World) -> String:
 
 
 ## Save data the build can't go on from is refused whole: another format, other rules, a seed or
-## tile tampered with (the hash notices), numbers that aren't whole, and text that isn't a world.
+## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
+## purging that doesn't add up (#212): the starting instance purged, an instance left behind while
+## someone is in it or not left behind while nobody is, or one left long enough to be purged.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
@@ -129,12 +131,40 @@ func _check_refused(world: World) -> String:
 		_changed(_fresh_data(), "start", InstanceBlueprints.GLADE): "the starting instance",
 		"not a world": "not a world save",
 		"{}": "format isn't",
+		_changed(data, "generations", [{ "name": "basic", "generation": 1 }]): "purged instance",
+		_with_left_at(data, InstanceBlueprints.GLADE, 0): "instance glade's left_at",
+		_with_left_at(data, InstanceBlueprints.BASIC, -1): "instance basic's left_at",
+		_expired(): "instance glade was left behind long enough",
 	}
 	for case: String in cases:
 		var problem: String = WorldSave.parse(case).problem
 		if problem.is_empty() or not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
+
+
+## `data` as text, with the saved instance `instance_name` left behind at `left`.
+static func _with_left_at(data: Dictionary, instance_name: String, left: int) -> String:
+	var changed: Dictionary = data.duplicate(true)
+	for entry: Dictionary in changed["instances"]:
+		if entry["name"] == instance_name:
+			entry["left_at"] = left
+	return JSON.stringify(changed)
+
+
+## A world's data whose glade, left behind, is saved PURGE_TICKS later without being purged.
+func _expired() -> String:
+	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
+	for direction: int in [EAST, 1, EAST, 3]:
+		world.step(_commands(direction))
+		for _tick: int in MovementFeature.MOVE_TICKS + 1:
+			world.step(_commands(Command.NO_MOVE))
+	var data: Dictionary = world.to_data()
+	return _changed(
+		data,
+		"tick",
+		world.left_at.get(InstanceBlueprints.GLADE, 0) + World.PURGE_TICKS,
+	)
 
 
 ## A fresh world's data, with only its starting instance loaded.
