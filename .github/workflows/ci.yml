@@ -373,7 +373,11 @@ jobs:
           path: build
 
       - name: "🐧 Linux test build: run the e2e flow under a virtual display"
+        # The game's exit code and its result line both have to say pass.
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
+          set -o pipefail
           chmod +x build/khovax-test.x86_64
           timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" build/khovax-test.x86_64 | tee linux-e2e.log
           grep -qx "KHOVAX_E2E: PASS" linux-e2e.log
