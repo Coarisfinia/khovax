@@ -2,7 +2,8 @@ class_name Region
 extends RefCounted
 ## An instance's region (#36): which tiles exist, each one's terrain as a small integer, and where
 ## the players start. Rules ask the region, never the distance from the origin, so a region can have
-## any shape. Regions are hand-made text files (regions/*.region, read with `parse`).
+## any shape. Regions are hand-made Markdown files (regions/*.md, read by RegionDocument into the
+## compact form `parse` reads, #145).
 
 const GROUND: int = 0
 const WATER: int = 1

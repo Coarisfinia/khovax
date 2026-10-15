@@ -198,11 +198,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   that isn't a player blocks walkers, players pass through each other) and where treasure chests
   stand (`ChestFeature`, #124, in blueprints with an instance loot table). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
-  A region is a hand-made text file in `regions/` (format in `Region.parse`), or arranged from
+  A region is a hand-made Markdown file in `regions/` (a title, prose, the tiles in a code block and
+  a legend explaining every symbol; format in `RegionDocument`, #145), or arranged from
   hand-made region pieces in `regions/<blueprint>/` by `RegionArranger`: the seed fits them together
   at their connectors and turns the whole region (#57), from its own random stream, unless the
   blueprint keeps its layout (`InstanceBlueprints.UNTURNED`, e.g. a boss arena, #127). The region is
-  in the state hash; its connectors are used up by arranging. **Exits** (`exit` lines, #140) lead
+  in the state hash; its connectors are used up by arranging. **Exits** (#140) lead
   to another blueprint, which has the way back on the opposite side (`exit_problem`); every instance
   in that web is unturned, so an exit always leads out the same way (#120).
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
