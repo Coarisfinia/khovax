@@ -49,6 +49,7 @@ func run(main: Node, tree: SceneTree) -> String:
 	var origin: Vector2 = main.get_viewport().get_visible_rect().size / 2.0
 	driver.set_process(false)
 	driver.start(SEED)
+	_visited.clear()
 	var start: Vector2i = driver.state.player(0).tile
 	var camera_before: Vector3 = camera.global_position
 	_touch(origin, true)
