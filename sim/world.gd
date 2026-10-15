@@ -4,7 +4,8 @@ extends RefCounted
 ## its own. Each tick it steps every instance a player is in, in name order, and leaves the others
 ## loaded but still (until #119 purges them). Every instance's seed comes from the run's seed and
 ## its name, so the same run loads the same instance the same way however and whenever it's
-## reached. Deterministic, like everything in sim/.
+## reached. Players walk from one instance into the next through exits (#154). Deterministic, like
+## everything in sim/.
 
 ## The run's seed, which every instance's own seed is drawn from.
 var run_seed: int = 0
@@ -50,10 +51,57 @@ func active() -> Array[String]:
 	return names
 
 
-## Advances every instance a player is in by one tick, with the tick's commands by slot.
+## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
+## every player who walked out through an exit into the instance it leads to (#154). Moving them
+## only after every instance has stepped means no one steps twice in a tick.
 func step(commands: Array[Command]) -> void:
+	var leaving: Array[Array] = []
 	for instance_name: String in active():
-		Simulation.step(instances[instance_name], commands)
+		var state: GameState = instances[instance_name]
+		Simulation.step(state, commands)
+		for event: RefCounted in state.events:
+			if event is ExitTaken:
+				leaving.append([instance_name, event])
+	for move: Array in leaving:
+		var from: String = move[0]
+		var taken: ExitTaken = move[1]
+		_walk_through(from, taken)
+
+
+## The player in `slot`, in whichever instance they are, or null.
+func player(slot: int) -> Entity:
+	for instance_name: String in _sorted_names():
+		var found: Entity = instances[instance_name].player(slot)
+		if found != null:
+			return found
+	return null
+
+
+## The name of the instance the player in `slot` is in, or "".
+func instance_of(slot: int) -> String:
+	for instance_name: String in _sorted_names():
+		if instances[instance_name].player(slot) != null:
+			return instance_name
+	return ""
+
+
+## Moves the player who took `taken` in `from` into the instance it leads to, onto the exit there
+## that leads back: an east exit arrives from the west. They stay if that instance can't load or
+## has no way back.
+func _walk_through(from: String, taken: ExitTaken) -> void:
+	var target: GameState = instance(taken.target)
+	if target == null:
+		return
+	var arrival: Vector2i = Vector2i.ZERO
+	var found: bool = false
+	for i: int in target.region.exits.size():
+		if target.region.exit_blueprints[i] == from and not found:
+			arrival = Vector2i(target.region.exits[i].x, target.region.exits[i].y)
+			found = true
+	if not found:
+		return
+	instances[from].remove_entity(taken.entity_id)
+	var _arrived: Entity = target.add_entity(taken.slot, arrival)
 
 
 ## A fingerprint of every loaded instance, in name order, each with its name.

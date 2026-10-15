@@ -64,6 +64,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		CatchFeature.new(),
 		FogFeature.new(),
 	]
+	if not region.exits.is_empty():
+		ordered.append(ExitFeature.new())
 	if LOOT_TABLES.has(instance_name):
 		var table: LootTable = _loot_table(LOOT_TABLES[instance_name])
 		if table == null:

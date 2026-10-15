@@ -34,7 +34,47 @@ func run(_tree: SceneTree) -> String:
 		result = _check_world()
 	if result.is_empty():
 		result = _check_documents()
+	if result.is_empty():
+		result = _check_walk_through()
 	return result
+
+
+## Walking through exits (#154): from the basic instance's start, east onto its exit and on east
+## into the glade, arriving on the glade's way back; then west again, back onto the basic
+## instance's exit, while the glade stays loaded for the next visit.
+func _check_walk_through() -> String:
+	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	# From the start at (1, -1): east, southeast, east to the exit on (3, 0), and east once more.
+	for direction: int in [0, 5, 0, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
+	var arrived: Entity = world.player(0)
+	if glade == null or world.instance_of(0) != InstanceBlueprints.GLADE:
+		return "walking east out of the basic instance didn't lead into the glade"
+	if arrived.tile != Vector2i(
+		-2,
+		0,
+	) or world.instances[InstanceBlueprints.BASIC].player(0) != null:
+		return "the player arrived on %s, not the glade's way back" % arrived.tile
+	_walk_in(world, 3)
+	var back: Entity = world.player(0)
+	if world.instance_of(0) != InstanceBlueprints.BASIC or back.tile != Vector2i(3, 0):
+		return "walking west out of the glade didn't lead back onto the basic instance's exit"
+	if world.instances[InstanceBlueprints.GLADE] != glade:
+		return "coming back loaded a new glade instead of the same one"
+	return ""
+
+
+## Walks player 0 one step in `direction`, through the world, until they stand still again.
+func _walk_in(world: World, direction: int) -> void:
+	world.step(_moving(direction))
+	for _tick: int in MovementFeature.MOVE_TICKS + 1:
+		world.step(_still())
+
+
+func _moving(direction: int) -> Array[Command]:
+	var commands: Array[Command] = [Command.new(direction)]
+	return commands
 
 
 ## Region documents (#145): tile (0, 0) is the middle tile of the middle row, the legend's symbols
