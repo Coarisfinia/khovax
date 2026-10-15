@@ -88,7 +88,9 @@ func show_state() -> void:
 	# A slot nobody plays in shows nothing.
 	visible = player != null
 	if player == null:
+		# Forgotten, so a player who comes back is placed afresh, not with a leftover glide.
 		_drawn_in = null
+		crossing = Vector3.ZERO
 		return
 	tile = player.tile
 	# Set explicitly, not left to the tile setter: the spot is added to it once below.
