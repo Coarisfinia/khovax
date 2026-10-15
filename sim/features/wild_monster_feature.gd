@@ -1,7 +1,8 @@
 class_name WildMonsterFeature
 extends Feature
 ## Wild monsters (#19): when the run begins, one stands on every spot the region marks for it, as an
-## entity no player controls. For now each is a stand-in ball that just stands there; walkers
+## entity no player controls. For now each just stands there (its look is a placeholder, #85);
+## walkers
 ## can't step onto its tile (MovementFeature), and a later rule catches it (#20). Like every
 ## feature, switched off it keeps its state: the monsters stay where they are, and only its own
 ## rules (catching, later) stop.

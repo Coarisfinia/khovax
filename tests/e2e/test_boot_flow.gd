@@ -1,7 +1,7 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
 ## in view of
-## the camera, and a wild monster's ball resting on its own tile.
+## the camera, and a wild monster's figure standing on its own tile.
 
 
 func run(tree: SceneTree) -> String:
@@ -24,10 +24,10 @@ func run(tree: SceneTree) -> String:
 		_check_player_model,
 		_check_player_in_view,
 		_check_state_drives_view,
-		_check_ball,
+		_check_wild_monster,
 		_check_toon_look,
 		_check_ink_outline,
-		_check_ball_removed,
+		_check_wild_monster_removed,
 		_check_terrain_colors,
 	]
 	var result: String = ""
@@ -175,9 +175,9 @@ func _check_state_drives_view(main: Node) -> String:
 	return ""
 
 
-## The basic region's wild monster (#19) is a ball resting on its tile, (-2, 0), with room for a
+## The basic region's wild monster (#19) is a figure standing on its tile, (-2, 0), with room for a
 ## ring around it: all six neighbors are ground on the region.
-func _check_ball(main: Node) -> String:
+func _check_wild_monster(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node_or_null("WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
@@ -194,18 +194,34 @@ func _check_ball(main: Node) -> String:
 		]
 	for direction: Vector2i in Hex.DIRECTIONS:
 		if not driver.state.region.is_walkable(spot + direction):
-			return "no ring fits around the ball: %s isn't ground" % (spot + direction)
-	var ball: HexPiece = view.balls.get(monster.id)
-	if ball == null or not ball.is_visible_in_tree() or ball.tile != spot:
-		return "no ball shown on the wild monster's tile"
-	var bottom: float = ball.global_position.y - WildMonsterView.RADIUS
-	if not is_equal_approx(bottom, HexGrid.TILE_HEIGHT):
-		return "the ball's bottom is at %f, not on the tile's top" % bottom
+			return "no ring fits around the wild monster: %s isn't ground" % (spot + direction)
+	var figure: HexPiece = view.figures.get(monster.id)
+	return _check_figure(figure, spot)
+
+
+## The wild monster's figure (#85): on its tile, standing on the tile's top, with a model that has
+## meshes and plays its idle clip.
+func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
+	if figure == null or not figure.is_visible_in_tree() or figure.tile != spot:
+		return "no figure shown on the wild monster's tile"
+	if not is_equal_approx(figure.global_position.y, HexGrid.TILE_HEIGHT):
+		return "the figure stands at %f, not on the tile's top" % figure.global_position.y
+	var meshes: Array[Node] = figure.find_children("*", "MeshInstance3D", true, false)
+	var animations: AnimationPlayer = figure.find_child(
+		"AnimationPlayer",
+		true,
+		false,
+	) as AnimationPlayer
+	var idling: bool = (
+		animations != null and animations.current_animation == WildMonsterView.IDLE
+	)
+	if meshes.is_empty() or not idling:
+		return "the wild monster's figure has no model, or it isn't idling"
 	return ""
 
 
-## A wild monster that leaves the world (caught, later) takes its ball and its entry with it.
-func _check_ball_removed(main: Node) -> String:
+## A wild monster that leaves the world (caught, later) takes its figure and its entry with it.
+func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
@@ -214,27 +230,28 @@ func _check_ball_removed(main: Node) -> String:
 	var monster_id: int = feature.monsters[0]
 	driver.state.remove_entity(monster_id)
 	view.show_state()
-	if not feature.monsters.is_empty() or view.balls.has(monster_id):
-		return "a removed wild monster left its ball or its entry behind"
+	if not feature.monsters.is_empty() or view.figures.has(monster_id):
+		return "a removed wild monster left its figure or its entry behind"
 	return ""
 
 
-## The comic look (#14) is on everything shown: the tiles, the ball and every part of the character
-## use toon shading and the one shared ink outline.
+## The comic look (#14) is on everything shown: the tiles and every part of the wild monsters' and
+## the character's models use toon shading and the one shared ink outline.
 func _check_toon_look(main: Node) -> String:
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
 	var materials: Array[Material] = [grid.tile_mesh().material]
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
-	for ball: HexPiece in view.balls.values():
-		var shape: MeshInstance3D = ball.get_child(0) as MeshInstance3D
-		materials.append(shape.mesh.surface_get_material(0))
 	var player: PlayerView = main.get_node("Player") as PlayerView
-	for node: Node in player.model.find_children("*", "MeshInstance3D", true, false):
-		var part: MeshInstance3D = node as MeshInstance3D
-		for surface: int in part.mesh.get_surface_count():
-			materials.append(part.get_active_material(surface))
-	if materials.size() < 3:
-		return "the toon check found no ball or no character to look at"
+	var models: Array[Node] = [player.model]
+	for figure: HexPiece in view.figures.values():
+		models.append(figure)
+	for model: Node in models:
+		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+			var part: MeshInstance3D = node as MeshInstance3D
+			for surface: int in part.mesh.get_surface_count():
+				materials.append(part.get_active_material(surface))
+	if view.figures.is_empty() or materials.size() < 3:
+		return "the toon check found no wild monster or no character to look at"
 	for material: Material in materials:
 		var toon: StandardMaterial3D = material as StandardMaterial3D
 		var banded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
