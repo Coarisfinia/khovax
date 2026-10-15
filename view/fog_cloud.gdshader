@@ -53,7 +53,8 @@ void fragment() {
 	// The noise only roughens the cloud: never enough to open a hole in it.
 	float thick = smoothstep(clear_below, thick_above, fog.x + (noise - 0.5) * 0.25);
 	float wisps = texture(cloud_noise, world.xz / wisp_scale + drift * TIME * 2.0).r;
-	float light = fog.y * mix(wisp_thin, wisp_thick, smoothstep(0.35, 0.75, wisps));
+	// Fading out as the cloud thickens, so wisps don't bleed into the cloud's edge.
+	float light = fog.y * (1.0 - thick) * mix(wisp_thin, wisp_thick, smoothstep(0.35, 0.75, wisps));
 	vec3 cloud = mix(cloud_shade.rgb, cloud_light.rgb, smoothstep(0.3, 0.7, noise));
 	ALBEDO = mix(cloud_light.rgb, cloud, thick);
 	ALPHA = max(thick, light);

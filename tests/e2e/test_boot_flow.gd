@@ -370,7 +370,8 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	fresh.driver = view.driver
 	fresh.cloud = cloud
 	fresh.show_state(10.0)
-	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far).x == 1.0
+	var unseen: Vector2 = Vector2(1.0, 0.0)
+	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == unseen
 	fresh.free()
 	view.show_state(10.0)
 	if not dark:
