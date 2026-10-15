@@ -71,9 +71,9 @@ func _check_quests() -> String:
 
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
-## numbers and walkability; the rules number every kind by its file's number; forest is walkable
-## with its trees, and every model a blueprint names exists. Broken blueprints, and two with one
-## number, are refused.
+## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
+## stumps are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
+## names exists. Broken blueprints, and two with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -83,15 +83,20 @@ func _check_tiles() -> String:
 		"water": false,
 		"rock": false,
 		"forest": true,
+		"shrubs": true,
+		"boulder": false,
+		"stumps": true,
 	}
+	var plain: Array[String] = ["ground", "water", "rock"]
 	for id: String in walkable:
 		var kind: int = TileKinds.number_of(id)
-		if not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]:
-			return "tile blueprint %s is missing or not as walkable as written" % id
+		if (not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]
+				or content.tiles[id].model.is_empty() != plain.has(id)):
+			return "tile blueprint %s is missing, not as walkable as written, or (un)decorated" % id
 	var built_in: Array[int] = [Region.GROUND, Region.WATER, Region.BLOCKED]
 	if built_in != [content.tiles["ground"].number, content.tiles["water"].number,
-			content.tiles["rock"].number] or content.tiles["forest"].model.is_empty():
-		return "the built-in tile kinds don't keep their numbers, or the forest has no trees"
+			content.tiles["rock"].number]:
+		return "the built-in tile kinds don't keep their numbers"
 	for tile: TileBlueprint in content.tiles.values():
 		if TileKinds.number_of(tile.id) != tile.number or TileKinds.id_of(tile.number) != tile.id:
 			return "the rules don't number tile blueprint %s by its file" % tile.id
