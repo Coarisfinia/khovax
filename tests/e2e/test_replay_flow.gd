@@ -726,9 +726,9 @@ func _check_arranged_regions() -> String:
 		var problem: String = _check_glade(seed_value, pieces)
 		if not problem.is_empty():
 			return problem
-	var problem: String = _check_connector_fit()
-	if not problem.is_empty():
-		return problem
+	var misfit: String = _check_connector_fit()
+	if not misfit.is_empty():
+		return misfit
 	if RegionArranger.arrange(pieces, 7, false).starts != pieces[0].starts:
 		return "an unturned arrangement moved the start piece"
 	if pieces[0].fits(pieces[0], Vector2i.ZERO):
@@ -781,12 +781,8 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 func _glade_pieces() -> Array[Region]:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
 	var pieces: Array[Region] = []
-	pieces.assign(
-		["start.region", "pond.region", "thicket.region"].map(
-			func(file: String) -> Region:
-				return Region.parse(FileAccess.get_file_as_string(folder + file))
-		),
-	)
+	for file: String in ["start.region", "pond.region", "thicket.region"]:
+		pieces.append(Region.parse(FileAccess.get_file_as_string(folder + file)))
 	return pieces
 
 
