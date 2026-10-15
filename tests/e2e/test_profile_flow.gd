@@ -2,7 +2,8 @@ extends RefCounted
 ## Profile flow (#37): the player's profile across sessions. A new profile starts with one slot and
 ## nothing caught; every gain adds its catches, with ids that are never reused, and its materials,
 ## and is on disk at once; the profile survives saving and loading; a save it can't trust is
-## refused; and a damaged save falls back to the newest intact generation before it (#179).
+## refused; an older save is migrated, oldest step first, into the current format with no quest
+## progress (#184); and a damaged save falls back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 
@@ -69,7 +70,10 @@ func _monsters_on_disk() -> int:
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
 func _check_bad_results(profile: Profile) -> String:
 	var before: String = profile.to_text()
+	var no_chests: Gain = _result(["moss_toad"], {})
+	no_chests.chests_opened = -1
 	var bad: Array[Gain] = [
+		no_chests,
 		_result(["ember_fox", ""], {}),
 		_result([], { "crystal": -1 }),
 		_result([], { "": 1 }),
@@ -108,9 +112,26 @@ func _check_save(profile: Profile) -> String:
 ## A save that isn't one, comes from a newer build, or contradicts itself is refused, not misread.
 func _check_refused() -> String:
 	var text: String = Profile.new().to_text()
+	var format: String = "\"format\": %d" % Profile.FORMAT
+	var done: String = "\"quests_done\": []"
+	var progress: String = "\"quest_progress\": {}"
 	var cases: Dictionary[String, String] = {
 		"not json": "not a profile save",
-		text.replace("\"format\": 2", "\"format\": 99"): "save format 99",
+		text.replace(format, "\"format\": 99"): "save format 99",
+		text.replace(done, "\"quests_done\": [\"a\", \"a\"]"): "a finished quest",
+		text.replace(done, "\"quests_done\": [7]"): "a finished quest",
+		text.replace(done, "\"quests_done\": [\"Bad id\"]"): "a finished quest",
+		text.replace(progress, "\"quest_progress\": {\"Bad id\": {\"step\": 0, \"count\": 0}}"): (
+			"quest Bad id's"
+		),
+		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": 0, \"count\": 1e10}}"): (
+			"quest a's"
+		),
+		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": -1, \"count\": 0}}"): (
+			"quest a's"
+		),
+		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": 0}}"): "quest a's",
+		text.replace(progress, "\"quest_progress\": []"): "the save lacks its quest",
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 7"): "the save's slots",
 		text.replace(
 			"\"captured_monsters\": []",
@@ -126,23 +147,27 @@ func _check_refused() -> String:
 	return ""
 
 
-## A save in format 1, which still counted finished runs, loads into the current format (#197).
+## Older saves load into the current format, migrated oldest step first: format 1 still counted
+## finished runs (#197), and formats before 3 had no quest progress (#184), which starts empty.
 func _check_migrated() -> String:
 	var text: String = Profile.new().to_text()
-	var old: String = text.replace("\"format\": 2", "\"format\": 1, \"runs_finished\": 3")
-	if old == text:
-		return "the format-1 save wasn't made from the current save"
-	# Format 1 with its run count, format 1 without it, and a format-2 save that still carries it:
-	# each loads as the current save, the count dropped.
-	var saves: Array[String] = [
-		old,
-		text.replace("\"format\": 2", "\"format\": 1"),
-		text.replace("\"format\": 2", "\"format\": 2, \"runs_finished\": 3"),
+	var parsed: Variant = JSON.parse_string(text)
+	var current: Dictionary = parsed
+	var _no_progress: bool = current.erase("quest_progress")
+	var _none_done: bool = current.erase("quests_done")
+	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
+	var olds: Array[Dictionary] = [
+		{ "format": 1, "runs_finished": 3 },
+		{ "format": 1 },
+		{ "format": 2, "runs_finished": 3 },
+		{ "format": 2 },
 	]
-	for save: String in saves:
-		var loaded: Profile = Profile.parse(save)
+	for old: Dictionary in olds:
+		var save: Dictionary = current.duplicate()
+		save.merge(old, true)
+		var loaded: Profile = Profile.parse(JSON.stringify(save))
 		if not loaded.problem.is_empty() or loaded.to_text() != text:
-			return "an older or stale save didn't load as the current one: " + loaded.problem
+			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
 	return ""
 
 

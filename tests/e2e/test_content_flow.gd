@@ -4,7 +4,8 @@ extends RefCounted
 ## types come from the type chart, never two from one family; and broken entries are refused. Loot
 ## tables (#90) load, roll the same for the same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
-## and broken ones are refused.
+## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
+## species that exist, and broken ones are refused.
 
 
 func run(_tree: SceneTree) -> String:
@@ -24,7 +25,49 @@ func run(_tree: SceneTree) -> String:
 		result = _check_wild_species(content)
 	if result.is_empty():
 		result = _check_tiles()
+	if result.is_empty():
+		result = _check_quests()
 	return result
+
+
+## Every quest file reads: the first catch is one catch of any species, and the toads' quest counts
+## up three of one species. Quests with a wrong id, name, step, condition, species or count are
+## refused, with a reason.
+func _check_quests() -> String:
+	var content: Content = Content.load_quests()
+	if not content.problem.is_empty():
+		return "the quests didn't load: " + content.problem
+	var first: QuestDefinition = content.quests.get("first_catch")
+	var toads: QuestDefinition = content.quests.get("three_moss_toads")
+	if first == null or first.name.is_empty() or first.steps.size() != 1 or toads == null:
+		return "the quests didn't load as written"
+	var any_catch: QuestStep = first.steps[0]
+	var toad_step: QuestStep = toads.steps[0]
+	if any_catch.condition != "caught" or not any_catch.species.is_empty() or any_catch.count != 1:
+		return "the first catch isn't one catch of any species"
+	if toad_step.species != "moss_toad" or toad_step.count != 3:
+		return "the toads' quest isn't three moss toads"
+	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
+	var step: String = "{\"condition\": \"caught\"%s}"
+	var cases: Dictionary[String, String] = {
+		quest % ["y", "N", step % ""]: "its id must",
+		quest % ["x", " ", step % ""]: "it needs a name",
+		quest % ["x", "N", ""]: "it needs at least one step",
+		quest % ["x", "N", "{\"condition\": \"reached\"}"]: "step 0: its condition",
+		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
+		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
+			"step 0: its species"
+		),
+		quest % ["x", "N", step % "" + ", " + step % ", \"count\": 0"]: "step 1: its count",
+		quest % ["x", "N", step % ", \"count\": 1.5"]: "step 0: its count",
+		quest % ["x", "N", step % ", \"when\": 1"]: "step 0: field when",
+		quest % ["x", "N", "7"]: "step 0: it isn't",
+	}
+	for text: String in cases:
+		var problem: String = QuestDefinition.parse("x", text, content.species).problem
+		if not problem.begins_with(cases[text]):
+			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
 
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their

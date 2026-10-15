@@ -3,12 +3,13 @@ extends RefCounted
 ## The game's content data (#72): JSONC files under data/, one per entry, checked against their
 ## schema in CI (data/schemas/) and here for what a schema can't check: ids unique and matching
 ## their file, types from the type chart, and two types never from the same family. Loot tables
-## (#90) are read here too, checked by LootTable, and tile blueprints (#116), checked by
-## TileBlueprint.
+## (#90) are read here too, checked by LootTable, tile blueprints (#116), checked by
+## TileBlueprint, and quests (#184), checked by QuestDefinition against the species.
 
 const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
+const QUESTS_DIR: String = "res://data/quests/"
 ## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
 const SPECIES_FIELDS: Array[String] = ["id", "types", "hp", "strength"]
 ## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
@@ -27,6 +28,8 @@ var species: Dictionary[String, Species] = {}
 var loot_tables: Dictionary[String, LootTable] = {}
 ## Every tile blueprint, by id.
 var tiles: Dictionary[String, TileBlueprint] = {}
+## Every quest, by id.
+var quests: Dictionary[String, QuestDefinition] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -81,6 +84,34 @@ static func load_tiles(directory: String = TILES_DIR) -> Content:
 				return content
 			content.tiles[tile.id] = tile
 			numbers[tile.number] = true
+	return content
+
+
+## Every quest file in `directory`, read and checked; the species its steps name must be in
+## `species_directory`.
+static func load_quests(
+	directory: String = QUESTS_DIR,
+	species_directory: String = SPECIES_DIR,
+) -> Content:
+	var content: Content = load_species(species_directory)
+	if not content.problem.is_empty():
+		return content
+	# Sorted, so the quests are read in the same order on every machine.
+	var file_names: Array[String] = []
+	file_names.assign(DirAccess.get_files_at(directory))
+	file_names.sort()
+	for file_name: String in file_names:
+		if file_name.ends_with(".jsonc"):
+			var text: String = FileAccess.get_file_as_string(directory + file_name)
+			var quest: QuestDefinition = QuestDefinition.parse(
+				file_name.get_basename(),
+				text,
+				content.species,
+			)
+			if not quest.problem.is_empty():
+				content.problem = file_name + ": " + quest.problem
+				return content
+			content.quests[quest.id] = quest
 	return content
 
 
