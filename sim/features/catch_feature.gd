@@ -113,5 +113,7 @@ static func _may_close(trail: Trail, grew: TrailGrew) -> bool:
 
 func _catch(state: GameState, monster_id: int, catcher_id: int) -> void:
 	var tile: Vector2i = state.entity(monster_id).tile
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var species: String = wild.species_of(monster_id)
 	state.remove_entity(monster_id)
-	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, tile))
+	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, tile, species))

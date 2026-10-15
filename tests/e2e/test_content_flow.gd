@@ -18,7 +18,23 @@ func run(_tree: SceneTree) -> String:
 		result = _check_loot_rolls()
 	if result.is_empty():
 		result = _check_loot_refused()
+	if result.is_empty():
+		result = _check_wild_species(content)
 	return result
+
+
+## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint
+## lists or a region piece names is one the species data has (#133).
+func _check_wild_species(content: Content) -> String:
+	for instance_name: String in InstanceBlueprints.NAMES:
+		var listed: Dictionary = InstanceBlueprints.WILD_SPECIES.get(instance_name, { })
+		var named: Array = InstanceBlueprints.region_of(instance_name, 0).named_species.values()
+		if listed.is_empty():
+			return "the %s blueprint lists no species for its wild monsters" % instance_name
+		for species: Variant in listed.keys() + named:
+			if not content.species.has(str(species)):
+				return "%s places a species that doesn't exist: %s" % [instance_name, species]
+	return ""
 
 
 ## Comments go, strings keep their slashes and stars, and line breaks stay where they were.

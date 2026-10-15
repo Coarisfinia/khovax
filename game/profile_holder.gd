@@ -7,9 +7,6 @@ extends Node
 ## their own profiles on their own machines (#74). A save that can't be read is reported and left
 ## alone, never overwritten.
 
-## Every wild monster is this species until spots get their own (#133), like its placeholder look.
-const PLACEHOLDER_SPECIES: String = "moss_toad"
-
 @export var driver: GameDriver
 ## Whose catches are this machine's player's.
 @export var input: LocalInput
@@ -55,9 +52,10 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterCaught:
-		var catcher: Entity = driver.state.entity((event as WildMonsterCaught).catcher_id)
+		var caught: WildMonsterCaught = event as WildMonsterCaught
+		var catcher: Entity = driver.state.entity(caught.catcher_id)
 		if catcher != null and catcher.slot == input.slot:
-			gain.caught_species.append(PLACEHOLDER_SPECIES)
+			gain.caught_species.append(caught.species)
 	elif event is ChestOpened:
 		var loot: Dictionary = (event as ChestOpened).loot.get(input.slot, {})
 		for item: Variant in loot:

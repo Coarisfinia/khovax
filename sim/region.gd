@@ -19,6 +19,8 @@ const CHEST: String = "c"
 const CONNECTOR: String = "connector "
 ## The start of a region piece's exit line (#140).
 const EXIT: String = "exit "
+## The start of a line naming a wild monster spot's species (#133).
+const SPECIES: String = "species "
 
 ## Every tile's terrain, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
@@ -26,6 +28,10 @@ var terrain: Dictionary[Vector2i, int] = {}
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the run begins, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
+## The species a region piece names for some of its wild monster spots, by spot (#133); every other
+## spot rolls one from its blueprint's list. Not hashed here: the wild monster feature hashes each
+## wild monster's species.
+var named_species: Dictionary[Vector2i, String] = {}
 ## Where treasure chests stand when the run begins, in the region file's reading order. Not hashed
 ## here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
@@ -59,14 +65,16 @@ static func disc(radius: int) -> Region:
 ## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
 ## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, `c`
 ## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
-## <side>` for each connector, and `exit <q> <r> <side> <blueprint>` for each exit.
+## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, and `species <q>
+## <r> <species id>` for a wild monster spot whose species it names.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
 	var connector_lines: Array[String] = []
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
-		if content.begins_with(CONNECTOR) or content.begins_with(EXIT):
+		var keyed: bool = content.begins_with(EXIT) or content.begins_with(SPECIES)
+		if content.begins_with(CONNECTOR) or keyed:
 			connector_lines.append(content)
 		elif not content.begins_with("#") and not content.is_empty():
 			rows.append(line.trim_suffix("\r"))
@@ -93,7 +101,8 @@ static func parse(text: String) -> Region:
 			return region
 		region.starts.append(starts_by_slot[slot])
 	for line: String in connector_lines:
-		region.problem = region._parse_connector(line)
+		var species: bool = line.begins_with(SPECIES)
+		region.problem = region._parse_species(line) if species else region._parse_connector(line)
 		if not region.problem.is_empty():
 			return region
 	return region
@@ -151,6 +160,8 @@ func turned(turns: int) -> Region:
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	region.exits.assign(exits.map(_turned_connector.bind(turns)))
 	region.exit_blueprints = exit_blueprints.duplicate()
+	for spot: Vector2i in named_species:
+		region.named_species[Hex.turn(spot, turns)] = named_species[spot]
 	return region
 
 
@@ -182,6 +193,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		terrain[tile + offset] = piece.terrain[tile]
 	for spot: Vector2i in piece.wild_monsters:
 		wild_monsters.append(spot + offset)
+	for spot: Vector2i in piece.named_species:
+		named_species[spot + offset] = piece.named_species[spot]
 	for spot: Vector2i in piece.chests:
 		chests.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
@@ -232,6 +245,20 @@ func _parse_connector(line: String) -> String:
 		exit_blueprints.append(parts[4])
 	else:
 		connectors.append(Vector3i(tile.x, tile.y, side))
+	return ""
+
+
+## Reads one `species <q> <r> <species id>` line; returns why it can't, or "". It names the species
+## of a wild monster spot, once.
+func _parse_species(line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	var numbers: bool = parts.size() == 4 and parts[1].is_valid_int() and parts[2].is_valid_int()
+	if not numbers:
+		return "a species line reads \"species <q> <r> <species id>\": " + line
+	var spot: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	if not wild_monsters.has(spot) or named_species.has(spot):
+		return "species %s names no wild monster spot, or one named before" % spot
+	named_species[spot] = parts[3]
 	return ""
 
 

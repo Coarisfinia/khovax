@@ -23,6 +23,14 @@ const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
 const UNTURNED: Array[String] = [GLADE, ARENA]
 ## Each blueprint's instance loot table (data/loot_tables/), by blueprint: what its chests hold.
 const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
+## Which species live in each blueprint, and how likely each is, for the wild monster spots its
+## region doesn't name (#133): species id to weight.
+const WILD_SPECIES: Dictionary[String, Dictionary] = {
+	BASIC: { "moss_toad": 3, "storm_finch": 1 },
+	LOAD: { "moss_toad": 1, "storm_finch": 1 },
+	GLADE: { "moss_toad": 1 },
+	ARENA: { "moss_toad": 1 },
+}
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.region"
@@ -51,7 +59,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		TrailFeature.new(),
-		WildMonsterFeature.new(),
+		_wild_monsters(instance_name),
 		CatchFeature.new(),
 		FogFeature.new(),
 	]
@@ -115,6 +123,18 @@ static func exit_problem(instance_name: String) -> String:
 ## The basic instance, as `create` makes it.
 static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
+
+
+## The wild monster feature with the named blueprint's species list.
+static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
+	var species: Dictionary = WILD_SPECIES.get(instance_name, { })
+	var roster: Array[String] = []
+	var weights: Array[int] = []
+	for species_id: Variant in species:
+		var weight: int = species[species_id]
+		roster.append(str(species_id))
+		weights.append(weight)
+	return WildMonsterFeature.new(roster, weights)
 
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.
