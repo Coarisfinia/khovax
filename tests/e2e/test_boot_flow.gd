@@ -275,8 +275,12 @@ func _check_ink_outline(main: Node) -> String:
 	if ink == null or ink.shader != InkOutline.SHADER:
 		return "the ink outline pass doesn't use the ink shader"
 	var color: Color = ink.get_shader_parameter("ink")
-	if color != Toon.INK or outline.extra_cull_margin < 1000.0:
+	if (color != Toon.INK
+			or outline.extra_cull_margin < 1000.0
+			or not outline.ignore_occlusion_culling):
 		return "the ink outline pass isn't in the ink color, or can be culled"
+	if ink.render_priority != Material.RENDER_PRIORITY_MAX:
+		return "the ink outline pass doesn't draw last"
 	return ""
 
 
