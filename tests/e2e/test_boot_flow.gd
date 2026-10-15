@@ -238,13 +238,10 @@ func _check_wild_monster_removed(main: Node) -> String:
 
 
 ## The comic look (#14) is on everything shown: the tiles and every part of the wild monsters' and
-## the character's models use toon shading. The tiles carry the shared ink outline as their next
-## pass; every model part has an outline hull of its own (#162).
+## the character's models use toon shading, with no per-mesh outline of their own (#166).
 func _check_toon_look(main: Node) -> String:
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
 	var materials: Array[Material] = [grid.tile_mesh().material]
-	if (grid.tile_mesh().material as StandardMaterial3D).next_pass != Toon.outline():
-		return "the tiles lack the shared ink outline"
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
 	var player: PlayerView = main.get_node("Player") as PlayerView
 	var models: Array[Node] = [player.model]
@@ -253,10 +250,6 @@ func _check_toon_look(main: Node) -> String:
 	for model: Node in models:
 		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 			var part: MeshInstance3D = node as MeshInstance3D
-			if part.name == Toon.HULL:
-				continue
-			if part.get_node_or_null(Toon.HULL) == null:
-				return "model part %s has no outline hull" % part.name
 			for surface: int in part.mesh.get_surface_count():
 				materials.append(part.get_active_material(surface))
 	if view.figures.is_empty() or materials.size() < 3:
@@ -266,36 +259,28 @@ func _check_toon_look(main: Node) -> String:
 		var banded: bool = toon != null and toon.diffuse_mode == BaseMaterial3D.DIFFUSE_TOON
 		if not banded or toon.specular_mode != BaseMaterial3D.SPECULAR_TOON:
 			return "a shown material lacks the toon light bands"
-	return _check_hull_closed(player.model.find_child("Rogue_Head", true, false) as MeshInstance3D)
-
-
-## The head's outline hull (#162) can't tear: every vertex at one position grows the same way, and
-## it's drawn in the shared ink outline.
-func _check_hull_closed(head: MeshInstance3D) -> String:
-	var hull: MeshInstance3D = head.get_node_or_null(Toon.HULL) as MeshInstance3D
-	if hull == null or hull.material_override != Toon.outline():
-		return "the head has no outline hull in ink"
-	var arrays: Array = hull.mesh.surface_get_arrays(0)
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-	var first: Dictionary[Vector3, Vector3] = {}
-	for i: int in vertices.size():
-		var normal: Vector3 = first.get(vertices[i], normals[i])
-		if not normal.is_equal_approx(normals[i]):
-			return "the head's outline hull tears at %s" % vertices[i]
-		first[vertices[i]] = normal
+		if toon.next_pass != null:
+			return "a shown material draws an outline of its own"
 	return ""
 
 
-## The shared ink outline is the inverted hull: back faces of a slightly grown mesh, unlit, in ink.
-func _check_ink_outline(_main: Node) -> String:
-	var ink: StandardMaterial3D = Toon.outline()
-	var grown: bool = ink.grow and ink.grow_amount > 0.0
-	var hull: bool = ink.cull_mode == BaseMaterial3D.CULL_FRONT and grown
-	if (not hull
-			or ink.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED
-			or ink.albedo_color != Toon.INK):
-		return "the ink outline isn't an unlit, grown back-face hull in the ink color"
+## The ink outline is one pass over the whole screen (#166), in the ink color, never culled, so
+## every
+## mesh gets it, open or closed.
+func _check_ink_outline(main: Node) -> String:
+	var outline: InkOutline = main.get_node_or_null("InkOutline") as InkOutline
+	if outline == null:
+		return "the main scene has no ink outline pass"
+	var ink: ShaderMaterial = outline.material_override as ShaderMaterial
+	if ink == null or ink.shader != InkOutline.SHADER:
+		return "the ink outline pass doesn't use the ink shader"
+	var color: Color = ink.get_shader_parameter("ink")
+	if (color != Toon.INK
+			or outline.extra_cull_margin < 1000.0
+			or not outline.ignore_occlusion_culling):
+		return "the ink outline pass isn't in the ink color, or can be culled"
+	if ink.render_priority != Material.RENDER_PRIORITY_MAX:
+		return "the ink outline pass doesn't draw last"
 	return ""
 
 
