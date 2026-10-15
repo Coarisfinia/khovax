@@ -39,9 +39,9 @@ const SPOT_SPEED: float = 1.2
 
 ## The yaw the character turns toward, in radians: where it last walked.
 var facing: float = 0.0
-## Where the player stands inside its tile, from the center: easing toward `_spot_target`.
+## Where the player stands inside its tile, from the center: easing toward its slot's spot while
+## it shares the tile, back to the center while it doesn't.
 var spot: Vector3 = Vector3.ZERO
-var _spot_target: Vector3 = Vector3.ZERO
 var _animations: AnimationPlayer
 
 
@@ -79,6 +79,8 @@ func show_state() -> void:
 	if player == null:
 		return
 	tile = player.tile
+	# Set explicitly, not left to the tile setter: the spot is added to it once below.
+	position = tile_position()
 	# Without movement in the instance, the player simply stands on its tile.
 	var movement: MovementFeature = driver.state.feature(Features.MOVEMENT) as MovementFeature
 	var walk: Walk = movement.walk(player.id) if movement != null else null
@@ -92,7 +94,6 @@ func show_state() -> void:
 		# toward the walk.
 		var heading: Vector3 = tile_position() - position_on(walk.from)
 		facing = atan2(heading.x, heading.z)
-	_spot_target = SPOTS[slot] if _shares_tile(player) else Vector3.ZERO
 	position += spot
 	_play(MOVE if moving else IDLE)
 
@@ -105,7 +106,13 @@ func current_clip() -> StringName:
 ## Moves the player toward its spot by at most SPOT_SPEED per second. Called every frame; tests
 ## call it with their own step.
 func ease_spot(delta: float) -> void:
-	spot = spot.move_toward(_spot_target, SPOT_SPEED * delta)
+	if driver == null or driver.state == null:
+		return
+	var player: Entity = driver.state.player(slot)
+	var target: Vector3 = Vector3.ZERO
+	if player != null and _shares_tile(player):
+		target = SPOTS[slot]
+	spot = spot.move_toward(target, SPOT_SPEED * delta)
 
 
 ## Whether another player stands on (or is walking onto) `player`'s tile.

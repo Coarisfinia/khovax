@@ -127,6 +127,10 @@ func _check_late_player() -> String:
 func _check_shared_tile() -> String:
 	var shared: Vector2i = _driver.state.player(0).tile
 	_driver.state.player(1).tile = shared
+	_views[0].ease_spot(STEP)
+	var first_step: float = _views[0].spot.length()
+	if first_step <= 0.0 or first_step >= PlayerView.SPOTS[0].length():
+		return "a player snapped to its spot instead of easing there (%.3f)" % first_step
 	_settle()
 	var first: Vector3 = _views[0].position
 	var second: Vector3 = _views[1].position
