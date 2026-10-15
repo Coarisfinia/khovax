@@ -13,6 +13,8 @@ uniform float width = 4.0;
 // Only a pixel farther than that average gets ink: the line lies around a thing, on what's behind
 // it, so a thin sheet seen edge-on (a hanging cape) keeps its color instead of turning to ink.
 uniform float threshold = 0.02;
+// Whether the lines are smoothed (below); off with anti-aliasing (Graphics).
+uniform bool smoothed = true;
 
 void vertex() {
 	// A quad covering the whole screen, whatever the camera does.
@@ -50,9 +52,12 @@ void fragment() {
 	// only the edges of meshes, this pass draws inside one quad, and the Compatibility renderer has
 	// no screen-space AA. Averaging fades each stair step of a line over a pixel.
 	float coverage = ink_at(SCREEN_UV, step_size, INV_PROJECTION_MATRIX);
-	coverage += ink_at(SCREEN_UV + vec2(pixel.x, 0.0), step_size, INV_PROJECTION_MATRIX);
-	coverage += ink_at(SCREEN_UV + vec2(0.0, pixel.y), step_size, INV_PROJECTION_MATRIX);
-	coverage += ink_at(SCREEN_UV + pixel, step_size, INV_PROJECTION_MATRIX);
+	if (smoothed) {
+		coverage += ink_at(SCREEN_UV + vec2(pixel.x, 0.0), step_size, INV_PROJECTION_MATRIX);
+		coverage += ink_at(SCREEN_UV + vec2(0.0, pixel.y), step_size, INV_PROJECTION_MATRIX);
+		coverage += ink_at(SCREEN_UV + pixel, step_size, INV_PROJECTION_MATRIX);
+		coverage *= 0.25;
+	}
 	ALBEDO = ink.rgb;
-	ALPHA = ink.a * coverage * 0.25;
+	ALPHA = ink.a * coverage;
 }
