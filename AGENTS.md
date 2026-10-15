@@ -201,7 +201,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   hand-made region pieces in `regions/<blueprint>/` by `RegionArranger`: the seed fits them together
   at their connectors and turns the whole region (#57), from its own random stream, unless the
   blueprint keeps its layout (`InstanceBlueprints.UNTURNED`, e.g. a boss arena, #127). The region is
-  in the state hash; its connectors are used up by arranging.
+  in the state hash; its connectors are used up by arranging. **Exits** (`exit` lines, #140) lead
+  to another blueprint, which has the way back on the opposite side (`exit_problem`); every instance
+  in that web is unturned, so an exit always leads out the same way (#120).
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
