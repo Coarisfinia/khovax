@@ -1,0 +1,11 @@
+# The arena (#127): one region piece that is never turned, the way a boss arena keeps its layout.
+# A disc of radius 3 with rocks at its corners, the players on one side and a wild monster across.
+# Format: see Region.parse (sim/region.gd).
+origin 6 3
+   ^ . . ^
+  . . m . .
+ . . . . . .
+. . . . . . .
+ . . 1 2 . .
+  . 3 4 . .
+   ^ . . ^

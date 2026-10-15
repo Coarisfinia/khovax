@@ -729,6 +729,9 @@ func _check_arranged_regions() -> String:
 	var misfit: String = _check_connector_fit()
 	if not misfit.is_empty():
 		return misfit
+	var turning: String = _check_turning()
+	if not turning.is_empty():
+		return turning
 	if RegionArranger.arrange(pieces, 7, false).starts != pieces[0].starts:
 		return "an unturned arrangement moved the start piece"
 	if pieces[0].fits(pieces[0], Vector2i.ZERO):
@@ -756,6 +759,26 @@ func _check_connector_fit() -> String:
 		var placed: bool = region.sorted_tiles() == expected and region.starts == first.starts
 		if not placed or not region.connectors.is_empty():
 			return "a piece opening to side %d landed on %s" % [side, region.sorted_tiles()]
+	return ""
+
+
+## Turning is the blueprint's switch (#127): the glade's seeds turn it more than one way, while the
+## arena, one piece the seeds never turn, loads for every seed exactly as its file is drawn, and
+## takes four players.
+func _check_turning() -> String:
+	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.ARENA + "/"
+	var drawn: Region = Region.parse(FileAccess.get_file_as_string(folder + "start.region"))
+	var glade_starts: Dictionary[Vector2i, bool] = {}
+	for seed_value: int in 12:
+		var glade: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
+		glade_starts[glade.starts[1]] = true
+		var arena: Region = InstanceBlueprints.region_of(InstanceBlueprints.ARENA, seed_value)
+		if not arena.problem.is_empty() or arena.hash_values() != drawn.hash_values():
+			return "seed %d loaded the arena unlike its file: %s" % [seed_value, arena.problem]
+	if glade_starts.size() < 2:
+		return "no seed turned the glade"
+	if InstanceBlueprints.create(InstanceBlueprints.ARENA, 3, 4) == null:
+		return "the arena doesn't take four players"
 	return ""
 
 
