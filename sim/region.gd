@@ -22,6 +22,8 @@ const CONNECTOR: String = "connector "
 const EXIT: String = "exit "
 ## The start of a line naming a wild monster spot's species (#133).
 const SPECIES: String = "species "
+## The start of a tile trigger's line (#181, #183).
+const TRIGGER: String = "trigger "
 
 ## Every tile's terrain, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
@@ -46,6 +48,10 @@ var connectors: Array[Vector3i] = []
 ## never change during a run.
 var exits: Array[Vector3i] = []
 var exit_blueprints: Array[String] = []
+## Tile triggers (#183), each written in its piece's legend, in the region file's reading order:
+## when something happens on a tile, an action runs (TriggerFeature). Not hashed: they come from the
+## blueprint's files; the trigger feature hashes the ones that fired.
+var triggers: Array[TileTrigger] = []
 ## Why the region file couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -66,15 +72,17 @@ static func disc(radius: int) -> Region:
 ## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
 ## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, `c`
 ## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
-## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, and `species <q>
-## <r> <species id>` for a wild monster spot whose species it names.
+## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, `species <q> <r>
+## <species id>` for a wild monster spot whose species it names, and `trigger <q> <r> <when>
+## <action> <amount>` for each tile trigger.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
 	var connector_lines: Array[String] = []
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
-		var keyed: bool = content.begins_with(EXIT) or content.begins_with(SPECIES)
+		var keyed: bool = (content.begins_with(EXIT) or content.begins_with(SPECIES)
+				or content.begins_with(TRIGGER))
 		if content.begins_with(CONNECTOR) or keyed:
 			connector_lines.append(content)
 		elif not content.begins_with("#") and not content.is_empty():
@@ -102,8 +110,7 @@ static func parse(text: String) -> Region:
 			return region
 		region.starts.append(starts_by_slot[slot])
 	for line: String in connector_lines:
-		var species: bool = line.begins_with(SPECIES)
-		region.problem = region._parse_species(line) if species else region._parse_connector(line)
+		region.problem = region._parse_keyed(line)
 		if not region.problem.is_empty():
 			return region
 	return region
@@ -161,6 +168,8 @@ func turned(turns: int) -> Region:
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	region.exits.assign(exits.map(_turned_connector.bind(turns)))
 	region.exit_blueprints = exit_blueprints.duplicate()
+	for trigger: TileTrigger in triggers:
+		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
 	for spot: Vector2i in named_species:
 		region.named_species[Hex.turn(spot, turns)] = named_species[spot]
 	return region
@@ -187,7 +196,8 @@ func outside_exits() -> Array[Vector2i]:
 	return outside
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors and exits. The
+## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors, exits and triggers.
+## The
 ## players' starts stay this region's own. Callers check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
@@ -203,6 +213,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 	for exit: Vector3i in piece.exits:
 		exits.append(exit + Vector3i(offset.x, offset.y, 0))
 	exit_blueprints.append_array(piece.exit_blueprints)
+	for trigger: TileTrigger in piece.triggers:
+		triggers.append(trigger.moved(offset))
 
 
 ## Every value of the region, for the state hash, in a fixed order.
@@ -246,6 +258,35 @@ func _parse_connector(line: String) -> String:
 		exit_blueprints.append(parts[4])
 	else:
 		connectors.append(Vector3i(tile.x, tile.y, side))
+	return ""
+
+
+## Reads one keyed line: a connector, an exit, a named species or a trigger. Returns why it can't,
+## or "".
+func _parse_keyed(line: String) -> String:
+	if line.begins_with(SPECIES):
+		return _parse_species(line)
+	if line.begins_with(TRIGGER):
+		return _parse_trigger(line)
+	return _parse_connector(line)
+
+
+## Reads one `trigger <q> <r> <when> <action> <amount>` line; returns why it can't, or "". A
+## trigger stands on ground, with a when and an action TileTrigger knows and an amount of at least
+## 1.
+func _parse_trigger(line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	var numbers: bool = parts.size() == 6
+	for i: int in [1, 2, 5]:
+		numbers = numbers and parts.size() > i and parts[i].is_valid_int()
+	if not numbers:
+		return "a trigger line reads \"trigger <q> <r> <when> <action> <amount>\": " + line
+	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	if not TileTrigger.WHENS.has(parts[3]) or not TileTrigger.ACTIONS.has(parts[4]):
+		return "trigger %s: no such when or action: %s %s" % [tile, parts[3], parts[4]]
+	if not is_walkable(tile) or parts[5].to_int() < 1:
+		return "trigger %s isn't on ground or acts on nothing" % tile
+	triggers.append(TileTrigger.new(tile, parts[3], parts[4], parts[5].to_int()))
 	return ""
 
 

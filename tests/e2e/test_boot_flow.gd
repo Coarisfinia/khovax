@@ -31,6 +31,7 @@ func run(tree: SceneTree) -> String:
 		_check_wild_monster_removed,
 		_check_terrain_colors,
 		_check_music,
+		_check_lookouts,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -383,4 +384,21 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	view.show_state(10.0)
 	if not dark:
 		return "a tile never seen isn't under thick cloud, or a revealed one isn't seen before"
+	return ""
+
+
+## A post stands on every lookout (#181): none in the basic instance, which has no lookout, and one
+## on the glade's.
+func _check_lookouts(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: LookoutView = main.get_node("LookoutView") as LookoutView
+	view.show_state()
+	if not view.figures.is_empty():
+		return "a lookout post stands in an instance without lookouts"
+	driver.instance = InstanceBlueprints.GLADE
+	driver.start(7)
+	view.show_state()
+	var lookout: TileTrigger = driver.state.region.triggers[0]
+	if view.figures.keys() != [lookout.tile]:
+		return "the glade's lookout has no post: %s" % [view.figures.keys()]
 	return ""

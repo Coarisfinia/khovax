@@ -9,7 +9,7 @@ const TICKS_PER_SECOND: int = 20
 ## The version of the rules, recorded in every replay. Bump it in a change that makes existing
 ## replays play out differently, and rehash the golden replays in the same change
 ## (tests/replays/rehash.gd): an old replay then fails with a clear message, not a mismatch.
-const RULES_VERSION: int = 8
+const RULES_VERSION: int = 9
 
 
 ## Advances `state` by one tick. `commands` holds each player slot's command, indexed by slot.

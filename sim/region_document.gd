@@ -13,6 +13,8 @@ extends RefCounted
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133)
+## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
+##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
 ## where <side> is one of SIDES. The document is read into Region.parse's compact form.
 
 const TILES: String = "## Tiles"
@@ -133,6 +135,26 @@ static func _origin(rows: Array[String]) -> Vector2i:
 	return Vector2i(columns[Fixed.div_floor(columns.size(), 2)], middle)
 
 
+## The compact trigger line a legend trigger's clause (`stepping here reveals within 8`) stands for
+## on `where`, or "" when it isn't one TileTrigger knows.
+static func _trigger_line(clause: String, where: String) -> String:
+	var whens: Dictionary[String, String] = { "stepping here ": TileTrigger.STEP }
+	var actions: Dictionary[String, String] = { "reveals within ": TileTrigger.REVEAL }
+	for phrase: String in whens:
+		var rest: String = clause.trim_prefix(phrase)
+		for action: String in actions:
+			var amount: String = rest.trim_prefix(action)
+			if clause.begins_with(phrase) and rest.begins_with(action) and amount.is_valid_int():
+				return "%s%s %s %s %s" % [
+					Region.TRIGGER,
+					where,
+					whens[phrase],
+					actions[action],
+					amount,
+				]
+	return ""
+
+
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
 static func _line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
@@ -146,4 +168,6 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 		return "%s%s %d %s" % [Region.EXIT, where, side, words[-1]]
 	if meaning.begins_with("a wild monster, always ") and words.size() >= 5:
 		return "%s%s %s" % [Region.SPECIES, where, words[-1]]
+	if meaning.contains("; "):
+		return _trigger_line(meaning.get_slice("; ", 1), where)
 	return ""
