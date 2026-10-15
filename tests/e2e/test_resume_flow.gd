@@ -281,7 +281,8 @@ static func _saved_tick() -> int:
 
 
 ## A world file whose explored ground is malformed (half a tile after a good instance, a number
-## that isn't whole, another format) resumes the world all the same, but with nothing explored: the
+## that isn't whole, another format, null) resumes the world all the same, but with nothing
+## explored: the
 ## memory is warned about and dropped whole.
 func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var explored: Dictionary = WorldSave.explored_data(_explored)
@@ -300,12 +301,14 @@ func _check_bad_explored(tree: SceneTree, world: World) -> String:
 		result = await _resumes_forgetting(tree, world, fraction)
 	if result.is_empty():
 		result = await _resumes_forgetting(tree, world, newer)
+	if result.is_empty():
+		result = await _resumes_forgetting(tree, world, null)
 	return result
 
 
 ## Boots the main scene on `world`'s file with the explored ground `bad` beside it, and checks it
 ## resumes the world with nothing explored, warning about the memory.
-func _resumes_forgetting(tree: SceneTree, world: World, bad: Dictionary) -> String:
+func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 	var data: Dictionary = JSON.parse_string(WorldSave.to_text(world))
 	var _written: String = SaveStore.write_save(WORLD_PATH, _changed(data, WorldSave.EXPLORED, bad))
 	# The runner's: the bad memory is warned about, on purpose here.
@@ -316,7 +319,7 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Dictionary) -> Stri
 	var result: String = ""
 	if driver.world.state_hash() != world.state_hash():
 		result = "malformed explored ground refused the world: %s" % [bad]
-	elif not keeper.explored_in(driver.world).is_empty():
+	elif not keeper.explored.is_empty():
 		result = "malformed explored ground was remembered: %s" % [bad]
 	main.queue_free()
 	await tree.process_frame
@@ -360,7 +363,10 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content
-	elif not keeper.explored_in(driver.world).is_empty():
+	# A frame for the fog view to remember the fresh world's sight: the basic instance's only, none
+	# of the refused world's glade.
+	await tree.process_frame
+	if result.is_empty() and keeper.explored.has(InstanceBlueprints.GLADE):
 		result = "a fresh world kept the ground explored in the refused one: " + content
 	main.queue_free()
 	await tree.process_frame

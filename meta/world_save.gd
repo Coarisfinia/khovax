@@ -58,8 +58,8 @@ static func parse(text: String) -> World:
 
 
 ## Reads the ground explored in the world saved at `path` into `into`, per instance name its tiles;
-## returns why it's refused, whole, leaving `into` empty, or "". A world saved without any (before
-## it was kept) has none.
+## returns why it's refused, whole, leaving `into` empty, or "". A world saved without the key
+## (before it was kept) has none; a key with anything malformed under it, null too, is refused.
 static func load_explored(path: String, into: Dictionary[String, Dictionary]) -> String:
 	into.clear()
 	if not SaveStore.exists(path):
@@ -69,8 +69,7 @@ static func load_explored(path: String, into: Dictionary[String, Dictionary]) ->
 		return saved.problem
 	var parsed: Variant = _json(saved.text)
 	var table: Dictionary = parsed if parsed is Dictionary else {}
-	var data: Variant = table.get(EXPLORED)
-	var problem: String = _read_explored(data, into) if data != null else ""
+	var problem: String = _read_explored(table[EXPLORED], into) if table.has(EXPLORED) else ""
 	if not problem.is_empty():
 		into.clear()
 	return problem

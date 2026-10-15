@@ -41,6 +41,9 @@ func _notification(what: int) -> void:
 ## The saved world to resume, or null for a fresh one: when no world is kept, none is saved yet,
 ## or the save is refused. A refused save is warned about; the fresh world's saves replace it.
 func saved_world() -> World:
+	# Nothing explored is kept unless the saved world is resumed.
+	explored = {}
+	_explored_world = null
 	if path().is_empty():
 		return null
 	var saved: World = WorldSave.load_from(path())
