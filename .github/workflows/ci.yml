@@ -391,7 +391,7 @@ jobs:
           name: web-e2e-video
           path: build/web-test-video/
           retention-days: 14
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   pages:
     # The playable web build at https://flixbox.github.io/khovax/ (#23): on every push to main whose
