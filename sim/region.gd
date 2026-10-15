@@ -17,6 +17,8 @@ const WILD_MONSTER: String = "m"
 const CHEST: String = "c"
 ## The start of a region piece's connector line.
 const CONNECTOR: String = "connector "
+## The start of a region piece's exit line (#140).
+const EXIT: String = "exit "
 
 ## Every tile's terrain, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
@@ -31,6 +33,12 @@ var chests: Array[Vector2i] = []
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
 ## arranging uses them up, so a region in a state has none and they aren't hashed.
 var connectors: Array[Vector3i] = []
+## Ways out into another instance (#120, #140): like a connector, (q, r) is a ground tile on the
+## edge and z the side it leads out of, and `exit_blueprints` holds the blueprint each leads to.
+## Unlike connectors they stay after arranging. Not hashed: they come from the blueprint's files and
+## never change during a run.
+var exits: Array[Vector3i] = []
+var exit_blueprints: Array[String] = []
 ## Why the region file couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -51,14 +59,14 @@ static func disc(radius: int) -> Region:
 ## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
 ## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, `c`
 ## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
-## <side>` for each connector.
+## <side>` for each connector, and `exit <q> <r> <side> <blueprint>` for each exit.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
 	var connector_lines: Array[String] = []
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
-		if content.begins_with(CONNECTOR):
+		if content.begins_with(CONNECTOR) or content.begins_with(EXIT):
 			connector_lines.append(content)
 		elif not content.begins_with("#") and not content.is_empty():
 			rows.append(line.trim_suffix("\r"))
@@ -141,19 +149,34 @@ func turned(turns: int) -> Region:
 	)
 	region.chests.assign(chests.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)))
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
+	region.exits.assign(exits.map(_turned_connector.bind(turns)))
+	region.exit_blueprints = exit_blueprints.duplicate()
 	return region
 
 
-## Whether `piece`, moved by `offset`, would lie on tiles this region doesn't have yet.
+## Whether `piece`, moved by `offset`, would lie on tiles this region doesn't have yet, leaving the
+## tile outside every exit free, so an exit always leads out of the region.
 func fits(piece: Region, offset: Vector2i) -> bool:
+	var kept_free: Array[Vector2i] = outside_exits()
 	for tile: Vector2i in piece.terrain:
-		if terrain.has(tile + offset):
+		if terrain.has(tile + offset) or kept_free.has(tile + offset):
+			return false
+	for outside: Vector2i in piece.outside_exits():
+		if terrain.has(outside + offset):
 			return false
 	return true
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, chests and connectors. The players'
-## starts stay this region's own. Callers check `fits` first.
+## The tile just outside each exit, where it leads out of the region.
+func outside_exits() -> Array[Vector2i]:
+	var outside: Array[Vector2i] = []
+	for exit: Vector3i in exits:
+		outside.append(Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z])
+	return outside
+
+
+## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors and exits. The
+## players' starts stay this region's own. Callers check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
 		terrain[tile + offset] = piece.terrain[tile]
@@ -163,6 +186,9 @@ func place(piece: Region, offset: Vector2i) -> void:
 		chests.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
 		connectors.append(connector + Vector3i(offset.x, offset.y, 0))
+	for exit: Vector3i in piece.exits:
+		exits.append(exit + Vector3i(offset.x, offset.y, 0))
+	exit_blueprints.append_array(piece.exit_blueprints)
 
 
 ## Every value of the region, for the state hash, in a fixed order.
@@ -183,22 +209,29 @@ func hash_values() -> Array[int]:
 	return values
 
 
-## Reads one `connector <q> <r> <side>` line; returns why it can't, or "". A connector sits on a
-## ground tile and opens to a side where the piece has no tile.
+## Reads one `connector <q> <r> <side>` or `exit <q> <r> <side> <blueprint>` line; returns why it
+## can't, or "". Both sit on a ground tile and open to a side where the piece has no tile.
 func _parse_connector(line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
-	var numbers: bool = parts.size() == 4
-	for part: String in parts.slice(1):
+	var exit: bool = line.begins_with(EXIT)
+	var numbers: bool = parts.size() == (5 if exit else 4)
+	for part: String in parts.slice(1, 4):
 		numbers = numbers and part.is_valid_int()
 	if not numbers:
+		if exit:
+			return "an exit line reads \"exit <q> <r> <side> <blueprint>\": " + line
 		return "a connector line reads \"connector <q> <r> <side>\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
 	var side: int = parts[3].to_int()
 	if side < 0 or side >= Hex.DIRECTIONS.size():
-		return "connector side %d isn't 0 to 5" % side
+		return "%s side %d isn't 0 to 5" % [parts[0], side]
 	if not is_walkable(tile) or has_tile(tile + Hex.DIRECTIONS[side]):
-		return "connector %s doesn't open from ground to the edge on side %d" % [tile, side]
-	connectors.append(Vector3i(tile.x, tile.y, side))
+		return "%s %s doesn't open from ground to the edge on side %d" % [parts[0], tile, side]
+	if exit:
+		exits.append(Vector3i(tile.x, tile.y, side))
+		exit_blueprints.append(parts[4])
+	else:
+		connectors.append(Vector3i(tile.x, tile.y, side))
 	return ""
 
 

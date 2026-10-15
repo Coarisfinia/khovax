@@ -12,13 +12,15 @@ extends RefCounted
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
-## The first region arranged from region pieces (#57): a glade the seed puts together and turns.
+## The first region arranged from region pieces (#57): a glade the seed puts together, east of the
+## basic instance (#140).
 const GLADE: String = "glade"
 ## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
 const ARENA: String = "arena"
 const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
 ## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
-const UNTURNED: Array[String] = [ARENA]
+## Every instance in the web of exits is one, so an exit always leads out the same way (#120).
+const UNTURNED: Array[String] = [GLADE, ARENA]
 ## Each blueprint's instance loot table (data/loot_tables/), by blueprint: what its chests hold.
 const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
 const REGIONS: String = "res://regions/"
@@ -89,6 +91,25 @@ static func region_of(instance_name: String, seed_value: int) -> Region:
 		if not piece.problem.is_empty():
 			return piece
 	return RegionArranger.arrange(pieces, seed_value, not UNTURNED.has(instance_name))
+
+
+## Why the named blueprint's exits don't hold together, or "" (#140): each leads to a blueprint that
+## exists and has an exit leading back on the opposite side, so a way out always has a way back.
+## The web is checked by the world flow, not each time an instance loads.
+static func exit_problem(instance_name: String) -> String:
+	var region: Region = region_of(instance_name, 0)
+	for i: int in region.exits.size():
+		var target: String = region.exit_blueprints[i]
+		if not exists(target):
+			return "%s's exit leads to %s, which doesn't exist" % [instance_name, target]
+		var back: Region = region_of(target, 0)
+		var side: int = posmod(region.exits[i].z + 3, Hex.DIRECTIONS.size())
+		var found: bool = false
+		for j: int in back.exits.size():
+			found = found or (back.exit_blueprints[j] == instance_name and back.exits[j].z == side)
+		if not found:
+			return "%s has no exit back to %s on side %d" % [target, instance_name, side]
+	return ""
 
 
 ## The basic instance, as `create` makes it.
