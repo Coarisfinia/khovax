@@ -19,6 +19,10 @@ var problem: String = ""
 var start_name: String = ""
 ## Each reachable instance's place in the world, worked out once (`offset`).
 var _offsets: Dictionary[String, Vector2i] = {}
+## Each blueprint's region for this run's seed, arranged once for the layout.
+var _regions: Dictionary[String, Region] = {}
+## The first problem laying out the web met, or "".
+var _layout_problem: String = ""
 
 
 ## A world whose run starts in the blueprint `start` with `players` players in it.
@@ -61,18 +65,21 @@ func offset(instance_name: String) -> Vector2i:
 	return _offsets.get(instance_name, Vector2i.ZERO)
 
 
-## Why the web can't be laid out as one world, or "": two instances that would lie on the same
-## tile (#187). The world flow checks it over many seeds, since arranged regions vary with them.
+## Why the web can't be laid out as one world, or "" (#187): an exit whose target has no way back to
+## it, a second way into an instance that doesn't fit where the first placed it, or two instances
+## that would lie on the same tile. The world flow checks it over many seeds, since arranged
+## regions vary with them.
 func layout_problem() -> String:
 	if _offsets.is_empty():
 		_lay_out()
+	if not _layout_problem.is_empty():
+		return _layout_problem
 	var taken: Dictionary[Vector2i, String] = {}
 	var names: Array[String] = []
 	names.assign(_offsets.keys())
 	names.sort()
 	for instance_name: String in names:
-		var region: Region = InstanceBlueprints.region_of(instance_name, seed_for(instance_name))
-		for tile: Vector2i in region.sorted_tiles():
+		for tile: Vector2i in _region(instance_name).sorted_tiles():
 			var placed: Vector2i = tile + _offsets[instance_name]
 			if taken.has(placed):
 				return "%s and %s would overlap on %s" % [taken[placed], instance_name, placed]
@@ -80,31 +87,53 @@ func layout_problem() -> String:
 	return ""
 
 
-## Places every instance the web reaches, breadth first from the starting instance.
+## Places every instance the web reaches, breadth first from the starting instance, checking every
+## exit against the places already given; the first exit that doesn't fit is `_layout_problem`.
 func _lay_out() -> void:
 	_offsets[start_name] = Vector2i.ZERO
 	var queue: Array[String] = [start_name]
 	while not queue.is_empty():
 		var from: String = queue.pop_front()
-		var region: Region = InstanceBlueprints.region_of(from, seed_for(from))
+		var region: Region = _region(from)
 		for i: int in region.exits.size():
 			var target: String = region.exit_blueprints[i]
-			if _offsets.has(target):
-				continue
-			var back: Vector2i = _way_back(target, from)
+			var back: Vector3i = _way_back(target, from)
 			var exit: Vector3i = region.exits[i]
 			var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-			_offsets[target] = _offsets[from] + outside - back
-			queue.append(target)
+			var placed: Vector2i = _offsets[from] + outside - Vector2i(back.x, back.y)
+			if back.z < 0:
+				_note("%s's exit to %s has no way back" % [from, target])
+			elif not _offsets.has(target):
+				_offsets[target] = placed
+				queue.append(target)
+			elif _offsets[target] != placed:
+				_note("%s doesn't fit where %s's exit leads into it" % [target, from])
 
 
-## The tile of the exit in `instance_name` that leads back to `from`: its way back.
-func _way_back(instance_name: String, from: String) -> Vector2i:
-	var region: Region = InstanceBlueprints.region_of(instance_name, seed_for(instance_name))
+## The exit in `instance_name` that leads back to `from` as (q, r, side), or z = -1 when there's
+## none.
+func _way_back(instance_name: String, from: String) -> Vector3i:
+	var region: Region = _region(instance_name)
 	for i: int in region.exits.size():
 		if region.exit_blueprints[i] == from:
-			return Vector2i(region.exits[i].x, region.exits[i].y)
-	return Vector2i.ZERO
+			return region.exits[i]
+	return Vector3i(0, 0, -1)
+
+
+## The region of the blueprint `instance_name` for this run's seed, arranged once.
+func _region(instance_name: String) -> Region:
+	if not _regions.has(instance_name):
+		_regions[instance_name] = InstanceBlueprints.region_of(
+			instance_name,
+			seed_for(instance_name),
+		)
+	return _regions[instance_name]
+
+
+## Keeps the first layout problem found.
+func _note(found: String) -> void:
+	if _layout_problem.is_empty():
+		_layout_problem = found
 
 
 ## The names of the instances a player is in, in name order: the ones that step.
