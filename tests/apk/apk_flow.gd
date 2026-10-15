@@ -27,8 +27,8 @@ func begin(main: Node, tree: SceneTree) -> void:
 	finished.emit(await run(main, tree))
 
 
-## Walks the scripted path in `main` and returns why it failed, or "". Real time passes once at the
-## end, for the camera to follow.
+## Walks the scripted path in `main` and returns why it failed, or "". Each tick waits for its
+## real time, so the walk plays at the game's speed and the web run's video shows it.
 func run(main: Node, tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var camera: Camera3D = main.get_node("Camera3D") as Camera3D
@@ -40,9 +40,9 @@ func run(main: Node, tree: SceneTree) -> String:
 	_touch(origin, true)
 	for leg: Vector2 in LEGS:
 		_drag(origin + leg * TouchStick.RADIUS)
-		_run_ticks(driver, LEG_TICKS)
+		await _run_ticks(driver, tree, LEG_TICKS)
 	_touch(origin, false)
-	_run_ticks(driver, LEG_TICKS)
+	await _run_ticks(driver, tree, LEG_TICKS)
 	# Frames pass in real time here, so the views and the camera catch up with the state.
 	await tree.create_timer(1.5).timeout
 	return _result(driver, camera, start, camera_before)
@@ -68,9 +68,10 @@ func _result(
 	return ""
 
 
-func _run_ticks(driver: GameDriver, ticks: int) -> void:
+func _run_ticks(driver: GameDriver, tree: SceneTree, ticks: int) -> void:
 	for _tick: int in ticks:
 		driver.advance(STEP)
+		await tree.create_timer(STEP).timeout
 
 
 func _touch(point: Vector2, pressed: bool) -> void:

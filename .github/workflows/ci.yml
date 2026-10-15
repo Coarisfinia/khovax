@@ -34,6 +34,10 @@ env:
   BUN_SHA256: 3e730528d89775f03f87f05c06787c4df4099d0a37f3f252e7b829cb23816e18
   CHROME_VERSION: 156.0.8078.12
   CHROME_SHA256: f56185000c18aa2471911e2b8fbd96c3175bcc7553e78c002371bb18a9fa69e9
+  # Playwright's own ffmpeg build, which records the run's video; the revision is the one
+  # playwright-core's browsers.json names.
+  PLAYWRIGHT_FFMPEG_REVISION: 1013
+  PLAYWRIGHT_FFMPEG_SHA256: ee986434d158f74fb5d9c5ff1092026ceedb63f324fe90b5be89460926b7b679
 
 jobs:
   headless:
@@ -355,7 +359,7 @@ jobs:
           name: khovax-web-test
           path: build/web-test
 
-      - name: "⬇️ Download Bun and Chrome (headless shell)"
+      - name: "⬇️ Download Bun, Chrome (headless shell) and Playwright's ffmpeg"
         run: |
           curl -fsSL -o bun.zip \
             "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip"
@@ -363,7 +367,11 @@ jobs:
           curl -fsSL -o chrome.zip \
             "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-headless-shell-linux64.zip"
           echo "${CHROME_SHA256}  chrome.zip" | sha256sum -c -
+          curl -fsSL -o ffmpeg.zip \
+            "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/${PLAYWRIGHT_FFMPEG_REVISION}/ffmpeg-linux.zip"
+          echo "${PLAYWRIGHT_FFMPEG_SHA256}  ffmpeg.zip" | sha256sum -c -
           unzip -q bun.zip -d ~/tools && unzip -q chrome.zip -d ~/tools
+          unzip -q ffmpeg.zip -d ~/tools/playwright/ffmpeg-${PLAYWRIGHT_FFMPEG_REVISION}
           echo ~/tools/bun-linux-x64 >> "$GITHUB_PATH"
 
       - name: "📦 Install the runner's dependencies (locked)"
@@ -372,7 +380,18 @@ jobs:
       - name: "🌐 Web test build: run the e2e flow in headless Chrome"
         run: |
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
+          export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
           timeout 300 bun tests/web/web_e2e.ts build/web-test
+
+      - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
+        # The run on film (owner, #115), also when it failed.
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-e2e-video
+          path: build/web-test-video/
+          retention-days: 14
+          if-no-files-found: ignore
 
   pages:
     # The playable web build at https://flixbox.github.io/khovax/ (#23): on every push to main whose
