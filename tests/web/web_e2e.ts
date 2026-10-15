@@ -11,7 +11,9 @@ const root = resolve(process.argv[2] ?? "build/web-test");
 const chrome = process.env.CHROME;
 const RESULT = /^KHOVAX_E2E: (PASS|FAIL .*)$/;
 const TIMEOUT_MS = 180_000;
-const SIZE = { width: 1280, height: 720 };
+// Small enough that the software-rendered WebGL and the video encoder keep up on a busy runner
+// (#193).
+const SIZE = { width: 960, height: 540 };
 const video = `${root}-video`;
 
 if (!chrome) {
