@@ -168,6 +168,7 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 		return "%s%s %d %s" % [Region.EXIT, where, side, words[-1]]
 	if meaning.begins_with("a wild monster, always ") and words.size() >= 5:
 		return "%s%s %s" % [Region.SPECIES, where, words[-1]]
-	if meaning.contains("; "):
+	# A trigger names what it is before the "; ", and its when and action after.
+	if meaning.contains("; ") and not meaning.get_slice("; ", 0).strip_edges().is_empty():
 		return _trigger_line(meaning.get_slice("; ", 1), where)
 	return ""

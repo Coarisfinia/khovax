@@ -32,7 +32,8 @@ func hash_values() -> Array[int]:
 	return values
 
 
-## Whether `trigger`'s when has come: for STEP, a player stands on its tile.
+## Whether `trigger`'s when has come: for STEP, a player stands on its tile. Standing counts, not
+## only a step onto it, so arriving there through an exit or starting there fires it too.
 static func _fires(state: GameState, trigger: TileTrigger) -> bool:
 	if trigger.condition == TileTrigger.STEP:
 		for slot: int in GameState.MAX_PLAYERS:
