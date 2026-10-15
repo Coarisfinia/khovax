@@ -176,7 +176,7 @@ func _check_view(tree: SceneTree) -> String:
 ## A catch reaches the profile through the driver's ticked events, as in a run: it's taken over and,
 ## the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
 func _check_saved(tree: SceneTree) -> String:
-	var _gone: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	SaveStore.remove(SAVE_PATH)
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
@@ -202,7 +202,7 @@ func _check_saved(tree: SceneTree) -> String:
 		result = "the caught %s wasn't saved into the profile: %s" % [expected, species]
 	main.queue_free()
 	await tree.process_frame
-	_gone = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	SaveStore.remove(SAVE_PATH)
 	return result
 
 
