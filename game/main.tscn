@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://view/fog_view.gd" id="12_fog"]
 [ext_resource type="Script" path="res://view/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://view/graphics.gd" id="14_graphics"]
+[ext_resource type="Script" path="res://view/chest_view.gd" id="15_chests"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -47,6 +48,11 @@ grid = NodePath("../HexGrid")
 [node name="WildMonsterView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")
 driver = NodePath("../Driver")
+
+[node name="ChestView" type="Node3D" parent="." node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
+script = ExtResource("15_chests")
+driver = NodePath("../Driver")
+input = NodePath("../LocalInput")
 
 [node name="Player" type="Node3D" parent="." node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
 script = ExtResource("4_player")
