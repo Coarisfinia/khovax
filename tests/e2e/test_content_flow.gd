@@ -3,6 +3,8 @@ extends RefCounted
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; and broken entries are refused. Loot
 ## tables (#90) load, roll the same for the same stream, and a blank rolls on the instance's table.
+## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
+## and broken ones are refused.
 
 
 func run(_tree: SceneTree) -> String:
@@ -20,7 +22,80 @@ func run(_tree: SceneTree) -> String:
 		result = _check_loot_refused()
 	if result.is_empty():
 		result = _check_wild_species(content)
+	if result.is_empty():
+		result = _check_tiles()
 	return result
+
+
+## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
+## numbers and walkability; the rules number every kind by its file's number; forest is walkable
+## with its trees, and every model a blueprint names exists. Broken blueprints, and two with one
+## number, are refused.
+func _check_tiles() -> String:
+	var content: Content = Content.load_tiles()
+	if not content.problem.is_empty():
+		return "the tile blueprints didn't load: " + content.problem
+	var walkable: Dictionary[String, bool] = {
+		"ground": true,
+		"water": false,
+		"rock": false,
+		"forest": true,
+	}
+	for id: String in walkable:
+		var kind: int = TileKinds.number_of(id)
+		if not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]:
+			return "tile blueprint %s is missing or not as walkable as written" % id
+	var built_in: Array[int] = [Region.GROUND, Region.WATER, Region.BLOCKED]
+	if built_in != [content.tiles["ground"].number, content.tiles["water"].number,
+			content.tiles["rock"].number] or content.tiles["forest"].model.is_empty():
+		return "the built-in tile kinds don't keep their numbers, or the forest has no trees"
+	for tile: TileBlueprint in content.tiles.values():
+		if TileKinds.number_of(tile.id) != tile.number or TileKinds.id_of(tile.number) != tile.id:
+			return "the rules don't number tile blueprint %s by its file" % tile.id
+		if not tile.model.is_empty() and not ResourceLoader.exists(tile.model):
+			return "tile blueprint %s's model %s doesn't exist" % [tile.id, tile.model]
+	var result: String = _check_tiles_refused()
+	return result if not result.is_empty() else _check_tile_numbers_unique()
+
+
+## Tile blueprints with a wrong id, number, color or trait are refused, with a reason.
+func _check_tiles_refused() -> String:
+	var tile: String = "{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
+	var walks: String = "\"walkable\": true"
+	var cases: Dictionary[String, String] = {
+		tile % ["y", "9", "#000000", walks, ""]: "its id must",
+		tile % ["x", "-1", "#000000", walks, ""]: "its number",
+		tile % ["x", "1.5", "#000000", walks, ""]: "its number",
+		tile % ["x", "\"9\"", "#000000", walks, ""]: "its number",
+		tile % ["x", "9", "green", walks, ""]: "its color",
+		tile % ["x", "9", "#000000", "", ""]: "its traits",
+		tile % ["x", "9", "#000000", walks + ", \"swims\": true", ""]: "field swims",
+		tile % ["x", "9", "#000000", walks, ", \"size\": 1"]: "field size",
+	}
+	for text: String in cases:
+		var problem: String = TileBlueprint.parse("x", text).problem
+		if not problem.begins_with(cases[text]):
+			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
+
+
+## Two tile blueprints with the same number are refused: a number names one kind forever.
+func _check_tile_numbers_unique() -> String:
+	var directory: String = "user://tile_numbers_test/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
+	var tile: String = "{\"id\": \"%s\", \"number\": 7, \"color\": \"#000000\", "
+	tile += "\"traits\": {\"walkable\": true}}"
+	for id: String in ["a", "b"]:
+		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
+		var _stored: bool = file.store_string(tile % id)
+		file.close()
+	var problem: String = Content.load_tiles(directory).problem
+	for id: String in ["a", "b"]:
+		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
+	var _gone: Error = DirAccess.remove_absolute(directory)
+	if not problem.begins_with("b.jsonc: its number 7"):
+		return "two tile blueprints with one number weren't refused: %s" % problem
+	return ""
 
 
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint

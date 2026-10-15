@@ -1,0 +1,7 @@
+// Rock: nobody walks it, and it blocks sight (FogFeature). Built in: `^` in a region file.
+{
+	"id": "rock",
+	"number": 2, // permanent: never reused or changed once shipped
+	"color": "#6b6661",
+	"traits": { "walkable": false }
+}

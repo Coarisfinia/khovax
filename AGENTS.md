@@ -196,7 +196,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
-- **Regions** (#36, `Region`): which tiles exist, each tile's terrain (ground, water, rock), the
+- **Regions** (#36, `Region`): which tiles exist, each tile's kind (a tile blueprint, #116), the
   players' starts, where wild monsters stand (`WildMonsterFeature` places them, #19, each of a
   species its spot names or rolled from the blueprint's `WILD_SPECIES`, #133; anything
   that isn't a player blocks walkers, players pass through each other) and where treasure chests
@@ -243,14 +243,19 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
   ones), and a player's choice overrides it until they choose Auto again.
   Content data (species, items) is read in `meta/` too (below).
-- **Content data** (#72): species and, later, items are JSONC files in `data/<kind>/`, one per
-  entry and named after its id, with a JSON Schema in `data/schemas/<kind>.schema.json`. Not Godot
-  resources (owner, #72: no engine lock-in). `meta/` reads them (`Content`, comments stripped by
-  `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
+- **Content data** (#72): species, loot tables, tile blueprints and, later, items are JSONC files
+  in `data/<kind>/`, one per entry and named after its id, with a JSON Schema in
+  `data/schemas/<kind>.schema.json`. Not Godot resources (owner, #72: no engine lock-in). `meta/`
+  reads them (`Content`, comments stripped by `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
   schema with `jv` (pinned, verified), after `tools/data_to_json.gd` strips the comments with the
   same stripper; the content flow checks what a schema can't (ids matching files and unique, types
   from the chart, never two types of one family, loot chances adding up to 100 %). Loot tables
   (`LootTable`, #90) roll from the `Rng` they're given, so a feature's stream rolls the same loot.
+  Tile blueprints (`TileBlueprint`, #116) each carry a permanent `number`, never reused or
+  changed once shipped, which `Region.terrain` holds; `TileKinds` in `sim/` keeps only each kind's
+  id, number and traits, and the views read the look (`TileLooks`). **Tile traits are rules:**
+  changing one (e.g. `walkable`) changes what the game does, so it bumps
+  `Simulation.RULES_VERSION` and rehashes the golden replays, like any rule change.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.
