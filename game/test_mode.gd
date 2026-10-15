@@ -20,10 +20,16 @@ func _ready() -> void:
 		return
 	# The main scene comes up after the autoloads.
 	await get_tree().process_frame
+	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
+	var errors: ErrorCounter = ErrorCounter.new()
+	OS.add_logger(errors)
 	var flow: Object = (load(FLOW) as GDScript).new()
 	var done: Signal = Signal(flow, "finished")
 	flow.call("begin", get_tree().current_scene, get_tree())
 	var result: String = await done
+	OS.remove_logger(errors)
+	if result.is_empty() and errors.count > 0:
+		result = "%d error(s) logged during the flow" % errors.count
 	_report(result)
 
 
