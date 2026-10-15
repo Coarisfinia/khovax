@@ -130,7 +130,9 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
 
 
-## The wild monster feature with the named blueprint's species list.
+## The wild monster feature with the named blueprint's species list and every species' stats from
+## the content data (#219). Content that doesn't load is an error; its monsters then push on
+## nothing.
 static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
 	var species: Dictionary = WILD_SPECIES.get(instance_name, { })
 	var roster: Array[String] = []
@@ -139,7 +141,15 @@ static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
 		var weight: int = species[species_id]
 		roster.append(str(species_id))
 		weights.append(weight)
-	return WildMonsterFeature.new(roster, weights)
+	var content: Content = Content.load_species()
+	if not content.problem.is_empty():
+		push_error("the species don't load: " + content.problem)
+	var max_hps: Dictionary[String, int] = {}
+	var strengths: Dictionary[String, int] = {}
+	for species_id: String in content.species:
+		max_hps[species_id] = content.species[species_id].hp
+		strengths[species_id] = content.species[species_id].strength
+	return WildMonsterFeature.new(roster, weights, max_hps, strengths)
 
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.

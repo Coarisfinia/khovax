@@ -1,16 +1,40 @@
 class_name CatchFeature
 extends Feature
-## Catching (#20): when a player's trail closes a ring around a wild monster, the monster is caught.
+## Catching (#20) with sealing (#219): when a player's trail closes a ring around wild monsters, the
+## ring seals. It must hold for a while as every wild monster inside pushes on its nearest wall
+## segment; if it holds, everything inside is caught (a WildMonsterCaught event each says who caught
+## it), and if a segment gives way, the ring breaks and nothing is (a RingBroken event). Either way
+## the player's trail starts over from where they stand.
+##
 ## Enclosed means the monster's tile can't reach the region's edge without crossing that player's
 ## trail: one flood fill from the edge over the region's tiles, whatever their terrain, so only the
-## trail encloses. The caught monster leaves the world (a WildMonsterCaught event says who caught
-## it) and the catcher's trail starts over from where it stands. Each player rings on their own
-## trail. Strength, pressure, sealing and enrage build on this later (design report).
+## trail encloses. The ring's wall is the trail tiles next to the enclosed tiles around the
+## monsters. Bigger rings spread the same ring power over more segments, so their walls are thinner.
+##
+## While a ring seals, its player walks on as usual but draws no new ring, the monsters inside stay
+## where they stand (wild monsters don't move yet), and a monster sealed in one player's ring can't
+## be sealed in another's: each player's ring seals on its own. Players reinforcing a wall (#227),
+## enraged monsters after a break (#220) and shared co-op rings (#87) build on this later.
 ##
 ## It runs after the trail has grown this tick, reads the trail and the wild monsters, and starts
 ## the catcher's trail over through TrailFeature.restart: features later in the order change an
 ## earlier one only through its public methods.
 
+## The ring rules' constants (#219). Every one is a placeholder, to tune (#219).
+## Players have no level yet: every player draws rings at this level until they do.
+const PLAYER_LEVEL: int = 1
+## Ring power is BASE + level × PER_LEVEL (+ companion passives, none yet): the issue's 100 + 20 ×
+## level scaled up, so a monster's pressure each tick (its strength) wears a wall down over a
+## whole seal rather than in one tick.
+const RING_POWER_BASE: int = 30_000
+const RING_POWER_PER_LEVEL: int = 6_000
+## A seal takes this many ticks, plus one per SEAL_PRESSURE_PER_TICK of pressure inside
+## (thousandths): more resistance seals slower.
+const SEAL_BASE_TICKS: int = 40
+const SEAL_PRESSURE_PER_TICK: int = 10 * Fixed.ONE
+
+## Every sealing ring, by its player's entity id.
+var seals: Dictionary[int, RingSeal] = {}
 ## The edge of `_edge_region`, cached by _edge_of.
 var _edge: Array[Vector2i] = []
 var _edge_region: Region = null
@@ -26,17 +50,36 @@ func requires() -> Array[int]:
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
+	# Rings sealing since an earlier tick push first, so a ring closed this tick starts next tick.
+	for catcher_id: int in _sealing_players():
+		_push(state, catcher_id)
+	_close_rings(state)
+
+
+## The power of a ring drawn at `level`.
+static func ring_power(level: int) -> int:
+	return RING_POWER_BASE + level * RING_POWER_PER_LEVEL
+
+
+## How hard the wild monster pushes on a wall each tick, in thousandths: its strength, scaled by
+## the HP it has left, so weakening it first makes the ring easier to hold.
+static func pressure(wild: WildMonsterFeature, monster_id: int) -> int:
+	var left: int = Fixed.ratio(wild.hp_of(monster_id), wild.max_hp_of(monster_id))
+	return wild.strength_of(monster_id) * left
+
+
+## Every new ring closed this tick around wild monsters not sealing yet starts sealing. A ring can
+## only close when its player's trail grows, so rings are checked per new trail tile, in the order
+## the moves happened: entity id order, so when two players close rings around the same monster in
+## one tick, the earlier one seals it. This relies on wild monsters standing still: every monster
+## inside a ring was found when the ring closed. A rule that moves monsters must also check when a
+## monster steps into an old ring. Copied, as seals may add events later.
+func _close_rings(state: GameState) -> void:
 	var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	# A ring can only close when its player's trail grows, so rings are checked per new trail
-	# tile, in the order the moves happened: entity id order, so when two players close rings
-	# around the same monster in one tick, the earlier one catches it. This relies on wild monsters
-	# standing still: every monster inside a ring was caught when the ring closed. A rule that
-	# moves monsters must also check when a monster steps into an old ring. Copied, as catches add
-	# events.
 	for event: RefCounted in state.events.duplicate():
 		var grew: TrailGrew = event as TrailGrew
-		if grew == null or trails.trail(grew.entity_id) == null:
+		if grew == null or trails.trail(grew.entity_id) == null or seals.has(grew.entity_id):
 			continue
 		var trail: Trail = trails.trail(grew.entity_id)
 		if wild.monsters.is_empty() or not _may_close(trail, grew):
@@ -44,15 +87,116 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		# One flood per move, for every monster at once (#104).
 		var edge: Array[Vector2i] = _edge_of(state.region)
 		var reachable: Dictionary[Vector2i, bool] = outside(state.region, trail, edge)
-		var caught: Array[int] = []
+		var inside: Array[int] = []
 		for monster_id: int in wild.monsters:
 			var spot: Vector2i = state.entity(monster_id).tile
-			if not trail.tiles.has(spot) and not reachable.has(spot):
-				caught.append(monster_id)
-		for monster_id: int in caught:
-			_catch(state, monster_id, grew.entity_id)
-		if not caught.is_empty():
-			trails.restart(grew.entity_id, state.entity(grew.entity_id).tile)
+			if not trail.tiles.has(spot) and not reachable.has(spot) and not _is_sealed(monster_id):
+				inside.append(monster_id)
+		if not inside.is_empty():
+			seals[grew.entity_id] = _seal(state, trail, inside)
+
+
+## A new seal of the ring `trail` closed around the wild monsters `inside`.
+func _seal(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var seal: RingSeal = RingSeal.new()
+	var spots: Array[Vector2i] = []
+	for monster_id: int in inside:
+		spots.append(state.entity(monster_id).tile)
+	seal.walls = wall_around(state.region, trail, spots)
+	var _sized: int = seal.damage.resize(seal.walls.size())
+	seal.damage.fill(0)
+	seal.integrity = Fixed.mul_div(ring_power(PLAYER_LEVEL), Fixed.ONE, seal.walls.size())
+	seal.monsters = inside
+	var total: int = 0
+	for i: int in inside.size():
+		seal.targets.append(nearest(seal.walls, spots[i]))
+		total += pressure(wild, inside[i])
+	seal.seal_ticks = SEAL_BASE_TICKS + Fixed.div_floor(total, SEAL_PRESSURE_PER_TICK)
+	return seal
+
+
+## One tick of the player's seal: every monster inside pushes on its segment. A segment whose
+## damage reaches its integrity breaks the ring; a ring that holds for its seal ticks catches
+## everything inside.
+func _push(state: GameState, catcher_id: int) -> void:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var seal: RingSeal = seals[catcher_id]
+	seal.ticks += 1
+	for i: int in seal.monsters.size():
+		seal.damage[seal.targets[i]] += pressure(wild, seal.monsters[i])
+	var failed: int = seal.failed_segment()
+	if failed >= 0:
+		var slot: int = state.entity(catcher_id).slot
+		var walls: Array[Vector2i] = seal.walls
+		var broken: RingBroken = RingBroken.new(
+			catcher_id,
+			slot,
+			walls[failed],
+			walls,
+			seal.monsters,
+		)
+		state.events.append(broken)
+		_end(state, catcher_id)
+	elif seal.ticks >= seal.seal_ticks:
+		for monster_id: int in seal.monsters.duplicate():
+			_catch(state, monster_id, catcher_id)
+		_end(state, catcher_id)
+
+
+## Ends the player's seal, held or broken: their trail starts over from where they stand.
+func _end(state: GameState, catcher_id: int) -> void:
+	var _dropped: bool = seals.erase(catcher_id)
+	var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
+	trails.restart(catcher_id, state.entity(catcher_id).tile)
+
+
+## The players whose rings are sealing, in id order.
+func _sealing_players() -> Array[int]:
+	var ids: Array[int] = []
+	ids.assign(seals.keys())
+	ids.sort()
+	return ids
+
+
+func _is_sealed(monster_id: int) -> bool:
+	for seal: RingSeal in seals.values():
+		if seal.monsters.has(monster_id):
+			return true
+	return false
+
+
+## The ring's wall around the monsters on `spots`: every trail tile next to a tile enclosed with
+## them, found by a flood from their spots that stops at the trail. Sorted.
+static func wall_around(region: Region, trail: Trail, spots: Array[Vector2i]) -> Array[Vector2i]:
+	var seen: Dictionary[Vector2i, bool] = {}
+	var wall: Dictionary[Vector2i, bool] = {}
+	var open: Array[Vector2i] = spots.duplicate()
+	for spot: Vector2i in spots:
+		seen[spot] = true
+	while not open.is_empty():
+		var current: Vector2i = open.pop_back()
+		for direction: Vector2i in Hex.DIRECTIONS:
+			var next: Vector2i = current + direction
+			if trail.tiles.has(next):
+				wall[next] = true
+			elif region.has_tile(next) and not seen.has(next):
+				seen[next] = true
+				open.append(next)
+	var sorted: Array[Vector2i] = []
+	sorted.assign(wall.keys())
+	sorted.sort()
+	return sorted
+
+
+## The index of the wall segment nearest to `spot` by hex distance; of equally near ones, the
+## first in the wall's order.
+static func nearest(walls: Array[Vector2i], spot: Vector2i) -> int:
+	var best: int = 0
+	for i: int in walls.size():
+		if Hex.distance(walls[i], spot) < Hex.distance(walls[best], spot):
+			best = i
+	return best
 
 
 ## Every tile off the trail that can reach the region's edge (a tile next to where the region ends)
@@ -118,3 +262,44 @@ func _catch(state: GameState, monster_id: int, catcher_id: int) -> void:
 	var slot: int = state.entity(catcher_id).slot
 	state.remove_entity(monster_id)
 	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, slot, tile, species))
+
+
+## A player who leaves the instance takes their seal with them, unfinished; a wild monster that
+## leaves it pushes no more.
+func entity_removed(_state: GameState, removed_id: int) -> void:
+	var _dropped: bool = seals.erase(removed_id)
+	for seal: RingSeal in seals.values():
+		seal.drop(removed_id)
+
+
+## Every sealing ring as its player's entity id and its seal, in id order.
+func save_values() -> Dictionary:
+	var saved: Array[Dictionary] = []
+	for catcher_id: int in _sealing_players():
+		var entry: Dictionary = seals[catcher_id].to_data()
+		entry["catcher"] = catcher_id
+		saved.append(entry)
+	return { "seals": saved }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	seals.clear()
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	for entry: DataReader in values.entries("seals"):
+		var catcher_id: int = entry.whole("catcher", 1, DataReader.MOST)
+		var catcher: Entity = state.entity(catcher_id)
+		if catcher == null or catcher.slot == Entity.NO_SLOT or seals.has(catcher_id):
+			values.fail("sealing ring of %d isn't one player's" % catcher_id)
+			return
+		var seal: RingSeal = RingSeal.from_data(entry, state, wild)
+		if seal == null:
+			return
+		seals[catcher_id] = seal
+
+
+func hash_values() -> Array[int]:
+	var values: Array[int] = [seals.size()]
+	for catcher_id: int in _sealing_players():
+		values.append(catcher_id)
+		values.append_array(seals[catcher_id].hash_values())
+	return values
