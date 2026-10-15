@@ -10,9 +10,10 @@ extends RefCounted
 ## world. Kept in the world's file, it's saved with the world and goes with it.
 
 const PATH: String = "user://world.json"
-## The key of the explored ground beside the world's data, and its format.
+## The key of the explored ground beside the world's data, and its format. Format 2 notes each
+## instance's generation (#212); format 1 had none, from before purging: generation 0.
 const EXPLORED: String = "explored"
-const EXPLORED_FORMAT: int = 1
+const EXPLORED_FORMAT: int = 2
 ## The farthest a remembered tile's coordinate lies from zero: a tile holds 32-bit numbers.
 const MOST_COORDINATE: int = 0x7fff_ffff
 
@@ -28,19 +29,19 @@ static func load_from(path: String = PATH) -> World:
 	return parse(saved.text)
 
 
-## Saves `world` at `path`, with the ground `explored` in it (per instance name, its tiles);
+## Saves `world` at `path`, with the ground `explored` in it (ExploredGround);
 ## returns why it couldn't, or "".
 static func save(
 		world: World,
 		path: String = PATH,
-		explored: Dictionary[String, Dictionary] = {},
+		explored: ExploredGround = null,
 ) -> String:
 	return SaveStore.write_save(path, to_text(world, explored))
 
 
-static func to_text(world: World, explored: Dictionary[String, Dictionary] = {}) -> String:
+static func to_text(world: World, explored: ExploredGround = null) -> String:
 	var data: Dictionary = world.to_data()
-	data[EXPLORED] = explored_data(explored)
+	data[EXPLORED] = explored_data(explored if explored != null else ExploredGround.new())
 	return JSON.stringify(data)
 
 
@@ -57,10 +58,10 @@ static func parse(text: String) -> World:
 	return World.from_data(data)
 
 
-## Reads the ground explored in the world saved at `path` into `into`, per instance name its tiles;
+## Reads the ground explored in the world saved at `path` into `into` (ExploredGround);
 ## returns why it's refused, whole, leaving `into` empty, or "". A world saved without the key
 ## (before it was kept) has none; a key with anything malformed under it, null too, is refused.
-static func load_explored(path: String, into: Dictionary[String, Dictionary]) -> String:
+static func load_explored(path: String, into: ExploredGround) -> String:
 	into.clear()
 	if not SaveStore.exists(path):
 		return ""
@@ -75,41 +76,47 @@ static func load_explored(path: String, into: Dictionary[String, Dictionary]) ->
 	return problem
 
 
-## The ground `explored` as save data: its format, and per instance in name order its tiles, as q
-## and r after one another in tile order (DataReader.flat).
-static func explored_data(explored: Dictionary[String, Dictionary]) -> Dictionary:
+## The ground `explored` as save data: its format, and per instance in name order its generation
+## and its tiles, as q and r after one another in tile order (DataReader.flat).
+static func explored_data(explored: ExploredGround) -> Dictionary:
 	var names: Array[String] = []
-	names.assign(explored.keys())
+	names.assign(explored.tiles_in.keys())
 	names.sort()
 	var instances: Array[Dictionary] = []
 	for instance_name: String in names:
 		var tiles: Array[Vector2i] = []
-		tiles.assign(explored[instance_name].keys())
+		tiles.assign(explored.tiles_in[instance_name].keys())
 		tiles.sort()
-		instances.append({ "name": instance_name, "tiles": DataReader.flat(tiles) })
+		instances.append(
+			{
+				"name": instance_name,
+				"generation": explored.generations[instance_name],
+				"tiles": DataReader.flat(tiles),
+			},
+		)
 	return { "format": EXPLORED_FORMAT, "instances": instances }
 
 
 ## Reads the explored ground `data` (as `explored_data` wrote it) into `into`; returns the first
 ## problem, or "".
-static func _read_explored(data: Variant, into: Dictionary[String, Dictionary]) -> String:
+static func _read_explored(data: Variant, into: ExploredGround) -> String:
 	if not data is Dictionary or not has_whole_numbers(data):
 		return "not explored ground, or it holds a number that isn't whole"
 	var read: DataReader = DataReader.new(whole_numbers(data))
 	var format: int = read.whole("format", 0, DataReader.MOST)
-	if not read.failed() and format != EXPLORED_FORMAT:
+	if not read.failed() and (format < 1 or format > EXPLORED_FORMAT):
 		read.fail("explored ground format %d, this build reads %d" % [format, EXPLORED_FORMAT])
 	for entry: DataReader in read.entries("instances"):
 		var instance_name: String = entry.text("name")
-		if not InstanceBlueprints.exists(instance_name) or into.has(instance_name):
+		if not InstanceBlueprints.exists(instance_name) or into.tiles_in.has(instance_name):
 			entry.fail("explored instance %s doesn't exist or is saved twice" % instance_name)
 		var numbers: Array[int] = entry.wholes("tiles", -MOST_COORDINATE, MOST_COORDINATE)
 		if numbers.size() % 2 != 0:
 			entry.fail("the tiles explored in %s hold half a tile" % instance_name)
-		var tiles: Dictionary[Vector2i, bool] = {}
+		var generation: int = entry.whole("generation", 0, DataReader.MOST) if format > 1 else 0
+		var tiles: Dictionary[Vector2i, bool] = into.tiles_of(instance_name, generation)
 		for i: int in range(0, numbers.size() - 1, 2):
 			tiles[Vector2i(numbers[i], numbers[i + 1])] = true
-		into[instance_name] = tiles
 	return read.problem
 
 

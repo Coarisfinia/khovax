@@ -6,7 +6,7 @@ extends RefCounted
 ## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
 ## can be reached from the starting instance. The world holds several loaded instances and
-## steps the ones a player is in (#148).
+## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -31,6 +31,8 @@ func run(_tree: SceneTree) -> String:
 		_check_world,
 		_check_documents,
 		_check_walk_through,
+		_check_purge,
+		_check_start_kept,
 		_check_layout,
 	]
 	for step: Callable in steps:
@@ -64,6 +66,62 @@ func _check_walk_through() -> String:
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"
 	return ""
+
+
+## Purging (#212): the glade, left behind, stays loaded until nobody has been in it for an hour of
+## play, and is purged the tick after; its next visit loads it at generation 1, from another seed,
+## and entering it resets the count. The world goes through its save data and back with the tick
+## the glade was left and its generation, and hashes the same.
+func _check_purge() -> String:
+	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var first_seed: int = world.seed_for(InstanceBlueprints.GLADE)
+	for direction: int in [0, 1, 0, 3]:
+		_walk_in(world, direction)
+	var left: int = world.left_at.get(InstanceBlueprints.GLADE, -1)
+	if left < 0 or world.instance_of(0) != InstanceBlueprints.BASIC:
+		return "walking into the glade and back didn't leave it behind"
+	_idle_until(world, left + World.PURGE_TICKS - 1)
+	if not world.instances.has(InstanceBlueprints.GLADE):
+		return "the glade was purged before an hour had passed"
+	world.step(_still())
+	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
+		return "the glade wasn't purged an hour after it was left behind"
+	_walk_in(world, 0)
+	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
+	var reseeded: bool = glade != null and glade.rng_seed == world.seed_for("glade")
+	if not reseeded or glade.rng_seed == first_seed or world.left_at.has("glade"):
+		return "the glade didn't come back at generation 1 from a new seed, or kept its count"
+	return _check_left_again(world, left + World.PURGE_TICKS)
+
+
+## Leaving the glade again, after it was purged at `purged`, starts a new count, and the world goes
+## through its save data and back with both.
+func _check_left_again(world: World, purged: int) -> String:
+	_walk_in(world, 3)
+	if world.left_at.get(InstanceBlueprints.GLADE, -1) <= purged:
+		return "leaving the glade again didn't start a new count"
+	var reloaded: World = World.from_data(world.to_data())
+	var kept: bool = reloaded.left_at == world.left_at and reloaded.generations == world.generations
+	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
+		return "the world didn't go through its save data with its purges: " + reloaded.problem
+	return ""
+
+
+## The starting instance is never purged (#212), however long the player stays in the glade.
+func _check_start_kept() -> String:
+	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	for direction: int in [0, 1, 0]:
+		_walk_in(world, direction)
+	_idle_until(world, world.tick + World.PURGE_TICKS + 1)
+	if not world.instances.has(InstanceBlueprints.BASIC) or world.generation("basic") != 0:
+		return "the starting instance was purged"
+	return ""
+
+
+## Steps the world with player 0 standing still until its tick is `until`.
+func _idle_until(world: World, until: int) -> void:
+	while world.tick < until:
+		world.step(_still())
 
 
 ## Walks player 0 one step in `direction`, through the world, until they stand still again.

@@ -6,9 +6,9 @@ touching git.
 
 **The code explains itself**, with short comments next to it for the reasons a reader can't see (keep
 them true in the same pull request that changes the code). **Decisions and their history live in the
-GitHub issues.** `docs/design.html` is the design report: the current state of the game design, updated
-in the pull request that changes a decision. The README holds only what a human has to do by hand and
-how to run things. This file holds the rules for working here and what agents have learned the hard
+GitHub issues**, the design included: there is no separate design document (owner, #217), so a
+design decision goes into its issue. The README holds only what a human has to do by hand and how to
+run things. This file holds the rules for working here and what agents have learned the hard
 way; add to it when something bites.
 
 ## Working on GitHub
@@ -70,6 +70,8 @@ the next one as soon as the previous one is merged.
 so the owner can review it right away: in its own worktree, branched from `main`, fully built and
 reviewed by Codex locally, but not pushed or opened. Once the open one merges, update the prepared
 branch onto the new `main` (`git rebase origin/main`), check it still holds, push it and open it.
+Waiting for CI and reviews is the time to build it (owner, #217): at any moment one pull request
+is open and reviewed, and another worktree is reviewed and ready to go.
 
 **One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
 refactors and tooling tweaks get their own issue and their own pull request later, never along for the
@@ -80,7 +82,7 @@ Prefer the simplest solution that does the job, and Godot's built-in way over a 
 an issue turns out bigger than one such unit, build the core now and file the rest as its own
 issue.
 
-**No pull requests that only change docs.** A change to this file, the README or the design report
+**No pull requests that only change docs.** A change to this file or the README
 rides along with the next real pull request, and that pull request's description says so.
 
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
@@ -216,7 +218,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   to another blueprint, which has the way back on the opposite side (`exit_problem`); every instance
   in that web is unturned, so an exit always leads out the same way (#120). A player who walks out
   through one (`ExitFeature`, an `ExitTaken` event) is moved by the `World` into the instance
-  it leads to, onto its way back (#154).
+  it leads to, onto its way back (#154). **Purging** (#212): an instance nobody has been in for an
+  hour of play (`World.PURGE_TICKS`, in world ticks) is dropped, never the starting one; its
+  generation goes up, and `World.seed_for` draws its seed for that generation, so its next visit
+  arranges it anew, and what was explored in an older generation is forgotten (`ExploredGround`).
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
