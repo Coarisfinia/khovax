@@ -4,7 +4,8 @@ extends RefCounted
 ## its figure shrinks away. An open ring, a walk that only touches the wild monster, and a ring
 ## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
 ## first gets the monster (owner, #84). Catching is deterministic. A catch by this machine's
-## player lands in their profile and its save at once (#132).
+## player lands in their profile and its save at once (#132), as the species it was: named by its
+## spot, or rolled from the blueprint's list (#133).
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
@@ -47,6 +48,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_catch()
 	if result.is_empty():
 		result = _check_together()
+	if result.is_empty():
+		result = _check_species()
 	if result.is_empty():
 		result = await _check_view(tree)
 	if result.is_empty():
@@ -190,17 +193,52 @@ func _check_saved(tree: SceneTree) -> String:
 		result = "another slot's catch went into this player's profile"
 	(main.get_node("LocalInput") as LocalInput).slot = 0
 	driver.ticked.emit(driver.state.tick, events)
-	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
 	var species: Array[String] = []
-	for monster: CapturedMonster in saved.captured_monsters:
+	for monster: CapturedMonster in SaveStore.load_profile(SAVE_PATH).captured_monsters:
 		species.append(monster.species)
-	var one: bool = species.size() == 1 and species[0] == ProfileHolder.PLACEHOLDER_SPECIES
-	if result.is_empty() and not one:
-		result = "the catch wasn't saved into the profile: %s" % [species]
+	var expected: String = _caught_species(events)
+	var saved_one: bool = species.size() == 1 and species[0] == expected
+	if result.is_empty() and (expected.is_empty() or not saved_one):
+		result = "the caught %s wasn't saved into the profile: %s" % [expected, species]
 	main.queue_free()
 	await tree.process_frame
 	_gone = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	return result
+
+
+## The species of the first wild monster caught in `events`, or "".
+func _caught_species(events: Array[RefCounted]) -> String:
+	for event: RefCounted in events:
+		if event is WildMonsterCaught:
+			return (event as WildMonsterCaught).species
+	return ""
+
+
+## Species (#133): a spot its region piece names always has that species (the arena's boss is a
+## storm finch); the others roll from their blueprint's list, the same way for the same seed, every
+## species on the list turning up over enough seeds, and the catch carries it.
+func _check_species() -> String:
+	var rolled: Dictionary[String, bool] = {}
+	for seed_value: int in 24:
+		var arena: GameState = InstanceBlueprints.create(InstanceBlueprints.ARENA, seed_value)
+		if _wild(arena).species_of(_wild(arena).monsters[0]) != "storm_finch":
+			return "seed %d's arena boss isn't the storm finch it names" % seed_value
+		var basic: String = _first_species(InstanceBlueprints.basic(seed_value))
+		if basic != _first_species(InstanceBlueprints.basic(seed_value)):
+			return "seed %d placed two different species" % seed_value
+		rolled[basic] = true
+	var listed: Array = InstanceBlueprints.WILD_SPECIES[InstanceBlueprints.BASIC].keys()
+	if rolled.size() != listed.size():
+		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
+	var state: GameState = InstanceBlueprints.basic(1)
+	if _caught_species(_walk(state, RING)) != _first_species(InstanceBlueprints.basic(1)):
+		return "the catch didn't carry the caught monster's species"
+	return ""
+
+
+## The species of the first wild monster in `state`.
+func _first_species(state: GameState) -> String:
+	return _wild(state).species_of(_wild(state).monsters[0])
 
 
 ## Walks the player in slot 0 onto each tile in turn, a whole step each; returns every event
