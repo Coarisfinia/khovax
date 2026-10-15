@@ -1,0 +1,6 @@
+// The first quest a new player has: any catch finishes it.
+{
+	"id": "first_catch",
+	"name": "Catch your first monster",
+	"steps": [{ "condition": "caught" }]
+}

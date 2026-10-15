@@ -4,10 +4,11 @@ extends RefCounted
 ## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
 ## loses nothing), never because of a tick itself. Integers and ids only, like everything that
 ## feeds a simulation. Saved as versioned JSON: a save in a newer format is refused, and an older
-## one is brought up to date in `parse`, one step at a time, before it's read.
+## one is brought up to date in `parse`, one step at a time, before it's read. Quest progress
+## (#184) is kept here too, advanced by the same gains against the quest definitions it's given.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 2
+const FORMAT: int = 3
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -22,6 +23,13 @@ var captured_monsters: Array[CapturedMonster] = []
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
+## Each quest started and not finished, by id: the step it's on and the count within it.
+var quest_progress: Dictionary[String, QuestProgress] = {}
+## The ids of the quests finished, in the order finished.
+var quests_done: Array[String] = []
+## The quests gains advance, by id (Content.load_quests): content, not saved. Progress kept for a
+## quest that isn't here is kept as it is.
+var quest_book: Dictionary[String, QuestDefinition] = {}
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
 ## Which of the save's generations it was loaded from: 0 the newest, more when newer ones were
@@ -29,7 +37,9 @@ var problem: String = ""
 var loaded_generation: int = 0
 
 
-## Takes over what the player just obtained: its catches and materials. Returns why the gain can't
+## Takes over what the player just obtained: its catches and materials, and every quest they
+## advance, one fact at a time, so one gain can finish a step and count toward the next. Returns why
+## the gain can't
 ## be taken over, or "", and changes nothing when it can't: a profile that took over a bad gain
 ## couldn't be loaded again. ProfileKeeper saves it.
 func apply(result: Gain) -> String:
@@ -38,6 +48,9 @@ func apply(result: Gain) -> String:
 		return refusal
 	for species: String in result.caught_species:
 		_capture(species)
+		_advance_quests("caught", species)
+	for _chest: int in result.chests_opened:
+		_advance_quests("opened", "")
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -49,6 +62,31 @@ func _capture(species: String) -> void:
 	next_monster_id += 1
 
 
+## Counts one fact (a `condition`, with the species of a catch) toward every quest in the book
+## whose current step asks for it. A step that reaches its count hands over to the next one, and
+## the last step finishes the quest.
+func _advance_quests(condition: String, species: String) -> void:
+	for id: String in quest_book:
+		var quest: QuestDefinition = quest_book[id]
+		var progress: QuestProgress = _progress_of(id)
+		var step: QuestStep = quest.step_at(progress.step)
+		if quests_done.has(id) or step == null or not step.counts(condition, species):
+			continue
+		progress.count += 1
+		if progress.count >= step.count:
+			progress.step += 1
+			progress.count = 0
+		quest_progress[id] = progress
+		if progress.step == quest.steps.size():
+			var _finished: bool = quest_progress.erase(id)
+			quests_done.append(id)
+
+
+## The progress of quest `id`: a fresh one when it hasn't started.
+func _progress_of(id: String) -> QuestProgress:
+	return quest_progress.get(id, QuestProgress.new())
+
+
 ## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
 ## than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
@@ -57,6 +95,8 @@ func _result_problem(result: Gain) -> String:
 	for species: String in result.caught_species:
 		if species.is_empty():
 			return "a caught monster has no species"
+	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
+		return "the opened chests' count is invalid"
 	for material: String in result.materials:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:
@@ -80,8 +120,21 @@ func to_text() -> String:
 		"next_monster_id": next_monster_id,
 		"captured_monsters": monsters,
 		"materials": sorted_materials,
+		"quest_progress": _progress_data(),
+		"quests_done": quests_done,
 	}
 	return JSON.stringify(data, "\t", false)
+
+
+## The quest progress as save data, by quest id in order.
+func _progress_data() -> Dictionary:
+	var data: Dictionary = {}
+	var ids: Array[String] = []
+	ids.assign(quest_progress.keys())
+	ids.sort()
+	for id: String in ids:
+		data[id] = { "step": quest_progress[id].step, "count": quest_progress[id].count }
+	return data
 
 
 ## A profile read from a save's text; its `problem` says why when the text isn't a valid save.
@@ -100,6 +153,8 @@ static func parse(text: String) -> Profile:
 	# Migrations from older formats, oldest first.
 	if format < 2:
 		_migrate_to_2(data)
+	if format < 3:
+		_migrate_to_3(data)
 	profile.problem = profile._read(data)
 	return profile
 
@@ -107,6 +162,12 @@ static func parse(text: String) -> Profile:
 ## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
 static func _migrate_to_2(data: Dictionary) -> void:
 	var _dropped: bool = data.erase("runs_finished")
+
+
+## Format 2 to 3: quests (#184) start with no progress.
+static func _migrate_to_3(data: Dictionary) -> void:
+	data["quest_progress"] = {}
+	data["quests_done"] = []
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
@@ -131,7 +192,39 @@ func _read(data: Dictionary) -> String:
 		if count < 0 or str(material).is_empty():
 			return "material %s has an invalid count" % material
 		materials[str(material)] = count
+	return _read_quests(data)
+
+
+## Reads the save's quest progress into this profile; returns why it can't, or "".
+func _read_quests(data: Dictionary) -> String:
+	var started: Variant = data.get("quest_progress")
+	var done: Variant = data.get("quests_done")
+	if not started is Dictionary or not done is Array:
+		return "the save lacks its quest progress"
+	var done_list: Array = done
+	for id: Variant in done_list:
+		var text: String = Content.text_of(id)
+		if text.is_empty() or quests_done.has(text):
+			return "a finished quest in the save has no id or is there twice"
+		quests_done.append(text)
+	var by_id: Dictionary = started
+	for id: Variant in by_id:
+		var progress: QuestProgress = _quest_progress(by_id[id])
+		if progress == null or str(id).is_empty() or quests_done.has(str(id)):
+			return "quest %s's progress in the save is malformed or it's finished" % id
+		quest_progress[str(id)] = progress
 	return ""
+
+
+## A quest's progress from save data, or null when it's malformed.
+static func _quest_progress(entry: Variant) -> QuestProgress:
+	if not entry is Dictionary:
+		return null
+	var data: Dictionary = entry
+	var progress: QuestProgress = QuestProgress.new(_int(data.get("step")), _int(data.get("count")))
+	if progress.step < 0 or progress.count < 0 or data.size() != 2:
+		return null
+	return progress
 
 
 func _has_monster(monster_id: int) -> bool:
