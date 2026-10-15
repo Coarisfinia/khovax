@@ -232,7 +232,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `Jsonc`) and hands the simulation plain integers and ids. CI checks every file against its
   schema with `jv` (pinned, verified), after `tools/data_to_json.gd` strips the comments with the
   same stripper; the content flow checks what a schema can't (ids matching files and unique, types
-  from the chart, never two types of one family).
+  from the chart, never two types of one family, loot chances adding up to 100 %). Loot tables
+  (`LootTable`, #90) roll from the `Rng` they're given, so a feature's stream rolls the same loot.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap actions
   (keys, the touch stick, later controllers). `LocalInput` turns them into the local player's
   command, and `HexInput.direction_toward` is where floats become a hex direction.

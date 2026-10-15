@@ -2,9 +2,11 @@ class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files under data/, one per entry, checked against their
 ## schema in CI (data/schemas/) and here for what a schema can't check: ids unique and matching
-## their file, types from the type chart, and two types never from the same family.
+## their file, types from the type chart, and two types never from the same family. Loot tables
+## (#90) are read here too, checked by LootTable.
 
 const SPECIES_DIR: String = "res://data/species/"
+const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 ## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
 const SPECIES_FIELDS: Array[String] = ["id", "types", "hp", "strength"]
 ## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
@@ -19,6 +21,8 @@ const FAMILIES: Array[Array] = [
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
+## Every loot table, by id.
+var loot_tables: Dictionary[String, LootTable] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -44,6 +48,20 @@ static func load_species(directory: String = SPECIES_DIR) -> Content:
 	return content
 
 
+## Every loot table file in `directory`, read and checked.
+static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
+	var content: Content = Content.new()
+	for file_name: String in DirAccess.get_files_at(directory):
+		if file_name.ends_with(".jsonc"):
+			var text: String = FileAccess.get_file_as_string(directory + file_name)
+			var table: LootTable = LootTable.parse(file_name.get_basename(), text)
+			if not table.problem.is_empty():
+				content.problem = file_name + ": " + table.problem
+				return content
+			content.loot_tables[table.id] = table
+	return content
+
+
 ## Reads one species file's text, named `file_id`; returns why it can't, or "".
 func add_species(file_id: String, text: String) -> String:
 	var json: JSON = JSON.new()
@@ -55,12 +73,12 @@ func add_species(file_id: String, text: String) -> String:
 			return "field %s isn't a species field" % key
 	var id: Variant = data.get("id")
 	var text_id: String = id if id is String else ""
-	if not _is_id(text_id):
+	if not is_id(text_id):
 		return "its id must be lowercase words joined by underscores"
 	var entry: Species = Species.new()
 	entry.id = text_id
-	entry.hp = _amount(data.get("hp"))
-	entry.strength = _amount(data.get("strength"))
+	entry.hp = amount(data.get("hp"))
+	entry.strength = amount(data.get("strength"))
 	var types: Variant = data.get("types")
 	if types is Array:
 		var type_list: Array = types
@@ -87,13 +105,13 @@ func _check_types(entry: Species) -> String:
 
 
 ## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.
-static func _is_id(text: String) -> bool:
+static func is_id(text: String) -> bool:
 	var pattern: RegEx = RegEx.create_from_string("^[a-z][a-z0-9_]*$")
 	return pattern.search(text) != null
 
 
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.
-static func _amount(value: Variant) -> int:
+static func amount(value: Variant) -> int:
 	if not (value is int or value is float):
 		return 0
 	var number: float = value
