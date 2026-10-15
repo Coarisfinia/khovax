@@ -115,5 +115,6 @@ func _catch(state: GameState, monster_id: int, catcher_id: int) -> void:
 	var tile: Vector2i = state.entity(monster_id).tile
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
+	var slot: int = state.entity(catcher_id).slot
 	state.remove_entity(monster_id)
-	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, tile, species))
+	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, slot, tile, species))

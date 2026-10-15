@@ -17,6 +17,7 @@
 [ext_resource type="Script" path="res://view/chest_view.gd" id="15_chests"]
 [ext_resource type="Script" path="res://view/fog_cloud.gd" id="16_cloud"]
 [ext_resource type="Script" path="res://view/lookout_view.gd" id="17_lookouts"]
+[ext_resource type="Script" path="res://game/event_bus.gd" id="18_bus"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -28,9 +29,13 @@ input = NodePath("../LocalInput")
 [node name="LocalInput" type="Node" parent="." unique_id=1290447713]
 script = ExtResource("2_input")
 
-[node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("driver", "input") unique_id=2066135784]
-script = ExtResource("11_profile")
+[node name="EventBus" type="Node" parent="." node_paths=PackedStringArray("driver") unique_id=1841841841]
+script = ExtResource("18_bus")
 driver = NodePath("../Driver")
+
+[node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("bus", "input") unique_id=2066135784]
+script = ExtResource("11_profile")
+bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 
 [node name="HexGrid" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=402158871]
