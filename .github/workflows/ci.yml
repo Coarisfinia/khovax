@@ -371,6 +371,7 @@ jobs:
             "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/${PLAYWRIGHT_FFMPEG_REVISION}/ffmpeg-linux.zip"
           echo "${PLAYWRIGHT_FFMPEG_SHA256}  ffmpeg.zip" | sha256sum -c -
           unzip -q bun.zip -d ~/tools && unzip -q chrome.zip -d ~/tools
+          mkdir -p ~/tools/playwright
           unzip -q ffmpeg.zip -d ~/tools/playwright/ffmpeg-${PLAYWRIGHT_FFMPEG_REVISION}
           echo ~/tools/bun-linux-x64 >> "$GITHUB_PATH"
 

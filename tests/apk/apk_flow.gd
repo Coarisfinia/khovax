@@ -38,11 +38,7 @@ func run(main: Node, tree: SceneTree) -> String:
 	var start: Vector2i = driver.state.player(0).tile
 	var camera_before: Vector3 = camera.global_position
 	_touch(origin, true)
-	for leg: Vector2 in LEGS:
-		_drag(origin + leg * TouchStick.RADIUS)
-		await _run_ticks(driver, tree, LEG_TICKS)
-	_touch(origin, false)
-	await _run_ticks(driver, tree, LEG_TICKS)
+	await _play(driver, tree, origin, 0, 0)
 	# Frames pass in real time here, so the views and the camera catch up with the state.
 	await tree.create_timer(1.5).timeout
 	return _result(driver, camera, start, camera_before)
@@ -68,10 +64,22 @@ func _result(
 	return ""
 
 
-func _run_ticks(driver: GameDriver, tree: SceneTree, ticks: int) -> void:
-	for _tick: int in ticks:
-		driver.advance(STEP)
-		await tree.create_timer(STEP).timeout
+## Plays the walk from tick `tick` of leg `leg` on, one tick per its real time: each leg drags the
+## finger, then the finger lifts for one more leg's ticks. Recursive, since the ticks come one
+## after another by design.
+func _play(driver: GameDriver, tree: SceneTree, origin: Vector2, leg: int, tick: int) -> void:
+	if leg > LEGS.size():
+		return
+	if tick == 0 and leg < LEGS.size():
+		_drag(origin + LEGS[leg] * TouchStick.RADIUS)
+	elif tick == 0:
+		_touch(origin, false)
+	driver.advance(STEP)
+	await tree.create_timer(STEP).timeout
+	if tick + 1 < LEG_TICKS:
+		await _play(driver, tree, origin, leg, tick + 1)
+	else:
+		await _play(driver, tree, origin, leg + 1, 0)
 
 
 func _touch(point: Vector2, pressed: bool) -> void:
