@@ -49,9 +49,6 @@ var _region: Region
 var _paint: Dictionary[Vector2i, Color] = {}
 ## Each tile's color when nothing paints it: its terrain's.
 var _base: Dictionary[Vector2i, Color] = {}
-## How bright each tile is drawn, 0 to 1, over whatever color it has (the fog, #137); 1 for a tile
-## not in it.
-var _shade: Dictionary[Vector2i, float] = {}
 ## Each tile's MultiMesh instance, transform and color, as given to the MultiMesh. Kept here
 ## because a MultiMesh can't be read back under the headless dummy renderer.
 var _index: Dictionary[Vector2i, int] = {}
@@ -96,19 +93,10 @@ func show_state() -> void:
 func paint(colors: Dictionary[Vector2i, Color]) -> void:
 	_paint = colors
 	for tile: Vector2i in _index:
-		var painted: Color = colors.get(tile, _base[tile])
-		var bright: float = _shade.get(tile, 1.0)
-		var color: Color = painted.darkened(1.0 - bright)
+		var color: Color = colors.get(tile, _base[tile])
 		if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
 			_colors[tile] = color
 			_tiles.multimesh.set_instance_color(_index[tile], color)
-
-
-## Draws the tiles in `brightness` that bright, 0 (dark) to 1, over whatever color they're painted;
-## every other tile at full brightness.
-func shade(brightness: Dictionary[Vector2i, float]) -> void:
-	_shade = brightness
-	paint(_paint)
 
 
 func has_tile(tile: Vector2i) -> bool:
