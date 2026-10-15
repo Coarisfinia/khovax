@@ -205,7 +205,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   blueprint keeps its layout (`InstanceBlueprints.UNTURNED`, e.g. a boss arena, #127). The region is
   in the state hash; its connectors are used up by arranging. **Exits** (#140) lead
   to another blueprint, which has the way back on the opposite side (`exit_problem`); every instance
-  in that web is unturned, so an exit always leads out the same way (#120).
+  in that web is unturned, so an exit always leads out the same way (#120). A player who walks out
+  through one (`ExitFeature`, an `ExitTaken` event) is moved by the run's `World` into the instance
+  it leads to, onto its way back (#154).
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.

@@ -10,3 +10,4 @@ const WILD_MONSTERS: int = 3
 const CATCH: int = 4
 const CHESTS: int = 5
 const FOG: int = 6
+const EXITS: int = 7
