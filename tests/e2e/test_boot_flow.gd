@@ -27,6 +27,7 @@ func run(tree: SceneTree) -> String:
 		_check_wild_monster,
 		_check_toon_look,
 		_check_ink_outline,
+		_check_fog,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
 		_check_music,
@@ -312,4 +313,47 @@ func _check_music(main: Node) -> String:
 		return "the exploration track doesn't loop"
 	if music.volume_linear >= 1.0:
 		return "the music started at full volume instead of fading in"
+	return ""
+
+
+## The fog (#137), drawn from the fog feature's state: a tile an ally sees is bright, one seen
+## before
+## dimmed, one never seen dark; brightness eases rather than jumps; and a wild monster out of every
+## ally's sight is hidden.
+func _check_fog(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: FogView = main.get_node("FogView") as FogView
+	var fog: FogFeature = driver.state.feature(Features.FOG) as FogFeature
+	var everything: Array = fog.visible[0]
+	var own: Vector2i = driver.state.player(0).tile
+	fog.visible[0] = [own]
+	view.show_state(10.0)
+	var far: Vector2i = Vector2i(-3, 0)
+	var result: String = _fog_levels(view, own, far)
+	(main.get_node("WildMonsterView") as WildMonsterView).show_state()
+	var figure: HexPiece = (main.get_node("WildMonsterView") as WildMonsterView).figures.values()[0]
+	if result.is_empty() and figure.visible:
+		result = "a wild monster out of sight is still shown"
+	fog.visible[0] = everything
+	view.show_state(0.1)
+	if result.is_empty() and not is_equal_approx(view.brightness[far], 0.45 + 0.15):
+		result = "the fog didn't ease: %s" % view.brightness[far]
+	view.show_state(10.0)
+	(main.get_node("WildMonsterView") as WildMonsterView).show_state()
+	return result
+
+
+## Why the fog view's levels are wrong, or "": `own` seen now, `far` only seen before, and `far`
+## dark to a fresh view that never saw it.
+func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
+	if view.brightness[own] != FogView.VISIBLE or view.brightness[far] != FogView.REMEMBERED:
+		return "the fog isn't bright where seen and dimmed where seen before"
+	var fresh: FogView = FogView.new()
+	fresh.driver = view.driver
+	fresh.grid = view.grid
+	fresh.show_state(10.0)
+	var dark: bool = fresh.brightness[far] == FogView.UNSEEN
+	fresh.free()
+	if not dark:
+		return "a tile never seen isn't dark"
 	return ""

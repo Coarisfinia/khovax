@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://assets/kaykit-adventurers/Rogue.glb" id="9_rogue"]
 [ext_resource type="Script" path="res://view/music.gd" id="10_music"]
 [ext_resource type="Script" path="res://game/profile_holder.gd" id="11_profile"]
+[ext_resource type="Script" path="res://view/fog_view.gd" id="12_fog"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -33,6 +34,11 @@ driver = NodePath("../Driver")
 
 [node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
 script = ExtResource("7_trail")
+driver = NodePath("../Driver")
+grid = NodePath("../HexGrid")
+
+[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1513957802]
+script = ExtResource("12_fog")
 driver = NodePath("../Driver")
 grid = NodePath("../HexGrid")
 
