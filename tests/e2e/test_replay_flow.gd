@@ -42,7 +42,7 @@ func run(_tree: SceneTree) -> String:
 		_check_replay_validation,
 		_check_rehash,
 		_check_golden_replays,
-		_check_map_file,
+		_check_region_file,
 		_check_terrain_blocks,
 	]
 	for step: Callable in steps:
@@ -675,7 +675,7 @@ func _recorded_run() -> Replay:
 
 ## The basic instance's region file reads as the disc it draws, with the players' starts and its
 ## wild monster, and a broken region file says what is wrong.
-func _check_map_file() -> String:
+func _check_region_file() -> String:
 	var region: Region = InstanceBlueprints.basic(42).region
 	var starts: Array[Vector2i] = [
 		Vector2i(1, -1),

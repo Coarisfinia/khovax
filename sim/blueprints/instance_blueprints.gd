@@ -1,7 +1,7 @@
 class_name InstanceBlueprints
 extends RefCounted
 ## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region (a
-## region file in regions/) and the features its instances have, in their step order. The players
+## region file in regions/) and the features an instance has, in their step order. The players
 ## start on the region's starts. A blueprint switches game rules on and off by listing them, and
 ## they can change during a run.
 
