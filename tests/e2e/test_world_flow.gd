@@ -5,7 +5,9 @@ extends RefCounted
 ## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
 ## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
-## can be reached from the starting instance. The world holds several loaded instances and
+## can be reached from the starting instance. In every region file and region piece, the walkable
+## tiles hang together, so a blocking tile never cuts a part off. The world holds several loaded
+## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 
 const SEEDS: int = 40
@@ -27,6 +29,7 @@ func run(_tree: SceneTree) -> String:
 		_check_glade_exit,
 		_check_refused,
 		_check_exits_reachable,
+		_check_pieces_connected,
 		_check_web_connected,
 		_check_world,
 		_check_documents,
@@ -187,6 +190,43 @@ func _check_exits_reachable() -> String:
 					seed_value,
 				]
 	return ""
+
+
+## Every region file and region piece (regions/ and its folders) has its walkable tiles in one
+## connected part, its starts, connectors and exits among them (#205): a blocking tile (rock, water,
+## a boulder) never cuts part of a piece off.
+func _check_pieces_connected() -> String:
+	var paths: Array[String] = []
+	for folder: String in DirAccess.get_directories_at(InstanceBlueprints.REGIONS):
+		for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS + folder):
+			paths.append(InstanceBlueprints.REGIONS + folder + "/" + file)
+	for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS):
+		paths.append(InstanceBlueprints.REGIONS + file)
+	for path: String in paths:
+		var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
+		if not piece.problem.is_empty() or _disconnected(piece):
+			return "%s has walkable tiles cut off from the rest: %s" % [path, piece.problem]
+	return ""
+
+
+## Whether some walkable tile, start, connector or exit of `region` can't be walked to from its
+## first walkable tile.
+func _disconnected(region: Region) -> bool:
+	var walkable: Array[Vector2i] = []
+	for tile: Vector2i in region.sorted_tiles():
+		if region.is_walkable(tile):
+			walkable.append(tile)
+	if walkable.is_empty():
+		return true
+	var reached: Array[Vector2i] = region.reachable(walkable[0])
+	var points: Array[Vector2i] = walkable.duplicate()
+	points.append_array(region.starts)
+	for side: Vector3i in region.connectors + region.exits:
+		points.append(Vector2i(side.x, side.y))
+	for tile: Vector2i in points:
+		if not reached.has(tile):
+			return true
+	return false
 
 
 ## The first exit of `region` its first player can't walk to, as text, or "".
