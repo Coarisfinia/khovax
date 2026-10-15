@@ -4,7 +4,8 @@ extends Node
 ## happen, never what they do: before each tick it polls its command sources (the local player,
 ## later network peers or a replay), and runs the tick once every player's command for it is
 ## known. It processes before everything else (process_priority in main.tscn), so the state is
-## current when views draw.
+## current when views draw. A run is a world (#148, #158): every instance a player is in steps, and
+## the views follow this machine's player into whichever instance they walk.
 
 ## After every tick, with the tick's number and the events the features raised in it, in order:
 ## how views learn about one-shot moments (a catch, a ring breaking) to play an effect. Every tick
@@ -17,7 +18,7 @@ const MAX_TICKS_PER_FRAME: int = 5
 ## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
 const HASH_HISTORY: int = 100
 
-## The instance to run, by name from InstanceBlueprints.
+## The instance the run starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
 @export var input: LocalInput
 ## Players in the run, in slots 0 and up. Each slot needs a command source, or ticks wait for it.
@@ -25,7 +26,12 @@ const HASH_HISTORY: int = 100
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
 @export_range(0, 20) var input_delay: int = 0
 
-var state: GameState
+## The run: every instance it has loaded.
+var world: World
+## The instance this machine's player is in now, which the views draw; null without a run.
+var state: GameState:
+	get:
+		return _local_instance()
 ## Where every slot's commands come from; the local player's by default. Tests replace them.
 var sources: Array[CommandSource] = []
 var schedule: CommandSchedule
@@ -47,15 +53,16 @@ func _process(delta: float) -> void:
 	advance(delta)
 
 
-## Starts a fresh run of the instance from `seed_value`: the APK test (#61) starts its own with a
-## fixed seed. The command sources stay.
+## Starts a fresh run, in the starting instance, from `seed_value`: the APK test (#61) starts its
+## own with a fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
-	# Null for an unknown or invalid instance, which InstanceBlueprints.create reports; nothing runs
-	# then.
-	state = InstanceBlueprints.create(instance, seed_value, players)
-	if state != null:
+	world = World.new(seed_value, instance, players)
+	# No run for an unknown or invalid instance, which InstanceBlueprints.create reports.
+	if not world.problem.is_empty():
+		world = null
+	if world != null:
 		recording = Replay.new(instance, seed_value)
-		recording.begin(state)
+		recording.begin(world)
 	schedule = CommandSchedule.new(players, input_delay)
 	hashes.clear()
 	_accumulated = 0.0
@@ -64,7 +71,7 @@ func start(seed_value: int) -> void:
 ## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
 ## frame; tests call it with fixed steps.
 func advance(delta: float) -> void:
-	if state == null:
+	if world == null:
 		return
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -82,21 +89,35 @@ func advance(delta: float) -> void:
 
 ## Runs the next tick if every player's command for it is known; returns whether it ran.
 func _step() -> bool:
-	var tick: int = state.tick + 1
+	var tick: int = world.tick + 1
 	for source: CommandSource in sources:
 		source.poll(schedule, tick, state)
 	if not schedule.is_complete(tick):
 		return false
 	var commands: Array[Command] = schedule.take(tick)
-	Simulation.step(state, commands)
-	recording.record(state, commands)
-	hashes[tick] = state.state_hash()
+	var before: GameState = state
+	world.step(commands)
+	recording.record(world, commands)
+	hashes[tick] = world.state_hash()
 	var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
-	# A copy: the simulation clears its list when the next tick starts.
+	# A copy of the local player's instance's events (the simulation clears its list when the next
+	# tick starts): the instance they were in, and the one they walked into if they left it.
 	var events: Array[RefCounted] = []
-	events.assign(state.events)
-	ticked.emit(state.tick, events)
+	if before != null:
+		events.assign(before.events)
+	if state != null and state != before:
+		events.append_array(state.events)
+	ticked.emit(world.tick, events)
 	return true
+
+
+## The instance this machine's player is in, or the starting one before they're placed.
+func _local_instance() -> GameState:
+	if world == null:
+		return null
+	var slot: int = input.slot if input != null else 0
+	var where: String = world.instance_of(slot)
+	return world.instances.get(where if not where.is_empty() else instance)
 
 
 ## How far real time is into the next tick, from 0 to 1: views draw between ticks with it.

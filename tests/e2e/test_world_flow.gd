@@ -20,7 +20,7 @@ func run(_tree: SceneTree) -> String:
 		if not problem.is_empty():
 			return problem
 	var basic: Region = InstanceBlueprints.region_of(InstanceBlueprints.BASIC, 0)
-	var east: bool = basic.exits.size() == 1 and basic.exits[0] == Vector3i(3, 0, 0)
+	var east: bool = basic.exits.size() == 1 and basic.exits[0] == Vector3i(3, -2, 0)
 	if not east or basic.exit_blueprints[0] != InstanceBlueprints.GLADE:
 		return "the basic instance's east edge doesn't lead to the glade: %s" % [basic.exits]
 	var result: String = _check_glade_exit()
@@ -39,13 +39,13 @@ func run(_tree: SceneTree) -> String:
 	return result
 
 
-## Walking through exits (#154): from the basic instance's start, east onto its exit and on east
-## into the glade, arriving on the glade's way back; then west again, back onto the basic
+## Walking through exits (#154): from the basic instance's start, onto its exit on (3, -2) and on
+## east into the glade, arriving on the glade's way back; then west again, back onto the basic
 ## instance's exit, while the glade stays loaded for the next visit.
 func _check_walk_through() -> String:
 	var world: World = World.new(3, InstanceBlueprints.BASIC)
-	# From the start at (1, -1): east, southeast, east to the exit on (3, 0), and east once more.
-	for direction: int in [0, 5, 0, 0]:
+	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east once more.
+	for direction: int in [0, 1, 0]:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	var arrived: Entity = world.player(0)
@@ -58,7 +58,7 @@ func _check_walk_through() -> String:
 		return "the player arrived on %s, not the glade's way back" % arrived.tile
 	_walk_in(world, 3)
 	var back: Entity = world.player(0)
-	if world.instance_of(0) != InstanceBlueprints.BASIC or back.tile != Vector2i(3, 0):
+	if world.instance_of(0) != InstanceBlueprints.BASIC or back.tile != Vector2i(3, -2):
 		return "walking west out of the glade didn't lead back onto the basic instance's exit"
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"

@@ -6,9 +6,9 @@ The playground: a disc of radius 3, all ground. Digits mark where players 1 to 4
 
 ```
    . . . .
-  . . . . .
+  . . . . x
  . . . 1 . .
-. m 3 . 4 . x
+. m 3 . 4 . .
  . . 2 . . .
   . . . . .
    . . . .
