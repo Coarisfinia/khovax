@@ -81,8 +81,8 @@ func _check_loot_rolls() -> String:
 	var glade: LootTable = content.loot_tables["glade"]
 	var hits: Dictionary[bool, int] = { true: 0, false: 0 }
 	for seed_value: int in 100:
-		var loot: Dictionary[String, int] = toad.roll(Rng.new(seed_value, 1), glade)
-		if loot != toad.roll(Rng.new(seed_value, 1), glade):
+		var loot: Dictionary[String, int] = _roll(toad, glade, seed_value)
+		if loot != _roll(toad, glade, seed_value):
 			return "seed %d rolled two different loots" % seed_value
 		var own: bool = loot.get("berry", 0) >= 2 and loot["berry"] <= 4
 		var blank: bool = loot.get("berry", 0) == 1 or loot.get("moss", 0) in [1, 2]
@@ -92,6 +92,11 @@ func _check_loot_rolls() -> String:
 	if hits[true] == 0 or hits[false] == 0:
 		return "the toad's rolls never gave its berries or never hit the blank"
 	return ""
+
+
+## One roll on `table` from a fresh stream of `seed_value`.
+func _roll(table: LootTable, instance_table: LootTable, seed_value: int) -> Dictionary[String, int]:
+	return table.roll(Rng.new(seed_value, 1), instance_table)
 
 
 ## Loot tables that don't add up, misplace the blank or break an entry are refused, with a reason.
