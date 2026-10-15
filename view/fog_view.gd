@@ -24,13 +24,10 @@ const EASE_PER_SECOND: float = 1.5
 
 ## Each tile's brightness as drawn now.
 var brightness: Dictionary[Vector2i, float] = {}
-## Every tile an ally has seen, per instance by blueprint name, in the world shown. It's what this
-## machine's player has seen, not the world's state: the keeper's `explored_in`.
-var _seen_in: Dictionary[String, Dictionary] = {}
-## The generation of each instance in `_seen_in` when it was seen (#212): a purged instance comes
-## back arranged anew, so what was seen in it before no longer fits its ground and is dropped.
-var _seen_generation: Dictionary[String, int] = {}
-## Every tile an ally has seen in the instance shown: its entry in `_seen_in`.
+## Every tile an ally has seen, per instance, in the world shown. It's what this machine's player
+## has seen, not the world's state: the keeper's `explored_in`.
+var _seen_in: ExploredGround = ExploredGround.new()
+## Every tile an ally has seen in the instance shown: its tiles in `_seen_in`.
 var _seen: Dictionary[Vector2i, bool] = {}
 var _region: Region
 var _world: World
@@ -66,11 +63,10 @@ func show_state(delta: float) -> void:
 
 
 ## What was seen in `world` before: the keeper's, or nothing yet without one.
-func _explored_in(world: World) -> Dictionary[String, Dictionary]:
+func _explored_in(world: World) -> ExploredGround:
 	if keeper != null:
 		return keeper.explored_in(world)
-	var fresh: Dictionary[String, Dictionary] = {}
-	return fresh
+	return ExploredGround.new()
 
 
 ## Starts drawing the instance `state`, with what was seen in it before.
@@ -82,12 +78,7 @@ func _switch_to(state: GameState) -> void:
 
 ## What was seen in the instance `instance_name`, forgotten when it was purged since (#212).
 func _memory_of(instance_name: String) -> Dictionary[Vector2i, bool]:
-	var generation: int = _world.generation(instance_name)
-	if not _seen_in.has(instance_name) or _seen_generation[instance_name] != generation:
-		var fresh: Dictionary[Vector2i, bool] = {}
-		_seen_in[instance_name] = fresh
-		_seen_generation[instance_name] = generation
-	return _seen_in[instance_name]
+	return _seen_in.tiles_of(instance_name, _world.generation(instance_name))
 
 
 ## Puts the light fog on the tiles next door that were seen while in that instance; the rest of
@@ -99,7 +90,7 @@ func _remember_next_door() -> void:
 		return
 	next_door.show_state()
 	for neighbour_name: String in next_door.shifts:
-		var seen: Dictionary[Vector2i, bool] = _memory_of(neighbour_name)
+		var seen: Dictionary = _seen_in.seen(neighbour_name, _world.generation(neighbour_name))
 		for tile: Vector2i in seen:
 			brightness[tile + next_door.shifts[neighbour_name]] = REMEMBERED
 

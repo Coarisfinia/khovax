@@ -6,8 +6,8 @@ extends RefCounted
 ## recording plays back from it, and its keeper saves it debounced; a damaged world file, one in a
 ## newer format or one played by other rules is refused and a fresh world starts. The profile is
 ## never touched by world saves. The ground explored is saved with the world (#215): resumed, it
-## lies under light fog, next door too; bad memory is dropped whole, and a fresh world starts with
-## none.
+## lies under light fog, next door too; bad memory is dropped whole, a fresh world starts with
+## none, and what was seen in an instance purged since (#212) isn't restored.
 
 const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
@@ -36,7 +36,7 @@ const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 const LIGHT: Vector2 = Vector2(0.0, 1.0)
 
 ## What player 0 saw on the walk, per instance by blueprint name, as FogView remembers it.
-var _explored: Dictionary[String, Dictionary] = {}
+var _explored: ExploredGround = ExploredGround.new()
 
 
 func run(tree: SceneTree) -> String:
@@ -52,6 +52,8 @@ func run(tree: SceneTree) -> String:
 		result = await _check_resumed(tree, world)
 	if result.is_empty():
 		result = await _check_bad_explored(tree, world)
+	if result.is_empty():
+		result = await _check_purged_explored(tree)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
 	if result.is_empty() and SaveStore.exists(PROFILE_PATH):
@@ -203,7 +205,7 @@ func _check_explored(main: Node) -> String:
 		return "resumed, the basic instance's explored ground next door isn't under light fog"
 	var glade: GameState = fog.driver.state
 	var out_of_sight: Array[Vector2i] = []
-	for tile: Vector2i in _explored[InstanceBlueprints.GLADE]:
+	for tile: Vector2i in _explored.tiles_in[InstanceBlueprints.GLADE]:
 		if not FogView.ally_sees(glade, tile):
 			out_of_sight.append(tile)
 	if out_of_sight.is_empty():
@@ -248,12 +250,12 @@ func _check_debounced(driver: GameDriver, keeper: WorldKeeper) -> String:
 
 ## Whether the explored ground saved in the flow's file holds every tile the walk explored.
 func _explored_saved() -> bool:
-	var saved: Dictionary[String, Dictionary] = {}
+	var saved: ExploredGround = ExploredGround.new()
 	if not WorldSave.load_explored(WORLD_PATH, saved).is_empty():
 		return false
-	for instance_name: String in _explored:
-		var tiles: Dictionary = saved.get(instance_name, {})
-		if not tiles.has_all(_explored[instance_name].keys()):
+	for instance_name: String in _explored.tiles_in:
+		var tiles: Dictionary = saved.tiles_in.get(instance_name, {})
+		if not tiles.has_all(_explored.tiles_in[instance_name].keys()):
 			return false
 	return true
 
@@ -319,11 +321,36 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != world.state_hash():
 		result = "malformed explored ground refused the world: %s" % [bad]
-	elif not keeper.explored.is_empty():
+	elif not keeper.explored.tiles_in.is_empty():
 		result = "malformed explored ground was remembered: %s" % [bad]
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
+## without what was seen in the glade before: it comes back arranged anew. What was seen in the
+## basic instance is kept.
+func _check_purged_explored(tree: SceneTree) -> String:
+	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
+	for direction: int in [EAST, 1, EAST, 3]:
+		_walk_in(world, direction)
+	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
+	while world.tick <= left + World.PURGE_TICKS:
+		world.step(_commands(Command.NO_MOVE))
+	var problem: String = WorldSave.save(world, WORLD_PATH, _explored)
+	if world.generation(InstanceBlueprints.GLADE) != 1 or not problem.is_empty():
+		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
+	var main: Node = _boot(tree)
+	await tree.process_frame
+	var explored: ExploredGround = (main.get_node("WorldKeeper") as WorldKeeper).explored
+	var glade: Dictionary = explored.tiles_in.get(InstanceBlueprints.GLADE, {})
+	var basic: Dictionary = explored.tiles_in.get(InstanceBlueprints.BASIC, {})
+	main.queue_free()
+	await tree.process_frame
+	if not glade.is_empty() or basic.is_empty():
+		return "resumed, the purged glade's old ground came back, or the basic instance's didn't"
+	return ""
 
 
 ## A world file the build can't go on from (damaged, in a newer format, played by other rules) is
@@ -366,7 +393,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	# A frame for the fog view to remember the fresh world's sight: the basic instance's only, none
 	# of the refused world's glade.
 	await tree.process_frame
-	if result.is_empty() and keeper.explored.has(InstanceBlueprints.GLADE):
+	if result.is_empty() and keeper.explored.tiles_in.has(InstanceBlueprints.GLADE):
 		result = "a fresh world kept the ground explored in the refused one: " + content
 	main.queue_free()
 	await tree.process_frame
@@ -400,11 +427,12 @@ func _walk_in(world: World, direction: int) -> void:
 func _remember(world: World) -> void:
 	for instance_name: String in world.instances:
 		var fog: FogFeature = world.instances[instance_name].feature(Features.FOG) as FogFeature
-		if not _explored.has(instance_name):
-			var fresh: Dictionary[Vector2i, bool] = {}
-			_explored[instance_name] = fresh
+		var seen: Dictionary[Vector2i, bool] = _explored.tiles_of(
+			instance_name,
+			world.generation(instance_name),
+		)
 		for tile: Vector2i in fog.visible.get(0, []):
-			_explored[instance_name][tile] = true
+			seen[tile] = true
 
 
 static func _commands(direction: int) -> Array[Command]:
