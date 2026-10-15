@@ -12,6 +12,8 @@ const OUTLINE_WIDTH: float = 0.04
 
 ## The one outline pass every toon material shares.
 static var _outline: StandardMaterial3D = null
+## The toon copy of each imported material, made once and shared by every model that uses it.
+static var _copies: Dictionary[StandardMaterial3D, StandardMaterial3D] = {}
 
 
 ## Gives `material` the toon look: banded light and the ink outline. A transparent material gets
@@ -23,8 +25,8 @@ static func apply(material: StandardMaterial3D) -> void:
 		material.next_pass = outline()
 
 
-## Gives every mesh under `root` the toon look, on its own copies of the imported materials, so
-## the imported resources stay untouched.
+## Gives every mesh under `root` the toon look, on toon copies of the imported materials, so the
+## imported resources stay untouched. Models sharing a material share its one copy.
 static func apply_to_model(root: Node) -> void:
 	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
 		var meshes: MeshInstance3D = node as MeshInstance3D
@@ -48,6 +50,8 @@ static func outline() -> StandardMaterial3D:
 
 
 static func _toon_copy(source: StandardMaterial3D) -> StandardMaterial3D:
-	var copy: StandardMaterial3D = source.duplicate() as StandardMaterial3D
-	apply(copy)
-	return copy
+	if not _copies.has(source):
+		var copy: StandardMaterial3D = source.duplicate() as StandardMaterial3D
+		apply(copy)
+		_copies[source] = copy
+	return _copies[source]

@@ -33,7 +33,7 @@ const OTHER_RING: Array[Vector2i] = [
 	Vector2i(0, 2),
 	Vector2i(0, 1),
 ]
-const BALL: Vector2i = Vector2i(-2, 0)
+const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 
 
 func run(tree: SceneTree) -> String:
@@ -83,7 +83,7 @@ func _check_catch() -> String:
 		if event is WildMonsterCaught:
 			caught.append(event as WildMonsterCaught)
 	var expected: bool = caught.size() == 1 and caught[0].monster_id == monster_id
-	if not expected or caught[0].catcher_id != player.id or caught[0].tile != BALL:
+	if not expected or caught[0].catcher_id != player.id or caught[0].tile != WILD_MONSTER_TILE:
 		return "the catch wasn't announced once, by the player, on the wild monster's tile"
 	var trail: Trail = _trails(state).trail(player.id)
 	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):

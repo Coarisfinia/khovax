@@ -196,10 +196,27 @@ func _check_wild_monster(main: Node) -> String:
 		if not driver.state.region.is_walkable(spot + direction):
 			return "no ring fits around the wild monster: %s isn't ground" % (spot + direction)
 	var figure: HexPiece = view.figures.get(monster.id)
+	return _check_figure(figure, spot)
+
+
+## The wild monster's figure (#85): on its tile, standing on the tile's top, with a model that has
+## meshes and plays its idle clip.
+func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 	if figure == null or not figure.is_visible_in_tree() or figure.tile != spot:
 		return "no figure shown on the wild monster's tile"
 	if not is_equal_approx(figure.global_position.y, HexGrid.TILE_HEIGHT):
 		return "the figure stands at %f, not on the tile's top" % figure.global_position.y
+	var meshes: Array[Node] = figure.find_children("*", "MeshInstance3D", true, false)
+	var animations: AnimationPlayer = figure.find_child(
+		"AnimationPlayer",
+		true,
+		false,
+	) as AnimationPlayer
+	var idling: bool = (
+		animations != null and animations.current_animation == WildMonsterView.IDLE
+	)
+	if meshes.is_empty() or not idling:
+		return "the wild monster's figure has no model, or it isn't idling"
 	return ""
 
 
@@ -224,9 +241,10 @@ func _check_toon_look(main: Node) -> String:
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
 	var materials: Array[Material] = [grid.tile_mesh().material]
 	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
-	var models: Array[Node] = view.figures.values()
 	var player: PlayerView = main.get_node("Player") as PlayerView
-	models.append(player.model)
+	var models: Array[Node] = [player.model]
+	for figure: HexPiece in view.figures.values():
+		models.append(figure)
 	for model: Node in models:
 		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 			var part: MeshInstance3D = node as MeshInstance3D
