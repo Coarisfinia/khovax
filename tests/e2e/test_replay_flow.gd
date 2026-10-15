@@ -760,15 +760,16 @@ func _check_connector_fit() -> String:
 	return ""
 
 
-## Turning is the blueprint's switch (#127): the glade's seeds turn it more than one way, while the
-## arena, one piece the seeds never turn, loads for every seed exactly as its file is drawn, and
-## takes four players.
+## Turning is the blueprint's switch (#127): the glade's pieces, arranged with turning on, turn
+## more than one way, while the arena, one piece the seeds never turn, loads for every seed exactly
+## as its file is drawn, and takes four players.
 func _check_turning() -> String:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.ARENA + "/"
 	var drawn: Region = Region.parse(FileAccess.get_file_as_string(folder + "start.region"))
+	var pieces: Array[Region] = _glade_pieces()
 	var glade_starts: Dictionary[Vector2i, bool] = {}
 	for seed_value: int in 12:
-		var glade: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
+		var glade: Region = RegionArranger.arrange(pieces, seed_value, true)
 		glade_starts[glade.starts[1]] = true
 		var arena: Region = InstanceBlueprints.region_of(InstanceBlueprints.ARENA, seed_value)
 		if not arena.problem.is_empty() or arena.hash_values() != drawn.hash_values():
