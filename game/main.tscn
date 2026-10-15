@@ -94,10 +94,11 @@ script = ExtResource("7_trail")
 driver = NodePath("../Driver")
 grid = NodePath("../Instance/HexGrid")
 
-[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "cloud") unique_id=1513957802]
+[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "cloud", "keeper") unique_id=1513957802]
 script = ExtResource("12_fog")
 driver = NodePath("../Driver")
 cloud = NodePath("../Instance/FogCloud")
+keeper = NodePath("../WorldKeeper")
 
 [node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("target") unique_id=833248369]
 process_priority = 100

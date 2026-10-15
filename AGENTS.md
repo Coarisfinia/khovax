@@ -254,7 +254,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   for another format, other rules (`RULES_VERSION`: it couldn't go on deterministically) or a hash
   that doesn't match. `WorldKeeper` in the main scene hands the driver the saved world at boot and
   saves it debounced like the profile; the headless flows and the test builds keep no world
-  (`WorldKeeper.default_path`). The same data is the snapshot co-op will resync from.
+  (`WorldKeeper.default_path`). The same data is the snapshot co-op will resync from. The ground
+  this machine's player explored (#215, FogView's memory) is saved beside it in the same file,
+  under its own key, read apart: it's a view's, so it never enters the world's data, hash or
+  replays, and bad memory is dropped without refusing the world.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
   ones), and a player's choice overrides it until they choose Auto again.
