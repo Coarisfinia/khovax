@@ -13,6 +13,7 @@
 [ext_resource type="Script" path="res://game/profile_holder.gd" id="11_profile"]
 [ext_resource type="Script" path="res://view/fog_view.gd" id="12_fog"]
 [ext_resource type="Script" path="res://view/ink_outline.gd" id="13_ink"]
+[ext_resource type="Script" path="res://view/graphics.gd" id="14_graphics"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -64,6 +65,10 @@ target = NodePath("../Player")
 
 [node name="InkOutline" type="MeshInstance3D" parent="." unique_id=1166402913]
 script = ExtResource("13_ink")
+
+[node name="Graphics" type="Node" parent="." node_paths=PackedStringArray("ink") unique_id=1610241777]
+script = ExtResource("14_graphics")
+ink = NodePath("../InkOutline")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
 transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)

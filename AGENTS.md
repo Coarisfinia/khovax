@@ -233,6 +233,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   background flush what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
   refused, and an older one is migrated in `Profile.parse` once a second format exists.
+  The player's `Settings` (#161) are kept apart from that progress, in their own file: each
+  setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
+  ones), and a player's choice overrides it until they choose Auto again.
   Content data (species, items) is read in `meta/` too (below).
 - **Content data** (#72): species and, later, items are JSONC files in `data/<kind>/`, one per
   entry and named after its id, with a JSON Schema in `data/schemas/<kind>.schema.json`. Not Godot
