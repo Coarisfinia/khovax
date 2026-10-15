@@ -726,12 +726,10 @@ func _check_arranged_regions() -> String:
 		var problem: String = _check_glade(seed_value, pieces)
 		if not problem.is_empty():
 			return problem
-	var misfit: String = _check_connector_fit()
-	if not misfit.is_empty():
-		return misfit
-	var turning: String = _check_turning()
-	if not turning.is_empty():
-		return turning
+	for check: Callable in [_check_connector_fit, _check_turning]:
+		var misfit: String = check.call()
+		if not misfit.is_empty():
+			return misfit
 	if RegionArranger.arrange(pieces, 7, false).starts != pieces[0].starts:
 		return "an unturned arrangement moved the start piece"
 	if pieces[0].fits(pieces[0], Vector2i.ZERO):
