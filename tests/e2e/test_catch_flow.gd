@@ -1,11 +1,11 @@
 extends RefCounted
-## Catch flow (#20): the player walks a ring around the basic region's wild monster, the ball at
-## (-2, 0), and catches it: the monster leaves the world, the catch is announced, the trail starts
-## over, and the ball shrinks away. An open ring, a walk that only touches the ball, and a ring
+## Catch flow (#20): the player walks a ring around the basic region's wild monster at (-2, 0),
+## and catches it: the monster leaves the world, the catch is announced, the trail starts over, and
+## its figure shrinks away. An open ring, a walk that only touches the wild monster, and a ring
 ## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
 ## first gets the monster (owner, #84). Catching is deterministic.
 
-## The six tiles around the ball, walked in a ring from the player's start at (1, -1).
+## The six tiles around the wild monster, walked in a ring from the player's start at (1, -1).
 const RING: Array[Vector2i] = [
 	Vector2i(0, -1),
 	Vector2i(-1, -1),
@@ -15,7 +15,7 @@ const RING: Array[Vector2i] = [
 	Vector2i(-2, 1),
 	Vector2i(-1, 0),
 ]
-## The second player's ring around the ball, from its start at (-1, 1): one step shorter.
+## The second player's ring around the wild monster, from its start at (-1, 1): one step shorter.
 const SECOND_RING: Array[Vector2i] = [
 	Vector2i(-2, 1),
 	Vector2i(-3, 1),
@@ -33,7 +33,7 @@ const OTHER_RING: Array[Vector2i] = [
 	Vector2i(0, 2),
 	Vector2i(0, 1),
 ]
-const BALL: Vector2i = Vector2i(-2, 0)
+const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 
 
 func run(tree: SceneTree) -> String:
@@ -49,7 +49,7 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Every ring tile but the last: the walk passes right by the ball and catches nothing.
+## Every ring tile but the last: the walk passes right by the wild monster and catches nothing.
 func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = _walk(state, RING.slice(0, RING.size() - 1))
@@ -58,7 +58,7 @@ func _check_open_ring() -> String:
 	return ""
 
 
-## A closed ring around another tile leaves the ball alone, and the trail keeps growing.
+## A closed ring around another tile leaves the wild monster alone, and the trail keeps growing.
 func _check_other_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = _walk(state, OTHER_RING)
@@ -68,7 +68,7 @@ func _check_other_ring() -> String:
 	return ""
 
 
-## The full ring catches the ball the moment it closes: the monster is gone, the catch is
+## The full ring catches the wild monster the moment it closes: the monster is gone, the catch is
 ## announced with who caught it, the trail starts over from the catcher's tile, and the same walk
 ## always ends in the same state.
 func _check_catch() -> String:
@@ -83,8 +83,8 @@ func _check_catch() -> String:
 		if event is WildMonsterCaught:
 			caught.append(event as WildMonsterCaught)
 	var expected: bool = caught.size() == 1 and caught[0].monster_id == monster_id
-	if not expected or caught[0].catcher_id != player.id or caught[0].tile != BALL:
-		return "the catch wasn't announced once, by the player, on the ball's tile"
+	if not expected or caught[0].catcher_id != player.id or caught[0].tile != WILD_MONSTER_TILE:
+		return "the catch wasn't announced once, by the player, on the wild monster's tile"
 	var trail: Trail = _trails(state).trail(player.id)
 	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):
 		return "the trail didn't start over after the catch: %s" % [trail.sorted_tiles()]
@@ -95,7 +95,8 @@ func _check_catch() -> String:
 	return ""
 
 
-## Two players close their rings around the ball in the same tick: the one who joined first (the
+## Two players close their rings around the wild monster in the same tick: the one who joined first
+## (the
 ## lower entity id) catches it, and only their trail starts over.
 func _check_together() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
@@ -136,7 +137,7 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 	return Hex.DIRECTIONS.find(next - walker.tile)
 
 
-## The ball doesn't blink out: it shrinks away calmly, and then it's gone.
+## The wild monster doesn't blink out: it shrinks away calmly, and then it's gone.
 func _check_view(tree: SceneTree) -> String:
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
@@ -147,18 +148,18 @@ func _check_view(tree: SceneTree) -> String:
 	driver.set_process(false)
 	# Drawn now, not left to whether a frame has passed yet.
 	view.show_state()
-	if view.balls.size() != 1:
+	if view.figures.size() != 1:
 		main.queue_free()
-		return "the main scene doesn't show the wild monster's ball"
-	var ball: HexPiece = view.balls.values()[0]
+		return "the main scene doesn't show the wild monster's figure"
+	var figure: HexPiece = view.figures.values()[0]
 	var _events: Array[RefCounted] = _walk(driver.state, RING)
 	view.show_state()
 	var result: String = ""
-	if not view.balls.is_empty() or not is_instance_valid(ball) or not ball.is_inside_tree():
-		result = "the caught ball didn't stay to shrink away"
+	if not view.figures.is_empty() or not is_instance_valid(figure) or not figure.is_inside_tree():
+		result = "the caught figure didn't stay to shrink away"
 	await tree.create_timer(WildMonsterView.FADE_SECONDS + 0.2).timeout
-	if result.is_empty() and is_instance_valid(ball):
-		result = "the caught ball was still there after shrinking away"
+	if result.is_empty() and is_instance_valid(figure):
+		result = "the caught figure was still there after shrinking away"
 	main.queue_free()
 	await tree.process_frame
 	return result
