@@ -196,9 +196,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   players' starts and where wild monsters stand (`WildMonsterFeature` places them, #19; anything
   that isn't a player blocks walkers, players pass through each other). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
-  Regions are hand-made text files in `regions/` (format in `Region.parse`); they will be arranged
-  from hand-made region pieces, the whole region turned by the run's seed (#57). The region is in
-  the state hash.
+  A region is a hand-made text file in `regions/` (format in `Region.parse`), or arranged from
+  hand-made region pieces in `regions/<blueprint>/` by `RegionArranger`: the seed fits them together
+  at their connectors and turns the whole region (#57), from its own random stream. The region is
+  in the state hash; its connectors are used up by arranging.
 - **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.

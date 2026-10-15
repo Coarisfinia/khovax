@@ -43,6 +43,7 @@ func run(_tree: SceneTree) -> String:
 		_check_rehash,
 		_check_golden_replays,
 		_check_region_file,
+		_check_arranged_regions,
 		_check_terrain_blocks,
 	]
 	for step: Callable in steps:
@@ -694,6 +695,9 @@ func _check_region_file() -> String:
 		"origin 0 0\n. 2 .": "the player starts aren't numbered",
 		"origin nope 3\n. .": "a region file starts with",
 		"origin 0 0\n1 . 1": "player 1's start is marked twice",
+		"origin 0 0\n. .\nconnector 0 0": "a connector line reads",
+		"origin 0 0\n. .\nconnector 0 0 6": "connector side 6 isn't 0 to 5",
+		"origin 0 0\n. .\nconnector 0 0 0": "connector (0, 0) doesn't open",
 	}
 	for text: String in broken:
 		if not Region.parse(text).problem.begins_with(broken[text]):
@@ -711,6 +715,59 @@ func _check_region_file() -> String:
 	if left.terrain != expected or left.starts != start:
 		return "negative coordinates read as %s, starts %s" % [left.terrain, left.starts]
 	return ""
+
+
+## Region pieces (#57): the glade arranges for every seed, the same way for the same seed, from all
+## its pieces without overlaps, with all its ground connected to the start. Turning off keeps the
+## start piece as it is, and a piece without a fitting connector is refused.
+func _check_arranged_regions() -> String:
+	for turns: int in 6:
+		if Hex.turn(Hex.DIRECTIONS[0], turns) != Hex.DIRECTIONS[turns]:
+			return "Hex.turn doesn't follow DIRECTIONS round: %d turns" % turns
+	var pieces: Array[Region] = _glade_pieces()
+	for seed_value: int in 40:
+		var problem: String = _check_glade(seed_value, pieces)
+		if not problem.is_empty():
+			return problem
+	if RegionArranger.arrange(pieces, 7, false).starts != pieces[0].starts:
+		return "an unturned arrangement moved the start piece"
+	if pieces[0].fits(pieces[0], Vector2i.ZERO):
+		return "a piece fits onto tiles the region already has"
+	var closed: Array[Region] = [pieces[0], Region.disc(1)]
+	if not RegionArranger.arrange(closed, 7, true).problem.begins_with("region piece 1 fits"):
+		return "a piece without connectors was placed"
+	return ""
+
+
+## The glade arranged for one seed: every piece's tiles, the same twice, all ground reachable.
+func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
+	var tiles: int = 0
+	for piece: Region in pieces:
+		tiles += piece.size()
+	var region: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
+	var again: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
+	if not region.problem.is_empty() or region.size() != tiles:
+		var found: Array = [seed_value, region.size(), tiles, region.problem]
+		return "seed %d arranged %d of %d tiles: %s" % found
+	if region.hash_values() != again.hash_values():
+		return "seed %d arranged the glade two different ways" % seed_value
+	var ground: int = region.sorted_tiles().filter(region.is_walkable).size()
+	if region.reachable(region.starts[0]).size() != ground:
+		return "seed %d left ground the start can't reach" % seed_value
+	return ""
+
+
+## The glade's region pieces, read straight from their files.
+func _glade_pieces() -> Array[Region]:
+	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
+	var pieces: Array[Region] = []
+	pieces.assign(
+		["start.region", "pond.region", "thicket.region"].map(
+			func(file: String) -> Region:
+				return Region.parse(FileAccess.get_file_as_string(folder + file))
+		),
+	)
+	return pieces
 
 
 ## Water and rock stop a walker like the region's edge does.
