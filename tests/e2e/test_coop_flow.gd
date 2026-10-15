@@ -154,7 +154,7 @@ func _run_frames(frames: int) -> void:
 ## The final hash of the plain run: the scripts' commands applied `delay` ticks late, standing
 ## still before.
 func _plain_hash(delay: int) -> int:
-	var state: GameState = Instances.create(Instances.BASIC, 0, 2)
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 0, 2)
 	var first: Array[int] = _script(1)
 	var second: Array[int] = _script(2)
 	for tick: int in range(1, TICKS + 1):

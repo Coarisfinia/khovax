@@ -1,6 +1,6 @@
 class_name WildMonsterFeature
 extends Feature
-## Wild monsters (#19): when the run begins, one stands on every spot the map marks for it, as an
+## Wild monsters (#19): when the run begins, one stands on every spot the region marks for it, as an
 ## entity no player controls. For now each is a stand-in ball that just stands there; walkers
 ## can't step onto its tile (MovementFeature), and a later rule catches it (#20). Like every
 ## feature, switched off it keeps its state: the monsters stay where they are, and only its own
@@ -15,7 +15,7 @@ func id() -> int:
 
 
 func start(state: GameState) -> void:
-	for spot: Vector2i in state.map.wild_monsters:
+	for spot: Vector2i in state.region.wild_monsters:
 		# Can't be refused: an entity without a slot is always added.
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)

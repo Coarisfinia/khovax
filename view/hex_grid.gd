@@ -1,9 +1,9 @@
-## The map's tiles, one hexagonal tile per cell, colored by terrain (#36). It only draws tiles:
+## The region's tiles, one hexagonal tile per cell, colored by terrain (#36). It only draws tiles:
 ## features color tiles through `paint` (e.g. TrailView), and know nothing about each other. A tool
 ## script, so the grid also shows in the editor, as a disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
-## The tiles are rebuilt from the map and never saved; nodes added to the grid by hand are kept.
+## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.
 @tool
 class_name HexGrid
 extends Node3D
@@ -20,31 +20,31 @@ const NO_PAINT: Dictionary[Vector2i, Color] = {}
 	set(value):
 		radius = value
 		if is_node_ready():
-			_build(_shown_map())
-## The grid shows this driver's map; without one (e.g. in the editor), a disc of `radius` rings.
+			_build(_shown_region())
+## The grid shows this driver's region; without one (e.g. in the editor), a disc of `radius` rings.
 @export var driver: GameDriver
 ## The color of every ground tile nothing paints.
 @export var tile_color: Color = Color(0.36, 0.55, 0.32):
 	set(value):
 		tile_color = value
 		if is_node_ready():
-			_build(_map)
+			_build(_region)
 @export var water_color: Color = Color(0.25, 0.45, 0.7):
 	set(value):
 		water_color = value
 		if is_node_ready():
-			_build(_map)
+			_build(_region)
 @export var rock_color: Color = Color(0.42, 0.4, 0.38):
 	set(value):
 		rock_color = value
 		if is_node_ready():
-			_build(_map)
+			_build(_region)
 
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
 var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
-## The map the tiles show.
-var _map: HexMap
+## The region the tiles show.
+var _region: Region
 ## The colors last painted onto tiles.
 var _paint: Dictionary[Vector2i, Color] = {}
 ## Each tile's color when nothing paints it: its terrain's.
@@ -73,7 +73,7 @@ func _ready() -> void:
 	_tiles.multimesh.use_colors = true
 	_tiles.multimesh.mesh = _mesh
 	add_child(_tiles)
-	_build(_shown_map())
+	_build(_shown_region())
 
 
 func _process(_delta: float) -> void:
@@ -81,11 +81,11 @@ func _process(_delta: float) -> void:
 		show_state()
 
 
-## Shows the state's map: the map is the simulation's, so the grid follows it if a run brings
+## Shows the state's region: the region is the simulation's, so the grid follows it if a run brings
 ## another one. Called every frame; tests call it after changing the state.
 func show_state() -> void:
-	if _shown_map() != _map:
-		_build(_shown_map())
+	if _shown_region() != _region:
+		_build(_shown_region())
 
 
 ## Colors the tiles in `colors` and gives every other tile its terrain's color. Only tiles whose
@@ -107,9 +107,9 @@ func tile_count() -> int:
 	return _tiles.multimesh.instance_count
 
 
-## The map the grid shows.
-func shown_map() -> HexMap:
-	return _map
+## The region the grid shows.
+func shown_region() -> Region:
+	return _region
 
 
 ## The tile's transform relative to the grid; the identity basis when the tile isn't on the grid.
@@ -124,9 +124,9 @@ func tile_color_of(tile: Vector2i) -> Color:
 
 ## The color a tile of this terrain has when nothing paints it.
 func terrain_color(terrain: int) -> Color:
-	if terrain == HexMap.WATER:
+	if terrain == Region.WATER:
 		return water_color
-	if terrain == HexMap.BLOCKED:
+	if terrain == Region.BLOCKED:
 		return rock_color
 	return tile_color
 
@@ -141,19 +141,19 @@ func tile_multimesh() -> MultiMesh:
 	return _tiles.multimesh
 
 
-## The running game's map, or the editor's preview disc. In the editor (and a headless import) the
-## driver isn't running: GameDriver isn't a tool script, so it has no state to read there.
-func _shown_map() -> HexMap:
+## The running game's region, or the editor's preview disc. In the editor (and a headless import)
+## the driver isn't running: GameDriver isn't a tool script, so it has no state to read there.
+func _shown_region() -> Region:
 	if not Engine.is_editor_hint() and driver != null and driver.state != null:
-		return driver.state.map
-	if _map == null or _map.size() != Hex.disc(radius).size():
-		return HexMap.disc(radius)
-	return _map
+		return driver.state.region
+	if _region == null or _region.size() != Hex.disc(radius).size():
+		return Region.disc(radius)
+	return _region
 
 
-func _build(map: HexMap) -> void:
-	_map = map
-	var tiles: Array[Vector2i] = map.sorted_tiles()
+func _build(region: Region) -> void:
+	_region = region
+	var tiles: Array[Vector2i] = region.sorted_tiles()
 	_index.clear()
 	_transforms.clear()
 	_colors.clear()
@@ -163,7 +163,7 @@ func _build(map: HexMap) -> void:
 		var tile: Vector2i = tiles[i]
 		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
 		_index[tile] = i
-		_base[tile] = terrain_color(map.terrain[tile])
+		_base[tile] = terrain_color(region.terrain[tile])
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
 	paint(_paint)

@@ -83,9 +83,9 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	# The basic instance's map, maps/basic.map: a disc of 3 rings.
+	# The basic instance's region, regions/basic.region: a disc of 3 rings.
 	if grid.tile_count() != 37:
-		return "the grid has %d tiles, expected the basic map's 37" % grid.tile_count()
+		return "the grid has %d tiles, expected the basic region's 37" % grid.tile_count()
 	var mesh: CylinderMesh = grid.tile_mesh()
 	var tile_radius: float = HexLayout.SIZE * HexGrid.TILE_SCALE
 	if mesh.radial_segments != 6 or not is_equal_approx(mesh.top_radius, tile_radius):
@@ -155,17 +155,17 @@ func _check_player_in_view(main: Node) -> String:
 	return ""
 
 
-## The simulation's state is the truth: the grid shows its map and the player stands on its tile.
+## The simulation's state is the truth: the grid shows its region and the player stands on its tile.
 func _check_state_drives_view(main: Node) -> String:
 	var driver: GameDriver = main.get_node_or_null("Driver") as GameDriver
 	if driver == null or driver.state == null:
 		return "no GameDriver named Driver with a state"
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
-	if grid.shown_map() != driver.state.map:
-		return "the grid shows another map than the state's"
-	for tile: Vector2i in driver.state.map.sorted_tiles():
+	if grid.shown_region() != driver.state.region:
+		return "the grid shows another region than the state's"
+	for tile: Vector2i in driver.state.region.sorted_tiles():
 		if not grid.has_tile(tile):
-			return "the state's map has tile %s, the grid doesn't" % tile
+			return "the state's region has tile %s, the grid doesn't" % tile
 	var shown: HexPiece = main.get_node("Player") as HexPiece
 	if shown.tile != driver.state.player(0).tile:
 		return "the player is drawn on %s, but stands on %s" % [
@@ -175,8 +175,8 @@ func _check_state_drives_view(main: Node) -> String:
 	return ""
 
 
-## The basic map's wild monster (#19) is a ball resting on its tile, (-2, 0), with room for a ring
-## around it: all six neighbors are ground on the map.
+## The basic region's wild monster (#19) is a ball resting on its tile, (-2, 0), with room for a
+## ring around it: all six neighbors are ground on the region.
 func _check_ball(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node_or_null("WildMonsterView") as WildMonsterView
@@ -184,7 +184,7 @@ func _check_ball(main: Node) -> String:
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
 	if view == null or feature == null or feature.monsters.size() != 1:
-		return "the main scene needs a WildMonsterView, and the basic map one wild monster"
+		return "the main scene needs a WildMonsterView, and the basic region one wild monster"
 	var monster: Entity = driver.state.entity(feature.monsters[0])
 	var spot: Vector2i = Vector2i(-2, 0)
 	if monster.tile != spot or monster.slot != Entity.NO_SLOT:
@@ -193,7 +193,7 @@ func _check_ball(main: Node) -> String:
 			spot,
 		]
 	for direction: Vector2i in Hex.DIRECTIONS:
-		if not driver.state.map.is_walkable(spot + direction):
+		if not driver.state.region.is_walkable(spot + direction):
 			return "no ring fits around the ball: %s isn't ground" % (spot + direction)
 	var ball: HexPiece = view.balls.get(monster.id)
 	if ball == null or not ball.is_visible_in_tree() or ball.tile != spot:
@@ -257,17 +257,17 @@ func _check_ink_outline(_main: Node) -> String:
 	return ""
 
 
-## The grid draws each tile in its terrain's color, and follows the state to another map.
+## The grid draws each tile in its terrain's color, and follows the state to another region.
 func _check_terrain_colors(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
-	var map: HexMap = HexMap.disc(1)
-	map.terrain[Vector2i(1, 0)] = HexMap.WATER
-	map.terrain[Vector2i(-1, 0)] = HexMap.BLOCKED
-	driver.state.map = map
+	var region: Region = Region.disc(1)
+	region.terrain[Vector2i(1, 0)] = Region.WATER
+	region.terrain[Vector2i(-1, 0)] = Region.BLOCKED
+	driver.state.region = region
 	grid.show_state()
-	if grid.tile_count() != map.size():
-		return "the grid didn't follow the state to another map"
+	if grid.tile_count() != region.size():
+		return "the grid didn't follow the state to another region"
 	var expected: Dictionary[Vector2i, Color] = {
 		Vector2i(0, 0): grid.tile_color,
 		Vector2i(1, 0): grid.water_color,

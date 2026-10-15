@@ -1,11 +1,10 @@
 extends RefCounted
 ## Movement flow, through every layer: keys, the touch stick and a gamepad press the movement
-## actions, the
-## local input turns them into commands, the simulation walks the player from tile to tile along a
-## known path, zigzagging along a column for straight up and stopping at the grid's edge and at a
-## wild monster's ball, and the
-## view glides the player between tiles without jumps. Real key and touch events reach the actions
-## too. Time is stepped by hand, so the flow is deterministic.
+## actions, the local input turns them into commands, the simulation walks the player from tile to
+## tile along a known path, zigzagging along a column for straight up and stopping at the grid's
+## edge and at a wild monster's ball, and the view glides the player between tiles without jumps.
+## Real key and touch events reach the actions too. Time is stepped by hand, so the flow is
+## deterministic.
 
 const STEP: float = 1.0 / 60.0
 ## Seconds to walk from one tile to the next.
@@ -356,9 +355,9 @@ func _check_trail() -> String:
 	if trail.sorted_tiles() != expected:
 		return "the trail is %s, expected %s" % [trail.sorted_tiles(), expected]
 	_trail_view.show_state()
-	var map: HexMap = _driver.state.map
-	for tile: Vector2i in map.sorted_tiles():
-		var base: Color = _grid.terrain_color(map.terrain[tile])
+	var region: Region = _driver.state.region
+	for tile: Vector2i in region.sorted_tiles():
+		var base: Color = _grid.terrain_color(region.terrain[tile])
 		var color: Color = _trail_view.trail_color if _walked.has(tile) else base
 		if _grid.tile_color_of(tile) != color:
 			return "tile %s isn't drawn in the %s color" % [
@@ -525,11 +524,11 @@ func _record(tick: int, events: Array[RefCounted]) -> void:
 			_moves.append(moved)
 
 
-## The side the player can walk to from where it stands: right, unless that is off the map.
+## The side the player can walk to from where it stands: right, unless that is off the region.
 func _open_side() -> String:
 	var right: int = HexInput.direction_toward(Vector2.RIGHT, _tile())
 	var next: Vector2i = _tile() + Hex.DIRECTIONS[right]
-	return "move_right" if _driver.state.map.is_walkable(next) else "move_left"
+	return "move_right" if _driver.state.region.is_walkable(next) else "move_left"
 
 
 func _finish_step() -> void:
