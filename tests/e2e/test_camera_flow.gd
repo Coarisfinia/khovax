@@ -174,7 +174,9 @@ func _show_frame_checked(driver: GameDriver) -> String:
 
 
 ## In the glade, its views lie at its place in the world, and the basic instance's ground beside
-## it at the world's origin, where it was drawn before the crossing.
+## it at the world's origin, where it was drawn before the crossing. The cloud reads its fog in the
+## glade's own coordinates (#209): its shader is handed the cloud's transform within the instance,
+## not its place in the world, where the fog map would be read off by the glade's place.
 func _check_glade_placed(driver: GameDriver) -> String:
 	var root: Node3D = _main.get_node("Instance") as Node3D
 	var glade: Vector3 = HexLayout.to_world(driver.world.offset(InstanceBlueprints.GLADE))
@@ -187,6 +189,12 @@ func _check_glade_placed(driver: GameDriver) -> String:
 	var basic: HexGrid = neighbours.grids.get(InstanceBlueprints.BASIC)
 	if basic == null or not basic.global_position.is_equal_approx(Vector3.ZERO):
 		return "in the glade, the basic instance's ground isn't drawn where it lies in the world"
+	var fog: FogView = _main.get_node("FogView") as FogView
+	fog.show_state(STEP)
+	var cloud: ShaderMaterial = fog.cloud.material_override as ShaderMaterial
+	var handed: Projection = cloud.get_shader_parameter("to_instance")
+	if handed != Projection(fog.cloud.transform):
+		return "in the glade, the cloud's shader isn't handed its place within the glade"
 	return ""
 
 
