@@ -2,8 +2,10 @@ extends RefCounted
 ## Camera flow: the camera looks down at the player from a fixed 65 degree angle, stays put while
 ## the
 ## player moves inside its dead zone, and follows smoothly once the player leaves it, without jumps,
-## sudden speed changes or any rotation, also under a moved and turned parent. Time is stepped by
-## hand, so the flow is deterministic; one last step lets the engine's own frames drive it.
+## sudden speed changes or any rotation, also under a moved and turned parent, and walking through
+## an exit into the next instance moves neither the camera nor the player's figure with a jump.
+## Time is stepped by hand, so the flow is deterministic; one last step lets the engine's own frames
+## drive it.
 
 const STEP: float = 1.0 / 60.0
 ## The decided camera angle (#8): mostly top-down with a slight tilt.
@@ -29,7 +31,7 @@ func run(tree: SceneTree) -> String:
 	tree.root.add_child(_main)
 	await tree.process_frame
 	_camera = _main.get_viewport().get_camera_3d() as FollowCamera
-	_player_view = _main.get_node_or_null("Player") as HexPiece
+	_player_view = _main.get_node_or_null("Instance/Player") as HexPiece
 	if _camera == null or _player_view == null:
 		_main.queue_free()
 		return "the main scene needs a FollowCamera as its active camera and a HexPiece Player"
@@ -43,6 +45,7 @@ func run(tree: SceneTree) -> String:
 		_check_dead_zone,
 		_check_follows_smoothly,
 		_check_under_moved_parent,
+		_check_seamless_crossing,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -119,6 +122,88 @@ func _check_under_moved_parent() -> String:
 	return ""
 
 
+## Walking through an exit has no cut (#189): east out of the basic instance into the glade, a
+## while there, and west back. Frame by frame, the camera and the player's figure move in world
+## space without a jump, the instance's views move to the glade's place in the world, and the
+## neighbours stay where they lie in it.
+func _check_seamless_crossing() -> String:
+	_main.transform = Transform3D.IDENTITY
+	var driver: GameDriver = _main.get_node("Driver") as GameDriver
+	driver.start(3)
+	var source: CrossingSource = CrossingSource.new()
+	source.basic = driver.state
+	driver.sources = [source]
+	_show_frame(driver)
+	var visited: Array[String] = [driver.local_instance_name()]
+	for _frame: int in Simulation.TICKS_PER_SECOND * 6:
+		var jumped: String = _show_frame_checked(driver)
+		if not jumped.is_empty():
+			return jumped
+		if driver.local_instance_name() != visited.back():
+			visited.append(driver.local_instance_name())
+		if driver.local_instance_name() == InstanceBlueprints.GLADE:
+			var placed: String = _check_glade_placed(driver)
+			if not placed.is_empty():
+				return placed
+	var expected: Array[String] = [
+		InstanceBlueprints.BASIC,
+		InstanceBlueprints.GLADE,
+		InstanceBlueprints.BASIC,
+	]
+	if visited != expected:
+		return "the walk didn't cross into the glade and back: %s" % [visited]
+	return ""
+
+
+## Shows one frame and checks that neither the camera nor the player's figure jumped: the camera
+## moves at most at its capped speed, the figure at most at walking speed, and as much again for the
+## step across an exit, which the next walk can join.
+func _show_frame_checked(driver: GameDriver) -> String:
+	var tile: float = HexLayout.to_world(Vector2i(1, 0)).length()
+	var walking: float = tile / MovementFeature.MOVE_TICKS * Simulation.TICKS_PER_SECOND * STEP
+	var camera_before: Vector3 = _camera.global_position
+	var player_before: Vector3 = _player_view.global_position
+	_show_frame(driver)
+	var camera_step: float = camera_before.distance_to(_camera.global_position)
+	if camera_step > _camera.max_speed * STEP + EPSILON:
+		return "the camera jumped %f crossing between instances" % camera_step
+	var player_step: float = player_before.distance_to(_player_view.global_position)
+	if player_step > walking * 2.0 + EPSILON:
+		return "the player's figure jumped %f crossing between instances" % player_step
+	return ""
+
+
+## In the glade, its views lie at its place in the world, and the basic instance's ground beside
+## it at the world's origin, where it was drawn before the crossing.
+func _check_glade_placed(driver: GameDriver) -> String:
+	var root: Node3D = _main.get_node("Instance") as Node3D
+	var glade: Vector3 = HexLayout.to_world(driver.world.offset(InstanceBlueprints.GLADE))
+	if not root.global_position.is_equal_approx(glade):
+		return "in the glade, its views lie at %s, not at its place %s" % [
+			root.global_position,
+			glade,
+		]
+	var neighbours: NeighbourView = _main.get_node("Instance/NeighbourView") as NeighbourView
+	var basic: HexGrid = neighbours.grids.get(InstanceBlueprints.BASIC)
+	if basic == null or not basic.global_position.is_equal_approx(Vector3.ZERO):
+		return "in the glade, the basic instance's ground isn't drawn where it lies in the world"
+	return ""
+
+
+## One frame of the running game, stepped by hand: the driver, then every view the walk moves,
+## then the camera.
+func _show_frame(driver: GameDriver) -> void:
+	var player: PlayerView = _player_view as PlayerView
+	driver.advance(STEP)
+	(_main.get_node("Instance") as InstanceRoot).show_state()
+	(_main.get_node("Instance/NeighbourView") as NeighbourView).show_state()
+	player.ease_spot(STEP)
+	player.ease_crossing(STEP)
+	player.show_state()
+	player.turn(STEP)
+	_camera.advance(STEP)
+
+
 ## The engine's own frames drive the camera through _process, and it stays placed.
 func _check_runs_by_itself(tree: SceneTree) -> String:
 	_camera.set_process(true)
@@ -142,3 +227,33 @@ func _advance(steps: int) -> void:
 
 func _ground(point: Vector3) -> Vector3:
 	return Vector3(point.x, 0.0, point.z)
+
+
+## Walks player 0 east out of the basic instance into the glade, waits there, and walks back west:
+## from the start (1, -1) east, northeast onto the exit on (3, -2) and east through it, then
+## through the glade's way back. The player's tile changes as a step starts, so each move is
+## picked by the tile being walked to and applies once the step before arrives.
+class CrossingSource:
+	extends CommandSource
+
+	## Ticks spent in the glade before walking back.
+	const GLADE_TICKS: int = 20
+	const ROUTE: Dictionary[Vector2i, int] = {
+		Vector2i(1, -1): 0,
+		Vector2i(2, -1): 1,
+		Vector2i(3, -2): 0,
+	}
+
+	## The basic instance, to tell it from the glade.
+	var basic: GameState
+	var _glade_ticks: int = 0
+
+	func poll(schedule: CommandSchedule, tick: int, state: GameState) -> void:
+		var move: int = Command.NO_MOVE
+		if state != basic:
+			_glade_ticks += 1
+			if _glade_ticks > GLADE_TICKS:
+				move = 3
+		elif _glade_ticks == 0:
+			move = ROUTE.get(state.player(slot).tile, Command.NO_MOVE)
+		schedule.put(tick + schedule.delay, slot, Command.new(move))

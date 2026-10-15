@@ -115,9 +115,17 @@ func _step() -> bool:
 func _local_instance() -> GameState:
 	if world == null:
 		return null
+	return world.instances.get(local_instance_name())
+
+
+## The blueprint name of the instance this machine's player is in, or of the starting one before
+## they're placed; "" without a world.
+func local_instance_name() -> String:
+	if world == null:
+		return ""
 	var slot: int = input.slot if input != null else 0
 	var where: String = world.instance_of(slot)
-	return world.instances.get(where if not where.is_empty() else instance)
+	return where if not where.is_empty() else instance
 
 
 ## How far real time is into the next tick, from 0 to 1: views draw between ticks with it.

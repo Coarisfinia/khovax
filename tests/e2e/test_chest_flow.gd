@@ -132,7 +132,7 @@ func _check_saved(tree: SceneTree) -> String:
 	if saved.materials != OWN_LOOT:
 		result = "the profile saved %s from the chest, not %s" % [saved.materials, OWN_LOOT]
 	if result.is_empty():
-		result = _check_shown(main.get_node("ChestView") as ChestView, driver)
+		result = _check_shown(main.get_node("Instance/ChestView") as ChestView, driver)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)

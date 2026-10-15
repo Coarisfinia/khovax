@@ -6,7 +6,8 @@ extends HexPiece
 ## walk glides at a constant speed. Its character model (#79) idles while standing, runs while
 ## moving and turns smoothly to face where it goes. Players walk through each other (#31), so
 ## several can stand on one tile: then each stands at its own spot inside it, by slot, easing there
-## and back rather than snapping (#151). It only reads the state; the spot is the view's alone.
+## and back rather than snapping (#151). Walking out through an exit, it glides on onto the next
+## instance's way back (#189). It only reads the state; the spot and the glide are the view's.
 
 ## How fast the character turns toward where it walks, in radians per second: quick enough to
 ## follow a zigzag, never a snap.
@@ -42,6 +43,15 @@ var facing: float = 0.0
 ## Where the player stands inside its tile, from the center: easing toward its slot's spot while
 ## it shares the tile, back to the center while it doesn't.
 var spot: Vector3 = Vector3.ZERO
+## What's left of the step across an exit (#189), in world units: from where the player was drawn
+## in the instance they left to their tile in the next, easing to nothing at walking speed. The
+## world moves them between instances within one tick, onto the tile beside the exit in world
+## space; this lets the figure walk that step instead of jumping it.
+var crossing: Vector3 = Vector3.ZERO
+## Where the player was last drawn, in world space, and in which instance of which world.
+var _drawn_at: Vector3 = Vector3.ZERO
+var _drawn_in: GameState
+var _drawn_world: World
 var _animations: AnimationPlayer
 
 
@@ -64,6 +74,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not Engine.is_editor_hint():
 		ease_spot(delta)
+		ease_crossing(delta)
 		show_state()
 		turn(delta)
 
@@ -77,6 +88,7 @@ func show_state() -> void:
 	# A slot nobody plays in shows nothing.
 	visible = player != null
 	if player == null:
+		_drawn_in = null
 		return
 	tile = player.tile
 	# Set explicitly, not left to the tile setter: the spot is added to it once below.
@@ -95,7 +107,8 @@ func show_state() -> void:
 		var heading: Vector3 = tile_position() - position_on(walk.from)
 		facing = atan2(heading.x, heading.z)
 	position += spot
-	_play(MOVE if moving else IDLE)
+	_follow_crossing()
+	_play(MOVE if moving or crossing != Vector3.ZERO else IDLE)
 
 
 ## The clip the character is playing, or "" without a model.
@@ -113,6 +126,29 @@ func ease_spot(delta: float) -> void:
 	if player != null and _shares_tile(player):
 		target = SPOTS[slot]
 	spot = spot.move_toward(target, SPOT_SPEED * delta)
+
+
+## Eases the step across an exit by at most walking speed per second. Called every frame; tests
+## call it with their own step.
+func ease_crossing(delta: float) -> void:
+	var step: float = HexLayout.to_world(Vector2i(1, 0)).length() / MovementFeature.MOVE_TICKS
+	crossing = crossing.move_toward(Vector3.ZERO, step * Simulation.TICKS_PER_SECOND * delta)
+
+
+## Starts the step across an exit when the local view moved on to another instance of the same
+## world while this player stayed in sight, so they glide on from where they were drawn; a new
+## world (a new session) places them at once. Then adds what's left of the step.
+func _follow_crossing() -> void:
+	var shift: Vector3 = InstanceRoot.shift_of(driver)
+	if _drawn_world != driver.world:
+		crossing = Vector3.ZERO
+	elif _drawn_in != null and _drawn_in != driver.state:
+		crossing = _drawn_at - (shift + position)
+		facing = atan2(-crossing.x, -crossing.z)
+	position += crossing
+	_drawn_at = shift + position
+	_drawn_in = driver.state
+	_drawn_world = driver.world
 
 
 ## Whether another player stands on (or is walking onto) `player`'s tile.
