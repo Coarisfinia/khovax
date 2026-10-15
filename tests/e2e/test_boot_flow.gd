@@ -1,7 +1,7 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
-## in view of
-## the camera, and a wild monster's figure standing on its own tile.
+## in view of the camera, a wild monster's figure standing on its own tile, and the exploration
+## music rising from silence.
 
 
 func run(tree: SceneTree) -> String:
@@ -29,6 +29,7 @@ func run(tree: SceneTree) -> String:
 		_check_ink_outline,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
+		_check_music,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -297,4 +298,18 @@ func _check_terrain_colors(main: Node) -> String:
 				grid.tile_color_of(tile),
 				expected[tile],
 			]
+	return ""
+
+
+## The run's music (#126): the exploration track plays, loops and fades in rather than starting
+## loud. Booting took a few frames, far less than the fade.
+func _check_music(main: Node) -> String:
+	var music: Music = main.get_node_or_null("Music") as Music
+	if music == null or not music.playing or music.stream != Music.EXPLORATION:
+		return "the exploration track isn't playing"
+	var track: AudioStreamOggVorbis = music.stream as AudioStreamOggVorbis
+	if track == null or not track.loop:
+		return "the exploration track doesn't loop"
+	if music.volume_linear >= 1.0:
+		return "the music started at full volume instead of fading in"
 	return ""
