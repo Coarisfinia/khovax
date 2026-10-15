@@ -32,7 +32,35 @@ func run(_tree: SceneTree) -> String:
 		result = _check_web_connected()
 	if result.is_empty():
 		result = _check_world()
+	if result.is_empty():
+		result = _check_documents()
 	return result
+
+
+## Region documents (#145): tile (0, 0) is the middle tile of the middle row, the legend's symbols
+## become connectors, exits and named species on their tiles, and a grid without a single middle
+## or a symbol the legend doesn't explain is refused.
+func _check_documents() -> String:
+	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
+	var legend: String = "- `j`: joins another piece to the west\n"
+	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch"
+	var region: Region = RegionDocument.parse(tiles % [" . .\nj 1 x\n B .", legend])
+	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
+	var west: Vector3i = Vector3i(-1, 0, 3)
+	expected = expected and region.connectors.size() == 1 and region.connectors[0] == west
+	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
+	expected = expected and region.named_species.get(Vector2i(-1, 1), "") == "storm_finch"
+	if not region.problem.is_empty() or not expected:
+		return "a region document didn't read as drawn: %s" % region.problem
+	var refusals: Dictionary[String, String] = {
+		tiles % [". .\n. .", ""]: "the tiles need an odd",
+		tiles % ["1 z .", ""]: "the legend doesn't explain `z`",
+	}
+	for text: String in refusals:
+		var problem: String = RegionDocument.parse(text).problem
+		if not problem.begins_with(refusals[text]):
+			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
+	return ""
 
 
 ## Every blueprint loads as a full instance for every seed, and its first player can walk to every

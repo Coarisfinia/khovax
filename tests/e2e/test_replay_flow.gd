@@ -685,9 +685,9 @@ func _check_region_file() -> String:
 		Vector2i(1, 0),
 	]
 	if region.sorted_tiles() != Region.disc(RADIUS).sorted_tiles() or region.starts != starts:
-		return "regions/basic.region isn't the disc of radius 3 with its four starts"
+		return "regions/basic.md isn't the disc of radius 3 with its four starts"
 	if region.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
-		return "regions/basic.region's wild monster isn't on (-2, 0): %s" % [region.wild_monsters]
+		return "regions/basic.md's wild monster isn't on (-2, 0): %s" % [region.wild_monsters]
 	var broken: Dictionary[String, String] = {
 		". . .": "a region file starts with",
 		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
@@ -765,7 +765,7 @@ func _check_connector_fit() -> String:
 ## as its file is drawn, and takes four players.
 func _check_turning() -> String:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.ARENA + "/"
-	var drawn: Region = Region.parse(FileAccess.get_file_as_string(folder + "start.region"))
+	var drawn: Region = RegionDocument.parse(FileAccess.get_file_as_string(folder + "start.md"))
 	var pieces: Array[Region] = _glade_pieces()
 	var glade_starts: Dictionary[Vector2i, bool] = {}
 	for seed_value: int in 12:
@@ -803,8 +803,8 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 func _glade_pieces() -> Array[Region]:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
 	var pieces: Array[Region] = []
-	for file: String in ["start.region", "pond.region", "thicket.region"]:
-		pieces.append(Region.parse(FileAccess.get_file_as_string(folder + file)))
+	for file: String in ["start.md", "pond.md", "thicket.md"]:
+		pieces.append(RegionDocument.parse(FileAccess.get_file_as_string(folder + file)))
 	return pieces
 
 
