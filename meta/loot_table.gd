@@ -42,9 +42,10 @@ static func parse(file_id: String, text: String) -> LootTable:
 		table.problem = "its id must match the file name and be lowercase words with underscores"
 	if table.problem.is_empty() and not KINDS.has(table.kind):
 		table.problem = "its kind is species or instance"
-	var entries: Variant = data.get("entries")
+	var raw: Variant = data.get("entries")
+	var entries: Array = raw if raw is Array else []
 	if table.problem.is_empty():
-		table.problem = table._read_entries(entries if entries is Array else [])
+		table.problem = table._read_entries(entries)
 	return table
 
 
@@ -94,4 +95,5 @@ static func _unknown_field(data: Dictionary, allowed: Array[String]) -> String:
 
 ## `value` if it's a string, or "" for anything else, so that e.g. `true` never reads as an id.
 static func _text(value: Variant) -> String:
-	return value if value is String else ""
+	var text: String = value if value is String else ""
+	return text
