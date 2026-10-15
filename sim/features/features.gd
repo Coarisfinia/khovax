@@ -8,3 +8,4 @@ const MOVEMENT: int = 1
 const TRAIL: int = 2
 const WILD_MONSTERS: int = 3
 const CATCH: int = 4
+const CHESTS: int = 5

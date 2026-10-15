@@ -1,7 +1,8 @@
-# A pond in the glade (#57): water in the middle, ground around it, open on three sides.
+# A pond in the glade (#57): water in the middle, ground around it, a treasure chest on its far
+# bank (#124), open on three sides.
 # Format: see Region.parse (sim/region.gd).
 origin 4 2
-  . . .
+  . c .
  . . . .
 . . ~ ~ .
  . . . .
