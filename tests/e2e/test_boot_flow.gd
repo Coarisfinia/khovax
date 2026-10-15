@@ -403,7 +403,7 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 func _check_remembered_ground(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var fog: FogView = main.get_node("FogView") as FogView
-	var view: NeighbourView = main.get_node("NeighbourView") as NeighbourView
+	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	var light: Vector2 = Vector2(0.0, 1.0)
 	# Seen while the fog was checked, and out of sight there for a while.
 	var far: Vector2i = Vector2i(-3, 0)
