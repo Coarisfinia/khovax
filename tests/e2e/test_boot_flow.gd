@@ -279,7 +279,8 @@ func _check_ink_outline(main: Node) -> String:
 			or outline.extra_cull_margin < 1000.0
 			or not outline.ignore_occlusion_culling):
 		return "the ink outline pass isn't in the ink color, or can be culled"
-	if ink.render_priority != InkOutline.PRIORITY or InkOutline.PRIORITY + 1 >= InkOutline.TEXT_PRIORITY:
+	if (ink.render_priority != InkOutline.PRIORITY
+			or InkOutline.PRIORITY + 1 >= InkOutline.TEXT_PRIORITY):
 		return "the ink outline pass doesn't draw last"
 	return ""
 
