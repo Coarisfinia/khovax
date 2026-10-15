@@ -1,14 +1,16 @@
-// The fog of war as a soft cloud (#156): one flat layer over the region, thick where no ally has
-// ever looked, a thin veil over what was seen before, clear where an ally sees now. How much fog
-// lies on each tile comes from `fog_map`, one texel per tile in axial coordinates (FogCloud),
-// sampled at each pixel's fractional tile so the edge of sight fades between tiles instead of
-// stepping. A slowly drifting noise roughens it into cloud. Unlike the rest of the look it isn't
+// The fog of war as a soft cloud (#156): one flat layer over the region. Where no ally has ever
+// looked lies thick cloud, hiding the ground. Over ground seen before lies light fog (#175): low,
+// thin wisps drifting along, through which the ground stays readable. It's told apart from the
+// cloud by its shape, not only its brightness (#68). Clear where an ally sees now. How much of each
+// lies on a tile comes from `fog_map`, one texel per tile in axial coordinates (FogCloud), sampled
+// at each pixel's fractional tile so the edges fade between tiles instead of stepping. Not
 // cel-shaded (owner, #156): banded fog with ink edges was too busy. Cheap enough for mobile and the
-// web: one plane, one material, three texture reads.
+// web: one plane, one material, four texture reads.
 shader_type spatial;
 render_mode unshaded, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
 
-// Fog per tile: 0 seen now, 1 never seen; texel (q, r) is tile (q, r) + `map_offset`.
+// Fog per tile, red the thick cloud and green the light fog, each 0 to 1; texel (q, r) is tile
+// (q, r) + `map_offset`.
 uniform sampler2D fog_map : filter_linear, repeat_disable;
 uniform vec2 map_offset;
 uniform vec2 map_size;
@@ -21,10 +23,13 @@ uniform vec4 cloud_shade : source_color = vec4(0.70, 0.73, 0.82, 1.0);
 uniform vec2 drift = vec2(0.004, 0.002);
 // How many world units one noise texture width covers.
 uniform float noise_scale = 40.0;
-// The fog, roughened by the noise, fades in from `clear_below` to full cloud at `thick_above`. A
-// tile seen before sits in between: a veil it can be read through.
-uniform float clear_below = 0.35;
-uniform float thick_above = 0.95;
+// The thick cloud, roughened by the noise, fades in from `clear_below` to full at `thick_above`.
+uniform float clear_below = 0.3;
+uniform float thick_above = 0.9;
+// The light fog's wisps: stretched along x, thinnest and thickest alpha.
+uniform vec2 wisp_scale = vec2(18.0, 5.0);
+uniform float wisp_thin = 0.3;
+uniform float wisp_thick = 0.6;
 
 varying vec3 world;
 
@@ -32,20 +37,25 @@ void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
-// The fog at a world position, blended between the tiles around it.
-float fog_at(vec2 xz) {
+// The fog at a world position, blended between the tiles around it: x thick, y light.
+vec2 fog_at(vec2 xz) {
 	float r = xz.y / (1.5 * hex_size);
 	float q = xz.x / (sqrt(3.0) * hex_size) - r * 0.5;
 	vec2 uv = (vec2(q, r) + map_offset + 0.5) / map_size;
-	return texture(fog_map, uv).r;
+	return texture(fog_map, uv).rg;
 }
 
 void fragment() {
 	vec2 at = world.xz / noise_scale;
 	float noise = texture(cloud_noise, at + drift * TIME).r * 0.65;
 	noise += texture(cloud_noise, at * 2.3 - drift * TIME * 1.7).r * 0.35;
-	// The noise only roughens the fog: never enough to open a hole in thick cloud.
-	float fog = fog_at(world.xz) + (noise - 0.5) * 0.25;
-	ALBEDO = mix(cloud_shade.rgb, cloud_light.rgb, smoothstep(0.3, 0.7, noise));
-	ALPHA = smoothstep(clear_below, thick_above, fog);
+	vec2 fog = fog_at(world.xz);
+	// The noise only roughens the cloud: never enough to open a hole in it.
+	float thick = smoothstep(clear_below, thick_above, fog.x + (noise - 0.5) * 0.25);
+	float wisps = texture(cloud_noise, world.xz / wisp_scale + drift * TIME * 2.0).r;
+	// Fading out as the cloud thickens, so wisps don't bleed into the cloud's edge.
+	float light = fog.y * (1.0 - thick) * mix(wisp_thin, wisp_thick, smoothstep(0.35, 0.75, wisps));
+	vec3 cloud = mix(cloud_shade.rgb, cloud_light.rgb, smoothstep(0.3, 0.7, noise));
+	ALBEDO = mix(cloud_light.rgb, cloud, thick);
+	ALPHA = max(thick, light);
 }

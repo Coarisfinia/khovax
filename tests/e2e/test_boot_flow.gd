@@ -363,14 +363,15 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	if view.brightness[own] != FogView.VISIBLE or view.brightness[far] != FogView.REMEMBERED:
 		return "the fog isn't bright where seen and dimmed where seen before"
 	var cloud: FogCloud = view.cloud
-	var veil: float = cloud.fog_on(far)
-	if not cloud.visible or cloud.fog_on(own) != 0.0 or veil < 0.5 or veil > 0.7:
-		return "the cloud isn't clear where seen and a veil where seen before (%.2f)" % veil
+	var seen_before: Vector2 = cloud.fog_on(far)
+	if not cloud.visible or cloud.fog_on(own) != Vector2.ZERO or seen_before != Vector2(0.0, 1.0):
+		return "the fog isn't clear where seen and light where seen before (%s)" % seen_before
 	var fresh: FogView = FogView.new()
 	fresh.driver = view.driver
 	fresh.cloud = cloud
 	fresh.show_state(10.0)
-	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == 1.0
+	var unseen: Vector2 = Vector2(1.0, 0.0)
+	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == unseen
 	fresh.free()
 	view.show_state(10.0)
 	if not dark:
