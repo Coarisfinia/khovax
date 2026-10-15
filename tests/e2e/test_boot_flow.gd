@@ -334,6 +334,12 @@ func _check_fog(main: Node) -> String:
 	var figure: HexPiece = (main.get_node("WildMonsterView") as WildMonsterView).figures.values()[0]
 	if result.is_empty() and figure.visible:
 		result = "a wild monster out of sight is still shown"
+	fog.enabled = false
+	view.show_state(10.0)
+	if result.is_empty() and view.brightness[far] != FogView.VISIBLE:
+		result = "a switched-off fog still darkens tiles"
+	fog.enabled = true
+	view.show_state(10.0)
 	fog.visible[0] = everything
 	view.show_state(0.1)
 	if result.is_empty() and not is_equal_approx(view.brightness[far], 0.45 + 0.15):

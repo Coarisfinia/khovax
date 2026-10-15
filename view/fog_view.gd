@@ -48,10 +48,11 @@ func show_state(delta: float) -> void:
 	grid.shade(brightness)
 
 
-## Whether any player in `state` sees `tile`: allies share sight. True without fog.
+## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
+## switched off.
 static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
-	if fog == null:
+	if fog == null or not fog.enabled:
 		return true
 	for slot: int in GameState.MAX_PLAYERS:
 		if fog.sees(slot, tile):
@@ -59,8 +60,11 @@ static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 	return false
 
 
-## How bright `tile` should be, remembering it once an ally sees it.
+## How bright `tile` should be, remembering it once an ally sees it. A switched-off fog keeps its
+## last sight, so it lifts instead, easing like any other change (a rule switches it, #30).
 func _target(fog: FogFeature, tile: Vector2i) -> float:
+	if not fog.enabled:
+		return VISIBLE
 	for slot: int in fog.visible:
 		if fog.sees(slot, tile):
 			_seen[tile] = true
