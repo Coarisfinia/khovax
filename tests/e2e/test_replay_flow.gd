@@ -721,14 +721,14 @@ func _check_region_file() -> String:
 ## its pieces without overlaps, with all its ground connected to the start. Turning off keeps the
 ## start piece as it is, and a piece without a fitting connector is refused.
 func _check_arranged_regions() -> String:
-	for turns: int in 6:
-		if Hex.turn(Hex.DIRECTIONS[0], turns) != Hex.DIRECTIONS[turns]:
-			return "Hex.turn doesn't follow DIRECTIONS round: %d turns" % turns
 	var pieces: Array[Region] = _glade_pieces()
 	for seed_value: int in 40:
 		var problem: String = _check_glade(seed_value, pieces)
 		if not problem.is_empty():
 			return problem
+	var problem: String = _check_connector_fit()
+	if not problem.is_empty():
+		return problem
 	if RegionArranger.arrange(pieces, 7, false).starts != pieces[0].starts:
 		return "an unturned arrangement moved the start piece"
 	if pieces[0].fits(pieces[0], Vector2i.ZERO):
@@ -736,6 +736,26 @@ func _check_arranged_regions() -> String:
 	var closed: Array[Region] = [pieces[0], Region.disc(1)]
 	if not RegionArranger.arrange(closed, 7, true).problem.begins_with("region piece 1 fits"):
 		return "a piece without connectors was placed"
+	return ""
+
+
+## Hex.turn goes round DIRECTIONS. Two one-tile pieces, each with one connector: the second lands
+## right next to the first, on the side the first opens to, whichever way its own connector faces
+## before it's turned (sides 3 and 0 need no turn and three turns). The first piece's player start
+## stays where it was.
+func _check_connector_fit() -> String:
+	for turns: int in 6:
+		if Hex.turn(Hex.DIRECTIONS[0], turns) != Hex.DIRECTIONS[turns]:
+			return "Hex.turn doesn't follow DIRECTIONS round: %d turns" % turns
+	var first: Region = Region.parse("origin 0 0\n1\nconnector 0 0 0")
+	var expected: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0)]
+	for side: int in [3, 0]:
+		var second: Region = Region.parse("origin 0 0\n.\nconnector 0 0 %d" % side)
+		var pair: Array[Region] = [first, second]
+		var region: Region = RegionArranger.arrange(pair, 1, false)
+		var placed: bool = region.sorted_tiles() == expected and region.starts == first.starts
+		if not placed or not region.connectors.is_empty():
+			return "a piece opening to side %d landed on %s" % [side, region.sorted_tiles()]
 	return ""
 
 
