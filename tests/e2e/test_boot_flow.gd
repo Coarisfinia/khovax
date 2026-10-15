@@ -326,9 +326,8 @@ func _check_music(main: Node) -> String:
 
 
 ## The fog (#137), drawn from the fog feature's state: a tile an ally sees is bright, one seen
-## before
-## dimmed, one never seen dark; brightness eases rather than jumps; and a wild monster out of every
-## ally's sight is hidden.
+## before dimmed, one never seen dark, and the cloud (#156) lies on each that thick; brightness
+## eases rather than jumps; and a wild monster out of every ally's sight is hidden.
 func _check_fog(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: FogView = main.get_node("FogView") as FogView
@@ -363,12 +362,17 @@ func _check_fog(main: Node) -> String:
 func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	if view.brightness[own] != FogView.VISIBLE or view.brightness[far] != FogView.REMEMBERED:
 		return "the fog isn't bright where seen and dimmed where seen before"
+	var cloud: FogCloud = view.cloud
+	var veil: float = cloud.fog_on(far)
+	if not cloud.visible or cloud.fog_on(own) != 0.0 or veil < 0.5 or veil > 0.7:
+		return "the cloud isn't clear where seen and a veil where seen before (%.2f)" % veil
 	var fresh: FogView = FogView.new()
 	fresh.driver = view.driver
-	fresh.grid = view.grid
+	fresh.cloud = cloud
 	fresh.show_state(10.0)
-	var dark: bool = fresh.brightness[far] == FogView.UNSEEN
+	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == 1.0
 	fresh.free()
+	view.show_state(10.0)
 	if not dark:
-		return "a tile never seen isn't dark"
+		return "a tile never seen isn't under thick cloud"
 	return ""

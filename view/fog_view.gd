@@ -1,8 +1,9 @@
 class_name FogView
 extends Node
-## Draws the fog of war (#65, #137) from the fog feature's state, on the grid's tiles: full bright
-## where any ally sees (allies share sight), dimmed where one has seen before, and dark where none
-## ever has. Each tile eases towards its brightness, so the fog never flickers or pulses (motion
+## Draws the fog of war (#65, #137) from the fog feature's state, as a cloud over the region
+## (FogCloud, #156): clear where any ally sees (allies share sight), a thin veil where one has seen
+## before, and thick cloud where none ever has. It works out each tile's brightness on that scale.
+## Each tile eases towards its brightness, so the fog never flickers or pulses (motion
 ## sickness). Wild monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
 ## It only reads the state: what was seen before is remembered here, per machine.
 
@@ -14,7 +15,7 @@ const UNSEEN: float = 0.12
 const EASE_PER_SECOND: float = 1.5
 
 @export var driver: GameDriver
-@export var grid: HexGrid
+@export var cloud: FogCloud
 
 ## Each tile's brightness as drawn now.
 var brightness: Dictionary[Vector2i, float] = {}
@@ -30,12 +31,12 @@ func _process(delta: float) -> void:
 ## Eases every tile `delta` seconds towards how bright the fog makes it, and draws it. Tests call
 ## it with a long `delta` to let it settle.
 func show_state(delta: float) -> void:
-	if driver == null or driver.state == null or grid == null:
+	if driver == null or driver.state == null or cloud == null:
 		return
 	var fog: FogFeature = driver.state.feature(Features.FOG) as FogFeature
 	if fog == null:
 		brightness.clear()
-		grid.shade(brightness)
+		cloud.show_fog(null, brightness)
 		return
 	if driver.state.region != _region:
 		_region = driver.state.region
@@ -45,7 +46,7 @@ func show_state(delta: float) -> void:
 		var target: float = _target(fog, tile)
 		var now: float = brightness.get(tile, target)
 		brightness[tile] = move_toward(now, target, EASE_PER_SECOND * delta)
-	grid.shade(brightness)
+	cloud.show_fog(_region, brightness)
 
 
 ## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
