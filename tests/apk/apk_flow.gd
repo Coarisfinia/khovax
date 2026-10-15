@@ -42,7 +42,7 @@ func begin(main: Node, tree: SceneTree) -> void:
 
 
 ## Walks the scripted path in `main` and returns why it failed, or "". Each tick waits for its
-## real time, so the walk plays at the game's speed and the web run's video shows it.
+## real time, so the walk plays at the game's speed and the web e2e job's video shows it.
 func run(main: Node, tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var camera: Camera3D = main.get_node("Camera3D") as Camera3D

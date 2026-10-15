@@ -327,7 +327,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   starts from a fixed seed, scripts its touches per tick, and must end in `EXPECTED_HASH`, which
   the same flow pins headless (`tests/e2e/test_apk_flow.gd`). A rule change that moves it updates
   it on purpose, like the golden replays. Everything else stays headless. `apk-e2e` is a required
-  check: it passed on its first run, and the owner asked to enforce it then.
+  check: it passed the first time it ran, and the owner asked to enforce it then.
 - **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
   for now (#61).
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
