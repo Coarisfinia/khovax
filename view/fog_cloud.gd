@@ -43,11 +43,18 @@ func show_fog(region: Region, brightness: Dictionary[Vector2i, float]) -> void:
 		return
 	if region != _region:
 		_fit(region)
+	# Only texels whose value changed are written, and the texture is uploaded only then: once the
+	# fog has settled, a frame costs nothing.
+	var changed: bool = false
 	for tile: Vector2i in brightness:
 		var fog: float = inverse_lerp(FogView.VISIBLE, FogView.UNSEEN, brightness[tile])
+		var level: int = roundi(clampf(fog, 0.0, 1.0) * 255.0)
 		var texel: Vector2i = tile + _offset
-		fog_map.set_pixel(texel.x, texel.y, Color(clampf(fog, 0.0, 1.0), 0.0, 0.0))
-	_texture.update(fog_map)
+		if roundi(fog_map.get_pixel(texel.x, texel.y).r * 255.0) != level:
+			fog_map.set_pixel(texel.x, texel.y, Color(level / 255.0, 0.0, 0.0))
+			changed = true
+	if changed:
+		_texture.update(fog_map)
 
 
 ## The fog the shader reads on `tile`, 0 to 1. Tests check the map with it.
