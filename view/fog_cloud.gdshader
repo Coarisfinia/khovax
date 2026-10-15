@@ -32,9 +32,15 @@ uniform float wisp_thin = 0.3;
 uniform float wisp_thick = 0.6;
 
 varying vec3 world;
+// The position within the instance, whose coordinates the fog map is in: the views of the current
+// instance stand at its place in the world (#189), so the world position is off by that place.
+varying vec3 in_instance;
+// The cloud's own transform within the instance.
+uniform mat4 to_instance;
 
 void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	in_instance = (to_instance * vec4(VERTEX, 1.0)).xyz;
 }
 
 // The fog at a world position, blended between the tiles around it: x thick, y light.
@@ -49,7 +55,8 @@ void fragment() {
 	vec2 at = world.xz / noise_scale;
 	float noise = texture(cloud_noise, at + drift * TIME).r * 0.65;
 	noise += texture(cloud_noise, at * 2.3 - drift * TIME * 1.7).r * 0.35;
-	vec2 fog = fog_at(world.xz);
+	// The noise stays in the world, so the cloud doesn't jump when crossing into the next instance.
+	vec2 fog = fog_at(in_instance.xz);
 	// The noise only roughens the cloud: never enough to open a hole in it.
 	float thick = smoothstep(clear_below, thick_above, fog.x + (noise - 0.5) * 0.25);
 	float wisps = texture(cloud_noise, world.xz / wisp_scale + drift * TIME * 2.0).r;
