@@ -15,6 +15,9 @@ const IDLE: StringName = &"Idle"
 
 ## The figure shown for each wild monster, by entity id: a piece on the tile holding the model.
 var figures: Dictionary[int, HexPiece] = {}
+## The instance the figures belong to: another instance drops them at once (#189), since they
+## would shrink away on the new instance's ground.
+var _shown: GameState
 
 
 func _process(_delta: float) -> void:
@@ -25,6 +28,11 @@ func _process(_delta: float) -> void:
 func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
+	if driver.state != _shown:
+		for figure: HexPiece in figures.values():
+			figure.queue_free()
+		figures.clear()
+		_shown = driver.state
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)

@@ -152,7 +152,7 @@ func _check_view(tree: SceneTree) -> String:
 	tree.root.add_child(main)
 	await tree.process_frame
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
+	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
 	driver.set_process(false)
 	# Drawn now, not left to whether a frame has passed yet.
 	view.show_state()

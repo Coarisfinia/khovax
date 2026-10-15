@@ -20,6 +20,7 @@
 [ext_resource type="Script" path="res://game/event_bus.gd" id="18_bus"]
 [ext_resource type="Script" path="res://view/tile_decorations.gd" id="19_decorations"]
 [ext_resource type="Script" path="res://view/neighbour_view.gd" id="20_neighbours"]
+[ext_resource type="Script" path="res://view/instance_root.gd" id="21_instance"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -40,59 +41,63 @@ script = ExtResource("11_profile")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 
-[node name="HexGrid" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=402158871]
+[node name="Instance" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1890189018]
+script = ExtResource("21_instance")
+driver = NodePath("../Driver")
+
+[node name="HexGrid" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=402158871]
 script = ExtResource("3_grid")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 
-[node name="TileDecorations" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1161161160]
+[node name="TileDecorations" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1161161160]
 script = ExtResource("19_decorations")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 
-[node name="NeighbourView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1880188018]
+[node name="NeighbourView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1880188018]
 script = ExtResource("20_neighbours")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 
-[node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
-script = ExtResource("7_trail")
-driver = NodePath("../Driver")
-grid = NodePath("../HexGrid")
-
-[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "cloud") unique_id=1513957802]
-script = ExtResource("12_fog")
-driver = NodePath("../Driver")
-cloud = NodePath("../FogCloud")
-
-[node name="FogCloud" type="MeshInstance3D" parent="." node_paths=PackedStringArray("neighbours") unique_id=1560156156]
+[node name="FogCloud" type="MeshInstance3D" parent="Instance" node_paths=PackedStringArray("neighbours") unique_id=1560156156]
 script = ExtResource("16_cloud")
 neighbours = NodePath("../NeighbourView")
 
-[node name="WildMonsterView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1408221635]
+[node name="WildMonsterView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 
-[node name="ChestView" type="Node3D" parent="." node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
+[node name="ChestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
 script = ExtResource("15_chests")
-driver = NodePath("../Driver")
-input = NodePath("../LocalInput")
+driver = NodePath("../../Driver")
+input = NodePath("../../LocalInput")
 
-[node name="LookoutView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1810181018]
+[node name="LookoutView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1810181018]
 script = ExtResource("17_lookouts")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 
-[node name="Player" type="Node3D" parent="." node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
+[node name="Player" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
 script = ExtResource("4_player")
-driver = NodePath("../Driver")
+driver = NodePath("../../Driver")
 model = NodePath("Model")
 base_offset = 0.0
 tile = Vector2i(1, -1)
 
-[node name="Model" parent="Player" instance=ExtResource("9_rogue")]
+[node name="Model" parent="Instance/Player" instance=ExtResource("9_rogue")]
+
+[node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
+script = ExtResource("7_trail")
+driver = NodePath("../Driver")
+grid = NodePath("../Instance/HexGrid")
+
+[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "cloud") unique_id=1513957802]
+script = ExtResource("12_fog")
+driver = NodePath("../Driver")
+cloud = NodePath("../Instance/FogCloud")
 
 [node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("target") unique_id=833248369]
 process_priority = 100
 current = true
 script = ExtResource("5_camera")
-target = NodePath("../Player")
+target = NodePath("../Instance/Player")
 
 [node name="InkOutline" type="MeshInstance3D" parent="." unique_id=1166402913]
 script = ExtResource("13_ink")

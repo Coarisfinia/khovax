@@ -86,7 +86,7 @@ func _check_known_positions(_main: Node) -> String:
 
 
 func _check_grid(main: Node) -> String:
-	var grid: HexGrid = main.get_node_or_null("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node_or_null("Instance/HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
 	# The basic instance's region, regions/basic.md: a disc of 3 rings.
@@ -108,7 +108,7 @@ func _check_grid(main: Node) -> String:
 ## The trail colors are per-instance colors, which only show with both of these on. The colors
 ## themselves can't be read back from the MultiMesh under the headless dummy renderer.
 func _check_grid_colors(main: Node) -> String:
-	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var material: StandardMaterial3D = grid.tile_mesh().material as StandardMaterial3D
 	if not grid.tile_multimesh().use_colors or material == null:
 		return "the tile MultiMesh doesn't use per-instance colors"
@@ -119,10 +119,10 @@ func _check_grid_colors(main: Node) -> String:
 
 ## The player's character stands on its tile: centered on it, feet on the tile's top.
 func _check_player_placement(main: Node) -> String:
-	var player: PlayerView = main.get_node_or_null("Player") as PlayerView
+	var player: PlayerView = main.get_node_or_null("Instance/Player") as PlayerView
 	if player == null or player.model == null:
 		return "no PlayerView named Player with a model"
-	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	if not grid.has_tile(player.tile):
 		return "the player's tile %s is not on the grid" % player.tile
 	var center: Vector3 = HexLayout.to_world(player.tile)
@@ -139,7 +139,7 @@ func _check_player_placement(main: Node) -> String:
 
 ## The character carries none of the model's weapons and idles while it stands.
 func _check_player_model(main: Node) -> String:
-	var player: PlayerView = main.get_node("Player") as PlayerView
+	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
 	for part: String in PlayerView.HIDDEN_PARTS:
 		var node: Node3D = player.model.find_child(part) as Node3D
 		if node == null or node.visible:
@@ -150,7 +150,7 @@ func _check_player_model(main: Node) -> String:
 
 
 func _check_player_in_view(main: Node) -> String:
-	var player: Node3D = main.get_node("Player") as Node3D
+	var player: Node3D = main.get_node("Instance/Player") as Node3D
 	if not player.is_visible_in_tree():
 		return "the player is not visible"
 	var camera: Camera3D = main.get_viewport().get_camera_3d()
@@ -166,13 +166,13 @@ func _check_state_drives_view(main: Node) -> String:
 	var driver: GameDriver = main.get_node_or_null("Driver") as GameDriver
 	if driver == null or driver.state == null:
 		return "no GameDriver named Driver with a state"
-	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	if grid.shown_region() != driver.state.region:
 		return "the grid shows another region than the state's"
 	for tile: Vector2i in driver.state.region.sorted_tiles():
 		if not grid.has_tile(tile):
 			return "the state's region has tile %s, the grid doesn't" % tile
-	var shown: HexPiece = main.get_node("Player") as HexPiece
+	var shown: HexPiece = main.get_node("Instance/Player") as HexPiece
 	if shown.tile != driver.state.player(0).tile:
 		return "the player is drawn on %s, but stands on %s" % [
 			shown.tile,
@@ -185,7 +185,7 @@ func _check_state_drives_view(main: Node) -> String:
 ## ring around it: all six neighbors are ground on the region.
 func _check_wild_monster(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: WildMonsterView = main.get_node_or_null("WildMonsterView") as WildMonsterView
+	var view: WildMonsterView = main.get_node_or_null("Instance/WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
@@ -229,7 +229,7 @@ func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 ## A wild monster that leaves the world (caught, later) takes its figure and its entry with it.
 func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
+	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
@@ -244,10 +244,10 @@ func _check_wild_monster_removed(main: Node) -> String:
 ## The comic look (#14) is on everything shown: the tiles and every part of the wild monsters' and
 ## the character's models use toon shading, with no per-mesh outline of their own (#166).
 func _check_toon_look(main: Node) -> String:
-	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var materials: Array[Material] = [grid.tile_mesh().material]
-	var view: WildMonsterView = main.get_node("WildMonsterView") as WildMonsterView
-	var player: PlayerView = main.get_node("Player") as PlayerView
+	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
+	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
 	var models: Array[Node] = [player.model]
 	for figure: HexPiece in view.figures.values():
 		models.append(figure)
@@ -293,7 +293,7 @@ func _check_ink_outline(main: Node) -> String:
 ## state to another region.
 func _check_terrain_colors(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var region: Region = Region.disc(1)
 	region.terrain[Vector2i(1, 0)] = Region.WATER
 	region.terrain[Vector2i(-1, 0)] = Region.BLOCKED
@@ -345,8 +345,9 @@ func _check_fog(main: Node) -> String:
 	view.show_state(10.0)
 	var far: Vector2i = Vector2i(-3, 0)
 	var result: String = _fog_levels(view, own, far)
-	(main.get_node("WildMonsterView") as WildMonsterView).show_state()
-	var figure: HexPiece = (main.get_node("WildMonsterView") as WildMonsterView).figures.values()[0]
+	var wild: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
+	wild.show_state()
+	var figure: HexPiece = wild.figures.values()[0]
 	if result.is_empty() and figure.visible:
 		result = "a wild monster out of sight is still shown"
 	fog.enabled = false
@@ -360,7 +361,7 @@ func _check_fog(main: Node) -> String:
 	if result.is_empty() and not is_equal_approx(view.brightness[far], 0.45 + 0.15):
 		result = "the fog didn't ease: %s" % view.brightness[far]
 	view.show_state(10.0)
-	(main.get_node("WildMonsterView") as WildMonsterView).show_state()
+	wild.show_state()
 	return result
 
 
@@ -398,7 +399,7 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 ## an ally has seen them.
 func _check_lookouts(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: LookoutView = main.get_node("LookoutView") as LookoutView
+	var view: LookoutView = main.get_node("Instance/LookoutView") as LookoutView
 	view.show_state()
 	if not view.figures.is_empty():
 		return "a lookout post stands in an instance without lookouts"
@@ -414,7 +415,7 @@ func _check_lookouts(main: Node) -> String:
 ## Trees stand on exactly the glade's forest tiles, cel-shaded, each shown once an ally has seen it.
 func _check_forest(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: TileDecorations = main.get_node("TileDecorations") as TileDecorations
+	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	view.show_state()
 	var region: Region = driver.state.region
 	var forest: Array[Vector2i] = []
@@ -457,7 +458,7 @@ func _toon_shaded(model: Node) -> bool:
 ## without loading it into the world.
 func _check_neighbour_grids(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var view: NeighbourView = main.get_node_or_null("NeighbourView") as NeighbourView
+	var view: NeighbourView = main.get_node_or_null("Instance/NeighbourView") as NeighbourView
 	if view == null:
 		return "the main scene has no NeighbourView"
 	view.show_state()
@@ -482,7 +483,7 @@ func _check_neighbour_grids(main: Node) -> String:
 
 ## Neighbours are unexplored ground: every tile of theirs lies under thick cloud.
 func _check_neighbour_cloud(main: Node) -> String:
-	var view: NeighbourView = main.get_node("NeighbourView") as NeighbourView
+	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	var fog: FogView = main.get_node("FogView") as FogView
 	fog.show_state(10.0)
 	var placed: Array[Vector2i] = view.placed_tiles()
@@ -496,7 +497,7 @@ func _check_neighbour_cloud(main: Node) -> String:
 
 ## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
 func _check_neighbour_follows(main: Node) -> String:
-	var view: NeighbourView = main.get_node("NeighbourView") as NeighbourView
+	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	view.show_state()
 	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
 	if view.grids.size() != 1 or basic == null or basic.tile_count() != 37:
