@@ -19,3 +19,15 @@ func _ready() -> void:
 	ink.render_priority = Material.RENDER_PRIORITY_MAX
 	ink.set_shader_parameter("ink", Toon.INK)
 	material_override = ink
+
+
+## Smooths the lines (four times the work) or draws them hard; Graphics decides with the
+## anti-aliasing.
+func set_smoothed(smoothed: bool) -> void:
+	(material_override as ShaderMaterial).set_shader_parameter("smoothed", smoothed)
+
+
+## Whether the lines are smoothed.
+func is_smoothed() -> bool:
+	var smoothed: bool = (material_override as ShaderMaterial).get_shader_parameter("smoothed")
+	return smoothed
