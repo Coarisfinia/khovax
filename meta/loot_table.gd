@@ -36,8 +36,8 @@ static func parse(file_id: String, text: String) -> LootTable:
 		return table
 	var data: Dictionary = json.data
 	table.problem = _unknown_field(data, FIELDS)
-	table.id = str(data.get("id", ""))
-	table.kind = str(data.get("kind", ""))
+	table.id = _text(data.get("id"))
+	table.kind = _text(data.get("kind"))
 	if table.problem.is_empty() and (table.id != file_id or not Content.is_id(table.id)):
 		table.problem = "its id must match the file name and be lowercase words with underscores"
 	if table.problem.is_empty() and not KINDS.has(table.kind):
@@ -61,14 +61,14 @@ func _read_entries(entries: Array) -> String:
 	var total: int = 0
 	for entry: Variant in entries:
 		var fields: Dictionary = entry if entry is Dictionary else { }
-		var blank: bool = fields.get("blank") == true
+		var blank: bool = fields.get("blank") is bool and fields["blank"]
 		var unknown: String = _unknown_field(fields, BLANK_FIELDS if blank else ITEM_FIELDS)
 		if not unknown.is_empty():
 			return unknown
 		var chance: int = Content.amount(fields.get("chance"))
 		var low: int = 0 if blank else Content.amount(fields.get("min"))
 		var high: int = 0 if blank else Content.amount(fields.get("max"))
-		var item: String = "" if blank else str(fields.get("item", ""))
+		var item: String = "" if blank else _text(fields.get("item"))
 		if chance < 1 or (not blank and (not Content.is_id(item) or low < 1 or high < low)):
 			return "entry %d needs a chance, and an item id with 1 <= min <= max" % items.size()
 		blanks += 1 if blank else 0
@@ -90,3 +90,8 @@ static func _unknown_field(data: Dictionary, allowed: Array[String]) -> String:
 		if not allowed.has(str(key)):
 			return "field %s isn't allowed here" % key
 	return ""
+
+
+## `value` if it's a string, or "" for anything else, so that e.g. `true` never reads as an id.
+static func _text(value: Variant) -> String:
+	return value if value is String else ""

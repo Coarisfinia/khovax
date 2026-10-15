@@ -107,6 +107,10 @@ func _check_loot_refused() -> String:
 		table % ["chest", item % [1000, 1, 1]]: "its kind",
 		table % ["instance", "{\"blank\": true, \"chance\": 1000, \"min\": 1}"]: "field min",
 		"{\"id\": \"y\", \"kind\": \"instance\", \"entries\": []}": "its id must",
+		"{\"id\": true, \"kind\": \"instance\", \"entries\": []}": "its id must",
+		table % ["instance", "{\"item\": true, \"chance\": 1000, \"min\": 1, \"max\": 1}"]: (
+			"entry 0 needs"
+		),
 	}
 	for text: String in cases:
 		var problem: String = LootTable.parse("x", text).problem
