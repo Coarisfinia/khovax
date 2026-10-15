@@ -352,14 +352,16 @@ jobs:
       # download once failed this required check before any test ran (#196). Kept in the cache and
       # installed with retries before the emulator action, whose own install then finds them in
       # place. The action always installs its channel's newest emulator, so this doesn't pin it: a
-      # new stable release is simply downloaded, with retries, until the key is bumped.
-      - name: "💾 Android emulator: cache (emulator and system image)"
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # new stable release is downloaded once, with retries, and saved under its own key, made from
+      # the installed packages' revision files (a cache entry can't be overwritten).
+      - name: "💾 Android emulator: restore the cache (emulator and system image)"
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             /usr/local/lib/android/sdk/emulator
             /usr/local/lib/android/sdk/system-images/android-34/default/x86_64
-          key: android-emulator-34-x86_64-v1
+          key: android-emulator-34-x86_64-
+          restore-keys: android-emulator-34-x86_64-
 
       - name: "⬇️ Android emulator: install, retrying a broken download"
         run: |
@@ -374,6 +376,22 @@ jobs:
             sleep 15
           done
           exit 1
+
+      # hashFiles() only reads the workspace, and the SDK lies outside it.
+      - name: "🔑 Android emulator: name the cache after the installed revisions"
+        id: emulator-revisions
+        run: |
+          sdk=/usr/local/lib/android/sdk
+          revisions=$(cat "$sdk/emulator/package.xml"             "$sdk/system-images/android-34/default/x86_64/package.xml" | sha256sum | cut -c1-16)
+          echo "key=android-emulator-34-x86_64-$revisions" >> "$GITHUB_OUTPUT"
+
+      - name: "💾 Android emulator: save the cache under the installed revisions"
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /usr/local/lib/android/sdk/emulator
+            /usr/local/lib/android/sdk/system-images/android-34/default/x86_64
+          key: ${{ steps.emulator-revisions.outputs.key }}
 
       - name: "📱 Android test APK: run the e2e flow on an emulator"
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
