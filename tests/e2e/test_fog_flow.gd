@@ -1,7 +1,8 @@
 extends RefCounted
 ## Fog flow (#65): what each player sees is simulation state. Hex lines step tile by tile, rock
 ## blocks sight and is seen itself, water doesn't block it, sight ends at the radius, it follows a
-## player who walks, it's in the state hash, and a player who leaves loses it.
+## player who walks, it's in the state hash, and a player who leaves loses it. An event reveals an
+## area to every player (#177): only tiles of the region, each once, in the state hash.
 
 const START: Vector2i = Vector2i(1, -1)
 const WEST: int = 3
@@ -13,6 +14,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_sight()
 	if result.is_empty():
 		result = _check_fog_follows()
+	if result.is_empty():
+		result = _check_reveal()
 	return result
 
 
@@ -72,6 +75,27 @@ func _check_fog_follows() -> String:
 	state.remove_entity(state.player(0).id)
 	if fog.visible.has(0):
 		return "a player who left kept their sight"
+	return ""
+
+
+## An event reveals an area to every player: tiles of the region only, each once, sorted, in the
+## state hash; nothing revealed leaves the hash as it was.
+func _check_reveal() -> String:
+	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new()]
+	var state: GameState = GameState.new(Region.disc(2), 2, ordered)
+	var _player: Entity = state.add_entity(0, START)
+	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var before: int = state.state_hash()
+	var area: Array[Vector2i] = [Vector2i(2, 0), Vector2i(0, 0), Vector2i(9, 9), Vector2i(2, 0)]
+	fog.reveal(state, area)
+	var expected: Array[Vector2i] = [Vector2i(0, 0), Vector2i(2, 0)]
+	if fog.revealed != expected:
+		return "the reveal kept %s, not the region's tiles once each" % [fog.revealed]
+	if state.state_hash() == before:
+		return "the state hash doesn't see a reveal"
+	fog.revealed.clear()
+	if state.state_hash() != before:
+		return "nothing revealed changed the state hash"
 	return ""
 
 

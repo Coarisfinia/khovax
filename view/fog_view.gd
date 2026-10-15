@@ -61,7 +61,8 @@ static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 	return false
 
 
-## How bright `tile` should be, remembering it once an ally sees it. A switched-off fog keeps its
+## How bright `tile` should be, remembering it once an ally sees it or an event reveals it (#177). A
+## switched-off fog keeps its
 ## last sight, so it lifts instead, easing like any other change (a rule switches it, #30).
 func _target(fog: FogFeature, tile: Vector2i) -> float:
 	if not fog.enabled:
@@ -70,4 +71,4 @@ func _target(fog: FogFeature, tile: Vector2i) -> float:
 		if fog.sees(slot, tile):
 			_seen[tile] = true
 			return VISIBLE
-	return REMEMBERED if _seen.has(tile) else UNSEEN
+	return REMEMBERED if _seen.has(tile) or fog.revealed.has(tile) else UNSEEN
