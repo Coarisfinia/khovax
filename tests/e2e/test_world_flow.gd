@@ -3,9 +3,14 @@ extends RefCounted
 ## Every exit leads to a blueprint that exists and has the way back on the opposite side; the basic
 ## instance's east edge leads to the glade; the glade keeps its layout, so its way back stays west
 ## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
-## refused.
+## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
+## exit can be walked to from the players' starts for every seed, and every blueprint with exits
+## can be reached from the starting instance.
 
 const SEEDS: int = 40
+## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
+## test's big region.
+const INSTANCE_SEEDS: int = 6
 
 
 func run(_tree: SceneTree) -> String:
@@ -20,7 +25,47 @@ func run(_tree: SceneTree) -> String:
 	var result: String = _check_glade_exit()
 	if result.is_empty():
 		result = _check_refused()
+	if result.is_empty():
+		result = _check_exits_reachable()
+	if result.is_empty():
+		result = _check_web_connected()
 	return result
+
+
+## Every blueprint loads as a full instance for every seed, and its first player can walk to every
+## exit. Tiles a scripted event opens later will count as open here once they exist (#143).
+func _check_exits_reachable() -> String:
+	for instance_name: String in InstanceBlueprints.NAMES:
+		for seed_value: int in INSTANCE_SEEDS:
+			var state: GameState = InstanceBlueprints.create(instance_name, seed_value)
+			if state == null:
+				return "%s didn't load for seed %d" % [instance_name, seed_value]
+			var walkable: Array[Vector2i] = state.region.reachable(state.region.starts[0])
+			for exit: Vector3i in state.region.exits:
+				if not walkable.has(Vector2i(exit.x, exit.y)):
+					return "%s's exit %s can't be walked to for seed %d" % [
+						instance_name,
+						exit,
+						seed_value,
+					]
+	return ""
+
+
+## Every blueprint with exits can be reached from the starting instance by walking through exits,
+## so no part of the web is cut off.
+func _check_web_connected() -> String:
+	var reached: Array[String] = [InstanceBlueprints.BASIC]
+	var next: int = 0
+	while next < reached.size():
+		for target: String in InstanceBlueprints.region_of(reached[next], 0).exit_blueprints:
+			if not reached.has(target):
+				reached.append(target)
+		next += 1
+	for instance_name: String in InstanceBlueprints.NAMES:
+		var has_exits: bool = not InstanceBlueprints.region_of(instance_name, 0).exits.is_empty()
+		if has_exits and not reached.has(instance_name):
+			return "%s has exits but can't be reached from the starting instance" % instance_name
+	return ""
 
 
 ## For every seed the glade's way back is on its west side, where the region ends.
