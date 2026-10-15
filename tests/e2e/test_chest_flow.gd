@@ -139,15 +139,12 @@ func _check_saved(tree: SceneTree) -> String:
 	return result
 
 
-## The chest view shows the burst of this machine's player's own loot only, and in the glade a
-## chest on every closed chest's tile, which sinks away once it's opened.
+## The chest view (#135): in the glade, a chest on every closed chest's tile. An opened chest
+## bursts into this machine's player's own loot only once a player sees it (never through the fog,
+## never for an instance the view isn't showing), and sinks away; another instance clears it all.
 func _check_shown(view: ChestView, driver: GameDriver) -> String:
-	var texts: Array[String] = []
-	for burst: Label3D in view.bursts:
-		texts.append(burst.text)
-	var expected: Array[String] = [ChestView.loot_text(OWN_LOOT)]
-	if texts != expected or expected[0] != "+2 moss":
-		return "the opened chest burst into %s, not this player's %s" % [texts, expected]
+	if not view.bursts.is_empty():
+		return "a chest the view doesn't show burst into loot"
 	driver.instance = InstanceBlueprints.GLADE
 	driver.start(SEED)
 	view.show_state()
@@ -155,17 +152,49 @@ func _check_shown(view: ChestView, driver: GameDriver) -> String:
 	var shown: Array[Vector2i] = view.figures.keys()
 	if shown != chests.chests:
 		return "the glade shows chests on %s, not on %s" % [shown, chests.chests]
-	var opened: Vector2i = chests.chests[0]
-	chests.chests.erase(opened)
+	var chest: Vector2i = chests.chests[0]
+	if not view.figures[chest].visible:
+		driver.ticked.emit(driver.state.tick, _chest_opened(chest))
+		if not view.bursts.is_empty():
+			return "a chest in the fog burst into loot"
+	_stand_next_to(driver, chest)
 	view.show_state()
-	if view.figures.has(opened):
-		return "an opened chest stayed on %s" % opened
+	driver.ticked.emit(driver.state.tick, _chest_opened(chest))
+	var texts: Array[String] = []
+	for burst: Label3D in view.bursts:
+		texts.append(burst.text)
+	var expected: Array[String] = ["+2 moss"]
+	if texts != expected or ChestView.loot_text(OWN_LOOT) != expected[0]:
+		return "the opened chest burst into %s, not this player's %s" % [texts, expected]
+	chests.chests.erase(chest)
+	view.show_state()
+	if view.figures.has(chest):
+		return "an opened chest stayed on %s" % chest
+	return _check_cleared(view, driver)
+
+
+## Another instance drops the glade's chests and loot at once, sinking or not.
+func _check_cleared(view: ChestView, driver: GameDriver) -> String:
+	driver.instance = InstanceBlueprints.BASIC
+	driver.start(SEED)
+	view.show_state()
+	if not view.figures.is_empty() or not view.bursts.is_empty():
+		return "another instance kept the glade's chests or loot"
 	return ""
 
 
-## A tick's events with one chest opened: OWN_LOOT for slot 0, a berry for slot 1.
-func _chest_opened() -> Array[RefCounted]:
+## Moves player 0 next to `chest` and runs a tick, so the fog lifts around it.
+func _stand_next_to(driver: GameDriver, chest: Vector2i) -> void:
+	for direction: Vector2i in Hex.DIRECTIONS:
+		if driver.state.region.is_walkable(chest + direction):
+			driver.state.player(0).tile = chest + direction
+			break
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+
+
+## A tick's events with the chest on `tile` opened: OWN_LOOT for slot 0, a berry for slot 1.
+func _chest_opened(tile: Vector2i = Vector2i.ZERO) -> Array[RefCounted]:
 	var other: Dictionary[String, int] = { "berry": 1 }
 	var loot: Dictionary[int, Dictionary] = { 0: OWN_LOOT, 1: other }
-	var events: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, loot)]
+	var events: Array[RefCounted] = [ChestOpened.new(tile, 1, loot)]
 	return events

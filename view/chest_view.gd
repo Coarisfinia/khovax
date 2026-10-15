@@ -27,6 +27,8 @@ const LOOT_FONT_SIZE: int = 48
 var figures: Dictionary[Vector2i, HexPiece] = {}
 ## The loot rising from chests opened lately, until it has faded.
 var bursts: Array[Label3D] = []
+## Opened chests still sinking away.
+var _sinking: Array[HexPiece] = []
 ## The instance the figures belong to: another instance clears them.
 var _shown: GameState
 
@@ -71,13 +73,18 @@ static func loot_text(loot: Dictionary) -> String:
 	return "\n".join(lines)
 
 
+## Bursts only for a chest this view shows, in the instance it shows and in sight: the driver also
+## passes on the events of an instance the player just left, and loot mustn't show through fog.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+	if input == null or driver.state != _shown:
+		return
 	for event: RefCounted in events:
 		var opened: ChestOpened = event as ChestOpened
-		if opened != null and input != null:
-			var loot: Dictionary = opened.loot.get(input.slot, {})
-			if not loot.is_empty():
-				_burst(opened.tile, loot_text(loot))
+		if opened == null or not figures.has(opened.tile) or not figures[opened.tile].visible:
+			continue
+		var loot: Dictionary = opened.loot.get(input.slot, {})
+		if not loot.is_empty():
+			_burst(opened.tile, loot_text(loot))
 
 
 ## Lets the loot rise from `tile` and fade, then frees it.
@@ -95,7 +102,7 @@ func _burst(tile: Vector2i, text: String) -> void:
 	label.position = HexLayout.to_world(tile) + Vector3(0.0, HexGrid.TILE_HEIGHT + 0.6, 0.0)
 	add_child(label)
 	bursts.append(label)
-	var tween: Tween = create_tween().set_parallel()
+	var tween: Tween = label.create_tween().set_parallel()
 	var rise: Vector3 = label.position + Vector3(0.0, LOOT_RISE, 0.0)
 	var _up: PropertyTweener = tween.tween_property(label, "position", rise, LOOT_SECONDS)
 	var _fade: PropertyTweener = tween.tween_property(label, "modulate:a", 0.0, LOOT_SECONDS)
@@ -115,9 +122,15 @@ func _drop_burst(label: Label3D) -> void:
 
 ## Shrinks an opened chest away and frees it.
 func _sink(figure: HexPiece) -> void:
-	var tween: Tween = create_tween()
+	_sinking.append(figure)
+	var tween: Tween = figure.create_tween()
 	var _shrink: PropertyTweener = tween.tween_property(figure, "scale", Vector3.ZERO, OPEN_SECONDS)
-	var _free: CallbackTweener = tween.tween_callback(figure.queue_free)
+	var _free: CallbackTweener = tween.tween_callback(_drop_sunk.bind(figure))
+
+
+func _drop_sunk(figure: HexPiece) -> void:
+	_sinking.erase(figure)
+	figure.queue_free()
 
 
 func _add_figure(tile: Vector2i) -> HexPiece:
@@ -132,8 +145,14 @@ func _add_figure(tile: Vector2i) -> HexPiece:
 	return piece
 
 
-## Drops every chest at once, for another instance.
+## Drops every chest and burst at once, for another instance. Their tweens go with them.
 func _clear() -> void:
 	for figure: HexPiece in figures.values():
 		figure.queue_free()
+	for figure: HexPiece in _sinking:
+		figure.queue_free()
+	for burst: Label3D in bursts:
+		burst.queue_free()
 	figures.clear()
+	_sinking.clear()
+	bursts.clear()
