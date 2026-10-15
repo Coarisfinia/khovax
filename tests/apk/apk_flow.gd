@@ -1,10 +1,11 @@
 extends RefCounted
-## The one e2e flow on the APK (#61): the main scene, a fixed seed, and the touch stick walking the
+## The one e2e flow on the devices (#61, #102): the main scene, a fixed seed, and the touch stick walking the
 ## player, tick by tick, so the game is exactly the same everywhere. It checks that the player
 ## walked, the trail grew and the camera follows, and that the game ended in exactly the expected
-## state. It runs on an Android emulator in CI (started by game/test_mode.gd in the test APK), and
-## headless in the required check (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a
-## pass on the device means Android plays the very same game.
+## state. It runs on an Android emulator and in headless Chrome in CI (started by game/test_mode.gd
+## in the test APK and the test web build), and headless in the required check
+## (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a pass on a device means it plays
+## the very same game.
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)
@@ -21,7 +22,7 @@ const EXPECTED_HASH: int = 1_014_516_516
 
 
 ## Runs the flow in `main` (the running main scene) and announces the result with `finished`.
-## Callers that only load this script by path (the APK's test mode) start it this way.
+## Callers that only load this script by path (the test builds' mode) start it this way.
 func begin(main: Node, tree: SceneTree) -> void:
 	finished.emit(await run(main, tree))
 

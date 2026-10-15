@@ -28,6 +28,12 @@ env:
   # archive, as GitHub records it for the release asset.
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
+  # The web e2e flow's runtime and browser (#102); the checksums are of their Linux archives (Bun's
+  # from the release's SHASUMS256.txt). playwright-core is locked in tests/web/bun.lock.
+  BUN_VERSION: 1.4.3
+  BUN_SHA256: 3e730528d89775f03f87f05c06787c4df4099d0a37f3f252e7b829cb23816e18
+  CHROME_VERSION: 156.0.8078.12
+  CHROME_SHA256: f56185000c18aa2471911e2b8fbd96c3175bcc7553e78c002371bb18a9fa69e9
 
 jobs:
   headless:
@@ -274,6 +280,20 @@ jobs:
           path: build/web/
           retention-days: 14
 
+      - name: "🧪 🌐 Web: export the test build"
+        # The web build with the device e2e flow in it (#102), for the web-e2e job.
+        run: |
+          mkdir -p build/web-test
+          timeout 300 ~/godot/godot --headless --path . --export-release "Web Test" build/web-test/index.html
+          test -s build/web-test/index.html && test -s build/web-test/index.pck
+
+      - name: "⬆️ 🧪 🌐 Web test build: upload (khovax-web-test)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: khovax-web-test
+          path: build/web-test/
+          retention-days: 3
+
       - name: "⬆️ 🪟 Windows build: upload (khovax-windows)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -319,12 +339,47 @@ jobs:
           disable-animations: true
           script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk
 
+  web-e2e:
+    # The same device flow on the web build (#102), in headless Chrome: it must end in the state the
+    # headless run pins, with nothing on the browser's console marked as an error.
+    needs: android
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: "⬇️ 🧪 🌐 Web test build: download (khovax-web-test)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: khovax-web-test
+          path: build/web-test
+
+      - name: "⬇️ Download Bun and Chrome (headless shell)"
+        run: |
+          curl -fsSL -o bun.zip \
+            "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip"
+          echo "${BUN_SHA256}  bun.zip" | sha256sum -c -
+          curl -fsSL -o chrome.zip \
+            "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-headless-shell-linux64.zip"
+          echo "${CHROME_SHA256}  chrome.zip" | sha256sum -c -
+          unzip -q bun.zip -d ~/tools && unzip -q chrome.zip -d ~/tools
+          echo ~/tools/bun-linux-x64 >> "$GITHUB_PATH"
+
+      - name: "📦 Install the runner's dependencies (locked)"
+        run: bun install --frozen-lockfile --cwd tests/web
+
+      - name: "🌐 Web test build: run the e2e flow in headless Chrome"
+        run: |
+          export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
+          timeout 300 bun tests/web/web_e2e.ts build/web-test
+
   pages:
     # The playable web build at https://flixbox.github.io/khovax/ (#23): on every push to main whose
     # checks all pass, the web build the android job just exported is published as it is, not
     # built again. Pull requests never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [headless, android, apk-e2e]
+    needs: [headless, android, apk-e2e, web-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
