@@ -2,10 +2,9 @@ class_name InstanceBlueprints
 extends RefCounted
 ## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region
 ## and the features an instance has, in their step order. The region is a fixed region file,
-## regions/<name>.region, or region pieces in regions/<name>/ that the seed arranges (#57). The
-## players start on the region's starts. A blueprint switches game rules on and off by listing them,
-## and
-## they can change during a run.
+## regions/<name>.region, or region pieces in regions/<name>/ that the seed arranges and, unless
+## the blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
+## blueprint switches game rules on and off by listing them, and they can change during a run.
 
 ## The playground: the hand-made region regions/basic.region, walking, a trail per player, the wild
 ## monsters the region places, and catching them with a ring.
@@ -14,7 +13,11 @@ const BASIC: String = "basic"
 const LOAD: String = "load"
 ## The first region arranged from region pieces (#57): a glade the seed puts together and turns.
 const GLADE: String = "glade"
-const NAMES: Array[String] = [BASIC, LOAD, GLADE]
+## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
+const ARENA: String = "arena"
+const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
+## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
+const UNTURNED: Array[String] = [ARENA]
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.region"
@@ -57,7 +60,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 
 
 ## The named blueprint's region for `seed_value`: its region file as it is, or its region pieces
-## arranged, the start piece first and the others by file name. Its `problem` says what's wrong.
+## arranged, the start piece first and the others by file name, and turned unless it's UNTURNED.
+## Its `problem` says what's wrong.
 static func region_of(instance_name: String, seed_value: int) -> Region:
 	var path: String = REGIONS + instance_name + ".region"
 	if FileAccess.file_exists(path):
@@ -74,7 +78,7 @@ static func region_of(instance_name: String, seed_value: int) -> Region:
 	for piece: Region in pieces:
 		if not piece.problem.is_empty():
 			return piece
-	return RegionArranger.arrange(pieces, seed_value, true)
+	return RegionArranger.arrange(pieces, seed_value, not UNTURNED.has(instance_name))
 
 
 ## The basic instance, as `create` makes it.
