@@ -14,7 +14,8 @@ func run(_tree: SceneTree) -> String:
 		if not problem.is_empty():
 			return problem
 	var basic: Region = InstanceBlueprints.region_of(InstanceBlueprints.BASIC, 0)
-	if basic.exits != [Vector3i(3, 0, 0)] or basic.exit_blueprints != [InstanceBlueprints.GLADE]:
+	var east: bool = basic.exits.size() == 1 and basic.exits[0] == Vector3i(3, 0, 0)
+	if not east or basic.exit_blueprints[0] != InstanceBlueprints.GLADE:
 		return "the basic instance's east edge doesn't lead to the glade: %s" % [basic.exits]
 	var result: String = _check_glade_exit()
 	if result.is_empty():
@@ -28,7 +29,8 @@ func _check_glade_exit() -> String:
 		var glade: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
 		var outside: Array[Vector2i] = glade.outside_exits()
 		var west: Vector3i = Vector3i(-2, 0, 3)
-		if glade.exits != [west] or glade.has_tile(outside[0]) or not glade.problem.is_empty():
+		var kept: bool = glade.exits.size() == 1 and glade.exits[0] == west
+		if not kept or glade.has_tile(outside[0]) or not glade.problem.is_empty():
 			return "seed %d's glade has its way back at %s: %s" % [
 				seed_value,
 				glade.exits,
