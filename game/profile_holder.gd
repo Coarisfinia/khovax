@@ -1,11 +1,10 @@
 class_name ProfileHolder
 extends Node
-## Holds this machine's player's profile through a run (#37, #132): loaded at boot, every catch of
-## that player and their loot from every chest opened (#124) taken over at once and saved debounced
-## (ProfileKeeper, #73), and whatever is
-## pending saved when the game quits or goes to the background. Other players' catches go into
-## their own profiles on their own machines (#74). A save that can't be read is reported and left
-## alone, never overwritten.
+## Holds this machine's player's profile through a session (#37, #132): loaded at boot, every catch
+## of that player and their loot from every chest opened (#124) taken over at once and saved
+## debounced (ProfileKeeper, #73), and whatever is pending saved when the game quits or goes to the
+## background. Other players' catches go into their own profiles on their own machines (#74). A save
+## that can't be read is reported and left alone, never overwritten.
 
 ## Where this machine's player's catches and finds come from (#184).
 @export var bus: EventBus

@@ -2,7 +2,7 @@ extends RefCounted
 ## Replay flow: the simulation alone, without scenes, input or frames. The same start and the same
 ## commands must always give the same state, tick for tick; that is what makes replays and
 ## lockstep co-op possible. Also checks the game rules as features: movement in whole ticks, the
-## trail, the feature order, and switching features off and on during a run.
+## trail, the feature order, and switching features off and on during a session.
 
 const START: Vector2i = Vector2i(1, -1)
 const RADIUS: int = 3
@@ -193,7 +193,7 @@ func _check_feature_order() -> String:
 	return ""
 
 
-## Rules can switch features during a run (e.g. a boss phase): off, a feature doesn't step and
+## Rules can switch features during a session (e.g. a boss phase): off, a feature doesn't step and
 ## keeps its state; on again, it continues.
 func _check_switching_features() -> String:
 	var state: GameState = _state(42)
@@ -322,7 +322,7 @@ func _check_entity_ids_stay() -> String:
 	if ids.has(added.id):
 		return "a new entity got the id %d again" % added.id
 	if state.player(1) != added or _movement(state).walk(added.id) == null:
-		return "a player added during a run doesn't walk in its slot"
+		return "a player added during a session doesn't walk in its slot"
 	return _check_id_order(state)
 
 
@@ -564,7 +564,7 @@ func _event_values(event: RefCounted) -> Array:
 	return values
 
 
-## A recorded run survives saving and loading, and plays back to exactly the same state; a
+## A recorded session survives saving and loading, and plays back to exactly the same state; a
 ## changed command makes playback name the first checkpoint that differs.
 func _check_replay_round_trip() -> String:
 	var recorded: Replay = _recorded_run()
@@ -573,7 +573,7 @@ func _check_replay_round_trip() -> String:
 	if not problem.is_empty():
 		return "a saved and loaded replay didn't play back: " + problem
 	if loaded.played.state_hash() != recorded.played.state_hash():
-		return "the played-back run ended in another state than the recorded one"
+		return "the played-back session ended in another state than the recorded one"
 	var tampered: Replay = Replay.parse(recorded.to_text())
 	# The first change is tick 1, slot 0: walking another way changes the game from there.
 	tampered.changes[2] = (tampered.changes[2] + 2) % Hex.DIRECTIONS.size()
@@ -660,7 +660,7 @@ func _check_golden_replays() -> String:
 	return ""
 
 
-## A run of two players walking the scripted moves, recorded and played once.
+## A session of two players walking the scripted moves, recorded and played once.
 func _recorded_run() -> Replay:
 	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
@@ -834,7 +834,7 @@ func _dice_state(seed_value: int) -> GameState:
 	return _state_with(ordered, seed_value)
 
 
-## The hash after a run of rolls.
+## The hash after a series of rolls.
 func _dice_hash(seed_value: int) -> int:
 	var state: GameState = _dice_state(seed_value)
 	for direction: int in _moves():

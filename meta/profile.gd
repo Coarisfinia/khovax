@@ -1,14 +1,13 @@
 class_name Profile
 extends RefCounted
-## The player's profile (#37): what lasts between runs, outside the simulation. It changes when the
-## player obtains something in a run (a Gain, saved at once by ProfileKeeper so a crash loses
-## nothing) and when a run finishes, never because of a tick itself. Integers and ids only, like
-## everything that feeds a simulation. Saved as versioned JSON: a save in a newer format is refused,
-## and once a second format exists, an older one is brought up to date in `parse`, one step at a
-## time, before it's read.
+## The player's profile (#37): what lasts between sessions, outside the simulation. It changes when
+## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
+## loses nothing), never because of a tick itself. Integers and ids only, like everything that
+## feeds a simulation. Saved as versioned JSON: a save in a newer format is refused, and an older
+## one is brought up to date in `parse`, one step at a time, before it's read.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 1
+const FORMAT: int = 2
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -23,7 +22,6 @@ var captured_monsters: Array[CapturedMonster] = []
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
-var runs_finished: int = 0
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
 ## Which of the save's generations it was loaded from: 0 the newest, more when newer ones were
@@ -82,7 +80,6 @@ func to_text() -> String:
 		"next_monster_id": next_monster_id,
 		"captured_monsters": monsters,
 		"materials": sorted_materials,
-		"runs_finished": runs_finished,
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -100,19 +97,24 @@ static func parse(text: String) -> Profile:
 	if format > FORMAT or format < 1:
 		profile.problem = "save format %d, this build reads up to format %d" % [format, FORMAT]
 		return profile
-	# FORMAT 1 is the first; migrations from older formats go here, oldest first.
+	# Migrations from older formats, oldest first.
+	if format < 2:
+		_migrate_to_2(data)
 	profile.problem = profile._read(data)
 	return profile
+
+
+## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
+static func _migrate_to_2(data: Dictionary) -> void:
+	var _dropped: bool = data.erase("runs_finished")
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
 func _read(data: Dictionary) -> String:
 	unlocked_slots = _int(data.get("unlocked_slots"))
 	next_monster_id = _int(data.get("next_monster_id"))
-	runs_finished = _int(data.get("runs_finished"))
-	var counters_valid: bool = next_monster_id >= 1 and runs_finished >= 0
-	if unlocked_slots < START_SLOTS or unlocked_slots > MAX_SLOTS or not counters_valid:
-		return "the save's slots, next id or run count are out of range"
+	if unlocked_slots < START_SLOTS or unlocked_slots > MAX_SLOTS or next_monster_id < 1:
+		return "the save's slots or next id are out of range"
 	var monsters: Variant = data.get("captured_monsters")
 	var stored: Variant = data.get("materials")
 	if not monsters is Array or not stored is Dictionary:

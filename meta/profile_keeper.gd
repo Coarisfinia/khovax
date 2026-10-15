@@ -3,8 +3,8 @@ extends RefCounted
 ## Keeps the profile and its save in step (#37). Every gain is taken over at once, and saved to
 ## disk at most once per SAVE_INTERVAL_MSEC (owner, #73): the first gain after a quiet spell is
 ## saved right away, and gains coming quickly after it are saved together when the interval has
-## passed, so obtaining fifty things in a few seconds doesn't mean fifty saves. Ending a run, and
-## the game quitting or going to the background, flush whatever is pending. A crash loses at most
+## passed, so obtaining fifty things in a few seconds doesn't mean fifty saves. Ending the session
+## (the game quitting) or going to the background flushes whatever is pending. A crash loses at most
 ## the gains of the last interval.
 ##
 ## Times are passed in, in milliseconds of any steady clock, so the keeper itself stays testable;
@@ -44,7 +44,7 @@ func save_if_due(now_msec: int) -> String:
 	return flush()
 
 
-## Saves pending changes now (a run ends, the game quits or goes to the background); returns why it
+## Saves pending changes now (the session ends or the game goes to the background); returns why it
 ## couldn't, or "".
 func flush() -> String:
 	if not _pending:
@@ -54,8 +54,7 @@ func flush() -> String:
 	return problem
 
 
-## Counts a finished run and saves everything pending.
-func finish_run() -> String:
-	profile.runs_finished += 1
+## Saves everything pending when a session ends.
+func end_session() -> String:
 	_pending = true
 	return flush()

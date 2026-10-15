@@ -1,7 +1,7 @@
 class_name CapturedMonster
 extends RefCounted
 ## A monster the player caught and owns (a `captured_monster`, #45), kept in the profile between
-## runs. Its species is an id into the content data (#72).
+## sessions. Its species is an id into the content data (#72).
 
 ## Unique in the profile and never reused.
 var id: int = 0

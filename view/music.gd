@@ -1,6 +1,6 @@
 class_name Music
 extends AudioStreamPlayer
-## The run's music (#126): the exploration track, looped. It fades in from silence and never cuts:
+## The world's music (#126): the exploration track, looped. It fades in from silence and never cuts:
 ## sudden loud changes don't fit a game designed around motion sickness. The combat track joins it
 ## once combat exists. Its volume becomes a setting with the settings menu.
 

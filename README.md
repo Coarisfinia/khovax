@@ -30,7 +30,7 @@ Open the project in Godot (`godot --path . --editor`), or run it directly with `
 ## On an Android phone
 
 CI builds a debug APK on every pull request and every push to `main`:
-1. Open the run on the repository's Actions tab (the `ci` workflow).
+1. Open the `ci` workflow's latest result on the repository's Actions tab.
 2. Download the `khovax-debug-apk` artifact (a zip with `khovax.apk` inside; kept for 14 days).
 3. Copy the APK to the phone and open it. Android asks once to allow installs from that source (the file manager or browser).
 
@@ -87,7 +87,7 @@ CHROME=<path to chrome-headless-shell> bun tests/web/web_e2e.ts build/web-test
 
 On demand, not in CI: the `load` instance (a big region full of wild monsters, the game's own rules)
 under four players walking by script. Headless it times every tick and each rule's share, and checks
-two runs end in the same state; rendered it times frames, uncapped:
+two passes end in the same state; rendered it times frames, uncapped:
 
 ```sh
 godot --headless --path . -s res://tools/load_test.gd -- ticks=2000

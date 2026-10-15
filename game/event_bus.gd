@@ -1,12 +1,11 @@
 class_name EventBus
 extends Node
-## The run's events, out of the simulation to whoever listens (#184): after each tick, the driver's
-## events are queued and, once a frame, handed to the subscribers of their topic, publish/subscribe.
-## The simulation doesn't know who listens, and no subscriber holds up a tick. A topic is the
-## event's class name (`&"WildMonsterCaught"`). Events only flow out: a subscriber never changes the
-## run,
-## since anything that matters inside it is a rule in the simulation (#26). Views keep the driver's
-## `ticked` signal, since their effects play in step with the ticks.
+## The world's events, out of the simulation to whoever listens (#184): after each tick, the
+## driver's events are queued and, once a frame, handed to the subscribers of their topic,
+## publish/subscribe. The simulation doesn't know who listens, and no subscriber holds up a tick. A
+## topic is the event's class name (`&"WildMonsterCaught"`). Events only flow out: a subscriber
+## never changes the world, since anything that matters inside it is a rule in the simulation
+## (#26). Views keep the driver's `ticked` signal, since their effects play in step with the ticks.
 
 @export var driver: GameDriver
 

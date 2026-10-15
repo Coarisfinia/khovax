@@ -312,7 +312,7 @@ func _check_terrain_colors(main: Node) -> String:
 	return ""
 
 
-## The run's music (#126): the exploration track plays, loops and fades in rather than starting
+## The world's music (#126): the exploration track plays, loops and fades in rather than starting
 ## loud. Booting took a few frames, far less than the fade.
 func _check_music(main: Node) -> String:
 	var music: Music = main.get_node_or_null("Music") as Music

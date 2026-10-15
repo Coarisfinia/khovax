@@ -5,12 +5,12 @@ extends RefCounted
 ## game rule itself. The presentation reads the state and never writes it.
 ## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
 
-## Players in one run, each in its own slot; a tick's commands are indexed by slot.
+## Players in this instance, each in its own slot; a tick's commands are indexed by slot.
 const MAX_PLAYERS: int = 4
 
 var tick: int = 0
 var rng_seed: int = 0
-## Which tiles exist and their terrain (#36). It doesn't change during a run yet.
+## Which tiles exist and their terrain (#36). It doesn't change while the instance is loaded yet.
 var region: Region
 ## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
 var next_entity_id: int = 1
@@ -112,10 +112,10 @@ func set_enabled(id: int, on: bool) -> void:
 		target.enabled = on
 
 
-## A fingerprint of the whole state, the same on every platform: two runs from the same start with
-## the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of every
-## core value, the region, every entity in id order and, in order, every feature's id, on/off and
-## state.
+## A fingerprint of the whole state, the same on every platform: two sessions from the same start
+## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
+## every core value, the region, every entity in id order and, in order, every feature's id, on/off
+## and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
 	values.append_array(region.hash_values())
