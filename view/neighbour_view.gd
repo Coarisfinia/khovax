@@ -20,8 +20,11 @@ var shifts: Dictionary[String, Vector2i] = {}
 var _state: GameState
 ## Every neighbour tile in the local instance's coordinates.
 var _placed: Array[Vector2i] = []
-## Each blueprint's region for the world shown, read once.
+## Each blueprint's region for the world shown, read once per generation (#212): a purged
+## instance comes back arranged anew.
 var _regions: Dictionary[String, Region] = {}
+## The generation each region in `_regions` was read for, by name.
+var _generations: Dictionary[String, int] = {}
 var _world: World
 
 
@@ -30,11 +33,12 @@ func _process(_delta: float) -> void:
 
 
 ## Finds and draws the neighbours of the local player's instance whenever it changes: walking into
-## the next instance makes the old one a neighbour. Called every frame; tests call it after
+## the next instance makes the old one a neighbour, and whenever a neighbour was purged. Called
+## every frame; tests call it after
 ## changing the state.
 func show_state() -> void:
 	var state: GameState = driver.state if driver != null else null
-	if state == _state:
+	if state == _state and not _rearranged():
 		return
 	_state = state
 	for old: HexGrid in grids.values():
@@ -60,10 +64,19 @@ func placed_tiles() -> Array[Vector2i]:
 	return _placed
 
 
+## Whether a neighbour drawn now has been purged since (#212): it is drawn again, arranged anew.
+func _rearranged() -> bool:
+	for target: String in grids:
+		if _generations[target] != _world.generation(target):
+			return true
+	return false
+
+
 ## A grid drawing the instance `target` where it lies next to `current`.
 func _grid_for(target: String, current: String) -> HexGrid:
-	if not _regions.has(target):
+	if not _regions.has(target) or _generations[target] != _world.generation(target):
 		_regions[target] = InstanceBlueprints.region_of(target, _world.seed_for(target))
+		_generations[target] = _world.generation(target)
 	var shift: Vector2i = _world.offset(target) - _world.offset(current)
 	shifts[target] = shift
 	var neighbour: HexGrid = HexGrid.new()
