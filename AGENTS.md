@@ -117,9 +117,12 @@ background; only wait in the foreground for a result the very next step needs.
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
-  screenshot. Render it locally with `godot --path . --write-movie <file>.png --quit-after 3`, since
-  headless runs have no renderer. It writes numbered frames (`<file>00000000.png`, …); use the last
-  one, and publish it on the `assets` branch (an orphan branch that is never merged), through the
+  screenshot. Headless runs have no renderer, so render it locally with a throwaway `-s` script
+  that never shows a window (owner's rule: the owner works on the same PC, and off-screen
+  positions get clamped onto a second monitor): it sets `root.mode = Window.MODE_MINIMIZED`, runs
+  the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
+  `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Publish it on
+  the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead.
 
