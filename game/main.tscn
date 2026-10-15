@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://view/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://view/graphics.gd" id="14_graphics"]
 [ext_resource type="Script" path="res://view/chest_view.gd" id="15_chests"]
+[ext_resource type="Script" path="res://view/fog_cloud.gd" id="16_cloud"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -40,10 +41,13 @@ script = ExtResource("7_trail")
 driver = NodePath("../Driver")
 grid = NodePath("../HexGrid")
 
-[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1513957802]
+[node name="FogView" type="Node" parent="." node_paths=PackedStringArray("driver", "cloud") unique_id=1513957802]
 script = ExtResource("12_fog")
 driver = NodePath("../Driver")
-grid = NodePath("../HexGrid")
+cloud = NodePath("../FogCloud")
+
+[node name="FogCloud" type="MeshInstance3D" parent="." unique_id=1560156156]
+script = ExtResource("16_cloud")
 
 [node name="WildMonsterView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")

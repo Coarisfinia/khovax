@@ -7,8 +7,9 @@ extends MeshInstance3D
 ## other transparent thing, so the ink lies on top, except text in the world (TEXT_PRIORITY).
 
 const SHADER: Shader = preload("res://view/ink_outline.gdshader")
-## The ink's draw order among transparent things: last but for text in the world, which would be
-## crossed by the lines of what stands behind it otherwise.
+## The ink's draw order among transparent things: last but for the fog's cloud (FogCloud), which
+## covers it, and text in the world, which would be crossed by the lines of what stands behind it
+## otherwise.
 const PRIORITY: int = Material.RENDER_PRIORITY_MAX - 2
 ## Text in the world (its outline one below), drawn above the ink.
 const TEXT_PRIORITY: int = Material.RENDER_PRIORITY_MAX
