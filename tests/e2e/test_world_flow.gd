@@ -5,7 +5,8 @@ extends RefCounted
 ## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
 ## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
-## can be reached from the starting instance.
+## can be reached from the starting instance. A run's world holds several loaded instances and
+## steps the ones a player is in (#148).
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -29,6 +30,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_exits_reachable()
 	if result.is_empty():
 		result = _check_web_connected()
+	if result.is_empty():
+		result = _check_world()
 	return result
 
 
@@ -74,6 +77,38 @@ func _check_web_connected() -> String:
 		if has_exits and not reached.has(instance_name):
 			return "%s has exits but can't be reached from the starting instance" % instance_name
 	return ""
+
+
+## The world (#148): the run starts in the basic instance, and the glade loads with nobody in it.
+## Only the instance a player is in steps, every instance's seed is its own and the same every run,
+## and the world's hash covers every loaded instance.
+func _check_world() -> String:
+	var world: World = World.new(7, InstanceBlueprints.BASIC)
+	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
+	if not world.problem.is_empty() or glade == null or glade.player(0) != null:
+		return "the world didn't start, or the glade didn't load empty: " + world.problem
+	var seeds: Array[int] = [world.seed_for(InstanceBlueprints.BASIC), glade.rng_seed]
+	if seeds[0] == seeds[1] or World.new(7, InstanceBlueprints.BASIC).seed_for("glade") != seeds[1]:
+		return "the instances' seeds aren't their own, or differ between runs: %s" % [seeds]
+	var hashed: int = world.state_hash()
+	for _tick: int in 10:
+		world.step(_still())
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	if basic.tick != 10 or glade.tick != 0 or world.active().size() != 1:
+		return "the world stepped the wrong instances: basic %d, glade %d" % [
+			basic.tick,
+			glade.tick,
+		]
+	var stepped: int = world.state_hash()
+	glade.tick += 1
+	if hashed == stepped or world.state_hash() == stepped:
+		return "the world's hash doesn't cover every loaded instance"
+	return ""
+
+
+func _still() -> Array[Command]:
+	var commands: Array[Command] = [Command.new(Command.NO_MOVE)]
+	return commands
 
 
 ## For every seed the glade's way back is on its west side, where the region ends.
