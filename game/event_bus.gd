@@ -14,6 +14,8 @@ extends Node
 var queued: Array[RefCounted] = []
 ## Each topic's subscribers, in the order they subscribed.
 var _subscribers: Dictionary[StringName, Array] = {}
+## Whether a flush is under way.
+var _flushing: bool = false
 
 
 func _ready() -> void:
@@ -31,14 +33,21 @@ func subscribe(topic: StringName, subscriber: Callable) -> void:
 	_subscribers[topic].append(subscriber)
 
 
-## Hands every queued event to its topic's subscribers, in order. Called once a frame; tests call it
-## to deliver at once.
+## Hands every queued event to its topic's subscribers, oldest first, until none is left: events a
+## subscriber raises meanwhile queue behind. A flush asked for during one is part of it. Each event
+## goes to the subscribers its topic had when it came up, and a freed subscriber is skipped. Called
+## once a frame; tests call it to deliver at once.
 func flush() -> void:
-	var events: Array[RefCounted] = queued
-	queued = []
-	for event: RefCounted in events:
-		for subscriber: Callable in _subscribers.get(topic_of(event), []):
-			subscriber.call(event)
+	if _flushing:
+		return
+	_flushing = true
+	while not queued.is_empty():
+		var event: RefCounted = queued.pop_front()
+		var subscribed: Array = _subscribers.get(topic_of(event), [])
+		for subscriber: Callable in subscribed.duplicate():
+			if subscriber.is_valid():
+				subscriber.call(event)
+	_flushing = false
 
 
 ## The topic an event is published on: its class name.
