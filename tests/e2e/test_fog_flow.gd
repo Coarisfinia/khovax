@@ -2,7 +2,8 @@ extends RefCounted
 ## Fog flow (#65): what each player sees is simulation state. Hex lines step tile by tile, rock
 ## blocks sight and is seen itself, water doesn't block it, sight ends at the radius, it follows a
 ## player who walks, it's in the state hash, and a player who leaves loses it. An event reveals an
-## area to every player (#177): only tiles of the region, each once, in the state hash.
+## area to every player (#177): only tiles of the region, each once, in the state hash. The glade's
+## lookout (#181) reveals the area around it the first time a player steps onto it, once.
 
 const START: Vector2i = Vector2i(1, -1)
 const WEST: int = 3
@@ -16,6 +17,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_fog_follows()
 	if result.is_empty():
 		result = _check_reveal()
+	if result.is_empty():
+		result = _check_lookout()
 	return result
 
 
@@ -96,6 +99,27 @@ func _check_reveal() -> String:
 	fog.revealed.clear()
 	if state.state_hash() != before:
 		return "nothing revealed changed the state hash"
+	return ""
+
+
+## A player stepping onto the glade's lookout reveals the region within its radius, in a tick, once.
+func _check_lookout() -> String:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 7, 1)
+	if state.region.triggers.is_empty() or state.feature(Features.TRIGGERS) == null:
+		return "the glade has no lookout"
+	var lookout: TileTrigger = state.region.triggers[0]
+	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	state.player(0).tile = lookout.tile
+	Simulation.step(state, _commands(Command.NO_MOVE))
+	var far: Vector2i = lookout.tile + Hex.DIRECTIONS[WEST] * lookout.amount
+	var near_edge: bool = not state.region.has_tile(far) or fog.revealed.has(far)
+	if fog.revealed.is_empty() or not near_edge:
+		return "stepping onto the lookout didn't reveal the area around it"
+	var hashed: int = state.state_hash()
+	fog.revealed.clear()
+	Simulation.step(state, _commands(Command.NO_MOVE))
+	if not fog.revealed.is_empty() or state.state_hash() == hashed:
+		return "a lookout revealed twice"
 	return ""
 
 
