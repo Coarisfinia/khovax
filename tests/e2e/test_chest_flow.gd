@@ -9,6 +9,8 @@ extends RefCounted
 const SEED: int = 7
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_chest_profile.json"
+## Slot 0's loot from the chest the save step opens; slot 1 gets a berry.
+const OWN_LOOT: Dictionary[String, int] = { "moss": 2 }
 
 ## The direction the last _open_first_chest walked in.
 var _direction: int = 0
@@ -122,16 +124,20 @@ func _check_saved(tree: SceneTree) -> String:
 	await tree.process_frame
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	driver.set_process(false)
-	var own: Dictionary[String, int] = { "moss": 2 }
-	var other: Dictionary[String, int] = { "berry": 1 }
-	var loot: Dictionary[int, Dictionary] = { 0: own, 1: other }
-	var events: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, loot)]
-	driver.ticked.emit(driver.state.tick, events)
+	driver.ticked.emit(driver.state.tick, _chest_opened())
 	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
 	var result: String = ""
-	if saved.materials != own:
-		result = "the profile saved %s from the chest, not %s" % [saved.materials, own]
+	if saved.materials != OWN_LOOT:
+		result = "the profile saved %s from the chest, not %s" % [saved.materials, OWN_LOOT]
 	main.queue_free()
 	await tree.process_frame
 	_gone = DirAccess.remove_absolute(save)
 	return result
+
+
+## A tick's events with one chest opened: OWN_LOOT for slot 0, a berry for slot 1.
+func _chest_opened() -> Array[RefCounted]:
+	var other: Dictionary[String, int] = { "berry": 1 }
+	var loot: Dictionary[int, Dictionary] = { 0: OWN_LOOT, 1: other }
+	var events: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, loot)]
+	return events
