@@ -372,8 +372,15 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	fresh.show_state(10.0)
 	var unseen: Vector2 = Vector2(1.0, 0.0)
 	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == unseen
+	# An area an event reveals (#177) lies under the light fog, though no one saw it.
+	var fog: FogFeature = view.driver.state.feature(Features.FOG) as FogFeature
+	var area: Array[Vector2i] = [far]
+	fog.reveal(view.driver.state, area)
+	fresh.show_state(10.0)
+	dark = dark and fresh.brightness[far] == FogView.REMEMBERED
+	fog.revealed.clear()
 	fresh.free()
 	view.show_state(10.0)
 	if not dark:
-		return "a tile never seen isn't under thick cloud"
+		return "a tile never seen isn't under thick cloud, or a revealed one isn't seen before"
 	return ""
