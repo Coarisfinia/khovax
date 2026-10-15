@@ -17,6 +17,13 @@ signal ticked(tick: int, events: Array[RefCounted])
 const MAX_TICKS_PER_FRAME: int = 5
 ## How many recent ticks' state hashes the driver keeps, to compare with other players' later.
 const HASH_HISTORY: int = 100
+## The value of `fixed_seed` that means "roll a seed".
+const ROLLED_SEED: int = -1
+
+## The seed a fresh world starts from instead of rolling one, or ROLLED_SEED (#213). The e2e runner
+## and the test builds (TestMode) set it to 0 before the main scene loads, so every flow and the
+## device flow's hash stay on the same world.
+static var fixed_seed: int = ROLLED_SEED
 
 ## The instance the session starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
@@ -52,13 +59,22 @@ func _ready() -> void:
 	if not problem.is_empty():
 		push_warning("the saved world can't be resumed, so a fresh one starts: " + problem)
 	if saved == null or not problem.is_empty():
-		start(0)
+		start(new_seed())
 	if input != null:
 		sources.append(LocalSource.new(input))
 
 
 func _process(delta: float) -> void:
 	advance(delta)
+
+
+## The seed of a fresh world: `fixed_seed` if one is set, otherwise rolled here, once, with Godot's
+## randomness. The seed is where a world begins, like a replay's, so rolling it lies outside the
+## simulation; everything after follows from it. randi() gives 32 bits, never negative.
+static func new_seed() -> int:
+	if fixed_seed != ROLLED_SEED:
+		return fixed_seed
+	return randi()
 
 
 ## Starts a fresh session, in the starting instance, from `seed_value`: the APK test (#61) starts

@@ -22,6 +22,9 @@ func _initialize() -> void:
 	# The flows never resume or overwrite a world on this device's disk; the resume flow points its
 	# keeper at a test file of its own.
 	WorldKeeper.default_path = ""
+	# Every flow boots the main scene on the same world (#213); the boot flow checks the rolling and
+	# puts this back.
+	GameDriver.fixed_seed = 0
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
 	var tests: Array[String] = []
