@@ -145,7 +145,12 @@ func _check_recovered() -> String:
 	var problem: String = SaveStore.save_profile(older, SAVE_PATH)
 	problem += SaveStore.save_profile(newer, SAVE_PATH)
 	var newest: String = FileAccess.get_file_as_string(SAVE_PATH)
-	for damaged: String in [newest.replace("ember_fox", "ember_cat"), newest.left(40)]:
+	var damaged_saves: Array[String] = [
+		newest.replace("ember_fox", "ember_cat"),
+		newest.left(40),
+		newest.replace("\"save\": 1", "\"saved\": 1"),
+	]
+	for damaged: String in damaged_saves:
 		_write(SAVE_PATH, damaged)
 		var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 		if not problem.is_empty() or loaded.loaded_generation != 1:

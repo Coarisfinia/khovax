@@ -65,13 +65,16 @@ static func write_save(path: String, text: String) -> String:
 	if file == null or not file.store_string(JSON.stringify(envelope, "\t") + "\n"):
 		return "couldn't write %s" % temporary
 	file.close()
+	# Godot's rename replaces an existing target on every platform, Windows included.
 	for generation: int in range(GENERATIONS - 1, 0, -1):
 		var older: String = _generation_path(path, generation - 1)
 		if FileAccess.file_exists(older):
-			var _moved: Error = DirAccess.rename_absolute(
+			var moved_up: Error = DirAccess.rename_absolute(
 				ProjectSettings.globalize_path(older),
 				ProjectSettings.globalize_path(_generation_path(path, generation)),
 			)
+			if moved_up != OK:
+				return "couldn't keep %s as an older generation" % older
 	var moved: Error = DirAccess.rename_absolute(
 		ProjectSettings.globalize_path(temporary),
 		ProjectSettings.globalize_path(path),
@@ -100,6 +103,7 @@ static func remove(path: String) -> void:
 	for file: String in files:
 		if FileAccess.file_exists(file):
 			var _gone: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
+	_sync_web()
 
 
 ## Asks the browser to keep this game's storage rather than evict it under pressure. Nothing off
@@ -112,15 +116,23 @@ static func keep_web_storage() -> void:
 
 
 ## The text inside an envelope, or "" when it isn't one that holds. A plain save from before
-## envelopes is its own text.
+## envelopes (none of the envelope's fields) is its own text; anything else shaped like an envelope
+## must be a whole one, or it's damaged and an older generation is tried.
 static func _opened(content: String) -> String:
 	# A JSON object, not JSON.parse_string: a damaged save is expected here, not an error to log.
 	var json: JSON = JSON.new()
 	if json.parse(content) != OK or not json.data is Dictionary:
 		return ""
 	var envelope: Dictionary = json.data
-	if not envelope.has("save"):
+	var fields: Array[String] = ["save", "checksum", "text"]
+	if fields.all(func(field: String) -> bool: return not envelope.has(field)):
 		return content
+	var version: Variant = envelope.get("save")
+	if not (version is float or version is int):
+		return ""
+	var number: float = version
+	if number != ENVELOPE:
+		return ""
 	var text: Variant = envelope.get("text")
 	var checksum: Variant = envelope.get("checksum")
 	if not text is String or not checksum is String:
