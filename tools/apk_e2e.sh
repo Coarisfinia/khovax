@@ -6,7 +6,7 @@ set -euo pipefail
 apk=${1:-build/khovax-test.apk}
 package=io.github.flixbox.khovax
 # The result line game/test_mode.gd prints, nothing else.
-result_line='KHOVAX_APK_E2E: (PASS|FAIL .*)$'
+result_line='KHOVAX_E2E: (PASS|FAIL .*)$'
 
 adb install -r "$apk"
 adb logcat -c
@@ -27,7 +27,7 @@ while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
   result=$(grep -oE "$result_line" <<< "$log" | tail -1 || true)
 done
 echo "${result:-no result within 180 s: the game never reported}"
-if [ "$result" != "KHOVAX_APK_E2E: PASS" ]; then
+if [ "$result" != "KHOVAX_E2E: PASS" ]; then
   adb logcat -d -s godot:V | tail -100
   exit 1
 fi
