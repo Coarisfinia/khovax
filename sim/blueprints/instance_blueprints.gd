@@ -42,8 +42,9 @@ static func exists(instance_name: String) -> bool:
 
 
 ## A new instance from the named blueprint, as its state, with `players` players in slots 0 and
-## up, or null (with an error) for an unknown name, an unreadable region, more players than the
-## region has starts, or an invalid feature order.
+## up (none for an instance loaded before anyone walks in, #148), or null (with an error) for an
+## unknown name, an unreadable region, more players than the region has starts, or an invalid
+## feature order.
 static func create(instance_name: String, seed_value: int, players: int = 1) -> GameState:
 	if not exists(instance_name):
 		push_error("unknown instance blueprint: " + instance_name)
@@ -52,9 +53,9 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	if not region.problem.is_empty():
 		push_error("instance %s has a broken region: %s" % [instance_name, region.problem])
 		return null
-	if players < 1 or players > region.starts.size():
+	if players < 0 or players > region.starts.size():
 		var limits: Array = [instance_name, region.starts.size(), players]
-		push_error("instance %s takes 1 to %d players, not %d" % limits)
+		push_error("instance %s takes 0 to %d players, not %d" % limits)
 		return null
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
