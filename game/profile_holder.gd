@@ -18,7 +18,12 @@ var keeper: ProfileKeeper
 
 
 func _ready() -> void:
+	SaveStore.keep_web_storage()
 	var profile: Profile = SaveStore.load_profile(save_path)
+	if profile.loaded_generation > 0:
+		push_warning("the newest profile saves were damaged; loaded the one %d back" % [
+			profile.loaded_generation,
+		])
 	if profile.problem.is_empty():
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:

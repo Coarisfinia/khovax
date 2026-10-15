@@ -26,6 +26,9 @@ var materials: Dictionary[String, int] = {}
 var runs_finished: int = 0
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
+## Which of the save's generations it was loaded from: 0 the newest, more when newer ones were
+## damaged (SaveStore). Not saved.
+var loaded_generation: int = 0
 
 
 ## Takes over what the player just obtained: its catches and materials. Returns why the gain can't

@@ -116,8 +116,7 @@ func _first_loot() -> String:
 ## A chest opened in a run: the driver's ticked events bring this machine's player (slot 0) their
 ## own roll, into the profile and its save at once, and not slot 1's.
 func _check_saved(tree: SceneTree) -> String:
-	var save: String = ProjectSettings.globalize_path(SAVE_PATH)
-	var _gone: Error = DirAccess.remove_absolute(save)
+	SaveStore.remove(SAVE_PATH)
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
@@ -135,7 +134,7 @@ func _check_saved(tree: SceneTree) -> String:
 		result = _check_shown(main.get_node("ChestView") as ChestView, driver)
 	main.queue_free()
 	await tree.process_frame
-	_gone = DirAccess.remove_absolute(save)
+	SaveStore.remove(SAVE_PATH)
 	return result
 
 
