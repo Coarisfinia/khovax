@@ -1,9 +1,9 @@
 extends RefCounted
-## The one e2e flow on the devices (#61, #102): the main scene, a fixed seed, and the touch stick walking the
-## player, tick by tick, so the game is exactly the same everywhere. It checks that the player
-## walked, the trail grew and the camera follows, and that the game ended in exactly the expected
-## state. It runs on an Android emulator and in headless Chrome in CI (started by game/test_mode.gd
-## in the test APK and the test web build), and headless in the required check
+## The one e2e flow on the devices (#61, #102): the main scene, a fixed seed, and the touch stick
+## walking the player, tick by tick, so the game is exactly the same everywhere. It checks that the
+## player walked, the trail grew and the camera follows, and that the game ended in exactly the
+## expected state. It runs on an Android emulator and in headless Chrome in CI (started by
+## game/test_mode.gd in the test APK and the test web build), and headless in the required check
 ## (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a pass on a device means it plays
 ## the very same game.
 
