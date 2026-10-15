@@ -125,7 +125,8 @@ background; only wait in the foreground for a result the very next step needs.
   `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
-  When the change has no visible part, say so instead.
+  When the change has no visible part, say so instead. **Before and after pictures always go in
+  that order** (owner's rule): the before first, then the after.
 
 ### After every push
 
