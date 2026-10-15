@@ -12,13 +12,14 @@ var delay: int = 0
 var _ticks: Dictionary[int, Array] = {}
 
 
-## A schedule for `player_count` slots and `input_delay` ticks of delay. The first `input_delay`
-## ticks come before any command could arrive, so every slot stands still in them.
-func _init(player_count: int, input_delay: int) -> void:
+## A schedule for `player_count` slots and `input_delay` ticks of delay, for the ticks after
+## `last_tick` (a resumed world's, #119). The first `input_delay` of them come before any command
+## could arrive, so every slot stands still in them.
+func _init(player_count: int, input_delay: int, last_tick: int = 0) -> void:
 	players = player_count
 	delay = input_delay
 	var idle: Command = Command.new()
-	for tick: int in range(1, input_delay + 1):
+	for tick: int in range(last_tick + 1, last_tick + input_delay + 1):
 		for slot: int in players:
 			put(tick, slot, idle)
 

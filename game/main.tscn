@@ -21,13 +21,15 @@
 [ext_resource type="Script" path="res://view/tile_decorations.gd" id="19_decorations"]
 [ext_resource type="Script" path="res://view/neighbour_view.gd" id="20_neighbours"]
 [ext_resource type="Script" path="res://view/instance_root.gd" id="21_instance"]
+[ext_resource type="Script" path="res://game/world_keeper.gd" id="22_keeper"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
-[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input") unique_id=520417396]
+[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper") unique_id=520417396]
 process_priority = -100
 script = ExtResource("1_driver")
 input = NodePath("../LocalInput")
+keeper = NodePath("../WorldKeeper")
 
 [node name="LocalInput" type="Node" parent="." unique_id=1290447713]
 script = ExtResource("2_input")
@@ -40,6 +42,10 @@ driver = NodePath("../Driver")
 script = ExtResource("11_profile")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
+
+[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("driver") unique_id=1191191190]
+script = ExtResource("22_keeper")
+driver = NodePath("../Driver")
 
 [node name="Instance" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1890189018]
 script = ExtResource("21_instance")

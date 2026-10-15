@@ -4,10 +4,12 @@ extends RefCounted
 ## again and end in exactly the same state (#35). A session plays one world (#158): it starts in one
 ## instance and steps every instance a player walks into. The driver records every session; golden
 ## replays in tests/replays/ are played by CI. Saved as JSON text, with the seed and the hashes as
-## strings, since JSON numbers can't hold every 64-bit integer exactly.
+## strings, since JSON numbers can't hold every 64-bit integer exactly. A session that resumed a
+## saved world (#119) starts from that world, which the replay holds as its starting world.
 
-## The file format; a replay in another format is refused, not misread.
-const FORMAT: int = 1
+## The file format; a replay in another format is refused, not misread. Format 2 added the starting
+## world; a format 1 replay has none and still plays.
+const FORMAT: int = 2
 ## A checkpoint (the state hash) every this many ticks, and one at the end.
 const CHECKPOINT_TICKS: int = 100
 ## One recorded change: the tick, the player slot, then the command's values.
@@ -16,6 +18,9 @@ const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players
 
 var instance: String = ""
 var seed_value: int = 0
+## The world the session resumed (World.to_data), or empty for one that started a fresh world from
+## the instance and the seed.
+var start_world: Dictionary = {}
 var players: int = 1
 ## The rules version and the instance's feature ids when it was recorded: a replay of other rules
 ## would play out differently, so playback refuses it with a clear message.
@@ -41,14 +46,12 @@ func _init(instance_name: String = "", seed_number: int = 0) -> void:
 	seed_value = seed_number
 
 
-## Starts recording from `world` at its start: its starting instance's players and
-## features.
+## Starts recording from `world` at its start: its players and its starting instance's features.
 func begin(world: World) -> void:
-	var state: GameState = world.instances[instance]
-	features = _feature_ids(state)
+	features = _feature_ids(world.instances[instance])
 	players = 0
-	for each: Entity in state.entities:
-		if each.slot != Entity.NO_SLOT:
+	for slot: int in GameState.MAX_PLAYERS:
+		if world.player(slot) != null:
 			players += 1
 
 
@@ -130,6 +133,8 @@ func to_text() -> String:
 		"changes": changes,
 		"checkpoints": hashes,
 	}
+	if not start_world.is_empty():
+		data["world"] = start_world
 	return JSON.stringify(data, "\t", false)
 
 
@@ -147,8 +152,12 @@ static func parse(text: String) -> Replay:
 	if not replay.problem.is_empty():
 		return replay
 	var format: int = _int(data["format"])
-	if format != FORMAT:
-		replay.problem = "replay format %d, this build reads format %d" % [format, FORMAT]
+	if format < 1 or format > FORMAT:
+		replay.problem = "replay format %d, this build reads up to format %d" % [format, FORMAT]
+		return replay
+	replay.start_world = _start_world(data.get("world", {}))
+	if data.has("world") and replay.start_world.is_empty():
+		replay.problem = "not a replay: its starting world isn't a world's data"
 		return replay
 	replay.rules = _int(data["rules"])
 	replay.instance = str(data["instance"])
@@ -161,6 +170,16 @@ static func parse(text: String) -> Replay:
 	for tick: Variant in by_tick:
 		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
+
+
+## The starting world in a replay's data, with JSON's numbers whole again; empty for none, or for
+## one that isn't a world's data, which then fails to set up.
+static func _start_world(saved: Variant) -> Dictionary:
+	var none: Dictionary = {}
+	if not saved is Dictionary or not WorldSave.has_whole_numbers(saved):
+		return none
+	var world: Dictionary = WorldSave.whole_numbers(saved)
+	return world
 
 
 ## Why `data` doesn't have a replay's shape, or "": every field there and of its type, rather than
@@ -228,9 +247,14 @@ func _setup_problem() -> String:
 ## Steps through every tick with the recorded commands. With `check`, compares the checkpoints
 ## and returns the first mismatch; without, records new ones.
 func _run(check: bool) -> String:
-	played = World.new(seed_value, instance, players)
+	if start_world.is_empty():
+		played = World.new(seed_value, instance, players)
+	else:
+		played = World.from_data(start_world)
 	if not played.problem.is_empty():
 		return played.problem
+	if not played.instances.has(instance):
+		return "the replay's starting world doesn't hold its instance %s" % instance
 	var start: Array[int] = _feature_ids(played.instances[instance])
 	if check and start != features:
 		return "the instance's features are now %s, recorded with %s" % [start, features]

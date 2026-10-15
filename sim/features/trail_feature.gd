@@ -55,6 +55,35 @@ func trail(entity_id: int) -> Trail:
 	return trails.get(entity_id)
 
 
+## Each trail as its entity's id and its tiles, sorted, in id order.
+func save_values() -> Dictionary:
+	var ids: Array[int] = []
+	ids.assign(trails.keys())
+	ids.sort()
+	var saved: Array[Dictionary] = []
+	for each: int in ids:
+		saved.append({ "entity": each, "tiles": DataReader.flat(trails[each].sorted_tiles()) })
+	return { "trails": saved }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	trails.clear()
+	for entry: DataReader in values.entries("trails"):
+		var owner_id: int = entry.whole("entity", 1, DataReader.MOST)
+		var tiles: Array[Vector2i] = entry.tiles("tiles", state.region)
+		if state.entity(owner_id) == null or trails.has(owner_id) or tiles.is_empty():
+			values.fail("trail of %d isn't of one entity or has no tiles" % owner_id)
+			return
+		trails[owner_id] = _trail_of(tiles)
+
+
+static func _trail_of(tiles: Array[Vector2i]) -> Trail:
+	var restored: Trail = Trail.new(tiles[0])
+	for tile: Vector2i in tiles:
+		restored.tiles[tile] = true
+	return restored
+
+
 func hash_values() -> Array[int]:
 	var ids: Array[int] = []
 	ids.assign(trails.keys())

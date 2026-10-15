@@ -59,6 +59,41 @@ func hash_values() -> Array[int]:
 	return values
 
 
+## Each walk as its entity's id, the tile its move started from and the ticks left, in id order.
+func save_values() -> Dictionary:
+	var ids: Array[int] = []
+	ids.assign(walks.keys())
+	ids.sort()
+	var flat: Array[int] = []
+	for each: int in ids:
+		flat.append_array([each, walks[each].from.x, walks[each].from.y, walks[each].ticks_left])
+	return { "walks": flat }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	walks.clear()
+	var flat: Array[int] = values.wholes("walks", -DataReader.MOST, DataReader.MOST)
+	if flat.size() % 4 != 0:
+		values.fail("a walk is cut off")
+		return
+	for i: int in range(0, flat.size(), 4):
+		var from: Vector2i = Vector2i(flat[i + 1], flat[i + 2])
+		var ticks_left: int = flat[i + 3]
+		if state.entity(flat[i]) == null or walks.has(flat[i]) or not state.region.has_tile(from):
+			values.fail("walk %d isn't of one entity or starts off the region" % flat[i])
+			return
+		if ticks_left < 0 or ticks_left > MOVE_TICKS:
+			values.fail("walk %d has %d ticks left" % [flat[i], ticks_left])
+			return
+		walks[flat[i]] = _walk_from(from, ticks_left)
+
+
+static func _walk_from(from: Vector2i, ticks_left: int) -> Walk:
+	var restored: Walk = Walk.new(from)
+	restored.ticks_left = ticks_left
+	return restored
+
+
 func _start_move(state: GameState, walker: Entity, current: Walk, command: Command) -> void:
 	if command.move < 0 or command.move >= Hex.DIRECTIONS.size():
 		return

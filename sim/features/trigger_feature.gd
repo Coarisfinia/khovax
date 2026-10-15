@@ -32,6 +32,20 @@ func hash_values() -> Array[int]:
 	return values
 
 
+## The triggers that have fired, by their index in the region's legend.
+func save_values() -> Dictionary:
+	return { "fired": fired }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	var saved: Array[int] = values.wholes("fired", 0, state.region.triggers.size() - 1)
+	fired.clear()
+	for index: int in saved:
+		if not fired.has(index):
+			fired.append(index)
+	fired.sort()
+
+
 ## Whether `trigger`'s when has come: for STEP, a player stands on its tile. Standing counts, not
 ## only a step onto it, so arriving there through an exit or starting there fires it too.
 static func _fires(state: GameState, trigger: TileTrigger) -> bool:

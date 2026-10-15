@@ -125,7 +125,12 @@ background; only wait in the foreground for a result the very next step needs.
   `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
-  When the change has no visible part, say so instead.
+  When the change has no visible part, say so instead. **Before and after pictures always go in
+  that order** (owner's rule): the before first, then the after.
+- **Show the flow as a replay whenever sensible** (owner's rule, #214): a pull request that
+  changes how something plays shows it in its description as an animated GIF of that flow,
+  rendered the same hidden, silent way (a PNG every few frames, assembled into the GIF) and
+  published on the `assets` branch like a screenshot.
 
 ### After every push
 
@@ -242,6 +247,14 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
   (catches, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.
+  **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
+  `SaveStore`), never in the profile: `World.to_data` holds its seed, tick and every loaded
+  instance's entities and feature state (`Feature.save_values`/`load_values`; regions are arranged
+  again from blueprint and seed), integers and ids only, and `World.from_data` refuses it whole
+  for another format, other rules (`RULES_VERSION`: it couldn't go on deterministically) or a hash
+  that doesn't match. `WorldKeeper` in the main scene hands the driver the saved world at boot and
+  saves it debounced like the profile; the headless flows and the test builds keep no world
+  (`WorldKeeper.default_path`). The same data is the snapshot co-op will resync from.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
   ones), and a player's choice overrides it until they choose Auto again.
@@ -279,7 +292,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   hashes (`hashes`) for desync checks. Its events also go onto the `EventBus` (#184), which hands
   them to subscribers by topic a frame later, publish/subscribe: `ProfileHolder` takes this
   machine's player's catches and chests from it, which advance their quests too. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
-  #35): the starting instance, seed, players, rules version and features, every change of a slot's command,
+  #35): the starting instance, seed, players, rules version and features (and the starting world,
+  for a session that resumed one), every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
 - A new mechanic puts its rules and data into a feature in `sim/features/` with a replay check, its
@@ -351,6 +365,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **gdstyle can accept what Godot's parser refuses**: a multi-line lambda inside a call's arguments
   passed `gdstyle check` but failed the script check ("Unindent doesn't match"). Write a loop, or a
   one-line lambda.
+- **A warning fails a flow too**, unless the flow expects it: before provoking one on purpose (a
+  refused world save), it calls `tree.call("expect_warning", "<fragment>")`, and fails if the
+  warning never comes. The device flows expect none.
 - **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.

@@ -36,13 +36,22 @@ func _init(seed_value: int, stream: int) -> void:
 ## seed theirs with `new`. Null (with an error) unless `state` is four 32-bit words, not all zero:
 ## the generator can never leave the all-zero state.
 static func from_words(state: Array[int]) -> Rng:
+	var generator: Rng = restored(state)
+	if generator == null:
+		push_error("Rng.from_words needs four 32-bit words, not all zero: %s" % [state])
+	return generator
+
+
+## A generator in the state `hash_values` gave, from a save (#119), or null when `state` isn't four
+## 32-bit words, not all zero. Bad save data is the save's problem, so unlike `from_words` it logs
+## nothing.
+static func restored(state: Array[int]) -> Rng:
 	var valid: bool = state.size() == 4
 	var nonzero: bool = false
 	for word: int in state:
 		valid = valid and word >= 0 and word <= MASK
 		nonzero = nonzero or word != 0
 	if not valid or not nonzero:
-		push_error("Rng.from_words needs four 32-bit words, not all zero: %s" % [state])
 		return null
 	var generator: Rng = Rng.new(0, 0)
 	generator.words.assign(state)
