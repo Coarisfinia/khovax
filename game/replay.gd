@@ -1,11 +1,10 @@
 class_name Replay
 extends RefCounted
-## A recorded run: how it started and every tick's commands for every player, enough to play it
-## again and end in exactly the same state (#35). A run is a world (#158): it starts in one
-## instance and steps every instance a player walks into. The driver records every run; golden
-## replays in
-## tests/replays/ are played by CI. Saved as JSON text, with the seed and the hashes as strings,
-## since JSON numbers can't hold every 64-bit integer exactly.
+## A recorded session: how it started and every tick's commands for every player, enough to play it
+## again and end in exactly the same state (#35). A session plays one world (#158): it starts in one
+## instance and steps every instance a player walks into. The driver records every session; golden
+## replays in tests/replays/ are played by CI. Saved as JSON text, with the seed and the hashes as
+## strings, since JSON numbers can't hold every 64-bit integer exactly.
 
 ## The file format; a replay in another format is refused, not misread.
 const FORMAT: int = 1
@@ -36,13 +35,13 @@ var played: World
 var _last: Dictionary[int, Array] = {}
 
 
-## A replay of a run of this instance and seed.
+## A replay of a session that starts in this instance, with this seed.
 func _init(instance_name: String = "", seed_number: int = 0) -> void:
 	instance = instance_name
 	seed_value = seed_number
 
 
-## Starts recording from `world`, the run at its start: its starting instance's players and
+## Starts recording from `world` at its start: its starting instance's players and
 ## features.
 func begin(world: World) -> void:
 	var state: GameState = world.instances[instance]
@@ -216,7 +215,7 @@ func _setup_problem() -> String:
 	for i: int in range(0, changes.size(), STRIDE):
 		var after_previous: bool = i == 0 or changes[i] >= changes[i - STRIDE]
 		if changes[i] < 1 or changes[i] > ticks or not after_previous:
-			return "a recorded command is out of order or outside the run"
+			return "a recorded command is out of order or outside the session"
 		if changes[i + 1] < 0 or changes[i + 1] >= players:
 			return "a recorded command is for slot %d of %d players" % [changes[i + 1], players]
 		var values: Array[int] = []

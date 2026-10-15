@@ -2,9 +2,9 @@ extends RefCounted
 ## Co-op flow (#38): two players in the main scene, both fed to the driver by command sources and
 ## run in lockstep, with an input delay. They walk at once, each with its own trail and its own
 ## view, and a key press moves the local player only once the delay has passed. The game is exactly
-## the plain run of the delayed commands; a late player's ticks wait for their commands, then the
-## game catches up to the same run. Two players on one tile each stand at their own spot inside it
-## (#151). Time is stepped by hand, one tick a frame.
+## the plain playback of the delayed commands; a late player's ticks wait for their commands, then
+## the game catches up to the same state. Two players on one tile each stand at their own spot
+## inside it (#151). Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 const TICKS: int = 60
@@ -77,14 +77,14 @@ func _check_two_players_walk() -> String:
 
 
 ## With an input delay, a command sampled before tick t applies to tick t + delay, and the first
-## ticks stand still: the driver's game is exactly the plain run of those commands.
+## ticks stand still: the driver's game is exactly the plain playback of those commands.
 func _check_input_delay() -> String:
 	_driver.sources = [ScriptedSource.new(0, _script(1)), ScriptedSource.new(1, _script(2))]
 	_run_frames(TICKS)
 	if _driver.state.tick != TICKS:
 		return "the driver ran %d ticks, not %d" % [_driver.state.tick, TICKS]
 	if _driver.state.state_hash() != _plain_hash(DELAY):
-		return "with an input delay, the game isn't the plain run of the delayed commands"
+		return "with an input delay, the game isn't the plain playback of the delayed commands"
 	if _driver.hashes.get(TICKS, 0) != _driver.world.state_hash():
 		return "the driver didn't keep the last tick's hash"
 	if _driver.hashes.size() > GameDriver.HASH_HISTORY:
@@ -118,7 +118,7 @@ func _check_late_player() -> String:
 		if _driver.state.tick < TICKS:
 			_driver.advance(STEP)
 	if _driver.state.tick != TICKS or _driver.state.state_hash() != _plain_hash(DELAY):
-		return "after catching up, the game isn't the on-time run"
+		return "after catching up, the game isn't the on-time playback"
 	return ""
 
 
@@ -174,7 +174,7 @@ func _start(delay: int) -> String:
 	_tree.root.add_child(_main)
 	await _tree.process_frame
 	if _driver.state == null or _driver.state.player(1) == null:
-		return "the driver didn't start a run with two players"
+		return "the driver didn't start a session with two players"
 	if second.model == null or second.model == first.model or second.model.get_parent() != second:
 		return "the second player's view doesn't have a character model of its own"
 	_driver.set_process(false)
@@ -191,7 +191,7 @@ func _run_frames(frames: int) -> void:
 		_driver.advance(STEP)
 
 
-## The final hash of the plain run: the scripts' commands applied `delay` ticks late, standing
+## The final hash of the plain playback: the scripts' commands applied `delay` ticks late, standing
 ## still before.
 func _plain_hash(delay: int) -> int:
 	var state: GameState = World.new(

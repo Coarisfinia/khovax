@@ -1,33 +1,33 @@
 class_name World
 extends RefCounted
-## A run's world (#139, #148): every instance it has loaded, by blueprint name, each a GameState of
+## The world (#139, #148): every instance it has loaded, by blueprint name, each a GameState of
 ## its own. Each tick it steps every instance a player is in, in name order, and leaves the others
-## loaded but still (until #119 purges them). Every instance's seed comes from the run's seed and
-## its name, so the same run loads the same instance the same way however and whenever it's
+## loaded but still (until #119 purges them). Every instance's seed comes from the world's seed and
+## its name, so the same world loads the same instance the same way however and whenever it's
 ## reached. Players walk from one instance into the next through exits (#154). Deterministic, like
 ## everything in sim/.
 
-## The run's seed, which every instance's own seed is drawn from.
-var run_seed: int = 0
+## The world's seed, which every instance's own seed is drawn from.
+var world_seed: int = 0
 ## Ticks the world has run. An instance nobody is in doesn't step, so its own tick can lag behind.
 var tick: int = 0
 ## Every loaded instance, by blueprint name.
 var instances: Dictionary[String, GameState] = {}
 ## Why the world couldn't be set up, or "" when it could.
 var problem: String = ""
-## The blueprint the run started in: the origin of the world's layout (#187).
+## The blueprint the world starts in: the origin of the world's layout (#187).
 var start_name: String = ""
 ## Each reachable instance's place in the world, worked out once (`offset`).
 var _offsets: Dictionary[String, Vector2i] = {}
-## Each blueprint's region for this run's seed, arranged once for the layout.
+## Each blueprint's region for the world's seed, arranged once for the layout.
 var _regions: Dictionary[String, Region] = {}
 ## The first problem laying out the web met, or "".
 var _layout_problem: String = ""
 
 
-## A world whose run starts in the blueprint `start` with `players` players in it.
+## A world that starts in the blueprint `start` with `players` players in it.
 func _init(seed_value: int, start: String, players: int = 1) -> void:
-	run_seed = seed_value
+	world_seed = seed_value
 	start_name = start
 	var first: GameState = InstanceBlueprints.create(start, seed_for(start), players)
 	if first == null:
@@ -36,10 +36,10 @@ func _init(seed_value: int, start: String, players: int = 1) -> void:
 	instances[start] = first
 
 
-## The seed of the instance loaded from the blueprint `instance_name`: drawn from the run's seed,
+## The seed of the instance loaded from the blueprint `instance_name`: drawn from the world's seed,
 ## with the name as the stream.
 func seed_for(instance_name: String) -> int:
-	return Rng.new(run_seed, name_code(instance_name)).next_u32()
+	return Rng.new(world_seed, name_code(instance_name)).next_u32()
 
 
 ## The instance loaded from `instance_name`, loading it with nobody in it the first time, or null
@@ -120,7 +120,7 @@ func _way_back(instance_name: String, from: String) -> Vector3i:
 	return Vector3i(0, 0, -1)
 
 
-## The region of the blueprint `instance_name` for this run's seed, arranged once.
+## The region of the blueprint `instance_name` for the world's seed, arranged once.
 func _region(instance_name: String) -> Region:
 	if not _regions.has(instance_name):
 		_regions[instance_name] = InstanceBlueprints.region_of(

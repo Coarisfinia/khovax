@@ -56,7 +56,7 @@ func _check_sight() -> String:
 	return ""
 
 
-## In a run, each player's sight follows them as they walk, and it's in the state hash.
+## In a session, each player's sight follows them as they walk, and it's in the state hash.
 func _check_fog_follows() -> String:
 	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new()]
 	var region: Region = Region.disc(2 * FogFeature.SIGHT_RADIUS)

@@ -173,8 +173,8 @@ func _check_view(tree: SceneTree) -> String:
 	return result
 
 
-## A catch reaches the profile through the driver's ticked events, as in a run: it's taken over and,
-## the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
+## A catch reaches the profile through the driver's ticked events, as in a session: it's taken over
+## and, the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
 func _check_saved(tree: SceneTree) -> String:
 	SaveStore.remove(SAVE_PATH)
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))

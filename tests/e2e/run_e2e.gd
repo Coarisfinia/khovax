@@ -9,7 +9,7 @@ extends SceneTree
 ## a function that hits a script error returns its type's default, which for String is "".
 
 const TEST_DIR: String = "res://tests/e2e"
-## A test running longer than this is named and fails the whole run, instead of the CI timeout
+## A test running longer than this is named and fails the whole suite, instead of the CI timeout
 ## killing Godot without saying which test hung.
 const TEST_TIMEOUT_SECONDS: float = 60.0
 

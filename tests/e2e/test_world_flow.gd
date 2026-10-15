@@ -5,7 +5,7 @@ extends RefCounted
 ## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
 ## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
-## can be reached from the starting instance. A run's world holds several loaded instances and
+## can be reached from the starting instance. The world holds several loaded instances and
 ## steps the ones a player is in (#148).
 
 const SEEDS: int = 40
@@ -148,9 +148,9 @@ func _check_web_connected() -> String:
 	return ""
 
 
-## The world (#148): the run starts in the basic instance, and the glade loads with nobody in it.
-## Only the instance a player is in steps, every instance's seed is its own and the same every run,
-## and the world's hash covers every loaded instance.
+## The world (#148): the session starts in the basic instance, and the glade loads with nobody in
+## it. Only the instance a player is in steps, every instance's seed is its own and the same every
+## session, and the world's hash covers every loaded instance.
 func _check_world() -> String:
 	var world: World = World.new(7, InstanceBlueprints.BASIC)
 	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
@@ -158,7 +158,7 @@ func _check_world() -> String:
 		return "the world didn't start, or the glade didn't load empty: " + world.problem
 	var seeds: Array[int] = [world.seed_for(InstanceBlueprints.BASIC), glade.rng_seed]
 	if seeds[0] == seeds[1] or World.new(7, InstanceBlueprints.BASIC).seed_for("glade") != seeds[1]:
-		return "the instances' seeds aren't their own, or differ between runs: %s" % [seeds]
+		return "the instances' seeds aren't their own, or differ between sessions: %s" % [seeds]
 	var hashed: int = world.state_hash()
 	for _tick: int in 10:
 		world.step(_still())

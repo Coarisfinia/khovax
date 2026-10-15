@@ -80,9 +80,9 @@ static func outside(
 
 
 ## The region's edge: every tile next to where the region ends, in a fixed order. Regions don't
-## change during a run (a rule that edits one in place must clear this cache), so it's worked out
-## once per region, and a replaced region is noticed. Derived from the region, so not part of the
-## hash.
+## change during a session (a rule that edits one in place must clear this cache), so it's worked
+## out once per region, and a replaced region is noticed. Derived from the region, so not part of
+## the hash.
 func _edge_of(region: Region) -> Array[Vector2i]:
 	if region != _edge_region:
 		_edge_region = region

@@ -68,7 +68,7 @@ func hash_values() -> Array[int]:
 		for tile: Vector2i in tiles:
 			values.append(tile.x)
 			values.append(tile.y)
-	# Only once something is revealed, so the hash of every run without a reveal stays as it was.
+	# Only once something is revealed, so the hash of every session without a reveal is unchanged.
 	if not revealed.is_empty():
 		values.append(revealed.size())
 		for tile: Vector2i in revealed:

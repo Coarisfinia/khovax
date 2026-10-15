@@ -4,8 +4,8 @@ extends SceneTree
 ## The load test (#101): the load instance (regions/load.md, a big region full of wild monsters,
 ## with the same rules as every instance) under four players walking by script.
 ##
-## Headless, it times the simulation: every tick (on an untimed run) and every feature's share (on
-## a timed one), leaving out a warm-up, and checks both runs end in the same state hash:
+## Headless, it times the simulation: every tick (on an untimed pass) and every feature's share (on
+## a timed one), leaving out a warm-up, and checks both passes end in the same state hash:
 ##   godot --headless --path . -s res://tools/load_test.gd -- ticks=2000
 ## Rendered, it runs the real main scene on the load instance and times frames:
 ##   godot --path . -s res://tools/load_test.gd -- rendered seconds=20
@@ -21,7 +21,7 @@ const ACTIONS: Array[String] = ["move_right", "move_up", "move_left", "move_down
 
 var _ticks: int = 2000
 var _seconds: float = 20.0
-## Rendered: when the run started, and each frame's duration in microseconds.
+## Rendered: when the pass started, and each frame's duration in microseconds.
 var _started_usec: int = 0
 var _last_usec: int = 0
 var _frames: Array[int] = []
@@ -74,38 +74,38 @@ func _initialize() -> void:
 
 
 func _run_headless() -> void:
-	var first: LoadRun = _simulate(true)
-	var second: LoadRun = _simulate(false)
+	var first: LoadPass = _simulate(true)
+	var second: LoadPass = _simulate(false)
 	print("headless load: %d ticks, %d entities at the start, %d catches" % [
 		_ticks,
 		first.entities,
 		first.catches,
 	])
-	# Tick times from the untimed run, so they carry no observer overhead.
+	# Tick times from the untimed pass, so they carry no observer overhead.
 	_print_spread("tick", second.ticks.slice(WARM_UP))
 	for feature_id: int in first.features:
 		var per_tick: float = first.features[feature_id] / float(_ticks - WARM_UP)
 		print("  feature %d: %.1f us per tick" % [feature_id, per_tick])
 	var same: bool = first.end_hash == second.end_hash
-	print("end state hash %d, %s" % [first.end_hash, "same in both runs" if same else "DIFFERS"])
+	print("end state hash %d, %s" % [first.end_hash, "same in both passes" if same else "DIFFERS"])
 	quit(0 if same else 1)
 
 
-## One headless run, timed when `timed`.
-func _simulate(timed: bool) -> LoadRun:
+## One headless pass, timed when `timed`.
+func _simulate(timed: bool) -> LoadPass:
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.LOAD, SEED, PLAYERS)
-	var run: LoadRun = LoadRun.new()
-	run.entities = state.entities.size()
+	var measured: LoadPass = LoadPass.new()
+	measured.entities = state.entities.size()
 	for tick: int in _ticks:
 		var commands: Array[Command] = _commands(tick)
 		var start: int = Time.get_ticks_usec()
-		run.mark = start
-		run.counting = tick >= WARM_UP
-		Simulation.step(state, commands, run.observe if timed else Callable())
-		run.ticks.append(Time.get_ticks_usec() - start)
-		run.count_catches(state.events)
-	run.end_hash = state.state_hash()
-	return run
+		measured.mark = start
+		measured.counting = tick >= WARM_UP
+		Simulation.step(state, commands, measured.observe if timed else Callable())
+		measured.ticks.append(Time.get_ticks_usec() - start)
+		measured.count_catches(state.events)
+	measured.end_hash = state.state_hash()
+	return measured
 
 
 ## Each player walks in a direction of its own, turning every LEG_TICKS ticks.
@@ -147,13 +147,13 @@ func _print_spread(what: String, samples: Array[int]) -> void:
 	])
 
 
-## One headless run's measurements.
-class LoadRun:
+## One headless pass's measurements.
+class LoadPass:
 	extends RefCounted
 
 	## Each tick's duration, in microseconds.
 	var ticks: Array[int] = []
-	## Each feature's total time over the run, in microseconds, by feature id.
+	## Each feature's total time over the pass, in microseconds, by feature id.
 	var features: Dictionary[int, int] = {}
 	var entities: int = 0
 	var catches: int = 0
