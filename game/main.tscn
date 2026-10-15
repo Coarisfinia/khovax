@@ -19,6 +19,7 @@
 [ext_resource type="Script" path="res://view/lookout_view.gd" id="17_lookouts"]
 [ext_resource type="Script" path="res://game/event_bus.gd" id="18_bus"]
 [ext_resource type="Script" path="res://view/tile_decorations.gd" id="19_decorations"]
+[ext_resource type="Script" path="res://view/neighbour_view.gd" id="20_neighbours"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -47,6 +48,10 @@ driver = NodePath("../Driver")
 script = ExtResource("19_decorations")
 driver = NodePath("../Driver")
 
+[node name="NeighbourView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1880188018]
+script = ExtResource("20_neighbours")
+driver = NodePath("../Driver")
+
 [node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
 script = ExtResource("7_trail")
 driver = NodePath("../Driver")
@@ -57,8 +62,9 @@ script = ExtResource("12_fog")
 driver = NodePath("../Driver")
 cloud = NodePath("../FogCloud")
 
-[node name="FogCloud" type="MeshInstance3D" parent="." unique_id=1560156156]
+[node name="FogCloud" type="MeshInstance3D" parent="." node_paths=PackedStringArray("neighbours") unique_id=1560156156]
 script = ExtResource("16_cloud")
+neighbours = NodePath("../NeighbourView")
 
 [node name="WildMonsterView" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")

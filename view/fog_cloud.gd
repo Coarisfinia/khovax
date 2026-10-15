@@ -12,6 +12,9 @@ const MARGIN: int = 12
 ## Where the cloud floats: just over the tiles, under everything standing on them.
 const HEIGHT: float = HexGrid.TILE_HEIGHT + 0.02
 
+## The neighbours drawn next to the region, which the cloud reaches over too.
+@export var neighbours: NeighbourView
+
 ## The fog per tile as the shader reads it: red the thick cloud (1 never seen), green the light fog
 ## (1 seen before). Under thick cloud the light fog is 0, so it never bleeds into tiles in sight
 ## next to unexplored ground.
@@ -76,12 +79,12 @@ static func _fog_of(bright: float) -> Color:
 	return Color(roundf(thick * 255.0) / 255.0, roundf(light * 255.0) / 255.0, 0.0)
 
 
-## Sizes the map and the cloud to `region` and its margin, all cloud to start with.
+## Sizes the map and the cloud to `region`, its neighbours and a margin, all cloud to start with.
 func _fit(region: Region) -> void:
 	_region = region
 	var low: Vector2i = Vector2i.MAX
 	var high: Vector2i = Vector2i.MIN
-	for tile: Vector2i in region.sorted_tiles():
+	for tile: Vector2i in _covered(region):
 		low = low.min(tile)
 		high = high.max(tile)
 	_offset = Vector2i(MARGIN, MARGIN) - low
@@ -107,3 +110,11 @@ func _fit(region: Region) -> void:
 	plane.size = Vector2(bounds.size.x, bounds.size.z)
 	mesh = plane
 	position = Vector3(bounds.get_center().x, HEIGHT, bounds.get_center().z)
+
+
+## The tiles the cloud has to cover: the region's and its neighbours', in the region's coordinates.
+func _covered(region: Region) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = region.sorted_tiles()
+	if neighbours != null:
+		tiles.append_array(neighbours.placed_tiles())
+	return tiles
