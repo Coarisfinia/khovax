@@ -15,6 +15,7 @@ awk -F'"' '
   case "$key $value${rest:+ $rest}" in
     "platform Android"*) echo android_debug.apk; echo android_release.apk ;;
     "platform Windows Desktop") echo windows_release_x86_64.exe ;;
+    "platform Linux") echo linux_release.x86_64 ;;
     "platform Web") web=1 ;;
     "threads false") [ "${web:-0}" = 1 ] && echo web_nothreads_release.zip; web=0 ;;
     "threads true") [ "${web:-0}" = 1 ] && echo web_release.zip; web=0 ;;

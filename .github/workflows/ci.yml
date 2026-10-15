@@ -246,6 +246,19 @@ jobs:
           timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
           test -s build/khovax.exe
 
+      - name: "🐧 Linux: export the release build"
+        # One x86_64 executable with the game embedded (#92); release.yml exports it the same way.
+        run: |
+          timeout 300 ~/godot/godot --headless --path . --export-release "Linux" build/khovax.x86_64
+          test -s build/khovax.x86_64
+
+      - name: "⬆️ 🐧 Linux build: upload (khovax-linux)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: khovax-linux
+          path: build/khovax.x86_64
+          retention-days: 14
+
       - name: "🌐 Web: export the release build"
         # Single-threaded (#22): it runs without SharedArrayBuffer, so static hosts that can't send
         # cross-origin isolation headers (GitHub Pages) serve it as is.
