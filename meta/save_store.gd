@@ -16,8 +16,7 @@ static func load_profile(path: String = PROFILE_PATH) -> Profile:
 
 ## Saves the profile; returns why it couldn't, or "".
 static func save_profile(profile: Profile, path: String = PROFILE_PATH) -> String:
-	return write_atomic(path, profile.to_text() + "
-")
+	return write_atomic(path, profile.to_text() + "\n")
 
 
 ## Writes `text` to `path`; returns why it couldn't, or "". The new file is written next to the old

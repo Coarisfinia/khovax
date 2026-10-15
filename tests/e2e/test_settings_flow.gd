@@ -27,7 +27,7 @@ func run(tree: SceneTree) -> String:
 ## label, with the ink smoothed unless MSAA is off.
 func _check_auto() -> String:
 	var graphics: Graphics = _start()
-	var auto: int = Graphics.auto_anti_aliasing()
+	var auto: int = ProjectSettings.get_setting_with_override(Graphics.MSAA_SETTING)
 	var label: String = graphics.anti_aliasing_label()
 	var problem: String = _check_applied(graphics, auto)
 	graphics.free()

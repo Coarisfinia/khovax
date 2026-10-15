@@ -22,7 +22,7 @@ static func load_from(path: String = PATH) -> Settings:
 	var saved: Dictionary = parsed
 	for setting: Variant in saved:
 		var value: Variant = saved[setting]
-		if setting is String and value is float:
+		if setting is String and (value is float or value is int):
 			var number: float = value
 			settings.chosen[setting] = int(number)
 	return settings

@@ -30,21 +30,26 @@ func _ready() -> void:
 	apply()
 
 
-## What Auto picks for anti-aliasing on this device.
+## What Auto picks for anti-aliasing on this device: the project's MSAA with this platform's
+## override (`get_setting` alone would ignore `.mobile` and `.web`).
 static func auto_anti_aliasing() -> int:
-	var msaa: int = ProjectSettings.get_setting(MSAA_SETTING)
+	var msaa: int = ProjectSettings.get_setting_with_override(MSAA_SETTING)
 	return msaa
 
 
-## The anti-aliasing in use: the player's choice, or Auto's.
+## The anti-aliasing in use: the player's choice, or Auto's. A saved value that isn't one of the
+## choices (a hand-edited file, a choice a later version dropped) counts as Auto.
 func anti_aliasing() -> int:
-	return settings.chosen.get(ANTI_ALIASING, auto_anti_aliasing())
+	var chosen: int = settings.chosen.get(ANTI_ALIASING, -1)
+	if chosen in ANTI_ALIASING_CHOICES:
+		return chosen
+	return auto_anti_aliasing()
 
 
 ## The anti-aliasing as a menu shows it: "4× MSAA", or "Auto (4× MSAA)" while Auto picks it.
 func anti_aliasing_label() -> String:
 	var shown: String = _msaa_name(anti_aliasing())
-	if settings.chosen.has(ANTI_ALIASING):
+	if settings.chosen.get(ANTI_ALIASING, -1) in ANTI_ALIASING_CHOICES:
 		return shown
 	return "Auto (%s)" % shown
 
