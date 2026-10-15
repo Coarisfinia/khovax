@@ -126,13 +126,13 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **Keep the project watcher running in the background**: the household-brain watcher
-  ([`watch-project.ts`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/src/watch-project.ts);
-  its events and what to do about each are in household-brain's
-  [`AGENTS.md`](https://github.com/Flixbox/household-brain/blob/main/AGENTS.md), "When the watcher
-  reports"). Set it up as the owner's laptop-wide agent notes describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
-  On a failing CI run, read the job with `agent-gh run view <run-id> --log-failed`, reproduce it
-  locally, fix it, and push once.
+- **Keep the project watcher running in the background**: household-brain's Claude Code plugin
+  `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
+  ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
+  Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
+  `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh` and
+  `SELF='flixbox-ai-agent[bot]'` (it has no default). On a failing CI run, read the job with
+  `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
 
 ### Review and merge
 
@@ -193,7 +193,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
 - **Regions** (#36, `Region`): which tiles exist, each tile's terrain (ground, water, rock), the
-  players' starts, where wild monsters stand (`WildMonsterFeature` places them, #19; anything
+  players' starts, where wild monsters stand (`WildMonsterFeature` places them, #19, each of a
+  species its spot names or rolled from the blueprint's `WILD_SPECIES`, #133; anything
   that isn't a player blocks walkers, players pass through each other) and where treasure chests
   stand (`ChestFeature`, #124, in blueprints with an instance loot table). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
