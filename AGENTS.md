@@ -315,6 +315,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `position`, `script`, `name`, and the test's own `run` have all bitten. So have discarded return
   values (`erase`, `resize`, a method returning the thing it added): assign them to a `_`-prefixed
   local, and an inner test class named like a global one (`Walk`).
+- **gdstyle can accept what Godot's parser refuses**: a multi-line lambda inside a call's arguments
+  passed `gdstyle check` but failed the script check ("Unindent doesn't match"). Write a loop, or a
+  one-line lambda.
 - **A GDScript function that hits a script error returns its type's default** (`""` for `String`), so
   a test can't signal success by returning nothing. The runner counts logged errors during each test
   (a `Logger` added with `OS.add_logger`) and fails the test if any appeared.
