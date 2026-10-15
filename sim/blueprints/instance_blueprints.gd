@@ -1,8 +1,10 @@
 class_name InstanceBlueprints
 extends RefCounted
-## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region (a
-## region file in regions/) and the features an instance has, in their step order. The players
-## start on the region's starts. A blueprint switches game rules on and off by listing them, and
+## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region
+## and the features an instance has, in their step order. The region is a fixed region file,
+## regions/<name>.region, or region pieces in regions/<name>/ that the seed arranges (#57). The
+## players start on the region's starts. A blueprint switches game rules on and off by listing them,
+## and
 ## they can change during a run.
 
 ## The playground: the hand-made region regions/basic.region, walking, a trail per player, the wild
@@ -10,8 +12,12 @@ extends RefCounted
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
-const NAMES: Array[String] = [BASIC, LOAD]
+## The first region arranged from region pieces (#57): a glade the seed puts together and turns.
+const GLADE: String = "glade"
+const NAMES: Array[String] = [BASIC, LOAD, GLADE]
 const REGIONS: String = "res://regions/"
+## The region piece an arranged region starts from, holding the players' starts.
+const START_PIECE: String = "start.region"
 
 
 ## Whether a blueprint of this name exists.
@@ -26,8 +32,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	if not exists(instance_name):
 		push_error("unknown instance blueprint: " + instance_name)
 		return null
-	var path: String = REGIONS + instance_name + ".region"
-	var region: Region = Region.parse(FileAccess.get_file_as_string(path))
+	var region: Region = region_of(instance_name, seed_value)
 	if not region.problem.is_empty():
 		push_error("instance %s has a broken region: %s" % [instance_name, region.problem])
 		return null
@@ -51,6 +56,34 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	return state
 
 
+## The named blueprint's region for `seed_value`: its region file as it is, or its region pieces
+## arranged, the start piece first and the others by file name. Its `problem` says what's wrong.
+static func region_of(instance_name: String, seed_value: int) -> Region:
+	var path: String = REGIONS + instance_name + ".region"
+	if FileAccess.file_exists(path):
+		return Region.parse(FileAccess.get_file_as_string(path))
+	var folder: String = REGIONS + instance_name + "/"
+	var files: Array[String] = []
+	for file: String in DirAccess.get_files_at(folder):
+		if file.ends_with(".region") and file != START_PIECE:
+			files.append(file)
+	files.sort()
+	files.push_front(START_PIECE)
+	var pieces: Array[Region] = []
+	pieces.assign(files.map(func(file: String) -> Region: return _piece(folder + file)))
+	for piece: Region in pieces:
+		if not piece.problem.is_empty():
+			return piece
+	return RegionArranger.arrange(pieces, seed_value, true)
+
+
 ## The basic instance, as `create` makes it.
 static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
+
+
+static func _piece(path: String) -> Region:
+	var piece: Region = Region.parse(FileAccess.get_file_as_string(path))
+	if not piece.problem.is_empty():
+		piece.problem = "%s: %s" % [path, piece.problem]
+	return piece

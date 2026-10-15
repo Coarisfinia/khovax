@@ -1,0 +1,12 @@
+# The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, open on three
+# sides. Format: see Region.parse (sim/region.gd); a connector is a ground tile on the edge and the
+# side it opens to.
+origin 4 2
+  . . .
+ . . . .
+. . 1 . .
+ . 2 . 3
+  . 4 .
+connector 2 0 0
+connector -2 0 3
+connector 0 -2 2

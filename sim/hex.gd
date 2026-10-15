@@ -40,3 +40,13 @@ static func ring(radius: int, center: Vector2i = Vector2i.ZERO) -> Array[Vector2
 			tiles.append(tile)
 			tile += DIRECTIONS[side]
 	return tiles
+
+
+## `tile` turned `turns` times by 60 degrees counter-clockwise around the origin, the way
+## DIRECTIONS goes round: DIRECTIONS[i] turns into DIRECTIONS[i + turns].
+static func turn(tile: Vector2i, turns: int) -> Vector2i:
+	var turned: Vector2i = tile
+	for _turn: int in posmod(turns, 6):
+		# In cube coordinates one turn is (x, y, z) -> (-y, -z, -x), with y = -q - r and z = r.
+		turned = Vector2i(turned.x + turned.y, -turned.x)
+	return turned
