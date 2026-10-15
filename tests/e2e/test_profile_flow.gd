@@ -132,9 +132,17 @@ func _check_migrated() -> String:
 	var old: String = text.replace("\"format\": 2", "\"format\": 1, \"runs_finished\": 3")
 	if old == text:
 		return "the format-1 save wasn't made from the current save"
-	var loaded: Profile = Profile.parse(old)
-	if not loaded.problem.is_empty() or loaded.to_text() != text:
-		return "a format-1 save didn't load: " + loaded.problem
+	# Format 1 with its run count, format 1 without it, and a format-2 save that still carries it:
+	# each loads as the current save, the count dropped.
+	var saves: Array[String] = [
+		old,
+		text.replace("\"format\": 2", "\"format\": 1"),
+		text.replace("\"format\": 2", "\"format\": 2, \"runs_finished\": 3"),
+	]
+	for save: String in saves:
+		var loaded: Profile = Profile.parse(save)
+		if not loaded.problem.is_empty() or loaded.to_text() != text:
+			return "an older or stale save didn't load as the current one: " + loaded.problem
 	return ""
 
 

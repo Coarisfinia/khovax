@@ -5,12 +5,12 @@ extends RefCounted
 ## game rule itself. The presentation reads the state and never writes it.
 ## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
 
-## Players in one session, each in its own slot; a tick's commands are indexed by slot.
+## Players in this instance, each in its own slot; a tick's commands are indexed by slot.
 const MAX_PLAYERS: int = 4
 
 var tick: int = 0
 var rng_seed: int = 0
-## Which tiles exist and their terrain (#36). It doesn't change during a session yet.
+## Which tiles exist and their terrain (#36). It doesn't change while the instance is loaded yet.
 var region: Region
 ## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
 var next_entity_id: int = 1
