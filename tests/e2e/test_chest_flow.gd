@@ -126,6 +126,7 @@ func _check_saved(tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	driver.set_process(false)
 	driver.ticked.emit(driver.state.tick, _chest_opened())
+	(main.get_node("EventBus") as EventBus).flush()
 	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
 	var result: String = ""
 	if saved.materials != OWN_LOOT:

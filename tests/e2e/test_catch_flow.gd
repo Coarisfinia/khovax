@@ -189,10 +189,16 @@ func _check_saved(tree: SceneTree) -> String:
 	var events: Array[RefCounted] = _walk(driver.state, RING)
 	driver.ticked.emit(driver.state.tick, events)
 	var result: String = ""
+	# The bus hands events out a frame later (#184), not while the tick runs.
+	var bus: EventBus = main.get_node("EventBus") as EventBus
+	if bus.queued.is_empty() or not holder.keeper.profile.captured_monsters.is_empty():
+		result = "the tick's events weren't queued for the next frame"
+	bus.flush()
 	if not holder.keeper.profile.captured_monsters.is_empty():
 		result = "another slot's catch went into this player's profile"
 	(main.get_node("LocalInput") as LocalInput).slot = 0
 	driver.ticked.emit(driver.state.tick, events)
+	(main.get_node("EventBus") as EventBus).flush()
 	var species: Array[String] = []
 	for monster: CapturedMonster in SaveStore.load_profile(SAVE_PATH).captured_monsters:
 		species.append(monster.species)

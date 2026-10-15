@@ -263,7 +263,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   `CommandSource`s (the local player's `LocalSource`; later network peers or a replay), which put
   commands into the `CommandSchedule` `input_delay` ticks ahead; a tick runs only once every
   player's command for it is known, and a command once put is final. It keeps the last ticks' state
-  hashes (`hashes`) for desync checks. It records every run (`GameDriver.recording`, a `Replay`,
+  hashes (`hashes`) for desync checks. Its events also go onto the `EventBus` (#184), which hands
+  them to subscribers by topic a frame later, publish/subscribe: the profile now, quest tracking
+  later. Subscribers never change the run; views keep the driver's `ticked` signal. It records every run (`GameDriver.recording`, a `Replay`,
   #35): the starting instance, seed, players, rules version and features, every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
