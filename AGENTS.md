@@ -219,7 +219,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **`meta/`, the layers above a run** (#37): the player's `Profile` (captured monsters, materials,
   unlocked slots) lasts between runs. A run is the profile's party plus an instance and a seed
   (`InstanceBlueprints.create`): deterministic, like everything in `sim/`. Each catch or find is a `Gain`,
-  which `ProfileKeeper.take` applies at once; **saves are debounced** (owner, #73): the first gain
+  which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the profile at
+  boot and takes this machine's player's catches from the tick's events, #132); **saves are debounced** (owner, #73): the first gain
   after a quiet spell is saved right away, later ones at most once per
   `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending a run, quitting or going to the background flush
   what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
