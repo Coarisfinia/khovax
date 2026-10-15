@@ -3,8 +3,11 @@ extends RefCounted
 ## and catches it: the monster leaves the world, the catch is announced, the trail starts over, and
 ## its figure shrinks away. An open ring, a walk that only touches the wild monster, and a ring
 ## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
-## first gets the monster (owner, #84). Catching is deterministic.
+## first gets the monster (owner, #84). Catching is deterministic. A catch by this machine's
+## player lands in their profile and its save at once (#132).
 
+## Where the flow's profile is saved, apart from the player's own.
+const SAVE_PATH: String = "user://test_catch_profile.json"
 ## The six tiles around the wild monster, walked in a ring from the player's start at (1, -1).
 const RING: Array[Vector2i] = [
 	Vector2i(0, -1),
@@ -46,6 +49,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_together()
 	if result.is_empty():
 		result = await _check_view(tree)
+	if result.is_empty():
+		result = await _check_saved(tree)
 	return result
 
 
@@ -162,6 +167,39 @@ func _check_view(tree: SceneTree) -> String:
 		result = "the caught figure was still there after shrinking away"
 	main.queue_free()
 	await tree.process_frame
+	return result
+
+
+## A catch reaches the profile through the driver's ticked events, as in a run: it's taken over and,
+## the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
+func _check_saved(tree: SceneTree) -> String:
+	var _gone: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var main: Node = (load(path) as PackedScene).instantiate()
+	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
+	holder.save_path = SAVE_PATH
+	tree.root.add_child(main)
+	await tree.process_frame
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	driver.set_process(false)
+	(main.get_node("LocalInput") as LocalInput).slot = 1
+	var events: Array[RefCounted] = _walk(driver.state, RING)
+	driver.ticked.emit(driver.state.tick, events)
+	var result: String = ""
+	if not holder.keeper.profile.captured_monsters.is_empty():
+		result = "another slot's catch went into this player's profile"
+	(main.get_node("LocalInput") as LocalInput).slot = 0
+	driver.ticked.emit(driver.state.tick, events)
+	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
+	var species: Array[String] = []
+	for monster: CapturedMonster in saved.captured_monsters:
+		species.append(monster.species)
+	var one: bool = species.size() == 1 and species[0] == ProfileHolder.PLACEHOLDER_SPECIES
+	if result.is_empty() and not one:
+		result = "the catch wasn't saved into the profile: %s" % [species]
+	main.queue_free()
+	await tree.process_frame
+	_gone = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	return result
 
 
