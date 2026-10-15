@@ -3,7 +3,9 @@ extends RefCounted
 ## the first catch open; another player's catch leaves it so, and this player's catch, through the
 ## event bus, finishes it; its progress is on disk at once and survives loading. A chest counts for
 ## the player who got loot from it. Steps count up and hand over to the next, one fact at a time,
-## and only what a step asks for counts toward it.
+## and only what a step asks for counts toward it. Quests finished together are listed in id order;
+## saved progress that no longer fits its quest settles at the next fact; and quest data with a
+## broken file advances no quest at all.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -16,6 +18,10 @@ const TWO_STEPS: String = (
 
 func run(tree: SceneTree) -> String:
 	var result: String = _check_counted()
+	if result.is_empty():
+		result = _check_settled()
+	if result.is_empty():
+		result = _check_broken_data()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -117,6 +123,52 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	applied = loaded.apply(_gain(["moss_toad", "moss_toad"], 0))
 	if not applied.is_empty() or not loaded.quests_done.has("three_moss_toads"):
 		return "loaded progress didn't count on to the toads' quest's end"
+	return ""
+
+
+## Two quests finished by one fact land in id order, whatever order the book holds them in. Saved
+## progress whose step is already at its count, or past the quest's last step, settles at the next
+## fact of any kind.
+func _check_settled() -> String:
+	var any_catch: String = "{\"id\": \"%s\", \"name\": \"N\", "
+	any_catch += "\"steps\": [{\"condition\": \"caught\"}]}"
+	var profile: Profile = Profile.new()
+	for id: String in ["zz_last", "aa_first"]:
+		profile.quest_book[id] = QuestDefinition.parse(id, any_catch % id, {})
+	var applied: String = profile.apply(_gain(["moss_toad"], 0))
+	var sorted: Array[String] = ["aa_first", "zz_last"]
+	if not applied.is_empty() or profile.quests_done != sorted:
+		return "quests finished together weren't listed in id order: %s" % profile.quests_done
+	var save: Profile = Profile.new()
+	save.quest_progress["three_moss_toads"] = QuestProgress.new(0, 3)
+	save.quest_progress["first_catch"] = QuestProgress.new(4, 0)
+	var stale: Profile = Profile.parse(save.to_text())
+	stale.quest_book = Content.load_quests().quests
+	applied = stale.problem + stale.apply(_gain([], 1))
+	var settled: Array[String] = ["first_catch", "three_moss_toads"]
+	if not applied.is_empty() or stale.quests_done != settled:
+		return "saved progress that no longer fits didn't settle at the next fact: " + applied
+	return ""
+
+
+## Quest data with one broken file gives an empty quest book, so no quest advances on part of it.
+func _check_broken_data() -> String:
+	var directory: String = "user://broken_quests_test/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
+	var files: Dictionary[String, String] = {
+		"a_good": "{\"id\": \"a_good\", \"name\": \"N\", \"steps\": [{\"condition\": \"opened\"}]}",
+		"b_broken": "{\"id\": \"b_broken\", \"name\": \"N\", \"steps\": []}",
+	}
+	for id: String in files:
+		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
+		var _stored: bool = file.store_string(files[id])
+		file.close()
+	var content: Content = Content.load_quests(directory)
+	for id: String in files:
+		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
+	var _gone: Error = DirAccess.remove_absolute(directory)
+	if content.problem.is_empty() or not ProfileHolder.quest_book_of(content).is_empty():
+		return "quest data with a broken file still gave quests to advance"
 	return ""
 
 

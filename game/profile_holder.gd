@@ -26,7 +26,10 @@ func _ready() -> void:
 			profile.loaded_generation,
 		])
 	if profile.problem.is_empty():
-		profile.quest_book = _quest_book()
+		var quests: Content = Content.load_quests()
+		if not quests.problem.is_empty():
+			push_warning("the quests can't be read, so none advance: " + quests.problem)
+		profile.quest_book = quest_book_of(quests)
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
@@ -56,12 +59,11 @@ func _on_event(event: RefCounted) -> void:
 		_report(keeper.take(gain, Time.get_ticks_msec()))
 
 
-## The quests the profile advances; none when the quest data can't be read, so progress waits.
-static func _quest_book() -> Dictionary[String, QuestDefinition]:
-	var content: Content = Content.load_quests()
-	if not content.problem.is_empty():
-		push_warning("the quests can't be read, so none advance: " + content.problem)
-	return content.quests
+## The quests the profile advances from `content`: none when any quest file couldn't be read, so
+## progress waits for whole, sound data rather than advancing on part of it.
+static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinition]:
+	var none: Dictionary[String, QuestDefinition] = {}
+	return content.quests if content.problem.is_empty() else none
 
 
 ## What this machine's player gains from `event`, or null when it isn't theirs: their catch, or

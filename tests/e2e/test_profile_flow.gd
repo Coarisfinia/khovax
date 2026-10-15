@@ -120,6 +120,13 @@ func _check_refused() -> String:
 		text.replace(format, "\"format\": 99"): "save format 99",
 		text.replace(done, "\"quests_done\": [\"a\", \"a\"]"): "a finished quest",
 		text.replace(done, "\"quests_done\": [7]"): "a finished quest",
+		text.replace(done, "\"quests_done\": [\"Bad id\"]"): "a finished quest",
+		text.replace(progress, "\"quest_progress\": {\"Bad id\": {\"step\": 0, \"count\": 0}}"): (
+			"quest Bad id's"
+		),
+		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": 0, \"count\": 1e10}}"): (
+			"quest a's"
+		),
 		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": -1, \"count\": 0}}"): (
 			"quest a's"
 		),

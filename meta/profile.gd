@@ -27,8 +27,9 @@ var materials: Dictionary[String, int] = {}
 var quest_progress: Dictionary[String, QuestProgress] = {}
 ## The ids of the quests finished, in the order finished.
 var quests_done: Array[String] = []
-## The quests gains advance, by id (Content.load_quests): content, not saved. Progress kept for a
-## quest that isn't here is kept as it is.
+## The quests gains advance, by id (Content.load_quests): content, not saved. Progress for a quest
+## that isn't here is kept untouched, on purpose: a quest missing from one build's data (dropped by
+## mistake, or not shipped yet) picks up where the player left it once it's back.
 var quest_book: Dictionary[String, QuestDefinition] = {}
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
@@ -63,21 +64,28 @@ func _capture(species: String) -> void:
 
 
 ## Counts one fact (a `condition`, with the species of a catch) toward every quest in the book
-## whose current step asks for it. A step that reaches its count hands over to the next one, and
-## the last step finishes the quest.
+## whose current step asks for it, in id order, so quests finished together are listed in the same
+## order on every machine. A step that reaches its count hands over to the next one, and the last
+## step finishes the quest. Saved progress that no longer fits the quest (its data changed since)
+## settles at the next fact of any kind: a step already at its count is complete, and a step past
+## the last one finishes the quest.
 func _advance_quests(condition: String, species: String) -> void:
-	for id: String in quest_book:
+	var ids: Array[String] = []
+	ids.assign(quest_book.keys())
+	ids.sort()
+	for id: String in ids:
 		var quest: QuestDefinition = quest_book[id]
 		var progress: QuestProgress = _progress_of(id)
 		var step: QuestStep = quest.step_at(progress.step)
-		if quests_done.has(id) or step == null or not step.counts(condition, species):
+		var open: bool = step != null and progress.count < step.count
+		if quests_done.has(id) or (open and not step.counts(condition, species)):
 			continue
-		progress.count += 1
-		if progress.count >= step.count:
+		progress.count += 1 if open else 0
+		if step != null and progress.count >= step.count:
 			progress.step += 1
 			progress.count = 0
 		quest_progress[id] = progress
-		if progress.step == quest.steps.size():
+		if progress.step >= quest.steps.size():
 			var _finished: bool = quest_progress.erase(id)
 			quests_done.append(id)
 
@@ -204,19 +212,20 @@ func _read_quests(data: Dictionary) -> String:
 	var done_list: Array = done
 	for id: Variant in done_list:
 		var text: String = Content.text_of(id)
-		if text.is_empty() or quests_done.has(text):
-			return "a finished quest in the save has no id or is there twice"
+		if not Content.is_id(text) or quests_done.has(text):
+			return "a finished quest in the save has no valid id or is there twice"
 		quests_done.append(text)
 	var by_id: Dictionary = started
 	for id: Variant in by_id:
 		var progress: QuestProgress = _quest_progress(by_id[id])
-		if progress == null or str(id).is_empty() or quests_done.has(str(id)):
+		if progress == null or not Content.is_id(str(id)) or quests_done.has(str(id)):
 			return "quest %s's progress in the save is malformed or it's finished" % id
 		quest_progress[str(id)] = progress
 	return ""
 
 
-## A quest's progress from save data, or null when it's malformed.
+## A quest's progress from save data, or null when it's malformed: a step and a count, each a
+## whole number from 0 to MAX_NUMBER.
 static func _quest_progress(entry: Variant) -> QuestProgress:
 	if not entry is Dictionary:
 		return null

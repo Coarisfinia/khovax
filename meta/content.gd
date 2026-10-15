@@ -96,7 +96,11 @@ static func load_quests(
 	var content: Content = load_species(species_directory)
 	if not content.problem.is_empty():
 		return content
-	for file_name: String in DirAccess.get_files_at(directory):
+	# Sorted, so the quests are read in the same order on every machine.
+	var file_names: Array[String] = []
+	file_names.assign(DirAccess.get_files_at(directory))
+	file_names.sort()
+	for file_name: String in file_names:
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)
 			var quest: QuestDefinition = QuestDefinition.parse(
