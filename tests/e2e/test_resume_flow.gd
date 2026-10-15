@@ -156,6 +156,8 @@ func _check_resumed(tree: SceneTree, world: World) -> String:
 	elif driver.state.player(0).tile != world.player(0).tile:
 		result = "the player came back on %s, not where they stood" % driver.state.player(0).tile
 	if result.is_empty():
+		result = await _check_camera_centered(tree, main)
+	if result.is_empty():
 		result = _check_recorded(driver)
 	if result.is_empty():
 		result = _check_debounced(driver, keeper)
@@ -164,6 +166,19 @@ func _check_resumed(tree: SceneTree, world: World) -> String:
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## Resumed in the glade, away from the world's origin, the camera starts centered on the player
+## where the views drew them, instead of gliding over from the origin.
+func _check_camera_centered(tree: SceneTree, main: Node) -> String:
+	await tree.process_frame
+	await tree.process_frame
+	var camera: FollowCamera = main.get_node("Camera3D") as FollowCamera
+	var player: Node3D = main.get_node("Instance/Player") as Node3D
+	var gap: Vector3 = camera.focus - player.global_position
+	if Vector2(gap.x, gap.z).length() > 0.1:
+		return "resumed in the glade, the camera starts %s away from the player" % [gap]
+	return ""
 
 
 ## The resumed session's recording plays back from the resumed world to the same state.

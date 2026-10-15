@@ -30,6 +30,7 @@ extends Camera3D
 ## The point on the ground the camera looks at.
 var focus: Vector3 = Vector3.ZERO
 var _velocity: Vector3 = Vector3.ZERO
+var _centered: bool = false
 
 
 func _ready() -> void:
@@ -39,8 +40,16 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if not Engine.is_editor_hint():
-		advance(delta)
+	if Engine.is_editor_hint():
+		return
+	# Centered on the target where the views first drew it, before anything is seen: when ready,
+	# the target may not stand in place yet, e.g. a world resumed away from the origin (#119).
+	if not _centered and target != null:
+		_centered = true
+		focus = _on_ground(target.global_position)
+		_place()
+		return
+	advance(delta)
 
 
 ## Moves the focus by one time step. Called every frame; tests call it with fixed steps.

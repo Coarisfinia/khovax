@@ -127,6 +127,10 @@ background; only wait in the foreground for a result the very next step needs.
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead. **Before and after pictures always go in
   that order** (owner's rule): the before first, then the after.
+- **Show the flow as a replay whenever sensible** (owner's rule, #214): a pull request that
+  changes how something plays shows it in its description as an animated GIF of that flow,
+  rendered the same hidden, silent way (a PNG every few frames, assembled into the GIF) and
+  published on the `assets` branch like a screenshot.
 
 ### After every push
 
