@@ -8,7 +8,7 @@ extends RefCounted
 ## with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
 ## The playground: the hand-made region regions/basic.region, walking, a trail per player, the wild
-## monsters the region places, and catching them with a ring.
+## monsters the region places, catching them with a ring, and fog of war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
@@ -51,6 +51,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		TrailFeature.new(),
 		WildMonsterFeature.new(),
 		CatchFeature.new(),
+		FogFeature.new(),
 	]
 	if LOOT_TABLES.has(instance_name):
 		var table: LootTable = _loot_table(LOOT_TABLES[instance_name])
