@@ -264,9 +264,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   command, and `HexInput.direction_toward` is where floats become a hex direction.
 - **`view/`, the presentation:** scenes that read the state and draw it, interpolating between ticks
   (`GameDriver.tick_fraction()`). They never write the state. `HexLayout` is the only tile-to-world
-  conversion. One-shot moments (a catch, a ring breaking, a hit) reach views as the tick's events
-  through the driver's `ticked(tick, events)` signal (#34): every tick exactly once, in order,
-  however many ticks a frame runs. Effects play from those; lasting looks come from the state.
+  conversion. The views of the local player's instance sit under one `InstanceRoot` (#189),
+  placed at that instance's place in the world (`World.offset`), so the camera follows the player
+  in world space and walking through an exit has no cut. One-shot moments (a catch, a ring
+  breaking, a hit) reach views as the tick's events through the driver's `ticked(tick, events)`
+  signal (#34): every tick exactly once, in order, however many ticks a frame runs. Effects play
+  from those; lasting looks come from the state.
 - **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` (#148, #158) from
   accumulated real time, in lockstep (#38); its `state` is the instance this machine's player is in,
   which the views draw. Real time decides when ticks happen, never what they do. Before each tick it polls its

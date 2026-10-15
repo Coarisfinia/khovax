@@ -72,9 +72,9 @@ func run(tree: SceneTree) -> String:
 	_main = scene.instantiate()
 	tree.root.add_child(_main)
 	await tree.process_frame
-	_player_view = _main.get_node_or_null("Player") as PlayerView
+	_player_view = _main.get_node_or_null("Instance/Player") as PlayerView
 	_driver = _main.get_node_or_null("Driver") as GameDriver
-	_grid = _main.get_node_or_null("HexGrid") as HexGrid
+	_grid = _main.get_node_or_null("Instance/HexGrid") as HexGrid
 	_trail_view = _main.get_node_or_null("TrailView") as TrailView
 	_stick = _main.get_node_or_null("Hud/TouchStick") as TouchStick
 	var nodes: Array[Node] = [_player_view, _driver, _grid, _trail_view, _stick]
