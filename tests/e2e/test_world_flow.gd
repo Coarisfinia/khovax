@@ -40,14 +40,22 @@ func _check_exits_reachable() -> String:
 			var state: GameState = InstanceBlueprints.create(instance_name, seed_value)
 			if state == null:
 				return "%s didn't load for seed %d" % [instance_name, seed_value]
-			var walkable: Array[Vector2i] = state.region.reachable(state.region.starts[0])
-			for exit: Vector3i in state.region.exits:
-				if not walkable.has(Vector2i(exit.x, exit.y)):
-					return "%s's exit %s can't be walked to for seed %d" % [
-						instance_name,
-						exit,
-						seed_value,
-					]
+			var stranded: String = _unreachable_exit(state.region)
+			if not stranded.is_empty():
+				return "%s's exit %s can't be walked to for seed %d" % [
+					instance_name,
+					stranded,
+					seed_value,
+				]
+	return ""
+
+
+## The first exit of `region` its first player can't walk to, as text, or "".
+func _unreachable_exit(region: Region) -> String:
+	var walkable: Array[Vector2i] = region.reachable(region.starts[0])
+	for exit: Vector3i in region.exits:
+		if not walkable.has(Vector2i(exit.x, exit.y)):
+			return str(exit)
 	return ""
 
 
