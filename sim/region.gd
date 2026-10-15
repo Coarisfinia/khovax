@@ -6,7 +6,7 @@ extends RefCounted
 ## read by RegionDocument into the
 ## compact form `parse` reads, #145).
 
-## The built-in kinds' numbers, as TileKinds.BUILT_IN lists them; rock blocks sight (FogFeature).
+## The built-in kinds' numbers, as data/tiles/ gives them; rock blocks sight (FogFeature).
 const GROUND: int = 0
 const WATER: int = 1
 const BLOCKED: int = 2
@@ -308,7 +308,7 @@ func _parse_tile(line: String) -> String:
 	if not numbers:
 		return "a tile line reads \"tile <q> <r> <tile blueprint id>\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
-	var kind: int = TileKinds.index_of(parts[3])
+	var kind: int = TileKinds.number_of(parts[3])
 	if not has_tile(tile) or kind < 0:
 		return "tile %s isn't on the region, or %s isn't a tile blueprint" % [tile, parts[3]]
 	terrain[tile] = kind

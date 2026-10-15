@@ -294,7 +294,7 @@ func _check_terrain_colors(main: Node) -> String:
 	var region: Region = Region.disc(1)
 	region.terrain[Vector2i(1, 0)] = Region.WATER
 	region.terrain[Vector2i(-1, 0)] = Region.BLOCKED
-	region.terrain[Vector2i(0, 1)] = TileKinds.index_of("forest")
+	region.terrain[Vector2i(0, 1)] = TileKinds.number_of("forest")
 	driver.state.region = region
 	grid.show_state()
 	if grid.tile_count() != region.size():
@@ -416,7 +416,7 @@ func _check_forest(main: Node) -> String:
 	var region: Region = driver.state.region
 	var forest: Array[Vector2i] = []
 	for tile: Vector2i in region.sorted_tiles():
-		if region.terrain[tile] == TileKinds.index_of("forest"):
+		if region.terrain[tile] == TileKinds.number_of("forest"):
 			forest.append(tile)
 	var shown: Array[Vector2i] = []
 	shown.assign(view.figures.keys())

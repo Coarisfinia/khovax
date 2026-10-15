@@ -47,7 +47,7 @@ func _build(region: Region) -> void:
 	_seen.clear()
 	_region = region
 	for tile: Vector2i in region.sorted_tiles():
-		var blueprint: TileBlueprint = TileKinds.blueprint(region.terrain[tile])
+		var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
 		if blueprint != null and not blueprint.model.is_empty():
 			figures[tile] = _add_figure(tile, blueprint.model)
 

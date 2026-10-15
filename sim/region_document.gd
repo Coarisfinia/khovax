@@ -160,7 +160,7 @@ static func _trigger_line(clause: String, where: String) -> String:
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
 static func _line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
-	if TileKinds.index_of(meaning) >= 0:
+	if TileKinds.number_of(meaning) >= 0:
 		return "%s%s %s" % [Region.TILE, where, meaning]
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
 	var side: int = -1

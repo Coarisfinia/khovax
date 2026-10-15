@@ -69,14 +69,18 @@ static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 ## Every tile blueprint file in `directory`, read and checked.
 static func load_tiles(directory: String = TILES_DIR) -> Content:
 	var content: Content = Content.new()
+	var numbers: Dictionary[int, bool] = {}
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)
 			var tile: TileBlueprint = TileBlueprint.parse(file_name.get_basename(), text)
+			if tile.problem.is_empty() and numbers.has(tile.number):
+				tile.problem = "its number %d is another tile blueprint's" % tile.number
 			if not tile.problem.is_empty():
 				content.problem = file_name + ": " + tile.problem
 				return content
 			content.tiles[tile.id] = tile
+			numbers[tile.number] = true
 	return content
 
 

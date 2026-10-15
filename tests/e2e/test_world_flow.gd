@@ -93,7 +93,7 @@ func _check_documents() -> String:
 	expected = expected and region.connectors.size() == 1 and region.connectors[0] == west
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
 	expected = expected and region.named_species.get(Vector2i(-1, 1), "") == "storm_finch"
-	var forest: int = TileKinds.index_of("forest")
+	var forest: int = TileKinds.number_of("forest")
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
 	if not region.problem.is_empty() or not expected:
