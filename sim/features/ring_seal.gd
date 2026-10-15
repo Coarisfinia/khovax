@@ -41,38 +41,15 @@ func drop(monster_id: int) -> void:
 		targets.remove_at(index)
 
 
-## The seal as save data.
+## The seal as save data: only what can't be worked out again from the instance (the walls, kept
+## to check the rebuilt ones against). CatchFeature.load_values rebuilds the rest.
 func to_data() -> Dictionary:
 	return {
 		"walls": DataReader.flat(walls),
 		"damage": damage,
-		"integrity": integrity,
 		"monsters": monsters,
-		"targets": targets,
 		"ticks": ticks,
-		"seal_ticks": seal_ticks,
 	}
-
-
-## The seal `to_data` saved, or null (reported to `values`) when it doesn't hold together: every
-## segment with its damage, every monster a wild monster with a segment, and the ticks in range.
-static func from_data(values: DataReader, state: GameState, wild: WildMonsterFeature) -> RingSeal:
-	var seal: RingSeal = RingSeal.new()
-	seal.walls = values.tiles("walls", state.region)
-	seal.damage = values.wholes("damage", 0, DataReader.MOST)
-	seal.integrity = values.whole("integrity", 1, DataReader.MOST)
-	seal.monsters = values.wholes("monsters", 1, DataReader.MOST)
-	seal.targets = values.wholes("targets", 0, maxi(seal.walls.size() - 1, 0))
-	seal.seal_ticks = values.whole("seal_ticks", 1, DataReader.MOST)
-	seal.ticks = values.whole("ticks", 0, seal.seal_ticks)
-	var whole: bool = not seal.walls.is_empty() and seal.damage.size() == seal.walls.size()
-	whole = whole and seal.targets.size() == seal.monsters.size()
-	for monster: int in seal.monsters:
-		whole = whole and wild.is_wild_monster(monster)
-	if values.failed() or not whole:
-		values.fail("a sealing ring doesn't hold together")
-		return null
-	return seal
 
 
 ## Every value of the seal, for the state hash, in a fixed order.

@@ -73,13 +73,12 @@ static func pressure(wild: WildMonsterFeature, monster_id: int) -> int:
 ## the moves happened: entity id order, so when two players close rings around the same monster in
 ## one tick, the earlier one seals it. This relies on wild monsters standing still: every monster
 ## inside a ring was found when the ring closed. A rule that moves monsters must also check when a
-## monster steps into an old ring. Copied, as seals may add events later.
+## monster steps into an old ring.
 func _close_rings(state: GameState) -> void:
 	var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	for event: RefCounted in state.events.duplicate():
-		var grew: TrailGrew = event as TrailGrew
-		if grew == null or trails.trail(grew.entity_id) == null or seals.has(grew.entity_id):
+	for grew: TrailGrew in _grown(state):
+		if trails.trail(grew.entity_id) == null or seals.has(grew.entity_id):
 			continue
 		var trail: Trail = trails.trail(grew.entity_id)
 		if wild.monsters.is_empty() or not _may_close(trail, grew):
@@ -94,6 +93,17 @@ func _close_rings(state: GameState) -> void:
 				inside.append(monster_id)
 		if not inside.is_empty():
 			seals[grew.entity_id] = _seal(state, trail, inside)
+
+
+## The tick's TrailGrew events in entity id order, whatever order they were raised in: who seals a
+## monster two players ring in the same tick never depends on the order of the events.
+static func _grown(state: GameState) -> Array[TrailGrew]:
+	var grown: Array[TrailGrew] = []
+	for event: RefCounted in state.events:
+		if event is TrailGrew:
+			grown.append(event as TrailGrew)
+	grown.sort_custom(func(a: TrailGrew, b: TrailGrew) -> bool: return a.entity_id < b.entity_id)
+	return grown
 
 
 ## A new seal of the ring `trail` closed around the wild monsters `inside`.
@@ -282,19 +292,66 @@ func save_values() -> Dictionary:
 	return { "seals": saved }
 
 
+## Restores each seal by building it again from the restored trail and monsters, with the same
+## code that builds a new one, and taking only its damage and ticks from the save. A save whose
+## walls differ from the rebuilt ones, or that names a monster twice, in two seals or outside the
+## ring, is refused.
 func load_values(state: GameState, values: DataReader) -> void:
 	seals.clear()
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	for entry: DataReader in values.entries("seals"):
 		var catcher_id: int = entry.whole("catcher", 1, DataReader.MOST)
 		var catcher: Entity = state.entity(catcher_id)
 		if catcher == null or catcher.slot == Entity.NO_SLOT or seals.has(catcher_id):
 			values.fail("sealing ring of %d isn't one player's" % catcher_id)
 			return
-		var seal: RingSeal = RingSeal.from_data(entry, state, wild)
-		if seal == null:
+		var monsters: Array[int] = entry.wholes("monsters", 1, DataReader.MOST)
+		var problem: String = _monsters_problem(state, catcher_id, monsters)
+		if not problem.is_empty():
+			values.fail("sealing ring of %d: %s" % [catcher_id, problem])
+			return
+		var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
+		var seal: RingSeal = _seal(state, trails.trail(catcher_id), monsters)
+		problem = _progress_problem(state, seal, entry)
+		if not problem.is_empty():
+			values.fail("sealing ring of %d: %s" % [catcher_id, problem])
 			return
 		seals[catcher_id] = seal
+
+
+## Why the saved monsters can't be sealing in the player's ring, or "": they must be wild monsters,
+## in increasing id order (so none twice), in no other seal, and enclosed by the player's trail.
+func _monsters_problem(state: GameState, catcher_id: int, monsters: Array[int]) -> String:
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).trail(catcher_id)
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	if trail == null or monsters.is_empty():
+		return "it has no trail or no wild monsters"
+	var edge: Array[Vector2i] = _edge_of(state.region)
+	var reachable: Dictionary[Vector2i, bool] = outside(state.region, trail, edge)
+	for i: int in monsters.size():
+		var monster_id: int = monsters[i]
+		if i > 0 and monster_id <= monsters[i - 1]:
+			return "its monsters are out of order or there twice"
+		if not wild.is_wild_monster(monster_id) or _is_sealed(monster_id):
+			return "%d isn't a wild monster, or is in another seal" % monster_id
+		var spot: Vector2i = state.entity(monster_id).tile
+		if trail.tiles.has(spot) or reachable.has(spot):
+			return "%d isn't inside the ring" % monster_id
+	return ""
+
+
+## Why the saved walls, damage and ticks don't fit the rebuilt `seal`, or ""; when they do, the
+## damage and ticks go into it. The ring must not have broken or held yet.
+static func _progress_problem(state: GameState, seal: RingSeal, entry: DataReader) -> String:
+	var walls: Array[Vector2i] = entry.tiles("walls", state.region)
+	var damage: Array[int] = entry.wholes("damage", 0, DataReader.MOST)
+	var ticks: int = entry.whole("ticks", 0, DataReader.MOST)
+	if entry.failed() or walls != seal.walls or damage.size() != walls.size():
+		return "its walls aren't the ring's"
+	seal.damage = damage
+	seal.ticks = ticks
+	if seal.failed_segment() >= 0 or ticks >= seal.seal_ticks:
+		return "it has already broken or held"
+	return ""
 
 
 func hash_values() -> Array[int]:

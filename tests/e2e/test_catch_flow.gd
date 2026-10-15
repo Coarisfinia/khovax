@@ -163,29 +163,68 @@ func _check_after_catch(state: GameState) -> String:
 
 
 ## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies catch
-## the monster on the same tick.
+## the monster on the same tick. A second player stands by, for the refused saves.
 func _check_seal_saved() -> String:
-	var world: World = World.new(42, InstanceBlueprints.BASIC)
+	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
 	for next: Vector2i in RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
-			world.step(_command(direction if tick == 0 else Command.NO_MOVE))
+			world.step(_commands([direction if tick == 0 else Command.NO_MOVE, Command.NO_MOVE]))
 	for _tick: int in Fixed.div_floor(CatchFeature.SEAL_BASE_TICKS, 2):
-		world.step(_command(Command.NO_MOVE))
+		world.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	if _catching(basic).seals.is_empty():
 		return "the world's ring wasn't sealing when saved"
+	var refused: String = _check_seal_refused(world)
+	if not refused.is_empty():
+		return refused
 	var resumed: World = WorldSave.parse(WorldSave.to_text(world))
 	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
 		return "the world saved mid-seal didn't resume as it was: " + resumed.problem
 	for _tick: int in MOST_SEAL_TICKS:
-		world.step(_command(Command.NO_MOVE))
-		resumed.step(_command(Command.NO_MOVE))
+		world.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
+		resumed.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
 		if resumed.state_hash() != world.state_hash():
 			return "the resumed seal went another way at tick %d" % world.tick
 	if not _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.is_empty():
 		return "the resumed seal didn't catch the wild monster"
 	return ""
+
+
+## A save whose seal names its monster twice, or puts it in a second player's seal too, is refused
+## whole: neither could have happened, and a monster sealed twice would be caught twice.
+func _check_seal_refused(world: World) -> String:
+	var data: Dictionary = world.to_data()
+	var twice: Dictionary = data.duplicate(true)
+	var seal: Dictionary = _seals_in(twice)[0]
+	var monster_id: int = seal["monsters"][0]
+	seal["monsters"] = [monster_id, monster_id]
+	var two_seals: Dictionary = data.duplicate(true)
+	var first: Dictionary = _seals_in(two_seals)[0]
+	var other: Dictionary = first.duplicate(true)
+	other["catcher"] = world.player(1).id
+	_seals_in(two_seals).append(other)
+	var cases: Dictionary[String, Dictionary] = {
+		"there twice": twice,
+		"in another seal": two_seals,
+	}
+	for expected: String in cases:
+		var problem: String = World.from_data(cases[expected]).problem
+		if not problem.contains(expected):
+			return "a seal %s wasn't refused for it: %s" % [expected, problem]
+	return ""
+
+
+## The saved seals of the basic instance in the world's save `data`, as saved: changing them
+## changes `data`.
+func _seals_in(data: Dictionary) -> Array:
+	for instance: Dictionary in data["instances"]:
+		if instance["name"] != InstanceBlueprints.BASIC:
+			continue
+		for feature: Dictionary in instance["state"]["features"]:
+			if feature["id"] == Features.CATCH:
+				return feature["values"]["seals"]
+	return []
 
 
 ## Two players close their rings around the wild monster in the same tick: the one who joined first
