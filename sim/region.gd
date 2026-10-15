@@ -13,6 +13,8 @@ const MAX_TILES: int = 4096
 const SYMBOLS: Dictionary[String, int] = { ".": GROUND, "~": WATER, "^": BLOCKED }
 ## Ground where a wild monster stands when the run begins (WildMonsterFeature, #19).
 const WILD_MONSTER: String = "m"
+## Ground where a treasure chest stands, placed by hand (ChestFeature, #124).
+const CHEST: String = "c"
 ## The start of a region piece's connector line.
 const CONNECTOR: String = "connector "
 
@@ -22,6 +24,9 @@ var terrain: Dictionary[Vector2i, int] = {}
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the run begins, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
+## Where treasure chests stand when the run begins, in the region file's reading order. Not hashed
+## here: the chest feature takes them over and hashes the ones still closed.
+var chests: Array[Vector2i] = []
 ## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
 ## arranging uses them up, so a region in a state has none and they aren't hashed.
@@ -44,8 +49,9 @@ static func disc(radius: int) -> Region:
 ## line is `origin <column> <row>`: the character there is tile (0, 0). Every further line is one
 ## row r of the region, from the origin row's r = 0 down; a tile sits on every second column
 ## (doubled coordinates), so each row is offset by half a tile, as on screen. `.` is ground, `~`
-## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, and
-## a space no tile. A region piece adds a line `connector <q> <r> <side>` for each connector.
+## water, `^` blocked, a digit 1 to 4 a player's start on ground, `m` a wild monster on ground, `c`
+## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
+## <side>` for each connector.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
 	var rows: Array[String] = []
@@ -133,6 +139,7 @@ func turned(turns: int) -> Region:
 	region.wild_monsters.assign(
 		wild_monsters.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
 	)
+	region.chests.assign(chests.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)))
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	return region
 
@@ -145,13 +152,15 @@ func fits(piece: Region, offset: Vector2i) -> bool:
 	return true
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters and connectors. The players' starts
-## stay this region's own. Callers check `fits` first.
+## Adds `piece`, moved by `offset`, with its wild monsters, chests and connectors. The players'
+## starts stay this region's own. Callers check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
 		terrain[tile + offset] = piece.terrain[tile]
 	for spot: Vector2i in piece.wild_monsters:
 		wild_monsters.append(spot + offset)
+	for spot: Vector2i in piece.chests:
+		chests.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
 		connectors.append(connector + Vector3i(offset.x, offset.y, 0))
 
@@ -214,13 +223,15 @@ func _parse_row(
 		var slot: int = symbol.to_int() - 1 if symbol.is_valid_int() else -1
 		if posmod(doubled, 2) != 0:
 			return "'%s' in row %d sits between two tiles" % [symbol, r]
-		var known: bool = SYMBOLS.has(symbol) or symbol == WILD_MONSTER
+		var known: bool = SYMBOLS.has(symbol) or symbol in [WILD_MONSTER, CHEST]
 		if not known and (slot < 0 or slot >= GameState.MAX_PLAYERS):
 			return "'%s' in row %d isn't a region symbol" % [symbol, r]
 		var tile: Vector2i = Vector2i(Fixed.div_floor(doubled, 2), r)
 		terrain[tile] = SYMBOLS.get(symbol, GROUND)
 		if symbol == WILD_MONSTER:
 			wild_monsters.append(tile)
+		if symbol == CHEST:
+			chests.append(tile)
 		if slot >= 0 and starts_by_slot.has(slot):
 			return "player %d's start is marked twice" % (slot + 1)
 		if slot >= 0:

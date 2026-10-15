@@ -1,7 +1,8 @@
 class_name ProfileHolder
 extends Node
 ## Holds this machine's player's profile through a run (#37, #132): loaded at boot, every catch of
-## that player taken over at once and saved debounced (ProfileKeeper, #73), and whatever is
+## that player and their loot from every chest opened (#124) taken over at once and saved debounced
+## (ProfileKeeper, #73), and whatever is
 ## pending saved when the game quits or goes to the background. Other players' catches go into
 ## their own profiles on their own machines (#74). A save that can't be read is reported and left
 ## alone, never overwritten.
@@ -44,17 +45,26 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if keeper == null:
 		return
 	for event: RefCounted in events:
-		var caught: WildMonsterCaught = event as WildMonsterCaught
-		var catcher: Entity = null if caught == null else driver.state.entity(caught.catcher_id)
-		if catcher != null and catcher.slot == input.slot:
-			_report(keeper.take(_catch_of(PLACEHOLDER_SPECIES), Time.get_ticks_msec()))
+		var gain: Gain = _gain_of(event)
+		if gain != null:
+			_report(keeper.take(gain, Time.get_ticks_msec()))
 
 
-## The gain of catching one monster of `species`.
-static func _catch_of(species: String) -> Gain:
+## What this machine's player gains from `event`, or null when it isn't theirs: their catch, or
+## their own roll from an opened chest (every player rolls their own, owner, #124).
+func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
-	gain.caught_species.append(species)
-	return gain
+	if event is WildMonsterCaught:
+		var catcher: Entity = driver.state.entity((event as WildMonsterCaught).catcher_id)
+		if catcher != null and catcher.slot == input.slot:
+			gain.caught_species.append(PLACEHOLDER_SPECIES)
+	elif event is ChestOpened:
+		var loot: Dictionary = (event as ChestOpened).loot.get(input.slot, {})
+		for item: Variant in loot:
+			var amount: int = loot[item]
+			gain.materials[str(item)] = amount
+	var empty: bool = gain.caught_species.is_empty() and gain.materials.is_empty()
+	return null if empty else gain
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.
