@@ -4,7 +4,9 @@ extends HexPiece
 ## Draws the player in `slot` from the simulation's state: on its tile, or between tiles while a
 ## move is under way, interpolated by tick and by how far real time is into the next tick, so the
 ## walk glides at a constant speed. Its character model (#79) idles while standing, runs while
-## moving and turns smoothly to face where it goes. It only reads the state.
+## moving and turns smoothly to face where it goes. Players walk through each other (#31), so
+## several can stand on one tile: then each stands at its own spot inside it, by slot, easing there
+## and back rather than snapping (#151). It only reads the state; the spot is the view's alone.
 
 ## How fast the character turns toward where it walks, in radians per second: quick enough to
 ## follow a zigzag, never a snap.
@@ -19,6 +21,16 @@ const HIDDEN_PARTS: Array[String] = [
 	"2H_Crossbow",
 	"Throwable",
 ]
+## Each slot's spot inside a tile it shares with other players: the corners of a small square,
+## in world units from the tile's center.
+const SPOTS: Array[Vector3] = [
+	Vector3(-0.3, 0.0, -0.3),
+	Vector3(0.3, 0.0, -0.3),
+	Vector3(-0.3, 0.0, 0.3),
+	Vector3(0.3, 0.0, 0.3),
+]
+## How fast a player eases to its spot and back to the center, in world units per second.
+const SPOT_SPEED: float = 1.2
 
 @export var driver: GameDriver
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
@@ -27,6 +39,9 @@ const HIDDEN_PARTS: Array[String] = [
 
 ## The yaw the character turns toward, in radians: where it last walked.
 var facing: float = 0.0
+## Where the player stands inside its tile, from the center: easing toward `_spot_target`.
+var spot: Vector3 = Vector3.ZERO
+var _spot_target: Vector3 = Vector3.ZERO
 var _animations: AnimationPlayer
 
 
@@ -48,6 +63,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if not Engine.is_editor_hint():
+		ease_spot(delta)
 		show_state()
 		turn(delta)
 
@@ -76,12 +92,29 @@ func show_state() -> void:
 		# toward the walk.
 		var heading: Vector3 = tile_position() - position_on(walk.from)
 		facing = atan2(heading.x, heading.z)
+	_spot_target = SPOTS[slot] if _shares_tile(player) else Vector3.ZERO
+	position += spot
 	_play(MOVE if moving else IDLE)
 
 
 ## The clip the character is playing, or "" without a model.
 func current_clip() -> StringName:
 	return StringName(_animations.current_animation) if _animations != null else &""
+
+
+## Moves the player toward its spot by at most SPOT_SPEED per second. Called every frame; tests
+## call it with their own step.
+func ease_spot(delta: float) -> void:
+	spot = spot.move_toward(_spot_target, SPOT_SPEED * delta)
+
+
+## Whether another player stands on (or is walking onto) `player`'s tile.
+func _shares_tile(player: Entity) -> bool:
+	for other_slot: int in GameState.MAX_PLAYERS:
+		var other: Entity = driver.state.player(other_slot)
+		if other_slot != slot and other != null and other.tile == player.tile:
+			return true
+	return false
 
 
 ## Turns the character toward `facing` by at most TURN_SPEED per second. Called every frame;
