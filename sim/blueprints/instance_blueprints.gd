@@ -4,7 +4,8 @@ extends RefCounted
 ## and the features an instance has, in their step order. The region is a fixed region file,
 ## regions/<name>.region, or region pieces in regions/<name>/ that the seed arranges and, unless
 ## the blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
-## blueprint switches game rules on and off by listing them, and they can change during a run.
+## blueprint switches game rules on and off by listing them, and they can change during a run. One
+## with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
 ## The playground: the hand-made region regions/basic.region, walking, a trail per player, the wild
 ## monsters the region places, and catching them with a ring.
@@ -18,6 +19,8 @@ const ARENA: String = "arena"
 const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
 ## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
 const UNTURNED: Array[String] = [ARENA]
+## Each blueprint's instance loot table (data/loot_tables/), by blueprint: what its chests hold.
+const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.region"
@@ -49,6 +52,12 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		WildMonsterFeature.new(),
 		CatchFeature.new(),
 	]
+	if LOOT_TABLES.has(instance_name):
+		var table: LootTable = _loot_table(LOOT_TABLES[instance_name])
+		if table == null:
+			push_error("instance %s's loot table doesn't load" % instance_name)
+			return null
+		ordered.append(ChestFeature.new(table))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -84,6 +93,15 @@ static func region_of(instance_name: String, seed_value: int) -> Region:
 ## The basic instance, as `create` makes it.
 static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
+
+
+## The instance loot table with this id, or null when the tables don't load or it isn't one.
+static func _loot_table(table_id: String) -> LootTable:
+	var content: Content = Content.load_loot_tables()
+	var table: LootTable = content.loot_tables.get(table_id)
+	if not content.problem.is_empty() or table == null or table.kind != LootTable.INSTANCE:
+		return null
+	return table
 
 
 static func _piece(path: String) -> Region:

@@ -127,7 +127,7 @@ background; only wait in the foreground for a result the very next step needs.
 
 - **Update the PR description** so it describes what the branch does now.
 - **Keep the project watcher running in the background**: the household-brain watcher
-  ([`watch-project.ts`](https://github.com/Flixbox/household-brain/blob/main/packages/tooling/src/watch-project.ts);
+  ([`watch-project.ts`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/src/watch-project.ts);
   its events and what to do about each are in household-brain's
   [`AGENTS.md`](https://github.com/Flixbox/household-brain/blob/main/AGENTS.md), "When the watcher
   reports"). Set it up as the owner's laptop-wide agent notes describe, with this repository's values: `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`.
@@ -193,8 +193,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
 - **Regions** (#36, `Region`): which tiles exist, each tile's terrain (ground, water, rock), the
-  players' starts and where wild monsters stand (`WildMonsterFeature` places them, #19; anything
-  that isn't a player blocks walkers, players pass through each other). Rules ask `state.region`
+  players' starts, where wild monsters stand (`WildMonsterFeature` places them, #19; anything
+  that isn't a player blocks walkers, players pass through each other) and where treasure chests
+  stand (`ChestFeature`, #124, in blueprints with an instance loot table). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
   A region is a hand-made text file in `regions/` (format in `Region.parse`), or arranged from
   hand-made region pieces in `regions/<blueprint>/` by `RegionArranger`: the seed fits them together
