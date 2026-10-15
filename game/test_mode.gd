@@ -19,6 +19,7 @@ func _ready() -> void:
 		return
 	# The main scene comes up after the autoloads.
 	await get_tree().process_frame
+	_cheapest_frames(get_tree().current_scene)
 	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
 	var errors: ErrorCounter = ErrorCounter.new()
 	OS.add_logger(errors)
@@ -30,6 +31,17 @@ func _ready() -> void:
 	if result.is_empty() and errors.count > 0:
 		result = "%d error(s) logged during the flow" % errors.count
 	_report(result)
+
+
+## Turns anti-aliasing off for the flow, without saving it (#193): the flow waits real time for
+## every tick, and a CI browser draws WebGL on the CPU, where MSAA and the ink pass's smoothing are
+## the costliest work per pixel; on a busy runner they slowed frames enough to run out of time. The
+## flow's checks and hash don't depend on the look.
+static func _cheapest_frames(main: Node) -> void:
+	var graphics: Graphics = main.get_node_or_null("Graphics") as Graphics
+	if graphics != null:
+		graphics.settings.chosen[Graphics.ANTI_ALIASING] = Viewport.MSAA_DISABLED
+		graphics.apply()
 
 
 func _report(result: String) -> void:
