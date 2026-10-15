@@ -21,6 +21,9 @@ const HASH_HISTORY: int = 100
 ## The instance the session starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
 @export var input: LocalInput
+## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
+## build a driver alone.
+@export var keeper: WorldKeeper
 ## Players in the session, in slots 0 and up. Each slot needs a command source, or ticks wait.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
@@ -44,7 +47,12 @@ var _accumulated: float = 0.0
 
 
 func _ready() -> void:
-	start(0)
+	var saved: World = keeper.saved_world() if keeper != null else null
+	var problem: String = resume(saved) if saved != null else ""
+	if not problem.is_empty():
+		push_warning("the saved world can't be resumed, so a fresh one starts: " + problem)
+	if saved == null or not problem.is_empty():
+		start(0)
 	if input != null:
 		sources.append(LocalSource.new(input))
 
@@ -63,7 +71,26 @@ func start(seed_value: int) -> void:
 	if world != null:
 		recording = Replay.new(instance, seed_value)
 		recording.begin(world)
-	schedule = CommandSchedule.new(players, input_delay)
+	_begin_session()
+
+
+## Resumes the saved world `saved` where it was left (#119), as WorldKeeper loaded it; returns why
+## it can't, or "", and changes nothing then. Its recording starts from the saved world.
+func resume(saved: World) -> String:
+	for slot: int in players:
+		if saved.player(slot) == null:
+			return "the saved world has no player in slot %d" % slot
+	world = saved
+	recording = Replay.new(saved.start_name, saved.world_seed)
+	recording.start_world = saved.to_data()
+	recording.begin(saved)
+	_begin_session()
+	return ""
+
+
+## A new session's schedule, from the world's tick on, with no hashes and no time due yet.
+func _begin_session() -> void:
+	schedule = CommandSchedule.new(players, input_delay, world.tick if world != null else 0)
 	hashes.clear()
 	_accumulated = 0.0
 

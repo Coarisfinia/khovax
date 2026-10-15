@@ -59,6 +59,36 @@ func species_of(entity_id: int) -> String:
 	return _species.get(entity_id, "")
 
 
+## Each wild monster still in the instance as its entity's id and its species, in id order. The
+## roster and the species this instance can place follow from the blueprint and the region.
+func save_values() -> Dictionary:
+	var saved: Array[Dictionary] = []
+	for monster: int in monsters:
+		saved.append({ "entity": monster, "species": _species[monster] })
+	return { "wild_monsters": saved }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	monsters.clear()
+	_species.clear()
+	for entry: DataReader in values.entries("wild_monsters"):
+		var monster: int = entry.whole("entity", 1, DataReader.MOST)
+		var species: String = entry.text("species")
+		var standing: Entity = state.entity(monster)
+		if standing == null or standing.slot != Entity.NO_SLOT or _species.has(monster):
+			values.fail("wild monster %d isn't one entity without a player" % monster)
+			return
+		if not _known.has(species):
+			values.fail("wild monster %d is of %s, which this instance doesn't place" % [
+				monster,
+				species,
+			])
+			return
+		monsters.append(monster)
+		_species[monster] = species
+	monsters.sort()
+
+
 func hash_values() -> Array[int]:
 	var values: Array[int] = [monsters.size()]
 	for monster: int in monsters:

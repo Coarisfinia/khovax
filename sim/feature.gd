@@ -46,3 +46,18 @@ func entity_removed(_state: GameState, _id: int) -> void:
 func hash_values() -> Array[int]:
 	var none: Array[int] = []
 	return none
+
+
+## The feature's state as save data (#119): whole numbers, ids, lists and tables, enough for
+## `load_values` to restore it exactly. Data that follows from the instance (the region, the
+## blueprint's lists) isn't saved. Every value `hash_values` covers must be in here or follow from
+## it, so a restored world hashes the same.
+func save_values() -> Dictionary:
+	return {}
+
+
+## Restores the state `save_values` saved, into a feature just started in an instance loaded from
+## the same blueprint and seed, after the instance's entities are restored. Bad data is reported to
+## `values` (DataReader.fail), which refuses the whole world.
+func load_values(_state: GameState, _values: DataReader) -> void:
+	return
