@@ -28,6 +28,14 @@ The assets this game uses, with their authors and licenses. Generated from each 
   (`addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb`)
 - **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
 
+## KayKit Medieval Hexagon Pack 1.0
+
+- **Files:** `assets/kaykit-hexagon/`
+- **Author:** Kay Lousberg (www.kaylousberg.com)
+- **Source:** https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
+  (`addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/trees_A_large.gltf`)
+- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
+
 ## KayKit Character Pack: Skeletons 1.0
 
 - **Files:** `assets/kaykit-skeletons/`

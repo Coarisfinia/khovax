@@ -1,6 +1,7 @@
-## The region's tiles, one hexagonal tile per cell, colored by terrain (#36). It only draws tiles:
-## features color tiles through `paint` (e.g. TrailView), and know nothing about each other. A tool
-## script, so the grid also shows in the editor, as a disc of `radius` rings.
+## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
+## draws tiles: features color tiles through `paint` (e.g. TrailView), and know nothing about each
+## other; TileDecorations stands each kind's decoration on them. A tool script, so the grid also
+## shows in the editor, as a disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
 ## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.
@@ -23,22 +24,6 @@ const NO_PAINT: Dictionary[Vector2i, Color] = {}
 			_build(_shown_region())
 ## The grid shows this driver's region; without one (e.g. in the editor), a disc of `radius` rings.
 @export var driver: GameDriver
-## The color of every ground tile nothing paints.
-@export var tile_color: Color = Color(0.36, 0.55, 0.32):
-	set(value):
-		tile_color = value
-		if is_node_ready():
-			_build(_region)
-@export var water_color: Color = Color(0.25, 0.45, 0.7):
-	set(value):
-		water_color = value
-		if is_node_ready():
-			_build(_region)
-@export var rock_color: Color = Color(0.42, 0.4, 0.38):
-	set(value):
-		rock_color = value
-		if is_node_ready():
-			_build(_region)
 
 var _material: StandardMaterial3D = StandardMaterial3D.new()
 var _mesh: CylinderMesh = CylinderMesh.new()
@@ -47,7 +32,7 @@ var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
 var _region: Region
 ## The colors last painted onto tiles.
 var _paint: Dictionary[Vector2i, Color] = {}
-## Each tile's color when nothing paints it: its terrain's.
+## Each tile's color when nothing paints it: its kind's.
 var _base: Dictionary[Vector2i, Color] = {}
 ## Each tile's MultiMesh instance, transform and color, as given to the MultiMesh. Kept here
 ## because a MultiMesh can't be read back under the headless dummy renderer.
@@ -88,7 +73,7 @@ func show_state() -> void:
 		_build(_shown_region())
 
 
-## Colors the tiles in `colors` and gives every other tile its terrain's color. Only tiles whose
+## Colors the tiles in `colors` and gives every other tile its kind's color. Only tiles whose
 ## color changes are sent to the MultiMesh.
 func paint(colors: Dictionary[Vector2i, Color]) -> void:
 	_paint = colors
@@ -122,13 +107,10 @@ func tile_color_of(tile: Vector2i) -> Color:
 	return _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0))
 
 
-## The color a tile of this terrain has when nothing paints it.
-func terrain_color(terrain: int) -> Color:
-	if terrain == Region.WATER:
-		return water_color
-	if terrain == Region.BLOCKED:
-		return rock_color
-	return tile_color
+## The color a tile of this kind (Region.terrain) has when nothing paints it: its tile blueprint's.
+func terrain_color(kind: int) -> Color:
+	var blueprint: TileBlueprint = TileLooks.of(kind)
+	return blueprint.color if blueprint != null else Color.BLACK
 
 
 func tile_mesh() -> CylinderMesh:

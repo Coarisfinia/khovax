@@ -2,7 +2,8 @@ extends RefCounted
 ## Movement flow, through every layer: keys, the touch stick and a gamepad press the movement
 ## actions, the local input turns them into commands, the simulation walks the player from tile to
 ## tile along a known path, zigzagging along a column for straight up and stopping at the grid's
-## edge and at a wild monster, and the view glides the player between tiles without jumps.
+## edge, at a wild monster and at water but not in a forest, and the view glides the player between
+## tiles without jumps.
 ## Real key and touch events reach the actions too. Time is stepped by hand, so the flow is
 ## deterministic.
 
@@ -91,6 +92,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_gamepad_bindings()
 	if result.is_empty():
 		result = _check_paths()
+	if result.is_empty():
+		result = _check_forest_and_water()
 	if result.is_empty():
 		result = _check_blocked_by_wild_monster()
 	if result.is_empty():
@@ -548,18 +551,42 @@ func _step() -> void:
 ## A wild monster blocks the way (#19): walking left along its row from (0, 0) stops on
 ## (-1, 0), next to the wild monster on (-2, 0), however long the key is held.
 func _check_blocked_by_wild_monster() -> String:
-	var player: Entity = _driver.state.player(0)
-	player.tile = Vector2i.ZERO
-	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
-	movement.walk(player.id).from = Vector2i.ZERO
-	_player_view.show_state()
-	# Placed by hand, not walked: only tiles walked from here on are expected on top of the trail.
-	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
-	_walked = trails.trail(player.id).tiles.duplicate()
+	_place(Vector2i.ZERO)
 	var result: String = _walk(["move_left"], [Vector2i(-1, 0)])
 	if not result.is_empty():
 		return "walking toward the wild monster: " + result
 	return ""
+
+
+## Tile kinds (#116): walking right from (0, 0) goes through a forest on (1, 0) and stops there,
+## in front of water on (2, 0). The region is given back afterwards.
+func _check_forest_and_water() -> String:
+	var kept: Region = _driver.state.region
+	# A copy (turned by nothing), so the grid redraws the changed tiles in their kinds' colors.
+	var region: Region = kept.turned(0)
+	region.terrain[Vector2i(1, 0)] = TileKinds.number_of("forest")
+	region.terrain[Vector2i(2, 0)] = Region.WATER
+	_driver.state.region = region
+	_grid.show_state()
+	_place(Vector2i.ZERO)
+	var result: String = _walk(["move_right"], [Vector2i(1, 0)])
+	_driver.state.region = kept
+	_grid.show_state()
+	if not result.is_empty():
+		return "walking through the forest toward water: " + result
+	return ""
+
+
+## Puts the player on `tile` by hand, standing still. Only tiles walked from here on are expected
+## on top of the trail.
+func _place(tile: Vector2i) -> void:
+	var player: Entity = _driver.state.player(0)
+	player.tile = tile
+	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
+	movement.walk(player.id).from = tile
+	_player_view.show_state()
+	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	_walked = trails.trail(player.id).tiles.duplicate()
 
 
 ## The player's tile in the simulation.

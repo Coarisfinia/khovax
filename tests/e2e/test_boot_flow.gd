@@ -286,21 +286,24 @@ func _check_ink_outline(main: Node) -> String:
 	return ""
 
 
-## The grid draws each tile in its terrain's color, and follows the state to another region.
+## The grid draws each tile in its kind's color, its tile blueprint's (#116), and follows the
+## state to another region.
 func _check_terrain_colors(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var grid: HexGrid = main.get_node("HexGrid") as HexGrid
 	var region: Region = Region.disc(1)
 	region.terrain[Vector2i(1, 0)] = Region.WATER
 	region.terrain[Vector2i(-1, 0)] = Region.BLOCKED
+	region.terrain[Vector2i(0, 1)] = TileKinds.number_of("forest")
 	driver.state.region = region
 	grid.show_state()
 	if grid.tile_count() != region.size():
 		return "the grid didn't follow the state to another region"
 	var expected: Dictionary[Vector2i, Color] = {
-		Vector2i(0, 0): grid.tile_color,
-		Vector2i(1, 0): grid.water_color,
-		Vector2i(-1, 0): grid.rock_color,
+		Vector2i(0, 0): Color("#5c8c52"),
+		Vector2i(1, 0): Color("#4073b3"),
+		Vector2i(-1, 0): Color("#6b6661"),
+		Vector2i(0, 1): Color("#3d6b38"),
 	}
 	for tile: Vector2i in expected:
 		if grid.tile_color_of(tile) != expected[tile]:
@@ -388,7 +391,8 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 
 
 ## A post stands on every lookout (#181): none in the basic instance, which has no lookout, and one
-## on the glade's.
+## on the glade's. Trees stand on the glade's forest tiles (#116), on no other tile, hidden until
+## an ally has seen them.
 func _check_lookouts(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: LookoutView = main.get_node("LookoutView") as LookoutView
@@ -401,4 +405,45 @@ func _check_lookouts(main: Node) -> String:
 	var lookout: TileTrigger = driver.state.region.triggers[0]
 	if view.figures.keys() != [lookout.tile]:
 		return "the glade's lookout has no post: %s" % [view.figures.keys()]
+	return _check_forest(main)
+
+
+## Trees stand on exactly the glade's forest tiles, cel-shaded, each shown once an ally has seen it.
+func _check_forest(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: TileDecorations = main.get_node("TileDecorations") as TileDecorations
+	view.show_state()
+	var region: Region = driver.state.region
+	var forest: Array[Vector2i] = []
+	for tile: Vector2i in region.sorted_tiles():
+		if region.terrain[tile] == TileKinds.number_of("forest"):
+			forest.append(tile)
+	var shown: Array[Vector2i] = []
+	shown.assign(view.figures.keys())
+	shown.sort()
+	if forest.is_empty() or shown != forest:
+		return "trees stand on %s, not on the glade's forest %s" % [shown, forest]
+	var seen: int = 0
+	for tile: Vector2i in forest:
+		var figure: HexPiece = view.figures[tile]
+		if figure.visible != FogView.ally_sees(driver.state, tile):
+			return "the trees on %s don't follow the fog" % tile
+		seen += 1 if figure.visible else 0
+		if figure.position != figure.position_on(tile) or not _toon_shaded(figure):
+			return "the trees on %s aren't on their tile, or not cel-shaded" % tile
+	if seen == 0 or seen == forest.size():
+		return "expected some of the glade's trees in sight and some hidden, %d seen" % seen
 	return ""
+
+
+## Whether every surface under `model` has the toon light bands, and there is one.
+func _toon_shaded(model: Node) -> bool:
+	var surfaces: int = 0
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var part: MeshInstance3D = node as MeshInstance3D
+		for surface: int in part.mesh.get_surface_count():
+			var toon: StandardMaterial3D = part.get_active_material(surface) as StandardMaterial3D
+			if toon == null or toon.diffuse_mode != BaseMaterial3D.DIFFUSE_TOON:
+				return false
+			surfaces += 1
+	return surfaces > 0

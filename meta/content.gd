@@ -3,10 +3,12 @@ extends RefCounted
 ## The game's content data (#72): JSONC files under data/, one per entry, checked against their
 ## schema in CI (data/schemas/) and here for what a schema can't check: ids unique and matching
 ## their file, types from the type chart, and two types never from the same family. Loot tables
-## (#90) are read here too, checked by LootTable.
+## (#90) are read here too, checked by LootTable, and tile blueprints (#116), checked by
+## TileBlueprint.
 
 const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
+const TILES_DIR: String = "res://data/tiles/"
 ## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
 const SPECIES_FIELDS: Array[String] = ["id", "types", "hp", "strength"]
 ## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
@@ -23,6 +25,8 @@ const FAMILIES: Array[Array] = [
 var species: Dictionary[String, Species] = {}
 ## Every loot table, by id.
 var loot_tables: Dictionary[String, LootTable] = {}
+## Every tile blueprint, by id.
+var tiles: Dictionary[String, TileBlueprint] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -59,6 +63,24 @@ static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 				content.problem = file_name + ": " + table.problem
 				return content
 			content.loot_tables[table.id] = table
+	return content
+
+
+## Every tile blueprint file in `directory`, read and checked.
+static func load_tiles(directory: String = TILES_DIR) -> Content:
+	var content: Content = Content.new()
+	var numbers: Dictionary[int, bool] = {}
+	for file_name: String in DirAccess.get_files_at(directory):
+		if file_name.ends_with(".jsonc"):
+			var text: String = FileAccess.get_file_as_string(directory + file_name)
+			var tile: TileBlueprint = TileBlueprint.parse(file_name.get_basename(), text)
+			if tile.problem.is_empty() and numbers.has(tile.number):
+				tile.problem = "its number %d is another tile blueprint's" % tile.number
+			if not tile.problem.is_empty():
+				content.problem = file_name + ": " + tile.problem
+				return content
+			content.tiles[tile.id] = tile
+			numbers[tile.number] = true
 	return content
 
 
@@ -119,3 +141,17 @@ static func amount(value: Variant) -> int:
 		return 0
 	var whole: int = type_convert(value, TYPE_INT)
 	return whole
+
+
+## Why `data` has a field outside `allowed`, or "".
+static func unknown_field(data: Dictionary, allowed: Array[String]) -> String:
+	for key: Variant in data:
+		if not allowed.has(str(key)):
+			return "field %s isn't allowed here" % key
+	return ""
+
+
+## `value` if it's a string, or "" for anything else, so that e.g. `true` never reads as an id.
+static func text_of(value: Variant) -> String:
+	var text: String = value if value is String else ""
+	return text
