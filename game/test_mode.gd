@@ -17,6 +17,8 @@ func _ready() -> void:
 	# The flow plays a fresh world from a fixed seed: it never resumes or overwrites a saved one.
 	# Autoloads are ready before the main scene, so its keeper never sees the default.
 	WorldKeeper.default_path = ""
+	# Autoloads are ready before the main scene is loaded, so its driver starts on this seed.
+	GameDriver.fixed_seed = 0
 	if not ResourceLoader.exists(FLOW):
 		_report("this build has no device test flow")
 		return
