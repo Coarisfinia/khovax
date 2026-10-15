@@ -110,6 +110,7 @@ func _fit(region: Region) -> void:
 	plane.size = Vector2(bounds.size.x, bounds.size.z)
 	mesh = plane
 	position = Vector3(bounds.get_center().x, HEIGHT, bounds.get_center().z)
+	cloud.set_shader_parameter("to_instance", Projection(transform))
 
 
 ## The tiles the cloud has to cover: the region's and its neighbours', in the region's coordinates.
