@@ -47,9 +47,14 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		var caught: WildMonsterCaught = event as WildMonsterCaught
 		var catcher: Entity = null if caught == null else driver.state.entity(caught.catcher_id)
 		if catcher != null and catcher.slot == input.slot:
-			var gain: Gain = Gain.new()
-			gain.caught_species.append(PLACEHOLDER_SPECIES)
-			_report(keeper.take(gain, Time.get_ticks_msec()))
+			_report(keeper.take(_catch_of(PLACEHOLDER_SPECIES), Time.get_ticks_msec()))
+
+
+## The gain of catching one monster of `species`.
+static func _catch_of(species: String) -> Gain:
+	var gain: Gain = Gain.new()
+	gain.caught_species.append(species)
+	return gain
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.
