@@ -85,23 +85,3 @@ func _on_timeout(file: String) -> void:
 	if _current == file:
 		printerr("FAIL  ", file, ": still running after %d s" % int(TEST_TIMEOUT_SECONDS))
 		quit(1)
-
-
-class ErrorCounter:
-	extends Logger
-
-	var count: int = 0
-
-	# The parameters are Logger's virtual method signature, fixed by the engine.
-	# gdstyle:ignore=quality/max-parameters
-	func _log_error(
-		_function: String,
-		_file: String,
-		_line: int,
-		_code: String,
-		_rationale: String,
-		_editor_notify: bool,
-		_error_type: int,
-		_script_backtraces: Array[ScriptBacktrace],
-	) -> void:
-		count += 1
