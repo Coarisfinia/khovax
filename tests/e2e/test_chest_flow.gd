@@ -3,15 +3,18 @@ extends RefCounted
 ## their pieces however the seed arranges and turns them. A player who walks onto a chest opens it:
 ## it bursts into loot, every player in the run gets their own roll on the glade's loot table
 ## (owner, #124), and the chest is gone, so walking there again opens nothing. The same seed opens
-## the same chest with the same loot. Instances without a loot table have no chests.
+## the same chest with the same loot. Instances without a loot table have no chests. This
+## machine's player's own loot lands in their profile and its save; the others' doesn't (#74).
 
 const SEED: int = 7
+## Where the flow's profile is saved, apart from the player's own.
+const SAVE_PATH: String = "user://test_chest_profile.json"
 
 ## The direction the last _open_first_chest walked in.
 var _direction: int = 0
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	var result: String = _check_placed()
 	if result.is_empty():
 		result = _check_opened()
@@ -20,6 +23,8 @@ func run(_tree: SceneTree) -> String:
 			result = "the same seed opened the chest with different loot"
 	if result.is_empty() and InstanceBlueprints.basic(SEED).feature(Features.CHESTS) != null:
 		result = "an instance without a loot table has chests"
+	if result.is_empty():
+		result = await _check_saved(tree)
 	return result
 
 
@@ -102,3 +107,31 @@ func _commands(move: int) -> Array[Command]:
 func _first_loot() -> String:
 	var opened: ChestOpened = _open_first_chest(InstanceBlueprints.create("glade", SEED, 2))
 	return "none" if opened == null else str(opened.loot)
+
+
+## A chest opened in a run: the driver's ticked events bring this machine's player (slot 0) their
+## own roll, into the profile and its save at once, and not slot 1's.
+func _check_saved(tree: SceneTree) -> String:
+	var save: String = ProjectSettings.globalize_path(SAVE_PATH)
+	var _gone: Error = DirAccess.remove_absolute(save)
+	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var main: Node = (load(path) as PackedScene).instantiate()
+	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
+	holder.save_path = SAVE_PATH
+	tree.root.add_child(main)
+	await tree.process_frame
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	driver.set_process(false)
+	var own: Dictionary[String, int] = { "moss": 2 }
+	var other: Dictionary[String, int] = { "berry": 1 }
+	var loot: Dictionary[int, Dictionary] = { 0: own, 1: other }
+	var events: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, loot)]
+	driver.ticked.emit(driver.state.tick, events)
+	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
+	var result: String = ""
+	if saved.materials != own:
+		result = "the profile saved %s from the chest, not %s" % [saved.materials, own]
+	main.queue_free()
+	await tree.process_frame
+	_gone = DirAccess.remove_absolute(save)
+	return result
