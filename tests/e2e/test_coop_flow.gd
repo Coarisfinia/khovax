@@ -7,6 +7,7 @@ extends RefCounted
 ## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
 ## one mark per slot number, so the two are told apart by more than color (#233, #68), and the
 ## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
+## Under cover, a player shows as a silhouette in their own color (#233), never in the open.
 ## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -92,6 +93,31 @@ func _check_circles() -> String:
 			return "player %d's circle isn't in their color with %d marks" % [slot + 1, slot + 1]
 	if _views[0].circle.color == _views[1].circle.color:
 		return "the two players' circles have the same color"
+	return _check_silhouettes()
+
+
+## Out in the open, no silhouette shows; in a tile that hides, a player is under cover; and each
+## player's silhouette is their own, in their own color.
+func _check_silhouettes() -> String:
+	var region: Region = Region.disc(1)
+	region.terrain[Vector2i(1, 0)] = TileKinds.number_of("forest")
+	if CoverSilhouette.covers(
+		region,
+		Vector2i.ZERO,
+	) or not CoverSilhouette.covers(region, Vector2i(1, 0)):
+		return "cover isn't told apart from the open"
+	for slot: int in 2:
+		var silhouette: CoverSilhouette = _views[slot].silhouette
+		_views[slot].ease_silhouette(1.0)
+		if silhouette == null or silhouette.material.albedo_color.a > 0.01:
+			return "player %d shows a silhouette out in the open" % (slot + 1)
+		var own: Color = PersonalColor.of(_driver.world.world_seed, slot)
+		silhouette.ease_toward(true, own, 5.0)
+		var expected: Color = Color(own, CoverSilhouette.ALPHA)
+		if not silhouette.material.albedo_color.is_equal_approx(expected):
+			return "player %d's silhouette under cover isn't in their color" % (slot + 1)
+	if _views[0].silhouette.material == _views[1].silhouette.material:
+		return "the two players share one silhouette"
 	return _check_trail_marks()
 
 

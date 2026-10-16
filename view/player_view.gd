@@ -56,6 +56,8 @@ var _drawn_world: World
 var _animations: AnimationPlayer
 ## The circle under the figure, in the player's personal color (#233); made in the game only.
 var circle: PlayerCircle
+## The player's silhouette in their personal color while under cover (#233); made in the game only.
+var silhouette: CoverSilhouette
 
 
 func _ready() -> void:
@@ -67,6 +69,8 @@ func _ready() -> void:
 		Toon.apply_to_model(model)
 		circle = PlayerCircle.new(slot)
 		add_child(circle)
+		silhouette = CoverSilhouette.new()
+		silhouette.lay_over(model)
 	for part: String in HIDDEN_PARTS:
 		var node: Node3D = model.find_child(part) as Node3D
 		if node != null:
@@ -82,6 +86,18 @@ func _process(delta: float) -> void:
 		ease_crossing(delta)
 		show_state()
 		turn(delta)
+		ease_silhouette(delta)
+
+
+## Shows the player's silhouette while they stand under cover, eased in and out over `delta`.
+func ease_silhouette(delta: float) -> void:
+	if silhouette == null or driver == null or driver.state == null or driver.world == null:
+		return
+	var player: Entity = driver.state.player(slot)
+	if player == null:
+		return
+	var covered: bool = CoverSilhouette.covers(driver.state.region, player.tile)
+	silhouette.ease_toward(covered, PersonalColor.of(driver.world.world_seed, slot), delta)
 
 
 ## Places the piece from the current state and picks the clip. Called every frame; tests call it
