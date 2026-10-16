@@ -18,6 +18,8 @@ extends RefCounted
 static var _ids: Array[String] = []
 ## Whether walkers can stand on each kind, by number.
 static var _walkable: Array[bool] = []
+## Whether wild monsters hide in each kind, by number (#202).
+static var _hides: Array[bool] = []
 
 
 ## The number of the kind with this id, or -1 when there's none.
@@ -38,6 +40,12 @@ static func is_walkable(kind: int) -> bool:
 	return kind >= 0 and kind < _walkable.size() and _walkable[kind]
 
 
+## Whether a wild monster standing on a tile of kind `kind` hides there (#202).
+static func hides(kind: int) -> bool:
+	_read_once()
+	return kind >= 0 and kind < _hides.size() and _hides[kind]
+
+
 ## How many numbers there are, the largest kind's plus one; gaps count, as kinds nobody has.
 static func count() -> int:
 	_read_once()
@@ -54,5 +62,7 @@ static func _read_once() -> void:
 		if tile.number >= _ids.size():
 			var _ids_grown: int = _ids.resize(tile.number + 1)
 			var _walkable_grown: int = _walkable.resize(tile.number + 1)
+			var _hides_grown: int = _hides.resize(tile.number + 1)
 		_ids[tile.number] = tile.id
 		_walkable[tile.number] = tile.walkable
+		_hides[tile.number] = tile.hides

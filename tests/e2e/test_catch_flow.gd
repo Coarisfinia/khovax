@@ -15,6 +15,10 @@ extends RefCounted
 ## level and weakening). A broken ring catches nothing, says so, and starts its trail over. A
 ## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
 ## the small ring holds; standing on any other segment of it, they don't, and it breaks.
+##
+## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
+## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
+## tile that hides.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
@@ -83,6 +87,66 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = await _check_saved(tree)
 	return result
+
+
+## The glade's wild monster in the shrubs starts hidden, and jumps out on the step that brings the
+## player next to it, once; a legend can't hide one in plain ground.
+func _check_hiding() -> String:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 0)
+	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	if hiding == null or hiding.hidden.size() != 1:
+		return "the glade's wild monster in the shrubs doesn't start hidden"
+	var monster: int = hiding.hidden[0]
+	var tile: Vector2i = state.entity(monster).tile
+	var path: Array[int] = []
+	for direction: Vector2i in Hex.DIRECTIONS:
+		if path.is_empty() and FlowSteps.walkable_for_players(state, tile + direction):
+			path = FlowSteps.shortest_path(state, state.player(0).tile, tile + direction)
+	if path.is_empty():
+		return "no way leads next to the hidden wild monster on %s" % tile
+	var jumps: int = 0
+	for direction: int in path:
+		var events: Array[RefCounted] = FlowSteps.step(state, direction)
+		var near: bool = Hex.distance(state.player(0).tile, tile) <= HidingFeature.NEAR
+		for event: RefCounted in events:
+			jumps += 1 if event is MonsterJumpedOut else 0
+		if near != (jumps == 1) or hiding.is_hidden(monster) == near:
+			return "on %s, next to it: %s, it jumped out %d times" % [
+				state.player(0).tile,
+				near,
+				jumps,
+			]
+		if near:
+			break
+	if jumps != 1:
+		return "the hidden wild monster jumped out %d times" % jumps
+	return _check_hiding_legend()
+
+
+## A legend hides a wild monster in shrubs, which hide, but not in ground, which doesn't.
+func _check_hiding_legend() -> String:
+	var piece: String = "# Hiding
+
+## Tiles
+
+```
+h
+```
+
+## Legend
+
+- `h`: "
+	piece += RegionDocument.HIDING
+	var shrubs: Region = RegionDocument.parse(piece + "shrubs
+")
+	if not shrubs.problem.is_empty() or shrubs.wild_monsters != [Vector2i.ZERO]:
+		return "a wild monster hiding in shrubs doesn't read: " + shrubs.problem
+	if not HidingFeature.hides_at(shrubs, Vector2i.ZERO):
+		return "the wild monster said to hide in shrubs isn't on shrubs"
+	if RegionDocument.parse(piece + "ground
+").problem.is_empty():
+		return "a legend hid a wild monster in plain ground"
+	return ""
 
 
 ## Every ring tile but the last: the walk passes right by the wild monster and catches nothing.
@@ -627,7 +691,7 @@ func _check_species() -> String:
 	events.append_array(_settle(state))
 	if _caught_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the catch didn't carry the caught monster's species"
-	return ""
+	return _check_hiding()
 
 
 ## The species of the first wild monster in `state`.

@@ -1,8 +1,9 @@
-// Forest: ground under trees, a darker green. Walkable, and sight passes through it.
+// Forest: ground under trees, a darker green. Walkable, sight passes through it, and wild
+// monsters hide in it (#202).
 {
 	"id": "forest",
 	"number": 3, // permanent: never reused or changed once shipped
 	"color": "#3d6b38",
 	"model": "res://assets/kaykit-hexagon/trees_A_large.gltf",
-	"traits": { "walkable": true }
+	"traits": { "walkable": true, "hides": true }
 }

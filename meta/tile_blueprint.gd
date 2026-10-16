@@ -6,7 +6,7 @@ extends RefCounted
 
 ## A tile blueprint file's fields, as its schema (data/schemas/tiles.schema.json) allows them.
 const FIELDS: Array[String] = ["id", "number", "color", "model", "scale", "traits"]
-const TRAITS: Array[String] = ["walkable"]
+const TRAITS: Array[String] = ["walkable", "hides"]
 ## The largest number a kind may have, so a typo can't make the kind list huge.
 const MAX_NUMBER: int = 255
 ## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
@@ -24,6 +24,8 @@ var model: String = ""
 var scale: float = 1.0
 ## Whether walkers can stand on it.
 var walkable: bool = false
+## Whether a wild monster standing on it hides there until a player comes next to it (#202).
+var hides: bool = false
 ## Why the blueprint couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -40,13 +42,17 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	var raw_traits: Variant = data.get("traits")
 	var traits: Dictionary = raw_traits if raw_traits is Dictionary else {}
 	var walks: Variant = traits.get("walkable")
+	var hiding: Variant = traits.get("hides", false)
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
 	blueprint.number = _number(data.get("number"))
 	blueprint.walkable = walks is bool and walks
+	blueprint.hides = hiding is bool and hiding
 	blueprint.problem = Content.unknown_field(data, FIELDS) + Content.unknown_field(traits, TRAITS)
 	if blueprint.problem.is_empty():
 		blueprint.problem = blueprint._check(file_id, data, walks)
+	if blueprint.problem.is_empty() and not hiding is bool:
+		blueprint.problem = "its hides trait is true or false"
 	return blueprint
 
 
