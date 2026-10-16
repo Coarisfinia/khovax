@@ -203,7 +203,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other: a feature may read the features it `requires` and change them only through
-  their public methods (e.g. `CatchFeature` restarts a trail with `TrailFeature.restart`), never
+  their public methods (e.g. `CatchFeature` clears a ring off the trail with `TrailFeature.clear`), never
   their fields. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
 - **Entities** (#31): everything in the world (players, wild monsters, later totems) is an
