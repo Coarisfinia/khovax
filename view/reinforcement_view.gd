@@ -27,7 +27,7 @@ func show_state() -> void:
 		catching = driver.state.feature(Features.CATCH) as CatchFeature
 	if catching != null:
 		for seal: RingSeal in catching.seals.values():
-			for tile: Vector2i in CatchFeature.reinforced(driver.state, seal):
+			for tile: Vector2i in RingSealing.reinforced(driver.state, seal):
 				braced[tile] = true
 	for tile: Vector2i in figures.keys():
 		if not braced.has(tile):
