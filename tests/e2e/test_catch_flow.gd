@@ -442,11 +442,12 @@ func _check_view(tree: SceneTree) -> String:
 	var result: String = _check_filling(main, driver.state)
 	if result.is_empty():
 		result = _check_brace(main, driver.state)
+	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
+	var brace: HexPiece = braces.figures.get(driver.state.player(0).tile)
 	var _events: Array[RefCounted] = _settle(driver.state)
 	view.show_state()
-	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
 	braces.show_state()
-	if result.is_empty() and not braces.figures.is_empty():
+	if result.is_empty() and _brace_left(braces, brace):
 		result = "a brace stayed after the seal ended: %s" % [braces.figures.keys()]
 	if result.is_empty() and (
 		not view.figures.is_empty() or not is_instance_valid(figure) or not figure.is_inside_tree()
@@ -481,8 +482,13 @@ func _check_filling(main: Node, state: GameState) -> String:
 	return ""
 
 
+## Whether a brace is still shown, or `brace`, shown before, is still kept.
+func _brace_left(braces: ReinforcementView, brace: HexPiece) -> bool:
+	return not braces.figures.is_empty() or (brace != null and not brace.is_queued_for_deletion())
+
+
 ## The ring's player ends their walk on its wall, so that segment is reinforced: it, and only it,
-## wears a brace.
+## wears a brace, a ring shape rather than only a color (#68).
 func _check_brace(main: Node, state: GameState) -> String:
 	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
 	braces.show_state()
@@ -494,6 +500,9 @@ func _check_brace(main: Node, state: GameState) -> String:
 			braced,
 			CatchFeature.reinforced(state, seal),
 		]
+	var brace: MeshInstance3D = braces.figures[braced[0]].get_child(0) as MeshInstance3D
+	if brace == null or not brace.mesh is TorusMesh:
+		return "the brace isn't a ring"
 	return ""
 
 
