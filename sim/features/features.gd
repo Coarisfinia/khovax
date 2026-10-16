@@ -14,3 +14,4 @@ const EXITS: int = 7
 const TRIGGERS: int = 8
 const ENRAGE: int = 9
 const HIDING: int = 10
+const CATCH_LOOT: int = 11

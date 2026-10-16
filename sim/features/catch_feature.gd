@@ -153,6 +153,9 @@ func _push(state: GameState, catcher_id: int) -> void:
 	var seal: RingSeal = seals[catcher_id]
 	var braced: Array[Vector2i] = reinforced(state, seal)
 	seal.ticks += 1
+	for entity: Entity in state.entities:
+		if entity.slot != Entity.NO_SLOT and seal.walls.has(entity.tile):
+			seal.braced[entity.id] = seal.braced.get(entity.id, 0) + 1
 	for i: int in seal.monsters.size():
 		var push: int = pressure(wild, seal.monsters[i])
 		if braced.has(seal.walls[seal.targets[i]]):
@@ -173,7 +176,7 @@ func _push(state: GameState, catcher_id: int) -> void:
 		_end(state, catcher_id)
 	elif seal.ticks >= seal.seal_ticks:
 		for monster_id: int in seal.monsters.duplicate():
-			_catch(state, monster_id, catcher_id)
+			_catch(state, monster_id, catcher_id, seal)
 		_end(state, catcher_id)
 
 
@@ -232,13 +235,39 @@ func _edge_of(region: Region) -> Array[Vector2i]:
 	return _edge
 
 
-func _catch(state: GameState, monster_id: int, catcher_id: int) -> void:
+func _catch(state: GameState, monster_id: int, catcher_id: int, seal: RingSeal) -> void:
 	var tile: Vector2i = state.entity(monster_id).tile
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
 	var slot: int = state.entity(catcher_id).slot
 	state.remove_entity(monster_id)
-	state.events.append(WildMonsterCaught.new(monster_id, catcher_id, slot, tile, species))
+	var caught: WildMonsterCaught = WildMonsterCaught.new(
+		monster_id,
+		catcher_id,
+		slot,
+		tile,
+		species,
+	)
+	_add_contributions(state, seal, caught)
+	state.events.append(caught)
+
+
+## What each player in the instance did for `seal`'s ring (#86), into `caught`: the wall tiles they
+## colored, and the ticks they stood on the wall while it sealed. Read before the ring comes off
+## the trail.
+static func _add_contributions(state: GameState, seal: RingSeal, caught: WildMonsterCaught) -> void:
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	for wall: Vector2i in seal.walls:
+		var colorer_id: int = trail.tiles.get(wall, 0)
+		var colorer: Entity = state.entity(colorer_id)
+		if colorer != null and colorer.slot != Entity.NO_SLOT:
+			caught.walls_colored[colorer.slot] = caught.walls_colored.get(colorer.slot, 0) + 1
+	# By slot, added up: a player who left and came back is a new entity in the same slot.
+	for braced_id: int in seal.braced:
+		var bracer: Entity = state.entity(braced_id)
+		if bracer != null and bracer.slot != Entity.NO_SLOT:
+			var had: int = caught.braced_ticks.get(bracer.slot, 0)
+			caught.braced_ticks[bracer.slot] = had + seal.braced[braced_id]
 
 
 ## A player who leaves the instance takes their seal with them, unfinished; a wild monster that
@@ -315,10 +344,15 @@ static func _progress_problem(state: GameState, seal: RingSeal, entry: DataReade
 	var walls: Array[Vector2i] = entry.tiles("walls", state.region)
 	var damage: Array[int] = entry.wholes("damage", 0, DataReader.MOST)
 	var ticks: int = entry.whole("ticks", 0, DataReader.MOST)
+	var braced: Array[int] = entry.wholes("braced", 0, DataReader.MOST)
 	if entry.failed() or walls != seal.walls or damage.size() != walls.size():
 		return "its walls aren't the ring's"
+	if braced.size() % 2 != 0:
+		return "its braced ticks aren't pairs of a player and ticks"
 	seal.damage = damage
 	seal.ticks = ticks
+	for i: int in range(0, braced.size(), 2):
+		seal.braced[braced[i]] = braced[i + 1]
 	if seal.failed_segment() >= 0 or ticks >= seal.seal_ticks:
 		return "it has already broken or held"
 	return ""

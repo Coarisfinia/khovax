@@ -49,12 +49,25 @@ static func parse(file_id: String, text: String) -> LootTable:
 	return table
 
 
-## Rolls one entry: its item and amount, as {item: amount}. A blank rolls on `instance_table`.
+## Rolls one entry: its item and amount, as {item: amount}. A blank rolls on `instance_table`, or
+## gives nothing without one.
 func roll(rng: Rng, instance_table: LootTable) -> Dictionary[String, int]:
 	var picked: int = rng.pick_weighted(chances)
+	var none: Dictionary[String, int] = {}
 	if items[picked].is_empty():
-		return instance_table.roll(rng, null)
+		return instance_table.roll(rng, null) if instance_table != null else none
 	return { items[picked]: rng.between(mins[picked], maxes[picked]) }
+
+
+## Rolls `times` times, adding up what each roll gave, as {item: amount}.
+func roll_times(rng: Rng, times: int, instance_table: LootTable) -> Dictionary[String, int]:
+	var found: Dictionary[String, int] = {}
+	for _roll: int in times:
+		var drawn: Dictionary[String, int] = roll(rng, instance_table)
+		for item: String in drawn:
+			var had: int = found.get(item, 0)
+			found[item] = had + drawn[item]
+	return found
 
 
 func _read_entries(entries: Array) -> String:

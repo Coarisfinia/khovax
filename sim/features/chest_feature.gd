@@ -114,11 +114,5 @@ func _roll_for_players(state: GameState) -> Dictionary[int, Dictionary]:
 	for slot: int in GameState.MAX_PLAYERS:
 		if state.player(slot) == null:
 			continue
-		var found: Dictionary[String, int] = {}
-		for _roll: int in ROLLS_PER_PLAYER:
-			var drawn: Dictionary[String, int] = table.roll(_rng, table)
-			for item: String in drawn:
-				var had: int = found.get(item, 0)
-				found[item] = had + drawn[item]
-		loot[slot] = found
+		loot[slot] = table.roll_times(_rng, ROLLS_PER_PLAYER, table)
 	return loot
