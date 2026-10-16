@@ -2,7 +2,7 @@ class_name RingBroken
 extends RefCounted
 ## Event: a player's sealing ring broke this tick (#219): a wall segment gave way under the wild
 ## monsters pushing against it, nothing inside was caught, and the player's trail starts over.
-## Enraging the monsters inside builds on this later (#220).
+## The monsters inside are enraged by it (#220, EnrageFeature).
 
 ## The ring's player's entity, and their slot.
 var catcher_id: int

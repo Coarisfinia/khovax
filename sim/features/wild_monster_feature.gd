@@ -6,12 +6,17 @@ extends Feature
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
 ## species. For now each just stands there (its look is a placeholder, #85); walkers can't step onto
 ## its tile (MovementFeature), and a ring catches it (CatchFeature). Each has its species' strength
-## and HP, and starts at full HP (#219); nothing hurts it yet. Like every feature, switched off it
+## and HP, and starts at full HP (#219); nothing hurts it yet. Enraged (#220, EnrageFeature), it
+## grows stronger with every stack of rage, which it keeps. Like every feature, switched off it
 ## keeps its state: the monsters stay where they are, and only its own rules stop.
 
 ## The stats of a species the feature wasn't given any for: it pushes on nothing.
 const UNKNOWN_MAX_HP: int = 1
 const UNKNOWN_STRENGTH: int = 0
+## How much stronger each stack of rage makes a wild monster (thousandths), and the most stacks it
+## takes. Placeholders to tune (#220).
+const RAGE_STRENGTH: int = 500
+const MOST_RAGE: int = 3
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
@@ -25,6 +30,8 @@ var strengths: Dictionary[String, int] = {}
 var _species: Dictionary[int, String] = {}
 ## Each wild monster's HP left, by entity id.
 var _hp: Dictionary[int, int] = {}
+## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
+var _rage: Dictionary[int, int] = {}
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 
@@ -66,6 +73,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
 	var _dropped: bool = _species.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
+	_dropped = _rage.erase(removed_id)
 
 
 ## Whether the entity with this id is a wild monster.
@@ -87,8 +95,25 @@ func max_hp_of(entity_id: int) -> int:
 	return max_hps.get(species_of(entity_id), UNKNOWN_MAX_HP)
 
 
+## Its species' strength, raised by RAGE_STRENGTH for every stack of rage it has (#220).
 func strength_of(entity_id: int) -> int:
-	return strengths.get(species_of(entity_id), UNKNOWN_STRENGTH)
+	var base: int = strengths.get(species_of(entity_id), UNKNOWN_STRENGTH)
+	return Fixed.scale(base, Fixed.ONE + rage_of(entity_id) * RAGE_STRENGTH)
+
+
+## The wild monster's stacks of rage.
+func rage_of(entity_id: int) -> int:
+	return _rage.get(entity_id, 0)
+
+
+## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
+## `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
+func enrage(entity_id: int, heal: int) -> void:
+	if not is_wild_monster(entity_id):
+		return
+	_rage[entity_id] = mini(rage_of(entity_id) + 1, MOST_RAGE)
+	var full: int = max_hp_of(entity_id)
+	_hp[entity_id] = mini(hp_of(entity_id) + Fixed.scale(full, heal), full)
 
 
 ## Each wild monster still in the instance as its entity's id, its species and its HP left, in id
@@ -97,7 +122,13 @@ func strength_of(entity_id: int) -> int:
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for monster: int in monsters:
-		saved.append({ "entity": monster, "species": _species[monster], "hp": _hp[monster] })
+		var entry: Dictionary = {
+			"entity": monster,
+			"species": _species[monster],
+			"hp": _hp[monster],
+		}
+		entry["rage"] = rage_of(monster)
+		saved.append(entry)
 	return { "wild_monsters": saved }
 
 
@@ -105,6 +136,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
 	_species.clear()
 	_hp.clear()
+	_rage.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
 		var species: String = entry.text("species")
@@ -121,6 +153,9 @@ func load_values(state: GameState, values: DataReader) -> void:
 		monsters.append(monster)
 		_species[monster] = species
 		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
+		var rage: int = entry.whole("rage", 0, MOST_RAGE)
+		if rage > 0:
+			_rage[monster] = rage
 	monsters.sort()
 
 
@@ -130,4 +165,5 @@ func hash_values() -> Array[int]:
 		values.append(monster)
 		values.append(_known.find(_species[monster]))
 		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
+		values.append(rage_of(monster))
 	return values
