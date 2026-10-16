@@ -7,7 +7,8 @@ extends HexPiece
 ## moving and turns smoothly to face where it goes. Players walk through each other (#31), so
 ## several can stand on one tile: then each stands at its own spot inside it, by slot, easing there
 ## and back rather than snapping (#151). Walking out through an exit, it glides on onto the next
-## instance's way back (#189). It only reads the state; the spot and the glide are the view's.
+## instance's way back (#189). A circle under the figure shows the player's personal color and a
+## mark per slot (#233). It only reads the state; the spot, the glide and the color are the view's.
 
 ## How fast the character turns toward where it walks, in radians per second: quick enough to
 ## follow a zigzag, never a snap.
@@ -53,6 +54,8 @@ var _drawn_at: Vector3 = Vector3.ZERO
 var _drawn_in: GameState
 var _drawn_world: World
 var _animations: AnimationPlayer
+## The circle under the figure, in the player's personal color (#233); made in the game only.
+var circle: PlayerCircle
 
 
 func _ready() -> void:
@@ -62,6 +65,8 @@ func _ready() -> void:
 	# Only in the game: in the editor, the copies would be saved into the scene.
 	if not Engine.is_editor_hint():
 		Toon.apply_to_model(model)
+		circle = PlayerCircle.new(slot)
+		add_child(circle)
 	for part: String in HIDDEN_PARTS:
 		var node: Node3D = model.find_child(part) as Node3D
 		if node != null:
@@ -93,6 +98,8 @@ func show_state() -> void:
 		crossing = Vector3.ZERO
 		return
 	tile = player.tile
+	if circle != null and driver.world != null:
+		circle.paint(PersonalColor.of(driver.world.world_seed, slot))
 	# Set explicitly, not left to the tile setter: the spot is added to it once below.
 	position = tile_position()
 	# Without movement in the instance, the player simply stands on its tile.
