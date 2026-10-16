@@ -7,6 +7,8 @@ extends RefCounted
 ## around another tile catch nothing. Allies share one trail (#87): two players close one ring
 ## together, and the catch goes to the lowest slot among those who colored its wall (owner, #86),
 ## whoever's move closed it; the ring then comes off the trail, the trail leading up to it stays.
+## A ring around several monsters splits them by contribution (#260): two allies who each colored
+## half of it get one each, and the owner's examples split as decided.
 ## Catching is deterministic. A catch by this
 ## machine's player lands in their profile and its save at once (#132), as the species it was:
 ## named by its spot, or rolled from the blueprint's list (#133).
@@ -365,7 +367,56 @@ func _check_together() -> String:
 		return "after the allies' catch the trail is %s, not %s" % [trail.sorted_tiles(), expected]
 	if trail.tiles[first.tile] != first.id or trail.tiles[second.tile] != second.id:
 		return "the players' fresh trail tiles aren't their own"
-	return problem
+	return problem if not problem.is_empty() else _check_shared_catch()
+
+
+## Two weak wild monsters in one ring that two allies closed together, each coloring half of its
+## wall: each gets one (#260). And the owner's examples: shares round to the closest whole monster,
+## what rounding leaves over goes to the largest share still owed, ties to whoever joined first.
+func _check_shared_catch() -> String:
+	var splits: Dictionary[String, Array] = {
+		"40/60": [[4, 6], [1, 2]],
+		"40/40/20": [[4, 4, 2], [1, 2]],
+		"thirds": [[1, 1, 1], [1, 2]],
+		"90/10": [[9, 1], [1, 1]],
+	}
+	for example: String in splits:
+		var amounts: Array = splits[example][0]
+		if _split(amounts, 2) != splits[example][1]:
+			return "two monsters at %s went to %s, not %s" % [
+				example,
+				_split(amounts, 2),
+				splits[example][1],
+			]
+	var state: GameState = _outcome_state(WEAK, [Vector2i.ZERO, Hex.DIRECTIONS[0]])
+	var ring: Array[Vector2i] = Hex.ring(2)
+	var first: Entity = state.add_entity(0, ring[0])
+	var second: Entity = state.add_entity(1, ring[6])
+	var events: Array[RefCounted] = _walk_slot(state, 0, ring.slice(1, 6))
+	events.append_array(_walk_slot(state, 1, ring.slice(7)))
+	events.append_array(_settle(state))
+	var takers: Array[int] = []
+	for caught: WildMonsterCaught in _caught(events):
+		takers.append(caught.catcher_id)
+	takers.sort()
+	if takers != [first.id, second.id]:
+		return "two allies who each colored half a ring around two monsters got %s" % [takers]
+	return ""
+
+
+## Who gets each of `count` monsters from players with these contributions (entity ids 1 and up),
+## sorted.
+static func _split(amounts: Array, count: int) -> Array[int]:
+	var done: Dictionary[int, int] = {}
+	for i: int in amounts.size():
+		done[i + 1] = amounts[i]
+	var monsters: Array[int] = []
+	for i: int in count:
+		monsters.append(100 + i)
+	var takers: Array[int] = []
+	takers.assign(CatchShares.hand_out(monsters, done).values())
+	takers.sort()
+	return takers
 
 
 ## Walks the player in `slot` along `path` while the other player stands; returns the events.
