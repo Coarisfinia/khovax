@@ -12,8 +12,10 @@ config_version=5
 
 config/name="khovax"
 config/version="0.1.0"
-run/main_scene="res://game/main.tscn"
+run/main_scene="res://game/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
+boot_splash/bg_color=Color(0.86, 0.88, 0.93, 1)
+boot_splash/show_image=false
 
 [autoload]
 

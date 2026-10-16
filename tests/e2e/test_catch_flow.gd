@@ -425,7 +425,7 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 ## segment its player stands on wears a brace, reinforced (#234); then the wild monster doesn't
 ## blink out: it shrinks away calmly, and then it's gone, and so is the brace.
 func _check_view(tree: SceneTree) -> String:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	tree.root.add_child(main)
 	await tree.process_frame
@@ -510,7 +510,7 @@ func _check_brace(main: Node, state: GameState) -> String:
 ## and, the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
 func _check_saved(tree: SceneTree) -> String:
 	SaveStore.remove(SAVE_PATH)
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
 	holder.save_path = SAVE_PATH

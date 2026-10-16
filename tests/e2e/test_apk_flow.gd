@@ -6,7 +6,7 @@ const FLOW: String = "res://tests/apk/apk_flow.gd"
 
 
 func run(tree: SceneTree) -> String:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	tree.root.add_child(main)
 	await tree.process_frame

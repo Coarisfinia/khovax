@@ -440,7 +440,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 ## The main scene, keeping its world and profile in the flow's files, with nothing running on its
 ## own: the flow steps it.
 func _boot(tree: SceneTree) -> Node:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	(main.get_node("WorldKeeper") as WorldKeeper).save_path = WORLD_PATH
 	(main.get_node("ProfileHolder") as ProfileHolder).save_path = PROFILE_PATH

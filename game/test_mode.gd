@@ -22,8 +22,11 @@ func _ready() -> void:
 	if not ResourceLoader.exists(FLOW):
 		_report("this build has no device test flow")
 		return
-	# The main scene comes up after the autoloads.
+	# The boot scene comes up after the autoloads, and starts the game once it has loaded (#243).
 	await get_tree().process_frame
+	var boot: Boot = get_tree().current_scene as Boot
+	if boot != null and boot.game == null:
+		var _started: Node = await boot.game_started
 	_cheapest_frames(get_tree().current_scene)
 	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
 	var errors: ErrorCounter = ErrorCounter.new()
