@@ -36,6 +36,7 @@ func _ready() -> void:
 	bus.subscribe(&"WildMonsterCaught", _on_event)
 	bus.subscribe(&"ChestOpened", _on_event)
 	bus.subscribe(&"LootFound", _on_event)
+	bus.subscribe(&"CatchLoot", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -82,6 +83,8 @@ func _gain_of(event: RefCounted) -> Gain:
 		_add_loot(gain, (event as ChestOpened).loot[input.slot])
 	elif event is LootFound and (event as LootFound).loot.has(input.slot):
 		_add_loot(gain, (event as LootFound).loot[input.slot])
+	elif event is CatchLoot and (event as CatchLoot).loot.has(input.slot):
+		_add_loot(gain, (event as CatchLoot).loot[input.slot])
 	var empty: bool = gain.caught_species.is_empty() and gain.chests_opened == 0
 	empty = empty and gain.materials.is_empty()
 	return null if empty else gain

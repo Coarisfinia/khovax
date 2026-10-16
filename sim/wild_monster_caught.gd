@@ -12,6 +12,11 @@ var catcher_slot: int
 var tile: Vector2i
 ## The caught monster's species id.
 var species: String
+## What each player in the instance did for the ring that caught it, by slot (#86): how many tiles
+## of its wall they colored, and how many ticks they stood on its wall while it sealed. A slot that
+## did neither is missing.
+var walls_colored: Dictionary[int, int] = {}
+var braced_ticks: Dictionary[int, int] = {}
 
 
 func _init(
