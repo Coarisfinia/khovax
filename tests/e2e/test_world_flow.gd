@@ -144,7 +144,8 @@ func _moving(direction: int) -> Array[Command]:
 ## Region documents (#145): tile (0, 0) is the middle tile of the middle row, the legend's symbols
 ## become connectors, exits, named species and tile kinds (#116, by any one character, an emoji
 ## too) on their tiles, a kind's decoration turned by hand where the legend says so (#231), which
-## turns along with the region, and a grid without a single middle, a symbol the legend doesn't
+## turns along with the region and moves with a placed piece, and a grid without a single middle, a
+## symbol the legend doesn't
 ## explain or a turn past five sixths is refused. The glade's pieces have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
@@ -163,6 +164,9 @@ func _check_documents() -> String:
 	expected = expected and region.terrain[STUMP] == TileKinds.number_of("stump")
 	expected = expected and region.decoration_turns == { STUMP: 3 }
 	expected = expected and region.turned(4).decoration_turns == { Hex.turn(STUMP, 4): 1 }
+	var placed: Region = Region.new()
+	placed.place(region, Vector2i(5, -2))
+	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
 	if not region.problem.is_empty() or not expected:
 		return "a region document didn't read as drawn: %s" % region.problem
 	var refusals: Dictionary[String, String] = {

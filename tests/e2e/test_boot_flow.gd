@@ -554,8 +554,10 @@ func _decoration_problem(
 		return "the %s on %s has no model, another one, or another size" % [id, tile]
 	var turn: float = TAU * region.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
 	var off: Vector3 = model.position
-	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER and off.y == 0.0
-	if not is_equal_approx(model.rotation.y, turn) or not off_center:
+	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER
+	off_center = off_center and off.is_equal_approx(TileDecorations.off_center(tile))
+	# Compared as angles: Godot may report a turn past half as its negative.
+	if not is_zero_approx(angle_difference(model.rotation.y, turn)) or not off_center:
 		return "the %s on %s is turned %f, not %f, or stands at %s" % [
 			id,
 			tile,
