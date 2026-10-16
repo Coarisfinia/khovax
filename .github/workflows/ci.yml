@@ -469,11 +469,19 @@ jobs:
       - name: "📦 Install the runner's dependencies (locked)"
         run: bun install --frozen-lockfile --cwd tests/web
 
+      - name: "📦 Install Mesa's software renderer (for CHROME_GL=mesa)"
+        if: matrix.gl == 'mesa'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri libgbm1
+
       - name: "🌐 Web test build: run the e2e flow in headless Chrome"
         run: |
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
           export CHROME_GL="${{ matrix.gl }}"
+          # Chrome's own log, so a fallback from Mesa says why.
+          if [ "$CHROME_GL" = mesa ]; then export DEBUG=pw:browser; fi
           timeout 300 bun tests/web/web_e2e.ts build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
