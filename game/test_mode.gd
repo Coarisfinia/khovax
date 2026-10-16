@@ -22,11 +22,13 @@ func _ready() -> void:
 	if not ResourceLoader.exists(FLOW):
 		_report("this build has no device test flow")
 		return
-	# The boot scene comes up after the autoloads, and starts the game once it has loaded (#243).
+	# The boot scene comes up after the autoloads, starts the game once it has loaded (#243), and
+	# leaves once its fog has lifted. The flow waits for that: the fog stops touches while it hides
+	# the game, and on a slow device the flow's first touches would land on it.
 	await get_tree().process_frame
 	var boot: Boot = get_tree().current_scene as Boot
-	if boot != null and boot.game == null:
-		var _started: Node = await boot.game_started
+	if boot != null:
+		await boot.tree_exited
 	_cheapest_frames(get_tree().current_scene)
 	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
 	var errors: ErrorCounter = ErrorCounter.new()
