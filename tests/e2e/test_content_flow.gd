@@ -345,7 +345,7 @@ func _check_loot_refused() -> String:
 		),
 	}
 	for text: String in cases:
-		var problem: String = LootTable.parse("x", text).problem
+		var problem: String = LootTableFile.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
 	return ""

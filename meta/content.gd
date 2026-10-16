@@ -45,7 +45,7 @@ static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var table: LootTable = LootTable.parse(file_name.get_basename(), text)
+			var table: LootTable = LootTableFile.parse(file_name.get_basename(), text)
 			if not table.problem.is_empty():
 				content.problem = file_name + ": " + table.problem
 				return content
