@@ -18,6 +18,9 @@ var targets: Array[int] = []
 var ticks: int = 0
 ## How many ticks each player has stood on the wall while it seals, by entity id (#86, #227).
 var braced: Dictionary[int, int] = {}
+## Which of its wall segments each player has stood on while it seals, by entity id, each list
+## sorted (#260): how many segments they reinforced.
+var braced_walls: Dictionary[int, Array] = {}
 var seal_ticks: int = 0
 
 
@@ -52,7 +55,30 @@ func to_data() -> Dictionary:
 		"monsters": monsters,
 		"ticks": ticks,
 		"braced": braced_flat(),
+		"braced_walls": braced_walls_flat(),
 	}
+
+
+## The braced wall segments as [entity id, q, r, ...], in id order, then in each list's order.
+func braced_walls_flat() -> Array[int]:
+	var ids: Array[int] = []
+	ids.assign(braced_walls.keys())
+	ids.sort()
+	var flat: Array[int] = []
+	for each: int in ids:
+		for wall: Vector2i in braced_walls[each]:
+			flat.append_array([each, wall.x, wall.y])
+	return flat
+
+
+## Notes that the player `entity_id` stands on wall segment `wall` this tick.
+func brace(entity_id: int, wall: Vector2i) -> void:
+	braced[entity_id] = braced.get(entity_id, 0) + 1
+	var walls_stood_on: Array = braced_walls.get(entity_id, [])
+	if not walls_stood_on.has(wall):
+		walls_stood_on.append(wall)
+		walls_stood_on.sort()
+	braced_walls[entity_id] = walls_stood_on
 
 
 ## The braced ticks as [entity id, ticks, ...], in id order.
@@ -76,4 +102,7 @@ func hash_values() -> Array[int]:
 		values.append_array([monsters[i], targets[i]])
 	values.append(braced.size())
 	values.append_array(braced_flat())
+	var walls_flat: Array[int] = braced_walls_flat()
+	values.append(walls_flat.size())
+	values.append_array(walls_flat)
 	return values

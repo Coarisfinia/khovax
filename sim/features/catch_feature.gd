@@ -155,7 +155,7 @@ func _push(state: GameState, catcher_id: int) -> void:
 	seal.ticks += 1
 	for entity: Entity in state.entities:
 		if entity.slot != Entity.NO_SLOT and seal.walls.has(entity.tile):
-			seal.braced[entity.id] = seal.braced.get(entity.id, 0) + 1
+			seal.brace(entity.id, entity.tile)
 	for i: int in seal.monsters.size():
 		var push: int = pressure(wild, seal.monsters[i])
 		if braced.has(seal.walls[seal.targets[i]]):
@@ -175,9 +175,23 @@ func _push(state: GameState, catcher_id: int) -> void:
 		state.events.append(broken)
 		_end(state, catcher_id)
 	elif seal.ticks >= seal.seal_ticks:
+		var takers: Dictionary[int, int] = _takers(state, catcher_id, seal)
 		for monster_id: int in seal.monsters.duplicate():
-			_catch(state, monster_id, catcher_id, seal)
+			_catch(state, monster_id, takers[monster_id], seal)
 		_end(state, catcher_id)
+
+
+## Who gets each wild monster of a held ring, by monster id: its catcher when it holds one; split
+## by contribution when it holds several (#260, CatchShares), the catcher taking any nobody earned.
+func _takers(state: GameState, catcher_id: int, seal: RingSeal) -> Dictionary[int, int]:
+	var takers: Dictionary[int, int] = {}
+	if seal.monsters.size() > 1:
+		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+		takers = CatchShares.hand_out(seal.monsters, CatchShares.contributions(state, trail, seal))
+	for monster_id: int in seal.monsters:
+		if not takers.has(monster_id):
+			takers[monster_id] = catcher_id
+	return takers
 
 
 ## Ends the catcher's seal, held or broken: its ring comes off the trail (#87), but not the wall
@@ -345,14 +359,22 @@ static func _progress_problem(state: GameState, seal: RingSeal, entry: DataReade
 	var damage: Array[int] = entry.wholes("damage", 0, DataReader.MOST)
 	var ticks: int = entry.whole("ticks", 0, DataReader.MOST)
 	var braced: Array[int] = entry.wholes("braced", 0, DataReader.MOST)
+	var braced_walls: Array[int] = entry.wholes("braced_walls", -DataReader.MOST, DataReader.MOST)
 	if entry.failed() or walls != seal.walls or damage.size() != walls.size():
 		return "its walls aren't the ring's"
-	if braced.size() % 2 != 0:
-		return "its braced ticks aren't pairs of a player and ticks"
+	if braced.size() % 2 != 0 or braced_walls.size() % 3 != 0:
+		return "its braced ticks or segments aren't a player and ticks, or a player and a tile"
 	seal.damage = damage
 	seal.ticks = ticks
 	for i: int in range(0, braced.size(), 2):
 		seal.braced[braced[i]] = braced[i + 1]
+	for i: int in range(0, braced_walls.size(), 3):
+		var wall: Vector2i = Vector2i(braced_walls[i + 1], braced_walls[i + 2])
+		if not seal.walls.has(wall):
+			return "a segment it says was braced isn't one of its walls"
+		var walls_stood_on: Array = seal.braced_walls.get(braced_walls[i], [])
+		walls_stood_on.append(wall)
+		seal.braced_walls[braced_walls[i]] = walls_stood_on
 	if seal.failed_segment() >= 0 or ticks >= seal.seal_ticks:
 		return "it has already broken or held"
 	return ""
