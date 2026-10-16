@@ -126,7 +126,7 @@ func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
 	var cases: Dictionary[String, String] = {
-		_changed(data, "format", World.FORMAT + 1): "world format",
+		_changed(data, "format", WorldData.FORMAT + 1): "world format",
 		_changed(data, "rules", Simulation.RULES_VERSION - 1): "played by rules",
 		_changed(data, "tick", world.tick + 1): "the world doesn't hash",
 		# Another seed arranges other regions, which the saved tiles may not even fit.
@@ -166,7 +166,7 @@ func _expired() -> String:
 		world.step(_commands(direction))
 		for _tick: int in MovementFeature.MOVE_TICKS + 1:
 			world.step(_commands(Command.NO_MOVE))
-	var data: Dictionary = world.to_data()
+	var data: Dictionary = WorldData.of(world)
 	return _changed(
 		data,
 		"tick",
@@ -176,7 +176,7 @@ func _expired() -> String:
 
 ## A fresh world's data, with only its starting instance loaded.
 static func _fresh_data() -> Dictionary:
-	return World.new(SEED, InstanceBlueprints.BASIC).to_data()
+	return WorldData.of(World.new(SEED, InstanceBlueprints.BASIC))
 
 
 ## `data` as text, with `key` set to `value`.
@@ -397,7 +397,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
 	var result: String = await _boots_fresh(tree, "not a world", false)
 	if result.is_empty():
-		result = await _boots_fresh(tree, _changed(data, "format", World.FORMAT + 1), true)
+		result = await _boots_fresh(tree, _changed(data, "format", WorldData.FORMAT + 1), true)
 	if result.is_empty():
 		var rules: int = Simulation.RULES_VERSION + 1
 		result = await _boots_fresh(tree, _changed(data, "rules", rules), true)

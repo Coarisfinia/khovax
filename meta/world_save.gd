@@ -3,7 +3,7 @@ extends RefCounted
 ## The world's file (#119): the persistent world, saved next to the profile and apart from it, so
 ## loading the game puts every player back exactly where they were. Kept like every save
 ## (SaveStore, #179: an envelope with a checksum, older generations, written atomically). What's
-## in it is World.to_data as JSON; reading it back turns JSON's numbers into whole numbers first,
+## in it is WorldData.of as JSON; reading it back turns JSON's numbers into whole numbers first,
 ## so the simulation only ever sees integers. Beside the world, under EXPLORED, lies the ground this
 ## machine's player has explored in it (#215): the player's view, not the world's state, so it's
 ## read apart from the world, never enters its hash or replays, and bad memory never refuses the
@@ -40,7 +40,7 @@ static func save(
 
 
 static func to_text(world: World, explored: ExploredGround = null) -> String:
-	var data: Dictionary = world.to_data()
+	var data: Dictionary = WorldData.of(world)
 	data[EXPLORED] = explored_data(explored if explored != null else ExploredGround.new())
 	return JSON.stringify(data)
 
@@ -55,7 +55,7 @@ static func parse(text: String) -> World:
 	if not parsed is Dictionary or not has_whole_numbers(parsed):
 		return World.refused("not a world save, or it holds a number that isn't whole")
 	var data: Dictionary = whole_numbers(parsed)
-	return World.from_data(data)
+	return WorldData.to_world(data)
 
 
 ## Reads the ground explored in the world saved at `path` into `into` (ExploredGround);

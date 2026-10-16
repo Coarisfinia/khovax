@@ -260,9 +260,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   (catches, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
-  `SaveStore`), never in the profile: `World.to_data` holds its seed, tick and every loaded
+  `SaveStore`), never in the profile: `WorldData.of` holds its seed, tick and every loaded
   instance's entities and feature state (`Feature.save_values`/`load_values`; regions are arranged
-  again from blueprint and seed), integers and ids only, and `World.from_data` refuses it whole
+  again from blueprint and seed), integers and ids only, and `WorldData.to_world` refuses it whole
   for another format, other rules (`RULES_VERSION`: it couldn't go on deterministically) or a hash
   that doesn't match. `WorldKeeper` in the main scene hands the driver the saved world at boot and
   saves it debounced like the profile; the headless flows and the test builds keep no world

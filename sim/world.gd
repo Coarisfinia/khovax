@@ -8,10 +8,6 @@ extends RefCounted
 ## it's reached, and a purged one comes back arranged anew. Players walk from one instance into
 ## the next through exits (#154). Deterministic, like everything in sim/.
 
-## The format of the world's save data (`to_data`); data in another one is refused. Format 1 had no
-## purging and format 2 no ring seals; their saves were played by older rules, which `from_data`
-## refuses anyway.
-const FORMAT: int = 3
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
 const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
@@ -39,7 +35,7 @@ var _layout_problem: String = ""
 
 
 ## A world that starts in the blueprint `start` with `players` players in it; with no `start`, an
-## empty one, which only a refused save gives (`from_data`).
+## empty one, which only a refused save gives (`WorldData.to_world`).
 func _init(seed_value: int, start: String, players: int = 1) -> void:
 	world_seed = seed_value
 	start_name = start
@@ -167,8 +163,8 @@ func _note(found: String) -> void:
 ## The names of the instances a player is in, in name order: the ones that step.
 func active() -> Array[String]:
 	var names: Array[String] = []
-	for instance_name: String in _sorted_names():
-		if _has_player(instances[instance_name]):
+	for instance_name: String in sorted_names():
+		if has_player(instances[instance_name]):
 			names.append(instance_name)
 	return names
 
@@ -197,8 +193,8 @@ func step(commands: Array[Command]) -> void:
 ## nobody has been in for PURGE_TICKS (#212): it is dropped, and its next visit loads it fresh at
 ## its next generation. Anyone entering it before then resets the count.
 func _purge_left_behind() -> void:
-	for instance_name: String in _sorted_names():
-		if _has_player(instances[instance_name]):
+	for instance_name: String in sorted_names():
+		if has_player(instances[instance_name]):
 			var _entered: bool = left_at.erase(instance_name)
 		elif not left_at.has(instance_name):
 			left_at[instance_name] = tick
@@ -214,7 +210,7 @@ func _purge_left_behind() -> void:
 
 ## The player in `slot`, in whichever instance they are, or null.
 func player(slot: int) -> Entity:
-	for instance_name: String in _sorted_names():
+	for instance_name: String in sorted_names():
 		var found: Entity = instances[instance_name].player(slot)
 		if found != null:
 			return found
@@ -223,7 +219,7 @@ func player(slot: int) -> Entity:
 
 ## The name of the instance the player in `slot` is in, or "".
 func instance_of(slot: int) -> String:
-	for instance_name: String in _sorted_names():
+	for instance_name: String in sorted_names():
 		if instances[instance_name].player(slot) != null:
 			return instance_name
 	return ""
@@ -252,7 +248,7 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 ## it, when it was left behind; then every purged blueprint's generation.
 func state_hash() -> int:
 	var result: int = _mix(2_166_136_261, tick)
-	for instance_name: String in _sorted_names():
+	for instance_name: String in sorted_names():
 		result = _mix(result, name_code(instance_name))
 		result = _mix(result, instances[instance_name].state_hash())
 		if left_at.has(instance_name):
@@ -260,107 +256,6 @@ func state_hash() -> int:
 	for purged: String in _sorted(generations.keys()):
 		result = _mix(_mix(result, name_code(purged)), generations[purged])
 	return result
-
-
-## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
-## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
-## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, every loaded instance
-## in name order with its state (GameState.to_data) and the tick it was left behind (-1 while
-## someone is in it), every purged blueprint's generation, the rules version it was played by and
-## its hash, which `from_data` checks. Regions aren't saved: no rule changes one while it's loaded,
-## so each is arranged again from its blueprint and seed.
-func to_data() -> Dictionary:
-	var saved: Array[Dictionary] = []
-	for instance_name: String in _sorted_names():
-		saved.append(
-			{
-				"name": instance_name,
-				"state": instances[instance_name].to_data(),
-				"left_at": left_at.get(instance_name, -1),
-			},
-		)
-	var purged: Array[Dictionary] = []
-	for instance_name: String in _sorted(generations.keys()):
-		purged.append({ "name": instance_name, "generation": generations[instance_name] })
-	return {
-		"format": FORMAT,
-		"rules": Simulation.RULES_VERSION,
-		"seed": [(world_seed >> 32) & 0xffff_ffff, world_seed & 0xffff_ffff],
-		"start": start_name,
-		"tick": tick,
-		"generations": purged,
-		"instances": saved,
-		"hash": state_hash(),
-	}
-
-
-## The world `to_data` saved, or an empty one whose `problem` says why it's refused, whole: data
-## in another format, or played by other rules (a world can only go on deterministically under the
-## rules it was played by), or that doesn't hash as it did when saved (its content changed since).
-static func from_data(data: Dictionary) -> World:
-	var read: DataReader = DataReader.new(data)
-	var format: int = read.whole("format", 0, DataReader.MOST)
-	var rules: int = read.whole("rules", 0, DataReader.MOST)
-	if not read.failed() and format != FORMAT:
-		read.fail("world format %d, this build reads format %d" % [format, FORMAT])
-	if not read.failed() and rules != Simulation.RULES_VERSION:
-		read.fail("played by rules %d, this build has %d" % [rules, Simulation.RULES_VERSION])
-	var halves: Array[int] = read.wholes("seed", 0, 0xffff_ffff)
-	var start: String = read.text("start")
-	if not read.failed() and (halves.size() != 2 or not InstanceBlueprints.exists(start)):
-		read.fail("the world's seed or its starting blueprint %s isn't valid" % start)
-	if read.failed():
-		return refused(read.problem)
-	var world: World = World.new((halves[0] << 32) | halves[1], start, 0)
-	world.instances.clear()
-	world.tick = read.whole("tick", 0, DataReader.MOST)
-	# Generations first: they decide the seeds the instances are loaded with.
-	for entry: DataReader in read.entries("generations"):
-		world._load_generation(entry)
-	for entry: DataReader in read.entries("instances"):
-		world._load_instance(entry)
-	# The starting instance stays loaded: replays and the driver start from it.
-	if not read.failed() and not world.instances.has(start):
-		read.fail("the starting instance %s isn't among the saved ones" % start)
-	var saved_hash: int = read.whole("hash", 0, 0xffff_ffff)
-	if not read.failed() and world.state_hash() != saved_hash:
-		read.fail("the world doesn't hash as it did when saved: its content changed since")
-	return world if not read.failed() else refused(read.problem)
-
-
-## Loads the instance `entry` names from its blueprint and restores its saved state into it.
-func _load_instance(entry: DataReader) -> void:
-	var instance_name: String = entry.text("name")
-	if not InstanceBlueprints.exists(instance_name) or instances.has(instance_name):
-		entry.fail("instance %s doesn't exist or is saved twice" % instance_name)
-		return
-	var loaded: GameState = InstanceBlueprints.create(instance_name, seed_for(instance_name), 0)
-	if loaded == null:
-		entry.fail("instance %s doesn't load" % instance_name)
-		return
-	loaded.load_data(entry.read("state"))
-	instances[instance_name] = loaded
-	# Left behind exactly when nobody is in it, and not so long ago that a step would have purged
-	# it.
-	var left: int = entry.whole("left_at", -1, tick)
-	if _has_player(loaded) != (left < 0):
-		entry.fail("instance %s's left_at %d doesn't fit who is in it" % [instance_name, left])
-	elif left >= 0 and instance_name != start_name and tick - left >= PURGE_TICKS:
-		entry.fail("instance %s was left behind long enough to be purged" % instance_name)
-	elif left >= 0:
-		left_at[instance_name] = left
-
-
-## Restores the generation of the purged blueprint `entry` names; the starting instance is never
-## purged. An instance is purged at most once per PURGE_TICKS, which also keeps `seed_for`'s draws
-## few.
-func _load_generation(entry: DataReader) -> void:
-	var instance_name: String = entry.text("name")
-	var known: bool = InstanceBlueprints.exists(instance_name) and instance_name != start_name
-	if not known or generations.has(instance_name):
-		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
-		return
-	generations[instance_name] = entry.whole("generation", 1, Fixed.div_floor(tick, PURGE_TICKS))
 
 
 ## An empty world refused for `why`.
@@ -378,7 +273,8 @@ static func name_code(instance_name: String) -> int:
 	return code
 
 
-func _sorted_names() -> Array[String]:
+## Every loaded instance's name, sorted: the order everything goes through them in.
+func sorted_names() -> Array[String]:
 	return _sorted(instances.keys())
 
 
@@ -389,7 +285,8 @@ static func _sorted(keys: Array) -> Array[String]:
 	return names
 
 
-static func _has_player(state: GameState) -> bool:
+## Whether any player is in the instance `state`.
+static func has_player(state: GameState) -> bool:
 	for slot: int in GameState.MAX_PLAYERS:
 		if state.player(slot) != null:
 			return true
