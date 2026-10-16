@@ -67,6 +67,8 @@ func _check_launch_options() -> String:
 		"--seed=-3": "not an option, or not a seed",
 		"--seed=x": "not an option, or not a seed",
 		"--instance=nowhere": "no instance blueprint nowhere; there are basic",
+		"--instance=glade=x": "no instance blueprint glade=x",
+		"--seed=4=2": "not an option, or not a seed",
 	}
 	for arg: String in refusals:
 		var problem: String = LaunchOptions.parse([arg]).problem
@@ -78,10 +80,15 @@ func _check_launch_options() -> String:
 
 
 ## Launched with `--instance=glade --seed=42`, the main scene starts a fresh world from that seed in
-## the glade, the player on its start, and keeps no world on disk.
+## the glade, the player on its start, and keeps no world on disk: the save the player's own world
+## would go to is let go of when the options are applied.
 func _check_launched(tree: SceneTree) -> String:
 	var given: int = GameDriver.fixed_seed
+	WorldKeeper.default_path = WorldSave.PATH
 	LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
+	if not WorldKeeper.default_path.is_empty():
+		WorldKeeper.default_path = ""
+		return "a launched test world would resume or overwrite the player's own"
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
 	tree.root.add_child(main)
@@ -95,8 +102,6 @@ func _check_launched(tree: SceneTree) -> String:
 			driver.local_instance_name(),
 			driver.world.world_seed,
 		]
-	elif not WorldKeeper.default_path.is_empty():
-		result = "a launched test world would be saved"
 	GameDriver.start_instance = ""
 	GameDriver.fixed_seed = given
 	main.queue_free()

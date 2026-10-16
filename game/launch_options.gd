@@ -27,7 +27,8 @@ var problem: String = ""
 static func parse(args: PackedStringArray) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
 	for arg: String in args:
-		var value: String = arg.get_slice("=", 1)
+		# Everything after the option's name: `--instance=glade=x` names no blueprint `glade`.
+		var value: String = arg.trim_prefix(SEED).trim_prefix(INSTANCE)
 		if not arg.begins_with("--"):
 			continue
 		if arg.begins_with(SEED) and value.is_valid_int() and value.to_int() >= 0:
