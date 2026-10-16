@@ -5,8 +5,9 @@ extends RefCounted
 ## the plain playback of the delayed commands; a late player's ticks wait for their commands, then
 ## the game catches up to the same state. Two players on one tile each stand at their own spot
 ## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
-## one mark per slot number, so the two are told apart by more than color (#233, #68). Time is
-## stepped by hand, one tick a frame.
+## one mark per slot number, so the two are told apart by more than color (#233, #68), and the
+## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
+## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 const TICKS: int = 60
@@ -91,6 +92,23 @@ func _check_circles() -> String:
 			return "player %d's circle isn't in their color with %d marks" % [slot + 1, slot + 1]
 	if _views[0].circle.color == _views[1].circle.color:
 		return "the two players' circles have the same color"
+	return _check_trail_marks()
+
+
+## While both share the instance, each player's tile on the shared trail carries their slot's
+## mark; alone, a player's trail carries none.
+func _check_trail_marks() -> String:
+	var marks: TrailMarksView = _main.get_node("Instance/TrailMarksView") as TrailMarksView
+	marks.show_state()
+	for slot: int in 2:
+		var tile: Vector2i = _driver.state.player(slot).tile
+		if marks.marks.get(tile, -1) != slot:
+			return "player %d's tile on the trail doesn't carry their mark" % (slot + 1)
+	var leaving: int = _driver.state.player(1).id
+	_driver.state.remove_entity(leaving)
+	marks.show_state()
+	if not marks.marks.is_empty():
+		return "a player alone still has marks on the trail"
 	return ""
 
 

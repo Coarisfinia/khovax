@@ -23,6 +23,7 @@
 [ext_resource type="Script" path="res://view/instance_root.gd" id="21_instance"]
 [ext_resource type="Script" path="res://game/world_keeper.gd" id="22_keeper"]
 [ext_resource type="Script" path="res://view/reinforcement_view.gd" id="23_braces"]
+[ext_resource type="Script" path="res://view/trail_marks_view.gd" id="24_marks"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -83,6 +84,10 @@ driver = NodePath("../../Driver")
 
 [node name="ReinforcementView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=2340234023]
 script = ExtResource("23_braces")
+driver = NodePath("../../Driver")
+
+[node name="TrailMarksView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=2660266026]
+script = ExtResource("24_marks")
 driver = NodePath("../../Driver")
 
 [node name="Player" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
