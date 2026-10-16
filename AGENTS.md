@@ -97,7 +97,8 @@ out of date.
 everything else, tech debt included.
 
 **The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
-fixes, then architecture, then cleanup, then UI, then visuals, then assets and models.
+fixes, then architecture, then cleanup, then gameplay features (rules and mechanics), then UI,
+then visuals, then assets and models.
 
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
