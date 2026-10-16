@@ -143,30 +143,27 @@ func _moving(direction: int) -> Array[Command]:
 
 ## Region documents (#145): tile (0, 0) is the middle tile of the middle row, the legend's symbols
 ## become connectors, exits, named species and tile kinds (#116, by any one character, an emoji
-## too) on their tiles, a kind's decoration turned by hand where the legend says so (#231), which
-## turns along with the region and moves with a placed piece, and a grid without a single middle, a
-## symbol the legend doesn't
-## explain or a turn past five sixths is refused. The glade's pieces have forest.
+## too) on their tiles, a kind's decoration turned by hand (#231) and its walkable trait overridden
+## for one tile (#201) where the legend says so, both of which turn along with the region and move
+## with a placed piece, and a grid without a single middle, a symbol the legend doesn't explain, a
+## clause it doesn't know or a turn past five sixths is refused. The glade's pieces have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
 	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch\n"
-	legend += "- `🌲`: forest\n- `w`: water\n- `🪓`: stump, turned 3"
-	var region: Region = RegionDocument.parse(tiles % [" 🪓 🌲\nj 1 x\n B w", legend])
+	legend += "- `🌲`: forest\n- `w`: water\n- `🪓`: stump, turned 3, not walkable"
+	var grid: String = " 🪓 🌲\nj 1 x\n B w"
+	var region: Region = RegionDocument.parse(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
-	var west: Vector3i = Vector3i(-1, 0, 3)
-	expected = expected and region.connectors.size() == 1 and region.connectors[0] == west
+	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
 	expected = expected and region.named_species.get(Vector2i(-1, 1), "") == "storm_finch"
 	var forest: int = TileKinds.number_of("forest")
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
 	expected = expected and region.terrain[STUMP] == TileKinds.number_of("stump")
-	expected = expected and region.decoration_turns == { STUMP: 3 }
-	expected = expected and region.turned(4).decoration_turns == { Hex.turn(STUMP, 4): 1 }
-	var placed: Region = Region.new()
-	placed.place(region, Vector2i(5, -2))
-	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
+	var plain: String = tiles % [grid, legend.replace(", not walkable", "")]
+	expected = expected and _turned_and_overridden(region, plain)
 	if not region.problem.is_empty() or not expected:
 		return "a region document didn't read as drawn: %s" % region.problem
 	var refusals: Dictionary[String, String] = {
@@ -174,6 +171,7 @@ func _check_documents() -> String:
 		tiles % ["1 z .", ""]: "the legend doesn't explain `z`",
 		tiles % ["1 🌲 .", "- `🌲`: jungle"]: "the legend doesn't explain `🌲`",
 		tiles % ["1 🪓 .", "- `🪓`: stump, turned 6"]: "tile (0, 0)'s turn 6",
+		tiles % ["1 🪓 .", "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",
 	}
 	for text: String in refusals:
 		var problem: String = RegionDocument.parse(text).problem
@@ -183,6 +181,23 @@ func _check_documents() -> String:
 	if not RegionDocument.parse(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
 	return ""
+
+
+## Whether `region`, read from _check_documents' document, has its stump turned 3 and not walkable
+## though stumps are, both turning with the region and moving with a placed piece; and whether the
+## override is hashed: `plain`, the same document without it, hashes otherwise.
+func _turned_and_overridden(region: Region, plain: String) -> bool:
+	var expected: bool = region.decoration_turns == { STUMP: 3 }
+	expected = expected and TileKinds.is_walkable(region.terrain[STUMP])
+	expected = expected and not region.is_walkable(STUMP) and region.is_walkable(Vector2i.ZERO)
+	var turned: Region = region.turned(4)
+	expected = expected and turned.decoration_turns == { Hex.turn(STUMP, 4): 1 }
+	expected = expected and not turned.is_walkable(Hex.turn(STUMP, 4))
+	var placed: Region = Region.new()
+	placed.place(region, Vector2i(5, -2))
+	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
+	expected = expected and placed.walkable_overrides == { STUMP + Vector2i(5, -2): false }
+	return expected and region.hash_values() != RegionDocument.parse(plain).hash_values()
 
 
 ## Every blueprint loads as a full instance for every seed, and its first player can walk to every

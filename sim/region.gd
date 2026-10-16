@@ -28,6 +28,9 @@ const SPECIES: String = "species "
 const TRIGGER: String = "trigger "
 ## The start of a line placing a tile blueprint on a tile (#116).
 const TILE: String = "tile "
+## What a tile line says to override its kind's walkable trait for that one tile (#201).
+const WALKABLE: String = "walkable"
+const NOT_WALKABLE: String = "not_walkable"
 
 ## Every tile's kind, its number in TileKinds, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
@@ -35,6 +38,9 @@ var terrain: Dictionary[Vector2i, int] = {}
 ## the tiles whose piece turns it by hand (#231); it turns with the region. A look, not a rule:
 ## not hashed, and only the views read it.
 var decoration_turns: Dictionary[Vector2i, int] = {}
+## Placed tiles whose piece overrides their kind's walkable trait (#201): whether walkers can stand
+## on each. A rule, so it's hashed with the tiles.
+var walkable_overrides: Dictionary[Vector2i, bool] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the instance loads, in the region file's reading order.
@@ -134,6 +140,8 @@ func has_tile(tile: Vector2i) -> bool:
 
 ## Whether a walker can stand on the tile: on the region, and of a walkable kind.
 func is_walkable(tile: Vector2i) -> bool:
+	if walkable_overrides.has(tile):
+		return terrain.has(tile) and walkable_overrides[tile]
 	return terrain.has(tile) and TileKinds.is_walkable(terrain[tile])
 
 
@@ -187,6 +195,8 @@ func turned(turns: int) -> Region:
 	for tile: Vector2i in decoration_turns:
 		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
 		region.decoration_turns[Hex.turn(tile, turns)] = turn
+	for tile: Vector2i in walkable_overrides:
+		region.walkable_overrides[Hex.turn(tile, turns)] = walkable_overrides[tile]
 	return region
 
 
@@ -223,6 +233,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		named_species[spot + offset] = piece.named_species[spot]
 	for tile: Vector2i in piece.decoration_turns:
 		decoration_turns[tile + offset] = piece.decoration_turns[tile]
+	for tile: Vector2i in piece.walkable_overrides:
+		walkable_overrides[tile + offset] = piece.walkable_overrides[tile]
 	for spot: Vector2i in piece.chests:
 		chests.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
@@ -249,6 +261,12 @@ func hash_values() -> Array[int]:
 	for spot: Vector2i in wild_monsters:
 		values.append(spot.x)
 		values.append(spot.y)
+	var overridden: Array[Vector2i] = []
+	overridden.assign(walkable_overrides.keys())
+	overridden.sort()
+	values.append(overridden.size())
+	for tile: Vector2i in overridden:
+		values.append_array([tile.x, tile.y, 1 if walkable_overrides[tile] else 0])
 	return values
 
 
@@ -309,25 +327,39 @@ func _parse_trigger(line: String) -> String:
 	return ""
 
 
-## Reads one `tile <q> <r> <tile blueprint id> [<turn>]` line; returns why it can't, or "". It
-## gives a tile of the grid its kind, and its decoration a turn of 0 to 5 sixths, if it names one.
+## Reads one `tile <q> <r> <tile blueprint id> [<turn>] [walkable | not_walkable]` line; returns
+## why it can't, or "". It gives a tile of the grid its kind, its decoration a turn of 0 to 5
+## sixths if it names one (#231), and overrides its kind's walkable trait for this tile if it says
+## so (#201).
 func _parse_tile(line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
-	var with_turn: bool = parts.size() == 5
-	var numbers: bool = (parts.size() == 4 or with_turn) and parts[1].is_valid_int()
-	numbers = numbers and parts[2].is_valid_int() and (not with_turn or parts[4].is_valid_int())
-	var turn: int = parts[4].to_int() if numbers and with_turn else 0
-	if not numbers:
-		return "a tile line reads \"tile <q> <r> <tile blueprint id> [<turn>]\": " + line
+	if parts.size() < 4 or not parts[1].is_valid_int() or not parts[2].is_valid_int():
+		return "a tile line reads \"tile <q> <r> <tile blueprint id> [<turn>] [walkable]\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
 	var kind: int = TileKinds.number_of(parts[3])
 	if not has_tile(tile) or kind < 0:
 		return "tile %s isn't on the region, or %s isn't a tile blueprint" % [tile, parts[3]]
-	if turn < 0 or turn >= Hex.DIRECTIONS.size():
-		return "tile %s's turn %d isn't 0 to 5" % [tile, turn]
 	terrain[tile] = kind
-	if turn != 0:
-		decoration_turns[tile] = turn
+	for extra: String in parts.slice(4):
+		var wrong: String = _parse_tile_extra(tile, extra)
+		if not wrong.is_empty():
+			return wrong
+	return ""
+
+
+## Reads what a tile line says after the tile's kind: its decoration's turn, or an override of its
+## walkable trait. Returns why it can't, or "".
+func _parse_tile_extra(tile: Vector2i, extra: String) -> String:
+	if extra.is_valid_int():
+		var turn: int = extra.to_int()
+		if turn < 0 or turn >= Hex.DIRECTIONS.size():
+			return "tile %s's turn %d isn't 0 to 5" % [tile, turn]
+		if turn != 0:
+			decoration_turns[tile] = turn
+	elif extra == WALKABLE or extra == NOT_WALKABLE:
+		walkable_overrides[tile] = extra == WALKABLE
+	else:
+		return "tile %s: %s is neither a turn nor %s or %s" % [tile, extra, WALKABLE, NOT_WALKABLE]
 	return ""
 
 
