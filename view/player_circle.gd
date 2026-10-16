@@ -8,8 +8,9 @@ extends Node3D
 ## Wide enough to show round the figure from the camera, inside the tile's edge.
 const RADIUS: float = 0.72
 const THICKNESS: float = 0.09
-## How high above the tile it floats, so it never flickers into the ground.
-const LIFT: float = 0.02
+## How high above the tile its middle floats: half its thickness and a little, so it never dips into
+## the ground or flickers against it.
+const LIFT: float = THICKNESS / 2.0 + 0.01
 const MARK_RADIUS: float = 0.1
 
 ## The color it's painted in.

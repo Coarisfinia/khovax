@@ -17,6 +17,7 @@ const SLOT_STEP: int = 90
 
 ## The default personal color of the player in `slot`, in the world built from `world_seed`.
 static func of(world_seed: int, slot: int) -> Color:
-	var base: int = posmod(world_seed * SPREAD, HUES)
+	# Each factor brought onto the wheel first, so a large seed can't overflow the product.
+	var base: int = posmod(posmod(world_seed, HUES) * posmod(SPREAD, HUES), HUES)
 	var hue: int = posmod(base + slot * SLOT_STEP, HUES)
 	return Color.from_hsv(float(hue) / HUES, SATURATION, VALUE)
