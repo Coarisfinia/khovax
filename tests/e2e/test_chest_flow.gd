@@ -146,19 +146,10 @@ func _free(state: GameState, tile: Vector2i) -> bool:
 ## way.
 func _walk(state: GameState, direction: int) -> Array[RefCounted]:
 	var opened: Array[RefCounted] = []
-	for tick: int in MovementFeature.MOVE_TICKS:
-		var move: int = direction if tick == 0 else Command.NO_MOVE
-		Simulation.step(state, _commands(move))
-		for event: RefCounted in state.events:
-			if event is ChestOpened or event is LootFound:
-				opened.append(event)
+	for event: RefCounted in FlowSteps.step(state, direction, 2):
+		if event is ChestOpened or event is LootFound:
+			opened.append(event)
 	return opened
-
-
-## Player 0's command `move`, and player 1 standing still.
-func _commands(move: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(move), Command.new(Command.NO_MOVE)]
-	return commands
 
 
 ## The rolls of the first loot found on the ground in a fresh two-player glade from SEED, as text.

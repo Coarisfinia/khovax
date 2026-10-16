@@ -96,7 +96,7 @@ func run(tree: SceneTree) -> String:
 ## Every ring tile but the last: the walk passes right by the wild monster and catches nothing.
 func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
-	var _events: Array[RefCounted] = _walk(state, RING.slice(0, RING.size() - 1))
+	var _events: Array[RefCounted] = FlowSteps.walk(state, RING.slice(0, RING.size() - 1))
 	if _wild(state).monsters.size() != 1 or not _catching(state).seals.is_empty():
 		return "an open ring caught the wild monster or started sealing"
 	return ""
@@ -105,7 +105,7 @@ func _check_open_ring() -> String:
 ## A closed ring around another tile leaves the wild monster alone, and the trail keeps growing.
 func _check_other_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
-	var _events: Array[RefCounted] = _walk(state, OTHER_RING)
+	var _events: Array[RefCounted] = FlowSteps.walk(state, OTHER_RING)
 	var trail: Trail = _trails(state).trail(state.player(0).id)
 	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
 		return "a ring around another tile caught the wild monster or reset the trail"
@@ -159,7 +159,7 @@ func _check_after_catch(state: GameState) -> String:
 	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):
 		return "the trail didn't start over after the catch: %s" % [trail.sorted_tiles()]
 	var again: GameState = InstanceBlueprints.basic(42)
-	var _walked: Array[RefCounted] = _walk(again, RING)
+	var _walked: Array[RefCounted] = FlowSteps.walk(again, RING)
 	var _events: Array[RefCounted] = _settle(again)
 	if again.state_hash() != state.state_hash():
 		return "the same catch gave two different states"
@@ -173,9 +173,10 @@ func _check_seal_saved() -> String:
 	for next: Vector2i in RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
-			world.step(_commands([direction if tick == 0 else Command.NO_MOVE, Command.NO_MOVE]))
+			var first: int = direction if tick == 0 else Command.NO_MOVE
+			world.step(FlowSteps.commands([first, Command.NO_MOVE]))
 	for _tick: int in Fixed.div_floor(CatchFeature.SEAL_BASE_TICKS, 2):
-		world.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
+		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	if _catching(basic).seals.is_empty():
 		return "the world's ring wasn't sealing when saved"
@@ -186,8 +187,8 @@ func _check_seal_saved() -> String:
 	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
 		return "the world saved mid-seal didn't resume as it was: " + resumed.problem
 	for _tick: int in MOST_SEAL_TICKS:
-		world.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
-		resumed.step(_commands([Command.NO_MOVE, Command.NO_MOVE]))
+		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+		resumed.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		if resumed.state_hash() != world.state_hash():
 			return "the resumed seal went another way at tick %d" % world.tick
 	if not _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.is_empty():
@@ -247,14 +248,14 @@ func _check_together() -> String:
 		for tick: int in MovementFeature.MOVE_TICKS:
 			# Each step's move is given on its first tick only.
 			var both: Array[int] = moves if tick == 0 else standing
-			Simulation.step(state, _commands(both))
+			Simulation.step(state, FlowSteps.commands(both))
 			events.append_array(state.events)
 	if _catching(state).seals.keys() != [first.id]:
 		return "two players closing rings at once: %s seal, not only the first" % [
 			_catching(state).seals.keys(),
 		]
 	for _tick: int in MOST_SEAL_TICKS:
-		Simulation.step(state, _commands(standing))
+		Simulation.step(state, FlowSteps.commands(standing))
 		events.append_array(state.events)
 	var caught: Array[WildMonsterCaught] = _caught(events)
 	if caught.size() != 1 or caught[0].catcher_id != first.id:
@@ -360,7 +361,7 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 		) > Hex.distance(from, Vector2i.ZERO):
 			away = direction
 	while state.player(0).tile == from and not _catching(state).seals.is_empty():
-		Simulation.step(state, _command(away))
+		Simulation.step(state, FlowSteps.command(away))
 		events.append_array(state.events)
 	return events
 
@@ -385,9 +386,9 @@ func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 ## Walks the player in slot 0 along `path` up to the start of its last step, which closes the
 ## ring: the tick it closes on is the state's tick then.
 func _close(state: GameState, path: Array[Vector2i]) -> void:
-	var _walked: Array[RefCounted] = _walk(state, path.slice(0, path.size() - 1))
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, path.slice(0, path.size() - 1))
 	var last: int = Hex.DIRECTIONS.find(path[path.size() - 1] - state.player(0).tile)
-	Simulation.step(state, _command(last))
+	Simulation.step(state, FlowSteps.command(last))
 
 
 ## Steps the player in slot 0 standing until no ring seals; returns every event raised.
@@ -396,7 +397,7 @@ func _settle(state: GameState) -> Array[RefCounted]:
 	for _tick: int in MOST_SEAL_TICKS:
 		if _catching(state).seals.is_empty():
 			break
-		Simulation.step(state, _command(Command.NO_MOVE))
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 		events.append_array(state.events)
 	return events
 
@@ -408,13 +409,6 @@ func _caught(events: Array[RefCounted]) -> Array[WildMonsterCaught]:
 		if event is WildMonsterCaught:
 			caught.append(event as WildMonsterCaught)
 	return caught
-
-
-## One command per slot, from each slot's move.
-func _commands(moves: Array[int]) -> Array[Command]:
-	var commands: Array[Command] = []
-	commands.assign(moves.map(func(move: int) -> Command: return Command.new(move)))
-	return commands
 
 
 func _toward(walker: Entity, next: Vector2i) -> int:
@@ -438,7 +432,7 @@ func _check_view(tree: SceneTree) -> String:
 		main.queue_free()
 		return "the main scene doesn't show the wild monster's figure"
 	var figure: HexPiece = view.figures.values()[0]
-	var _walked: Array[RefCounted] = _walk(driver.state, RING)
+	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, RING)
 	var result: String = _check_filling(main, driver.state)
 	if result.is_empty():
 		result = _check_brace(main, driver.state)
@@ -468,7 +462,7 @@ func _check_filling(main: Node, state: GameState) -> String:
 	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var seal: RingSeal = _catching(state).seals.get(state.player(0).id)
 	for _tick: int in Fixed.div_floor(seal.seal_ticks, 2):
-		Simulation.step(state, _command(Command.NO_MOVE))
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	trails.show_state()
 	var sealed: int = 0
 	for tile: Vector2i in seal.walls:
@@ -519,7 +513,7 @@ func _check_saved(tree: SceneTree) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	driver.set_process(false)
 	(main.get_node("LocalInput") as LocalInput).slot = 1
-	var events: Array[RefCounted] = _walk(driver.state, RING)
+	var events: Array[RefCounted] = FlowSteps.walk(driver.state, RING)
 	events.append_array(_settle(driver.state))
 	driver.ticked.emit(driver.state.tick, events)
 	var result: String = ""
@@ -569,7 +563,7 @@ func _check_species() -> String:
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var state: GameState = InstanceBlueprints.basic(1)
-	var events: Array[RefCounted] = _walk(state, RING)
+	var events: Array[RefCounted] = FlowSteps.walk(state, RING)
 	events.append_array(_settle(state))
 	if _caught_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the catch didn't carry the caught monster's species"
@@ -579,23 +573,6 @@ func _check_species() -> String:
 ## The species of the first wild monster in `state`.
 func _first_species(state: GameState) -> String:
 	return _wild(state).species_of(_wild(state).monsters[0])
-
-
-## Walks the player in slot 0 onto each tile in turn, a whole step each; returns every event
-## raised on the way.
-func _walk(state: GameState, path: Array[Vector2i]) -> Array[RefCounted]:
-	var events: Array[RefCounted] = []
-	for next: Vector2i in path:
-		var direction: int = Hex.DIRECTIONS.find(next - state.player(0).tile)
-		for tick: int in MovementFeature.MOVE_TICKS:
-			Simulation.step(state, _command(direction if tick == 0 else Command.NO_MOVE))
-			events.append_array(state.events)
-	return events
-
-
-func _command(direction: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(direction)]
-	return commands
 
 
 func _wild(state: GameState) -> WildMonsterFeature:
