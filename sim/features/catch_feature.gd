@@ -136,11 +136,11 @@ func _seal(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
 func _push(state: GameState, catcher_id: int) -> void:
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var seal: RingSeal = seals[catcher_id]
-	var stood_on: Dictionary[Vector2i, bool] = _stood_on(state)
+	var braced: Array[Vector2i] = reinforced(state, seal)
 	seal.ticks += 1
 	for i: int in seal.monsters.size():
 		var push: int = pressure(wild, seal.monsters[i])
-		if stood_on.has(seal.walls[seal.targets[i]]):
+		if braced.has(seal.walls[seal.targets[i]]):
 			push = Fixed.scale(push, REINFORCED_SHARE)
 		seal.damage[seal.targets[i]] += push
 	var failed: int = seal.failed_segment()
@@ -169,13 +169,18 @@ func _end(state: GameState, catcher_id: int) -> void:
 	trails.restart(catcher_id, state.entity(catcher_id).tile)
 
 
-## The tiles players stand on this tick.
-static func _stood_on(state: GameState) -> Dictionary[Vector2i, bool]:
-	var tiles: Dictionary[Vector2i, bool] = {}
+## The seal's wall segments a player stands on, reinforcing them (#227), in the wall's order. The
+## rules and the views (#234) both ask this.
+static func reinforced(state: GameState, seal: RingSeal) -> Array[Vector2i]:
+	var stood_on: Dictionary[Vector2i, bool] = {}
 	for entity: Entity in state.entities:
 		if entity.slot != Entity.NO_SLOT:
-			tiles[entity.tile] = true
-	return tiles
+			stood_on[entity.tile] = true
+	var braced: Array[Vector2i] = []
+	for wall: Vector2i in seal.walls:
+		if stood_on.has(wall):
+			braced.append(wall)
+	return braced
 
 
 ## The players whose rings are sealing, in id order.

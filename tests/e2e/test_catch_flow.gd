@@ -421,8 +421,9 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 	return Hex.DIRECTIONS.find(next - walker.tile)
 
 
-## While the ring seals, its tiles fill round the ring with the seal's progress; then the wild
-## monster doesn't blink out: it shrinks away calmly, and then it's gone.
+## While the ring seals, its tiles fill round the ring with the seal's progress, and the wall
+## segment its player stands on wears a brace, reinforced (#234); then the wild monster doesn't
+## blink out: it shrinks away calmly, and then it's gone, and so is the brace.
 func _check_view(tree: SceneTree) -> String:
 	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
 	var main: Node = (load(path) as PackedScene).instantiate()
@@ -439,8 +440,14 @@ func _check_view(tree: SceneTree) -> String:
 	var figure: HexPiece = view.figures.values()[0]
 	var _walked: Array[RefCounted] = _walk(driver.state, RING)
 	var result: String = _check_filling(main, driver.state)
+	if result.is_empty():
+		result = _check_brace(main, driver.state)
 	var _events: Array[RefCounted] = _settle(driver.state)
 	view.show_state()
+	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
+	braces.show_state()
+	if result.is_empty() and not braces.figures.is_empty():
+		result = "a brace stayed after the seal ended: %s" % [braces.figures.keys()]
 	if result.is_empty() and (
 		not view.figures.is_empty() or not is_instance_valid(figure) or not figure.is_inside_tree()
 	):
@@ -470,6 +477,22 @@ func _check_filling(main: Node, state: GameState) -> String:
 		return "halfway through the seal, %d of the ring's %d tiles were filled" % [
 			sealed,
 			seal.walls.size(),
+		]
+	return ""
+
+
+## The ring's player ends their walk on its wall, so that segment is reinforced: it, and only it,
+## wears a brace.
+func _check_brace(main: Node, state: GameState) -> String:
+	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
+	braces.show_state()
+	var seal: RingSeal = _catching(state).seals.get(state.player(0).id)
+	var braced: Array[Vector2i] = []
+	braced.assign(braces.figures.keys())
+	if braced != [state.player(0).tile] or braced != CatchFeature.reinforced(state, seal):
+		return "the braces stand on %s, not on the reinforced %s" % [
+			braced,
+			CatchFeature.reinforced(state, seal),
 		]
 	return ""
 
