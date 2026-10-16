@@ -183,8 +183,14 @@ jobs:
           if [ "${{ github.event_name }}" = pull_request ]; then
             git fetch -q --depth=1 origin "${{ github.base_ref }}"
             git worktree add -q /tmp/base FETCH_HEAD
-            timeout 120 ~/godot/godot --headless --path /tmp/base --import > /dev/null 2>&1 || true
-            timeout 120 ~/godot/godot --headless --path /tmp/base -s res://tools/load_test.gd -- ticks=2000               | tee /tmp/load-base.txt || true
+            # A base that fails its own load test is the base's problem: this branch is then
+            # reported without a comparison, and nothing of the failed run is compared.
+            if timeout 120 ~/godot/godot --headless --path /tmp/base --import > /dev/null 2>&1               && timeout 120 ~/godot/godot --headless --path /tmp/base -s res://tools/load_test.gd                 -- ticks=2000 > /tmp/load-base.txt 2>&1; then
+              cat /tmp/load-base.txt
+            else
+              echo "::warning::The base's load test failed, so there's nothing to compare against."
+              rm -f /tmp/load-base.txt
+            fi
           fi
           bash tools/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
 

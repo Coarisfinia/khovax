@@ -13,14 +13,18 @@ head_report=$1
 base_report=${2:-}
 
 # The mean tick in microseconds, and every feature's share, from one report.
-mean_of() { sed -n 's/^ *tick: mean \([0-9.]*\) us.*/\1/p' "$1"; }
-features_of() { sed -n 's/^ *feature \([0-9]*\): \([0-9.]*\) us per tick/\1 \2/p' "$1"; }
+mean_of() { sed -n 's/^ *tick: mean \([0-9][0-9]*\.[0-9]\) us.*/\1/p' "$1"; }
+features_of() { sed -n 's/^ *feature \([0-9][0-9]*\): \([0-9][0-9]*\.[0-9]\) us per tick$/\1 \2/p' "$1"; }
 
-if ! grep -q "same in both passes" "$head_report"; then
-  echo "The load test's two passes ended in different states: the simulation isn't deterministic."
+if ! grep -qE '^end state hash -?[0-9]+, same in both passes$' "$head_report"; then
+  echo "The load test didn't end with both passes in the same state: it failed, or the simulation isn't deterministic."
   exit 1
 fi
 head_mean=$(mean_of "$head_report")
+if ! [[ "$head_mean" =~ ^[0-9]+\.[0-9]$ ]]; then
+  echo "The load test's report has no mean tick."
+  exit 1
+fi
 
 if [ -z "$base_report" ] || [ ! -s "$base_report" ] || [ -z "$(mean_of "$base_report")" ]; then
   echo "### Load test"
