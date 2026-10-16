@@ -350,6 +350,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   built-in shaders before the first frame, which blocks the page, and a full, still bar there looks
   like a hang. The fade is a CSS opacity transition, which the browser's compositor keeps running
   while the page is blocked; the page's background is the fog's color already (the boot splash).
+  It watches the bar until it's full, gone (the engine started) or hidden (a load error).
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
 - **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
   in it in one frame, not around a player at the start nor on arriving somewhere.
