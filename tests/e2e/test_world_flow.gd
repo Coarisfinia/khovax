@@ -16,6 +16,8 @@ const SEEDS: int = 40
 const INSTANCE_SEEDS: int = 6
 ## Where _check_documents' region document has its stump, turned by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
+## Where it has its water, made walkable by hand.
+const WATER: Vector2i = Vector2i(0, 1)
 
 
 func run(_tree: SceneTree) -> String:
@@ -151,7 +153,7 @@ func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
 	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch\n"
-	legend += "- `🌲`: forest\n- `w`: water\n- `🪓`: stump, turned 3, not walkable"
+	legend += "- `🌲`: forest\n- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable"
 	var grid: String = " 🪓 🌲\nj 1 x\n B w"
 	var region: Region = RegionDocument.parse(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
@@ -162,7 +164,10 @@ func _check_documents() -> String:
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
 	expected = expected and region.terrain[STUMP] == TileKinds.number_of("stump")
-	var plain: String = tiles % [grid, legend.replace(", not walkable", "")]
+	var plain: String = tiles % [
+		grid,
+		legend.replace(", not walkable", "").replace(", walkable", ""),
+	]
 	expected = expected and _turned_and_overridden(region, plain)
 	if not region.problem.is_empty() or not expected:
 		return "a region document didn't read as drawn: %s" % region.problem
@@ -172,6 +177,8 @@ func _check_documents() -> String:
 		tiles % ["1 🌲 .", "- `🌲`: jungle"]: "the legend doesn't explain `🌲`",
 		tiles % ["1 🪓 .", "- `🪓`: stump, turned 6"]: "tile (0, 0)'s turn 6",
 		tiles % ["1 🪓 .", "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",
+		tiles % ["1 🪓 .", "- `🪓`: stump, turned 2, turned 4"]: "tile (0, 0) says its turn",
+		tiles % ["1 🪓 .", "- `🪓`: stump, walkable, not walkable"]: "tile (0, 0) says its turn",
 	}
 	for text: String in refusals:
 		var problem: String = RegionDocument.parse(text).problem
@@ -184,19 +191,23 @@ func _check_documents() -> String:
 
 
 ## Whether `region`, read from _check_documents' document, has its stump turned 3 and not walkable
-## though stumps are, both turning with the region and moving with a placed piece; and whether the
-## override is hashed: `plain`, the same document without it, hashes otherwise.
+## though stumps are, and its water walkable though water isn't, all of it turning with the region
+## and moving with a placed piece; and whether the overrides are hashed: `plain`, the same document
+## without them, hashes otherwise.
 func _turned_and_overridden(region: Region, plain: String) -> bool:
 	var expected: bool = region.decoration_turns == { STUMP: 3 }
 	expected = expected and TileKinds.is_walkable(region.terrain[STUMP])
 	expected = expected and not region.is_walkable(STUMP) and region.is_walkable(Vector2i.ZERO)
+	expected = expected and region.is_walkable(WATER) and not TileKinds.is_walkable(Region.WATER)
 	var turned: Region = region.turned(4)
 	expected = expected and turned.decoration_turns == { Hex.turn(STUMP, 4): 1 }
 	expected = expected and not turned.is_walkable(Hex.turn(STUMP, 4))
 	var placed: Region = Region.new()
 	placed.place(region, Vector2i(5, -2))
 	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
-	expected = expected and placed.walkable_overrides == { STUMP + Vector2i(5, -2): false }
+	var moved: Vector2i = Vector2i(5, -2)
+	expected = expected and not placed.is_walkable(STUMP + moved)
+	expected = expected and placed.is_walkable(WATER + moved)
 	return expected and region.hash_values() != RegionDocument.parse(plain).hash_values()
 
 

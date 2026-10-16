@@ -340,7 +340,15 @@ func _parse_tile(line: String) -> String:
 	if not has_tile(tile) or kind < 0:
 		return "tile %s isn't on the region, or %s isn't a tile blueprint" % [tile, parts[3]]
 	terrain[tile] = kind
-	for extra: String in parts.slice(4):
+	var extras: PackedStringArray = parts.slice(4)
+	# At most a turn and one override, each said once.
+	var turns_said: int = 0
+	for extra: String in extras:
+		turns_said += 1 if extra.is_valid_int() else 0
+	var overrides_said: int = extras.count(WALKABLE) + extras.count(NOT_WALKABLE)
+	if turns_said > 1 or overrides_said > 1:
+		return "tile %s says its turn or its walkable trait twice: %s" % [tile, line]
+	for extra: String in extras:
 		var wrong: String = _parse_tile_extra(tile, extra)
 		if not wrong.is_empty():
 			return wrong
