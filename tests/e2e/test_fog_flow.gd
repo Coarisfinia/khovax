@@ -110,14 +110,14 @@ func _check_lookout() -> String:
 	var lookout: TileTrigger = state.region.triggers[0]
 	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
 	state.player(0).tile = lookout.tile
-	Simulation.step(state, _commands(Command.NO_MOVE))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	var far: Vector2i = lookout.tile + Hex.DIRECTIONS[WEST] * lookout.amount
 	var near_edge: bool = not state.region.has_tile(far) or fog.revealed.has(far)
 	if fog.revealed.is_empty() or not near_edge:
 		return "stepping onto the lookout didn't reveal the area around it"
 	var hashed: int = state.state_hash()
 	fog.revealed.clear()
-	Simulation.step(state, _commands(Command.NO_MOVE))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if not fog.revealed.is_empty() or state.state_hash() == hashed:
 		return "a lookout revealed twice"
 	return ""
@@ -127,14 +127,9 @@ func _check_lookout() -> String:
 func _walk_west(state: GameState, moves: int) -> void:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	for _move: int in moves:
-		Simulation.step(state, _commands(WEST))
+		Simulation.step(state, FlowSteps.command(WEST))
 		while movement.walk(state.player(0).id).is_moving():
-			Simulation.step(state, _commands(Command.NO_MOVE))
-
-
-func _commands(move: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(move)]
-	return commands
+			Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 
 
 func _tile(state: GameState) -> Vector2i:

@@ -59,7 +59,7 @@ func _check_move_timing() -> String:
 	var state: GameState = _state(1)
 	var arrivals: Array[Vector2i] = []
 	for _tick: int in 3 * MovementFeature.MOVE_TICKS + 1:
-		Simulation.step(state, _commands(EAST))
+		Simulation.step(state, FlowSteps.command(EAST))
 		arrivals.append(_tile(state))
 	var expected_second: Vector2i = START + 2 * Hex.DIRECTIONS[EAST]
 	if arrivals[0] != START + Hex.DIRECTIONS[EAST]:
@@ -77,7 +77,7 @@ func _check_invalid_commands() -> String:
 	var state: GameState = _state(1)
 	var invalid: Array[int] = [-5, Command.NO_MOVE, Hex.DIRECTIONS.size(), 99]
 	for direction: int in invalid:
-		Simulation.step(state, _commands(direction))
+		Simulation.step(state, FlowSteps.command(direction))
 	if _tile(state) != START or _player_walk(state).is_moving():
 		return "an invalid or empty command moved the player"
 	return ""
@@ -90,7 +90,7 @@ func _check_same_commands_same_state() -> String:
 		return "the same seed and commands gave different states"
 	var last: GameState = _state(42)
 	for direction: int in _moves():
-		Simulation.step(last, _commands(direction))
+		Simulation.step(last, FlowSteps.command(direction))
 	if _tile(last) == START and not _player_walk(last).is_moving():
 		return "the scripted commands never moved the player, so the replay proves little"
 	return ""
@@ -257,10 +257,10 @@ func _check_switch_within_tick() -> String:
 		TrailFeature.new(),
 	]
 	var state: GameState = _state_with(ordered, 42)
-	Simulation.step(state, _commands(EAST))
+	Simulation.step(state, FlowSteps.command(EAST))
 	var first: Vector2i = _tile(state)
 	for _tick: int in MovementFeature.MOVE_TICKS:
-		Simulation.step(state, _commands(EAST))
+		Simulation.step(state, FlowSteps.command(EAST))
 	if first != START + Hex.DIRECTIONS[EAST]:
 		return "the player didn't move before the boss phase began"
 	if _tile(state) != first or _movement(state).enabled:
@@ -276,7 +276,7 @@ func _check_players_move_at_once() -> String:
 	var second: Entity = state.player(1)
 	var start_first: Vector2i = first.tile
 	var start_second: Vector2i = second.tile
-	Simulation.step(state, _slot_commands(EAST, WEST))
+	Simulation.step(state, FlowSteps.commands([EAST, WEST]))
 	if first.tile != start_first + Hex.DIRECTIONS[EAST]:
 		return "the player in slot 0 didn't follow its own command"
 	if second.tile != start_second + Hex.DIRECTIONS[WEST]:
@@ -300,7 +300,7 @@ func _two_player_hash() -> int:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
 	for direction: int in _moves():
 		var other: int = (direction + 2) % Hex.DIRECTIONS.size()
-		Simulation.step(state, _slot_commands(direction, other))
+		Simulation.step(state, FlowSteps.commands([direction, other]))
 	return state.state_hash()
 
 
@@ -458,8 +458,8 @@ func _check_streams_apart() -> String:
 	var calm: GameState = _two_dice(1)
 	var busy: GameState = _two_dice(3)
 	for _tick: int in 50:
-		Simulation.step(calm, _commands(Command.NO_MOVE))
-		Simulation.step(busy, _commands(Command.NO_MOVE))
+		Simulation.step(calm, FlowSteps.command(Command.NO_MOVE))
+		Simulation.step(busy, FlowSteps.command(Command.NO_MOVE))
 	var other: int = Dice.ID + 1
 	if calm.feature(other).hash_values() != busy.feature(other).hash_values():
 		return "more rolls in one feature shifted another feature's rolls"
@@ -545,7 +545,7 @@ func _event_log(seed_value: int) -> Array:
 	# Not "log": that would shadow the global log() and fail the script check.
 	var raised: Array = []
 	for direction: int in _moves():
-		Simulation.step(state, _commands(direction))
+		Simulation.step(state, FlowSteps.command(direction))
 		for event: RefCounted in state.events:
 			raised.append(state.tick)
 			raised.append(_event_values(event))
@@ -666,7 +666,7 @@ func _recorded_run() -> Replay:
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)
 	for direction: int in _moves():
-		var commands: Array[Command] = _slot_commands(direction, Command.NO_MOVE)
+		var commands: Array[Command] = FlowSteps.commands([direction, Command.NO_MOVE])
 		world.step(commands)
 		recorded.record(world, commands)
 	recorded.finish(world)
@@ -838,16 +838,16 @@ func _dice_state(seed_value: int) -> GameState:
 func _dice_hash(seed_value: int) -> int:
 	var state: GameState = _dice_state(seed_value)
 	for direction: int in _moves():
-		Simulation.step(state, _commands(direction))
+		Simulation.step(state, FlowSteps.command(direction))
 	return state.state_hash()
 
 
 ## Moves `moves` tiles in one direction, waiting for each move to arrive.
 func _walk(state: GameState, direction: int, moves: int) -> void:
 	for _move: int in moves:
-		Simulation.step(state, _commands(direction))
+		Simulation.step(state, FlowSteps.command(direction))
 		while _player_walk(state).is_moving():
-			Simulation.step(state, _commands(Command.NO_MOVE))
+			Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 
 
 ## A state with movement and the trail, like the basic instance, on this flow's own region and
@@ -896,7 +896,7 @@ func _replay(moves: Array[int], seed_value: int) -> Array[int]:
 	var state: GameState = _state(seed_value)
 	var hashes: Array[int] = []
 	for direction: int in moves:
-		Simulation.step(state, _commands(direction))
+		Simulation.step(state, FlowSteps.command(direction))
 		hashes.append(state.state_hash())
 	return hashes
 
@@ -907,18 +907,6 @@ func _moves() -> Array[int]:
 	for tick: int in REPLAY_TICKS:
 		moves.append(posmod(tick * 3 + tick % 11, Hex.DIRECTIONS.size() + 1) - 1)
 	return moves
-
-
-## One tick's commands with one player, in slot 0.
-func _commands(direction: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(direction)]
-	return commands
-
-
-## One tick's commands for slots 0 and 1.
-func _slot_commands(first: int, second: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(first), Command.new(second)]
-	return commands
 
 
 ## A test rule like a boss phase: from tick `from_tick` on, it switches movement off, inside the
