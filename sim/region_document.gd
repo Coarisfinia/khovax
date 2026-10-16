@@ -6,7 +6,8 @@ extends RefCounted
 ## number of rows and its middle row an odd number of tiles. Nothing refers to a tile by numbers:
 ## connectors, exits and named species are symbols in the grid, which the legend explains.
 ##
-## Region.parse's symbols need no legend entry (`.` ground, `~` water, `^` rock, `1`-`4` players'
+## RegionFormat.parse's symbols need no legend entry (`.` ground, `~` water, `^` rock, `1`-`4`
+## players'
 ## starts, `m` a wild monster, `c` a treasure chest), though one may describe them. Any other
 ## symbol is ground (a wild monster's spot for a named species) and its legend entry says what it
 ## is, as a list item "- `X`: <meaning>", the meaning being one of:
@@ -22,7 +23,7 @@ extends RefCounted
 ##   `turned <n>` turns its decoration by n sixths of a turn, counter-clockwise (#231), so two
 ##   symbols can stand for the same kind turned apart, and `walkable` or `not walkable` overrides
 ##   its kind's trait for this tile (#201), e.g. `forest, not walkable`
-## where <side> is one of SIDES. The document is read into Region.parse's compact form.
+## where <side> is one of SIDES. The document is read into RegionFormat.parse's compact form.
 
 const TILES: String = "## Tiles"
 const LEGEND: String = "## Legend"
@@ -53,10 +54,11 @@ static func parse(text: String) -> Region:
 	for r: int in rows.size():
 		compact.append(_compact_row(rows[r], r - origin.y, origin.x, legend, lines))
 	compact.append_array(lines)
-	return Region.parse("\n".join(compact))
+	return RegionFormat.parse("\n".join(compact))
 
 
-## Row `rows[r]` with its legend symbols turned into what Region.parse reads there (ground, or a
+## Row `rows[r]` with its legend symbols turned into what RegionFormat.parse reads there (ground, or
+## a
 ## wild monster's spot), adding each symbol's compact line to `lines`. `r` counts from the origin's
 ## row, and `origin_column` is the origin's column.
 static func _compact_row(
@@ -73,7 +75,7 @@ static func _compact_row(
 			var tile: Vector2i = Vector2i(Fixed.div_floor(column - origin_column - r, 2), r)
 			var line: String = _line(legend[symbol], tile)
 			lines.append(line)
-			compact[column] = "m" if line.begins_with(Region.SPECIES) else "."
+			compact[column] = "m" if line.begins_with(RegionFormat.SPECIES) else "."
 	return compact
 
 
@@ -160,7 +162,7 @@ static func _trigger_line(clause: String, where: String) -> String:
 			var amount: String = rest.trim_prefix(action)
 			if clause.begins_with(phrase) and rest.begins_with(action) and amount.is_valid_int():
 				return "%s%s %s %s %s" % [
-					Region.TRIGGER,
+					RegionFormat.TRIGGER,
 					where,
 					whens[phrase],
 					actions[action],
@@ -175,13 +177,16 @@ static func _tile_line(meaning: String, where: String) -> String:
 	var clauses: PackedStringArray = meaning.split(", ")
 	if TileKinds.number_of(clauses[0]) < 0:
 		return ""
-	var line: String = "%s%s %s" % [Region.TILE, where, clauses[0]]
+	var line: String = "%s%s %s" % [RegionFormat.TILE, where, clauses[0]]
 	for clause: String in clauses.slice(1):
 		var turn: String = clause.trim_prefix(TURNED)
 		if clause.begins_with(TURNED) and turn.is_valid_int():
 			line += " " + turn
 		elif clause == WALKABLE or clause == NOT_WALKABLE:
-			line += " " + (Region.WALKABLE if clause == WALKABLE else Region.NOT_WALKABLE)
+			var override: String = RegionFormat.NOT_WALKABLE
+			if clause == WALKABLE:
+				override = RegionFormat.WALKABLE
+			line += " " + override
 		else:
 			return ""
 	return line
@@ -193,7 +198,7 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 	# What lies on the tile: a tile kind, or loot on the ground.
 	var placed: String = _tile_line(meaning, where)
 	if meaning == LOOT_ON_THE_GROUND:
-		placed = Region.LOOT + where
+		placed = RegionFormat.LOOT + where
 	if not placed.is_empty():
 		return placed
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
@@ -201,11 +206,11 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 	for word: String in words:
 		side = SIDES.find(word) if side < 0 else side
 	if meaning.begins_with("joins another piece to the ") and side >= 0:
-		return "%s%s %d" % [Region.CONNECTOR, where, side]
+		return "%s%s %d" % [RegionFormat.CONNECTOR, where, side]
 	if meaning.begins_with("exit to the ") and side >= 0 and words.size() >= 6:
-		return "%s%s %d %s" % [Region.EXIT, where, side, words[-1]]
+		return "%s%s %d %s" % [RegionFormat.EXIT, where, side, words[-1]]
 	if meaning.begins_with("a wild monster, always ") and words.size() >= 5:
-		return "%s%s %s" % [Region.SPECIES, where, words[-1]]
+		return "%s%s %s" % [RegionFormat.SPECIES, where, words[-1]]
 	# A trigger names what it is before the "; ", and its when and action after.
 	if meaning.contains("; ") and not meaning.get_slice("; ", 0).strip_edges().is_empty():
 		return _trigger_line(meaning.get_slice("; ", 1), where)
