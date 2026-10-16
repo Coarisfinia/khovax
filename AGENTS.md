@@ -332,6 +332,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
+  borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
+  bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
 - **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no

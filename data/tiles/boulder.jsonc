@@ -1,0 +1,8 @@
+// Boulder: a cluster of big rocks standing on the ground. Nobody walks it, but sight passes over it.
+{
+	"id": "boulder",
+	"number": 5, // permanent: never reused or changed once shipped
+	"color": "#5c8c52",
+	"model": "res://assets/kaykit-hexagon/mountain_C.gltf",
+	"traits": { "walkable": false }
+}
