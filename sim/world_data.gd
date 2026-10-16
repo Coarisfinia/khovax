@@ -42,7 +42,7 @@ static func of(world: World) -> Dictionary:
 	}
 
 
-## The world `of` saved, or an empty one whose `problem` says why it's refused, whole: data
+## The world that `of` saved, or an empty one whose `problem` says why it's refused, whole: data
 ## in another format, or played by other rules (a world can only go on deterministically under the
 ## rules it was played by), or that doesn't hash as it did when saved (its content changed since).
 static func to_world(data: Dictionary) -> World:
