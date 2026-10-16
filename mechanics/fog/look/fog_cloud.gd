@@ -6,7 +6,7 @@ extends MeshInstance3D
 ## thick cloud where no ally has ever looked, and light fog (#175) over ground seen before. Outside
 ## the region lies cloud, so the region's edge sinks into it instead of ending at a void.
 
-const SHADER: Shader = preload("res://view/fog_cloud.gdshader")
+const SHADER: Shader = preload("res://mechanics/fog/look/fog_cloud.gdshader")
 ## How far the cloud reaches past the region, in tiles.
 const MARGIN: int = 12
 ## Where the cloud floats: just over the tiles, under everything standing on them.
