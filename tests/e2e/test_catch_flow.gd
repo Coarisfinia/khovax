@@ -4,8 +4,10 @@ extends RefCounted
 ## ticks (not a tick before) the monster is caught: it leaves the world, the catch is announced,
 ## the trail starts over, and its figure shrinks away. While it seals, the ring fills on screen and
 ## a save resumes it exactly. An open ring, a walk that only touches the wild monster, and a ring
-## around another tile catch nothing. Two players closing rings in the same tick: whoever joined
-## first seals the monster in and gets it (owner, #84). Catching is deterministic. A catch by this
+## around another tile catch nothing. Allies share one trail (#87): two players close one ring
+## together, and the catch goes to the lowest slot among those who colored its wall (owner, #86),
+## whoever's move closed it; the ring then comes off the trail, the trail leading up to it stays.
+## Catching is deterministic. A catch by this
 ## machine's player lands in their profile and its save at once (#132), as the species it was:
 ## named by its spot, or rolled from the blueprint's list (#133).
 ##
@@ -22,14 +24,19 @@ extends RefCounted
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
-## The second player's ring around the wild monster, from its start at (-1, 1): one step shorter.
-const SECOND_RING: Array[Vector2i] = [
+## The two halves of the ring around the wild monster that two allies walk (#87): the first player
+## from its start at (1, -1), the second from its start at (-1, 1). The second's last step closes
+## it.
+const FIRST_HALF: Array[Vector2i] = [
+	Vector2i(0, -1),
+	Vector2i(-1, -1),
+	Vector2i(-2, -1),
+	Vector2i(-3, 0),
+]
+const SECOND_HALF: Array[Vector2i] = [
+	Vector2i(-1, 0),
 	Vector2i(-2, 1),
 	Vector2i(-3, 1),
-	Vector2i(-3, 0),
-	Vector2i(-2, -1),
-	Vector2i(-1, -1),
-	Vector2i(-1, 0),
 ]
 ## A ring around (1, 1), with no wild monster inside.
 const OTHER_RING: Array[Vector2i] = [
@@ -163,7 +170,7 @@ func _check_open_ring() -> String:
 func _check_other_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = FlowSteps.walk(state, OTHER_RING)
-	var trail: Trail = _trails(state).trail(state.player(0).id)
+	var trail: Trail = _trails(state).shared
 	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
 		return "a ring around another tile caught the wild monster or reset the trail"
 	if not _catching(state).seals.is_empty():
@@ -208,13 +215,15 @@ func _check_catch() -> String:
 	return _check_after_catch(state)
 
 
-## After the catch, the trail has started over from the catcher's tile, and the same walk always
-## ends in the same state.
+## After the catch, the ring is off the trail but for the tile the catcher stands on (#87), the
+## trail leading up to it stays, and the same walk always ends in the same state.
 func _check_after_catch(state: GameState) -> String:
 	var player: Entity = state.player(0)
-	var trail: Trail = _trails(state).trail(player.id)
-	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):
-		return "the trail didn't start over after the catch: %s" % [trail.sorted_tiles()]
+	var trail: Trail = _trails(state).shared
+	var expected: Array[Vector2i] = [Vector2i(1, -1), FlowSteps.BASIC_RING[0], player.tile]
+	expected.sort()
+	if trail.sorted_tiles() != expected:
+		return "the ring didn't come off the trail after the catch: %s" % [trail.sorted_tiles()]
 	var again: GameState = InstanceBlueprints.basic(42)
 	var _walked: Array[RefCounted] = FlowSteps.walk(again, FlowSteps.BASIC_RING)
 	var _events: Array[RefCounted] = _settle(again)
@@ -289,40 +298,51 @@ func _seals_in(data: Dictionary) -> Array:
 	return []
 
 
-## Two players close their rings around the wild monster in the same tick: the one who joined first
-## (the lower entity id) seals it in and catches it, and only their trail starts over.
+## Two allies close one ring together (#87): the first player walks half of it, then the second
+## the rest, and the second's step closes it. The catch still goes to the first, the lowest slot
+## among those who colored its wall (owner, #86). Then the ring is off the trail, but the trail
+## leading up to it stays, and each player colors the tile they stand on.
 func _check_together() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
-	var events: Array[RefCounted] = []
-	var standing: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
-	# The second player's ring is a step shorter, so it waits a step and both close at once.
-	for i: int in FlowSteps.BASIC_RING.size():
-		var moves: Array[int] = [_toward(first, FlowSteps.BASIC_RING[i]), Command.NO_MOVE]
-		if i > 0:
-			moves[1] = _toward(second, SECOND_RING[i - 1])
-		for tick: int in MovementFeature.MOVE_TICKS:
-			# Each step's move is given on its first tick only.
-			var both: Array[int] = moves if tick == 0 else standing
-			Simulation.step(state, FlowSteps.commands(both))
-			events.append_array(state.events)
+	var starts: Array[Vector2i] = [first.tile, second.tile]
+	var events: Array[RefCounted] = _walk_slot(state, 0, FIRST_HALF)
+	if not _catching(state).seals.is_empty():
+		return "half a ring started sealing"
+	events.append_array(_walk_slot(state, 1, SECOND_HALF))
 	if _catching(state).seals.keys() != [first.id]:
-		return "two players closing rings at once: %s seal, not only the first" % [
+		return "the allies' ring seals for %s, not the first player" % [
 			_catching(state).seals.keys(),
 		]
 	for _tick: int in MOST_SEAL_TICKS:
-		Simulation.step(state, FlowSteps.commands(standing))
+		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		events.append_array(state.events)
 	var caught: Array[WildMonsterCaught] = _caught(events)
 	if caught.size() != 1 or caught[0].catcher_id != first.id:
-		return "two players closing rings at once: caught %d times, not once by the first" % [
-			caught.size(),
-		]
-	var second_trail: Trail = _trails(state).trail(second.id)
-	if _trails(state).trail(first.id).tiles.size() != 1 or second_trail.tiles.size() == 1:
-		return "the catcher's trail didn't start over, or the other player's did"
+		return "the allies' ring caught %d times, not once for the first player" % caught.size()
+	var expected: Array[Vector2i] = [starts[0], starts[1], FIRST_HALF[0], first.tile, second.tile]
+	expected.sort()
+	var trail: Trail = _trails(state).shared
+	if trail.sorted_tiles() != expected:
+		return "after the allies' catch the trail is %s, not %s" % [trail.sorted_tiles(), expected]
+	if trail.tiles[first.tile] != first.id or trail.tiles[second.tile] != second.id:
+		return "the players' fresh trail tiles aren't their own"
 	return ""
+
+
+## Walks the player in `slot` along `path` while the other player stands; returns the events.
+func _walk_slot(state: GameState, slot: int, path: Array[Vector2i]) -> Array[RefCounted]:
+	var events: Array[RefCounted] = []
+	var standing: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
+	for next: Vector2i in path:
+		var moves: Array[int] = standing.duplicate()
+		moves[slot] = _toward(state.player(slot), next)
+		for tick: int in MovementFeature.MOVE_TICKS:
+			# Each step's move is given on its first tick only.
+			Simulation.step(state, FlowSteps.commands(moves if tick == 0 else standing))
+			events.append_array(state.events)
+	return events
 
 
 ## The issue's outcomes table, each in its own disc of test monsters.
@@ -465,9 +485,15 @@ func _outcome(
 	failed = failed and _wild(state).monsters.size() == spots.size()
 	failed = failed and broken[0].catcher_id == player.id and broken[0].walls.has(broken[0].tile)
 	var result: int = 1 if held else (0 if failed else -1)
-	# Held or broken, the trail starts over.
-	if _trails(state).trail(player.id).tiles.size() != 1:
-		result = -1
+	# Held or broken, the ring comes off the trail: none of its wall is left but where players
+	# stand.
+	var standing: Array[Vector2i] = []
+	for entity: Entity in state.entities:
+		if entity.slot != Entity.NO_SLOT:
+			standing.append(entity.tile)
+	for wall: Vector2i in broken[0].walls if not broken.is_empty() else []:
+		if _trails(state).shared.tiles.has(wall) and not standing.has(wall):
+			result = -1
 	return Vector2i(result, state.tick - closed)
 
 

@@ -62,7 +62,7 @@ func _check_two_players_walk() -> String:
 	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
 	for slot: int in 2:
 		var player: Entity = _driver.state.player(slot)
-		if player.tile == starts[slot] or trails.trail(player.id).tiles.size() < 2:
+		if player.tile == starts[slot] or not trails.shared.tiles.has(player.tile):
 			return "player %d didn't walk" % (slot + 1)
 		_views[slot].show_state()
 		if _views[slot].tile != player.tile:
@@ -71,8 +71,11 @@ func _check_two_players_walk() -> String:
 				_views[slot].tile,
 				player.tile,
 			]
-	if trails.trail(_driver.state.player(0).id).tiles.has(starts[1]):
-		return "the players share a trail"
+	# Allies share one trail (#87), and each tile remembers who colored it.
+	for slot: int in 2:
+		var player: Entity = _driver.state.player(slot)
+		if trails.shared.tiles.get(player.tile, 0) != player.id:
+			return "player %d's tile on the shared trail isn't theirs" % (slot + 1)
 	return ""
 
 
