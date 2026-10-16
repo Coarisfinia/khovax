@@ -5,7 +5,17 @@
 	"description": "What a monster is, captured or not (#45, #72). One file per species, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "types", "hp", "strength"],
+	"required": [
+		"id",
+		"types",
+		"hp",
+		"strength",
+		"speed",
+		"archetype",
+		"special",
+		"player_passive",
+		"self_passive"
+	],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
@@ -23,6 +33,14 @@
 			}
 		},
 		"hp": { "description": "Base HP, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 },
-		"strength": { "description": "Base strength, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 }
+		"strength": { "description": "Base strength, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 },
+		"speed": { "description": "Base speed, a whole amount (#33, #222): higher is faster.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
+		"archetype": {
+			"description": "How it behaves as a wild monster against rings (#222).",
+			"enum": ["charger", "burrower", "flyer", "swarm", "pusher"]
+		},
+		"special": { "description": "Its special attack, an ability of kind special that no other species has (#222, #228).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"player_passive": { "description": "Its passive that helps the player while it's out, an ability of kind player_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"self_passive": { "description": "Its passive that helps itself, an ability of kind self_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
 	}
 }

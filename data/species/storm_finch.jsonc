@@ -4,5 +4,10 @@
 	"id": "storm_finch",
 	"types": ["breeze", "mana"],
 	"hp": 60,
-	"strength": 70
+	"strength": 70,
+	"speed": 90,
+	"archetype": "flyer",
+	"special": "storm_finch_gale_dive",
+	"player_passive": "storm_finch_tailwind",
+	"self_passive": "storm_finch_light_bones"
 }

@@ -7,6 +7,12 @@ extends RefCounted
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, and broken ones are refused.
 
+## A species file's speed, archetype and abilities, as a valid species ends (#222).
+const KIT: String = (
+	", \"speed\": 1, \"archetype\": \"pusher\", \"special\": \"a_special\","
+	+ " \"player_passive\": \"a_passive\", \"self_passive\": \"its_passive\""
+)
+
 
 func run(_tree: SceneTree) -> String:
 	var content: Content = Content.load_species()
@@ -27,7 +33,59 @@ func run(_tree: SceneTree) -> String:
 		result = _check_tiles()
 	if result.is_empty():
 		result = _check_quests()
-	return result
+	return result if not result.is_empty() else _check_kits(content)
+
+
+## Every ability file reads, and every species names a special and two passives that exist and are
+## of their kind, its special its own (#222, #228). A special two species share, an ability of the
+## wrong kind, or one that doesn't exist is refused, and so is an ability file with a wrong id,
+## kind, name or description.
+func _check_kits(content: Content) -> String:
+	var loaded: Content = Content.load_abilities()
+	if not loaded.problem.is_empty():
+		return "the abilities didn't load: " + loaded.problem
+	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)
+	if not problem.is_empty():
+		return "the species' abilities don't hold together: " + problem
+	var finch: Species = content.species["storm_finch"]
+	var toad: Species = content.species["moss_toad"]
+	var shared: Dictionary[String, Species] = { "a": toad, "b": _copy_kit(finch, toad.special) }
+	if not SpeciesKit.problem(shared, loaded.abilities).contains("share the special"):
+		return "two species sharing a special weren't refused"
+	var wrong: Dictionary[String, Species] = { "b": _copy_kit(finch, finch.self_passive) }
+	if not SpeciesKit.problem(wrong, loaded.abilities).contains("isn't an ability of that kind"):
+		return "a passive named as a special wasn't refused"
+	var missing: Dictionary[String, Species] = { "b": _copy_kit(finch, "no_such_ability") }
+	if SpeciesKit.problem(missing, loaded.abilities).is_empty():
+		return "a special that doesn't exist wasn't refused"
+	return _check_abilities_refused()
+
+
+## A copy of `species`' kit with `special` as its special.
+static func _copy_kit(species: Species, special: String) -> Species:
+	var copy: Species = Species.new()
+	copy.id = species.id + "_copy"
+	copy.special = special
+	copy.player_passive = species.player_passive
+	copy.self_passive = species.self_passive
+	return copy
+
+
+func _check_abilities_refused() -> String:
+	var ability: String = "{\"id\": \"%s\", \"kind\": \"%s\", \"name\": \"%s\","
+	ability += " \"description\": \"d\"}"
+	var cases: Dictionary[String, String] = {
+		ability % ["y", "special", "N"]: "its id must",
+		ability % ["x", "attack", "N"]: "its kind",
+		ability % ["x", "special", ""]: "it has a name",
+		"{\"id\": \"x\", \"kind\": \"special\", \"name\": \"N\"}": "it has a name",
+		ability.replace("}", ", \"power\": 1}") % ["x", "special", "N"]: "field power",
+	}
+	for text: String in cases:
+		var problem: String = Ability.parse("x", text).problem
+		if not problem.begins_with(cases[text]):
+			return "expected an ability refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
 
 
 ## Every quest file reads: the first catch is one catch of any species, and the toads' quest counts
@@ -220,13 +278,19 @@ func _check_refused() -> String:
 		"{\"id\": \"x\", \"types\": [], \"hp\": 1, \"strength\": 1}": "a species has one",
 		"{\"id\": 7, \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id must be",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1, \"y\": 1}": "field y",
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("pusher", "digger") + "}": "its archetype",
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("\"a_special\"", "7") + "}": "it names a special",
 	}
 	for text: String in cases:
 		var problem: String = _add_to_empty(text)
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
 	var twice: Content = Content.new()
-	var valid: String = "{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}"
+	var valid: String = "{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+	valid += KIT + "}"
 	var first: String = twice.add_species("x", valid)
 	if not first.is_empty() or not twice.add_species("x", valid).begins_with("its id"):
 		return "a second species with the same id was accepted"

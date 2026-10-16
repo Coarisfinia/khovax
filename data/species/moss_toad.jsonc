@@ -3,5 +3,10 @@
 	"id": "moss_toad",
 	"types": ["growth"],
 	"hp": 120, // sturdy
-	"strength": 40
+	"strength": 40,
+	"speed": 40,
+	"archetype": "pusher",
+	"special": "moss_toad_belly_flop",
+	"player_passive": "moss_toad_soft_moss",
+	"self_passive": "moss_toad_damp_hide"
 }
