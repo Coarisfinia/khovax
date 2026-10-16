@@ -1,0 +1,8 @@
+// A placeholder until the abilities do something (#222): its effect comes with the system that
+// uses it.
+{
+	"id": "moss_toad_belly_flop",
+	"kind": "special",
+	"name": "Belly Flop",
+	"description": "The moss toad leaps and lands on its target with all its soggy weight."
+}

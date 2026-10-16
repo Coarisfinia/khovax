@@ -1,0 +1,8 @@
+// A placeholder until the abilities do something (#222): its effect comes with the system that
+// uses it.
+{
+	"id": "storm_finch_gale_dive",
+	"kind": "special",
+	"name": "Gale Dive",
+	"description": "The storm finch folds its wings and drops on its target in a gust."
+}

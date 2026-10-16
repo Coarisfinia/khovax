@@ -1,0 +1,8 @@
+// A placeholder until the abilities do something (#222): its effect comes with the system that
+// uses it.
+{
+	"id": "moss_toad_soft_moss",
+	"kind": "player_passive",
+	"name": "Soft Moss",
+	"description": "While the moss toad is out, the player's rings hold a little longer."
+}

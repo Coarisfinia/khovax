@@ -10,8 +10,19 @@ const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
 const QUESTS_DIR: String = "res://data/quests/"
+const ABILITIES_DIR: String = "res://data/abilities/"
 ## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
-const SPECIES_FIELDS: Array[String] = ["id", "types", "hp", "strength"]
+const SPECIES_FIELDS: Array[String] = [
+	"id",
+	"types",
+	"hp",
+	"strength",
+	"speed",
+	"archetype",
+	"special",
+	"player_passive",
+	"self_passive",
+]
 ## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
 ## Families have no names; each is shown as an icon in a circle on its color.
 const FAMILIES: Array[Array] = [
@@ -30,6 +41,8 @@ var loot_tables: Dictionary[String, LootTable] = {}
 var tiles: Dictionary[String, TileBlueprint] = {}
 ## Every quest, by id.
 var quests: Dictionary[String, QuestDefinition] = {}
+## Every ability, by id (#222).
+var abilities: Dictionary[String, Ability] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -66,6 +79,20 @@ static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 				content.problem = file_name + ": " + table.problem
 				return content
 			content.loot_tables[table.id] = table
+	return content
+
+
+## Every ability file in `directory`, read and checked (#222).
+static func load_abilities(directory: String = ABILITIES_DIR) -> Content:
+	var content: Content = Content.new()
+	for file_name: String in DirAccess.get_files_at(directory):
+		if file_name.ends_with(".jsonc"):
+			var text: String = FileAccess.get_file_as_string(directory + file_name)
+			var ability: Ability = Ability.parse(file_name.get_basename(), text)
+			if not ability.problem.is_empty():
+				content.problem = file_name + ": " + ability.problem
+				return content
+			content.abilities[ability.id] = ability
 	return content
 
 
@@ -141,7 +168,8 @@ func add_species(file_id: String, text: String) -> String:
 		return "its id must match the file name and be unique"
 	if entry.hp < 1 or entry.strength < 1:
 		return "hp and strength are whole numbers from 1 to %d" % Fixed.MAX_AMOUNT
-	return _check_types(entry)
+	var wrong: String = _check_types(entry)
+	return wrong if not wrong.is_empty() else entry.read_kit(data)
 
 
 func _check_types(entry: Species) -> String:

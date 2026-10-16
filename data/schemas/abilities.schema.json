@@ -1,0 +1,19 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Flixbox/khovax/data/schemas/abilities.schema.json",
+	"title": "Ability",
+	"description": "Something a species brings (#222): a special attack the player triggers (#221), a passive that helps the player while the companion is active, or one that helps the companion itself. A special attack is one species' own (#228). One file per ability, named after its id.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "kind", "name", "description"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"kind": { "enum": ["special", "player_passive", "self_passive"] },
+		"name": { "description": "What the player reads.", "type": "string", "minLength": 1 },
+		"description": { "description": "What it does, for the player.", "type": "string", "minLength": 1 }
+	}
+}
