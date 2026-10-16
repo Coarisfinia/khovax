@@ -96,14 +96,14 @@ out of date.
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
 
-**Tech debt comes before new features** (owner's rule). When picking the next issue, open
-`tech-debt` issues (refactors, cleanups, tooling, bugs) go first, then features.
+**The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
+fixes, then architecture, then cleanup, then UI, then visuals, then assets and models.
 
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
 
-**Keep going without being asked.** Once a pull request is merged, take the next issue. Tech debt,
-refactors and bugs come before new features. Ask only for decisions that belong to the owner (game
+**Keep going without being asked.** Once a pull request is merged, take the next issue, in the
+order above. Ask only for decisions that belong to the owner (game
 design, scope, security trade-offs).
 
 **Stuck? File an issue and move on.** When something can't be finished without the owner, file an
