@@ -255,8 +255,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones
   at most once per `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending the session (quitting) or going
   to the background flushes what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
-  saved as versioned JSON (`Profile.FORMAT`, `SaveStore`), integers and ids only: a newer format is
-  refused, and an older one is migrated in `Profile.parse`, one format at a time.
+  saved as versioned JSON (`ProfileSave.FORMAT`, through `SaveStore`), integers and ids only: a newer format is
+  refused, and an older one is migrated in `ProfileSave.parse`, one format at a time.
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
   (catches, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.

@@ -69,7 +69,7 @@ func _monsters_on_disk() -> int:
 
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
 func _check_bad_results(profile: Profile) -> String:
-	var before: String = profile.to_text()
+	var before: String = ProfileSave.to_text(profile)
 	var no_chests: Gain = _result(["moss_toad"], {})
 	no_chests.chests_opened = -1
 	var bad: Array[Gain] = [
@@ -85,7 +85,7 @@ func _check_bad_results(profile: Profile) -> String:
 				result.caught_species,
 				result.materials,
 			]
-	if profile.to_text() != before:
+	if ProfileSave.to_text(profile) != before:
 		return "a refused gain still changed the profile"
 	return ""
 
@@ -97,7 +97,7 @@ func _check_save(profile: Profile) -> String:
 		return problem
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
-	if not loaded.problem.is_empty() or loaded.to_text() != profile.to_text():
+	if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(profile):
 		return "the loaded profile differs from the saved one: " + loaded.problem
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
 		return "saving left its temporary file behind"
@@ -111,8 +111,8 @@ func _check_save(profile: Profile) -> String:
 
 ## A save that isn't one, comes from a newer build, or contradicts itself is refused, not misread.
 func _check_refused() -> String:
-	var text: String = Profile.new().to_text()
-	var format: String = "\"format\": %d" % Profile.FORMAT
+	var text: String = ProfileSave.to_text(Profile.new())
+	var format: String = "\"format\": %d" % ProfileSave.FORMAT
 	var done: String = "\"quests_done\": []"
 	var progress: String = "\"quest_progress\": {}"
 	var cases: Dictionary[String, String] = {
@@ -141,7 +141,7 @@ func _check_refused() -> String:
 		text.replace("\"next_monster_id\": 1", "\"next_monster_id\": 0"): "the save's slots",
 	}
 	for case: String in cases:
-		var problem: String = Profile.parse(case).problem
+		var problem: String = ProfileSave.parse(case).problem
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
@@ -150,7 +150,7 @@ func _check_refused() -> String:
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
 ## finished runs (#197), and formats before 3 had no quest progress (#184), which starts empty.
 func _check_migrated() -> String:
-	var text: String = Profile.new().to_text()
+	var text: String = ProfileSave.to_text(Profile.new())
 	var parsed: Variant = JSON.parse_string(text)
 	var current: Dictionary = parsed
 	var _no_progress: bool = current.erase("quest_progress")
@@ -165,8 +165,8 @@ func _check_migrated() -> String:
 	for old: Dictionary in olds:
 		var save: Dictionary = current.duplicate()
 		save.merge(old, true)
-		var loaded: Profile = Profile.parse(JSON.stringify(save))
-		if not loaded.problem.is_empty() or loaded.to_text() != text:
+		var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
+		if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != text:
 			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
 	return ""
 
@@ -200,15 +200,15 @@ func _check_recovered() -> String:
 		var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 		if not problem.is_empty() or loaded.loaded_generation != 1:
 			return "a damaged newest save didn't fall back a generation: " + problem
-		if loaded.to_text() != older.to_text():
+		if ProfileSave.to_text(loaded) != ProfileSave.to_text(older):
 			return "the fallback isn't the save before the damaged one"
 	for file: String in [SAVE_PATH, SAVE_PATH + ".1"]:
 		_write(file, "{}")
 	if SaveStore.load_profile(SAVE_PATH).problem.is_empty():
 		return "a save with every generation damaged was read"
 	SaveStore.remove(SAVE_PATH)
-	_write(SAVE_PATH, newer.to_text())
-	if SaveStore.load_profile(SAVE_PATH).to_text() != newer.to_text():
+	_write(SAVE_PATH, ProfileSave.to_text(newer))
+	if ProfileSave.to_text(SaveStore.load_profile(SAVE_PATH)) != ProfileSave.to_text(newer):
 		return "a plain save from before checksums didn't load"
 	return ""
 
