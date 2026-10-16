@@ -50,6 +50,8 @@ const STRONG_STRENGTH: int = 400
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
+## The HP the enrage check wears its monster down to before enraging it further.
+const WORN: int = 10
 ## No second player on the outcome's wall.
 const NO_HELPER: int = -1
 ## Where many weak monsters stand in the big ring.
@@ -317,22 +319,50 @@ func _check_enraged() -> String:
 	return _enraged_further(state, monster)
 
 
-## Every further ring the monster breaks adds a stack, up to the most it takes, each making it
-## stronger still, and its HP never goes past full.
-func _enraged_further(state: GameState, monster: int) -> String:
-	var wild: WildMonsterFeature = _wild(state)
-	var enrage: EnrageFeature = state.feature(Features.ENRAGE) as EnrageFeature
+## A RingBroken event for a ring that had only `monster` inside.
+func _broken_around(monster: int) -> RingBroken:
 	var inside: Array[int] = [monster]
 	var walls: Array[Vector2i] = []
-	var broken: Array[RefCounted] = [RingBroken.new(0, 0, Vector2i.ZERO, walls, inside)]
+	return RingBroken.new(0, 0, Vector2i.ZERO, walls, inside)
+
+
+## Saves the wild monsters with `monster` at WORN HP and loads them back: its rage must survive.
+func _wear_down(state: GameState, monster: int) -> String:
+	var wild: WildMonsterFeature = _wild(state)
+	var saved: Dictionary = wild.save_values()
+	var entries: Array = saved["wild_monsters"]
+	var entry: Dictionary = entries[0]
+	entry["hp"] = WORN
+	var restored: DataReader = DataReader.new(saved)
+	wild.load_values(state, restored)
+	if restored.failed() or wild.rage_of(monster) != 1 or wild.hp_of(monster) != WORN:
+		return "the monster's rage or HP didn't survive a save: %s" % restored.problem
+	return ""
+
+
+## Every further ring the monster breaks adds a stack, up to the most it takes, each making it
+## stronger still and healing EnrageFeature.HEAL of its full HP, never past it: it's worn down to
+## WORN HP first (through a save, as nothing hurts monsters yet). Its rage is saved too.
+func _enraged_further(state: GameState, monster: int) -> String:
+	var worn: String = _wear_down(state, monster)
+	if not worn.is_empty():
+		return worn
+	var wild: WildMonsterFeature = _wild(state)
+	var enrage: EnrageFeature = state.feature(Features.ENRAGE) as EnrageFeature
+	var broken: Array[RefCounted] = [_broken_around(monster)]
 	for stack: int in range(2, WildMonsterFeature.MOST_RAGE + 3):
 		var before: int = wild.strength_of(monster)
 		state.events = broken
 		enrage.step(state, [])
-		var capped: bool = stack > WildMonsterFeature.MOST_RAGE
-		var stronger: bool = wild.strength_of(monster) > before or capped
+		# Past the most rage, it grows no stronger.
+		var stronger: bool = wild.strength_of(monster) > before
+		stronger = stronger or stack > WildMonsterFeature.MOST_RAGE
 		var rage: int = mini(stack, WildMonsterFeature.MOST_RAGE)
-		if wild.rage_of(monster) != rage or not stronger or wild.hp_of(monster) > OUTCOME_HP:
+		var healed: int = mini(
+			WORN + (stack - 1) * Fixed.scale(OUTCOME_HP, EnrageFeature.HEAL),
+			OUTCOME_HP,
+		)
+		if wild.rage_of(monster) != rage or not stronger or wild.hp_of(monster) != healed:
 			return "broken ring %d left rage %d, strength %d, HP %d" % [
 				stack,
 				wild.rage_of(monster),
