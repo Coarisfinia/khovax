@@ -111,7 +111,7 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	applied += SaveStore.save_profile(fresh, SAVE_PATH)
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
-	if not applied.is_empty() or loaded.to_text() != fresh.to_text():
+	if not applied.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(fresh):
 		return "quest progress didn't survive saving and loading: " + applied + loaded.problem
 	loaded.quest_book = book
 	applied = loaded.apply(_gain(["moss_toad", "moss_toad"], 0))
@@ -136,7 +136,7 @@ func _check_settled() -> String:
 	var save: Profile = Profile.new()
 	save.quest_progress["three_moss_toads"] = QuestProgress.new(0, 3)
 	save.quest_progress["first_catch"] = QuestProgress.new(4, 0)
-	var stale: Profile = Profile.parse(save.to_text())
+	var stale: Profile = ProfileSave.parse(ProfileSave.to_text(save))
 	stale.quest_book = Content.load_quests().quests
 	applied = stale.problem + stale.apply(_gain([], 1))
 	var settled: Array[String] = ["first_catch", "three_moss_toads"]
