@@ -19,6 +19,10 @@ var terrain: Dictionary[Vector2i, int] = {}
 ## the tiles whose piece turns it by hand (#231); it turns with the region. A look, not a rule:
 ## not hashed, and only the views read it.
 var decoration_turns: Dictionary[Vector2i, int] = {}
+## How tall a tile stands, set by hand in its region piece (#232), in hundredths of a tile's radius,
+## for the check that a crown above it leaves it room; every other tile is as tall as its tallest
+## object, measured from the models. Not a rule, so not hashed.
+var height_overrides: Dictionary[Vector2i, int] = {}
 ## Placed tiles whose piece overrides their kind's walkable trait (#201): whether walkers can stand
 ## on each. A rule, so it's hashed with the tiles.
 var walkable_overrides: Dictionary[Vector2i, bool] = {}
@@ -129,6 +133,8 @@ func turned(turns: int) -> Region:
 	for tile: Vector2i in decoration_turns:
 		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
 		region.decoration_turns[Hex.turn(tile, turns)] = turn
+	for tile: Vector2i in height_overrides:
+		region.height_overrides[Hex.turn(tile, turns)] = height_overrides[tile]
 	for tile: Vector2i in walkable_overrides:
 		region.walkable_overrides[Hex.turn(tile, turns)] = walkable_overrides[tile]
 	return region
@@ -167,6 +173,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		named_species[spot + offset] = piece.named_species[spot]
 	for tile: Vector2i in piece.decoration_turns:
 		decoration_turns[tile + offset] = piece.decoration_turns[tile]
+	for tile: Vector2i in piece.height_overrides:
+		height_overrides[tile + offset] = piece.height_overrides[tile]
 	for tile: Vector2i in piece.walkable_overrides:
 		walkable_overrides[tile + offset] = piece.walkable_overrides[tile]
 	for spot: Vector2i in piece.chests:

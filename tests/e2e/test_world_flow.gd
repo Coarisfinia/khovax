@@ -15,7 +15,7 @@ const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
 ## test's big region.
 const INSTANCE_SEEDS: int = 6
-## Where _check_documents' region document has its stump, turned by hand.
+## Where _check_documents' region document has its stump, turned and set lower (#232) by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
 const WATER: Vector2i = Vector2i(0, 1)
@@ -160,7 +160,8 @@ func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
 	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch\n"
-	legend += "- `🌲`: forest\n- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable"
+	legend += "- `🌲`: forest\n"
+	legend += "- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
 	var grid: String = " 🪓 🌲\nj 1 x\n B w"
 	var region: Region = RegionDocument.parse(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
@@ -203,15 +204,18 @@ func _check_documents() -> String:
 ## without them, hashes otherwise.
 func _turned_and_overridden(region: Region, plain: String) -> bool:
 	var expected: bool = region.decoration_turns == { STUMP: 3 }
+	expected = expected and region.height_overrides == { STUMP: 30 }
 	expected = expected and TileKinds.is_walkable(region.terrain[STUMP])
 	expected = expected and not region.is_walkable(STUMP) and region.is_walkable(Vector2i.ZERO)
 	expected = expected and region.is_walkable(WATER) and not TileKinds.is_walkable(Region.WATER)
 	var turned: Region = region.turned(4)
 	expected = expected and turned.decoration_turns == { Hex.turn(STUMP, 4): 1 }
+	expected = expected and turned.height_overrides == { Hex.turn(STUMP, 4): 30 }
 	expected = expected and not turned.is_walkable(Hex.turn(STUMP, 4))
 	var placed: Region = Region.new()
 	placed.place(region, Vector2i(5, -2))
 	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
+	expected = expected and placed.height_overrides == { STUMP + Vector2i(5, -2): 30 }
 	var moved: Vector2i = Vector2i(5, -2)
 	expected = expected and not placed.is_walkable(STUMP + moved)
 	expected = expected and placed.is_walkable(WATER + moved)
@@ -279,13 +283,14 @@ func _check_room() -> String:
 	return _check_room_caught()
 
 
-## A made-up crown reaching one ring, leaving room for a stump's height beneath it: a stump next
-## to it fits, a forest's trees don't, and the problem names both tiles.
+## A made-up crown reaching one ring, leaving room for a stump's measured height beneath it: a
+## stump next to it fits, a forest's trees don't, and the problem names both tiles; a forest set
+## lower by hand in its piece (a height override, #232) fits.
 func _check_room_caught() -> String:
 	var crown: TileBlueprint = TileBlueprint.new()
 	crown.id = "test_crown"
 	crown.reach = 1
-	crown.clearance = TileLooks.of(TileKinds.number_of("stump")).height
+	crown.clearance = TileLooks.height_of(TileKinds.number_of("stump"))
 	_crown = crown
 	var look: Callable = _crown_look
 	var region: Region = Region.disc(2)
@@ -300,6 +305,9 @@ func _check_room_caught() -> String:
 	var problem: String = _room_problem(region, look)
 	if not problem.contains("forest") or not problem.contains(str(Hex.DIRECTIONS[3])):
 		return "a forest under a crown that leaves no room for it wasn't caught: " + problem
+	region.height_overrides[Hex.DIRECTIONS[3]] = crown.clearance
+	if not _room_problem(region, look).is_empty():
+		return "a forest set low enough by hand didn't fit: " + _room_problem(region, look)
 	return ""
 
 
@@ -309,7 +317,9 @@ func _crown_look(kind: int) -> TileBlueprint:
 
 
 ## Why `region` doesn't leave a crown the room it needs, or "": every tile within a decoration's
-## reach must be no taller than the clearance it leaves (#232). `look` gives a kind's blueprint.
+## reach must be no taller than the clearance it leaves (#232). A tile is as tall as its tallest
+## object, measured from the models, unless its piece sets its height by hand. `look` gives a
+## kind's blueprint.
 static func _room_problem(region: Region, look: Callable) -> String:
 	for tile: Vector2i in region.sorted_tiles():
 		var crown: TileBlueprint = look.call(region.terrain[tile])
@@ -319,11 +329,15 @@ static func _room_problem(region: Region, look: Callable) -> String:
 			var below: TileBlueprint = null
 			if under != tile and region.has_tile(under):
 				below = look.call(region.terrain[under])
-			if below != null and below.height > crown.clearance:
+			var tall: int = 0
+			if below != null:
+				var measured: int = TileLooks.height_of(region.terrain[under])
+				tall = region.height_overrides.get(under, measured)
+			if below != null and tall > crown.clearance:
 				return "%s on %s is taller (%d) than %s's crown on %s leaves room for (%d)" % [
 					below.id,
 					under,
-					below.height,
+					tall,
 					crown.id,
 					tile,
 					crown.clearance,

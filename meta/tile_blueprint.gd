@@ -11,7 +11,6 @@ const FIELDS: Array[String] = [
 	"color",
 	"model",
 	"scale",
-	"height",
 	"reach",
 	"clearance",
 	"traits",
@@ -19,8 +18,8 @@ const FIELDS: Array[String] = [
 const TRAITS: Array[String] = ["walkable", "hides"]
 ## The largest number a kind may have, so a typo can't make the kind list huge.
 const MAX_NUMBER: int = 255
-## The largest height or clearance (hundredths of a tile's radius) and reach (rings) a blueprint
-## may give, so a typo can't make one tile overshadow the region.
+## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
+## a typo can't make one tile overshadow the region.
 const MAX_HEIGHT: int = 1000
 const MAX_REACH: int = 3
 ## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
@@ -36,10 +35,9 @@ var color: Color = Color.BLACK
 var model: String = ""
 ## How much larger than the pack made it the model is drawn, for a model too small to read.
 var scale: float = 1.0
-## How high its decoration fills its tile (#232), in hundredths of a tile's radius; 0 when flat.
-var height: int = 0
 ## How many rings around its tile its decoration's crown covers, and how much height the crown
-## leaves free beneath it: every tile under the crown must fit (#232).
+## leaves free beneath it, in hundredths of a tile's radius: every tile under the crown must fit
+## (#232). How tall a tile is gets measured from its objects' models (TileLooks.height_of).
 var reach: int = 0
 var clearance: int = 0
 ## Whether walkers can stand on it.
@@ -66,7 +64,6 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
 	blueprint.number = _number(data.get("number"))
-	blueprint.height = _whole(data.get("height"), MAX_HEIGHT)
 	blueprint.reach = _whole(data.get("reach", 0), MAX_REACH)
 	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
 	blueprint.walkable = walks is bool and walks
@@ -103,13 +100,13 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 	return ""
 
 
-## Why the height, reach or clearance read isn't a whole number in its range (each is -1 then), or
-## "" (#232).
+## Why the reach or clearance read isn't a whole number in its range (each is -1 then), or ""
+## (#232).
 func _size_problem() -> String:
-	if height < 0 or reach < 0 or clearance < 0:
-		return "its height (up to %d), reach (up to %d) and clearance are whole numbers" % [
-			MAX_HEIGHT,
+	if reach < 0 or clearance < 0:
+		return "its reach (up to %d) and clearance (up to %d) are whole numbers" % [
 			MAX_REACH,
+			MAX_HEIGHT,
 		]
 	return ""
 

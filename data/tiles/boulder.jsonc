@@ -4,6 +4,5 @@
 	"number": 5, // permanent: never reused or changed once shipped
 	"color": "#5c8c52",
 	"model": "res://assets/kaykit-hexagon/mountain_C.gltf",
-	"height": 151, // how high it fills its tile (#232)
 	"traits": { "walkable": false }
 }

@@ -5,6 +5,5 @@
 	"number": 3, // permanent: never reused or changed once shipped
 	"color": "#3d6b38",
 	"model": "res://assets/kaykit-hexagon/trees_A_large.gltf",
-	"height": 92, // how high it fills its tile (#232)
 	"traits": { "walkable": true, "hides": true }
 }

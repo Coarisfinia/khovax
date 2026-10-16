@@ -25,7 +25,9 @@ extends RefCounted
 ##   stand for it, an emoji too. Clauses after the kind, each after a ", ", change that tile:
 ##   `turned <n>` turns its decoration by n sixths of a turn, counter-clockwise (#231), so two
 ##   symbols can stand for the same kind turned apart, and `walkable` or `not walkable` overrides
-##   its kind's trait for this tile (#201), e.g. `forest, not walkable`
+##   its kind's trait for this tile (#201), e.g. `forest, not walkable`, and `height <n>` sets how
+##   tall it stands for crowns above it (#232), in hundredths of a tile's radius, where its
+##   models' measured height doesn't fit, e.g. `shrubs, height 40`
 ## where <side> is one of SIDES. The document is read into RegionFormat.parse's compact form.
 
 const TILES: String = "## Tiles"
@@ -42,6 +44,7 @@ const BUILT_IN: String = ".~^1234mc"
 const TURNED: String = "turned "
 const WALKABLE: String = "walkable"
 const NOT_WALKABLE: String = "not walkable"
+const HEIGHT: String = "height "
 
 
 ## The region a Markdown region document describes; its `problem` says what's wrong.
@@ -188,6 +191,8 @@ static func _tile_line(meaning: String, where: String) -> String:
 		var turn: String = clause.trim_prefix(TURNED)
 		if clause.begins_with(TURNED) and turn.is_valid_int():
 			line += " " + turn
+		elif clause.begins_with(HEIGHT) and clause.trim_prefix(HEIGHT).is_valid_int():
+			line += " " + RegionFormat.HEIGHT + clause.trim_prefix(HEIGHT)
 		elif clause == WALKABLE or clause == NOT_WALKABLE:
 			var override: String = RegionFormat.NOT_WALKABLE
 			if clause == WALKABLE:

@@ -5,6 +5,5 @@
 	"color": "#6b8a4a",
 	"model": "res://assets/kaykit-hexagon/tree_single_B_cut.gltf",
 	"scale": 4, // the pack's stump is too small to read from the camera
-	"height": 55, // how high it fills its tile (#232)
 	"traits": { "walkable": true }
 }
