@@ -46,20 +46,82 @@ func run(tree: SceneTree) -> String:
 			break
 	main.queue_free()
 	await tree.process_frame
+	if result.is_empty():
+		result = _check_launch_options()
+	if result.is_empty():
+		result = await _check_launched(tree)
 	return result
 
 
-## A fresh world rolls its own seed (#213), but the flows set one, so they all boot on seed 0.
+## Launch options (#237) read as given: a seed, an instance blueprint and invincibility, leaving a
+## script's own arguments (no `--`) alone; an unknown
+## option, a seed that isn't 0 or more and an unknown instance blueprint are refused with a reason.
+func _check_launch_options() -> String:
+	var args: PackedStringArray = ["--seed=42", "ticks=9", "--instance=glade", "--invincible"]
+	var options: LaunchOptions = LaunchOptions.parse(args)
+	var read: bool = options.seed_value == 42 and options.instance == "glade" and options.invincible
+	if not options.problem.is_empty() or not read or not options.is_test_world():
+		return "launch options didn't read as given: %s" % options.problem
+	var refusals: Dictionary[String, String] = {
+		"--speed=2": "not an option",
+		"--seed=-3": "not an option, or not a seed",
+		"--seed=x": "not an option, or not a seed",
+		"--instance=nowhere": "no instance blueprint nowhere; there are basic",
+		"--instance=glade=x": "no instance blueprint glade=x",
+		"--seed=4=2": "not an option, or not a seed",
+	}
+	for arg: String in refusals:
+		var problem: String = LaunchOptions.parse([arg]).problem
+		if not problem.begins_with(refusals[arg]):
+			return "%s wasn't refused as %s, but: %s" % [arg, refusals[arg], problem]
+	if LaunchOptions.parse([]).is_test_world():
+		return "no launch options make a test world"
+	return ""
+
+
+## Launched with `--instance=glade --seed=42`, the main scene starts a fresh world from that seed in
+## the glade, the player on its start, and keeps no world on disk: the save the player's own world
+## would go to is let go of when the options are applied.
+func _check_launched(tree: SceneTree) -> String:
+	var given: int = GameDriver.fixed_seed
+	WorldKeeper.default_path = WorldSave.PATH
+	LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
+	if not WorldKeeper.default_path.is_empty():
+		WorldKeeper.default_path = ""
+		return "a launched test world would resume or overwrite the player's own"
+	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var main: Node = (load(path) as PackedScene).instantiate()
+	tree.root.add_child(main)
+	await tree.process_frame
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var result: String = ""
+	var on_start: bool = driver.state != null
+	on_start = on_start and driver.state.player(0).tile == driver.state.region.starts[0]
+	if driver.local_instance_name() != "glade" or driver.world.world_seed != 42 or not on_start:
+		result = "launched into the glade on seed 42, the game started in %s on %d" % [
+			driver.local_instance_name(),
+			driver.world.world_seed,
+		]
+	GameDriver.start_instance = ""
+	GameDriver.fixed_seed = given
+	main.queue_free()
+	await tree.process_frame
+	return result
+
+
+## A fresh world rolls its own seed (#213), but the runner is given one (#237), so every flow
+## boots on that seed.
 func _check_world_seed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	if driver.world == null or driver.world.world_seed != 0:
-		return "the flows' main scene didn't boot on the fixed seed 0"
-	if GameDriver.new_seed() != 0:
+	var given: int = GameDriver.fixed_seed
+	if given == GameDriver.ROLLED_SEED or driver.world == null or driver.world.world_seed != given:
+		return "the flows' main scene didn't boot on the runner's seed %d" % given
+	if GameDriver.new_seed() != given:
 		return "with a fixed seed set, a fresh world doesn't take it"
 	GameDriver.fixed_seed = GameDriver.ROLLED_SEED
 	var first: int = GameDriver.new_seed()
 	var second: int = GameDriver.new_seed()
-	GameDriver.fixed_seed = 0
+	GameDriver.fixed_seed = given
 	for rolled: int in [first, second]:
 		if rolled < 0 or rolled > 0xffffffff:
 			return "a rolled seed is outside 32 bits: %d" % rolled

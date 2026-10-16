@@ -62,7 +62,7 @@ The e2e tests run headless. A fresh checkout needs one import first:
 
 ```sh
 godot --headless --path . --import
-godot --headless --path . -s res://tests/e2e/run_e2e.gd
+godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 ```
 
 Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
