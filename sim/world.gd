@@ -9,8 +9,9 @@ extends RefCounted
 ## the next through exits (#154). Deterministic, like everything in sim/.
 
 ## The format of the world's save data (`to_data`); data in another one is refused. Format 1 had no
-## purging; its saves were played by older rules, which `from_data` refuses anyway.
-const FORMAT: int = 2
+## purging and format 2 no ring seals; their saves were played by older rules, which `from_data`
+## refuses anyway.
+const FORMAT: int = 3
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
 const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
