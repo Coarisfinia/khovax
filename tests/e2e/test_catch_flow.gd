@@ -343,7 +343,7 @@ func _reinforce(state: GameState, ring: Array[Vector2i], spot: Vector2i, offset:
 	# The ring's wall is the whole ring, in sorted order, as nothing else stands inside it.
 	var walls: Array[Vector2i] = ring.duplicate()
 	walls.sort()
-	var segment: int = (CatchFeature.nearest(walls, spot) + offset) % walls.size()
+	var segment: int = (RingShape.nearest(walls, spot) + offset) % walls.size()
 	var _helper: Entity = state.add_entity(1, walls[segment])
 
 
