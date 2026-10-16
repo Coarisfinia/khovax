@@ -16,3 +16,6 @@ Thumbs.db
 
 # The web e2e runner's dependencies (tests/web/)
 node_modules/
+
+# A local render's window settings (AGENTS.md, "Before you push"); never committed.
+/override.cfg
