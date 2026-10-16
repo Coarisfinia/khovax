@@ -76,25 +76,28 @@ jobs:
         run: jscpd --format gdscript --exit-code 1 --reporters console --no-colors .
 
       - name: "🎲 Check the simulation stays deterministic"
-        # sim/ holds the rules: plain RefCounted classes without nodes, input, time, engine or OS
-        # state, global randomness, frame delta or floats (see AGENTS.md, "Architecture").
+        # sim/ and every mechanic's rules/ hold the rules: plain RefCounted classes without nodes,
+        # input, time, engine or OS state, global randomness, frame delta or floats (see AGENTS.md,
+        # "Architecture"). The mechanics move out of sim/ one slice at a time (#296, #297).
         # Comments are stripped first (a # outside strings), so the rules can be explained in them.
         run: |
           forbidden='\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
           failed=0
-          # A sim/ script extends RefCounted, or another class of sim/ (e.g. Feature).
-          sim_classes=$(grep -rh '^class_name ' sim | awk '{print $2}' | paste -sd'|' -)
+          mapfile -t mechanic_rules < <(find mechanics -type d -name rules -print)
+          rules=(sim "${mechanic_rules[@]}")
+          # A rules script extends RefCounted, or another class of the rules (e.g. Feature).
+          sim_classes=$(grep -rh '^class_name ' "${rules[@]}" | awk '{print $2}' | paste -sd'|' -)
           while read -r file; do
             code=$(perl -pe 's/^((?:[^"'"'"'#]|"(?:\\.|[^"\\])*"|'"'"'(?:\\.|[^'"'"'\\])*'"'"')*)#.*$/$1/' "$file")
             if ! grep -qxE "extends (RefCounted|${sim_classes})" <<< "$code"; then
-              echo "::error file=${file}::sim/ scripts extend RefCounted or a class of sim/"
+              echo "::error file=${file}::rules scripts extend RefCounted or a class of the rules"
               failed=1
             fi
             if grep -nE "$forbidden" <<< "$code"; then
-              echo "::error file=${file}::sim/ must stay deterministic: see the lines above"
+              echo "::error file=${file}::the rules must stay deterministic: see the lines above"
               failed=1
             fi
-          done < <(find sim -name '*.gd')
+          done < <(find "${rules[@]}" -name '*.gd')
           exit "$failed"
 
       - name: "💾 Cache Godot (Linux editor)"
