@@ -56,14 +56,19 @@ func run(tree: SceneTree) -> String:
 
 
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
-## screen at once, before anything has loaded, loads the game behind it, starts it under the fog as
-## the current scene, and then lifts the fog and leaves.
+## screen at once, and starts loading the game only once that fog has been drawn, so the page never
+## waits on a blank splash; it starts the game under the fog as the current scene, and then lifts
+## the fog and leaves.
 func _check_boot(tree: SceneTree) -> String:
 	if str(ProjectSettings.get_setting("application/run/main_scene")) != "res://game/boot.tscn":
 		return "the project doesn't start in the boot scene"
 	var boot: Boot = (load("res://game/boot.tscn") as PackedScene).instantiate() as Boot
 	tree.root.add_child(boot)
 	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
+	# Nothing loads before the fog has been drawn once.
+	var loading: int = ResourceLoader.load_threaded_get_status(Boot.GAME)
+	fogged = fogged and loading != ResourceLoader.THREAD_LOAD_IN_PROGRESS
+	fogged = fogged and not boot.is_processing()
 	# A game that never starts fails the flow on the runner's timeout.
 	var game: Node = await boot.game_started
 	var result: String = ""

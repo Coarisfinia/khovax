@@ -332,6 +332,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
+  in it in one frame, not around a player at the start nor on arriving somewhere.
 - **No humanoid monsters** (owner, #230): nothing stands on two legs with arms, a human-like
   upright torso and a head; every monster is clearly a monster. Four legs, a tail, a snout and a
   head is fine; so is six legs with a long horizontal belly, an upright torso, two arms and a

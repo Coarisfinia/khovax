@@ -1,7 +1,10 @@
 class_name Boot
 extends Node
 ## The first scene (#243): it has nothing to load, so it shows at once, as thick fog over the
-## whole screen, while the game's main scene loads behind it in the background. Once the game has
+## whole screen, and only once that fog is on screen does the game's main scene start loading
+## behind it. The web build runs single-threaded, where "background" loading still runs on the one
+## thread and holds the page still until it's done, so it mustn't start before the fog is drawn:
+## the page then waits on fog, not on the engine's splash. Once the game has
 ## loaded, it starts under the fog, draws its first frames (which compile its shaders), and the fog
 ## lifts calmly, without a flash (the game is made around motion sickness). The engine's own boot
 ## splash is the fog's color too (project.godot), so the first thing on screen already looks like
@@ -35,13 +38,19 @@ func _ready() -> void:
 	cover = ColorRect.new()
 	cover.color = FOG
 	cover.set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Touches and clicks go through to the game below while the fog lifts.
-	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Touches and clicks stop at the fog while it hides the game, and go through once it lifts.
+	cover.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(cover)
+	set_process(false)
+	# Two frames' starts with a frame drawn in between, so the fog is on screen; the headless
+	# renderer never signals a drawn frame, so the frames' starts are what's awaited.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_report("fog shown")
 	var requested: Error = ResourceLoader.load_threaded_request(GAME)
 	if requested != OK:
 		push_error("the game's main scene can't be loaded: %s" % error_string(requested))
-	_report("fog shown")
+	set_process(true)
 
 
 func _process(_delta: float) -> void:
@@ -70,6 +79,7 @@ func _start(scene: PackedScene) -> void:
 
 ## Lifts the fog calmly, then leaves.
 func _lift() -> void:
+	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tween: Tween = create_tween()
 	var _clear: PropertyTweener = tween.tween_property(cover, "color:a", 0.0, LIFT_SECONDS)
 	var _gone: CallbackTweener = tween.tween_callback(queue_free)
