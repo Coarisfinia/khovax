@@ -5,10 +5,23 @@ extends RefCounted
 ## its id. Its number is permanent (TileKinds); the rules see only its id, number and traits.
 
 ## A tile blueprint file's fields, as its schema (data/schemas/tiles.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "number", "color", "model", "scale", "traits"]
+const FIELDS: Array[String] = [
+	"id",
+	"number",
+	"color",
+	"model",
+	"scale",
+	"reach",
+	"clearance",
+	"traits",
+]
 const TRAITS: Array[String] = ["walkable", "hides"]
 ## The largest number a kind may have, so a typo can't make the kind list huge.
 const MAX_NUMBER: int = 255
+## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
+## a typo can't make one tile overshadow the region.
+const MAX_HEIGHT: int = RegionFormat.MAX_HEIGHT
+const MAX_REACH: int = 3
 ## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
 const MAX_SCALE: float = 4.0
 
@@ -22,6 +35,11 @@ var color: Color = Color.BLACK
 var model: String = ""
 ## How much larger than the pack made it the model is drawn, for a model too small to read.
 var scale: float = 1.0
+## How many rings around its tile its decoration's crown covers, and how much height the crown
+## leaves free beneath it, in hundredths of a tile's radius: every tile under the crown must fit
+## (#232). How tall a tile is gets measured from its objects' models (TileLooks.height_of).
+var reach: int = 0
+var clearance: int = 0
 ## Whether walkers can stand on it.
 var walkable: bool = false
 ## Whether a wild monster standing on it hides there until a player comes next to it (#202).
@@ -46,11 +64,15 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
 	blueprint.number = _number(data.get("number"))
+	blueprint.reach = _whole(data.get("reach", 0), MAX_REACH)
+	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
 	blueprint.walkable = walks is bool and walks
 	blueprint.hides = hiding is bool and hiding
 	blueprint.problem = Content.unknown_field(data, FIELDS) + Content.unknown_field(traits, TRAITS)
 	if blueprint.problem.is_empty():
 		blueprint.problem = blueprint._check(file_id, data, walks)
+	if blueprint.problem.is_empty():
+		blueprint.problem = blueprint._size_problem()
 	if blueprint.problem.is_empty() and not hiding is bool:
 		blueprint.problem = "its hides trait is true or false"
 	return blueprint
@@ -78,12 +100,28 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 	return ""
 
 
+## Why the reach or clearance read isn't a whole number in its range (each is -1 then), or ""
+## (#232).
+func _size_problem() -> String:
+	if reach < 0 or clearance < 0:
+		return "its reach (up to %d) and clearance (up to %d) are whole numbers" % [
+			MAX_REACH,
+			MAX_HEIGHT,
+		]
+	return ""
+
+
 ## A JSON number that is a whole kind number from 0 to MAX_NUMBER, or -1 for anything else.
 static func _number(value: Variant) -> int:
+	return _whole(value, MAX_NUMBER)
+
+
+## A JSON number that is a whole number from 0 to `most`, or -1 for anything else.
+static func _whole(value: Variant, most: int) -> int:
 	if not (value is int or value is float):
 		return -1
 	var given: float = value
-	if given != floorf(given) or given < 0.0 or given > MAX_NUMBER:
+	if given != floorf(given) or given < 0.0 or given > most:
 		return -1
 	var whole: int = type_convert(value, TYPE_INT)
 	return whole

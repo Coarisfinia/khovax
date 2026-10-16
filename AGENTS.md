@@ -62,16 +62,16 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
-**One pull request at a time** (owner's rule). Never stack pull requests or work on two open ones in
-parallel: pull requests are squash-merged, which rewrites the history a stacked branch is built on. Open
-the next one as soon as the previous one is merged.
+**Keep up to 5 pull requests open** (owner's rule), so the owner can go through them fast. Each is
+branched from `main` and independent of the others: never stack pull requests, since they're
+squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
+open pull request waits until that one is merged. After every merge, update the other open ones onto
+the new `main` (`git rebase origin/main`, the ruleset wants them up to date), fix what collides
+(e.g. two rule changes each bumping `RULES_VERSION`: take the next number and rehash again), and
+push. Open a new one whenever fewer than 5 are open.
 
-**While a pull request waits for the owner's review, prepare exactly one next one** (owner's rule),
-so the owner can review it right away: in its own worktree, branched from `main`, fully built and
-reviewed by Codex locally, but not pushed or opened. Once the open one merges, update the prepared
-branch onto the new `main` (`git rebase origin/main`), check it still holds, push it and open it.
-Waiting for CI and reviews is the time to build it (owner, #217): at any moment one pull request
-is open and reviewed, and another worktree is reviewed and ready to go.
+**Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
+worktree, fully built and reviewed by Codex locally before it's pushed and opened.
 
 **One pull request per coherent change**: one feature, one fix or one refactor, whole. Side findings,
 refactors and tooling tweaks get their own issue and their own pull request later, never along for the
