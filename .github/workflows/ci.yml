@@ -75,6 +75,11 @@ jobs:
         # into one place (AGENTS.md, "Single responsibility").
         run: jscpd --format gdscript --exit-code 1 --reporters console --no-colors .
 
+      - name: "🧹 Check every declared function, variable, constant and class is used"
+        # Godot's script check already fails on unused locals, parameters and signals; this finds
+        # what nothing in the whole project names (#315).
+        run: bash tools/unused_code.sh
+
       - name: "🎲 Check the simulation stays deterministic"
         # sim/ and every mechanic's rules/ hold the rules: plain RefCounted classes without nodes,
         # input, time, engine or OS state, global randomness, frame delta or floats (see AGENTS.md,
