@@ -5,6 +5,18 @@ extends RefCounted
 ## ready for the simulation.
 
 const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pusher"]
+## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
+const FIELDS: Array[String] = [
+	"id",
+	"types",
+	"hp",
+	"strength",
+	"speed",
+	"archetype",
+	"special",
+	"player_passive",
+	"self_passive",
+]
 
 var id: String = ""
 ## One or two types (#68); dual types are the norm later in the game.
@@ -19,6 +31,8 @@ var archetype: String = ""
 var special: String = ""
 var player_passive: String = ""
 var self_passive: String = ""
+## Why the species couldn't be read, or "" when it could.
+var problem: String = ""
 
 
 ## Reads its speed, archetype and abilities from a species file's `data`; returns why it can't, or
@@ -36,4 +50,55 @@ func read_kit(data: Dictionary) -> String:
 	for ability: String in [special, player_passive, self_passive]:
 		if not Content.is_id(ability):
 			return "it names a special and two passives by their ids"
+	return ""
+
+
+## A species read from a species file's text, named `file_id`, and checked against the type chart
+## (#279); its `problem` says what's wrong.
+static func parse(file_id: String, text: String) -> Species:
+	var entry: Species = Species.new()
+	var json: JSON = JSON.new()
+	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
+		entry.problem = "not a JSON object"
+		return entry
+	var data: Dictionary = json.data
+	entry.problem = _read(entry, file_id, data)
+	return entry
+
+
+## Reads `data` into `entry`; returns why it can't, or "".
+static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
+	for key: Variant in data:
+		if not FIELDS.has(str(key)):
+			return "field %s isn't a species field" % key
+	var given_id: Variant = data.get("id")
+	var text_id: String = given_id if given_id is String else ""
+	if not Content.is_id(text_id):
+		return "its id must be lowercase words joined by underscores"
+	entry.id = text_id
+	entry.hp = Content.amount(data.get("hp"))
+	entry.strength = Content.amount(data.get("strength"))
+	var given_types: Variant = data.get("types")
+	if given_types is Array:
+		var type_list: Array = given_types
+		for type: Variant in type_list:
+			entry.types.append(str(type))
+	if entry.id != file_id:
+		return "its id must match the file name and be unique"
+	if entry.hp < 1 or entry.strength < 1:
+		return "hp and strength are whole numbers from 1 to %d" % Fixed.MAX_AMOUNT
+	var wrong: String = entry._types_problem()
+	return wrong if not wrong.is_empty() else entry.read_kit(data)
+
+
+## Why its types don't fit the chart, or "": one or two, from the chart, never two of one family.
+func _types_problem() -> String:
+	if types.is_empty() or types.size() > 2:
+		return "a species has one or two types"
+	var families: Array[int] = []
+	for type: String in types:
+		var family: int = TypeChart.family_of(type)
+		if family < 0 or families.has(family):
+			return "type %s isn't on the chart, or two types share a family" % type
+		families.append(family)
 	return ""
