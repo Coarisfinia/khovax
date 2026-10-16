@@ -19,13 +19,13 @@ func _init() -> void:
 
 
 func _rehash(path: String) -> bool:
-	var replay: Replay = Replay.parse(FileAccess.get_file_as_string(path))
+	var replay: Replay = ReplayFile.parse(FileAccess.get_file_as_string(path))
 	var problem: String = replay.rehash()
 	if not problem.is_empty():
 		printerr("%s: %s" % [path, problem])
 		return false
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	if file == null or not file.store_string(replay.to_text() + "\n"):
+	if file == null or not file.store_string(ReplayFile.to_text(replay) + "\n"):
 		printerr("%s: couldn't write it" % path)
 		return false
 	print("rehashed ", path)

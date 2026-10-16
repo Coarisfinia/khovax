@@ -393,7 +393,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   check: it passed the first time it ran, and the owner asked to enforce it then.
 - **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
   for now (#61).
-- **A fresh checkout needs `godot --headless --path . --import`** before headless runs.
+- **A fresh checkout needs `godot --headless --path . --import`** before headless runs, and so
+  does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
+  flows fail to load or log errors that have nothing to do with the change.
 - **A script error in the runner itself leaves the SceneTree running forever.** Every CI step that
   runs Godot needs a `timeout`, and every job a `timeout-minutes`.
 - **Local names that shadow a base-class method or property fail the script check**: `reference`,

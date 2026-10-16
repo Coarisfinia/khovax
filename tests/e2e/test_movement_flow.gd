@@ -509,7 +509,7 @@ func _check_moves_announced(from: Vector2i) -> String:
 ## plays back to exactly the state the flow ended in.
 func _check_recording() -> String:
 	_driver.recording.finish(_driver.world)
-	var loaded: Replay = Replay.parse(_driver.recording.to_text())
+	var loaded: Replay = ReplayFile.parse(ReplayFile.to_text(_driver.recording))
 	var problem: String = loaded.play()
 	if not problem.is_empty():
 		return "the flow's recording didn't play back: " + problem

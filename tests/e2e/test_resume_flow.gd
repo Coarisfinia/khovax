@@ -250,7 +250,7 @@ func _check_recorded(driver: GameDriver) -> String:
 	for _tick: int in 30:
 		driver.advance(STEP)
 	driver.recording.finish(driver.world)
-	var replay: Replay = Replay.parse(driver.recording.to_text())
+	var replay: Replay = ReplayFile.parse(ReplayFile.to_text(driver.recording))
 	var problem: String = replay.play()
 	if not problem.is_empty() or replay.played.state_hash() != driver.world.state_hash():
 		return "the resumed session's recording didn't play back: " + problem
