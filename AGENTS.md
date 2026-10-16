@@ -108,6 +108,12 @@ owner.
 order above. Ask only for decisions that belong to the owner (game
 design, scope, security trade-offs).
 
+**An issue that needs the owner's decision gets a bump comment with the question, and work goes
+on with the next one** (owner's rule): never wait on an answer.
+
+**A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
+issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
+
 **Stuck? File an issue and move on.** When something can't be finished without the owner, file an
 issue saying what is blocked and why, and continue with the next work.
 
