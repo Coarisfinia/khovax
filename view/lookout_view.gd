@@ -26,9 +26,7 @@ func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
 	if driver.state != _shown:
-		for figure: HexPiece in figures.values():
-			figure.queue_free()
-		figures.clear()
+		HexPiece.free_all(figures)
 		_shown = driver.state
 	for trigger: TileTrigger in driver.state.region.triggers:
 		var tile: Vector2i = trigger.tile
