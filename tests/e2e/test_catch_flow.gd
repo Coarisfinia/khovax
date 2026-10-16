@@ -291,6 +291,54 @@ func _check_outcomes() -> String:
 			reinforced,
 			beside,
 		]
+	return _check_enraged()
+
+
+## Enrage (#220): a strong monster that breaks a small ring comes out of it with a stack of rage,
+## stronger than its species; every further broken ring adds a stack (enraged_further).
+func _check_enraged() -> String:
+	var origin: Array[Vector2i] = [Vector2i.ZERO]
+	var state: GameState = _outcome_state(STRONG, origin)
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	# Off the wall, so the catcher doesn't reinforce the ring and it breaks.
+	var _events: Array[RefCounted] = _step_off(state)
+	_events = _settle(state)
+	var wild: WildMonsterFeature = _wild(state)
+	if wild.monsters.size() != 1:
+		return "the strong monster didn't break out of the small ring"
+	var monster: int = wild.monsters[0]
+	if wild.rage_of(monster) != 1 or wild.strength_of(monster) <= STRONG_STRENGTH:
+		return "a broken ring didn't enrage the monster inside: rage %d, strength %d" % [
+			wild.rage_of(monster),
+			wild.strength_of(monster),
+		]
+	return _enraged_further(state, monster)
+
+
+## Every further ring the monster breaks adds a stack, up to the most it takes, each making it
+## stronger still, and its HP never goes past full.
+func _enraged_further(state: GameState, monster: int) -> String:
+	var wild: WildMonsterFeature = _wild(state)
+	var enrage: EnrageFeature = state.feature(Features.ENRAGE) as EnrageFeature
+	var inside: Array[int] = [monster]
+	var walls: Array[Vector2i] = []
+	var broken: Array[RefCounted] = [RingBroken.new(0, 0, Vector2i.ZERO, walls, inside)]
+	for stack: int in range(2, WildMonsterFeature.MOST_RAGE + 3):
+		var before: int = wild.strength_of(monster)
+		state.events = broken
+		enrage.step(state, [])
+		var capped: bool = stack > WildMonsterFeature.MOST_RAGE
+		var stronger: bool = wild.strength_of(monster) > before or capped
+		var rage: int = mini(stack, WildMonsterFeature.MOST_RAGE)
+		if wild.rage_of(monster) != rage or not stronger or wild.hp_of(monster) > OUTCOME_HP:
+			return "broken ring %d left rage %d, strength %d, HP %d" % [
+				stack,
+				wild.rage_of(monster),
+				wild.strength_of(monster),
+				wild.hp_of(monster),
+			]
 	return ""
 
 
@@ -370,6 +418,7 @@ func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 		TrailFeature.new(),
 		WildMonsterFeature.new([], [], hp, strength),
 		CatchFeature.new(),
+		EnrageFeature.new(),
 	]
 	return GameState.new(region, 1, ordered)
 
