@@ -65,10 +65,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		EnrageFeature.new(),
 		FogFeature.new(),
 	]
-	if not region.exits.is_empty():
-		ordered.append(ExitFeature.new())
-	if not region.triggers.is_empty():
-		ordered.append(TriggerFeature.new())
+	ordered.append_array(_for_region(region))
 	if LOOT_TABLES.has(instance_name):
 		var table: LootTable = _loot_table(LOOT_TABLES[instance_name])
 		if table == null:
@@ -83,6 +80,19 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		# Can't be refused: the count is checked above and every slot is new.
 		var _player: Entity = state.add_entity(slot, region.starts[slot])
 	return state
+
+
+## The features an instance has because of what its region holds: exits, triggers, wild monsters
+## in hiding.
+static func _for_region(region: Region) -> Array[Feature]:
+	var features: Array[Feature] = []
+	if not region.exits.is_empty():
+		features.append(ExitFeature.new())
+	if not region.triggers.is_empty():
+		features.append(TriggerFeature.new())
+	if HidingFeature.has_hiding(region):
+		features.append(HidingFeature.new())
+	return features
 
 
 ## The named blueprint's region for `seed_value`: its region file as it is, or its region pieces

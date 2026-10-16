@@ -14,6 +14,9 @@ extends RefCounted
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133)
+## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
+##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
+##   hiding in shrubs`
 ## - `loot on the ground`: loot the first player to step here finds, every player in the instance
 ##   getting their own roll, like a chest's (#203)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
@@ -29,6 +32,8 @@ const TILES: String = "## Tiles"
 const LEGEND: String = "## Legend"
 ## A legend meaning placing loot on the ground (#203).
 const LOOT_ON_THE_GROUND: String = "loot on the ground"
+## A legend meaning placing a wild monster in a tile that hides it (#202), before the tile's kind.
+const HIDING: String = "a wild monster hiding in "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
@@ -75,7 +80,8 @@ static func _compact_row(
 			var tile: Vector2i = Vector2i(Fixed.div_floor(column - origin_column - r, 2), r)
 			var line: String = _line(legend[symbol], tile)
 			lines.append(line)
-			compact[column] = "m" if line.begins_with(RegionFormat.SPECIES) else "."
+			var monster: bool = line.begins_with(RegionFormat.SPECIES)
+			compact[column] = "m" if monster or legend[symbol].begins_with(HIDING) else "."
 	return compact
 
 
@@ -199,6 +205,9 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 	var placed: String = _tile_line(meaning, where)
 	if meaning == LOOT_ON_THE_GROUND:
 		placed = RegionFormat.LOOT + where
+	var hides_in: String = meaning.trim_prefix(HIDING)
+	if meaning.begins_with(HIDING) and TileKinds.hides(TileKinds.number_of(hides_in)):
+		placed = "%s%s %s" % [RegionFormat.TILE, where, hides_in]
 	if not placed.is_empty():
 		return placed
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
