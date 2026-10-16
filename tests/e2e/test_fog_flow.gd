@@ -40,12 +40,12 @@ func _check_hex_lines() -> String:
 
 ## Sight (#65): rock blocks it and is seen itself, water doesn't, and it ends at the radius.
 func _check_sight() -> String:
-	var rock: Region = Region.parse("origin 0 0
+	var rock: Region = RegionFormat.parse("origin 0 0
 1 . ^ . .")
 	var seen: Array[Vector2i] = FogFeature.sight(rock, Vector2i.ZERO, FogFeature.SIGHT_RADIUS)
 	if not seen.has(Vector2i(2, 0)) or seen.has(Vector2i(3, 0)) or seen.has(Vector2i(4, 0)):
 		return "rock didn't block sight, or wasn't seen itself: %s" % [seen]
-	var water: Region = Region.parse("origin 0 0
+	var water: Region = RegionFormat.parse("origin 0 0
 1 . ~ . .")
 	if not FogFeature.sight(water, Vector2i.ZERO, FogFeature.SIGHT_RADIUS).has(Vector2i(4, 0)):
 		return "water blocked sight"

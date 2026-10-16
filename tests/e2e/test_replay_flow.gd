@@ -700,10 +700,10 @@ func _check_region_file() -> String:
 		"origin 0 0\n. .\nconnector 0 0 0": "connector (0, 0) doesn't open",
 	}
 	for text: String in broken:
-		if not Region.parse(text).problem.begins_with(broken[text]):
-			return "region file %s gave: %s" % [text.c_escape(), Region.parse(text).problem]
+		if not RegionFormat.parse(text).problem.begins_with(broken[text]):
+			return "region file %s gave: %s" % [text.c_escape(), RegionFormat.parse(text).problem]
 	# Tiles left of the origin and rows above it have negative coordinates.
-	var left: Region = Region.parse("origin 4 1\n ~ ^\n1 . .")
+	var left: Region = RegionFormat.parse("origin 4 1\n ~ ^\n1 . .")
 	var expected: Dictionary[Vector2i, int] = {
 		Vector2i(-1, -1): Region.WATER,
 		Vector2i(0, -1): Region.BLOCKED,
@@ -748,10 +748,10 @@ func _check_connector_fit() -> String:
 	for turns: int in 6:
 		if Hex.turn(Hex.DIRECTIONS[0], turns) != Hex.DIRECTIONS[turns]:
 			return "Hex.turn doesn't follow DIRECTIONS round: %d turns" % turns
-	var first: Region = Region.parse("origin 0 0\n1\nconnector 0 0 0")
+	var first: Region = RegionFormat.parse("origin 0 0\n1\nconnector 0 0 0")
 	var expected: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0)]
 	for side: int in [3, 0]:
-		var second: Region = Region.parse("origin 0 0\n.\nconnector 0 0 %d" % side)
+		var second: Region = RegionFormat.parse("origin 0 0\n.\nconnector 0 0 %d" % side)
 		var pair: Array[Region] = [first, second]
 		var region: Region = RegionArranger.arrange(pair, 1, false)
 		var placed: bool = region.sorted_tiles() == expected and region.starts == first.starts
