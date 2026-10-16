@@ -4,7 +4,10 @@ extends Node
 ## (FogCloud, #156): clear where any ally sees (allies share sight), a thin veil where one has seen
 ## before, and thick cloud where none ever has. It works out each tile's brightness on that scale.
 ## Each tile eases towards its brightness, so the fog never flickers or pulses (motion
-## sickness). Wild monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
+## sickness), and always moves (owner, #243, #248): a tile drawn for the first time starts as
+## thick cloud, or as light fog where it was seen before, and eases open from there, so no hole
+## opens around a player in one frame, at the start or on arriving in another instance. Wild
+## monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
 ## It only reads the state: what was seen before is remembered here, per machine and per instance
 ## (#190), so coming back to an instance, or looking at one next door (NeighbourView), shows the
 ## ground explored there under light fog. The keeper saves it with the world (#215).
@@ -55,8 +58,10 @@ func show_state(delta: float) -> void:
 	if driver.state.region != _region:
 		_switch_to(driver.state)
 	for tile: Vector2i in _region.sorted_tiles():
+		# Taken before _target, which remembers a tile as seen once an ally sees it.
+		var start: float = REMEMBERED if _seen.has(tile) else UNSEEN
 		var target: float = _target(fog, tile)
-		var now: float = brightness.get(tile, target)
+		var now: float = brightness.get(tile, start)
 		brightness[tile] = move_toward(now, target, EASE_PER_SECOND * delta)
 	_remember_next_door()
 	cloud.show_fog(_region, brightness)

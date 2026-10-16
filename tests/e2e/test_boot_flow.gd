@@ -484,7 +484,8 @@ func _check_fog(main: Node) -> String:
 
 
 ## Why the fog view's levels are wrong, or "": `own` seen now, `far` only seen before, and `far`
-## dark to a fresh view that never saw it.
+## dark to a fresh view that never saw it. A fresh view opens the fog around the player gradually
+## (#248): after one short frame, `own` has only begun to clear from thick cloud.
 func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	if view.brightness[own] != FogView.VISIBLE or view.brightness[far] != FogView.REMEMBERED:
 		return "the fog isn't bright where seen and dimmed where seen before"
@@ -495,9 +496,13 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	var fresh: FogView = FogView.new()
 	fresh.driver = view.driver
 	fresh.cloud = cloud
+	fresh.show_state(0.1)
+	var opening: float = FogView.UNSEEN + FogView.EASE_PER_SECOND * 0.1
+	var gradual: bool = is_equal_approx(fresh.brightness[own], opening)
 	fresh.show_state(10.0)
 	var unseen: Vector2 = Vector2(1.0, 0.0)
-	var dark: bool = fresh.brightness[far] == FogView.UNSEEN and cloud.fog_on(far) == unseen
+	var dark: bool = gradual and fresh.brightness[far] == FogView.UNSEEN
+	dark = dark and cloud.fog_on(far) == unseen
 	# An area an event reveals (#177) lies under the light fog, though no one saw it.
 	var fog: FogFeature = view.driver.state.feature(Features.FOG) as FogFeature
 	var area: Array[Vector2i] = [far]
@@ -508,7 +513,7 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	fresh.free()
 	view.show_state(10.0)
 	if not dark:
-		return "a tile never seen isn't under thick cloud, or a revealed one isn't seen before"
+		return "unseen isn't thick, revealed isn't seen before, or the fog opened at once"
 	return ""
 
 
