@@ -4,7 +4,13 @@ extends Node
 ## (FogCloud, #156): clear where any ally sees (allies share sight), a thin veil where one has seen
 ## before, and thick cloud where none ever has. It works out each tile's brightness on that scale.
 ## Each tile eases towards its brightness, so the fog never flickers or pulses (motion
-## sickness). Wild monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
+## sickness), and always moves (owner, #243, #248, #250): when it starts drawing an instance, at
+## the start or on arriving in another, the whole region is thick cloud, and the fog draws back
+## in a widening circle around this machine's player, each ring of tiles starting to clear a
+## moment after the one inside it. While the boot fog still hides the game (Boot.covering), the
+## circle waits, so the player first sees the world fully fogged. No hole ever opens in one frame.
+## Wild
+## monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
 ## It only reads the state: what was seen before is remembered here, per machine and per instance
 ## (#190), so coming back to an instance, or looking at one next door (NeighbourView), shows the
 ## ground explored there under light fog. The keeper saves it with the world (#215).
@@ -15,6 +21,9 @@ const REMEMBERED: float = 0.45
 const UNSEEN: float = 0.12
 ## How much a tile's brightness changes per second as it eases.
 const EASE_PER_SECOND: float = 1.5
+## How long after the fog view starts drawing an instance each ring of tiles around this
+## machine's player waits before it starts to clear: the circle's pace.
+const RING_SECONDS: float = 0.12
 
 @export var driver: GameDriver
 @export var cloud: FogCloud
@@ -31,6 +40,10 @@ var _seen_in: ExploredGround = ExploredGround.new()
 var _seen: Dictionary[Vector2i, bool] = {}
 var _region: Region
 var _world: World
+## Seconds since the fog view started drawing the instance shown, and the tile the circle widens
+## from: where this machine's player stood then.
+var _since_switch: float = 0.0
+var _middle: Vector2i = Vector2i.ZERO
 
 
 func _process(delta: float) -> void:
@@ -54,10 +67,14 @@ func show_state(delta: float) -> void:
 		_region = null
 	if driver.state.region != _region:
 		_switch_to(driver.state)
+	if not Boot.covering:
+		_since_switch += delta
 	for tile: Vector2i in _region.sorted_tiles():
 		var target: float = _target(fog, tile)
-		var now: float = brightness.get(tile, target)
-		brightness[tile] = move_toward(now, target, EASE_PER_SECOND * delta)
+		var now: float = brightness.get(tile, UNSEEN)
+		if _since_switch >= Hex.distance(tile, _middle) * RING_SECONDS:
+			now = move_toward(now, target, EASE_PER_SECOND * delta)
+		brightness[tile] = now
 	_remember_next_door()
 	cloud.show_fog(_region, brightness)
 
@@ -73,6 +90,10 @@ func _explored_in(world: World) -> ExploredGround:
 func _switch_to(state: GameState) -> void:
 	_region = state.region
 	brightness.clear()
+	_since_switch = 0.0
+	var slot: int = driver.input.slot if driver.input != null else 0
+	var player: Entity = state.player(slot)
+	_middle = player.tile if player != null else Vector2i.ZERO
 	_seen = _memory_of(NeighbourView.name_of(_world, state))
 
 
