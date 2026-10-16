@@ -117,7 +117,8 @@ static func load_quests(
 ## must be one no species read before has.
 func add_species(file_id: String, text: String) -> String:
 	var entry: Species = Species.parse(file_id, text)
-	if entry.problem.is_empty() and species.has(entry.id):
+	# A repeated id is refused as that first, whatever else is wrong with the file, as before #279.
+	if not entry.id.is_empty() and species.has(entry.id):
 		return "its id must match the file name and be unique"
 	if entry.problem.is_empty():
 		species[entry.id] = entry
