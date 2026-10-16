@@ -97,8 +97,9 @@ out of date.
 everything else, tech debt included.
 
 **The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
-fixes, then architecture, then cleanup, then gameplay features (rules and mechanics), then UI,
-then visuals, then assets and models.
+fixes, then performance (e.g. the web build loading in under 2 s, #265), then architecture, then
+cleanup, then gameplay features (rules and mechanics), then UI, then visuals, then assets and
+models.
 
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
@@ -345,6 +346,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The simulation is deterministic**: see "Architecture" above. No Godot physics in gameplay.
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
+- **The web page's loading bar fades into the fog once it's full** (#261, the web presets'
+  `html/head_include`, the same in both): after the download the engine compiles its renderer's
+  built-in shaders before the first frame, which blocks the page, and a full, still bar there looks
+  like a hang. The fade is a CSS opacity transition, which the browser's compositor keeps running
+  while the page is blocked; the page's background is the fog's color already (the boot splash).
+  It watches the bar until it's full, gone (the engine started) or hidden (a load error).
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
 - **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
   in it in one frame, not around a player at the start nor on arriving somewhere.
