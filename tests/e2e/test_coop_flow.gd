@@ -4,7 +4,9 @@ extends RefCounted
 ## view, and a key press moves the local player only once the delay has passed. The game is exactly
 ## the plain playback of the delayed commands; a late player's ticks wait for their commands, then
 ## the game catches up to the same state. Two players on one tile each stand at their own spot
-## inside it (#151). Time is stepped by hand, one tick a frame.
+## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
+## one mark per slot number, so the two are told apart by more than color (#233, #68). Time is
+## stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 const TICKS: int = 60
@@ -76,6 +78,19 @@ func _check_two_players_walk() -> String:
 		var player: Entity = _driver.state.player(slot)
 		if trails.shared.tiles.get(player.tile, 0) != player.id:
 			return "player %d's tile on the shared trail isn't theirs" % (slot + 1)
+	return _check_circles()
+
+
+## Each player's circle is in their personal color for this world, with one mark per slot number,
+## and the two players' colors differ.
+func _check_circles() -> String:
+	for slot: int in 2:
+		var circle: PlayerCircle = _views[slot].circle
+		var expected: Color = PersonalColor.of(_driver.world.world_seed, slot)
+		if circle == null or circle.color != expected or circle.marks != slot + 1:
+			return "player %d's circle isn't in their color with %d marks" % [slot + 1, slot + 1]
+	if _views[0].circle.color == _views[1].circle.color:
+		return "the two players' circles have the same color"
 	return ""
 
 
