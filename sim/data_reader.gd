@@ -1,9 +1,9 @@
 class_name DataReader
 extends RefCounted
 ## Reads saved simulation data (#119): a Dictionary of whole numbers, strings, arrays and nested
-## Dictionaries, as World.to_data writes it. Every read checks the value's type and range and gives
+## Dictionaries, as WorldData.of writes it. Every read checks the value's type and range and gives
 ## a safe default when it doesn't hold, noting the first problem, so a world built from bad data is
-## refused whole (World.from_data) rather than half-read or crashing. A reader of a nested value
+## refused whole (WorldData.to_world) rather than half-read or crashing. A reader of a nested value
 ## reports to the reader it came from, so the outermost one holds the first problem of them all.
 
 ## The largest whole number a save holds, 2^52 - 1: JSON numbers are doubles, and below 2^52 every

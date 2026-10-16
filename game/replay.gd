@@ -18,7 +18,7 @@ const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players
 
 var instance: String = ""
 var seed_value: int = 0
-## The world the session resumed (World.to_data), or empty for one that started a fresh world from
+## The world the session resumed (WorldData.of), or empty for one that started a fresh world from
 ## the instance and the seed.
 var start_world: Dictionary = {}
 var players: int = 1
@@ -250,7 +250,7 @@ func _run(check: bool) -> String:
 	if start_world.is_empty():
 		played = World.new(seed_value, instance, players)
 	else:
-		played = World.from_data(start_world)
+		played = WorldData.to_world(start_world)
 	if not played.problem.is_empty():
 		return played.problem
 	if not played.instances.has(instance):

@@ -104,7 +104,7 @@ func resume(saved: World) -> String:
 			return "the saved world's players aren't the session's %d" % players
 	world = saved
 	recording = Replay.new(saved.start_name, saved.world_seed)
-	recording.start_world = saved.to_data()
+	recording.start_world = WorldData.of(saved)
 	recording.begin(saved)
 	_begin_session()
 	return ""
