@@ -14,7 +14,7 @@ extends RefCounted
 ## strong one breaks a big ring fast, and a small ring too, only later (the issue leaves that to
 ## level and weakening). A broken ring catches nothing, says so, and starts its trail over. A
 ## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
-## the small ring holds.
+## the small ring holds; standing on any other segment of it, they don't, and it breaks.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
@@ -60,6 +60,8 @@ const STRONG_STRENGTH: int = 400
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
+## No second player on the outcome's wall.
+const NO_HELPER: int = -1
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -273,7 +275,8 @@ func _check_outcomes() -> String:
 	var crowd_big: Vector2i = _outcome(WEAK, BIG_RING, CROWD)
 	var strong_big: Vector2i = _outcome(STRONG, BIG_RING, origin)
 	var strong_small: Vector2i = _outcome(STRONG, SMALL_RING, origin)
-	var reinforced: Vector2i = _outcome(STRONG, SMALL_RING, origin, true)
+	var reinforced: Vector2i = _outcome(STRONG, SMALL_RING, origin, 0)
+	var beside: Vector2i = _outcome(STRONG, SMALL_RING, origin, 1)
 	if weak_small.x != 1 or weak_big.x != 1:
 		return "a weak monster broke out of a small (%s) or a big ring (%s)" % [
 			weak_small,
@@ -291,27 +294,30 @@ func _check_outcomes() -> String:
 			strong_small.y,
 			crowd_big.y,
 		]
-	if reinforced.x != 1:
-		return "a reinforced small ring didn't hold a strong monster: %s" % reinforced
+	if reinforced.x != 1 or beside.x != 0:
+		return "a ring reinforced where a strong monster pushes (%s) or beside (%s) went wrong" % [
+			reinforced,
+			beside,
+		]
 	return ""
 
 
 ## Plays one outcome: monsters of `species` on `spots`, and the player walking a ring of `radius`
-## around the disc's middle, then stepping off it outward, so the wall stands on its own; with
-## `reinforced`, a second player stands on the wall segment the first spot pushes on. Returns 1 when
-## the ring held and caught them all, 0 when it broke
-## catching none, -1 otherwise; and the ticks from closing to the end.
+## around the disc's middle, then stepping off it outward, so the wall stands on its own. With a
+## `helper`, a second player stands on the wall that many segments after the one the first spot
+## pushes on (0: on it). Returns 1 when the ring held and caught them all, 0 when it broke catching
+## none, -1 otherwise; and the ticks from closing to the end.
 func _outcome(
 		species: String,
 		radius: int,
 		spots: Array[Vector2i],
-		reinforced: bool = false,
+		helper: int = NO_HELPER,
 ) -> Vector2i:
 	var state: GameState = _outcome_state(species, spots)
 	var ring: Array[Vector2i] = Hex.ring(radius)
 	var player: Entity = state.add_entity(0, ring[0])
-	if reinforced:
-		_reinforce(state, ring, spots[0])
+	if helper != NO_HELPER:
+		_reinforce(state, ring, spots[0], helper)
 	_close(state, ring.slice(1))
 	var closed: int = state.tick
 	var events: Array[RefCounted] = _step_off(state)
@@ -331,12 +337,14 @@ func _outcome(
 	return Vector2i(result, state.tick - closed)
 
 
-## Puts a player in slot 1 on the segment of `ring`'s wall that the monster on `spot` will push.
-func _reinforce(state: GameState, ring: Array[Vector2i], spot: Vector2i) -> void:
+## Puts a player in slot 1 on `ring`'s wall, `offset` segments after the one the monster on `spot`
+## will push.
+func _reinforce(state: GameState, ring: Array[Vector2i], spot: Vector2i, offset: int) -> void:
 	# The ring's wall is the whole ring, in sorted order, as nothing else stands inside it.
 	var walls: Array[Vector2i] = ring.duplicate()
 	walls.sort()
-	var _helper: Entity = state.add_entity(1, walls[CatchFeature.nearest(walls, spot)])
+	var segment: int = (CatchFeature.nearest(walls, spot) + offset) % walls.size()
+	var _helper: Entity = state.add_entity(1, walls[segment])
 
 
 ## Steps the player in slot 0 off the ring, away from the disc's middle, once their last step is
