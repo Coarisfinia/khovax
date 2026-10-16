@@ -63,3 +63,21 @@ static func _owed(
 	total: int,
 ) -> int:
 	return done[helper] * count - received.get(helper, 0) * total
+
+
+## What each player in the instance did for `seal`'s ring (#86), into `caught`: the wall tiles they
+## colored, and the ticks they stood on the wall while it sealed. Read before the ring comes off
+## the trail.
+static func add_contributions(state: GameState, seal: RingSeal, caught: WildMonsterCaught) -> void:
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	for wall: Vector2i in seal.walls:
+		var colorer_id: int = trail.tiles.get(wall, 0)
+		var colorer: Entity = state.entity(colorer_id)
+		if colorer != null and colorer.slot != Entity.NO_SLOT:
+			caught.walls_colored[colorer.slot] = caught.walls_colored.get(colorer.slot, 0) + 1
+	# By slot, added up: a player who left and came back is a new entity in the same slot.
+	for braced_id: int in seal.braced:
+		var bracer: Entity = state.entity(braced_id)
+		if bracer != null and bracer.slot != Entity.NO_SLOT:
+			var had: int = caught.braced_ticks.get(bracer.slot, 0)
+			caught.braced_ticks[bracer.slot] = had + seal.braced[braced_id]

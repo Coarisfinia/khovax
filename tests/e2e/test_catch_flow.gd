@@ -193,9 +193,9 @@ func _check_catch() -> String:
 	var seal: RingSeal = _catching(state).seals.get(player.id)
 	if seal == null or state.entity(monster_id) == null or seal.monsters != [monster_id]:
 		return "the ring closed, but didn't start sealing the wild monster in"
-	var expected_ticks: int = CatchFeature.SEAL_BASE_TICKS + Fixed.div_floor(
-		CatchFeature.pressure(_wild(state), monster_id),
-		CatchFeature.SEAL_PRESSURE_PER_TICK,
+	var expected_ticks: int = RingSealing.SEAL_BASE_TICKS + Fixed.div_floor(
+		RingSealing.pressure(_wild(state), monster_id),
+		RingSealing.SEAL_PRESSURE_PER_TICK,
 	)
 	if seal.seal_ticks != expected_ticks or seal.walls.size() != Hex.ring(1).size():
 		return "the seal takes %d ticks with %d walls, not %d with six" % [
@@ -278,7 +278,7 @@ func _check_seal_saved() -> String:
 		for tick: int in MovementFeature.MOVE_TICKS:
 			var first: int = direction if tick == 0 else Command.NO_MOVE
 			world.step(FlowSteps.commands([first, Command.NO_MOVE]))
-	for _tick: int in Fixed.div_floor(CatchFeature.SEAL_BASE_TICKS, 2):
+	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 2):
 		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	if _catching(basic).seals.is_empty():
@@ -733,10 +733,10 @@ func _check_brace(main: Node, state: GameState) -> String:
 	var seal: RingSeal = _catching(state).seals.get(state.player(0).id)
 	var braced: Array[Vector2i] = []
 	braced.assign(braces.figures.keys())
-	if braced != [state.player(0).tile] or braced != CatchFeature.reinforced(state, seal):
+	if braced != [state.player(0).tile] or braced != RingSealing.reinforced(state, seal):
 		return "the braces stand on %s, not on the reinforced %s" % [
 			braced,
-			CatchFeature.reinforced(state, seal),
+			RingSealing.reinforced(state, seal),
 		]
 	var brace: MeshInstance3D = braces.figures[braced[0]].get_child(0) as MeshInstance3D
 	if brace == null or not brace.mesh is TorusMesh:

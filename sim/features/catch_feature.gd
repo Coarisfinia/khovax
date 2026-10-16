@@ -24,21 +24,6 @@ extends Feature
 ## ring off the trail through TrailFeature.clear: features later in the order change an earlier one
 ## only through its public methods.
 
-## The ring rules' constants (#219). Every one is a placeholder, to tune (#219).
-## Players have no level yet: every player draws rings at this level until they do.
-const PLAYER_LEVEL: int = 1
-## Ring power is BASE + level × PER_LEVEL (+ companion passives, none yet): the issue's 100 + 20 ×
-## level scaled up, so a monster's pressure each tick (its strength) wears a wall down over a
-## whole seal rather than in one tick.
-const RING_POWER_BASE: int = 30_000
-const RING_POWER_PER_LEVEL: int = 6_000
-## A seal takes this many ticks, plus one per SEAL_PRESSURE_PER_TICK of pressure inside
-## (thousandths): more resistance seals slower.
-const SEAL_BASE_TICKS: int = 40
-const SEAL_PRESSURE_PER_TICK: int = 10 * Fixed.ONE
-## The share of the pressure a wall segment takes while a player stands on it (thousandths).
-const REINFORCED_SHARE: int = 100
-
 ## Every sealing ring, by its catcher's entity id.
 var seals: Dictionary[int, RingSeal] = {}
 ## The edge of `_edge_region`, cached by _edge_of.
@@ -62,18 +47,6 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	_close_rings(state)
 
 
-## The power of a ring drawn at `level`.
-static func ring_power(level: int) -> int:
-	return RING_POWER_BASE + level * RING_POWER_PER_LEVEL
-
-
-## How hard the wild monster pushes on a wall each tick, in thousandths: its strength, scaled by
-## the HP it has left, so weakening it first makes the ring easier to hold.
-static func pressure(wild: WildMonsterFeature, monster_id: int) -> int:
-	var left: int = Fixed.ratio(wild.hp_of(monster_id), wild.max_hp_of(monster_id))
-	return wild.strength_of(monster_id) * left
-
-
 ## Every new ring closed this tick around wild monsters not sealing yet starts sealing, unless its
 ## catcher has a ring sealing already. A ring can only close when the trail grows, so rings are
 ## checked per new trail tile, in entity id order of who moved, whatever order the moves were raised
@@ -95,7 +68,7 @@ func _close_rings(state: GameState) -> void:
 				inside.append(monster_id)
 		if inside.is_empty():
 			continue
-		var seal: RingSeal = _seal(state, trail, inside)
+		var seal: RingSeal = RingSealing.build(state, trail, inside)
 		var catcher_id: int = catcher_of(state, trail, seal.walls)
 		if catcher_id > 0 and not seals.has(catcher_id):
 			seals[catcher_id] = seal
@@ -125,42 +98,11 @@ static func _grown(state: GameState) -> Array[TrailGrew]:
 	return grown
 
 
-## A new seal of the ring `trail` closed around the wild monsters `inside`.
-func _seal(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	var seal: RingSeal = RingSeal.new()
-	var spots: Array[Vector2i] = []
-	for monster_id: int in inside:
-		spots.append(state.entity(monster_id).tile)
-	seal.walls = RingShape.wall_around(state.region, trail, spots)
-	var _sized: int = seal.damage.resize(seal.walls.size())
-	seal.damage.fill(0)
-	seal.integrity = Fixed.mul_div(ring_power(PLAYER_LEVEL), Fixed.ONE, seal.walls.size())
-	seal.monsters = inside
-	var total: int = 0
-	for i: int in inside.size():
-		seal.targets.append(RingShape.nearest(seal.walls, spots[i]))
-		total += pressure(wild, inside[i])
-	seal.seal_ticks = SEAL_BASE_TICKS + Fixed.div_floor(total, SEAL_PRESSURE_PER_TICK)
-	return seal
-
-
-## One tick of the player's seal: every monster inside pushes on its segment, which takes only
-## REINFORCED_SHARE of that while a player stands on it. A segment whose damage reaches its
-## integrity breaks the ring; a ring that holds for its seal ticks catches everything inside.
+## One tick of the catcher's seal (RingSealing.push): a segment whose damage reaches its integrity
+## breaks the ring; a ring that holds for its seal ticks catches everything inside.
 func _push(state: GameState, catcher_id: int) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var seal: RingSeal = seals[catcher_id]
-	var braced: Array[Vector2i] = reinforced(state, seal)
-	seal.ticks += 1
-	for entity: Entity in state.entities:
-		if entity.slot != Entity.NO_SLOT and seal.walls.has(entity.tile):
-			seal.brace(entity.id, entity.tile)
-	for i: int in seal.monsters.size():
-		var push: int = pressure(wild, seal.monsters[i])
-		if braced.has(seal.walls[seal.targets[i]]):
-			push = Fixed.scale(push, REINFORCED_SHARE)
-		seal.damage[seal.targets[i]] += push
+	RingSealing.push(state, seal)
 	var failed: int = seal.failed_segment()
 	if failed >= 0:
 		var slot: int = state.entity(catcher_id).slot
@@ -209,20 +151,6 @@ func _end(state: GameState, catcher_id: int) -> void:
 	(state.feature(Features.TRAIL) as TrailFeature).clear(state, cleared)
 
 
-## The seal's wall segments a player stands on, reinforcing them (#227), in the wall's order. The
-## rules and the views (#234) both ask this.
-static func reinforced(state: GameState, seal: RingSeal) -> Array[Vector2i]:
-	var stood_on: Dictionary[Vector2i, bool] = {}
-	for entity: Entity in state.entities:
-		if entity.slot != Entity.NO_SLOT:
-			stood_on[entity.tile] = true
-	var braced: Array[Vector2i] = []
-	for wall: Vector2i in seal.walls:
-		if stood_on.has(wall):
-			braced.append(wall)
-	return braced
-
-
 ## The players whose rings are sealing, in id order.
 func _sealing_players() -> Array[int]:
 	var ids: Array[int] = []
@@ -262,26 +190,8 @@ func _catch(state: GameState, monster_id: int, catcher_id: int, seal: RingSeal) 
 		tile,
 		species,
 	)
-	_add_contributions(state, seal, caught)
+	CatchShares.add_contributions(state, seal, caught)
 	state.events.append(caught)
-
-
-## What each player in the instance did for `seal`'s ring (#86), into `caught`: the wall tiles they
-## colored, and the ticks they stood on the wall while it sealed. Read before the ring comes off
-## the trail.
-static func _add_contributions(state: GameState, seal: RingSeal, caught: WildMonsterCaught) -> void:
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
-	for wall: Vector2i in seal.walls:
-		var colorer_id: int = trail.tiles.get(wall, 0)
-		var colorer: Entity = state.entity(colorer_id)
-		if colorer != null and colorer.slot != Entity.NO_SLOT:
-			caught.walls_colored[colorer.slot] = caught.walls_colored.get(colorer.slot, 0) + 1
-	# By slot, added up: a player who left and came back is a new entity in the same slot.
-	for braced_id: int in seal.braced:
-		var bracer: Entity = state.entity(braced_id)
-		if bracer != null and bracer.slot != Entity.NO_SLOT:
-			var had: int = caught.braced_ticks.get(bracer.slot, 0)
-			caught.braced_ticks[bracer.slot] = had + seal.braced[braced_id]
 
 
 ## A player who leaves the instance takes their seal with them, unfinished; a wild monster that
@@ -320,7 +230,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("sealing ring of %d: %s" % [catcher_id, problem])
 			return
 		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
-		var seal: RingSeal = _seal(state, trail, monsters)
+		var seal: RingSeal = RingSealing.build(state, trail, monsters)
 		if catcher_of(state, trail, seal.walls) != catcher_id:
 			values.fail("sealing ring of %d: its catch goes to someone else" % catcher_id)
 			return
