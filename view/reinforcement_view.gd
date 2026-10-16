@@ -6,8 +6,8 @@ extends Node3D
 ## placeholder made of a primitive mesh until the game's own look exists. It only reads the state.
 
 const BRACE_COLOR: Color = Color(0.36, 0.62, 0.86)
-const BRACE_RADIUS: float = 0.7
-const BRACE_THICKNESS: float = 0.12
+const BRACE_RADIUS: float = 0.82
+const BRACE_THICKNESS: float = 0.16
 
 @export var driver: GameDriver
 
