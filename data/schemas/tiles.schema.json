@@ -5,7 +5,7 @@
 	"description": "A kind of tile a region is made of (#116): its look and its traits. One file per kind, named after its id; a region's legend places it by its id. Its traits are rules: changing one changes what the game does, so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "number", "color", "traits"],
+	"required": ["id", "number", "color", "height", "traits"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
@@ -33,6 +33,24 @@
 			"type": "number",
 			"exclusiveMinimum": 0,
 			"maximum": 4
+		},
+		"height": {
+			"description": "How high the tile's decoration fills its tile (#232), in hundredths of a tile's radius; 0 for a flat tile. A tile's occupied height is its tallest thing's.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1000
+		},
+		"reach": {
+			"description": "How many rings of tiles around its own the decoration's crown covers (#232), e.g. a large tree's; 0 when left out.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 3
+		},
+		"clearance": {
+			"description": "How much height the crown leaves free beneath it (#232), in hundredths of a tile's radius: every tile its reach covers must fit under it. 0 when left out.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1000
 		},
 		"traits": {
 			"description": "What the kind does in the game.",
