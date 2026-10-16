@@ -22,11 +22,14 @@ var invincible: bool = false
 var problem: String = ""
 
 
-## The options in `args` (the user arguments, after `--`); `problem` says what's wrong.
+## The options in `args` (the user arguments, after `--`); `problem` says what's wrong. Arguments
+## that don't start with `--` are a script's own (tools/load_test.gd's `ticks=2000`), not options.
 static func parse(args: PackedStringArray) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
 	for arg: String in args:
 		var value: String = arg.get_slice("=", 1)
+		if not arg.begins_with("--"):
+			continue
 		if arg.begins_with(SEED) and value.is_valid_int() and value.to_int() >= 0:
 			options.seed_value = value.to_int()
 		elif arg.begins_with(INSTANCE) and InstanceBlueprints.NAMES.has(value):

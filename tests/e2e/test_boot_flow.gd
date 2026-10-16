@@ -53,10 +53,11 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Launch options (#237) read as given: a seed, an instance blueprint and invincibility; an unknown
+## Launch options (#237) read as given: a seed, an instance blueprint and invincibility, leaving a
+## script's own arguments (no `--`) alone; an unknown
 ## option, a seed that isn't 0 or more and an unknown instance blueprint are refused with a reason.
 func _check_launch_options() -> String:
-	var args: PackedStringArray = ["--seed=42", "--instance=glade", "--invincible"]
+	var args: PackedStringArray = ["--seed=42", "ticks=9", "--instance=glade", "--invincible"]
 	var options: LaunchOptions = LaunchOptions.parse(args)
 	var read: bool = options.seed_value == 42 and options.instance == "glade" and options.invincible
 	if not options.problem.is_empty() or not read or not options.is_test_world():
