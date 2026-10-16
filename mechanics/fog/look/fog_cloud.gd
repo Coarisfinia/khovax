@@ -1,7 +1,7 @@
 class_name FogCloud
 extends MeshInstance3D
 ## The fog of war's look (#156): one cloud layer over the region and beyond it, drawn by
-## view/fog_cloud.gdshader from the brightness FogView eases per tile. Each tile's fog goes into a
+## its shader, beside it, from the brightness FogView eases per tile. Each tile's fog goes into a
 ## small texture, one texel per tile in axial coordinates, which the shader blends between tiles:
 ## thick cloud where no ally has ever looked, and light fog (#175) over ground seen before. Outside
 ## the region lies cloud, so the region's edge sinks into it instead of ending at a void.
