@@ -262,10 +262,12 @@ static func _add_contributions(state: GameState, seal: RingSeal, caught: WildMon
 		var colorer: Entity = state.entity(colorer_id)
 		if colorer != null and colorer.slot != Entity.NO_SLOT:
 			caught.walls_colored[colorer.slot] = caught.walls_colored.get(colorer.slot, 0) + 1
+	# By slot, added up: a player who left and came back is a new entity in the same slot.
 	for braced_id: int in seal.braced:
 		var bracer: Entity = state.entity(braced_id)
 		if bracer != null and bracer.slot != Entity.NO_SLOT:
-			caught.braced_ticks[bracer.slot] = seal.braced[braced_id]
+			var had: int = caught.braced_ticks.get(bracer.slot, 0)
+			caught.braced_ticks[bracer.slot] = had + seal.braced[braced_id]
 
 
 ## A player who leaves the instance takes their seal with them, unfinished; a wild monster that
