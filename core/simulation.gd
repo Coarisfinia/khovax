@@ -3,7 +3,7 @@ extends RefCounted
 ## Advances a GameState by one tick from that tick's commands: every enabled feature steps, in the
 ## instance's order. The rules themselves live in the features. Deterministic: the same state and
 ## commands always give the same next state, on every platform. Integers only; no nodes, input,
-## time or engine state (CI checks `sim/` for them).
+## time or engine state (CI checks `core/` for them).
 
 const TICKS_PER_SECOND: int = 20
 ## The version of the rules, recorded in every replay. Bump it in a change that makes existing
