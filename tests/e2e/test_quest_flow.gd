@@ -31,15 +31,9 @@ func run(tree: SceneTree) -> String:
 ## Through the main scene: only this player's catch, handed out by the bus, finishes the first
 ## catch, and it's saved at once and loads back; a chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
-	SaveStore.remove(SAVE_PATH)
-	var path: String = Boot.GAME
-	var main: Node = (load(path) as PackedScene).instantiate()
-	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
-	holder.save_path = SAVE_PATH
-	tree.root.add_child(main)
-	await tree.process_frame
-	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	driver.set_process(false)
+	var main: Node = await FlowGame.start(tree, SAVE_PATH)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var driver: GameDriver = FlowGame.held_driver(main)
 	var bus: EventBus = main.get_node("EventBus") as EventBus
 	var profile: Profile = holder.keeper.profile
 	var result: String = ""

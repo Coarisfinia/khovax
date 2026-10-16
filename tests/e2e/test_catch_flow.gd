@@ -18,16 +18,6 @@ extends RefCounted
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
-## The six tiles around the wild monster, walked in a ring from the player's start at (1, -1).
-const RING: Array[Vector2i] = [
-	Vector2i(0, -1),
-	Vector2i(-1, -1),
-	Vector2i(-2, -1),
-	Vector2i(-3, 0),
-	Vector2i(-3, 1),
-	Vector2i(-2, 1),
-	Vector2i(-1, 0),
-]
 ## The second player's ring around the wild monster, from its start at (-1, 1): one step shorter.
 const SECOND_RING: Array[Vector2i] = [
 	Vector2i(-2, 1),
@@ -96,7 +86,8 @@ func run(tree: SceneTree) -> String:
 ## Every ring tile but the last: the walk passes right by the wild monster and catches nothing.
 func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
-	var _events: Array[RefCounted] = FlowSteps.walk(state, RING.slice(0, RING.size() - 1))
+	var ring: Array[Vector2i] = FlowSteps.BASIC_RING
+	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
 	if _wild(state).monsters.size() != 1 or not _catching(state).seals.is_empty():
 		return "an open ring caught the wild monster or started sealing"
 	return ""
@@ -121,7 +112,7 @@ func _check_other_ring() -> String:
 func _check_catch() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var monster_id: int = _wild(state).monsters[0]
-	_close(state, RING)
+	_close(state, FlowSteps.BASIC_RING)
 	var closed: int = state.tick
 	var player: Entity = state.player(0)
 	var seal: RingSeal = _catching(state).seals.get(player.id)
@@ -159,7 +150,7 @@ func _check_after_catch(state: GameState) -> String:
 	if trail.sorted_tiles() != ([player.tile] as Array[Vector2i]):
 		return "the trail didn't start over after the catch: %s" % [trail.sorted_tiles()]
 	var again: GameState = InstanceBlueprints.basic(42)
-	var _walked: Array[RefCounted] = FlowSteps.walk(again, RING)
+	var _walked: Array[RefCounted] = FlowSteps.walk(again, FlowSteps.BASIC_RING)
 	var _events: Array[RefCounted] = _settle(again)
 	if again.state_hash() != state.state_hash():
 		return "the same catch gave two different states"
@@ -170,7 +161,7 @@ func _check_after_catch(state: GameState) -> String:
 ## the monster on the same tick. A second player stands by, for the refused saves.
 func _check_seal_saved() -> String:
 	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
-	for next: Vector2i in RING:
+	for next: Vector2i in FlowSteps.BASIC_RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
 			var first: int = direction if tick == 0 else Command.NO_MOVE
@@ -241,8 +232,8 @@ func _check_together() -> String:
 	var events: Array[RefCounted] = []
 	var standing: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
 	# The second player's ring is a step shorter, so it waits a step and both close at once.
-	for i: int in RING.size():
-		var moves: Array[int] = [_toward(first, RING[i]), Command.NO_MOVE]
+	for i: int in FlowSteps.BASIC_RING.size():
+		var moves: Array[int] = [_toward(first, FlowSteps.BASIC_RING[i]), Command.NO_MOVE]
 		if i > 0:
 			moves[1] = _toward(second, SECOND_RING[i - 1])
 		for tick: int in MovementFeature.MOVE_TICKS:
@@ -419,20 +410,16 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 ## segment its player stands on wears a brace, reinforced (#234); then the wild monster doesn't
 ## blink out: it shrinks away calmly, and then it's gone, and so is the brace.
 func _check_view(tree: SceneTree) -> String:
-	var path: String = Boot.GAME
-	var main: Node = (load(path) as PackedScene).instantiate()
-	tree.root.add_child(main)
-	await tree.process_frame
-	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var main: Node = await FlowGame.start(tree)
+	var driver: GameDriver = FlowGame.held_driver(main)
 	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
-	driver.set_process(false)
 	# Drawn now, not left to whether a frame has passed yet.
 	view.show_state()
 	if view.figures.size() != 1:
 		main.queue_free()
 		return "the main scene doesn't show the wild monster's figure"
 	var figure: HexPiece = view.figures.values()[0]
-	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, RING)
+	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, FlowSteps.BASIC_RING)
 	var result: String = _check_filling(main, driver.state)
 	if result.is_empty():
 		result = _check_brace(main, driver.state)
@@ -503,17 +490,11 @@ func _check_brace(main: Node, state: GameState) -> String:
 ## A catch reaches the profile through the driver's ticked events, as in a session: it's taken over
 ## and, the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
 func _check_saved(tree: SceneTree) -> String:
-	SaveStore.remove(SAVE_PATH)
-	var path: String = Boot.GAME
-	var main: Node = (load(path) as PackedScene).instantiate()
-	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
-	holder.save_path = SAVE_PATH
-	tree.root.add_child(main)
-	await tree.process_frame
-	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	driver.set_process(false)
+	var main: Node = await FlowGame.start(tree, SAVE_PATH)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var driver: GameDriver = FlowGame.held_driver(main)
 	(main.get_node("LocalInput") as LocalInput).slot = 1
-	var events: Array[RefCounted] = FlowSteps.walk(driver.state, RING)
+	var events: Array[RefCounted] = FlowSteps.walk(driver.state, FlowSteps.BASIC_RING)
 	events.append_array(_settle(driver.state))
 	driver.ticked.emit(driver.state.tick, events)
 	var result: String = ""
@@ -563,7 +544,7 @@ func _check_species() -> String:
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var state: GameState = InstanceBlueprints.basic(1)
-	var events: Array[RefCounted] = FlowSteps.walk(state, RING)
+	var events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
 	events.append_array(_settle(state))
 	if _caught_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the catch didn't carry the caught monster's species"

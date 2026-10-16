@@ -26,6 +26,10 @@ env:
   GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
   # jv, the JSON Schema validator for the content data (#72); the checksum is of its Linux release
   # archive, as GitHub records it for the release asset.
+  # jscpd, the duplicate-code check (#247); the checksum is of its Linux release archive, from the
+  # release's checksums.txt.
+  JSCPD_VERSION: 5.4.1
+  JSCPD_SHA256: f2017a17de2a8d5708f8354c6e7223f82da3dc6489675bce543ba00d9d529468
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
   # The web e2e flow's runtime and browser (#102); the checksums are of their Linux archives (Bun's
@@ -59,6 +63,17 @@ jobs:
 
       - name: "🎨 Check GDScript formatting"
         run: gdstyle fmt --check .
+
+      - name: "🧰 Install jscpd (the duplicate-code check)"
+        run: |
+          curl -fsSL -o /tmp/jscpd.tar.gz             "https://github.com/kucherenko/jscpd/releases/download/v${JSCPD_VERSION}/jscpd-linux-x64-gnu.tar.gz"
+          echo "${JSCPD_SHA256}  /tmp/jscpd.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/jscpd.tar.gz -C /usr/local/bin jscpd
+
+      - name: "♊ Check GDScript for copied code"
+        # Any clone of its default minimum size fails, game code and tests alike: shared code goes
+        # into one place (AGENTS.md, "Single responsibility").
+        run: jscpd --format gdscript --exit-code 1 --reporters console --no-colors .
 
       - name: "🎲 Check the simulation stays deterministic"
         # sim/ holds the rules: plain RefCounted classes without nodes, input, time, engine or OS
