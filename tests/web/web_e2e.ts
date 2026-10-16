@@ -13,9 +13,12 @@ const root = resolve(process.argv[2] ?? "build/web-test");
 const chrome = process.env.CHROME;
 const RESULT = /^KHOVAX_E2E: (PASS|FAIL .*)$/;
 const TIMEOUT_MS = 180_000;
-// How often the page is asked whether it still answers, and how long it may take.
+// How often the page is asked whether it still answers, how long it may take, and how many
+// answers in a row it may miss before it counts as frozen: the game loads in one blocking step,
+// which a slow software renderer can stretch, so one missed answer isn't enough.
 const HEARTBEAT_MS = 10_000;
-const ANSWER_MS = 5_000;
+const ANSWER_MS = 10_000;
+const MISSES = 3;
 // Small enough that the software-rendered WebGL and the video encoder keep up on a busy runner
 // (#193).
 const SIZE = { width: 960, height: 540 };
@@ -48,6 +51,8 @@ const browser = await chromium.launch({
 const errors: string[] = [];
 let result = "";
 let ended = false;
+// Why the run stopped early, or "" when it didn't.
+let stopReason = "";
 try {
   const context = await browser.newContext({
     viewport: SIZE,
@@ -62,11 +67,13 @@ try {
     stop = (why: string) => {
       if (ended) return;
       ended = true;
-      errors.push(`${why} after ${seconds()} s`);
+      stopReason = `${why} after ${seconds()} s`;
+      errors.push(stopReason);
       done("");
     };
   });
   page.on("crash", () => stop("the page crashed"));
+  page.on("close", () => stop("the page closed"));
   browser.on("disconnected", () => stop("the browser went away"));
   // The canvas's context-lost events don't bubble, but they pass the document on their way down.
   await page.addInitScript(() => {
@@ -87,31 +94,39 @@ try {
   });
   page.on("pageerror", (error) => ended || errors.push(error.message));
   page.on("requestfailed", (request) => ended || errors.push(`failed to load ${request.url()}`));
-  await page.goto(server.url.href);
+  // A page that crashes while it loads ends the run there, not when navigation gives up.
+  await Promise.race([page.goto(server.url.href).catch(() => {}), stopped]);
   const timeout = new Promise<string>((done) =>
     setTimeout(() => done(""), TIMEOUT_MS),
   );
+  let missed = 0;
   const heartbeat = setInterval(async () => {
-    const answer = page.evaluate(() => performance.now()).then(() => true, () => true);
+    const answer = page.evaluate(() => true).catch(() => false);
     const silence = new Promise<boolean>((done) => setTimeout(() => done(false), ANSWER_MS));
-    if (!ended && !(await Promise.race([answer, silence]))) {
-      stop(`the page stopped answering (no reply within ${ANSWER_MS / 1000} s)`);
+    missed = (await Promise.race([answer, silence])) ? 0 : missed + 1;
+    if (missed >= MISSES) {
+      stop(`the page stopped answering (${MISSES} heartbeats in a row)`);
     }
   }, HEARTBEAT_MS);
   result = await Promise.race([reported, stopped, timeout]);
   clearInterval(heartbeat);
   // Closing the browser below is no failure of the run.
   ended = true;
-  // The video is written when its page closes.
-  await context.close();
-  await page.video()?.saveAs(`${video}/web-e2e.webm`);
-  await page.video()?.delete();
+  // The video is written when its page closes. Best effort: after a crash or a lost browser this
+  // can fail, and that mustn't hide why the run stopped.
+  try {
+    await context.close();
+    await page.video()?.saveAs(`${video}/web-e2e.webm`);
+    await page.video()?.delete();
+  } catch (error) {
+    console.log(`the video couldn't be saved: ${error}`);
+  }
 } finally {
-  await browser.close();
+  await browser.close().catch(() => {});
   server.stop(true);
 }
 
-const early = errors.length > 0 ? "the run ended early" : "";
-console.log(result || early || `no result within ${TIMEOUT_MS / 1000} s: the game never reported`);
+const timedOut = `no result within ${TIMEOUT_MS / 1000} s: the game never reported`;
+console.log(result || (stopReason ? `the run stopped early: ${stopReason}` : timedOut));
 for (const error of errors) console.log(`console error: ${error}`);
 process.exit(result === "KHOVAX_E2E: PASS" && errors.length === 0 ? 0 : 1);
