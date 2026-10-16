@@ -179,7 +179,7 @@ func _first_loot() -> String:
 ## player (slot 0) their own rolls, into the profile and its save at once, and not slot 1's.
 func _check_saved(tree: SceneTree) -> String:
 	SaveStore.remove(SAVE_PATH)
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
 	holder.save_path = SAVE_PATH

@@ -119,7 +119,7 @@ func _commands(tick: int) -> Array[Command]:
 
 
 func _start_rendered() -> void:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	_driver = main.get_node("Driver") as GameDriver
 	_driver.instance = InstanceBlueprints.LOAD

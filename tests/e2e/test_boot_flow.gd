@@ -6,7 +6,7 @@ extends RefCounted
 
 
 func run(tree: SceneTree) -> String:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var scene: PackedScene = load(path) as PackedScene
 	if scene == null:
 		return "main scene failed to load"
@@ -50,6 +50,39 @@ func run(tree: SceneTree) -> String:
 		result = _check_launch_options()
 	if result.is_empty():
 		result = await _check_launched(tree)
+	if result.is_empty():
+		result = await _check_boot(tree)
+	return result
+
+
+## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
+## screen at once, and starts loading the game only once that fog has been drawn, so the page never
+## waits on a blank splash; it starts the game under the fog as the current scene, and then lifts
+## the fog and leaves.
+func _check_boot(tree: SceneTree) -> String:
+	if str(ProjectSettings.get_setting("application/run/main_scene")) != "res://game/boot.tscn":
+		return "the project doesn't start in the boot scene"
+	var boot: Boot = (load("res://game/boot.tscn") as PackedScene).instantiate() as Boot
+	tree.root.add_child(boot)
+	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
+	# Nothing loads before the fog has been drawn once.
+	fogged = fogged and not boot.is_processing()
+	# A game that never starts fails the flow on the runner's timeout.
+	var game: Node = await boot.game_started
+	var result: String = ""
+	if not fogged or game == null or game.get_node_or_null("Driver") == null:
+		result = "the boot scene didn't show fog first and then start the game"
+	elif tree.current_scene != game or not boot.cover.visible:
+		result = "the started game isn't the current scene under the fog"
+	else:
+		await tree.create_timer(Boot.LIFT_SECONDS + 1.0).timeout
+		if is_instance_valid(boot):
+			result = "the fog didn't lift and the boot scene stayed"
+	if is_instance_valid(boot):
+		boot.queue_free()
+	if game != null:
+		game.queue_free()
+	await tree.process_frame
 	return result
 
 
@@ -89,7 +122,7 @@ func _check_launched(tree: SceneTree) -> String:
 	if not WorldKeeper.default_path.is_empty():
 		WorldKeeper.default_path = ""
 		return "a launched test world would resume or overwrite the player's own"
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	tree.root.add_child(main)
 	await tree.process_frame

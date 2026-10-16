@@ -32,7 +32,7 @@ func run(tree: SceneTree) -> String:
 ## catch, and it's saved at once and loads back; a chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
 	SaveStore.remove(SAVE_PATH)
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
 	holder.save_path = SAVE_PATH
