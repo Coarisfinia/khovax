@@ -1,7 +1,8 @@
 class_name TileDecorations
 extends Node3D
 ## Each tile's decoration (#116): the model its kind's tile blueprint names (e.g. the forest's
-## trees), cel-shaded like every model and scaled to sit inside its tile. A decoration stays hidden
+## trees), cel-shaded like every model and scaled to sit inside its tile, times the blueprint's own
+## scale. A decoration stays hidden
 ## in the fog until an ally has seen its tile or an event revealed it (as FogView remembers the
 ## ground under it), then stays. It only reads the state.
 
@@ -49,16 +50,17 @@ func _build(region: Region) -> void:
 	for tile: Vector2i in region.sorted_tiles():
 		var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
 		if blueprint != null and not blueprint.model.is_empty():
-			figures[tile] = _add_figure(tile, blueprint.model)
+			figures[tile] = _add_figure(tile, blueprint)
 
 
-func _add_figure(tile: Vector2i, path: String) -> HexPiece:
+func _add_figure(tile: Vector2i, blueprint: TileBlueprint) -> HexPiece:
+	var path: String = blueprint.model
 	if not _models.has(path):
 		_models[path] = load(path) as PackedScene
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
 	var model: Node3D = _models[path].instantiate() as Node3D
-	model.scale = Vector3.ONE * MODEL_SCALE
+	model.scale = Vector3.ONE * MODEL_SCALE * blueprint.scale
 	Toon.apply_to_model(model)
 	piece.add_child(model)
 	add_child(piece)

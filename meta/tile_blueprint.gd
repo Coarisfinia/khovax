@@ -5,10 +5,12 @@ extends RefCounted
 ## its id. Its number is permanent (TileKinds); the rules see only its id, number and traits.
 
 ## A tile blueprint file's fields, as its schema (data/schemas/tiles.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "number", "color", "model", "traits"]
+const FIELDS: Array[String] = ["id", "number", "color", "model", "scale", "traits"]
 const TRAITS: Array[String] = ["walkable"]
 ## The largest number a kind may have, so a typo can't make the kind list huge.
 const MAX_NUMBER: int = 255
+## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
+const MAX_SCALE: float = 4.0
 
 var id: String = ""
 ## The kind's permanent number in Region.terrain, never reused or changed once shipped; -1 when
@@ -18,6 +20,8 @@ var number: int = -1
 var color: Color = Color.BLACK
 ## The decoration drawn on every tile of this kind, a res:// path, or "" for none.
 var model: String = ""
+## How much larger than the pack made it the model is drawn, for a model too small to read.
+var scale: float = 1.0
 ## Whether walkers can stand on it.
 var walkable: bool = false
 ## Why the blueprint couldn't be read, or "" when it could.
@@ -57,6 +61,13 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 		return "its number is a whole number from 0 to %d" % MAX_NUMBER
 	if not walks is bool:
 		return "its traits say whether it's walkable"
+	var given_scale: Variant = data.get("scale", 1.0)
+	var drawn: float = 0.0
+	if given_scale is int or given_scale is float:
+		drawn = given_scale
+	if drawn <= 0.0 or drawn > MAX_SCALE:
+		return "its scale is a number above 0, at most %s" % MAX_SCALE
+	scale = drawn
 	color = Color.html(html)
 	return ""
 

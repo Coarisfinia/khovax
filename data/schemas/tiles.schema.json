@@ -28,6 +28,12 @@
 			"type": "string",
 			"pattern": "^res://assets/.+[.](gltf|glb)$"
 		},
+		"scale": {
+			"description": "How much larger than the pack made it the model is drawn (1 when left out), for a model too small to read from the camera.",
+			"type": "number",
+			"exclusiveMinimum": 0,
+			"maximum": 4
+		},
 		"traits": {
 			"description": "What the kind does in the game.",
 			"type": "object",

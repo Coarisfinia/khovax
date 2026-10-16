@@ -484,8 +484,8 @@ func _walk_in(world: World, direction: int) -> void:
 
 
 ## A post stands on every lookout (#181): none in the basic instance, which has no lookout, and one
-## on the glade's. Trees stand on the glade's forest tiles (#116), on no other tile, hidden until
-## an ally has seen them.
+## on the glade's. Decorations stand on the glade's decorated tiles (#116, #205), on no other tile,
+## hidden until an ally has seen them.
 func _check_lookouts(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: LookoutView = main.get_node("Instance/LookoutView") as LookoutView
@@ -498,34 +498,56 @@ func _check_lookouts(main: Node) -> String:
 	var lookout: TileTrigger = driver.state.region.triggers[0]
 	if view.figures.keys() != [lookout.tile]:
 		return "the glade's lookout has no post: %s" % [view.figures.keys()]
-	return _check_forest(main)
+	return _check_decorations(main)
 
 
-## Trees stand on exactly the glade's forest tiles, cel-shaded, each shown once an ally has seen it.
-func _check_forest(main: Node) -> String:
+## Each decorated kind's model (forest, shrubs, boulder, stump) stands on exactly the glade's tiles
+## of that kind, at its blueprint's scale, cel-shaded, each shown once an ally has seen it.
+func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	view.show_state()
 	var region: Region = driver.state.region
-	var forest: Array[Vector2i] = []
-	for tile: Vector2i in region.sorted_tiles():
-		if region.terrain[tile] == TileKinds.number_of("forest"):
-			forest.append(tile)
+	var decorated: Array[Vector2i] = []
+	for id: String in ["forest", "shrubs", "boulder", "stump"]:
+		var tiles: Array[Vector2i] = []
+		for tile: Vector2i in region.sorted_tiles():
+			if region.terrain[tile] == TileKinds.number_of(id):
+				tiles.append(tile)
+		if tiles.is_empty():
+			return "the glade has no %s" % id
+		for tile: Vector2i in tiles:
+			var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
+			var size: Vector3 = Vector3.ONE * TileDecorations.MODEL_SCALE * blueprint.scale
+			var model: Node3D = null
+			if view.figures.has(tile):
+				model = view.figures[tile].get_child(0) as Node3D
+			if model == null or model.scene_file_path != blueprint.model or model.scale != size:
+				return "the %s on %s has no model, another one, or another size" % [id, tile]
+		decorated.append_array(tiles)
+	decorated.sort()
 	var shown: Array[Vector2i] = []
 	shown.assign(view.figures.keys())
 	shown.sort()
-	if forest.is_empty() or shown != forest:
-		return "trees stand on %s, not on the glade's forest %s" % [shown, forest]
+	if shown != decorated:
+		return "decorations stand on %s, not on the glade's decorated %s" % [shown, decorated]
+	return _check_decorations_in_fog(driver, view, decorated)
+
+
+## The decorations on `decorated` stand on their tiles, cel-shaded, each shown once an ally has seen
+## it: some of them in sight, some hidden.
+func _check_decorations_in_fog(driver: GameDriver, view: TileDecorations,
+		decorated: Array[Vector2i]) -> String:
 	var seen: int = 0
-	for tile: Vector2i in forest:
+	for tile: Vector2i in decorated:
 		var figure: HexPiece = view.figures[tile]
 		if figure.visible != FogView.ally_sees(driver.state, tile):
-			return "the trees on %s don't follow the fog" % tile
+			return "the decoration on %s doesn't follow the fog" % tile
 		seen += 1 if figure.visible else 0
 		if figure.position != figure.position_on(tile) or not _toon_shaded(figure):
-			return "the trees on %s aren't on their tile, or not cel-shaded" % tile
-	if seen == 0 or seen == forest.size():
-		return "expected some of the glade's trees in sight and some hidden, %d seen" % seen
+			return "the decoration on %s isn't on its tile, or not cel-shaded" % tile
+	if seen == 0 or seen == decorated.size():
+		return "expected some of the glade's decorations in sight and some hidden, %d seen" % seen
 	return ""
 
 

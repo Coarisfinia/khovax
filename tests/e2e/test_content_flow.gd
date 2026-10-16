@@ -71,9 +71,10 @@ func _check_quests() -> String:
 
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
-## numbers and walkability; the rules number every kind by its file's number; forest is walkable
-## with its trees, and every model a blueprint names exists. Broken blueprints, and two with one
-## number, are refused.
+## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
+## a stump are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
+## names exists; the stump is drawn at scale 4, every other kind at 1, the default. Broken
+## blueprints, and two with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -83,25 +84,36 @@ func _check_tiles() -> String:
 		"water": false,
 		"rock": false,
 		"forest": true,
+		"shrubs": true,
+		"boulder": false,
+		"stump": true,
 	}
+	var plain: Array[String] = ["ground", "water", "rock"]
 	for id: String in walkable:
 		var kind: int = TileKinds.number_of(id)
-		if not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]:
-			return "tile blueprint %s is missing or not as walkable as written" % id
+		if (not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]
+				or content.tiles[id].model.is_empty() != plain.has(id)):
+			return "tile blueprint %s is missing, not as walkable as written, or (un)decorated" % id
 	var built_in: Array[int] = [Region.GROUND, Region.WATER, Region.BLOCKED]
 	if built_in != [content.tiles["ground"].number, content.tiles["water"].number,
-			content.tiles["rock"].number] or content.tiles["forest"].model.is_empty():
-		return "the built-in tile kinds don't keep their numbers, or the forest has no trees"
+			content.tiles["rock"].number]:
+		return "the built-in tile kinds don't keep their numbers"
 	for tile: TileBlueprint in content.tiles.values():
 		if TileKinds.number_of(tile.id) != tile.number or TileKinds.id_of(tile.number) != tile.id:
 			return "the rules don't number tile blueprint %s by its file" % tile.id
-		if not tile.model.is_empty() and not ResourceLoader.exists(tile.model):
-			return "tile blueprint %s's model %s doesn't exist" % [tile.id, tile.model]
+		var missing: bool = not tile.model.is_empty() and not ResourceLoader.exists(tile.model)
+		if missing or tile.scale != (4.0 if tile.id == "stump" else 1.0):
+			return "tile blueprint %s's model %s doesn't exist, or it's drawn at scale %s" % [
+				tile.id,
+				tile.model,
+				tile.scale,
+			]
 	var result: String = _check_tiles_refused()
 	return result if not result.is_empty() else _check_tile_numbers_unique()
 
 
-## Tile blueprints with a wrong id, number, color or trait are refused, with a reason.
+## Tile blueprints with a wrong id, number, color, scale or trait are refused, with a reason; the
+## largest scale is read.
 func _check_tiles_refused() -> String:
 	var tile: String = "{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
 	var walks: String = "\"walkable\": true"
@@ -114,11 +126,18 @@ func _check_tiles_refused() -> String:
 		tile % ["x", "9", "#000000", "", ""]: "its traits",
 		tile % ["x", "9", "#000000", walks + ", \"swims\": true", ""]: "field swims",
 		tile % ["x", "9", "#000000", walks, ", \"size\": 1"]: "field size",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 0"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 9"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
 	}
 	for text: String in cases:
 		var problem: String = TileBlueprint.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	var largest: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,
+			", \"scale\": 4"])
+	if not largest.problem.is_empty() or largest.scale != TileBlueprint.MAX_SCALE:
+		return "the largest scale is refused or misread: %s" % largest.problem
 	return ""
 
 

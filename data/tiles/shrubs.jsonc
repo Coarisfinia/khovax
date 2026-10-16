@@ -1,0 +1,8 @@
+// Shrubs: ground under a cluster of small round trees. Walkable, and sight passes through them.
+{
+	"id": "shrubs",
+	"number": 4, // permanent: never reused or changed once shipped
+	"color": "#4f7d45",
+	"model": "res://assets/kaykit-hexagon/trees_B_small.gltf",
+	"traits": { "walkable": true }
+}
