@@ -24,14 +24,14 @@ static func load_profile(path: String = PROFILE_PATH) -> Profile:
 		var refused: Profile = Profile.new()
 		refused.problem = saved.problem
 		return refused
-	var profile: Profile = Profile.parse(saved.text)
+	var profile: Profile = ProfileSave.parse(saved.text)
 	profile.loaded_generation = saved.generation
 	return profile
 
 
 ## Saves the profile; returns why it couldn't, or "".
 static func save_profile(profile: Profile, path: String = PROFILE_PATH) -> String:
-	return write_save(path, profile.to_text())
+	return write_save(path, ProfileSave.to_text(profile))
 
 
 ## The newest generation of the save at `path` whose checksum holds. A plain file from before
