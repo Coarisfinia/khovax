@@ -1,8 +1,9 @@
-// Shrubs: ground under a cluster of small round trees. Walkable, and sight passes through them.
+// Shrubs: ground under a cluster of small round trees. Walkable, sight passes through them, and
+// wild monsters hide in them (#202).
 {
 	"id": "shrubs",
 	"number": 4, // permanent: never reused or changed once shipped
 	"color": "#4f7d45",
 	"model": "res://assets/kaykit-hexagon/trees_B_small.gltf",
-	"traits": { "walkable": true }
+	"traits": { "walkable": true, "hides": true }
 }

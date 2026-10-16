@@ -40,7 +40,11 @@
 			"additionalProperties": false,
 			"required": ["walkable"],
 			"properties": {
-				"walkable": { "description": "Whether walkers can stand on it.", "type": "boolean" }
+				"walkable": { "description": "Whether walkers can stand on it.", "type": "boolean" },
+				"hides": {
+					"description": "Whether a wild monster standing on it hides there until a player comes next to it (#202); false when left out.",
+					"type": "boolean"
+				}
 			}
 		}
 	}
