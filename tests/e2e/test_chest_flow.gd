@@ -29,6 +29,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_opened()
 	if result.is_empty():
 		result = _check_found()
+	if result.is_empty() and _first_found() != _first_found():
+		result = "the same seed found the loot with different rolls"
 	if result.is_empty():
 		if _first_loot() != _first_loot():
 			result = "the same seed opened the chest with different loot"
@@ -95,6 +97,19 @@ func _check_found() -> String:
 	var back: int = posmod(_direction + 3, Hex.DIRECTIONS.size())
 	if not _walk(state, back).is_empty() or not _walk(state, _direction).is_empty():
 		return "the loot was found twice"
+	return _check_found_kept(state)
+
+
+## The loot still lying and the rolls to come are saved and restored: a glade loaded from the save
+## lies the same and rolls on the same stream.
+func _check_found_kept(state: GameState) -> String:
+	var chests: ChestFeature = state.feature(Features.CHESTS) as ChestFeature
+	var fresh: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var restored: ChestFeature = fresh.feature(Features.CHESTS) as ChestFeature
+	var values: DataReader = DataReader.new(chests.save_values())
+	restored.load_values(fresh, values)
+	if values.failed() or restored.hash_values() != chests.hash_values():
+		return "the loot still lying didn't survive a save: %s" % values.problem
 	return ""
 
 
@@ -144,6 +159,14 @@ func _walk(state: GameState, direction: int) -> Array[RefCounted]:
 func _commands(move: int) -> Array[Command]:
 	var commands: Array[Command] = [Command.new(move), Command.new(Command.NO_MOVE)]
 	return commands
+
+
+## The rolls of the first loot found on the ground in a fresh two-player glade from SEED, as text.
+func _first_found() -> String:
+	var state: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var spot: Vector2i = (state.feature(Features.CHESTS) as ChestFeature).loot_spots[0]
+	var events: Array[RefCounted] = _step_onto(state, spot)
+	return "none" if events.is_empty() else str((events[0] as LootFound).loot)
 
 
 ## The loot of the first chest opened in a fresh two-player glade from SEED, as text.
