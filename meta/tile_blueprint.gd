@@ -20,7 +20,7 @@ const TRAITS: Array[String] = ["walkable", "hides"]
 const MAX_NUMBER: int = 255
 ## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
 ## a typo can't make one tile overshadow the region.
-const MAX_HEIGHT: int = 1000
+const MAX_HEIGHT: int = RegionFormat.MAX_HEIGHT
 const MAX_REACH: int = 3
 ## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
 const MAX_SCALE: float = 4.0

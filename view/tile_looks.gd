@@ -37,9 +37,23 @@ static func _measured(blueprint: TileBlueprint) -> int:
 	if blueprint == null or blueprint.model.is_empty():
 		return 0
 	var model: Node3D = (load(blueprint.model) as PackedScene).instantiate() as Node3D
+	var meshes: Array[Node] = model.find_children("*", "MeshInstance3D", true, false)
+	if model is MeshInstance3D:
+		meshes.append(model)
 	var top: float = 0.0
-	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-		var box: AABB = mesh.transform * mesh.get_aabb()
+	for mesh: MeshInstance3D in meshes:
+		var box: AABB = _in_model(model, mesh) * mesh.get_aabb()
 		top = maxf(top, box.end.y)
 	model.free()
 	return ceili(top * blueprint.scale * HEIGHT_UNITS)
+
+
+## `node`'s transform within `model`, every parent's on the way included: imported models nest.
+static func _in_model(model: Node3D, node: Node3D) -> Transform3D:
+	var placed: Transform3D = Transform3D.IDENTITY
+	var step: Node = node
+	while step != null and step != model:
+		if step is Node3D:
+			placed = (step as Node3D).transform * placed
+		step = step.get_parent()
+	return placed

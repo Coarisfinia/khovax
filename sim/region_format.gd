@@ -30,8 +30,10 @@ const TILE: String = "tile "
 ## What a tile line says to override its kind's walkable trait for that one tile (#201).
 const WALKABLE: String = "walkable"
 const NOT_WALKABLE: String = "not_walkable"
-## A tile line's height override (#232): `height=<n>`, in hundredths of a tile's radius.
+## A tile line's height override (#232): `height=<n>`, in hundredths of a tile's radius, up to
+## MAX_HEIGHT, so a typo can't make one tile block every crown.
 const HEIGHT: String = "height="
+const MAX_HEIGHT: int = 1000
 
 
 ## A region read from a region file's text. Lines starting with `#` are comments. The first other
@@ -204,8 +206,8 @@ static func _parse_tile_extra(region: Region, tile: Vector2i, extra: String) -> 
 		region.walkable_overrides[tile] = extra == WALKABLE
 	elif extra.begins_with(HEIGHT) and extra.trim_prefix(HEIGHT).is_valid_int():
 		var height: int = extra.trim_prefix(HEIGHT).to_int()
-		if height < 0:
-			return "tile %s's height %d is below 0" % [tile, height]
+		if height < 0 or height > MAX_HEIGHT:
+			return "tile %s's height %d isn't 0 to %d" % [tile, height, MAX_HEIGHT]
 		region.height_overrides[tile] = height
 	else:
 		return "tile %s: %s is neither a turn nor %s or %s" % [tile, extra, WALKABLE, NOT_WALKABLE]
