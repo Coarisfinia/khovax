@@ -10,6 +10,9 @@ extends Feature
 ## How far every player sees, in steps, until traits from captured monsters change it (#65).
 const SIGHT_RADIUS: int = 5
 
+## Each radius's lines, as _lines_within works them out, shared by every instance.
+static var _lines: Dictionary[int, Array] = {}
+
 ## Each player's visible tiles, by slot, in a fixed order (Hex.disc's).
 var visible: Dictionary[int, Array] = {}
 ## Tiles an event revealed to every player, sorted, each once (#177).
@@ -119,19 +122,41 @@ func _update(state: GameState) -> void:
 
 
 ## The tiles of `region` within `radius` of `from` that a straight line reaches without passing
-## over rock, in Hex.disc's order.
+## over rock, in Hex.disc's order. Every line is worked out once per radius, from the origin, and
+## walked from `from` (#289): a hex line doesn't depend on where it starts, so the tiles are the
+## same
+## as drawing each line afresh, without the work.
 static func sight(region: Region, from: Vector2i, radius: int) -> Array[Vector2i]:
 	var seen: Array[Vector2i] = []
-	for tile: Vector2i in Hex.disc(radius, from):
-		if region.has_tile(tile) and _clear(region, Hex.line(from, tile)):
+	var lines: Array = _lines_within(radius)
+	var ends: Array[Vector2i] = Hex.disc(radius)
+	for i: int in ends.size():
+		var tile: Vector2i = from + ends[i]
+		var between: Array[Vector2i] = lines[i]
+		if region.has_tile(tile) and _clear(region, from, between):
 			seen.append(tile)
 	return seen
 
 
-## Whether nothing between the line's ends blocks sight: no rock, and no gap in the region.
-static func _clear(region: Region, path: Array[Vector2i]) -> bool:
-	for i: int in range(1, path.size() - 1):
-		var tile: Vector2i = path[i]
+## Whether nothing between a line's ends blocks sight, the line's tiles between them given as
+## offsets from `from`: no rock, and no gap in the region.
+static func _clear(region: Region, from: Vector2i, between: Array[Vector2i]) -> bool:
+	for offset: Vector2i in between:
+		var tile: Vector2i = from + offset
 		if not region.has_tile(tile) or region.terrain[tile] == Region.BLOCKED:
 			return false
 	return true
+
+
+## The tiles between the origin and each tile of Hex.disc(radius), in the disc's order, worked out
+## once per radius. Derived data, so it's in no hash.
+static func _lines_within(radius: int) -> Array:
+	if not _lines.has(radius):
+		var lines: Array = []
+		for end: Vector2i in Hex.disc(radius):
+			var path: Array[Vector2i] = Hex.line(Vector2i.ZERO, end)
+			var between: Array[Vector2i] = []
+			between.assign(path.slice(1, maxi(path.size() - 1, 1)))
+			lines.append(between)
+		_lines[radius] = lines
+	return _lines[radius]
