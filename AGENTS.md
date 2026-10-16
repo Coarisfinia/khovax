@@ -193,7 +193,9 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   its rules in `rules/` (the simulation's, under every rule below for `sim/`, checked by CI the
   same way) and its look in `look/` (views, under the rules for `view/`). The split between rules
   and look holds inside every slice. Shared slices (the trail, loot tables) come before the ones that
-  use them. The mechanics move out of `sim/` and `view/` one slice per PR (catching first, #296;
+  use them. **The core never depends on a slice:** data the core holds (a region's `TileTrigger`)
+  and events it reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and
+  only the rules that run them move. The mechanics move out of `sim/` and `view/` one slice per PR (catching first, #296;
   the rest #297); what's left of `sim/` then becomes `core/`.
 - **`sim/`, the simulation:** the core (`Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features. Plain `RefCounted` classes (or subclasses of `sim/` classes),
