@@ -43,7 +43,8 @@ const server = Bun.serve({
 });
 
 // The runner has no GPU, so WebGL 2 comes from a software renderer, chosen by CHROME_GL (#252):
-// Chrome's own (swiftshader, which it only offers when asked to) or Mesa's, through EGL.
+// Chrome's own (swiftshader, which it only offers when asked to) or Mesa's, through EGL, held to
+// its software rasterizer by the environment.
 const GL_ARGS: Record<string, string[]> = {
   swiftshader: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
   mesa: ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist"],
@@ -53,7 +54,15 @@ if (!GL_ARGS[gl]) {
   console.error(`CHROME_GL is ${gl}, not one of ${Object.keys(GL_ARGS).join(", ")}`);
   process.exit(2);
 }
-const browser = await chromium.launch({ executablePath: chrome, args: GL_ARGS[gl] });
+const GL_ENV: Record<string, Record<string, string>> = {
+  swiftshader: {},
+  mesa: { LIBGL_ALWAYS_SOFTWARE: "1", MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe" },
+};
+const browser = await chromium.launch({
+  executablePath: chrome,
+  args: GL_ARGS[gl],
+  env: { ...process.env, ...GL_ENV[gl] },
+});
 const errors: string[] = [];
 let result = "";
 let ended = false;
@@ -65,6 +74,14 @@ try {
     recordVideo: { dir: video, size: SIZE },
   });
   const page = await context.newPage();
+  // Which renderer the run really got, since the flags only ask for one.
+  const renderer = await page.evaluate(() => {
+    const webgl = document.createElement("canvas").getContext("webgl2");
+    if (!webgl) return "none";
+    const info = webgl.getExtension("WEBGL_debug_renderer_info");
+    return String(webgl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : webgl.RENDERER));
+  });
+  console.log(`CHROME_GL ${gl}: WebGL 2 renderer ${renderer}`);
   const started = Date.now();
   const seconds = () => Math.round((Date.now() - started) / 1000);
   // Ends the run early, failed, saying why.
