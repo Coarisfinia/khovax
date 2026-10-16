@@ -1,9 +1,10 @@
 class_name TrailView
 extends Node
-## The trail feature's look: paints every trail's tiles on the grid. A sealing ring (#219) fills
+## The trail feature's look: paints the allies' shared trail (#87) on the grid. A sealing ring
+## (#219) fills
 ## with the seal's progress: its wall tiles turn to the seal color one after another, going round
 ## the ring, so how far the seal has come shows as how much of the ring is filled, not only as a
-## color (#68). A ring that breaks or holds starts its trail over, so the fill clears. It reads the
+## color (#68). A ring that breaks or holds comes off the trail, so the fill clears. It reads the
 ## trail and catch features' state and never writes it; an instance without the trail paints
 ## nothing.
 
@@ -28,9 +29,8 @@ func show_state() -> void:
 	var colors: Dictionary[Vector2i, Color] = {}
 	var feature: TrailFeature = driver.state.feature(Features.TRAIL) as TrailFeature
 	if feature != null:
-		for trail: Trail in feature.trails.values():
-			for tile: Vector2i in trail.tiles:
-				colors[tile] = trail_color
+		for tile: Vector2i in feature.shared.tiles:
+			colors[tile] = trail_color
 	var catching: CatchFeature = driver.state.feature(Features.CATCH) as CatchFeature
 	if catching != null:
 		for seal: RingSeal in catching.seals.values():

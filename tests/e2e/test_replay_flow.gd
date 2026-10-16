@@ -134,10 +134,12 @@ func _check_hash_covers_fields() -> String:
 		"walk from.y": func(state: GameState) -> void: _player_walk(state).from.y += 1,
 		"walk ticks_left": func(state: GameState) -> void: _player_walk(state).ticks_left += 1,
 		"walk dropped": func(state: GameState) -> void: _movement(state).walks.clear(),
-		"trail": func(state: GameState) -> void: _trail(state).tiles[Vector2i.ZERO] = true,
+		"trail": func(state: GameState) -> void: _trail(state).tiles[Vector2i.ZERO] = 1,
 		# Same size, other tile: the hash must see the coordinates, not only how many there are.
-		"trail tile": func(state: GameState) -> void: _trail(state).tiles = { Vector2i.ZERO: true },
-		"trail dropped": func(state: GameState) -> void: _trails(state).trails.clear(),
+		"trail tile": func(state: GameState) -> void: _trail(state).tiles = { Vector2i.ZERO: 1 },
+		# Same tile, someone else colored it (#87).
+		"trail colorer": _recolor_trail,
+		"trail dropped": func(state: GameState) -> void: _trail(state).tiles.clear(),
 		"movement off": func(state: GameState) -> void: state.set_enabled(Features.MOVEMENT, false),
 		"trail off": func(state: GameState) -> void: state.set_enabled(Features.TRAIL, false),
 	}
@@ -167,13 +169,14 @@ func _check_trail() -> String:
 		return "walking back over the trail changed it to %s" % [_trail(state).sorted_tiles()]
 	var reordered: GameState = _state(42)
 	var shuffled: Array[Vector2i] = [START + 2 * east, START, START + east]
+	var by: int = reordered.player(0).id
 	_trail(reordered).tiles = {}
 	for tile: Vector2i in shuffled:
-		_trail(reordered).tiles[tile] = true
+		_trail(reordered).tiles[tile] = by
 	var ordered: GameState = _state(42)
 	_trail(ordered).tiles = {}
 	for tile: Vector2i in after_two:
-		_trail(ordered).tiles[tile] = true
+		_trail(ordered).tiles[tile] = by
 	if reordered.state_hash() != ordered.state_hash():
 		return "the same trail walked in a different order hashes differently"
 	return ""
@@ -281,10 +284,10 @@ func _check_players_move_at_once() -> String:
 		return "the player in slot 0 didn't follow its own command"
 	if second.tile != start_second + Hex.DIRECTIONS[WEST]:
 		return "the player in slot 1 didn't move in the same tick by its own command"
-	var trails: TrailFeature = _trails(state)
-	var shared: bool = trails.trail(first.id).tiles.has(second.tile)
-	if shared or trails.trail(second.id).tiles.has(first.tile):
-		return "the players share a trail"
+	# Allies share one trail (#87), each tile remembering who colored it.
+	var trail: Trail = _trails(state).shared
+	if trail.tiles.get(first.tile, 0) != first.id or trail.tiles.get(second.tile, 0) != second.id:
+		return "the players' tiles on the shared trail aren't their own"
 	var only_first: Array[Command] = [Command.new(WEST)]
 	for _tick: int in MovementFeature.MOVE_TICKS:
 		Simulation.step(state, only_first)
@@ -316,8 +319,8 @@ func _check_entity_ids_stay() -> String:
 	state.remove_entity(removed)
 	if state.entity(removed) != null or ids.size() != state.entities.size() + 1:
 		return "removing an entity took the wrong one or more than one"
-	if _movement(state).walk(removed) != null or _trails(state).trail(removed) != null:
-		return "a removed entity's walk or trail stayed behind"
+	if _movement(state).walk(removed) != null:
+		return "a removed entity's walk stayed behind"
 	var added: Entity = state.add_entity(1, START)
 	if ids.has(added.id):
 		return "a new entity got the id %d again" % added.id
@@ -886,9 +889,14 @@ func _trails(state: GameState) -> TrailFeature:
 	return state.feature(Features.TRAIL) as TrailFeature
 
 
-## The trail of the player in slot 0.
+## The allies' shared trail (#87).
 func _trail(state: GameState) -> Trail:
-	return _trails(state).trail(state.player(0).id)
+	return _trails(state).shared
+
+
+## Gives the start tile to another colorer than the player who colored it.
+func _recolor_trail(state: GameState) -> void:
+	_trail(state).tiles[START] = _trail(state).tiles[START] + 1
 
 
 ## The state hash after every tick.
