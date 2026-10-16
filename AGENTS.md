@@ -189,6 +189,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
               game/ driver: fixed ticks
 ```
 
+- **Vertical slices** (owner, #290): each mechanic lives in one folder, `mechanics/<name>/`, with
+  its rules in `rules/` (the simulation's, under every rule below for `sim/`, checked by CI the
+  same way) and its look in `look/` (views, under the rules for `view/`). The split between rules
+  and look holds inside every slice. Shared slices (the trail, loot tables) come before the ones that
+  use them. The mechanics move out of `sim/` and `view/` one slice per PR (catching first, #296;
+  the rest #297); what's left of `sim/` then becomes `core/`.
 - **`sim/`, the simulation:** the core (`Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features. Plain `RefCounted` classes (or subclasses of `sim/` classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
