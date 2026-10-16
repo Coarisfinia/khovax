@@ -42,11 +42,32 @@ const server = Bun.serve({
   },
 });
 
-// The runner has no GPU: WebGL 2 comes from Chrome's software renderer, which it only offers
-// when asked to.
+// Without a GPU, WebGL 2 comes from a software renderer, chosen by CHROME_GL (#252): Mesa's
+// llvmpipe through EGL, which CI uses, since on Chrome's own SwiftShader the page sometimes froze
+// for good; or SwiftShader (which Chrome only offers when asked to), where Mesa isn't installed.
+// Chrome quietly falls back to its own when it can't use the one asked for, so each names what its
+// renderer string must contain.
+const GL: Record<string, { args: string[]; env: Record<string, string>; expect: string }> = {
+  swiftshader: {
+    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+    env: {},
+    expect: "SwiftShader",
+  },
+  mesa: {
+    args: ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist"],
+    env: { LIBGL_ALWAYS_SOFTWARE: "1", MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe" },
+    expect: "llvmpipe",
+  },
+};
+const gl = process.env.CHROME_GL ?? "swiftshader";
+if (!GL[gl]) {
+  console.error(`CHROME_GL is ${gl}, not one of ${Object.keys(GL).join(", ")}`);
+  process.exit(2);
+}
 const browser = await chromium.launch({
   executablePath: chrome,
-  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  args: GL[gl].args,
+  env: { ...process.env, ...GL[gl].env },
 });
 const errors: string[] = [];
 let result = "";
@@ -59,6 +80,17 @@ try {
     recordVideo: { dir: video, size: SIZE },
   });
   const page = await context.newPage();
+  // Which renderer the run really got, since the flags only ask for one.
+  const renderer = await page.evaluate(() => {
+    const webgl = document.createElement("canvas").getContext("webgl2");
+    if (!webgl) return "none";
+    const info = webgl.getExtension("WEBGL_debug_renderer_info");
+    return String(webgl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : webgl.RENDERER));
+  });
+  console.log(`CHROME_GL ${gl}: WebGL 2 renderer ${renderer}`);
+  if (!renderer.includes(GL[gl].expect)) {
+    throw new Error(`CHROME_GL ${gl} asked for ${GL[gl].expect}, but got ${renderer}`);
+  }
   const started = Date.now();
   const seconds = () => Math.round((Date.now() - started) / 1000);
   // Ends the run early, failed, saying why.

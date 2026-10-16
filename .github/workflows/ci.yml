@@ -463,10 +463,19 @@ jobs:
       - name: "📦 Install the runner's dependencies (locked)"
         run: bun install --frozen-lockfile --cwd tests/web
 
+      - name: "📦 Install Mesa's software renderer"
+        # WebGL 2 comes from Mesa's llvmpipe (#252): on Chrome's own SwiftShader the page sometimes
+        # froze for good. From the named runner image's signed Ubuntu archive, so its version
+        # follows the image's Mesa.
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri libgbm1
+
       - name: "🌐 Web test build: run the e2e flow in headless Chrome"
         run: |
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
+          export CHROME_GL=mesa
           timeout 300 bun tests/web/web_e2e.ts build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
