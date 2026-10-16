@@ -48,9 +48,9 @@ static func covers(region: Region, tile: Vector2i) -> bool:
 	if TileKinds.hides(region.terrain[tile]):
 		return true
 	for near: Vector2i in Hex.disc(TileBlueprint.MAX_REACH, tile):
-		if near == tile or not region.has_tile(near):
+		if not region.has_tile(near):
 			continue
 		var crown: TileBlueprint = TileLooks.of(region.terrain[near])
-		if crown != null and Hex.distance(near, tile) <= crown.reach:
+		if crown != null and crown.reach > 0 and Hex.distance(near, tile) <= crown.reach:
 			return true
 	return false

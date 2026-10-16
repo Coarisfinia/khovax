@@ -96,8 +96,11 @@ func _check_circles() -> String:
 	return _check_silhouettes()
 
 
-## Out in the open, no silhouette shows; in a tile that hides, a player is under cover; and each
-## player's silhouette is their own, in their own color.
+## Out in the open, no silhouette shows; under cover (a tile that hides), a player's silhouette
+## eases
+## in from the state in their own color, and out again once they're back in the open; and each
+## player
+## has their own.
 func _check_silhouettes() -> String:
 	var region: Region = Region.disc(1)
 	region.terrain[Vector2i(1, 0)] = TileKinds.number_of("forest")
@@ -106,16 +109,23 @@ func _check_silhouettes() -> String:
 		Vector2i.ZERO,
 	) or not CoverSilhouette.covers(region, Vector2i(1, 0)):
 		return "cover isn't told apart from the open"
-	for slot: int in 2:
-		var silhouette: CoverSilhouette = _views[slot].silhouette
-		_views[slot].ease_silhouette(1.0)
-		if silhouette == null or silhouette.material.albedo_color.a > 0.01:
-			return "player %d shows a silhouette out in the open" % (slot + 1)
-		var own: Color = PersonalColor.of(_driver.world.world_seed, slot)
-		silhouette.ease_toward(true, own, 5.0)
-		var expected: Color = Color(own, CoverSilhouette.ALPHA)
-		if not silhouette.material.albedo_color.is_equal_approx(expected):
-			return "player %d's silhouette under cover isn't in their color" % (slot + 1)
+	var state: GameState = _driver.state
+	var tile: Vector2i = state.player(0).tile
+	var ground: int = state.region.terrain[tile]
+	var view: PlayerView = _views[0]
+	view.ease_silhouette(5.0)
+	var hidden: bool = view.silhouette.material.albedo_color.a < 0.01
+	# The player's own tile turned to forest for a moment, then back: only this view reads it.
+	state.region.terrain[tile] = TileKinds.number_of("forest")
+	view.ease_silhouette(5.0)
+	var shown: Color = view.silhouette.material.albedo_color
+	state.region.terrain[tile] = ground
+	view.ease_silhouette(5.0)
+	var own: Color = PersonalColor.of(_driver.world.world_seed, 0)
+	if not hidden or not shown.is_equal_approx(Color(own, CoverSilhouette.ALPHA)):
+		return "player 1's silhouette doesn't follow cover from the state"
+	if view.silhouette.material.albedo_color.a > 0.01:
+		return "player 1's silhouette stays after leaving cover"
 	if _views[0].silhouette.material == _views[1].silhouette.material:
 		return "the two players share one silhouette"
 	return _check_trail_marks()
