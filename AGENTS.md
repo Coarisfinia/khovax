@@ -332,6 +332,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **No humanoid monsters** (owner, #230): nothing stands on two legs with arms, a human-like
+  upright torso and a head; every monster is clearly a monster. Four legs, a tail, a snout and a
+  head is fine; so is six legs with a long horizontal belly, an upright torso, two arms and a
+  monster's head. Two legs, a human-like upright torso, six arms and a head is not.
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
