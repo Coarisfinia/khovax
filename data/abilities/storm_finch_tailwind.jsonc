@@ -1,0 +1,8 @@
+// A placeholder until the abilities do something (#222): its effect comes with the system that
+// uses it.
+{
+	"id": "storm_finch_tailwind",
+	"kind": "player_passive",
+	"name": "Tailwind",
+	"description": "While the storm finch is out, the player walks a little faster."
+}
