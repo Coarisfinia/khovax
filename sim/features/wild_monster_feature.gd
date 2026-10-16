@@ -5,23 +5,40 @@ extends Feature
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
 ## species. For now each just stands there (its look is a placeholder, #85); walkers can't step onto
-## its tile (MovementFeature), and a later rule catches it (#20). Like every feature, switched off
-## it keeps its state: the monsters stay where they are, and only its own rules stop.
+## its tile (MovementFeature), and a ring catches it (CatchFeature). Each has its species' strength
+## and HP, and starts at full HP (#219); nothing hurts it yet. Like every feature, switched off it
+## keeps its state: the monsters stay where they are, and only its own rules stop.
+
+## The stats of a species the feature wasn't given any for: it pushes on nothing.
+const UNKNOWN_MAX_HP: int = 1
+const UNKNOWN_STRENGTH: int = 0
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
 ## The blueprint's species ids for spots the region doesn't name, and how likely each one is.
 var roster: Array[String] = []
 var weights: Array[int] = []
+## Each species' base HP and strength, by species id, from the content data (meta/ reads it).
+var max_hps: Dictionary[String, int] = {}
+var strengths: Dictionary[String, int] = {}
 ## Each wild monster's species id, by entity id.
 var _species: Dictionary[int, String] = {}
+## Each wild monster's HP left, by entity id.
+var _hp: Dictionary[int, int] = {}
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 
 
-func _init(roster_ids: Array[String] = [], roster_weights: Array[int] = []) -> void:
+func _init(
+	roster_ids: Array[String] = [],
+	roster_weights: Array[int] = [],
+	species_max_hps: Dictionary[String, int] = {},
+	species_strengths: Dictionary[String, int] = {},
+) -> void:
 	roster = roster_ids
 	weights = roster_weights
+	max_hps = species_max_hps
+	strengths = species_strengths
 
 
 func id() -> int:
@@ -41,12 +58,14 @@ func start(state: GameState) -> void:
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
 		_species[monster.id] = species
+		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
 	_known.sort()
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
 	var _dropped: bool = _species.erase(removed_id)
+	_dropped = _hp.erase(removed_id)
 
 
 ## Whether the entity with this id is a wild monster.
@@ -59,18 +78,33 @@ func species_of(entity_id: int) -> String:
 	return _species.get(entity_id, "")
 
 
-## Each wild monster still in the instance as its entity's id and its species, in id order. The
-## roster and the species this instance can place follow from the blueprint and the region.
+## The wild monster's HP left, its species' full HP, and its species' strength.
+func hp_of(entity_id: int) -> int:
+	return _hp.get(entity_id, 0)
+
+
+func max_hp_of(entity_id: int) -> int:
+	return max_hps.get(species_of(entity_id), UNKNOWN_MAX_HP)
+
+
+func strength_of(entity_id: int) -> int:
+	return strengths.get(species_of(entity_id), UNKNOWN_STRENGTH)
+
+
+## Each wild monster still in the instance as its entity's id, its species and its HP left, in id
+## order. The roster, the species this instance can place and their stats follow from the
+## blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for monster: int in monsters:
-		saved.append({ "entity": monster, "species": _species[monster] })
+		saved.append({ "entity": monster, "species": _species[monster], "hp": _hp[monster] })
 	return { "wild_monsters": saved }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
 	_species.clear()
+	_hp.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
 		var species: String = entry.text("species")
@@ -86,6 +120,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 			return
 		monsters.append(monster)
 		_species[monster] = species
+		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
 	monsters.sort()
 
 
@@ -94,4 +129,5 @@ func hash_values() -> Array[int]:
 	for monster: int in monsters:
 		values.append(monster)
 		values.append(_known.find(_species[monster]))
+		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
 	return values

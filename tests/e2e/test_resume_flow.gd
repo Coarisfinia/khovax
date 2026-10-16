@@ -63,13 +63,20 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Plays the world a while: the ring catches the basic instance's wild monster, the exit leads into
-## the glade, and there the player walks onto the lookout and a chest.
+## Plays the world a while: the ring catches the basic instance's wild monster (the player waits
+## for it to seal, #219), the exit leads into the glade, and there the player walks onto the
+## lookout and a chest.
 func _play(world: World) -> String:
 	var tile: Vector2i = world.player(0).tile
+	var catching: CatchFeature = world.instances[InstanceBlueprints.BASIC].feature(
+		Features.CATCH,
+	) as CatchFeature
 	for next: Vector2i in RING_AND_OUT:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
+		while not catching.seals.is_empty():
+			world.step(_commands(Command.NO_MOVE))
+			_remember(world)
 	_walk_in(world, EAST)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var wild: WildMonsterFeature = basic.feature(Features.WILD_MONSTERS) as WildMonsterFeature
