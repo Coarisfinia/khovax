@@ -12,7 +12,9 @@ extends RefCounted
 ## The issue's outcomes (#219), at level 1 with the placeholder constants, in a disc of test
 ## monsters: a weak one holds in a small ring and in a big one; many weak ones break a big ring; a
 ## strong one breaks a big ring fast, and a small ring too, only later (the issue leaves that to
-## level and weakening). A broken ring catches nothing, says so, and starts its trail over.
+## level and weakening). A broken ring catches nothing, says so, and starts its trail over. A
+## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
+## the small ring holds.
 
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_catch_profile.json"
@@ -271,6 +273,7 @@ func _check_outcomes() -> String:
 	var crowd_big: Vector2i = _outcome(WEAK, BIG_RING, CROWD)
 	var strong_big: Vector2i = _outcome(STRONG, BIG_RING, origin)
 	var strong_small: Vector2i = _outcome(STRONG, SMALL_RING, origin)
+	var reinforced: Vector2i = _outcome(STRONG, SMALL_RING, origin, true)
 	if weak_small.x != 1 or weak_big.x != 1:
 		return "a weak monster broke out of a small (%s) or a big ring (%s)" % [
 			weak_small,
@@ -288,19 +291,31 @@ func _check_outcomes() -> String:
 			strong_small.y,
 			crowd_big.y,
 		]
+	if reinforced.x != 1:
+		return "a reinforced small ring didn't hold a strong monster: %s" % reinforced
 	return ""
 
 
 ## Plays one outcome: monsters of `species` on `spots`, and the player walking a ring of `radius`
-## around the disc's middle. Returns 1 when the ring held and caught them all, 0 when it broke
+## around the disc's middle, then stepping off it outward, so the wall stands on its own; with
+## `reinforced`, a second player stands on the wall segment the first spot pushes on. Returns 1 when
+## the ring held and caught them all, 0 when it broke
 ## catching none, -1 otherwise; and the ticks from closing to the end.
-func _outcome(species: String, radius: int, spots: Array[Vector2i]) -> Vector2i:
+func _outcome(
+		species: String,
+		radius: int,
+		spots: Array[Vector2i],
+		reinforced: bool = false,
+) -> Vector2i:
 	var state: GameState = _outcome_state(species, spots)
 	var ring: Array[Vector2i] = Hex.ring(radius)
 	var player: Entity = state.add_entity(0, ring[0])
+	if reinforced:
+		_reinforce(state, ring, spots[0])
 	_close(state, ring.slice(1))
 	var closed: int = state.tick
-	var events: Array[RefCounted] = _settle(state)
+	var events: Array[RefCounted] = _step_off(state)
+	events.append_array(_settle(state))
 	var broken: Array[RingBroken] = []
 	for event: RefCounted in events:
 		if event is RingBroken:
@@ -314,6 +329,32 @@ func _outcome(species: String, radius: int, spots: Array[Vector2i]) -> Vector2i:
 	if _trails(state).trail(player.id).tiles.size() != 1:
 		result = -1
 	return Vector2i(result, state.tick - closed)
+
+
+## Puts a player in slot 1 on the segment of `ring`'s wall that the monster on `spot` will push.
+func _reinforce(state: GameState, ring: Array[Vector2i], spot: Vector2i) -> void:
+	# The ring's wall is the whole ring, in sorted order, as nothing else stands inside it.
+	var walls: Array[Vector2i] = ring.duplicate()
+	walls.sort()
+	var _helper: Entity = state.add_entity(1, walls[CatchFeature.nearest(walls, spot)])
+
+
+## Steps the player in slot 0 off the ring, away from the disc's middle, once their last step is
+## done, unless the seal ends first; returns every event raised meanwhile.
+func _step_off(state: GameState) -> Array[RefCounted]:
+	var events: Array[RefCounted] = []
+	var from: Vector2i = state.player(0).tile
+	var away: int = Command.NO_MOVE
+	for direction: int in Hex.DIRECTIONS.size():
+		if Hex.distance(
+			from + Hex.DIRECTIONS[direction],
+			Vector2i.ZERO,
+		) > Hex.distance(from, Vector2i.ZERO):
+			away = direction
+	while state.player(0).tile == from and not _catching(state).seals.is_empty():
+		Simulation.step(state, _command(away))
+		events.append_array(state.events)
+	return events
 
 
 ## A disc with monsters of `species` on `spots`, and no player yet.

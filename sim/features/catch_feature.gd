@@ -13,8 +13,10 @@ extends Feature
 ##
 ## While a ring seals, its player walks on as usual but draws no new ring, the monsters inside stay
 ## where they stand (wild monsters don't move yet), and a monster sealed in one player's ring can't
-## be sealed in another's: each player's ring seals on its own. Players reinforcing a wall (#227),
-## enraged monsters after a break (#220) and shared co-op rings (#87) build on this later.
+## be sealed in another's: each player's ring seals on its own. Any player standing on a wall
+## segment reinforces it (#227), whoever's ring it is: a reinforced segment takes only a share of
+## the pressure on it, which is strong, but it puts the player right where the monsters push.
+## Enraged monsters after a break (#220) and shared co-op rings (#87) build on this later.
 ##
 ## It runs after the trail has grown this tick, reads the trail and the wild monsters, and starts
 ## the catcher's trail over through TrailFeature.restart: features later in the order change an
@@ -32,6 +34,8 @@ const RING_POWER_PER_LEVEL: int = 6_000
 ## (thousandths): more resistance seals slower.
 const SEAL_BASE_TICKS: int = 40
 const SEAL_PRESSURE_PER_TICK: int = 10 * Fixed.ONE
+## The share of the pressure a wall segment takes while a player stands on it (thousandths).
+const REINFORCED_SHARE: int = 100
 
 ## Every sealing ring, by its player's entity id.
 var seals: Dictionary[int, RingSeal] = {}
@@ -126,15 +130,19 @@ func _seal(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
 	return seal
 
 
-## One tick of the player's seal: every monster inside pushes on its segment. A segment whose
-## damage reaches its integrity breaks the ring; a ring that holds for its seal ticks catches
-## everything inside.
+## One tick of the player's seal: every monster inside pushes on its segment, which takes only
+## REINFORCED_SHARE of that while a player stands on it. A segment whose damage reaches its
+## integrity breaks the ring; a ring that holds for its seal ticks catches everything inside.
 func _push(state: GameState, catcher_id: int) -> void:
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var seal: RingSeal = seals[catcher_id]
+	var stood_on: Dictionary[Vector2i, bool] = _stood_on(state)
 	seal.ticks += 1
 	for i: int in seal.monsters.size():
-		seal.damage[seal.targets[i]] += pressure(wild, seal.monsters[i])
+		var push: int = pressure(wild, seal.monsters[i])
+		if stood_on.has(seal.walls[seal.targets[i]]):
+			push = Fixed.scale(push, REINFORCED_SHARE)
+		seal.damage[seal.targets[i]] += push
 	var failed: int = seal.failed_segment()
 	if failed >= 0:
 		var slot: int = state.entity(catcher_id).slot
@@ -159,6 +167,15 @@ func _end(state: GameState, catcher_id: int) -> void:
 	var _dropped: bool = seals.erase(catcher_id)
 	var trails: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
 	trails.restart(catcher_id, state.entity(catcher_id).tile)
+
+
+## The tiles players stand on this tick.
+static func _stood_on(state: GameState) -> Dictionary[Vector2i, bool]:
+	var tiles: Dictionary[Vector2i, bool] = {}
+	for entity: Entity in state.entities:
+		if entity.slot != Entity.NO_SLOT:
+			tiles[entity.tile] = true
+	return tiles
 
 
 ## The players whose rings are sealing, in id order.
