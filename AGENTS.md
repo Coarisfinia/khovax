@@ -322,7 +322,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   does one job, and a file that has grown a second one is split, with each part named for its job
   (e.g. reading a region file apart from the region's data). A new behaviour goes where its job
   already lives, or into a new class, never onto whatever file is handy. Test files are exempt:
-  a flow is one file per user flow, however long it grows.
+  a flow is one file per user flow, however long it grows. Helpers that several flows use (walking
+  a path, stepping ticks, making commands) move into a shared test file rather than being copied.
 - **GDScript only, no C#.** Godot's C# projects can't export to the web, and the project keeps one
   language for all code.
 - **Every GDScript warning is an error** (`project.godot`), and **every gdstyle rule is an error**
