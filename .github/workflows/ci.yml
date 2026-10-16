@@ -431,15 +431,15 @@ jobs:
   web-e2e:
     # The same device flow on the web build (#102), in headless Chrome: it must end in the state the
     # headless run pins, with nothing on the browser's console marked as an error.
-    # For now (#252): each software renderer three times, to see which one stops hanging.
+    # For now (#252): Mesa's software renderer nine times, to see it doesn't hang.
     needs: export
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        gl: [swiftshader, mesa]
-        attempt: [1, 2, 3]
+        gl: [mesa]
+        attempt: [1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
