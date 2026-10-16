@@ -173,6 +173,21 @@ jobs:
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 
+      - name: "⏱️ Load test: the simulation isn't slower than the base's"
+        # The load test (tools/load_test.gd, #101) times every tick and every feature headless. On a
+        # pull request it runs on the base branch too, in this job on this runner, so the two
+        # compare fairly (#303); the numbers go into the job's summary either way.
+        run: |
+          set -o pipefail
+          timeout 120 ~/godot/godot --headless --path . -s res://tools/load_test.gd -- ticks=2000             | tee /tmp/load-head.txt
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            git fetch -q --depth=1 origin "${{ github.base_ref }}"
+            git worktree add -q /tmp/base FETCH_HEAD
+            timeout 120 ~/godot/godot --headless --path /tmp/base --import > /dev/null 2>&1 || true
+            timeout 120 ~/godot/godot --headless --path /tmp/base -s res://tools/load_test.gd -- ticks=2000               | tee /tmp/load-base.txt || true
+          fi
+          bash tools/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
+
   export:
     # Every platform's build, from one Godot and export templates download (#168): the debug APK
     # to install on a phone (#59, with the Android SDK and Java already on the runner and a
