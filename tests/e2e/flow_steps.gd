@@ -4,6 +4,18 @@ extends RefCounted
 ## whole step on the grid, and a shortest walk. Not a flow itself: the runner runs only the
 ## `test_*.gd` files.
 
+## The six tiles around the basic instance's wild monster, walked in a ring from the player's start
+## at (1, -1).
+const BASIC_RING: Array[Vector2i] = [
+	Vector2i(0, -1),
+	Vector2i(-1, -1),
+	Vector2i(-2, -1),
+	Vector2i(-3, 0),
+	Vector2i(-3, 1),
+	Vector2i(-2, 1),
+	Vector2i(-1, 0),
+]
+
 
 ## One tick's commands with only the player in slot 0: `move`.
 static func command(move: int) -> Array[Command]:

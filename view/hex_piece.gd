@@ -29,5 +29,13 @@ func position_on(on_tile: Vector2i) -> Vector3:
 	return HexLayout.to_world(on_tile) + Vector3(0.0, HexGrid.TILE_HEIGHT + base_offset, 0.0)
 
 
+## Frees every piece a view keeps (by tile or by entity id) and empties the dictionary, e.g. when
+## its instance changed.
+static func free_all(pieces: Dictionary) -> void:
+	for piece: HexPiece in pieces.values():
+		piece.queue_free()
+	pieces.clear()
+
+
 func _place() -> void:
 	position = tile_position()

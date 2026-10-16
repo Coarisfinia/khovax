@@ -122,11 +122,8 @@ func _check_launched(tree: SceneTree) -> String:
 	if not WorldKeeper.default_path.is_empty():
 		WorldKeeper.default_path = ""
 		return "a launched test world would resume or overwrite the player's own"
-	var path: String = Boot.GAME
-	var main: Node = (load(path) as PackedScene).instantiate()
-	tree.root.add_child(main)
-	await tree.process_frame
-	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var main: Node = await FlowGame.start(tree)
+	var driver: GameDriver = FlowGame.driver(main)
 	var result: String = ""
 	var on_start: bool = driver.state != null
 	on_start = on_start and driver.state.player(0).tile == driver.state.region.starts[0]

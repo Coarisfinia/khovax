@@ -29,9 +29,7 @@ func show_state() -> void:
 	if driver == null or driver.state == null:
 		return
 	if driver.state != _shown:
-		for figure: HexPiece in figures.values():
-			figure.queue_free()
-		figures.clear()
+		HexPiece.free_all(figures)
 		_shown = driver.state
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature

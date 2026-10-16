@@ -13,16 +13,9 @@ const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
 const WORLD_PATH: String = "user://test_resume_world.json"
 const PROFILE_PATH: String = "user://test_resume_profile.json"
-## The ring around the basic instance's wild monster, from the start at (1, -1) (as the catch
-## flow walks it), then on to the exit on (3, -2).
-const RING_AND_OUT: Array[Vector2i] = [
-	Vector2i(0, -1),
-	Vector2i(-1, -1),
-	Vector2i(-2, -1),
-	Vector2i(-3, 0),
-	Vector2i(-3, 1),
-	Vector2i(-2, 1),
-	Vector2i(-1, 0),
+## After the ring around the basic instance's wild monster (FlowSteps.BASIC_RING), on to the exit
+## on (3, -2).
+const OUT: Array[Vector2i] = [
 	Vector2i(0, -1),
 	Vector2i(1, -1),
 	Vector2i(2, -1),
@@ -71,7 +64,7 @@ func _play(world: World) -> String:
 	var catching: CatchFeature = world.instances[InstanceBlueprints.BASIC].feature(
 		Features.CATCH,
 	) as CatchFeature
-	for next: Vector2i in RING_AND_OUT:
+	for next: Vector2i in FlowSteps.BASIC_RING + OUT:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
 		while not catching.seals.is_empty():
@@ -237,7 +230,7 @@ func _check_explored(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	fog.show_state(10.0)
 	# On the ring walked around the basic instance's wild monster.
-	var next_door: Vector2i = RING_AND_OUT[3] + view.shifts[InstanceBlueprints.BASIC]
+	var next_door: Vector2i = FlowSteps.BASIC_RING[3] + view.shifts[InstanceBlueprints.BASIC]
 	if fog.cloud.fog_on(next_door) != LIGHT:
 		return "resumed, the basic instance's explored ground next door isn't under light fog"
 	var glade: GameState = fog.driver.state
