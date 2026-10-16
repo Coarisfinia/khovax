@@ -160,7 +160,7 @@ func _settle() -> void:
 ## The main scene with two players, a view for each, and `delay` ticks of input delay; stepped by
 ## hand from here on.
 func _start(delay: int) -> String:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	_main = (load(path) as PackedScene).instantiate()
 	_driver = _main.get_node("Driver") as GameDriver
 	_driver.players = 2

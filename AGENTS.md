@@ -121,7 +121,13 @@ background; only wait in the foreground for a result the very next step needs.
 - **Every pull request that changes what the player sees shows it** in its description as a
   screenshot. Headless runs have no renderer, so render it locally with a throwaway `-s` script
   that never shows a window (owner's rule: the owner works on the same PC, and off-screen
-  positions get clamped onto a second monitor): it sets `root.mode = Window.MODE_MINIMIZED`, runs
+  positions get clamped onto a second monitor). Godot opens its window before any script runs,
+  so the window must start as nothing: a temporary `override.cfg` in the worktree's root makes it
+  one borderless pixel that never takes focus (`[display]` with `window/size/viewport_width=1`,
+  `window/size/viewport_height=1`, `window/size/borderless=true`, `window/size/no_focus=true`,
+  `window/size/resizable=false`), deleted right after the run and never committed (starting it
+  minimized instead renders nothing). Parse-check the script headless first (`--check-only`):
+  one that doesn't load leaves Godot's window showing. The script sets `root.mode = Window.MODE_MINIMIZED`, runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
   `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Run it with
   `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
@@ -332,6 +338,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
+- **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
+  in it in one frame, not around a player at the start nor on arriving somewhere.
 - **No humanoid monsters** (owner, #230): nothing stands on two legs with arms, a human-like
   upright torso and a head; every monster is clearly a monster. Four legs, a tail, a snout and a
   head is fine; so is six legs with a long horizontal belly, an upright torso, two arms and a

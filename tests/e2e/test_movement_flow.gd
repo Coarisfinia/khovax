@@ -65,7 +65,7 @@ func _input() -> Vector2:
 
 
 func run(tree: SceneTree) -> String:
-	var path: String = str(ProjectSettings.get_setting("application/run/main_scene"))
+	var path: String = Boot.GAME
 	var scene: PackedScene = load(path) as PackedScene
 	if scene == null:
 		return "main scene failed to load"
