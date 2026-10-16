@@ -1,6 +1,6 @@
 # Glade: start
 
-The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, open on two sides, with the way back west to the basic instance (#140) and a lookout at its northeast corner that reveals the glade around it (#181).
+The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, open on two sides, with the way back west to the basic instance (#140) and a lookout at its northeast corner that reveals the glade around it (#181), and a stump at its southwest, turned by hand (#231) so it doesn't look like the pond's.
 
 ## Tiles
 
@@ -9,14 +9,14 @@ The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, op
  . . 🌲 .
 x . 1 . j
  . 2 . 3
-  🪵 4 🌲
+  🪓 4 🌲
 ```
 
 ## Legend
 
 - `.`: ground
 - `🌲`: forest
-- `🪵`: stump
+- `🪓`: stump, turned 3
 - `1` to `4`: where players 1 to 4 start
 - `j`: joins another piece to the east
 - `x`: exit to the west, to basic

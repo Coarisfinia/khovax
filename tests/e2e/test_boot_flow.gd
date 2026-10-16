@@ -502,7 +502,9 @@ func _check_lookouts(main: Node) -> String:
 
 
 ## Each decorated kind's model (forest, shrubs, boulder, stump) stands on exactly the glade's tiles
-## of that kind, at its blueprint's scale, cel-shaded, each shown once an ally has seen it.
+## of that kind, at its blueprint's scale, cel-shaded, each shown once an ally has seen it; each
+## turned as its piece turns it by hand (the glade turns some), and a little off its tile's middle,
+## not all of them the same way (#231).
 func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
@@ -517,13 +519,9 @@ func _check_decorations(main: Node) -> String:
 		if tiles.is_empty():
 			return "the glade has no %s" % id
 		for tile: Vector2i in tiles:
-			var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
-			var size: Vector3 = Vector3.ONE * TileDecorations.MODEL_SCALE * blueprint.scale
-			var model: Node3D = null
-			if view.figures.has(tile):
-				model = view.figures[tile].get_child(0) as Node3D
-			if model == null or model.scene_file_path != blueprint.model or model.scale != size:
-				return "the %s on %s has no model, another one, or another size" % [id, tile]
+			var problem: String = _decoration_problem(view, region, id, tile)
+			if not problem.is_empty():
+				return problem
 		decorated.append_array(tiles)
 	decorated.sort()
 	var shown: Array[Vector2i] = []
@@ -531,7 +529,43 @@ func _check_decorations(main: Node) -> String:
 	shown.sort()
 	if shown != decorated:
 		return "decorations stand on %s, not on the glade's decorated %s" % [shown, decorated]
+	var offsets: Dictionary[Vector3, bool] = {}
+	for tile: Vector2i in decorated:
+		offsets[TileDecorations.off_center(tile)] = true
+	if region.decoration_turns.is_empty() or offsets.size() < 2 or offsets.has(Vector3.ZERO):
+		return "the glade turns no decoration by hand, or all stand alike: %s" % [offsets.keys()]
 	return _check_decorations_in_fog(driver, view, decorated)
+
+
+## What's wrong with the decoration of kind `id` on `tile`, or "": its model and size, its turn and
+## where it stands in its tile.
+func _decoration_problem(
+	view: TileDecorations,
+	region: Region,
+	id: String,
+	tile: Vector2i,
+) -> String:
+	var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
+	var size: Vector3 = Vector3.ONE * TileDecorations.MODEL_SCALE * blueprint.scale
+	var model: Node3D = null
+	if view.figures.has(tile):
+		model = view.figures[tile].get_child(0) as Node3D
+	if model == null or model.scene_file_path != blueprint.model or model.scale != size:
+		return "the %s on %s has no model, another one, or another size" % [id, tile]
+	var turn: float = TAU * region.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
+	var off: Vector3 = model.position
+	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER
+	off_center = off_center and off.is_equal_approx(TileDecorations.off_center(tile))
+	# Compared as angles: Godot may report a turn past half as its negative.
+	if not is_zero_approx(angle_difference(model.rotation.y, turn)) or not off_center:
+		return "the %s on %s is turned %f, not %f, or stands at %s" % [
+			id,
+			tile,
+			model.rotation.y,
+			turn,
+			off,
+		]
+	return ""
 
 
 ## The decorations on `decorated` stand on their tiles, cel-shaded, each shown once an ally has seen
