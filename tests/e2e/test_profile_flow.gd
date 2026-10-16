@@ -182,13 +182,20 @@ func _check_migrated() -> String:
 	return _check_migrated_carried()
 
 
-## A format 3 save with four monsters carries its first three.
+## A format 3 save with four monsters carries its first three; a save carrying one twice, or four,
+## is refused.
 func _check_migrated_carried() -> String:
 	var profile: Profile = Profile.new()
 	var four: Array = ["ember_fox", "moss_toad", "ember_fox", "moss_toad"]
 	var _caught: String = profile.apply(_result(four, {}))
 	var parsed: Variant = JSON.parse_string(ProfileSave.to_text(profile))
 	var save: Dictionary = parsed
+	for bad: Array in [[1, 1], [1, 2, 3, 4]]:
+		var wrong: Dictionary = save.duplicate()
+		wrong["carried"] = bad
+		var problem: String = ProfileSave.parse(JSON.stringify(wrong)).problem
+		if not problem.begins_with("a carried monster"):
+			return "a save carrying %s wasn't refused: %s" % [bad, problem]
 	var _dropped: bool = save.erase("carried")
 	save["format"] = 3
 	var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
