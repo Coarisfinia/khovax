@@ -112,10 +112,12 @@ func _check_tiles() -> String:
 	return result if not result.is_empty() else _check_tile_numbers_unique()
 
 
-## Tile blueprints with a wrong id, number, color, scale or trait are refused, with a reason; the
-## largest scale is read.
+## Tile blueprints with a wrong id, number, color, scale, crown (#232) or trait are refused, with a
+## reason; the largest scale is read, and so is a crown's reach and clearance.
 func _check_tiles_refused() -> String:
-	var tile: String = "{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
+	var tile: String = (
+		"{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
+	)
 	var walks: String = "\"walkable\": true"
 	var cases: Dictionary[String, String] = {
 		tile % ["y", "9", "#000000", walks, ""]: "its id must",
@@ -129,6 +131,8 @@ func _check_tiles_refused() -> String:
 		tile % ["x", "9", "#000000", walks, ", \"scale\": 0"]: "its scale",
 		tile % ["x", "9", "#000000", walks, ", \"scale\": 9"]: "its scale",
 		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"reach\": 9"]: "its reach",
+		tile % ["x", "9", "#000000", walks, ", \"clearance\": -1"]: "its reach",
 	}
 	for text: String in cases:
 		var problem: String = TileBlueprint.parse("x", text).problem
@@ -138,6 +142,12 @@ func _check_tiles_refused() -> String:
 			", \"scale\": 4"])
 	if not largest.problem.is_empty() or largest.scale != TileBlueprint.MAX_SCALE:
 		return "the largest scale is refused or misread: %s" % largest.problem
+	var crown: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,
+			", \"reach\": 1, \"clearance\": 40"])
+	if (not crown.problem.is_empty()
+			or crown.reach != 1
+			or crown.clearance != 40):
+		return "a crown's reach or clearance is refused or misread: %s" % crown.problem
 	return ""
 
 

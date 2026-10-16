@@ -6,7 +6,8 @@ extends RefCounted
 ## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
 ## can be reached from the starting instance. In every region file and region piece, the walkable
-## tiles hang together, so a blocking tile never cuts a part off. The world holds several loaded
+## tiles hang together, so a blocking tile never cuts a part off, and every tile under a crown
+## (a decoration reaching over its neighbours, #232) fits beneath it. The world holds several loaded
 ## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 
@@ -14,10 +15,15 @@ const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
 ## test's big region.
 const INSTANCE_SEEDS: int = 6
-## Where _check_documents' region document has its stump, turned by hand.
+## Where _check_documents' region document has its stump, turned and set lower (#232) by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
 const WATER: Vector2i = Vector2i(0, 1)
+## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
+const CROWN_KIND: int = 250
+
+## The made-up crown _check_room_caught gives CROWN_KIND.
+var _crown: TileBlueprint
 
 
 func run(_tree: SceneTree) -> String:
@@ -34,6 +40,7 @@ func run(_tree: SceneTree) -> String:
 		_check_refused,
 		_check_exits_reachable,
 		_check_pieces_connected,
+		_check_room,
 		_check_web_connected,
 		_check_world,
 		_check_documents,
@@ -153,7 +160,8 @@ func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
 	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch\n"
-	legend += "- `🌲`: forest\n- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable"
+	legend += "- `🌲`: forest\n"
+	legend += "- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
 	var grid: String = " 🪓 🌲\nj 1 x\n B w"
 	var region: Region = RegionDocument.parse(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
@@ -179,6 +187,8 @@ func _check_documents() -> String:
 		tiles % ["1 🪓 .", "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",
 		tiles % ["1 🪓 .", "- `🪓`: stump, turned 2, turned 4"]: "tile (0, 0) says its turn",
 		tiles % ["1 🪓 .", "- `🪓`: stump, walkable, not walkable"]: "tile (0, 0) says its turn",
+		tiles % ["1 🪓 .", "- `🪓`: stump, height 1001"]: "tile (0, 0)'s height 1001",
+		tiles % ["1 🪓 .", "- `🪓`: stump, height 2, height 3"]: "tile (0, 0) says its turn",
 	}
 	for text: String in refusals:
 		var problem: String = RegionDocument.parse(text).problem
@@ -196,15 +206,18 @@ func _check_documents() -> String:
 ## without them, hashes otherwise.
 func _turned_and_overridden(region: Region, plain: String) -> bool:
 	var expected: bool = region.decoration_turns == { STUMP: 3 }
+	expected = expected and region.height_overrides == { STUMP: 30 }
 	expected = expected and TileKinds.is_walkable(region.terrain[STUMP])
 	expected = expected and not region.is_walkable(STUMP) and region.is_walkable(Vector2i.ZERO)
 	expected = expected and region.is_walkable(WATER) and not TileKinds.is_walkable(Region.WATER)
 	var turned: Region = region.turned(4)
 	expected = expected and turned.decoration_turns == { Hex.turn(STUMP, 4): 1 }
+	expected = expected and turned.height_overrides == { Hex.turn(STUMP, 4): 30 }
 	expected = expected and not turned.is_walkable(Hex.turn(STUMP, 4))
 	var placed: Region = Region.new()
 	placed.place(region, Vector2i(5, -2))
 	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
+	expected = expected and placed.height_overrides == { STUMP + Vector2i(5, -2): 30 }
 	var moved: Vector2i = Vector2i(5, -2)
 	expected = expected and not placed.is_walkable(STUMP + moved)
 	expected = expected and placed.is_walkable(WATER + moved)
@@ -233,16 +246,104 @@ func _check_exits_reachable() -> String:
 ## connected part, its starts, connectors and exits among them (#205): a blocking tile (rock, water,
 ## a boulder) never cuts part of a piece off.
 func _check_pieces_connected() -> String:
+	for path: String in _region_files():
+		var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
+		if not piece.problem.is_empty() or _disconnected(piece):
+			return "%s has walkable tiles cut off from the rest: %s" % [path, piece.problem]
+	return ""
+
+
+## Every region file and region piece.
+static func _region_files() -> Array[String]:
 	var paths: Array[String] = []
 	for folder: String in DirAccess.get_directories_at(InstanceBlueprints.REGIONS):
 		for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS + folder):
 			paths.append(InstanceBlueprints.REGIONS + folder + "/" + file)
 	for file: String in DirAccess.get_files_at(InstanceBlueprints.REGIONS):
 		paths.append(InstanceBlueprints.REGIONS + file)
-	for path: String in paths:
-		var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
-		if not piece.problem.is_empty() or _disconnected(piece):
-			return "%s has walkable tiles cut off from the rest: %s" % [path, piece.problem]
+	return paths
+
+
+## Every region file and piece, and every blueprint's arranged region (a crown can reach across a
+## piece's edge), leaves the room its crowns need (#232); and a crown over something too tall is
+## caught.
+func _check_room() -> String:
+	var look: Callable = Callable(TileLooks, "of")
+	for path: String in _region_files():
+		var problem: String = _room_problem(
+			RegionDocument.parse(FileAccess.get_file_as_string(path)),
+			look,
+		)
+		if not problem.is_empty():
+			return "%s: %s" % [path, problem]
+	for instance_name: String in InstanceBlueprints.NAMES:
+		for seed_value: int in INSTANCE_SEEDS:
+			var region: Region = InstanceBlueprints.region_of(instance_name, seed_value)
+			var problem: String = _room_problem(region, look)
+			if not problem.is_empty():
+				return "%s at seed %d: %s" % [instance_name, seed_value, problem]
+	return _check_room_caught()
+
+
+## A made-up crown reaching one ring, leaving room for a stump's measured height beneath it: a
+## stump next to it fits, a forest's trees don't, and the problem names both tiles; a forest set
+## lower by hand in its piece (a height override, #232) fits.
+func _check_room_caught() -> String:
+	var crown: TileBlueprint = TileBlueprint.new()
+	crown.id = "test_crown"
+	crown.reach = 1
+	crown.clearance = TileLooks.height_of(TileKinds.number_of("stump"))
+	_crown = crown
+	var look: Callable = _crown_look
+	var region: Region = Region.disc(2)
+	region.terrain[Vector2i.ZERO] = CROWN_KIND
+	region.terrain[Hex.DIRECTIONS[0]] = TileKinds.number_of("stump")
+	if not _room_problem(region, look).is_empty():
+		return "a stump didn't fit under a crown that leaves room for it: " + _room_problem(
+			region,
+			look,
+		)
+	region.terrain[Hex.DIRECTIONS[3]] = TileKinds.number_of("forest")
+	var problem: String = _room_problem(region, look)
+	if not problem.contains("forest") or not problem.contains(str(Hex.DIRECTIONS[3])):
+		return "a forest under a crown that leaves no room for it wasn't caught: " + problem
+	region.height_overrides[Hex.DIRECTIONS[3]] = crown.clearance
+	if not _room_problem(region, look).is_empty():
+		return "a forest set low enough by hand didn't fit: " + _room_problem(region, look)
+	return ""
+
+
+## The blueprint of `kind` for _check_room_caught: its made-up crown, or the real one.
+func _crown_look(kind: int) -> TileBlueprint:
+	return _crown if kind == CROWN_KIND else TileLooks.of(kind)
+
+
+## Why `region` doesn't leave a crown the room it needs, or "": every tile within a decoration's
+## reach must be no taller than the clearance it leaves (#232). A tile is as tall as its tallest
+## object, measured from the models, unless its piece sets its height by hand. `look` gives a
+## kind's blueprint.
+static func _room_problem(region: Region, look: Callable) -> String:
+	for tile: Vector2i in region.sorted_tiles():
+		var crown: TileBlueprint = look.call(region.terrain[tile])
+		if crown == null or crown.reach == 0:
+			continue
+		for under: Vector2i in Hex.disc(crown.reach, tile):
+			var below: TileBlueprint = null
+			if under != tile and region.has_tile(under):
+				below = look.call(region.terrain[under])
+			var tall: int = 0
+			if below != null:
+				var measured: int = TileLooks.height_of(region.terrain[under])
+				tall = region.height_overrides.get(under, measured)
+			if below != null and tall > crown.clearance:
+				return "%s on %s is taller (%d) than %s's crown on %s leaves room for (%d)" % [
+					below.id,
+					under,
+					tall,
+					crown.id,
+					tile,
+					crown.clearance,
+				]
 	return ""
 
 

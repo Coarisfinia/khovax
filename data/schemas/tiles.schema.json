@@ -34,6 +34,18 @@
 			"exclusiveMinimum": 0,
 			"maximum": 4
 		},
+		"reach": {
+			"description": "How many rings of tiles around its own the decoration's crown covers (#232), e.g. a large tree's; 0 when left out.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 3
+		},
+		"clearance": {
+			"description": "How much height the crown leaves free beneath it (#232), in hundredths of a tile's radius: every tile its reach covers must fit under it, each as tall as its tallest object, measured from the model. 0 when left out.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 1000
+		},
 		"traits": {
 			"description": "What the kind does in the game.",
 			"type": "object",
