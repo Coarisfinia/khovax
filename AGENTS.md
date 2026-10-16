@@ -324,9 +324,10 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   for a session that resumed one), every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
-- A new mechanic puts its rules and data into a feature in `sim/features/` with a replay check, its
-  controls into `input/` as commands, and its look into its own view in `view/` (like `TrailView`,
-  which paints the trail onto `HexGrid`; `HexGrid` itself only draws tiles).
+- A new mechanic gets its own slice, `mechanics/<name>/`: its rules and data into a feature in
+  `rules/` with a replay check, its controls into `input/` as commands, and its look into its own
+  view in `look/` (like `TrailView` in `mechanics/trail/look/`, which paints the trail onto
+  `HexGrid`; `HexGrid` itself only draws tiles).
 
 ## Lessons learned
 
