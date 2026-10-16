@@ -31,6 +31,10 @@ const TILE: String = "tile "
 
 ## Every tile's kind, its number in TileKinds, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
+## How far a tile's decoration is turned, in sixths of a turn counter-clockwise like Hex.turn, for
+## the tiles whose piece turns it by hand (#231); it turns with the region. A look, not a rule:
+## not hashed, and only the views read it.
+var decoration_turns: Dictionary[Vector2i, int] = {}
 ## Where the players start, by slot.
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the instance loads, in the region file's reading order.
@@ -180,6 +184,9 @@ func turned(turns: int) -> Region:
 		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
 	for spot: Vector2i in named_species:
 		region.named_species[Hex.turn(spot, turns)] = named_species[spot]
+	for tile: Vector2i in decoration_turns:
+		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
+		region.decoration_turns[Hex.turn(tile, turns)] = turn
 	return region
 
 
@@ -214,6 +221,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		wild_monsters.append(spot + offset)
 	for spot: Vector2i in piece.named_species:
 		named_species[spot + offset] = piece.named_species[spot]
+	for tile: Vector2i in piece.decoration_turns:
+		decoration_turns[tile + offset] = piece.decoration_turns[tile]
 	for spot: Vector2i in piece.chests:
 		chests.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
@@ -300,18 +309,25 @@ func _parse_trigger(line: String) -> String:
 	return ""
 
 
-## Reads one `tile <q> <r> <tile blueprint id>` line; returns why it can't, or "". It gives a tile
-## of the grid its kind.
+## Reads one `tile <q> <r> <tile blueprint id> [<turn>]` line; returns why it can't, or "". It
+## gives a tile of the grid its kind, and its decoration a turn of 0 to 5 sixths, if it names one.
 func _parse_tile(line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
-	var numbers: bool = parts.size() == 4 and parts[1].is_valid_int() and parts[2].is_valid_int()
+	var with_turn: bool = parts.size() == 5
+	var numbers: bool = (parts.size() == 4 or with_turn) and parts[1].is_valid_int()
+	numbers = numbers and parts[2].is_valid_int() and (not with_turn or parts[4].is_valid_int())
+	var turn: int = parts[4].to_int() if numbers and with_turn else 0
 	if not numbers:
-		return "a tile line reads \"tile <q> <r> <tile blueprint id>\": " + line
+		return "a tile line reads \"tile <q> <r> <tile blueprint id> [<turn>]\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
 	var kind: int = TileKinds.number_of(parts[3])
 	if not has_tile(tile) or kind < 0:
 		return "tile %s isn't on the region, or %s isn't a tile blueprint" % [tile, parts[3]]
+	if turn < 0 or turn >= Hex.DIRECTIONS.size():
+		return "tile %s's turn %d isn't 0 to 5" % [tile, turn]
 	terrain[tile] = kind
+	if turn != 0:
+		decoration_turns[tile] = turn
 	return ""
 
 

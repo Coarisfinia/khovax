@@ -16,7 +16,8 @@ extends RefCounted
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
-##   stand for it, an emoji too
+##   stand for it, an emoji too. `<tile blueprint id>, turned <n>` turns its decoration by n sixths
+##   of a turn, counter-clockwise (#231), so two symbols can stand for the same kind turned apart
 ## where <side> is one of SIDES. The document is read into Region.parse's compact form.
 
 const TILES: String = "## Tiles"
@@ -24,6 +25,8 @@ const LEGEND: String = "## Legend"
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
+## What a tile kind's legend meaning says before its decoration's turn.
+const TURNED: String = ", turned "
 
 
 ## The region a Markdown region document describes; its `problem` says what's wrong.
@@ -157,11 +160,23 @@ static func _trigger_line(clause: String, where: String) -> String:
 	return ""
 
 
+## The compact tile line a tile kind's legend meaning (`stump`, or `stump, turned 3`) stands for on
+## `where`, or "" when it names no tile blueprint.
+static func _tile_line(meaning: String, where: String) -> String:
+	var kind: String = meaning.get_slice(TURNED, 0)
+	var turn: String = meaning.get_slice(TURNED, 1)
+	if TileKinds.number_of(kind) < 0:
+		return ""
+	if not meaning.contains(TURNED):
+		return "%s%s %s" % [Region.TILE, where, kind]
+	return "%s%s %s %s" % [Region.TILE, where, kind, turn] if turn.is_valid_int() else ""
+
+
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
 static func _line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
-	if TileKinds.number_of(meaning) >= 0:
-		return "%s%s %s" % [Region.TILE, where, meaning]
+	if not _tile_line(meaning, where).is_empty():
+		return _tile_line(meaning, where)
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
 	var side: int = -1
 	for word: String in words:
