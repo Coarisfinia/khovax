@@ -206,14 +206,8 @@ func _plain_hash(delay: int) -> int:
 		var moves: Array[int] = [Command.NO_MOVE, Command.NO_MOVE]
 		if index >= 0:
 			moves = [first[index], second[index]]
-		Simulation.step(state, _commands(moves))
+		Simulation.step(state, FlowSteps.commands(moves))
 	return state.state_hash()
-
-
-## One tick's commands for the two slots.
-func _commands(moves: Array[int]) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(moves[0]), Command.new(moves[1])]
-	return commands
 
 
 ## A fixed mix of moves and pauses, different for each `variant`.

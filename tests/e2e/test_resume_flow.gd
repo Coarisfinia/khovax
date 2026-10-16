@@ -75,7 +75,7 @@ func _play(world: World) -> String:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
 		while not catching.seals.is_empty():
-			world.step(_commands(Command.NO_MOVE))
+			world.step(FlowSteps.command(Command.NO_MOVE))
 			_remember(world)
 	_walk_in(world, EAST)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
@@ -86,7 +86,7 @@ func _play(world: World) -> String:
 	var goals: Array[Vector2i] = [glade.region.triggers[0].tile]
 	goals.append_array(glade.region.chests)
 	for goal: Vector2i in goals:
-		for direction: int in _path(glade, world.player(0).tile, goal):
+		for direction: int in FlowSteps.shortest_path(glade, world.player(0).tile, goal):
 			_walk_in(world, direction)
 	var triggers: TriggerFeature = glade.feature(Features.TRIGGERS) as TriggerFeature
 	var chests: ChestFeature = glade.feature(Features.CHESTS) as ChestFeature
@@ -108,7 +108,7 @@ func _check_round_trip(world: World) -> String:
 		return "the world read back has the player elsewhere or another tick"
 	var rolls: Rng = Rng.new(SEED, 1)
 	for _tick: int in ONWARD_TICKS:
-		var commands: Array[Command] = _commands(rolls.between(Command.NO_MOVE, 5))
+		var commands: Array[Command] = FlowSteps.command(rolls.between(Command.NO_MOVE, 5))
 		world.step(commands)
 		resumed.step(commands)
 		if resumed.state_hash() != world.state_hash():
@@ -163,9 +163,9 @@ static func _with_left_at(data: Dictionary, instance_name: String, left: int) ->
 func _expired() -> String:
 	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
 	for direction: int in [EAST, 1, EAST, 3]:
-		world.step(_commands(direction))
+		world.step(FlowSteps.command(direction))
 		for _tick: int in MovementFeature.MOVE_TICKS + 1:
-			world.step(_commands(Command.NO_MOVE))
+			world.step(FlowSteps.command(Command.NO_MOVE))
 	var data: Dictionary = WorldData.of(world)
 	return _changed(
 		data,
@@ -374,7 +374,7 @@ func _check_purged_explored(tree: SceneTree) -> String:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
-		world.step(_commands(Command.NO_MOVE))
+		world.step(FlowSteps.command(Command.NO_MOVE))
 	var problem: String = WorldSave.save(world, WORLD_PATH, _explored)
 	if world.generation(InstanceBlueprints.GLADE) != 1 or not problem.is_empty():
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
@@ -453,10 +453,10 @@ func _boot(tree: SceneTree) -> Node:
 ## Walks player 0 one step in `direction`, through the world, until they stand still again,
 ## remembering what they see on the way.
 func _walk_in(world: World, direction: int) -> void:
-	world.step(_commands(direction))
+	world.step(FlowSteps.command(direction))
 	_remember(world)
 	for _tick: int in MovementFeature.MOVE_TICKS + 1:
-		world.step(_commands(Command.NO_MOVE))
+		world.step(FlowSteps.command(Command.NO_MOVE))
 		_remember(world)
 
 
@@ -470,37 +470,3 @@ func _remember(world: World) -> void:
 		)
 		for tile: Vector2i in fog.visible.get(0, []):
 			seen[tile] = true
-
-
-static func _commands(direction: int) -> Array[Command]:
-	var commands: Array[Command] = [Command.new(direction)]
-	return commands
-
-
-## The directions of a shortest walk in `state` from `from` to `goal` over walkable tiles nobody
-## but players stands on; empty when there's none.
-static func _path(state: GameState, from: Vector2i, goal: Vector2i) -> Array[int]:
-	var came: Dictionary[Vector2i, int] = { from: -1 }
-	var open: Array[Vector2i] = [from]
-	while not open.is_empty() and not came.has(goal):
-		var current: Vector2i = open.pop_front()
-		for direction: int in Hex.DIRECTIONS.size():
-			var next: Vector2i = current + Hex.DIRECTIONS[direction]
-			if not came.has(next) and _free(state, next):
-				came[next] = direction
-				open.append(next)
-	var directions: Array[int] = []
-	var tile: Vector2i = goal
-	while came.has(goal) and tile != from:
-		directions.push_front(came[tile])
-		tile -= Hex.DIRECTIONS[came[tile]]
-	return directions
-
-
-static func _free(state: GameState, tile: Vector2i) -> bool:
-	if not state.region.is_walkable(tile):
-		return false
-	for other: Entity in state.entities:
-		if other.slot == Entity.NO_SLOT and other.tile == tile:
-			return false
-	return true
