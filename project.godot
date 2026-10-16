@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 
+LaunchMode="*res://game/launch_mode.gd"
 TestMode="*res://game/test_mode.gd"
 
 [debug]

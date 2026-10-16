@@ -153,7 +153,7 @@ jobs:
 
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever
-        run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd
+        run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 
   export:
     # Every platform's build, from one Godot and export templates download (#168): the debug APK

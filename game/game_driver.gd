@@ -20,10 +20,13 @@ const HASH_HISTORY: int = 100
 ## The value of `fixed_seed` that means "roll a seed".
 const ROLLED_SEED: int = -1
 
-## The seed a fresh world starts from instead of rolling one, or ROLLED_SEED (#213). The e2e runner
-## and the test builds (TestMode) set it to 0 before the main scene loads, so every flow and the
-## device flow's hash stay on the same world.
+## The seed a fresh world starts from instead of rolling one, or ROLLED_SEED (#213): the `--seed`
+## launch option (LaunchOptions, #237), which the e2e runner requires so every flow boots on the
+## same world, or the test builds' own (TestMode), set before the main scene loads.
 static var fixed_seed: int = ROLLED_SEED
+## The instance blueprint a fresh world starts in instead of `instance`, or "": the `--instance`
+## launch option (#237).
+static var start_instance: String = ""
 
 ## The instance the session starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
@@ -54,6 +57,8 @@ var _accumulated: float = 0.0
 
 
 func _ready() -> void:
+	if not start_instance.is_empty():
+		instance = start_instance
 	var saved: World = keeper.saved_world() if keeper != null else null
 	var problem: String = resume(saved) if saved != null else ""
 	if not problem.is_empty():
