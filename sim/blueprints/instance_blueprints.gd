@@ -62,6 +62,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		TrailFeature.new(),
 		_wild_monsters(instance_name),
 		CatchFeature.new(),
+		EnrageFeature.new(),
 		FogFeature.new(),
 	]
 	if not region.exits.is_empty():
