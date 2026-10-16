@@ -1,37 +1,16 @@
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files under data/, one per entry, checked against their
-## schema in CI (data/schemas/) and here for what a schema can't check: ids unique and matching
-## their file, types from the type chart, and two types never from the same family. Loot tables
-## (#90) are read here too, checked by LootTable, tile blueprints (#116), checked by
-## TileBlueprint, and quests (#184), checked by QuestDefinition against the species.
+## schema in CI (data/schemas/) and here for what a schema can't check, each by its own kind: ids
+## unique and matching their file. Species are checked by Species (#279), loot tables (#90) by
+## LootTable, tile blueprints (#116) by TileBlueprint, abilities (#222) by Ability, and quests
+## (#184) by QuestDefinition against the species. Here too: the field helpers they all use.
 
 const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
 const QUESTS_DIR: String = "res://data/quests/"
 const ABILITIES_DIR: String = "res://data/abilities/"
-## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
-const SPECIES_FIELDS: Array[String] = [
-	"id",
-	"types",
-	"hp",
-	"strength",
-	"speed",
-	"archetype",
-	"special",
-	"player_passive",
-	"self_passive",
-]
-## The type chart (#68): five families, each with its Lesser and Greater type, by family id.
-## Families have no names; each is shown as an icon in a circle on its color.
-const FAMILIES: Array[Array] = [
-	["mana", "arcane"],
-	["shadow", "abyss"],
-	["might", "titan"],
-	["growth", "nature"],
-	["breeze", "tempest"],
-]
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
@@ -45,14 +24,6 @@ var quests: Dictionary[String, QuestDefinition] = {}
 var abilities: Dictionary[String, Ability] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
-
-
-## The family id of a type, or -1 for a type that isn't on the chart.
-static func family_of(type: String) -> int:
-	for family: int in FAMILIES.size():
-		if FAMILIES[family].has(type):
-			return family
-	return -1
 
 
 ## Every species file in `directory`, read and checked.
@@ -142,47 +113,15 @@ static func load_quests(
 	return content
 
 
-## Reads one species file's text, named `file_id`; returns why it can't, or "".
+## Reads one species file's text, named `file_id`, and adds it; returns why it can't, or "". Its id
+## must be one no species read before has.
 func add_species(file_id: String, text: String) -> String:
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		return "not a JSON object"
-	var data: Dictionary = json.data
-	for key: Variant in data:
-		if not SPECIES_FIELDS.has(str(key)):
-			return "field %s isn't a species field" % key
-	var id: Variant = data.get("id")
-	var text_id: String = id if id is String else ""
-	if not is_id(text_id):
-		return "its id must be lowercase words joined by underscores"
-	var entry: Species = Species.new()
-	entry.id = text_id
-	entry.hp = amount(data.get("hp"))
-	entry.strength = amount(data.get("strength"))
-	var types: Variant = data.get("types")
-	if types is Array:
-		var type_list: Array = types
-		for type: Variant in type_list:
-			entry.types.append(str(type))
-	if entry.id != file_id or species.has(entry.id):
+	var entry: Species = Species.parse(file_id, text)
+	if entry.problem.is_empty() and species.has(entry.id):
 		return "its id must match the file name and be unique"
-	if entry.hp < 1 or entry.strength < 1:
-		return "hp and strength are whole numbers from 1 to %d" % Fixed.MAX_AMOUNT
-	var wrong: String = _check_types(entry)
-	return wrong if not wrong.is_empty() else entry.read_kit(data)
-
-
-func _check_types(entry: Species) -> String:
-	if entry.types.is_empty() or entry.types.size() > 2:
-		return "a species has one or two types"
-	var families: Array[int] = []
-	for type: String in entry.types:
-		var family: int = family_of(type)
-		if family < 0 or families.has(family):
-			return "type %s isn't on the chart, or two types share a family" % type
-		families.append(family)
-	species[entry.id] = entry
-	return ""
+	if entry.problem.is_empty():
+		species[entry.id] = entry
+	return entry.problem
 
 
 ## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.
