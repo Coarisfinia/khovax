@@ -14,7 +14,6 @@ const TILE_HEIGHT: float = 0.1
 ## Tiles are drawn slightly smaller than their cell, so the gaps read as grid lines.
 const TILE_SCALE: float = 0.94
 const TILES_NODE: String = "Tiles"
-const NO_PAINT: Dictionary[Vector2i, Color] = {}
 
 ## The editor's preview without a running game: a disc of this many rings.
 @export_range(0, 12) var radius: int = 3:
