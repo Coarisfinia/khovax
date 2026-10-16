@@ -42,12 +42,18 @@ const server = Bun.serve({
   },
 });
 
-// The runner has no GPU: WebGL 2 comes from Chrome's software renderer, which it only offers
-// when asked to.
-const browser = await chromium.launch({
-  executablePath: chrome,
-  args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
-});
+// The runner has no GPU, so WebGL 2 comes from a software renderer, chosen by CHROME_GL (#252):
+// Chrome's own (swiftshader, which it only offers when asked to) or Mesa's, through EGL.
+const GL_ARGS: Record<string, string[]> = {
+  swiftshader: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+  mesa: ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist"],
+};
+const gl = process.env.CHROME_GL ?? "swiftshader";
+if (!GL_ARGS[gl]) {
+  console.error(`CHROME_GL is ${gl}, not one of ${Object.keys(GL_ARGS).join(", ")}`);
+  process.exit(2);
+}
+const browser = await chromium.launch({ executablePath: chrome, args: GL_ARGS[gl] });
 const errors: string[] = [];
 let result = "";
 let ended = false;

@@ -431,9 +431,15 @@ jobs:
   web-e2e:
     # The same device flow on the web build (#102), in headless Chrome: it must end in the state the
     # headless run pins, with nothing on the browser's console marked as an error.
+    # For now (#252): each software renderer three times, to see which one stops hanging.
     needs: export
     runs-on: ubuntu-26.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        gl: [swiftshader, mesa]
+        attempt: [1, 2, 3]
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -467,6 +473,7 @@ jobs:
         run: |
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
+          export CHROME_GL="${{ matrix.gl }}"
           timeout 300 bun tests/web/web_e2e.ts build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
@@ -474,7 +481,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: web-e2e-video
+          name: web-e2e-video-${{ matrix.gl }}-${{ matrix.attempt }}
           path: build/web-test-video/
           retention-days: 14
           if-no-files-found: error
