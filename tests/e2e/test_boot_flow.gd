@@ -66,8 +66,6 @@ func _check_boot(tree: SceneTree) -> String:
 	tree.root.add_child(boot)
 	var fogged: bool = boot.cover.color == Boot.FOG and boot.game == null
 	# Nothing loads before the fog has been drawn once.
-	var loading: int = ResourceLoader.load_threaded_get_status(Boot.GAME)
-	fogged = fogged and loading != ResourceLoader.THREAD_LOAD_IN_PROGRESS
 	fogged = fogged and not boot.is_processing()
 	# A game that never starts fails the flow on the runner's timeout.
 	var game: Node = await boot.game_started
