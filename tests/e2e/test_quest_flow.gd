@@ -5,7 +5,8 @@ extends RefCounted
 ## the player who got loot from it. Steps count up and hand over to the next, one fact at a time,
 ## and only what a step asks for counts toward it. Quests finished together are listed in id order;
 ## saved progress that no longer fits its quest settles at the next fact; and quest data with a
-## broken file advances no quest at all.
+## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
+## asks for (#300), and a finished one has none.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -39,6 +40,9 @@ func _check_tracked(tree: SceneTree) -> String:
 	var result: String = ""
 	if not profile.quest_book.has("first_catch") or not profile.quests_done.is_empty():
 		result = "a fresh profile doesn't have the first catch open"
+	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
+	if result.is_empty():
+		result = _check_marked(driver, markers, profile)
 	_emit(driver, bus, WildMonsterCaught.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's catch finished this player's quest"
@@ -47,12 +51,52 @@ func _check_tracked(tree: SceneTree) -> String:
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
 		result = "this player's catch didn't finish the first catch on disk"
+	markers.show_quests()
+	if result.is_empty() and markers.markers.has("first_catch"):
+		result = "the finished first catch still has a marker"
 	if result.is_empty():
 		result = _check_chests(driver, bus, profile)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
+
+
+## The open first catch is marked over the wild monster nearest to this player, a quest asking
+## for a species nobody here is has no marker, and the markers follow the open quests.
+func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profile) -> String:
+	var state: GameState = driver.state
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	if wild == null or wild.monsters.is_empty():
+		return "the starting instance needs wild monsters to mark"
+	var from: Vector2i = state.player(0).tile
+	var nearest: int = Hex.distance(state.entity(wild.monsters[0]).tile, from)
+	for entity_id: int in wild.monsters:
+		nearest = mini(nearest, Hex.distance(state.entity(entity_id).tile, from))
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	if not targets.has("first_catch") or Hex.distance(targets["first_catch"], from) != nearest:
+		return "the first catch isn't marked over the nearest wild monster"
+	markers.show_quests()
+	if not markers.markers.has("first_catch"):
+		return "the open first catch has no marker"
+	return _check_unmarked(state, wild, profile)
+
+
+## A quest asking for a species is marked only when one of that species is here.
+func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profile) -> String:
+	var text: String = "{\"id\": \"absent\", \"name\": \"Absent\", \"steps\": "
+	text += "[{\"condition\": \"caught\", \"species\": \"storm_finch\"}]}"
+	var known: Dictionary[String, Species] = Content.load_species().species
+	var absent: QuestDefinition = QuestDefinition.parse("absent", text, known)
+	profile.quest_book[absent.id] = absent
+	var any_finch: bool = false
+	for entity_id: int in wild.monsters:
+		any_finch = any_finch or wild.species_of(entity_id) == "storm_finch"
+	var marked: bool = QuestMarkerView.targets_of(state, profile, 0).has("absent")
+	var _dropped: bool = profile.quest_book.erase("absent")
+	if marked != any_finch:
+		return "a quest is marked although nothing it asks for is here, or the other way round"
+	return ""
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did.
