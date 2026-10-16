@@ -107,7 +107,7 @@ func _check_left_again(world: World, purged: int) -> String:
 	_walk_in(world, 3)
 	if world.left_at.get(InstanceBlueprints.GLADE, -1) <= purged:
 		return "leaving the glade again didn't start a new count"
-	var reloaded: World = World.from_data(world.to_data())
+	var reloaded: World = WorldData.to_world(WorldData.of(world))
 	var kept: bool = reloaded.left_at == world.left_at and reloaded.generations == world.generations
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its purges: " + reloaded.problem

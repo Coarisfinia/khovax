@@ -198,7 +198,7 @@ func _check_seal_saved() -> String:
 ## A save whose seal names its monster twice, or puts it in a second player's seal too, is refused
 ## whole: neither could have happened, and a monster sealed twice would be caught twice.
 func _check_seal_refused(world: World) -> String:
-	var data: Dictionary = world.to_data()
+	var data: Dictionary = WorldData.of(world)
 	var twice: Dictionary = data.duplicate(true)
 	var seal: Dictionary = _seals_in(twice)[0]
 	var monster_id: int = seal["monsters"][0]
@@ -213,7 +213,7 @@ func _check_seal_refused(world: World) -> String:
 		"in another seal": two_seals,
 	}
 	for expected: String in cases:
-		var problem: String = World.from_data(cases[expected]).problem
+		var problem: String = WorldData.to_world(cases[expected]).problem
 		if not problem.contains(expected):
 			return "a seal %s wasn't refused for it: %s" % [expected, problem]
 	return ""
