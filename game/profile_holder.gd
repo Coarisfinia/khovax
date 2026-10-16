@@ -35,6 +35,7 @@ func _ready() -> void:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
 	bus.subscribe(&"WildMonsterCaught", _on_event)
 	bus.subscribe(&"ChestOpened", _on_event)
+	bus.subscribe(&"LootFound", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -68,7 +69,8 @@ static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinitio
 
 ## What this machine's player gains from `event`, or null when it isn't theirs: their catch, or
 ## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
-## as a chest they opened for quests even when it rolled nothing.
+## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
+## (#203), which is no chest.
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterCaught:
@@ -76,13 +78,20 @@ func _gain_of(event: RefCounted) -> Gain:
 		if caught.catcher_slot == input.slot:
 			gain.caught_species.append(caught.species)
 	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
-		var loot: Dictionary = (event as ChestOpened).loot[input.slot]
 		gain.chests_opened = 1
-		for item: Variant in loot:
-			var amount: int = loot[item]
-			gain.materials[str(item)] = amount
+		_add_loot(gain, (event as ChestOpened).loot[input.slot])
+	elif event is LootFound and (event as LootFound).loot.has(input.slot):
+		_add_loot(gain, (event as LootFound).loot[input.slot])
 	var empty: bool = gain.caught_species.is_empty() and gain.chests_opened == 0
+	empty = empty and gain.materials.is_empty()
 	return null if empty else gain
+
+
+## Adds a roll of loot, {item id: amount}, to `gain`'s materials.
+static func _add_loot(gain: Gain, loot: Dictionary) -> void:
+	for item: Variant in loot:
+		var amount: int = loot[item]
+		gain.materials[str(item)] = amount
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.

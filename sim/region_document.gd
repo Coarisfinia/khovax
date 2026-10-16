@@ -13,6 +13,8 @@ extends RefCounted
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133)
+## - `loot on the ground`: loot the first player to step here finds, every player in the instance
+##   getting their own roll, like a chest's (#203)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
@@ -24,6 +26,8 @@ extends RefCounted
 
 const TILES: String = "## Tiles"
 const LEGEND: String = "## Legend"
+## A legend meaning placing loot on the ground (#203).
+const LOOT_ON_THE_GROUND: String = "loot on the ground"
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
@@ -186,8 +190,12 @@ static func _tile_line(meaning: String, where: String) -> String:
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
 static func _line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
-	if not _tile_line(meaning, where).is_empty():
-		return _tile_line(meaning, where)
+	# What lies on the tile: a tile kind, or loot on the ground.
+	var placed: String = _tile_line(meaning, where)
+	if meaning == LOOT_ON_THE_GROUND:
+		placed = Region.LOOT + where
+	if not placed.is_empty():
+		return placed
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
 	var side: int = -1
 	for word: String in words:

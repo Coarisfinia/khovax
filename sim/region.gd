@@ -26,6 +26,8 @@ const EXIT: String = "exit "
 const SPECIES: String = "species "
 ## The start of a tile trigger's line (#181, #183).
 const TRIGGER: String = "trigger "
+## The start of a line placing loot on the ground on a tile (#203).
+const LOOT: String = "loot "
 ## The start of a line placing a tile blueprint on a tile (#116).
 const TILE: String = "tile "
 ## What a tile line says to override its kind's walkable trait for that one tile (#201).
@@ -52,6 +54,10 @@ var named_species: Dictionary[Vector2i, String] = {}
 ## Where treasure chests stand when the instance loads, in the region file's reading order. Not
 ## hashed here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
+## Where loot lies on the ground when the instance loads (#203), in the region file's reading order:
+## found by stepping onto it, like a chest without one. Not hashed here: the chest feature takes
+## them over and hashes the ones still lying.
+var loot_spots: Array[Vector2i] = []
 ## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
 ## arranging uses them up, so a region in a state has none and they aren't hashed.
@@ -98,7 +104,7 @@ static func parse(text: String) -> Region:
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
 		var keyed: bool = (content.begins_with(EXIT) or content.begins_with(SPECIES)
-				or content.begins_with(TRIGGER))
+				or content.begins_with(TRIGGER) or content.begins_with(LOOT))
 		if content.begins_with(TILE):
 			tile_lines.append(content)
 		elif content.begins_with(CONNECTOR) or keyed:
@@ -185,6 +191,9 @@ func turned(turns: int) -> Region:
 		wild_monsters.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
 	)
 	region.chests.assign(chests.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)))
+	region.loot_spots.assign(
+		loot_spots.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
+	)
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	region.exits.assign(exits.map(_turned_connector.bind(turns)))
 	region.exit_blueprints = exit_blueprints.duplicate()
@@ -237,6 +246,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		walkable_overrides[tile + offset] = piece.walkable_overrides[tile]
 	for spot: Vector2i in piece.chests:
 		chests.append(spot + offset)
+	for spot: Vector2i in piece.loot_spots:
+		loot_spots.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
 		connectors.append(connector + Vector3i(offset.x, offset.y, 0))
 	for exit: Vector3i in piece.exits:
@@ -305,7 +316,21 @@ func _parse_keyed(line: String) -> String:
 		return _parse_species(line)
 	if line.begins_with(TRIGGER):
 		return _parse_trigger(line)
+	if line.begins_with(LOOT):
+		return _parse_loot(line)
 	return _parse_connector(line)
+
+
+## Reads one `loot <q> <r>` line; returns why it can't, or "". Loot lies on ground, once a tile.
+func _parse_loot(line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	if parts.size() != 3 or not parts[1].is_valid_int() or not parts[2].is_valid_int():
+		return "a loot line reads \"loot <q> <r>\": " + line
+	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	if not is_walkable(tile) or loot_spots.has(tile) or chests.has(tile):
+		return "loot on %s isn't on free ground" % tile
+	loot_spots.append(tile)
+	return ""
 
 
 ## Reads one `trigger <q> <r> <when> <action> <amount>` line; returns why it can't, or "". A
