@@ -21,9 +21,13 @@ const FOG: Color = Color(0.86, 0.88, 0.93)
 ## Frames the game draws under the fog before it lifts: its first ones compile its shaders.
 const SETTLE_FRAMES: int = 10
 ## How long the fog takes to lift.
-const LIFT_SECONDS: float = 1.2
+const LIFT_SECONDS: float = 0.4
 ## The export feature only the test builds have (TestMode).
 const TEST_BUILD: String = "e2e_test"
+
+## Whether the boot fog still hides the game: the game's own fog waits to draw back until it lifts
+## (FogView), so the world shows fully fogged first, then opens around the player (owner, #250).
+static var covering: bool = false
 
 ## The game, once it has loaded; null until then.
 var game: Node
@@ -42,6 +46,7 @@ func _ready() -> void:
 	# Touches and clicks stop at the fog while it hides the game, and go through once it lifts.
 	cover.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(cover)
+	covering = true
 	set_process(false)
 	# Two frames' starts with a frame drawn in between, so the fog is on screen; the headless
 	# renderer never signals a drawn frame, so the frames' starts are what's awaited.
@@ -62,6 +67,11 @@ func _process(_delta: float) -> void:
 		_lift()
 
 
+## However the boot scene goes, its fog no longer hides the game.
+func _exit_tree() -> void:
+	covering = false
+
+
 ## Starts the loaded game under the fog: it becomes the current scene.
 func _start(scene: PackedScene) -> void:
 	game = scene.instantiate()
@@ -74,6 +84,7 @@ func _start(scene: PackedScene) -> void:
 
 ## Lifts the fog calmly, then leaves.
 func _lift() -> void:
+	covering = false
 	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tween: Tween = create_tween()
 	var _clear: PropertyTweener = tween.tween_property(cover, "color:a", 0.0, LIFT_SECONDS)
