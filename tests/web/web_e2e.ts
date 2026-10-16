@@ -42,8 +42,9 @@ const server = Bun.serve({
   },
 });
 
-// The runner has no GPU, so WebGL 2 comes from a software renderer, chosen by CHROME_GL (#252):
-// Chrome's own (swiftshader, which it only offers when asked to) or Mesa's llvmpipe, through EGL.
+// Without a GPU, WebGL 2 comes from a software renderer, chosen by CHROME_GL (#252): Mesa's
+// llvmpipe through EGL, which CI uses, since on Chrome's own SwiftShader the page sometimes froze
+// for good; or SwiftShader (which Chrome only offers when asked to), where Mesa isn't installed.
 // Chrome quietly falls back to its own when it can't use the one asked for, so each names what its
 // renderer string must contain.
 const GL: Record<string, { args: string[]; env: Record<string, string>; expect: string }> = {
@@ -53,7 +54,7 @@ const GL: Record<string, { args: string[]; env: Record<string, string>; expect: 
     expect: "SwiftShader",
   },
   mesa: {
-    args: ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist", "--enable-logging=stderr"],
+    args: ["--use-gl=angle", "--use-angle=gl-egl", "--ignore-gpu-blocklist"],
     env: { LIBGL_ALWAYS_SOFTWARE: "1", MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe" },
     expect: "llvmpipe",
   },
