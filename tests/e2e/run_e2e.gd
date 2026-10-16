@@ -2,7 +2,9 @@
 # The runner's report on stdout is what it is for, not leftover debug printing.
 extends SceneTree
 ## Headless e2e runner. Runs every tests/e2e/test_*.gd and exits non-zero on failure.
-## Usage: godot --headless --path . -s res://tests/e2e/run_e2e.gd
+## Usage: godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
+## The seed is required (#237): every flow boots the main scene on that world, and the flows'
+## expectations are written for the seed CI passes.
 ## Each test script extends RefCounted and defines `func run(tree: SceneTree) -> String`,
 ## returning "" on success or a failure message. `run` may await.
 ## Any error logged while a test runs (script errors, push_error, engine errors) fails it too:
@@ -22,9 +24,14 @@ func _initialize() -> void:
 	# The flows never resume or overwrite a world on this device's disk; the resume flow points its
 	# keeper at a test file of its own.
 	WorldKeeper.default_path = ""
-	# Every flow boots the main scene on the same world (#213); the boot flow checks the rolling and
-	# puts this back.
-	GameDriver.fixed_seed = 0
+	# Every flow boots the main scene on the same world (#213), from the seed it's given; the boot
+	# flow checks the rolling and puts the seed back.
+	var options: LaunchOptions = LaunchOptions.parse(OS.get_cmdline_user_args())
+	if not options.problem.is_empty() or options.seed_value == GameDriver.ROLLED_SEED:
+		printerr("the runner needs a seed, e.g. -- --seed=0. ", options.problem)
+		quit(1)
+		return
+	options.apply()
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
 	var tests: Array[String] = []
