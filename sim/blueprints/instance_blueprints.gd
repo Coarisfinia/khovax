@@ -62,6 +62,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		TrailFeature.new(),
 		_wild_monsters(instance_name),
 		CatchFeature.new(),
+		_catch_loot(instance_name),
 		EnrageFeature.new(),
 		FogFeature.new(),
 	]
@@ -161,6 +162,22 @@ static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
 		max_hps[species_id] = content.species[species_id].hp
 		strengths[species_id] = content.species[species_id].strength
 	return WildMonsterFeature.new(roster, weights, max_hps, strengths)
+
+
+## The catch loot feature (#86): every species table there is, and the blueprint's instance table
+## for blanks, if it has one. Tables that don't load are an error; catches then drop nothing.
+static func _catch_loot(instance_name: String) -> CatchLootFeature:
+	var content: Content = Content.load_loot_tables()
+	if not content.problem.is_empty():
+		push_error("the loot tables don't load: " + content.problem)
+	var species_tables: Dictionary[String, LootTable] = {}
+	for table: LootTable in content.loot_tables.values():
+		if table.kind == LootTable.SPECIES:
+			species_tables[table.id] = table
+	var instance_table: LootTable = null
+	if LOOT_TABLES.has(instance_name):
+		instance_table = _loot_table(LOOT_TABLES[instance_name])
+	return CatchLootFeature.new(species_tables, instance_table)
 
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.

@@ -212,7 +212,42 @@ func _check_catch() -> String:
 	var expected: bool = caught[0].monster_id == monster_id and caught[0].catcher_id == player.id
 	if not expected or caught[0].tile != WILD_MONSTER_TILE or state.entity(monster_id) != null:
 		return "the catch wasn't announced once, by the player, on the wild monster's tile"
+	# A ring walked alone: all six wall tiles are the catcher's, the full loot (#86).
+	var looted: String = _check_loot(events, caught[0], [CatchLootFeature.FULL_ROLLS, 0])
+	if not looted.is_empty():
+		return looted
 	return _check_after_catch(state)
+
+
+## The catch's loot (#86): each slot earned `rolls` (by slot) for what it did for the ring, and
+## the catch's CatchLoot gives exactly the slots that earned any, when its species has a loot
+## table; a species without one drops nothing. A player who only braced the wall for a second earns
+## nothing.
+func _check_loot(events: Array[RefCounted], caught: WildMonsterCaught, rolls: Array[int]) -> String:
+	for slot: int in rolls.size():
+		if CatchLootFeature.rolls_for(caught, slot) != rolls[slot]:
+			return "slot %d earned %d rolls for the catch, not %d" % [
+				slot,
+				CatchLootFeature.rolls_for(caught, slot),
+				rolls[slot],
+			]
+	var earning: Array[int] = []
+	for slot: int in rolls.size():
+		if rolls[slot] > 0:
+			earning.append(slot)
+	var looted: Array = []
+	for event: RefCounted in events:
+		if event is CatchLoot and (event as CatchLoot).monster_id == caught.monster_id:
+			looted = (event as CatchLoot).loot.keys()
+	looted.sort()
+	var tabled: bool = Content.load_loot_tables().loot_tables.has(caught.species)
+	if looted != (earning if tabled else []):
+		return "the %s's loot went to slots %s, not %s" % [caught.species, looted, earning]
+	var brief: WildMonsterCaught = WildMonsterCaught.new(1, 1, 0, Vector2i.ZERO, caught.species)
+	brief.braced_ticks[0] = Simulation.TICKS_PER_SECOND
+	if CatchLootFeature.rolls_for(brief, 0) != 0:
+		return "a second on the wall earned loot"
+	return ""
 
 
 ## After the catch, the ring is off the trail but for the tile the catcher stands on (#87), the
@@ -321,6 +356,8 @@ func _check_together() -> String:
 	var caught: Array[WildMonsterCaught] = _caught(events)
 	if caught.size() != 1 or caught[0].catcher_id != first.id:
 		return "the allies' ring caught %d times, not once for the first player" % caught.size()
+	# Each colored half the wall: three tiles each, two rolls each (#86).
+	var problem: String = _check_loot(events, caught[0], [2, 2])
 	var expected: Array[Vector2i] = [starts[0], starts[1], FIRST_HALF[0], first.tile, second.tile]
 	expected.sort()
 	var trail: Trail = _trails(state).shared
@@ -328,7 +365,7 @@ func _check_together() -> String:
 		return "after the allies' catch the trail is %s, not %s" % [trail.sorted_tiles(), expected]
 	if trail.tiles[first.tile] != first.id or trail.tiles[second.tile] != second.id:
 		return "the players' fresh trail tiles aren't their own"
-	return ""
+	return problem
 
 
 ## Walks the player in `slot` along `path` while the other player stands; returns the events.

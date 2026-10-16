@@ -16,6 +16,8 @@ var monsters: Array[int] = []
 var targets: Array[int] = []
 ## Ticks the seal has held, and how many it must hold.
 var ticks: int = 0
+## How many ticks each player has stood on the wall while it seals, by entity id (#86, #227).
+var braced: Dictionary[int, int] = {}
 var seal_ticks: int = 0
 
 
@@ -49,7 +51,19 @@ func to_data() -> Dictionary:
 		"damage": damage,
 		"monsters": monsters,
 		"ticks": ticks,
+		"braced": braced_flat(),
 	}
+
+
+## The braced ticks as [entity id, ticks, ...], in id order.
+func braced_flat() -> Array[int]:
+	var ids: Array[int] = []
+	ids.assign(braced.keys())
+	ids.sort()
+	var flat: Array[int] = []
+	for each: int in ids:
+		flat.append_array([each, braced[each]])
+	return flat
 
 
 ## Every value of the seal, for the state hash, in a fixed order.
@@ -60,4 +74,6 @@ func hash_values() -> Array[int]:
 	values.append(monsters.size())
 	for i: int in monsters.size():
 		values.append_array([monsters[i], targets[i]])
+	values.append(braced.size())
+	values.append_array(braced_flat())
 	return values
