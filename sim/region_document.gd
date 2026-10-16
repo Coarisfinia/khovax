@@ -16,8 +16,10 @@ extends RefCounted
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
-##   stand for it, an emoji too. `<tile blueprint id>, turned <n>` turns its decoration by n sixths
-##   of a turn, counter-clockwise (#231), so two symbols can stand for the same kind turned apart
+##   stand for it, an emoji too. Clauses after the kind, each after a ", ", change that tile:
+##   `turned <n>` turns its decoration by n sixths of a turn, counter-clockwise (#231), so two
+##   symbols can stand for the same kind turned apart, and `walkable` or `not walkable` overrides
+##   its kind's trait for this tile (#201), e.g. `forest, not walkable`
 ## where <side> is one of SIDES. The document is read into Region.parse's compact form.
 
 const TILES: String = "## Tiles"
@@ -25,8 +27,11 @@ const LEGEND: String = "## Legend"
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
-## What a tile kind's legend meaning says before its decoration's turn.
-const TURNED: String = ", turned "
+## What a tile kind's legend meaning says, after the kind, to turn its decoration (#231) or to
+## override its walkable trait (#201), each clause after a ", ".
+const TURNED: String = "turned "
+const WALKABLE: String = "walkable"
+const NOT_WALKABLE: String = "not walkable"
 
 
 ## The region a Markdown region document describes; its `problem` says what's wrong.
@@ -160,16 +165,22 @@ static func _trigger_line(clause: String, where: String) -> String:
 	return ""
 
 
-## The compact tile line a tile kind's legend meaning (`stump`, or `stump, turned 3`) stands for on
-## `where`, or "" when it names no tile blueprint.
+## The compact tile line a tile kind's legend meaning (`stump`, or `stump, turned 3, not walkable`)
+## stands for on `where`, or "" when it names no tile blueprint or a clause isn't understood.
 static func _tile_line(meaning: String, where: String) -> String:
-	var kind: String = meaning.get_slice(TURNED, 0)
-	var turn: String = meaning.get_slice(TURNED, 1)
-	if TileKinds.number_of(kind) < 0:
+	var clauses: PackedStringArray = meaning.split(", ")
+	if TileKinds.number_of(clauses[0]) < 0:
 		return ""
-	if not meaning.contains(TURNED):
-		return "%s%s %s" % [Region.TILE, where, kind]
-	return "%s%s %s %s" % [Region.TILE, where, kind, turn] if turn.is_valid_int() else ""
+	var line: String = "%s%s %s" % [Region.TILE, where, clauses[0]]
+	for clause: String in clauses.slice(1):
+		var turn: String = clause.trim_prefix(TURNED)
+		if clause.begins_with(TURNED) and turn.is_valid_int():
+			line += " " + turn
+		elif clause == WALKABLE or clause == NOT_WALKABLE:
+			line += " " + (Region.WALKABLE if clause == WALKABLE else Region.NOT_WALKABLE)
+		else:
+			return ""
+	return line
 
 
 ## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
