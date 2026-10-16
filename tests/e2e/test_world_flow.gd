@@ -379,10 +379,10 @@ func _check_refused() -> String:
 		"origin 0 0\n. .\nexit 0 0 0 basic": "exit (0, 0) doesn't open",
 	}
 	for text: String in cases:
-		var problem: String = Region.parse(text).problem
+		var problem: String = RegionFormat.parse(text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	var with_exit: Region = Region.parse("origin 0 0\n.\nexit 0 0 0 basic")
-	if with_exit.fits(Region.parse("origin 0 0\n."), Vector2i(1, 0)):
+	var with_exit: Region = RegionFormat.parse("origin 0 0\n.\nexit 0 0 0 basic")
+	if with_exit.fits(RegionFormat.parse("origin 0 0\n."), Vector2i(1, 0)):
 		return "a piece fit onto the tile outside an exit"
 	return ""
