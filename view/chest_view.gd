@@ -4,7 +4,8 @@ extends Node3D
 ## an ally sees it (#137). When one opens (ChestOpened, #124), it sinks away calmly while this
 ## machine's player's own loot rises from it and fades: each item as its name and amount, so it
 ## never relies on color (#68), with no flash and no shake (motion sickness). Every player sees
-## only their own roll (#74). It only reads the state and the tick's events.
+## only their own roll (#74). Loot on the ground (#203) shows as a small gem instead of a chest and
+## bursts the same way when found (LootFound). It only reads the state and the tick's events.
 
 ## How long an opened chest takes to sink away, and the loot to rise and fade.
 const OPEN_SECONDS: float = 0.6
@@ -15,6 +16,9 @@ const LOOT_RISE: float = 0.8
 ## a player's size.
 const MODEL: PackedScene = preload("res://assets/kaykit-dungeon/chest.glb")
 const MODEL_SCALE: float = 0.5
+## Loot on the ground: a small cut gem, a placeholder made of a primitive mesh.
+const GEM_COLOR: Color = Color(0.95, 0.78, 0.3)
+const GEM_SIZE: float = 0.22
 ## How large the loot's text stands in the world: a world unit per this many of its pixels.
 const LOOT_PIXEL_SIZE: float = 0.012
 const LOOT_FONT_SIZE: int = 48
@@ -23,7 +27,7 @@ const LOOT_FONT_SIZE: int = 48
 ## Whose loot is this machine's player's.
 @export var input: LocalInput
 
-## The chest shown on each closed chest's tile.
+## The chest shown on each closed chest's tile, and the gem on each loot spot's.
 var figures: Dictionary[Vector2i, HexPiece] = {}
 ## The loot rising from chests opened lately, until it has faded.
 var bursts: Array[Label3D] = []
@@ -50,15 +54,17 @@ func show_state() -> void:
 		_shown = driver.state
 	var feature: ChestFeature = driver.state.feature(Features.CHESTS) as ChestFeature
 	var closed: Array[Vector2i] = []
+	var lying: Array[Vector2i] = []
 	if feature != null:
-		closed = feature.chests
+		closed = feature.chests + feature.loot_spots
+		lying = feature.loot_spots
 	for tile: Vector2i in figures.keys():
 		if not closed.has(tile):
 			_sink(figures[tile])
 			var _dropped: bool = figures.erase(tile)
 	for tile: Vector2i in closed:
 		if not figures.has(tile):
-			figures[tile] = _add_figure(tile)
+			figures[tile] = _add_figure(tile, lying.has(tile))
 		figures[tile].visible = FogView.ally_sees(driver.state, tile)
 
 
@@ -79,12 +85,19 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if input == null or driver.state != _shown:
 		return
 	for event: RefCounted in events:
-		var opened: ChestOpened = event as ChestOpened
-		if opened == null or not figures.has(opened.tile) or not figures[opened.tile].visible:
+		var tile: Vector2i = Vector2i.MAX
+		var rolled: Dictionary[int, Dictionary] = {}
+		if event is ChestOpened:
+			tile = (event as ChestOpened).tile
+			rolled = (event as ChestOpened).loot
+		elif event is LootFound:
+			tile = (event as LootFound).tile
+			rolled = (event as LootFound).loot
+		if not figures.has(tile) or not figures[tile].visible:
 			continue
-		var loot: Dictionary = opened.loot.get(input.slot, {})
+		var loot: Dictionary = rolled.get(input.slot, {})
 		if not loot.is_empty():
-			_burst(opened.tile, loot_text(loot))
+			_burst(tile, loot_text(loot))
 
 
 ## Lets the loot rise from `tile` and fade, then frees it.
@@ -133,16 +146,37 @@ func _drop_sunk(figure: HexPiece) -> void:
 	figure.queue_free()
 
 
-func _add_figure(tile: Vector2i) -> HexPiece:
+## A chest on `tile`, or a gem for loot on the ground.
+func _add_figure(tile: Vector2i, gem: bool) -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
-	var model: Node3D = MODEL.instantiate() as Node3D
-	model.scale = Vector3.ONE * MODEL_SCALE
-	Toon.apply_to_model(model)
-	piece.add_child(model)
+	if gem:
+		piece.add_child(_gem())
+	else:
+		var model: Node3D = MODEL.instantiate() as Node3D
+		model.scale = Vector3.ONE * MODEL_SCALE
+		Toon.apply_to_model(model)
+		piece.add_child(model)
 	add_child(piece)
 	piece.tile = tile
 	return piece
+
+
+## The gem marking loot on the ground: a sphere of six sides and two rings, a cut stone.
+static func _gem() -> MeshInstance3D:
+	var mesh: SphereMesh = SphereMesh.new()
+	mesh.radius = GEM_SIZE / 2.0
+	mesh.height = GEM_SIZE * 1.6
+	mesh.radial_segments = 6
+	mesh.rings = 2
+	var material: StandardMaterial3D = StandardMaterial3D.new()
+	material.albedo_color = GEM_COLOR
+	Toon.apply(material)
+	var gem: MeshInstance3D = MeshInstance3D.new()
+	gem.mesh = mesh
+	gem.material_override = material
+	gem.position = Vector3(0.0, GEM_SIZE, 0.0)
+	return gem
 
 
 ## Drops every chest and burst at once, for another instance. Their tweens go with them.
