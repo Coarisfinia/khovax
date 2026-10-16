@@ -6,7 +6,7 @@
 [ext_resource type="Script" path="res://view/player_view.gd" id="4_player"]
 [ext_resource type="Script" path="res://view/follow_camera.gd" id="5_camera"]
 [ext_resource type="Script" path="res://input/touch_stick.gd" id="6_stick"]
-[ext_resource type="Script" path="res://view/trail_view.gd" id="7_trail"]
+[ext_resource type="Script" path="res://mechanics/trail/look/trail_view.gd" id="7_trail"]
 [ext_resource type="Script" path="res://view/wild_monster_view.gd" id="8_wild"]
 [ext_resource type="PackedScene" path="res://assets/kaykit-adventurers/Rogue.glb" id="9_rogue"]
 [ext_resource type="Script" path="res://view/music.gd" id="10_music"]
@@ -23,7 +23,7 @@
 [ext_resource type="Script" path="res://view/instance_root.gd" id="21_instance"]
 [ext_resource type="Script" path="res://game/world_keeper.gd" id="22_keeper"]
 [ext_resource type="Script" path="res://mechanics/catching/look/reinforcement_view.gd" id="23_braces"]
-[ext_resource type="Script" path="res://view/trail_marks_view.gd" id="24_marks"]
+[ext_resource type="Script" path="res://mechanics/trail/look/trail_marks_view.gd" id="24_marks"]
 [ext_resource type="Script" path="res://view/quest_marker_view.gd" id="25_quests"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
