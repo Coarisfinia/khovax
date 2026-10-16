@@ -6,7 +6,8 @@ extends Feature
 ## roll** on the instance's loot table (owner, #124), not only the one who opened it. The rolls
 ## come from the feature's own random stream (#32), so a replay opens the same chests with the
 ## same loot; a ChestOpened event says who got what, and each player's loot goes into their own
-## profile (#74).
+## profile (#74). Loot on the ground (#203) is found the same way, by the first player to step on
+## it, with every player rolling their own; a LootFound event says so, as it's no chest.
 
 ## How many times each player rolls on the table when a chest opens.
 const ROLLS_PER_PLAYER: int = 1
@@ -15,6 +16,8 @@ const ROLLS_PER_PLAYER: int = 1
 var table: LootTable
 ## Every chest still closed, in the region's order.
 var chests: Array[Vector2i] = []
+## Every loot spot still lying on the ground, in the region's order.
+var loot_spots: Array[Vector2i] = []
 var _rng: Rng
 
 
@@ -33,6 +36,7 @@ func requires() -> Array[int]:
 
 func start(state: GameState) -> void:
 	chests = state.region.chests.duplicate()
+	loot_spots = state.region.loot_spots.duplicate()
 	_rng = Rng.new(state.rng_seed, id())
 
 
@@ -40,12 +44,17 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	# Copied, as opening adds events.
 	for event: RefCounted in state.events.duplicate():
 		var moved: EntityMoved = event as EntityMoved
-		if moved == null or not chests.has(moved.to):
+		if moved == null or not (chests.has(moved.to) or loot_spots.has(moved.to)):
 			continue
 		var walker: Entity = state.entity(moved.entity_id)
-		if walker != null and walker.slot != Entity.NO_SLOT:
+		if walker == null or walker.slot == Entity.NO_SLOT:
+			continue
+		if chests.has(moved.to):
 			chests.erase(moved.to)
 			state.events.append(_open(state, moved.to, walker.id))
+		else:
+			loot_spots.erase(moved.to)
+			state.events.append(_find(state, moved.to, walker.id))
 
 
 func hash_values() -> Array[int]:
@@ -53,13 +62,20 @@ func hash_values() -> Array[int]:
 	for chest: Vector2i in chests:
 		values.append(chest.x)
 		values.append(chest.y)
+	values.append(loot_spots.size())
+	for spot: Vector2i in loot_spots:
+		values.append_array([spot.x, spot.y])
 	values.append_array(_rng.hash_values())
 	return values
 
 
-## The chests still closed, in their order, and the stream's state.
+## The chests still closed and the loot still lying, in their order, and the stream's state.
 func save_values() -> Dictionary:
-	return { "chests": DataReader.flat(chests), "rng": _rng.hash_values() }
+	return {
+		"chests": DataReader.flat(chests),
+		"loot": DataReader.flat(loot_spots),
+		"rng": _rng.hash_values(),
+	}
 
 
 func load_values(state: GameState, values: DataReader) -> void:
@@ -69,6 +85,12 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("a saved chest on %s isn't one of the region's" % chest)
 			return
 	chests = closed
+	var lying: Array[Vector2i] = values.tiles("loot", state.region)
+	for spot: Vector2i in lying:
+		if not state.region.loot_spots.has(spot) or lying.count(spot) > 1:
+			values.fail("saved loot on %s isn't the region's" % spot)
+			return
+	loot_spots = lying
 	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if restored == null:
 		values.fail("the chests' random stream isn't four 32-bit words, not all zero")
@@ -79,6 +101,11 @@ func load_values(state: GameState, values: DataReader) -> void:
 ## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event.
 func _open(state: GameState, tile: Vector2i, opener_id: int) -> ChestOpened:
 	return ChestOpened.new(tile, opener_id, _roll_for_players(state))
+
+
+## Finds the loot on `tile` for the player `finder_id`: every player's roll from it, as the event.
+func _find(state: GameState, tile: Vector2i, finder_id: int) -> LootFound:
+	return LootFound.new(tile, finder_id, _roll_for_players(state))
 
 
 ## Every player's loot from one chest, by slot, in slot order so the stream rolls the same way.
