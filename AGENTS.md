@@ -96,14 +96,15 @@ out of date.
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
 
-**Tech debt comes before new features** (owner's rule). When picking the next issue, open
-`tech-debt` issues (refactors, cleanups, tooling, bugs) go first, then features.
+**The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
+fixes, then architecture, then cleanup, then gameplay features (rules and mechanics), then UI,
+then visuals, then assets and models.
 
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
 
-**Keep going without being asked.** Once a pull request is merged, take the next issue. Tech debt,
-refactors and bugs come before new features. Ask only for decisions that belong to the owner (game
+**Keep going without being asked.** Once a pull request is merged, take the next issue, in the
+order above. Ask only for decisions that belong to the owner (game
 design, scope, security trade-offs).
 
 **Stuck? File an issue and move on.** When something can't be finished without the owner, file an
@@ -318,6 +319,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 
 ### Game architecture
 
+- **Single responsibility is law; "god files" are banned** (owner's rule): every class and file
+  does one job, and a file that has grown a second one is split, with each part named for its job
+  (e.g. reading a region file apart from the region's data). A new behaviour goes where its job
+  already lives, or into a new class, never onto whatever file is handy. Test files are exempt:
+  a flow is one file per user flow, however long it grows. Helpers that several flows use (walking
+  a path, stepping ticks, making commands) move into a shared test file rather than being copied.
 - **GDScript only, no C#.** Godot's C# projects can't export to the web, and the project keeps one
   language for all code.
 - **Every GDScript warning is an error** (`project.godot`), and **every gdstyle rule is an error**
