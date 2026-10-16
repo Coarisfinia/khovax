@@ -318,6 +318,11 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 
 ### Game architecture
 
+- **Single responsibility is law; "god files" are banned** (owner's rule): every class and file
+  does one job, and a file that has grown a second one is split, with each part named for its job
+  (e.g. reading a region file apart from the region's data). A new behaviour goes where its job
+  already lives, or into a new class, never onto whatever file is handy. A test flow stays one
+  user flow; helpers several flows share move into their own file instead of growing one.
 - **GDScript only, no C#.** Godot's C# projects can't export to the web, and the project keeps one
   language for all code.
 - **Every GDScript warning is an error** (`project.godot`), and **every gdstyle rule is an error**
