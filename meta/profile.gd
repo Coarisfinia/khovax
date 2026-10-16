@@ -87,6 +87,20 @@ func _advance_quests(condition: String, species: String) -> void:
 			quests_done.append(id)
 
 
+## The step each open quest in the book is on, by quest id in id order: every quest not finished
+## yet, started or not (#300: what quest markers point at).
+func open_steps() -> Dictionary[String, QuestStep]:
+	var steps: Dictionary[String, QuestStep] = {}
+	var ids: Array[String] = []
+	ids.assign(quest_book.keys())
+	ids.sort()
+	for id: String in ids:
+		var step: QuestStep = quest_book[id].step_at(_progress_of(id).step)
+		if step != null and not quests_done.has(id):
+			steps[id] = step
+	return steps
+
+
 ## The progress of quest `id`: a fresh one when it hasn't started.
 func _progress_of(id: String) -> QuestProgress:
 	return quest_progress.get(id, QuestProgress.new())
