@@ -12,3 +12,4 @@ const CHESTS: int = 5
 const FOG: int = 6
 const EXITS: int = 7
 const TRIGGERS: int = 8
+const ENRAGE: int = 9
