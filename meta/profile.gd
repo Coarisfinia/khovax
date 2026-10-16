@@ -9,6 +9,8 @@ extends RefCounted
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
+## How many captured monsters a player carries (#53): always three, never more.
+const CARRY_LIMIT: int = 3
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
 ## whole number up to 2^53 exactly, and this stays far below it.
 const MAX_NUMBER: int = Fixed.MAX_AMOUNT
@@ -16,6 +18,10 @@ const MAX_NUMBER: int = Fixed.MAX_AMOUNT
 var unlocked_slots: int = START_SLOTS
 ## Every captured monster, in the order caught.
 var captured_monsters: Array[CapturedMonster] = []
+## The captured monsters this player carries, by id, in the order the next one comes in when one
+## faints (#53, #54). They're chosen at the player's base (#50); until it exists, the first three
+## captured are carried, in the order caught.
+var carried: Array[int] = []
 ## The id the next captured monster gets; ids are never reused.
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
@@ -57,6 +63,8 @@ func apply(result: Gain) -> String:
 ## Adds a newly captured monster of `species`, with the next id.
 func _capture(species: String) -> void:
 	captured_monsters.append(CapturedMonster.new(next_monster_id, species))
+	if carried.size() < CARRY_LIMIT:
+		carried.append(next_monster_id)
 	next_monster_id += 1
 
 

@@ -3,7 +3,8 @@ extends RefCounted
 ## nothing caught; every gain adds its catches, with ids that are never reused, and its materials,
 ## and is on disk at once; the profile survives saving and loading; a save it can't trust is
 ## refused; an older save is migrated, oldest step first, into the current format with no quest
-## progress (#184); and a damaged save falls back to the newest intact generation before it (#179).
+## progress (#184); the first three monsters caught are carried (#53); and a damaged save falls back
+## to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 
@@ -21,8 +22,12 @@ func run(_tree: SceneTree) -> String:
 		ids.append(monster.id)
 	var expected: Array[int] = [1, 2, 3]
 	var expected_materials: Dictionary[String, int] = { "crystal": 3, "feather": 3 }
-	if ids != expected or profile.materials != expected_materials:
-		return "two gains gave monsters %s and materials %s" % [ids, profile.materials]
+	if ids != expected or profile.materials != expected_materials or profile.carried != expected:
+		return "two gains gave monsters %s, materials %s and carried %s" % [
+			ids,
+			profile.materials,
+			profile.carried,
+		]
 	var result: String = _check_kept_at_once()
 	if result.is_empty():
 		result = _check_bad_results(profile)
@@ -102,8 +107,9 @@ func _check_save(profile: Profile) -> String:
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
 		return "saving left its temporary file behind"
 	var _caught: String = loaded.apply(_result(["moss_toad"], {}))
-	if loaded.captured_monsters.back().id != 4:
-		return "a monster caught after loading reused an id"
+	var three: Array[int] = [1, 2, 3]
+	if loaded.captured_monsters.back().id != 4 or loaded.carried != three:
+		return "a monster caught after loading reused an id or joined the carried three"
 	if not SaveStore.load_profile(SAVE_PATH).captured_monsters.is_empty():
 		return "without a save, the game didn't start a new profile"
 	return ""
@@ -139,6 +145,8 @@ func _check_refused() -> String:
 		): "a captured",
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 1.5"): "the save's slots",
 		text.replace("\"next_monster_id\": 1", "\"next_monster_id\": 0"): "the save's slots",
+		text.replace("\"carried\": []", "\"carried\": [5]"): "a carried monster isn't",
+		text.replace("\"carried\": []", "\"carried\": {}"): "the save lacks its carried",
 	}
 	for case: String in cases:
 		var problem: String = ProfileSave.parse(case).problem
@@ -148,19 +156,22 @@ func _check_refused() -> String:
 
 
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
-## finished runs (#197), and formats before 3 had no quest progress (#184), which starts empty.
+## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
+## formats before 4 carried no monsters (#53): the first three captured are carried then.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var parsed: Variant = JSON.parse_string(text)
 	var current: Dictionary = parsed
 	var _no_progress: bool = current.erase("quest_progress")
 	var _none_done: bool = current.erase("quests_done")
+	var _none_carried: bool = current.erase("carried")
 	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
 	var olds: Array[Dictionary] = [
 		{ "format": 1, "runs_finished": 3 },
 		{ "format": 1 },
 		{ "format": 2, "runs_finished": 3 },
 		{ "format": 2 },
+		{ "format": 3, "quest_progress": {}, "quests_done": [] },
 	]
 	for old: Dictionary in olds:
 		var save: Dictionary = current.duplicate()
@@ -168,6 +179,22 @@ func _check_migrated() -> String:
 		var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
 		if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != text:
 			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
+	return _check_migrated_carried()
+
+
+## A format 3 save with four monsters carries its first three.
+func _check_migrated_carried() -> String:
+	var profile: Profile = Profile.new()
+	var four: Array = ["ember_fox", "moss_toad", "ember_fox", "moss_toad"]
+	var _caught: String = profile.apply(_result(four, {}))
+	var parsed: Variant = JSON.parse_string(ProfileSave.to_text(profile))
+	var save: Dictionary = parsed
+	var _dropped: bool = save.erase("carried")
+	save["format"] = 3
+	var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
+	var three: Array[int] = [1, 2, 3]
+	if not loaded.problem.is_empty() or loaded.carried != three:
+		return "a format 3 save didn't carry its first three monsters: %s" % loaded.problem
 	return ""
 
 

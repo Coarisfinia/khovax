@@ -259,8 +259,8 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
-- **`meta/`, the layers above the simulation** (#37): the player's `Profile` (captured monsters,
-  materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
+- **`meta/`, the layers above the simulation** (#37): the player's `Profile` (captured monsters, the
+  three they carry, materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
   persistent `World`, built from a seed, deterministic like everything in `sim/`. A **session** is
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
   technical and never shown to the player. Each catch or find is a
