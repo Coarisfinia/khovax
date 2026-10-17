@@ -139,7 +139,8 @@ try {
     new MutationObserver((records) => {
       for (const record of records) {
         const bar = record.target;
-        if (!full && bar instanceof HTMLProgressElement && bar.max > 0 && bar.value >= bar.max) {
+        const loading = bar instanceof HTMLProgressElement && bar.id === "status-progress";
+        if (!full && loading && bar.max > 0 && bar.value >= bar.max) {
           full = true;
           console.log("KHOVAX_BAR: full");
         }
