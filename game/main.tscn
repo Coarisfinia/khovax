@@ -27,6 +27,7 @@
 [ext_resource type="Script" path="res://view/quest_marker_view.gd" id="25_quests"]
 [ext_resource type="Script" path="res://view/survey_view.gd" id="26_survey"]
 [ext_resource type="Script" path="res://view/survey_choice.gd" id="27_survey_choice"]
+[ext_resource type="Script" path="res://view/canopy_cutaway.gd" id="26_cutaway"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -118,6 +119,11 @@ script = ExtResource("12_fog")
 driver = NodePath("../Driver")
 cloud = NodePath("../Instance/FogCloud")
 keeper = NodePath("../WorldKeeper")
+
+[node name="CanopyCutaway" type="Node" parent="." node_paths=PackedStringArray("driver", "decorations") unique_id=3280328032]
+script = ExtResource("26_cutaway")
+driver = NodePath("../Driver")
+decorations = NodePath("../Instance/TileDecorations")
 
 [node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("target") unique_id=833248369]
 process_priority = 100

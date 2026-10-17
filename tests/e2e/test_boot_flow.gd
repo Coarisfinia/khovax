@@ -39,6 +39,7 @@ func run(tree: SceneTree) -> String:
 		_check_terrain_colors,
 		_check_music,
 		_check_lookouts,
+		_check_canopy_cutaway,
 		_check_neighbour_follows,
 		_check_survey,
 	]
@@ -753,6 +754,127 @@ func _check_neighbour_grids(main: Node) -> String:
 	if driver.world.instances.size() != 1:
 		return "drawing the neighbours loaded an instance into the world"
 	return ""
+
+
+## The canopy cut-away (#328), in the glade: in the open nothing is cut. A player standing in the
+## forest has every decoration tall enough to hide them cut away within the radius, easing out, and
+## nothing beyond it nor the low stump; it all eases back once they stand in the open again. A
+## wild monster in the fog, or hiding in its tile, cuts nothing; one an ally sees in the forest
+## does.
+func _check_canopy_cutaway(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var cutaway: CanopyCutaway = main.get_node("CanopyCutaway") as CanopyCutaway
+	var state: GameState = driver.state
+	var player: Entity = state.player(0)
+	var open: Vector2i = player.tile
+	var forest: Vector2i = _seen_tile_of(state, "forest")
+	var monster: Entity = _shown_wild_monster(state)
+	if monster == null:
+		return "no wild monster in sight in the glade"
+	var monster_spot: Vector2i = monster.tile
+	cutaway.show_state(10.0)
+	var result: String = _cut_problem(cutaway, [], "in the open")
+	if result.is_empty():
+		player.tile = forest
+		result = _cut_eases(cutaway, [forest], "around a player in the forest")
+	if result.is_empty():
+		player.tile = open
+		result = _cut_eases(cutaway, [], "once the player is in the open again")
+	if result.is_empty():
+		monster.tile = _unseen_tile_of(state, "forest")
+		cutaway.show_state(10.0)
+		result = _cut_problem(cutaway, [], "with a wild monster in the fog or in hiding")
+	if result.is_empty():
+		monster.tile = forest
+		cutaway.show_state(10.0)
+		result = _cut_problem(cutaway, [forest], "around a wild monster in the forest")
+	player.tile = open
+	monster.tile = monster_spot
+	cutaway.show_state(10.0)
+	return result
+
+
+## Eases `cutaway` a moment, which must leave every decoration changing on its way (no snap), then
+## until it settles cut away around the figures on `covered`.
+func _cut_eases(cutaway: CanopyCutaway, covered: Array[Vector2i], where: String) -> String:
+	var before: Dictionary[Vector2i, float] = cutaway.cut.duplicate()
+	cutaway.show_state(0.1)
+	for tile: Vector2i in cutaway.cut:
+		var now: float = cutaway.cut[tile]
+		var target: float = 1.0 if _cut_expected(cutaway, tile, covered) else 0.0
+		if now != before[tile] and (now == target or _drawn_cut(cutaway, tile) != now):
+			return "the decoration on %s snapped %s, or isn't drawn as cut" % [tile, where]
+	cutaway.show_state(10.0)
+	return _cut_problem(cutaway, covered, where)
+
+
+## What's wrong with the cuts once settled, or "": exactly the decorations tall enough to hide a
+## figure within the radius of one on `covered` are gone, every other one whole, some of each.
+func _cut_problem(cutaway: CanopyCutaway, covered: Array[Vector2i], where: String) -> String:
+	var cut: int = 0
+	var kept_tall: int = 0
+	for tile: Vector2i in cutaway.decorations.figures:
+		var expected: bool = _cut_expected(cutaway, tile, covered)
+		var drawn: float = _drawn_cut(cutaway, tile)
+		if cutaway.cut[tile] != (1.0 if expected else 0.0) or drawn != cutaway.cut[tile]:
+			return "the decoration on %s is cut %f, drawn %f, %s" % [
+				tile,
+				cutaway.cut[tile],
+				drawn,
+				where,
+			]
+		cut += 1 if expected else 0
+		var tall: bool = CanopyCutaway.hides(cutaway.driver.state.region, tile)
+		kept_tall += 1 if tall and not expected else 0
+	if not covered.is_empty() and (cut == 0 or kept_tall == 0):
+		return "expected some decorations cut and some tall ones kept %s: %d cut" % [where, cut]
+	return ""
+
+
+## Whether the decoration on `tile` should be cut away around the figures on `covered`.
+func _cut_expected(cutaway: CanopyCutaway, tile: Vector2i, covered: Array[Vector2i]) -> bool:
+	if not CanopyCutaway.hides(cutaway.driver.state.region, tile):
+		return false
+	for figure: Vector2i in covered:
+		if Hex.distance(tile, figure) <= CanopyCutaway.RADIUS:
+			return true
+	return false
+
+
+## How cut away the decoration on `tile` is drawn: 1 when its model is hidden, else how far it
+## has shrunk, eased; -1 when it's drawn otherwise.
+func _drawn_cut(cutaway: CanopyCutaway, tile: Vector2i) -> float:
+	var piece: HexPiece = cutaway.decorations.figures[tile]
+	if not (piece.get_child(0) as Node3D).visible:
+		return 1.0
+	var amount: float = cutaway.cut[tile]
+	var size: float = maxf(1.0 - smoothstep(0.0, 1.0, amount), CanopyCutaway.SMALLEST)
+	return amount if piece.scale.is_equal_approx(Vector3.ONE * size) else -1.0
+
+
+## A wild monster in `state` that an ally sees and that isn't hiding, or null.
+func _shown_wild_monster(state: GameState) -> Entity:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	for entity_id: int in wild.monsters:
+		if WildMonsterView.is_shown(state, entity_id):
+			return state.entity(entity_id)
+	return null
+
+
+## A tile of kind `id` that an ally sees, or one none does, in `state`.
+func _seen_tile_of(state: GameState, id: String) -> Vector2i:
+	return _tile_of(state, id, true)
+
+
+func _unseen_tile_of(state: GameState, id: String) -> Vector2i:
+	return _tile_of(state, id, false)
+
+
+func _tile_of(state: GameState, id: String, seen: bool) -> Vector2i:
+	for tile: Vector2i in _split_by_sight(state, seen):
+		if state.region.terrain[tile] == TileKinds.number_of(id):
+			return tile
+	return Vector2i.MAX
 
 
 ## Neighbours are unexplored ground: every tile of theirs lies under thick cloud.
