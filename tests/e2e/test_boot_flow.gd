@@ -546,6 +546,15 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	return ""
 
 
+## The first of the glade's `tiles` that no ally in `state` sees across the seam, shifted by
+## `shift` into its coordinates.
+static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vector2i) -> Vector2i:
+	for tile: Vector2i in tiles:
+		if not FogView.ally_sees(state, tile + shift):
+			return tile
+	return tiles[0]
+
+
 ## Explored ground is remembered per instance (#190): walking into the glade, the basic instance's
 ## ground seen before, now next door, lies under light fog; walking back, the basic instance's
 ## ground out of sight is still seen before, and next door the glade's explored ground lies under
@@ -574,8 +583,11 @@ func _check_remembered_ground(main: Node) -> String:
 	_walk_in(driver.world, 3)
 	fog.show_state(10.0)
 	var shift: Vector2i = view.shifts.get(InstanceBlueprints.GLADE, Vector2i.ZERO)
-	var glade_light: bool = fog.cloud.fog_on(glade_seen[0] + shift) == light
-	if not glade_light or fog.cloud.fog_on(glade_unseen[0] + shift) != Vector2(1.0, 0.0):
+	# Back on the exit, some of the glade is in sight across the seam (#191): only tiles out of it.
+	var explored: Vector2i = _out_of_sight(driver.state, glade_seen, shift)
+	var unexplored: Vector2i = _out_of_sight(driver.state, glade_unseen, shift)
+	var glade_light: bool = fog.cloud.fog_on(explored + shift) == light
+	if not glade_light or fog.cloud.fog_on(unexplored + shift) != Vector2(1.0, 0.0):
 		return "next door, the glade's explored ground isn't light fog and its unexplored thick"
 	return _check_out_of_sight(fog, far)
 

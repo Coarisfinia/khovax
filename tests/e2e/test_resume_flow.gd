@@ -434,6 +434,21 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	return result
 
 
+## The glade's tiles, in its own coordinates, that a player in the basic instance of `world` sees
+## across the seam (#191).
+static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var fog: FogFeature = basic.feature(Features.FOG) as FogFeature
+	var glade_at: Vector2i = world.offset(InstanceBlueprints.GLADE)
+	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.BASIC)
+	var seen: Dictionary[Vector2i, bool] = {}
+	for slot: int in fog.visible:
+		for tile: Vector2i in fog.visible[slot]:
+			if basic.next_door.has(tile):
+				seen[tile - shift] = true
+	return seen
+
+
 ## Boots the main scene on a world file holding `content` (in a save's envelope with `enveloped`,
 ## or damaged, as it is) and checks it starts a fresh world.
 func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
@@ -454,10 +469,15 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content
-	# A frame for the fog view to remember the fresh world's sight: the basic instance's only, none
-	# of the refused world's glade.
+	# A frame for the fog view to remember the fresh world's sight: of the glade, only what the
+	# player sees of it from the start, across the seam (#191), none of the refused world's.
 	await tree.process_frame
-	if result.is_empty() and keeper.explored.tiles_in.has(InstanceBlueprints.GLADE):
+	var glade: Dictionary = keeper.explored.tiles_in.get(InstanceBlueprints.GLADE, {})
+	var seen_across: Dictionary[Vector2i, bool] = _seen_across(driver.world)
+	var kept_old: bool = false
+	for tile: Vector2i in glade:
+		kept_old = kept_old or not seen_across.has(tile)
+	if result.is_empty() and kept_old:
 		result = "a fresh world kept the ground explored in the refused one: " + content
 	main.queue_free()
 	await tree.process_frame
