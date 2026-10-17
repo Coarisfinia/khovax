@@ -29,11 +29,7 @@ const REST_TICKS: int = 20
 const FINGER: int = 0
 ## The state hash after the scripted walk; when a rule change alters it on purpose, update it with
 ## the golden replays (see AGENTS.md).
-<<<<<<< HEAD
 const EXPECTED_HASH: int = 1_744_721_332
-=======
-const EXPECTED_HASH: int = 1_204_744_184
->>>>>>> c0c145f (Device flow: the hash the companions' strikes end it in)
 
 ## Every instance the player stood in during the walk.
 var _visited: Dictionary[String, bool] = {}
