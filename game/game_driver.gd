@@ -88,7 +88,7 @@ static func new_seed() -> int:
 ## Starts a fresh session, in the starting instance, from `seed_value`: the APK test (#61) starts
 ## its own with a fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
-	world = World.new(seed_value, instance, players, companions())
+	world = World.new(BlueprintSource.new(), seed_value, instance, players, companions())
 	# No world for an unknown or invalid instance, which InstanceBlueprints.create reports.
 	if not world.problem.is_empty():
 		world = null

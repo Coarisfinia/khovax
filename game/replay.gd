@@ -140,9 +140,9 @@ func _setup_problem() -> String:
 ## and returns the first mismatch; without, records new ones.
 func _run(check: bool) -> String:
 	if start_world.is_empty():
-		played = World.new(seed_value, instance, players, companions)
+		played = World.new(BlueprintSource.new(), seed_value, instance, players, companions)
 	else:
-		played = WorldData.to_world(start_world)
+		played = WorldData.to_world(start_world, BlueprintSource.new())
 	if not played.problem.is_empty():
 		return played.problem
 	# A replay names only the slots up to the last that brings one; the world names every slot.

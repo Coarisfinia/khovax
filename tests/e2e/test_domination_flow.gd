@@ -292,7 +292,7 @@ func _check_after_domination(state: GameState) -> String:
 ## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies
 ## dominate the monster on the same tick. A second player stands by, for the refused saves.
 func _check_seal_saved() -> String:
-	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
+	var world: World = World.new(BlueprintSource.new(), 42, InstanceBlueprints.BASIC, 2)
 	for next: Vector2i in FlowSteps.BASIC_RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
@@ -336,8 +336,9 @@ func _check_seal_refused(world: World) -> String:
 		"there twice": twice,
 		"in another seal": two_seals,
 	}
+	var source: BlueprintSource = BlueprintSource.new()
 	for expected: String in cases:
-		var problem: String = WorldData.to_world(cases[expected]).problem
+		var problem: String = WorldData.to_world(cases[expected], source).problem
 		if not problem.contains(expected):
 			return "a seal %s wasn't refused for it: %s" % [expected, problem]
 	return ""

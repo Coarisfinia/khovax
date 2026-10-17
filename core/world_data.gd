@@ -48,10 +48,11 @@ static func of(world: World) -> Dictionary:
 	}
 
 
-## The world that `of` saved, or an empty one whose `problem` says why it's refused, whole: data
-## in another format, or played by other rules (a world can only go on deterministically under the
-## rules it was played by), or that doesn't hash as it did when saved (its content changed since).
-static func to_world(data: Dictionary) -> World:
+## The world that `of` saved, loading its instances from `source`, or an empty one whose `problem`
+## says why it's refused, whole: data in another format, or played by other rules (a world can only
+## go on deterministically under the rules it was played by), or that doesn't hash as it did when
+## saved (its content changed since).
+static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var read: DataReader = DataReader.new(data)
 	var format: int = read.whole("format", 0, DataReader.MOST)
 	var rules: int = read.whole("rules", 0, DataReader.MOST)
@@ -61,11 +62,12 @@ static func to_world(data: Dictionary) -> World:
 		read.fail("played by rules %d, this build has %d" % [rules, Simulation.RULES_VERSION])
 	var halves: Array[int] = read.wholes("seed", 0, 0xffff_ffff)
 	var start: String = read.text("start")
-	if not read.failed() and (halves.size() != 2 or not InstanceBlueprints.exists(start)):
+	if not read.failed() and (halves.size() != 2 or not source.exists(start)):
 		read.fail("the world's seed or its starting blueprint %s isn't valid" % start)
 	if read.failed():
 		return World.refused(read.problem)
-	var world: World = World.new((halves[0] << 32) | halves[1], start, 0, _companions(read))
+	var seed_value: int = (halves[0] << 32) | halves[1]
+	var world: World = World.new(source, seed_value, start, 0, _companions(read))
 	world.instances.clear()
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
@@ -85,7 +87,7 @@ static func to_world(data: Dictionary) -> World:
 ## Loads the instance `entry` names from its blueprint and restores its saved state into it.
 static func _load_instance(world: World, entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
-	if not InstanceBlueprints.exists(instance_name) or world.instances.has(instance_name):
+	if not world.source.exists(instance_name) or world.instances.has(instance_name):
 		entry.fail("instance %s doesn't exist or is saved twice" % instance_name)
 		return
 	var loaded: GameState = world.create_instance(instance_name, 0)
@@ -125,7 +127,7 @@ static func _companions(read: DataReader) -> Array[String]:
 ## few.
 static func _load_generation(world: World, entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
-	var known: bool = InstanceBlueprints.exists(instance_name) and instance_name != world.start_name
+	var known: bool = world.source.exists(instance_name) and instance_name != world.start_name
 	if not known or world.generations.has(instance_name):
 		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return
