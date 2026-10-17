@@ -22,7 +22,7 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	var species: Content = Content.load_species()
+	var species: Content = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	for id: String in species.species:
