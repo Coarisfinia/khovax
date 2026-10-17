@@ -15,6 +15,8 @@ const KIT: String = (
 )
 ## A quest step to reach a place, its id left open (#339).
 const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
+## A quest step to enter a region piece, its id left open (#350).
+const ENTER: String = "{\"condition\": \"entered\", \"piece\": \"%s\"}"
 
 
 func run(_tree: SceneTree) -> String:
@@ -93,22 +95,28 @@ func _check_abilities_refused() -> String:
 	return ""
 
 
-## Why a step to reach the beach doesn't read, or "".
-func _check_reach_step(content: Content) -> String:
-	var beach: QuestDefinition = QuestDefinition.parse(
+## Why a step to reach the beach and one to enter the thicket don't read, naming them, or "".
+func _check_named_steps(content: Content) -> String:
+	var named: QuestDefinition = QuestDefinition.parse(
 		"x",
-		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}" % (REACH % "beach"),
+		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s]}" % [
+			REACH % "beach",
+			ENTER % "thicket",
+		],
 		content.species,
 	)
-	if not beach.problem.is_empty() or beach.steps[0].place != "beach":
-		return "a step to reach the beach didn't read: " + beach.problem
+	if (not named.problem.is_empty()
+			or named.steps[0].place != "beach"
+			or named.steps[1].piece != "thicket"):
+		return "a step to reach the beach or to enter the thicket didn't read: " + named.problem
 	return ""
 
 
 ## Every quest file reads: the first domination is one domination of any species, and the toads'
-## quest counts up three of one species, and a step to reach a place names it (#339). Quests with a
-## wrong id, name, step, condition, species, place or count are refused, with a reason: a reached
-## step without a place, or a place on another step, too.
+## quest counts up three of one species, a step to reach a place names it (#339), and one to enter
+## a region piece names the piece (#350). Quests with a wrong id, name, step, condition, species,
+## place, piece or count are refused, with a reason: a reached step without a place, or a place on
+## another step, too, and the same for an entered step and its piece.
 func _check_quests() -> String:
 	var content: Content = Content.load_quests()
 	if not content.problem.is_empty():
@@ -127,8 +135,8 @@ func _check_quests() -> String:
 			or toad_step.species_name != "Moss Toad"
 			or toad_step.count != 3):
 		return "the toads' quest isn't three moss toads"
-	if not _check_reach_step(content).is_empty():
-		return _check_reach_step(content)
+	if not _check_named_steps(content).is_empty():
+		return _check_named_steps(content)
 	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
 	var step: String = "{\"condition\": \"dominated\"%s}"
 	var cases: Dictionary[String, String] = {
@@ -139,6 +147,9 @@ func _check_quests() -> String:
 		quest % ["x", "N", "{\"condition\": \"reached\"}"]: "step 0: its place",
 		quest % ["x", "N", step % ", \"place\": \"beach\""]: "step 0: its place",
 		quest % ["x", "N", REACH % "The Beach"]: "step 0: its place must",
+		quest % ["x", "N", "{\"condition\": \"entered\"}"]: "step 0: its piece",
+		quest % ["x", "N", step % ", \"piece\": \"thicket\""]: "step 0: its piece",
+		quest % ["x", "N", ENTER % "The Thicket"]: "step 0: its piece must",
 		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
 		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
 			"step 0: its species"

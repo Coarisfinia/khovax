@@ -305,8 +305,10 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   refused, and an older one is migrated in `ProfileSave.parse`, one format at a time.
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
   (dominations, chests opened, places reached on stepping in, starting there or arriving through
-  an exit: a place is a tile trigger in a region piece's legend, #339, #348), and `Profile.apply` advances each quest in its `quest_book` (the quest
-  data) from them, so progress is saved and debounced like any gain.
+  an exit: a place is a tile trigger in a region piece's legend, #339, #348; region pieces entered,
+  #350, with no legend marking: an arranged region knows each tile's piece, `Region.piece_of`),
+  and `Profile.apply` advances each quest in its `quest_book` (the quest data) from them, so
+  progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
   `SaveStore`), never in the profile: `WorldData.of` holds its seed, tick and every loaded
   instance's entities and feature state (`Feature.save_values`/`load_values`; regions are arranged

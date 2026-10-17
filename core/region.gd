@@ -55,6 +55,10 @@ var exit_blueprints: Array[String] = []
 ## when something happens on a tile, an action runs (TriggerFeature). Not hashed: they come from the
 ## blueprint's files; the trigger feature hashes the ones that fired.
 var triggers: Array[TileTrigger] = []
+## The region piece each tile was arranged from (#350), by the piece's file name in its blueprint's
+## folder, which entering it raises (EnteringFeature); empty for a region from one file. Not hashed:
+## it comes from the blueprint's files.
+var piece_of: Dictionary[Vector2i, String] = {}
 ## Why the region file couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -137,6 +141,8 @@ func turned(turns: int) -> Region:
 		region.height_overrides[Hex.turn(tile, turns)] = height_overrides[tile]
 	for tile: Vector2i in walkable_overrides:
 		region.walkable_overrides[Hex.turn(tile, turns)] = walkable_overrides[tile]
+	for tile: Vector2i in piece_of:
+		region.piece_of[Hex.turn(tile, turns)] = piece_of[tile]
 	return region
 
 
@@ -161,9 +167,9 @@ func outside_exits() -> Array[Vector2i]:
 	return outside
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors, exits and triggers.
-## The
-## players' starts stay this region's own. Callers check `fits` first.
+## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors, exits, triggers and
+## which piece each tile came from. The players' starts stay this region's own. Callers check `fits`
+## first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
 		terrain[tile + offset] = piece.terrain[tile]
@@ -188,6 +194,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 	exit_blueprints.append_array(piece.exit_blueprints)
 	for trigger: TileTrigger in piece.triggers:
 		triggers.append(trigger.moved(offset))
+	for tile: Vector2i in piece.piece_of:
+		piece_of[tile + offset] = piece.piece_of[tile]
 
 
 ## Every value of the region, for the state hash, in a fixed order.
