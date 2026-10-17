@@ -196,8 +196,11 @@ func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> 
 	if not marked.has("survey_any") or marked != targets:
 		return "the Survey doesn't mark the open quests' targets: %s" % [marked]
 	var own: Entity = driver.state.player(0)
-	if survey.players.keys() != [0] or survey.players[0] != own.tile:
-		return "the Survey doesn't mark the player on their tile: %s" % [survey.players]
+	var on_tile: bool = survey.circles.has(0) and survey.on_view(survey.circles[0]).is_equal_approx(
+		survey.to_view(own.tile)
+	)
+	if survey.circles.keys() != [0] or not on_tile:
+		return "the Survey doesn't mark the player on their tile: %s" % [survey.circles]
 	return _survey_mark_glides(driver, survey)
 
 

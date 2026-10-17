@@ -66,10 +66,9 @@ var blocking: Dictionary[Vector2i, bool] = {}
 ## Each exit on a tile shown, here or next door, as (q, r, side) in the coordinates of the instance
 ## this machine's player is in.
 var exits: Array[Vector3i] = []
-## The tile each player in the instance stands on, by slot.
-var players: Dictionary[int, Vector2i] = {}
-## Where each player's circle is drawn, by slot, on the ground in world units: between the tile
-## they walk from and their own while they walk, as their figure glides (#354).
+## Where each player in the instance is drawn, by slot, on the ground in world units: on their
+## tile, or between the tile they walk from and their own while they walk, as their figure glides
+## (#354).
 var circles: Dictionary[int, Vector2] = {}
 ## The tile each open quest points at, by quest id.
 var quest_targets: Dictionary[String, Vector2i] = {}
@@ -125,7 +124,6 @@ func show_state() -> void:
 	tiles.clear()
 	blocking.clear()
 	exits.clear()
-	players.clear()
 	circles.clear()
 	quest_targets.clear()
 	if driver == null or driver.state == null:
@@ -147,7 +145,6 @@ func show_state() -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player != null:
-			players[slot] = player.tile
 			circles[slot] = _walked_ground(state, player)
 	if holder != null and holder.keeper != null:
 		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot())
