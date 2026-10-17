@@ -6,8 +6,11 @@ extends RefCounted
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
 
 ## The file format; a replay in another format is refused, not misread. Format 2 added the starting
-## world and format 3 the companions (#338); a replay without them has none and still plays.
-const FORMAT: int = 3
+## world and format 3 the companions (#338); a replay without them has none and still plays. Format
+## 4 gave every command its special attack (#410): an older replay's commands fire none.
+const FORMAT: int = 4
+## How many integers a command was in a replay before format 4.
+const OLD_VALUE_COUNT: int = 1
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -66,10 +69,25 @@ static func parse(text: String) -> Replay:
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
+	if format < 4 and replay.changes.size() % (2 + OLD_VALUE_COUNT) != 0:
+		replay.problem = "the recorded commands are cut off"
+		return replay
+	if format < 4:
+		replay.changes = _without_specials(replay.changes)
 	var by_tick: Dictionary = data.get("checkpoints", {})
 	for tick: Variant in by_tick:
 		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
+
+
+## Changes recorded before commands had a special attack (tick, slot, move each), each firing none.
+static func _without_specials(old: Array[int]) -> Array[int]:
+	var stride: int = 2 + OLD_VALUE_COUNT
+	var changes: Array[int] = []
+	for i: int in range(0, old.size(), stride):
+		changes.append_array(old.slice(i, i + stride))
+		changes.append(0)
+	return changes
 
 
 ## The starting world in a replay's data, with JSON's numbers whole again; empty for none, or for

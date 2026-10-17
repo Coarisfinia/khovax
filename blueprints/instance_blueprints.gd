@@ -7,9 +7,9 @@ extends RefCounted
 ## blueprint switches game rules on and off by listing them, and they can change during a session.
 ## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
-## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338),
-## a trail per player, the wild monsters the region places, dominating them with a ring, and fog of
-## war.
+## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338)
+## with its attacks, a trail per player, the wild monsters the region places, dominating them with
+## a ring, and fog of war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
@@ -80,6 +80,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
 	ordered.append(CompanionAttackFeature.new())
+	ordered.append(_specials(species))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -158,6 +159,25 @@ static func _companions(content: Content) -> CompanionFeature:
 		var stats: Species = content.species[species_id]
 		reaches[species_id] = CompanionFeature.reach_of(stats.hp, stats.strength, stats.speed)
 	return CompanionFeature.new(reaches)
+
+
+## The specials feature (#410) with every species' special's power and cooldown, from the species
+## `content` and the ability data; a special that doesn't load is an error, and its species has
+## none.
+static func _specials(content: Content) -> SpecialAttackFeature:
+	var abilities: Content = Content.load_abilities()
+	if not abilities.problem.is_empty():
+		push_error("the abilities don't load: " + abilities.problem)
+	var powers: Dictionary[String, int] = {}
+	var cooldowns: Dictionary[String, int] = {}
+	for species_id: String in content.species:
+		var special: Ability = abilities.abilities.get(content.species[species_id].special)
+		if special == null or special.kind != Ability.SPECIAL:
+			push_error("%s's special doesn't load" % species_id)
+			continue
+		powers[species_id] = special.power
+		cooldowns[species_id] = special.cooldown_seconds * Simulation.TICKS_PER_SECOND
+	return SpecialAttackFeature.new(powers, cooldowns)
 
 
 ## The wild monster feature with the named blueprint's species list and every species' stats from

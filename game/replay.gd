@@ -131,7 +131,7 @@ func _setup_problem() -> String:
 			return "a recorded command is for slot %d of %d players" % [changes[i + 1], players]
 		var values: Array[int] = []
 		values.assign(changes.slice(i + 2, i + STRIDE))
-		if not Command.from_values(values).is_valid():
+		if not Command.is_valid_values(values):
 			return "a recorded command at tick %d is invalid: %s" % [changes[i], values]
 	return ""
 

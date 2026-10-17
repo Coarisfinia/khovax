@@ -76,7 +76,7 @@ static func figures_in_cover(state: GameState) -> Array[Vector2i]:
 			shown.append(player.tile)
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	if wild != null:
-		for entity_id: int in wild.monsters:
+		for entity_id: int in wild.monsters + wild.fainted:
 			if WildMonsterView.is_shown(state, entity_id):
 				shown.append(state.entity(entity_id).tile)
 	var covered: Array[Vector2i] = []

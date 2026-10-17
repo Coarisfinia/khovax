@@ -27,7 +27,9 @@ extends RefCounted
 ##
 ## A companion (#221) strikes the wild monster next to it once a second for its species'
 ## strength, never below 1 HP, and leaves one hiding in its tile alone, and one sealing in a ring
-## (#409): its seal was worked out from its HP, so a save taken mid-seal resumes.
+## (#409): its seal was worked out from its HP, so a save taken mid-seal resumes. Its player fires
+## its special attack (#410): lethal, it fells the wild monster next to it, which faints for good
+## where it fell, and then it cools down.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -71,6 +73,10 @@ const STRONG: String = "strong"
 const OUTCOME_HP: int = 100
 const WEAK_STRENGTH: int = 40
 const STRONG_STRENGTH: int = 400
+## The weak species' special: three times its strength, more than a weak monster's HP, and its
+## cooldown.
+const SPECIAL_POWER: int = 3000
+const SPECIAL_TICKS: int = 50
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
@@ -756,7 +762,62 @@ func _check_companion_strikes() -> String:
 	(state.feature(Features.HIDING) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
+	return _check_special(state, first, spots)
+
+
+## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
+## hiding, `first` the one with the lowest id: with nothing to strike it does nothing, and nor does
+## a press for a slot without a player. Once they jump out, it fells `first` for its power, which
+## faints for good, staying where it fell and saved as it is; it cools down, and once it's ready
+## again it fells the next one.
+func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> String:
+	var specials: SpecialAttackFeature = state.feature(Features.SPECIALS) as SpecialAttackFeature
+	var wild: WildMonsterFeature = _wild(state)
+	var nobody: Array[Command] = [Command.new(), Command.new(Command.NO_MOVE, true)]
+	if not _specials_in(state, _fire()).is_empty() or not _specials_in(state, nobody).is_empty():
+		return "a special struck a hiding wild monster, or fired for a slot without a player"
+	(state.feature(Features.HIDING) as HidingFeature).hidden.clear()
+	var felled: Array[SpecialStruck] = _specials_in(state, _fire())
+	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
+	if felled.size() != 1 or felled[0].monster_id != first or felled[0].damage != damage:
+		return "the special didn't strike the first wild monster for its power"
+	if not felled[0].felled or not wild.is_fainted(first) or wild.is_wild_monster(first):
+		return "the special didn't fell the wild monster"
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
+		return "the fainted wild monster didn't stay where it fell, blocking walkers"
+	var reloaded_state: GameState = _strike_state(spots)
+	for feature_id: int in [Features.WILD_MONSTERS, Features.SPECIALS]:
+		var feature: Feature = state.feature(feature_id)
+		var reloaded: Feature = reloaded_state.feature(feature_id)
+		reloaded.load_values(reloaded_state, DataReader.new(feature.save_values()))
+		if reloaded.hash_values() != feature.hash_values():
+			return "feature %d didn't load back as saved after the special" % feature_id
+	if specials.cooldown_left(0) != SPECIAL_TICKS or not _specials_in(state, _fire()).is_empty():
+		return "the special didn't cool down for its cooldown"
+	while specials.cooldown_left(0) > 1:
+		var _waited: Array[SpecialStruck] = _specials_in(state, FlowSteps.command(Command.NO_MOVE))
+	var second: int = wild.monsters[0]
+	var next: Array[SpecialStruck] = _specials_in(state, _fire())
+	if next.size() != 1 or next[0].monster_id != second or not next[0].felled:
+		return "the special, ready again, didn't fell the next wild monster"
 	return ""
+
+
+## One tick's commands with the player in slot 0 standing and firing their special.
+static func _fire() -> Array[Command]:
+	var firing: Array[Command] = [Command.new(Command.NO_MOVE, true)]
+	return firing
+
+
+## The specials that struck in one tick of `commands`.
+static func _specials_in(state: GameState, commands: Array[Command]) -> Array[SpecialStruck]:
+	Simulation.step(state, commands)
+	var struck: Array[SpecialStruck] = []
+	for event: RefCounted in state.events:
+		if event is SpecialStruck:
+			struck.append(event as SpecialStruck)
+	return struck
 
 
 ## A disc with a weak wild monster on each of `spots`, hiding and companions.
@@ -769,6 +830,7 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		HidingFeature.new(),
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),
+		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
 	]
 	return GameState.new(region, 1, ordered)
 

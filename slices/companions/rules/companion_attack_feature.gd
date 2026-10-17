@@ -34,7 +34,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_waits[companion_id] = wait - 1
 			continue
 		var _ready: bool = _waits.erase(companion_id)
-		var target: int = _target(state, wild, state.entity(companion_id).tile)
+		var target: int = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
 			continue
 		var damage: int = wild.strengths.get(companions.species_of(companion_id), 1)
@@ -82,8 +82,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 ## The wild monster with the lowest id next to `tile` that isn't hiding or sealing in a ring, or 0.
 ## WildMonsterFeature keeps its monsters in id order. Hiding and domination aren't required, since
 ## an instance may have neither; where an instance has them, InstanceBlueprints lists them before
-## the companions, so they have stepped already.
-static func _target(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
+## the companions, so they have stepped already. The special attack (#410) strikes the same one.
+static func target_next_to(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
 	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
 	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
 	for monster: int in wild.monsters:
