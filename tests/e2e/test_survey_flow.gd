@@ -9,7 +9,9 @@ extends RefCounted
 ## either way, it sits against its own corner or covers the whole screen; every zoom step is
 ## followed, and zooming stops at both ends. On touch screens its buttons show beside it, clear of
 ## it on every screen, and a press on each presses its action and moves the Survey like the key,
-## without starting the touch stick (#352).
+## without starting the touch stick (#352). A pinch on a corner Survey zooms it a step at a time,
+## spreading the fingers closer and pinching them farther, and never starts the touch stick, which
+## still starts anywhere else (#358).
 
 ## Desktop screens and phones held either way.
 const SCREENS: Array[Vector2] = [
@@ -65,6 +67,8 @@ func _check_survey(main: Node) -> String:
 		result = _survey_zooms(choice, survey)
 	if result.is_empty():
 		result = _survey_buttons(main, choice, survey)
+	if result.is_empty():
+		result = _survey_pinches(main, choice, survey)
 	SaveStore.remove(path)
 	graphics.settings_path = kept_path
 	graphics.settings.chosen = kept
@@ -409,9 +413,71 @@ func _survey_buttons_beside(
 	return ""
 
 
-## Touches `at` with the first finger, or lifts it there.
-func _touch(viewport: Viewport, at: Vector2, down: bool) -> void:
+## Why a pinch on a corner Survey doesn't zoom it a step at a time, out on pinching the fingers
+## together and in on spreading them, or starts the touch stick, or the stick doesn't start
+## anywhere else, or "". The zoom is at its closest step here, so pinching in comes first.
+func _survey_pinches(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
+	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+	var problem: String = ""
+	while problem.is_empty() and not (survey.visible and survey.bordered):
+		problem = choice.cycle()
+	var zoom: int = choice.zoom_step()
+	# Each pinch moves one finger a little first, too little for a step, then the other one far
+	# enough for exactly one.
+	var pinches: Array[PackedFloat32Array] = [
+		PackedFloat32Array([0.22, 0.15, 0.12, -1.0]),
+		PackedFloat32Array([0.15, 0.25, 0.22, 1.0]),
+	]
+	for pinch: PackedFloat32Array in pinches:
+		if problem.is_empty():
+			zoom += int(pinch[3])
+			problem = _survey_pinched(survey, stick, pinch)
+		if problem.is_empty() and choice.zoom_step() != zoom:
+			problem = "a pinch on the Survey went to zoom step %d, not %d" % [
+				choice.zoom_step(),
+				zoom,
+			]
+	var middle: Vector2 = survey.get_viewport_rect().get_center()
+	_touch(survey.get_viewport(), middle, true)
+	if problem.is_empty() and not stick.is_held():
+		problem = "the touch stick didn't start off the Survey"
+	_touch(survey.get_viewport(), middle, false)
+	return problem
+
+
+## Why two fingers on the Survey, `pinch[0]` of its side from its middle each, moved to `pinch[1]`
+## and `pinch[2]` and lifted, started the touch stick or left a zoom action pressed, or "".
+func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32Array) -> String:
+	var viewport: Viewport = survey.get_viewport()
+	var middle: Vector2 = survey.get_global_rect().get_center()
+	var side: float = survey.size.x
+	var apart: Vector2 = Vector2(pinch[0] * side, 0.0)
+	var fingers: Array[Vector2] = [middle - apart, middle + apart]
+	for finger: int in fingers.size():
+		_touch(viewport, fingers[finger], true, finger)
+	_drag(viewport, middle + Vector2(pinch[1] * side, 0.0), 1)
+	_drag(viewport, middle - Vector2(pinch[2] * side, 0.0), 0)
+	var held: bool = stick.is_held()
+	for finger: int in fingers.size():
+		_touch(viewport, fingers[finger], false, finger)
+	var zooming: bool = Input.is_action_pressed(&"survey_zoom_in")
+	if held or zooming or Input.is_action_pressed(&"survey_zoom_out"):
+		return "a pinch on the Survey started the touch stick, or left a zoom action pressed"
+	return ""
+
+
+## Touches `at` with `finger` (the first one unless named), or lifts it there.
+func _touch(viewport: Viewport, at: Vector2, down: bool, finger: int = 0) -> void:
 	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.index = finger
 	touch.position = at
 	touch.pressed = down
 	viewport.push_input(touch)
+
+
+## Drags `finger` to `at`.
+func _drag(viewport: Viewport, at: Vector2, finger: int) -> void:
+	var drag: InputEventScreenDrag = InputEventScreenDrag.new()
+	drag.index = finger
+	drag.position = at
+	viewport.push_input(drag)
