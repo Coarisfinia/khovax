@@ -1309,26 +1309,49 @@ func _check_species() -> String:
 	return _check_wounded()
 
 
-## The beach's wounded moss toad (#389) starts at WOUNDED_HP of its full HP, the other at full.
+## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never
+## below 1, while the one beside it starts at full.
 func _check_wounded() -> String:
-	var state: GameState = InstanceBlueprints.basic(1)
+	var tiles: String = "# W
+
+## Tiles
+
+```
+w .
+. 1 .
+m .
+```
+
+## Legend
+
+"
+	tiles += "- `w`: a wild monster, always moss_toad, wounded
+- `m`: a wild monster, always moss_toad
+"
+	var region: Region = RegionDocument.parse(tiles)
+	var marked: int = 0
+	for spot: WildSpot in region.wild_spots.values():
+		marked += 1 if spot.wounded else 0
+	if not region.problem.is_empty() or marked != 1:
+		return "a legend didn't mark its wild monster wounded: " + region.problem
+	var hp: Dictionary[String, int] = { "moss_toad": OUTCOME_HP }
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		TrailFeature.new(),
+		WildMonsterFeature.new([], [], hp, { "moss_toad": WEAK_STRENGTH }),
+	]
+	var state: GameState = GameState.new(region, 1, ordered)
 	var wild: WildMonsterFeature = _wild(state)
-	var wounded: int = 0
+	var weak: int = maxi(Fixed.scale(OUTCOME_HP, WildMonsterFeature.WOUNDED_HP), 1)
+	var expected: Array[int] = [weak, OUTCOME_HP]
+	var started: Array[int] = []
 	for monster: int in wild.monsters:
-		var full: int = wild.max_hp_of(monster)
-		var spot: Vector2i = state.entity(monster).tile
-		var expected: int = full
-		if state.region.wild_spots.has(spot) and state.region.wild_spots[spot].wounded:
-			wounded += 1
-			expected = maxi(Fixed.scale(full, WildMonsterFeature.WOUNDED_HP), 1)
-		if wild.hp_of(monster) != expected:
-			return "the wild monster on %s starts at %d HP, not %d" % [
-				spot,
-				wild.hp_of(monster),
-				expected,
-			]
-	if wounded != 1:
-		return "the basic instance has %d wounded wild monsters, not the beach's one" % wounded
+		started.append(wild.hp_of(monster))
+	if started != expected:
+		return "the wounded and the whole wild monster started at %s HP, not %s" % [
+			started,
+			expected,
+		]
 	return _check_hiding()
 
 
