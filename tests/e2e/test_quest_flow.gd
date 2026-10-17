@@ -14,7 +14,9 @@ extends RefCounted
 ## player's arrival, and the quest's marker points at the place's nearest tile. In the glade, a
 ## player raises that they entered each region piece they come to stand in, once each time it
 ## changes, starting in one too (#350); entering the thicket finishes this player's quest to enter
-## it, not another player's, and the quest's marker points at the thicket's nearest tile.
+## it, not another player's, and the quest's marker points at the thicket's nearest tile. Entering
+## the glade finishes this player's quest to enter it, not another player's or another instance,
+## and its marker points at the exit leading there (#370).
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -27,6 +29,11 @@ const TWO_STEPS: String = (
 const ENTER_THICKET: String = (
 	"{\"id\": \"enter_thicket\", \"name\": \"Into the thicket\", \"steps\": ["
 	+ "{\"condition\": \"entered\", \"piece\": \"thicket\"}]}"
+)
+## A quest that asks to enter the glade.
+const ENTER_GLADE: String = (
+	"{\"id\": \"enter_glade\", \"name\": \"Into the glade\", \"steps\": ["
+	+ "{\"condition\": \"entered\", \"instance\": \"glade\"}]}"
 )
 ## A quest that asks to reach the beach.
 const REACH_BEACH: String = (
@@ -174,7 +181,7 @@ func _check_list_follows(
 	return result
 
 
-## Chests, places and region pieces count for whoever opened, reached or entered them.
+## Chests, places, region pieces and instances count for whoever opened, reached or entered them.
 func _check_finds(
 	driver: GameDriver,
 	bus: EventBus,
@@ -184,7 +191,9 @@ func _check_finds(
 	var result: String = _check_chests(driver, bus, profile, list)
 	if result.is_empty():
 		result = _check_reached(driver, bus, profile)
-	return result if not result.is_empty() else _check_entered(driver, bus, profile)
+	if result.is_empty():
+		result = _check_entered(driver, bus, profile)
+	return result if not result.is_empty() else _check_entered_glade(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,
@@ -238,6 +247,28 @@ func _check_entered(driver: GameDriver, bus: EventBus, profile: Profile) -> Stri
 	_emit(driver, bus, PieceEntered.new("thicket", 1, 0))
 	if not profile.quests_done.has("enter_thicket"):
 		return "this player entering the thicket didn't finish the quest to enter it"
+	return ""
+
+
+## The quest to enter the glade is marked on the basic instance's exit leading there, and counts
+## for this player when they entered the glade, not when another player did, nor for another
+## instance, nor for a piece of the same name.
+func _check_entered_glade(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var glade: QuestDefinition = QuestDefinition.parse("enter_glade", ENTER_GLADE, {})
+	profile.quest_book[glade.id] = glade
+	var basic: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 3, 1)
+	var exit: Vector3i = basic.region.exits[basic.region.exit_blueprints.find("glade")]
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(basic, profile, 0)
+	if targets.get("enter_glade", -Vector2i.ONE) != Vector2i(exit.x, exit.y):
+		return "the quest to enter the glade isn't marked on the exit leading there"
+	_emit(driver, bus, InstanceEntered.new("glade", 9, 1))
+	_emit(driver, bus, InstanceEntered.new("basic", 1, 0))
+	_emit(driver, bus, PieceEntered.new("glade", 1, 0))
+	if profile.quests_done.has("enter_glade"):
+		return "another player entering, another instance or a piece counted as entering the glade"
+	_emit(driver, bus, InstanceEntered.new("glade", 1, 0))
+	if not profile.quests_done.has("enter_glade"):
+		return "this player entering the glade didn't finish the quest to enter it"
 	return ""
 
 

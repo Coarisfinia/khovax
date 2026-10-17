@@ -306,7 +306,9 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
   (dominations, chests opened, places reached on stepping in, starting there or arriving through
   an exit: a place is a tile trigger in a region piece's legend, #339, #348; region pieces entered,
-  #350, with no legend marking: an arranged region knows each tile's piece, `Region.piece_of`),
+  #350, with no legend marking: an arranged region knows each tile's piece, `Region.piece_of`;
+  instances entered, #370, which the `World` raises, not a feature, in its own `events`, neither
+  hashed nor saved, when a fresh world starts and when a player arrives through an exit),
   and `Profile.apply` advances each quest in its `quest_book` (the quest data) from them, so
   progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through

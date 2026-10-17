@@ -29,13 +29,13 @@
 					},
 					{
 						"if": { "properties": { "condition": { "const": "entered" } } },
-						"then": { "required": ["piece"] },
-						"else": { "not": { "required": ["piece"] } }
+						"then": { "oneOf": [{ "required": ["piece"] }, { "required": ["instance"] }] },
+						"else": { "not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] } }
 					}
 				],
 				"properties": {
 					"condition": {
-						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece this player entered.",
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered.",
 						"enum": ["dominated", "opened", "reached", "entered"]
 					},
 					"species": {
@@ -49,7 +49,12 @@
 						"pattern": "^[a-z][a-z0-9_]*$"
 					},
 					"piece": {
-						"description": "On an entered step, and only there, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
+						"description": "On an entered step, and only there unless it names an instance, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9_]*$"
+					},
+					"instance": {
+						"description": "On an entered step, and only there unless it names a piece, the name of the instance blueprint it asks for.",
 						"type": "string",
 						"pattern": "^[a-z][a-z0-9_]*$"
 					},

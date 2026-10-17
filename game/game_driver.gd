@@ -7,10 +7,10 @@ extends Node
 ## views draw. A session plays one world (#148, #158): every instance a player is in steps, and the
 ## views follow this machine's player into whichever instance they walk.
 
-## After every tick, with the tick's number and the events the features raised in it, in order:
-## how views learn about one-shot moments (a domination, a ring breaking) to play an effect. Every
-## tick is announced exactly once, however many ticks a frame runs. `events` is the view's own copy,
-## and the events themselves must only be read.
+## After every tick, with the tick's number and the events the features and the world raised in it,
+## in order: how views learn about one-shot moments (a domination, a ring breaking) to play an
+## effect. Every tick is announced exactly once, however many ticks a frame runs. `events` is the
+## view's own copy, and the events themselves must only be read.
 signal ticked(tick: int, events: Array[RefCounted])
 
 ## Ticks one frame may run; more real time than this is dropped.
@@ -172,6 +172,8 @@ func _step() -> bool:
 		events.assign(before.events)
 	if state != null and state != before:
 		events.append_array(state.events)
+	# The world's own: who came into another instance (#370).
+	events.append_array(world.events)
 	ticked.emit(world.tick, events)
 	return true
 

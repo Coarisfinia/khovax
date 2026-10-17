@@ -4,11 +4,11 @@ extends Node3D
 ## over what this machine's player's quest asks for next, the nearest wild monster of the species a
 ## domination step names (any, when it names none), the nearest closed treasure chest, the nearest
 ## tile of the place a reached step names (#339) or of the region piece an entered step names
-## (#350). It shows through the fog, so it leads the player into it; a wild monster still hiding in
-## its tile (#202) isn't pointed at, since that would give it away. The arrow's shape, not its
-## color, says what it is (#68). It glides after a moving target, eases in and out, and bobs
-## gently; it only reads the state and the profile. The same targets will be marked on the Survey
-## (#301).
+## (#350), or the nearest exit leading to the instance it names (#370). It shows through the fog,
+## so it leads the player into it; a wild monster still hiding in its tile (#202) isn't pointed
+## at, since that would give it away. The arrow's shape, not its color, says what it is (#68). It
+## glides after a moving target, eases in and out, and bobs gently; it only reads the state and
+## the profile. The same targets will be marked on the Survey (#301).
 
 ## How high over the tile's top the arrow floats, and how far and how slowly it bobs.
 const HEIGHT: float = 2.6
@@ -90,15 +90,12 @@ static func targets_of(
 
 
 ## The tiles `step` could be met at in `state`: wild monsters of its species that aren't hiding,
-## in id order, the closed chests, the tiles of its place, in the legend's order, or the tiles of
-## its piece.
+## in id order, the closed chests, the tiles of its place, in the legend's order, the tiles of
+## its piece, or the exits leading to its instance.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
 	if step.condition == "entered":
-		for tile: Vector2i in state.region.piece_of:
-			if state.region.piece_of[tile] == step.piece:
-				tiles.append(tile)
-		return tiles
+		return _entered_tiles(state, step)
+	var tiles: Array[Vector2i] = []
 	if step.condition == "reached":
 		for trigger: TileTrigger in state.region.triggers:
 			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
@@ -121,6 +118,21 @@ static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 		var fits: bool = step.species.is_empty() or wild.species_of(entity_id) == step.species
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)
+	return tiles
+
+
+## The tiles where an entered `step` is met in `state`: the exits leading to its instance, or the
+## tiles of its piece.
+static func _entered_tiles(state: GameState, step: QuestStep) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	if not step.instance.is_empty():
+		for i: int in state.region.exits.size():
+			if state.region.exit_blueprints[i] == step.instance:
+				tiles.append(Vector2i(state.region.exits[i].x, state.region.exits[i].y))
+		return tiles
+	for tile: Vector2i in state.region.piece_of:
+		if state.region.piece_of[tile] == step.piece:
+			tiles.append(tile)
 	return tiles
 
 
