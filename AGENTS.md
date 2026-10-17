@@ -90,7 +90,9 @@ issue.
 **Implementation subagents only on the owner's say-so, once** (owner's rule): the main session
 implements. When the owner authorizes subagents for implementation, that's a one-time thing for the
 batch they name, and each one gets an issue that fits one small pull request, never a massive one;
-an issue that's bigger is split first.
+an issue that's bigger is split first. Each subagent babysits its own pull request until it is merged (owner's rule):
+Codex-reviewed, CI green, rebased when it conflicts, the owner's comments answered, and, once the
+owner approves, in the merge queue until it lands. Only then does it report back.
 
 **No pull requests that only change docs.** A change to this file or the README
 rides along with the next real pull request, and that pull request's description says so.
@@ -105,6 +107,9 @@ out of date.
 
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
+
+**Refactors and cleanups always come first** (owner's rule, on #384): while one is open (like the
+move to slices, #375 to #381), it goes before any new feature.
 
 **The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
 fixes, then performance (e.g. the web build loading in under 2 s, #265), then architecture, then
@@ -131,6 +136,9 @@ on with the next one** (owner's rule): never wait on an answer.
 
 **A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
 issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
+
+**Close an issue once everything in it is built or tracked elsewhere** (owner's rule, #265):
+an open issue is work still to do, never a record. Say in the closing comment where each part went.
 
 **Stuck? File an issue and move on.** When something can't be finished without the owner, file an
 issue saying what is blocked and why, and continue with the next work.

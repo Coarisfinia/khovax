@@ -172,6 +172,13 @@ func rage_of(entity_id: int) -> int:
 	return _rage.get(entity_id, 0)
 
 
+## Takes `damage` off the wild monster's HP, never below 1: a non-lethal hit (#221), which weakens
+## it for a domination but never fells it.
+func wound(entity_id: int, damage: int) -> void:
+	if is_wild_monster(entity_id):
+		_hp[entity_id] = maxi(hp_of(entity_id) - damage, 1)
+
+
 ## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
 ## `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
 func enrage(entity_id: int, heal: int) -> void:

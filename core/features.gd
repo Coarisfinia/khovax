@@ -17,3 +17,4 @@ const HIDING: int = 10
 const DOMINATION_LOOT: int = 11
 const COMPANIONS: int = 12
 const ENTERING: int = 13
+const COMPANION_ATTACKS: int = 14
