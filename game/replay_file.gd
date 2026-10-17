@@ -7,10 +7,9 @@ extends RefCounted
 
 ## The file format; a replay in another format is refused, not misread. Format 2 added the starting
 ## world and format 3 the companions (#338); a replay without them has none and still plays. Format
-## 4 gave every command its special attack (#410): an older replay's commands fire none.
-const FORMAT: int = 4
-## How many integers a command was in a replay before format 4.
-const OLD_VALUE_COUNT: int = 1
+## 4 gave every command its special attack (#410) and format 5 its totem (#423): an older replay's
+## commands fire none and place none.
+const FORMAT: int = 5
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -69,24 +68,35 @@ static func parse(text: String) -> Replay:
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
-	if format < 4 and replay.changes.size() % (2 + OLD_VALUE_COUNT) != 0:
+	var count: int = _value_count(format)
+	if replay.changes.size() % (2 + count) != 0:
 		replay.problem = "the recorded commands are cut off"
 		return replay
-	if format < 4:
-		replay.changes = _without_specials(replay.changes)
+	if count < Command.VALUE_COUNT:
+		replay.changes = _widened(replay.changes, count)
 	var by_tick: Dictionary = data.get("checkpoints", {})
 	for tick: Variant in by_tick:
 		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
 
 
-## Changes recorded before commands had a special attack (tick, slot, move each), each firing none.
-static func _without_specials(old: Array[int]) -> Array[int]:
-	var stride: int = 2 + OLD_VALUE_COUNT
+## How many integers a command is in a replay of `format`: only the move before format 4, the
+## special attack too in format 4, and the totem too since.
+static func _value_count(format: int) -> int:
+	if format < 4:
+		return 1
+	return 2 if format < 5 else Command.VALUE_COUNT
+
+
+## Changes recorded with `count` integers per command (the tick and slot before them), each
+## widened with zeros to a whole command's: no special attack fired, no totem placed.
+static func _widened(old: Array[int], count: int) -> Array[int]:
+	var stride: int = 2 + count
 	var changes: Array[int] = []
 	for i: int in range(0, old.size(), stride):
 		changes.append_array(old.slice(i, i + stride))
-		changes.append(0)
+		for _value: int in Command.VALUE_COUNT - count:
+			changes.append(0)
 	return changes
 
 

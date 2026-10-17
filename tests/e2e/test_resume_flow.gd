@@ -67,9 +67,9 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Plays the world a while: the ring dominates the basic instance's wild monster (the player waits
-## for it to seal, #219), the exit leads into the glade, and there the player walks onto the
-## lookout and a chest.
+## Plays the world a while: the ring dominates the basic instance's wild monster (the player places
+## their totem on it, #423, and waits for it to seal, #219), the exit leads into the glade, and
+## there the player walks onto the lookout and a chest.
 func _play(world: World) -> String:
 	var tile: Vector2i = world.player(0).tile
 	var domination: DominationFeature = world.instances[InstanceBlueprints.BASIC].feature(
@@ -78,6 +78,9 @@ func _play(world: World) -> String:
 	for next: Vector2i in FlowSteps.BASIC_RING + OUT:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
+		if not domination.encircled.is_empty():
+			world.step(FlowSteps.totem())
+			_remember(world)
 		while not domination.seals.is_empty():
 			world.step(FlowSteps.command(Command.NO_MOVE))
 			_remember(world)

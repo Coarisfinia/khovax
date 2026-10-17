@@ -596,24 +596,27 @@ func _check_replay_round_trip() -> String:
 	swapped.companions.reverse()
 	if loaded.companions != recorded.companions or swapped.play().is_empty():
 		return "the replay didn't keep its companions, or played with others all the same"
-	return _check_before_specials(recorded)
+	return _check_older_formats(recorded, loaded)
 
 
-## A replay from before commands had a special attack (#410, format 3) plays as one whose commands
-## fire none: `recorded` fires none.
-func _check_before_specials(recorded: Replay) -> String:
-	var old: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
-	var moves_only: Array[int] = []
-	for i: int in range(0, old.changes.size(), Replay.STRIDE):
-		moves_only.append_array(old.changes.slice(i, i + Replay.STRIDE - 1))
-	old.changes = moves_only
-	var text: String = ReplayFile.to_text(old).replace(
-		"\"format\": %d" % ReplayFile.FORMAT,
-		"\"format\": 3",
-	)
-	var problem: String = ReplayFile.parse(text).play()
-	if not problem.is_empty():
-		return "a replay from before the special attack didn't play: " + problem
+## Replays from before commands had a special attack (#410, format 3) or a totem (#423, format 4)
+## read with none fired and none placed, as `recorded` fires and places none, and play back the
+## same.
+func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
+	for older_format: int in [3, 4]:
+		var values: int = 1 if older_format == 3 else 2
+		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
+		var kept: Array[int] = []
+		for i: int in range(0, older.changes.size(), Replay.STRIDE):
+			kept.append_array(older.changes.slice(i, i + 2 + values))
+		older.changes = kept
+		var text: String = ReplayFile.to_text(older).replace(
+			"\"format\": %d" % ReplayFile.FORMAT,
+			"\"format\": %d" % older_format,
+		)
+		var migrated: Replay = ReplayFile.parse(text)
+		if migrated.changes != loaded.changes or not migrated.play().is_empty():
+			return "a replay in format %d didn't read with nothing fired or placed" % older_format
 	return ""
 
 
@@ -649,10 +652,13 @@ func _check_replay_validation() -> String:
 	invalid_move.changes[2] = Hex.DIRECTIONS.size() + 3
 	var invalid_special: Replay = ReplayFile.parse(text)
 	invalid_special.changes[3] = 2
+	var invalid_totem: Replay = ReplayFile.parse(text)
+	invalid_totem.changes[4] = Command.PLACE_TOTEM + 1
 	var cases: Dictionary[String, String] = {
 		ReplayFile.to_text(unchecked): "the replay has no checkpoint at its last tick",
 		ReplayFile.to_text(invalid_move): "a recorded command at tick 1 is invalid",
 		ReplayFile.to_text(invalid_special): "a recorded command at tick 1 is invalid",
+		ReplayFile.to_text(invalid_totem): "a recorded command at tick 1 is invalid",
 		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
 		text.replace("\"companions\": [", "\"companions\": [1,"): "not a replay: its companions",

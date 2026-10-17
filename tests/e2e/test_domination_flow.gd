@@ -1,9 +1,12 @@
 extends RefCounted
 ## Domination flow (#20, #219): the player walks a ring around the basic region's wild monster at
-## (-2, 0), and the ring seals: the monster pushes on it, and once the ring has held for its seal
-## ticks (not a tick before) the monster is dominated: it leaves the world, the domination is
-## announced, the trail starts over, and its figure shrinks away. While it seals, the ring fills on
-## screen and a save resumes it exactly. An open ring, a walk that only touches the wild monster,
+## (-2, 0), and the ring waits for a totem (#423), as long as it takes, the monster encircled; a
+## totem placed off the ring, or by a player out of charges, does nothing. The player's totem placed
+## on the ring (the place_totem key) spends a charge, and the ring seals: the monster pushes on it,
+## and once the ring has held for its seal ticks (not a tick before) the monster is dominated: it
+## leaves the world, the domination is announced, the trail starts over, and its figure shrinks
+## away. While it seals, the ring fills on screen and a save resumes it exactly. An open ring, a
+## walk that only touches the wild monster,
 ## and a ring around another tile dominate nothing. Allies share one trail (#87): two players
 ## close one ring together, and the domination goes to the lowest slot among those who colored its
 ## wall (owner, #86), whoever's move closed it; the ring then comes off the trail, the trail leading
@@ -26,10 +29,11 @@ extends RefCounted
 ## one held where it stands (as hiding ones are).
 ##
 ## A companion (#221) strikes the wild monster next to it once a second for its species'
-## strength, never below 1 HP, and leaves one hiding in its tile alone, and one sealing in a ring
-## (#409): its seal was worked out from its HP, so a save taken mid-seal resumes. Its player fires
-## its special attack (#410): lethal, it fells the wild monster next to it, which faints for good
-## where it fell, and then it cools down.
+## strength, never below 1 HP, one encircled by a ring waiting for a totem too (#423), and leaves
+## one hiding in its tile alone, and one sealing in a ring (#409): its seal was worked out from its
+## HP, so a save taken mid-seal resumes. A save taken while a ring waits resumes too. Its player
+## fires its special attack (#410): lethal, it fells the wild monster next to it, which faints for
+## good where it fell, and then it cools down.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -182,6 +186,8 @@ func _check_open_ring() -> String:
 	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
 	if _wild(state).monsters.size() != 1 or not _domination(state).seals.is_empty():
 		return "an open ring dominated the wild monster or started sealing"
+	if not _domination(state).encircled.is_empty():
+		return "an open ring encircled the wild monster"
 	return ""
 
 
@@ -192,8 +198,53 @@ func _check_other_ring() -> String:
 	var trail: Trail = _trails(state).shared
 	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
 		return "a ring around another tile dominated the wild monster or reset the trail"
-	if not _domination(state).seals.is_empty():
-		return "a ring around no wild monster started sealing"
+	if not _domination(state).seals.is_empty() or not _domination(state).encircled.is_empty():
+		return "a ring around no wild monster started sealing or waited for a totem"
+	return _check_waits_for_totem()
+
+
+## The full ring doesn't seal by itself (#423): it waits for a totem, however long, the wild monster
+## encircled. A totem placed one step off the ring does nothing; back on it, the totem spends one
+## charge and the ring seals, and holding it there spends no more. A player out of charges places
+## none.
+func _check_waits_for_totem() -> String:
+	var state: GameState = InstanceBlueprints.basic(42)
+	var monster_id: int = _wild(state).monsters[0]
+	var player: Entity = state.player(0)
+	var domination: DominationFeature = _domination(state)
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
+	for _tick: int in MOST_SEAL_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not domination.seals.is_empty() or not domination.is_encircled(monster_id):
+		return "a closed ring didn't wait for a totem with the wild monster encircled"
+	var walls: Array[Vector2i] = domination.ring_waiting(state, player.id)
+	if domination.encircled.keys() != [player.id] or walls.size() != Hex.ring(1).size():
+		return "the ring waiting for a totem isn't the player's six tiles: %s" % [walls]
+	var ring_tile: Vector2i = player.tile
+	_walked = FlowSteps.step(state, Hex.DIRECTIONS.find(Vector2i(1, 0)))
+	Simulation.step(state, FlowSteps.totem())
+	var left: int = domination.totems.charges_of(player.id)
+	if not domination.seals.is_empty() or left != PlaceholderTotems.CHARGES:
+		return "a totem placed off the ring started sealing or spent a charge"
+	_walked = FlowSteps.step(state, Hex.DIRECTIONS.find(ring_tile - player.tile))
+	for _tick: int in 2:
+		Simulation.step(state, FlowSteps.totem())
+	var spent: int = PlaceholderTotems.CHARGES - domination.totems.charges_of(player.id)
+	if domination.seals.keys() != [player.id] or not domination.encircled.is_empty() or spent != 1:
+		return "a totem held on the ring started no seal, or spent %d charges, not 1" % spent
+	return _check_out_of_charges()
+
+
+## A player whose totem has no charge left places none: the ring goes on waiting.
+func _check_out_of_charges() -> String:
+	var state: GameState = InstanceBlueprints.basic(42)
+	var player: Entity = state.player(0)
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
+	while _domination(state).totems.spend(player.id):
+		pass
+	Simulation.step(state, FlowSteps.totem())
+	if not _domination(state).seals.is_empty() or _domination(state).encircled.is_empty():
+		return "a totem without charges started a seal"
 	return ""
 
 
@@ -209,7 +260,7 @@ func _check_domination() -> String:
 	var player: Entity = state.player(0)
 	var seal: RingSeal = _domination(state).seals.get(player.id)
 	if seal == null or state.entity(monster_id) == null or seal.monsters != [monster_id]:
-		return "the ring closed, but didn't start sealing the wild monster in"
+		return "the totem on the closed ring didn't start sealing the wild monster in"
 	var expected_ticks: int = RingSealing.SEAL_BASE_TICKS + Fixed.div_floor(
 		RingSealing.pressure(_wild(state), monster_id),
 		RingSealing.SEAL_PRESSURE_PER_TICK,
@@ -291,17 +342,17 @@ func _check_after_domination(state: GameState) -> String:
 	if trail.sorted_tiles() != expected:
 		return "the ring didn't come off the trail after dominating: %s" % [trail.sorted_tiles()]
 	var again: GameState = InstanceBlueprints.basic(42)
-	var _walked: Array[RefCounted] = FlowSteps.walk(again, FlowSteps.BASIC_RING)
+	_close(again, FlowSteps.BASIC_RING)
 	var _events: Array[RefCounted] = _settle(again)
 	if again.state_hash() != state.state_hash():
 		return "the same domination gave two different states"
 	return ""
 
 
-## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies
-## dominate the monster on the same tick. A second player stands by, for the refused saves. The
-## first player's companion stands next to the sealing monster before the save and never strikes
-## it (#409).
+## A world saved while a ring waits for a totem resumes as it was, and one saved while it seals
+## resumes the seal exactly: the same hash, and both copies dominate the monster on the same tick.
+## A second player stands by, for the refused saves. The first player's companion stands next to
+## the monster: it strikes it while the ring waits (#423), and never while it seals (#409).
 func _check_seal_saved() -> String:
 	var world: World = World.new(
 		BlueprintSource.new(),
@@ -315,9 +366,15 @@ func _check_seal_saved() -> String:
 		for tick: int in MovementFeature.MOVE_TICKS:
 			var first: int = direction if tick == 0 else Command.NO_MOVE
 			world.step(FlowSteps.commands([first, Command.NO_MOVE]))
+	var waited: String = _check_wait_saved(world)
+	if waited.is_empty():
+		waited = _check_strikes_in_ring(world, false)
+	if not waited.is_empty():
+		return waited
+	world.step(FlowSteps.totem(0, 2))
 	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 4):
 		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
-	var struck: String = _check_no_strike_mid_seal(world)
+	var struck: String = _check_strikes_in_ring(world, true)
 	if not struck.is_empty():
 		return struck
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
@@ -339,22 +396,46 @@ func _check_seal_saved() -> String:
 	return ""
 
 
-## Keeps the first player's companion next to the wild monster sealing in the world's basic
-## instance for as long as it waits between strikes at most: it never strikes it (#409).
-func _check_no_strike_mid_seal(world: World) -> String:
+## A world saved while its basic instance's ring waits for a totem resumes as it was, and a save
+## whose waiting ring names its monster twice is refused.
+func _check_wait_saved(world: World) -> String:
+	var resumed: World = WorldSave.parse(WorldSave.to_text(world))
+	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
+		return "the world saved while its ring waited didn't resume as it was: " + resumed.problem
+	var data: Dictionary = WorldData.of(world)
+	var waiting: Array = _domination_values(data)["waiting"]
+	if waiting.size() != 1:
+		return "the world's save holds %d rings waiting for a totem, not 1" % waiting.size()
+	var monster_id: int = waiting[0]["monsters"][0]
+	waiting[0]["monsters"] = [monster_id, monster_id]
+	var problem: String = WorldData.to_world(data, BlueprintSource.new()).problem
+	if not problem.contains("there twice"):
+		return "a waiting ring with its monster twice wasn't refused for it: " + problem
+	return ""
+
+
+## Keeps the first player's companion next to the wild monster in the world's basic instance's
+## ring for a little longer than it waits between strikes: it strikes it while the ring waits for
+## a totem (#423), and never while it seals (#409).
+func _check_strikes_in_ring(world: World, sealing: bool) -> String:
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
 	var companion: Entity = basic.entity(companions.companion_of(0))
 	if companion == null:
 		return "the first player's companion didn't join them"
-	for _tick: int in CompanionAttackFeature.STRIKE_TICKS:
-		if _domination(basic).seals.is_empty():
-			return "the ring stopped sealing before the companion stood by it for a second"
+	var struck: bool = false
+	for _tick: int in CompanionAttackFeature.STRIKE_TICKS + 1:
+		var ringed: bool = not _domination(basic).encircled.is_empty()
+		if sealing:
+			ringed = not _domination(basic).seals.is_empty()
+		if not ringed:
+			return "the ring stopped sealing or waiting before the companion stood by it"
 		companion.tile = WILD_MONSTER_TILE + Hex.DIRECTIONS[2]
 		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		for event: RefCounted in basic.events:
-			if event is CompanionStruck:
-				return "the companion struck a wild monster sealing in a ring"
+			struck = struck or event is CompanionStruck
+	if struck == sealing:
+		return "the companion struck: %s, the ring sealing: %s" % [struck, sealing]
 	return ""
 
 
@@ -386,18 +467,24 @@ func _check_seal_refused(world: World) -> String:
 ## The saved seals of the basic instance in the world's save `data`, as saved: changing them
 ## changes `data`.
 func _seals_in(data: Dictionary) -> Array:
+	return _domination_values(data)["seals"]
+
+
+## The basic instance's saved domination in the world's save `data`, as saved.
+func _domination_values(data: Dictionary) -> Dictionary:
 	for instance: Dictionary in data["instances"]:
 		if instance["name"] != InstanceBlueprints.BASIC:
 			continue
 		for feature: Dictionary in instance["state"]["features"]:
 			if feature["id"] == Features.DOMINATION:
-				return feature["values"]["seals"]
-	return []
+				return feature["values"]
+	return { "seals": [], "waiting": [] }
 
 
 ## Two allies close one ring together (#87): the first player walks half of it, then the second
-## the rest, and the second's step closes it. The domination still goes to the first, the lowest
-## slot among those who colored its wall (owner, #86). Then the ring is off the trail, but the trail
+## the rest, and the second's step closes it. The second places their totem on it, and the
+## domination still goes to the first, the lowest slot among those who colored its wall (owner,
+## #86). Then the ring is off the trail, but the trail
 ## leading up to it stays, and each player colors the tile they stand on.
 func _check_together() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
@@ -408,8 +495,18 @@ func _check_together() -> String:
 	if not _domination(state).seals.is_empty():
 		return "half a ring started sealing"
 	events.append_array(_walk_slot(state, 1, SECOND_HALF))
-	if _domination(state).seals.keys() != [first.id]:
-		return "the allies' ring seals for %s, not the first player" % [
+	if _domination(state).encircled.keys() != [first.id]:
+		return "the allies' ring waits for %s, not the first player" % [
+			_domination(state).encircled.keys(),
+		]
+	Simulation.step(state, FlowSteps.totem(1, 2))
+	events.append_array(state.events)
+	var spent: bool = (
+		_domination(state).totems.charges_of(second.id)
+		< _domination(state).totems.charges_of(first.id)
+	)
+	if _domination(state).seals.keys() != [first.id] or not spent:
+		return "the second's totem started the seal for %s, not the first player" % [
 			_domination(state).seals.keys(),
 		]
 	for _tick: int in MOST_SEAL_TICKS:
@@ -862,16 +959,22 @@ func _strikes_over(state: GameState, ticks: int) -> Array[CompanionStruck]:
 
 
 ## Walks the player in slot 0 along `path` up to the start of its last step, which closes the
-## ring: the tick it closes on is the state's tick then.
+## ring, and places their totem on it the next tick (#423): the seal starts on the state's tick
+## then.
 func _close(state: GameState, path: Array[Vector2i]) -> void:
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, path.slice(0, path.size() - 1))
 	var last: int = Hex.DIRECTIONS.find(path[path.size() - 1] - state.player(0).tile)
 	Simulation.step(state, FlowSteps.command(last))
+	Simulation.step(state, FlowSteps.totem())
 
 
-## Steps the player in slot 0 standing until no ring seals; returns every event raised.
+## Steps the player in slot 0 standing until no ring seals, first placing their totem on a ring
+## waiting for one (#423); returns every event raised.
 func _settle(state: GameState) -> Array[RefCounted]:
 	var events: Array[RefCounted] = []
+	if not _domination(state).encircled.is_empty():
+		Simulation.step(state, FlowSteps.totem())
+		events.append_array(state.events)
 	for _tick: int in MOST_SEAL_TICKS:
 		if _domination(state).seals.is_empty():
 			break
@@ -893,7 +996,8 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 	return Hex.DIRECTIONS.find(next - walker.tile)
 
 
-## While the ring seals, its tiles fill round the ring with the seal's progress, and the wall
+## The place_totem key places the player's totem on the ring they closed (#423), and while the ring
+## seals, its tiles fill round the ring with the seal's progress, and the wall
 ## segment its player stands on wears a brace, reinforced (#234); then the wild monster doesn't
 ## blink out: it shrinks away calmly, and then it's gone, and so is the brace.
 func _check_view(tree: SceneTree) -> String:
@@ -907,7 +1011,9 @@ func _check_view(tree: SceneTree) -> String:
 		return "the main scene doesn't show the wild monster's figure"
 	var figure: HexPiece = view.figures.values()[0]
 	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, FlowSteps.BASIC_RING)
-	var result: String = _check_filling(main, driver.state)
+	var result: String = _check_totem_key(main, driver.state)
+	if result.is_empty():
+		result = _check_filling(main, driver.state)
 	if result.is_empty():
 		result = _check_brace(main, driver.state)
 	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
@@ -927,6 +1033,25 @@ func _check_view(tree: SceneTree) -> String:
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## Pressing place_totem makes the local player's command place their totem, which starts the ring
+## sealing; released, the next command places none.
+func _check_totem_key(main: Node, state: GameState) -> String:
+	var local: LocalInput = main.get_node("LocalInput") as LocalInput
+	Input.action_press("place_totem")
+	var placing: Array[Command] = [local.command(state)]
+	Input.action_release("place_totem")
+	var released: Command = local.command(state)
+	Simulation.step(state, placing)
+	if placing[0].totem != Command.PLACE_TOTEM or released.totem != Command.NO_TOTEM:
+		return "the place_totem key gave the totems %d, then %d" % [
+			placing[0].totem,
+			released.totem,
+		]
+	if _domination(state).seals.is_empty():
+		return "the totem placed with the key didn't start the ring sealing"
+	return ""
 
 
 ## Halfway through the seal, about half the ring's tiles have the seal color, and the rest the
