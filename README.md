@@ -4,7 +4,7 @@
 
 A top-down, real-time ARPG on a hex grid. You dominate monsters by walking rings around them, and your companions do the fighting. The simulation is fully deterministic and supports co-op. Built with Godot 4 and GDScript for web, mobile and PC.
 
-Status: pre-production. **[Play the latest build in your browser](https://flixbox.github.io/khovax/)**
+Status: pre-production. **[Play the latest build in your browser](https://coarisfinia.github.io/khovax/)**
 
 ## License
 
@@ -44,7 +44,7 @@ CI builds the Linux version (x86_64) on every pull request and every push to `ma
 
 ## In a browser
 
-**Play it at https://flixbox.github.io/khovax/**: every push to `main` that passes all checks deploys there.
+**Play it at https://coarisfinia.github.io/khovax/**: every push to `main` that passes all checks deploys there.
 
 CI builds the web version on every pull request and every push to `main`, as the `khovax-web` artifact (kept for 14 days). Browsers won't run it from a file, so serve the unzipped folder: `python -m http.server 8000` inside it, then open http://localhost:8000. It's single-threaded, so it needs no special server headers. Every release attaches the same build as a zip.
 

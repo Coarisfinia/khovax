@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://github.com/Flixbox/khovax/data/schemas/species.schema.json",
+	"$id": "https://github.com/Coarisfinia/khovax/data/schemas/species.schema.json",
 	"title": "Species",
 	"description": "What a monster is, dominated or not (#45, #72). One file per species, named after its id.",
 	"type": "object",

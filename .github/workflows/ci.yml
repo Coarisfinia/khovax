@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue (#329) checks each pull request on top of the ones queued before it.
+  merge_group:
 
 permissions:
   contents: read
@@ -538,7 +540,7 @@ jobs:
           if-no-files-found: error
 
   pages:
-    # The playable web build at https://flixbox.github.io/khovax/ (#23): on every push to main whose
+    # The playable web build at https://coarisfinia.github.io/khovax/ (#23): on every push to main whose
     # checks all pass, the web build the export job just made is published as it is, not
     # built again. Pull requests never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
