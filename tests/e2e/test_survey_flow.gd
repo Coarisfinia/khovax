@@ -114,12 +114,15 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 	var region: Region = survey.neighbours.region_of(target)
 	if world.instances.has(target) or region == null:
 		return "the glade's neighbour %s is loaded already, or not drawn next door" % target
-	# Every other tile next door explored, and the exits' own tiles here, for their chevrons.
+	# Every other tile next door explored, and the exits' own tiles here and there, for their
+	# chevrons.
 	var explored: ExploredGround = survey.keeper.explored_in(world)
 	var there: Dictionary[Vector2i, bool] = explored.tiles_of(target, world.generation(target))
 	var ground: Array[Vector2i] = region.sorted_tiles()
 	for i: int in range(0, ground.size(), 2):
 		there[ground[i]] = true
+	for exit: Vector3i in region.exits:
+		there[Vector2i(exit.x, exit.y)] = true
 	var here_name: String = driver.local_instance_name()
 	var here: Dictionary[Vector2i, bool] = explored.tiles_of(here_name, world.generation(here_name))
 	for exit: Vector3i in state.region.exits:
@@ -130,6 +133,10 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 	if world.sorted_names() != loaded or world.state_hash() != before:
 		return "drawing the Survey loaded or changed an instance"
 	var shift: Vector2i = survey.neighbours.shifts[target]
+	var everywhere: Array[Vector3i] = []
+	everywhere.append_array(state.region.exits)
+	for exit: Vector3i in region.exits:
+		everywhere.append(exit + Vector3i(shift.x, shift.y, 0))
 	for tile: Vector2i in ground:
 		var at: Vector2i = tile + shift
 		if survey.tiles.has(at) != there.has(tile):
@@ -138,11 +145,13 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 		if there.has(tile) and survey.tiles[at] != TileLooks.of(region.terrain[tile]).color:
 			return "the Survey colors %s next door unlike its kind" % tile
 	var shown: Array[Vector3i] = []
-	for exit: Vector3i in state.region.exits:
+	for exit: Vector3i in everywhere:
 		if survey.tiles.has(Vector2i(exit.x, exit.y)):
 			shown.append(exit)
-	if shown.is_empty() or survey.exits != shown:
-		return "the Survey doesn't show the exits on the tiles it shows: %s" % [survey.exits]
+	if shown.size() <= state.region.exits.size() or survey.exits != shown:
+		return "the Survey doesn't show the exits here and next door on the tiles it shows: %s" % [
+			survey.exits,
+		]
 	return ""
 
 

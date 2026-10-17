@@ -63,7 +63,8 @@ var tiles: Dictionary[Vector2i, Color] = {}
 var symbols: Dictionary[Vector2i, String] = {}
 ## The tiles shown that nobody can walk onto.
 var blocking: Dictionary[Vector2i, bool] = {}
-## Each exit on a tile shown, as (q, r, side), in the instance's own coordinates.
+## Each exit on a tile shown, here or next door, as (q, r, side) in the coordinates of the instance
+## this machine's player is in.
 var exits: Array[Vector3i] = []
 ## The tile each player in the instance stands on, by slot.
 var players: Dictionary[int, Vector2i] = {}
@@ -190,15 +191,20 @@ func _show_tile(at: Vector2i, region: Region, tile: Vector2i) -> void:
 func _show_neighbours(state: GameState) -> void:
 	if neighbours == null:
 		return
+	var shown: Dictionary[String, bool] = {}
 	for target: String in state.region.exit_blueprints:
 		var region: Region = neighbours.region_of(target)
-		if region == null:
+		if region == null or shown.has(target):
 			continue
+		shown[target] = true
 		var shift: Vector2i = neighbours.shifts[target]
 		var known: Dictionary = _seen(target)
 		for tile: Vector2i in region.sorted_tiles():
 			if known.has(tile):
 				_show_tile(tile + shift, region, tile)
+		for exit: Vector3i in region.exits:
+			if known.has(Vector2i(exit.x, exit.y)):
+				exits.append(exit + Vector3i(shift.x, shift.y, 0))
 
 
 ## An exit's chevron on `tile`, pointing out across its side `side`, in ink round a light fill: the
