@@ -11,6 +11,8 @@ extends RefCounted
 ## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
+## The world raises that a player entered an instance (#370) when they start in it and whenever
+## they walk through an exit into another, and only then.
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -25,6 +27,8 @@ const CROWN_KIND: int = 250
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
+## The instances player 0 entered while _walk_in walked them, in order (#370).
+var _entered: Array[String] = []
 
 
 func run(_tree: SceneTree) -> String:
@@ -60,9 +64,11 @@ func run(_tree: SceneTree) -> String:
 
 ## Walking through exits (#154): from the basic instance's start, onto its exit on (3, -2) and on
 ## east into the glade, arriving on the glade's way back; then west again, back onto the basic
-## instance's exit, while the glade stays loaded for the next visit.
+## instance's exit, while the glade stays loaded for the next visit. The player enters the basic
+## instance on the first tick, then the glade, then the basic instance again, and nothing else.
 func _check_walk_through() -> String:
 	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	_entered.clear()
 	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east once more.
 	for direction: int in [0, 1, 0]:
 		_walk_in(world, direction)
@@ -81,6 +87,10 @@ func _check_walk_through() -> String:
 		return "walking west out of the glade didn't lead back onto the basic instance's exit"
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"
+	var basic: String = InstanceBlueprints.BASIC
+	var expected: Array[String] = [basic, InstanceBlueprints.GLADE, basic]
+	if _entered != expected:
+		return "walking there and back entered %s, not %s" % [_entered, expected]
 	return ""
 
 
@@ -201,11 +211,21 @@ func _idle_until(world: World, until: int) -> void:
 		world.step(_still())
 
 
-## Walks player 0 one step in `direction`, through the world, until they stand still again.
+## Walks player 0 one step in `direction`, through the world, until they stand still again, noting
+## the instances they entered meanwhile.
 func _walk_in(world: World, direction: int) -> void:
 	world.step(_moving(direction))
+	_note_entered(world)
 	for _tick: int in MovementFeature.MOVE_TICKS + 1:
 		world.step(_still())
+		_note_entered(world)
+
+
+## Notes the instances player 0 entered in the world's last tick.
+func _note_entered(world: World) -> void:
+	for event: RefCounted in world.events:
+		if event is InstanceEntered and (event as InstanceEntered).slot == 0:
+			_entered.append((event as InstanceEntered).instance)
 
 
 func _moving(direction: int) -> Array[Command]:
