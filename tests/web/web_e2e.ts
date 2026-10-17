@@ -127,14 +127,22 @@ try {
       shown = on;
       requestAnimationFrame(watch);
     })();
-    let said = "";
-    new MutationObserver(() => {
-      const caption = document.getElementById("khovax-start")?.textContent || "gone";
-      if (caption !== said && (said || caption !== "gone")) {
-        console.log(`KHOVAX_CAPTION: ${caption}`);
+    // Every record counts, so two captions set in one task are both seen.
+    const caption = (node: Node | null) => node instanceof Element && node.id === "khovax-start";
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (caption(node) || caption(record.target)) {
+            console.log(`KHOVAX_CAPTION: ${node.textContent}`);
+          }
+        }
+        for (const node of record.removedNodes) {
+          if (caption(node) || (node instanceof Element && node.querySelector("#khovax-start"))) {
+            console.log("KHOVAX_CAPTION: gone");
+          }
+        }
       }
-      said = caption;
-    }).observe(document, { childList: true, subtree: true, characterData: true });
+    }).observe(document, { childList: true, subtree: true });
   });
   const reported = new Promise<string>((done) => {
     page.on("console", (message) => {
