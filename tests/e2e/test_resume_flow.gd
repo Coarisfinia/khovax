@@ -391,8 +391,9 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 
 
 ## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
-## without what was seen in the glade before: it comes back arranged anew. What was seen in the
-## basic instance is kept.
+## without what was seen in the glade before: it comes back arranged anew, and only what is seen of
+## it from next door now (#191) is remembered, at its new generation. What was seen in the basic
+## instance is kept.
 func _check_purged_explored(tree: SceneTree) -> String:
 	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
 	for direction: int in [EAST, 1, EAST, 3]:
@@ -406,11 +407,11 @@ func _check_purged_explored(tree: SceneTree) -> String:
 	var main: Node = _boot(tree)
 	await tree.process_frame
 	var explored: ExploredGround = (main.get_node("WorldKeeper") as WorldKeeper).explored
-	var glade: Dictionary = explored.tiles_in.get(InstanceBlueprints.GLADE, {})
+	var glade_generation: int = explored.generations.get(InstanceBlueprints.GLADE, 1)
 	var basic: Dictionary = explored.tiles_in.get(InstanceBlueprints.BASIC, {})
 	main.queue_free()
 	await tree.process_frame
-	if not glade.is_empty() or basic.is_empty():
+	if glade_generation != 1 or basic.is_empty():
 		return "resumed, the purged glade's old ground came back, or the basic instance's didn't"
 	return ""
 
@@ -433,6 +434,31 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	return result
 
 
+## Whether `explored` remembers any of the glade that a player in `world`'s basic instance doesn't
+## see across the seam now: ground of an older world.
+static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
+	var seen_across: Dictionary[Vector2i, bool] = _seen_across(world)
+	for tile: Vector2i in explored.tiles_in.get(InstanceBlueprints.GLADE, {}):
+		if not seen_across.has(tile):
+			return true
+	return false
+
+
+## The glade's tiles, in its own coordinates, that a player in the basic instance of `world` sees
+## across the seam (#191).
+static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var fog: FogFeature = basic.feature(Features.FOG) as FogFeature
+	var glade_at: Vector2i = world.offset(InstanceBlueprints.GLADE)
+	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.BASIC)
+	var seen: Dictionary[Vector2i, bool] = {}
+	for slot: int in fog.visible:
+		for tile: Vector2i in fog.visible[slot]:
+			if basic.next_door.has(tile):
+				seen[tile - shift] = true
+	return seen
+
+
 ## Boots the main scene on a world file holding `content` (in a save's envelope with `enveloped`,
 ## or damaged, as it is) and checks it starts a fresh world.
 func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
@@ -453,10 +479,10 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content
-	# A frame for the fog view to remember the fresh world's sight: the basic instance's only, none
-	# of the refused world's glade.
+	# A frame for the fog view to remember the fresh world's sight: of the glade, only what the
+	# player sees of it from the start, across the seam (#191), none of the refused world's.
 	await tree.process_frame
-	if result.is_empty() and keeper.explored.tiles_in.has(InstanceBlueprints.GLADE):
+	if result.is_empty() and _kept_old_glade(driver.world, keeper.explored):
 		result = "a fresh world kept the ground explored in the refused one: " + content
 	main.queue_free()
 	await tree.process_frame
