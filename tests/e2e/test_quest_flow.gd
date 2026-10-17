@@ -76,19 +76,9 @@ func _check_tracked(tree: SceneTree) -> String:
 	if not profile.quest_book.has("first_domination") or not profile.quests_done.is_empty():
 		result = "a fresh profile doesn't have the first domination open"
 	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
-	if result.is_empty():
-		result = _check_marked(driver, markers, profile)
 	var list: QuestListView = main.get_node("Hud/QuestList") as QuestListView
-	if result.is_empty():
-		result = _check_listed(list, {
-			"first_domination": "Go to the beach",
-			"three_moss_toads": "Dominate a Moss Toad  0/3",
-		})
-	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
-	if result.is_empty():
-		result = _check_marked_monster(driver, markers, profile)
-	if result.is_empty():
-		result = _check_listed(list, { "first_domination": "Dominate a monster" })
+	var beach_first: String = _check_beach_first(driver, bus, profile, markers, list)
+	result = beach_first if result.is_empty() else result
 	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
@@ -107,6 +97,29 @@ func _check_tracked(tree: SceneTree) -> String:
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
+	return result
+
+
+## The fresh first domination asks for the beach: it's marked there and listed as going there;
+## once this player reaches it, it asks for a domination, marked over the nearest wild monster.
+func _check_beach_first(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	markers: QuestMarkerView,
+	list: QuestListView,
+) -> String:
+	var result: String = _check_marked(driver, markers, profile)
+	if result.is_empty():
+		result = _check_listed(list, {
+			"first_domination": "Go to the beach",
+			"three_moss_toads": "Dominate a Moss Toad  0/3",
+		})
+	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
+	if result.is_empty():
+		result = _check_marked_monster(driver, markers, profile)
+	if result.is_empty():
+		result = _check_listed(list, { "first_domination": "Dominate a monster" })
 	return result
 
 
