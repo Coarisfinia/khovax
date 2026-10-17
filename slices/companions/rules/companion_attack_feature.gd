@@ -37,9 +37,20 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if target == 0:
 			continue
 		var damage: int = wild.strengths.get(companions.species_of(companion_id), 1)
-		wild.wound(target, damage)
-		_waits[companion_id] = STRIKE_TICKS
-		state.events.append(CompanionStruck.new(companion_id, target, damage))
+		_strike(state, wild, companion_id, target, damage)
+
+
+## The companion strikes `target` for `damage`, then waits STRIKE_TICKS.
+func _strike(
+		state: GameState,
+		wild: WildMonsterFeature,
+		companion_id: int,
+		target: int,
+		damage: int,
+) -> void:
+	wild.wound(target, damage)
+	_waits[companion_id] = STRIKE_TICKS
+	state.events.append(CompanionStruck.new(companion_id, target, damage))
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:

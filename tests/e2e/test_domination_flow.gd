@@ -100,8 +100,6 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_species()
 	if result.is_empty():
-		result = _check_companion_strikes()
-	if result.is_empty():
 		result = await _check_view(tree)
 	if result.is_empty():
 		result = await _check_saved(tree)
@@ -165,7 +163,7 @@ h
 	if RegionDocument.parse(piece + "ground
 ").problem.is_empty():
 		return "a legend hid a wild monster in plain ground"
-	return ""
+	return _check_companion_strikes()
 
 
 ## Every ring tile but the last: the walk passes right by the wild monster and dominates nothing.
@@ -708,7 +706,8 @@ func _check_companion_strikes() -> String:
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	state.entity(companions.companion_of(0)).tile = hemmed
 	var first: int = _wild(state).monsters[0]
-	var strikes: Array[CompanionStruck] = _strikes_over(state, 4 * CompanionAttackFeature.STRIKE_TICKS)
+	var ticks: int = 4 * CompanionAttackFeature.STRIKE_TICKS
+	var strikes: Array[CompanionStruck] = _strikes_over(state, ticks)
 	var damages: Array[int] = []
 	for strike: CompanionStruck in strikes:
 		damages.append(strike.damage if strike.monster_id == first else -1)
@@ -717,7 +716,8 @@ func _check_companion_strikes() -> String:
 			damages,
 		]
 	if _wild(state).hp_of(first) != 1:
-		return "the companion's hits left the wild monster at %d HP, not 1" % _wild(state).hp_of(first)
+		var left: int = _wild(state).hp_of(first)
+		return "the companion's hits left the wild monster at %d HP, not 1" % left
 	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
 	hiding.hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
