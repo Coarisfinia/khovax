@@ -437,11 +437,18 @@ func _survey_pinches(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 				choice.zoom_step(),
 				zoom,
 			]
-	var middle: Vector2 = survey.get_viewport_rect().get_center()
-	_touch(survey.get_viewport(), middle, true)
+	# The screen's corner across from the Survey's: the headless screen is small, so its middle
+	# can be on the Survey.
+	var screen: Vector2 = survey.get_viewport_rect().size
+	var across: Vector2 = screen - survey.get_global_rect().get_center()
+	var off: Vector2 = Vector2(
+		1.0 if across.x < screen.x / 2.0 else screen.x - 1.0,
+		1.0 if across.y < screen.y / 2.0 else screen.y - 1.0,
+	)
+	_touch(survey.get_viewport(), off, true)
 	if problem.is_empty() and not stick.is_held():
 		problem = "the touch stick didn't start off the Survey"
-	_touch(survey.get_viewport(), middle, false)
+	_touch(survey.get_viewport(), off, false)
 	return problem
 
 
