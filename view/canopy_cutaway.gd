@@ -2,8 +2,9 @@ class_name CanopyCutaway
 extends Node
 ## Keeps players and wild monsters in sight under cover (#328): when a decoration tall enough to
 ## hide a figure (a tree's canopy, a boulder) stands on a figure's tile, or just in front of it
-## from the camera's side, every such decoration within RADIUS tiles of that figure is cut away,
-## shrinking towards its tile, and grows back once nobody needs the view. It eases both ways,
+## from the camera's side, every such decoration within RADIUS tiles of that figure is cut down to
+## its lower part (KEPT), so its tile still reads as what it is (a mountain stays a mountain, #365),
+## and grows back once nobody needs the view. It eases both ways,
 ## never snapping (motion sickness). Only figures that are drawn count: every player, and the wild
 ## monsters an ally sees that aren't hiding in their tile (WildMonsterView.is_shown), so a cut
 ## never gives away what the fog or a hiding place keeps hidden. It only reads the state.
@@ -18,14 +19,14 @@ const RADIUS: int = 5
 const CAMERA_SIDE: Array[Vector2i] = [Vector2i(-1, 1), Vector2i(0, 1)]
 ## How much of a decoration is cut away or brought back per second as it eases.
 const EASE_PER_SECOND: float = 2.0
-## The smallest a decoration shrinks to before it's hidden: a node never scales to nothing, since
-## its transform couldn't be inverted then.
-const SMALLEST: float = 0.01
+## How much of a decoration's height stays once it's cut away.
+const KEPT: float = 0.5
 
 @export var driver: GameDriver
 @export var decorations: TileDecorations
 
-## How far each decoration is cut away as drawn now, by tile: 0 whole, 1 gone. Kept here, since
+## How far each decoration is cut away as drawn now, by tile: 0 whole, 1 cut down to KEPT. Kept
+## here, since
 ## the headless renderer can't be read back.
 var cut: Dictionary[Vector2i, float] = {}
 ## The region the cuts belong to: another one starts every decoration whole.
@@ -36,12 +37,15 @@ func _process(delta: float) -> void:
 	show_state(delta)
 
 
-## Draws `piece`'s decoration cut away by `amount`: shrinking towards its tile, eased at both
-## ends, and not drawn at all once gone. A shrink rather than a fade: the Compatibility renderer,
-## the baseline, ignores a mesh's own transparency.
 static func _draw(piece: HexPiece, amount: float) -> void:
-	(piece.get_child(0) as Node3D).visible = amount < 1.0
-	piece.scale = Vector3.ONE * maxf(1.0 - smoothstep(0.0, 1.0, amount), SMALLEST)
+	piece.scale = scale_of(amount)
+
+
+## How a decoration cut away by `amount` is scaled: lowered towards its ground, eased at both
+## ends, never lower than KEPT, and never narrower. Lowered rather than faded: the Compatibility
+## renderer, the baseline, ignores a mesh's own transparency.
+static func scale_of(amount: float) -> Vector3:
+	return Vector3(1.0, 1.0 - smoothstep(0.0, 1.0, amount) * (1.0 - KEPT), 1.0)
 
 
 ## Eases every decoration `delta` seconds towards cut away or whole, and draws it. Called every
