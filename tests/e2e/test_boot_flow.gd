@@ -755,10 +755,10 @@ func _check_neighbour_grids(main: Node) -> String:
 
 
 ## The canopy cut-away (#328), in the glade: in the open nothing is cut. A player standing in the
-## forest has every decoration tall enough to hide them cut away within the radius, easing out, and
-## nothing beyond it nor the low stump; it all eases back once they stand in the open again. A
-## wild monster in the fog, or hiding in its tile, cuts nothing; one an ally sees in the forest
-## does.
+## forest has every decoration tall enough to hide them cut down to its lower part within the
+## radius (#365), easing down, and nothing beyond it nor the low stump; it all eases back once they
+## stand in the open again. A wild monster in the fog, or hiding in its tile, cuts nothing; one an
+## ally sees in the forest does.
 func _check_canopy_cutaway(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var cutaway: CanopyCutaway = main.get_node("CanopyCutaway") as CanopyCutaway
@@ -845,15 +845,14 @@ func _cut_expected(cutaway: CanopyCutaway, tile: Vector2i, covered: Array[Vector
 	return false
 
 
-## How cut away the decoration on `tile` is drawn: 1 when its model is hidden, else how far it
-## has shrunk, eased; -1 when it's drawn otherwise.
+## How cut away the decoration on `tile` is drawn: how far it's lowered, eased, while its model
+## still shows (its lower part stays, #365); -1 when it's drawn otherwise.
 func _drawn_cut(cutaway: CanopyCutaway, tile: Vector2i) -> float:
 	var piece: HexPiece = cutaway.decorations.figures[tile]
 	if not (piece.get_child(0) as Node3D).visible:
-		return 1.0
+		return -1.0
 	var amount: float = cutaway.cut[tile]
-	var size: float = maxf(1.0 - smoothstep(0.0, 1.0, amount), CanopyCutaway.SMALLEST)
-	return amount if piece.scale.is_equal_approx(Vector3.ONE * size) else -1.0
+	return amount if piece.scale.is_equal_approx(CanopyCutaway.scale_of(amount)) else -1.0
 
 
 ## A wild monster in `state` that an ally sees and that isn't hiding, or null.
