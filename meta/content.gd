@@ -1,10 +1,12 @@
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, under data/ or, for a kind a slice
-## owns, under that slice's data/ (#412), checked against their schema in CI and here for what a schema can't check, each by its own kind: ids
+## owns, under that slice's data/ (#412), checked against their schema in CI and here for what a
+## schema can't check, each by its own kind: ids
 ## unique and matching their file. Species are checked by Species (#279), loot tables (#90) by
 ## LootTable, tile blueprints (#116) by TileBlueprint, abilities (#222) by Ability, and quests
-## (#184) by QuestDefinition against the species, read by the quests slice (QuestContent). Here too: the field helpers they all use.
+## (#184) by QuestDefinition against the species, read by the quests slice (QuestContent). Here too:
+## the field helpers they all use.
 
 const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"

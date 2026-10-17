@@ -1,10 +1,11 @@
 class_name QuestDefinition
 extends RefCounted
-## A quest (#184), read from content data (the quests slice's data/quests/, #72, #412): a player-facing name and an ordered
+## A quest (#184), read from content data (the quests slice's data/quests/, #72, #412): a
+## player-facing name and an ordered
 ## list of steps, each one condition met a number of times. Each player's progress through it lives
 ## in their profile (Profile.quest_progress), advanced by what they obtain.
 
-## A quest file's fields, as its schema (data/schemas/quests.schema.json) allows them.
+## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
 const FIELDS: Array[String] = ["id", "name", "steps"]
 
 var id: String = ""
