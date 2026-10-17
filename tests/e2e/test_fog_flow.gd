@@ -128,7 +128,8 @@ func _check_lookout() -> String:
 
 
 ## In the basic instance, the glade's ground next door is handed over without loading the glade,
-## and a player standing on the exit to it sees some of it, and nothing that is neither here nor there.
+## and a player standing on the exit to it sees some of it, and nothing that is neither here nor
+## there.
 func _check_across_the_seam() -> String:
 	var world: World = World.new(3, InstanceBlueprints.BASIC)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]

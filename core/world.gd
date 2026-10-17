@@ -109,7 +109,7 @@ func _hand_next_door(instance_name: String, state: GameState) -> void:
 	state.next_door = {}
 	for target: String in state.region.exit_blueprints:
 		var shift: Vector2i = offset(target) - offset(instance_name)
-		var ground: Region = _layout.region(self, target)
+		var ground: Region = _layout.region_for(self, target)
 		for tile: Vector2i in ground.sorted_tiles():
 			if not state.region.has_tile(tile + shift):
 				state.next_door[tile + shift] = ground.terrain[tile]
