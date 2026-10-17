@@ -82,10 +82,14 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		hidden += 0 if known else 1
 	if hidden == 0:
 		return "nothing of the instance was still in the fog to hide on the Survey"
+	# At the corner size of a desktop screen, whatever size the test's own window is.
 	var across: float = survey.across
+	var shown: Vector2 = survey.size
 	survey.across = SurveyChoice.ZOOMS[-1]
+	survey.size = Vector2.ONE * 648.0 * SurveyChoice.CORNER_SHARE
 	var drawn: bool = survey.symbol_size() > 0
 	survey.across = across
+	survey.size = shown
 	return "" if drawn else "the Survey draws no tile symbols even at its closest zoom"
 
 
