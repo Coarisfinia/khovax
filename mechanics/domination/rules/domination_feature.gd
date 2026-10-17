@@ -1,21 +1,22 @@
-class_name CatchFeature
+class_name DominationFeature
 extends Feature
-## Catching (#20) with sealing (#219): when the allies' shared trail (#87) closes a ring around wild
-## monsters, the ring seals. It must hold for a while as every wild monster inside pushes on its
-## nearest wall segment; if it holds, everything inside is caught (a WildMonsterCaught event each
-## says who caught it), and if a segment gives way, the ring breaks and nothing is (a RingBroken
-## event). Either way the ring comes off the trail, and every player colors the tile they stand on.
+## Domination (#20) with sealing (#219): when the allies' shared trail (#87) closes a ring around
+## wild monsters, the ring seals. It must hold for a while as every wild monster inside pushes on
+## its nearest wall segment; if it holds, everything inside is dominated (a WildMonsterDominated
+## event each says who dominated it), and if a segment gives way, the ring breaks and nothing is (a
+## RingBroken event). Either way the ring comes off the trail, and every player colors the tile they
+## stand on.
 ##
-## The catch goes to the lowest slot among the players in the instance who colored the ring's wall
-## (owner, #86, #87): allies close rings together, whoever's move closes it. Splitting a catch by
-## contribution is #86 and #260.
+## The domination goes to the lowest slot among the players in the instance who colored the ring's
+## wall (owner, #86, #87): allies close rings together, whoever's move closes it. Splitting a
+## domination by contribution is #86 and #260.
 ##
 ## Enclosed means the monster's tile can't reach the region's edge without crossing the trail: one
 ## flood fill from the edge over the region's tiles, whatever their terrain, so only the trail
 ## encloses. The ring's wall is the trail tiles next to the enclosed tiles around the monsters.
 ## Bigger rings spread the same ring power over more segments, so their walls are thinner.
 ##
-## While a ring seals, its catcher gets no other ring, the monsters inside stay where they stand
+## While a ring seals, its dominator gets no other ring, the monsters inside stay where they stand
 ## (wild monsters don't move yet), and a monster sealed in one ring can't be sealed in another. Any
 ## player standing on a wall segment reinforces it (#227): a reinforced segment takes only a share
 ## of the pressure on it, which is strong, but it puts the player right where the monsters push.
@@ -24,7 +25,7 @@ extends Feature
 ## ring off the trail through TrailFeature.clear: features later in the order change an earlier one
 ## only through its public methods.
 
-## Every sealing ring, by its catcher's entity id.
+## Every sealing ring, by its dominator's entity id.
 var seals: Dictionary[int, RingSeal] = {}
 ## The edge of `_edge_region`, cached by _edge_of.
 var _edge: Array[Vector2i] = []
@@ -32,7 +33,7 @@ var _edge_region: Region = null
 
 
 func id() -> int:
-	return Features.CATCH
+	return Features.DOMINATION
 
 
 func requires() -> Array[int]:
@@ -42,13 +43,13 @@ func requires() -> Array[int]:
 
 func step(state: GameState, _commands: Array[Command]) -> void:
 	# Rings sealing since an earlier tick push first, so a ring closed this tick starts next tick.
-	for catcher_id: int in _sealing_players():
-		_push(state, catcher_id)
+	for dominator_id: int in _sealing_players():
+		_push(state, dominator_id)
 	_close_rings(state)
 
 
 ## Every new ring closed this tick around wild monsters not sealing yet starts sealing, unless its
-## catcher has a ring sealing already. A ring can only close when the trail grows, so rings are
+## dominator has a ring sealing already. A ring can only close when the trail grows, so rings are
 ## checked per new trail tile, in entity id order of who moved, whatever order the moves were raised
 ## in. This relies on wild monsters standing still: every monster inside a ring was found when the
 ## ring closed. A rule that moves monsters must also check when a monster steps into an old ring.
@@ -69,14 +70,15 @@ func _close_rings(state: GameState) -> void:
 		if inside.is_empty():
 			continue
 		var seal: RingSeal = RingSealing.build(state, trail, inside)
-		var catcher_id: int = catcher_of(state, trail, seal.walls)
-		if catcher_id > 0 and not seals.has(catcher_id):
-			seals[catcher_id] = seal
+		var dominator_id: int = dominator_of(state, trail, seal.walls)
+		if dominator_id > 0 and not seals.has(dominator_id):
+			seals[dominator_id] = seal
 
 
-## Who a ring's catch goes to: of the players in the instance who colored a tile of its `walls`, the
-## one in the lowest slot (owner, #86), as their entity id; 0 when none of them is here any more.
-static func catcher_of(state: GameState, trail: Trail, walls: Array[Vector2i]) -> int:
+## Who a ring's domination goes to: of the players in the instance who colored a tile of its
+## `walls`, the one in the lowest slot (owner, #86), as their entity id; 0 when none of them is here
+## any more.
+static func dominator_of(state: GameState, trail: Trail, walls: Array[Vector2i]) -> int:
 	var best: Entity = null
 	for wall: Vector2i in walls:
 		var colorer_id: int = trail.tiles.get(wall, 0)
@@ -98,49 +100,53 @@ static func _grown(state: GameState) -> Array[TrailGrew]:
 	return grown
 
 
-## One tick of the catcher's seal (RingSealing.push): a segment whose damage reaches its integrity
-## breaks the ring; a ring that holds for its seal ticks catches everything inside.
-func _push(state: GameState, catcher_id: int) -> void:
-	var seal: RingSeal = seals[catcher_id]
+## One tick of the dominator's seal (RingSealing.push): a segment whose damage reaches its integrity
+## breaks the ring; a ring that holds for its seal ticks dominates everything inside.
+func _push(state: GameState, dominator_id: int) -> void:
+	var seal: RingSeal = seals[dominator_id]
 	RingSealing.push(state, seal)
 	var failed: int = seal.failed_segment()
 	if failed >= 0:
-		var slot: int = state.entity(catcher_id).slot
+		var slot: int = state.entity(dominator_id).slot
 		var walls: Array[Vector2i] = seal.walls
 		var broken: RingBroken = RingBroken.new(
-			catcher_id,
+			dominator_id,
 			slot,
 			walls[failed],
 			walls,
 			seal.monsters,
 		)
 		state.events.append(broken)
-		_end(state, catcher_id)
+		_end(state, dominator_id)
 	elif seal.ticks >= seal.seal_ticks:
-		var takers: Dictionary[int, int] = _takers(state, catcher_id, seal)
+		var takers: Dictionary[int, int] = _takers(state, dominator_id, seal)
 		for monster_id: int in seal.monsters.duplicate():
-			_catch(state, monster_id, takers[monster_id], seal)
-		_end(state, catcher_id)
+			_dominate(state, monster_id, takers[monster_id], seal)
+		_end(state, dominator_id)
 
 
-## Who gets each wild monster of a held ring, by monster id: its catcher when it holds one; split
-## by contribution when it holds several (#260, CatchShares), the catcher taking any nobody earned.
-func _takers(state: GameState, catcher_id: int, seal: RingSeal) -> Dictionary[int, int]:
+## Who gets each wild monster of a held ring, by monster id: its dominator when it holds one; split
+## by contribution when it holds several (#260, DominationShares), the dominator taking any nobody
+## earned.
+func _takers(state: GameState, dominator_id: int, seal: RingSeal) -> Dictionary[int, int]:
 	var takers: Dictionary[int, int] = {}
 	if seal.monsters.size() > 1:
 		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
-		takers = CatchShares.hand_out(seal.monsters, CatchShares.contributions(state, trail, seal))
+		takers = DominationShares.hand_out(
+			seal.monsters,
+			DominationShares.contributions(state, trail, seal),
+		)
 	for monster_id: int in seal.monsters:
 		if not takers.has(monster_id):
-			takers[monster_id] = catcher_id
+			takers[monster_id] = dominator_id
 	return takers
 
 
-## Ends the catcher's seal, held or broken: its ring comes off the trail (#87), but not the wall
+## Ends the dominator's seal, held or broken: its ring comes off the trail (#87), but not the wall
 ## tiles another ring still sealing needs.
-func _end(state: GameState, catcher_id: int) -> void:
-	var walls: Array[Vector2i] = seals[catcher_id].walls
-	var _dropped: bool = seals.erase(catcher_id)
+func _end(state: GameState, dominator_id: int) -> void:
+	var walls: Array[Vector2i] = seals[dominator_id].walls
+	var _dropped: bool = seals.erase(dominator_id)
 	var cleared: Array[Vector2i] = []
 	for wall: Vector2i in walls:
 		var needed: bool = false
@@ -177,21 +183,21 @@ func _edge_of(region: Region) -> Array[Vector2i]:
 	return _edge
 
 
-func _catch(state: GameState, monster_id: int, catcher_id: int, seal: RingSeal) -> void:
+func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingSeal) -> void:
 	var tile: Vector2i = state.entity(monster_id).tile
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
-	var slot: int = state.entity(catcher_id).slot
+	var slot: int = state.entity(dominator_id).slot
 	state.remove_entity(monster_id)
-	var caught: WildMonsterCaught = WildMonsterCaught.new(
+	var dominated: WildMonsterDominated = WildMonsterDominated.new(
 		monster_id,
-		catcher_id,
+		dominator_id,
 		slot,
 		tile,
 		species,
 	)
-	CatchShares.add_contributions(state, seal, caught)
-	state.events.append(caught)
+	DominationShares.add_contributions(state, seal, dominated)
+	state.events.append(dominated)
 
 
 ## A player who leaves the instance takes their seal with them, unfinished; a wild monster that
@@ -202,12 +208,13 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 		seal.drop(removed_id)
 
 
-## Every sealing ring as its player's entity id and its seal, in id order.
+## Every sealing ring as its player's entity id and its seal, in id order. The id's key keeps its
+## name from before domination (#317), "catcher", so saved worlds keep loading.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
-	for catcher_id: int in _sealing_players():
-		var entry: Dictionary = seals[catcher_id].to_data()
-		entry["catcher"] = catcher_id
+	for dominator_id: int in _sealing_players():
+		var entry: Dictionary = seals[dominator_id].to_data()
+		entry["catcher"] = dominator_id
 		saved.append(entry)
 	return { "seals": saved }
 
@@ -219,26 +226,26 @@ func save_values() -> Dictionary:
 func load_values(state: GameState, values: DataReader) -> void:
 	seals.clear()
 	for entry: DataReader in values.entries("seals"):
-		var catcher_id: int = entry.whole("catcher", 1, DataReader.MOST)
-		var catcher: Entity = state.entity(catcher_id)
-		if catcher == null or catcher.slot == Entity.NO_SLOT or seals.has(catcher_id):
-			values.fail("sealing ring of %d isn't one player's" % catcher_id)
+		var dominator_id: int = entry.whole("catcher", 1, DataReader.MOST)
+		var dominator: Entity = state.entity(dominator_id)
+		if dominator == null or dominator.slot == Entity.NO_SLOT or seals.has(dominator_id):
+			values.fail("sealing ring of %d isn't one player's" % dominator_id)
 			return
 		var monsters: Array[int] = entry.wholes("monsters", 1, DataReader.MOST)
 		var problem: String = _monsters_problem(state, monsters)
 		if not problem.is_empty():
-			values.fail("sealing ring of %d: %s" % [catcher_id, problem])
+			values.fail("sealing ring of %d: %s" % [dominator_id, problem])
 			return
 		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
 		var seal: RingSeal = RingSealing.build(state, trail, monsters)
-		if catcher_of(state, trail, seal.walls) != catcher_id:
-			values.fail("sealing ring of %d: its catch goes to someone else" % catcher_id)
+		if dominator_of(state, trail, seal.walls) != dominator_id:
+			values.fail("sealing ring of %d: its domination goes to someone else" % dominator_id)
 			return
 		problem = _progress_problem(state, seal, entry)
 		if not problem.is_empty():
-			values.fail("sealing ring of %d: %s" % [catcher_id, problem])
+			values.fail("sealing ring of %d: %s" % [dominator_id, problem])
 			return
-		seals[catcher_id] = seal
+		seals[dominator_id] = seal
 
 
 ## Why the saved monsters can't be sealing in the ring, or "": they must be wild monsters, in
@@ -292,7 +299,7 @@ static func _progress_problem(state: GameState, seal: RingSeal, entry: DataReade
 
 func hash_values() -> Array[int]:
 	var values: Array[int] = [seals.size()]
-	for catcher_id: int in _sealing_players():
-		values.append(catcher_id)
-		values.append_array(seals[catcher_id].hash_values())
+	for dominator_id: int in _sealing_players():
+		values.append(dominator_id)
+		values.append_array(seals[dominator_id].hash_values())
 	return values

@@ -7,7 +7,7 @@ extends Feature
 ## its tiles count as seen before for every player, also in the state hash. How it is drawn
 ## (remembered tiles, allies' sight, monsters in fog) is FogView's.
 
-## How far every player sees, in steps, until traits from captured monsters change it (#65).
+## How far every player sees, in steps, until traits from dominated monsters change it (#65).
 const SIGHT_RADIUS: int = 5
 
 ## Each radius's lines, as _lines_within works them out, shared by every instance.

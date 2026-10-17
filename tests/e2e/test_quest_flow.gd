@@ -1,9 +1,10 @@
 extends RefCounted
 ## Quest flow (#184): quests advance from what this machine's player obtains. A fresh profile has
-## the first catch open; another player's catch leaves it so, and this player's catch, through the
-## event bus, finishes it; its progress is on disk at once and survives loading. A chest counts for
-## the player who got loot from it. Steps count up and hand over to the next, one fact at a time,
-## and only what a step asks for counts toward it. Quests finished together are listed in id order;
+## the first domination open; another player's domination leaves it so, and this player's
+## domination, through the event bus, finishes it; its progress is on disk at once and survives
+## loading. A chest counts for the player who got loot from it. Steps count up and hand over to the
+## next, one fact at a time, and only what a step asks for counts toward it. Quests finished
+## together are listed in id order;
 ## saved progress that no longer fits its quest settles at the next fact; and quest data with a
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
 ## asks for (#300), and a finished one has none.
@@ -12,7 +13,7 @@ const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
 const TWO_STEPS: String = (
 	"{\"id\": \"toads_then_chest\", \"name\": \"Two toads, then a chest\", \"steps\": ["
-	+ "{\"condition\": \"caught\", \"species\": \"moss_toad\", \"count\": 2}, "
+	+ "{\"condition\": \"dominated\", \"species\": \"moss_toad\", \"count\": 2}, "
 	+ "{\"condition\": \"opened\"}]}"
 )
 
@@ -29,8 +30,8 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Through the main scene: only this player's catch, handed out by the bus, finishes the first
-## catch, and it's saved at once and loads back; a chest counts for whoever got loot from it.
+## Through the main scene: only this player's domination, handed out by the bus, finishes the first
+## domination, and it's saved at once and loads back; a chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
@@ -38,22 +39,22 @@ func _check_tracked(tree: SceneTree) -> String:
 	var bus: EventBus = main.get_node("EventBus") as EventBus
 	var profile: Profile = holder.keeper.profile
 	var result: String = ""
-	if not profile.quest_book.has("first_catch") or not profile.quests_done.is_empty():
-		result = "a fresh profile doesn't have the first catch open"
+	if not profile.quest_book.has("first_domination") or not profile.quests_done.is_empty():
+		result = "a fresh profile doesn't have the first domination open"
 	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
 	if result.is_empty():
 		result = _check_marked(driver, markers, profile)
-	_emit(driver, bus, WildMonsterCaught.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
+	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
-		result = "another slot's catch finished this player's quest"
-	_emit(driver, bus, WildMonsterCaught.new(91, 1, 0, Vector2i.ZERO, "storm_finch"))
-	var expected: Array[String] = ["first_catch"]
+		result = "another slot's domination finished this player's quest"
+	_emit(driver, bus, WildMonsterDominated.new(91, 1, 0, Vector2i.ZERO, "storm_finch"))
+	var expected: Array[String] = ["first_domination"]
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
-		result = "this player's catch didn't finish the first catch on disk"
+		result = "this player's domination didn't finish the first domination on disk"
 	markers.show_quests()
-	if result.is_empty() and markers.markers.has("first_catch"):
-		result = "the finished first catch still has a marker"
+	if result.is_empty() and markers.markers.has("first_domination"):
+		result = "the finished first domination still has a marker"
 	if result.is_empty():
 		result = _check_chests(driver, bus, profile)
 	main.queue_free()
@@ -62,7 +63,7 @@ func _check_tracked(tree: SceneTree) -> String:
 	return result
 
 
-## The open first catch is marked over the wild monster nearest to this player, a quest asking
+## The open first domination is marked over the wild monster nearest to this player, a quest asking
 ## for a species nobody here is has no marker, and the markers follow the open quests.
 func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profile) -> String:
 	var state: GameState = driver.state
@@ -74,18 +75,19 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profil
 	for entity_id: int in wild.monsters:
 		nearest = mini(nearest, Hex.distance(state.entity(entity_id).tile, from))
 	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
-	if not targets.has("first_catch") or Hex.distance(targets["first_catch"], from) != nearest:
-		return "the first catch isn't marked over the nearest wild monster"
+	if (not targets.has("first_domination")
+			or Hex.distance(targets["first_domination"], from) != nearest):
+		return "the first domination isn't marked over the nearest wild monster"
 	markers.show_quests()
-	if not markers.markers.has("first_catch"):
-		return "the open first catch has no marker"
+	if not markers.markers.has("first_domination"):
+		return "the open first domination has no marker"
 	return _check_unmarked(state, wild, profile)
 
 
 ## A quest asking for a species is marked only when one of that species is here.
 func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profile) -> String:
 	var text: String = "{\"id\": \"absent\", \"name\": \"Absent\", \"steps\": "
-	text += "[{\"condition\": \"caught\", \"species\": \"storm_finch\"}]}"
+	text += "[{\"condition\": \"dominated\", \"species\": \"storm_finch\"}]}"
 	var known: Dictionary[String, Species] = Content.load_species().species
 	var absent: QuestDefinition = QuestDefinition.parse("absent", text, known)
 	profile.quest_book[absent.id] = absent
@@ -137,10 +139,11 @@ func _check_counted() -> String:
 	var toads: QuestProgress = profile.quest_progress.get("three_moss_toads")
 	if not applied.is_empty() or progress == null or progress.step != 0 or progress.count != 1:
 		return "one moss toad didn't count one toward its step: " + applied
-	if toads == null or toads.count != 1 or profile.quests_done != ["first_catch"]:
-		return "the toads' quest didn't count up, or the first catch didn't finish"
+	if toads == null or toads.count != 1 or profile.quests_done != ["first_domination"]:
+		return "the toads' quest didn't count up, or the first domination didn't finish"
 	applied = profile.apply(_gain(["moss_toad", "moss_toad"], 1))
-	if not applied.is_empty() or profile.quests_done != ["first_catch", "three_moss_toads", two.id]:
+	if (not applied.is_empty()
+			or profile.quests_done != ["first_domination", "three_moss_toads", two.id]):
 		return "a gain didn't hand a full step to the next one: %s" % profile.quests_done
 	if not profile.quest_progress.is_empty():
 		return "finished quests kept their progress"
@@ -168,22 +171,22 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 ## progress whose step is already at its count, or past the quest's last step, settles at the next
 ## fact of any kind.
 func _check_settled() -> String:
-	var any_catch: String = "{\"id\": \"%s\", \"name\": \"N\", "
-	any_catch += "\"steps\": [{\"condition\": \"caught\"}]}"
+	var any_domination: String = "{\"id\": \"%s\", \"name\": \"N\", "
+	any_domination += "\"steps\": [{\"condition\": \"dominated\"}]}"
 	var profile: Profile = Profile.new()
 	for id: String in ["zz_last", "aa_first"]:
-		profile.quest_book[id] = QuestDefinition.parse(id, any_catch % id, {})
+		profile.quest_book[id] = QuestDefinition.parse(id, any_domination % id, {})
 	var applied: String = profile.apply(_gain(["moss_toad"], 0))
 	var sorted: Array[String] = ["aa_first", "zz_last"]
 	if not applied.is_empty() or profile.quests_done != sorted:
 		return "quests finished together weren't listed in id order: %s" % profile.quests_done
 	var save: Profile = Profile.new()
 	save.quest_progress["three_moss_toads"] = QuestProgress.new(0, 3)
-	save.quest_progress["first_catch"] = QuestProgress.new(4, 0)
+	save.quest_progress["first_domination"] = QuestProgress.new(4, 0)
 	var stale: Profile = ProfileSave.parse(ProfileSave.to_text(save))
 	stale.quest_book = Content.load_quests().quests
 	applied = stale.problem + stale.apply(_gain([], 1))
-	var settled: Array[String] = ["first_catch", "three_moss_toads"]
+	var settled: Array[String] = ["first_domination", "three_moss_toads"]
 	if not applied.is_empty() or stale.quests_done != settled:
 		return "saved progress that no longer fits didn't settle at the next fact: " + applied
 	return ""
@@ -212,6 +215,6 @@ func _check_broken_data() -> String:
 
 func _gain(species: Array[String], chests: int) -> Gain:
 	var gain: Gain = Gain.new()
-	gain.caught_species = species
+	gain.dominated_species = species
 	gain.chests_opened = chests
 	return gain

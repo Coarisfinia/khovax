@@ -2,7 +2,7 @@ class_name RingSealing
 extends RefCounted
 ## How strong a sealing ring is (#219, #286): its power, spread over its wall's segments; how hard
 ## each wild monster inside pushes on its nearest segment; how long the seal takes; and how a player
-## standing on a segment reinforces it (#227). CatchFeature closes the rings and decides what a
+## standing on a segment reinforces it (#227). DominationFeature closes the rings and decides what a
 ## held or broken one gives; the numbers live here.
 
 ## The ring rules' constants (#219). Every one is a placeholder, to tune (#219).

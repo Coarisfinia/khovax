@@ -1,13 +1,13 @@
 extends RefCounted
 ## Resume flow (#119): the persistent world is saved and resumed. A world played a while (a wild
-## monster caught in the basic instance, then out through the exit into the glade, its lookout and
-## a chest) turns into save data and back with the same hash, and both go on alike, tick for tick.
-## Saved to its own file next to the profile, the main scene resumes it where the player stood, its
-## recording plays back from it, and its keeper saves it debounced; a damaged world file, one in a
-## newer format or one played by other rules is refused and a fresh world starts. The profile is
-## never touched by world saves. The ground explored is saved with the world (#215): resumed, it
-## lies under light fog, next door too; bad memory is dropped whole, a fresh world starts with
-## none, and what was seen in an instance purged since (#212) isn't restored.
+## monster dominated in the basic instance, then out through the exit into the glade, its lookout
+## and a chest) turns into save data and back with the same hash, and both go on alike, tick for
+## tick. Saved to its own file next to the profile, the main scene resumes it where the player
+## stood, its recording plays back from it, and its keeper saves it debounced; a damaged world file,
+## one in a newer format or one played by other rules is refused and a fresh world starts. The
+## profile is never touched by world saves. The ground explored is saved with the world (#215):
+## resumed, it lies under light fog, next door too; bad memory is dropped whole, a fresh world
+## starts with none, and what was seen in an instance purged since (#212) isn't restored.
 
 const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
@@ -56,25 +56,25 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Plays the world a while: the ring catches the basic instance's wild monster (the player waits
+## Plays the world a while: the ring dominates the basic instance's wild monster (the player waits
 ## for it to seal, #219), the exit leads into the glade, and there the player walks onto the
 ## lookout and a chest.
 func _play(world: World) -> String:
 	var tile: Vector2i = world.player(0).tile
-	var catching: CatchFeature = world.instances[InstanceBlueprints.BASIC].feature(
-		Features.CATCH,
-	) as CatchFeature
+	var domination: DominationFeature = world.instances[InstanceBlueprints.BASIC].feature(
+		Features.DOMINATION,
+	) as DominationFeature
 	for next: Vector2i in FlowSteps.BASIC_RING + OUT:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
-		while not catching.seals.is_empty():
+		while not domination.seals.is_empty():
 			world.step(FlowSteps.command(Command.NO_MOVE))
 			_remember(world)
 	_walk_in(world, EAST)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var wild: WildMonsterFeature = basic.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	if not wild.monsters.is_empty() or world.instance_of(0) != InstanceBlueprints.GLADE:
-		return "the walk didn't catch the wild monster and go on into the glade"
+		return "the walk didn't dominate the wild monster and go on into the glade"
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var goals: Array[Vector2i] = [glade.region.triggers[0].tile]
 	goals.append_array(glade.region.chests)

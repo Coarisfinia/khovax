@@ -1,12 +1,11 @@
 class_name TrailView
 extends Node
 ## The trail feature's look: paints the allies' shared trail (#87) on the grid. A sealing ring
-## (#219) fills
-## with the seal's progress: its wall tiles turn to the seal color one after another, going round
-## the ring, so how far the seal has come shows as how much of the ring is filled, not only as a
-## color (#68). A ring that breaks or holds comes off the trail, so the fill clears. It reads the
-## trail and catch features' state and never writes it; an instance without the trail paints
-## nothing.
+## (#219) fills with the seal's progress: its wall tiles turn to the seal color one after another,
+## going round the ring, so how far the seal has come shows as how much of the ring is filled, not
+## only as a color (#68). A ring that breaks or holds comes off the trail, so the fill clears. It
+## reads the trail and domination features' state and never writes it; an instance without the trail
+## paints nothing.
 
 @export var driver: GameDriver
 @export var grid: HexGrid
@@ -31,9 +30,11 @@ func show_state() -> void:
 	if feature != null:
 		for tile: Vector2i in feature.shared.tiles:
 			colors[tile] = trail_color
-	var catching: CatchFeature = driver.state.feature(Features.CATCH) as CatchFeature
-	if catching != null:
-		for seal: RingSeal in catching.seals.values():
+	var domination: DominationFeature = (
+		driver.state.feature(Features.DOMINATION) as DominationFeature
+	)
+	if domination != null:
+		for seal: RingSeal in domination.seals.values():
 			for tile: Vector2i in sealed_tiles(seal):
 				colors[tile] = seal_color
 	grid.paint(colors)

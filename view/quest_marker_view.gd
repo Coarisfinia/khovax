@@ -2,7 +2,7 @@ class_name QuestMarkerView
 extends Node3D
 ## Every open quest's marker (#300, owner: quests always have a marker): an arrow floating
 ## over what this machine's player's quest asks for next, the nearest wild monster of the species a
-## catch step names (any, when it names none) or the nearest closed treasure chest. It shows
+## domination step names (any, when it names none) or the nearest closed treasure chest. It shows
 ## through the fog, so it leads the player into it; a wild monster still hiding in its tile (#202)
 ## isn't pointed at, since that would give it away. The arrow's shape, not its color, says what it
 ## is (#68). It glides after a moving target, eases in and out, and bobs gently; it only reads the
@@ -97,7 +97,7 @@ static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 			tiles.assign(chests.chests)
 		return tiles
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	if wild == null or step.condition != "caught":
+	if wild == null or step.condition != "dominated":
 		return tiles
 	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
 	var ids: Array[int] = wild.monsters.duplicate()

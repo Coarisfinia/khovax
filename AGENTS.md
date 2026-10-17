@@ -217,7 +217,7 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other: a feature may read the features it `requires` and change them only through
-  their public methods (e.g. `CatchFeature` clears a ring off the trail with `TrailFeature.clear`), never
+  their public methods (e.g. `DominationFeature` clears a ring off the trail with `TrailFeature.clear`), never
   their fields. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
 - **Entities** (#31): everything in the world (players, wild monsters, later totems) is an
@@ -248,9 +248,11 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
-  these is meant. A `species` is what every monster is, captured or not; a `captured_monster` was
-  caught by the player; a `wild_monster` can still be caught; an `ally_monster` fights on the
-  player's side but isn't captured and can't be. They're names, not necessarily separate classes.
+  these is meant. A `species` is what every monster is, dominated or not; a `dominated_monster` was
+  dominated by the player (made to submit, #317: it is never captured or caught); a `wild_monster`
+  can still be dominated; an `ally_monster` fights on the player's side but isn't dominated and
+  can't be. The player dominates; the act is a domination. They're names, not necessarily
+  separate classes.
 - **The place you play in** (owner's rule, #57, #117): **"map" is banned** in code and docs, except
   for a **map item**, an item drop that adds modifiers to an instance blueprint (#120). An
   **instance blueprint** is what an instance is loaded from (its region pieces and features); an
@@ -259,20 +261,20 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
 - **Commands** (`core/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
-- **`meta/`, the layers above the simulation** (#37): the player's `Profile` (captured monsters, the
+- **`meta/`, the layers above the simulation** (#37): the player's `Profile` (dominated monsters, the
   three they carry, materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
   persistent `World`, built from a seed, deterministic like all of the simulation. A **session** is
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
-  technical and never shown to the player. Each catch or find is a
+  technical and never shown to the player. Each domination or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
-  profile at boot and takes this machine's player's catches from the tick's events, #132); **saves
+  profile at boot and takes this machine's player's dominations from the tick's events, #132); **saves
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones
   at most once per `ProfileKeeper.SAVE_INTERVAL_MSEC`, and ending the session (quitting) or going
   to the background flushes what's pending. Saves are atomic, so a crash loses at most one interval's gains. The profile is
   saved as versioned JSON (`ProfileSave.FORMAT`, through `SaveStore`), integers and ids only: a newer format is
   refused, and an older one is migrated in `ProfileSave.parse`, one format at a time.
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
-  (catches, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
+  (dominations, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
   `SaveStore`), never in the profile: `WorldData.of` holds its seed, tick and every loaded
@@ -309,7 +311,7 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   (`GameDriver.tick_fraction()`). They never write the state. `HexLayout` is the only tile-to-world
   conversion. The views of the local player's instance sit under one `InstanceRoot` (#189),
   placed at that instance's place in the world (`World.offset`), so the camera follows the player
-  in world space and walking through an exit has no cut. One-shot moments (a catch, a ring
+  in world space and walking through an exit has no cut. One-shot moments (a domination, a ring
   breaking, a hit) reach views as the tick's events through the driver's `ticked(tick, events)`
   signal (#34): every tick exactly once, in order, however many ticks a frame runs. Effects play
   from those; lasting looks come from the state.
@@ -321,7 +323,7 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   player's command for it is known, and a command once put is final. It keeps the last ticks' state
   hashes (`hashes`) for desync checks. Its events also go onto the `EventBus` (#184), which hands
   them to subscribers by topic a frame later, publish/subscribe: `ProfileHolder` takes this
-  machine's player's catches and chests from it, which advance their quests too. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
+  machine's player's dominations and chests from it, which advance their quests too. Subscribers never change the world; views keep the driver's `ticked` signal. It records every session (`GameDriver.recording`, a `Replay`,
   #35): the starting instance, seed, players, rules version and features (and the starting world,
   for a session that resumed one), every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
@@ -396,7 +398,7 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
 ### Testing and CI
 
 - **Every user flow has one coherent e2e test, headless** (owner's rule): one flow for booting
-  into the world, one for moving on the hex grid, one for a full catch or combat encounter, and so
+  into the world, one for moving on the hex grid, one for a full domination or combat encounter, and so
   on. A change to an area extends the flow that covers it with new steps; a new flow file
   (`tests/e2e/test_<flow>.gd`) is only for a new user flow. No collections of small unrelated tests,
   and no separate unit tests while the flows already check the same things (owner, #61).

@@ -8,7 +8,7 @@ extends RefCounted
 ## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
 ## The playground: the hand-made region regions/basic.md, walking, a trail per player, the wild
-## monsters the region places, catching them with a ring, and fog of war.
+## monsters the region places, dominating them with a ring, and fog of war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
@@ -61,8 +61,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		MovementFeature.new(),
 		TrailFeature.new(),
 		_wild_monsters(instance_name),
-		CatchFeature.new(),
-		_catch_loot(instance_name),
+		DominationFeature.new(),
+		_domination_loot(instance_name),
 		EnrageFeature.new(),
 		FogFeature.new(),
 	]
@@ -164,9 +164,10 @@ static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
 	return WildMonsterFeature.new(roster, weights, max_hps, strengths)
 
 
-## The catch loot feature (#86): every species table there is, and the blueprint's instance table
-## for blanks, if it has one. Tables that don't load are an error; catches then drop nothing.
-static func _catch_loot(instance_name: String) -> CatchLootFeature:
+## The domination loot feature (#86): every species table there is, and the blueprint's instance
+## table for blanks, if it has one. Tables that don't load are an error; dominations then drop
+## nothing.
+static func _domination_loot(instance_name: String) -> DominationLootFeature:
 	var content: Content = Content.load_loot_tables()
 	if not content.problem.is_empty():
 		push_error("the loot tables don't load: " + content.problem)
@@ -177,7 +178,7 @@ static func _catch_loot(instance_name: String) -> CatchLootFeature:
 	var instance_table: LootTable = null
 	if LOOT_TABLES.has(instance_name):
 		instance_table = _loot_table(LOOT_TABLES[instance_name])
-	return CatchLootFeature.new(species_tables, instance_table)
+	return DominationLootFeature.new(species_tables, instance_table)
 
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.

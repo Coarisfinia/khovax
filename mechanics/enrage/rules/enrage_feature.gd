@@ -6,10 +6,10 @@ extends Feature
 ## every further ring that fails. The camera stays still: the rage shows on the monsters. Speed and
 ## going for the player come when wild monsters move and fight (#221).
 ##
-## It reads the tick's RingBroken events, so it runs after the catch feature, and changes the wild
-## monsters only through WildMonsterFeature.enrage. A seal never feels the rage it causes: the ring
-## that broke has ended, and a monster is sealed in one ring at a time, so the extra strength first
-## pushes on the next ring that closes around it.
+## It reads the tick's RingBroken events, so it runs after the domination feature, and changes the
+## wild monsters only through WildMonsterFeature.enrage. A seal never feels the rage it causes: the
+## ring that broke has ended, and a monster is sealed in one ring at a time, so the extra strength
+## first pushes on the next ring that closes around it.
 
 ## How much of a wild monster's full HP each enraging heals (thousandths). A placeholder to tune.
 const HEAL: int = 250
@@ -20,7 +20,7 @@ func id() -> int:
 
 
 func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.CATCH]
+	var needed: Array[int] = [Features.WILD_MONSTERS, Features.DOMINATION]
 	return needed
 
 

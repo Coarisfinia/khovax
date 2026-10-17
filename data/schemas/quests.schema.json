@@ -23,11 +23,11 @@
 				"required": ["condition"],
 				"properties": {
 					"condition": {
-						"description": "caught: a wild monster this player caught. opened: a treasure chest this player got loot from.",
-						"enum": ["caught", "opened"]
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from.",
+						"enum": ["dominated", "opened"]
 					},
 					"species": {
-						"description": "On a caught step, the species id it asks for; any species when left out.",
+						"description": "On a dominated step, the species id it asks for; any species when left out.",
 						"type": "string",
 						"pattern": "^[a-z][a-z0-9_]*$"
 					},

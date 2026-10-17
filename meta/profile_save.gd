@@ -6,13 +6,16 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 4
+const FORMAT: int = 5
+## The first quest's id before format 5, and since (#317).
+const OLD_FIRST_QUEST: String = "first_catch"
+const NEW_FIRST_QUEST: String = "first_domination"
 
 
 ## The profile as save text.
 static func to_text(profile: Profile) -> String:
 	var monsters: Array = []
-	for monster: CapturedMonster in profile.captured_monsters:
+	for monster: DominatedMonster in profile.dominated_monsters:
 		monsters.append(monster.to_data())
 	var sorted_materials: Dictionary = {}
 	var names: Array[String] = []
@@ -24,7 +27,7 @@ static func to_text(profile: Profile) -> String:
 		"format": FORMAT,
 		"unlocked_slots": profile.unlocked_slots,
 		"next_monster_id": profile.next_monster_id,
-		"captured_monsters": monsters,
+		"dominated_monsters": monsters,
 		"carried": profile.carried,
 		"materials": sorted_materials,
 		"quest_progress": _progress_data(profile),
@@ -65,6 +68,8 @@ static func parse(text: String) -> Profile:
 		_migrate_to_3(data)
 	if format < 4:
 		_migrate_to_4(data)
+	if format < 5:
+		_migrate_to_5(data)
 	profile.problem = _read(profile, data)
 	return profile
 
@@ -80,8 +85,8 @@ static func _migrate_to_3(data: Dictionary) -> void:
 	data["quests_done"] = []
 
 
-## Format 3 to 4: a player carries three monsters (#53), the first three they captured until their
-## base exists.
+## Format 3 to 4: a player carries three monsters (#53), the first three they dominated until their
+## base exists. Their key is still `captured_monsters` here, until format 5.
 static func _migrate_to_4(data: Dictionary) -> void:
 	var carried: Array = []
 	var monsters: Variant = data.get("captured_monsters")
@@ -92,6 +97,25 @@ static func _migrate_to_4(data: Dictionary) -> void:
 	data["carried"] = carried
 
 
+## Format 4 to 5: monsters are dominated, not captured (#317), so their key and the first quest's
+## id are renamed.
+static func _migrate_to_5(data: Dictionary) -> void:
+	if data.has("captured_monsters"):
+		data["dominated_monsters"] = data["captured_monsters"]
+		var _renamed: bool = data.erase("captured_monsters")
+	var progress: Variant = data.get("quest_progress")
+	var by_id: Dictionary = progress if progress is Dictionary else {}
+	if by_id.has(OLD_FIRST_QUEST):
+		by_id[NEW_FIRST_QUEST] = by_id[OLD_FIRST_QUEST]
+		var _moved: bool = by_id.erase(OLD_FIRST_QUEST)
+	var done: Variant = data.get("quests_done")
+	if done is Array:
+		var done_list: Array = done
+		var at: int = done_list.find(OLD_FIRST_QUEST)
+		if at >= 0:
+			done_list[at] = NEW_FIRST_QUEST
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -99,18 +123,18 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	var slots: int = profile.unlocked_slots
 	if slots < Profile.START_SLOTS or slots > Profile.MAX_SLOTS or profile.next_monster_id < 1:
 		return "the save's slots or next id are out of range"
-	var monsters: Variant = data.get("captured_monsters")
+	var monsters: Variant = data.get("dominated_monsters")
 	var stored: Variant = data.get("materials")
 	if not monsters is Array or not stored is Dictionary:
 		return "the save lacks its monsters or materials"
 	var monster_list: Array = monsters
 	for entry: Variant in monster_list:
-		var monster: CapturedMonster = _monster(entry)
+		var monster: DominatedMonster = _monster(entry)
 		if (monster == null
 				or monster.id >= profile.next_monster_id
 				or profile.has_monster(monster.id)):
-			return "a captured monster in the save is malformed or its id isn't unique"
-		profile.captured_monsters.append(monster)
+			return "a dominated monster in the save is malformed or its id isn't unique"
+		profile.dominated_monsters.append(monster)
 	var by_name: Dictionary = stored
 	for material: Variant in by_name:
 		var count: int = _int(by_name[material])
@@ -121,7 +145,7 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	return problem if not problem.is_empty() else _read_quests(profile, data)
 
 
-## Reads which captured monsters the save's player carries; returns why it can't, or "".
+## Reads which dominated monsters the save's player carries; returns why it can't, or "".
 static func _read_carried(profile: Profile, data: Dictionary) -> String:
 	var carried: Variant = data.get("carried")
 	if not carried is Array:
@@ -170,12 +194,12 @@ static func _quest_progress(entry: Variant) -> QuestProgress:
 	return progress
 
 
-## A captured monster from save data, or null when it's malformed.
-static func _monster(entry: Variant) -> CapturedMonster:
+## A dominated monster from save data, or null when it's malformed.
+static func _monster(entry: Variant) -> DominatedMonster:
 	if not entry is Dictionary:
 		return null
 	var data: Dictionary = entry
-	var monster: CapturedMonster = CapturedMonster.new(
+	var monster: DominatedMonster = DominatedMonster.new(
 		_int(data.get("id")),
 		str(data.get("species", "")),
 		_int(data.get("level")),

@@ -5,13 +5,13 @@ extends RefCounted
 
 ## A step's fields, as the quest schema (data/schemas/quests.schema.json) allows them.
 const FIELDS: Array[String] = ["condition", "species", "count"]
-## The conditions a step can have, each counted from facts a Gain carries: `caught`, a wild monster
-## this player caught (of `species`, or any); `opened`, a treasure chest this player got loot from.
-## Reaching a place and defeating a monster wait until their events exist.
-const CONDITIONS: Array[String] = ["caught", "opened"]
+## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
+## monster this player dominated (of `species`, or any); `opened`, a treasure chest this player got
+## loot from. Reaching a place and defeating a monster wait until their events exist.
+const CONDITIONS: Array[String] = ["dominated", "opened"]
 
 var condition: String = ""
-## The species a `caught` step asks for, or "" for any.
+## The species a `dominated` step asks for, or "" for any.
 var species: String = ""
 var count: int = 1
 ## Why the step couldn't be read, or "" when it could.
@@ -35,13 +35,14 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 	if not CONDITIONS.has(step.condition):
 		step.problem = "its condition must be one of %s" % [CONDITIONS]
 	elif (data.has("species")
-			and (step.condition != "caught" or not known_species.has(step.species))):
-		step.problem = "its species must be one that exists, on a caught step"
+			and (step.condition != "dominated" or not known_species.has(step.species))):
+		step.problem = "its species must be one that exists, on a dominated step"
 	elif step.count < 1:
 		step.problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	return step
 
 
-## Whether one fact of `fact_condition` (a catch of `caught_species`, or a chest) counts here.
-func counts(fact_condition: String, caught_species: String) -> bool:
-	return fact_condition == condition and (species.is_empty() or species == caught_species)
+## Whether one fact of `fact_condition` (a domination of `dominated_species`, or a chest) counts
+## here.
+func counts(fact_condition: String, dominated_species: String) -> bool:
+	return fact_condition == condition and (species.is_empty() or species == dominated_species)

@@ -1,6 +1,6 @@
 class_name Species
 extends RefCounted
-## What a monster is, captured or not (a `species`, #45), read from content data (#72): its types,
+## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
 ## base stats, wild archetype and its three abilities (#222). Everything here is integers and ids,
 ## ready for the simulation.
 

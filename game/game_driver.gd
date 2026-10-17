@@ -8,8 +8,8 @@ extends Node
 ## views follow this machine's player into whichever instance they walk.
 
 ## After every tick, with the tick's number and the events the features raised in it, in order:
-## how views learn about one-shot moments (a catch, a ring breaking) to play an effect. Every tick
-## is announced exactly once, however many ticks a frame runs. `events` is the view's own copy,
+## how views learn about one-shot moments (a domination, a ring breaking) to play an effect. Every
+## tick is announced exactly once, however many ticks a frame runs. `events` is the view's own copy,
 ## and the events themselves must only be read.
 signal ticked(tick: int, events: Array[RefCounted])
 

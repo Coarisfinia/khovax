@@ -22,7 +22,7 @@
 [ext_resource type="Script" path="res://view/neighbour_view.gd" id="20_neighbours"]
 [ext_resource type="Script" path="res://view/instance_root.gd" id="21_instance"]
 [ext_resource type="Script" path="res://game/world_keeper.gd" id="22_keeper"]
-[ext_resource type="Script" path="res://mechanics/catching/look/reinforcement_view.gd" id="23_braces"]
+[ext_resource type="Script" path="res://mechanics/domination/look/reinforcement_view.gd" id="23_braces"]
 [ext_resource type="Script" path="res://mechanics/trail/look/trail_marks_view.gd" id="24_marks"]
 [ext_resource type="Script" path="res://view/quest_marker_view.gd" id="25_quests"]
 

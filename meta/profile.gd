@@ -9,20 +9,20 @@ extends RefCounted
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
-## How many captured monsters a player carries (#53): always three, never more.
+## How many dominated monsters a player carries (#53): always three, never more.
 const CARRY_LIMIT: int = 3
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
 ## whole number up to 2^53 exactly, and this stays far below it.
 const MAX_NUMBER: int = Fixed.MAX_AMOUNT
 
 var unlocked_slots: int = START_SLOTS
-## Every captured monster, in the order caught.
-var captured_monsters: Array[CapturedMonster] = []
-## The captured monsters this player carries, by id, in the order the next one comes in when one
+## Every dominated monster, in the order dominated.
+var dominated_monsters: Array[DominatedMonster] = []
+## The dominated monsters this player carries, by id, in the order the next one comes in when one
 ## faints (#53, #54). They're chosen at the player's base (#50); until it exists, the first three
-## captured are carried, in the order caught.
+## dominated are carried, in the order dominated.
 var carried: Array[int] = []
-## The id the next captured monster gets; ids are never reused.
+## The id the next dominated monster gets; ids are never reused.
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
@@ -41,18 +41,17 @@ var problem: String = ""
 var loaded_generation: int = 0
 
 
-## Takes over what the player just obtained: its catches and materials, and every quest they
+## Takes over what the player just obtained: its dominations and materials, and every quest they
 ## advance, one fact at a time, so one gain can finish a step and count toward the next. Returns why
-## the gain can't
-## be taken over, or "", and changes nothing when it can't: a profile that took over a bad gain
-## couldn't be loaded again. ProfileKeeper saves it.
+## the gain can't be taken over, or "", and changes nothing when it can't: a profile that took over
+## a bad gain couldn't be loaded again. ProfileKeeper saves it.
 func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
 		return refusal
-	for species: String in result.caught_species:
-		_capture(species)
-		_advance_quests("caught", species)
+	for species: String in result.dominated_species:
+		_dominate(species)
+		_advance_quests("dominated", species)
 	for _chest: int in result.chests_opened:
 		_advance_quests("opened", "")
 	for material: String in result.materials:
@@ -60,15 +59,15 @@ func apply(result: Gain) -> String:
 	return ""
 
 
-## Adds a newly captured monster of `species`, with the next id.
-func _capture(species: String) -> void:
-	captured_monsters.append(CapturedMonster.new(next_monster_id, species))
+## Adds a newly dominated monster of `species`, with the next id.
+func _dominate(species: String) -> void:
+	dominated_monsters.append(DominatedMonster.new(next_monster_id, species))
 	if carried.size() < CARRY_LIMIT:
 		carried.append(next_monster_id)
 	next_monster_id += 1
 
 
-## Counts one fact (a `condition`, with the species of a catch) toward every quest in the book
+## Counts one fact (a `condition`, with the species of a domination) toward every quest in the book
 ## whose current step asks for it, in id order, so quests finished together are listed in the same
 ## order on every machine. A step that reaches its count hands over to the next one, and the last
 ## step finishes the quest. Saved progress that no longer fits the quest (its data changed since)
@@ -117,11 +116,11 @@ func _progress_of(id: String) -> QuestProgress:
 ## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
 ## than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
-	if next_monster_id + result.caught_species.size() > MAX_NUMBER:
+	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
-	for species: String in result.caught_species:
+	for species: String in result.dominated_species:
 		if species.is_empty():
-			return "a caught monster has no species"
+			return "a dominated monster has no species"
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
 	for material: String in result.materials:
@@ -131,9 +130,9 @@ func _result_problem(result: Gain) -> String:
 	return ""
 
 
-## Whether a captured monster has this id.
+## Whether a dominated monster has this id.
 func has_monster(monster_id: int) -> bool:
-	for monster: CapturedMonster in captured_monsters:
+	for monster: DominatedMonster in dominated_monsters:
 		if monster.id == monster_id:
 			return true
 	return false
