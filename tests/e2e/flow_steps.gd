@@ -30,6 +30,16 @@ static func commands(moves: Array[int]) -> Array[Command]:
 	return made
 
 
+## One tick's commands for `slots` players standing still, the one in `slot` placing their totem
+## (#423).
+static func totem(slot: int = 0, slots: int = 1) -> Array[Command]:
+	var made: Array[Command] = []
+	for each: int in slots:
+		var place: int = Command.PLACE_TOTEM if each == slot else Command.NO_TOTEM
+		made.append(Command.new(Command.NO_MOVE, false, place))
+	return made
+
+
 ## Walks the player in slot 0 one whole step in `direction` while the other `slots` - 1 players
 ## stand still; returns every event raised on the way.
 static func step(state: GameState, direction: int, slots: int = 1) -> Array[RefCounted]:
