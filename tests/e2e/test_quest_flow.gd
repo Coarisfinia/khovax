@@ -185,7 +185,7 @@ func _check_marked_monster(
 func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profile) -> String:
 	var text: String = "{\"id\": \"absent\", \"name\": \"Absent\", \"steps\": "
 	text += "[{\"condition\": \"dominated\", \"species\": \"storm_finch\"}]}"
-	var known: Dictionary[String, Species] = Content.load_species().species
+	var known: Dictionary[String, Species] = SpeciesContent.load_species().species
 	var absent: QuestDefinition = QuestDefinition.parse("absent", text, known)
 	profile.quest_book[absent.id] = absent
 	var any_finch: bool = false

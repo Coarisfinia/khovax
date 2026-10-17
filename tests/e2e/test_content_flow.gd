@@ -22,7 +22,7 @@ const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\
 
 
 func run(_tree: SceneTree) -> String:
-	var content: Content = Content.load_species()
+	var content: Content = SpeciesContent.load_species()
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
 	if (not content.species.has("moss_toad")
@@ -51,7 +51,7 @@ func run(_tree: SceneTree) -> String:
 ## kind, name or description, a special without its power and cooldown (#410), or a passive with
 ## them.
 func _check_kits(content: Content) -> String:
-	var loaded: Content = Content.load_abilities()
+	var loaded: Content = SpeciesContent.load_abilities()
 	if not loaded.problem.is_empty():
 		return "the abilities didn't load: " + loaded.problem
 	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)

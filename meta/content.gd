@@ -3,15 +3,15 @@ extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, under data/ or, for a kind a slice
 ## owns, under that slice's data/ (#412), checked against their schema in CI and here for what a
 ## schema can't check, each by its own kind: ids
-## unique and matching their file. Species are checked by Species (#279), loot tables (#90) by
-## LootTable, tile blueprints (#116) by TileBlueprint, abilities (#222) by Ability, and quests
+## unique and matching their file. Species are checked by Species (#279) and abilities by Ability,
+## read by the species slice
+## (SpeciesContent), loot tables (#90) by
+## LootTable, tile blueprints (#116) by TileBlueprint, and quests
 ## (#184) by QuestDefinition against the species, read by the quests slice (QuestContent). Here too:
 ## the field helpers they all use.
 
-const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
-const ABILITIES_DIR: String = "res://data/abilities/"
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
@@ -27,19 +27,6 @@ var abilities: Dictionary[String, Ability] = {}
 var problem: String = ""
 
 
-## Every species file in `directory`, read and checked.
-static func load_species(directory: String = SPECIES_DIR) -> Content:
-	var content: Content = Content.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			content.problem = content.add_species(file_name.get_basename(), text)
-			if not content.problem.is_empty():
-				content.problem = file_name + ": " + content.problem
-				return content
-	return content
-
-
 ## Every loot table file in `directory`, read and checked.
 static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 	var content: Content = Content.new()
@@ -51,20 +38,6 @@ static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
 				content.problem = file_name + ": " + table.problem
 				return content
 			content.loot_tables[table.id] = table
-	return content
-
-
-## Every ability file in `directory`, read and checked (#222).
-static func load_abilities(directory: String = ABILITIES_DIR) -> Content:
-	var content: Content = Content.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var ability: Ability = Ability.parse(file_name.get_basename(), text)
-			if not ability.problem.is_empty():
-				content.problem = file_name + ": " + ability.problem
-				return content
-			content.abilities[ability.id] = ability
 	return content
 
 
