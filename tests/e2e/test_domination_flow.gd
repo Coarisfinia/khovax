@@ -26,7 +26,9 @@ extends RefCounted
 ## one held where it stands (as hiding ones are).
 ##
 ## A companion (#221) strikes the wild monster next to it once a second for its species'
-## strength, never below 1 HP, and leaves one hiding in its tile alone.
+## strength, never below 1 HP, and leaves one hiding in its tile alone. Its player can switch it
+## to lethal strikes (#221): the next one fells a wild monster at 1 HP, which faints for good where
+## it fell, and the companion goes on to the next one.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -722,7 +724,47 @@ func _check_companion_strikes() -> String:
 	(state.feature(Features.HIDING) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
+	return _check_lethal_strikes(state, first, spots)
+
+
+## The player toggles their companion, ready and hemmed in by the wild monsters on `spots`, all
+## hiding, the one with the lowest id, `first`, at 1 HP, to lethal strikes: once they jump out, its
+## next strike fells `first`, which faints for good, staying where it fell and saved as it is; it
+## then strikes the next one, until the player toggles it back. A toggle for a companion they don't
+## have does nothing.
+func _check_lethal_strikes(state: GameState, first: int, spots: Array[Vector2i]) -> String:
+	var attacks: CompanionAttackFeature = (
+		state.feature(Features.COMPANION_ATTACKS) as CompanionAttackFeature
+	)
+	var wild: WildMonsterFeature = _wild(state)
+	_toggle_lethal(state, 1)
+	if not attacks.lethal.is_empty():
+		return "a toggle for a companion the player doesn't have made one lethal"
+	(state.feature(Features.HIDING) as HidingFeature).hidden.clear()
+	_toggle_lethal(state, 0)
+	if not wild.is_fainted(first) or wild.is_wild_monster(first) or wild.hp_of(first) != 0:
+		return "the lethal strike didn't fell the wild monster at 1 HP"
+	if state.entity(first) == null:
+		return "the fainted wild monster didn't stay where it fell"
+	var saved: Dictionary = wild.save_values()
+	var reloaded: WildMonsterFeature = _wild(_strike_state(spots))
+	reloaded.load_values(state, DataReader.new(saved))
+	if reloaded.hash_values() != wild.hash_values():
+		return "the fainted wild monster didn't load back as saved"
+	var strikes: Array[CompanionStruck] = _strikes_over(state, CompanionAttackFeature.STRIKE_TICKS)
+	if strikes.size() != 1 or strikes[0].monster_id != wild.monsters[0]:
+		return "the companion didn't go on to the next wild monster after felling one"
+	_toggle_lethal(state, 0)
+	if not attacks.lethal.is_empty():
+		return "toggling the companion again didn't make it non-lethal"
 	return ""
+
+
+## One tick of the player in slot 0 standing still and toggling the lethal strikes of their
+## companion at `place`.
+func _toggle_lethal(state: GameState, place: int) -> void:
+	var toggling: Array[Command] = [Command.new(Command.NO_MOVE, place)]
+	Simulation.step(state, toggling)
 
 
 ## A disc with a weak wild monster on each of `spots`, hiding and companions.

@@ -6,8 +6,9 @@ extends RefCounted
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
 
 ## The file format; a replay in another format is refused, not misread. Format 2 added the starting
-## world and format 3 the companions (#338); a replay without them has none and still plays.
-const FORMAT: int = 3
+## world and format 3 the companions (#338); a replay without them has none and still plays. Format
+## 4 gave every command its lethal toggle (#221): an older replay's commands toggle nothing.
+const FORMAT: int = 4
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -66,10 +67,22 @@ static func parse(text: String) -> Replay:
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
+	if format < 4:
+		replay.changes = _untoggled(replay.changes)
 	var by_tick: Dictionary = data.get("checkpoints", {})
 	for tick: Variant in by_tick:
 		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
+
+
+## Changes recorded before commands had a lethal toggle (tick, slot, move each), each with no
+## toggle added.
+static func _untoggled(old: Array[int]) -> Array[int]:
+	var changes: Array[int] = []
+	for i: int in range(0, old.size(), 3):
+		changes.append_array(old.slice(i, i + 3))
+		changes.append(Command.NO_TOGGLE)
+	return changes
 
 
 ## The starting world in a replay's data, with JSON's numbers whole again; empty for none, or for

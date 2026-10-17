@@ -10,7 +10,10 @@ extends Feature
 ## one could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
 ## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates
 ## it (DominationFeature). Each has its species'
-## strength and HP, and starts at full HP (#219); nothing hurts it yet. Enraged (#220,
+## strength and HP, and starts at full HP (#219); companions' strikes wound it (#221), and a lethal
+## one can fell it: it faints for good, staying where it fell, out of `monsters` and in `fainted`,
+## so no rule moves, enrages, strikes or dominates it any more, and it still blocks walkers like
+## anything that doesn't walk. Enraged (#220,
 ## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
 ## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
 
@@ -27,6 +30,8 @@ const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
+## Every fainted one's (#221), felled by a lethal strike, in id order: no longer a wild monster.
+var fainted: Array[int] = []
 ## The blueprint's species ids for spots the region doesn't name, and how likely each one is.
 var roster: Array[String] = []
 var weights: Array[int] = []
@@ -128,6 +133,7 @@ func _unringable_in(region: Region) -> Dictionary[Vector2i, bool]:
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
+	fainted.erase(removed_id)
 	held.erase(removed_id)
 	var _dropped: bool = _species.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
@@ -172,11 +178,23 @@ func rage_of(entity_id: int) -> int:
 	return _rage.get(entity_id, 0)
 
 
-## Takes `damage` off the wild monster's HP, never below 1: a non-lethal hit (#221), which weakens
-## it for a domination but never fells it.
-func wound(entity_id: int, damage: int) -> void:
-	if is_wild_monster(entity_id):
-		_hp[entity_id] = maxi(hp_of(entity_id) - damage, 1)
+## Whether the entity with this id is a fainted one (#221).
+func is_fainted(entity_id: int) -> bool:
+	return fainted.has(entity_id)
+
+
+## Takes `damage` off the wild monster's HP. A non-lethal hit (#221) never takes it below 1, so it
+## weakens it for a domination; a `lethal` one can take it to 0, and then it faints.
+func wound(entity_id: int, damage: int, lethal: bool = false) -> void:
+	if not is_wild_monster(entity_id):
+		return
+	_hp[entity_id] = maxi(hp_of(entity_id) - damage, 0 if lethal else 1)
+	if _hp[entity_id] == 0:
+		monsters.erase(entity_id)
+		held.erase(entity_id)
+		var _calmed: bool = _rage.erase(entity_id)
+		fainted.append(entity_id)
+		fainted.sort()
 
 
 ## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
@@ -190,11 +208,15 @@ func enrage(entity_id: int, heal: int) -> void:
 
 
 ## Each wild monster still in the instance as its entity's id, its species and its HP left, in id
-## order. The roster, the species this instance can place and their stats follow from the
+## order, the fainted ones among them at 0 HP. The roster, the species this instance can place and
+## their stats follow from the
 ## blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
-	for monster: int in monsters:
+	var standing: Array[int] = monsters.duplicate()
+	standing.append_array(fainted)
+	standing.sort()
+	for monster: int in standing:
 		var entry: Dictionary = {
 			"entity": monster,
 			"species": _species[monster],
@@ -207,6 +229,7 @@ func save_values() -> Dictionary:
 
 func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
+	fainted.clear()
 	held.clear()
 	_species.clear()
 	_hp.clear()
@@ -224,13 +247,17 @@ func load_values(state: GameState, values: DataReader) -> void:
 				species,
 			])
 			return
-		monsters.append(monster)
 		_species[monster] = species
 		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
+		if _hp[monster] == 0:
+			fainted.append(monster)
+			continue
+		monsters.append(monster)
 		var rage: int = entry.whole("rage", 0, MOST_RAGE)
 		if rage > 0:
 			_rage[monster] = rage
 	monsters.sort()
+	fainted.sort()
 
 
 func hash_values() -> Array[int]:
@@ -242,4 +269,7 @@ func hash_values() -> Array[int]:
 		values.append(rage_of(monster))
 	values.append(held.size())
 	values.append_array(held)
+	values.append(fainted.size())
+	for monster: int in fainted:
+		values.append_array([monster, _known.find(_species[monster])])
 	return values
