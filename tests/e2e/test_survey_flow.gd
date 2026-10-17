@@ -527,23 +527,29 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	key.action = &"survey_zoom_in"
 	key.pressed = true
 	tab.get_viewport().push_input(key)
+	problem += _survey_zoomed_to(choice, "key", SurveyChoice.AUTO_ZOOM + 1)
 	(tab.find_child("ZoomIn", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom in button", SurveyChoice.AUTO_ZOOM + 2)
 	(tab.find_child("ZoomOut", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom out button", SurveyChoice.AUTO_ZOOM + 1)
 	if problem.is_empty():
 		# Spread far enough for exactly one step closer, as on the corner Survey.
 		var spread: PackedFloat32Array = PackedFloat32Array([0.15, 0.25, 0.22])
 		var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
 		problem = _survey_pinched(tab.view, stick, spread)
+	problem += _survey_zoomed_to(choice, "pinch", SurveyChoice.AUTO_ZOOM + 2)
 	await main.get_tree().process_frame
-	var step: int = SurveyChoice.AUTO_ZOOM + 2
-	if problem.is_empty() and (choice.zoom_step() != step
-			or tab.view.across != SurveyChoice.ZOOMS[step]):
-		problem = "the menu's Survey zoom key, buttons and pinch went to step %d, not %d" % [
-			choice.zoom_step(),
-			step,
-		]
+	if problem.is_empty() and tab.view.across != SurveyChoice.ZOOMS[choice.zoom_step()]:
+		problem = "the menu's Survey doesn't follow the zoom"
 	menu.toggle()
 	return problem
+
+
+## Why the menu's Survey `how` didn't step the zoom to `step`, or "".
+func _survey_zoomed_to(choice: SurveyChoice, how: String, step: int) -> String:
+	if choice.zoom_step() == step:
+		return ""
+	return "the menu's Survey %s went to zoom step %d, not %d. " % [how, choice.zoom_step(), step]
 
 
 ## Touches `at` with `finger` (the first one unless named), or lifts it there.
