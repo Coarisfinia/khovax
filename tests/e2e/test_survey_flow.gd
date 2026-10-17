@@ -514,6 +514,10 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	menu.toggle()
 	(tab.get_parent() as TabContainer).current_tab = tab.get_index()
 	var problem: String = choice.zoom_by(SurveyChoice.AUTO_ZOOM - choice.zoom_step())
+	# The headless window is too small for the tab to lay its Survey out: a desktop screen's size.
+	var window: Window = main.get_tree().root
+	var kept_size: Vector2i = window.size
+	window.size = Vector2i(SCREENS[0])
 	await main.get_tree().process_frame
 	await main.get_tree().process_frame
 	survey.show_state()
@@ -542,6 +546,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	if problem.is_empty() and tab.view.across != SurveyChoice.ZOOMS[choice.zoom_step()]:
 		problem = "the menu's Survey doesn't follow the zoom"
 	menu.toggle()
+	window.size = kept_size
 	return problem
 
 
