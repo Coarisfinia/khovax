@@ -1323,20 +1323,9 @@ w 1 m
 ## Legend
 
 "
-
-
-## Tiles
-
-```
-w .
-. 1 .
-m .
-```
-## Legend
-
+	tiles += "- `w`: a wild monster, always moss_toad, wounded
 "
-	tiles += " - `w`: a wild monster, always moss_toad, wounded
-- `m`: a wild monster, always moss_toad
+	tiles += "- `m`: a wild monster, always moss_toad
 "
 	var region: Region = RegionDocument.parse(tiles)
 	var marked: int = 0
