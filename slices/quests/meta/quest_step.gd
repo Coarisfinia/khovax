@@ -3,7 +3,7 @@ extends RefCounted
 ## One step of a quest (#184): a single condition, met `count` times. It's checked only against what
 ## the player obtains (a Gain), never inside the simulation.
 
-## A step's fields, as the quest schema (data/schemas/quests.schema.json) allows them.
+## A step's fields, as the quest schema (slices/quests/data/quests.schema.json) allows them.
 const FIELDS: Array[String] = ["condition", "species", "place", "piece", "instance", "count"]
 ## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
 ## monster this player dominated (of `species`, or any); `opened`, a treasure chest this player got

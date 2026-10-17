@@ -508,7 +508,7 @@ func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
 ## quest counts to three. The first domination asks for the beach first (#321): dominations before
 ## it don't count, and reaching it hands over to dominating.
 func _check_counted() -> String:
-	var content: Content = Content.load_quests()
+	var content: Content = QuestContent.load_quests()
 	var profile: Profile = Profile.new()
 	profile.quest_book = content.quests
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
@@ -568,7 +568,7 @@ func _check_settled() -> String:
 	save.quest_progress["three_moss_toads"] = QuestProgress.new(0, 3)
 	save.quest_progress["first_domination"] = QuestProgress.new(4, 0)
 	var stale: Profile = ProfileSave.parse(ProfileSave.to_text(save))
-	stale.quest_book = Content.load_quests().quests
+	stale.quest_book = QuestContent.load_quests().quests
 	applied = stale.problem + stale.apply(_gain([], 1))
 	var settled: Array[String] = ["first_domination", "three_moss_toads"]
 	if not applied.is_empty() or stale.quests_done != settled:
@@ -588,7 +588,7 @@ func _check_broken_data() -> String:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
 		var _stored: bool = file.store_string(files[id])
 		file.close()
-	var content: Content = Content.load_quests(directory)
+	var content: Content = QuestContent.load_quests(directory)
 	for id: String in files:
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
 	var _gone: Error = DirAccess.remove_absolute(directory)
