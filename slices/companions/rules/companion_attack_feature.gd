@@ -60,9 +60,10 @@ func save_values() -> Dictionary:
 
 func load_values(state: GameState, values: DataReader) -> void:
 	_waits.clear()
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	var flat: Array[int] = values.wholes("waits", 0, DataReader.MOST)
 	for i: int in range(0, flat.size() - 1, 2):
-		if state.entity(flat[i]) != null and flat[i + 1] > 0:
+		if companions.owners.has(flat[i]) and flat[i + 1] > 0:
 			_waits[flat[i]] = mini(flat[i + 1], STRIKE_TICKS)
 
 
@@ -71,7 +72,9 @@ func wait_of(companion_id: int) -> int:
 	return _waits.get(companion_id, 0)
 
 
-## The wild monster with the lowest id next to `tile` that isn't hiding, or 0.
+## The wild monster with the lowest id next to `tile` that isn't hiding, or 0. WildMonsterFeature
+## keeps its monsters in id order. Hiding isn't required, since most instances have none; where an
+## instance has it, InstanceBlueprints lists it before the companions, so it has stepped already.
 static func _target(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
 	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
 	for monster: int in wild.monsters:
