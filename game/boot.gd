@@ -9,7 +9,9 @@ extends Node
 ## loaded, it starts under the fog, draws its first frames (which compile its shaders), and the fog
 ## lifts calmly, without a flash (the game is made around motion sickness). The engine's own boot
 ## splash is the fog's color too (project.godot), so the first thing on screen already looks like
-## the game. The test builds log when the fog shows and when the game starts, for the web e2e.
+## the game. A caption on the fog says the world is loading (#270), carrying on from the web page's
+## own captions (the web presets' head_include), so the wait never looks like a hang. The test
+## builds log when the fog shows and when the game starts, for the web e2e.
 
 ## Emitted when the game's main scene has loaded and been added, with it.
 signal game_started(game: Node)
@@ -18,6 +20,11 @@ signal game_started(game: Node)
 const GAME: String = "res://game/main.tscn"
 ## The fog's color: the clouds' light shade (FogCloud).
 const FOG: Color = Color(0.86, 0.88, 0.93)
+## What the fog's caption says while the game loads.
+const LOADING: String = "Loading the world…"
+## The caption's color and size: the web page's captions' (the web presets' head_include).
+const CAPTION_COLOR: Color = Color(0.29, 0.31, 0.38)
+const CAPTION_SIZE: int = 18
 ## Frames the game draws under the fog before it lifts: its first ones compile its shaders.
 const SETTLE_FRAMES: int = 10
 ## How long the fog takes to lift.
@@ -33,6 +40,8 @@ static var covering: bool = false
 var game: Node
 ## The fog over the screen.
 var cover: ColorRect
+## The fog's caption, saying what the game is doing.
+var caption: Label
 var _settle: int = -1
 
 
@@ -46,6 +55,7 @@ func _ready() -> void:
 	# Touches and clicks stop at the fog while it hides the game, and go through once it lifts.
 	cover.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(cover)
+	cover.add_child(_caption())
 	covering = true
 	set_process(false)
 	# Two frames' starts with a frame drawn in between, so the fog is on screen; the headless
@@ -82,12 +92,26 @@ func _start(scene: PackedScene) -> void:
 	game_started.emit(game)
 
 
-## Lifts the fog calmly, then leaves.
+## The caption, low on the fog where the web page's caption stands, so it reads as the same one.
+func _caption() -> Label:
+	caption = Label.new()
+	caption.text = LOADING
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.add_theme_color_override("font_color", CAPTION_COLOR)
+	caption.add_theme_font_size_override("font_size", CAPTION_SIZE)
+	caption.set_anchors_preset(Control.PRESET_FULL_RECT)
+	caption.anchor_top = 0.85
+	caption.anchor_bottom = 0.9
+	caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	return caption
+
+
+## Lifts the fog calmly, with its caption, then leaves.
 func _lift() -> void:
 	covering = false
 	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tween: Tween = create_tween()
-	var _clear: PropertyTweener = tween.tween_property(cover, "color:a", 0.0, LIFT_SECONDS)
+	var _clear: PropertyTweener = tween.tween_property(cover, "modulate:a", 0.0, LIFT_SECONDS)
 	var _gone: CallbackTweener = tween.tween_callback(queue_free)
 
 
