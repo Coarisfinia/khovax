@@ -265,7 +265,7 @@ func _check_loot(
 		if event is DominationLoot and (event as DominationLoot).monster_id == dominated.monster_id:
 			looted = (event as DominationLoot).loot.keys()
 	looted.sort()
-	var tabled: bool = Content.load_loot_tables().loot_tables.has(dominated.species)
+	var tabled: bool = LootContent.load_loot_tables().loot_tables.has(dominated.species)
 	if looted != (earning if tabled else []):
 		return "the %s's loot went to slots %s, not %s" % [dominated.species, looted, earning]
 	var brief: WildMonsterDominated = WildMonsterDominated.new(

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://github.com/Coarisfinia/khovax/data/schemas/loot_tables.schema.json",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/loot/data/loot_tables.schema.json",
 	"title": "Loot table",
 	"description": "What a roll can give (#90). A species table's blank entry rolls again on the instance's table; an instance table has no blank. Chances are thousandths and add up to 1000 (100 %). One file per table, named after its id.",
 	"type": "object",

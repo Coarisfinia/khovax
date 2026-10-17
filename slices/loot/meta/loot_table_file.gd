@@ -1,10 +1,11 @@
 class_name LootTableFile
 extends RefCounted
-## Reads a loot table (LootTable, #90) from its content file (data/loot_tables/, #72): checks its
+## Reads a loot table (LootTable, #90) from its content file (the loot slice's data/loot_tables/,
+## #72, #412): checks its
 ## fields, its id against the file name, and that its chances add up to 100 %, and hands the rules
 ## the table's plain data.
 
-## A loot table file's fields, as its schema (data/schemas/loot_tables.schema.json) allows them.
+## A loot table file's fields, as its schema (slices/loot/data/loot_tables.schema.json) allows them.
 const FIELDS: Array[String] = ["id", "kind", "entries"]
 const ITEM_FIELDS: Array[String] = ["item", "chance", "min", "max"]
 const BLANK_FIELDS: Array[String] = ["blank", "chance"]
