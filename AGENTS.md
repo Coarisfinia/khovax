@@ -122,8 +122,9 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Don't rerun locally what CI runs** (owner's rule): lint, the script check and the e2e tests run
-  on every push. Push and let CI check. Run them locally only to reproduce a CI failure.
+- **Don't run tests or lint locally** (owner's rule): CI takes care of them. Lint, the script check,
+  the e2e tests, the unused code and asset checks and the load test all run on every push, so push
+  and let CI check, after a rebase too. Run one locally only to reproduce a CI failure.
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a

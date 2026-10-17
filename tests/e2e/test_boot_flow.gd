@@ -838,7 +838,7 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
 func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> String:
 	var text: String = "{\"id\": \"survey_any\", \"name\": \"Any\", "
-	text += "\"steps\": [{\"condition\": \"caught\"}]}"
+	text += "\"steps\": [{\"condition\": \"dominated\"}]}"
 	profile.quest_book["survey_any"] = QuestDefinition.parse("survey_any", text, {})
 	survey.show_state()
 	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(driver.state, profile, 0)
