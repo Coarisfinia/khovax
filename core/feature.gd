@@ -4,7 +4,7 @@ extends RefCounted
 ## rule: every game rule is one). An instance decides which features it has and in which order they
 ## step; whether each one is on is simulation state, so a rule (e.g. a boss phase) can switch
 ## features on and off during a session, inside a tick. A disabled feature keeps its state but
-## doesn't step. Same rules as all of sim/: integers only, no nodes, input, time or engine state.
+## doesn't step. Same rules as all of core/: integers only, no nodes, input, time or engine state.
 
 var enabled: bool = true
 

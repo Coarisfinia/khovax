@@ -10,7 +10,7 @@ extends RefCounted
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
 ## so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.
 ##
-## Read here at first use rather than handed over by meta/: regions are read in sim/ from files
+## Read here at first use rather than handed over by meta/: regions are read in core/ from files
 ## already (InstanceBlueprints), and the kinds are fixed data of the build, never state, so they
 ## need no hash of their own: a region hashes its tiles' numbers.
 
