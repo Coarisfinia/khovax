@@ -13,8 +13,8 @@ extends Feature
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
 ## player walked off), it heads straight back. It walks like a player (MovementFeature): players
 ## and companions pass through each other, so it never traps its own player, and what doesn't walk
-## (a wild monster) stops it. Its rolls come from the feature's own stream. Attacks come later
-## (#221).
+## (a wild monster) stops it. Its rolls come from the feature's own stream. It attacks through
+## CompanionAttackFeature (#221).
 
 ## The reach of a species the feature wasn't given one for, and the shortest and longest any
 ## species has, in tiles.

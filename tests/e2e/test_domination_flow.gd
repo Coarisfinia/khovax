@@ -25,6 +25,9 @@ extends RefCounted
 ## there, where a ring dominates it; one a ring could enclose already never moves, and neither does
 ## one held where it stands (as hiding ones are).
 ##
+## A companion (#221) strikes the wild monster next to it once a second for its species'
+## strength, never below 1 HP, and leaves one hiding in its tile alone.
+##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
 ## tile that hides.
@@ -96,6 +99,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_outcomes()
 	if result.is_empty():
 		result = _check_species()
+	if result.is_empty():
+		result = _check_companion_strikes()
 	if result.is_empty():
 		result = await _check_view(tree)
 	if result.is_empty():
@@ -685,6 +690,65 @@ func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 		EnrageFeature.new(),
 	]
 	return GameState.new(region, 1, ordered)
+
+
+## A weak companion hemmed in by weak wild monsters strikes the one with the lowest id at once
+## and then every STRIKE_TICKS, for its strength each time, until it holds at 1 HP; with them all
+## hidden in their tiles, it strikes none.
+func _check_companion_strikes() -> String:
+	var hemmed: Vector2i = Vector2i(2, 0)
+	var spots: Array[Vector2i] = []
+	for side: Vector2i in Hex.DIRECTIONS:
+		spots.append(hemmed + side)
+	var state: GameState = _strike_state(spots)
+	state.companions[0] = WEAK
+	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	if not _strikes_over(state, 1).is_empty():
+		return "the companion struck before it stood next to a wild monster"
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	state.entity(companions.companion_of(0)).tile = hemmed
+	var first: int = _wild(state).monsters[0]
+	var strikes: Array[CompanionStruck] = _strikes_over(state, 4 * CompanionAttackFeature.STRIKE_TICKS)
+	var damages: Array[int] = []
+	for strike: CompanionStruck in strikes:
+		damages.append(strike.damage if strike.monster_id == first else -1)
+	if damages != [WEAK_STRENGTH, WEAK_STRENGTH, WEAK_STRENGTH, WEAK_STRENGTH]:
+		return "the companion's strikes on the first wild monster were %s, not 4, once a second" % [
+			damages,
+		]
+	if _wild(state).hp_of(first) != 1:
+		return "the companion's hits left the wild monster at %d HP, not 1" % _wild(state).hp_of(first)
+	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	hiding.hidden.append_array(_wild(state).monsters)
+	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
+		return "the companion struck a wild monster hiding in its tile"
+	return ""
+
+
+## A disc with a weak wild monster on each of `spots`, hiding and companions.
+func _strike_state(spots: Array[Vector2i]) -> GameState:
+	var region: Region = _outcome_state(WEAK, spots).region
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		TrailFeature.new(),
+		WildMonsterFeature.new([], [], { WEAK: OUTCOME_HP }, { WEAK: WEAK_STRENGTH }),
+		HidingFeature.new(),
+		CompanionFeature.new(),
+		CompanionAttackFeature.new(),
+	]
+	return GameState.new(region, 1, ordered)
+
+
+## The companions' strikes over `ticks` ticks of the player standing still.
+func _strikes_over(state: GameState, ticks: int) -> Array[CompanionStruck]:
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	var strikes: Array[CompanionStruck] = []
+	for _tick: int in ticks:
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			if event is CompanionStruck:
+				strikes.append(event as CompanionStruck)
+	return strikes
 
 
 ## Walks the player in slot 0 along `path` up to the start of its last step, which closes the

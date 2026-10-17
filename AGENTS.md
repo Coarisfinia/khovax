@@ -132,6 +132,9 @@ on with the next one** (owner's rule): never wait on an answer.
 **A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
 issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
 
+**Close an issue once everything in it is built or tracked elsewhere** (owner's rule, #265):
+an open issue is work still to do, never a record. Say in the closing comment where each part went.
+
 **Stuck? File an issue and move on.** When something can't be finished without the owner, file an
 issue saying what is blocked and why, and continue with the next work.
 
@@ -300,7 +303,8 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
   technical and never shown to the player. Who the players bring is part of a session's start:
   each player's companion (#338) is the first monster their profile carries, handed to the world
-  as species ids (`World.companions`, in its save and the replay too). Each domination or find is a
+  as species ids (`World.companions`, in its save and the replay too). It fights on its own
+  (`CompanionAttackFeature`, #221): a non-lethal strike on a wild monster next to it, once a second. Each domination or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
   profile at boot and takes this machine's player's dominations from the tick's events, #132); **saves
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones
