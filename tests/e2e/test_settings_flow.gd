@@ -2,12 +2,15 @@ extends RefCounted
 ## Settings flow (#161): every graphics setting starts at Auto, which picks the project's value for
 ## this platform and says so in its label; a player's choice takes effect at once and survives a
 ## restart; and choosing Auto again hands the setting back. Anti-aliasing is the first: MSAA and the
-## ink pass's smoothing together. In the game, the settings menu (#355) does all that: the `menu`
-## action opens it, easing in; it lists every setting, each on Auto at first; a step changes one
-## and keeps it, its Auto button hands it back; it fits a phone's screen; and the action closes it,
-## easing out.
+## ink pass's smoothing together. In the game, the menu's Settings tab (#355, #362) does all that:
+## the `menu` action opens the menu, easing in; while it's open the player's keys don't walk and,
+## by default, single player pauses (#302): no tick runs. The tab lists every setting, each on Auto
+## at first; a step changes one and keeps it, its Auto button hands it back; turning the pause off
+## lets the ticks run on behind the menu; the rows fit a phone's screen; and the action closes the
+## menu, easing out, and the game goes on.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
+const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 
 var _tree: SceneTree
 
@@ -90,96 +93,143 @@ func _check_menu() -> String:
 	graphics.settings_path = SETTINGS_PATH
 	graphics.settings = Settings.new()
 	graphics.apply()
-	var menu: SettingsMenu = main.get_node("Hud/SettingsMenu") as SettingsMenu
+	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
+	var driver: GameDriver = FlowGame.driver(main)
 	var result: String = await _open_menu(menu)
 	if result.is_empty():
+		result = await _menu_holds_game(driver, true)
+	if result.is_empty():
 		result = _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
+	if result.is_empty():
+		result = await _menu_pause_choice(menu, driver)
 	if result.is_empty():
 		result = _menu_on_screens(menu)
 	if result.is_empty():
 		result = await _close_menu(menu)
+	if result.is_empty():
+		result = await _menu_holds_game(driver, false)
 	main.queue_free()
 	await _tree.process_frame
 	return result
 
 
-## The `menu` action opens the menu, easing in, and it lists every setting, each on Auto.
-func _open_menu(menu: SettingsMenu) -> String:
+## The `menu` action opens the menu, easing in, and its Settings tab lists every setting, each on
+## Auto.
+func _open_menu(menu: GameMenu) -> String:
 	if menu.is_open() or menu.opacity() > 0.0:
-		return "the settings menu shows before it's opened"
+		return "the menu shows before it's opened"
 	_press_menu(menu)
 	if not menu.is_open() or menu.opacity() >= 1.0:
-		return "the menu action doesn't open the settings menu, or it snaps open"
-	await _tree.create_timer(SettingsMenu.FADE_SECONDS * 2.0).timeout
+		return "the menu action doesn't open the menu, or it snaps open"
+	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
 	if menu.opacity() < 1.0:
-		return "the settings menu doesn't finish easing in"
+		return "the menu doesn't finish easing in"
+	var shown: Dictionary[String, String] = menu.settings.shown
 	var listed: Array[String] = []
-	for setting: String in menu.shown:
+	for setting: String in shown:
 		listed.append(setting)
 	var settings: Array[String] = [
 		Graphics.ANTI_ALIASING,
 		SurveyChoice.PLACE_SETTING,
 		SurveyChoice.ZOOM_SETTING,
+		GameMenu.PAUSE_SETTING,
 	]
 	if listed != settings:
-		return "the settings menu lists %s, not every setting" % [listed]
+		return "the Settings tab lists %s, not every setting" % [listed]
 	for setting: String in listed:
-		if not menu.shown[setting].begins_with("Auto ("):
-			return "%s isn't on Auto at first: %s" % [setting, menu.shown[setting]]
+		if not shown[setting].begins_with("Auto ("):
+			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
+	return ""
+
+
+## While the menu is open (`open`), the player's keys don't walk and no tick runs; once it's
+## closed, both go on.
+func _menu_holds_game(driver: GameDriver, open: bool) -> String:
+	Input.action_press("move_right")
+	var walks: bool = driver.input.command(driver.state).move != Command.NO_MOVE
+	Input.action_release("move_right")
+	var ticked: bool = await _ticks_run(driver)
+	if walks == open or ticked == open:
+		return "with the menu %s, the keys %s walk and the ticks %s run" % [
+			"open" if open else "closed",
+			"do" if walks else "don't",
+			"do" if ticked else "don't",
+		]
 	return ""
 
 
 ## Stepping anti-aliasing on and the Survey's place back takes effect and keeps them;
-## anti-aliasing's
-## Auto button hands it back.
-func _menu_choices(menu: SettingsMenu, graphics: Graphics, survey: SurveyChoice) -> String:
+## anti-aliasing's Auto button hands it back.
+func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> String:
+	var tab: SettingsTab = menu.settings
 	var choices: Array[int] = Graphics.ANTI_ALIASING_CHOICES
 	var next: int = choices[posmod(choices.find(Graphics.auto_anti_aliasing()) + 1, choices.size())]
-	menu.button(Graphics.ANTI_ALIASING, "Next").pressed.emit()
+	tab.button(Graphics.ANTI_ALIASING, "Next").pressed.emit()
 	var problem: String = _check_applied(graphics, next)
-	if problem.is_empty() and menu.shown[Graphics.ANTI_ALIASING] != _label_of(next):
-		problem = "the menu shows anti-aliasing as %s" % menu.shown[Graphics.ANTI_ALIASING]
+	if problem.is_empty() and tab.shown[Graphics.ANTI_ALIASING] != _label_of(next):
+		problem = "the menu shows anti-aliasing as %s" % tab.shown[Graphics.ANTI_ALIASING]
 	var place: int = posmod(SurveyChoice.AUTO_PLACE - 1, SurveyChoice.Place.size())
-	menu.button(SurveyChoice.PLACE_SETTING, "Previous").pressed.emit()
+	tab.button(SurveyChoice.PLACE_SETTING, "Previous").pressed.emit()
 	var kept: Settings = Settings.load_from(SETTINGS_PATH)
 	if problem.is_empty() and (survey.place_shown() != place
 			or kept.chosen.get(SurveyChoice.PLACE_SETTING) != place
 			or kept.chosen.get(Graphics.ANTI_ALIASING) != next):
 		problem = "the menu's choices aren't followed or kept: %s" % [kept.chosen]
-	menu.button(Graphics.ANTI_ALIASING, "Auto").pressed.emit()
+	tab.button(Graphics.ANTI_ALIASING, "Auto").pressed.emit()
 	if problem.is_empty():
 		problem = _check_applied(graphics, Graphics.auto_anti_aliasing())
 	kept = Settings.load_from(SETTINGS_PATH)
 	if problem.is_empty() and (kept.chosen.has(Graphics.ANTI_ALIASING)
-			or not menu.shown[Graphics.ANTI_ALIASING].begins_with("Auto (")):
+			or not tab.shown[Graphics.ANTI_ALIASING].begins_with("Auto (")):
 		problem = "the menu's Auto doesn't hand anti-aliasing back: %s" % [kept.chosen]
 	return problem
 
 
-## The menu fits on a phone held either way and on a desktop screen.
-func _menu_on_screens(menu: SettingsMenu) -> String:
+## Turning the pause off lets the ticks run on behind the open menu, and keeps that; its Auto
+## button pauses the game again.
+func _menu_pause_choice(menu: GameMenu, driver: GameDriver) -> String:
+	var tab: SettingsTab = menu.settings
+	tab.button(GameMenu.PAUSE_SETTING, "Next").pressed.emit()
+	if not await _ticks_run(driver) or tab.shown[GameMenu.PAUSE_SETTING] != "Off":
+		return "with the pause off, the open menu still holds the ticks"
+	var kept: Settings = Settings.load_from(SETTINGS_PATH)
+	if kept.chosen.get(GameMenu.PAUSE_SETTING) != 0:
+		return "the pause choice isn't kept: %s" % [kept.chosen]
+	tab.button(GameMenu.PAUSE_SETTING, "Auto").pressed.emit()
+	if await _ticks_run(driver) or not menu.pauses():
+		return "the pause's Auto doesn't pause the game again"
+	return ""
+
+
+## The settings' rows fit a phone held either way and a desktop screen.
+func _menu_on_screens(menu: GameMenu) -> String:
 	for screen: Vector2 in [Vector2(360.0, 640.0), Vector2(640.0, 360.0), Vector2(1920.0, 1080.0)]:
 		menu.lay_out(screen)
-		var panel: Rect2 = menu.panel_rect()
-		if panel.size.x <= 0.0 or panel.size.y <= 0.0:
-			return "the settings menu is %s on a %s screen, with no size" % [panel, screen]
-		if not Rect2(Vector2.ZERO, screen).encloses(panel):
-			return "the settings menu %s doesn't fit a %s screen" % [menu.panel_rect(), screen]
+		var width: float = menu.settings.rows_width()
+		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
+			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
 	return ""
 
 
 ## The `menu` action closes the menu again, easing out.
-func _close_menu(menu: SettingsMenu) -> String:
+func _close_menu(menu: GameMenu) -> String:
 	_press_menu(menu)
 	if menu.is_open() or menu.opacity() <= 0.0:
-		return "the menu action doesn't close the settings menu, or it snaps shut"
-	await _tree.create_timer(SettingsMenu.FADE_SECONDS * 2.0).timeout
+		return "the menu action doesn't close the menu, or it snaps shut"
+	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
 	if menu.opacity() > 0.0:
-		return "the settings menu doesn't finish easing out"
+		return "the menu doesn't finish easing out"
 	return ""
 
 
-func _press_menu(menu: SettingsMenu) -> void:
+## Whether ticks run on real time over a few ticks' time.
+func _ticks_run(driver: GameDriver) -> bool:
+	var tick: int = driver.world.tick
+	await _tree.create_timer(STEP * 4.0).timeout
+	return driver.world.tick > tick
+
+
+func _press_menu(menu: GameMenu) -> void:
 	var pressed: InputEventAction = InputEventAction.new()
 	pressed.action = &"menu"
 	pressed.pressed = true

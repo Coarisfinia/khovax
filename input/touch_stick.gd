@@ -51,7 +51,7 @@ func steering() -> Vector2:
 
 
 ## Lets go of the steering finger as if it was lifted, e.g. when a menu opens over the stick
-## (SettingsMenu, #355).
+## (GameMenu, #362).
 func let_go() -> void:
 	if is_held():
 		_finger = -1
