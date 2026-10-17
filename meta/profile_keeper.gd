@@ -35,6 +35,17 @@ func take(gain: Gain, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Takes over the player's choice of personal color (#391), `color` as 0xRRGGBB or
+## Profile.AUTO_COLOR, at time `now_msec`, saved debounced like a gain; returns why it couldn't be
+## taken or saved, or "". A color the save can't hold changes nothing.
+func choose_color(color: int, now_msec: int) -> String:
+	if color < Profile.AUTO_COLOR or color > Profile.MAX_COLOR:
+		return "not a personal color: %d" % color
+	profile.personal_color = color
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Saves pending changes if the last save is at least SAVE_INTERVAL_MSEC old; returns why it
 ## couldn't, or "".
 func save_if_due(now_msec: int) -> String:

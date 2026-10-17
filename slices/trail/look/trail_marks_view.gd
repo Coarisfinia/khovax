@@ -18,6 +18,8 @@ const LIFT: float = HexGrid.TILE_HEIGHT + DOT_RADIUS
 ## The slot whose mark each tile shows, by tile: what the dots are drawn from, kept here because
 ## the headless renderer can't read a MultiMesh back.
 var marks: Dictionary[Vector2i, int] = {}
+## Each slot's color the dots were drawn in, so a color chosen in the menu (#391) redraws them.
+var _colors: Array[Color] = []
 var _multimesh: MultiMesh = MultiMesh.new()
 
 
@@ -44,9 +46,13 @@ func _process(_delta: float) -> void:
 ## Matches the dots to the current state. Called every frame; tests call it after stepping.
 func show_state() -> void:
 	var wanted: Dictionary[Vector2i, int] = _wanted()
-	if wanted == marks:
+	var colors: Array[Color] = []
+	for slot: int in GameState.MAX_PLAYERS:
+		colors.append(PersonalColor.shown(driver, slot))
+	if wanted == marks and colors == _colors:
 		return
 	marks = wanted
+	_colors = colors
 	var tiles: Array[Vector2i] = []
 	tiles.assign(marks.keys())
 	tiles.sort()
@@ -57,7 +63,7 @@ func show_state() -> void:
 	var index: int = 0
 	for tile: Vector2i in tiles:
 		var dots: int = marks[tile] + 1
-		var color: Color = PersonalColor.of(driver.world.world_seed, marks[tile])
+		var color: Color = _colors[marks[tile]]
 		for i: int in dots:
 			var across: float = (i - (dots - 1) / 2.0) * SPACING
 			var at: Vector3 = HexLayout.to_world(tile) + Vector3(across, LIFT, 0.0)

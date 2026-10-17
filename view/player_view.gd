@@ -99,7 +99,7 @@ func show_state() -> void:
 		return
 	tile = player.tile
 	if circle != null and driver.world != null:
-		circle.paint(PersonalColor.of(driver.world.world_seed, slot))
+		circle.paint(PersonalColor.shown(driver, slot))
 	# Set explicitly, not left to the tile setter: the spot is added to it once below.
 	position = tile_position()
 	# Without movement in the instance, the player simply stands on its tile.

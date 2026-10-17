@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 5
+const FORMAT: int = 6
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -32,6 +32,7 @@ static func to_text(profile: Profile) -> String:
 		"materials": sorted_materials,
 		"quest_progress": _progress_data(profile),
 		"quests_done": profile.quests_done,
+		"personal_color": profile.personal_color,
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -70,6 +71,8 @@ static func parse(text: String) -> Profile:
 		_migrate_to_4(data)
 	if format < 5:
 		_migrate_to_5(data)
+	if format < 6:
+		_migrate_to_6(data)
 	profile.problem = _read(profile, data)
 	return profile
 
@@ -116,6 +119,11 @@ static func _migrate_to_5(data: Dictionary) -> void:
 			done_list[at] = NEW_FIRST_QUEST
 
 
+## Format 5 to 6: the personal color (#391) starts on Auto.
+static func _migrate_to_6(data: Dictionary) -> void:
+	data["personal_color"] = Profile.AUTO_COLOR
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -141,6 +149,9 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 		if count < 0 or str(material).is_empty():
 			return "material %s has an invalid count" % material
 		profile.materials[str(material)] = count
+	profile.personal_color = _color(data.get("personal_color"))
+	if profile.personal_color < Profile.AUTO_COLOR:
+		return "the save's personal color is invalid"
 	var problem: String = _read_carried(profile, data)
 	return problem if not problem.is_empty() else _read_quests(profile, data)
 
@@ -207,6 +218,15 @@ static func _monster(entry: Variant) -> DominatedMonster:
 	if monster.id < 1 or monster.species.is_empty() or monster.level < 1:
 		return null
 	return monster
+
+
+## A personal color from save data: Profile.AUTO_COLOR, or a color as 0xRRGGBB; below AUTO_COLOR
+## for anything else.
+static func _color(value: Variant) -> int:
+	if (value is int or value is float) and value == Profile.AUTO_COLOR:
+		return Profile.AUTO_COLOR
+	var color: int = _int(value)
+	return color if color >= 0 and color <= Profile.MAX_COLOR else Profile.AUTO_COLOR - 1
 
 
 ## A whole JSON number from 0 to Profile.MAX_NUMBER as an integer; -1 for anything else, so a
