@@ -405,7 +405,9 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   built-in shaders before the first frame, which blocks the page, and a full, still bar there looks
   like a hang. The fade is a CSS opacity transition, which the browser's compositor keeps running
   while the page is blocked; the page's background is the fog's color already (the boot splash).
-  It watches the bar until it's full, gone (the engine started) or hidden (a load error).
+  It watches the bar's attributes with a mutation observer until it's full or hidden (a load
+  error): the last progress can come right before the engine's start blocks the page, with no
+  frame between them, so polling once a frame would miss it.
   A caption below it says what's happening (#270): "Downloading…" while the bar fills, then,
   once it's full, "Starting the game…" (set before the block starts, so it shows through it); it
   goes with the loading screen when the engine starts (or with the bar on a load error), and the

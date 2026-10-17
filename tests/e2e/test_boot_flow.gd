@@ -59,8 +59,8 @@ func run(tree: SceneTree) -> String:
 
 ## Launching (#243): the project starts in the boot scene, which shows thick fog over the whole
 ## screen at once, with a caption saying the world is loading (#270), and starts loading the game
-## only once that fog has been drawn, so the page never waits on a blank splash; it starts the game under the fog as the current scene, and then lifts
-## the fog and leaves.
+## only once that fog has been drawn, so the page never waits on a blank splash; it starts the
+## game under the fog as the current scene, and then lifts the fog and leaves.
 func _check_boot(tree: SceneTree) -> String:
 	if str(ProjectSettings.get_setting("application/run/main_scene")) != "res://game/boot.tscn":
 		return "the project doesn't start in the boot scene"
