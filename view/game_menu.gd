@@ -1,7 +1,7 @@
 class_name GameMenu
 extends Control
-## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Character,
-## #391, Settings and the Survey, #392, so far; Quests follows: #388). The `menu` action (Escape)
+## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it: Character
+## (#391), Settings, the Survey (#392) and Quests (#388). The `menu` action (Escape)
 ## opens and closes it, and on touch screens a small button does; it eases in and out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
@@ -36,7 +36,8 @@ const OPEN_TEXT: String = "Menu"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## Whose profile keeps the personal color the Character tab shows.
+## Whose profile keeps the personal color the Character tab shows, and the quests the Quests tab
+## shows.
 @export var holder: ProfileHolder
 
 ## The Character tab.
@@ -152,7 +153,9 @@ func lay_out(screen: Vector2) -> void:
 		theme.default_font_size = font
 		_size_buttons(self)
 		character.fit(font)
-	settings.fit(minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN))
+	var width: float = minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN)
+	settings.fit(width)
+	quests_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
 
@@ -208,6 +211,10 @@ func _build_sheet() -> void:
 	survey_tab.name = "Survey"
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
+	var quests: QuestsTab = QuestsTab.new()
+	quests.name = "Quests"
+	quests.holder = holder
+	tabs.add_child(quests)
 	column.add_child(tabs)
 	var close: Button = button("Close", toggle)
 	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -228,6 +235,11 @@ func _pause_chosen() -> int:
 		return -1
 	var chosen: int = graphics.settings.chosen.get(PAUSE_SETTING, -1)
 	return chosen if chosen >= 0 and chosen < PAUSE_CHOICES.size() else -1
+
+
+## The Quests tab, found under the sheet rather than kept in a field of its own.
+func quests_tab() -> QuestsTab:
+	return _sheet.find_child("Quests", true, false) as QuestsTab
 
 
 ## Gives every button under `node` a finger-sized smallest side for the font in use.
