@@ -142,8 +142,14 @@ func step(commands: Array[Command]) -> void:
 		for instance_name: String in active():
 			_raise_entered(instance_name, instances[instance_name].entities)
 	tick += 1
+	var stepping: Array[String] = active()
+	# An instance nobody is in doesn't step, so it raises nothing this tick: its last tick's events
+	# would otherwise reach whoever walks into it as new (#386).
+	for instance_name: String in sorted_names():
+		if not stepping.has(instance_name):
+			instances[instance_name].events.clear()
 	var leaving: Array[Array] = []
-	for instance_name: String in active():
+	for instance_name: String in stepping:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
 		for event: RefCounted in state.events:
