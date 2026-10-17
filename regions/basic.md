@@ -1,6 +1,6 @@
 # Basic
 
-The playground and the first instance: a disc of radius 3, ground with a beach of sand at its southwest by the water (#321), the place the first quest leads to, where a wounded moss toad waits to be dominated (#448). Digits mark where players 1 to 4 start, and m where a wild monster stands (a ball for now, #19), with room to walk a ring around it. Its east edge leads to the glade (#140).
+The playground and the first instance: a disc of radius 3, ground with a beach of sand at its southwest by the water (#321), the place the first quest leads to, where a wounded moss toad waits at its edge to be dominated (#448). Digits mark where players 1 to 4 start, and m where a wild monster stands (a ball for now, #19), with room to walk a ring around it. Its east edge leads to the glade (#140).
 
 ## Tiles
 
@@ -10,7 +10,7 @@ The playground and the first instance: a disc of radius 3, ground with a beach o
    . . . 1 . .
   . m 3 . 4 . .
  ~ . . 2 . . .
-~ ~ s s w . .
+~ ~ s s s w .
  ~ ~ s s s s
 ```
 

@@ -185,7 +185,8 @@ func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var ring: Array[Vector2i] = FlowSteps.BASIC_RING
 	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
-	if _wild(state).monsters.size() != 1 or not _domination(state).seals.is_empty():
+	# Both wild monsters stay: the rolled one and the beach's wounded toad (#448).
+	if _wild(state).monsters.size() != 2 or not _domination(state).seals.is_empty():
 		return "an open ring dominated the wild monster or started sealing"
 	if not _domination(state).encircled.is_empty():
 		return "an open ring encircled the wild monster"

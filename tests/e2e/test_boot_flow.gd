@@ -355,7 +355,7 @@ func _check_wild_monster_removed(main: Node) -> String:
 	var monster_id: int = feature.monsters[0]
 	driver.state.remove_entity(monster_id)
 	view.show_state()
-	if not feature.monsters.is_empty() or view.figures.has(monster_id):
+	if feature.monsters.has(monster_id) or view.figures.has(monster_id):
 		return "a removed wild monster left its figure or its entry behind"
 	return ""
 
