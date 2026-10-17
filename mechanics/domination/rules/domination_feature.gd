@@ -17,7 +17,9 @@ extends Feature
 ## Bigger rings spread the same ring power over more segments, so their walls are thinner.
 ##
 ## While a ring seals, its dominator gets no other ring, the monsters inside stay where they stand
-## (wild monsters don't move yet), and a monster sealed in one ring can't be sealed in another. Any
+## (a wild monster only moves where no ring could enclose it, #364), and a monster sealed in one
+## ring
+## can't be sealed in another. Any
 ## player standing on a wall segment reinforces it (#227): a reinforced segment takes only a share
 ## of the pressure on it, which is strong, but it puts the player right where the monsters push.
 ##
@@ -51,8 +53,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 ## Every new ring closed this tick around wild monsters not sealing yet starts sealing, unless its
 ## dominator has a ring sealing already. A ring can only close when the trail grows, so rings are
 ## checked per new trail tile, in entity id order of who moved, whatever order the moves were raised
-## in. This relies on wild monsters standing still: every monster inside a ring was found when the
-## ring closed. A rule that moves monsters must also check when a monster steps into an old ring.
+## in. This relies on no wild monster stepping into a ring after it closed: one that moves (#364)
+## never steps onto the trail, and a ring's inside only borders the outside through its trail.
 func _close_rings(state: GameState) -> void:
 	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature

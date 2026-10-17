@@ -12,7 +12,7 @@ var damage: Array[int] = []
 ## The damage a segment takes before it fails, in thousandths.
 var integrity: int = 0
 ## The wild monsters inside, in id order, and the index in `walls` of the segment each one pushes
-## on: the nearest, as wild monsters don't move.
+## on: the nearest, as a ring holds its wild monsters where they stand.
 var monsters: Array[int] = []
 var targets: Array[int] = []
 ## Ticks the seal has held, and how many it must hold.

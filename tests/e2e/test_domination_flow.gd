@@ -20,6 +20,11 @@ extends RefCounted
 ## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
 ## the small ring holds; standing on any other segment of it, they don't, and it breaks.
 ##
+## A wild monster where no ring could enclose it (#364), on the region's edge or beside rock that
+## runs to the edge, steps away at its own pace to the nearest tile where one could and stays
+## there, where a ring dominates it; one a ring could enclose already never moves, and neither does
+## one held where it stands (as hiding ones are).
+##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
 ## tile that hides.
@@ -89,6 +94,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_together()
 	if result.is_empty():
 		result = _check_outcomes()
+	if result.is_empty():
+		result = _check_moves_away()
 	if result.is_empty():
 		result = _check_species()
 	if result.is_empty():
@@ -481,6 +488,41 @@ func _check_outcomes() -> String:
 			beside,
 		]
 	return _check_enraged()
+
+
+## In a disc with rock running from its edge to (-2, 0): the monster on the edge at (4, 0) and the
+## one beside the rock at (-1, 0) can't be ringed, so each steps once within STEP_TICKS, to the
+## nearest tile that can, and then stands; the one at (1, 2) never moves, nor the one held on the
+## edge at (0, 4). A small ring then dominates the one that came off the rock.
+func _check_moves_away() -> String:
+	var spots: Array[Vector2i] = [Vector2i(4, 0), Vector2i(-1, 0), Vector2i(1, 2), Vector2i(0, 4)]
+	var state: GameState = _outcome_state(WEAK, spots)
+	_wild(state).hold(_wild(state).monsters[3], true)
+	for rock: Vector2i in [Vector2i(-2, 0), Vector2i(-3, 0), Vector2i(-4, 0)]:
+		state.region.terrain[rock] = Region.BLOCKED
+	var stuck: Dictionary[Vector2i, bool] = RingableGround.unringable(state.region)
+	if (not stuck.has(spots[0])
+			or not stuck.has(spots[1])
+			or stuck.has(spots[2])
+			or not stuck.has(spots[3])):
+		return "the tiles no ring encloses are %s" % [stuck.keys()]
+	var expected: Array[Vector2i] = [Vector2i(3, 0), Vector2i.ZERO, Vector2i(1, 2), Vector2i(0, 4)]
+	for steps: int in [WildMonsterFeature.STEP_TICKS, 3 * WildMonsterFeature.STEP_TICKS]:
+		for _tick: int in steps:
+			Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var tiles: Array[Vector2i] = []
+		for monster: int in _wild(state).monsters:
+			tiles.append(state.entity(monster).tile)
+		if tiles != expected:
+			return "wild monsters that can't be ringed stand on %s, not %s" % [tiles, expected]
+	var off_the_rock: int = _wild(state).monsters[1]
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	var dominated: Array[WildMonsterDominated] = _dominated(_settle(state))
+	if dominated.size() != 1 or dominated[0].monster_id != off_the_rock:
+		return "a ring around where the monster stepped off the rock didn't dominate it"
+	return ""
 
 
 ## Enrage (#220): a strong monster that breaks a small ring comes out of it with a stack of rage,
