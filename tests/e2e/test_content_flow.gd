@@ -133,8 +133,8 @@ func _check_quests() -> String:
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
 ## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
 ## a stump are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
-## names exists; the stump is drawn at scale 4, every other kind at 1, the default. Broken
-## blueprints, and two with one number, are refused.
+## names exists; the stump is drawn at scale 4, every other kind at 1, the default; no two kinds
+## share a symbol (#68). Broken blueprints, and two with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -158,9 +158,13 @@ func _check_tiles() -> String:
 	if built_in != [content.tiles["ground"].number, content.tiles["water"].number,
 			content.tiles["rock"].number]:
 		return "the built-in tile kinds don't keep their numbers"
+	var symbols: Dictionary[String, String] = {}
 	for tile: TileBlueprint in content.tiles.values():
 		if TileKinds.number_of(tile.id) != tile.number or TileKinds.id_of(tile.number) != tile.id:
 			return "the rules don't number tile blueprint %s by its file" % tile.id
+		if symbols.has(tile.symbol):
+			return "tile blueprints %s and %s share one symbol" % [symbols[tile.symbol], tile.id]
+		symbols[tile.symbol] = tile.id
 		var missing: bool = not tile.model.is_empty() and not ResourceLoader.exists(tile.model)
 		if missing or tile.scale != (4.0 if tile.id == "stump" else 1.0):
 			return "tile blueprint %s's model %s doesn't exist, or it's drawn at scale %s" % [
@@ -172,11 +176,12 @@ func _check_tiles() -> String:
 	return result if not result.is_empty() else _check_tile_numbers_unique()
 
 
-## Tile blueprints with a wrong id, number, color, scale, crown (#232) or trait are refused, with a
-## reason; the largest scale is read, and so is a crown's reach and clearance.
+## Tile blueprints with a wrong id, number, color, symbol (#68), scale, crown (#232) or trait are
+## refused, with a reason; the largest scale is read, and so is a crown's reach and clearance.
 func _check_tiles_refused() -> String:
 	var tile: String = (
-		"{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"traits\": {%s}%s}"
+		"{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"symbol\": \"x\", "
+		+ "\"traits\": {%s}%s}"
 	)
 	var walks: String = "\"walkable\": true"
 	var cases: Dictionary[String, String] = {
@@ -193,6 +198,8 @@ func _check_tiles_refused() -> String:
 		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
 		tile % ["x", "9", "#000000", walks, ", \"reach\": 9"]: "its reach",
 		tile % ["x", "9", "#000000", walks, ", \"clearance\": -1"]: "its reach",
+		tile.replace(", \"symbol\": \"x\"", "") % ["x", "9", "#000000", walks, ""]: "its symbol",
+		tile.replace("\"x\", ", "\"xy\", ") % ["x", "9", "#000000", walks, ""]: "its symbol",
 	}
 	for text: String in cases:
 		var problem: String = TileBlueprint.parse("x", text).problem
@@ -216,10 +223,10 @@ func _check_tile_numbers_unique() -> String:
 	var directory: String = "user://tile_numbers_test/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
 	var tile: String = "{\"id\": \"%s\", \"number\": 7, \"color\": \"#000000\", "
-	tile += "\"traits\": {\"walkable\": true}}"
+	tile += "\"symbol\": \"%s\", \"traits\": {\"walkable\": true}}"
 	for id: String in ["a", "b"]:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(tile % id)
+		var _stored: bool = file.store_string(tile % [id, id])
 		file.close()
 	var problem: String = Content.load_tiles(directory).problem
 	for id: String in ["a", "b"]:

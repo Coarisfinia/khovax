@@ -409,7 +409,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
   shared camera), and what a player obtains goes into their own profile.
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
-  teams, states) also gets a symbol or a shape, so the game stays colorblind friendly.
+  teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
+  kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it

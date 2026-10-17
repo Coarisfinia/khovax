@@ -1,8 +1,8 @@
 class_name TileLooks
 extends RefCounted
 ## Each tile kind's look (#116), by its number in Region.terrain: its tile blueprint, with the
-## ground color and decoration model the views draw. Read from the content data once. The
-## simulation keeps only a kind's id and traits (TileKinds); the look is the view's alone.
+## ground color, symbol (#68) and decoration model the views draw. Read from the content data once.
+## The simulation keeps only a kind's id and traits (TileKinds); the look is the view's alone.
 
 ## How tall a tile's decoration stands, in hundredths of a tile's radius (#232).
 const HEIGHT_UNITS: float = 100.0 / HexLayout.SIZE
