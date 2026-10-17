@@ -64,8 +64,8 @@ func run(tree: SceneTree) -> String:
 
 
 ## Through the main scene: the first domination asks for the beach, then a domination (#321); only
-## this player's domination, handed out by the bus, finishes it, and it's saved at once and loads
-## back; a chest counts for whoever got loot from it.
+## this player's domination, handed out by the bus, finishes it, and it's saved and loads back; a
+## chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
@@ -83,6 +83,9 @@ func _check_tracked(tree: SceneTree) -> String:
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
 	_emit(driver, bus, WildMonsterDominated.new(91, 1, 0, Vector2i.ZERO, "storm_finch"))
+	# Reaching the beach was the gain saved at once; the domination right after it waits for the
+	# debounce (ProfileKeeper.SAVE_INTERVAL_MSEC), so it's flushed as ending the session would.
+	result += holder.keeper.flush()
 	var expected: Array[String] = ["first_domination"]
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
