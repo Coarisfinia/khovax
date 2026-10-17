@@ -815,8 +815,10 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
+	# One shared spot: the regions only read it.
+	var named: WildSpot = WildSpot.new(species)
 	for spot: Vector2i in spots:
-		region.wild_spots[spot] = WildSpot.new(species)
+		region.wild_spots[spot] = named
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP, STRONG: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH, STRONG: STRONG_STRENGTH }
 	var ordered: Array[Feature] = [

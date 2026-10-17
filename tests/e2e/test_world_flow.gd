@@ -264,10 +264,7 @@ func _check_documents() -> String:
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
-	expected = expected and region.wild_spots.get(
-		Vector2i(-1, 1),
-		WildSpot.new(),
-	).species == "storm_finch"
+	expected = expected and _species_on(region, Vector2i(-1, 1)) == "storm_finch"
 	var forest: int = TileKinds.number_of("forest")
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
@@ -304,6 +301,12 @@ func _check_documents() -> String:
 	if not RegionDocument.parse(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
 	return _check_kind_and_place(tiles)
+
+
+## The species `region`'s legend names for the wild monster spot `spot`, or "".
+static func _species_on(region: Region, spot: Vector2i) -> String:
+	var named: WildSpot = region.wild_spots.get(spot)
+	return named.species if named != null else ""
 
 
 ## A legend symbol naming a tile kind and a place at once (#349) makes its tiles that kind and part
