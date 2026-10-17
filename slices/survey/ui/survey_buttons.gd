@@ -148,18 +148,13 @@ func lay_out_in(screen: Vector2) -> void:
 		place = survey.place_shown()
 	if place in [SurveyChoice.Place.OFF, SurveyChoice.Place.OVER_GAME, SurveyChoice.Place.OPAQUE]:
 		place = SurveyChoice.AUTO_PLACE
-	var left: bool = place == SurveyChoice.Place.TOP_LEFT or place == SurveyChoice.Place.BOTTOM_LEFT
-	var top: bool = place == SurveyChoice.Place.TOP_LEFT or place == SurveyChoice.Place.TOP_RIGHT
-	var corner: float = shorter * SurveyChoice.CORNER_SHARE
-	var right: float = SurveyChoice.MARGIN + corner if left else screen.x - SurveyChoice.MARGIN
-	var upper: float = SurveyChoice.MARGIN if top else screen.y - SurveyChoice.MARGIN - corner
-	var middle: Vector2 = Vector2(right - INSET - _cog_side / 2.0, upper + INSET + _cog_side / 2.0)
+	var middle: Vector2 = _cog_middle(screen, place)
 	_place(cog, middle, _cog_side)
 	var column: float = _side * ACTIONS.size() + GAP * (ACTIONS.size() - 1)
 	# Down from the cogwheel, or up from it, but never off the screen's right edge.
 	var x: float = minf(middle.x, screen.x - SurveyChoice.MARGIN - _side / 2.0)
 	var first: float = middle.y + _cog_side / 2.0 + GAP
-	if not top:
+	if place == SurveyChoice.Place.BOTTOM_LEFT or place == SurveyChoice.Place.BOTTOM_RIGHT:
 		first = middle.y - _cog_side / 2.0 - GAP - column
 	for i: int in ACTIONS.size():
 		var button: TouchScreenButton = buttons[ACTIONS[i]]
@@ -167,6 +162,17 @@ func lay_out_in(screen: Vector2) -> void:
 		# A hidden TouchScreenButton takes no touches, so the Survey under it can be pinched.
 		button.visible = open
 	queue_redraw()
+
+
+## The cogwheel's middle on a screen of `screen` pixels: just inside the top right of the Survey
+## in its corner `place`.
+func _cog_middle(screen: Vector2, place: SurveyChoice.Place) -> Vector2:
+	var corner: float = minf(screen.x, screen.y) * SurveyChoice.CORNER_SHARE
+	var left: bool = place == SurveyChoice.Place.TOP_LEFT or place == SurveyChoice.Place.BOTTOM_LEFT
+	var top: bool = place == SurveyChoice.Place.TOP_LEFT or place == SurveyChoice.Place.TOP_RIGHT
+	var right: float = SurveyChoice.MARGIN + corner if left else screen.x - SurveyChoice.MARGIN
+	var upper: float = SurveyChoice.MARGIN if top else screen.y - SurveyChoice.MARGIN - corner
+	return Vector2(right - INSET - _cog_side / 2.0, upper + INSET + _cog_side / 2.0)
 
 
 ## Where `action`'s button is on the screen.
