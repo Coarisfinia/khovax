@@ -66,7 +66,8 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
-**Keep up to 5 pull requests open** (owner's rule), so the owner can go through them fast. Each is
+**Keep up to 5 pull requests open** (owner's rule), so the owner can go through them fast. A pull
+request in the merge queue counts as done (owner's rule): it doesn't count toward the 5. Each is
 branched from `main` and independent of the others: never stack pull requests, since they're
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
@@ -85,6 +86,11 @@ ride.
 Prefer the simplest solution that does the job, and Godot's built-in way over a hand-built one. When
 an issue turns out bigger than one such unit, build the core now and file the rest as its own
 issue.
+
+**Implementation subagents only on the owner's say-so, once** (owner's rule): the main session
+implements. When the owner authorizes subagents for implementation, that's a one-time thing for the
+batch they name, and each one gets an issue that fits one small pull request, never a massive one;
+an issue that's bigger is split first.
 
 **No pull requests that only change docs.** A change to this file or the README
 rides along with the next real pull request, and that pull request's description says so.
@@ -172,6 +178,7 @@ background; only wait in the foreground for a result the very next step needs.
   description what was addressed. Four review rounds is the soft cap.
 - **Every comment gets an answer.** Fix what is asked in one push, then reply saying what changed. If
   a comment needs the owner's decision, say so and leave it open.
+- **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the

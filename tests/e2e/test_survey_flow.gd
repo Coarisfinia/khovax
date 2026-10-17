@@ -4,7 +4,9 @@ extends RefCounted
 ## kind's color, while
 ## ground still in the fog stays hidden; it marks every player by slot and every open quest's
 ## target; its action cycles it through the corners, over the game, opaque and off, its zoom steps
-## within their range, and both choices are kept.
+## within their range, and both choices are kept. In every place, on desktop screens and phones
+## held either way, it sits against its own corner or covers the whole screen; every zoom step is
+## followed, and zooming stops at both ends.
 
 
 func run(tree: SceneTree) -> String:
@@ -43,6 +45,10 @@ func _check_survey(main: Node) -> String:
 		result = _survey_marks(driver, survey, FlowGame.holder(main).keeper.profile)
 	if result.is_empty():
 		result = _survey_choice(choice, survey, path)
+	if result.is_empty():
+		result = _survey_screens(choice, survey)
+	if result.is_empty():
+		result = _survey_zooms(choice, survey)
 	SaveStore.remove(path)
 	graphics.settings_path = kept_path
 	graphics.settings.chosen = kept
@@ -133,24 +139,69 @@ func _survey_choice(choice: SurveyChoice, survey: SurveyView, path: String) -> S
 ## Why the Survey isn't where its place says, or "": hidden when off, in its corner, or over the
 ## whole screen, see-through over the game and opaque otherwise.
 func _survey_placed(choice: SurveyChoice, survey: SurveyView) -> String:
+	return _survey_placed_in(choice, survey, survey.get_viewport_rect().size)
+
+
+## Why the Survey, laid out for a screen of `screen` pixels, isn't where its place says, or "": a
+## corner one sits against its own corner, a margin from both edges and wholly on the screen; a
+## full one covers the screen exactly, opaque or see-through as its place says.
+func _survey_placed_in(choice: SurveyChoice, survey: SurveyView, screen: Vector2) -> String:
 	var place: SurveyChoice.Place = choice.place_shown()
-	var screen: Vector2 = survey.get_viewport_rect().size
 	if place == SurveyChoice.Place.OFF:
 		return "the Survey shows while off" if survey.visible else ""
-	var corners: Dictionary[SurveyChoice.Place, Vector2] = {
-		SurveyChoice.Place.TOP_LEFT: Vector2.ZERO,
-		SurveyChoice.Place.TOP_RIGHT: Vector2(screen.x, 0.0),
-		SurveyChoice.Place.BOTTOM_LEFT: Vector2(0.0, screen.y),
-		SurveyChoice.Place.BOTTOM_RIGHT: screen,
-	}
-	var middle: Vector2 = survey.position + survey.size / 2.0
-	if corners.has(place):
-		var half: Vector2 = screen / 2.0
-		var nearest: bool = (middle - half).sign() == (corners[place] - half).sign()
-		if not survey.visible or not survey.bordered or not nearest:
-			return "the Survey isn't in its corner %d: %s" % [place, survey.get_rect()]
+	var rect: Rect2 = survey.get_rect()
+	if not survey.visible or not Rect2(Vector2.ZERO, screen).encloses(rect):
+		return "the Survey in place %d isn't wholly on a %s screen: %s" % [place, screen, rect]
+	if not survey.bordered:
+		var opaque: bool = place == SurveyChoice.Place.OPAQUE
+		if rect != Rect2(Vector2.ZERO, screen) or (survey.backdrop.a == 1.0) != opaque:
+			return "the full Survey on a %s screen isn't so, or not as see-through as its place" % [
+				screen,
+			]
 		return ""
-	var opaque: bool = place == SurveyChoice.Place.OPAQUE
-	if survey.get_rect() != Rect2(Vector2.ZERO, screen) or (survey.backdrop.a == 1.0) != opaque:
-		return "the Survey over the whole screen isn't so, or not as see-through as its place"
+	var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
+	var top: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.TOP_RIGHT]
+	var gap: Vector2 = Vector2(
+		rect.position.x if left else screen.x - rect.end.x,
+		rect.position.y if top else screen.y - rect.end.y,
+	)
+	if not gap.is_equal_approx(Vector2.ONE * SurveyChoice.MARGIN):
+		return "the Survey isn't against its corner %d on a %s screen: %s" % [place, screen, rect]
 	return ""
+
+
+## Why the Survey isn't placed right in every place on every kind of screen, desktop and phones
+## held either way, or "".
+func _survey_screens(choice: SurveyChoice, survey: SurveyView) -> String:
+	var screens: Array[Vector2] = [
+		Vector2(1152, 648),
+		Vector2(1920, 1080),
+		Vector2(720, 1600),
+		Vector2(2400, 1080),
+	]
+	for screen: Vector2 in screens:
+		for _place: int in SurveyChoice.Place.size():
+			var _kept: String = choice.cycle()
+			choice.place_in(screen)
+			var problem: String = _survey_placed_in(choice, survey, screen)
+			if not problem.is_empty():
+				return problem
+	choice.place()
+	return ""
+
+
+## Why the Survey doesn't follow every zoom step from far to close, or doesn't stop at either end,
+## or "".
+func _survey_zooms(choice: SurveyChoice, survey: SurveyView) -> String:
+	var problem: String = ""
+	for _step: int in SurveyChoice.ZOOMS.size():
+		problem += choice.zoom_by(-1)
+	for step: int in SurveyChoice.ZOOMS.size():
+		choice.place()
+		if problem.is_empty() and survey.across != SurveyChoice.ZOOMS[step]:
+			problem = "the Survey's zoom step %d shows %s tiles across" % [step, survey.across]
+		problem += choice.zoom_by(1)
+	choice.place()
+	if problem.is_empty() and survey.across != SurveyChoice.ZOOMS.back():
+		problem = "zooming in past the closest step didn't stop there"
+	return problem

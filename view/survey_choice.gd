@@ -82,12 +82,16 @@ func zoom_by(steps: int) -> String:
 
 ## Puts the Survey where it shows, at its zoom, sized to the screen.
 func place() -> void:
-	if view == null:
-		return
+	if view != null:
+		place_in(view.get_viewport_rect().size)
+
+
+## Puts the Survey where it shows, at its zoom, sized to a screen of `screen` pixels (tests lay it
+## out for other screens than their own this way).
+func place_in(screen: Vector2) -> void:
 	var shown: Place = place_shown()
 	view.visible = shown != Place.OFF
 	view.across = ZOOMS[zoom_step()]
-	var screen: Vector2 = view.get_viewport_rect().size
 	var alpha: float = 1.0
 	if shown == Place.OVER_GAME:
 		alpha = OVER_GAME_ALPHA
