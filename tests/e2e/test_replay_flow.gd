@@ -6,6 +6,14 @@ extends RefCounted
 
 const START: Vector2i = Vector2i(1, -1)
 const RADIUS: int = 3
+## The water the basic instance's region draws outside its disc, by its beach (#321).
+const BASIC_WATER: Array[Vector2i] = [
+	Vector2i(-4, 1),
+	Vector2i(-5, 2),
+	Vector2i(-4, 2),
+	Vector2i(-5, 3),
+	Vector2i(-4, 3),
+]
 const EAST: int = 0
 const WEST: int = 3
 ## Long enough for the scripted commands to walk around the grid several times.
@@ -685,8 +693,8 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
-## The basic instance's region file reads as the disc it draws, with the players' starts and its
-## wild monster, and a broken region file says what is wrong.
+## The basic instance's region file reads as the disc it draws, with the water by its beach
+## (#321), the players' starts and its wild monster, and a broken region file says what is wrong.
 func _check_region_file() -> String:
 	var region: Region = InstanceBlueprints.basic(42).region
 	var starts: Array[Vector2i] = [
@@ -695,8 +703,13 @@ func _check_region_file() -> String:
 		Vector2i(-1, 0),
 		Vector2i(1, 0),
 	]
-	if region.sorted_tiles() != Region.disc(RADIUS).sorted_tiles() or region.starts != starts:
-		return "regions/basic.md isn't the disc of radius 3 with its four starts"
+	var drawn: Region = Region.disc(RADIUS)
+	var all_water: bool = true
+	for water: Vector2i in BASIC_WATER:
+		drawn.terrain[water] = Region.WATER
+		all_water = all_water and region.terrain.get(water) == Region.WATER
+	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts or not all_water:
+		return "regions/basic.md isn't the disc of radius 3 and the water, with its four starts"
 	if region.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
 		return "regions/basic.md's wild monster isn't on (-2, 0): %s" % [region.wild_monsters]
 	var broken: Dictionary[String, String] = {

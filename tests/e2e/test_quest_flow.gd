@@ -1,10 +1,10 @@
 extends RefCounted
 ## Quest flow (#184): quests advance from what this machine's player obtains. A fresh profile has
-## the first domination open; another player's domination leaves it so, and this player's
-## domination, through the event bus, finishes it; its progress is on disk at once and survives
-## loading. A chest counts for the player who got loot from it. Steps count up and hand over to the
-## next, one fact at a time, and only what a step asks for counts toward it. Quests finished
-## together are listed in id order;
+## the first domination open, asking for the beach of the starting instance first (#321); another
+## player's domination leaves it so, and this player's domination, through the event bus, finishes
+## it; its progress is on disk at once and survives loading. A chest counts for the player who
+## got loot from it. Steps count up and hand over to the next, one fact at a time, and only what a
+## step asks for counts toward it. Quests finished together are listed in id order;
 ## saved progress that no longer fits its quest settles at the next fact; and quest data with a
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
 ## asks for (#300), and a finished one has none. The list at the side of the screen (#340) shows
@@ -63,8 +63,9 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## Through the main scene: only this player's domination, handed out by the bus, finishes the first
-## domination, and it's saved at once and loads back; a chest counts for whoever got loot from it.
+## Through the main scene: the first domination asks for the beach, then a domination (#321); only
+## this player's domination, handed out by the bus, finishes it, and it's saved and loads back; a
+## chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
@@ -75,18 +76,16 @@ func _check_tracked(tree: SceneTree) -> String:
 	if not profile.quest_book.has("first_domination") or not profile.quests_done.is_empty():
 		result = "a fresh profile doesn't have the first domination open"
 	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
-	if result.is_empty():
-		result = _check_marked(driver, markers, profile)
 	var list: QuestListView = main.get_node("Hud/QuestList") as QuestListView
 	if result.is_empty():
-		result = _check_listed(list, {
-			"first_domination": "Dominate a monster",
-			"three_moss_toads": "Dominate a Moss Toad  0/3",
-		})
+		result = _check_beach_first(driver, bus, profile, markers, list)
 	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
 	_emit(driver, bus, WildMonsterDominated.new(91, 1, 0, Vector2i.ZERO, "storm_finch"))
+	# Reaching the beach was the gain saved at once; the domination right after it waits for the
+	# debounce (ProfileKeeper.SAVE_INTERVAL_MSEC), so it's flushed as ending the session would.
+	result += holder.keeper.flush()
 	var expected: Array[String] = ["first_domination"]
 	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
@@ -104,9 +103,60 @@ func _check_tracked(tree: SceneTree) -> String:
 	return result
 
 
-## The open first domination is marked over the wild monster nearest to this player, a quest asking
-## for a species nobody here is has no marker, and the markers follow the open quests.
+## The fresh first domination asks for the beach: it's marked there and listed as going there;
+## once this player reaches it, it asks for a domination, marked over the nearest wild monster.
+func _check_beach_first(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	markers: QuestMarkerView,
+	list: QuestListView,
+) -> String:
+	var result: String = _check_marked(driver, markers, profile)
+	if result.is_empty():
+		result = _check_listed(list, {
+			"first_domination": "Go to the beach",
+			"three_moss_toads": "Dominate a Moss Toad  0/3",
+		})
+	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
+	if result.is_empty():
+		result = _check_marked_monster(driver, markers, profile)
+	if result.is_empty():
+		result = _check_listed(list, { "first_domination": "Dominate a monster" })
+	return result
+
+
+## The open first domination asks for the beach first (#321): it's marked over the beach's tile
+## nearest to this player, the sand of the starting instance, and the markers follow the open
+## quests.
 func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profile) -> String:
+	var state: GameState = driver.state
+	var from: Vector2i = state.player(0).tile
+	var nearest: int = -1
+	for trigger: TileTrigger in state.region.triggers:
+		var beach: bool = trigger.action == TileTrigger.REACH and trigger.place == "beach"
+		var sand: bool = state.region.terrain[trigger.tile] == TileKinds.number_of("sand")
+		if beach and not sand:
+			return "the starting instance's beach isn't sand"
+		var distance: int = Hex.distance(trigger.tile, from)
+		nearest = distance if beach and (nearest < 0 or distance < nearest) else nearest
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	if (nearest < 0 or not targets.has("first_domination")
+			or Hex.distance(targets["first_domination"], from) != nearest):
+		return "the first domination isn't marked over the starting instance's nearest beach tile"
+	markers.show_quests()
+	if not markers.markers.has("first_domination"):
+		return "the open first domination has no marker"
+	return ""
+
+
+## Once the beach is reached, the first domination is marked over the wild monster nearest to this
+## player, and a quest asking for a species nobody here is has no marker.
+func _check_marked_monster(
+	driver: GameDriver,
+	markers: QuestMarkerView,
+	profile: Profile,
+) -> String:
 	var state: GameState = driver.state
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	if wild == null or wild.monsters.is_empty():
@@ -118,10 +168,10 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profil
 	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
 	if (not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
-		return "the first domination isn't marked over the nearest wild monster"
+		return "after the beach, the first domination isn't marked over the nearest wild monster"
 	markers.show_quests()
 	if not markers.markers.has("first_domination"):
-		return "the open first domination has no marker"
+		return "the open first domination has no marker after the beach"
 	return _check_unmarked(state, wild, profile)
 
 
@@ -424,20 +474,26 @@ func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
 
 ## Steps count up one fact at a time: only the species a step asks for counts, a step at its count
 ## hands over to the next even within one gain, and the last one finishes the quest. The toads'
-## quest counts to three.
+## quest counts to three. The first domination asks for the beach first (#321): dominations before
+## it don't count, and reaching it hands over to dominating.
 func _check_counted() -> String:
 	var content: Content = Content.load_quests()
 	var profile: Profile = Profile.new()
 	profile.quest_book = content.quests
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
 	profile.quest_book[two.id] = two
-	var applied: String = profile.apply(_gain(["storm_finch", "moss_toad"], 0))
+	var at_beach: Gain = _gain(["storm_finch", "moss_toad"], 0)
+	at_beach.places_reached = ["beach"]
+	var applied: String = profile.apply(at_beach)
 	var progress: QuestProgress = profile.quest_progress.get(two.id)
+	var first: QuestProgress = profile.quest_progress.get("first_domination")
 	var toads: QuestProgress = profile.quest_progress.get("three_moss_toads")
 	if not applied.is_empty() or progress == null or progress.step != 0 or progress.count != 1:
 		return "one moss toad didn't count one toward its step: " + applied
-	if toads == null or toads.count != 1 or profile.quests_done != ["first_domination"]:
-		return "the toads' quest didn't count up, or the first domination didn't finish"
+	if toads == null or toads.count != 1 or first == null or first.step != 1:
+		return "the toads' quest didn't count up, or the beach didn't hand over to dominating"
+	if not profile.quests_done.is_empty():
+		return "a domination before the beach finished the first domination"
 	applied = profile.apply(_gain(["moss_toad", "moss_toad"], 1))
 	if (not applied.is_empty()
 			or profile.quests_done != ["first_domination", "three_moss_toads", two.id]):

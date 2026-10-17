@@ -84,6 +84,9 @@ static func step_line(step: QuestStep, count: int) -> String:
 			asks = "Dominate " + what
 		"opened":
 			asks = "Open a chest"
+		"reached":
+			# A place has no player-facing name of its own yet: its id, in words.
+			asks = "Go to the " + step.place.replace("_", " ")
 	if step.count > 1:
 		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
 	return asks

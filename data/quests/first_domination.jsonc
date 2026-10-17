@@ -1,6 +1,7 @@
-// The first quest a new player has: any domination finishes it.
+// The first quest a new player has (#321): go to the beach in the first instance, then dominate a
+// monster there, encircling it, the first domination.
 {
 	"id": "first_domination",
 	"name": "Dominate your first monster",
-	"steps": [{ "condition": "dominated" }]
+	"steps": [{ "condition": "reached", "place": "beach" }, { "condition": "dominated" }]
 }

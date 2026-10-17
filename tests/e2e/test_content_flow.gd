@@ -143,21 +143,24 @@ static func _unrefused(cases: Dictionary[String, String], content: Content) -> S
 	return ""
 
 
-## Every quest file reads: the first domination is one domination of any species, and the toads'
-## quest counts up three of one species, a step to reach a place names it (#339), and one to enter
-## a region piece names the piece (#350), or an instance its blueprint (#370). Quests with a wrong
-## id, name, step, condition, species, place, piece, instance or count are refused, with a reason:
-## a reached step without a place, or a place on another step, too, and the same for an entered
-## step and its piece or instance, which it names one of, never both.
+## Every quest file reads: the first domination is reaching the beach, then one domination of
+## any species (#321), and the toads' quest counts up three of one species, a step to reach a
+## place names it (#339), and one to enter a region piece names the piece (#350), or an instance
+## its blueprint (#370). Quests with a wrong id, name, step, condition, species, place, piece,
+## instance or count are refused, with a reason: a reached step without a place, or a place on
+## another step, too, and the same for an entered step and its piece or instance, which it names
+## one of, never both.
 func _check_quests() -> String:
 	var content: Content = Content.load_quests()
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
 	var first: QuestDefinition = content.quests.get("first_domination")
 	var toads: QuestDefinition = content.quests.get("three_moss_toads")
-	if first == null or first.name.is_empty() or first.steps.size() != 1 or toads == null:
+	if first == null or first.name.is_empty() or first.steps.size() != 2 or toads == null:
 		return "the quests didn't load as written"
-	var any_domination: QuestStep = first.steps[0]
+	if first.steps[0].condition != "reached" or first.steps[0].place != "beach":
+		return "the first domination doesn't lead to the beach first"
+	var any_domination: QuestStep = first.steps[1]
 	var toad_step: QuestStep = toads.steps[0]
 	if (any_domination.condition != "dominated"
 			or not any_domination.species.is_empty()
@@ -198,9 +201,10 @@ func _check_quests() -> String:
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
 ## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
-## a stump are walkable and a boulder isn't (#205), each with its model, and every model a blueprint
-## names exists; the stump is drawn at scale 4, every other kind at 1, the default; no two kinds
-## share a symbol (#68). Broken blueprints, and two with one number, are refused.
+## a stump are walkable and a boulder isn't (#205), each with its model, and sand is plain and
+## walkable (#321); every model a blueprint names exists; the stump is drawn at scale 4, every
+## other kind at 1, the default; no two kinds share a symbol (#68). Broken blueprints, and two
+## with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -213,8 +217,9 @@ func _check_tiles() -> String:
 		"shrubs": true,
 		"boulder": false,
 		"stump": true,
+		"sand": true,
 	}
-	var plain: Array[String] = ["ground", "water", "rock"]
+	var plain: Array[String] = ["ground", "water", "rock", "sand"]
 	for id: String in walkable:
 		var kind: int = TileKinds.number_of(id)
 		if (not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]
