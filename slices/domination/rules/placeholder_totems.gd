@@ -47,7 +47,8 @@ func flat() -> Array[int]:
 
 
 ## Restores the totems from `values` (as `flat` gives them); returns why they can't be, or "":
-## each must be a player's in `state`, in increasing id order, with 0 to CHARGES charges.
+## each must be a player's in `state`, in increasing id order, with 0 to CHARGES charges, and every
+## player there must have one.
 func load_flat(state: GameState, values: Array[int]) -> String:
 	charges.clear()
 	if values.size() % 2 != 0:
@@ -60,4 +61,7 @@ func load_flat(state: GameState, values: Array[int]) -> String:
 		if values[i + 1] < 0 or values[i + 1] > CHARGES:
 			return "totem of %d has %d charges" % [values[i], values[i + 1]]
 		charges[values[i]] = values[i + 1]
+	for entity: Entity in state.entities:
+		if entity.slot != Entity.NO_SLOT and not charges.has(entity.id):
+			return "player %d has no totem" % entity.id
 	return ""
