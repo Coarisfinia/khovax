@@ -172,7 +172,7 @@ func _check_purge() -> String:
 	glade_left.events.append(RefCounted.new())
 	world.step(_still())
 	if not glade_left.events.is_empty():
-		return "the glade, left behind, kept its last tick's events into a tick it didn't step (#386)"
+		return "the glade, left behind, kept its events into a tick it didn't step (#386)"
 	_idle_until(world, left + World.PURGE_TICKS - 1)
 	if not world.instances.has(InstanceBlueprints.GLADE):
 		return "the glade was purged before an hour had passed"
