@@ -3,8 +3,9 @@ extends ScrollContainer
 ## The menu's Character tab (#391): the player's personal color (#233) on a freeform color wheel,
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
-## line says which one is in use, in words (#68). The character's name and their monsters follow
-## on this tab later. It scrolls when the screen is too short.
+## line says which one is in use, in words (#68). Below it, the player's dominated monsters (#400,
+## DominatedMonstersList). The character's name follows on this tab later. It scrolls when the
+## screen is too short.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
@@ -18,6 +19,8 @@ var holder: ProfileHolder
 var picker: ColorPicker
 ## Hands the color back to Auto.
 var auto_button: Button
+## The player's dominated monsters.
+var monsters: DominatedMonstersList
 ## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
 var shown: String = ""
 var _column: VBoxContainer
@@ -42,17 +45,24 @@ func _ready() -> void:
 	picker.color_modes_visible = false
 	picker.presets_visible = false
 	picker.sampler_visible = false
+	# The column is as wide as the monsters' lines (fit_width); the wheel stays in its middle.
+	picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var _picked: int = picker.color_changed.connect(_on_picked)
 	_column.add_child(picker)
 	auto_button = GameMenu.button("Auto", choose_auto)
 	auto_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_column.add_child(auto_button)
+	monsters = DominatedMonstersList.new()
+	monsters.holder = holder
+	_column.add_child(monsters)
 	middle.add_child(_column)
 	add_child(middle)
 
 
-## Shows the color in use: the player's own, or the world's default while Auto picks it.
+## Shows the color in use, the player's own or the world's default while Auto picks it, and their
+## monsters as they are now.
 func refresh() -> void:
+	monsters.refresh()
 	var local: int = driver.input.slot if driver != null and driver.input != null else 0
 	picker.color = PersonalColor.shown(driver, local)
 	_show_state()
@@ -78,6 +88,11 @@ func fit(font: int) -> void:
 	var wheel: int = roundi(font * WHEEL_FONTS)
 	picker.add_theme_constant_override("sv_width", wheel)
 	picker.add_theme_constant_override("sv_height", wheel)
+
+
+## Makes the tab's column `width` pixels wide, so the monsters' lines fit.
+func fit_width(width: float) -> void:
+	_column.custom_minimum_size.x = width
 
 
 func _on_picked(color: Color) -> void:

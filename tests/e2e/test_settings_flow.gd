@@ -9,7 +9,9 @@ extends RefCounted
 ## lets the ticks run on behind the menu; the rows fit a phone's screen; and the action closes the
 ## menu, easing out, and the game goes on. Its Character tab (#391) shows the player's personal
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
-## kept in their profile, and its Auto button hands the world's default back.
+## kept in their profile, and its Auto button hands the world's default back. It lists the player's
+## dominated monsters (#400): none at first, then each by its species' name and level, the three
+## they carry first, in order, the first their companion, each marked in words.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
 const PROFILE_PATH: String = "user://test_settings_profile.json"
@@ -104,6 +106,8 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = _menu_character(menu, main)
 	if result.is_empty():
+		result = _menu_monsters(menu, main)
+	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
 		result = _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
@@ -179,6 +183,30 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 			or not tab.picker.color.is_equal_approx(default)
 			or not player.circle.color.is_equal_approx(default)):
 		return "the Character tab's Auto doesn't hand the world's color back"
+	return ""
+
+
+## The Character tab lists no monsters for a new player; once they dominate four, it lists the three
+## they carry first, in the order dominated, the first their companion, then the fourth.
+func _menu_monsters(menu: GameMenu, main: Node) -> String:
+	var tab: CharacterTab = menu.character
+	var none: Array[String] = [DominatedMonstersList.NONE_TEXT]
+	if tab.monsters.shown != none:
+		return "the Character tab lists monsters before any is dominated: %s" % [tab.monsters.shown]
+	var gain: Gain = Gain.new()
+	gain.dominated_species.assign(["moss_toad", "storm_finch", "storm_finch", "moss_toad"])
+	var problem: String = FlowGame.holder(main).keeper.take(gain, Time.get_ticks_msec())
+	if not problem.is_empty():
+		return "the dominations aren't taken: " + problem
+	tab.refresh()
+	var listed: Array[String] = [
+		"Carried 1, companion: Moss Toad, level 1",
+		"Carried 2: Storm Finch, level 1",
+		"Carried 3: Storm Finch, level 1",
+		"Not carried: Moss Toad, level 1",
+	]
+	if tab.monsters.shown != listed:
+		return "the Character tab lists %s, not the dominated monsters" % [tab.monsters.shown]
 	return ""
 
 
