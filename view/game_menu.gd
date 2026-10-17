@@ -46,8 +46,6 @@ var character: CharacterTab
 var settings: SettingsTab
 ## The Survey tab.
 var survey_tab: SurveyTab
-## The Quests tab.
-var quests: QuestsTab
 ## Everything the menu shows when open: the opaque sheet over the whole screen.
 var _sheet: PanelContainer
 var _open_button: Button
@@ -71,7 +69,6 @@ func _process(_delta: float) -> void:
 	lay_out(get_viewport_rect().size)
 	if _sheet.visible:
 		settings.refresh()
-		quests.refresh()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -115,7 +112,6 @@ func toggle() -> void:
 		_fade.kill()
 	settings.refresh()
 	character.refresh()
-	quests.refresh()
 	_sheet.visible = true
 	_fade = _sheet.create_tween()
 	var _eased: PropertyTweener = _fade.tween_property(
@@ -159,7 +155,7 @@ func lay_out(screen: Vector2) -> void:
 		character.fit(font)
 	var width: float = minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN)
 	settings.fit(width)
-	quests.fit(width)
+	quests_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
 
@@ -215,7 +211,7 @@ func _build_sheet() -> void:
 	survey_tab.name = "Survey"
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
-	quests = QuestsTab.new()
+	var quests: QuestsTab = QuestsTab.new()
 	quests.name = "Quests"
 	quests.holder = holder
 	tabs.add_child(quests)
@@ -239,6 +235,11 @@ func _pause_chosen() -> int:
 		return -1
 	var chosen: int = graphics.settings.chosen.get(PAUSE_SETTING, -1)
 	return chosen if chosen >= 0 and chosen < PAUSE_CHOICES.size() else -1
+
+
+## The Quests tab, found under the sheet rather than kept in a field of its own.
+func quests_tab() -> QuestsTab:
+	return _sheet.find_child("Quests", true, false) as QuestsTab
 
 
 ## Gives every button under `node` a finger-sized smallest side for the font in use.

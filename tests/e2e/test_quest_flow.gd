@@ -217,14 +217,14 @@ func _check_quests_tab(menu: GameMenu, profile: Profile, first: String) -> Strin
 	}
 	for id: String in entered:
 		profile.quest_book[id] = QuestDefinition.parse(id, entered[id], {})
-	menu.quests.refresh()
+	menu.quests_tab().refresh()
 	var expected: Dictionary[String, String] = {
 		"enter_glade": "Now: Enter the glade",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
 		"three_moss_toads": "Now: Dominate a Moss Toad  0/3",
 	}
-	var shown: Dictionary[String, String] = menu.quests.shown
+	var shown: Dictionary[String, String] = menu.quests_tab().shown
 	for id: String in entered:
 		var _unbooked: bool = profile.quest_book.erase(id)
 	if shown != expected:

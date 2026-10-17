@@ -4,7 +4,8 @@ extends ScrollContainer
 ## Profile.open_steps), each with its name and every one of its steps, worded as the list words
 ## them (QuestListView.step_line): the steps done, the one it's on with its count, and the ones
 ## still to come. Each step says which it is in words, never by color alone (#68). It only reads
-## the profile, and scrolls when the screen is too short for every quest.
+## the profile, keeps up with it while shown, and scrolls when the screen is too short for every
+## quest.
 
 const GAP: float = 8.0
 ## How far a quest's steps sit in from its name, in gaps.
@@ -31,6 +32,12 @@ func _ready() -> void:
 	middle.add_child(_rows)
 	add_child(middle)
 	_show({}, {})
+
+
+func _process(_delta: float) -> void:
+	# Only while the tab is shown: the menu is open on it.
+	if is_visible_in_tree():
+		refresh()
 
 
 ## Shows the open quests as they are now; builds the rows anew only when that changed.
