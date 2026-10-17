@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 3
+const FORMAT: int = 4
 
 
 ## The profile as save text.
@@ -25,6 +25,7 @@ static func to_text(profile: Profile) -> String:
 		"unlocked_slots": profile.unlocked_slots,
 		"next_monster_id": profile.next_monster_id,
 		"captured_monsters": monsters,
+		"carried": profile.carried,
 		"materials": sorted_materials,
 		"quest_progress": _progress_data(profile),
 		"quests_done": profile.quests_done,
@@ -62,6 +63,8 @@ static func parse(text: String) -> Profile:
 		_migrate_to_2(data)
 	if format < 3:
 		_migrate_to_3(data)
+	if format < 4:
+		_migrate_to_4(data)
 	profile.problem = _read(profile, data)
 	return profile
 
@@ -75,6 +78,18 @@ static func _migrate_to_2(data: Dictionary) -> void:
 static func _migrate_to_3(data: Dictionary) -> void:
 	data["quest_progress"] = {}
 	data["quests_done"] = []
+
+
+## Format 3 to 4: a player carries three monsters (#53), the first three they captured until their
+## base exists.
+static func _migrate_to_4(data: Dictionary) -> void:
+	var carried: Array = []
+	var monsters: Variant = data.get("captured_monsters")
+	var monster_list: Array = monsters if monsters is Array else []
+	for entry: Variant in monster_list.slice(0, Profile.CARRY_LIMIT):
+		var fields: Dictionary = entry if entry is Dictionary else {}
+		carried.append(fields.get("id"))
+	data["carried"] = carried
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
@@ -102,7 +117,24 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 		if count < 0 or str(material).is_empty():
 			return "material %s has an invalid count" % material
 		profile.materials[str(material)] = count
-	return _read_quests(profile, data)
+	var problem: String = _read_carried(profile, data)
+	return problem if not problem.is_empty() else _read_quests(profile, data)
+
+
+## Reads which captured monsters the save's player carries; returns why it can't, or "".
+static func _read_carried(profile: Profile, data: Dictionary) -> String:
+	var carried: Variant = data.get("carried")
+	if not carried is Array:
+		return "the save lacks its carried monsters"
+	var ids: Array = carried
+	if ids.size() > Profile.CARRY_LIMIT:
+		return "a carried monster too many: at most %d" % Profile.CARRY_LIMIT
+	for entry: Variant in ids:
+		var id: int = _int(entry)
+		if not profile.has_monster(id) or profile.carried.has(id):
+			return "a carried monster isn't one of the save's, or is carried twice"
+		profile.carried.append(id)
+	return ""
 
 
 ## Reads the save's quest progress into this profile; returns why it can't, or "".
