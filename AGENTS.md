@@ -289,7 +289,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   replays, and bad memory is dropped without refusing the world.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
-  ones), and a player's choice overrides it until they choose Auto again.
+  ones and owns the file; `SurveyChoice` keeps where the Survey shows and its zoom in it, #301),
+  and a player's choice overrides it until they choose Auto again.
   Content data (species, quests, items) is read in `meta/` too (below).
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC files
   in `data/<kind>/`, one per entry and named after its id, with a JSON Schema in
