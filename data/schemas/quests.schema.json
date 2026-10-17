@@ -21,13 +21,22 @@
 				"type": "object",
 				"additionalProperties": false,
 				"required": ["condition"],
-				"if": { "properties": { "condition": { "const": "reached" } } },
-				"then": { "required": ["place"] },
-				"else": { "not": { "required": ["place"] } },
+				"allOf": [
+					{
+						"if": { "properties": { "condition": { "const": "reached" } } },
+						"then": { "required": ["place"] },
+						"else": { "not": { "required": ["place"] } }
+					},
+					{
+						"if": { "properties": { "condition": { "const": "entered" } } },
+						"then": { "required": ["piece"] },
+						"else": { "not": { "required": ["piece"] } }
+					}
+				],
 				"properties": {
 					"condition": {
-						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into.",
-						"enum": ["dominated", "opened", "reached"]
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece this player entered.",
+						"enum": ["dominated", "opened", "reached", "entered"]
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
@@ -36,6 +45,11 @@
 					},
 					"place": {
 						"description": "On a reached step, and only there, the id of the place it asks for, as a region piece's legend names it.",
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9_]*$"
+					},
+					"piece": {
+						"description": "On an entered step, and only there, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
 						"type": "string",
 						"pattern": "^[a-z][a-z0-9_]*$"
 					},
