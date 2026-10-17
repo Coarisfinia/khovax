@@ -148,6 +148,11 @@ jobs:
             exit 1
           fi
 
+      - name: "📦 Check every asset is used"
+        # Commit only what the game uses (AGENTS.md, #69): every file under assets/ is named by a
+        # scene, script, content file or setting, or by a glTF that is (#320).
+        run: bash tools/unused_assets.sh
+
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
         # each data/<folder>/ file against data/schemas/<folder>.schema.json.
