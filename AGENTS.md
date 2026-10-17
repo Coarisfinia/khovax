@@ -406,8 +406,11 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   like a hang. The fade is a CSS opacity transition, which the browser's compositor keeps running
   while the page is blocked; the page's background is the fog's color already (the boot splash).
   It watches the bar until it's full, gone (the engine started) or hidden (a load error).
-  Once it's full, a caption fades in there too, saying the game is starting (#270), on the
-  compositor the same way; it goes with the loading screen when the engine starts.
+  A caption below it says what's happening (#270): "Downloading…" while the bar fills, then,
+  once it's full, "Starting the game…" (set before the block starts, so it shows through it); it
+  goes with the loading screen when the engine starts (or with the bar on a load error), and the
+  boot scene's fog says "Loading the world…" in the same place until the game shows. The web e2e
+  checks the page's captions in order.
   A tiny snake game (#264, plain JavaScript on a canvas, arrow keys or swipes) sits above the bar
   meanwhile: it's playable during the download and freezes while the engine starts, and it goes with
   the loading screen, its listeners removed, so it never takes the game's input. Its script is

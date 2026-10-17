@@ -76,6 +76,10 @@ let ended = false;
 let stopReason = "";
 // What the loading screen's snake reported, in order.
 const snake: string[] = [];
+// What the loading screen's caption said, in order.
+const captions: string[] = [];
+// The captions the loading screen shows (#270, the web presets' head_include), then none.
+const CAPTIONS = "Downloading…,Starting the game…,gone";
 try {
   const context = await browser.newContext({
     viewport: SIZE,
@@ -110,7 +114,9 @@ try {
   page.on("close", () => stop("the page closed"));
   browser.on("disconnected", () => stop("the browser went away"));
   // The canvas's context-lost events don't bubble, but they pass the document on their way down.
-  // The loading screen's snake (#264, the web presets' head_include) says when it's on and gone.
+  // The loading screen's snake (#264, the web presets' head_include) says when it's on and gone,
+  // and its caption (#270) what it says. A mutation observer sees each caption the moment it's
+  // set, even when the engine's start blocks the page right after.
   await page.addInitScript(() => {
     document.addEventListener("webglcontextlost", () => console.error("WebGL lost its context"), true);
     let shown = false;
@@ -121,6 +127,14 @@ try {
       shown = on;
       requestAnimationFrame(watch);
     })();
+    let said = "";
+    new MutationObserver(() => {
+      const caption = document.getElementById("khovax-start")?.textContent || "gone";
+      if (caption !== said && (said || caption !== "gone")) {
+        console.log(`KHOVAX_CAPTION: ${caption}`);
+      }
+      said = caption;
+    }).observe(document, { childList: true, subtree: true, characterData: true });
   });
   const reported = new Promise<string>((done) => {
     page.on("console", (message) => {
@@ -128,6 +142,7 @@ try {
       console.log(`[${message.type()}] ${line}`);
       if (message.type() === "error" && !ended) errors.push(line);
       if (line.startsWith("KHOVAX_SNAKE: ")) snake.push(line.slice(14));
+      if (line.startsWith("KHOVAX_CAPTION: ")) captions.push(line.slice(16));
       if (line === "WebGL lost its context") stop("WebGL lost its context");
       const match = RESULT.exec(line);
       if (match) {
@@ -157,6 +172,10 @@ try {
   // The snake was on the loading screen while the game loaded, and went with it.
   if (result && snake.join() !== "shown,gone") {
     errors.push(`the loading screen's snake reported ${snake.join() || "nothing"}, not shown,gone`);
+  }
+  // The loading screen said what it was doing, step by step, and its caption went with it.
+  if (result && captions.join() !== CAPTIONS) {
+    errors.push(`the loading screen's captions were ${captions.join() || "none"}, not ${CAPTIONS}`);
   }
   // Closing the browser below is no failure of the run.
   ended = true;
