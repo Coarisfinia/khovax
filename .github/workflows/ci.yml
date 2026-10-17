@@ -169,6 +169,19 @@ jobs:
         # <kind>.schema.json beside it. A schema without its data folder would sit unchecked, so it
         # fails too, and so does a kind with two schemas.
         run: |
+          # Every kind's folder has its own schema: data/<kind>/ in data/schemas/, and a slice's
+          # <kind>/ beside it, so a slice's data never borrows another's schema.
+          for folder in data/*/ slices/*/data/*/; do
+            [ -d "$folder" ] || continue
+            name=$(basename "$folder")
+            [ "$folder" = "data/schemas/" ] && continue
+            schema=data/schemas/${name}.schema.json
+            case "$folder" in slices/*) schema=${folder%/}.schema.json ;; esac
+            if [ ! -f "$schema" ]; then
+              echo "::error::${folder} has no schema at ${schema}"
+              exit 1
+            fi
+          done
           declare -A schema_of
           for schema in data/schemas/*.schema.json slices/*/data/*.schema.json; do
             [ -e "$schema" ] || continue

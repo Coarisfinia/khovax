@@ -11,20 +11,21 @@ const SLICES: String = "res://slices/"
 
 
 func _init() -> void:
-	var failed: int = _convert_all("res://data/")
+	var failed: int = _convert_all("res://data/", false)
 	for slice: String in DirAccess.get_directories_at(SLICES):
 		if DirAccess.dir_exists_absolute(SLICES + slice + "/data"):
-			failed += _convert_all(SLICES + slice + "/data/")
+			failed += _convert_all(SLICES + slice + "/data/", true)
 	quit(1 if failed > 0 else 0)
 
 
 ## Converts every kind's folder in `source`. Content lives exactly one folder deep
 ## (<source><kind>/<id>.jsonc), as CI checks it; anything elsewhere would go unchecked, so it fails
-## instead, except the schemas (data/schemas/, or <kind>.schema.json beside a slice's kind).
-func _convert_all(source: String) -> int:
+## instead, except the schemas: data/schemas/, or, in a slice's data/ (`beside`), the
+## <kind>.schema.json beside its kind.
+func _convert_all(source: String, beside: bool) -> int:
 	var failed: int = 0
 	for file_name: String in DirAccess.get_files_at(source):
-		if not file_name.ends_with(".schema.json"):
+		if not (beside and file_name.ends_with(".schema.json")):
 			printerr("%s%s isn't content: put it in a <kind>/ folder" % [source, file_name])
 			failed += 1
 	for folder: String in DirAccess.get_directories_at(source):
