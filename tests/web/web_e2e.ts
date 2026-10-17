@@ -78,8 +78,13 @@ let stopReason = "";
 const snake: string[] = [];
 // What the loading screen's caption said, in order.
 const captions: string[] = [];
-// The captions the loading screen shows (#270, the web presets' head_include), then none.
+// Whether the loading screen's bar was ever full.
+let barFull = false;
+// The captions the loading screen shows (#270, the web presets' head_include), then none. The
+// engine reports progress once a frame, so on a fast load it can start before the bar ever fills:
+// the page then has nothing to switch on and goes straight from downloading to gone (#413).
 const CAPTIONS = "Downloading…,Starting the game…,gone";
+const CAPTIONS_UNFILLED = "Downloading…,gone";
 try {
   const context = await browser.newContext({
     viewport: SIZE,
@@ -127,10 +132,18 @@ try {
       shown = on;
       requestAnimationFrame(watch);
     })();
-    // Every record counts, so two captions set in one task are both seen.
+    // Every record counts, so two captions set in one task are both seen. The bar is checked in
+    // the same microtask checkpoint as the page's own observer, so a full bar it saw is seen here.
     const caption = (node: Node | null) => node instanceof Element && node.id === "khovax-start";
+    let full = false;
     new MutationObserver((records) => {
       for (const record of records) {
+        const bar = record.target;
+        const loading = bar instanceof HTMLProgressElement && bar.id === "status-progress";
+        if (!full && loading && bar.max > 0 && bar.value >= bar.max) {
+          full = true;
+          console.log("KHOVAX_BAR: full");
+        }
         for (const node of record.addedNodes) {
           if (caption(node) || caption(record.target)) {
             console.log(`KHOVAX_CAPTION: ${node.textContent}`);
@@ -142,7 +155,11 @@ try {
           }
         }
       }
-    }).observe(document, { childList: true, subtree: true });
+    }).observe(document, {
+      childList: true,
+      subtree: true,
+      attributeFilter: ["value", "max"],
+    });
   });
   const reported = new Promise<string>((done) => {
     page.on("console", (message) => {
@@ -151,6 +168,7 @@ try {
       if (message.type() === "error" && !ended) errors.push(line);
       if (line.startsWith("KHOVAX_SNAKE: ")) snake.push(line.slice(14));
       if (line.startsWith("KHOVAX_CAPTION: ")) captions.push(line.slice(16));
+      if (line === "KHOVAX_BAR: full") barFull = true;
       if (line === "WebGL lost its context") stop("WebGL lost its context");
       const match = RESULT.exec(line);
       if (match) {
@@ -181,9 +199,11 @@ try {
   if (result && snake.join() !== "shown,gone") {
     errors.push(`the loading screen's snake reported ${snake.join() || "nothing"}, not shown,gone`);
   }
-  // The loading screen said what it was doing, step by step, and its caption went with it.
-  if (result && captions.join() !== CAPTIONS) {
-    errors.push(`the loading screen's captions were ${captions.join() || "none"}, not ${CAPTIONS}`);
+  // The loading screen said what it was doing, step by step, and its caption went with it: once
+  // its bar was full, it said the game was starting.
+  const expected = barFull ? CAPTIONS : CAPTIONS_UNFILLED;
+  if (result && captions.join() !== expected) {
+    errors.push(`the loading screen's captions were ${captions.join() || "none"}, not ${expected}`);
   }
   // Closing the browser below is no failure of the run.
   ended = true;
