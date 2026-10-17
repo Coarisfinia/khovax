@@ -145,6 +145,11 @@ func _run(check: bool) -> String:
 		played = WorldData.to_world(start_world)
 	if not played.problem.is_empty():
 		return played.problem
+	# A replay names only the slots up to the last that brings one; the world names every slot.
+	var named: Array[String] = companions.duplicate()
+	var _sized: int = named.resize(GameState.MAX_PLAYERS)
+	if played.companions != named:
+		return "the replay's companions %s aren't its world's %s" % [named, played.companions]
 	if not played.instances.has(instance):
 		return "the replay's starting world doesn't hold its instance %s" % instance
 	var start: Array[int] = _feature_ids(played.instances[instance])

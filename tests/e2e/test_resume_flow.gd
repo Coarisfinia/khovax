@@ -433,7 +433,8 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var main: Node = _boot(tree)
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
-	var fresh: World = World.new(0, InstanceBlueprints.BASIC)
+	# The player brings the companion their profile carries into the fresh world too.
+	var fresh: World = World.new(0, InstanceBlueprints.BASIC, 1, [COMPANION])
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

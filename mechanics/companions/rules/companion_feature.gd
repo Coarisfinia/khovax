@@ -5,9 +5,9 @@ extends Feature
 ## player in whichever instance they are, on a free tile next to them, as an entity no player
 ## controls: players are the entities with a slot, which walk by commands, draw the trail, take
 ## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
-## goes when its player leaves the instance or brings another one. One left behind in an instance
-## nobody is in waits there unseen; if its player comes back far from it, or ever gets LOST_DISTANCE
-## away (it was stuck behind something), it goes and joins them afresh beside them.
+## goes when its player leaves the instance (through an exit, the same tick: the feature steps
+## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
+## something), it goes and joins them afresh beside them.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -61,8 +61,14 @@ func start(state: GameState) -> void:
 ## brings one and has none here be joined by it, then lets each companion roam, in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var leaving: Array[int] = []
+	for event: RefCounted in state.events:
+		if event is ExitTaken:
+			leaving.append((event as ExitTaken).slot)
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
+		if leaving.has(owners[companion_id]):
+			player = null
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
 		if gone or state.companions[player.slot] != _species[companion_id]:
@@ -217,8 +223,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
 			values.fail("companion %d isn't one walking entity without a player" % companion_id)
 			return
-		if species.is_empty():
-			values.fail("companion %d has no species" % companion_id)
+		if species.is_empty() or species != state.companions[slot]:
+			values.fail("companion %d isn't of its slot's companion species" % companion_id)
 			return
 		owners[companion_id] = slot
 		_species[companion_id] = species

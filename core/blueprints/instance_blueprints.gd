@@ -63,7 +63,6 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
-		_companions(species),
 		TrailFeature.new(),
 		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
@@ -78,6 +77,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 			push_error("instance %s's loot table doesn't load" % instance_name)
 			return null
 		ordered.append(ChestFeature.new(table))
+	# Last, so a companion whose player walks out through an exit this tick goes with them.
+	ordered.append(_companions(species))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
