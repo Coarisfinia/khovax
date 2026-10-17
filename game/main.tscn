@@ -198,7 +198,7 @@ mouse_filter = 2
 script = ExtResource("31_survey_buttons")
 survey = NodePath("../../SurveyChoice")
 
-[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch") unique_id=3550355035]
+[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -213,3 +213,4 @@ graphics = NodePath("../../Graphics")
 survey = NodePath("../../SurveyChoice")
 stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
+holder = NodePath("../../ProfileHolder")

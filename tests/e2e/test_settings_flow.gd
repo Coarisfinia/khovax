@@ -7,9 +7,14 @@ extends RefCounted
 ## by default, single player pauses (#302): no tick runs. The tab lists every setting, each on Auto
 ## at first; a step changes one and keeps it, its Auto button hands it back; turning the pause off
 ## lets the ticks run on behind the menu; the rows fit a phone's screen; and the action closes the
-## menu, easing out, and the game goes on.
+## menu, easing out, and the game goes on. Its Character tab (#391) shows the player's personal
+## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
+## kept in their profile, and its Auto button hands the world's default back.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
+const PROFILE_PATH: String = "user://test_settings_profile.json"
+## A color the player picks on the Character tab's wheel, as the profile keeps it.
+const PICKED: int = 0x3366cc
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 
 var _tree: SceneTree
@@ -88,7 +93,7 @@ func _check_back_to_auto() -> String:
 ## The settings menu in the game, its settings kept in the test's file.
 func _check_menu() -> String:
 	_forget()
-	var main: Node = await FlowGame.start(_tree)
+	var main: Node = await FlowGame.start(_tree, PROFILE_PATH)
 	var graphics: Graphics = main.get_node("Graphics") as Graphics
 	graphics.settings_path = SETTINGS_PATH
 	graphics.settings = Settings.new()
@@ -96,6 +101,8 @@ func _check_menu() -> String:
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var driver: GameDriver = FlowGame.driver(main)
 	var result: String = await _open_menu(menu)
+	if result.is_empty():
+		result = _menu_character(menu, main)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
@@ -139,6 +146,39 @@ func _open_menu(menu: GameMenu) -> String:
 	for setting: String in listed:
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
+	return ""
+
+
+## The Character tab starts on Auto, the world's default color for this player; a color picked on
+## its wheel colors their circle at once and is in their profile on disk, and Auto hands the
+## default back.
+func _menu_character(menu: GameMenu, main: Node) -> String:
+	var tab: CharacterTab = menu.character
+	var driver: GameDriver = FlowGame.driver(main)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
+	var default: Color = PersonalColor.of(driver.world.world_seed, driver.input.slot)
+	if tab.shown != CharacterTab.AUTO_TEXT or not tab.picker.color.is_equal_approx(default):
+		return "the Character tab doesn't start on Auto's color: %s" % tab.shown
+	var picked: Color = PersonalColor.of_number(PICKED)
+	tab.picker.color_changed.emit(picked)
+	player.show_state()
+	var kept: Profile = SaveStore.load_profile(PROFILE_PATH)
+	if (tab.shown != CharacterTab.CHOSEN_TEXT
+			or not player.circle.color.is_equal_approx(picked)
+			or kept.personal_color != PICKED):
+		return "a picked color isn't shown on the circle or kept: %s, %s, %x" % [
+			tab.shown,
+			player.circle.color,
+			kept.personal_color,
+		]
+	tab.auto_button.pressed.emit()
+	player.show_state()
+	if (tab.shown != CharacterTab.AUTO_TEXT
+			or holder.personal_color() != Profile.AUTO_COLOR
+			or not tab.picker.color.is_equal_approx(default)
+			or not player.circle.color.is_equal_approx(default)):
+		return "the Character tab's Auto doesn't hand the world's color back"
 	return ""
 
 
@@ -267,3 +307,4 @@ func _label_of(msaa: int) -> String:
 
 func _forget() -> void:
 	SaveStore.remove(SETTINGS_PATH)
+	SaveStore.remove(PROFILE_PATH)
