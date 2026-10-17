@@ -31,7 +31,8 @@ static func shown(driver: GameDriver, slot: int) -> Color:
 	if driver == null or driver.world == null:
 		return of(0, slot)
 	var local: int = driver.input.slot if driver.input != null else 0
-	var chosen: int = driver.holder.personal_color() if driver.holder != null else Profile.AUTO_COLOR
+	var holder: ProfileHolder = driver.holder
+	var chosen: int = holder.personal_color() if holder != null else Profile.AUTO_COLOR
 	if slot == local and chosen != Profile.AUTO_COLOR:
 		return of_number(chosen)
 	return of(driver.world.world_seed, slot)
