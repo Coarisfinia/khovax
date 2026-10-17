@@ -209,19 +209,24 @@ Game logic and control logic are strictly separated (owner's rule, #26), so that
 and the same commands always give the same game: for replays, lockstep co-op and tests.
 
 ```
-devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/, mechanics/*/look/
+devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, slices/*/look/
                         ^
               game/ driver: fixed ticks
 ```
 
-- **Vertical slices** (owner, #290): each mechanic lives in one folder, `mechanics/<name>/`, with
-  its rules in `rules/` (the simulation's, under every rule below for `core/`, checked by CI the
-  same way) and its look in `look/` (views, under the rules for `view/`). The split between rules
-  and look holds inside every slice. Shared slices (the trail, loot tables) come before the ones that
-  use them. **The core never depends on a slice:** data the core holds (a region's `TileTrigger`)
-  and events it reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and
-  only the rules that run them move. The core is `core/` (#297): the tick, the state, the region,
-  the world, the grid math and the feature list.
+- **Vertical slices** (owner, #290, #371): what belongs together lives in one folder,
+  `slices/<name>/`, in fixed subfolders, each only where the slice has one: `rules/` (the
+  simulation, under every rule below for `core/`, checked by CI the same way), `look/` (views in
+  the world, under the rules for `view/`), `ui/` (screens and menus) and `meta/` (profile, content
+  and saves, under the rules for `meta/`). The split between them holds inside every slice. Shared
+  slices (the trail, loot tables) come before the ones that use them. **The core never depends on
+  a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
+  or loads a `res://slices/` path): data the core holds (a region's `TileTrigger`) and events it
+  reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and only the
+  rules that run them move. The core is `core/` (#297): the tick, the state, the region, the
+  world, the grid math and the feature list. Scripts reach each other by `class_name`; where a
+  path is needed (a scene, a model, a `preload`), it is absolute from `res://`, never relative
+  (`./`, `../`), which the same check refuses (#375).
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
@@ -365,9 +370,9 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   for a session that resumed one), every change of a slot's command,
   and the state hash at checkpoints. `Replay.play()` plays one back headless and names the first
   difference, or why this build can't play it (format, rules version, instance, features).
-- A new mechanic gets its own slice, `mechanics/<name>/`: its rules and data into a feature in
+- A new mechanic gets its own slice, `slices/<name>/`: its rules and data into a feature in
   `rules/` with a replay check, its controls into `input/` as commands, and its look into its own
-  view in `look/` (like `TrailView` in `mechanics/trail/look/`, which paints the trail onto
+  view in `look/` (like `TrailView` in `slices/trail/look/`, which paints the trail onto
   `HexGrid`; `HexGrid` itself only draws tiles).
 
 ## Lessons learned
