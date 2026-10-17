@@ -119,7 +119,7 @@ func _check_beach_first(
 			"first_domination": "Go to the beach",
 			"three_moss_toads": "Dominate a Moss Toad  0/3",
 		})
-	var menu: GameMenu = list.get_node("../GameMenu") as GameMenu
+	var menu: GameMenu = list.get_parent().get_node("GameMenu") as GameMenu
 	if result.is_empty():
 		result = _check_quests_tab(menu, profile, "Now: Go to the beach\nLater: Dominate a monster")
 	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
