@@ -11,7 +11,9 @@ extends RefCounted
 ## it on every screen, and a press on each presses its action and moves the Survey like the key,
 ## without starting the touch stick (#352). A pinch on a corner Survey zooms it a step at a time,
 ## spreading the fingers closer and pinching them farther, and never starts the touch stick, which
-## still starts anywhere else (#358).
+## still starts anywhere else (#358). In the menu's Survey tab (#392) it shows the same ground,
+## players and quest targets over the tab, and its zoom key, its buttons there and a pinch on it
+## step the one zoom, which it follows.
 
 ## Desktop screens and phones held either way.
 const SCREENS: Array[Vector2] = [
@@ -30,7 +32,7 @@ func run(tree: SceneTree) -> String:
 	tree.root.add_child(main)
 	await tree.process_frame
 	await tree.process_frame
-	var result: String = _check_survey(main)
+	var result: String = await _check_survey(main)
 	main.queue_free()
 	GameDriver.start_instance = ""
 	await tree.process_frame
@@ -69,6 +71,8 @@ func _check_survey(main: Node) -> String:
 		result = _survey_buttons(main, choice, survey)
 	if result.is_empty():
 		result = _survey_pinches(main, choice, survey)
+	if result.is_empty():
+		result = await _survey_in_menu(main, choice, survey)
 	SaveStore.remove(path)
 	graphics.settings_path = kept_path
 	graphics.settings.chosen = kept
@@ -500,6 +504,57 @@ func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32
 	if held or zooming or Input.is_action_pressed(&"survey_zoom_out"):
 		return "a pinch on the Survey started the touch stick, or left a zoom action pressed"
 	return ""
+
+
+## Why the menu's Survey tab (#392) doesn't show what the Survey shows, over the tab, or its zoom
+## key, its buttons or a pinch on it don't step the one zoom it follows, or "".
+func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
+	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
+	var tab: SurveyTab = menu.survey_tab
+	menu.toggle()
+	(tab.get_parent() as TabContainer).current_tab = tab.get_index()
+	var problem: String = choice.zoom_by(SurveyChoice.AUTO_ZOOM - choice.zoom_step())
+	# The headless window is too small for the tab to lay its Survey out: a desktop screen's size.
+	var window: Window = main.get_tree().root
+	var kept_size: Vector2i = window.size
+	window.size = Vector2i(SCREENS[0])
+	await main.get_tree().process_frame
+	await main.get_tree().process_frame
+	survey.show_state()
+	tab.view.show_state()
+	var same: bool = (tab.view.tiles.keys() == survey.tiles.keys()
+			and tab.view.circles.keys() == survey.circles.keys()
+			and tab.view.quest_targets == survey.quest_targets)
+	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
+		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
+	var key: InputEventAction = InputEventAction.new()
+	key.action = &"survey_zoom_in"
+	key.pressed = true
+	tab.get_viewport().push_input(key)
+	problem += _survey_zoomed_to(choice, "key", SurveyChoice.AUTO_ZOOM + 1)
+	(tab.find_child("ZoomIn", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom in button", SurveyChoice.AUTO_ZOOM + 2)
+	(tab.find_child("ZoomOut", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom out button", SurveyChoice.AUTO_ZOOM + 1)
+	if problem.is_empty():
+		# Spread far enough for exactly one step closer, as on the corner Survey.
+		var spread: PackedFloat32Array = PackedFloat32Array([0.15, 0.25, 0.22])
+		var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+		problem = _survey_pinched(tab.view, stick, spread)
+	problem += _survey_zoomed_to(choice, "pinch", SurveyChoice.AUTO_ZOOM + 2)
+	await main.get_tree().process_frame
+	if problem.is_empty() and tab.view.across != SurveyChoice.ZOOMS[choice.zoom_step()]:
+		problem = "the menu's Survey doesn't follow the zoom"
+	menu.toggle()
+	window.size = kept_size
+	return problem
+
+
+## Why the menu's Survey `how` didn't step the zoom to `step`, or "".
+func _survey_zoomed_to(choice: SurveyChoice, how: String, step: int) -> String:
+	if choice.zoom_step() == step:
+		return ""
+	return "the menu's Survey %s went to zoom step %d, not %d. " % [how, choice.zoom_step(), step]
 
 
 ## Touches `at` with `finger` (the first one unless named), or lifts it there.

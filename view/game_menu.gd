@@ -1,12 +1,12 @@
 class_name GameMenu
 extends Control
-## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Settings so
-## far; Character, Survey and Quests follow: #391, #392, #388). The `menu` action (Escape) opens
-## and closes it, and on touch screens a small button does; it eases in and out, never snaps.
-## While it's open the game hears no input: the player stands, and the touch stick and the Survey's
-## pinch and keys rest. By default it pauses single player (#302), a setting the player can
-## change; co-op never pauses (GameDriver.pause). Its text grows with the screen, so it stays
-## readable on a phone.
+## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Settings and
+## the Survey, #392, so far; Character and Quests follow: #391, #388). The `menu` action (Escape)
+## opens and closes it, and on touch screens a small button does; it eases in and out, never snaps.
+## While it's open the game hears no input: the player stands, the touch stick rests, and the
+## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
+## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows
+## with the screen, so it stays readable on a phone.
 
 ## The pause setting and its choices, saved by number: never reorder.
 const PAUSE_SETTING: String = "pause_in_menu"
@@ -39,6 +39,8 @@ const OPEN_TEXT: String = "Menu"
 
 ## The Settings tab.
 var settings: SettingsTab
+## The Survey tab.
+var survey_tab: SurveyTab
 ## Everything the menu shows when open: the opaque sheet over the whole screen.
 var _sheet: PanelContainer
 var _open_button: Button
@@ -69,7 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle()
 		get_viewport().set_input_as_handled()
 	elif _open:
-		# The game's own keys (the Survey's) rest while the menu is open.
+		# The game's own keys rest while the menu is open; the Survey tab took the zoom's first.
 		get_viewport().set_input_as_handled()
 
 
@@ -165,7 +167,7 @@ func _follow() -> void:
 		stick.set_process_input(not _open)
 	if pinch != null:
 		pinch.let_go()
-		pinch.set_process_input(not _open)
+		pinch.in_menu = survey_tab.view if _open else null
 
 
 ## The sheet: the tabs over the whole screen, and a button that closes the menu below them.
@@ -191,6 +193,10 @@ func _build_sheet() -> void:
 	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
+	survey_tab = SurveyTab.new()
+	survey_tab.name = "Survey"
+	survey_tab.survey = survey
+	tabs.add_child(survey_tab)
 	column.add_child(tabs)
 	var close: Button = button("Close", toggle)
 	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
