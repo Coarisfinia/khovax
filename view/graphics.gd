@@ -62,6 +62,15 @@ func choose_anti_aliasing(msaa: int) -> String:
 	return settings.save(settings_path)
 
 
+## Steps the anti-aliasing `steps` choices on (back for fewer), after the last one round to the
+## first, and keeps it; returns why it couldn't be saved, or "".
+func step_anti_aliasing(steps: int) -> String:
+	var at: int = ANTI_ALIASING_CHOICES.find(anti_aliasing())
+	return choose_anti_aliasing(
+		ANTI_ALIASING_CHOICES[posmod(at + steps, ANTI_ALIASING_CHOICES.size())],
+	)
+
+
 ## Hands `setting` back to Auto; returns why that couldn't be saved, or "".
 func choose_auto(setting: String) -> String:
 	var _was_chosen: bool = settings.chosen.erase(setting)
