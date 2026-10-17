@@ -25,6 +25,8 @@
 [ext_resource type="Script" path="res://mechanics/domination/look/reinforcement_view.gd" id="23_braces"]
 [ext_resource type="Script" path="res://mechanics/trail/look/trail_marks_view.gd" id="24_marks"]
 [ext_resource type="Script" path="res://view/quest_marker_view.gd" id="25_quests"]
+[ext_resource type="Script" path="res://view/survey_view.gd" id="26_survey"]
+[ext_resource type="Script" path="res://view/survey_choice.gd" id="27_survey_choice"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -130,6 +132,11 @@ script = ExtResource("13_ink")
 script = ExtResource("14_graphics")
 ink = NodePath("../InkOutline")
 
+[node name="SurveyChoice" type="Node" parent="." node_paths=PackedStringArray("view", "graphics") unique_id=3011301130]
+script = ExtResource("27_survey_choice")
+view = NodePath("../Hud/Survey")
+graphics = NodePath("../Graphics")
+
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
 transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)
 
@@ -137,6 +144,15 @@ transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.8111
 script = ExtResource("10_music")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
+
+[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "holder", "input") unique_id=3010301030]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("26_survey")
+driver = NodePath("../../Driver")
+keeper = NodePath("../../WorldKeeper")
+holder = NodePath("../../ProfileHolder")
+input = NodePath("../../LocalInput")
 
 [node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
 layout_mode = 3

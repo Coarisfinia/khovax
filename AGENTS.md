@@ -122,8 +122,9 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Don't rerun locally what CI runs** (owner's rule): lint, the script check and the e2e tests run
-  on every push. Push and let CI check. Run them locally only to reproduce a CI failure.
+- **Don't run tests or lint locally** (owner's rule): CI takes care of them. Lint, the script check,
+  the e2e tests, the unused code and asset checks and the load test all run on every push, so push
+  and let CI check, after a rebase too. Run one locally only to reproduce a CI failure.
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
@@ -289,7 +290,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   replays, and bad memory is dropped without refusing the world.
   The player's `Settings` (#161) are kept apart from that progress, in their own file: each
   setting starts at "Auto", which picks what suits the device (`Graphics` applies the graphics
-  ones), and a player's choice overrides it until they choose Auto again.
+  ones and owns the file; `SurveyChoice` keeps where the Survey shows and its zoom in it, #301),
+  and a player's choice overrides it until they choose Auto again.
   Content data (species, quests, items) is read in `meta/` too (below).
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC files
   in `data/<kind>/`, one per entry and named after its id, with a JSON Schema in
