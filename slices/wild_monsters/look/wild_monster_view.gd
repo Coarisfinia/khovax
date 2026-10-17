@@ -5,7 +5,8 @@ extends Node3D
 ## follows the wild monster feature's state: a figure appears for each wild monster and, when it
 ## goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
 ## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. One that steps
-## away from where no ring could enclose it (#364) glides to its new tile. It only reads the state.
+## away from where no ring could enclose it (#364) glides to its new tile. A fainted one (#410)
+## stays where it fell, drawn as it was until it gets its own look. It only reads the state.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -49,7 +50,7 @@ func show_state() -> void:
 	# An instance without wild monsters shows no figures.
 	var shown: Array[int] = []
 	if feature != null:
-		shown = feature.monsters
+		shown = feature.monsters + feature.fainted
 	for entity_id: int in figures.keys():
 		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
 			_fade_out(figures[entity_id])

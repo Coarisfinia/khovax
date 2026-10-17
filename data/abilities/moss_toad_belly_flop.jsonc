@@ -1,8 +1,9 @@
-// A placeholder until the abilities do something (#222): its effect comes with the system that
-// uses it.
+// A placeholder (#222): its power and cooldown are to tune (#410).
 {
 	"id": "moss_toad_belly_flop",
 	"kind": "special",
 	"name": "Belly Flop",
-	"description": "The moss toad leaps and lands on its target with all its soggy weight."
+	"description": "The moss toad leaps and lands on its target with all its soggy weight.",
+	"power": 4000,
+	"cooldown_seconds": 12
 }

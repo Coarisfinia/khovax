@@ -48,7 +48,8 @@ func run(_tree: SceneTree) -> String:
 ## Every ability file reads, and every species names a special and two passives that exist and are
 ## of their kind, its special its own (#222, #228). A special two species share, an ability of the
 ## wrong kind, or one that doesn't exist is refused, and so is an ability file with a wrong id,
-## kind, name or description.
+## kind, name or description, a special without its power and cooldown (#410), or a passive with
+## them.
 func _check_kits(content: Content) -> String:
 	var loaded: Content = Content.load_abilities()
 	if not loaded.problem.is_empty():
@@ -83,17 +84,24 @@ static func _copy_kit(species: Species, special: String) -> Species:
 func _check_abilities_refused() -> String:
 	var ability: String = "{\"id\": \"%s\", \"kind\": \"%s\", \"name\": \"%s\","
 	ability += " \"description\": \"d\"}"
+	var special: String = ability.replace("}", ", \"power\": 3000, \"cooldown_seconds\": 8}")
 	var cases: Dictionary[String, String] = {
 		ability % ["y", "special", "N"]: "its id must",
 		ability % ["x", "attack", "N"]: "its kind",
 		ability % ["x", "special", ""]: "it has a name",
 		"{\"id\": \"x\", \"kind\": \"special\", \"name\": \"N\"}": "it has a name",
-		ability.replace("}", ", \"power\": 1}") % ["x", "special", "N"]: "field power",
+		ability.replace("}", ", \"damage\": 1}") % ["x", "special", "N"]: "field damage",
+		ability % ["x", "special", "N"]: "a special has a power and a cooldown",
+		special.replace(", \"power\": 3000", "") % ["x", "special", "N"]: "a special has a power",
+		special % ["x", "self_passive", "N"]: "a special has a power and a cooldown, a passive",
 	}
 	for text: String in cases:
 		var problem: String = Ability.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected an ability refusal starting %s, got: %s" % [cases[text], problem]
+	var read: Ability = Ability.parse("x", special % ["x", "special", "N"])
+	if not read.problem.is_empty() or read.power != 3000 or read.cooldown_seconds != 8:
+		return "a special's power and cooldown didn't read: " + read.problem
 	return ""
 
 
