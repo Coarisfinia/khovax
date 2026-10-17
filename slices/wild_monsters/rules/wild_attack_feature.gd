@@ -28,6 +28,8 @@ const TILE_INTEGRITY: int = 400
 
 ## The damage each trail tile has taken, by tile; one never hit isn't here.
 var _wear: Dictionary[Vector2i, int] = {}
+## The trail's feature, which the wear is read against (set in `start`).
+var _trail: TrailFeature = null
 ## Worked out again each tick, so neither hashed nor saved: the lowest id of a companion and of a
 ## player on each tile, and every ring's wall (only once a free monster may strike the trail).
 var _companion_at: Dictionary[Vector2i, int] = {}
@@ -43,6 +45,10 @@ func id() -> int:
 func requires() -> Array[int]:
 	var needed: Array[int] = [Features.TRAIL, Features.WILD_MONSTERS, Features.DOMINATION]
 	return needed
+
+
+func start(state: GameState) -> void:
+	_trail = state.feature(Features.TRAIL) as TrailFeature
 
 
 ## Lets every wild monster strike, in id order, once every STRIKE_TICKS. Wear on tiles that left
@@ -125,8 +131,9 @@ func _strike_ring(state: GameState, monster: Entity, dominator_id: int, damage: 
 	var wall: Vector2i = walls[RingShape.nearest(walls, monster.tile)]
 	state.events.append(WildMonsterStruck.new(monster.id, 0, wall, damage))
 	if _worn_through(wall, damage):
+		# The ring comes off the trail, but a wall another ring needs stays, so it's left to it.
+		var _dropped: bool = _wear.erase(wall)
 		domination.break_waiting(state, dominator_id, wall)
-		_clear(state, wall)
 
 
 ## The free wild monster strikes the first target next to it, if there is one: the companion with
@@ -201,17 +208,21 @@ static func _sides(tile: Vector2i) -> Array[Vector2i]:
 	return sides
 
 
-## The worn tiles, sorted.
+## The worn tiles still on the trail, sorted: a tile a ring took off the trail since the last step
+## keeps its entry until the next, but its wear counts no more.
 func _worn_tiles() -> Array[Vector2i]:
 	var tiles: Array[Vector2i] = []
-	tiles.assign(_wear.keys())
+	for tile: Vector2i in _wear:
+		if _trail.shared.tiles.has(tile):
+			tiles.append(tile)
 	tiles.sort()
 	return tiles
 
 
 func hash_values() -> Array[int]:
-	var values: Array[int] = [_wear.size()]
-	for tile: Vector2i in _worn_tiles():
+	var tiles: Array[Vector2i] = _worn_tiles()
+	var values: Array[int] = [tiles.size()]
+	for tile: Vector2i in tiles:
 		values.append_array([tile.x, tile.y, _wear[tile]])
 	return values
 
@@ -235,9 +246,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 	if wear.size() != tiles.size():
 		values.fail("the worn tiles and their wear don't match")
 		return
-	var trail: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
 	for i: int in tiles.size():
-		if not trail.shared.tiles.has(tiles[i]) or _wear.has(tiles[i]):
+		if not _trail.shared.tiles.has(tiles[i]) or _wear.has(tiles[i]):
 			values.fail("worn tile %s isn't on the trail once" % tiles[i])
 			return
 		_wear[tiles[i]] = wear[i]
