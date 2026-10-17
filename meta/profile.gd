@@ -5,7 +5,8 @@ extends RefCounted
 ## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
 ## loses nothing), never because of a tick itself. Integers and ids only, like everything that
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). Quest progress (#184) is kept
-## here too, advanced by the same gains against the quest definitions it's given.
+## here too, advanced by the same gains against the quest definitions it's given, and so is the
+## player's personal color (#233), which only views read.
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -14,6 +15,10 @@ const CARRY_LIMIT: int = 3
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
 ## whole number up to 2^53 exactly, and this stays far below it.
 const MAX_NUMBER: int = Fixed.MAX_AMOUNT
+## The personal color while Auto picks it: the world's default (PersonalColor.of).
+const AUTO_COLOR: int = -1
+## The largest personal color: white, as 0xRRGGBB.
+const MAX_COLOR: int = 0xffffff
 
 var unlocked_slots: int = START_SLOTS
 ## Every dominated monster, in the order dominated.
@@ -34,6 +39,9 @@ var quests_done: Array[String] = []
 ## that isn't here is kept untouched, on purpose: a quest missing from one build's data (dropped by
 ## mistake, or not shipped yet) picks up where the player left it once it's back.
 var quest_book: Dictionary[String, QuestDefinition] = {}
+## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
+## simulation's (#233).
+var personal_color: int = AUTO_COLOR
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
 ## Which of the save's generations it was loaded from: 0 the newest, more when newer ones were

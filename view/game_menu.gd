@@ -1,7 +1,7 @@
 class_name GameMenu
 extends Control
-## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Settings and
-## the Survey, #392, so far; Character and Quests follow: #391, #388). The `menu` action (Escape)
+## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Character,
+## #391, Settings and the Survey, #392, so far; Quests follows: #388). The `menu` action (Escape)
 ## opens and closes it, and on touch screens a small button does; it eases in and out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
@@ -36,7 +36,11 @@ const OPEN_TEXT: String = "Menu"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
+## Whose profile keeps the personal color the Character tab shows.
+@export var holder: ProfileHolder
 
+## The Character tab.
+var character: CharacterTab
 ## The Settings tab.
 var settings: SettingsTab
 ## The Survey tab.
@@ -106,6 +110,7 @@ func toggle() -> void:
 	if _fade != null:
 		_fade.kill()
 	settings.refresh()
+	character.refresh()
 	_sheet.visible = true
 	_fade = _sheet.create_tween()
 	var _eased: PropertyTweener = _fade.tween_property(
@@ -146,6 +151,7 @@ func lay_out(screen: Vector2) -> void:
 		_font_size = font
 		theme.default_font_size = font
 		_size_buttons(self)
+		character.fit(font)
 	settings.fit(minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN))
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
@@ -186,6 +192,11 @@ func _build_sheet() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# No panel of its own: the tabs' pages lie on the sheet, so the ink text stays on the fog.
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	character = CharacterTab.new()
+	character.name = "Character"
+	character.driver = driver
+	character.holder = holder
+	tabs.add_child(character)
 	settings = SettingsTab.new()
 	settings.name = "Settings"
 	settings.graphics = graphics

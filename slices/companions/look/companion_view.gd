@@ -47,8 +47,11 @@ func show_state() -> void:
 			var _dropped: bool = figures.erase(companion_id)
 			_dropped = _facing.erase(companion_id)
 	for companion_id: int in shown:
+		var slot: int = feature.owners[companion_id]
 		if not figures.has(companion_id):
-			figures[companion_id] = _add_figure(feature.owners[companion_id])
+			figures[companion_id] = _add_figure(slot)
+		# Every frame, so a color the player chooses in the menu shows at once (#391).
+		circle_of(companion_id).paint(PersonalColor.shown(driver, slot))
 		_place(companion_id)
 
 
@@ -78,7 +81,7 @@ func _place(companion_id: int) -> void:
 
 
 ## A new figure for the companion of the player in `slot`, in the comic look and idling, in a
-## circle of that player's color and marks.
+## circle of that player's marks (show_state paints it in their color).
 func _add_figure(slot: int) -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
@@ -87,7 +90,6 @@ func _add_figure(slot: int) -> HexPiece:
 	piece.add_child(model)
 	var circle: PlayerCircle = PlayerCircle.new(slot)
 	circle.scale = Vector3.ONE * CIRCLE_SCALE
-	circle.paint(PersonalColor.of(driver.world.world_seed, slot))
 	piece.add_child(circle)
 	add_child(piece)
 	WildMonsterView.idle(model)

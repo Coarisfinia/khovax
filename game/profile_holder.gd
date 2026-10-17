@@ -5,7 +5,7 @@ extends Node
 ## saved debounced (ProfileKeeper, #73), and whatever is pending saved when the game quits or goes
 ## to the background. The same dominations and chests advance the player's quests (#184), in the
 ## profile, and so do the places they step into (#339) and the region pieces and instances they
-## enter (#350, #370).
+## enter (#350, #370). The player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -71,6 +71,18 @@ func _on_event(event: RefCounted) -> void:
 	var gain: Gain = _gain_of(event)
 	if gain != null:
 		_report(keeper.take(gain, Time.get_ticks_msec()))
+
+
+## This machine's player's chosen personal color (#391), as 0xRRGGBB, or Profile.AUTO_COLOR, also
+## while the save can't be read.
+func personal_color() -> int:
+	return keeper.profile.personal_color if keeper != null else Profile.AUTO_COLOR
+
+
+## Keeps `color` (0xRRGGBB, or Profile.AUTO_COLOR) as this machine's player's personal color.
+func choose_color(color: int) -> void:
+	if keeper != null:
+		_report(keeper.choose_color(color, Time.get_ticks_msec()))
 
 
 ## The quests the profile advances from `content`: none when any quest file couldn't be read, so

@@ -121,6 +121,7 @@ func _check_refused() -> String:
 	var format: String = "\"format\": %d" % ProfileSave.FORMAT
 	var done: String = "\"quests_done\": []"
 	var progress: String = "\"quest_progress\": {}"
+	var color: String = "\"personal_color\": -1"
 	var cases: Dictionary[String, String] = {
 		"not json": "not a profile save",
 		text.replace(format, "\"format\": 99"): "save format 99",
@@ -147,6 +148,10 @@ func _check_refused() -> String:
 		text.replace("\"next_monster_id\": 1", "\"next_monster_id\": 0"): "the save's slots",
 		text.replace("\"carried\": []", "\"carried\": [5]"): "a carried monster isn't",
 		text.replace("\"carried\": []", "\"carried\": {}"): "the save lacks its carried",
+		text.replace(color, "\"personal_color\": -2"): "the save's personal color",
+		text.replace(color, "\"personal_color\": 16777216"): "the save's personal color",
+		text.replace(color, "\"personal_color\": 1.5"): "the save's personal color",
+		text.replace(color, "\"personal_color\": \"red\""): "the save's personal color",
 	}
 	for case: String in cases:
 		var problem: String = ProfileSave.parse(case).problem
@@ -158,13 +163,15 @@ func _check_refused() -> String:
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
 ## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
 ## formats before 4 carried no monsters (#53): the first three dominated are carried then, and
-## formats before 5 named them captured (#317).
+## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
+## starts on Auto.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
 	var _no_progress: bool = current.erase("quest_progress")
 	var _none_done: bool = current.erase("quests_done")
 	var _none_carried: bool = current.erase("carried")
+	var _no_color: bool = current.erase("personal_color")
 	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
 	var olds: Array[Dictionary] = [
 		{ "format": 1, "runs_finished": 3 },
@@ -173,6 +180,13 @@ func _check_migrated() -> String:
 		{ "format": 2 },
 		{ "format": 3, "quest_progress": {}, "quests_done": [] },
 		{ "format": 4, "quest_progress": {}, "quests_done": [], "carried": [] },
+		{
+			"format": 5,
+			"quest_progress": {},
+			"quests_done": [],
+			"carried": [],
+			"dominated_monsters": [],
+		},
 	]
 	for old: Dictionary in olds:
 		var save: Dictionary = current.duplicate()

@@ -111,9 +111,8 @@ func _draw() -> void:
 			_draw_symbol(font, font_size, at, tiles[tile].symbol)
 	for exit: Vector3i in exits:
 		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
-	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
 	for slot: int in circles:
-		_draw_player(on_view(circles[slot]), slot, PersonalColor.of(world_seed, slot))
+		_draw_player(on_view(circles[slot]), slot, PersonalColor.shown(driver, slot))
 	for id: String in quest_targets:
 		_draw_arrow(to_view(quest_targets[id]))
 	if bordered:
