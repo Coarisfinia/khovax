@@ -5,35 +5,43 @@ extends RefCounted
 ## the starting state, is a replay.
 
 const NO_MOVE: int = -1
+## Whether the player places their totem this tick (#423): integers, like every value here.
+const NO_TOTEM: int = 0
+const PLACE_TOTEM: int = 1
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 2
+const VALUE_COUNT: int = 3
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
 ## Whether the player fires their companion's special attack this tick (#410). A press, not a held
 ## state: it's given for the one tick the player presses it.
 var special: bool = false
+## NO_TOTEM or PLACE_TOTEM.
+var totem: int = NO_TOTEM
 
 
-func _init(direction: int = NO_MOVE, fires: bool = false) -> void:
+func _init(direction: int = NO_MOVE, fires: bool = false, place: int = NO_TOTEM) -> void:
 	move = direction
 	special = fires
+	totem = place
 
 
 ## The command as integers, for replays: from_values turns them back into the same command.
 func to_values() -> Array[int]:
-	var values: Array[int] = [move, 1 if special else 0]
+	var values: Array[int] = [move, 1 if special else 0, totem]
 	return values
 
 
 ## The command from to_values' integers; is_valid_values says whether they make one.
 static func from_values(values: Array[int]) -> Command:
-	return Command.new(values[0], values[1] == 1)
+	return Command.new(values[0], values[1] == 1, values[2])
 
 
-## Whether the command is one a player can give: no move, or one of the six directions.
+## Whether the command is one a player can give: no move or one of the six directions, and a
+## totem placed or not.
 func is_valid() -> bool:
-	return move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
+	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
+	return moves and (totem == NO_TOTEM or totem == PLACE_TOTEM)
 
 
 ## Whether `values` are a command's, as to_values gives them, of one a player can give.
