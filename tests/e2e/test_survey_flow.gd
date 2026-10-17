@@ -1,11 +1,13 @@
 extends RefCounted
 ## Survey flow (#301): the player looks at the Survey, the overview of the ground they explored, in
 ## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
-## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; it marks
-## every player by slot and every open quest's target; its action cycles it through the corners,
-## over the game, opaque and off, its zoom steps within their range, and both choices are kept. In
-## every place, on desktop screens and phones held either way, it sits against its own corner or
-## covers the whole screen; every zoom step is followed, and zooming stops at both ends.
+## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; next
+## door it shows exactly what was explored there, at its place in the world, and the exits on the
+## tiles it shows, loading nothing; it marks every player by slot and every open quest's target;
+## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
+## their range, and both choices are kept. In every place, on desktop screens and phones held
+## either way, it sits against its own corner or covers the whole screen; every zoom step is
+## followed, and zooming stops at both ends.
 
 
 func run(tree: SceneTree) -> String:
@@ -41,6 +43,8 @@ func _check_survey(main: Node) -> String:
 	graphics.settings.chosen.clear()
 	fog.show_state(10.0)
 	var result: String = _survey_ground(driver, survey)
+	if result.is_empty():
+		result = _survey_next_door(driver, survey)
 	if result.is_empty():
 		result = _survey_marks(driver, survey, FlowGame.holder(main).keeper.profile)
 	if result.is_empty():
@@ -98,6 +102,48 @@ func _survey_symbols_drawn(survey: SurveyView) -> bool:
 	survey.across = across
 	survey.size = shown
 	return drawn
+
+
+## Why the Survey doesn't show exactly the explored ground of the instance next door at its place
+## in the world, or the exits on the tiles it shows, or loads an instance to draw them, or ""
+## (#353).
+func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
+	var world: World = driver.world
+	var state: GameState = driver.state
+	var target: String = state.region.exit_blueprints[0]
+	var region: Region = survey.neighbours.region_of(target)
+	if world.instances.has(target) or region == null:
+		return "the glade's neighbour %s is loaded already, or not drawn next door" % target
+	# Every other tile next door explored, and the exits' own tiles here, for their chevrons.
+	var explored: ExploredGround = survey.keeper.explored_in(world)
+	var there: Dictionary[Vector2i, bool] = explored.tiles_of(target, world.generation(target))
+	var ground: Array[Vector2i] = region.sorted_tiles()
+	for i: int in range(0, ground.size(), 2):
+		there[ground[i]] = true
+	var here_name: String = driver.local_instance_name()
+	var here: Dictionary[Vector2i, bool] = explored.tiles_of(here_name, world.generation(here_name))
+	for exit: Vector3i in state.region.exits:
+		here[Vector2i(exit.x, exit.y)] = true
+	var loaded: Array[String] = world.sorted_names()
+	var before: int = world.state_hash()
+	survey.show_state()
+	if world.sorted_names() != loaded or world.state_hash() != before:
+		return "drawing the Survey loaded or changed an instance"
+	var shift: Vector2i = survey.neighbours.shifts[target]
+	for tile: Vector2i in ground:
+		var at: Vector2i = tile + shift
+		if survey.tiles.has(at) != there.has(tile):
+			var how: String = "shows the fogged" if survey.tiles.has(at) else "hides the explored"
+			return "the Survey %s tile %s next door" % [how, tile]
+		if there.has(tile) and survey.tiles[at] != TileLooks.of(region.terrain[tile]).color:
+			return "the Survey colors %s next door unlike its kind" % tile
+	var shown: Array[Vector3i] = []
+	for exit: Vector3i in state.region.exits:
+		if survey.tiles.has(Vector2i(exit.x, exit.y)):
+			shown.append(exit)
+	if shown.is_empty() or survey.exits != shown:
+		return "the Survey doesn't show the exits on the tiles it shows: %s" % [survey.exits]
+	return ""
 
 
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".

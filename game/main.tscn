@@ -158,7 +158,7 @@ script = ExtResource("10_music")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
 
-[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "holder", "input") unique_id=3010301030]
+[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "holder", "input", "neighbours") unique_id=3010301030]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("26_survey")
@@ -166,6 +166,7 @@ driver = NodePath("../../Driver")
 keeper = NodePath("../../WorldKeeper")
 holder = NodePath("../../ProfileHolder")
 input = NodePath("../../LocalInput")
+neighbours = NodePath("../../Instance/NeighbourView")
 
 [node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("holder", "survey") unique_id=3403403400]
 layout_mode = 3

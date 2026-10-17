@@ -1,14 +1,17 @@
 class_name SurveyView
 extends Control
-## The Survey (#301): an overview of the instance this machine's player is in, as far as they have
-## explored it. It draws each tile they explored (FogView's memory, ExploredGround), sees now or had
-## revealed (#177) in its kind's color (TileLooks) with its kind's symbol over it, and a tile nobody
-## can walk onto ringed in ink, so no kind is told by color alone (#68); the rest stays the
-## backdrop, the fog's color, so what is still in the fog stays hidden here too. Every player in
-## the instance is a circle in their personal color with one mark per slot number, like their
-## circle in the world (#68), and every open quest's target (QuestMarkerView.targets_of, #300)
-## an arrow pointing down at it. It's centered on this machine's player, gliding after them. Where
-## it shows and how close is SurveyChoice's. It only reads the state, the explored ground and the
+## The Survey (#301): an overview of the instance this machine's player is in and the instances
+## next door (#353, the ones NeighbourView draws, at their places in the world), as far as they have
+## explored them. It draws each tile they explored (FogView's memory, ExploredGround), sees now or
+## had revealed (#177) in its kind's color (TileLooks) with its kind's symbol over it, so no kind
+## is told by color alone (#68), a tile nobody can walk onto ringed in ink, and every exit on a
+## tile shown as a chevron pointing out across its side; the rest stays the backdrop, the fog's
+## color, so what is
+## still in the fog stays hidden here too. Every player in the instance is a circle in their
+## personal color with one mark per slot number, like their circle in the world (#68), and every
+## open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. It's
+## centered on this machine's player, gliding after them. Where it shows and how close is
+## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
 ## profile.
 
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
@@ -28,6 +31,14 @@ const SYMBOL_SHARE: float = 1.1
 const SYMBOL_MIN_PIXELS: int = 8
 const SYMBOL_COLOR: Color = Color.WHITE
 const BORDER_PIXELS: float = 2.0
+## An exit's chevron, in shares of the way to the next tile: its half width, how far its tip
+## reaches past the tile's middle, across the side into the ground next door, and how far its base
+## lies behind it. The way is never taken as shorter than the pixels below.
+const EXIT_HALF_WIDTH: float = 0.35
+const EXIT_REACH: float = 0.75
+const EXIT_BACK: float = 0.15
+const EXIT_MIN_PIXELS: float = 18.0
+const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 
 @export var driver: GameDriver
 ## Where the explored ground is kept with the world.
@@ -36,6 +47,8 @@ const BORDER_PIXELS: float = 2.0
 @export var holder: ProfileHolder
 ## Which player is in the middle, and whose quests' targets are measured from.
 @export var input: LocalInput
+## The instances next door, read as it draws them: never loaded for the Survey either.
+@export var neighbours: NeighbourView
 
 ## How many tiles fit across the view's shorter side: the zoom, the same in a corner and over the
 ## whole screen.
@@ -50,6 +63,8 @@ var tiles: Dictionary[Vector2i, Color] = {}
 var symbols: Dictionary[Vector2i, String] = {}
 ## The tiles shown that nobody can walk onto.
 var blocking: Dictionary[Vector2i, bool] = {}
+## Each exit on a tile shown, as (q, r, side), in the instance's own coordinates.
+var exits: Array[Vector3i] = []
 ## The tile each player in the instance stands on, by slot.
 var players: Dictionary[int, Vector2i] = {}
 ## The tile each open quest points at, by quest id.
@@ -89,6 +104,8 @@ func _draw() -> void:
 			draw_polyline(shape, Toon.INK, INK_PIXELS)
 		if font_size > 0:
 			_draw_symbol(font, font_size, at, symbols[tile])
+	for exit: Vector3i in exits:
+		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
 	for slot: int in players:
 		_draw_player(to_view(players[slot]), slot, PersonalColor.of(world_seed, slot))
@@ -104,6 +121,7 @@ func show_state() -> void:
 	tiles.clear()
 	symbols.clear()
 	blocking.clear()
+	exits.clear()
 	players.clear()
 	quest_targets.clear()
 	if driver == null or driver.state == null:
@@ -117,11 +135,11 @@ func show_state() -> void:
 	var known: Dictionary = _explored(state)
 	for tile: Vector2i in state.region.sorted_tiles():
 		if known.has(tile) or FogView.ally_sees(state, tile):
-			var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
-			tiles[tile] = look.color if look != null else Color.GRAY
-			symbols[tile] = look.symbol if look != null else "?"
-			if not state.region.is_walkable(tile):
-				blocking[tile] = true
+			_show_tile(tile, state.region, tile)
+	for exit: Vector3i in state.region.exits:
+		if tiles.has(Vector2i(exit.x, exit.y)):
+			exits.append(exit)
+	_show_neighbours(state)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player != null:
@@ -155,6 +173,50 @@ func _draw_symbol(font: Font, font_size: int, at: Vector2, symbol: String) -> vo
 	var center: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER
 	draw_string_outline(font, baseline, symbol, center, width, font_size, outline, Toon.INK)
 	draw_string(font, baseline, symbol, center, width, font_size, SYMBOL_COLOR)
+
+
+## Shows the tile `tile` of `region` at `at`, in its kind's color, and whether it blocks the way.
+func _show_tile(at: Vector2i, region: Region, tile: Vector2i) -> void:
+	var look: TileBlueprint = TileLooks.of(region.terrain[tile])
+	tiles[at] = look.color if look != null else Color.GRAY
+	symbols[at] = look.symbol if look != null else "?"
+	if not region.is_walkable(tile):
+		blocking[at] = true
+
+
+## Shows the ground this machine's player explored in each instance next door (#353), at its place
+## in the world, from the region NeighbourView read for it: never loading one, since the world's
+## hash covers every loaded instance.
+func _show_neighbours(state: GameState) -> void:
+	if neighbours == null:
+		return
+	for target: String in state.region.exit_blueprints:
+		var region: Region = neighbours.region_of(target)
+		if region == null:
+			continue
+		var shift: Vector2i = neighbours.shifts[target]
+		var known: Dictionary = _seen(target)
+		for tile: Vector2i in region.sorted_tiles():
+			if known.has(tile):
+				_show_tile(tile + shift, region, tile)
+
+
+## An exit's chevron on `tile`, pointing out across its side `side`, in ink round a light fill: the
+## shape says where a way leads next door (#68).
+func _draw_exit(tile: Vector2i, side: int) -> void:
+	var from: Vector2 = to_view(tile)
+	var out: Vector2 = to_view(tile + Hex.DIRECTIONS[side]) - from
+	out = out.normalized() * maxf(out.length(), EXIT_MIN_PIXELS)
+	var wide: Vector2 = out.orthogonal() * EXIT_HALF_WIDTH
+	var base: Vector2 = from - out * EXIT_BACK
+	var shape: PackedVector2Array = PackedVector2Array([
+		from + out * EXIT_REACH,
+		base + wide,
+		base - wide,
+	])
+	draw_colored_polygon(shape, EXIT_COLOR)
+	var _closed: bool = shape.append(shape[0])
+	draw_polyline(shape, Toon.INK, INK_PIXELS)
 
 
 ## A player's circle at `at` in `color`, ringed in ink, with `slot` + 1 ink marks across it.
@@ -200,16 +262,20 @@ static func _hexagon(radius: float) -> PackedVector2Array:
 ## The tiles of `state` explored before or revealed to every player: what this machine's player
 ## remembers there, as FogView does.
 func _explored(state: GameState) -> Dictionary:
-	var known: Dictionary = {}
-	if keeper != null and driver.world != null:
-		var instance_name: String = driver.local_instance_name()
-		var explored: ExploredGround = keeper.explored_in(driver.world)
-		known = explored.seen(instance_name, driver.world.generation(instance_name)).duplicate()
+	var known: Dictionary = _seen(driver.local_instance_name()).duplicate()
 	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
 	if fog != null:
 		for tile: Vector2i in fog.revealed:
 			known[tile] = true
 	return known
+
+
+## The tiles this machine's player explored in `instance_name` at its generation now, only to read.
+func _seen(instance_name: String) -> Dictionary:
+	if keeper == null or driver.world == null:
+		return {}
+	var explored: ExploredGround = keeper.explored_in(driver.world)
+	return explored.seen(instance_name, driver.world.generation(instance_name))
 
 
 ## A tile's middle on the ground, as the survey lays it out: north up.

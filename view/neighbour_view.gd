@@ -64,6 +64,15 @@ func placed_tiles() -> Array[Vector2i]:
 	return _placed
 
 
+## The region of the neighbour `target` drawn now, as it was read for its grid, or null: for the
+## Survey (#353), which shows the neighbours' explored ground without loading them either.
+func region_of(target: String) -> Region:
+	show_state()
+	if not grids.has(target):
+		return null
+	return _regions[target]
+
+
 ## Whether a neighbour drawn now has been purged since (#212): it is drawn again, arranged anew.
 func _rearranged() -> bool:
 	for target: String in grids:
