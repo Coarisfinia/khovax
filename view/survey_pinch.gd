@@ -5,7 +5,8 @@ extends Node
 ## the Survey's buttons, so SurveyChoice can't tell them apart. Godot reports a pinch as a gesture
 ## only on some platforms (not the web), so this follows the two fingers itself. Every touch that
 ## lands on a corner Survey is taken, so the touch stick never starts under it; over the whole
-## screen the Survey leaves touches to the stick, and its buttons zoom it. Godot hands `_input` to
+## screen the Survey leaves touches to the stick, and its buttons zoom it. While the menu is open
+## (GameMenu, #362), only the Survey in its Survey tab takes a pinch (#392). Godot hands `_input` to
 ## later nodes first, so this node comes after the stick in the Hud and sees a touch before it does.
 
 ## How far apart the fingers have to move, as a share of their distance at the last step, for one
@@ -15,6 +16,9 @@ const STEP_RATIO: float = 1.5
 ## Where the Survey shows.
 @export var survey: SurveyChoice
 
+## The Survey in the menu's Survey tab while the menu is open, which then takes the pinch instead
+## of the corner Survey under the menu; null while the menu is closed.
+var in_menu: SurveyView
 ## Where each finger on the Survey is, by its index.
 var _fingers: Dictionary[int, Vector2] = {}
 ## The two fingers' distance at the last step, or 0 while fewer than two are down.
@@ -78,12 +82,13 @@ func _distance() -> float:
 	return at[0].distance_to(at[1])
 
 
-## Whether `at` is on a corner Survey that shows.
+## Whether `at` is on the menu's Survey while the menu is open, or else on a corner Survey, and it
+## shows.
 func _on_survey(at: Vector2) -> bool:
-	if survey == null or survey.view == null:
-		return false
-	var view: SurveyView = survey.view
-	return view.is_visible_in_tree() and view.bordered and view.get_global_rect().has_point(at)
+	var view: SurveyView = in_menu
+	if view == null and survey != null and survey.view != null and survey.view.bordered:
+		view = survey.view
+	return view != null and view.is_visible_in_tree() and view.get_global_rect().has_point(at)
 
 
 ## Presses and releases `action` once, as a TouchScreenButton does: its event, so SurveyChoice

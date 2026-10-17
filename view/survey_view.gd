@@ -83,7 +83,9 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if not visible:
+	# Hidden with what holds it too: the menu's Survey tab (#392) while another tab or nothing
+	# shows.
+	if not is_visible_in_tree():
 		return
 	show_state()
 	var own: Vector2 = circles.get(_slot(), _ground(Vector2i.ZERO))
