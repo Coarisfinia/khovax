@@ -31,6 +31,7 @@
 [ext_resource type="Script" path="res://view/quest_list_view.gd" id="28_quest_list"]
 [ext_resource type="Script" path="res://mechanics/companions/look/companion_view.gd" id="29_companions"]
 [ext_resource type="Script" path="res://view/settings_menu.gd" id="30_settings_menu"]
+[ext_resource type="Script" path="res://view/survey_buttons.gd" id="31_survey_buttons"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -185,6 +186,12 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("6_stick")
+
+[node name="SurveyButtons" type="Control" parent="Hud" node_paths=PackedStringArray("survey") unique_id=3520352035]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("31_survey_buttons")
+survey = NodePath("../../SurveyChoice")
 
 [node name="SettingsMenu" type="Control" parent="Hud" node_paths=PackedStringArray("graphics", "survey", "stick") unique_id=3550355035]
 layout_mode = 3
