@@ -218,8 +218,9 @@ func _moving(direction: int) -> Array[Command]:
 ## too) on their tiles, a kind's decoration turned by hand (#231) and its walkable trait overridden
 ## for one tile (#201) where the legend says so, both of which turn along with the region and move
 ## with a placed piece, and a grid without a single middle, a symbol the legend doesn't explain, a
-## clause it doesn't know, a turn past five sixths or a place without an id (#339) is refused. The
-## glade's pieces have forest.
+## clause it doesn't know, a turn past five sixths or a place without an id (#339) is refused. A
+## place's symbol can name its tile kind too (#349), which must be walkable. The glade's pieces
+## have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
@@ -256,6 +257,9 @@ func _check_documents() -> String:
 		tiles % ["1 b .", "- `b`: a beach; stepping here reaches the place Beach"]: (
 			"the legend doesn't explain `b`"
 		),
+		tiles % ["1 b .", "- `b`: boulder; stepping here reaches the place beach"]: (
+			"trigger (0, 0) isn't on ground"
+		),
 	}
 	for text: String in refusals:
 		var problem: String = RegionDocument.parse(text).problem
@@ -264,6 +268,25 @@ func _check_documents() -> String:
 	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
 	if not RegionDocument.parse(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
+	return _check_kind_and_place(tiles)
+
+
+## A legend symbol naming a tile kind and a place at once (#349) makes its tiles that kind and part
+## of that place, a turn and all; one naming something else before the place leaves them ground.
+func _check_kind_and_place(tiles: String) -> String:
+	var legend: String = "- `g`: forest, turned 2; stepping here reaches the place grove\n"
+	legend += "- `b`: the beach; stepping here reaches the place beach"
+	var region: Region = RegionDocument.parse(tiles % ["g 1 b", legend])
+	var grove: Vector2i = Vector2i(-1, 0)
+	var expected: bool = region.problem.is_empty() and region.triggers.size() == 2
+	expected = expected and region.terrain.get(grove, -1) == TileKinds.number_of("forest")
+	expected = expected and region.decoration_turns == { grove: 2 }
+	expected = expected and region.terrain.get(Vector2i(1, 0), -1) == Region.GROUND
+	for trigger: TileTrigger in region.triggers:
+		var place: String = "grove" if trigger.tile == grove else "beach"
+		expected = expected and trigger.action == TileTrigger.REACH and trigger.place == place
+	if not expected:
+		return "a symbol naming a tile kind and a place didn't read as both: %s" % region.problem
 	return ""
 
 
