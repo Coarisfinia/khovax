@@ -1,11 +1,11 @@
 class_name TileKinds
 extends RefCounted
 ## The kinds of tile a region is made of (#116), as the rules see them: Region.terrain holds one
-## kind per tile, as its number. Each kind is a tile blueprint (data/tiles/, read by Content), whose
-## file gives it a permanent number, never reused or changed once shipped (like Features' ids), so
-## adding a kind never renumbers another. The built-in kinds keep the numbers regions always had
-## (Region.GROUND, WATER and BLOCKED). Only what rules need is kept here: each kind's id and
-## traits; its color and model are the view's, read from the blueprints in meta/.
+## kind per tile, as its number. Each kind is a tile blueprint (content data, read by Content),
+## whose file gives it a permanent number, never reused or changed once shipped (like Features'
+## ids), so adding a kind never renumbers another. The built-in kinds keep the numbers regions
+## always had (Region.GROUND, WATER and BLOCKED). Only what rules need is kept here: each kind's id
+## and traits; its color and model are the view's, read from the blueprints in meta/.
 ##
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
 ## so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.

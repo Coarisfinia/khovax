@@ -7,7 +7,8 @@ extends RefCounted
 ## hand-made region pieces (regions/<blueprint>/) by RegionArranger (#57). This class holds the
 ## region's data and its geometry (turning, placing, fitting, reachability, hashing).
 
-## The built-in kinds' numbers, as data/tiles/ gives them; rock blocks sight (FogFeature).
+## The built-in kinds' numbers, as the tile blueprints give them; rock blocks sight
+## (FogFeature).
 const GROUND: int = 0
 const WATER: int = 1
 const BLOCKED: int = 2
