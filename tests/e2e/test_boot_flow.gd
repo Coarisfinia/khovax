@@ -341,7 +341,7 @@ func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 	return ""
 
 
-## A wild monster that leaves the world (caught, later) takes its figure and its entry with it.
+## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.
 func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView

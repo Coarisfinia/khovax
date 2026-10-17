@@ -3,7 +3,7 @@ extends Feature
 ## Hiding tiles (#202): a wild monster that starts on a tile whose kind hides (a tile blueprint's
 ## `hides` trait, e.g. shrubs) stays hidden there until a player comes next to it, then jumps out
 ## (a MonsterJumpedOut event) and is a wild monster like any other from then on. Hidden, it still
-## blocks walkers, and a ring around it still catches it: hiding only keeps it out of sight.
+## blocks walkers, and a ring around it still dominates it: hiding only keeps it out of sight.
 ## Instances whose region has such a monster have it.
 
 ## How near a player comes before a hidden wild monster jumps out: next to it.

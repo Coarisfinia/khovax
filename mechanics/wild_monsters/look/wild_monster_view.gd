@@ -3,7 +3,7 @@ extends Node3D
 ## The wild monsters' look (#19): for now a placeholder figure for each (#85), standing on its tile
 ## and idling, its shape standing out from the players' (so it doesn't rely on color alone). It
 ## follows the wild monster feature's state: a figure appears for each wild monster and, when it
-## goes (caught, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
+## goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
 ## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. It only reads
 ## the state.
 

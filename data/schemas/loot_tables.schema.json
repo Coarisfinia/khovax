@@ -13,7 +13,7 @@
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"kind": {
-			"description": "A species table (rolled when a monster is caught, #86) or an instance table (a blank's second roll, chests, #124).",
+			"description": "A species table (rolled when a monster is dominated, #86) or an instance table (a blank's second roll, chests, #124).",
 			"enum": ["species", "instance"]
 		},
 		"entries": {

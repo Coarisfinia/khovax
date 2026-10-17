@@ -1,22 +1,22 @@
 extends RefCounted
-## Catch flow (#20, #219): the player walks a ring around the basic region's wild monster at
+## Domination flow (#20, #219): the player walks a ring around the basic region's wild monster at
 ## (-2, 0), and the ring seals: the monster pushes on it, and once the ring has held for its seal
-## ticks (not a tick before) the monster is caught: it leaves the world, the catch is announced,
-## the trail starts over, and its figure shrinks away. While it seals, the ring fills on screen and
-## a save resumes it exactly. An open ring, a walk that only touches the wild monster, and a ring
-## around another tile catch nothing. Allies share one trail (#87): two players close one ring
-## together, and the catch goes to the lowest slot among those who colored its wall (owner, #86),
-## whoever's move closed it; the ring then comes off the trail, the trail leading up to it stays.
-## A ring around several monsters splits them by contribution (#260): two allies who each colored
-## half of it get one each, and the owner's examples split as decided.
-## Catching is deterministic. A catch by this
+## ticks (not a tick before) the monster is dominated: it leaves the world, the domination is
+## announced, the trail starts over, and its figure shrinks away. While it seals, the ring fills on
+## screen and a save resumes it exactly. An open ring, a walk that only touches the wild monster,
+## and a ring around another tile dominate nothing. Allies share one trail (#87): two players
+## close one ring together, and the domination goes to the lowest slot among those who colored its
+## wall (owner, #86), whoever's move closed it; the ring then comes off the trail, the trail leading
+## up to it stays. A ring around several monsters splits them by contribution (#260): two allies who
+## each colored half of it get one each, and the owner's examples split as decided.
+## Domination is deterministic. A domination by this
 ## machine's player lands in their profile and its save at once (#132), as the species it was:
 ## named by its spot, or rolled from the blueprint's list (#133).
 ##
 ## The issue's outcomes (#219), at level 1 with the placeholder constants, in a disc of test
 ## monsters: a weak one holds in a small ring and in a big one; many weak ones break a big ring; a
 ## strong one breaks a big ring fast, and a small ring too, only later (the issue leaves that to
-## level and weakening). A broken ring catches nothing, says so, and starts its trail over. A
+## level and weakening). A broken ring dominates nothing, says so, and starts its trail over. A
 ## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
 ## the small ring holds; standing on any other segment of it, they don't, and it breaks.
 ##
@@ -25,7 +25,7 @@ extends RefCounted
 ## tile that hides.
 
 ## Where the flow's profile is saved, apart from the player's own.
-const SAVE_PATH: String = "user://test_catch_profile.json"
+const SAVE_PATH: String = "user://test_domination_profile.json"
 ## The two halves of the ring around the wild monster that two allies walk (#87): the first player
 ## from its start at (1, -1), the second from its start at (-1, 1). The second's last step closes
 ## it.
@@ -82,7 +82,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_other_ring()
 	if result.is_empty():
-		result = _check_catch()
+		result = _check_domination()
 	if result.is_empty():
 		result = _check_seal_saved()
 	if result.is_empty():
@@ -158,13 +158,13 @@ h
 	return ""
 
 
-## Every ring tile but the last: the walk passes right by the wild monster and catches nothing.
+## Every ring tile but the last: the walk passes right by the wild monster and dominates nothing.
 func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var ring: Array[Vector2i] = FlowSteps.BASIC_RING
 	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
-	if _wild(state).monsters.size() != 1 or not _catching(state).seals.is_empty():
-		return "an open ring caught the wild monster or started sealing"
+	if _wild(state).monsters.size() != 1 or not _domination(state).seals.is_empty():
+		return "an open ring dominated the wild monster or started sealing"
 	return ""
 
 
@@ -174,23 +174,23 @@ func _check_other_ring() -> String:
 	var _events: Array[RefCounted] = FlowSteps.walk(state, OTHER_RING)
 	var trail: Trail = _trails(state).shared
 	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
-		return "a ring around another tile caught the wild monster or reset the trail"
-	if not _catching(state).seals.is_empty():
+		return "a ring around another tile dominated the wild monster or reset the trail"
+	if not _domination(state).seals.is_empty():
 		return "a ring around no wild monster started sealing"
 	return ""
 
 
 ## The full ring seals around the wild monster: it stays until the ring has held for its seal
-## ticks, which grow with the monster's pressure, and is caught exactly then: gone, the catch
-## announced with who caught it, the trail started over from the catcher's tile, and the same walk
-## always ending in the same state.
-func _check_catch() -> String:
+## ticks, which grow with the monster's pressure, and is dominated exactly then: gone, the
+## domination announced with who dominated it, the trail started over from the dominator's tile, and
+## the same walk always ending in the same state.
+func _check_domination() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var monster_id: int = _wild(state).monsters[0]
 	_close(state, FlowSteps.BASIC_RING)
 	var closed: int = state.tick
 	var player: Entity = state.player(0)
-	var seal: RingSeal = _catching(state).seals.get(player.id)
+	var seal: RingSeal = _domination(state).seals.get(player.id)
 	if seal == null or state.entity(monster_id) == null or seal.monsters != [monster_id]:
 		return "the ring closed, but didn't start sealing the wild monster in"
 	var expected_ticks: int = RingSealing.SEAL_BASE_TICKS + Fixed.div_floor(
@@ -204,33 +204,39 @@ func _check_catch() -> String:
 			expected_ticks,
 		]
 	var events: Array[RefCounted] = _settle(state)
-	var caught: Array[WildMonsterCaught] = _caught(events)
-	if caught.size() != 1 or state.tick - closed != expected_ticks:
-		return "the seal ended %d ticks after closing, not %d, with %d catches" % [
+	var dominated: Array[WildMonsterDominated] = _dominated(events)
+	if dominated.size() != 1 or state.tick - closed != expected_ticks:
+		return "the seal ended %d ticks after closing, not %d, with %d dominations" % [
 			state.tick - closed,
 			expected_ticks,
-			caught.size(),
+			dominated.size(),
 		]
-	var expected: bool = caught[0].monster_id == monster_id and caught[0].catcher_id == player.id
-	if not expected or caught[0].tile != WILD_MONSTER_TILE or state.entity(monster_id) != null:
-		return "the catch wasn't announced once, by the player, on the wild monster's tile"
-	# A ring walked alone: all six wall tiles are the catcher's, the full loot (#86).
-	var looted: String = _check_loot(events, caught[0], [CatchLootFeature.FULL_ROLLS, 0])
+	var expected: bool = (
+		dominated[0].monster_id == monster_id and dominated[0].dominator_id == player.id
+	)
+	if not expected or dominated[0].tile != WILD_MONSTER_TILE or state.entity(monster_id) != null:
+		return "the domination wasn't announced once, by the player, on the wild monster's tile"
+	# A ring walked alone: all six wall tiles are the dominator's, the full loot (#86).
+	var looted: String = _check_loot(events, dominated[0], [DominationLootFeature.FULL_ROLLS, 0])
 	if not looted.is_empty():
 		return looted
-	return _check_after_catch(state)
+	return _check_after_domination(state)
 
 
-## The catch's loot (#86): each slot earned `rolls` (by slot) for what it did for the ring, and
-## the catch's CatchLoot gives exactly the slots that earned any, when its species has a loot
-## table; a species without one drops nothing. A player who only braced the wall for a second earns
-## nothing.
-func _check_loot(events: Array[RefCounted], caught: WildMonsterCaught, rolls: Array[int]) -> String:
+## The domination's loot (#86): each slot earned `rolls` (by slot) for what it did for the ring, and
+## the domination's DominationLoot gives exactly the slots that earned any, when its species has a
+## loot table; a species without one drops nothing. A player who only braced the wall for a second
+## earns nothing.
+func _check_loot(
+	events: Array[RefCounted],
+	dominated: WildMonsterDominated,
+	rolls: Array[int],
+) -> String:
 	for slot: int in rolls.size():
-		if CatchLootFeature.rolls_for(caught, slot) != rolls[slot]:
-			return "slot %d earned %d rolls for the catch, not %d" % [
+		if DominationLootFeature.rolls_for(dominated, slot) != rolls[slot]:
+			return "slot %d earned %d rolls for the domination, not %d" % [
 				slot,
-				CatchLootFeature.rolls_for(caught, slot),
+				DominationLootFeature.rolls_for(dominated, slot),
 				rolls[slot],
 			]
 	var earning: Array[int] = []
@@ -239,38 +245,44 @@ func _check_loot(events: Array[RefCounted], caught: WildMonsterCaught, rolls: Ar
 			earning.append(slot)
 	var looted: Array = []
 	for event: RefCounted in events:
-		if event is CatchLoot and (event as CatchLoot).monster_id == caught.monster_id:
-			looted = (event as CatchLoot).loot.keys()
+		if event is DominationLoot and (event as DominationLoot).monster_id == dominated.monster_id:
+			looted = (event as DominationLoot).loot.keys()
 	looted.sort()
-	var tabled: bool = Content.load_loot_tables().loot_tables.has(caught.species)
+	var tabled: bool = Content.load_loot_tables().loot_tables.has(dominated.species)
 	if looted != (earning if tabled else []):
-		return "the %s's loot went to slots %s, not %s" % [caught.species, looted, earning]
-	var brief: WildMonsterCaught = WildMonsterCaught.new(1, 1, 0, Vector2i.ZERO, caught.species)
+		return "the %s's loot went to slots %s, not %s" % [dominated.species, looted, earning]
+	var brief: WildMonsterDominated = WildMonsterDominated.new(
+		1,
+		1,
+		0,
+		Vector2i.ZERO,
+		dominated.species,
+	)
 	brief.braced_ticks[0] = Simulation.TICKS_PER_SECOND
-	if CatchLootFeature.rolls_for(brief, 0) != 0:
+	if DominationLootFeature.rolls_for(brief, 0) != 0:
 		return "a second on the wall earned loot"
 	return ""
 
 
-## After the catch, the ring is off the trail but for the tile the catcher stands on (#87), the
-## trail leading up to it stays, and the same walk always ends in the same state.
-func _check_after_catch(state: GameState) -> String:
+## After the domination, the ring is off the trail but for the tile the dominator stands on (#87),
+## the trail leading up to it stays, and the same walk always ends in the same state.
+func _check_after_domination(state: GameState) -> String:
 	var player: Entity = state.player(0)
 	var trail: Trail = _trails(state).shared
 	var expected: Array[Vector2i] = [Vector2i(1, -1), FlowSteps.BASIC_RING[0], player.tile]
 	expected.sort()
 	if trail.sorted_tiles() != expected:
-		return "the ring didn't come off the trail after the catch: %s" % [trail.sorted_tiles()]
+		return "the ring didn't come off the trail after dominating: %s" % [trail.sorted_tiles()]
 	var again: GameState = InstanceBlueprints.basic(42)
 	var _walked: Array[RefCounted] = FlowSteps.walk(again, FlowSteps.BASIC_RING)
 	var _events: Array[RefCounted] = _settle(again)
 	if again.state_hash() != state.state_hash():
-		return "the same catch gave two different states"
+		return "the same domination gave two different states"
 	return ""
 
 
-## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies catch
-## the monster on the same tick. A second player stands by, for the refused saves.
+## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies
+## dominate the monster on the same tick. A second player stands by, for the refused saves.
 func _check_seal_saved() -> String:
 	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
 	for next: Vector2i in FlowSteps.BASIC_RING:
@@ -281,7 +293,7 @@ func _check_seal_saved() -> String:
 	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 2):
 		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	if _catching(basic).seals.is_empty():
+	if _domination(basic).seals.is_empty():
 		return "the world's ring wasn't sealing when saved"
 	var refused: String = _check_seal_refused(world)
 	if not refused.is_empty():
@@ -295,12 +307,12 @@ func _check_seal_saved() -> String:
 		if resumed.state_hash() != world.state_hash():
 			return "the resumed seal went another way at tick %d" % world.tick
 	if not _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.is_empty():
-		return "the resumed seal didn't catch the wild monster"
+		return "the resumed seal didn't dominate the wild monster"
 	return ""
 
 
 ## A save whose seal names its monster twice, or puts it in a second player's seal too, is refused
-## whole: neither could have happened, and a monster sealed twice would be caught twice.
+## whole: neither could have happened, and a monster sealed twice would be dominated twice.
 func _check_seal_refused(world: World) -> String:
 	var data: Dictionary = WorldData.of(world)
 	var twice: Dictionary = data.duplicate(true)
@@ -330,14 +342,14 @@ func _seals_in(data: Dictionary) -> Array:
 		if instance["name"] != InstanceBlueprints.BASIC:
 			continue
 		for feature: Dictionary in instance["state"]["features"]:
-			if feature["id"] == Features.CATCH:
+			if feature["id"] == Features.DOMINATION:
 				return feature["values"]["seals"]
 	return []
 
 
 ## Two allies close one ring together (#87): the first player walks half of it, then the second
-## the rest, and the second's step closes it. The catch still goes to the first, the lowest slot
-## among those who colored its wall (owner, #86). Then the ring is off the trail, but the trail
+## the rest, and the second's step closes it. The domination still goes to the first, the lowest
+## slot among those who colored its wall (owner, #86). Then the ring is off the trail, but the trail
 ## leading up to it stays, and each player colors the tile they stand on.
 func _check_together() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
@@ -345,35 +357,38 @@ func _check_together() -> String:
 	var second: Entity = state.player(1)
 	var starts: Array[Vector2i] = [first.tile, second.tile]
 	var events: Array[RefCounted] = _walk_slot(state, 0, FIRST_HALF)
-	if not _catching(state).seals.is_empty():
+	if not _domination(state).seals.is_empty():
 		return "half a ring started sealing"
 	events.append_array(_walk_slot(state, 1, SECOND_HALF))
-	if _catching(state).seals.keys() != [first.id]:
+	if _domination(state).seals.keys() != [first.id]:
 		return "the allies' ring seals for %s, not the first player" % [
-			_catching(state).seals.keys(),
+			_domination(state).seals.keys(),
 		]
 	for _tick: int in MOST_SEAL_TICKS:
 		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		events.append_array(state.events)
-	var caught: Array[WildMonsterCaught] = _caught(events)
-	if caught.size() != 1 or caught[0].catcher_id != first.id:
-		return "the allies' ring caught %d times, not once for the first player" % caught.size()
+	var dominated: Array[WildMonsterDominated] = _dominated(events)
+	if dominated.size() != 1 or dominated[0].dominator_id != first.id:
+		return "the allies' ring dominated %d times, not once for the first" % dominated.size()
 	# Each colored half the wall: three tiles each, two rolls each (#86).
-	var problem: String = _check_loot(events, caught[0], [2, 2])
+	var problem: String = _check_loot(events, dominated[0], [2, 2])
 	var expected: Array[Vector2i] = [starts[0], starts[1], FIRST_HALF[0], first.tile, second.tile]
 	expected.sort()
 	var trail: Trail = _trails(state).shared
 	if trail.sorted_tiles() != expected:
-		return "after the allies' catch the trail is %s, not %s" % [trail.sorted_tiles(), expected]
+		return "after the allies' domination the trail is %s, not %s" % [
+			trail.sorted_tiles(),
+			expected,
+		]
 	if trail.tiles[first.tile] != first.id or trail.tiles[second.tile] != second.id:
 		return "the players' fresh trail tiles aren't their own"
-	return problem if not problem.is_empty() else _check_shared_catch()
+	return problem if not problem.is_empty() else _check_shared_domination()
 
 
 ## Two weak wild monsters in one ring that two allies closed together, each coloring half of its
 ## wall: each gets one (#260). And the owner's examples: shares round to the closest whole monster,
 ## what rounding leaves over goes to the largest share still owed, ties to whoever joined first.
-func _check_shared_catch() -> String:
+func _check_shared_domination() -> String:
 	var splits: Dictionary[String, Array] = {
 		"40/60": [[4, 6], [1, 2]],
 		"40/40/20": [[4, 4, 2], [1, 2]],
@@ -396,8 +411,8 @@ func _check_shared_catch() -> String:
 	events.append_array(_walk_slot(state, 1, ring.slice(7)))
 	events.append_array(_settle(state))
 	var takers: Array[int] = []
-	for caught: WildMonsterCaught in _caught(events):
-		takers.append(caught.catcher_id)
+	for dominated: WildMonsterDominated in _dominated(events):
+		takers.append(dominated.dominator_id)
 	takers.sort()
 	if takers != [first.id, second.id]:
 		return "two allies who each colored half a ring around two monsters got %s" % [takers]
@@ -414,7 +429,7 @@ static func _split(amounts: Array, count: int) -> Array[int]:
 	for i: int in count:
 		monsters.append(100 + i)
 	var takers: Array[int] = []
-	takers.assign(CatchShares.hand_out(monsters, done).values())
+	takers.assign(DominationShares.hand_out(monsters, done).values())
 	takers.sort()
 	return takers
 
@@ -476,7 +491,7 @@ func _check_enraged() -> String:
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
 	var _player: Entity = state.add_entity(0, ring[0])
 	_close(state, ring.slice(1))
-	# Off the wall, so the catcher doesn't reinforce the ring and it breaks.
+	# Off the wall, so the dominator doesn't reinforce the ring and it breaks.
 	var _events: Array[RefCounted] = _step_off(state)
 	_events = _settle(state)
 	var wild: WildMonsterFeature = _wild(state)
@@ -547,8 +562,8 @@ func _enraged_further(state: GameState, monster: int) -> String:
 ## Plays one outcome: monsters of `species` on `spots`, and the player walking a ring of `radius`
 ## around the disc's middle, then stepping off it outward, so the wall stands on its own. With a
 ## `helper`, a second player stands on the wall that many segments after the one the first spot
-## pushes on (0: on it). Returns 1 when the ring held and caught them all, 0 when it broke catching
-## none, -1 otherwise; and the ticks from closing to the end.
+## pushes on (0: on it). Returns 1 when the ring held and dominated them all, 0 when it broke
+## dominating none, -1 otherwise; and the ticks from closing to the end.
 func _outcome(
 		species: String,
 		radius: int,
@@ -568,10 +583,10 @@ func _outcome(
 	for event: RefCounted in events:
 		if event is RingBroken:
 			broken.append(event as RingBroken)
-	var held: bool = _caught(events).size() == spots.size() and broken.is_empty()
-	var failed: bool = _caught(events).is_empty() and broken.size() == 1
+	var held: bool = _dominated(events).size() == spots.size() and broken.is_empty()
+	var failed: bool = _dominated(events).is_empty() and broken.size() == 1
 	failed = failed and _wild(state).monsters.size() == spots.size()
-	failed = failed and broken[0].catcher_id == player.id and broken[0].walls.has(broken[0].tile)
+	failed = failed and broken[0].dominator_id == player.id and broken[0].walls.has(broken[0].tile)
 	var result: int = 1 if held else (0 if failed else -1)
 	# Held or broken, the ring comes off the trail: none of its wall is left but where players
 	# stand.
@@ -607,7 +622,7 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 			Vector2i.ZERO,
 		) > Hex.distance(from, Vector2i.ZERO):
 			away = direction
-	while state.player(0).tile == from and not _catching(state).seals.is_empty():
+	while state.player(0).tile == from and not _domination(state).seals.is_empty():
 		Simulation.step(state, FlowSteps.command(away))
 		events.append_array(state.events)
 	return events
@@ -625,7 +640,7 @@ func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 		MovementFeature.new(),
 		TrailFeature.new(),
 		WildMonsterFeature.new([], [], hp, strength),
-		CatchFeature.new(),
+		DominationFeature.new(),
 		EnrageFeature.new(),
 	]
 	return GameState.new(region, 1, ordered)
@@ -643,20 +658,20 @@ func _close(state: GameState, path: Array[Vector2i]) -> void:
 func _settle(state: GameState) -> Array[RefCounted]:
 	var events: Array[RefCounted] = []
 	for _tick: int in MOST_SEAL_TICKS:
-		if _catching(state).seals.is_empty():
+		if _domination(state).seals.is_empty():
 			break
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 		events.append_array(state.events)
 	return events
 
 
-## Every catch in `events`.
-func _caught(events: Array[RefCounted]) -> Array[WildMonsterCaught]:
-	var caught: Array[WildMonsterCaught] = []
+## Every domination in `events`.
+func _dominated(events: Array[RefCounted]) -> Array[WildMonsterDominated]:
+	var dominated: Array[WildMonsterDominated] = []
 	for event: RefCounted in events:
-		if event is WildMonsterCaught:
-			caught.append(event as WildMonsterCaught)
-	return caught
+		if event is WildMonsterDominated:
+			dominated.append(event as WildMonsterDominated)
+	return dominated
 
 
 func _toward(walker: Entity, next: Vector2i) -> int:
@@ -690,10 +705,10 @@ func _check_view(tree: SceneTree) -> String:
 	if result.is_empty() and (
 		not view.figures.is_empty() or not is_instance_valid(figure) or not figure.is_inside_tree()
 	):
-		result = "the caught figure didn't stay to shrink away"
+		result = "the dominated figure didn't stay to shrink away"
 	await tree.create_timer(WildMonsterView.FADE_SECONDS + 0.2).timeout
 	if result.is_empty() and is_instance_valid(figure):
-		result = "the caught figure was still there after shrinking away"
+		result = "the dominated figure was still there after shrinking away"
 	main.queue_free()
 	await tree.process_frame
 	return result
@@ -704,7 +719,7 @@ func _check_view(tree: SceneTree) -> String:
 func _check_filling(main: Node, state: GameState) -> String:
 	var trails: TrailView = main.get_node("TrailView") as TrailView
 	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
-	var seal: RingSeal = _catching(state).seals.get(state.player(0).id)
+	var seal: RingSeal = _domination(state).seals.get(state.player(0).id)
 	for _tick: int in Fixed.div_floor(seal.seal_ticks, 2):
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	trails.show_state()
@@ -730,7 +745,7 @@ func _brace_left(braces: ReinforcementView, brace: HexPiece) -> bool:
 func _check_brace(main: Node, state: GameState) -> String:
 	var braces: ReinforcementView = main.get_node("Instance/ReinforcementView") as ReinforcementView
 	braces.show_state()
-	var seal: RingSeal = _catching(state).seals.get(state.player(0).id)
+	var seal: RingSeal = _domination(state).seals.get(state.player(0).id)
 	var braced: Array[Vector2i] = []
 	braced.assign(braces.figures.keys())
 	if braced != [state.player(0).tile] or braced != RingSealing.reinforced(state, seal):
@@ -744,8 +759,9 @@ func _check_brace(main: Node, state: GameState) -> String:
 	return ""
 
 
-## A catch reaches the profile through the driver's ticked events, as in a session: it's taken over
-## and, the first gain after a quiet spell, saved at once. Another slot's catch isn't this player's.
+## A domination reaches the profile through the driver's ticked events, as in a session: it's taken
+## over and, the first gain after a quiet spell, saved at once. Another slot's domination isn't this
+## player's.
 func _check_saved(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
@@ -757,36 +773,36 @@ func _check_saved(tree: SceneTree) -> String:
 	var result: String = ""
 	# The bus hands events out a frame later (#184), not while the tick runs.
 	var bus: EventBus = main.get_node("EventBus") as EventBus
-	if bus.queued.is_empty() or not holder.keeper.profile.captured_monsters.is_empty():
+	if bus.queued.is_empty() or not holder.keeper.profile.dominated_monsters.is_empty():
 		result = "the tick's events weren't queued for the next frame"
 	bus.flush()
-	if not holder.keeper.profile.captured_monsters.is_empty():
-		result = "another slot's catch went into this player's profile"
+	if not holder.keeper.profile.dominated_monsters.is_empty():
+		result = "another slot's domination went into this player's profile"
 	(main.get_node("LocalInput") as LocalInput).slot = 0
 	driver.ticked.emit(driver.state.tick, events)
 	(main.get_node("EventBus") as EventBus).flush()
 	var species: Array[String] = []
-	for monster: CapturedMonster in SaveStore.load_profile(SAVE_PATH).captured_monsters:
+	for monster: DominatedMonster in SaveStore.load_profile(SAVE_PATH).dominated_monsters:
 		species.append(monster.species)
-	var expected: String = _caught_species(events)
+	var expected: String = _dominated_species(events)
 	var saved_one: bool = species.size() == 1 and species[0] == expected
 	if result.is_empty() and (expected.is_empty() or not saved_one):
-		result = "the caught %s wasn't saved into the profile: %s" % [expected, species]
+		result = "the dominated %s wasn't saved into the profile: %s" % [expected, species]
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
 
 
-## The species of the first wild monster caught in `events`, or "".
-func _caught_species(events: Array[RefCounted]) -> String:
-	var caught: Array[WildMonsterCaught] = _caught(events)
-	return caught[0].species if not caught.is_empty() else ""
+## The species of the first wild monster dominated in `events`, or "".
+func _dominated_species(events: Array[RefCounted]) -> String:
+	var dominated: Array[WildMonsterDominated] = _dominated(events)
+	return dominated[0].species if not dominated.is_empty() else ""
 
 
 ## Species (#133): a spot its region piece names always has that species (the arena's boss is a
 ## storm finch); the others roll from their blueprint's list, the same way for the same seed, every
-## species on the list turning up over enough seeds, and the catch carries it.
+## species on the list turning up over enough seeds, and the domination carries it.
 func _check_species() -> String:
 	var rolled: Dictionary[String, bool] = {}
 	for seed_value: int in 24:
@@ -803,8 +819,8 @@ func _check_species() -> String:
 	var state: GameState = InstanceBlueprints.basic(1)
 	var events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
 	events.append_array(_settle(state))
-	if _caught_species(events) != _first_species(InstanceBlueprints.basic(1)):
-		return "the catch didn't carry the caught monster's species"
+	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
+		return "the domination didn't carry the dominated monster's species"
 	return _check_hiding()
 
 
@@ -821,5 +837,5 @@ func _trails(state: GameState) -> TrailFeature:
 	return state.feature(Features.TRAIL) as TrailFeature
 
 
-func _catching(state: GameState) -> CatchFeature:
-	return state.feature(Features.CATCH) as CatchFeature
+func _domination(state: GameState) -> DominationFeature:
+	return state.feature(Features.DOMINATION) as DominationFeature

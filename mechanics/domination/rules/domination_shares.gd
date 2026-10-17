@@ -1,13 +1,14 @@
-class_name CatchShares
+class_name DominationShares
 extends RefCounted
-## Who gets which wild monster when one ring catches several (#260, owner): each player in the
+## Who gets which wild monster when one ring dominates several (#260, owner): each player in the
 ## instance who helped gets a number of them fitting their contribution, the tiles of the ring's
 ## wall they colored plus the segments of it they reinforced while it sealed (#227). The monsters
 ## are handed out one at a time, each to the player with the largest share still owed, ties going to
 ## whoever joined first (the lower entity id, #86): that rounds every share to the closest whole
 ## monster, and settles what rounding leaves over or short. Whoever gets none gets loot rolls
-## instead (CatchLootFeature). A ring around one monster keeps its catcher, the lowest slot that
-## colored it (#87). Integers only: shares are compared as contribution × monsters, never divided.
+## instead (DominationLootFeature). A ring around one monster keeps its dominator, the lowest slot
+## that colored it (#87). Integers only: shares are compared as contribution × monsters, never
+## divided.
 
 
 ## How much each player in the instance did for `seal`'s ring, by entity id, in id order: its wall
@@ -28,8 +29,7 @@ static func contributions(state: GameState, trail: Trail, seal: RingSeal) -> Dic
 
 
 ## Each of `monsters` (in id order) with the entity id of the player who gets it, by monster id,
-## from
-## `done` (contributions by entity id). Empty when nobody contributed.
+## from `done` (contributions by entity id). Empty when nobody contributed.
 static func hand_out(monsters: Array[int], done: Dictionary[int, int]) -> Dictionary[int, int]:
 	var given: Dictionary[int, int] = {}
 	var helpers: Array[int] = []
@@ -65,19 +65,23 @@ static func _owed(
 	return done[helper] * count - received.get(helper, 0) * total
 
 
-## What each player in the instance did for `seal`'s ring (#86), into `caught`: the wall tiles they
-## colored, and the ticks they stood on the wall while it sealed. Read before the ring comes off
-## the trail.
-static func add_contributions(state: GameState, seal: RingSeal, caught: WildMonsterCaught) -> void:
+## What each player in the instance did for `seal`'s ring (#86), into `dominated`: the wall tiles
+## they colored, and the ticks they stood on the wall while it sealed. Read before the ring comes
+## off the trail.
+static func add_contributions(
+	state: GameState,
+	seal: RingSeal,
+	dominated: WildMonsterDominated,
+) -> void:
 	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
 	for wall: Vector2i in seal.walls:
 		var colorer_id: int = trail.tiles.get(wall, 0)
 		var colorer: Entity = state.entity(colorer_id)
 		if colorer != null and colorer.slot != Entity.NO_SLOT:
-			caught.walls_colored[colorer.slot] = caught.walls_colored.get(colorer.slot, 0) + 1
+			dominated.walls_colored[colorer.slot] = dominated.walls_colored.get(colorer.slot, 0) + 1
 	# By slot, added up: a player who left and came back is a new entity in the same slot.
 	for braced_id: int in seal.braced:
 		var bracer: Entity = state.entity(braced_id)
 		if bracer != null and bracer.slot != Entity.NO_SLOT:
-			var had: int = caught.braced_ticks.get(bracer.slot, 0)
-			caught.braced_ticks[bracer.slot] = had + seal.braced[braced_id]
+			var had: int = dominated.braced_ticks.get(bracer.slot, 0)
+			dominated.braced_ticks[bracer.slot] = had + seal.braced[braced_id]

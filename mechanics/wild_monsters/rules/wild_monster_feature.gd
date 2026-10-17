@@ -5,10 +5,10 @@ extends Feature
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
 ## species. For now each just stands there (its look is a placeholder, #85); walkers can't step onto
-## its tile (MovementFeature), and a ring catches it (CatchFeature). Each has its species' strength
-## and HP, and starts at full HP (#219); nothing hurts it yet. Enraged (#220, EnrageFeature), it
-## grows stronger with every stack of rage, which it keeps. Like every feature, switched off it
-## keeps its state: the monsters stay where they are, and only its own rules stop.
+## its tile (MovementFeature), and a ring dominates it (DominationFeature). Each has its species'
+## strength and HP, and starts at full HP (#219); nothing hurts it yet. Enraged (#220,
+## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
+## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
 
 ## The stats of a species the feature wasn't given any for: it pushes on nothing.
 const UNKNOWN_MAX_HP: int = 1

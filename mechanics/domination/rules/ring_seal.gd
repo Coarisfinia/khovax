@@ -1,8 +1,9 @@
 class_name RingSeal
 extends RefCounted
-## CatchFeature's data for one player's ring while it seals (#219): its wall segments, the damage
-## each has taken, the wild monsters inside and the segment each one pushes on, and how far the
-## seal has come. Everything is fixed when the ring closes; only the damage and the ticks change.
+## DominationFeature's data for one player's ring while it seals (#219): its wall segments, the
+## damage each has taken, the wild monsters inside and the segment each one pushes on, and how far
+## the seal has come. Everything is fixed when the ring closes; only the damage and the ticks
+## change.
 
 ## The ring's wall segments: the trail tiles next to the tiles it encloses, sorted.
 var walls: Array[Vector2i] = []
@@ -47,7 +48,7 @@ func drop(monster_id: int) -> void:
 
 
 ## The seal as save data: only what can't be worked out again from the instance (the walls, kept
-## to check the rebuilt ones against). CatchFeature.load_values rebuilds the rest.
+## to check the rebuilt ones against). DominationFeature.load_values rebuilds the rest.
 func to_data() -> Dictionary:
 	return {
 		"walls": DataReader.flat(walls),
