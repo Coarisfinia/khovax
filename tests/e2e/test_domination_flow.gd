@@ -1317,15 +1317,25 @@ func _check_wounded() -> String:
 ## Tiles
 
 ```
-w .
-. 1 .
-m .
+w 1 m
 ```
 
 ## Legend
 
 "
-	tiles += "- `w`: a wild monster, always moss_toad, wounded
+
+
+## Tiles
+
+```
+w .
+. 1 .
+m .
+```
+## Legend
+
+"
+	tiles += " - `w`: a wild monster, always moss_toad, wounded
 - `m`: a wild monster, always moss_toad
 "
 	var region: Region = RegionDocument.parse(tiles)
