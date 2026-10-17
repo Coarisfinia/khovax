@@ -22,7 +22,8 @@ extends RefCounted
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`,
 ##   `reveals within <n>`, `reaches the place <place id>` (#339: every tile of a place has it, e.g.
-##   `the beach; stepping here reaches the place beach`)
+##   `the beach; stepping here reaches the place beach`). When what it is is a tile kind's meaning
+##   (below), the tile is that kind too (#349), e.g. `forest; stepping here reaches the place grove`
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
 ##   stand for it, an emoji too. Clauses after the kind, each after a ", ", change that tile:
 ##   `turned <n>` turns its decoration by n sixths of a turn, counter-clockwise (#231), so two
@@ -234,5 +235,16 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 		return "%s%s %s" % [RegionFormat.SPECIES, where, words[-1]]
 	# A trigger names what it is before the "; ", and its when and action after.
 	if meaning.contains("; ") and not meaning.get_slice("; ", 0).strip_edges().is_empty():
-		return _trigger_line(meaning.get_slice("; ", 1), where)
+		return _trigger_lines(meaning, where)
 	return ""
+
+
+## The compact lines a legend trigger (`a lookout; stepping here reveals within 8`) stands for on
+## `where`, or "" when its clause isn't one TileTrigger knows: its trigger line, after a tile line
+## when what it is names a tile kind (#349, `forest; stepping here reaches the place grove`).
+static func _trigger_lines(meaning: String, where: String) -> String:
+	var trigger: String = _trigger_line(meaning.get_slice("; ", 1), where)
+	var kind: String = _tile_line(meaning.get_slice("; ", 0), where)
+	if trigger.is_empty() or kind.is_empty():
+		return trigger
+	return kind + "\n" + trigger
