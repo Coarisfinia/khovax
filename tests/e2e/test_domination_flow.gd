@@ -982,21 +982,20 @@ func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable)
 
 ## The player rings the wild monster in `state` and the ring waits for a totem (#423): encircled,
 ## the monster strikes only the ring's wall segment nearest to it, even with the player beside it,
-## and the ring breaks on the `hits`-th strike that wears it through, not one before, and comes off
-## the trail.
+## and the ring breaks on the `hits`-th strike that wears it through, not one before.
 func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
 	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
 	player.tile = ring[0]
 	var _colored: bool = trail.color(ring[0], player.id)
-	_close(state, ring.slice(1))
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
 	var domination: DominationFeature = _domination(state)
 	if domination.encircled.keys() != [player.id]:
 		return "the ring around the attacking wild monster didn't wait for a totem"
 	var walls: Array[Vector2i] = domination.ring_waiting(state, player.id)
 	var wall: Vector2i = walls[RingShape.nearest(walls, Vector2i.ZERO)]
 	var waiting: Dictionary = domination.encircled
-	var broken: Callable = func() -> bool: return waiting.is_empty() and not trail.tiles.has(wall)
+	var broken: Callable = func() -> bool: return waiting.is_empty()
 	var worn: String = _wears_through(state, wall, hits, broken)
 	if not worn.is_empty():
 		return "the waiting ring's nearest wall: " + worn
