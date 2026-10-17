@@ -263,6 +263,7 @@ func _run_frames(frames: int) -> void:
 ## still before.
 func _plain_hash(delay: int) -> int:
 	var state: GameState = World.new(
+		BlueprintSource.new(),
 		0,
 		InstanceBlueprints.BASIC,
 		2,

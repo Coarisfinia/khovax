@@ -681,7 +681,13 @@ func _check_golden_replays() -> String:
 ## A session of two players walking the scripted moves, each with a companion (#338), recorded and
 ## played once.
 func _recorded_run() -> Replay:
-	var world: World = World.new(42, InstanceBlueprints.BASIC, 2, ["storm_finch", "moss_toad"])
+	var world: World = World.new(
+		BlueprintSource.new(),
+		42,
+		InstanceBlueprints.BASIC,
+		2,
+		["storm_finch", "moss_toad"],
+	)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)
 	for direction: int in _moves():

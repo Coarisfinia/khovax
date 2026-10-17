@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Fails when a script reaches a file the wrong way (#375):
 # - The core never depends on a slice: no script under core/ names a class_name declared under
-#   slices/ or loads a res://slices/ path (AGENTS.md, "Vertical slices"). core/blueprints/ is left
-#   out until it moves out of the core (#396): it lists every instance's features, so it names them.
+#   slices/ or loads a res://slices/ path (AGENTS.md, "Vertical slices").
 # - Paths are absolute from res://: no string in a script starts with ./ or ../, no load or preload
 #   of a path without its scheme, and no scene or resource names a file by a relative path.
 # Comments don't count (a # outside strings, as the determinism check strips them), so the rules
@@ -29,7 +28,7 @@ while IFS= read -r -d '' file; do
     echo "::error file=${file}::the core never loads a slice's file: see the lines above"
     failed=1
   fi
-done < <(git ls-files -z 'core/*.gd' ':!core/blueprints/')
+done < <(git ls-files -z 'core/*.gd')
 
 while IFS= read -r -d '' file; do
   code=$(code_of "$file")

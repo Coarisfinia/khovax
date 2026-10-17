@@ -84,7 +84,7 @@ func _way_back(world: World, instance_name: String, from: String) -> Vector3i:
 ## The region of the blueprint `instance_name` for the world's seed, arranged once.
 func region_for(world: World, instance_name: String) -> Region:
 	if not _regions.has(instance_name):
-		_regions[instance_name] = InstanceBlueprints.region_of(
+		_regions[instance_name] = world.source.region_of(
 			instance_name,
 			world.seed_for(instance_name),
 		)

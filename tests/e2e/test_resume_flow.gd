@@ -40,7 +40,13 @@ func run(tree: SceneTree) -> String:
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	var carried: String = _carry(COMPANION)
-	var world: World = World.new(SEED, InstanceBlueprints.BASIC, 1, [COMPANION])
+	var world: World = World.new(
+		BlueprintSource.new(),
+		SEED,
+		InstanceBlueprints.BASIC,
+		1,
+		[COMPANION],
+	)
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
@@ -169,7 +175,7 @@ static func _carry(species: String) -> String:
 
 ## A world's data whose glade, left behind, is saved PURGE_TICKS later without being purged.
 func _expired() -> String:
-	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC)
 	for direction: int in [EAST, 1, EAST, 3]:
 		world.step(FlowSteps.command(direction))
 		for _tick: int in MovementFeature.MOVE_TICKS + 1:
@@ -184,7 +190,7 @@ func _expired() -> String:
 
 ## A fresh world's data, with only its starting instance loaded.
 static func _fresh_data() -> Dictionary:
-	return WorldData.of(World.new(SEED, InstanceBlueprints.BASIC))
+	return WorldData.of(World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC))
 
 
 ## `data` as text, with `key` set to `value`.
@@ -395,7 +401,7 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 ## it from next door now (#191) is remembered, at its new generation. What was seen in the basic
 ## instance is kept.
 func _check_purged_explored(tree: SceneTree) -> String:
-	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC)
 	for direction: int in [EAST, 1, EAST, 3]:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
@@ -429,7 +435,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 		result = await _boots_fresh(tree, _changed(data, "rules", rules), true)
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
-		var pair: World = World.new(SEED, InstanceBlueprints.BASIC, 2)
+		var pair: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC, 2)
 		result = await _boots_fresh(tree, WorldSave.to_text(pair, _explored), true)
 	return result
 
@@ -475,7 +481,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
 	# The player brings the companion their profile carries into the fresh world too.
-	var fresh: World = World.new(0, InstanceBlueprints.BASIC, 1, [COMPANION])
+	var fresh: World = World.new(BlueprintSource.new(), 0, InstanceBlueprints.BASIC, 1, [COMPANION])
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

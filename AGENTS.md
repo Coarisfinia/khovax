@@ -287,7 +287,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   hour of play (`World.PURGE_TICKS`, in world ticks) is dropped, never the starting one; its
   generation goes up, and `World.seed_for` draws its seed for that generation, so its next visit
   arranges it anew, and what was explored in an older generation is forgotten (`ExploredGround`).
-- **Instance blueprints** (`core/blueprints/`, `InstanceBlueprints`): which region (a file in
+- **Instance blueprints** (`blueprints/`, `InstanceBlueprints`, outside the core, #396): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
