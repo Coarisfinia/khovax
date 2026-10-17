@@ -5,7 +5,7 @@
 set -euo pipefail
 
 repeated=$(git ls-files | awk -F/ '{
-  delete seen
+  split("", seen)
   for (i = 1; i < NF; i++) {
     if ($i in seen) { print; next }
     seen[$i] = 1
