@@ -48,12 +48,13 @@ func drop(monster_id: int) -> void:
 
 
 ## The seal as save data: only what can't be worked out again from the instance (the walls, kept
-## to check the rebuilt ones against). DominationFeature.load_values rebuilds the rest.
+## to check the rebuilt ones against). DominationFeature.load_values rebuilds the rest. Copies, as
+## the seal goes on changing its own lists after a snapshot (a recording's starting world) is taken.
 func to_data() -> Dictionary:
 	return {
 		"walls": DataReader.flat(walls),
-		"damage": damage,
-		"monsters": monsters,
+		"damage": damage.duplicate(),
+		"monsters": monsters.duplicate(),
 		"ticks": ticks,
 		"braced": braced_flat(),
 		"braced_walls": braced_walls_flat(),
