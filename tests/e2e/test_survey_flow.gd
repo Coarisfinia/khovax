@@ -82,7 +82,14 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		hidden += 0 if known else 1
 	if hidden == 0:
 		return "nothing of the instance was still in the fog to hide on the Survey"
-	# At the corner size of a desktop screen, whatever size the test's own window is.
+	return "" if _survey_symbols_drawn(survey) else (
+		"the Survey draws no tile symbols even at its closest zoom"
+	)
+
+
+## Whether the Survey draws tile symbols at its closest zoom, at the corner size of a desktop
+## screen, whatever size the test's own window is.
+func _survey_symbols_drawn(survey: SurveyView) -> bool:
 	var across: float = survey.across
 	var shown: Vector2 = survey.size
 	survey.across = SurveyChoice.ZOOMS[-1]
@@ -90,7 +97,7 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 	var drawn: bool = survey.symbol_size() > 0
 	survey.across = across
 	survey.size = shown
-	return "" if drawn else "the Survey draws no tile symbols even at its closest zoom"
+	return drawn
 
 
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
