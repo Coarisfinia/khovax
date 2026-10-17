@@ -44,7 +44,8 @@ const MAX_HEIGHT: int = 1000
 ## a treasure chest on ground, and a space no tile. A region piece adds a line `connector <q> <r>
 ## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, `species <q> <r>
 ## <species id>` for a wild monster spot whose species it names, and `trigger <q> <r> <when>
-## <action> <amount>` for each tile trigger. A line `tile <q> <r> <tile blueprint id>` makes a
+## <action> <amount>` for each tile trigger (`<place id>` for the amount of one that marks a
+## place). A line `tile <q> <r> <tile blueprint id>` makes a
 ## tile of the grid that kind, before the other lines are read.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
@@ -145,20 +146,23 @@ static func _parse_loot(region: Region, line: String) -> String:
 
 ## Reads one `trigger <q> <r> <when> <action> <amount>` line; returns why it can't, or "". A
 ## trigger stands on ground, with a when and an action TileTrigger knows and an amount of at least
-## 1.
+## 1; a REACH trigger names its place's id in the amount's stead (#339).
 static func _parse_trigger(region: Region, line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
 	var numbers: bool = parts.size() == 6
-	for i: int in [1, 2, 5]:
+	for i: int in [1, 2]:
 		numbers = numbers and parts.size() > i and parts[i].is_valid_int()
 	if not numbers:
 		return "a trigger line reads \"trigger <q> <r> <when> <action> <amount>\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
 	if not TileTrigger.WHENS.has(parts[3]) or not TileTrigger.ACTIONS.has(parts[4]):
 		return "trigger %s: no such when or action: %s %s" % [tile, parts[3], parts[4]]
-	if not region.is_walkable(tile) or parts[5].to_int() < 1:
+	var place: String = parts[5] if parts[4] == TileTrigger.REACH else ""
+	var amount: int = parts[5].to_int() if parts[5].is_valid_int() and place.is_empty() else 0
+	var acts: bool = amount >= 1 or TileTrigger.is_place_id(place)
+	if not region.is_walkable(tile) or not acts:
 		return "trigger %s isn't on ground or acts on nothing" % tile
-	region.triggers.append(TileTrigger.new(tile, parts[3], parts[4], parts[5].to_int()))
+	region.triggers.append(TileTrigger.new(tile, parts[3], parts[4], amount, place))
 	return ""
 
 

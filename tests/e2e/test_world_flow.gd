@@ -218,7 +218,8 @@ func _moving(direction: int) -> Array[Command]:
 ## too) on their tiles, a kind's decoration turned by hand (#231) and its walkable trait overridden
 ## for one tile (#201) where the legend says so, both of which turn along with the region and move
 ## with a placed piece, and a grid without a single middle, a symbol the legend doesn't explain, a
-## clause it doesn't know or a turn past five sixths is refused. The glade's pieces have forest.
+## clause it doesn't know, a turn past five sixths or a place without an id (#339) is refused. The
+## glade's pieces have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = "- `j`: joins another piece to the west\n"
@@ -252,6 +253,9 @@ func _check_documents() -> String:
 		tiles % ["1 🪓 .", "- `🪓`: stump, walkable, not walkable"]: "tile (0, 0) says its turn",
 		tiles % ["1 🪓 .", "- `🪓`: stump, height 1001"]: "tile (0, 0)'s height 1001",
 		tiles % ["1 🪓 .", "- `🪓`: stump, height 2, height 3"]: "tile (0, 0) says its turn",
+		tiles % ["1 b .", "- `b`: a beach; stepping here reaches the place Beach"]: (
+			"the legend doesn't explain `b`"
+		),
 	}
 	for text: String in refusals:
 		var problem: String = RegionDocument.parse(text).problem
