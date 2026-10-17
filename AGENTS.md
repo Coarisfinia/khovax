@@ -19,21 +19,25 @@ way; add to it when something bites.
   tests or docs (owner's rule): describe the idea instead ("instanced regions", "comic-style cel
   shading with ink outlines", "monster catching"). The tools the project uses (Godot, GitHub, scoop,
   gdstyle, Codex) are dependencies, not references, and are fine.
-- **The agent works as `flixbox-ai-agent[bot]`** (the private GitHub App "Flixbox [AI Agent]"): it
+- **The repository is `Coarisfinia/khovax`** (#329): the organization Coarisfinia owns it since the
+  owner moved it there from their own account, whose old URLs redirect. What the organization stands
+  for is decided later.
+- **The agent works as `coarisfinia-ai-agent[bot]`** (the private GitHub App "Coarisfinia [AI Agent]",
+  owned by the organization): it
   commits, pushes, opens and updates pull requests, comments and reads CI as the bot, never with the
   owner's account. Commits the owner makes by hand use the owner's GitHub noreply address, never the
   machine-global work email.
 - **Tokens:** `agent-gh-token` (in `~/.local/bin`) signs a JWT with the app's private key
-  (`~/.config/khovax-agent/app.pem`, App ID in `app-id` next to it) and prints a 1-hour installation
-  token, cached for 50 minutes. The token is scoped to this repository only and to the permissions
-  the agent needs (contents, pull requests, issues and workflows: write; actions: read), so it can't
-  change settings even if the App could. `agent-gh` is `gh` with that token.
+  (`~/.config/coarisfinia-agent/app.pem`, App ID in `app-id` next to it) and prints a 1-hour
+  installation token, cached for 50 minutes. The token is scoped to this repository only and to the
+  permissions the agent needs (contents, pull requests, issues, workflows, actions and merge queues:
+  write; checks and commit statuses: read), so it can rerun a failed job but can't change settings. `agent-gh` is `gh` with that token.
   The key is never read, printed, committed or sent anywhere except GitHub's token endpoint.
 - **Each clone**, once after cloning (its worktrees share the clone's config):
 
   ```sh
-  git config user.name 'flixbox-ai-agent[bot]'
-  git config user.email '336689584+flixbox-ai-agent[bot]@users.noreply.github.com'
+  git config user.name 'coarisfinia-ai-agent[bot]'
+  git config user.email '343849075+coarisfinia-ai-agent[bot]@users.noreply.github.com'
   git config credential.https://github.com.helper ''
   git config --add credential.https://github.com.helper \
     '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$(agent-gh-token)"; }; f'
@@ -65,10 +69,10 @@ Never create or switch branches inside `main/`.
 **Keep up to 5 pull requests open** (owner's rule), so the owner can go through them fast. Each is
 branched from `main` and independent of the others: never stack pull requests, since they're
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
-open pull request waits until that one is merged. After every merge, update the other open ones onto
-the new `main` (`git rebase origin/main`, the ruleset wants them up to date), fix what collides
-(e.g. two rule changes each bumping `RULES_VERSION`: take the next number and rehash again), and
-push. Open a new one whenever fewer than 5 are open.
+open pull request waits until that one is merged. The merge queue tests each one on top of `main`
+and the ones queued before it, so a pull request needs no rebase just because `main` moved; rebase
+it (`git rebase origin/main`) only when it conflicts, fixing what collides (e.g. two rule changes
+each bumping `RULES_VERSION`: take the next number and rehash again), and push. Open a new one whenever fewer than 5 are open.
 
 **Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
@@ -141,7 +145,7 @@ background; only wait in the foreground for a result the very next step needs.
   `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Run it with
   `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
-  `assets/` worktree next to `main/`: `![what it shows](https://github.com/Flixbox/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
+  `assets/` worktree next to `main/`: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead. **Before and after pictures always go in
   that order** (owner's rule): the before first, then the after.
 - **Show the flow as a replay whenever sensible** (owner's rule, #214): a pull request that
@@ -156,8 +160,9 @@ background; only wait in the foreground for a result the very next step needs.
   `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
   ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
   Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
-  `REPO=Flixbox/khovax`, `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh` and
-  `SELF='flixbox-ai-agent[bot]'` (it has no default). On a failing CI run, read the job with
+  `REPO=Coarisfinia/khovax`, `OWNER=Flixbox` (the owner's login, whose reviews count),
+  `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh` and `SELF='coarisfinia-ai-agent[bot]'` (it has
+  no default). On a failing CI run, read the job with
   `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
 
 ### Review and merge
@@ -169,12 +174,13 @@ background; only wait in the foreground for a result the very next step needs.
   a comment needs the owner's decision, say so and leave it open.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
-  `agent-gh pr merge <n> --auto --squash`. It merges once the required CI check is green. Without
+  `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
+  pull requests queued before it and merges it once the required checks are green. Without
   the owner's approval, never enable auto-merge. **If it doesn't merge** although the PR is
   approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
   merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The approval stays valid through
   later pushes (owner's rule), so check the comments again before enabling auto-merge after a fix.
-- **Read the reviews themselves to see an approval** (`gh api repos/Flixbox/khovax/pulls/<n>/reviews`),
+- **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
   An approval often arrives together with review comments, and the watcher reports only those.
@@ -464,8 +470,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
   approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
-  checks from GitHub Actions green on a branch that is up to date with `main`, squash merges only, no
-  force-push or deletion. The required checks are named after the CI jobs: renaming a job means
+  checks from GitHub Actions green, merged through the merge queue (#329; CI runs on its
+  `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
   changing the ruleset in the same PR (owner's `gh`).
 - **Release tags are immutable:** the tag ruleset "immutable release tags" (`refs/tags/v*`, owner,
   #91) blocks deleting, moving and force-updating them, with no bypass; creating one is allowed.
