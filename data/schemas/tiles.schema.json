@@ -5,7 +5,7 @@
 	"description": "A kind of tile a region is made of (#116): its look and its traits. One file per kind, named after its id; a region's legend places it by its id. Its traits are rules: changing one changes what the game does, so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "number", "color", "traits"],
+	"required": ["id", "number", "color", "symbol", "traits"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
@@ -22,6 +22,11 @@
 			"description": "The tile's ground color, as #rrggbb.",
 			"type": "string",
 			"pattern": "^#[0-9a-f]{6}$"
+		},
+		"symbol": {
+			"description": "What tells the kind apart without its color (#68), drawn on the Survey: one printable ASCII character, so every font has it, and unique among the kinds.",
+			"type": "string",
+			"pattern": "^[!-~]$"
 		},
 		"model": {
 			"description": "A decoration drawn on every tile of this kind: a res:// path to a model under assets/.",

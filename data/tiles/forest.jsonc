@@ -4,6 +4,7 @@
 	"id": "forest",
 	"number": 3, // permanent: never reused or changed once shipped
 	"color": "#3d6b38",
+	"symbol": "T", // tells it apart without its color (#68)
 	"model": "res://assets/kaykit-hexagon/trees_A_large.gltf",
 	"traits": { "walkable": true, "hides": true }
 }
