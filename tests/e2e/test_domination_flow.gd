@@ -26,7 +26,8 @@ extends RefCounted
 ## one held where it stands (as hiding ones are).
 ##
 ## A companion (#221) strikes the wild monster next to it once a second for its species'
-## strength, never below 1 HP, and leaves one hiding in its tile alone.
+## strength, never below 1 HP, and leaves one hiding in its tile alone, and one sealing in a ring
+## (#409): its seal was worked out from its HP, so a save taken mid-seal resumes.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -60,6 +61,8 @@ const OTHER_RING: Array[Vector2i] = [
 const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 ## Ticks a seal may take at most in this flow, before it counts as stuck.
 const MOST_SEAL_TICKS: int = 400
+## The companion the first player brings into the saved world.
+const COMPANION: String = "moss_toad"
 ## The outcome tests' species, in a disc region of radius OUTCOME_RADIUS: a weak and a strong one,
 ## both at full HP.
 const OUTCOME_RADIUS: int = 4
@@ -290,16 +293,27 @@ func _check_after_domination(state: GameState) -> String:
 
 
 ## A world saved while a ring seals resumes the seal exactly: the same hash, and both copies
-## dominate the monster on the same tick. A second player stands by, for the refused saves.
+## dominate the monster on the same tick. A second player stands by, for the refused saves. The
+## first player's companion stands next to the sealing monster before the save and never strikes
+## it (#409).
 func _check_seal_saved() -> String:
-	var world: World = World.new(BlueprintSource.new(), 42, InstanceBlueprints.BASIC, 2)
+	var world: World = World.new(
+		BlueprintSource.new(),
+		42,
+		InstanceBlueprints.BASIC,
+		2,
+		[COMPANION],
+	)
 	for next: Vector2i in FlowSteps.BASIC_RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
 			var first: int = direction if tick == 0 else Command.NO_MOVE
 			world.step(FlowSteps.commands([first, Command.NO_MOVE]))
-	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 2):
+	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 4):
 		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+	var struck: String = _check_no_strike_mid_seal(world)
+	if not struck.is_empty():
+		return struck
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	if _domination(basic).seals.is_empty():
 		return "the world's ring wasn't sealing when saved"
@@ -316,6 +330,25 @@ func _check_seal_saved() -> String:
 			return "the resumed seal went another way at tick %d" % world.tick
 	if not _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.is_empty():
 		return "the resumed seal didn't dominate the wild monster"
+	return ""
+
+
+## Keeps the first player's companion next to the wild monster sealing in the world's basic
+## instance for as long as it waits between strikes at most: it never strikes it (#409).
+func _check_no_strike_mid_seal(world: World) -> String:
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var companion: Entity = basic.entity(companions.companion_of(0))
+	if companion == null:
+		return "the first player's companion didn't join them"
+	for _tick: int in CompanionAttackFeature.STRIKE_TICKS:
+		if _domination(basic).seals.is_empty():
+			return "the ring stopped sealing before the companion stood by it for a second"
+		companion.tile = WILD_MONSTER_TILE + Hex.DIRECTIONS[2]
+		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+		for event: RefCounted in basic.events:
+			if event is CompanionStruck:
+				return "the companion struck a wild monster sealing in a ring"
 	return ""
 
 
