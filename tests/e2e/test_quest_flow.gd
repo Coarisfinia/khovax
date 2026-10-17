@@ -217,7 +217,8 @@ func _check_reached(driver: GameDriver, bus: EventBus, profile: Profile) -> Stri
 
 ## On a region with a beach: player 1 walking onto it from outside raises that they reached it,
 ## walking on along it doesn't again, and player 2 stepping onto it raises it for player 2. The
-## quest to reach the beach points at the beach tile nearest to player 1.
+## quest to reach the beach points at the beach tile nearest to player 1. A player arriving on the
+## beach (through an exit, or starting there) reaches it too (#348).
 func _check_places() -> String:
 	var region: Region = RegionDocument.parse(BEACH_REGION)
 	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new(), TriggerFeature.new()]
@@ -248,7 +249,23 @@ func _check_places() -> String:
 		reached.append_array(_reached(state.events))
 	if result.is_empty() and (reached.size() != 1 or reached[0].slot != 1):
 		result = "player 2 stepping onto the beach didn't reach it for player 2"
-	return result
+	return result if not result.is_empty() else _check_arrival(state)
+
+
+## A player who appears on the beach, as they do arriving through an exit or starting there,
+## reaches it on the next tick, once, and not again while they stay.
+func _check_arrival(state: GameState) -> String:
+	var _arrived: Entity = state.add_entity(2, state.region.triggers[0].tile)
+	var stay: Array[int] = [Command.NO_MOVE, Command.NO_MOVE, Command.NO_MOVE]
+	var still: Array[Command] = FlowSteps.commands(stay)
+	Simulation.step(state, still)
+	var reached: Array[PlaceReached] = _reached(state.events)
+	if reached.size() != 1 or reached[0].slot != 2 or reached[0].place != "beach":
+		return "a player arriving on the beach didn't reach it, once"
+	Simulation.step(state, still)
+	if not _reached(state.events).is_empty():
+		return "a player staying on the beach reached it again"
+	return ""
 
 
 ## The quest to reach the beach is marked on the beach tile nearest to player 1.
