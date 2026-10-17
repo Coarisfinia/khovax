@@ -26,7 +26,7 @@
 		"name": {
 			"description": "What the player reads (#351); code and saves use the id.",
 			"type": "string",
-			"pattern": "\S"
+			"pattern": "\\S"
 		},
 		"types": {
 			"description": "One or two types from the type chart (#68), never two of the same family.",
