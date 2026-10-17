@@ -103,8 +103,6 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_other_ring()
 	if result.is_empty():
-		result = _check_waits_for_totem()
-	if result.is_empty():
 		result = _check_domination()
 	if result.is_empty():
 		result = _check_seal_saved()
@@ -202,7 +200,7 @@ func _check_other_ring() -> String:
 		return "a ring around another tile dominated the wild monster or reset the trail"
 	if not _domination(state).seals.is_empty() or not _domination(state).encircled.is_empty():
 		return "a ring around no wild monster started sealing or waited for a totem"
-	return ""
+	return _check_waits_for_totem()
 
 
 ## The full ring doesn't seal by itself (#423): it waits for a totem, however long, the wild monster
@@ -503,8 +501,10 @@ func _check_together() -> String:
 		]
 	Simulation.step(state, FlowSteps.totem(1, 2))
 	events.append_array(state.events)
-	var totems: PlaceholderTotems = _domination(state).totems
-	var spent: bool = totems.charges_of(second.id) < totems.charges_of(first.id)
+	var spent: bool = (
+		_domination(state).totems.charges_of(second.id)
+		< _domination(state).totems.charges_of(first.id)
+	)
 	if _domination(state).seals.keys() != [first.id] or not spent:
 		return "the second's totem started the seal for %s, not the first player" % [
 			_domination(state).seals.keys(),

@@ -33,10 +33,11 @@ static func commands(moves: Array[int]) -> Array[Command]:
 ## One tick's commands for `slots` players standing still, the one in `slot` placing their totem
 ## (#423).
 static func totem(slot: int = 0, slots: int = 1) -> Array[Command]:
+	var placing: Command = Command.new(Command.NO_MOVE, false, Command.PLACE_TOTEM)
+	var standing: Command = Command.new()
 	var made: Array[Command] = []
 	for each: int in slots:
-		var place: int = Command.PLACE_TOTEM if each == slot else Command.NO_TOTEM
-		made.append(Command.new(Command.NO_MOVE, false, place))
+		made.append(placing if each == slot else standing)
 	return made
 
 

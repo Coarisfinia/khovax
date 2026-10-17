@@ -308,7 +308,8 @@ func save_values() -> Dictionary:
 		saved.append(entry)
 	var waiting: Array[Dictionary] = []
 	for dominator_id: int in _waiting_players():
-		waiting.append({ "dominator": dominator_id, "monsters": encircled[dominator_id].duplicate() })
+		var inside: Array = encircled[dominator_id].duplicate()
+		waiting.append({ "dominator": dominator_id, "monsters": inside })
 	return { "seals": saved, "waiting": waiting, "totems": totems.flat() }
 
 
