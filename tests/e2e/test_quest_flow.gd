@@ -77,8 +77,8 @@ func _check_tracked(tree: SceneTree) -> String:
 		result = "a fresh profile doesn't have the first domination open"
 	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
 	var list: QuestListView = main.get_node("Hud/QuestList") as QuestListView
-	var beach_first: String = _check_beach_first(driver, bus, profile, markers, list)
-	result = beach_first if result.is_empty() else result
+	if result.is_empty():
+		result = _check_beach_first(driver, bus, profile, markers, list)
 	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
