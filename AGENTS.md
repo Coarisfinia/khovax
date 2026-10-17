@@ -162,6 +162,9 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
+- **End the PR description with the current usage** (owner's rule): every time you work on a pull
+  request, its description's last line gives the session's and the week's usage in percent. Only
+  the owner can see them (`/usage`), so until they're readable it says so.
 - **Keep the project watcher running in the background**: household-brain's Claude Code plugin
   `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
   ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
@@ -293,8 +296,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   saved as versioned JSON (`ProfileSave.FORMAT`, through `SaveStore`), integers and ids only: a newer format is
   refused, and an older one is migrated in `ProfileSave.parse`, one format at a time.
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
-  (dominations, chests opened, places reached: a place is a tile trigger in a region piece's legend,
-  #339), and `Profile.apply` advances each quest in its `quest_book` (the quest
+  (dominations, chests opened, places reached on stepping in, starting there or arriving through
+  an exit: a place is a tile trigger in a region piece's legend, #339, #348), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
   `SaveStore`), never in the profile: `WorldData.of` holds its seed, tick and every loaded
