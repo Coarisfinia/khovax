@@ -5,7 +5,7 @@ extends RefCounted
 
 
 ## Adds the main scene to the tree and waits a frame for it to start. With a profile path, the
-## flow's catches and finds go into a fresh save there, never into the player's own.
+## flow's dominations and finds go into a fresh save there, never into the player's own.
 static func start(tree: SceneTree, profile_path: String = "") -> Node:
 	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()

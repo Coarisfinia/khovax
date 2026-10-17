@@ -4,7 +4,7 @@ extends Feature
 ## remembering who colored it first (all players in an instance are allies, owner, #87). Rings are
 ## drawn with it, so allies close rings together. It grows from EntityMoved events, so the trail
 ## comes after movement in an instance's order. Walking over the trail again changes nothing; a
-## catch clears only the ring that made it (CatchFeature, through `clear`).
+## domination clears only the ring that made it (DominationFeature, through `clear`).
 
 ## The allies' trail.
 var shared: Trail = Trail.new()
@@ -45,8 +45,9 @@ static func _is_player(state: GameState, entity_id: int) -> bool:
 	return entity != null and entity.slot != Entity.NO_SLOT
 
 
-## Takes `tiles` off the trail (a ring that caught or broke, #87): the trail leading up to it stays,
-## and every player then colors the tile they stand on, so each starts a fresh trail where they are.
+## Takes `tiles` off the trail (a ring that dominated or broke, #87): the trail leading up to it
+## stays, and every player then colors the tile they stand on, so each starts a fresh trail where
+## they are.
 func clear(state: GameState, tiles: Array[Vector2i]) -> void:
 	for tile: Vector2i in tiles:
 		var _dropped: bool = shared.tiles.erase(tile)

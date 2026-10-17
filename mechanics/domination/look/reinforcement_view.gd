@@ -22,11 +22,11 @@ func _process(_delta: float) -> void:
 ## Matches the braces to the current state. Called every frame; tests call it after stepping.
 func show_state() -> void:
 	var braced: Dictionary[Vector2i, bool] = {}
-	var catching: CatchFeature = null
+	var domination: DominationFeature = null
 	if driver != null and driver.state != null:
-		catching = driver.state.feature(Features.CATCH) as CatchFeature
-	if catching != null:
-		for seal: RingSeal in catching.seals.values():
+		domination = driver.state.feature(Features.DOMINATION) as DominationFeature
+	if domination != null:
+		for seal: RingSeal in domination.seals.values():
 			for tile: Vector2i in RingSealing.reinforced(driver.state, seal):
 				braced[tile] = true
 	for tile: Vector2i in figures.keys():

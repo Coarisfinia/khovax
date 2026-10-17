@@ -1,6 +1,6 @@
-class_name CapturedMonster
+class_name DominatedMonster
 extends RefCounted
-## A monster the player caught and owns (a `captured_monster`, #45), kept in the profile between
+## A monster the player dominated and owns (a `dominated_monster`, #45), kept in the profile between
 ## sessions. Its species is an id into the content data (#72).
 
 ## Unique in the profile and never reused.

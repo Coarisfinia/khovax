@@ -88,25 +88,27 @@ func _check_abilities_refused() -> String:
 	return ""
 
 
-## Every quest file reads: the first catch is one catch of any species, and the toads' quest counts
-## up three of one species. Quests with a wrong id, name, step, condition, species or count are
-## refused, with a reason.
+## Every quest file reads: the first domination is one domination of any species, and the toads'
+## quest counts up three of one species. Quests with a wrong id, name, step, condition, species or
+## count are refused, with a reason.
 func _check_quests() -> String:
 	var content: Content = Content.load_quests()
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
-	var first: QuestDefinition = content.quests.get("first_catch")
+	var first: QuestDefinition = content.quests.get("first_domination")
 	var toads: QuestDefinition = content.quests.get("three_moss_toads")
 	if first == null or first.name.is_empty() or first.steps.size() != 1 or toads == null:
 		return "the quests didn't load as written"
-	var any_catch: QuestStep = first.steps[0]
+	var any_domination: QuestStep = first.steps[0]
 	var toad_step: QuestStep = toads.steps[0]
-	if any_catch.condition != "caught" or not any_catch.species.is_empty() or any_catch.count != 1:
-		return "the first catch isn't one catch of any species"
+	if (any_domination.condition != "dominated"
+			or not any_domination.species.is_empty()
+			or any_domination.count != 1):
+		return "the first domination isn't one domination of any species"
 	if toad_step.species != "moss_toad" or toad_step.count != 3:
 		return "the toads' quest isn't three moss toads"
 	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
-	var step: String = "{\"condition\": \"caught\"%s}"
+	var step: String = "{\"condition\": \"dominated\"%s}"
 	var cases: Dictionary[String, String] = {
 		quest % ["y", "N", step % ""]: "its id must",
 		quest % ["x", " ", step % ""]: "it needs a name",

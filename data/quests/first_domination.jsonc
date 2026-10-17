@@ -1,0 +1,6 @@
+// The first quest a new player has: any domination finishes it.
+{
+	"id": "first_domination",
+	"name": "Dominate your first monster",
+	"steps": [{ "condition": "dominated" }]
+}

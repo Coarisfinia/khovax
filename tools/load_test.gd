@@ -76,10 +76,10 @@ func _initialize() -> void:
 func _run_headless() -> void:
 	var first: LoadPass = _simulate(true)
 	var second: LoadPass = _simulate(false)
-	print("headless load: %d ticks, %d entities at the start, %d catches" % [
+	print("headless load: %d ticks, %d entities at the start, %d dominations" % [
 		_ticks,
 		first.entities,
-		first.catches,
+		first.dominations,
 	])
 	# Tick times from the untimed pass, so they carry no observer overhead.
 	_print_spread("tick", second.ticks.slice(WARM_UP))
@@ -103,7 +103,7 @@ func _simulate(timed: bool) -> LoadPass:
 		measured.counting = tick >= WARM_UP
 		Simulation.step(state, commands, measured.observe if timed else Callable())
 		measured.ticks.append(Time.get_ticks_usec() - start)
-		measured.count_catches(state.events)
+		measured.count_dominations(state.events)
 	measured.end_hash = state.state_hash()
 	return measured
 
@@ -156,7 +156,7 @@ class LoadPass:
 	## Each feature's total time over the pass, in microseconds, by feature id.
 	var features: Dictionary[int, int] = {}
 	var entities: int = 0
-	var catches: int = 0
+	var dominations: int = 0
 	var end_hash: int = 0
 	## When the last feature finished, or the tick started.
 	var mark: int = 0
@@ -170,7 +170,7 @@ class LoadPass:
 			features[feature_id] = features.get(feature_id, 0) + now - mark
 		mark = now
 
-	func count_catches(events: Array[RefCounted]) -> void:
+	func count_dominations(events: Array[RefCounted]) -> void:
 		for event: RefCounted in events:
-			if event is WildMonsterCaught:
-				catches += 1
+			if event is WildMonsterDominated:
+				dominations += 1

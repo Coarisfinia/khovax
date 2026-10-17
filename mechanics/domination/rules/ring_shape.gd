@@ -2,7 +2,7 @@ class_name RingShape
 extends RefCounted
 ## The shape of a ring a trail closes (#20, #219): which tiles it encloses, its wall and the wall's
 ## segments, and whether a step can have closed one at all. Plain geometry over a region and a
-## trail, no state: CatchFeature asks it when it catches and seals.
+## trail, no state: DominationFeature asks it when it dominates and seals.
 
 
 ## The ring's wall around the monsters on `spots`: every trail tile next to a tile enclosed with
