@@ -33,7 +33,9 @@ extends RefCounted
 ## one hiding in its tile alone, and one sealing in a ring (#409): its seal was worked out from its
 ## HP, so a save taken mid-seal resumes. A save taken while a ring waits resumes too. Its player
 ## fires its special attack (#410): lethal, it fells the wild monster next to it, which faints for
-## good where it fell, and then it cools down.
+## good where it fell, and then it cools down. A wild monster strikes once a second too (#422): the
+## companion next to it first, then the player, then the trail, whose tile gives way once worn
+## through; encircled, it strikes only its ring's wall, and wearing through it breaks the ring.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -903,7 +905,7 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 	var next: Array[SpecialStruck] = _specials_in(state, _fire())
 	if next.size() != 1 or next[0].monster_id != second or not next[0].felled:
 		return "the special, ready again, didn't fell the next wild monster"
-	return ""
+	return _check_wild_attacks()
 
 
 ## Whether the feature `feature_id` of `state`, saved and loaded into `reloaded_state`, hashes the
@@ -931,7 +933,81 @@ static func _specials_in(state: GameState, commands: Array[Command]) -> Array[Sp
 	return struck
 
 
-## A disc with a weak wild monster on each of `spots`, hiding and companions.
+## A weak wild monster strikes once a second, for its strength (#422): the companion next to it
+## first, then, with the companion away, the player next to it, then, with the player away too,
+## the trail tile next to it, which gives way on the strike that wears it through, not one before.
+func _check_wild_attacks() -> String:
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	var state: GameState = _strike_state(spots)
+	state.companions[0] = WEAK
+	var beside: Vector2i = Vector2i(1, 0)
+	var player: Entity = state.add_entity(0, beside)
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var companion_id: int = (state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0)
+	var struck: String = _struck_once(state, Vector2i(-1, 0), companion_id, "the companion")
+	if struck.is_empty():
+		struck = _struck_once(state, Vector2i(-3, 0), player.id, "the player")
+	if not struck.is_empty():
+		return struck
+	player.tile = Vector2i(3, 0)
+	var hits: int = Fixed.div_floor(
+		WildAttackFeature.TILE_INTEGRITY + WEAK_STRENGTH - 1,
+		WEAK_STRENGTH,
+	)
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	for hit: int in hits:
+		var strikes: Array[WildMonsterStruck] = _wild_strikes_over(
+			state,
+			WildAttackFeature.STRIKE_TICKS,
+			Vector2i(-3, 0),
+		)
+		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != beside:
+			return "the wild monster didn't strike the trail beside it once in second %d" % hit
+		if trail.tiles.has(beside) != (hit < hits - 1):
+			return "the trail tile gave way after %d strikes, not %d" % [hit + 1, hits]
+	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
+		return "the wild monster struck with nothing next to it"
+	return ""
+
+
+## Why the wild monster didn't strike `target_id` (`what`) exactly once over a second with the
+## companion on `companion_tile`, or "".
+func _struck_once(
+		state: GameState,
+		companion_tile: Vector2i,
+		target_id: int,
+		what: String,
+) -> String:
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, companion_tile)
+	if strikes.size() != 1 or strikes[0].target_id != target_id:
+		return "the wild monster didn't strike %s once in a second" % what
+	return ""
+
+
+## The wild monsters' strikes over `ticks` ticks of the player standing still, with the player's
+## companion put on `companion_tile` before each.
+func _wild_strikes_over(
+		state: GameState,
+		ticks: int,
+		companion_tile: Vector2i,
+) -> Array[WildMonsterStruck]:
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var strikes: Array[WildMonsterStruck] = []
+	for _tick: int in ticks:
+		var companion: Entity = state.entity(companions.companion_of(0))
+		if companion != null:
+			companion.tile = companion_tile
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			if event is WildMonsterStruck:
+				strikes.append(event as WildMonsterStruck)
+	return strikes
+
+
+## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
+## specials, and the wild monsters' attacks.
 func _strike_state(spots: Array[Vector2i]) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
@@ -942,6 +1018,7 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
+		WildAttackFeature.new(),
 	]
 	return GameState.new(region, 1, ordered)
 
