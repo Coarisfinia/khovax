@@ -161,8 +161,16 @@ jobs:
 
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
-        # each data/<folder>/ file against data/schemas/<folder>.schema.json.
+        # each data/<folder>/ file against data/schemas/<folder>.schema.json. A schema without its
+        # data folder would sit unchecked, so it fails too.
         run: |
+          for schema in data/schemas/*.schema.json; do
+            name=$(basename "$schema" .schema.json)
+            if [ ! -d "data/${name}" ]; then
+              echo "::error file=${schema}::has no data/${name}/ folder to check"
+              exit 1
+            fi
+          done
           curl -fsSL -o /tmp/jv.tar.gz             "https://github.com/santhosh-tekuri/jsonschema/releases/download/v${JV_VERSION}/jv-v${JV_VERSION}-linux-amd64.tar.gz"
           echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
           mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv

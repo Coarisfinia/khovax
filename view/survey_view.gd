@@ -2,14 +2,14 @@ class_name SurveyView
 extends Control
 ## The Survey (#301): an overview of the instance this machine's player is in, as far as they have
 ## explored it. It draws each tile they explored (FogView's memory, ExploredGround), sees now or had
-## revealed (#177) in its kind's color (TileLooks), and a tile nobody can walk onto ringed in ink,
-## so what blocks the way isn't told by color alone (#68); the rest stays the backdrop, the fog's
-## color, so what is still in the fog stays hidden here too. Every player in the instance is a
-## circle in
-## their personal color with one mark per slot number, like their circle in the world (#68), and
-## every open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. It's
-## centered on this machine's player, gliding after them. Where it shows and how close is
-## SurveyChoice's. It only reads the state, the explored ground and the profile.
+## revealed (#177) in its kind's color (TileLooks) with its kind's symbol over it, and a tile nobody
+## can walk onto ringed in ink, so no kind is told by color alone (#68); the rest stays the
+## backdrop, the fog's color, so what is still in the fog stays hidden here too. Every player in
+## the instance is a circle in their personal color with one mark per slot number, like their
+## circle in the world (#68), and every open quest's target (QuestMarkerView.targets_of, #300)
+## an arrow pointing down at it. It's centered on this machine's player, gliding after them. Where
+## it shows and how close is SurveyChoice's. It only reads the state, the explored ground and the
+## profile.
 
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
@@ -21,6 +21,12 @@ const PLAYER_MIN_PIXELS: float = 8.0
 const ARROW_SHARE: float = 1.1
 const ARROW_MIN_PIXELS: float = 9.0
 const INK_PIXELS: float = 2.0
+## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
+## Below the pixels here it wouldn't read, so it's left out at far zooms in a corner; the color and
+## the ink ring remain.
+const SYMBOL_SHARE: float = 1.1
+const SYMBOL_MIN_PIXELS: int = 8
+const SYMBOL_COLOR: Color = Color.WHITE
 const BORDER_PIXELS: float = 2.0
 
 @export var driver: GameDriver
@@ -40,6 +46,8 @@ var backdrop: Color = Boot.FOG
 var bordered: bool = false
 ## Each tile shown, by tile, in its kind's color. Kept here so tests can read what is drawn.
 var tiles: Dictionary[Vector2i, Color] = {}
+## Each tile shown's kind's symbol, by tile.
+var symbols: Dictionary[Vector2i, String] = {}
 ## The tiles shown that nobody can walk onto.
 var blocking: Dictionary[Vector2i, bool] = {}
 ## The tile each player in the instance stands on, by slot.
@@ -68,6 +76,8 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), backdrop)
 	var corners: PackedVector2Array = _hexagon(zoom() * TILE_SHARE)
+	var font: Font = get_theme_default_font()
+	var font_size: int = symbol_size()
 	for tile: Vector2i in tiles:
 		var at: Vector2 = to_view(tile)
 		var shape: PackedVector2Array = PackedVector2Array()
@@ -77,6 +87,8 @@ func _draw() -> void:
 		if blocking.has(tile):
 			var _closed: bool = shape.append(shape[0])
 			draw_polyline(shape, Toon.INK, INK_PIXELS)
+		if font_size > 0:
+			_draw_symbol(font, font_size, at, symbols[tile])
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
 	for slot: int in players:
 		_draw_player(to_view(players[slot]), slot, PersonalColor.of(world_seed, slot))
@@ -90,6 +102,7 @@ func _draw() -> void:
 ## directly.
 func show_state() -> void:
 	tiles.clear()
+	symbols.clear()
 	blocking.clear()
 	players.clear()
 	quest_targets.clear()
@@ -106,6 +119,7 @@ func show_state() -> void:
 		if known.has(tile) or FogView.ally_sees(state, tile):
 			var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
 			tiles[tile] = look.color if look != null else Color.GRAY
+			symbols[tile] = look.symbol if look != null else "?"
 			if not state.region.is_walkable(tile):
 				blocking[tile] = true
 	for slot: int in GameState.MAX_PLAYERS:
@@ -124,6 +138,23 @@ func to_view(tile: Vector2i) -> Vector2:
 ## How far a tile's corners lie from its middle, in pixels: a tile is sqrt(3) radii wide.
 func zoom() -> float:
 	return minf(size.x, size.y) / (across * sqrt(3.0))
+
+
+## How large a tile's symbol is drawn, in pixels, at this zoom: 0 when tiles are too small for it.
+func symbol_size() -> int:
+	var pixels: int = floori(zoom() * SYMBOL_SHARE)
+	return pixels if pixels >= SYMBOL_MIN_PIXELS else 0
+
+
+## `symbol` in `font` at `font_size`, centered on `at`: white outlined in ink.
+func _draw_symbol(font: Font, font_size: int, at: Vector2, symbol: String) -> void:
+	var width: float = zoom() * 2.0
+	var middle: float = (font.get_ascent(font_size) - font.get_descent(font_size)) / 2.0
+	var baseline: Vector2 = at + Vector2(-width / 2.0, middle)
+	var outline: int = roundi(INK_PIXELS * 2.0)
+	var center: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER
+	draw_string_outline(font, baseline, symbol, center, width, font_size, outline, Toon.INK)
+	draw_string(font, baseline, symbol, center, width, font_size, SYMBOL_COLOR)
 
 
 ## A player's circle at `at` in `color`, ringed in ink, with `slot` + 1 ink marks across it.

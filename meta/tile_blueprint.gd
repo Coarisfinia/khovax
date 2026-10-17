@@ -9,6 +9,7 @@ const FIELDS: Array[String] = [
 	"id",
 	"number",
 	"color",
+	"symbol",
 	"model",
 	"scale",
 	"reach",
@@ -31,6 +32,9 @@ var id: String = ""
 var number: int = -1
 ## The tile's ground color.
 var color: Color = Color.BLACK
+## What tells the kind apart without its color (#68): one printable ASCII character, so every font
+## has it, unique among the kinds (the content flow checks), drawn on the Survey.
+var symbol: String = ""
 ## The decoration drawn on every tile of this kind, a res:// path, or "" for none.
 var model: String = ""
 ## How much larger than the pack made it the model is drawn, for a model too small to read.
@@ -63,6 +67,7 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	var hiding: Variant = traits.get("hides", false)
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
+	blueprint.symbol = Content.text_of(data.get("symbol"))
 	blueprint.number = _number(data.get("number"))
 	blueprint.reach = _whole(data.get("reach", 0), MAX_REACH)
 	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
@@ -85,6 +90,8 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 	var html: String = Content.text_of(data.get("color"))
 	if RegEx.create_from_string("^#[0-9a-f]{6}$").search(html) == null:
 		return "its color is #rrggbb"
+	if RegEx.create_from_string("^[!-~]$").search(symbol) == null:
+		return "its symbol is one printable ASCII character"
 	if number < 0 or number > MAX_NUMBER:
 		return "its number is a whole number from 0 to %d" % MAX_NUMBER
 	if not walks is bool:

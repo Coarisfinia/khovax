@@ -1,12 +1,11 @@
 extends RefCounted
 ## Survey flow (#301): the player looks at the Survey, the overview of the ground they explored, in
 ## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
-## kind's color, while
-## ground still in the fog stays hidden; it marks every player by slot and every open quest's
-## target; its action cycles it through the corners, over the game, opaque and off, its zoom steps
-## within their range, and both choices are kept. In every place, on desktop screens and phones
-## held either way, it sits against its own corner or covers the whole screen; every zoom step is
-## followed, and zooming stops at both ends.
+## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; it marks
+## every player by slot and every open quest's target; its action cycles it through the corners,
+## over the game, opaque and off, its zoom steps within their range, and both choices are kept. In
+## every place, on desktop screens and phones held either way, it sits against its own corner or
+## covers the whole screen; every zoom step is followed, and zooming stops at both ends.
 
 
 func run(tree: SceneTree) -> String:
@@ -25,9 +24,10 @@ func run(tree: SceneTree) -> String:
 
 
 ## The Survey (#301) starts at Auto, in a corner; it shows exactly the tiles explored, seen now or
-## revealed, each in its kind's color, while ground still in the fog stays hidden; it marks every
-## player by slot and every open quest's target; its action cycles it through the corners, over the
-## game, opaque and off, its zoom steps within their range, and both choices are kept.
+## revealed, each in its kind's color with its kind's symbol, while ground still in the fog stays
+## hidden; it marks every player by slot and every open quest's target; its action cycles it
+## through the corners, over the game, opaque and off, its zoom steps within their range, and both
+## choices are kept.
 func _check_survey(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var fog: FogView = main.get_node("FogView") as FogView
@@ -55,7 +55,8 @@ func _check_survey(main: Node) -> String:
 	return result
 
 
-## Why the Survey's tiles aren't exactly the explored ones in their kinds' colors, or "".
+## Why the Survey's tiles aren't exactly the explored ones in their kinds' colors and symbols
+## (#68), or its closest zoom draws no symbols, or "".
 func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 	var state: GameState = driver.state
 	var keeper: WorldKeeper = survey.keeper
@@ -71,15 +72,32 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		var known: bool = seen.has(tile) or fog.revealed.has(tile) or FogView.ally_sees(state, tile)
 		if survey.tiles.has(tile) != known:
 			return "the Survey shows %s although it's %s" % [tile, "known" if known else "fogged"]
-		var color: Color = TileLooks.of(state.region.terrain[tile]).color
-		if known and survey.tiles[tile] != color:
+		var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
+		if known and survey.tiles[tile] != look.color:
 			return "the Survey colors %s unlike its kind" % tile
+		if known and survey.symbols[tile] != look.symbol:
+			return "the Survey doesn't mark %s with its kind's symbol" % tile
 		if known and survey.blocking.has(tile) == state.region.is_walkable(tile):
 			return "the Survey doesn't ring %s in ink exactly when it blocks the way" % tile
 		hidden += 0 if known else 1
 	if hidden == 0:
 		return "nothing of the instance was still in the fog to hide on the Survey"
-	return ""
+	return "" if _survey_symbols_drawn(survey) else (
+		"the Survey draws no tile symbols even at its closest zoom"
+	)
+
+
+## Whether the Survey draws tile symbols at its closest zoom, at the corner size of a desktop
+## screen, whatever size the test's own window is.
+func _survey_symbols_drawn(survey: SurveyView) -> bool:
+	var across: float = survey.across
+	var shown: Vector2 = survey.size
+	survey.across = SurveyChoice.ZOOMS[-1]
+	survey.size = Vector2.ONE * 648.0 * SurveyChoice.CORNER_SHARE
+	var drawn: bool = survey.symbol_size() > 0
+	survey.across = across
+	survey.size = shown
+	return drawn
 
 
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
