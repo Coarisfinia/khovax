@@ -26,22 +26,29 @@ static func unringable(region: Region) -> Dictionary[Vector2i, bool]:
 ## unwalkable tiles next to where the region ends.
 static func _unwalkable_from_edge(region: Region) -> Dictionary[Vector2i, bool]:
 	var reached: Dictionary[Vector2i, bool] = {}
-	var open: Array[Vector2i] = []
+	var found: Array[Vector2i] = []
 	for tile: Vector2i in region.sorted_tiles():
-		if region.is_walkable(tile):
-			continue
 		for direction: Vector2i in Hex.DIRECTIONS:
 			if not reached.has(tile) and not region.has_tile(tile + direction):
 				reached[tile] = true
-				open.append(tile)
-	while not open.is_empty():
-		var current: Vector2i = open.pop_back()
+				found.append(tile)
+	# Breadth first, through unwalkable tiles only: the walkable edge tiles seed nothing.
+	var next: int = 0
+	while next < found.size():
+		var current: Vector2i = found[next]
+		next += 1
+		if region.is_walkable(current):
+			continue
 		for direction: Vector2i in Hex.DIRECTIONS:
-			var next: Vector2i = current + direction
-			if region.has_tile(next) and not region.is_walkable(next) and not reached.has(next):
-				reached[next] = true
-				open.append(next)
-	return reached
+			var neighbor: Vector2i = current + direction
+			if region.has_tile(neighbor) and not reached.has(neighbor):
+				reached[neighbor] = true
+				found.append(neighbor)
+	var unwalkable: Dictionary[Vector2i, bool] = {}
+	for tile: Vector2i in reached:
+		if not region.is_walkable(tile):
+			unwalkable[tile] = true
+	return unwalkable
 
 
 ## The first step from `from` toward the nearest tile not in `stuck` (a wild monster's way out),
