@@ -1,9 +1,11 @@
 class_name SurveyView
 extends Control
 ## The Survey (#301): an overview of the instance this machine's player is in, as far as they have
-## explored it. It draws each tile they explored (FogView's memory, ExploredGround), see now or had
-## revealed (#177) in its kind's color (TileLooks); the rest stays the backdrop, the fog's color,
-## so what is still in the fog stays hidden here too. Every player in the instance is a circle in
+## explored it. It draws each tile they explored (FogView's memory, ExploredGround), sees now or had
+## revealed (#177) in its kind's color (TileLooks), and a tile nobody can walk onto ringed in ink,
+## so what blocks the way isn't told by color alone (#68); the rest stays the backdrop, the fog's
+## color, so what is still in the fog stays hidden here too. Every player in the instance is a
+## circle in
 ## their personal color with one mark per slot number, like their circle in the world (#68), and
 ## every open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. It's
 ## centered on this machine's player, gliding after them. Where it shows and how close is
@@ -38,6 +40,8 @@ var backdrop: Color = Boot.FOG
 var bordered: bool = false
 ## Each tile shown, by tile, in its kind's color. Kept here so tests can read what is drawn.
 var tiles: Dictionary[Vector2i, Color] = {}
+## The tiles shown that nobody can walk onto.
+var blocking: Dictionary[Vector2i, bool] = {}
 ## The tile each player in the instance stands on, by slot.
 var players: Dictionary[int, Vector2i] = {}
 ## The tile each open quest points at, by quest id.
@@ -70,6 +74,9 @@ func _draw() -> void:
 		for corner: Vector2 in corners:
 			var _added: bool = shape.append(at + corner)
 		draw_colored_polygon(shape, tiles[tile])
+		if blocking.has(tile):
+			var _closed: bool = shape.append(shape[0])
+			draw_polyline(shape, Toon.INK, INK_PIXELS)
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
 	for slot: int in players:
 		_draw_player(to_view(players[slot]), slot, PersonalColor.of(world_seed, slot))
@@ -83,6 +90,7 @@ func _draw() -> void:
 ## directly.
 func show_state() -> void:
 	tiles.clear()
+	blocking.clear()
 	players.clear()
 	quest_targets.clear()
 	if driver == null or driver.state == null:
@@ -98,6 +106,8 @@ func show_state() -> void:
 		if known.has(tile) or FogView.ally_sees(state, tile):
 			var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
 			tiles[tile] = look.color if look != null else Color.GRAY
+			if not state.region.is_walkable(tile):
+				blocking[tile] = true
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player != null:

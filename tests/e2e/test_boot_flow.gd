@@ -827,6 +827,8 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		var color: Color = TileLooks.of(state.region.terrain[tile]).color
 		if known and survey.tiles[tile] != color:
 			return "the Survey colors %s unlike its kind" % tile
+		if known and survey.blocking.has(tile) == state.region.is_walkable(tile):
+			return "the Survey doesn't ring %s in ink exactly when it blocks the way" % tile
 		hidden += 0 if known else 1
 	if hidden == 0:
 		return "nothing of the instance was still in the fog to hide on the Survey"
@@ -858,8 +860,14 @@ func _survey_choice(choice: SurveyChoice, survey: SurveyView, path: String) -> S
 		return "the Survey doesn't start at Auto"
 	var problem: String = _survey_placed(choice, survey)
 	var places: int = SurveyChoice.Place.size()
+	var pressed: InputEventAction = InputEventAction.new()
+	pressed.action = &"survey"
+	pressed.pressed = true
 	for step: int in places:
-		var cycled: String = choice.cycle()
+		# The first press goes through the input map's action, the rest straight to the choice.
+		var cycled: String = choice.cycle() if step > 0 else ""
+		if step == 0:
+			survey.get_viewport().push_input(pressed)
 		if problem.is_empty() and not cycled.is_empty():
 			problem = "the Survey's place couldn't be saved: " + cycled
 		if (problem.is_empty()
