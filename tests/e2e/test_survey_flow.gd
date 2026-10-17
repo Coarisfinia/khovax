@@ -1,18 +1,23 @@
 extends RefCounted
-## Survey flow (#301): the player looks at the Survey, the overview of the ground they explored. It
-## starts at Auto, in a corner; it shows exactly the tiles explored, each in its kind's color, while
+## Survey flow (#301): the player looks at the Survey, the overview of the ground they explored, in
+## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
+## kind's color, while
 ## ground still in the fog stays hidden; it marks every player by slot and every open quest's
 ## target; its action cycles it through the corners, over the game, opaque and off, its zoom steps
 ## within their range, and both choices are kept.
 
 
 func run(tree: SceneTree) -> String:
+	# The glade: big enough that some of it is still in the fog at the start, for the Survey to
+	# hide.
+	GameDriver.start_instance = InstanceBlueprints.GLADE
 	var main: Node = (load(Boot.GAME) as PackedScene).instantiate()
 	tree.root.add_child(main)
 	await tree.process_frame
 	await tree.process_frame
 	var result: String = _check_survey(main)
 	main.queue_free()
+	GameDriver.start_instance = ""
 	await tree.process_frame
 	return result
 
