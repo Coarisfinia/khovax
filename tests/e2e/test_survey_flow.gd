@@ -331,26 +331,37 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 		problem = _survey_buttons_placed(choice, survey, buttons)
 	var actions: Array[StringName] = [&"survey_zoom_out", &"survey_zoom_in", &"survey"]
 	for action: StringName in actions:
-		if not problem.is_empty():
-			break
-		var place: int = choice.place_shown()
-		var zoom: int = choice.zoom_step()
-		buttons.lay_out()
-		var at: Vector2 = buttons.rect_of(action).get_center()
-		_touch(survey.get_viewport(), at, true)
-		var pressed: bool = Input.is_action_pressed(action) and not stick.is_held()
-		_touch(survey.get_viewport(), at, false)
-		var expected: Vector2i = Vector2i(posmod(place + 1, SurveyChoice.Place.size()), zoom)
-		if action != &"survey":
-			expected = Vector2i(place, zoom + (1 if action == &"survey_zoom_in" else -1))
-		var moved: bool = Vector2i(choice.place_shown(), choice.zoom_step()) == expected
-		if not pressed or Input.is_action_pressed(action) or not moved:
-			problem = "the Survey's %s button didn't press its action alone, or move it like its key" % [
-				action,
-			]
+		if problem.is_empty():
+			problem = _survey_button_pressed(buttons, stick, choice, action)
 	buttons.touch = touch
 	buttons.lay_out()
 	return problem
+
+
+## Why a touch on `action`'s button doesn't press its action alone, without the touch stick, and
+## move the Survey's place or zoom like the key, or "".
+func _survey_button_pressed(
+		buttons: SurveyButtons,
+		stick: TouchStick,
+		choice: SurveyChoice,
+		action: StringName,
+) -> String:
+	var place: int = choice.place_shown()
+	var zoom: int = choice.zoom_step()
+	buttons.lay_out()
+	var at: Vector2 = buttons.rect_of(action).get_center()
+	_touch(buttons.get_viewport(), at, true)
+	var pressed: bool = Input.is_action_pressed(action) and not stick.is_held()
+	_touch(buttons.get_viewport(), at, false)
+	var expected: Vector2i = Vector2i(posmod(place + 1, SurveyChoice.Place.size()), zoom)
+	if action != &"survey":
+		expected = Vector2i(place, zoom + (1 if action == &"survey_zoom_in" else -1))
+	var moved: bool = Vector2i(choice.place_shown(), choice.zoom_step()) == expected
+	if not pressed or Input.is_action_pressed(action) or not moved:
+		return "the Survey's %s button didn't press its action alone, or move it like its key" % [
+			action,
+		]
+	return ""
 
 
 ## Why the Survey's buttons aren't wholly on every screen, in each place, on the Survey's side and
@@ -366,23 +377,35 @@ func _survey_buttons_placed(
 			problem += choice.cycle()
 			choice.place_in(screen)
 			buttons.lay_out_in(screen)
-			var place: SurveyChoice.Place = choice.place_shown()
-			var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
-			for action: StringName in SurveyButtons.ACTIONS:
-				var rect: Rect2 = buttons.rect_of(action)
-				var on_side: bool = (rect.get_center().x < screen.x / 2.0) == left
-				var clear: bool = not (survey.bordered and survey.get_rect().intersects(rect))
-				if problem.is_empty() and (
-						not Rect2(Vector2.ZERO, screen).encloses(rect) or not on_side or not clear):
-					problem = "the Survey's %s button on a %s screen in place %d is at %s" % [
-						action,
-						screen,
-						place,
-						rect,
-					]
+			if problem.is_empty():
+				problem = _survey_buttons_beside(choice, survey, buttons, screen)
 	choice.place()
 	buttons.lay_out()
 	return problem
+
+
+## Why the Survey's buttons, laid out for a `screen`, aren't wholly on it, on the Survey's side and
+## clear of a corner Survey, or "".
+func _survey_buttons_beside(
+		choice: SurveyChoice,
+		survey: SurveyView,
+		buttons: SurveyButtons,
+		screen: Vector2,
+) -> String:
+	var place: SurveyChoice.Place = choice.place_shown()
+	var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
+	for action: StringName in SurveyButtons.ACTIONS:
+		var rect: Rect2 = buttons.rect_of(action)
+		var on_side: bool = (rect.get_center().x < screen.x / 2.0) == left
+		var clear: bool = not (survey.bordered and survey.get_rect().intersects(rect))
+		if not Rect2(Vector2.ZERO, screen).encloses(rect) or not on_side or not clear:
+			return "the Survey's %s button on a %s screen in place %d is at %s" % [
+				action,
+				screen,
+				place,
+				rect,
+			]
+	return ""
 
 
 ## Touches `at` with the first finger, or lifts it there.

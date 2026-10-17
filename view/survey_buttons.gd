@@ -32,13 +32,7 @@ var _side: float = 0.0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for action: StringName in ACTIONS:
-		var button: TouchScreenButton = TouchScreenButton.new()
-		button.action = action
-		button.shape = RectangleShape2D.new()
-		# The buttons are hidden with this node where there is no touch input.
-		button.visibility_mode = TouchScreenButton.VISIBILITY_ALWAYS
-		var _taken: int = button.pressed.connect(_take_touch)
-		var _redrawn: int = button.released.connect(queue_redraw)
+		var button: TouchScreenButton = _button(action)
 		add_child(button)
 		buttons[action] = button
 
@@ -90,6 +84,18 @@ func lay_out_in(screen: Vector2) -> void:
 		button.position = Vector2(x, top + (_side + GAP) * i + _side / 2.0)
 		(button.shape as RectangleShape2D).size = Vector2(_side, _side)
 	queue_redraw()
+
+
+## A new button pressing `action`, sized and placed by `lay_out_in`.
+func _button(action: StringName) -> TouchScreenButton:
+	var button: TouchScreenButton = TouchScreenButton.new()
+	button.action = action
+	button.shape = RectangleShape2D.new()
+	# The buttons are hidden with this node where there is no touch input.
+	button.visibility_mode = TouchScreenButton.VISIBILITY_ALWAYS
+	var _taken: int = button.pressed.connect(_take_touch)
+	var _redrawn: int = button.released.connect(queue_redraw)
+	return button
 
 
 ## Where `action`'s button is on the screen.
