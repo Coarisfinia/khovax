@@ -1125,7 +1125,9 @@ func _check_view(tree: SceneTree) -> String:
 		return "the main scene doesn't show the wild monster's figure"
 	var figure: HexPiece = view.figures.values()[0]
 	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, FlowSteps.BASIC_RING)
-	var result: String = _check_totem_key(main, driver.state)
+	var result: String = _check_totem_button(main)
+	if result.is_empty():
+		result = _check_totem_key(main, driver.state)
 	if result.is_empty():
 		result = _check_filling(main, driver.state)
 	if result.is_empty():
@@ -1147,6 +1149,33 @@ func _check_view(tree: SceneTree) -> String:
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## On a touch screen, standing on a ring that waits for a totem, the totem's button shows its
+## charges and isn't faded; a touch on it presses place_totem and never starts the touch stick, and
+## lifting it lets go (#429).
+func _check_totem_button(main: Node) -> String:
+	var totem: TotemButton = main.get_node("Hud/TotemButton") as TotemButton
+	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+	totem.touch = true
+	totem.lay_out_in(totem.get_viewport_rect().size)
+	if (not totem.visible
+			or totem.corner_text() != str(PlaceholderTotems.CHARGES)
+			or not totem.usable()):
+		return "the totem's button doesn't show its charges, usable, on a waiting ring"
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.position = totem.rect().get_center()
+	touch.pressed = true
+	totem.get_viewport().push_input(touch)
+	var pressed: bool = Input.is_action_pressed("place_totem")
+	var stick_held: bool = stick.is_held()
+	var lift: InputEventScreenTouch = touch.duplicate() as InputEventScreenTouch
+	lift.pressed = false
+	totem.get_viewport().push_input(lift)
+	if not pressed or stick_held or Input.is_action_pressed("place_totem"):
+		return "a touch on the totem's button didn't press place_totem alone, or didn't let go"
+	totem.touch = false
+	return ""
 
 
 ## Pressing place_totem makes the local player's command place their totem, which starts the ring
