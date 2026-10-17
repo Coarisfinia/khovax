@@ -165,7 +165,7 @@ static func _companions(content: Content) -> CompanionFeature:
 ## `content` and the ability data; a special that doesn't load is an error, and its species has
 ## none.
 static func _specials(content: Content) -> SpecialAttackFeature:
-	var abilities: Content = Content.load_abilities()
+	var abilities: Content = SpeciesContent.load_abilities()
 	if not abilities.problem.is_empty():
 		push_error("the abilities don't load: " + abilities.problem)
 	var powers: Dictionary[String, int] = {}
