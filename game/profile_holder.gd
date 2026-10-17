@@ -4,8 +4,9 @@ extends Node
 ## domination of that player and their loot from every chest opened (#124) taken over at once and
 ## saved debounced (ProfileKeeper, #73), and whatever is pending saved when the game quits or goes
 ## to the background. The same dominations and chests advance the player's quests (#184), in the
-## profile. Other players' dominations go into their own profiles on their own machines (#74). A
-## save that can't be read is reported and left alone, never overwritten.
+## profile, and so do the places they step into (#339). Other players' dominations go into their
+## own profiles on their own machines (#74). A save that can't be read is reported and left alone,
+## never overwritten.
 
 ## Where this machine's player's dominations and finds come from (#184).
 @export var bus: EventBus
@@ -44,6 +45,7 @@ func _ready() -> void:
 	bus.subscribe(&"ChestOpened", _on_event)
 	bus.subscribe(&"LootFound", _on_event)
 	bus.subscribe(&"DominationLoot", _on_event)
+	bus.subscribe(&"PlaceReached", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -78,7 +80,7 @@ static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinitio
 ## What this machine's player gains from `event`, or null when it isn't theirs: their domination, or
 ## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
 ## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
-## (#203), which is no chest.
+## (#203), which is no chest; or a place they stepped into (#339).
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterDominated:
@@ -92,8 +94,10 @@ func _gain_of(event: RefCounted) -> Gain:
 		_add_loot(gain, (event as LootFound).loot[input.slot])
 	elif event is DominationLoot and (event as DominationLoot).loot.has(input.slot):
 		_add_loot(gain, (event as DominationLoot).loot[input.slot])
+	elif event is PlaceReached and (event as PlaceReached).slot == input.slot:
+		gain.places_reached.append((event as PlaceReached).place)
 	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
-	empty = empty and gain.materials.is_empty()
+	empty = empty and gain.materials.is_empty() and gain.places_reached.is_empty()
 	return null if empty else gain
 
 

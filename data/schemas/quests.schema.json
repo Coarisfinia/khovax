@@ -21,13 +21,21 @@
 				"type": "object",
 				"additionalProperties": false,
 				"required": ["condition"],
+				"if": { "properties": { "condition": { "const": "reached" } } },
+				"then": { "required": ["place"] },
+				"else": { "not": { "required": ["place"] } },
 				"properties": {
 					"condition": {
-						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from.",
-						"enum": ["dominated", "opened"]
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into.",
+						"enum": ["dominated", "opened", "reached"]
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9_]*$"
+					},
+					"place": {
+						"description": "On a reached step, and only there, the id of the place it asks for, as a region piece's legend names it.",
 						"type": "string",
 						"pattern": "^[a-z][a-z0-9_]*$"
 					},

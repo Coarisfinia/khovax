@@ -2,11 +2,12 @@ class_name QuestMarkerView
 extends Node3D
 ## Every open quest's marker (#300, owner: quests always have a marker): an arrow floating
 ## over what this machine's player's quest asks for next, the nearest wild monster of the species a
-## domination step names (any, when it names none) or the nearest closed treasure chest. It shows
-## through the fog, so it leads the player into it; a wild monster still hiding in its tile (#202)
-## isn't pointed at, since that would give it away. The arrow's shape, not its color, says what it
-## is (#68). It glides after a moving target, eases in and out, and bobs gently; it only reads the
-## state and the profile. The same targets will be marked on the Survey (#301).
+## domination step names (any, when it names none), the nearest closed treasure chest or the nearest
+## tile of the place a reached step names (#339). It shows through the fog, so it leads the player
+## into it; a wild monster still hiding in its tile (#202) isn't pointed at, since that would give
+## it away. The arrow's shape, not its color, says what it is (#68). It glides after a moving
+## target, eases in and out, and bobs gently; it only reads the state and the profile. The same
+## targets will be marked on the Survey (#301).
 
 ## How high over the tile's top the arrow floats, and how far and how slowly it bobs.
 const HEIGHT: float = 2.6
@@ -88,9 +89,14 @@ static func targets_of(
 
 
 ## The tiles `step` could be met at in `state`: wild monsters of its species that aren't hiding,
-## in id order, or the closed chests.
+## in id order, the closed chests, or the tiles of its place, in the legend's order.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	var tiles: Array[Vector2i] = []
+	if step.condition == "reached":
+		for trigger: TileTrigger in state.region.triggers:
+			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
+				tiles.append(trigger.tile)
+		return tiles
 	if step.condition == "opened":
 		var chests: ChestFeature = state.feature(Features.CHESTS) as ChestFeature
 		if chests != null:

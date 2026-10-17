@@ -293,7 +293,8 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   saved as versioned JSON (`ProfileSave.FORMAT`, through `SaveStore`), integers and ids only: a newer format is
   refused, and an older one is migrated in `ProfileSave.parse`, one format at a time.
   **Quest progress** (#184) lives in the profile too: a gain carries the facts quests count
-  (dominations, chests opened), and `Profile.apply` advances each quest in its `quest_book` (the quest
+  (dominations, chests opened, places reached: a place is a tile trigger in a region piece's legend,
+  #339), and `Profile.apply` advances each quest in its `quest_book` (the quest
   data) from them, so progress is saved and debounced like any gain.
   **The world is saved too** (#119), in its own file next to the profile (`WorldSave`, through
   `SaveStore`), never in the profile: `WorldData.of` holds its seed, tick and every loaded
