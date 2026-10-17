@@ -234,15 +234,18 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   their public methods (e.g. `DominationFeature` clears a ring off the trail with `TrailFeature.clear`), never
   their fields. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.
-- **Entities** (#31): everything in the world (players, wild monsters, later totems) is an
-  `Entity` with a stable id, never reused, an owning player slot (0–3, or none) and a tile. A
+- **Entities** (#31): everything in the world (players, wild monsters, companions, later totems) is an
+  `Entity` with a stable id, never reused, an owning player slot (0–3, or none) and a tile. An
+  entity with a slot is that slot's player: rules treat it as one (it walks by commands, draws the
+  trail, takes exits), so what belongs to a player without being one keeps its owner in its
+  feature's data, like a companion (`CompanionFeature.owners`, #338). A
   feature keeps its own data per entity id, like a component (`MovementFeature.walks`), set up and
   dropped in `entity_added` / `entity_removed`. Rules go through entities in id order
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
 - **Regions** (#36, `Region`): which tiles exist, each tile's kind (a tile blueprint, #116), the
   players' starts, where wild monsters stand (`WildMonsterFeature` places them, #19, each of a
   species its spot names or rolled from the blueprint's `WILD_SPECIES`, #133; anything
-  that isn't a player blocks walkers, players pass through each other) and where treasure chests
+  that doesn't walk blocks walkers, and walkers, players and companions, pass through each other) and where treasure chests
   stand (`ChestFeature`, #124, in blueprints with an instance loot table). Rules ask `state.region`
   (`is_walkable`, `has_tile`), never a distance from the origin, so a region can have any shape.
   A region is a hand-made Markdown file in `regions/` (a title, prose, the tiles in a code block and
@@ -279,7 +282,9 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   three they carry, materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
   persistent `World`, built from a seed, deterministic like all of the simulation. A **session** is
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
-  technical and never shown to the player. Each domination or find is a
+  technical and never shown to the player. Who the players bring is part of a session's start:
+  each player's companion (#338) is the first monster their profile carries, handed to the world
+  as species ids (`World.companions`, in its save and the replay too). Each domination or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
   profile at boot and takes this machine's player's dominations from the tick's events, #132); **saves
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones

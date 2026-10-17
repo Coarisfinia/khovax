@@ -52,8 +52,8 @@ static func walk(state: GameState, path: Array[Vector2i]) -> Array[RefCounted]:
 	return events
 
 
-## The directions of a shortest walk in `state` from `from` to `goal` over walkable tiles nobody
-## but players stands on; empty when there's none.
+## The directions of a shortest walk in `state` from `from` to `goal` over walkable tiles nothing
+## that doesn't walk stands on; empty when there's none.
 static func shortest_path(state: GameState, from: Vector2i, goal: Vector2i) -> Array[int]:
 	var came: Dictionary[Vector2i, int] = { from: -1 }
 	var open: Array[Vector2i] = [from]
@@ -72,11 +72,7 @@ static func shortest_path(state: GameState, from: Vector2i, goal: Vector2i) -> A
 	return directions
 
 
-## Whether a player can walk onto `tile`: walkable, and nothing but players stands there.
+## Whether a player can walk onto `tile`: walkable, and nothing that doesn't walk stands there.
 static func walkable_for_players(state: GameState, tile: Vector2i) -> bool:
-	if not state.region.is_walkable(tile):
-		return false
-	for other: Entity in state.entities:
-		if other.slot == Entity.NO_SLOT and other.tile == tile:
-			return false
-	return true
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)

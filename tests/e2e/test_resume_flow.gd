@@ -7,12 +7,16 @@ extends RefCounted
 ## one in a newer format or one played by other rules is refused and a fresh world starts. The
 ## profile is never touched by world saves. The ground explored is saved with the world (#215):
 ## resumed, it lies under light fog, next door too; bad memory is dropped whole, a fresh world
-## starts with none, and what was seen in an instance purged since (#212) isn't restored.
+## starts with none, and what was seen in an instance purged since (#212) isn't restored. The
+## player brings a companion all along (#338), the first monster their profile carries: it goes
+## through the save and back, and the main scene resumes with it.
 
 const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
 const WORLD_PATH: String = "user://test_resume_world.json"
 const PROFILE_PATH: String = "user://test_resume_profile.json"
+## The species the flow's profile carries first: the player's companion.
+const COMPANION: String = "storm_finch"
 ## After the ring around the basic instance's wild monster (FlowSteps.BASIC_RING), on to the exit
 ## on (3, -2).
 const OUT: Array[Vector2i] = [
@@ -35,7 +39,8 @@ var _explored: ExploredGround = ExploredGround.new()
 func run(tree: SceneTree) -> String:
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
-	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
+	var carried: String = _carry(COMPANION)
+	var world: World = World.new(SEED, InstanceBlueprints.BASIC, 1, [COMPANION])
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
@@ -49,8 +54,8 @@ func run(tree: SceneTree) -> String:
 		result = await _check_purged_explored(tree)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
-	if result.is_empty() and SaveStore.exists(PROFILE_PATH):
-		result = "saving the world wrote a profile"
+	if result.is_empty() and ProfileSave.to_text(SaveStore.load_profile(PROFILE_PATH)) != carried:
+		result = "saving the world changed the profile"
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	return result
@@ -152,6 +157,16 @@ static func _with_left_at(data: Dictionary, instance_name: String, left: int) ->
 	return JSON.stringify(changed)
 
 
+## Saves a profile that carries a monster of `species` to the flow's file; returns its text.
+static func _carry(species: String) -> String:
+	var profile: Profile = Profile.new()
+	var gain: Gain = Gain.new()
+	gain.dominated_species.append(species)
+	var _taken: String = profile.apply(gain)
+	var _saved: String = SaveStore.save_profile(profile, PROFILE_PATH)
+	return ProfileSave.to_text(profile)
+
+
 ## A world's data whose glade, left behind, is saved PURGE_TICKS later without being purged.
 func _expired() -> String:
 	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
@@ -245,8 +260,11 @@ func _check_explored(main: Node) -> String:
 	return ""
 
 
-## The resumed session's recording plays back from the resumed world to the same state.
+## The player came back with their companion, and the resumed session's recording plays back from
+## the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
+	if (driver.state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0) == 0:
+		return "the player came back without their companion"
 	for _tick: int in 30:
 		driver.advance(STEP)
 	driver.recording.finish(driver.world)
@@ -416,7 +434,8 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var main: Node = _boot(tree)
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
-	var fresh: World = World.new(0, InstanceBlueprints.BASIC)
+	# The player brings the companion their profile carries into the fresh world too.
+	var fresh: World = World.new(0, InstanceBlueprints.BASIC, 1, [COMPANION])
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

@@ -24,6 +24,10 @@ var features: Array[Feature] = []
 ## and derived from the tick's own changes, so it is not part of the state's contract or its hash,
 ## though a replay raises the same events.
 var events: Array[RefCounted] = []
+## Each player slot's companion species (#338), or "" for none: the first monster that player
+## carries, which walks beside them. Start data the world hands every instance it loads, like the
+## seed; no rule changes it.
+var companions: Array[String] = []
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
 ## features and must not be run: InstanceBlueprints.create refuses it.
 var problem: String = ""
@@ -32,6 +36,7 @@ var problem: String = ""
 func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> void:
 	region = start_region
 	rng_seed = seed_value
+	var _sized: int = companions.resize(MAX_PLAYERS)
 	problem = order_problem(ordered)
 	if not problem.is_empty():
 		return
@@ -183,10 +188,12 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, the region, every entity in id order and, in order, every feature's id, on/off
-## and state.
+## every core value, the region, every slot's companion species, every entity in id order and, in
+## order, every feature's id, on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
+	for species: String in companions:
+		values.append(World.name_code(species) if not species.is_empty() else 0)
 	values.append_array(region.hash_values())
 	values.append(next_entity_id)
 	values.append(entities.size())

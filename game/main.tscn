@@ -29,14 +29,16 @@
 [ext_resource type="Script" path="res://view/survey_choice.gd" id="27_survey_choice"]
 [ext_resource type="Script" path="res://view/canopy_cutaway.gd" id="26_cutaway"]
 [ext_resource type="Script" path="res://view/quest_list_view.gd" id="28_quest_list"]
+[ext_resource type="Script" path="res://mechanics/companions/look/companion_view.gd" id="29_companions"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
-[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper") unique_id=520417396]
+[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper", "holder") unique_id=520417396]
 process_priority = -100
 script = ExtResource("1_driver")
 input = NodePath("../LocalInput")
 keeper = NodePath("../WorldKeeper")
+holder = NodePath("../ProfileHolder")
 
 [node name="LocalInput" type="Node" parent="." unique_id=1290447713]
 script = ExtResource("2_input")
@@ -76,6 +78,10 @@ neighbours = NodePath("../NeighbourView")
 
 [node name="WildMonsterView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")
+driver = NodePath("../../Driver")
+
+[node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]
+script = ExtResource("29_companions")
 driver = NodePath("../../Driver")
 
 [node name="ChestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
