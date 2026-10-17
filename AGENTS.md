@@ -89,18 +89,18 @@ Prefer the simplest solution that does the job, and Godot's built-in way over a 
 an issue turns out bigger than one such unit, build the core now and file the rest as its own
 issue.
 
-**Implementation subagents only on the owner's say-so, once** (owner's rule): the main session
-implements. When the owner authorizes subagents for implementation, that's a one-time thing for the
-batch they name, and each one gets an issue that fits one small pull request, never a massive one;
-an issue that's bigger is split first. Each subagent babysits its own pull request until it is merged (owner's rule):
-Codex-reviewed, CI green, rebased when it conflicts, the owner's comments answered, and, once the
-owner approves, in the merge queue until it lands. Only then does it report back.
+**Implementation subagents, the usage budget, the usage line in PR descriptions and the project
+watcher** follow the owner's machine-wide agent notes (`~/.ai/AGENTS.md`), their single source of
+truth (owner, #441); this file only adds this repository's values.
 
 **No pull requests that only change docs.** A change to this file or the README
 rides along with the next real pull request, and that pull request's description says so.
 
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
+
+**Every part of the game can be played with a controller** (owner's rule, on #438): whatever a
+touch or a click does, a controller can do too.
 
 **Buttons always show their item's or attack's icon, with its charges or cooldown** (owner's rule, on
 #429): a button never vanishes when it's empty or cooling down; it shows 0, or a cooldown circle with
@@ -124,14 +124,6 @@ move to slices, #375 to #381), it goes before any new feature.
 fixes, then performance (e.g. the web build loading in under 2 s, #265), then architecture, then
 cleanup, then gameplay features (rules and mechanics), then UI, then visuals, then assets and
 models.
-
-**Usage budget** (owner's rule): before taking on new work, check the usage with `claude-usage
---reset` (the session and week in percent, and when the week resets). Stop once the week's usage
-left is down to 20% for every work day (Monday to Friday) left before the week resets, and never
-below 20% in any case: with three work days to go, stop at 60% left; with one or none, at 20%.
-Stopping means no new work: finish answering, tell the owner, and wait for the reset.
-The week doesn't reset on a fixed day: take the date from `claude-usage --reset`, which reads it
-from the endpoint.
 
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
@@ -187,9 +179,6 @@ background; only wait in the foreground for a result the very next step needs.
 ### After every push
 
 - **Update the PR description** so it describes what the branch does now.
-- **End the PR description with the current usage** (owner's rule): every time you work on a pull
-  request, its description's last line gives the session's and the week's usage in percent. Only
-  the owner can see them (`/usage`), so until they're readable it says so.
 - **Keep the project watcher running in the background**: household-brain's Claude Code plugin
   `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
   ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
