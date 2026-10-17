@@ -160,7 +160,10 @@ func _menu_choices(menu: SettingsMenu, graphics: Graphics, survey: SurveyChoice)
 func _menu_on_screens(menu: SettingsMenu) -> String:
 	for screen: Vector2 in [Vector2(360.0, 640.0), Vector2(640.0, 360.0), Vector2(1920.0, 1080.0)]:
 		menu.lay_out(screen)
-		if not Rect2(Vector2.ZERO, screen).encloses(menu.panel_rect()):
+		var panel: Rect2 = menu.panel_rect()
+		if panel.size.x <= 0.0 or panel.size.y <= 0.0:
+			return "the settings menu is %s on a %s screen, with no size" % [panel, screen]
+		if not Rect2(Vector2.ZERO, screen).encloses(panel):
 			return "the settings menu %s doesn't fit a %s screen" % [menu.panel_rect(), screen]
 	return ""
 
