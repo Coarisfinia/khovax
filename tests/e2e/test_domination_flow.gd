@@ -336,8 +336,9 @@ func _check_seal_refused(world: World) -> String:
 		"there twice": twice,
 		"in another seal": two_seals,
 	}
+	var source: BlueprintSource = BlueprintSource.new()
 	for expected: String in cases:
-		var problem: String = WorldData.to_world(cases[expected], BlueprintSource.new()).problem
+		var problem: String = WorldData.to_world(cases[expected], source).problem
 		if not problem.contains(expected):
 			return "a seal %s wasn't refused for it: %s" % [expected, problem]
 	return ""
