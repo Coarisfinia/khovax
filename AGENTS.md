@@ -5,7 +5,9 @@ player-facing name is separate and lives only in display strings and config, so 
 touching git.
 
 **The code explains itself**, with short comments next to it for the reasons a reader can't see (keep
-them true in the same pull request that changes the code). **Decisions and their history live in the
+them true in the same pull request that changes the code). **How the code works is documented next to the code,
+never in this file** (owner's rule, on #395): this file holds the rules for working here, not
+descriptions of classes, features or mechanics. **Decisions and their history live in the
 GitHub issues**, the design included: there is no separate design document (owner, #217), so a
 design decision goes into its issue. The README holds only what a human has to do by hand and how to
 run things. This file holds the rules for working here and what agents have learned the hard

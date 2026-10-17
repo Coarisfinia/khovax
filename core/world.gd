@@ -99,7 +99,21 @@ func create_instance(instance_name: String, players: int) -> GameState:
 	)
 	if created != null:
 		created.companions = companions.duplicate()
+		_hand_next_door(instance_name, created)
 	return created
+
+
+## Hands `state`, the instance `instance_name`, the ground of every instance its exits lead to
+## (#191), shifted into its coordinates as the views place them (`offset`).
+func _hand_next_door(instance_name: String, state: GameState) -> void:
+	state.next_door = {}
+	for target: String in state.region.exit_blueprints:
+		var shift: Vector2i = offset(target) - offset(instance_name)
+		var ground: Region = _layout.region_for(self, target)
+		for tile: Vector2i in ground.sorted_tiles():
+			if not state.region.has_tile(tile + shift):
+				state.next_door[tile + shift] = ground.terrain[tile]
+	state.next_door_version += 1
 
 
 ## Sets every slot's companion species, by slot ("" or nothing for none), in the world and every
@@ -175,8 +189,11 @@ func _purge_left_behind() -> void:
 			var _dropped: bool = instances.erase(instance_name)
 			var _forgotten: bool = left_at.erase(instance_name)
 			generations[instance_name] = generation(instance_name) + 1
-			# Its region is arranged anew, so the layout is worked out again from it.
+			# Its region is arranged anew, so the layout is worked out again from it, and the
+			# instances next to it see its new ground.
 			_layout.forget(instance_name)
+			for loaded: String in sorted_names():
+				_hand_next_door(loaded, instances[loaded])
 
 
 ## The player in `slot`, in whichever instance they are, or null.

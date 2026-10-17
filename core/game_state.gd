@@ -28,6 +28,12 @@ var events: Array[RefCounted] = []
 ## carries, which walks beside them. Start data the world hands every instance it loads, like the
 ## seed; no rule changes it.
 var companions: Array[String] = []
+## The ground of the instances next door (#191): each tile their regions have that this one doesn't,
+## with its terrain, in this instance's coordinates. The world hands it over from their blueprints
+## and seeds, without loading them, so sight crosses the seam. Derived data, like the region, so
+## it's in no hash; `next_door_version` goes up whenever it changes.
+var next_door: Dictionary[Vector2i, int] = {}
+var next_door_version: int = 0
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
 ## features and must not be run: InstanceBlueprints.create refuses it.
 var problem: String = ""

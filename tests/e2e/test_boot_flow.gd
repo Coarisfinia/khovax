@@ -546,6 +546,15 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	return ""
 
 
+## The first of the glade's `tiles` that no ally in `state` sees across the seam, shifted by
+## `shift` into its coordinates.
+static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vector2i) -> Vector2i:
+	for tile: Vector2i in tiles:
+		if not FogView.ally_sees(state, tile + shift):
+			return tile
+	return tiles[0]
+
+
 ## Explored ground is remembered per instance (#190): walking into the glade, the basic instance's
 ## ground seen before, now next door, lies under light fog; walking back, the basic instance's
 ## ground out of sight is still seen before, and next door the glade's explored ground lies under
@@ -573,11 +582,27 @@ func _check_remembered_ground(main: Node) -> String:
 		return "expected some of the glade in sight and some not on arrival"
 	_walk_in(driver.world, 3)
 	fog.show_state(10.0)
+	var result: String = _check_glade_next_door(fog, view, glade_seen, glade_unseen)
+	return result if not result.is_empty() else _check_out_of_sight(fog, far)
+
+
+## Back in the basic instance, next door the glade's explored ground (some of `seen`) lies under
+## light fog and its unexplored ground (some of `unseen`) under thick cloud, out of sight across
+## the seam (#191).
+func _check_glade_next_door(
+		fog: FogView,
+		view: NeighbourView,
+		seen: Array[Vector2i],
+		unseen: Array[Vector2i],
+) -> String:
 	var shift: Vector2i = view.shifts.get(InstanceBlueprints.GLADE, Vector2i.ZERO)
-	var glade_light: bool = fog.cloud.fog_on(glade_seen[0] + shift) == light
-	if not glade_light or fog.cloud.fog_on(glade_unseen[0] + shift) != Vector2(1.0, 0.0):
-		return "next door, the glade's explored ground isn't light fog and its unexplored thick"
-	return _check_out_of_sight(fog, far)
+	var explored: Vector2i = _out_of_sight(fog.driver.state, seen, shift) + shift
+	var unexplored: Vector2i = _out_of_sight(fog.driver.state, unseen, shift) + shift
+	if fog.cloud.fog_on(explored) != Vector2(0.0, 1.0):
+		return "next door, the glade's explored ground isn't under light fog"
+	if fog.cloud.fog_on(unexplored) != Vector2(1.0, 0.0):
+		return "next door, the glade's unexplored ground isn't under thick cloud"
+	return ""
 
 
 ## Why `far` in the instance shown, out of every ally's sight, isn't under light fog, or "".
@@ -881,18 +906,31 @@ func _tile_of(state: GameState, id: String, seen: bool) -> Vector2i:
 	return Vector2i.MAX
 
 
-## Neighbours are unexplored ground: every tile of theirs lies under thick cloud.
+## Neighbours are unexplored ground: every tile of theirs out of sight from anywhere here lies
+## under thick cloud (nearer ones may have been seen across the seam, #191).
 func _check_neighbour_cloud(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	var fog: FogView = main.get_node("FogView") as FogView
 	fog.show_state(10.0)
-	var placed: Array[Vector2i] = view.placed_tiles()
-	if placed.is_empty():
-		return "no neighbour tiles to cover"
-	for tile: Vector2i in placed:
+	var region: Region = view.driver.state.region
+	var far: Array[Vector2i] = []
+	for tile: Vector2i in view.placed_tiles():
+		if _farther_than_sight(region, tile):
+			far.append(tile)
+	if far.is_empty():
+		return "no neighbour tiles out of sight to cover"
+	for tile: Vector2i in far:
 		if fog.cloud.fog_on(tile) != Vector2(1.0, 0.0):
 			return "neighbour tile %s isn't under thick cloud: %s" % [tile, fog.cloud.fog_on(tile)]
 	return ""
+
+
+## Whether `tile` lies beyond sight from every tile of `region`.
+static func _farther_than_sight(region: Region, tile: Vector2i) -> bool:
+	for here: Vector2i in region.sorted_tiles():
+		if Hex.distance(here, tile) <= FogFeature.SIGHT_RADIUS:
+			return false
+	return true
 
 
 ## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
