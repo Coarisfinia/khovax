@@ -61,7 +61,11 @@ jobs:
           sudo tar xzf /tmp/gdstyle.tar.gz -C /usr/local/bin gdstyle
 
       - name: "🔍 Lint GDScript"
-        run: gdstyle check --no-color .
+        # Every rule on every script, except the file length (owner, #335): tests are exempt from it,
+        # so it's checked on its own over every script outside tests/.
+        run: |
+          gdstyle check --no-color --ignore quality/max-file-length .
+          git ls-files -z '*.gd' ':!tests/' | xargs -0 gdstyle check --no-color --select quality/max-file-length
 
       - name: "🎨 Check GDScript formatting"
         run: gdstyle fmt --check .
