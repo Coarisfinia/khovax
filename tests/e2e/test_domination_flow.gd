@@ -955,19 +955,29 @@ func _check_wild_attacks() -> String:
 		WEAK_STRENGTH,
 	)
 	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var gave_way: Callable = func() -> bool: return not trail.tiles.has(beside)
+	struck = _wears_through(state, beside, hits, gave_way)
+	if not struck.is_empty():
+		return "the trail beside it: " + struck
+	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
+		return "the wild monster struck with nothing next to it"
+	return _check_ring_worn(state, player, hits)
+
+
+## Why the wild monster in `state` didn't strike `tile` once a second and wear it through with
+## `hits` strikes, `gone` turning true on the last one and not before, or "".
+func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable) -> String:
 	for hit: int in hits:
 		var strikes: Array[WildMonsterStruck] = _wild_strikes_over(
 			state,
 			WildAttackFeature.STRIKE_TICKS,
 			Vector2i(-3, 0),
 		)
-		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != beside:
-			return "the wild monster didn't strike the trail beside it once in second %d" % hit
-		if trail.tiles.has(beside) != (hit < hits - 1):
-			return "the trail tile gave way after %d strikes, not %d" % [hit + 1, hits]
-	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
-		return "the wild monster struck with nothing next to it"
-	return _check_ring_worn(state, player, hits)
+		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != tile:
+			return "not struck once in second %d" % hit
+		if gone.call() != (hit == hits - 1):
+			return "gave way after %d strikes, not %d" % [hit + 1, hits]
+	return ""
 
 
 ## The player rings the wild monster in `state` and the ring waits for a totem (#423): encircled,
@@ -985,19 +995,11 @@ func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
 		return "the ring around the attacking wild monster didn't wait for a totem"
 	var walls: Array[Vector2i] = domination.ring_waiting(state, player.id)
 	var wall: Vector2i = walls[RingShape.nearest(walls, Vector2i.ZERO)]
-	for hit: int in hits:
-		var strikes: Array[WildMonsterStruck] = _wild_strikes_over(
-			state,
-			WildAttackFeature.STRIKE_TICKS,
-			Vector2i(-3, 0),
-		)
-		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != wall:
-			return "the encircled monster didn't strike its ring's nearest wall in second %d" % [
-				hit,
-			]
-		var broken: bool = domination.encircled.is_empty() and not trail.tiles.has(wall)
-		if broken != (hit == hits - 1):
-			return "the ring broke after %d strikes on its wall, not %d" % [hit + 1, hits]
+	var waiting: Dictionary = domination.encircled
+	var broken: Callable = func() -> bool: return waiting.is_empty() and not trail.tiles.has(wall)
+	var worn: String = _wears_through(state, wall, hits, broken)
+	if not worn.is_empty():
+		return "the waiting ring's nearest wall: " + worn
 	return ""
 
 
