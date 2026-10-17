@@ -3,7 +3,9 @@ extends Feature
 ## Hiding tiles (#202): a wild monster that starts on a tile whose kind hides (a tile blueprint's
 ## `hides` trait, e.g. shrubs) stays hidden there until a player comes next to it, then jumps out
 ## (a MonsterJumpedOut event) and is a wild monster like any other from then on. Hidden, it still
-## blocks walkers, and a ring around it still dominates it: hiding only keeps it out of sight.
+## blocks walkers, and a ring around it still dominates it: hiding only keeps it out of sight. It
+## stays in its tile while hidden, held there (WildMonsterFeature.hold), even where no ring could
+## enclose it (#364).
 ## Instances whose region has such a monster have it.
 
 ## How near a player comes before a hidden wild monster jumps out: next to it.
@@ -28,14 +30,17 @@ func start(state: GameState) -> void:
 	for monster: int in wild.monsters:
 		if hides_at(state.region, state.entity(monster).tile):
 			hidden.append(monster)
+			wild.hold(monster, true)
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var still: Array[int] = []
 	for monster: int in hidden:
 		var tile: Vector2i = state.entity(monster).tile
 		if _player_near(state, tile):
 			state.events.append(_jumped_out(monster, tile))
+			wild.hold(monster, false)
 		else:
 			still.append(monster)
 	hidden = still
@@ -84,6 +89,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("hidden %d isn't one wild monster" % monster)
 			return
 		hidden.append(monster)
+		wild.hold(monster, true)
 	hidden.sort()
 
 
