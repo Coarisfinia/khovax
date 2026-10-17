@@ -206,9 +206,9 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("Instance/HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	# The basic instance's region, regions/basic.md: a disc of 3 rings.
-	if grid.tile_count() != 37:
-		return "the grid has %d tiles, expected the basic region's 37" % grid.tile_count()
+	# The basic instance's region, regions/basic.md: a disc of 3 rings and the water by its beach.
+	if grid.tile_count() != 42:
+		return "the grid has %d tiles, expected the basic region's 42" % grid.tile_count()
 	var mesh: CylinderMesh = grid.tile_mesh()
 	var tile_radius: float = HexLayout.SIZE * HexGrid.TILE_SCALE
 	if mesh.radial_segments != 6 or not is_equal_approx(mesh.top_radius, tile_radius):
@@ -899,7 +899,7 @@ func _check_neighbour_follows(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	view.show_state()
 	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
-	if view.grids.size() != 1 or basic == null or basic.tile_count() != 37:
+	if view.grids.size() != 1 or basic == null or basic.tile_count() != 42:
 		return "in the glade, the neighbours drawn aren't the basic instance: %s" % [
 			view.grids.keys(),
 		]
