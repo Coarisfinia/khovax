@@ -90,8 +90,9 @@ issue.
 **Implementation subagents only on the owner's say-so, once** (owner's rule): the main session
 implements. When the owner authorizes subagents for implementation, that's a one-time thing for the
 batch they name, and each one gets an issue that fits one small pull request, never a massive one;
-an issue that's bigger is split first. Each subagent babysits its own pull request until Codex has reviewed it and CI
-is green (owner's rule), fixing what fails, before it reports back.
+an issue that's bigger is split first. Each subagent babysits its own pull request until it is merged (owner's rule):
+Codex-reviewed, CI green, rebased when it conflicts, the owner's comments answered, and, once the
+owner approves, in the merge queue until it lands. Only then does it report back.
 
 **No pull requests that only change docs.** A change to this file or the README
 rides along with the next real pull request, and that pull request's description says so.
