@@ -83,12 +83,17 @@ func _on_survey(at: Vector2) -> bool:
 ## steps once, and its state, unless a key or a button holds it already, which keeps it held.
 func _press(action: StringName) -> void:
 	var held: bool = Input.is_action_pressed(action)
-	for pressed: bool in [true, false]:
-		if not held and pressed:
-			Input.action_press(action)
-		elif not held:
-			Input.action_release(action)
-		var event: InputEventAction = InputEventAction.new()
-		event.action = action
-		event.pressed = pressed
-		get_viewport().push_input(event, true)
+	if not held:
+		Input.action_press(action)
+	_send(action, true)
+	if not held:
+		Input.action_release(action)
+	_send(action, false)
+
+
+## Sends `action`'s event, pressed or released, through the viewport.
+func _send(action: StringName, pressed: bool) -> void:
+	var event: InputEventAction = InputEventAction.new()
+	event.action = action
+	event.pressed = pressed
+	get_viewport().push_input(event, true)
