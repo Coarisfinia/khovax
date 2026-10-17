@@ -1,11 +1,12 @@
 class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it (Settings so
-## far; the other tabs are their own issues). The `menu` action (Escape) opens and closes it, and
-## on touch screens a small button does; it eases in and out, never snaps. While it's open the game
-## hears no input: the player stands, and the touch stick and the Survey's pinch and keys rest. By
-## default it pauses single player (#302), a setting the player can change; co-op never pauses
-## (GameDriver.pause). Its text grows with the screen, so it stays readable on a phone.
+## far; Character, Survey and Quests follow: #391, #392, #388). The `menu` action (Escape) opens
+## and closes it, and on touch screens a small button does; it eases in and out, never snaps.
+## While it's open the game hears no input: the player stands, and the touch stick and the Survey's
+## pinch and keys rest. By default it pauses single player (#302), a setting the player can
+## change; co-op never pauses (GameDriver.pause). Its text grows with the screen, so it stays
+## readable on a phone.
 
 ## The pause setting and its choices, saved by number: never reorder.
 const PAUSE_SETTING: String = "pause_in_menu"
@@ -163,6 +164,7 @@ func _follow() -> void:
 		stick.let_go()
 		stick.set_process_input(not _open)
 	if pinch != null:
+		pinch.let_go()
 		pinch.set_process_input(not _open)
 
 

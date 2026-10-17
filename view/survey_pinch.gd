@@ -47,6 +47,13 @@ func _on_touch(touch: InputEventScreenTouch) -> void:
 	get_viewport().set_input_as_handled()
 
 
+## Forgets the fingers on the Survey as if they were lifted, e.g. when the menu opens over it
+## (GameMenu, #362) and their lifting never reaches this node.
+func let_go() -> void:
+	_fingers.clear()
+	_spread = 0.0
+
+
 ## Steps the zoom once the fingers have moved far enough apart or together since the last step.
 func _step() -> void:
 	var distance: float = _distance()
