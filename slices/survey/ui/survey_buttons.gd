@@ -225,12 +225,17 @@ func _on_click(click: InputEventMouseButton) -> void:
 			return
 
 
-## Presses or releases `action`, as its button would.
+## Presses or releases `action` as its TouchScreenButton does: held in Input at once, and handed
+## to the screen as an event, which SurveyChoice cycles or zooms on.
 func _send(action: StringName, pressed: bool) -> void:
+	if pressed:
+		Input.action_press(action)
+	else:
+		Input.action_release(action)
 	var press: InputEventAction = InputEventAction.new()
 	press.action = action
 	press.pressed = pressed
-	Input.parse_input_event(press)
+	get_viewport().push_input(press, true)
 
 
 ## Keeps the touch that pressed a button from reaching the touch stick or the pinch. Godot hands

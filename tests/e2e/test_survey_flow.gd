@@ -364,6 +364,11 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var buttons: SurveyButtons = main.get_node("Hud/SurveyButtons") as SurveyButtons
 	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
 	var viewport: Viewport = buttons.get_viewport()
+	# A click lands only on the screen, and the headless one is tiny: a desktop screen's size.
+	var window: Window = main.get_tree().root
+	var kept_size: Vector2i = window.size
+	window.size = Vector2i(SCREENS[0])
+	await main.get_tree().process_frame
 	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
 	pad.pressed = true
 	viewport.push_input(pad)
@@ -398,6 +403,7 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	buttons.lay_out()
 	if problem.is_empty() and (buttons.open or buttons.buttons[&"survey"].visible):
 		problem = "a click on the Survey's cogwheel didn't hide its buttons"
+	window.size = kept_size
 	return problem
 
 
