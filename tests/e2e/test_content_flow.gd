@@ -393,7 +393,7 @@ func _check_refused() -> String:
 ## what the glade's table gives (1 to 2 moss, or a single berry), and the same stream rolls the
 ## same loot.
 func _check_loot_rolls() -> String:
-	var content: Content = Content.load_loot_tables()
+	var content: Content = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		return "the loot tables didn't load: " + content.problem
 	var toad: LootTable = content.loot_tables["moss_toad"]

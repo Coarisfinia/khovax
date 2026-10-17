@@ -1,6 +1,7 @@
 class_name LootTable
 extends RefCounted
-## What a roll can give (#90), read from content data (data/loot_tables/, #72) by LootTableFile.
+## What a roll can give (#90), read from content data (the loot slice's data/loot_tables/, #72,
+## #412) by LootTableFile.
 ## Each entry is an item in an amount from `min` to `max`, or the blank, with a chance in
 ## thousandths; the chances add up to Fixed.ONE (100 %). A species table (#86) always holds one
 ## blank, which rolls on the

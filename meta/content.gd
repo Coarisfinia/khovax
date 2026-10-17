@@ -6,11 +6,11 @@ extends RefCounted
 ## unique and matching their file. Species are checked by Species (#279) and abilities by Ability,
 ## read by the species slice
 ## (SpeciesContent), loot tables (#90) by
-## LootTable, tile blueprints (#116) by TileBlueprint, and quests
+## LootTable, read by the loot slice (LootContent), tile blueprints (#116) by TileBlueprint, and
+## quests
 ## (#184) by QuestDefinition against the species, read by the quests slice (QuestContent). Here too:
 ## the field helpers they all use.
 
-const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
 
 ## Every species, by id.
@@ -25,20 +25,6 @@ var quests: Dictionary[String, QuestDefinition] = {}
 var abilities: Dictionary[String, Ability] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
-
-
-## Every loot table file in `directory`, read and checked.
-static func load_loot_tables(directory: String = LOOT_TABLES_DIR) -> Content:
-	var content: Content = Content.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var table: LootTable = LootTableFile.parse(file_name.get_basename(), text)
-			if not table.problem.is_empty():
-				content.problem = file_name + ": " + table.problem
-				return content
-			content.loot_tables[table.id] = table
-	return content
 
 
 ## Every tile blueprint file in `directory`, read and checked.
