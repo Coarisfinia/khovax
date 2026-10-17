@@ -703,8 +703,8 @@ func _check_companion_strikes() -> String:
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
 	if not _strikes_over(state, 1).is_empty():
 		return "the companion struck before it stood next to a wild monster"
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
-	state.entity(companions.companion_of(0)).tile = hemmed
+	var companion_id: int = (state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0)
+	state.entity(companion_id).tile = hemmed
 	var first: int = _wild(state).monsters[0]
 	var ticks: int = 4 * CompanionAttackFeature.STRIKE_TICKS
 	var strikes: Array[CompanionStruck] = _strikes_over(state, ticks)
@@ -716,10 +716,10 @@ func _check_companion_strikes() -> String:
 			damages,
 		]
 	if _wild(state).hp_of(first) != 1:
-		var left: int = _wild(state).hp_of(first)
-		return "the companion's hits left the wild monster at %d HP, not 1" % left
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
-	hiding.hidden.append_array(_wild(state).monsters)
+		return "the companion's hits left the wild monster at %d HP, not 1" % [
+			_wild(state).hp_of(first),
+		]
+	(state.feature(Features.HIDING) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
 	return ""
