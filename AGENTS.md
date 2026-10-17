@@ -302,7 +302,8 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read
-  only through that slice's accessor; the core gets plain integers and ids. Not Godot resources
+  only through that slice's accessor; the core gets plain integers and ids. The one exception: the
+  tile blueprints, which the core's `TileKinds` needs, are read by `Content` in `meta/`. Not Godot resources
   (owner, #72: no engine lock-in). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) bumps `Simulation.RULES_VERSION` and
   rehashes the golden replays, like any rule change.
