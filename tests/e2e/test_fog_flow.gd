@@ -3,7 +3,9 @@ extends RefCounted
 ## blocks sight and is seen itself, water doesn't block it, sight ends at the radius, it follows a
 ## player who walks, it's in the state hash, and a player who leaves loses it. An event reveals an
 ## area to every player (#177): only tiles of the region, each once, in the state hash. The glade's
-## lookout (#181) reveals the area around it the first time a player steps onto it, once.
+## lookout (#181) reveals the area around it the first time a player steps onto it, once. Sight
+## crosses the seam (#191): standing on an exit, a player sees the ground of the instance it leads
+## to, which the world hands over without loading it.
 
 const START: Vector2i = Vector2i(1, -1)
 const WEST: int = 3
@@ -19,6 +21,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_reveal()
 	if result.is_empty():
 		result = _check_lookout()
+	if result.is_empty():
+		result = _check_across_the_seam()
 	return result
 
 
@@ -120,6 +124,28 @@ func _check_lookout() -> String:
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if not fog.revealed.is_empty() or state.state_hash() == hashed:
 		return "a lookout revealed twice"
+	return ""
+
+
+## In the basic instance, the glade's ground next door is handed over without loading the glade,
+## and a player standing on the exit to it sees some of it, and nothing that is neither here nor there.
+func _check_across_the_seam() -> String:
+	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	if basic.next_door.is_empty() or world.instances.has(InstanceBlueprints.GLADE):
+		return "the basic instance has no ground next door, or the glade was loaded for it"
+	var exit: Vector3i = basic.region.exits[0]
+	basic.player(0).tile = Vector2i(exit.x, exit.y)
+	world.step(FlowSteps.command(Command.NO_MOVE))
+	var fog: FogFeature = basic.feature(Features.FOG) as FogFeature
+	var across: int = 0
+	for tile: Vector2i in fog.visible[0]:
+		if basic.next_door.has(tile):
+			across += 1
+		elif not basic.region.has_tile(tile):
+			return "the player sees %s, which is neither here nor next door" % tile
+	if across == 0:
+		return "a player on the exit sees nothing of the ground next door"
 	return ""
 
 

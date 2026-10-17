@@ -19,6 +19,8 @@ var visible: Dictionary[int, Array] = {}
 var revealed: Array[Vector2i] = []
 ## Where each player stood when their sight was last worked out, by slot.
 var _seen_from: Dictionary[int, Vector2i] = {}
+## The version of the ground next door the sight was last worked out with.
+var _next_door_version: int = 0
 
 
 func id() -> int:
@@ -104,13 +106,17 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("the sight of slot %d isn't of one player in the region" % slot)
 			return
 		_seen_from[slot] = from
-		visible[slot] = sight(state.region, from, SIGHT_RADIUS)
+		visible[slot] = sight(state.region, from, SIGHT_RADIUS, state.next_door)
 	revealed = values.tiles("revealed", state.region)
 	revealed.sort()
 
 
-## Works out again the sight of every player who moved; players who left lose theirs.
+## Works out again the sight of every player who moved, or everyone's when the ground next door
+## changed; players who left lose theirs.
 func _update(state: GameState) -> void:
+	if state.next_door_version != _next_door_version:
+		_next_door_version = state.next_door_version
+		_seen_from.clear()
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player == null:
@@ -118,34 +124,52 @@ func _update(state: GameState) -> void:
 			var _forgot: bool = _seen_from.erase(slot)
 		elif not _seen_from.has(slot) or _seen_from[slot] != player.tile:
 			_seen_from[slot] = player.tile
-			visible[slot] = sight(state.region, player.tile, SIGHT_RADIUS)
+			visible[slot] = sight(state.region, player.tile, SIGHT_RADIUS, state.next_door)
 
 
-## The tiles of `region` within `radius` of `from` that a straight line reaches without passing
-## over rock, in Hex.disc's order. Every line is worked out once per radius, from the origin, and
+## The tiles of `region`, or of the ground next door (#191), within `radius` of `from` that a
+## straight line reaches without passing over rock, in Hex.disc's order: sight crosses the seam.
+## Every line is worked out once per radius, from the origin, and
 ## walked from `from` (#289): a hex line doesn't depend on where it starts, so the tiles are the
 ## same
 ## as drawing each line afresh, without the work.
-static func sight(region: Region, from: Vector2i, radius: int) -> Array[Vector2i]:
+static func sight(
+		region: Region,
+		from: Vector2i,
+		radius: int,
+		next_door: Dictionary[Vector2i, int] = {},
+) -> Array[Vector2i]:
 	var seen: Array[Vector2i] = []
 	var lines: Array = _lines_within(radius)
 	var ends: Array[Vector2i] = Hex.disc(radius)
 	for i: int in ends.size():
 		var tile: Vector2i = from + ends[i]
 		var between: Array[Vector2i] = lines[i]
-		if region.has_tile(tile) and _clear(region, from, between):
+		if _ground(region, next_door, tile) >= 0 and _clear(region, next_door, from, between):
 			seen.append(tile)
 	return seen
 
 
 ## Whether nothing between a line's ends blocks sight, the line's tiles between them given as
-## offsets from `from`: no rock, and no gap in the region.
-static func _clear(region: Region, from: Vector2i, between: Array[Vector2i]) -> bool:
+## offsets from `from`: no rock, and no gap in the region or next door.
+static func _clear(
+		region: Region,
+		next_door: Dictionary[Vector2i, int],
+		from: Vector2i,
+		between: Array[Vector2i],
+) -> bool:
 	for offset: Vector2i in between:
-		var tile: Vector2i = from + offset
-		if not region.has_tile(tile) or region.terrain[tile] == Region.BLOCKED:
+		var ground: int = _ground(region, next_door, from + offset)
+		if ground < 0 or ground == Region.BLOCKED:
 			return false
 	return true
+
+
+## The terrain of `tile`, in the region or next door, or -1 where there's no ground.
+static func _ground(region: Region, next_door: Dictionary[Vector2i, int], tile: Vector2i) -> int:
+	if region.has_tile(tile):
+		return region.terrain[tile]
+	return next_door.get(tile, -1)
 
 
 ## The tiles between the origin and each tile of Hex.disc(radius), in the disc's order, worked out

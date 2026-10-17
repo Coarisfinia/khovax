@@ -285,6 +285,9 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   hour of play (`World.PURGE_TICKS`, in world ticks) is dropped, never the starting one; its
   generation goes up, and `World.seed_for` draws its seed for that generation, so its next visit
   arranges it anew, and what was explored in an older generation is forgotten (`ExploredGround`).
+  **Sight crosses the seam** (#191): the `World` hands each instance the ground of the ones its
+  exits lead to (`GameState.next_door`, from blueprint and seed, without loading them), so a
+  player near an exit sees into the next instance; what they see there counts as explored there.
 - **Instance blueprints** (`core/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.

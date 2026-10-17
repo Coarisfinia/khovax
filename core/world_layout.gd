@@ -40,7 +40,7 @@ func problem(world: World) -> String:
 	names.assign(_offsets.keys())
 	names.sort()
 	for instance_name: String in names:
-		for tile: Vector2i in _region(world, instance_name).sorted_tiles():
+		for tile: Vector2i in region(world, instance_name).sorted_tiles():
 			var placed: Vector2i = tile + _offsets[instance_name]
 			if taken.has(placed):
 				return "%s and %s would overlap on %s" % [taken[placed], instance_name, placed]
@@ -55,7 +55,7 @@ func _lay_out(world: World) -> void:
 	var queue: Array[String] = [world.start_name]
 	while not queue.is_empty():
 		var from: String = queue.pop_front()
-		var region: Region = _region(world, from)
+		var region: Region = region(world, from)
 		for i: int in region.exits.size():
 			var target: String = region.exit_blueprints[i]
 			var back: Vector3i = _way_back(world, target, from)
@@ -74,7 +74,7 @@ func _lay_out(world: World) -> void:
 ## The exit in `instance_name` that leads back to `from` as (q, r, side), or z = -1 when there's
 ## none.
 func _way_back(world: World, instance_name: String, from: String) -> Vector3i:
-	var region: Region = _region(world, instance_name)
+	var region: Region = region(world, instance_name)
 	for i: int in region.exits.size():
 		if region.exit_blueprints[i] == from:
 			return region.exits[i]
@@ -82,7 +82,7 @@ func _way_back(world: World, instance_name: String, from: String) -> Vector3i:
 
 
 ## The region of the blueprint `instance_name` for the world's seed, arranged once.
-func _region(world: World, instance_name: String) -> Region:
+func region(world: World, instance_name: String) -> Region:
 	if not _regions.has(instance_name):
 		_regions[instance_name] = InstanceBlueprints.region_of(
 			instance_name,

@@ -75,7 +75,7 @@ func show_state(delta: float) -> void:
 		if _since_switch >= Hex.distance(tile, _middle) * RING_SECONDS:
 			now = move_toward(now, target, EASE_PER_SECOND * delta)
 		brightness[tile] = now
-	_remember_next_door()
+	_remember_next_door(fog, delta)
 	cloud.show_fog(_region, brightness)
 
 
@@ -102,18 +102,26 @@ func _memory_of(instance_name: String) -> Dictionary[Vector2i, bool]:
 	return _seen_in.tiles_of(instance_name, _world.generation(instance_name))
 
 
-## Puts the light fog on the tiles next door that were seen while in that instance; the rest of
-## their ground stays under the thick cloud FogCloud starts with. No ally sees them from here, so
-## they don't ease: they show what is remembered from the moment they are drawn.
-func _remember_next_door() -> void:
+## Draws the ground next door: clear where an ally sees across the seam (#191), which then counts
+## as explored there, light fog where it was explored before, from here or from inside that
+## instance, and the thick cloud FogCloud starts with elsewhere. Remembered tiles show so from the
+## moment they are drawn; sight across the seam eases in and out like any other.
+func _remember_next_door(fog: FogFeature, delta: float) -> void:
 	var next_door: NeighbourView = cloud.neighbours
 	if next_door == null:
 		return
 	next_door.show_state()
 	for neighbour_name: String in next_door.shifts:
-		var seen: Dictionary = _seen_in.seen(neighbour_name, _world.generation(neighbour_name))
-		for tile: Vector2i in seen:
-			brightness[tile + next_door.shifts[neighbour_name]] = REMEMBERED
+		var shift: Vector2i = next_door.shifts[neighbour_name]
+		var seen: Dictionary[Vector2i, bool] = _memory_of(neighbour_name)
+		for tile: Vector2i in next_door.region_of(neighbour_name).sorted_tiles():
+			var here: Vector2i = tile + shift
+			var sighted: bool = fog.enabled and ally_sees(driver.state, here)
+			if sighted:
+				seen[tile] = true
+			var target: float = VISIBLE if sighted else (REMEMBERED if seen.has(tile) else UNSEEN)
+			var now: float = brightness.get(here, REMEMBERED if seen.has(tile) else UNSEEN)
+			brightness[here] = move_toward(now, target, EASE_PER_SECOND * delta)
 
 
 ## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
