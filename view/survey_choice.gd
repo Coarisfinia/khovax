@@ -54,24 +54,35 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Where the Survey shows: the player's choice, or Auto's. A saved value that isn't a place counts
 ## as Auto.
 func place_shown() -> Place:
-	var chosen: int = _chosen(PLACE_SETTING)
-	if chosen >= 0 and chosen < Place.size():
-		return chosen as Place
+	if _is_chosen(PLACE_SETTING, Place.size()):
+		return _chosen(PLACE_SETTING) as Place
 	return AUTO_PLACE
 
 
 ## The zoom step in use: the player's choice, or Auto's.
 func zoom_step() -> int:
-	var chosen: int = _chosen(ZOOM_SETTING)
-	if chosen >= 0 and chosen < ZOOMS.size():
-		return chosen
+	if _is_chosen(ZOOM_SETTING, ZOOMS.size()):
+		return _chosen(ZOOM_SETTING)
 	return AUTO_ZOOM
 
 
-## Shows the Survey in the next place, after the last one off again, and keeps that; returns why it
-## couldn't be saved, or "".
-func cycle() -> String:
-	return _choose(PLACE_SETTING, posmod(place_shown() + 1, Place.size()))
+## Where the Survey shows, as a menu (#355) shows it: "Top right", or "Auto (Top right)" while
+## Auto picks it. The words come from the place's name.
+func place_label() -> String:
+	var key: String = Place.keys()[place_shown()]
+	var words: String = key.to_lower().replace("_", " ")
+	return _labelled(PLACE_SETTING, Place.size(), words.left(1).to_upper() + words.substr(1))
+
+
+## The zoom as a menu shows it: "20 tiles across", or "Auto (20 tiles across)" while Auto picks it.
+func zoom_label() -> String:
+	return _labelled(ZOOM_SETTING, ZOOMS.size(), "%d tiles across" % roundi(ZOOMS[zoom_step()]))
+
+
+## Shows the Survey `steps` places on (back for fewer), after the last one off again, and keeps
+## that; returns why it couldn't be saved, or "".
+func cycle(steps: int = 1) -> String:
+	return _choose(PLACE_SETTING, posmod(place_shown() + steps, Place.size()))
 
 
 ## Steps the zoom `steps` closer (fewer is farther), within the steps there are, and keeps it;
@@ -113,6 +124,19 @@ func place_in(screen: Vector2) -> void:
 		MARGIN if left else screen.x - side - MARGIN,
 		MARGIN if top else screen.y - side - MARGIN,
 	)
+
+
+## Whether the player chose `setting`, as one of its `count` values; anything else counts as Auto.
+func _is_chosen(setting: String, count: int) -> bool:
+	var chosen: int = _chosen(setting)
+	return chosen >= 0 and chosen < count
+
+
+## `shown`, or "Auto (`shown`)" while Auto picks `setting`, one of `count` values.
+func _labelled(setting: String, count: int, shown: String) -> String:
+	if _is_chosen(setting, count):
+		return shown
+	return "Auto (%s)" % shown
 
 
 func _chosen(setting: String) -> int:

@@ -50,6 +50,14 @@ func steering() -> Vector2:
 	return _steer
 
 
+## Lets go of the steering finger as if it was lifted, e.g. when a menu opens over the stick
+## (SettingsMenu, #355).
+func let_go() -> void:
+	if is_held():
+		_finger = -1
+		_steer_toward(_origin)
+
+
 func _on_touch(touch: InputEventScreenTouch) -> void:
 	# A touch the system cancels (e.g. for a gesture) ends like a lifted finger.
 	var down: bool = touch.pressed and not touch.canceled
@@ -58,8 +66,7 @@ func _on_touch(touch: InputEventScreenTouch) -> void:
 		_origin = touch.position
 		_steer_toward(touch.position)
 	elif not down and touch.index == _finger:
-		_finger = -1
-		_steer_toward(_origin)
+		let_go()
 
 
 func _steer_toward(point: Vector2) -> void:
