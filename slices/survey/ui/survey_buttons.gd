@@ -77,12 +77,21 @@ func _input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		controller = false
-	var click: InputEventMouseButton = event as InputEventMouseButton
-	# A touch reaches the buttons as itself; the mouse click Godot makes up from it is skipped.
-	if click == null or click.device == InputEvent.DEVICE_ID_EMULATION:
-		return
-	controller = false
-	if click.button_index == MOUSE_BUTTON_LEFT:
+	# A click is let go here, wherever it's let go, so its action never stays pressed.
+	var click: InputEventMouseButton = _click_of(event)
+	if click != null:
+		controller = false
+		if not click.pressed and not _clicked.is_empty():
+			_send(_clicked, false)
+			_clicked = &""
+			_take_touch()
+
+
+## A click lands here only when no control took it first, so the open menu over the Survey keeps
+## its clicks.
+func _unhandled_input(event: InputEvent) -> void:
+	var click: InputEventMouseButton = _click_of(event)
+	if click != null and click.pressed and visible:
 		_on_click(click)
 
 
@@ -187,17 +196,18 @@ func _place(button: TouchScreenButton, middle: Vector2, side: float) -> void:
 	(button.shape as RectangleShape2D).size = Vector2(side, side)
 
 
+## `event` as a left click of a real mouse, or null. A touch reaches the buttons as itself, so the
+## click Godot makes up from it is skipped.
+func _click_of(event: InputEvent) -> InputEventMouseButton:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click == null or click.device == InputEvent.DEVICE_ID_EMULATION:
+		return null
+	return click if click.button_index == MOUSE_BUTTON_LEFT else null
+
+
 ## A left click on the cogwheel turns it; on a shown button it presses the button's action until
 ## it's let go, as a touch does. Either is taken, so nothing under it sees it.
 func _on_click(click: InputEventMouseButton) -> void:
-	if not click.pressed:
-		if not _clicked.is_empty():
-			_send(_clicked, false)
-			_clicked = &""
-			_take_touch()
-		return
-	if not visible:
-		return
 	if cog_rect().has_point(click.position):
 		toggle()
 		return
