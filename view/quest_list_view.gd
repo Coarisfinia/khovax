@@ -85,11 +85,17 @@ static func step_line(step: QuestStep, count: int) -> String:
 		"opened":
 			asks = "Open a chest"
 		"reached":
-			# A place has no player-facing name of its own yet: its id, in words.
-			asks = "Go to the " + step.place.replace("_", " ")
+			asks = "Go to the " + _words(step.place)
+		"entered":
+			asks = "Enter the " + _words(step.piece if step.instance.is_empty() else step.instance)
 	if step.count > 1:
 		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
 	return asks
+
+
+## An id (a place, a region piece or an instance) as words: they have no player-facing names yet.
+static func _words(id: String) -> String:
+	return id.replace("_", " ")
 
 
 ## A species' player-facing name (#351), after "a" or "an" by its first letter.

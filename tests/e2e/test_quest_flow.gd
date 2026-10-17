@@ -9,7 +9,8 @@ extends RefCounted
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
 ## asks for (#300), and a finished one has none. The list at the side of the screen (#340) shows
 ## each open quest's step and count, follows a step counting up, and drops a finished quest once
-## it has faded out. A player stepping into a place from outside it raises that the place was
+## it has faded out; the menu's Quests tab (#388) shows the same quests with every step, done,
+## current or later. A player stepping into a place from outside it raises that the place was
 ## reached, for that player only (#339); it finishes this player's quest to reach it, not another
 ## player's arrival, and the quest's marker points at the place's nearest tile. In the glade, a
 ## player raises that they entered each region piece they come to stand in, once each time it
@@ -118,11 +119,16 @@ func _check_beach_first(
 			"first_domination": "Go to the beach",
 			"three_moss_toads": "Dominate a Moss Toad  0/3",
 		})
+	var menu: GameMenu = list.get_parent().get_node("GameMenu") as GameMenu
+	if result.is_empty():
+		result = _check_quests_tab(menu, profile, "Now: Go to the beach\nLater: Dominate a monster")
 	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
 	if result.is_empty():
 		result = _check_marked_monster(driver, markers, profile)
 	if result.is_empty():
 		result = _check_listed(list, { "first_domination": "Dominate a monster" })
+	if result.is_empty():
+		result = _check_quests_tab(menu, profile, "Done: Go to the beach\nNow: Dominate a monster")
 	return result
 
 
@@ -198,6 +204,31 @@ func _check_listed(list: QuestListView, expected: Dictionary[String, String]) ->
 	for id: String in expected:
 		if list.shown.get(id, "") != expected[id] or not list.cards.has(id):
 			return "the quest list shows %s for %s, not %s" % [list.shown.get(id), id, expected[id]]
+	return ""
+
+
+## The menu's Quests tab lists every open quest with all its steps, each worded and marked done,
+## now or later in words: the first domination's as `first` says, and quests to enter a region piece
+## and an instance, which it's given for a moment.
+func _check_quests_tab(menu: GameMenu, profile: Profile, first: String) -> String:
+	var entered: Dictionary[String, String] = {
+		"enter_thicket": ENTER_THICKET,
+		"enter_glade": ENTER_GLADE,
+	}
+	for id: String in entered:
+		profile.quest_book[id] = QuestDefinition.parse(id, entered[id], {})
+	menu.quests_tab().refresh()
+	var expected: Dictionary[String, String] = {
+		"enter_glade": "Now: Enter the glade",
+		"enter_thicket": "Now: Enter the thicket",
+		"first_domination": first,
+		"three_moss_toads": "Now: Dominate a Moss Toad  0/3",
+	}
+	var shown: Dictionary[String, String] = menu.quests_tab().shown
+	for id: String in entered:
+		var _unbooked: bool = profile.quest_book.erase(id)
+	if shown != expected:
+		return "the Quests tab shows %s, not %s" % [shown, expected]
 	return ""
 
 
