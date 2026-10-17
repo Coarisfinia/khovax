@@ -58,7 +58,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		var limits: Array = [instance_name, region.starts.size(), players]
 		push_error("instance %s takes 0 to %d players, not %d" % limits)
 		return null
-	var species: Content = Content.load_species()
+	var species: Content = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [

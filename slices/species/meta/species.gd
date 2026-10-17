@@ -5,7 +5,7 @@ extends RefCounted
 ## ready for the simulation.
 
 const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pusher"]
-## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
+## A species file's fields, as its schema (slices/species/data/species.schema.json) allows them.
 const FIELDS: Array[String] = [
 	"id",
 	"name",
@@ -30,7 +30,8 @@ var strength: int = 0
 var speed: int = 0
 ## How it behaves as a wild monster against rings: one of ARCHETYPES (#222).
 var archetype: String = ""
-## Its abilities' ids (data/abilities/): its special attack and its two passives (#222).
+## Its abilities' ids (the species slice's data/abilities/): its special attack and its two passives
+## (#222).
 var special: String = ""
 var player_passive: String = ""
 var self_passive: String = ""
