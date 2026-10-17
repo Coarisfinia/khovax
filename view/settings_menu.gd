@@ -191,7 +191,9 @@ func _add_row(setting: String, title: String, label: Callable, stepper: Callable
 func _label(text: String) -> Label:
 	var label: Label = Label.new()
 	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# One line each, cut short with an ellipsis rather than wrapped: a wrapped label's height
+	# depends on a width its container only gives it later, so the menu's size would lag.
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	return label
 
