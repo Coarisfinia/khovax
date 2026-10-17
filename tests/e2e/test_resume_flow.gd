@@ -391,8 +391,9 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 
 
 ## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
-## without what was seen in the glade before: it comes back arranged anew. What was seen in the
-## basic instance is kept.
+## without what was seen in the glade before: it comes back arranged anew, and only what is seen of
+## it from next door now (#191) is remembered, at its new generation. What was seen in the basic
+## instance is kept.
 func _check_purged_explored(tree: SceneTree) -> String:
 	var world: World = World.new(SEED, InstanceBlueprints.BASIC)
 	for direction: int in [EAST, 1, EAST, 3]:
@@ -406,11 +407,11 @@ func _check_purged_explored(tree: SceneTree) -> String:
 	var main: Node = _boot(tree)
 	await tree.process_frame
 	var explored: ExploredGround = (main.get_node("WorldKeeper") as WorldKeeper).explored
-	var glade: Dictionary = explored.tiles_in.get(InstanceBlueprints.GLADE, {})
+	var glade_generation: int = explored.generations.get(InstanceBlueprints.GLADE, 1)
 	var basic: Dictionary = explored.tiles_in.get(InstanceBlueprints.BASIC, {})
 	main.queue_free()
 	await tree.process_frame
-	if not glade.is_empty() or basic.is_empty():
+	if glade_generation != 1 or basic.is_empty():
 		return "resumed, the purged glade's old ground came back, or the basic instance's didn't"
 	return ""
 

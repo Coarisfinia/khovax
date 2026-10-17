@@ -881,18 +881,31 @@ func _tile_of(state: GameState, id: String, seen: bool) -> Vector2i:
 	return Vector2i.MAX
 
 
-## Neighbours are unexplored ground: every tile of theirs lies under thick cloud.
+## Neighbours are unexplored ground: every tile of theirs out of sight from anywhere here lies
+## under thick cloud (nearer ones may have been seen across the seam, #191).
 func _check_neighbour_cloud(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	var fog: FogView = main.get_node("FogView") as FogView
 	fog.show_state(10.0)
-	var placed: Array[Vector2i] = view.placed_tiles()
-	if placed.is_empty():
-		return "no neighbour tiles to cover"
-	for tile: Vector2i in placed:
+	var region: Region = view.driver.state.region
+	var far: Array[Vector2i] = []
+	for tile: Vector2i in view.placed_tiles():
+		if _farther_than_sight(region, tile):
+			far.append(tile)
+	if far.is_empty():
+		return "no neighbour tiles out of sight to cover"
+	for tile: Vector2i in far:
 		if fog.cloud.fog_on(tile) != Vector2(1.0, 0.0):
 			return "neighbour tile %s isn't under thick cloud: %s" % [tile, fog.cloud.fog_on(tile)]
 	return ""
+
+
+## Whether `tile` lies beyond sight from every tile of `region`.
+static func _farther_than_sight(region: Region, tile: Vector2i) -> bool:
+	for here: Vector2i in region.sorted_tiles():
+		if Hex.distance(here, tile) <= FogFeature.SIGHT_RADIUS:
+			return false
+	return true
 
 
 ## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
