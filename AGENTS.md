@@ -300,9 +300,10 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   inside the simulation. Saves are versioned JSON of integers and ids only, kept by `SaveStore`;
   gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`, `WorldKeeper`).
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
-  files in `data/<kind>/`, one per entry and named after its id, with a JSON Schema in
-  `data/schemas/<kind>.schema.json`. Not Godot resources (owner, #72: no engine lock-in). `meta/`
-  reads them (`Content`) and hands the simulation plain integers and ids. **Tile traits are
+  files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
+  #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read
+  only through that slice's accessor; the core gets plain integers and ids. Not Godot resources
+  (owner, #72: no engine lock-in). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) bumps `Simulation.RULES_VERSION` and
   rehashes the golden replays, like any rule change.
 - **`input/`, the input layer:** devices to commands. Every device presses the same InputMap
