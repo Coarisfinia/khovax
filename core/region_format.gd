@@ -21,6 +21,8 @@ const CONNECTOR: String = "connector "
 const EXIT: String = "exit "
 ## The start of a line naming a wild monster spot's species (#133).
 const SPECIES: String = "species "
+## A species line's last word for a wild monster that starts wounded (#389).
+const WOUNDED: String = "wounded"
 ## The start of a tile trigger's line (#181, #183).
 const TRIGGER: String = "trigger "
 ## The start of a line placing loot on the ground on a tile (#203).
@@ -222,13 +224,15 @@ static func _parse_tile_extra(region: Region, tile: Vector2i, extra: String) -> 
 ## of a wild monster spot, once.
 static func _parse_species(region: Region, line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
-	var numbers: bool = parts.size() == 4 and parts[1].is_valid_int() and parts[2].is_valid_int()
+	var wounded: bool = parts.size() == 5 and parts[4] == WOUNDED
+	var sized: bool = parts.size() == 4 or wounded
+	var numbers: bool = sized and parts[1].is_valid_int() and parts[2].is_valid_int()
 	if not numbers:
-		return "a species line reads \"species <q> <r> <species id>\": " + line
+		return "a species line reads \"species <q> <r> <species id> [wounded]\": " + line
 	var spot: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
-	if not region.wild_monsters.has(spot) or region.named_species.has(spot):
+	if not region.wild_monsters.has(spot) or region.wild_spots.has(spot):
 		return "species %s names no wild monster spot, or one named before" % spot
-	region.named_species[spot] = parts[3]
+	region.wild_spots[spot] = WildSpot.new(parts[3], wounded)
 	return ""
 
 

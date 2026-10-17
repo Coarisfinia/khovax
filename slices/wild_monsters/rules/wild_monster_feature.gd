@@ -27,6 +27,9 @@ const MOST_RAGE: int = 3
 ## How many ticks a wild monster that can't be ringed where it stands takes for each step away: its
 ## own pace, slower than a player's. A placeholder to tune (#364).
 const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
+## The share of its full HP a wild monster a region marks wounded starts with (#389), in
+## thousandths. A placeholder to tune.
+const WOUNDED_HP: int = 250
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
@@ -81,7 +84,8 @@ func start(state: GameState) -> void:
 	var rng: Rng = Rng.new(state.rng_seed, id())
 	_known = roster.duplicate()
 	for spot: Vector2i in state.region.wild_monsters:
-		var species: String = state.region.named_species.get(spot, "")
+		var named: WildSpot = state.region.wild_spots.get(spot)
+		var species: String = named.species if named != null else ""
 		if species.is_empty() and not roster.is_empty():
 			species = roster[rng.pick_weighted(weights)]
 		if not _known.has(species):
@@ -91,6 +95,8 @@ func start(state: GameState) -> void:
 		monsters.append(monster.id)
 		_species[monster.id] = species
 		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
+		if named != null and named.wounded:
+			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
 	_known.sort()
 
 

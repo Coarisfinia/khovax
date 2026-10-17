@@ -13,7 +13,8 @@ extends RefCounted
 ## is, as a list item "- `X`: <meaning>", the meaning being one of:
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
-## - `a wild monster, always <species id>`: a wild monster of a named species (#133)
+## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
+##   `, wounded` after it, it starts at a low share of its HP (#389)
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
@@ -232,6 +233,9 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 	if meaning.begins_with("exit to the ") and side >= 0 and words.size() >= 6:
 		return "%s%s %d %s" % [RegionFormat.EXIT, where, side, words[-1]]
 	if meaning.begins_with("a wild monster, always ") and words.size() >= 5:
+		# `a wild monster, always <species>, wounded`: it starts at a low share of its HP (#389).
+		if words[-1] == RegionFormat.WOUNDED and words.size() >= 6:
+			return "%s%s %s %s" % [RegionFormat.SPECIES, where, words[-2], RegionFormat.WOUNDED]
 		return "%s%s %s" % [RegionFormat.SPECIES, where, words[-1]]
 	# A trigger names what it is before the "; ", and its when and action after.
 	if meaning.contains("; ") and not meaning.get_slice("; ", 0).strip_edges().is_empty():
