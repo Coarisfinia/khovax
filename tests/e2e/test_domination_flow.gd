@@ -1,19 +1,18 @@
 extends RefCounted
 ## Domination flow (#20, #219): the player walks a ring around the basic region's wild monster at
-## (-2, 0), and the ring waits for a totem (#423), as long as it takes, the monster encircled; a
-## totem placed off the ring, or by a player out of charges, does nothing. The player's totem placed
-## on the ring (the place_totem key) spends a charge, and the ring seals: the monster pushes on it,
-## and once the ring has held for its seal ticks (not a tick before) the monster is dominated: it
-## leaves the world, the domination is announced, the trail starts over, and its figure shrinks
-## away. While it seals, the ring fills on screen and a save resumes it exactly. An open ring, a
-## walk that only touches the wild monster,
-## and a ring around another tile dominate nothing. Allies share one trail (#87): two players
-## close one ring together, and the domination goes to the lowest slot among those who colored its
-## wall (owner, #86), whoever's move closed it; the ring then comes off the trail, the trail leading
-## up to it stays. A ring around several monsters splits them by contribution (#260): two allies who
-## each colored half of it get one each, and the owner's examples split as decided.
-## Domination is deterministic. A domination by this
-## machine's player lands in their profile and its save at once (#132), as the species it was:
+## (-2, 0), and the ring waits for a totem (#423), the monster encircled, until it wears the ring
+## through (#422); a totem placed off the ring, or by a player out of charges, does nothing. The
+## player's totem placed on the ring (the place_totem key) spends a charge, and the ring seals: the
+## monster pushes on it, and once the ring has held for its seal ticks (not a tick before) the
+## monster is dominated: it leaves the world, the domination is announced, the trail starts over,
+## and its figure shrinks away. While it seals, the ring fills on screen and a save resumes it
+## exactly. An open ring, a walk that only touches the wild monster, and a ring around another tile
+## dominate nothing. Allies share one trail (#87): two players close one ring together, and the
+## domination goes to the lowest slot among those who colored its wall (owner, #86), whoever's move
+## closed it; the ring then comes off the trail, the trail leading up to it stays. A ring around
+## several monsters splits them by contribution (#260): two allies who each colored half of it get
+## one each, and the owner's examples split as decided. Domination is deterministic. A domination by
+## this machine's player lands in their profile and its save at once (#132), as the species it was:
 ## named by its spot, or rolled from the blueprint's list (#133).
 ##
 ## The issue's outcomes (#219), at level 1 with the placeholder constants, in a disc of test
@@ -33,7 +32,9 @@ extends RefCounted
 ## one hiding in its tile alone, and one sealing in a ring (#409): its seal was worked out from its
 ## HP, so a save taken mid-seal resumes. A save taken while a ring waits resumes too. Its player
 ## fires its special attack (#410): lethal, it fells the wild monster next to it, which faints for
-## good where it fell, and then it cools down.
+## good where it fell, and then it cools down. A wild monster strikes once a second too (#422): the
+## companion next to it first, then the player, then the trail, whose tile gives way once worn
+## through; encircled, it strikes only its ring's wall, and wearing through it breaks the ring.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -203,8 +204,8 @@ func _check_other_ring() -> String:
 	return _check_waits_for_totem()
 
 
-## The full ring doesn't seal by itself (#423): it waits for a totem, however long, the wild monster
-## encircled. A totem placed one step off the ring does nothing; back on it, the totem spends one
+## The full ring doesn't seal by itself (#423): it waits for a totem, the wild monster encircled. A
+## totem placed one step off the ring does nothing; back on it, the totem spends one
 ## charge and the ring seals, and holding it there spends no more. A player out of charges places
 ## none.
 func _check_waits_for_totem() -> String:
@@ -213,7 +214,8 @@ func _check_waits_for_totem() -> String:
 	var player: Entity = state.player(0)
 	var domination: DominationFeature = _domination(state)
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
-	for _tick: int in MOST_SEAL_TICKS:
+	# A while, but not so long that the monster wears the ring through (#422).
+	for _tick: int in 2 * WildAttackFeature.STRIKE_TICKS:
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if not domination.seals.is_empty() or not domination.is_encircled(monster_id):
 		return "a closed ring didn't wait for a totem with the wild monster encircled"
@@ -903,7 +905,7 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 	var next: Array[SpecialStruck] = _specials_in(state, _fire())
 	if next.size() != 1 or next[0].monster_id != second or not next[0].felled:
 		return "the special, ready again, didn't fell the next wild monster"
-	return ""
+	return _check_wild_attacks()
 
 
 ## Whether the feature `feature_id` of `state`, saved and loaded into `reloaded_state`, hashes the
@@ -931,13 +933,125 @@ static func _specials_in(state: GameState, commands: Array[Command]) -> Array[Sp
 	return struck
 
 
-## A disc with a weak wild monster on each of `spots`, hiding and companions.
+## A weak wild monster strikes once a second, for its strength (#422): the companion next to it
+## first, then, with the companion away, the player next to it, then, with the player away too,
+## the trail tile next to it, which gives way on the strike that wears it through, not one before.
+func _check_wild_attacks() -> String:
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	var state: GameState = _strike_state(spots)
+	state.companions[0] = WEAK
+	var beside: Vector2i = Vector2i(1, 0)
+	var player: Entity = state.add_entity(0, beside)
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var companion_id: int = (state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0)
+	var struck: String = _struck_once(state, Vector2i(-1, 0), companion_id, "the companion")
+	if struck.is_empty():
+		struck = _struck_once(state, Vector2i(-3, 0), player.id, "the player")
+	if not struck.is_empty():
+		return struck
+	player.tile = Vector2i(3, 0)
+	var hits: int = Fixed.div_floor(
+		WildAttackFeature.TILE_INTEGRITY + WEAK_STRENGTH - 1,
+		WEAK_STRENGTH,
+	)
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var gave_way: Callable = func() -> bool: return not trail.tiles.has(beside)
+	struck = _wears_through(state, beside, hits, gave_way)
+	if not struck.is_empty():
+		return "the trail beside it: " + struck
+	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
+		return "the wild monster struck with nothing next to it"
+	return _check_ring_worn(state, player, hits)
+
+
+## Why the wild monster in `state` didn't strike `tile` once a second and wear it through with
+## `hits` strikes, `gone` turning true on the last one and not before, or "".
+func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable) -> String:
+	for hit: int in hits:
+		var strikes: Array[WildMonsterStruck] = _wild_strikes_over(
+			state,
+			WildAttackFeature.STRIKE_TICKS,
+			Vector2i(-3, 0),
+		)
+		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != tile:
+			return "not struck once in second %d" % hit
+		if gone.call() != (hit == hits - 1):
+			return "gave way after %d strikes, not %d" % [hit + 1, hits]
+	return ""
+
+
+## The player rings the wild monster in `state` and the ring waits for a totem (#423): encircled,
+## the monster strikes only the ring's wall segment nearest to it, even with the player beside it,
+## and the ring breaks on the `hits`-th strike that wears it through, not one before, and comes off
+## the trail but for the tile the player stands on.
+func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	player.tile = ring[0]
+	var _colored: bool = trail.color(ring[0], player.id)
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
+	var domination: DominationFeature = _domination(state)
+	if domination.encircled.keys() != [player.id]:
+		return "the ring around the attacking wild monster didn't wait for a totem"
+	var walls: Array[Vector2i] = domination.ring_waiting(state, player.id)
+	var wall: Vector2i = walls[RingShape.nearest(walls, Vector2i.ZERO)]
+	var waiting: Dictionary = domination.encircled
+	var broken: Callable = func() -> bool: return waiting.is_empty()
+	var worn: String = _wears_through(state, wall, hits, broken)
+	if not worn.is_empty():
+		return "the waiting ring's nearest wall: " + worn
+	for each: Vector2i in walls:
+		if each != player.tile and trail.tiles.has(each):
+			return "the broken ring's wall %s stayed on the trail" % each
+	return ""
+
+
+## Why the wild monster didn't strike `target_id` (`what`) exactly once over a second with the
+## companion on `companion_tile`, or "".
+func _struck_once(
+		state: GameState,
+		companion_tile: Vector2i,
+		target_id: int,
+		what: String,
+) -> String:
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, companion_tile)
+	if strikes.size() != 1 or strikes[0].target_id != target_id:
+		return "the wild monster didn't strike %s once in a second" % what
+	return ""
+
+
+## The wild monsters' strikes over `ticks` ticks of the player standing still, with the player's
+## companion put on `companion_tile` before each.
+func _wild_strikes_over(
+		state: GameState,
+		ticks: int,
+		companion_tile: Vector2i,
+) -> Array[WildMonsterStruck]:
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var strikes: Array[WildMonsterStruck] = []
+	for _tick: int in ticks:
+		var companion: Entity = state.entity(companions.companion_of(0))
+		if companion != null:
+			companion.tile = companion_tile
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			if event is WildMonsterStruck:
+				strikes.append(event as WildMonsterStruck)
+	return strikes
+
+
+## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
+## specials, and the wild monsters' attacks.
 func _strike_state(spots: Array[Vector2i]) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		TrailFeature.new(),
 		WildMonsterFeature.new([], [], { WEAK: OUTCOME_HP }, { WEAK: WEAK_STRENGTH }),
+		DominationFeature.new(),
+		WildAttackFeature.new(),
 		HidingFeature.new(),
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),

@@ -67,6 +67,9 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		TrailFeature.new(),
 		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
+		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
+		# wild monsters of a ring that broke.
+		WildAttackFeature.new(),
 		_domination_loot(instance_name),
 		EnrageFeature.new(),
 		FogFeature.new(),

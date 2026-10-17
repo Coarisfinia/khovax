@@ -86,6 +86,7 @@ func run(tree: SceneTree) -> String:
 	_driver.set_process(false)
 	_player_view.set_process(false)
 	_trail_view.set_process(false)
+	var _connected: int = _driver.ticked.connect(_forget_worn)
 	_walked = { _tile(): true }
 
 	var result: String = _check_bindings()
@@ -368,8 +369,18 @@ func _check_look(walked: bool, ran: bool, last_from: Vector2i) -> String:
 	return ""
 
 
-## The trail is exactly the start tile and every tile walked onto so far, and the grid shows those
-## tiles, and only those, in the trail color.
+## Forgets a walked tile a wild monster wore off the trail this tick (#422): the walks linger beside
+## one. The domination flow checks the wear itself.
+func _forget_worn(_tick: int, events: Array[RefCounted]) -> void:
+	var trail: Trail = (_driver.state.feature(Features.TRAIL) as TrailFeature).shared
+	for event: RefCounted in events:
+		var struck: WildMonsterStruck = event as WildMonsterStruck
+		if struck != null and struck.target_id == 0 and not trail.tiles.has(struck.tile):
+			var _forgotten: bool = _walked.erase(struck.tile)
+
+
+## The trail is exactly the start tile and every tile walked onto so far, but those a wild monster
+## wore away, and the grid shows those tiles, and only those, in the trail color.
 func _check_trail() -> String:
 	var expected: Array[Vector2i] = []
 	expected.assign(_walked.keys())
