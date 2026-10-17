@@ -111,6 +111,14 @@ fixes, then performance (e.g. the web build loading in under 2 s, #265), then ar
 cleanup, then gameplay features (rules and mechanics), then UI, then visuals, then assets and
 models.
 
+**Usage budget** (owner's rule): before taking on new work, check the usage with `claude-usage
+--reset` (the session and week in percent, and when the week resets). Stop once the week's usage
+left is down to 20% for every work day (Monday to Friday) left before the week resets, and never
+below 20% in any case: with three work days to go, stop at 60% left; with one or none, at 20%.
+Stopping means no new work: finish answering, tell the owner, and wait for the reset.
+The week doesn't reset on a fixed day: take the date from `claude-usage --reset`, which reads it
+from the endpoint.
+
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
 
