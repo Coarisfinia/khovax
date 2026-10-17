@@ -6,7 +6,7 @@ extends RefCounted
 ## Every instance's seed comes from the world's seed, its name and its generation, which goes up
 ## with each purge, so the same world loads the same instance the same way however and whenever
 ## it's reached, and a purged one comes back arranged anew. Players walk from one instance into
-## the next through exits (#154). Deterministic, like everything in sim/.
+## the next through exits (#154). Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.

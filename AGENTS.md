@@ -184,21 +184,21 @@ Game logic and control logic are strictly separated (owner's rule, #26), so that
 and the same commands always give the same game: for replays, lockstep co-op and tests.
 
 ```
-devices -> input/ -> Command -> sim/ -> GameState -> view/
+devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/, mechanics/*/look/
                         ^
               game/ driver: fixed ticks
 ```
 
 - **Vertical slices** (owner, #290): each mechanic lives in one folder, `mechanics/<name>/`, with
-  its rules in `rules/` (the simulation's, under every rule below for `sim/`, checked by CI the
+  its rules in `rules/` (the simulation's, under every rule below for `core/`, checked by CI the
   same way) and its look in `look/` (views, under the rules for `view/`). The split between rules
   and look holds inside every slice. Shared slices (the trail, loot tables) come before the ones that
   use them. **The core never depends on a slice:** data the core holds (a region's `TileTrigger`)
   and events it reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and
-  only the rules that run them move. The mechanics move out of `sim/` and `view/` one slice per PR (catching first, #296;
-  the rest #297); what's left of `sim/` then becomes `core/`.
-- **`sim/`, the simulation:** the core (`Simulation.step(state, commands)`, `GameState`, the grid
-  math `Hex`) and the features. Plain `RefCounted` classes (or subclasses of `sim/` classes),
+  only the rules that run them move. The core is `core/` (#297): the tick, the state, the region,
+  the world, the grid math and the feature list.
+- **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
+  math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
   `Engine`, `OS`, global randomness, frame `delta` or `float`: CI greps for them. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
@@ -213,7 +213,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a session (e.g. a boss phase). The core holds no game rule: only the
   tick, the seed, the region, the entities and the instance's features in their step order. A feature
-  (`sim/features/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
+  (in its slice's `rules/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
   a `step` called in order each tick, the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other: a feature may read the features it `requires` and change them only through
@@ -244,7 +244,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   hour of play (`World.PURGE_TICKS`, in world ticks) is dropped, never the starting one; its
   generation goes up, and `World.seed_for` draws its seed for that generation, so its next visit
   arranges it anew, and what was explored in an older generation is forgotten (`ExploredGround`).
-- **Instance blueprints** (`sim/blueprints/`, `InstanceBlueprints`): which region (a file in
+- **Instance blueprints** (`core/blueprints/`, `InstanceBlueprints`): which region (a file in
   `regions/`) and which features in which order; players start on the region's starts. A new
   mechanic is a new feature that blueprints list; it never grows the core.
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
@@ -256,12 +256,12 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   **instance blueprint** is what an instance is loaded from (its region pieces and features); an
   **instance** is a loaded one (its region and state, #119); the **region** is the arranged place;
   a **region piece** is a hand-made piece a region is arranged from.
-- **Commands** (`sim/command.gd`): the only way into the simulation. One per player per tick,
+- **Commands** (`core/command.gd`): the only way into the simulation. One per player per tick,
   indexed by player slot (`Command.of`), integers only. The starting state plus every tick's
   commands is a replay.
 - **`meta/`, the layers above the simulation** (#37): the player's `Profile` (captured monsters, the
   three they carry, materials, unlocked slots) lasts between sessions. There are no runs (#183): the player roams one
-  persistent `World`, built from a seed, deterministic like everything in `sim/`. A **session** is
+  persistent `World`, built from a seed, deterministic like all of the simulation. A **session** is
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
   technical and never shown to the player. Each catch or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
@@ -298,7 +298,7 @@ devices -> input/ -> Command -> sim/ -> GameState -> view/
   from the chart, never two types of one family, loot chances adding up to 100 %). Loot tables
   (`LootTable`, #90) roll from the `Rng` they're given, so a feature's stream rolls the same loot.
   Tile blueprints (`TileBlueprint`, #116) each carry a permanent `number`, never reused or
-  changed once shipped, which `Region.terrain` holds; `TileKinds` in `sim/` keeps only each kind's
+  changed once shipped, which `Region.terrain` holds; `TileKinds` in `core/` keeps only each kind's
   id, number and traits, and the views read the look (`TileLooks`). **Tile traits are rules:**
   changing one (e.g. `walkable`) changes what the game does, so it bumps
   `Simulation.RULES_VERSION` and rehashes the golden replays, like any rule change.
