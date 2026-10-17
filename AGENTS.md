@@ -108,6 +108,9 @@ out of date.
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
 
+**Refactors and cleanups always come first** (owner's rule, on #384): while one is open (like the
+move to slices, #375 to #381), it goes before any new feature.
+
 **The order issues are taken in** (owner's rule), after `blocking` ones: CI/CD fixes, then bug
 fixes, then performance (e.g. the web build loading in under 2 s, #265), then architecture, then
 cleanup, then gameplay features (rules and mechanics), then UI, then visuals, then assets and
