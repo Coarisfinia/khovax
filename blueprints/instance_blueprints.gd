@@ -58,7 +58,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		var limits: Array = [instance_name, region.starts.size(), players]
 		push_error("instance %s takes 0 to %d players, not %d" % limits)
 		return null
-	var species: Content = Content.load_species()
+	var species: Content = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [
@@ -165,7 +165,7 @@ static func _companions(content: Content) -> CompanionFeature:
 ## `content` and the ability data; a special that doesn't load is an error, and its species has
 ## none.
 static func _specials(content: Content) -> SpecialAttackFeature:
-	var abilities: Content = Content.load_abilities()
+	var abilities: Content = SpeciesContent.load_abilities()
 	if not abilities.problem.is_empty():
 		push_error("the abilities don't load: " + abilities.problem)
 	var powers: Dictionary[String, int] = {}

@@ -1,6 +1,7 @@
 class_name Ability
 extends RefCounted
-## Something a species brings (#222), read from content data (data/abilities/, #72): a special
+## Something a species brings (#222), read from content data (the species slice's data/abilities/,
+## #72, #412): a special
 ## attack the player triggers (#221), a passive that helps the player while the companion is
 ## active (e.g. stronger warding, #223), or a passive that helps the companion itself. Each species
 ## names one of each; what they do comes with the systems that use them. A special attack is one
@@ -11,7 +12,7 @@ const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"
 const SELF_PASSIVE: String = "self_passive"
 const KINDS: Array[String] = [SPECIAL, PLAYER_PASSIVE, SELF_PASSIVE]
-## An ability file's fields, as its schema (data/schemas/abilities.schema.json) allows them.
+## An ability file's fields, as its schema (slices/species/data/abilities.schema.json) allows them.
 const FIELDS: Array[String] = [
 	"id",
 	"kind",

@@ -11,9 +11,9 @@ const DIR: String = "res://slices/quests/data/quests/"
 ## `species_directory`.
 static func load_quests(
 	directory: String = DIR,
-	species_directory: String = Content.SPECIES_DIR,
+	species_directory: String = SpeciesContent.SPECIES_DIR,
 ) -> Content:
-	var content: Content = Content.load_species(species_directory)
+	var content: Content = SpeciesContent.load_species(species_directory)
 	if not content.problem.is_empty():
 		return content
 	# Sorted, so the quests are read in the same order on every machine.
