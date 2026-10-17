@@ -1312,9 +1312,9 @@ func _check_species() -> String:
 ## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never
 ## below 1, while the one beside it starts at full.
 func _check_wounded() -> String:
-	var tiles: String = "# W\n\n## Tiles\n\n```\nw 1 m\n```\n\n## Legend\n\n"
+	var tiles: String = "# W\n\n## Tiles\n\n```\nw 1 t\n```\n\n## Legend\n\n"
 	tiles += "- `w`: a wild monster, always moss_toad, wounded\n"
-	tiles += "- `m`: a wild monster, always moss_toad\n"
+	tiles += "- `t`: a wild monster, always moss_toad\n"
 	var region: Region = RegionDocument.parse(tiles)
 	var marked: int = 0
 	for spot: WildSpot in region.wild_spots.values():
