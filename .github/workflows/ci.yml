@@ -86,16 +86,19 @@ jobs:
         # what nothing in the whole project names (#315).
         run: bash tools/unused_code.sh
 
+      - name: "🧭 Check the core never depends on a slice and paths are absolute"
+        run: bash tools/import_rules.sh
+
       - name: "🎲 Check the simulation stays deterministic"
-        # core/ and every mechanic's rules/ hold the rules: plain RefCounted classes without nodes,
+        # core/ and every slice's rules/ hold the rules: plain RefCounted classes without nodes,
         # input, time, engine or OS state, global randomness, frame delta or floats (see AGENTS.md,
         # "Architecture"; vertical slices, #290).
         # Comments are stripped first (a # outside strings), so the rules can be explained in them.
         run: |
           forbidden='\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
           failed=0
-          mapfile -t mechanic_rules < <(find mechanics -type d -name rules -print)
-          rules=(core "${mechanic_rules[@]}")
+          mapfile -t slice_rules < <(find slices -type d -name rules -print)
+          rules=(core "${slice_rules[@]}")
           # A rules script extends RefCounted, or another class of the rules (e.g. Feature).
           rule_classes=$(grep -rh '^class_name ' "${rules[@]}" | awk '{print $2}' | paste -sd'|' -)
           while read -r file; do
