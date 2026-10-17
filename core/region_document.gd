@@ -20,7 +20,9 @@ extends RefCounted
 ## - `loot on the ground`: loot the first player to step here finds, every player in the instance
 ##   getting their own roll, like a chest's (#203)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
-##   within 8`, with TileTrigger's whens and actions in words: `stepping here`, `reveals within <n>`
+##   within 8`, with TileTrigger's whens and actions in words: `stepping here`,
+##   `reveals within <n>`, `reaches the place <place id>` (#339: every tile of a place has it, e.g.
+##   `the beach; stepping here reaches the place beach`)
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`; any single character can
 ##   stand for it, an emoji too. Clauses after the kind, each after a ", ", change that tile:
 ##   `turned <n>` turns its decoration by n sixths of a turn, counter-clockwise (#231), so two
@@ -164,12 +166,17 @@ static func _origin(rows: Array[String]) -> Vector2i:
 ## on `where`, or "" when it isn't one TileTrigger knows.
 static func _trigger_line(clause: String, where: String) -> String:
 	var whens: Dictionary[String, String] = { "stepping here ": TileTrigger.STEP }
-	var actions: Dictionary[String, String] = { "reveals within ": TileTrigger.REVEAL }
+	var actions: Dictionary[String, String] = {
+		"reveals within ": TileTrigger.REVEAL,
+		"reaches the place ": TileTrigger.REACH,
+	}
 	for phrase: String in whens:
 		var rest: String = clause.trim_prefix(phrase)
 		for action: String in actions:
 			var amount: String = rest.trim_prefix(action)
-			if clause.begins_with(phrase) and rest.begins_with(action) and amount.is_valid_int():
+			var reach: bool = actions[action] == TileTrigger.REACH
+			var known: bool = TileTrigger.is_place_id(amount) if reach else amount.is_valid_int()
+			if clause.begins_with(phrase) and rest.begins_with(action) and known:
 				return "%s%s %s %s %s" % [
 					RegionFormat.TRIGGER,
 					where,

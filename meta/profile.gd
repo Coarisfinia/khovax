@@ -54,6 +54,8 @@ func apply(result: Gain) -> String:
 		_advance_quests("dominated", species)
 	for _chest: int in result.chests_opened:
 		_advance_quests("opened", "")
+	for place: String in result.places_reached:
+		_advance_quests("reached", place)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -67,13 +69,13 @@ func _dominate(species: String) -> void:
 	next_monster_id += 1
 
 
-## Counts one fact (a `condition`, with the species of a domination) toward every quest in the book
-## whose current step asks for it, in id order, so quests finished together are listed in the same
-## order on every machine. A step that reaches its count hands over to the next one, and the last
-## step finishes the quest. Saved progress that no longer fits the quest (its data changed since)
-## settles at the next fact of any kind: a step already at its count is complete, and a step past
-## the last one finishes the quest.
-func _advance_quests(condition: String, species: String) -> void:
+## Counts one fact (a `condition`, with the species of a domination or the place reached) toward
+## every quest in the book whose current step asks for it, in id order, so quests finished together
+## are listed in the same order on every machine. A step that reaches its count hands over to the
+## next one, and the last step finishes the quest. Saved progress that no longer fits the quest
+## (its data changed since) settles at the next fact of any kind: a step already at its count is
+## complete, and a step past the last one finishes the quest.
+func _advance_quests(condition: String, what: String) -> void:
 	var ids: Array[String] = []
 	ids.assign(quest_book.keys())
 	ids.sort()
@@ -82,7 +84,7 @@ func _advance_quests(condition: String, species: String) -> void:
 		var progress: QuestProgress = _progress_of(id)
 		var step: QuestStep = quest.step_at(progress.step)
 		var open: bool = step != null and progress.count < step.count
-		if quests_done.has(id) or (open and not step.counts(condition, species)):
+		if quests_done.has(id) or (open and not step.counts(condition, what)):
 			continue
 		progress.count += 1 if open else 0
 		if step != null and progress.count >= step.count:
@@ -113,8 +115,8 @@ func _progress_of(id: String) -> QuestProgress:
 	return quest_progress.get(id, QuestProgress.new())
 
 
-## Why `result` can't be taken over (an empty species, a nameless or negative material, or more
-## than the save can hold), or "".
+## Why `result` can't be taken over (an empty species or place, a nameless or negative material,
+## or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -123,6 +125,8 @@ func _result_problem(result: Gain) -> String:
 			return "a dominated monster has no species"
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
+	if result.places_reached.has(""):
+		return "a place reached has no id"
 	for material: String in result.materials:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:

@@ -9,7 +9,9 @@ extends RefCounted
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
 ## asks for (#300), and a finished one has none. The list at the side of the screen (#340) shows
 ## each open quest's step and count, follows a step counting up, and drops a finished quest once
-## it has faded out.
+## it has faded out. A player stepping into a place from outside it raises that the place was
+## reached, for that player only (#339); it finishes this player's quest to reach it, not another
+## player's arrival, and the quest's marker points at the place's nearest tile.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -17,6 +19,16 @@ const TWO_STEPS: String = (
 	"{\"id\": \"toads_then_chest\", \"name\": \"Two toads, then a chest\", \"steps\": ["
 	+ "{\"condition\": \"dominated\", \"species\": \"moss_toad\", \"count\": 2}, "
 	+ "{\"condition\": \"opened\"}]}"
+)
+## A quest that asks to reach the beach.
+const REACH_BEACH: String = (
+	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
+	+ "{\"condition\": \"reached\", \"place\": \"beach\"}]}"
+)
+## A small region with the beach on its east, `b`; players 1 and 2 start west of it.
+const BEACH_REGION: String = (
+	"# Beach\n\n## Tiles\n\n```\n . . b b\n. 1 2 . b\n . . b b\n```\n\n## Legend\n\n"
+	+ "- `b`: the beach; stepping here reaches the place beach\n"
 )
 
 
@@ -26,6 +38,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_settled()
 	if result.is_empty():
 		result = _check_broken_data()
+	if result.is_empty():
+		result = _check_places()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -67,6 +81,8 @@ func _check_tracked(tree: SceneTree) -> String:
 		result = await _check_list_follows(tree, driver, bus, list)
 	if result.is_empty():
 		result = _check_chests(driver, bus, profile, list)
+	if result.is_empty():
+		result = _check_reached(driver, bus, profile)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
@@ -174,6 +190,80 @@ func _check_chests(
 	if not profile.quests_done.has("open_one"):
 		return "a chest this player got their roll from didn't count"
 	return ""
+
+
+## Reaching the beach counts for this player when they reached it, not when another player did.
+func _check_reached(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var beach: QuestDefinition = QuestDefinition.parse("reach_beach", REACH_BEACH, {})
+	profile.quest_book[beach.id] = beach
+	_emit(driver, bus, PlaceReached.new("beach", 9, 1))
+	_emit(driver, bus, PlaceReached.new("pond", 1, 0))
+	if profile.quests_done.has("reach_beach"):
+		return "another player's arrival, or another place, counted as reaching the beach"
+	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
+	if not profile.quests_done.has("reach_beach"):
+		return "this player reaching the beach didn't finish the quest to reach it"
+	return ""
+
+
+## On a region with a beach: player 1 walking onto it from outside raises that they reached it,
+## walking on along it doesn't again, and player 2 stepping onto it raises it for player 2. The
+## quest to reach the beach points at the beach tile nearest to player 1.
+func _check_places() -> String:
+	var region: Region = RegionDocument.parse(BEACH_REGION)
+	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new(), TriggerFeature.new()]
+	var state: GameState = GameState.new(region, 3, ordered)
+	if not region.problem.is_empty() or not state.problem.is_empty():
+		return "the beach region didn't read: " + region.problem + state.problem
+	for slot: int in 2:
+		var _player: Entity = state.add_entity(slot, region.starts[slot])
+	var profile: Profile = Profile.new()
+	profile.quest_book["reach_beach"] = QuestDefinition.parse("reach_beach", REACH_BEACH, {})
+	var result: String = _check_place_marker(state, profile)
+	var east: int = Hex.DIRECTIONS.find(Vector2i(1, 0))
+	var reached: Array[PlaceReached] = _reached(FlowSteps.step(state, east, 2))
+	reached.append_array(_reached(FlowSteps.step(state, east, 2)))
+	if result.is_empty() and not reached.is_empty():
+		result = "walking on ground short of the beach reached it"
+	reached = _reached(FlowSteps.step(state, east, 2))
+	var reached_by_one: bool = reached.size() == 1 and reached[0].slot == 0
+	if result.is_empty() and not (reached_by_one and reached[0].place == "beach"):
+		result = "player 1 stepping onto the beach didn't reach it, once"
+	reached = _reached(FlowSteps.step(state, Hex.DIRECTIONS.find(Vector2i(0, -1)), 2))
+	if result.is_empty() and not reached.is_empty():
+		result = "walking along the beach reached it again"
+	reached = []
+	for tick: int in MovementFeature.MOVE_TICKS:
+		var south: int = Hex.DIRECTIONS.find(Vector2i(0, 1)) if tick == 0 else Command.NO_MOVE
+		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, south]))
+		reached.append_array(_reached(state.events))
+	if result.is_empty() and (reached.size() != 1 or reached[0].slot != 1):
+		result = "player 2 stepping onto the beach didn't reach it for player 2"
+	return result
+
+
+## The quest to reach the beach is marked on the beach tile nearest to player 1.
+func _check_place_marker(state: GameState, profile: Profile) -> String:
+	var from: Vector2i = state.player(0).tile
+	var nearest: int = -1
+	var beach: Array[Vector2i] = []
+	for trigger: TileTrigger in state.region.triggers:
+		beach.append(trigger.tile)
+		var distance: int = Hex.distance(trigger.tile, from)
+		nearest = distance if nearest < 0 else mini(nearest, distance)
+	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("reach_beach", from)
+	if not beach.has(target) or Hex.distance(target, from) != nearest:
+		return "the quest to reach the beach isn't marked on its nearest tile"
+	return ""
+
+
+## The places reached among `events`.
+static func _reached(events: Array[RefCounted]) -> Array[PlaceReached]:
+	var reached: Array[PlaceReached] = []
+	for event: RefCounted in events:
+		if event is PlaceReached:
+			reached.append(event as PlaceReached)
+	return reached
 
 
 ## Raises `event` in a tick and has the bus hand it out at once.

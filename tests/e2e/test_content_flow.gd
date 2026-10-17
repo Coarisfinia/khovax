@@ -89,8 +89,9 @@ func _check_abilities_refused() -> String:
 
 
 ## Every quest file reads: the first domination is one domination of any species, and the toads'
-## quest counts up three of one species. Quests with a wrong id, name, step, condition, species or
-## count are refused, with a reason.
+## quest counts up three of one species, and a step to reach a place names it (#339). Quests with a
+## wrong id, name, step, condition, species, place or count are refused, with a reason: a reached
+## step without a place, or a place on another step, too.
 func _check_quests() -> String:
 	var content: Content = Content.load_quests()
 	if not content.problem.is_empty():
@@ -107,13 +108,24 @@ func _check_quests() -> String:
 		return "the first domination isn't one domination of any species"
 	if toad_step.species != "moss_toad" or toad_step.count != 3:
 		return "the toads' quest isn't three moss toads"
+	var reach: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
+	var beach: QuestDefinition = QuestDefinition.parse(
+		"x",
+		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}" % (reach % "beach"),
+		content.species,
+	)
+	if not beach.problem.is_empty() or beach.steps[0].place != "beach":
+		return "a step to reach the beach didn't read: " + beach.problem
 	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
 	var step: String = "{\"condition\": \"dominated\"%s}"
 	var cases: Dictionary[String, String] = {
 		quest % ["y", "N", step % ""]: "its id must",
 		quest % ["x", " ", step % ""]: "it needs a name",
 		quest % ["x", "N", ""]: "it needs at least one step",
-		quest % ["x", "N", "{\"condition\": \"reached\"}"]: "step 0: its condition",
+		quest % ["x", "N", "{\"condition\": \"defeated\"}"]: "step 0: its condition",
+		quest % ["x", "N", "{\"condition\": \"reached\"}"]: "step 0: its place",
+		quest % ["x", "N", step % ", \"place\": \"beach\""]: "step 0: its place",
+		quest % ["x", "N", reach % "The Beach"]: "step 0: its place must",
 		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
 		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
 			"step 0: its species"
