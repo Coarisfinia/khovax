@@ -63,14 +63,8 @@ func _check_tracked(tree: SceneTree) -> String:
 	markers.show_quests()
 	if result.is_empty() and markers.markers.has("first_domination"):
 		result = "the finished first domination still has a marker"
-	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty():
-		result = _check_listed(list, {
-			"first_domination": QuestListView.DONE_TEXT,
-			"three_moss_toads": "Dominate a moss toad  1/3",
-		})
-	if result.is_empty():
-		result = await _check_dropped(tree, list)
+		result = await _check_list_follows(tree, driver, bus, list)
 	if result.is_empty():
 		result = _check_chests(driver, bus, profile, list)
 	main.queue_free()
@@ -136,6 +130,24 @@ func _check_dropped(tree: SceneTree, list: QuestListView) -> String:
 	if not list.cards.has("three_moss_toads"):
 		return "an open quest left the quest list"
 	return ""
+
+
+## The list follows: another moss toad counts the toads' quest up, the finished first domination
+## shows done and then drops out.
+func _check_list_follows(
+	tree: SceneTree,
+	driver: GameDriver,
+	bus: EventBus,
+	list: QuestListView,
+) -> String:
+	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
+	var result: String = _check_listed(list, {
+		"first_domination": QuestListView.DONE_TEXT,
+		"three_moss_toads": "Dominate a moss toad  1/3",
+	})
+	if result.is_empty():
+		result = await _check_dropped(tree, list)
+	return result
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,

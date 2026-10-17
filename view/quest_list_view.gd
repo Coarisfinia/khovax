@@ -187,7 +187,8 @@ func _lay_out(glide: float) -> void:
 func _size_text(card: PanelContainer) -> void:
 	var font: int = maxi(MIN_FONT, _font_size)
 	var lines: Node = card.get_child(0)
-	(lines.get_child(0) as Label).add_theme_font_size_override("font_size", roundi(font * NAME_SCALE))
+	var name_label: Label = lines.get_child(0) as Label
+	name_label.add_theme_font_size_override("font_size", roundi(font * NAME_SCALE))
 	(lines.get_child(1) as Label).add_theme_font_size_override("font_size", font)
 
 
