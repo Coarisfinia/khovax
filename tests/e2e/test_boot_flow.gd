@@ -783,9 +783,15 @@ func _check_canopy_cutaway(main: Node) -> String:
 	if result.is_empty():
 		monster.tile = _unseen_tile_of(state, "forest")
 		cutaway.show_state(10.0)
-		result = _cut_problem(cutaway, [], "with a wild monster in the fog or in hiding")
+		result = _cut_problem(cutaway, [], "with a wild monster in the fog")
+	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
 	if result.is_empty():
 		monster.tile = forest
+		hiding.hidden.append(monster.id)
+		cutaway.show_state(10.0)
+		result = _cut_problem(cutaway, [], "with a wild monster hiding in the forest")
+		hiding.hidden.erase(monster.id)
+	if result.is_empty():
 		cutaway.show_state(10.0)
 		result = _cut_problem(cutaway, [forest], "around a wild monster in the forest")
 	player.tile = open
