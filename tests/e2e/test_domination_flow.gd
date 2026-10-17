@@ -815,8 +815,10 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
+	# One shared spot: the regions only read it.
+	var named: WildSpot = WildSpot.new(species)
 	for spot: Vector2i in spots:
-		region.named_species[spot] = species
+		region.wild_spots[spot] = named
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP, STRONG: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH, STRONG: STRONG_STRENGTH }
 	var ordered: Array[Feature] = [
@@ -1304,6 +1306,39 @@ func _check_species() -> String:
 	events.append_array(_settle(state))
 	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
+	return _check_wounded()
+
+
+## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never
+## below 1, while the one beside it starts at full.
+func _check_wounded() -> String:
+	var tiles: String = "# W\n\n## Tiles\n\n```\nw 1 t\n```\n\n## Legend\n\n"
+	tiles += "- `w`: a wild monster, always moss_toad, wounded\n"
+	tiles += "- `t`: a wild monster, always moss_toad\n"
+	var region: Region = RegionDocument.parse(tiles)
+	var marked: int = 0
+	for spot: WildSpot in region.wild_spots.values():
+		marked += 1 if spot.wounded else 0
+	if not region.problem.is_empty() or marked != 1:
+		return "a legend didn't mark its wild monster wounded: " + region.problem
+	var hp: Dictionary[String, int] = { "moss_toad": OUTCOME_HP }
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		TrailFeature.new(),
+		WildMonsterFeature.new([], [], hp, { "moss_toad": WEAK_STRENGTH }),
+	]
+	var state: GameState = GameState.new(region, 1, ordered)
+	var wild: WildMonsterFeature = _wild(state)
+	var weak: int = maxi(Fixed.scale(OUTCOME_HP, WildMonsterFeature.WOUNDED_HP), 1)
+	var expected: Array[int] = [weak, OUTCOME_HP]
+	var started: Array[int] = []
+	for monster: int in wild.monsters:
+		started.append(wild.hp_of(monster))
+	if started != expected:
+		return "the wounded and the whole wild monster started at %s HP, not %s" % [
+			started,
+			expected,
+		]
 	return _check_hiding()
 
 
