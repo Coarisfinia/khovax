@@ -79,13 +79,14 @@ func _on_survey(at: Vector2) -> bool:
 	return view.is_visible_in_tree() and view.bordered and view.get_global_rect().has_point(at)
 
 
-## Presses and releases `action` once, as a TouchScreenButton does: the action's state and its
-## event both, so SurveyChoice steps once.
+## Presses and releases `action` once, as a TouchScreenButton does: its event, so SurveyChoice
+## steps once, and its state, unless a key or a button holds it already, which keeps it held.
 func _press(action: StringName) -> void:
+	var held: bool = Input.is_action_pressed(action)
 	for pressed: bool in [true, false]:
-		if pressed:
+		if not held and pressed:
 			Input.action_press(action)
-		else:
+		elif not held:
 			Input.action_release(action)
 		var event: InputEventAction = InputEventAction.new()
 		event.action = action
