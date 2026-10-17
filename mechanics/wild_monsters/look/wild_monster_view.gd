@@ -4,8 +4,8 @@ extends Node3D
 ## and idling, its shape standing out from the players' (so it doesn't rely on color alone). It
 ## follows the wild monster feature's state: a figure appears for each wild monster and, when it
 ## goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
-## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. It only reads
-## the state.
+## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. One that steps
+## away from where no ring could enclose it (#364) glides to its new tile. It only reads the state.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -15,6 +15,8 @@ const IDLE: StringName = &"Idle"
 ## How high and how long a wild monster hops when it jumps out of hiding.
 const HOP_HEIGHT: float = 0.6
 const HOP_SECONDS: float = 0.35
+## How long a wild monster's figure takes to glide to the tile it stepped onto: about its step.
+const GLIDE_SECONDS: float = 0.8
 
 @export var driver: GameDriver
 
@@ -55,10 +57,12 @@ func show_state() -> void:
 	for entity_id: int in shown:
 		if driver.state.entity(entity_id) == null:
 			continue
+		var spot: Vector2i = driver.state.entity(entity_id).tile
 		if not figures.has(entity_id):
 			figures[entity_id] = _add_figure()
-		var spot: Vector2i = driver.state.entity(entity_id).tile
-		figures[entity_id].tile = spot
+			figures[entity_id].tile = spot
+		elif figures[entity_id].tile != spot:
+			_glide(figures[entity_id], spot)
 		figures[entity_id].visible = is_shown(driver.state, entity_id)
 
 
@@ -90,6 +94,17 @@ func _hop(figure: HexPiece) -> void:
 	var _down: PropertyTweener = tween.tween_property(
 		model, "position:y", 0.0, HOP_SECONDS / 2
 	).set_ease(Tween.EASE_IN)
+
+
+## Moves the figure onto `spot`, gliding there from where it stands, easing both ways.
+func _glide(figure: HexPiece, spot: Vector2i) -> void:
+	var from: Vector3 = figure.position
+	figure.tile = spot
+	figure.position = from
+	var tween: Tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var _glided: PropertyTweener = tween.tween_property(
+		figure, "position", figure.tile_position(), GLIDE_SECONDS
+	)
 
 
 ## Shrinks a figure away and frees it.

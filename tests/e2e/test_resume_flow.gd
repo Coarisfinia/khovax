@@ -198,6 +198,7 @@ static func _changed(data: Dictionary, key: String, value: Variant) -> String:
 ## tile, with the same hash, and the session's recording plays back from it. The keeper saves it
 ## debounced, to its own file, never touching the profile.
 func _check_resumed(tree: SceneTree, world: World) -> String:
+	_settle(world)
 	var problem: String = WorldSave.save(world, WORLD_PATH, _explored)
 	if not problem.is_empty():
 		return "the world couldn't be saved: " + problem
@@ -258,6 +259,19 @@ func _check_explored(main: Node) -> String:
 	if fog.cloud.fog_on(out_of_sight[0]) != LIGHT:
 		return "resumed, the glade's explored ground out of sight isn't under light fog"
 	return ""
+
+
+## Lets every ring still sealing end, standing still: one that held over the save would dominate in
+## the resumed session, and its gain would change the profile, which only world saves must not.
+func _settle(world: World) -> void:
+	var sealing: bool = true
+	while sealing:
+		sealing = false
+		for each: GameState in world.instances.values():
+			var feature: Feature = each.feature(Features.DOMINATION)
+			sealing = sealing or not (feature as DominationFeature).seals.is_empty()
+		if sealing:
+			world.step(FlowSteps.command(Command.NO_MOVE))
 
 
 ## The player came back with their companion, and the resumed session's recording plays back from

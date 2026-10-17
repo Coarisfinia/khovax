@@ -4,8 +4,12 @@ extends Feature
 ## as an entity no player controls, and each is of a species (#133). A spot whose region piece names
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
-## species. For now each just stands there (its look is a placeholder, #85); walkers can't step onto
-## its tile (MovementFeature), and a ring dominates it (DominationFeature). Each has its species'
+## species. Each stands where it is (its look is a placeholder, #85), unless no ring could enclose
+## it
+## there (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where
+## one could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
+## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates
+## it (DominationFeature). Each has its species'
 ## strength and HP, and starts at full HP (#219); nothing hurts it yet. Enraged (#220,
 ## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
 ## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
@@ -17,6 +21,9 @@ const UNKNOWN_STRENGTH: int = 0
 ## takes. Placeholders to tune (#220).
 const RAGE_STRENGTH: int = 500
 const MOST_RAGE: int = 3
+## How many ticks a wild monster that can't be ringed where it stands takes for each step away: its
+## own pace, slower than a player's. A placeholder to tune (#364).
+const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []
@@ -32,8 +39,16 @@ var _species: Dictionary[int, String] = {}
 var _hp: Dictionary[int, int] = {}
 ## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
 var _rage: Dictionary[int, int] = {}
+## The wild monsters held where they stand whatever the ground, in id order: HidingFeature holds
+## the hidden ones (#202) and lets them go when they jump out, and restores them on loading, so
+## they aren't saved here.
+var held: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
+## The tiles of `_unringable_region` no ring can enclose a wild monster on, cached by
+## _unringable_in. Derived from the region, which doesn't change during a session, so not hashed.
+var _unringable: Dictionary[Vector2i, bool] = {}
+var _unringable_region: Region = null
 
 
 func _init(
@@ -50,6 +65,11 @@ func _init(
 
 func id() -> int:
 	return Features.WILD_MONSTERS
+
+
+func requires() -> Array[int]:
+	var needed: Array[int] = [Features.TRAIL]
+	return needed
 
 
 func start(state: GameState) -> void:
@@ -69,11 +89,57 @@ func start(state: GameState) -> void:
 	_known.sort()
 
 
+## Every wild monster no ring could enclose where it stands steps toward where one could, each on
+## its own tick of every STEP_TICKS (by its id), in id order.
+func step(state: GameState, _commands: Array[Command]) -> void:
+	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
+	var blocked: Dictionary[Vector2i, bool] = {}
+	for monster: int in monsters:
+		# Only the monsters due this tick are looked up: finding an entity goes through them all.
+		if (state.tick + monster) % STEP_TICKS != 0 or held.has(monster):
+			continue
+		var standing: Entity = state.entity(monster)
+		if not stuck.has(standing.tile):
+			continue
+		if blocked.is_empty():
+			blocked = _blocked(state)
+		var from: Vector2i = standing.tile
+		standing.tile = RingableGround.way_out(state.region, stuck, blocked, from)
+		blocked[standing.tile] = true
+
+
+## The tiles a wild monster may not step onto: the trail, so it never walks into a ring, and every
+## tile something stands on.
+static func _blocked(state: GameState) -> Dictionary[Vector2i, bool]:
+	var blocked: Dictionary[Vector2i, bool] = {}
+	for tile: Vector2i in (state.feature(Features.TRAIL) as TrailFeature).shared.tiles:
+		blocked[tile] = true
+	for entity: Entity in state.entities:
+		blocked[entity.tile] = true
+	return blocked
+
+
+func _unringable_in(region: Region) -> Dictionary[Vector2i, bool]:
+	if region != _unringable_region:
+		_unringable_region = region
+		_unringable = RingableGround.unringable(region)
+	return _unringable
+
+
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
+	held.erase(removed_id)
 	var _dropped: bool = _species.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
 	_dropped = _rage.erase(removed_id)
+
+
+## Holds the wild monster with this entity id where it stands, or lets it go again.
+func hold(entity_id: int, holding: bool) -> void:
+	held.erase(entity_id)
+	if holding and is_wild_monster(entity_id):
+		held.append(entity_id)
+		held.sort()
 
 
 ## Whether the entity with this id is a wild monster.
@@ -134,6 +200,7 @@ func save_values() -> Dictionary:
 
 func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
+	held.clear()
 	_species.clear()
 	_hp.clear()
 	_rage.clear()
@@ -166,4 +233,6 @@ func hash_values() -> Array[int]:
 		values.append(_known.find(_species[monster]))
 		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
 		values.append(rage_of(monster))
+	values.append(held.size())
+	values.append_array(held)
 	return values
