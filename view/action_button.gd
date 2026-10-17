@@ -48,6 +48,9 @@ func _process(_delta: float) -> void:
 
 
 func _draw() -> void:
+	# Not laid out yet: nothing to draw, and a font size of 0 would fail.
+	if _side <= 0.0:
+		return
 	var area: Rect2 = rect()
 	var faded: float = 1.0 if usable() else UNUSABLE_ALPHA
 	var alpha: float = PRESSED_ALPHA if button.is_pressed() else BACKDROP_ALPHA
