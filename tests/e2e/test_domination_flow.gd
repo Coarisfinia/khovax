@@ -816,7 +816,7 @@ func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
 	for spot: Vector2i in spots:
-		region.named_species[spot] = species
+		region.wild_spots[spot] = WildSpot.new(species)
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP, STRONG: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH, STRONG: STRONG_STRENGTH }
 	var ordered: Array[Feature] = [
@@ -1316,7 +1316,7 @@ func _check_wounded() -> String:
 		var full: int = wild.max_hp_of(monster)
 		var spot: Vector2i = state.entity(monster).tile
 		var expected: int = full
-		if state.region.wounded.has(spot):
+		if state.region.wild_spots.has(spot) and state.region.wild_spots[spot].wounded:
 			wounded += 1
 			expected = maxi(Fixed.scale(full, WildMonsterFeature.WOUNDED_HP), 1)
 		if wild.hp_of(monster) != expected:

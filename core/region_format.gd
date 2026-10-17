@@ -230,11 +230,9 @@ static func _parse_species(region: Region, line: String) -> String:
 	if not numbers:
 		return "a species line reads \"species <q> <r> <species id> [wounded]\": " + line
 	var spot: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
-	if not region.wild_monsters.has(spot) or region.named_species.has(spot):
+	if not region.wild_monsters.has(spot) or region.wild_spots.has(spot):
 		return "species %s names no wild monster spot, or one named before" % spot
-	region.named_species[spot] = parts[3]
-	if wounded:
-		region.wounded[spot] = true
+	region.wild_spots[spot] = WildSpot.new(parts[3], wounded)
 	return ""
 
 

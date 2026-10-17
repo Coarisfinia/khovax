@@ -264,7 +264,10 @@ func _check_documents() -> String:
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
-	expected = expected and region.named_species.get(Vector2i(-1, 1), "") == "storm_finch"
+	expected = expected and region.wild_spots.get(
+		Vector2i(-1, 1),
+		WildSpot.new(),
+	).species == "storm_finch"
 	var forest: int = TileKinds.number_of("forest")
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER

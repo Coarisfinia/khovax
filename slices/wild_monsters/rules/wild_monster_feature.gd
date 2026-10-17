@@ -84,7 +84,8 @@ func start(state: GameState) -> void:
 	var rng: Rng = Rng.new(state.rng_seed, id())
 	_known = roster.duplicate()
 	for spot: Vector2i in state.region.wild_monsters:
-		var species: String = state.region.named_species.get(spot, "")
+		var named: WildSpot = state.region.wild_spots.get(spot)
+		var species: String = named.species if named != null else ""
 		if species.is_empty() and not roster.is_empty():
 			species = roster[rng.pick_weighted(weights)]
 		if not _known.has(species):
@@ -94,7 +95,7 @@ func start(state: GameState) -> void:
 		monsters.append(monster.id)
 		_species[monster.id] = species
 		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
-		if state.region.wounded.has(spot):
+		if named != null and named.wounded:
 			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
 	_known.sort()
 

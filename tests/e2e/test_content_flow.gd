@@ -321,7 +321,9 @@ func _check_tile_numbers_unique() -> String:
 func _check_wild_species(content: Content) -> String:
 	for instance_name: String in InstanceBlueprints.NAMES:
 		var listed: Dictionary = InstanceBlueprints.WILD_SPECIES.get(instance_name, { })
-		var named: Array = InstanceBlueprints.region_of(instance_name, 0).named_species.values()
+		var named: Array[String] = []
+		for spot: WildSpot in InstanceBlueprints.region_of(instance_name, 0).wild_spots.values():
+			named.append(spot.species)
 		if listed.is_empty():
 			return "the %s blueprint lists no species for its wild monsters" % instance_name
 		for species: Variant in listed.keys() + named:

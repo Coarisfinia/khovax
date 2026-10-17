@@ -32,13 +32,10 @@ var walkable_overrides: Dictionary[Vector2i, bool] = {}
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the instance loads, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
-## The species a region piece names for some of its wild monster spots, by spot (#133); every other
-## spot rolls one from its blueprint's list. Not hashed here: the wild monster feature hashes each
-## wild monster's species.
-var named_species: Dictionary[Vector2i, String] = {}
-## The wild monster spots whose monster starts wounded (#389), at a low share of its HP. Not hashed
-## here: the wild monster feature hashes each wild monster's HP.
-var wounded: Dictionary[Vector2i, bool] = {}
+## What the legend says about some of the wild monster spots (WildSpot), by spot: a named species
+## (#133; every other spot rolls one from its blueprint's list) or a wounded start (#389). Not
+## hashed here: the wild monster feature hashes each wild monster's species and HP.
+var wild_spots: Dictionary[Vector2i, WildSpot] = {}
 ## Where treasure chests stand when the instance loads, in the region file's reading order. Not
 ## hashed here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
@@ -137,10 +134,8 @@ func turned(turns: int) -> Region:
 	region.exit_blueprints = exit_blueprints.duplicate()
 	for trigger: TileTrigger in triggers:
 		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
-	for spot: Vector2i in named_species:
-		region.named_species[Hex.turn(spot, turns)] = named_species[spot]
-	for spot: Vector2i in wounded:
-		region.wounded[Hex.turn(spot, turns)] = true
+	for spot: Vector2i in wild_spots:
+		region.wild_spots[Hex.turn(spot, turns)] = wild_spots[spot]
 	for tile: Vector2i in decoration_turns:
 		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
 		region.decoration_turns[Hex.turn(tile, turns)] = turn
@@ -182,10 +177,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		terrain[tile + offset] = piece.terrain[tile]
 	for spot: Vector2i in piece.wild_monsters:
 		wild_monsters.append(spot + offset)
-	for spot: Vector2i in piece.named_species:
-		named_species[spot + offset] = piece.named_species[spot]
-	for spot: Vector2i in piece.wounded:
-		wounded[spot + offset] = true
+	for spot: Vector2i in piece.wild_spots:
+		wild_spots[spot + offset] = piece.wild_spots[spot]
 	for tile: Vector2i in piece.decoration_turns:
 		decoration_turns[tile + offset] = piece.decoration_turns[tile]
 	for tile: Vector2i in piece.height_overrides:
