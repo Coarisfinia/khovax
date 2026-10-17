@@ -95,8 +95,6 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_outcomes()
 	if result.is_empty():
-		result = _check_moves_away()
-	if result.is_empty():
 		result = _check_species()
 	if result.is_empty():
 		result = await _check_view(tree)
@@ -487,7 +485,8 @@ func _check_outcomes() -> String:
 			reinforced,
 			beside,
 		]
-	return _check_enraged()
+	var enraged: String = _check_enraged()
+	return enraged if not enraged.is_empty() else _check_moves_away()
 
 
 ## In a disc with rock running from its edge to (-2, 0): the monster on the edge at (4, 0) and the
