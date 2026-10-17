@@ -35,7 +35,8 @@ var materials: Dictionary[String, int] = {}
 var quest_progress: Dictionary[String, QuestProgress] = {}
 ## The ids of the quests finished, in the order finished.
 var quests_done: Array[String] = []
-## The quests gains advance, by id (Content.load_quests): content, not saved. Progress for a quest
+## The quests gains advance, by id (QuestContent.load_quests): content, not saved. Progress for a
+## quest
 ## that isn't here is kept untouched, on purpose: a quest missing from one build's data (dropped by
 ## mistake, or not shipped yet) picks up where the player left it once it's back.
 var quest_book: Dictionary[String, QuestDefinition] = {}

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://github.com/Coarisfinia/khovax/data/schemas/quests.schema.json",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/quests/data/quests.schema.json",
 	"title": "Quest",
 	"description": "A quest (#184): a player-facing name and an ordered list of steps, each one condition met a number of times. One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
 	"type": "object",

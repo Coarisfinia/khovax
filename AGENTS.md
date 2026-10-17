@@ -102,6 +102,9 @@ rides along with the next real pull request, and that pull request's description
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
 
+**The agent decides the region legend's format** (owner's rule, on #389): how a region file marks
+a tile, a place or a monster isn't the owner's call; pick a clear wording and note it in the issue.
+
 **Track queued work as GitHub issues.** Every idea or request that isn't being built right now gets an
 issue assigned to the owner. Nothing waits only in a chat. **Read the issue and all its comments
 before starting work on it**: the owner decides things in comments, and the description alone can be
