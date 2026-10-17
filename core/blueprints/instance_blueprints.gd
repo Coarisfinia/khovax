@@ -79,6 +79,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		ordered.append(ChestFeature.new(table))
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
+	ordered.append(CompanionAttackFeature.new())
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
