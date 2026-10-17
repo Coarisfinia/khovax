@@ -152,7 +152,10 @@ func _survey_placed_in(choice: SurveyChoice, survey: SurveyView, screen: Vector2
 	var rect: Rect2 = survey.get_rect()
 	if not survey.visible or not Rect2(Vector2.ZERO, screen).encloses(rect):
 		return "the Survey in place %d isn't wholly on a %s screen: %s" % [place, screen, rect]
-	if not survey.bordered:
+	var full: bool = place in [SurveyChoice.Place.OVER_GAME, SurveyChoice.Place.OPAQUE]
+	if survey.bordered == full:
+		return "the Survey in place %d is laid out as the other kind of place" % place
+	if full:
 		var opaque: bool = place == SurveyChoice.Place.OPAQUE
 		if rect != Rect2(Vector2.ZERO, screen) or (survey.backdrop.a == 1.0) != opaque:
 			return "the full Survey on a %s screen isn't so, or not as see-through as its place" % [
@@ -194,8 +197,11 @@ func _survey_screens(choice: SurveyChoice, survey: SurveyView) -> String:
 ## or "".
 func _survey_zooms(choice: SurveyChoice, survey: SurveyView) -> String:
 	var problem: String = ""
-	for _step: int in SurveyChoice.ZOOMS.size():
+	for _step: int in SurveyChoice.ZOOMS.size() + 1:
 		problem += choice.zoom_by(-1)
+	choice.place()
+	if problem.is_empty() and survey.across != SurveyChoice.ZOOMS.front():
+		problem = "zooming out past the farthest step didn't stop there"
 	for step: int in SurveyChoice.ZOOMS.size():
 		choice.place()
 		if problem.is_empty() and survey.across != SurveyChoice.ZOOMS[step]:
