@@ -25,15 +25,20 @@ func cooldown_share() -> float:
 	var companions: CompanionFeature = _companions()
 	if special == null or companions == null:
 		return 0.0
-	var species: String = companions.species_of(companions.companion_of(_slot()))
-	var full: int = special.cooldowns.get(species, 0)
+	var companion_id: int = companions.companion_of(_slot())
+	if companion_id == 0:
+		return 0.0
+	var full: int = special.cooldowns.get(companions.species_of(companion_id), 0)
 	return float(_cooldown_left()) / full if full > 0 else 0.0
 
 
 func usable() -> bool:
 	var companions: CompanionFeature = _companions()
 	var wild: WildMonsterFeature = _feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	if companions == null or wild == null or _cooldown_left() > 0:
+	var special: SpecialAttackFeature = _special()
+	if special == null or not special.enabled or companions == null or wild == null:
+		return false
+	if _cooldown_left() > 0:
 		return false
 	var companion_id: int = companions.companion_of(_slot())
 	if companion_id == 0:

@@ -1179,6 +1179,9 @@ func _check_special_button(main: Node) -> String:
 	var ready: bool = special.corner_text().is_empty() and special.cooldown_share() == 0.0
 	if not special.visible or not ready:
 		return "the special's button doesn't show, ready, on a touch screen"
+	# No companion here, so nothing to strike with: shown, but faded.
+	if special.usable():
+		return "the special's button shows usable with no companion to strike with"
 	if special.rect().intersects(
 		(main.get_node("Hud/TotemButton") as TotemButton).rect()
 	):
