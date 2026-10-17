@@ -771,7 +771,6 @@ func _check_companion_strikes() -> String:
 ## faints for good, staying where it fell and saved as it is; it cools down, and once it's ready
 ## again it fells the next one.
 func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> String:
-	var specials: SpecialAttackFeature = state.feature(Features.SPECIALS) as SpecialAttackFeature
 	var wild: WildMonsterFeature = _wild(state)
 	var nobody: Array[Command] = [Command.new(), Command.new(Command.NO_MOVE, true)]
 	if not _specials_in(state, _fire()).is_empty() or not _specials_in(state, nobody).is_empty():
@@ -786,22 +785,37 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
+	return _check_special_cooldown(state, spots)
+
+
+## After the special felled a wild monster in `state`: the wild monsters and the cooldown load back
+## as saved, the special cools down for its cooldown, and once it's ready it fells the next one.
+func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String:
+	var specials: SpecialAttackFeature = state.feature(Features.SPECIALS) as SpecialAttackFeature
 	var reloaded_state: GameState = _strike_state(spots)
-	for feature_id: int in [Features.WILD_MONSTERS, Features.SPECIALS]:
-		var feature: Feature = state.feature(feature_id)
-		var reloaded: Feature = reloaded_state.feature(feature_id)
-		reloaded.load_values(reloaded_state, DataReader.new(feature.save_values()))
-		if reloaded.hash_values() != feature.hash_values():
-			return "feature %d didn't load back as saved after the special" % feature_id
+	if not _reloads(state, reloaded_state, Features.WILD_MONSTERS):
+		return "the fainted wild monster didn't load back as saved"
+	if not _reloads(state, reloaded_state, Features.SPECIALS):
+		return "the special's cooldown didn't load back as saved"
 	if specials.cooldown_left(0) != SPECIAL_TICKS or not _specials_in(state, _fire()).is_empty():
 		return "the special didn't cool down for its cooldown"
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
 	while specials.cooldown_left(0) > 1:
-		var _waited: Array[SpecialStruck] = _specials_in(state, FlowSteps.command(Command.NO_MOVE))
-	var second: int = wild.monsters[0]
+		var _waited: Array[SpecialStruck] = _specials_in(state, still)
+	var second: int = _wild(state).monsters[0]
 	var next: Array[SpecialStruck] = _specials_in(state, _fire())
 	if next.size() != 1 or next[0].monster_id != second or not next[0].felled:
 		return "the special, ready again, didn't fell the next wild monster"
 	return ""
+
+
+## Whether the feature `feature_id` of `state`, saved and loaded into `reloaded_state`, hashes the
+## same.
+static func _reloads(state: GameState, reloaded_state: GameState, feature_id: int) -> bool:
+	var feature: Feature = state.feature(feature_id)
+	var reloaded: Feature = reloaded_state.feature(feature_id)
+	reloaded.load_values(reloaded_state, DataReader.new(feature.save_values()))
+	return reloaded.hash_values() == feature.hash_values()
 
 
 ## One tick's commands with the player in slot 0 standing and firing their special.
