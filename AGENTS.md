@@ -106,6 +106,9 @@ touch or a click does, a controller can do too.
 #429): a button never vanishes when it's empty or cooling down; it shows 0, or a cooldown circle with
 the seconds left.
 
+**Every part of the game can be played with a controller** (owner's rule, on #438): whatever a
+touch or a click reaches, a controller reaches too, in the game or in the menu.
+
 **The agent decides the region legend's format** (owner's rule, on #389): how a region file marks
 a tile, a place or a monster isn't the owner's call; pick a clear wording and note it in the issue.
 

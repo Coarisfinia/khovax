@@ -7,13 +7,15 @@ extends RefCounted
 ## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
 ## their range, and both choices are kept. In every place, on desktop screens and phones held
 ## either way, it sits against its own corner or covers the whole screen; every zoom step is
-## followed, and zooming stops at both ends. On touch screens its buttons show beside it, clear of
-## it on every screen, and a press on each presses its action and moves the Survey like the key,
-## without starting the touch stick (#352). A pinch on a corner Survey zooms it a step at a time,
-## spreading the fingers closer and pinching them farther, and never starts the touch stick, which
-## still starts anywhere else (#358). In the menu's Survey tab (#392) it shows the same ground,
+## followed, and zooming stops at both ends. Its buttons hide behind a cogwheel on its top right
+## corner, which hides while a controller is used (#438); a tap or a click on the cogwheel turns it
+## and shows them beside it, on every screen, and a press or a click on each presses its action and
+## moves the Survey like the key, without starting the touch stick (#352). A pinch on a corner
+## Survey zooms it a step at a time, spreading the fingers closer and pinching them farther, and
+## never starts the touch stick, which still starts anywhere else (#358). In the menu's Survey tab
+## (#392) it shows the same ground,
 ## players and quest targets over the tab, and its zoom key, its buttons there and a pinch on it
-## step the one zoom, which it follows.
+## step the one zoom, which it follows; its place button there cycles where the Survey shows.
 
 ## Desktop screens and phones held either way.
 const SCREENS: Array[Vector2] = [
@@ -68,7 +70,7 @@ func _check_survey(main: Node) -> String:
 	if result.is_empty():
 		result = _survey_zooms(choice, survey)
 	if result.is_empty():
-		result = _survey_buttons(main, choice, survey)
+		result = await _survey_buttons(main, choice, survey)
 	if result.is_empty():
 		result = _survey_pinches(main, choice, survey)
 	if result.is_empty():
@@ -352,27 +354,58 @@ func _survey_zooms(choice: SurveyChoice, survey: SurveyView) -> String:
 	return problem
 
 
-## Why the Survey's touch buttons don't show exactly where there is touch input, or aren't placed
-## right on every screen, or a press on one doesn't press its action and move the Survey like its
-## key, or starts the touch stick, or "". The zoom is at its closest step here, so zooming out
-## comes first.
+## Why the Survey's cogwheel (#438) doesn't hide exactly while a controller is used, or isn't
+## placed right on every screen, or its buttons show before a tap on it, or a tap on it doesn't
+## turn it and show them without starting the touch stick or a pinch, or a press on each doesn't
+## press its action and move the Survey like its key, or a click doesn't press it too, or a click
+## on the cogwheel doesn't hide them again, or "". The zoom is at its closest step here, so
+## zooming out comes first.
 func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
 	var buttons: SurveyButtons = main.get_node("Hud/SurveyButtons") as SurveyButtons
 	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
-	var touch: bool = buttons.touch
-	buttons.touch = false
+	var viewport: Viewport = buttons.get_viewport()
+	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
+	pad.pressed = true
+	viewport.push_input(pad)
 	buttons.lay_out()
-	var problem: String = "the Survey's buttons show without touch input" if buttons.visible else ""
-	buttons.touch = true
+	var problem: String = "the Survey's cogwheel shows with a controller" if buttons.visible else ""
+	_touch(viewport, Vector2.ONE, true)
+	_touch(viewport, Vector2.ONE, false)
+	buttons.lay_out()
+	if problem.is_empty() and not buttons.visible:
+		problem = "the Survey's cogwheel doesn't show again on a touch"
 	if problem.is_empty():
 		problem = _survey_buttons_placed(choice, survey, buttons)
+	if problem.is_empty() and (buttons.open or buttons.buttons[&"survey"].visible):
+		problem = "the Survey's buttons show before the cogwheel is tapped"
+	var cog: Vector2 = buttons.cog_rect().get_center()
+	_touch(viewport, cog, true)
+	var held: bool = stick.is_held() or _pinching(main)
+	_touch(viewport, cog, false)
+	await main.get_tree().create_timer(SurveyButtons.TURN_SECONDS * 2.0).timeout
+	buttons.lay_out()
+	var turned: bool = is_equal_approx(buttons.cog_angle(), SurveyButtons.COG_TURN)
+	if problem.is_empty() and (not buttons.open or held or not turned):
+		problem = "a tap on the Survey's cogwheel didn't turn it and show its buttons alone"
 	var actions: Array[StringName] = [&"survey_zoom_out", &"survey_zoom_in", &"survey"]
 	for action: StringName in actions:
 		if problem.is_empty():
 			problem = _survey_button_pressed(buttons, stick, choice, action)
-	buttons.touch = touch
+	if problem.is_empty():
+		problem = _survey_button_clicked(buttons, choice)
+	_click(viewport, buttons.cog_rect().get_center(), true)
+	_click(viewport, buttons.cog_rect().get_center(), false)
 	buttons.lay_out()
+	if problem.is_empty() and (buttons.open or buttons.buttons[&"survey"].visible):
+		problem = "a click on the Survey's cogwheel didn't hide its buttons"
 	return problem
+
+
+## Whether the Survey's pinch holds a finger.
+func _pinching(main: Node) -> bool:
+	var pinch: SurveyPinch = main.get_node("Hud/SurveyPinch") as SurveyPinch
+	var fingers: Dictionary = pinch.get("_fingers")
+	return not fingers.is_empty()
 
 
 ## Why a touch on `action`'s button doesn't press its action alone, without the touch stick, and
@@ -401,8 +434,24 @@ func _survey_button_pressed(
 	return ""
 
 
-## Why the Survey's buttons aren't wholly on every screen, in each place, on the Survey's side and
-## clear of a corner Survey that shows, or "".
+## Why a mouse click on the button cycling where the Survey shows doesn't press its action until
+## it's let go and cycle the Survey, or "".
+func _survey_button_clicked(buttons: SurveyButtons, choice: SurveyChoice) -> String:
+	var place: int = choice.place_shown()
+	buttons.lay_out()
+	var at: Vector2 = buttons.rect_of(&"survey").get_center()
+	_click(buttons.get_viewport(), at, true)
+	var pressed: bool = Input.is_action_pressed(&"survey")
+	_click(buttons.get_viewport(), at, false)
+	if not pressed or Input.is_action_pressed(&"survey"):
+		return "a click on the Survey's button didn't press its action until let go"
+	if choice.place_shown() != posmod(place + 1, SurveyChoice.Place.size()):
+		return "a click on the Survey's button didn't cycle where it shows"
+	return ""
+
+
+## Why the Survey's cogwheel and buttons aren't wholly on every screen, in each place, with the
+## cogwheel on a corner Survey that shows and the buttons clear of the cogwheel, or "".
 func _survey_buttons_placed(
 		choice: SurveyChoice,
 		survey: SurveyView,
@@ -415,34 +464,24 @@ func _survey_buttons_placed(
 			choice.place_in(screen)
 			buttons.lay_out_in(screen)
 			if problem.is_empty():
-				problem = _survey_buttons_beside(choice, survey, buttons, screen)
+				problem = _survey_buttons_beside(survey, buttons, screen)
 	choice.place()
 	buttons.lay_out()
 	return problem
 
 
-## Why the Survey's buttons, laid out for a `screen`, aren't wholly on it, on the Survey's side and
-## clear of a corner Survey that shows, or "".
-func _survey_buttons_beside(
-		choice: SurveyChoice,
-		survey: SurveyView,
-		buttons: SurveyButtons,
-		screen: Vector2,
-) -> String:
-	var place: SurveyChoice.Place = choice.place_shown()
-	var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
+## Why the Survey's cogwheel and buttons, laid out for a `screen`, aren't wholly on it, with the
+## cogwheel on a corner Survey that shows and the buttons clear of the cogwheel, or "".
+func _survey_buttons_beside(survey: SurveyView, buttons: SurveyButtons, screen: Vector2) -> String:
+	var whole: Rect2 = Rect2(Vector2.ZERO, screen)
+	var cog: Rect2 = buttons.cog_rect()
+	var in_corner: bool = survey.visible and survey.bordered
+	if not whole.encloses(cog) or (in_corner and not survey.get_rect().encloses(cog)):
+		return "the Survey's cogwheel on a %s screen is at %s" % [screen, cog]
 	for action: StringName in SurveyButtons.ACTIONS:
 		var rect: Rect2 = buttons.rect_of(action)
-		var on_side: bool = (rect.get_center().x < screen.x / 2.0) == left
-		var in_corner: bool = survey.visible and survey.bordered
-		var clear: bool = not (in_corner and survey.get_rect().intersects(rect))
-		if not Rect2(Vector2.ZERO, screen).encloses(rect) or not on_side or not clear:
-			return "the Survey's %s button on a %s screen in place %d is at %s" % [
-				action,
-				screen,
-				place,
-				rect,
-			]
+		if not whole.encloses(rect) or rect.intersects(cog):
+			return "the Survey's %s button on a %s screen is at %s" % [action, screen, rect]
 	return ""
 
 
@@ -536,6 +575,10 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	problem += _survey_zoomed_to(choice, "Zoom in button", SurveyChoice.AUTO_ZOOM + 2)
 	(tab.find_child("ZoomOut", true, false) as Button).pressed.emit()
 	problem += _survey_zoomed_to(choice, "Zoom out button", SurveyChoice.AUTO_ZOOM + 1)
+	var place: int = choice.place_shown()
+	tab.place_button.pressed.emit()
+	if problem.is_empty() and choice.place_shown() != posmod(place + 1, SurveyChoice.Place.size()):
+		problem = "the menu's Survey place button didn't cycle where the Survey shows"
 	if problem.is_empty():
 		# Spread far enough for exactly one step closer, as on the corner Survey.
 		var spread: PackedFloat32Array = PackedFloat32Array([0.15, 0.25, 0.22])
@@ -564,6 +607,15 @@ func _touch(viewport: Viewport, at: Vector2, down: bool, finger: int = 0) -> voi
 	touch.position = at
 	touch.pressed = down
 	viewport.push_input(touch)
+
+
+## Presses the mouse's left button at `at` (`down`), or lets it go there.
+func _click(viewport: Viewport, at: Vector2, down: bool) -> void:
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.position = at
+	click.pressed = down
+	viewport.push_input(click)
 
 
 ## Drags `finger` to `at`.
