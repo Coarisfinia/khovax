@@ -65,6 +65,8 @@ exclude = [".godot", "addons"]
 "quality/allocation-in-loop" = "error"
 "quality/process-get-node" = "error"
 "quality/max-nesting-depth" = "error"
-"quality/max-returns" = "error"
+# Off by the owner's decision (#341): a function may return as often as it needs, so one return per
+# case of a large match reads straight down instead of being split into helpers.
+"quality/max-returns" = "off"
 "quality/max-branches" = "error"
 "quality/max-local-variables" = "error"
