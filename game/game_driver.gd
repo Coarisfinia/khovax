@@ -5,7 +5,9 @@ extends Node
 ## later network peers or a replay), and runs the tick once every player's command for it is known.
 ## It processes before everything else (process_priority in main.tscn), so the state is current when
 ## views draw. A session plays one world (#148, #158): every instance a player is in steps, and the
-## views follow this machine's player into whichever instance they walk.
+## views follow this machine's player into whichever instance they walk. A session is the span from
+## loading the game to quitting it, which replays and lockstep co-op work in; it's technical and
+## never shown to the player.
 
 ## After every tick, with the tick's number and the events the features and the world raised in it,
 ## in order: how views learn about one-shot moments (a domination, a ring breaking) to play an

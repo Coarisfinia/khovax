@@ -5,9 +5,11 @@ extends RefCounted
 ## loaded but still, until one has been left behind for PURGE_TICKS: then it is purged (#212).
 ## Every instance's seed comes from the world's seed, its name and its generation, which goes up
 ## with each purge, so the same world loads the same instance the same way however and whenever
-## it's reached, and a purged one comes back arranged anew. Players walk from one instance into
-## the next through exits (#154), and the world raises that they entered it (#370). Deterministic,
-## like everything in core/.
+## it's reached, and a purged one comes back arranged anew. There are no runs (#183): the players
+## roam this one persistent world, saved between sessions (WorldData). A player who walks out
+## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
+## way back (#154), and the world raises that they entered it (#370). Deterministic, like
+## everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
