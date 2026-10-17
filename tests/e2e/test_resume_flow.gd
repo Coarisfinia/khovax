@@ -211,8 +211,6 @@ func _check_resumed(tree: SceneTree, world: World) -> String:
 		result = "the main scene resumed in %s, not the glade" % driver.local_instance_name()
 	elif driver.state.player(0).tile != world.player(0).tile:
 		result = "the player came back on %s, not where they stood" % driver.state.player(0).tile
-	elif (driver.state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0) == 0:
-		result = "the player came back without their companion"
 	if result.is_empty():
 		result = await _check_camera_centered(tree, main)
 	if result.is_empty():
@@ -262,8 +260,11 @@ func _check_explored(main: Node) -> String:
 	return ""
 
 
-## The resumed session's recording plays back from the resumed world to the same state.
+## The player came back with their companion, and the resumed session's recording plays back from
+## the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
+	if (driver.state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0) == 0:
+		return "the player came back without their companion"
 	for _tick: int in 30:
 		driver.advance(STEP)
 	driver.recording.finish(driver.world)
