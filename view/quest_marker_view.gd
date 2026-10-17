@@ -93,9 +93,9 @@ static func targets_of(
 ## in id order, the closed chests, the tiles of its place, in the legend's order, the tiles of
 ## its piece, or the exits leading to its instance.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
 	if step.condition == "entered":
 		return _entered_tiles(state, step)
+	var tiles: Array[Vector2i] = []
 	if step.condition == "reached":
 		for trigger: TileTrigger in state.region.triggers:
 			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
