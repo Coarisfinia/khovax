@@ -46,19 +46,26 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 	elif (data.has("species")
 			and (step.condition != "dominated" or not known_species.has(step.species))):
 		step.problem = "its species must be one that exists, on a dominated step"
-	elif (step.condition == "reached") != data.has("place"):
-		step.problem = "its place is what a reached step asks for, and only that"
-	elif data.has("place") and not TileTrigger.is_place_id(step.place):
-		step.problem = "its place must be an id, lowercase words joined by underscores"
-	elif (step.condition == "entered") != data.has("piece"):
-		step.problem = "its piece is what an entered step asks for, and only that"
-	elif data.has("piece") and not TileTrigger.is_place_id(step.piece):
-		step.problem = "its piece must be an id, lowercase words joined by underscores"
+	elif not _where_problem(data, step).is_empty():
+		step.problem = _where_problem(data, step)
 	elif step.count < 1:
 		step.problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	if step.problem.is_empty() and data.has("species"):
 		step.species_name = known_species[step.species].name
 	return step
+
+
+## Why `step`'s place or piece, read from `data`, doesn't fit, or "": a reached step names a place
+## and an entered step a piece (#350), each as an id, and no other step names either.
+static func _where_problem(data: Dictionary, step: QuestStep) -> String:
+	var wanted: Dictionary[String, String] = { "place": "reached", "piece": "entered" }
+	for field: String in wanted:
+		var value: String = step.place if field == "place" else step.piece
+		if (step.condition == wanted[field]) != data.has(field):
+			return "its %s is what a %s step asks for, and only that" % [field, wanted[field]]
+		if data.has(field) and not TileTrigger.is_place_id(value):
+			return "its %s must be an id, lowercase words joined by underscores" % field
+	return ""
 
 
 ## Whether one fact of `fact_condition` (a domination of a species, a chest, a place reached or a

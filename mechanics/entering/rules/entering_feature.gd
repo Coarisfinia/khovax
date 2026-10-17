@@ -26,8 +26,13 @@ func start(state: GameState) -> void:
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var entered: Array[PieceEntered] = []
 	for walker: Entity in inside.enter(state, state.region.piece_of, _ids):
-		entered.append(PieceEntered.new(state.region.piece_of[walker.tile], walker.id, walker.slot))
+		entered.append(_entered(state.region.piece_of[walker.tile], walker))
 	state.events.append_array(entered)
+
+
+## That `walker` entered `piece`.
+static func _entered(piece: String, walker: Entity) -> PieceEntered:
+	return PieceEntered.new(piece, walker.id, walker.slot)
 
 
 func hash_values() -> Array[int]:

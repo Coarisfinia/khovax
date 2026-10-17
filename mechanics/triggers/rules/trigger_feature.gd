@@ -90,7 +90,7 @@ func _reach_places(state: GameState) -> void:
 		return
 	var reached: Array[PlaceReached] = []
 	for walker: Entity in standing.enter(state, places, AreaStanding.ids_of(places)):
-		reached.append(PlaceReached.new(places[walker.tile], walker.id, walker.slot))
+		reached.append(_reached(places[walker.tile], walker))
 	state.events.append_array(reached)
 
 
@@ -101,3 +101,8 @@ static func _places(region: Region) -> Dictionary[Vector2i, String]:
 		if trigger.action == TileTrigger.REACH:
 			places[trigger.tile] = trigger.place
 	return places
+
+
+## That `walker` reached `place`.
+static func _reached(place: String, walker: Entity) -> PlaceReached:
+	return PlaceReached.new(place, walker.id, walker.slot)
