@@ -67,7 +67,7 @@ func run(_tree: SceneTree) -> String:
 ## instance's exit, while the glade stays loaded for the next visit. The player enters the basic
 ## instance on the first tick, then the glade, then the basic instance again, and nothing else.
 func _check_walk_through() -> String:
-	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	_entered.clear()
 	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east once more.
 	for direction: int in [0, 1, 0]:
@@ -100,7 +100,13 @@ func _check_walk_through() -> String:
 ## step out of it, and only players color the trail. The player walks through it, and it follows
 ## them out through the exit into the glade, while the one in the basic instance goes.
 func _check_companions() -> String:
-	var world: World = World.new(3, InstanceBlueprints.BASIC, 2, ["storm_finch"])
+	var world: World = World.new(
+		BlueprintSource.new(),
+		3,
+		InstanceBlueprints.BASIC,
+		2,
+		["storm_finch"],
+	)
 	world.step(_still())
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
@@ -161,7 +167,7 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 ## goes through its save data and back with the tick the glade was left and its generation, and
 ## hashes the same.
 func _check_purge() -> String:
-	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	var first_seed: int = world.seed_for(InstanceBlueprints.GLADE)
 	for direction: int in [0, 1, 0, 3]:
 		_walk_in(world, direction)
@@ -193,7 +199,7 @@ func _check_left_again(world: World, purged: int) -> String:
 	_walk_in(world, 3)
 	if world.left_at.get(InstanceBlueprints.GLADE, -1) <= purged:
 		return "leaving the glade again didn't start a new count"
-	var reloaded: World = WorldData.to_world(WorldData.of(world))
+	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
 	var kept: bool = reloaded.left_at == world.left_at and reloaded.generations == world.generations
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its purges: " + reloaded.problem
@@ -202,7 +208,7 @@ func _check_left_again(world: World, purged: int) -> String:
 
 ## The starting instance is never purged (#212), however long the player stays in the glade.
 func _check_start_kept() -> String:
-	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	for direction: int in [0, 1, 0]:
 		_walk_in(world, direction)
 	_idle_until(world, world.tick + World.PURGE_TICKS + 1)
@@ -513,12 +519,13 @@ func _check_web_connected() -> String:
 ## it. Only the instance a player is in steps, every instance's seed is its own and the same every
 ## session, and the world's hash covers every loaded instance.
 func _check_world() -> String:
-	var world: World = World.new(7, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
 	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
 	if not world.problem.is_empty() or glade == null or glade.player(0) != null:
 		return "the world didn't start, or the glade didn't load empty: " + world.problem
 	var seeds: Array[int] = [world.seed_for(InstanceBlueprints.BASIC), glade.rng_seed]
-	if seeds[0] == seeds[1] or World.new(7, InstanceBlueprints.BASIC).seed_for("glade") != seeds[1]:
+	var again: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
+	if seeds[0] == seeds[1] or again.seed_for("glade") != seeds[1]:
 		return "the instances' seeds aren't their own, or differ between sessions: %s" % [seeds]
 	var hashed: int = world.state_hash()
 	for _tick: int in 10:
@@ -548,7 +555,7 @@ func _check_layout() -> String:
 		var problem: String = _layout_problem(seed_value)
 		if not problem.is_empty():
 			return "seed %d: %s" % [seed_value, problem]
-	var world: World = World.new(7, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
 	var basic: Region = InstanceBlueprints.region_of(
 		InstanceBlueprints.BASIC,
 		world.seed_for("basic"),
@@ -568,7 +575,7 @@ func _check_layout() -> String:
 
 ## Why seed `seed_value`'s web can't be laid out as one world, or "".
 func _layout_problem(seed_value: int) -> String:
-	return World.new(seed_value, InstanceBlueprints.BASIC).layout_problem()
+	return World.new(BlueprintSource.new(), seed_value, InstanceBlueprints.BASIC).layout_problem()
 
 
 ## For every seed the glade's way back is on its west side, where the region ends.

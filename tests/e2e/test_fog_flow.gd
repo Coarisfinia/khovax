@@ -131,7 +131,7 @@ func _check_lookout() -> String:
 ## and a player standing on the exit to it sees some of it, and nothing that is neither here nor
 ## there.
 func _check_across_the_seam() -> String:
-	var world: World = World.new(3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	if basic.next_door.is_empty() or world.instances.has(InstanceBlueprints.GLADE):
 		return "the basic instance has no ground next door, or the glade was loaded for it"

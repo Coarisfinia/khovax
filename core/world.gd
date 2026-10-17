@@ -27,6 +27,8 @@ var start_name: String = ""
 var generations: Dictionary[String, int] = {}
 ## The world tick each loaded instance nobody is in was left behind (or loaded empty), by name.
 var left_at: Dictionary[String, int] = {}
+## What the world loads its instances from (#396), handed in, so the core names no blueprint.
+var source: InstanceSource = null
 ## Where each instance lies in the world, worked out once (#187, #282).
 var _layout: WorldLayout = WorldLayout.new()
 ## Each player slot's companion species, or "" for none (#338): who the players bring, which
@@ -38,15 +40,18 @@ var companions: Array[String] = []
 var events: Array[RefCounted] = []
 
 
-## A world that starts in the blueprint `start` with `players` players in it, each slot bringing
-## its companion from `companion_species` (by slot; none past its end); with no `start`, an empty
-## one, which only a refused save gives (`WorldData.to_world`).
+## A world that loads its instances from `instance_source` and starts in the blueprint `start` with
+## `players` players in it, each slot bringing its companion from `companion_species` (by slot; none
+## past its end); with no `start`, an empty one, which only a refused save gives
+## (`WorldData.to_world`).
 func _init(
+	instance_source: InstanceSource,
 	seed_value: int,
 	start: String,
 	players: int = 1,
 	companion_species: Array[String] = [],
 ) -> void:
+	source = instance_source
 	world_seed = seed_value
 	start_name = start
 	set_companions(companion_species)
@@ -92,11 +97,7 @@ func instance(instance_name: String) -> GameState:
 ## `players` players and the world's companions, not yet among the loaded ones; null when it can't
 ## load.
 func create_instance(instance_name: String, players: int) -> GameState:
-	var created: GameState = InstanceBlueprints.create(
-		instance_name,
-		seed_for(instance_name),
-		players,
-	)
+	var created: GameState = source.create(instance_name, seed_for(instance_name), players)
 	if created != null:
 		created.companions = companions.duplicate()
 		_hand_next_door(instance_name, created)
@@ -262,7 +263,7 @@ func state_hash() -> int:
 
 ## An empty world refused for `why`.
 static func refused(why: String) -> World:
-	var empty: World = World.new(0, "")
+	var empty: World = World.new(null, 0, "")
 	empty.problem = why
 	return empty
 

@@ -55,7 +55,7 @@ static func parse(text: String) -> World:
 	if not parsed is Dictionary or not has_whole_numbers(parsed):
 		return World.refused("not a world save, or it holds a number that isn't whole")
 	var data: Dictionary = whole_numbers(parsed)
-	return WorldData.to_world(data)
+	return WorldData.to_world(data, BlueprintSource.new())
 
 
 ## Reads the ground explored in the world saved at `path` into `into` (ExploredGround);
