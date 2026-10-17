@@ -80,9 +80,7 @@ func _check_tracked(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = await _check_list_follows(tree, driver, bus, list)
 	if result.is_empty():
-		result = _check_chests(driver, bus, profile, list)
-	if result.is_empty():
-		result = _check_reached(driver, bus, profile)
+		result = _check_finds(driver, bus, profile, list)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
@@ -164,6 +162,17 @@ func _check_list_follows(
 	if result.is_empty():
 		result = await _check_dropped(tree, list)
 	return result
+
+
+## Chests and places count for whoever opened or reached them.
+func _check_finds(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	list: QuestListView,
+) -> String:
+	var result: String = _check_chests(driver, bus, profile, list)
+	return result if not result.is_empty() else _check_reached(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,

@@ -86,5 +86,10 @@ static func _reach_places(state: GameState) -> void:
 		var place: String = places.get(moved.to, "")
 		var entered: bool = not place.is_empty() and places.get(moved.from, "") != place
 		if walker != null and walker.slot != Entity.NO_SLOT and entered:
-			reached.append(PlaceReached.new(place, walker.id, walker.slot))
+			reached.append(_reached(place, walker))
 	state.events.append_array(reached)
+
+
+## That `walker` reached `place`.
+static func _reached(place: String, walker: Entity) -> PlaceReached:
+	return PlaceReached.new(place, walker.id, walker.slot)
