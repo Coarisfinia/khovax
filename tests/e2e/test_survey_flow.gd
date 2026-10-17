@@ -109,14 +109,38 @@ func _survey_symbols_drawn(survey: SurveyView) -> bool:
 ## (#353).
 func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 	var world: World = driver.world
-	var state: GameState = driver.state
-	var target: String = state.region.exit_blueprints[0]
+	var target: String = driver.state.region.exit_blueprints[0]
 	var region: Region = survey.neighbours.region_of(target)
 	if world.instances.has(target) or region == null:
 		return "the glade's neighbour %s is loaded already, or not drawn next door" % target
-	# Every other tile next door explored, and the exits' own tiles here and there, for their
-	# chevrons.
-	var explored: ExploredGround = survey.keeper.explored_in(world)
+	var keeper: WorldKeeper = survey.keeper
+	var there: Dictionary[Vector2i, bool] = _explore_next_door(driver, keeper, region, target)
+	var loaded: Array[String] = world.sorted_names()
+	var before: int = world.state_hash()
+	survey.show_state()
+	if world.sorted_names() != loaded or world.state_hash() != before:
+		return "drawing the Survey loaded or changed an instance"
+	var shift: Vector2i = survey.neighbours.shifts[target]
+	for tile: Vector2i in region.sorted_tiles():
+		var at: Vector2i = tile + shift
+		if survey.tiles.has(at) != there.has(tile):
+			var how: String = "shows the fogged" if survey.tiles.has(at) else "hides the explored"
+			return "the Survey %s tile %s next door" % [how, tile]
+		if there.has(tile) and survey.tiles[at] != TileLooks.of(region.terrain[tile]).color:
+			return "the Survey colors %s next door unlike its kind" % tile
+	return _survey_exits(driver.state.region, region, shift, survey)
+
+
+## Marks every other tile of `region`, the instance `target` next door, explored, and the exits'
+## own tiles here and there, for their chevrons; returns what is explored there.
+func _explore_next_door(
+		driver: GameDriver,
+		keeper: WorldKeeper,
+		region: Region,
+		target: String,
+) -> Dictionary[Vector2i, bool]:
+	var world: World = driver.world
+	var explored: ExploredGround = keeper.explored_in(world)
 	var there: Dictionary[Vector2i, bool] = explored.tiles_of(target, world.generation(target))
 	var ground: Array[Vector2i] = region.sorted_tiles()
 	for i: int in range(0, ground.size(), 2):
@@ -125,30 +149,23 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 		there[Vector2i(exit.x, exit.y)] = true
 	var here_name: String = driver.local_instance_name()
 	var here: Dictionary[Vector2i, bool] = explored.tiles_of(here_name, world.generation(here_name))
-	for exit: Vector3i in state.region.exits:
+	for exit: Vector3i in driver.state.region.exits:
 		here[Vector2i(exit.x, exit.y)] = true
-	var loaded: Array[String] = world.sorted_names()
-	var before: int = world.state_hash()
-	survey.show_state()
-	if world.sorted_names() != loaded or world.state_hash() != before:
-		return "drawing the Survey loaded or changed an instance"
-	var shift: Vector2i = survey.neighbours.shifts[target]
+	return there
+
+
+## Why the Survey doesn't show exactly the exits on the tiles it shows, those of `here` and those of
+## `there` next door, shifted by `shift`, or "".
+func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyView) -> String:
 	var everywhere: Array[Vector3i] = []
-	everywhere.append_array(state.region.exits)
-	for exit: Vector3i in region.exits:
+	everywhere.append_array(here.exits)
+	for exit: Vector3i in there.exits:
 		everywhere.append(exit + Vector3i(shift.x, shift.y, 0))
-	for tile: Vector2i in ground:
-		var at: Vector2i = tile + shift
-		if survey.tiles.has(at) != there.has(tile):
-			var how: String = "shows the fogged" if survey.tiles.has(at) else "hides the explored"
-			return "the Survey %s tile %s next door" % [how, tile]
-		if there.has(tile) and survey.tiles[at] != TileLooks.of(region.terrain[tile]).color:
-			return "the Survey colors %s next door unlike its kind" % tile
 	var shown: Array[Vector3i] = []
 	for exit: Vector3i in everywhere:
 		if survey.tiles.has(Vector2i(exit.x, exit.y)):
 			shown.append(exit)
-	if shown.size() <= state.region.exits.size() or survey.exits != shown:
+	if shown.size() <= here.exits.size() or survey.exits != shown:
 		return "the Survey doesn't show the exits here and next door on the tiles it shows: %s" % [
 			survey.exits,
 		]
