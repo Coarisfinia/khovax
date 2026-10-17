@@ -89,14 +89,16 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	return state
 
 
-## The features an instance has because of what its region holds: exits, triggers, wild monsters
-## in hiding.
+## The features an instance has because of what its region holds: exits, triggers, region pieces
+## to enter, wild monsters in hiding.
 static func _for_region(region: Region) -> Array[Feature]:
 	var features: Array[Feature] = []
 	if not region.exits.is_empty():
 		features.append(ExitFeature.new())
 	if not region.triggers.is_empty():
 		features.append(TriggerFeature.new())
+	if not region.piece_of.is_empty():
+		features.append(EnteringFeature.new())
 	if HidingFeature.has_hiding(region):
 		features.append(HidingFeature.new())
 	return features
@@ -201,8 +203,12 @@ static func _loot_table(table_id: String) -> LootTable:
 	return table
 
 
+## The region piece in the file at `path`, every tile of it named after the file (#350).
 static func _piece(path: String) -> Region:
 	var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
 	if not piece.problem.is_empty():
 		piece.problem = "%s: %s" % [path, piece.problem]
+	var piece_id: String = path.get_file().get_basename()
+	for tile: Vector2i in piece.terrain:
+		piece.piece_of[tile] = piece_id
 	return piece

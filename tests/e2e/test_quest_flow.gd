@@ -11,7 +11,10 @@ extends RefCounted
 ## each open quest's step and count, follows a step counting up, and drops a finished quest once
 ## it has faded out. A player stepping into a place from outside it raises that the place was
 ## reached, for that player only (#339); it finishes this player's quest to reach it, not another
-## player's arrival, and the quest's marker points at the place's nearest tile.
+## player's arrival, and the quest's marker points at the place's nearest tile. In the glade, a
+## player raises that they entered each region piece they come to stand in, once each time it
+## changes, starting in one too (#350); entering the thicket finishes this player's quest to enter
+## it, not another player's, and the quest's marker points at the thicket's nearest tile.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -19,6 +22,11 @@ const TWO_STEPS: String = (
 	"{\"id\": \"toads_then_chest\", \"name\": \"Two toads, then a chest\", \"steps\": ["
 	+ "{\"condition\": \"dominated\", \"species\": \"moss_toad\", \"count\": 2}, "
 	+ "{\"condition\": \"opened\"}]}"
+)
+## A quest that asks to enter the glade's thicket.
+const ENTER_THICKET: String = (
+	"{\"id\": \"enter_thicket\", \"name\": \"Into the thicket\", \"steps\": ["
+	+ "{\"condition\": \"entered\", \"piece\": \"thicket\"}]}"
 )
 ## A quest that asks to reach the beach.
 const REACH_BEACH: String = (
@@ -40,6 +48,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_broken_data()
 	if result.is_empty():
 		result = _check_places()
+	if result.is_empty():
+		result = _check_pieces()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -164,7 +174,7 @@ func _check_list_follows(
 	return result
 
 
-## Chests and places count for whoever opened or reached them.
+## Chests, places and region pieces count for whoever opened, reached or entered them.
 func _check_finds(
 	driver: GameDriver,
 	bus: EventBus,
@@ -172,7 +182,9 @@ func _check_finds(
 	list: QuestListView,
 ) -> String:
 	var result: String = _check_chests(driver, bus, profile, list)
-	return result if not result.is_empty() else _check_reached(driver, bus, profile)
+	if result.is_empty():
+		result = _check_reached(driver, bus, profile)
+	return result if not result.is_empty() else _check_entered(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,
@@ -212,6 +224,20 @@ func _check_reached(driver: GameDriver, bus: EventBus, profile: Profile) -> Stri
 	_emit(driver, bus, PlaceReached.new("beach", 1, 0))
 	if not profile.quests_done.has("reach_beach"):
 		return "this player reaching the beach didn't finish the quest to reach it"
+	return ""
+
+
+## Entering the thicket counts for this player when they entered it, not when another player did.
+func _check_entered(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var thicket: QuestDefinition = QuestDefinition.parse("enter_thicket", ENTER_THICKET, {})
+	profile.quest_book[thicket.id] = thicket
+	_emit(driver, bus, PieceEntered.new("thicket", 9, 1))
+	_emit(driver, bus, PieceEntered.new("pond", 1, 0))
+	if profile.quests_done.has("enter_thicket"):
+		return "another player entering, or another piece, counted as entering the thicket"
+	_emit(driver, bus, PieceEntered.new("thicket", 1, 0))
+	if not profile.quests_done.has("enter_thicket"):
+		return "this player entering the thicket didn't finish the quest to enter it"
 	return ""
 
 
@@ -271,16 +297,82 @@ func _check_arrival(state: GameState) -> String:
 ## The quest to reach the beach is marked on the beach tile nearest to player 1.
 func _check_place_marker(state: GameState, profile: Profile) -> String:
 	var from: Vector2i = state.player(0).tile
-	var nearest: int = -1
 	var beach: Array[Vector2i] = []
 	for trigger: TileTrigger in state.region.triggers:
 		beach.append(trigger.tile)
-		var distance: int = Hex.distance(trigger.tile, from)
-		nearest = distance if nearest < 0 else mini(nearest, distance)
 	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("reach_beach", from)
-	if not beach.has(target) or Hex.distance(target, from) != nearest:
+	if not beach.has(target) or Hex.distance(target, from) != _nearest(beach, from):
 		return "the quest to reach the beach isn't marked on its nearest tile"
 	return ""
+
+
+## In the glade: the player starting in the start piece enters it on the first tick, once. The
+## quest to enter the thicket is marked on the thicket's nearest tile, and walking there enters
+## every piece on the way, once each time the piece changes, ending in the thicket.
+func _check_pieces() -> String:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var still: Array[Command] = FlowSteps.commands([Command.NO_MOVE])
+	Simulation.step(state, still)
+	var entered: Array[String] = _pieces_entered(state.events)
+	Simulation.step(state, still)
+	entered.append_array(_pieces_entered(state.events))
+	if entered.size() != 1 or entered[0] != "start":
+		return "the player starting in the glade didn't enter its start piece, once"
+	var profile: Profile = Profile.new()
+	profile.quest_book["enter_thicket"] = QuestDefinition.parse("enter_thicket", ENTER_THICKET, {})
+	var from: Vector2i = state.player(0).tile
+	var thicket: Array[Vector2i] = []
+	for tile: Vector2i in state.region.piece_of:
+		if state.region.piece_of[tile] == "thicket":
+			thicket.append(tile)
+	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("enter_thicket", from)
+	if not thicket.has(target) or Hex.distance(target, from) != _nearest(thicket, from):
+		return "the quest to enter the thicket isn't marked on its nearest tile"
+	return _check_walk_into_thicket(state)
+
+
+## Walking to the nearest walkable tile of the thicket enters each piece on the way once, in the
+## order the walk comes to them, the thicket last.
+func _check_walk_into_thicket(state: GameState) -> String:
+	var from: Vector2i = state.player(0).tile
+	var directions: Array[int] = []
+	for tile: Vector2i in state.region.reachable(from):
+		if state.region.piece_of[tile] == "thicket":
+			directions = FlowSteps.shortest_path(state, from, tile)
+		if not directions.is_empty():
+			break
+	if directions.is_empty():
+		return "no walk leads from the glade's start into the thicket"
+	var expected: Array[String] = []
+	var walked: Vector2i = from
+	var events: Array[RefCounted] = []
+	for direction: int in directions:
+		var piece: String = state.region.piece_of[walked + Hex.DIRECTIONS[direction]]
+		if piece != state.region.piece_of[walked]:
+			expected.append(piece)
+		walked += Hex.DIRECTIONS[direction]
+		events.append_array(FlowSteps.step(state, direction))
+	var entered: Array[String] = _pieces_entered(events)
+	if entered != expected or not entered.has("thicket"):
+		return "walking into the thicket entered %s, not %s" % [entered, expected]
+	return ""
+
+
+## How far the nearest of `tiles` is from `from`.
+static func _nearest(tiles: Array[Vector2i], from: Vector2i) -> int:
+	var nearest: int = Hex.distance(tiles[0], from)
+	for tile: Vector2i in tiles:
+		nearest = mini(nearest, Hex.distance(tile, from))
+	return nearest
+
+
+## The region pieces entered among `events`, in order, by the player in slot 0.
+static func _pieces_entered(events: Array[RefCounted]) -> Array[String]:
+	var pieces: Array[String] = []
+	for event: RefCounted in events:
+		if event is PieceEntered and (event as PieceEntered).slot == 0:
+			pieces.append((event as PieceEntered).piece)
+	return pieces
 
 
 ## The places reached among `events`.

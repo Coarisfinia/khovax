@@ -9,9 +9,8 @@ extends Feature
 
 ## The index of every trigger in `state.region.triggers` that has fired, sorted.
 var fired: Array[int] = []
-## The place each player stands in, by entity id, as its index among the region's place ids
-## (sorted); a player standing in none isn't here. Coming to stand in another place reaches it.
-var standing: Dictionary[int, int] = {}
+## The place each player stands in. Coming to stand in another place reaches it.
+var standing: AreaStanding = AreaStanding.new()
 
 
 func id() -> int:
@@ -38,19 +37,19 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [fired.size()]
 	values.append_array(fired)
 	# Only where someone stands in a place, so regions without places hash as before.
-	if not standing.is_empty():
-		values.append_array(_standing_flat())
+	if not standing.areas.is_empty():
+		values.append_array(standing.flat())
 	return values
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
-	var _forgotten: bool = standing.erase(removed_id)
+	standing.forget(removed_id)
 
 
 ## The triggers that have fired, by their index in the region's legend, and the place each player
 ## stands in.
 func save_values() -> Dictionary:
-	return { "fired": fired, "standing": _standing_flat() }
+	return { "fired": fired, "standing": standing.flat() }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
@@ -60,14 +59,9 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if not fired.has(index):
 			fired.append(index)
 	fired.sort()
-	standing.clear()
 	# A save from before places were remembered has none: everyone stands in no place.
-	if values.data.has("standing"):
-		var places: int = _place_ids(state.region).size()
-		var pairs: Array[int] = values.wholes("standing", 0, DataReader.MOST)
-		for i: int in range(0, pairs.size() - 1, 2):
-			if pairs[i + 1] < places and state.entity(pairs[i]) != null:
-				standing[pairs[i]] = pairs[i + 1]
+	var places: Dictionary[Vector2i, String] = _places(state.region)
+	standing.load_flat(state, values, "standing", AreaStanding.ids_of(places).size())
 
 
 ## Whether `trigger`'s when has come: for STEP, a player stands on its tile. Standing counts, not
@@ -91,50 +85,19 @@ static func _act(state: GameState, trigger: TileTrigger) -> void:
 ## Raises PlaceReached for every player, in id order, who now stands in a place other than the one
 ## they stood in: stepping in from outside it, starting there, or arriving there through an exit.
 func _reach_places(state: GameState) -> void:
-	var places: Dictionary[Vector2i, String] = {}
-	for trigger: TileTrigger in state.region.triggers:
-		if trigger.action == TileTrigger.REACH:
-			places[trigger.tile] = trigger.place
+	var places: Dictionary[Vector2i, String] = _places(state.region)
 	if places.is_empty():
 		return
-	var ids: Array[String] = _place_ids(state.region)
 	var reached: Array[PlaceReached] = []
-	for walker: Entity in state.entities:
-		if walker.slot == Entity.NO_SLOT:
-			continue
-		var place: String = places.get(walker.tile, "")
-		var index: int = ids.find(place)
-		if index == standing.get(walker.id, -1):
-			continue
-		if index < 0:
-			var _left: bool = standing.erase(walker.id)
-		else:
-			standing[walker.id] = index
-			reached.append(_reached(place, walker))
+	for walker: Entity in standing.enter(state, places, AreaStanding.ids_of(places)):
+		reached.append(PlaceReached.new(places[walker.tile], walker.id, walker.slot))
 	state.events.append_array(reached)
 
 
-## The ids of the places in `region`'s legend, sorted, each once.
-static func _place_ids(region: Region) -> Array[String]:
-	var ids: Array[String] = []
+## The place each of `region`'s place tiles is part of, by tile.
+static func _places(region: Region) -> Dictionary[Vector2i, String]:
+	var places: Dictionary[Vector2i, String] = {}
 	for trigger: TileTrigger in region.triggers:
-		if trigger.action == TileTrigger.REACH and not ids.has(trigger.place):
-			ids.append(trigger.place)
-	ids.sort()
-	return ids
-
-
-## Where the players stand, as entity id and place index after one another, by id.
-func _standing_flat() -> Array[int]:
-	var flat: Array[int] = []
-	var ids: Array[int] = []
-	ids.assign(standing.keys())
-	ids.sort()
-	for entity_id: int in ids:
-		flat.append_array([entity_id, standing[entity_id]])
-	return flat
-
-
-## That `walker` reached `place`.
-static func _reached(place: String, walker: Entity) -> PlaceReached:
-	return PlaceReached.new(place, walker.id, walker.slot)
+		if trigger.action == TileTrigger.REACH:
+			places[trigger.tile] = trigger.place
+	return places
