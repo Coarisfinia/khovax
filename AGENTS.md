@@ -102,6 +102,10 @@ rides along with the next real pull request, and that pull request's description
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
 
+**Buttons always show their item's or attack's icon, with its charges or cooldown** (owner's rule, on
+#429): a button never vanishes when it's empty or cooling down; it shows 0, or a cooldown circle with
+the seconds left.
+
 **The agent decides the region legend's format** (owner's rule, on #389): how a region file marks
 a tile, a place or a monster isn't the owner's call; pick a clear wording and note it in the issue.
 
