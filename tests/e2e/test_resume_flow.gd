@@ -268,8 +268,8 @@ func _settle(world: World) -> void:
 	while sealing:
 		sealing = false
 		for each: GameState in world.instances.values():
-			var domination: DominationFeature = each.feature(Features.DOMINATION) as DominationFeature
-			sealing = sealing or not domination.seals.is_empty()
+			var feature: Feature = each.feature(Features.DOMINATION)
+			sealing = sealing or not (feature as DominationFeature).seals.is_empty()
 		if sealing:
 			world.step(FlowSteps.command(Command.NO_MOVE))
 
