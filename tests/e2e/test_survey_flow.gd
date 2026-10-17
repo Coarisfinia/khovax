@@ -7,7 +7,17 @@ extends RefCounted
 ## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
 ## their range, and both choices are kept. In every place, on desktop screens and phones held
 ## either way, it sits against its own corner or covers the whole screen; every zoom step is
-## followed, and zooming stops at both ends.
+## followed, and zooming stops at both ends. On touch screens its buttons show beside it, clear of
+## it on every screen, and a press on each presses its action and moves the Survey like the key,
+## without starting the touch stick (#352).
+
+## Desktop screens and phones held either way.
+const SCREENS: Array[Vector2] = [
+	Vector2(1152, 648),
+	Vector2(1920, 1080),
+	Vector2(720, 1600),
+	Vector2(2400, 1080),
+]
 
 
 func run(tree: SceneTree) -> String:
@@ -53,6 +63,8 @@ func _check_survey(main: Node) -> String:
 		result = _survey_screens(choice, survey)
 	if result.is_empty():
 		result = _survey_zooms(choice, survey)
+	if result.is_empty():
+		result = _survey_buttons(main, choice, survey)
 	SaveStore.remove(path)
 	graphics.settings_path = kept_path
 	graphics.settings.chosen = kept
@@ -272,13 +284,7 @@ func _survey_cornered(place: SurveyChoice.Place, rect: Rect2, screen: Vector2) -
 ## Why the Survey isn't placed right in every place on every kind of screen, desktop and phones
 ## held either way, or "".
 func _survey_screens(choice: SurveyChoice, survey: SurveyView) -> String:
-	var screens: Array[Vector2] = [
-		Vector2(1152, 648),
-		Vector2(1920, 1080),
-		Vector2(720, 1600),
-		Vector2(2400, 1080),
-	]
-	for screen: Vector2 in screens:
+	for screen: Vector2 in SCREENS:
 		for _place: int in SurveyChoice.Place.size():
 			var _kept: String = choice.cycle()
 			choice.place_in(screen)
@@ -307,3 +313,105 @@ func _survey_zooms(choice: SurveyChoice, survey: SurveyView) -> String:
 	if problem.is_empty() and survey.across != SurveyChoice.ZOOMS.back():
 		problem = "zooming in past the closest step didn't stop there"
 	return problem
+
+
+## Why the Survey's touch buttons don't show exactly where there is touch input, or aren't placed
+## right on every screen, or a press on one doesn't press its action and move the Survey like its
+## key, or starts the touch stick, or "". The zoom is at its closest step here, so zooming out
+## comes first.
+func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
+	var buttons: SurveyButtons = main.get_node("Hud/SurveyButtons") as SurveyButtons
+	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+	var touch: bool = buttons.touch
+	buttons.touch = false
+	buttons.lay_out()
+	var problem: String = "the Survey's buttons show without touch input" if buttons.visible else ""
+	buttons.touch = true
+	if problem.is_empty():
+		problem = _survey_buttons_placed(choice, survey, buttons)
+	var actions: Array[StringName] = [&"survey_zoom_out", &"survey_zoom_in", &"survey"]
+	for action: StringName in actions:
+		if problem.is_empty():
+			problem = _survey_button_pressed(buttons, stick, choice, action)
+	buttons.touch = touch
+	buttons.lay_out()
+	return problem
+
+
+## Why a touch on `action`'s button doesn't press its action alone, without the touch stick, and
+## move the Survey's place or zoom like the key, or "".
+func _survey_button_pressed(
+		buttons: SurveyButtons,
+		stick: TouchStick,
+		choice: SurveyChoice,
+		action: StringName,
+) -> String:
+	var place: int = choice.place_shown()
+	var zoom: int = choice.zoom_step()
+	buttons.lay_out()
+	var at: Vector2 = buttons.rect_of(action).get_center()
+	_touch(buttons.get_viewport(), at, true)
+	var pressed: bool = Input.is_action_pressed(action) and not stick.is_held()
+	_touch(buttons.get_viewport(), at, false)
+	var expected: Vector2i = Vector2i(posmod(place + 1, SurveyChoice.Place.size()), zoom)
+	if action != &"survey":
+		expected = Vector2i(place, zoom + (1 if action == &"survey_zoom_in" else -1))
+	var moved: bool = Vector2i(choice.place_shown(), choice.zoom_step()) == expected
+	if not pressed or Input.is_action_pressed(action) or not moved:
+		return "the Survey's %s button didn't press its action alone, or move it like its key" % [
+			action,
+		]
+	return ""
+
+
+## Why the Survey's buttons aren't wholly on every screen, in each place, on the Survey's side and
+## clear of a corner Survey that shows, or "".
+func _survey_buttons_placed(
+		choice: SurveyChoice,
+		survey: SurveyView,
+		buttons: SurveyButtons,
+) -> String:
+	var problem: String = ""
+	for screen: Vector2 in SCREENS:
+		for _place: int in SurveyChoice.Place.size():
+			problem += choice.cycle()
+			choice.place_in(screen)
+			buttons.lay_out_in(screen)
+			if problem.is_empty():
+				problem = _survey_buttons_beside(choice, survey, buttons, screen)
+	choice.place()
+	buttons.lay_out()
+	return problem
+
+
+## Why the Survey's buttons, laid out for a `screen`, aren't wholly on it, on the Survey's side and
+## clear of a corner Survey that shows, or "".
+func _survey_buttons_beside(
+		choice: SurveyChoice,
+		survey: SurveyView,
+		buttons: SurveyButtons,
+		screen: Vector2,
+) -> String:
+	var place: SurveyChoice.Place = choice.place_shown()
+	var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
+	for action: StringName in SurveyButtons.ACTIONS:
+		var rect: Rect2 = buttons.rect_of(action)
+		var on_side: bool = (rect.get_center().x < screen.x / 2.0) == left
+		var in_corner: bool = survey.visible and survey.bordered
+		var clear: bool = not (in_corner and survey.get_rect().intersects(rect))
+		if not Rect2(Vector2.ZERO, screen).encloses(rect) or not on_side or not clear:
+			return "the Survey's %s button on a %s screen in place %d is at %s" % [
+				action,
+				screen,
+				place,
+				rect,
+			]
+	return ""
+
+
+## Touches `at` with the first finger, or lifts it there.
+func _touch(viewport: Viewport, at: Vector2, down: bool) -> void:
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.position = at
+	touch.pressed = down
+	viewport.push_input(touch)
