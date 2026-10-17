@@ -14,6 +14,8 @@ const CONDITIONS: Array[String] = ["dominated", "opened", "reached"]
 var condition: String = ""
 ## The species a `dominated` step asks for, or "" for any.
 var species: String = ""
+## That species' name, as the player reads it (#351), or "".
+var species_name: String = ""
 ## The place a `reached` step asks for, as region legends name it (TileTrigger.REACH).
 var place: String = ""
 var count: int = 1
@@ -47,6 +49,8 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 		step.problem = "its place must be an id, lowercase words joined by underscores"
 	elif step.count < 1:
 		step.problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
+	if step.problem.is_empty() and data.has("species"):
+		step.species_name = known_species[step.species].name
 	return step
 
 

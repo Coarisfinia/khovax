@@ -2,6 +2,7 @@
    families, as dual types must. */
 {
 	"id": "storm_finch",
+	"name": "Storm Finch",
 	"types": ["breeze", "mana"],
 	"hp": 60,
 	"strength": 70,

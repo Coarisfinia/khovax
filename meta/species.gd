@@ -8,6 +8,7 @@ const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pus
 ## A species file's fields, as its schema (data/schemas/species.schema.json) allows them.
 const FIELDS: Array[String] = [
 	"id",
+	"name",
 	"types",
 	"hp",
 	"strength",
@@ -19,6 +20,8 @@ const FIELDS: Array[String] = [
 ]
 
 var id: String = ""
+## What the player reads (#351); code and saves use the id.
+var name: String = ""
 ## One or two types (#68); dual types are the norm later in the game.
 var types: Array[String] = []
 var hp: int = 0
@@ -88,7 +91,12 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	if entry.hp < 1 or entry.strength < 1:
 		return "hp and strength are whole numbers from 1 to %d" % Fixed.MAX_AMOUNT
 	var wrong: String = entry._types_problem()
-	return wrong if not wrong.is_empty() else entry.read_kit(data)
+	if wrong.is_empty():
+		wrong = entry.read_kit(data)
+	entry.name = Content.text_of(data.get("name"))
+	if wrong.is_empty() and entry.name.strip_edges().is_empty():
+		wrong = "it needs a name"
+	return wrong
 
 
 ## Why its types don't fit the chart, or "": one or two, from the chart, never two of one family.
