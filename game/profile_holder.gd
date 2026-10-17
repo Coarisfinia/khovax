@@ -4,7 +4,8 @@ extends Node
 ## domination of that player and their loot from every chest opened (#124) taken over at once and
 ## saved debounced (ProfileKeeper, #73), and whatever is pending saved when the game quits or goes
 ## to the background. The same dominations and chests advance the player's quests (#184), in the
-## profile, and so do the places they step into (#339) and the region pieces they enter (#350).
+## profile, and so do the places they step into (#339) and the region pieces and instances they
+## enter (#350, #370).
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -47,6 +48,7 @@ func _ready() -> void:
 	bus.subscribe(&"DominationLoot", _on_event)
 	bus.subscribe(&"PlaceReached", _on_event)
 	bus.subscribe(&"PieceEntered", _on_event)
+	bus.subscribe(&"InstanceEntered", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -81,8 +83,8 @@ static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinitio
 ## What this machine's player gains from `event`, or null when it isn't theirs: their domination, or
 ## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
 ## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
-## (#203), which is no chest; a place they stepped into (#339), or a region piece they entered
-## (#350).
+## (#203), which is no chest; a place they stepped into (#339), or a region piece or an instance
+## they entered (#350, #370).
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterDominated:
@@ -100,9 +102,11 @@ func _gain_of(event: RefCounted) -> Gain:
 		gain.places_reached.append((event as PlaceReached).place)
 	elif event is PieceEntered and (event as PieceEntered).slot == input.slot:
 		gain.pieces_entered.append((event as PieceEntered).piece)
+	elif event is InstanceEntered and (event as InstanceEntered).slot == input.slot:
+		gain.instances_entered.append((event as InstanceEntered).instance)
 	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
 	empty = empty and gain.materials.is_empty() and gain.places_reached.is_empty()
-	empty = empty and gain.pieces_entered.is_empty()
+	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
 	return null if empty else gain
 
 

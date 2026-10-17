@@ -17,6 +17,8 @@ const KIT: String = (
 const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
 ## A quest step to enter a region piece, its id left open (#350).
 const ENTER: String = "{\"condition\": \"entered\", \"piece\": \"%s\"}"
+## A quest step to enter an instance, its blueprint left open (#370).
+const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\"}"
 
 
 func run(_tree: SceneTree) -> String:
@@ -95,28 +97,33 @@ func _check_abilities_refused() -> String:
 	return ""
 
 
-## Why a step to reach the beach and one to enter the thicket don't read, naming them, or "".
+## Why a step to reach the beach, one to enter the thicket and one to enter the glade don't read,
+## naming them, or "".
 func _check_named_steps(content: Content) -> String:
 	var named: QuestDefinition = QuestDefinition.parse(
 		"x",
-		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s]}" % [
+		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s, %s]}" % [
 			REACH % "beach",
 			ENTER % "thicket",
+			ENTER_INSTANCE % "glade",
 		],
 		content.species,
 	)
 	if (not named.problem.is_empty()
 			or named.steps[0].place != "beach"
-			or named.steps[1].piece != "thicket"):
-		return "a step to reach the beach or to enter the thicket didn't read: " + named.problem
+			or named.steps[1].piece != "thicket"
+			or named.steps[2].instance != "glade"
+			or not named.steps[2].piece.is_empty()):
+		return "a step to reach or enter something didn't read: " + named.problem
 	return ""
 
 
 ## Every quest file reads: the first domination is one domination of any species, and the toads'
 ## quest counts up three of one species, a step to reach a place names it (#339), and one to enter
-## a region piece names the piece (#350). Quests with a wrong id, name, step, condition, species,
-## place, piece or count are refused, with a reason: a reached step without a place, or a place on
-## another step, too, and the same for an entered step and its piece.
+## a region piece names the piece (#350), or an instance its blueprint (#370). Quests with a wrong
+## id, name, step, condition, species, place, piece, instance or count are refused, with a reason:
+## a reached step without a place, or a place on another step, too, and the same for an entered
+## step and its piece or instance, which it names one of, never both.
 func _check_quests() -> String:
 	var content: Content = Content.load_quests()
 	if not content.problem.is_empty():
@@ -150,6 +157,12 @@ func _check_quests() -> String:
 		quest % ["x", "N", "{\"condition\": \"entered\"}"]: "step 0: its piece",
 		quest % ["x", "N", step % ", \"piece\": \"thicket\""]: "step 0: its piece",
 		quest % ["x", "N", ENTER % "The Thicket"]: "step 0: its piece must",
+		quest % ["x", "N", step % ", \"instance\": \"glade\""]: "step 0: its piece or instance",
+		quest % ["x", "N", ENTER_INSTANCE % "glade\", \"piece\": \"start"]: (
+			"step 0: its piece or instance"
+		),
+		quest % ["x", "N", ENTER_INSTANCE % "The Glade"]: "step 0: its instance must be an id",
+		quest % ["x", "N", ENTER_INSTANCE % "nowhere"]: "step 0: its instance must be an instance",
 		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
 		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
 			"step 0: its species"

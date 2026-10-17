@@ -58,6 +58,8 @@ func apply(result: Gain) -> String:
 		_advance_quests("reached", place)
 	for piece: String in result.pieces_entered:
 		_advance_quests("entered", piece)
+	for instance_name: String in result.instances_entered:
+		_advance_quests(QuestStep.INSTANCE_ENTERED, instance_name)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -71,12 +73,12 @@ func _dominate(species: String) -> void:
 	next_monster_id += 1
 
 
-## Counts one fact (a `condition`, with the species of a domination, the place reached or the piece
-## entered) toward every quest in the book whose current step asks for it, in id order, so quests
-## finished together are listed in the same order on every machine. A step that reaches its count
-## hands over to the next one, and the last step finishes the quest. Saved progress that no longer
-## fits the quest (its data changed since) settles at the next fact of any kind: a step already at
-## its count is complete, and a step past the last one finishes the quest.
+## Counts one fact (a `condition`, with the species of a domination, the place reached, or the
+## piece or instance entered) toward every quest in the book whose current step asks for it, in id
+## order, so quests finished together are listed in the same order on every machine. A step that
+## reaches its count hands over to the next one, and the last step finishes the quest. Saved
+## progress that no longer fits the quest (its data changed since) settles at the next fact of any
+## kind: a step already at its count is complete, and a step past the last one finishes the quest.
 func _advance_quests(condition: String, what: String) -> void:
 	var ids: Array[String] = []
 	ids.assign(quest_book.keys())
@@ -117,8 +119,8 @@ func _progress_of(id: String) -> QuestProgress:
 	return quest_progress.get(id, QuestProgress.new())
 
 
-## Why `result` can't be taken over (an empty species, place or piece, a nameless or negative
-## material, or more than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, place, piece or instance, a nameless or
+## negative material, or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -131,6 +133,8 @@ func _result_problem(result: Gain) -> String:
 		return "a place reached has no id"
 	if result.pieces_entered.has(""):
 		return "a region piece entered has no id"
+	if result.instances_entered.has(""):
+		return "an instance entered has no name"
 	for material: String in result.materials:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:

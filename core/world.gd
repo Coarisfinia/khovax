@@ -6,7 +6,8 @@ extends RefCounted
 ## Every instance's seed comes from the world's seed, its name and its generation, which goes up
 ## with each purge, so the same world loads the same instance the same way however and whenever
 ## it's reached, and a purged one comes back arranged anew. Players walk from one instance into
-## the next through exits (#154). Deterministic, like everything in core/.
+## the next through exits (#154), and the world raises that they entered it (#370). Deterministic,
+## like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
@@ -31,6 +32,10 @@ var _layout: WorldLayout = WorldLayout.new()
 ## Each player slot's companion species, or "" for none (#338): who the players bring, which
 ## every instance the world loads is handed (GameState.companions). Set when the session starts.
 var companions: Array[String] = []
+## The world's own events of the last tick (#370): players who came into another instance
+## (InstanceEntered), which no instance's features see. Like an instance's events, they're derived
+## from what happened, so they're neither hashed nor saved.
+var events: Array[RefCounted] = []
 
 
 ## A world that starts in the blueprint `start` with `players` players in it, each slot bringing
@@ -129,8 +134,13 @@ func active() -> Array[String]:
 ## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
 ## every player who walked out through an exit into the instance it leads to (#154). Moving them
 ## only after every instance has stepped means no one steps twice in a tick. Last, it purges what
-## has been left behind long enough.
+## has been left behind long enough. On a fresh world's first tick, every player enters the
+## instance they start in; a resumed world's players were already in theirs.
 func step(commands: Array[Command]) -> void:
+	events.clear()
+	if tick == 0:
+		for instance_name: String in active():
+			_entered(instance_name, instances[instance_name].entities)
 	tick += 1
 	var leaving: Array[Array] = []
 	for instance_name: String in active():
@@ -196,7 +206,16 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	if not found:
 		return
 	instances[from].remove_entity(taken.entity_id)
-	var _arrived: Entity = target.add_entity(taken.slot, arrival)
+	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
+	if arrived[0] != null:
+		_entered(taken.target, arrived)
+
+
+## Raises that each player among `entities` entered the instance `instance_name`.
+func _entered(instance_name: String, entities: Array[Entity]) -> void:
+	for entering: Entity in entities:
+		if entering.slot != Entity.NO_SLOT:
+			events.append(InstanceEntered.new(instance_name, entering.id, entering.slot))
 
 
 ## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
