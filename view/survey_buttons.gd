@@ -97,7 +97,9 @@ func rect_of(action: StringName) -> Rect2:
 	return Rect2(buttons[action].position - Vector2(_side, _side) / 2.0, Vector2(_side, _side))
 
 
-## Keeps the touch that pressed a button from reaching the touch stick.
+## Keeps the touch that pressed a button from reaching the touch stick. Godot hands `_input` to
+## later
+## nodes first, so this node comes after the stick in the Hud and sees the touch before it does.
 func _take_touch() -> void:
 	get_viewport().set_input_as_handled()
 	queue_redraw()
