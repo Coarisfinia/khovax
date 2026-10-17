@@ -4,7 +4,8 @@ extends RefCounted
 ## tile along a known path, zigzagging along a column for straight up and stopping at the grid's
 ## edge, at a wild monster and at water but not in a forest, and the view glides the player between
 ## tiles without jumps.
-## Real key and touch events reach the actions too. Time is stepped by hand, so the flow is
+## Real key and touch events reach the actions too. The special attack's key (#410) fires it in the
+## local player's next command, once per press. Time is stepped by hand, so the flow is
 ## deterministic.
 
 const STEP: float = 1.0 / 60.0
@@ -89,6 +90,8 @@ func run(tree: SceneTree) -> String:
 
 	var result: String = _check_bindings()
 	if result.is_empty():
+		result = _check_special_key()
+	if result.is_empty():
 		result = _check_gamepad_bindings()
 	if result.is_empty():
 		result = _check_paths()
@@ -125,6 +128,23 @@ func _check_bindings() -> String:
 			action,
 		) or not _press_reaches(KEY_NONE, arrow, action):
 			return "a real key event doesn't press %s" % action
+	return ""
+
+
+## E presses the special attack, by its physical position; a press fires it in the next command
+## only, and one between two ticks still reaches it.
+func _check_special_key() -> String:
+	if not _press_reaches(KEY_E, KEY_NONE, "special_attack"):
+		return "a real E key event doesn't press the special attack"
+	var input: LocalInput = _main.get_node("LocalInput") as LocalInput
+	var state: GameState = _driver.state
+	Input.action_press("special_attack")
+	input._process(STEP)
+	Input.action_release("special_attack")
+	input._process(STEP)
+	var fired: bool = input.command(state).special
+	if not fired or input.command(state).special:
+		return "a press of the special attack didn't fire it in the next command alone"
 	return ""
 
 
