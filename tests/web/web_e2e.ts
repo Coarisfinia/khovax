@@ -74,6 +74,8 @@ let result = "";
 let ended = false;
 // Why the run stopped early, or "" when it didn't.
 let stopReason = "";
+// What the loading screen's snake reported, in order.
+const snake: string[] = [];
 try {
   const context = await browser.newContext({
     viewport: SIZE,
@@ -108,14 +110,24 @@ try {
   page.on("close", () => stop("the page closed"));
   browser.on("disconnected", () => stop("the browser went away"));
   // The canvas's context-lost events don't bubble, but they pass the document on their way down.
+  // The loading screen's snake (#264, the web presets' head_include) says when it's on and gone.
   await page.addInitScript(() => {
     document.addEventListener("webglcontextlost", () => console.error("WebGL lost its context"), true);
+    let shown = false;
+    (function watch() {
+      const on = document.getElementById("khovax-snake") !== null;
+      if (on && !shown) console.log("KHOVAX_SNAKE: shown");
+      if (shown && !on) return console.log("KHOVAX_SNAKE: gone");
+      shown = on;
+      requestAnimationFrame(watch);
+    })();
   });
   const reported = new Promise<string>((done) => {
     page.on("console", (message) => {
       const line = message.text();
       console.log(`[${message.type()}] ${line}`);
       if (message.type() === "error" && !ended) errors.push(line);
+      if (line.startsWith("KHOVAX_SNAKE: ")) snake.push(line.slice(14));
       if (line === "WebGL lost its context") stop("WebGL lost its context");
       const match = RESULT.exec(line);
       if (match) {
@@ -142,6 +154,10 @@ try {
   }, HEARTBEAT_MS);
   result = await Promise.race([reported, stopped, timeout]);
   clearInterval(heartbeat);
+  // The snake was on the loading screen while the game loaded, and went with it.
+  if (result && snake.join() !== "shown,gone") {
+    errors.push(`the loading screen's snake reported ${snake.join() || "nothing"}, not shown,gone`);
+  }
   // Closing the browser below is no failure of the run.
   ended = true;
   // The video is written when its page closes. Best effort: after a crash or a lost browser this

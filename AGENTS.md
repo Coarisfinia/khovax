@@ -394,6 +394,11 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   It watches the bar until it's full, gone (the engine started) or hidden (a load error).
   Once it's full, a caption fades in there too, saying the game is starting (#270), on the
   compositor the same way; it goes with the loading screen when the engine starts.
+  A tiny snake game (#264, plain JavaScript on a canvas, arrow keys or swipes) sits above the bar
+  meanwhile: it's playable during the download and freezes while the engine starts, and it goes with
+  the loading screen, its listeners removed, so it never takes the game's input. Its script is
+  the second one in the head_include, minified (the cfg holds one line); the web e2e checks that
+  it shows and goes.
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
 - **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
   in it in one frame, not around a player at the start nor on arriving somewhere.
