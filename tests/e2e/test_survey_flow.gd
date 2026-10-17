@@ -365,7 +365,7 @@ func _survey_button_pressed(
 
 
 ## Why the Survey's buttons aren't wholly on every screen, in each place, on the Survey's side and
-## clear of a corner Survey, or "".
+## clear of a corner Survey that shows, or "".
 func _survey_buttons_placed(
 		choice: SurveyChoice,
 		survey: SurveyView,
@@ -385,7 +385,7 @@ func _survey_buttons_placed(
 
 
 ## Why the Survey's buttons, laid out for a `screen`, aren't wholly on it, on the Survey's side and
-## clear of a corner Survey, or "".
+## clear of a corner Survey that shows, or "".
 func _survey_buttons_beside(
 		choice: SurveyChoice,
 		survey: SurveyView,
@@ -397,7 +397,8 @@ func _survey_buttons_beside(
 	for action: StringName in SurveyButtons.ACTIONS:
 		var rect: Rect2 = buttons.rect_of(action)
 		var on_side: bool = (rect.get_center().x < screen.x / 2.0) == left
-		var clear: bool = not (survey.bordered and survey.get_rect().intersects(rect))
+		var in_corner: bool = survey.visible and survey.bordered
+		var clear: bool = not (in_corner and survey.get_rect().intersects(rect))
 		if not Rect2(Vector2.ZERO, screen).encloses(rect) or not on_side or not clear:
 			return "the Survey's %s button on a %s screen in place %d is at %s" % [
 				action,
