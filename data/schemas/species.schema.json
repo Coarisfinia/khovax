@@ -7,6 +7,7 @@
 	"additionalProperties": false,
 	"required": [
 		"id",
+		"name",
 		"types",
 		"hp",
 		"strength",
@@ -21,6 +22,11 @@
 			"description": "Stable, never reused: lowercase words joined by underscores.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": {
+			"description": "What the player reads (#351); code and saves use the id.",
+			"type": "string",
+			"pattern": "\\S"
 		},
 		"types": {
 			"description": "One or two types from the type chart (#68), never two of the same family.",

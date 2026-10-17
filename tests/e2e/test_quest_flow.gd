@@ -64,7 +64,7 @@ func _check_tracked(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_listed(list, {
 			"first_domination": "Dominate a monster",
-			"three_moss_toads": "Dominate a moss toad  0/3",
+			"three_moss_toads": "Dominate a Moss Toad  0/3",
 		})
 	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
@@ -157,7 +157,7 @@ func _check_list_follows(
 	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
 	var result: String = _check_listed(list, {
 		"first_domination": QuestListView.DONE_TEXT,
-		"three_moss_toads": "Dominate a moss toad  1/3",
+		"three_moss_toads": "Dominate a Moss Toad  1/3",
 	})
 	if result.is_empty():
 		result = await _check_dropped(tree, list)
