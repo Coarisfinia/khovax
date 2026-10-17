@@ -3,7 +3,8 @@ extends Feature
 ## Companions fight on their own (#221): every companion strikes a wild monster next to it once a
 ## second, the one with the lowest id, for its species' strength. The hit is non-lethal, an auto
 ## attack's property: it never takes a wild monster below 1 HP, so it weakens it for a domination
-## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Each hit
+## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Nor are ones
+## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
 ## raises CompanionStruck. A companion that just joined or has nothing to strike is ready at once.
 
 ## The ticks between two strikes of one companion.
@@ -78,14 +79,17 @@ func load_values(state: GameState, values: DataReader) -> void:
 			_waits[flat[i]] = mini(flat[i + 1], STRIKE_TICKS)
 
 
-## The wild monster with the lowest id next to `tile` that isn't hiding, or 0. WildMonsterFeature
-## keeps its monsters in id order. Hiding isn't required, since most instances have none; where an
-## instance has it, InstanceBlueprints lists it before the companions, so it has stepped already.
+## The wild monster with the lowest id next to `tile` that isn't hiding or sealing in a ring, or 0.
+## WildMonsterFeature keeps its monsters in id order. Hiding and domination aren't required, since
+## an instance may have neither; where an instance has them, InstanceBlueprints lists them before
+## the companions, so they have stepped already.
 static func _target(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
 	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
 	for monster: int in wild.monsters:
 		var hidden: bool = hiding != null and hiding.is_hidden(monster)
-		if not hidden and Hex.distance(state.entity(monster).tile, tile) == 1:
+		var sealed: bool = domination != null and domination.is_sealed(monster)
+		if not hidden and not sealed and Hex.distance(state.entity(monster).tile, tile) == 1:
 			return monster
 	return 0
 

@@ -67,7 +67,7 @@ func _close_rings(state: GameState) -> void:
 		var inside: Array[int] = []
 		for monster_id: int in wild.monsters:
 			var spot: Vector2i = state.entity(monster_id).tile
-			if not trail.tiles.has(spot) and not reachable.has(spot) and not _is_sealed(monster_id):
+			if not trail.tiles.has(spot) and not reachable.has(spot) and not is_sealed(monster_id):
 				inside.append(monster_id)
 		if inside.is_empty():
 			continue
@@ -167,7 +167,8 @@ func _sealing_players() -> Array[int]:
 	return ids
 
 
-func _is_sealed(monster_id: int) -> bool:
+## Whether the wild monster with this id is sealing in a ring.
+func is_sealed(monster_id: int) -> bool:
 	for seal: RingSeal in seals.values():
 		if seal.monsters.has(monster_id):
 			return true
@@ -263,7 +264,7 @@ func _monsters_problem(state: GameState, monsters: Array[int]) -> String:
 		var monster_id: int = monsters[i]
 		if i > 0 and monster_id <= monsters[i - 1]:
 			return "its monsters are out of order or there twice"
-		if not wild.is_wild_monster(monster_id) or _is_sealed(monster_id):
+		if not wild.is_wild_monster(monster_id) or is_sealed(monster_id):
 			return "%d isn't a wild monster, or is in another seal" % monster_id
 		var spot: Vector2i = state.entity(monster_id).tile
 		if trail.tiles.has(spot) or reachable.has(spot):
