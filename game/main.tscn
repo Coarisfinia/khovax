@@ -28,6 +28,7 @@
 [ext_resource type="Script" path="res://view/survey_view.gd" id="26_survey"]
 [ext_resource type="Script" path="res://view/survey_choice.gd" id="27_survey_choice"]
 [ext_resource type="Script" path="res://view/canopy_cutaway.gd" id="26_cutaway"]
+[ext_resource type="Script" path="res://view/quest_list_view.gd" id="28_quest_list"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -159,6 +160,13 @@ driver = NodePath("../../Driver")
 keeper = NodePath("../../WorldKeeper")
 holder = NodePath("../../ProfileHolder")
 input = NodePath("../../LocalInput")
+
+[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("holder", "survey") unique_id=3403403400]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("28_quest_list")
+holder = NodePath("../../ProfileHolder")
+survey = NodePath("../../SurveyChoice")
 
 [node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
 layout_mode = 3
