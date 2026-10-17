@@ -704,9 +704,11 @@ func _check_region_file() -> String:
 		Vector2i(1, 0),
 	]
 	var drawn: Region = Region.disc(RADIUS)
+	var all_water: bool = true
 	for water: Vector2i in BASIC_WATER:
 		drawn.terrain[water] = Region.WATER
-	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts:
+		all_water = all_water and region.terrain.get(water) == Region.WATER
+	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts or not all_water:
 		return "regions/basic.md isn't the disc of radius 3 and the water, with its four starts"
 	if region.wild_monsters != ([Vector2i(-2, 0)] as Array[Vector2i]):
 		return "regions/basic.md's wild monster isn't on (-2, 0): %s" % [region.wild_monsters]
