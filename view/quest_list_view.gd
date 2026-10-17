@@ -80,7 +80,7 @@ static func step_line(step: QuestStep, count: int) -> String:
 		"dominated":
 			var what: String = "a monster"
 			if not step.species.is_empty():
-				what = _with_article(step.species)
+				what = _with_article(step.species_name)
 			asks = "Dominate " + what
 		"opened":
 			asks = "Open a chest"
@@ -89,11 +89,9 @@ static func step_line(step: QuestStep, count: int) -> String:
 	return asks
 
 
-## `species` named for the player, after "a" or "an". Species have no player-facing names yet, so
-## the id is read out, its words apart.
-static func _with_article(species: String) -> String:
-	var words: String = species.replace("_", " ")
-	return ("an " if "aeiou".contains(words.left(1)) else "a ") + words
+## A species' player-facing name (#351), after "a" or "an" by its first letter.
+static func _with_article(species_name: String) -> String:
+	return ("an " if "aeiou".contains(species_name.left(1).to_lower()) else "a ") + species_name
 
 
 ## A new card for quest `id`, named `quest_name`, fading in under the others.

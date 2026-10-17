@@ -1,6 +1,7 @@
 // A placeholder species until real content exists: slow, sturdy, Lesser Nature.
 {
 	"id": "moss_toad",
+	"name": "Moss Toad",
 	"types": ["growth"],
 	"hp": 120, // sturdy
 	"strength": 40,
