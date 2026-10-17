@@ -67,6 +67,9 @@ static func parse(text: String) -> Replay:
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
+	if format < 4 and replay.changes.size() % 3 != 0:
+		replay.problem = "the recorded commands are cut off"
+		return replay
 	if format < 4:
 		replay.changes = _untoggled(replay.changes)
 	var by_tick: Dictionary = data.get("checkpoints", {})

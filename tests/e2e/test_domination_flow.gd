@@ -744,11 +744,13 @@ func _check_lethal_strikes(state: GameState, first: int, spots: Array[Vector2i])
 	_toggle_lethal(state, 0)
 	if not wild.is_fainted(first) or wild.is_wild_monster(first) or wild.hp_of(first) != 0:
 		return "the lethal strike didn't fell the wild monster at 1 HP"
-	if state.entity(first) == null:
-		return "the fainted wild monster didn't stay where it fell"
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
+		return "the fainted wild monster didn't stay where it fell, blocking walkers"
 	var saved: Dictionary = wild.save_values()
-	var reloaded: WildMonsterFeature = _wild(_strike_state(spots))
-	reloaded.load_values(state, DataReader.new(saved))
+	var reloaded_state: GameState = _strike_state(spots)
+	var reloaded: WildMonsterFeature = _wild(reloaded_state)
+	reloaded.load_values(reloaded_state, DataReader.new(saved))
 	if reloaded.hash_values() != wild.hash_values():
 		return "the fainted wild monster didn't load back as saved"
 	var strikes: Array[CompanionStruck] = _strikes_over(state, CompanionAttackFeature.STRIKE_TICKS)
