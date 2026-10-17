@@ -1,11 +1,13 @@
 extends RefCounted
 ## Survey flow (#301): the player looks at the Survey, the overview of the ground they explored, in
 ## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
-## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; it marks
-## every player by slot and every open quest's target; its action cycles it through the corners,
-## over the game, opaque and off, its zoom steps within their range, and both choices are kept. In
-## every place, on desktop screens and phones held either way, it sits against its own corner or
-## covers the whole screen; every zoom step is followed, and zooming stops at both ends.
+## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; next
+## door it shows exactly what was explored there, at its place in the world, and the exits on the
+## tiles it shows, loading nothing; it marks every player by slot and every open quest's target;
+## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
+## their range, and both choices are kept. In every place, on desktop screens and phones held
+## either way, it sits against its own corner or covers the whole screen; every zoom step is
+## followed, and zooming stops at both ends.
 
 
 func run(tree: SceneTree) -> String:
@@ -42,6 +44,8 @@ func _check_survey(main: Node) -> String:
 	fog.show_state(10.0)
 	var result: String = _survey_ground(driver, survey)
 	if result.is_empty():
+		result = _survey_next_door(driver, survey)
+	if result.is_empty():
 		result = _survey_marks(driver, survey, FlowGame.holder(main).keeper.profile)
 	if result.is_empty():
 		result = _survey_choice(choice, survey, path)
@@ -73,9 +77,9 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		if survey.tiles.has(tile) != known:
 			return "the Survey shows %s although it's %s" % [tile, "known" if known else "fogged"]
 		var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
-		if known and survey.tiles[tile] != look.color:
+		if known and survey.tiles[tile].color != look.color:
 			return "the Survey colors %s unlike its kind" % tile
-		if known and survey.symbols[tile] != look.symbol:
+		if known and survey.tiles[tile].symbol != look.symbol:
 			return "the Survey doesn't mark %s with its kind's symbol" % tile
 		if known and survey.blocking.has(tile) == state.region.is_walkable(tile):
 			return "the Survey doesn't ring %s in ink exactly when it blocks the way" % tile
@@ -98,6 +102,74 @@ func _survey_symbols_drawn(survey: SurveyView) -> bool:
 	survey.across = across
 	survey.size = shown
 	return drawn
+
+
+## Why the Survey doesn't show exactly the explored ground of the instance next door at its place
+## in the world, or the exits on the tiles it shows, or loads an instance to draw them, or ""
+## (#353).
+func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
+	var world: World = driver.world
+	var target: String = driver.state.region.exit_blueprints[0]
+	var region: Region = survey.neighbours.region_of(target)
+	if world.instances.has(target) or region == null:
+		return "the glade's neighbour %s is loaded already, or not drawn next door" % target
+	var keeper: WorldKeeper = survey.keeper
+	var there: Dictionary[Vector2i, bool] = _explore_next_door(driver, keeper, region, target)
+	var loaded: Array[String] = world.sorted_names()
+	var before: int = world.state_hash()
+	survey.show_state()
+	if world.sorted_names() != loaded or world.state_hash() != before:
+		return "drawing the Survey loaded or changed an instance"
+	var shift: Vector2i = survey.neighbours.shifts[target]
+	for tile: Vector2i in region.sorted_tiles():
+		var at: Vector2i = tile + shift
+		if survey.tiles.has(at) != there.has(tile):
+			var how: String = "shows the fogged" if survey.tiles.has(at) else "hides the explored"
+			return "the Survey %s tile %s next door" % [how, tile]
+		if there.has(tile) and survey.tiles[at].color != TileLooks.of(region.terrain[tile]).color:
+			return "the Survey colors %s next door unlike its kind" % tile
+	return _survey_exits(driver.state.region, region, shift, survey)
+
+
+## Marks every other tile of `region`, the instance `target` next door, explored, and the exits'
+## own tiles here and there, for their chevrons; returns what is explored there.
+func _explore_next_door(
+		driver: GameDriver,
+		keeper: WorldKeeper,
+		region: Region,
+		target: String,
+) -> Dictionary[Vector2i, bool]:
+	var world: World = driver.world
+	var explored: ExploredGround = keeper.explored_in(world)
+	var there: Dictionary[Vector2i, bool] = explored.tiles_of(target, world.generation(target))
+	var ground: Array[Vector2i] = region.sorted_tiles()
+	for i: int in range(0, ground.size(), 2):
+		there[ground[i]] = true
+	for exit: Vector3i in region.exits:
+		there[Vector2i(exit.x, exit.y)] = true
+	var here_name: String = driver.local_instance_name()
+	var here: Dictionary[Vector2i, bool] = explored.tiles_of(here_name, world.generation(here_name))
+	for exit: Vector3i in driver.state.region.exits:
+		here[Vector2i(exit.x, exit.y)] = true
+	return there
+
+
+## Why the Survey doesn't show exactly the exits on the tiles it shows, those of `here` and those of
+## `there` next door, shifted by `shift`, or "".
+func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyView) -> String:
+	var everywhere: Array[Vector3i] = []
+	everywhere.append_array(here.exits)
+	for exit: Vector3i in there.exits:
+		everywhere.append(exit + Vector3i(shift.x, shift.y, 0))
+	var shown: Array[Vector3i] = []
+	for exit: Vector3i in everywhere:
+		if survey.tiles.has(Vector2i(exit.x, exit.y)):
+			shown.append(exit)
+	if shown.size() <= here.exits.size() or survey.exits != shown:
+		return "the Survey doesn't show the exits here and next door on the tiles it shows: %s" % [
+			survey.exits,
+		]
+	return ""
 
 
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
