@@ -155,10 +155,11 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 	return ""
 
 
-## Purging (#212): the glade, left behind, stays loaded until nobody has been in it for an hour of
-## play, and is purged the tick after; its next visit loads it at generation 1, from another seed,
-## and entering it resets the count. The world goes through its save data and back with the tick
-## the glade was left and its generation, and hashes the same.
+## Purging (#212): the glade, left behind, raises nothing in the ticks it doesn't step (#386), stays
+## loaded until nobody has been in it for an hour of play, and is purged the tick after; its next
+## visit loads it at generation 1, from another seed, and entering it resets the count. The world
+## goes through its save data and back with the tick the glade was left and its generation, and
+## hashes the same.
 func _check_purge() -> String:
 	var world: World = World.new(3, InstanceBlueprints.BASIC)
 	var first_seed: int = world.seed_for(InstanceBlueprints.GLADE)
@@ -167,6 +168,11 @@ func _check_purge() -> String:
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, -1)
 	if left < 0 or world.instance_of(0) != InstanceBlueprints.BASIC:
 		return "walking into the glade and back didn't leave it behind"
+	var glade_left: GameState = world.instances[InstanceBlueprints.GLADE]
+	glade_left.events.append(RefCounted.new())
+	world.step(_still())
+	if not glade_left.events.is_empty():
+		return "the glade, left behind, kept its events into a tick it didn't step (#386)"
 	_idle_until(world, left + World.PURGE_TICKS - 1)
 	if not world.instances.has(InstanceBlueprints.GLADE):
 		return "the glade was purged before an hour had passed"
