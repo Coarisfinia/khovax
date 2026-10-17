@@ -94,20 +94,20 @@ func _check_menu() -> String:
 	graphics.settings = Settings.new()
 	graphics.apply()
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
-	var driver: GameDriver = FlowGame.held_driver(main)
+	var driver: GameDriver = FlowGame.driver(main)
 	var result: String = await _open_menu(menu)
 	if result.is_empty():
-		result = _menu_holds_game(driver, true)
+		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
 		result = _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
 	if result.is_empty():
-		result = _menu_pause_choice(menu, driver)
+		result = await _menu_pause_choice(menu, driver)
 	if result.is_empty():
 		result = _menu_on_screens(menu)
 	if result.is_empty():
 		result = await _close_menu(menu)
 	if result.is_empty():
-		result = _menu_holds_game(driver, false)
+		result = await _menu_holds_game(driver, false)
 	main.queue_free()
 	await _tree.process_frame
 	return result
@@ -148,9 +148,7 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 	Input.action_press("move_right")
 	var walks: bool = driver.input.command(driver.state).move != Command.NO_MOVE
 	Input.action_release("move_right")
-	var tick: int = driver.world.tick
-	driver.advance(STEP)
-	var ticked: bool = driver.world.tick > tick
+	var ticked: bool = await _ticks_run(driver)
 	if walks == open or ticked == open:
 		return "with the menu %s, the keys %s walk and the ticks %s run" % [
 			"open" if open else "closed",
@@ -192,17 +190,13 @@ func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> 
 func _menu_pause_choice(menu: GameMenu, driver: GameDriver) -> String:
 	var tab: SettingsTab = menu.settings
 	tab.button(GameMenu.PAUSE_SETTING, "Next").pressed.emit()
-	var tick: int = driver.world.tick
-	driver.advance(STEP)
-	if driver.world.tick == tick or tab.shown[GameMenu.PAUSE_SETTING] != "Off":
+	if not await _ticks_run(driver) or tab.shown[GameMenu.PAUSE_SETTING] != "Off":
 		return "with the pause off, the open menu still holds the ticks"
 	var kept: Settings = Settings.load_from(SETTINGS_PATH)
 	if kept.chosen.get(GameMenu.PAUSE_SETTING) != 0:
 		return "the pause choice isn't kept: %s" % [kept.chosen]
 	tab.button(GameMenu.PAUSE_SETTING, "Auto").pressed.emit()
-	tick = driver.world.tick
-	driver.advance(STEP)
-	if driver.world.tick != tick or not menu.pauses():
+	if await _ticks_run(driver) or not menu.pauses():
 		return "the pause's Auto doesn't pause the game again"
 	return ""
 
@@ -226,6 +220,13 @@ func _close_menu(menu: GameMenu) -> String:
 	if menu.opacity() > 0.0:
 		return "the menu doesn't finish easing out"
 	return ""
+
+
+## Whether ticks run on real time over a few ticks' time.
+func _ticks_run(driver: GameDriver) -> bool:
+	var tick: int = driver.world.tick
+	await _tree.create_timer(STEP * 4.0).timeout
+	return driver.world.tick > tick
 
 
 func _press_menu(menu: GameMenu) -> void:

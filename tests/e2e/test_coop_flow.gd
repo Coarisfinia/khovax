@@ -141,8 +141,12 @@ func _check_input_delay() -> String:
 	var menu: GameMenu = _main.get_node("Hud/GameMenu") as GameMenu
 	# Every setting on Auto, whatever this machine's player chose.
 	(_main.get_node("Graphics") as Graphics).settings = Settings.new()
+	# The flow steps the driver itself; real time would reach it again unless the menu paused it.
+	_driver.set_process(true)
 	menu.toggle()
-	if not menu.pauses() or _driver.paused:
+	var paused: bool = not _driver.is_processing()
+	_driver.set_process(false)
+	if not menu.pauses() or paused:
 		return "the open menu pauses co-op, or its pause isn't on by default"
 	_run_frames(TICKS)
 	if _driver.state.tick != TICKS:

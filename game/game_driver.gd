@@ -56,9 +56,6 @@ var schedule: CommandSchedule
 var hashes: Dictionary[int, int] = {}
 ## Every tick of this session so far, to play back (#35).
 var recording: Replay
-## Whether ticks are held, as an open menu holds them (#302): the world, its replay and its hashes
-## then stay as if no time passed. Only a session with one player pauses; see `pause`.
-var paused: bool = false
 var _accumulated: float = 0.0
 
 
@@ -136,16 +133,18 @@ func _begin_session() -> void:
 	_accumulated = 0.0
 
 
-## Holds the ticks (`on`) or lets them run again. In co-op it never holds them: lockstep keeps every
-## player's world running together (#38).
+## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops
+## reaching the driver, so the world, its replay and its hashes stay as if no time passed. In co-op
+## it never holds them: lockstep keeps every player's world running together (#38).
 func pause(on: bool) -> void:
-	paused = on and players == 1
+	if players == 1:
+		set_process(not on)
 
 
 ## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
 ## frame; tests call it with fixed steps.
 func advance(delta: float) -> void:
-	if world == null or paused:
+	if world == null:
 		return
 	_accumulated += delta
 	var tick_seconds: float = 1.0 / Simulation.TICKS_PER_SECOND
