@@ -78,11 +78,6 @@ func load_values(state: GameState, values: DataReader) -> void:
 			_waits[flat[i]] = mini(flat[i + 1], STRIKE_TICKS)
 
 
-## The ticks the companion with this entity id still waits before it can strike; 0 when ready.
-func wait_of(companion_id: int) -> int:
-	return _waits.get(companion_id, 0)
-
-
 ## The wild monster with the lowest id next to `tile` that isn't hiding, or 0. WildMonsterFeature
 ## keeps its monsters in id order. Hiding isn't required, since most instances have none; where an
 ## instance has it, InstanceBlueprints lists it before the companions, so it has stepped already.
