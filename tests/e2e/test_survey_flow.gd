@@ -196,8 +196,37 @@ func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> 
 	if not marked.has("survey_any") or marked != targets:
 		return "the Survey doesn't mark the open quests' targets: %s" % [marked]
 	var own: Entity = driver.state.player(0)
-	if survey.players.keys() != [0] or survey.players[0] != own.tile:
-		return "the Survey doesn't mark the player on their tile: %s" % [survey.players]
+	var on_tile: bool = survey.circles.has(0) and survey.on_view(survey.circles[0]).is_equal_approx(
+		survey.to_view(own.tile)
+	)
+	if survey.circles.keys() != [0] or not on_tile:
+		return "the Survey doesn't mark the player on their tile: %s" % [survey.circles]
+	return _survey_mark_glides(driver, survey)
+
+
+## Why the player's mark, a tick into a step, doesn't sit on the way between the tile they walk
+## from and the one they walk to, short of both, or "" (#354).
+func _survey_mark_glides(driver: GameDriver, survey: SurveyView) -> String:
+	var state: GameState = driver.state
+	var from: Vector2i = state.player(0).tile
+	var direction: int = -1
+	for side: int in Hex.DIRECTIONS.size():
+		if direction < 0 and FlowSteps.walkable_for_players(state, from + Hex.DIRECTIONS[side]):
+			direction = side
+	# Stepped by hand, so the driver's own ticks don't finish the step first.
+	driver.set_process(false)
+	Simulation.step(state, FlowSteps.command(direction))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	survey.show_state()
+	var start: Vector2 = survey.to_view(from)
+	var way: Vector2 = survey.to_view(state.player(0).tile) - start
+	var mark: Vector2 = survey.on_view(survey.circles[0]) - start
+	var share: float = mark.dot(way) / way.length_squared()
+	driver.set_process(true)
+	if share <= 0.0 or share >= 1.0 or not mark.is_equal_approx(way * share):
+		return "the Survey's mark of a walking player isn't between their tiles: %s of the way" % [
+			share,
+		]
 	return ""
 
 
