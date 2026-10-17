@@ -77,9 +77,9 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		if survey.tiles.has(tile) != known:
 			return "the Survey shows %s although it's %s" % [tile, "known" if known else "fogged"]
 		var look: TileBlueprint = TileLooks.of(state.region.terrain[tile])
-		if known and survey.tiles[tile] != look.color:
+		if known and survey.tiles[tile].color != look.color:
 			return "the Survey colors %s unlike its kind" % tile
-		if known and survey.symbols[tile] != look.symbol:
+		if known and survey.tiles[tile].symbol != look.symbol:
 			return "the Survey doesn't mark %s with its kind's symbol" % tile
 		if known and survey.blocking.has(tile) == state.region.is_walkable(tile):
 			return "the Survey doesn't ring %s in ink exactly when it blocks the way" % tile
@@ -126,7 +126,7 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 		if survey.tiles.has(at) != there.has(tile):
 			var how: String = "shows the fogged" if survey.tiles.has(at) else "hides the explored"
 			return "the Survey %s tile %s next door" % [how, tile]
-		if there.has(tile) and survey.tiles[at] != TileLooks.of(region.terrain[tile]).color:
+		if there.has(tile) and survey.tiles[at].color != TileLooks.of(region.terrain[tile]).color:
 			return "the Survey colors %s next door unlike its kind" % tile
 	return _survey_exits(driver.state.region, region, shift, survey)
 

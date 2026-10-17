@@ -57,10 +57,9 @@ var across: float = 20.0
 var backdrop: Color = Boot.FOG
 ## Whether an ink border is drawn round it, in a corner.
 var bordered: bool = false
-## Each tile shown, by tile, in its kind's color. Kept here so tests can read what is drawn.
-var tiles: Dictionary[Vector2i, Color] = {}
-## Each tile shown's kind's symbol, by tile.
-var symbols: Dictionary[Vector2i, String] = {}
+## Each tile shown, by tile: its kind's blueprint, for its color and symbol. Kept here so tests can
+## read what is drawn.
+var tiles: Dictionary[Vector2i, TileBlueprint] = {}
 ## The tiles shown that nobody can walk onto.
 var blocking: Dictionary[Vector2i, bool] = {}
 ## Each exit on a tile shown, here or next door, as (q, r, side) in the coordinates of the instance
@@ -99,12 +98,12 @@ func _draw() -> void:
 		var shape: PackedVector2Array = PackedVector2Array()
 		for corner: Vector2 in corners:
 			var _added: bool = shape.append(at + corner)
-		draw_colored_polygon(shape, tiles[tile])
+		draw_colored_polygon(shape, tiles[tile].color)
 		if blocking.has(tile):
 			var _closed: bool = shape.append(shape[0])
 			draw_polyline(shape, Toon.INK, INK_PIXELS)
 		if font_size > 0:
-			_draw_symbol(font, font_size, at, symbols[tile])
+			_draw_symbol(font, font_size, at, tiles[tile].symbol)
 	for exit: Vector3i in exits:
 		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
@@ -120,7 +119,6 @@ func _draw() -> void:
 ## directly.
 func show_state() -> void:
 	tiles.clear()
-	symbols.clear()
 	blocking.clear()
 	exits.clear()
 	players.clear()
@@ -179,8 +177,7 @@ func _draw_symbol(font: Font, font_size: int, at: Vector2, symbol: String) -> vo
 ## Shows the tile `tile` of `region` at `at`, in its kind's color, and whether it blocks the way.
 func _show_tile(at: Vector2i, region: Region, tile: Vector2i) -> void:
 	var look: TileBlueprint = TileLooks.of(region.terrain[tile])
-	tiles[at] = look.color if look != null else Color.GRAY
-	symbols[at] = look.symbol if look != null else "?"
+	tiles[at] = look if look != null else _unknown_tile()
 	if not region.is_walkable(tile):
 		blocking[at] = true
 
@@ -292,3 +289,11 @@ static func _ground(tile: Vector2i) -> Vector2:
 
 func _slot() -> int:
 	return input.slot if input != null else 0
+
+
+## How a tile of a kind without a blueprint shows: grey, with a question mark.
+static func _unknown_tile() -> TileBlueprint:
+	var unknown: TileBlueprint = TileBlueprint.new()
+	unknown.color = Color.GRAY
+	unknown.symbol = "?"
+	return unknown
