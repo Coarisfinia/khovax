@@ -67,6 +67,9 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		TrailFeature.new(),
 		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
+		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
+		# wild monsters of a ring that broke.
+		WildAttackFeature.new(),
 		_domination_loot(instance_name),
 		EnrageFeature.new(),
 		FogFeature.new(),
@@ -82,8 +85,6 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	ordered.append(_companions(species))
 	ordered.append(CompanionAttackFeature.new())
 	ordered.append(_specials(species))
-	# After the companions, so a wild monster strikes them where they stand this tick.
-	ordered.append(WildAttackFeature.new())
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])

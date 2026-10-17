@@ -200,13 +200,13 @@ func _takers(state: GameState, dominator_id: int, seal: RingSeal) -> Dictionary[
 func _end(state: GameState, dominator_id: int) -> void:
 	var walls: Array[Vector2i] = seals[dominator_id].walls
 	var _dropped: bool = seals.erase(dominator_id)
-	var needed: Dictionary[Vector2i, bool] = {}
-	for other: RingSeal in seals.values():
-		for wall: Vector2i in other.walls:
-			needed[wall] = true
-	for waiting_id: int in _waiting_players():
-		for wall: Vector2i in ring_waiting(state, waiting_id):
-			needed[wall] = true
+	_clear_ring(state, walls)
+
+
+## Takes the `walls` of a ring that ended off the trail, but not the tiles another ring sealing or
+## waiting for a totem needs.
+func _clear_ring(state: GameState, walls: Array[Vector2i]) -> void:
+	var needed: Dictionary[Vector2i, bool] = ring_walls(state)
 	var cleared: Array[Vector2i] = []
 	for wall: Vector2i in walls:
 		if not needed.has(wall):
@@ -236,6 +236,42 @@ func is_sealed(monster_id: int) -> bool:
 		if seal.monsters.has(monster_id):
 			return true
 	return false
+
+
+## Every wall segment of a ring sealing or waiting for a totem: only the wild monsters inside it
+## attack it (#422). Waiting rings' walls are worked out here, so callers ask once per tick.
+func ring_walls(state: GameState) -> Dictionary[Vector2i, bool]:
+	var walls: Dictionary[Vector2i, bool] = {}
+	for seal: RingSeal in seals.values():
+		for wall: Vector2i in seal.walls:
+			walls[wall] = true
+	for waiting_id: int in _waiting_players():
+		for wall: Vector2i in ring_waiting(state, waiting_id):
+			walls[wall] = true
+	return walls
+
+
+## The entity id of the dominator whose ring waiting for a totem encircles the wild monster with
+## this id, or 0.
+func waiting_dominator(monster_id: int) -> int:
+	for waiting_id: int in _waiting_players():
+		if encircled[waiting_id].has(monster_id):
+			return waiting_id
+	return 0
+
+
+## Breaks the ring of `dominator_id` waiting for a totem, its segment `wall` worn through by the
+## wild monsters inside (#422, WildAttackFeature): a RingBroken event, as when a seal breaks (so
+## EnrageFeature enrages them), and the ring comes off the trail. A waiting ring breaks no other
+## way.
+func break_waiting(state: GameState, dominator_id: int, wall: Vector2i) -> void:
+	var walls: Array[Vector2i] = ring_waiting(state, dominator_id)
+	var inside: Array[int] = []
+	inside.assign(encircled[dominator_id])
+	var _dropped: bool = encircled.erase(dominator_id)
+	var slot: int = state.entity(dominator_id).slot
+	state.events.append(RingBroken.new(dominator_id, slot, wall, walls, inside))
+	_clear_ring(state, walls)
 
 
 ## Whether the wild monster with this id is encircled by a ring waiting for a totem.

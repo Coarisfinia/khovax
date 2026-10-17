@@ -1,19 +1,18 @@
 extends RefCounted
 ## Domination flow (#20, #219): the player walks a ring around the basic region's wild monster at
-## (-2, 0), and the ring waits for a totem (#423), as long as it takes, the monster encircled; a
-## totem placed off the ring, or by a player out of charges, does nothing. The player's totem placed
-## on the ring (the place_totem key) spends a charge, and the ring seals: the monster pushes on it,
-## and once the ring has held for its seal ticks (not a tick before) the monster is dominated: it
-## leaves the world, the domination is announced, the trail starts over, and its figure shrinks
-## away. While it seals, the ring fills on screen and a save resumes it exactly. An open ring, a
-## walk that only touches the wild monster,
-## and a ring around another tile dominate nothing. Allies share one trail (#87): two players
-## close one ring together, and the domination goes to the lowest slot among those who colored its
-## wall (owner, #86), whoever's move closed it; the ring then comes off the trail, the trail leading
-## up to it stays. A ring around several monsters splits them by contribution (#260): two allies who
-## each colored half of it get one each, and the owner's examples split as decided.
-## Domination is deterministic. A domination by this
-## machine's player lands in their profile and its save at once (#132), as the species it was:
+## (-2, 0), and the ring waits for a totem (#423), the monster encircled, until it wears the ring
+## through (#422); a totem placed off the ring, or by a player out of charges, does nothing. The
+## player's totem placed on the ring (the place_totem key) spends a charge, and the ring seals: the
+## monster pushes on it, and once the ring has held for its seal ticks (not a tick before) the
+## monster is dominated: it leaves the world, the domination is announced, the trail starts over,
+## and its figure shrinks away. While it seals, the ring fills on screen and a save resumes it
+## exactly. An open ring, a walk that only touches the wild monster, and a ring around another tile
+## dominate nothing. Allies share one trail (#87): two players close one ring together, and the
+## domination goes to the lowest slot among those who colored its wall (owner, #86), whoever's move
+## closed it; the ring then comes off the trail, the trail leading up to it stays. A ring around
+## several monsters splits them by contribution (#260): two allies who each colored half of it get
+## one each, and the owner's examples split as decided. Domination is deterministic. A domination by
+## this machine's player lands in their profile and its save at once (#132), as the species it was:
 ## named by its spot, or rolled from the blueprint's list (#133).
 ##
 ## The issue's outcomes (#219), at level 1 with the placeholder constants, in a disc of test
@@ -205,8 +204,8 @@ func _check_other_ring() -> String:
 	return _check_waits_for_totem()
 
 
-## The full ring doesn't seal by itself (#423): it waits for a totem, however long, the wild monster
-## encircled. A totem placed one step off the ring does nothing; back on it, the totem spends one
+## The full ring doesn't seal by itself (#423): it waits for a totem, the wild monster encircled. A
+## totem placed one step off the ring does nothing; back on it, the totem spends one
 ## charge and the ring seals, and holding it there spends no more. A player out of charges places
 ## none.
 func _check_waits_for_totem() -> String:
@@ -215,7 +214,8 @@ func _check_waits_for_totem() -> String:
 	var player: Entity = state.player(0)
 	var domination: DominationFeature = _domination(state)
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
-	for _tick: int in MOST_SEAL_TICKS:
+	# A while, but not so long that the monster wears the ring through (#422).
+	for _tick: int in 2 * WildAttackFeature.STRIKE_TICKS:
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if not domination.seals.is_empty() or not domination.is_encircled(monster_id):
 		return "a closed ring didn't wait for a totem with the wild monster encircled"
@@ -967,6 +967,37 @@ func _check_wild_attacks() -> String:
 			return "the trail tile gave way after %d strikes, not %d" % [hit + 1, hits]
 	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
 		return "the wild monster struck with nothing next to it"
+	return _check_ring_worn(state, player, hits)
+
+
+## The player rings the wild monster in `state` and the ring waits for a totem (#423): encircled,
+## the monster strikes only the ring's wall segment nearest to it, even with the player beside it,
+## and the ring breaks on the `hits`-th strike that wears it through, not one before, and comes off
+## the trail.
+func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	player.tile = ring[0]
+	var _colored: bool = trail.color(ring[0], player.id)
+	_close(state, ring.slice(1))
+	var domination: DominationFeature = _domination(state)
+	if domination.encircled.keys() != [player.id]:
+		return "the ring around the attacking wild monster didn't wait for a totem"
+	var walls: Array[Vector2i] = domination.ring_waiting(state, player.id)
+	var wall: Vector2i = walls[RingShape.nearest(walls, Vector2i.ZERO)]
+	for hit: int in hits:
+		var strikes: Array[WildMonsterStruck] = _wild_strikes_over(
+			state,
+			WildAttackFeature.STRIKE_TICKS,
+			Vector2i(-3, 0),
+		)
+		if strikes.size() != 1 or strikes[0].target_id != 0 or strikes[0].tile != wall:
+			return "the encircled monster didn't strike its ring's nearest wall in second %d" % [
+				hit,
+			]
+		var broken: bool = domination.encircled.is_empty() and not trail.tiles.has(wall)
+		if broken != (hit == hits - 1):
+			return "the ring broke after %d strikes on its wall, not %d" % [hit + 1, hits]
 	return ""
 
 
@@ -1014,11 +1045,12 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		MovementFeature.new(),
 		TrailFeature.new(),
 		WildMonsterFeature.new([], [], { WEAK: OUTCOME_HP }, { WEAK: WEAK_STRENGTH }),
+		DominationFeature.new(),
+		WildAttackFeature.new(),
 		HidingFeature.new(),
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
-		WildAttackFeature.new(),
 	]
 	return GameState.new(region, 1, ordered)
 
