@@ -366,7 +366,9 @@ devices -> input/ -> Command -> core/ + mechanics/*/rules/ -> GameState -> view/
   return value explicitly (no `:=`: `inferred_declaration` is an error too). A rule or warning only
   gets relaxed when it truly conflicts with another one, with the conflict named next to it.
   Inconvenience is not a reason. **The one exception the owner chose:** no cap on return statements
-  (#341), so a large `match` returns once per case instead of being split into helpers. A suppression is a `# gdstyle:ignore=<rule>` or
+  (#341), so a large `match` returns once per case instead of being split into helpers. A script
+  is at most 700 lines long (#335); the tests are exempt from that, so a flow stays one file per
+  user flow however long it grows. A suppression is a `# gdstyle:ignore=<rule>` or
   `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
 - **Before pushing, run `gdstyle fmt .`**: it fixes the formatting rather than only checking it.
   gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned there and
