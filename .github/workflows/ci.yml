@@ -164,15 +164,26 @@ jobs:
 
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
-        # each data/<folder>/ file against data/schemas/<folder>.schema.json. A schema without its
-        # data folder would sit unchecked, so it fails too.
+        # each kind's files against its schema: data/<kind>/ against data/schemas/<kind>.schema.json,
+        # and a kind a slice owns (#412), slices/<slice>/data/<kind>/, against the
+        # <kind>.schema.json beside it. A schema without its data folder would sit unchecked, so it
+        # fails too, and so does a kind with two schemas.
         run: |
-          for schema in data/schemas/*.schema.json; do
+          declare -A schema_of
+          for schema in data/schemas/*.schema.json slices/*/data/*.schema.json; do
+            [ -e "$schema" ] || continue
             name=$(basename "$schema" .schema.json)
-            if [ ! -d "data/${name}" ]; then
-              echo "::error file=${schema}::has no data/${name}/ folder to check"
+            folder=data/${name}
+            case "$schema" in slices/*) folder=$(dirname "$schema")/${name} ;; esac
+            if [ ! -d "$folder" ]; then
+              echo "::error file=${schema}::has no ${folder}/ folder to check"
               exit 1
             fi
+            if [ -n "${schema_of[$name]:-}" ]; then
+              echo "::error file=${schema}::${name} already has a schema: ${schema_of[$name]}"
+              exit 1
+            fi
+            schema_of[$name]=$schema
           done
           curl -fsSL -o /tmp/jv.tar.gz             "https://github.com/santhosh-tekuri/jsonschema/releases/download/v${JV_VERSION}/jv-v${JV_VERSION}-linux-amd64.tar.gz"
           echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
@@ -180,11 +191,16 @@ jobs:
           jv=$(find /tmp/jv -type f -name jv | head -1)
           timeout 60 ~/godot/godot --headless --path . -s res://tools/data_to_json.gd
           # Godot exits 0 even when a script fails to compile, so check every file was converted.
-          test "$(find data -name '*.jsonc' | wc -l)" -eq "$(find build/data-json -name '*.json' | wc -l)"
+          sources=$(find data slices/*/data -name '*.jsonc' 2>/dev/null | wc -l)
+          test "$sources" -eq "$(find build/data-json -name '*.json' | wc -l)"
           for folder in build/data-json/*/; do
             name=$(basename "$folder")
+            if [ -z "${schema_of[$name]:-}" ]; then
+              echo "::error::content kind ${name} has no schema"
+              exit 1
+            fi
             for file in "$folder"*.json; do
-              "$jv" "data/schemas/${name}.schema.json" "$file"
+              "$jv" "${schema_of[$name]}" "$file"
             done
           done
 

@@ -32,7 +32,7 @@ func _enter_tree() -> void:
 			profile.loaded_generation,
 		])
 	if profile.problem.is_empty():
-		var quests: Content = Content.load_quests()
+		var quests: Content = QuestContent.load_quests()
 		if not quests.problem.is_empty():
 			push_warning("the quests can't be read, so none advance: " + quests.problem)
 		profile.quest_book = quest_book_of(quests)

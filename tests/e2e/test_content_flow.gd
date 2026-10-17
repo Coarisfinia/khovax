@@ -151,7 +151,7 @@ static func _unrefused(cases: Dictionary[String, String], content: Content) -> S
 ## another step, too, and the same for an entered step and its piece or instance, which it names
 ## one of, never both.
 func _check_quests() -> String:
-	var content: Content = Content.load_quests()
+	var content: Content = QuestContent.load_quests()
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
 	var first: QuestDefinition = content.quests.get("first_domination")

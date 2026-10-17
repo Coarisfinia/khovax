@@ -1,15 +1,14 @@
 class_name Content
 extends RefCounted
-## The game's content data (#72): JSONC files under data/, one per entry, checked against their
-## schema in CI (data/schemas/) and here for what a schema can't check, each by its own kind: ids
+## The game's content data (#72): JSONC files, one per entry, under data/ or, for a kind a slice
+## owns, under that slice's data/ (#412), checked against their schema in CI and here for what a schema can't check, each by its own kind: ids
 ## unique and matching their file. Species are checked by Species (#279), loot tables (#90) by
 ## LootTable, tile blueprints (#116) by TileBlueprint, abilities (#222) by Ability, and quests
-## (#184) by QuestDefinition against the species. Here too: the field helpers they all use.
+## (#184) by QuestDefinition against the species, read by the quests slice (QuestContent). Here too: the field helpers they all use.
 
 const SPECIES_DIR: String = "res://data/species/"
 const LOOT_TABLES_DIR: String = "res://data/loot_tables/"
 const TILES_DIR: String = "res://data/tiles/"
-const QUESTS_DIR: String = "res://data/quests/"
 const ABILITIES_DIR: String = "res://data/abilities/"
 
 ## Every species, by id.
@@ -82,34 +81,6 @@ static func load_tiles(directory: String = TILES_DIR) -> Content:
 				return content
 			content.tiles[tile.id] = tile
 			numbers[tile.number] = true
-	return content
-
-
-## Every quest file in `directory`, read and checked; the species its steps name must be in
-## `species_directory`.
-static func load_quests(
-	directory: String = QUESTS_DIR,
-	species_directory: String = SPECIES_DIR,
-) -> Content:
-	var content: Content = load_species(species_directory)
-	if not content.problem.is_empty():
-		return content
-	# Sorted, so the quests are read in the same order on every machine.
-	var file_names: Array[String] = []
-	file_names.assign(DirAccess.get_files_at(directory))
-	file_names.sort()
-	for file_name: String in file_names:
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var quest: QuestDefinition = QuestDefinition.parse(
-				file_name.get_basename(),
-				text,
-				content.species,
-			)
-			if not quest.problem.is_empty():
-				content.problem = file_name + ": " + quest.problem
-				return content
-			content.quests[quest.id] = quest
 	return content
 
 
