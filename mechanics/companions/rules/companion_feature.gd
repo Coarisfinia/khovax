@@ -1,0 +1,236 @@
+class_name CompanionFeature
+extends Feature
+## Companions (#338, the first part of #221): the first monster each player carries walks beside
+## them. Which species that is comes with the session's start (GameState.companions). It joins its
+## player in whichever instance they are, on a free tile next to them, as an entity no player
+## controls: players are the entities with a slot, which walk by commands, draw the trail, take
+## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
+## goes when its player leaves the instance (through an exit, the same tick: the feature steps
+## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
+## something), it goes and joins them afresh beside them.
+## It roams freely around its player, within a reach worked out from its species' stats
+## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
+## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
+## player walked off), it heads straight back. It walks like a player (MovementFeature): players
+## and companions pass through each other, so it never traps its own player, and what doesn't walk
+## (a wild monster) stops it. Its rolls come from the feature's own stream. Attacks come later
+## (#221).
+
+## The reach of a species the feature wasn't given one for, and the shortest and longest any
+## species has, in tiles.
+const LEAST_REACH: int = 1
+const MOST_REACH: int = 5
+## How much of a species' stats (its HP plus twice its strength and its speed) widens its reach by
+## a tile. A placeholder to tune (#221).
+const STATS_PER_TILE: int = 120
+## How far from its player a companion counts as lost, in tiles.
+const LOST_DISTANCE: int = 2 * MOST_REACH
+## The shortest and longest rest between two roaming steps, in ticks.
+const LEAST_REST: int = 10
+const MOST_REST: int = 40
+
+## Each species' reach, by species id, from its stats in the content data (meta/ reads them).
+var reaches: Dictionary[String, int] = {}
+## Each companion's player slot, by entity id.
+var owners: Dictionary[int, int] = {}
+## Each companion's species, by entity id.
+var _species: Dictionary[int, String] = {}
+## The ticks each companion still rests before its next roaming step, by entity id.
+var _rest: Dictionary[int, int] = {}
+var _rng: Rng
+
+
+func _init(species_reaches: Dictionary[String, int] = {}) -> void:
+	reaches = species_reaches
+
+
+func id() -> int:
+	return Features.COMPANIONS
+
+
+func requires() -> Array[int]:
+	var needed: Array[int] = [Features.MOVEMENT]
+	return needed
+
+
+func start(state: GameState) -> void:
+	_rng = Rng.new(state.rng_seed, id())
+
+
+## Sends off the companions whose player left, brings another or lost them, lets every player who
+## brings one and has none here be joined by it, then lets each companion roam, in id order.
+func step(state: GameState, _commands: Array[Command]) -> void:
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var leaving: Array[int] = []
+	for event: RefCounted in state.events:
+		if event is ExitTaken:
+			leaving.append((event as ExitTaken).slot)
+	for companion_id: int in companions():
+		var player: Entity = state.player(owners[companion_id])
+		if leaving.has(owners[companion_id]):
+			player = null
+		var tile: Vector2i = state.entity(companion_id).tile
+		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
+		if gone or state.companions[player.slot] != _species[companion_id]:
+			state.remove_entity(companion_id)
+	for slot: int in GameState.MAX_PLAYERS:
+		var player: Entity = state.player(slot)
+		if player != null and not state.companions[slot].is_empty() and companion_of(slot) == 0:
+			_join(state, movement, player, state.companions[slot])
+	for companion_id: int in companions():
+		_roam(state, movement, state.entity(companion_id))
+
+
+func entity_removed(_state: GameState, removed_id: int) -> void:
+	var _dropped: bool = owners.erase(removed_id)
+	_dropped = _species.erase(removed_id)
+	_dropped = _rest.erase(removed_id)
+
+
+## Every companion's entity id, in id order.
+func companions() -> Array[int]:
+	var ids: Array[int] = []
+	ids.assign(owners.keys())
+	ids.sort()
+	return ids
+
+
+## The entity id of the companion of the player in `slot`, or 0 when they have none here.
+func companion_of(slot: int) -> int:
+	for companion_id: int in companions():
+		if owners[companion_id] == slot:
+			return companion_id
+	return 0
+
+
+## The species of the companion with this entity id, or "".
+func species_of(companion_id: int) -> String:
+	return _species.get(companion_id, "")
+
+
+## How far from its player the companion with this entity id roams, in tiles.
+func reach_of_companion(companion_id: int) -> int:
+	return reaches.get(species_of(companion_id), LEAST_REACH)
+
+
+## A species' reach from its stats: one tile, and one more for every STATS_PER_TILE of its HP plus
+## twice its strength and its speed, from LEAST_REACH to MOST_REACH.
+static func reach_of(hp: int, strength: int, speed: int) -> int:
+	var widened: int = Fixed.div_floor(hp + 2 * (strength + speed), STATS_PER_TILE)
+	return clampi(LEAST_REACH + widened, LEAST_REACH, MOST_REACH)
+
+
+## Adds the companion of `species` beside `player`: on the first free neighboring tile, or on the
+## player's own tile when none is free.
+func _join(state: GameState, movement: MovementFeature, player: Entity, species: String) -> void:
+	var tile: Vector2i = player.tile
+	for direction: int in Hex.DIRECTIONS.size():
+		if _is_free(state, movement, player.tile + Hex.DIRECTIONS[direction]):
+			tile = player.tile + Hex.DIRECTIONS[direction]
+			break
+	# Can't be refused: an entity without a slot is always added.
+	var companion: Entity = state.add_entity(Entity.NO_SLOT, tile)
+	owners[companion.id] = player.slot
+	_species[companion.id] = species
+	_rest[companion.id] = 0
+	movement.add_walk(companion)
+
+
+## Lets the companion take its next step, once its last one has arrived: back toward its player
+## when it's out of reach, otherwise a rolled step within reach after a rolled rest.
+func _roam(state: GameState, movement: MovementFeature, companion: Entity) -> void:
+	var walk: Walk = movement.walk(companion.id)
+	if walk == null or walk.is_moving():
+		return
+	var player: Entity = state.player(owners[companion.id])
+	var reach: int = reach_of_companion(companion.id)
+	if Hex.distance(companion.tile, player.tile) > reach:
+		var back: int = _toward(state, movement, companion.tile, player.tile)
+		var _went_back: bool = movement.try_step(state, companion, back)
+		return
+	if _rest[companion.id] > 0:
+		_rest[companion.id] -= 1
+		return
+	_rest[companion.id] = _rng.between(LEAST_REST, MOST_REST)
+	var direction: int = _rng.below(Hex.DIRECTIONS.size())
+	if Hex.distance(companion.tile + Hex.DIRECTIONS[direction], player.tile) <= reach:
+		var _roamed: bool = movement.try_step(state, companion, direction)
+
+
+## The direction of the free neighbor of `from` closest to `goal`, the first in direction order of
+## those as close; -1 when no neighbor is free.
+static func _toward(
+	state: GameState,
+	movement: MovementFeature,
+	from: Vector2i,
+	goal: Vector2i,
+) -> int:
+	var best: int = -1
+	for direction: int in Hex.DIRECTIONS.size():
+		var next: Vector2i = from + Hex.DIRECTIONS[direction]
+		var closer: bool = (
+			best == -1 or Hex.distance(next, goal) < Hex.distance(from + Hex.DIRECTIONS[best], goal)
+		)
+		if closer and _is_free(state, movement, next):
+			best = direction
+	return best
+
+
+## Whether a walker may step onto `tile`: walkable, and nothing that doesn't walk stands there.
+static func _is_free(state: GameState, movement: MovementFeature, tile: Vector2i) -> bool:
+	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)
+
+
+## Every companion's entity id, slot, species (as its name's code) and rest, in id order, then the
+## stream's state.
+func hash_values() -> Array[int]:
+	var values: Array[int] = [owners.size()]
+	for companion_id: int in companions():
+		values.append_array([companion_id, owners[companion_id], _rest[companion_id]])
+		values.append(World.name_code(_species[companion_id]))
+	values.append_array(_rng.hash_values())
+	return values
+
+
+## Every companion as its entity id, slot, species and rest, in id order, and the stream's state.
+## The reaches follow from the content.
+func save_values() -> Dictionary:
+	var saved: Array[Dictionary] = []
+	for companion_id: int in companions():
+		saved.append(
+			{
+				"entity": companion_id,
+				"slot": owners[companion_id],
+				"species": _species[companion_id],
+				"rest": _rest[companion_id],
+			},
+		)
+	return { "companions": saved, "rng": _rng.hash_values() }
+
+
+func load_values(state: GameState, values: DataReader) -> void:
+	owners.clear()
+	_species.clear()
+	_rest.clear()
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	for entry: DataReader in values.entries("companions"):
+		var companion_id: int = entry.whole("entity", 1, DataReader.MOST)
+		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
+		var species: String = entry.text("species")
+		var standing: Entity = state.entity(companion_id)
+		var walks: bool = movement != null and movement.walk(companion_id) != null
+		var taken: bool = owners.has(companion_id) or companion_of(slot) != 0
+		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
+			values.fail("companion %d isn't one walking entity without a player" % companion_id)
+			return
+		if species.is_empty() or species != state.companions[slot]:
+			values.fail("companion %d isn't of its slot's companion species" % companion_id)
+			return
+		owners[companion_id] = slot
+		_species[companion_id] = species
+		_rest[companion_id] = entry.whole("rest", 0, MOST_REST)
+	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
+	if restored == null:
+		values.fail("the companions' random stream isn't four 32-bit words, not all zero")
+		return
+	_rng = restored

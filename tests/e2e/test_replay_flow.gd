@@ -121,6 +121,7 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
+		"companion": func(state: GameState) -> void: state.companions[0] = "moss_toad",
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
 		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
@@ -582,6 +583,11 @@ func _check_replay_round_trip() -> String:
 	tampered.changes[2] = (tampered.changes[2] + 2) % Hex.DIRECTIONS.size()
 	if not tampered.play().begins_with("tick %d:" % Replay.CHECKPOINT_TICKS):
 		return "a changed command played without a mismatch at the first checkpoint"
+	# Who the players brought is part of the start (#338): other companions play another game.
+	var swapped: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
+	swapped.companions.reverse()
+	if loaded.companions != recorded.companions or swapped.play().is_empty():
+		return "the replay didn't keep its companions, or played with others all the same"
 	return ""
 
 
@@ -620,6 +626,7 @@ func _check_replay_validation() -> String:
 		ReplayFile.to_text(invalid_move): "a recorded command at tick 1 is invalid",
 		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
+		text.replace("\"companions\": [", "\"companions\": [1,"): "not a replay: its companions",
 		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
 	}
 	for case: String in cases:
@@ -663,9 +670,10 @@ func _check_golden_replays() -> String:
 	return ""
 
 
-## A session of two players walking the scripted moves, recorded and played once.
+## A session of two players walking the scripted moves, each with a companion (#338), recorded and
+## played once.
 func _recorded_run() -> Replay:
-	var world: World = World.new(42, InstanceBlueprints.BASIC, 2)
+	var world: World = World.new(42, InstanceBlueprints.BASIC, 2, ["storm_finch", "moss_toad"])
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)
 	for direction: int in _moves():

@@ -6,8 +6,8 @@ extends RefCounted
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
 
 ## The file format; a replay in another format is refused, not misread. Format 2 added the starting
-## world; a format 1 replay has none and still plays.
-const FORMAT: int = 2
+## world and format 3 the companions (#338); a replay without them has none and still plays.
+const FORMAT: int = 3
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -25,6 +25,7 @@ static func to_text(replay: Replay) -> String:
 		"instance": replay.instance,
 		"seed": str(replay.seed_value),
 		"players": replay.players,
+		"companions": replay.companions,
 		"features": replay.features,
 		"ticks": replay.ticks,
 		"changes": replay.changes,
@@ -60,6 +61,8 @@ static func parse(text: String) -> Replay:
 	replay.instance = str(data["instance"])
 	replay.seed_value = str(data["seed"]).to_int()
 	replay.players = _int(data["players"])
+	var companions: Array = data.get("companions", [])
+	replay.companions.assign(companions)
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
@@ -92,6 +95,8 @@ static func _shape_problem(data: Dictionary) -> String:
 	for key: String in ["changes", "features"]:
 		if not _all_numbers(data.get(key)):
 			return "not a replay: its %s aren't a list of numbers" % key
+	if not _all_texts(data.get("companions", [])):
+		return "not a replay: its companions aren't a list of species"
 	var hashes: Variant = data.get("checkpoints", {})
 	if not _valid_checkpoints(hashes):
 		return "not a replay: its checkpoints aren't ticks with hashes"
@@ -104,6 +109,16 @@ static func _valid_checkpoints(hashes: Variant) -> bool:
 	var by_tick: Dictionary = hashes
 	for tick: Variant in by_tick:
 		if not str(tick).is_valid_int() or not str(by_tick[tick]).is_valid_int():
+			return false
+	return true
+
+
+static func _all_texts(values: Variant) -> bool:
+	if not values is Array:
+		return false
+	var items: Array = values
+	for item: Variant in items:
+		if not item is String:
 			return false
 	return true
 

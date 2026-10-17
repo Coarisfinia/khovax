@@ -34,6 +34,9 @@ static var start_instance: String = ""
 ## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
 ## build a driver alone.
 @export var keeper: WorldKeeper
+## Holds this machine's player's profile, whose first carried monster is their companion (#338);
+## none in tests that build a driver alone, whose players then bring none.
+@export var holder: ProfileHolder
 ## Players in the session, in slots 0 and up. Each slot needs a command source, or ticks wait.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
@@ -85,7 +88,7 @@ static func new_seed() -> int:
 ## Starts a fresh session, in the starting instance, from `seed_value`: the APK test (#61) starts
 ## its own with a fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
-	world = World.new(seed_value, instance, players)
+	world = World.new(seed_value, instance, players, companions())
 	# No world for an unknown or invalid instance, which InstanceBlueprints.create reports.
 	if not world.problem.is_empty():
 		world = null
@@ -103,11 +106,24 @@ func resume(saved: World) -> String:
 		if (saved.player(slot) != null) != (slot < players):
 			return "the saved world's players aren't the session's %d" % players
 	world = saved
+	# Who the players bring is the session's, so a monster dominated since the save comes along.
+	world.set_companions(companions())
 	recording = Replay.new(saved.start_name, saved.world_seed)
 	recording.start_world = WorldData.of(saved)
 	recording.begin(saved)
 	_begin_session()
 	return ""
+
+
+## Each slot's companion species for a session starting now (#338): this machine's player brings
+## their first carried monster; other players bring none until co-op peers send theirs (#75).
+func companions() -> Array[String]:
+	var species: Array[String] = []
+	var _sized: int = species.resize(GameState.MAX_PLAYERS)
+	var slot: int = input.slot if input != null else 0
+	if holder != null and holder.keeper != null:
+		species[slot] = holder.keeper.profile.companion_species()
+	return species
 
 
 ## A new session's schedule, from the world's tick on, with no hashes and no time due yet.

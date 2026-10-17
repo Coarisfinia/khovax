@@ -7,8 +7,9 @@ extends RefCounted
 ## blueprint switches game rules on and off by listing them, and they can change during a session.
 ## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
-## The playground: the hand-made region regions/basic.md, walking, a trail per player, the wild
-## monsters the region places, dominating them with a ring, and fog of war.
+## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338),
+## a trail per player, the wild monsters the region places, dominating them with a ring, and fog of
+## war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
@@ -57,10 +58,13 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		var limits: Array = [instance_name, region.starts.size(), players]
 		push_error("instance %s takes 0 to %d players, not %d" % limits)
 		return null
+	var species: Content = Content.load_species()
+	if not species.problem.is_empty():
+		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		TrailFeature.new(),
-		_wild_monsters(instance_name),
+		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
 		_domination_loot(instance_name),
 		EnrageFeature.new(),
@@ -73,6 +77,8 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 			push_error("instance %s's loot table doesn't load" % instance_name)
 			return null
 		ordered.append(ChestFeature.new(table))
+	# Last, so a companion whose player walks out through an exit this tick goes with them.
+	ordered.append(_companions(species))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -142,10 +148,18 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
 
 
+## The companion feature (#338) with every species' reach, from its stats in `content`.
+static func _companions(content: Content) -> CompanionFeature:
+	var reaches: Dictionary[String, int] = {}
+	for species_id: String in content.species:
+		var stats: Species = content.species[species_id]
+		reaches[species_id] = CompanionFeature.reach_of(stats.hp, stats.strength, stats.speed)
+	return CompanionFeature.new(reaches)
+
+
 ## The wild monster feature with the named blueprint's species list and every species' stats from
-## the content data (#219). Content that doesn't load is an error; its monsters then push on
-## nothing.
-static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
+## the species `content` (#219); when it didn't load, its monsters push on nothing.
+static func _wild_monsters(instance_name: String, content: Content) -> WildMonsterFeature:
 	var species: Dictionary = WILD_SPECIES.get(instance_name, { })
 	var roster: Array[String] = []
 	var weights: Array[int] = []
@@ -153,9 +167,6 @@ static func _wild_monsters(instance_name: String) -> WildMonsterFeature:
 		var weight: int = species[species_id]
 		roster.append(str(species_id))
 		weights.append(weight)
-	var content: Content = Content.load_species()
-	if not content.problem.is_empty():
-		push_error("the species don't load: " + content.problem)
 	var max_hps: Dictionary[String, int] = {}
 	var strengths: Dictionary[String, int] = {}
 	for species_id: String in content.species:

@@ -130,6 +130,17 @@ func _result_problem(result: Gain) -> String:
 	return ""
 
 
+## The species of the player's companion (#338): the first monster they carry; "" when they carry
+## none.
+func companion_species() -> String:
+	if carried.is_empty():
+		return ""
+	for monster: DominatedMonster in dominated_monsters:
+		if monster.id == carried[0]:
+			return monster.species
+	return ""
+
+
 ## Whether a dominated monster has this id.
 func has_monster(monster_id: int) -> bool:
 	for monster: DominatedMonster in dominated_monsters:

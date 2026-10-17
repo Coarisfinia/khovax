@@ -5,14 +5,15 @@ extends RefCounted
 ## instances and runs them; this writes and reads them.
 
 ## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
-## purging and format 2 no ring seals; their saves were played by older rules, which `to_world`
-## refuses anyway.
-const FORMAT: int = 3
+## purging, format 2 no ring seals and format 3 no companions; their saves were played by older
+## rules, which `to_world` refuses anyway.
+const FORMAT: int = 4
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
 ## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
-## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, every loaded instance
+## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, each slot's companion
+## species (#338, only the slots that bring one), every loaded instance
 ## in name order with its state (GameState.to_data) and the tick it was left behind (-1 while
 ## someone is in it), every purged blueprint's generation, the rules version it was played by and
 ## its hash, which `to_world` checks. Regions aren't saved: no rule changes one while it's loaded,
@@ -30,12 +31,17 @@ static func of(world: World) -> Dictionary:
 	var purged: Array[Dictionary] = []
 	for instance_name: String in _sorted(world.generations.keys()):
 		purged.append({ "name": instance_name, "generation": world.generations[instance_name] })
+	var companions: Array[Dictionary] = []
+	for slot: int in GameState.MAX_PLAYERS:
+		if not world.companions[slot].is_empty():
+			companions.append({ "slot": slot, "species": world.companions[slot] })
 	return {
 		"format": FORMAT,
 		"rules": Simulation.RULES_VERSION,
 		"seed": [(world.world_seed >> 32) & 0xffff_ffff, world.world_seed & 0xffff_ffff],
 		"start": world.start_name,
 		"tick": world.tick,
+		"companions": companions,
 		"generations": purged,
 		"instances": saved,
 		"hash": world.state_hash(),
@@ -59,7 +65,7 @@ static func to_world(data: Dictionary) -> World:
 		read.fail("the world's seed or its starting blueprint %s isn't valid" % start)
 	if read.failed():
 		return World.refused(read.problem)
-	var world: World = World.new((halves[0] << 32) | halves[1], start, 0)
+	var world: World = World.new((halves[0] << 32) | halves[1], start, 0, _companions(read))
 	world.instances.clear()
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
@@ -82,11 +88,7 @@ static func _load_instance(world: World, entry: DataReader) -> void:
 	if not InstanceBlueprints.exists(instance_name) or world.instances.has(instance_name):
 		entry.fail("instance %s doesn't exist or is saved twice" % instance_name)
 		return
-	var loaded: GameState = InstanceBlueprints.create(
-		instance_name,
-		world.seed_for(instance_name),
-		0,
-	)
+	var loaded: GameState = world.create_instance(instance_name, 0)
 	if loaded == null:
 		entry.fail("instance %s doesn't load" % instance_name)
 		return
@@ -101,6 +103,20 @@ static func _load_instance(world: World, entry: DataReader) -> void:
 		entry.fail("instance %s was left behind long enough to be purged" % instance_name)
 	elif left >= 0:
 		world.left_at[instance_name] = left
+
+
+## Each slot's companion species from the save, by slot, "" for a slot that brings none: every
+## species named, each slot at most once.
+static func _companions(read: DataReader) -> Array[String]:
+	var species: Array[String] = []
+	var _sized: int = species.resize(GameState.MAX_PLAYERS)
+	for entry: DataReader in read.entries("companions"):
+		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
+		var named: String = entry.text("species")
+		if named.is_empty() or not species[slot].is_empty():
+			entry.fail("slot %d's companion is nameless or saved twice" % slot)
+		species[slot] = named
+	return species
 
 
 ## Restores the generation of the purged blueprint `entry` names; the starting instance is never

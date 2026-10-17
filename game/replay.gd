@@ -18,6 +18,8 @@ var seed_value: int = 0
 ## the instance and the seed.
 var start_world: Dictionary = {}
 var players: int = 1
+## Each slot's companion species, "" for none (#338): who the players brought, part of the start.
+var companions: Array[String] = []
 ## The rules version and the instance's feature ids when it was recorded: a replay of other rules
 ## would play out differently, so playback refuses it with a clear message.
 var rules: int = Simulation.RULES_VERSION
@@ -42,9 +44,11 @@ func _init(instance_name: String = "", seed_number: int = 0) -> void:
 	seed_value = seed_number
 
 
-## Starts recording from `world` at its start: its players and its starting instance's features.
+## Starts recording from `world` at its start: its players, their companions and its starting
+## instance's features.
 func begin(world: World) -> void:
 	features = _feature_ids(world.instances[instance])
+	companions = world.companions.duplicate()
 	players = 0
 	for slot: int in GameState.MAX_PLAYERS:
 		if world.player(slot) != null:
@@ -117,6 +121,8 @@ func _setup_problem() -> String:
 		return "instance %s with %d players doesn't exist in this build" % [instance, players]
 	if changes.size() % STRIDE != 0:
 		return "the recorded commands are cut off"
+	if companions.size() > GameState.MAX_PLAYERS:
+		return "the replay has companions for %d slots" % companions.size()
 	for i: int in range(0, changes.size(), STRIDE):
 		var after_previous: bool = i == 0 or changes[i] >= changes[i - STRIDE]
 		if changes[i] < 1 or changes[i] > ticks or not after_previous:
@@ -134,11 +140,16 @@ func _setup_problem() -> String:
 ## and returns the first mismatch; without, records new ones.
 func _run(check: bool) -> String:
 	if start_world.is_empty():
-		played = World.new(seed_value, instance, players)
+		played = World.new(seed_value, instance, players, companions)
 	else:
 		played = WorldData.to_world(start_world)
 	if not played.problem.is_empty():
 		return played.problem
+	# A replay names only the slots up to the last that brings one; the world names every slot.
+	var named: Array[String] = companions.duplicate()
+	var _sized: int = named.resize(GameState.MAX_PLAYERS)
+	if played.companions != named:
+		return "the replay's companions %s aren't its world's %s" % [named, played.companions]
 	if not played.instances.has(instance):
 		return "the replay's starting world doesn't hold its instance %s" % instance
 	var start: Array[int] = _feature_ids(played.instances[instance])

@@ -15,3 +15,4 @@ const TRIGGERS: int = 8
 const ENRAGE: int = 9
 const HIDING: int = 10
 const DOMINATION_LOOT: int = 11
+const COMPANIONS: int = 12
