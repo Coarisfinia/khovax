@@ -10,6 +10,7 @@ extends RefCounted
 ## (a decoration reaching over its neighbours, #232) fits beneath it. The world holds several loaded
 ## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
+## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -45,6 +46,7 @@ func run(_tree: SceneTree) -> String:
 		_check_world,
 		_check_documents,
 		_check_walk_through,
+		_check_companions,
 		_check_purge,
 		_check_start_kept,
 		_check_layout,
@@ -79,6 +81,67 @@ func _check_walk_through() -> String:
 		return "walking west out of the glade didn't lead back onto the basic instance's exit"
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"
+	return ""
+
+
+## Companions (#338): the player who brings one is joined by it on the first tick, beside them; the
+## other player, who brings none, isn't. A weak species' reach is shorter than a strong one's.
+## Standing, the player watches it roam within its reach; walking off, they're never more than a
+## step out of it, and only players color the trail. The player walks through it, and it follows
+## them out through the exit into the glade, while the one in the basic instance goes.
+func _check_companions() -> String:
+	var world: World = World.new(3, InstanceBlueprints.BASIC, 2, ["storm_finch"])
+	world.step(_still())
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var companion: Entity = basic.entity(companions.companion_of(0))
+	if companion == null or companions.companion_of(1) != 0:
+		return "only the player bringing a companion should be joined by one"
+	if Hex.distance(companion.tile, world.player(0).tile) != 1:
+		return "the companion joined on %s, not beside its player" % companion.tile
+	if companions.reaches["moss_toad"] >= companions.reaches["storm_finch"]:
+		return "the weaker moss toad doesn't stay closer than the storm finch"
+	var reach: int = companions.reach_of_companion(companion.id)
+	var roamed: Dictionary[Vector2i, bool] = {}
+	for _tick: int in 400:
+		world.step(_still())
+		roamed[companion.tile] = true
+		if Hex.distance(companion.tile, world.player(0).tile) > reach:
+			return "the companion roamed out of its reach of %d" % reach
+	if roamed.size() < 3:
+		return "the companion didn't roam: it stood on %s" % [roamed.keys()]
+	for direction: int in [3, 3, 0, 0, 3, 0]:
+		for tick: int in MovementFeature.MOVE_TICKS:
+			world.step(_moving(direction) if tick == 0 else _still())
+			if Hex.distance(companion.tile, world.player(0).tile) > reach + 1:
+				return "the companion fell more than a step behind its walking player"
+	var trails: TrailFeature = basic.feature(Features.TRAIL) as TrailFeature
+	for tile: Vector2i in trails.shared.tiles:
+		if trails.shared.tiles[tile] == companion.id:
+			return "the companion colored %s on the trail" % tile
+	return _check_companion_passed(world, companion)
+
+
+## Standing east of its player, the companion lets them walk through, and it follows them out
+## through the exit into the glade, while the one left in the basic instance goes.
+func _check_companion_passed(world: World, companion: Entity) -> String:
+	var start: Vector2i = world.player(0).tile
+	companion.tile = start + Hex.DIRECTIONS[0]
+	world.step(_moving(0))
+	if world.player(0).tile != start + Hex.DIRECTIONS[0]:
+		return "the companion stopped its own player"
+	_idle_until(world, world.tick + MovementFeature.MOVE_TICKS)
+	# From (2, -1), northeast onto the exit on (3, -2), and east once more.
+	for direction: int in [1, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var left: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	if world.instance_of(0) != InstanceBlueprints.GLADE or followed.companion_of(0) == 0:
+		return "the companion didn't follow its player into the glade"
+	if left.companion_of(0) != 0 or basic.entity(companion.id) != null:
+		return "the companion stayed in the basic instance its player left"
 	return ""
 
 

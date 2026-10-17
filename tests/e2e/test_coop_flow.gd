@@ -7,6 +7,7 @@ extends RefCounted
 ## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
 ## one mark per slot number, so the two are told apart by more than color (#233, #68), and the
 ## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
+## Each player's companion (#338) joins them, in a smaller circle of their color and marks.
 ## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -92,6 +93,25 @@ func _check_circles() -> String:
 			return "player %d's circle isn't in their color with %d marks" % [slot + 1, slot + 1]
 	if _views[0].circle.color == _views[1].circle.color:
 		return "the two players' circles have the same color"
+	return _check_companions_shown()
+
+
+## When both players bring a companion, each is joined by theirs, drawn in a circle of their own
+## color with their own marks, so the two are told apart by more than color too.
+func _check_companions_shown() -> String:
+	_driver.world.set_companions(["storm_finch", "moss_toad"])
+	_driver.world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+	var view: CompanionView = _main.get_node("Instance/CompanionView") as CompanionView
+	view.show_state()
+	var feature: CompanionFeature = _driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	for slot: int in 2:
+		var circle: PlayerCircle = view.circle_of(feature.companion_of(slot))
+		var expected: Color = PersonalColor.of(_driver.world.world_seed, slot)
+		if circle == null or circle.color != expected or circle.marks != slot + 1:
+			return "player %d's companion isn't shown in their color with %d marks" % [
+				slot + 1,
+				slot + 1,
+			]
 	return _check_trail_marks()
 
 

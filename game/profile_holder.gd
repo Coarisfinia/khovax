@@ -18,7 +18,11 @@ var save_path: String = SaveStore.PROFILE_PATH
 var keeper: ProfileKeeper
 
 
-func _ready() -> void:
+## Loads the profile on entering the tree, before any node's _ready: the driver starts the session
+## in its own, with this player's companion from the profile (#338).
+func _enter_tree() -> void:
+	if keeper != null:
+		return
 	SaveStore.keep_web_storage()
 	var profile: Profile = SaveStore.load_profile(save_path)
 	if profile.loaded_generation > 0:
@@ -33,6 +37,9 @@ func _ready() -> void:
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
+
+
+func _ready() -> void:
 	bus.subscribe(&"WildMonsterDominated", _on_event)
 	bus.subscribe(&"ChestOpened", _on_event)
 	bus.subscribe(&"LootFound", _on_event)

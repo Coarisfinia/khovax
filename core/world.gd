@@ -28,16 +28,26 @@ var generations: Dictionary[String, int] = {}
 var left_at: Dictionary[String, int] = {}
 ## Where each instance lies in the world, worked out once (#187, #282).
 var _layout: WorldLayout = WorldLayout.new()
+## Each player slot's companion species, or "" for none (#338): who the players bring, which
+## every instance the world loads is handed (GameState.companions). Set when the session starts.
+var companions: Array[String] = []
 
 
-## A world that starts in the blueprint `start` with `players` players in it; with no `start`, an
-## empty one, which only a refused save gives (`WorldData.to_world`).
-func _init(seed_value: int, start: String, players: int = 1) -> void:
+## A world that starts in the blueprint `start` with `players` players in it, each slot bringing
+## its companion from `companion_species` (by slot; none past its end); with no `start`, an empty
+## one, which only a refused save gives (`WorldData.to_world`).
+func _init(
+	seed_value: int,
+	start: String,
+	players: int = 1,
+	companion_species: Array[String] = [],
+) -> void:
 	world_seed = seed_value
 	start_name = start
+	set_companions(companion_species)
 	if start.is_empty():
 		return
-	var first: GameState = InstanceBlueprints.create(start, seed_for(start), players)
+	var first: GameState = create_instance(start, players)
 	if first == null:
 		problem = "the starting instance %s doesn't load" % start
 		return
@@ -65,12 +75,36 @@ func generation(instance_name: String) -> int:
 ## when it can't load.
 func instance(instance_name: String) -> GameState:
 	if not instances.has(instance_name):
-		var loaded: GameState = InstanceBlueprints.create(instance_name, seed_for(instance_name), 0)
+		var loaded: GameState = create_instance(instance_name, 0)
 		if loaded == null:
 			return null
 		instances[instance_name] = loaded
 		left_at[instance_name] = tick
 	return instances[instance_name]
+
+
+## A fresh instance of the blueprint `instance_name` at its current generation's seed, with
+## `players` players and the world's companions, not yet among the loaded ones; null when it can't
+## load.
+func create_instance(instance_name: String, players: int) -> GameState:
+	var created: GameState = InstanceBlueprints.create(
+		instance_name,
+		seed_for(instance_name),
+		players,
+	)
+	if created != null:
+		created.companions = companions.duplicate()
+	return created
+
+
+## Sets every slot's companion species, by slot ("" or nothing for none), in the world and every
+## instance it has loaded: a session's start decides who the players bring (#338).
+func set_companions(companion_species: Array[String]) -> void:
+	companions.clear()
+	for slot: int in GameState.MAX_PLAYERS:
+		companions.append(companion_species[slot] if slot < companion_species.size() else "")
+	for instance_name: String in sorted_names():
+		instances[instance_name].companions = companions.duplicate()
 
 
 ## Where tile (0, 0) of the instance `instance_name` lies in the world (#187); see WorldLayout.

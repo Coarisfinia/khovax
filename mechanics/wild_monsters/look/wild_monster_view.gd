@@ -103,11 +103,22 @@ func _fade_out(figure: HexPiece) -> void:
 func _add_figure() -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
-	var model: Node3D = MODEL.instantiate() as Node3D
-	Toon.apply_to_model(model)
+	var model: Node3D = placeholder_model()
 	piece.add_child(model)
 	add_child(piece)
+	idle(model)
+	return piece
+
+
+## A new copy of the placeholder model, in the comic look; companions wear it too (#338).
+static func placeholder_model() -> Node3D:
+	var model: Node3D = MODEL.instantiate() as Node3D
+	Toon.apply_to_model(model)
+	return model
+
+
+## Starts the placeholder model's idle clip, once it's in the tree.
+static func idle(model: Node3D) -> void:
 	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
 	if animations != null and animations.has_animation(IDLE):
 		animations.play(IDLE)
-	return piece
