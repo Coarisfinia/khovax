@@ -19,3 +19,4 @@ const COMPANIONS: int = 12
 const ENTERING: int = 13
 const COMPANION_ATTACKS: int = 14
 const SPECIALS: int = 15
+const WILD_ATTACKS: int = 16
