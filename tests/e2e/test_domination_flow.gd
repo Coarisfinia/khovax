@@ -1304,6 +1304,29 @@ func _check_species() -> String:
 	events.append_array(_settle(state))
 	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
+	return _check_wounded()
+
+
+## The beach's wounded moss toad (#389) starts at WOUNDED_HP of its full HP, the other at full.
+func _check_wounded() -> String:
+	var state: GameState = InstanceBlueprints.basic(1)
+	var wild: WildMonsterFeature = _wild(state)
+	var wounded: int = 0
+	for monster: int in wild.monsters:
+		var full: int = wild.max_hp_of(monster)
+		var spot: Vector2i = state.entity(monster).tile
+		var expected: int = full
+		if state.region.wounded.has(spot):
+			wounded += 1
+			expected = maxi(Fixed.scale(full, WildMonsterFeature.WOUNDED_HP), 1)
+		if wild.hp_of(monster) != expected:
+			return "the wild monster on %s starts at %d HP, not %d" % [
+				spot,
+				wild.hp_of(monster),
+				expected,
+			]
+	if wounded != 1:
+		return "the basic instance has %d wounded wild monsters, not the beach's one" % wounded
 	return _check_hiding()
 
 

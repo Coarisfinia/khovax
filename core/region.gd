@@ -36,6 +36,9 @@ var wild_monsters: Array[Vector2i] = []
 ## spot rolls one from its blueprint's list. Not hashed here: the wild monster feature hashes each
 ## wild monster's species.
 var named_species: Dictionary[Vector2i, String] = {}
+## The wild monster spots whose monster starts wounded (#389), at a low share of its HP. Not hashed
+## here: the wild monster feature hashes each wild monster's HP.
+var wounded: Dictionary[Vector2i, bool] = {}
 ## Where treasure chests stand when the instance loads, in the region file's reading order. Not
 ## hashed here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
@@ -136,6 +139,8 @@ func turned(turns: int) -> Region:
 		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
 	for spot: Vector2i in named_species:
 		region.named_species[Hex.turn(spot, turns)] = named_species[spot]
+	for spot: Vector2i in wounded:
+		region.wounded[Hex.turn(spot, turns)] = true
 	for tile: Vector2i in decoration_turns:
 		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
 		region.decoration_turns[Hex.turn(tile, turns)] = turn
@@ -179,6 +184,8 @@ func place(piece: Region, offset: Vector2i) -> void:
 		wild_monsters.append(spot + offset)
 	for spot: Vector2i in piece.named_species:
 		named_species[spot + offset] = piece.named_species[spot]
+	for spot: Vector2i in piece.wounded:
+		wounded[spot + offset] = true
 	for tile: Vector2i in piece.decoration_turns:
 		decoration_turns[tile + offset] = piece.decoration_turns[tile]
 	for tile: Vector2i in piece.height_overrides:
