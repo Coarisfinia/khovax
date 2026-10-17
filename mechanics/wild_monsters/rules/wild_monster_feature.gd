@@ -93,12 +93,19 @@ func start(state: GameState) -> void:
 ## its own tick of every STEP_TICKS (by its id), in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
+	var blocked: Dictionary[Vector2i, bool] = {}
 	for monster: int in monsters:
-		var standing: Entity = state.entity(monster)
-		var due: bool = (state.tick + monster) % STEP_TICKS == 0
-		if not due or not stuck.has(standing.tile) or held.has(monster):
+		# Only the monsters due this tick are looked up: finding an entity goes through them all.
+		if (state.tick + monster) % STEP_TICKS != 0 or held.has(monster):
 			continue
-		standing.tile = RingableGround.way_out(state.region, stuck, _blocked(state), standing.tile)
+		var standing: Entity = state.entity(monster)
+		if not stuck.has(standing.tile):
+			continue
+		if blocked.is_empty():
+			blocked = _blocked(state)
+		var from: Vector2i = standing.tile
+		standing.tile = RingableGround.way_out(state.region, stuck, blocked, from)
+		blocked[standing.tile] = true
 
 
 ## The tiles a wild monster may not step onto: the trail, so it never walks into a ring, and every
