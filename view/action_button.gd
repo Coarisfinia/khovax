@@ -55,17 +55,21 @@ func _draw() -> void:
 	var ink: Color = Color(Toon.INK, faded)
 	draw_rect(area, ink, false, INK_PIXELS)
 	_draw_icon(area, ink)
+	_draw_numbers(area, ink)
+
+
+## The cooldown circle, while one runs, and the number in the corner.
+func _draw_numbers(area: Rect2, ink: Color) -> void:
 	var left: float = cooldown_share()
 	if left > 0.0:
-		var middle: Vector2 = area.get_center()
 		var radius: float = area.size.x * 0.42
-		draw_arc(middle, radius, -PI / 2.0, -PI / 2.0 + TAU * left, 32, ink, INK_PIXELS * 2.0)
+		var turned: float = -PI / 2.0 + TAU * left
+		draw_arc(area.get_center(), radius, -PI / 2.0, turned, 32, ink, INK_PIXELS * 2.0)
 	var label: String = corner_text()
 	if not label.is_empty():
-		var font: Font = ThemeDB.fallback_font
-		var font_size: int = int(area.size.x * 0.3)
 		var at: Vector2 = area.end - Vector2(area.size.x * 0.32, area.size.y * 0.1)
-		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, ink)
+		var font_size: int = int(area.size.x * 0.3)
+		draw_string(ThemeDB.fallback_font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, ink)
 
 
 ## Lays the button out for a screen of `screen` pixels: in a column at the bottom right corner.
@@ -83,9 +87,9 @@ func rect() -> Rect2:
 	return Rect2(button.position - Vector2(_side, _side) / 2.0, Vector2(_side, _side))
 
 
-## Draws the icon in `area` with `ink`. Subclasses draw their item's or attack's.
-func _draw_icon(_area: Rect2, _ink: Color) -> void:
-	pass
+## Draws the icon in `area` with `ink`: a dot here; subclasses draw their item's or attack's.
+func _draw_icon(area: Rect2, ink: Color) -> void:
+	draw_circle(area.get_center(), area.size.x * 0.1, ink)
 
 
 ## The number in the button's corner: charges left, or the cooldown's seconds; "" for none.

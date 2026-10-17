@@ -20,6 +20,8 @@ func usable() -> bool:
 	var player: Entity = _player()
 	if domination == null or player == null or _charges() == 0:
 		return false
+	if not domination.encircled.has(player.id):
+		return false
 	return domination.ring_waiting(driver.state, player.id).has(player.tile)
 
 
