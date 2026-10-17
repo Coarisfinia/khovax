@@ -8,7 +8,8 @@ extends Control
 ## tile shown as a chevron pointing out across its side; the rest stays the backdrop, the fog's
 ## color, so what is
 ## still in the fog stays hidden here too. Every player in the instance is a circle in their
-## personal color with one mark per slot number, like their circle in the world (#68), and every
+## personal color with one mark per slot number, like their circle in the world (#68), gliding
+## from tile to tile as their figure walks (#354), and every
 ## open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. It's
 ## centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
@@ -67,6 +68,9 @@ var blocking: Dictionary[Vector2i, bool] = {}
 var exits: Array[Vector3i] = []
 ## The tile each player in the instance stands on, by slot.
 var players: Dictionary[int, Vector2i] = {}
+## Where each player's circle is drawn, by slot, on the ground in world units: between the tile
+## they walk from and their own while they walk, as their figure glides (#354).
+var marks: Dictionary[int, Vector2] = {}
 ## The tile each open quest points at, by quest id.
 var quest_targets: Dictionary[String, Vector2i] = {}
 ## The ground point in the middle, in world units on the XZ plane.
@@ -83,8 +87,8 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	show_state()
-	var own: Vector2i = players.get(_slot(), Vector2i.ZERO)
-	_middle = _middle.lerp(_ground(own), 1.0 - exp(-GLIDE * delta))
+	var own: Vector2 = marks.get(_slot(), _ground(Vector2i.ZERO))
+	_middle = _middle.lerp(own, 1.0 - exp(-GLIDE * delta))
 	queue_redraw()
 
 
@@ -107,8 +111,8 @@ func _draw() -> void:
 	for exit: Vector3i in exits:
 		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
-	for slot: int in players:
-		_draw_player(to_view(players[slot]), slot, PersonalColor.of(world_seed, slot))
+	for slot: int in marks:
+		_draw_player(on_view(marks[slot]), slot, PersonalColor.of(world_seed, slot))
 	for id: String in quest_targets:
 		_draw_arrow(to_view(quest_targets[id]))
 	if bordered:
@@ -122,6 +126,7 @@ func show_state() -> void:
 	blocking.clear()
 	exits.clear()
 	players.clear()
+	marks.clear()
 	quest_targets.clear()
 	if driver == null or driver.state == null:
 		return
@@ -143,13 +148,19 @@ func show_state() -> void:
 		var player: Entity = state.player(slot)
 		if player != null:
 			players[slot] = player.tile
+			marks[slot] = _walked_ground(state, player)
 	if holder != null and holder.keeper != null:
 		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot())
 
 
 ## Where `tile` is drawn, in the view's own pixels.
 func to_view(tile: Vector2i) -> Vector2:
-	return size / 2.0 + (_ground(tile) - _middle) * zoom() / HexLayout.SIZE
+	return on_view(_ground(tile))
+
+
+## Where the ground point `ground`, in world units, is drawn, in the view's own pixels.
+func on_view(ground: Vector2) -> Vector2:
+	return size / 2.0 + (ground - _middle) * zoom() / HexLayout.SIZE
 
 
 ## How far a tile's corners lie from its middle, in pixels: a tile is sqrt(3) radii wide.
@@ -279,6 +290,18 @@ func _seen(instance_name: String) -> Dictionary:
 		return {}
 	var explored: ExploredGround = keeper.explored_in(driver.world)
 	return explored.seen(instance_name, driver.world.generation(instance_name))
+
+
+## Where `walker` is on the ground: on its tile, or while it walks between the tile it walks from
+## and its own, by tick and by how far real time is into the next one, as its figure glides.
+func _walked_ground(state: GameState, walker: Entity) -> Vector2:
+	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var walk: Walk = movement.walk(walker.id) if movement != null else null
+	var standing: Vector2 = _ground(walker.tile)
+	if walk == null or not walk.is_moving():
+		return standing
+	var left: float = walk.ticks_left - driver.tick_fraction()
+	return standing.lerp(_ground(walk.from), clampf(left / MovementFeature.MOVE_TICKS, 0.0, 1.0))
 
 
 ## A tile's middle on the ground, as the survey lays it out: north up.
