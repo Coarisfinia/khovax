@@ -118,6 +118,31 @@ func _check_named_steps(content: Content) -> String:
 	return ""
 
 
+## Why broken steps to enter an instance (#370) aren't refused, with a reason, or "": one naming
+## both a piece and an instance, an instance on another step, an instance that isn't an id or
+## isn't a blueprint.
+func _check_instance_steps(content: Content) -> String:
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
+	var cases: Dictionary[String, String] = {
+		quest % "{\"condition\": \"opened\", \"instance\": \"glade\"}": (
+			"step 0: its piece or instance"
+		),
+		quest % (ENTER_INSTANCE % "glade\", \"piece\": \"start"): "step 0: its piece or instance",
+		quest % (ENTER_INSTANCE % "The Glade"): "step 0: its instance must be an id",
+		quest % (ENTER_INSTANCE % "nowhere"): "step 0: its instance must be an instance",
+	}
+	return _unrefused(cases, content)
+
+
+## Why one of the quests in `cases` isn't refused with the reason it maps to, or "".
+static func _unrefused(cases: Dictionary[String, String], content: Content) -> String:
+	for text: String in cases:
+		var problem: String = QuestDefinition.parse("x", text, content.species).problem
+		if not problem.begins_with(cases[text]):
+			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
+
+
 ## Every quest file reads: the first domination is one domination of any species, and the toads'
 ## quest counts up three of one species, a step to reach a place names it (#339), and one to enter
 ## a region piece names the piece (#350), or an instance its blueprint (#370). Quests with a wrong
@@ -144,6 +169,8 @@ func _check_quests() -> String:
 		return "the toads' quest isn't three moss toads"
 	if not _check_named_steps(content).is_empty():
 		return _check_named_steps(content)
+	if not _check_instance_steps(content).is_empty():
+		return _check_instance_steps(content)
 	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
 	var step: String = "{\"condition\": \"dominated\"%s}"
 	var cases: Dictionary[String, String] = {
@@ -157,12 +184,6 @@ func _check_quests() -> String:
 		quest % ["x", "N", "{\"condition\": \"entered\"}"]: "step 0: its piece",
 		quest % ["x", "N", step % ", \"piece\": \"thicket\""]: "step 0: its piece",
 		quest % ["x", "N", ENTER % "The Thicket"]: "step 0: its piece must",
-		quest % ["x", "N", step % ", \"instance\": \"glade\""]: "step 0: its piece or instance",
-		quest % ["x", "N", ENTER_INSTANCE % "glade\", \"piece\": \"start"]: (
-			"step 0: its piece or instance"
-		),
-		quest % ["x", "N", ENTER_INSTANCE % "The Glade"]: "step 0: its instance must be an id",
-		quest % ["x", "N", ENTER_INSTANCE % "nowhere"]: "step 0: its instance must be an instance",
 		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
 		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
 			"step 0: its species"
@@ -172,11 +193,7 @@ func _check_quests() -> String:
 		quest % ["x", "N", step % ", \"when\": 1"]: "step 0: field when",
 		quest % ["x", "N", "7"]: "step 0: it isn't",
 	}
-	for text: String in cases:
-		var problem: String = QuestDefinition.parse("x", text, content.species).problem
-		if not problem.begins_with(cases[text]):
-			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	return ""
+	return _unrefused(cases, content)
 
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their

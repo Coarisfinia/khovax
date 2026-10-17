@@ -94,16 +94,8 @@ static func targets_of(
 ## its piece, or the exits leading to its instance.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	var tiles: Array[Vector2i] = []
-	if step.condition == "entered" and not step.instance.is_empty():
-		for i: int in state.region.exits.size():
-			if state.region.exit_blueprints[i] == step.instance:
-				tiles.append(Vector2i(state.region.exits[i].x, state.region.exits[i].y))
-		return tiles
 	if step.condition == "entered":
-		for tile: Vector2i in state.region.piece_of:
-			if state.region.piece_of[tile] == step.piece:
-				tiles.append(tile)
-		return tiles
+		return _entered_tiles(state, step)
 	if step.condition == "reached":
 		for trigger: TileTrigger in state.region.triggers:
 			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
@@ -126,6 +118,21 @@ static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 		var fits: bool = step.species.is_empty() or wild.species_of(entity_id) == step.species
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)
+	return tiles
+
+
+## The tiles where an entered `step` is met in `state`: the exits leading to its instance, or the
+## tiles of its piece.
+static func _entered_tiles(state: GameState, step: QuestStep) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	if not step.instance.is_empty():
+		for i: int in state.region.exits.size():
+			if state.region.exit_blueprints[i] == step.instance:
+				tiles.append(Vector2i(state.region.exits[i].x, state.region.exits[i].y))
+		return tiles
+	for tile: Vector2i in state.region.piece_of:
+		if state.region.piece_of[tile] == step.piece:
+			tiles.append(tile)
 	return tiles
 
 

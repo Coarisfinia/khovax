@@ -140,7 +140,7 @@ func step(commands: Array[Command]) -> void:
 	events.clear()
 	if tick == 0:
 		for instance_name: String in active():
-			_entered(instance_name, instances[instance_name].entities)
+			_raise_entered(instance_name, instances[instance_name].entities)
 	tick += 1
 	var leaving: Array[Array] = []
 	for instance_name: String in active():
@@ -208,14 +208,19 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	instances[from].remove_entity(taken.entity_id)
 	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
 	if arrived[0] != null:
-		_entered(taken.target, arrived)
+		_raise_entered(taken.target, arrived)
 
 
 ## Raises that each player among `entities` entered the instance `instance_name`.
-func _entered(instance_name: String, entities: Array[Entity]) -> void:
+func _raise_entered(instance_name: String, entities: Array[Entity]) -> void:
 	for entering: Entity in entities:
 		if entering.slot != Entity.NO_SLOT:
-			events.append(InstanceEntered.new(instance_name, entering.id, entering.slot))
+			events.append(_entered_event(instance_name, entering))
+
+
+## That `entering` entered the instance `instance_name`.
+static func _entered_event(instance_name: String, entering: Entity) -> InstanceEntered:
+	return InstanceEntered.new(instance_name, entering.id, entering.slot)
 
 
 ## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
