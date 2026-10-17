@@ -162,6 +162,12 @@ func _survey_placed_in(choice: SurveyChoice, survey: SurveyView, screen: Vector2
 				screen,
 			]
 		return ""
+	return _survey_cornered(place, rect, screen)
+
+
+## Why a corner Survey at `rect` isn't against its own corner of a `screen`, a margin from both of
+## its edges, or "".
+func _survey_cornered(place: SurveyChoice.Place, rect: Rect2, screen: Vector2) -> String:
 	var left: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.BOTTOM_LEFT]
 	var top: bool = place in [SurveyChoice.Place.TOP_LEFT, SurveyChoice.Place.TOP_RIGHT]
 	var gap: Vector2 = Vector2(
