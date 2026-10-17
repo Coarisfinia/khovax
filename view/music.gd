@@ -2,7 +2,7 @@ class_name Music
 extends AudioStreamPlayer
 ## The world's music (#126): the exploration track, looped. It fades in from silence and never cuts:
 ## sudden loud changes don't fit a game designed around motion sickness. The combat track joins it
-## once combat exists. Its volume becomes a setting with the settings menu.
+## once combat exists. Its volume becomes a setting in the menu's Settings tab.
 
 ## How long the track takes to rise from silence once it starts.
 const FADE_IN_SECONDS: float = 4.0

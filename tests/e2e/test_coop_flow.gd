@@ -7,7 +7,8 @@ extends RefCounted
 ## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
 ## one mark per slot number, so the two are told apart by more than color (#233, #68), and the
 ## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
-## Each player's companion (#338) joins them, in a smaller circle of their color and marks.
+## Each player's companion (#338) joins them, in a smaller circle of their color and marks. An open
+## menu doesn't pause co-op (#362).
 ## Time is stepped by hand, one tick a frame.
 
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -133,9 +134,20 @@ func _check_trail_marks() -> String:
 
 
 ## With an input delay, a command sampled before tick t applies to tick t + delay, and the first
-## ticks stand still: the driver's game is exactly the plain playback of those commands.
+## ticks stand still: the driver's game is exactly the plain playback of those commands. The menu
+## is open meanwhile: in co-op it never pauses (#362), so the ticks run on.
 func _check_input_delay() -> String:
 	_driver.sources = [ScriptedSource.new(0, _script(1)), ScriptedSource.new(1, _script(2))]
+	var menu: GameMenu = _main.get_node("Hud/GameMenu") as GameMenu
+	# Every setting on Auto, whatever this machine's player chose.
+	(_main.get_node("Graphics") as Graphics).settings = Settings.new()
+	# The flow steps the driver itself; real time would reach it again unless the menu paused it.
+	_driver.set_process(true)
+	menu.toggle()
+	var paused: bool = not _driver.is_processing()
+	_driver.set_process(false)
+	if not menu.pauses() or paused:
+		return "the open menu pauses co-op, or its pause isn't on by default"
 	_run_frames(TICKS)
 	if _driver.state.tick != TICKS:
 		return "the driver ran %d ticks, not %d" % [_driver.state.tick, TICKS]

@@ -133,6 +133,14 @@ func _begin_session() -> void:
 	_accumulated = 0.0
 
 
+## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops
+## reaching the driver, so the world, its replay and its hashes stay as if no time passed. In co-op
+## it never holds them: lockstep keeps every player's world running together (#38).
+func pause(on: bool) -> void:
+	if players == 1:
+		set_process(not on)
+
+
 ## Runs as many whole ticks as `delta` adds up to, at most MAX_TICKS_PER_FRAME. Called every
 ## frame; tests call it with fixed steps.
 func advance(delta: float) -> void:
