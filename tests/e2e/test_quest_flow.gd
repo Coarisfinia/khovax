@@ -7,7 +7,9 @@ extends RefCounted
 ## together are listed in id order;
 ## saved progress that no longer fits its quest settles at the next fact; and quest data with a
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
-## asks for (#300), and a finished one has none.
+## asks for (#300), and a finished one has none. The list at the side of the screen (#340) shows
+## each open quest's step and count, follows a step counting up, and drops a finished quest once
+## it has faded out.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -44,6 +46,12 @@ func _check_tracked(tree: SceneTree) -> String:
 	var markers: QuestMarkerView = main.get_node("Instance/QuestMarkerView") as QuestMarkerView
 	if result.is_empty():
 		result = _check_marked(driver, markers, profile)
+	var list: QuestListView = main.get_node("Hud/QuestList") as QuestListView
+	if result.is_empty():
+		result = _check_listed(list, {
+			"first_domination": "Dominate a monster",
+			"three_moss_toads": "Dominate a moss toad  0/3",
+		})
 	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
@@ -55,8 +63,16 @@ func _check_tracked(tree: SceneTree) -> String:
 	markers.show_quests()
 	if result.is_empty() and markers.markers.has("first_domination"):
 		result = "the finished first domination still has a marker"
+	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
 	if result.is_empty():
-		result = _check_chests(driver, bus, profile)
+		result = _check_listed(list, {
+			"first_domination": QuestListView.DONE_TEXT,
+			"three_moss_toads": "Dominate a moss toad  1/3",
+		})
+	if result.is_empty():
+		result = await _check_dropped(tree, list)
+	if result.is_empty():
+		result = _check_chests(driver, bus, profile, list)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
@@ -101,12 +117,42 @@ func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profil
 	return ""
 
 
-## A chest counts for this player when they got loot from it, not when only another player did.
-func _check_chests(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+## The list shows each of `expected`'s quests with the line under its name, by quest id.
+func _check_listed(list: QuestListView, expected: Dictionary[String, String]) -> String:
+	list.show_quests()
+	for id: String in expected:
+		if list.shown.get(id, "") != expected[id] or not list.cards.has(id):
+			return "the quest list shows %s for %s, not %s" % [list.shown.get(id), id, expected[id]]
+	return ""
+
+
+## The finished first domination's card fades out and is gone; the open toads' quest stays.
+func _check_dropped(tree: SceneTree, list: QuestListView) -> String:
+	var fading: float = QuestListView.DONE_SECONDS + QuestListView.FADE_SECONDS
+	await tree.create_timer(fading + 0.2).timeout
+	list.show_quests()
+	if list.cards.has("first_domination") or list.order.has("first_domination"):
+		return "the finished first domination stayed on the quest list"
+	if not list.cards.has("three_moss_toads"):
+		return "an open quest left the quest list"
+	return ""
+
+
+## A chest counts for this player when they got loot from it, not when only another player did,
+## and the list asks to open one meanwhile.
+func _check_chests(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	list: QuestListView,
+) -> String:
 	var text: String = "{\"id\": \"open_one\", \"name\": \"Open a chest\", "
 	text += "\"steps\": [{\"condition\": \"opened\"}]}"
 	var chest: QuestDefinition = QuestDefinition.parse("open_one", text, {})
 	profile.quest_book[chest.id] = chest
+	var listed: String = _check_listed(list, { "open_one": "Open a chest" })
+	if not listed.is_empty():
+		return listed
 	var others: Dictionary[int, Dictionary] = { 1: { "moss": 1 } }
 	_emit(driver, bus, ChestOpened.new(Vector2i.ZERO, 9, others))
 	if profile.quests_done.has("open_one"):
