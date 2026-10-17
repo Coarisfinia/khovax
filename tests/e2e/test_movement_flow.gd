@@ -86,7 +86,7 @@ func run(tree: SceneTree) -> String:
 	_driver.set_process(false)
 	_player_view.set_process(false)
 	_trail_view.set_process(false)
-	var _connected: Error = _driver.ticked.connect(_forget_worn)
+	var _connected: int = _driver.ticked.connect(_forget_worn)
 	_walked = { _tile(): true }
 
 	var result: String = _check_bindings()
