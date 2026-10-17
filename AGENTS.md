@@ -308,8 +308,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   the span from loading the game to quitting it, which replays and lockstep co-op work in; it is
   technical and never shown to the player. Who the players bring is part of a session's start:
   each player's companion (#338) is the first monster their profile carries, handed to the world
-  as species ids (`World.companions`, in its save and the replay too). It fights on its own
-  (`CompanionAttackFeature`, #221): a non-lethal strike on a wild monster next to it, once a second. Each domination or find is a
+  as species ids (`World.companions`, in its save and the replay too). Each domination or find is a
   `Gain`, which `ProfileKeeper.take` applies at once (`ProfileHolder` in the main scene loads the
   profile at boot and takes this machine's player's dominations from the tick's events, #132); **saves
   are debounced** (owner, #73): the first gain after a quiet spell is saved right away, later ones
