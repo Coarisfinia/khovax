@@ -70,7 +70,7 @@ var exits: Array[Vector3i] = []
 var players: Dictionary[int, Vector2i] = {}
 ## Where each player's circle is drawn, by slot, on the ground in world units: between the tile
 ## they walk from and their own while they walk, as their figure glides (#354).
-var marks: Dictionary[int, Vector2] = {}
+var circles: Dictionary[int, Vector2] = {}
 ## The tile each open quest points at, by quest id.
 var quest_targets: Dictionary[String, Vector2i] = {}
 ## The ground point in the middle, in world units on the XZ plane.
@@ -87,7 +87,7 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	show_state()
-	var own: Vector2 = marks.get(_slot(), _ground(Vector2i.ZERO))
+	var own: Vector2 = circles.get(_slot(), _ground(Vector2i.ZERO))
 	_middle = _middle.lerp(own, 1.0 - exp(-GLIDE * delta))
 	queue_redraw()
 
@@ -111,8 +111,8 @@ func _draw() -> void:
 	for exit: Vector3i in exits:
 		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
 	var world_seed: int = driver.world.world_seed if driver != null and driver.world != null else 0
-	for slot: int in marks:
-		_draw_player(on_view(marks[slot]), slot, PersonalColor.of(world_seed, slot))
+	for slot: int in circles:
+		_draw_player(on_view(circles[slot]), slot, PersonalColor.of(world_seed, slot))
 	for id: String in quest_targets:
 		_draw_arrow(to_view(quest_targets[id]))
 	if bordered:
@@ -126,7 +126,7 @@ func show_state() -> void:
 	blocking.clear()
 	exits.clear()
 	players.clear()
-	marks.clear()
+	circles.clear()
 	quest_targets.clear()
 	if driver == null or driver.state == null:
 		return
@@ -148,7 +148,7 @@ func show_state() -> void:
 		var player: Entity = state.player(slot)
 		if player != null:
 			players[slot] = player.tile
-			marks[slot] = _walked_ground(state, player)
+			circles[slot] = _walked_ground(state, player)
 	if holder != null and holder.keeper != null:
 		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot())
 

@@ -217,7 +217,7 @@ func _survey_mark_glides(driver: GameDriver, survey: SurveyView) -> String:
 	survey.show_state()
 	var start: Vector2 = survey.to_view(from)
 	var way: Vector2 = survey.to_view(state.player(0).tile) - start
-	var mark: Vector2 = survey.on_view(survey.marks[0]) - start
+	var mark: Vector2 = survey.on_view(survey.circles[0]) - start
 	var share: float = mark.dot(way) / way.length_squared()
 	driver.set_process(true)
 	if share <= 0.0 or share >= 1.0 or not mark.is_equal_approx(way * share):
