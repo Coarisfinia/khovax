@@ -344,6 +344,30 @@ func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 	return ""
 
 
+## A wild monster felled by a special (#410) lies down on its side and stops idling (#431): a
+## shape that tells it apart from a standing one, not only a color.
+func _check_fainted_lies(
+	view: WildMonsterView,
+	feature: WildMonsterFeature,
+	monster_id: int,
+) -> String:
+	feature.wound(monster_id, feature.hp_of(monster_id), true)
+	view.show_state()
+	var figure: HexPiece = view.figures.get(monster_id)
+	var model: Node3D = figure.get_child(0) as Node3D if figure != null else null
+	var animations: AnimationPlayer = (
+		model.find_child(
+			"AnimationPlayer",
+			true,
+			false,
+		) as AnimationPlayer if model != null else null
+	)
+	var idling: bool = animations != null and animations.is_playing()
+	if not feature.is_fainted(monster_id) or not view.fallen.has(monster_id) or idling:
+		return "a fainted wild monster's figure didn't lie down and stop idling"
+	return ""
+
+
 ## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.
 func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
@@ -352,6 +376,9 @@ func _check_wild_monster_removed(main: Node) -> String:
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
 	var monster_id: int = feature.monsters[0]
+	var fell: String = _check_fainted_lies(view, feature, monster_id)
+	if not fell.is_empty():
+		return fell
 	driver.state.remove_entity(monster_id)
 	view.show_state()
 	if not feature.monsters.is_empty() or view.figures.has(monster_id):

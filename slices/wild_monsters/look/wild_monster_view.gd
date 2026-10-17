@@ -6,7 +6,8 @@ extends Node3D
 ## goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
 ## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. One that steps
 ## away from where no ring could enclose it (#364) glides to its new tile. A fainted one (#410)
-## stays where it fell, drawn as it was until it gets its own look. It only reads the state.
+## stays where it fell, and its figure lies down on its side, still: a shape that tells it apart
+## from a standing one without color (#68, #431). It only reads the state.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -18,6 +19,9 @@ const HOP_HEIGHT: float = 0.6
 const HOP_SECONDS: float = 0.35
 ## How long a wild monster's figure takes to glide to the tile it stepped onto: about its step.
 const GLIDE_SECONDS: float = 0.8
+## How long a fainted wild monster's figure takes to lie down, and on which side.
+const FALL_SECONDS: float = 0.5
+const LYING: Vector3 = Vector3(0.0, 0.0, PI / 2.0)
 
 @export var driver: GameDriver
 
@@ -26,6 +30,8 @@ var figures: Dictionary[int, HexPiece] = {}
 ## The instance the figures belong to: another instance drops them at once (#189), since they
 ## would shrink away on the new instance's ground.
 var _shown: GameState
+## The fainted wild monsters whose figures lie down already, by entity id.
+var fallen: Dictionary[int, bool] = {}
 
 
 func _ready() -> void:
@@ -43,6 +49,7 @@ func show_state() -> void:
 		return
 	if driver.state != _shown:
 		HexPiece.free_all(figures)
+		fallen.clear()
 		_shown = driver.state
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
@@ -55,6 +62,7 @@ func show_state() -> void:
 		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
 			_fade_out(figures[entity_id])
 			var _dropped: bool = figures.erase(entity_id)
+			_dropped = fallen.erase(entity_id)
 	for entity_id: int in shown:
 		if driver.state.entity(entity_id) == null:
 			continue
@@ -65,6 +73,9 @@ func show_state() -> void:
 		elif figures[entity_id].tile != spot:
 			_glide(figures[entity_id], spot)
 		figures[entity_id].visible = is_shown(driver.state, entity_id)
+		if feature.is_fainted(entity_id) and not fallen.has(entity_id):
+			fallen[entity_id] = true
+			_fall(figures[entity_id])
 
 
 ## Whether the wild monster `entity_id` in `state` is drawn: hidden in the fog until an ally sees
@@ -109,6 +120,20 @@ func _glide(figure: HexPiece, spot: Vector2i) -> void:
 
 
 ## Shrinks a figure away and frees it.
+## Lays `figure` down on its side, eased, and stills it: its wild monster fainted.
+func _fall(figure: HexPiece) -> void:
+	var model: Node3D = figure.get_child(0) as Node3D
+	var animations: AnimationPlayer = model.find_child(
+		"AnimationPlayer",
+		true,
+		false,
+	) as AnimationPlayer
+	if animations != null:
+		animations.stop()
+	var tween: Tween = figure.create_tween().set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
+	var _lie: PropertyTweener = tween.tween_property(model, "rotation", LYING, FALL_SECONDS)
+
+
 func _fade_out(figure: HexPiece) -> void:
 	var tween: Tween = create_tween()
 	var _shrink: PropertyTweener = tween.tween_property(figure, "scale", Vector3.ZERO, FADE_SECONDS)
