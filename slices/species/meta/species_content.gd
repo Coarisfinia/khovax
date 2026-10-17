@@ -1,10 +1,11 @@
 class_name SpeciesContent
 extends RefCounted
 ## The species' and abilities' content data (#279, #222), which the species slice owns (#412): one
-## JSONC file per entry in its data/species/ and data/abilities/, each checked against the schema
-## beside it in CI. Everything else reads them through this.
+## JSONC file per entry, a species directly in its data/ (its own kind, so no folder repeats the
+## slice's name, #442) and an ability in data/abilities/, each checked against its schema in data/
+## in CI. Everything else reads them through this.
 
-const SPECIES_DIR: String = "res://slices/species/data/species/"
+const SPECIES_DIR: String = "res://slices/species/data/"
 const ABILITIES_DIR: String = "res://slices/species/data/abilities/"
 
 

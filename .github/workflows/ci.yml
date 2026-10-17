@@ -89,6 +89,9 @@ jobs:
       - name: "🧭 Check the core never depends on a slice and paths are absolute"
         run: bash tools/import_rules.sh
 
+      - name: "📁 Check no path repeats a folder name"
+        run: bash tools/repeated_folders.sh
+
       - name: "🎲 Check the simulation stays deterministic"
         # core/ and every slice's rules/ hold the rules: plain RefCounted classes without nodes,
         # input, time, engine or OS state, global randomness, frame delta or floats (see AGENTS.md,
@@ -166,8 +169,9 @@ jobs:
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
         # each kind's files against its schema: data/<kind>/ against data/schemas/<kind>.schema.json,
         # and a kind a slice owns (#412), slices/<slice>/data/<kind>/, against the
-        # <kind>.schema.json beside it. A schema without its data folder would sit unchecked, so it
-        # fails too, and so does a kind with two schemas.
+        # <kind>.schema.json beside it; the slice's own kind sits directly in its data/, beside
+        # <slice>.schema.json, so no folder repeats the slice's name (#442). A schema without its
+        # data would sit unchecked, so it fails too, and so does a kind with two schemas.
         run: |
           # Every kind's folder has its own schema: data/<kind>/ in data/schemas/, and a slice's
           # <kind>/ beside it, so a slice's data never borrows another's schema.
@@ -188,7 +192,12 @@ jobs:
             name=$(basename "$schema" .schema.json)
             folder=data/${name}
             case "$schema" in slices/*) folder=$(dirname "$schema")/${name} ;; esac
-            if [ ! -d "$folder" ]; then
+            if [ "$folder" = "slices/${name}/data/${name}" ]; then
+              if ! compgen -G "slices/${name}/data/*.jsonc" > /dev/null; then
+                echo "::error file=${schema}::has no slices/${name}/data/*.jsonc to check"
+                exit 1
+              fi
+            elif [ ! -d "$folder" ]; then
               echo "::error file=${schema}::has no ${folder}/ folder to check"
               exit 1
             fi

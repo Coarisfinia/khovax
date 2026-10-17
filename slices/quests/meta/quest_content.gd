@@ -1,10 +1,11 @@
 class_name QuestContent
 extends RefCounted
-## The quests' content data (#184), which the quests slice owns (#412): one JSONC file per quest in
-## its data/quests/, checked against data/quests.schema.json beside it in CI, and here against the
-## species. Everything else reads the quests through this.
+## The quests' content data (#184), which the quests slice owns (#412): one JSONC file per quest
+## directly in its data/ (its own kind, so no folder repeats the slice's name, #442), checked
+## against quests.schema.json beside them in CI, and here against the species. Everything else
+## reads the quests through this.
 
-const DIR: String = "res://slices/quests/data/quests/"
+const DIR: String = "res://slices/quests/data/"
 
 
 ## Every quest file in `directory`, read and checked; the species its steps name must be in

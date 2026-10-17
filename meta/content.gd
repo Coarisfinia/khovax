@@ -1,13 +1,14 @@
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
-## (#412: slices/<slice>/data/<kind>/), checked against its schema there in CI and here for what a
-## schema can't check: ids unique and matching their file. The slices read their kinds through
-## their own accessors (QuestContent, SpeciesContent, LootContent); the tile blueprints (#116),
-## which the core's TileKinds needs too, are read here, from the tiles slice. Here too: the field
-## helpers they all use.
+## (#412: the slice's own kind directly in slices/<slice>/data/, so no folder repeats the slice's
+## name, #442, and any other kind in slices/<slice>/data/<kind>/), checked against its schema there
+## in CI and here for what a schema can't check: ids unique and matching their file. The slices
+## read their kinds through their own accessors (QuestContent, SpeciesContent, LootContent); the
+## tile blueprints (#116), which the core's TileKinds needs too, are read here, from the tiles
+## slice. Here too: the field helpers they all use.
 
-const TILES_DIR: String = "res://slices/tiles/data/tiles/"
+const TILES_DIR: String = "res://slices/tiles/data/"
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
