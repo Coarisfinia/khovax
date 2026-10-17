@@ -369,16 +369,7 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var kept_size: Vector2i = window.size
 	window.size = Vector2i(SCREENS[0])
 	await main.get_tree().process_frame
-	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
-	pad.pressed = true
-	viewport.push_input(pad)
-	buttons.lay_out()
-	var problem: String = "the Survey's cogwheel shows with a controller" if buttons.visible else ""
-	_touch(viewport, Vector2.ONE, true)
-	_touch(viewport, Vector2.ONE, false)
-	buttons.lay_out()
-	if problem.is_empty() and not buttons.visible:
-		problem = "the Survey's cogwheel doesn't show again on a touch"
+	var problem: String = _survey_cog_with_controller(buttons)
 	if problem.is_empty():
 		problem = _survey_buttons_placed(choice, survey, buttons)
 	if problem.is_empty() and (buttons.open or buttons.buttons[&"survey"].visible):
@@ -404,6 +395,22 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	if problem.is_empty() and (buttons.open or buttons.buttons[&"survey"].visible):
 		problem = "a click on the Survey's cogwheel didn't hide its buttons"
 	window.size = kept_size
+	return problem
+
+
+## Why the Survey's cogwheel shows while a controller is used, or doesn't show again on a touch,
+## or "".
+func _survey_cog_with_controller(buttons: SurveyButtons) -> String:
+	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
+	pad.pressed = true
+	buttons.get_viewport().push_input(pad)
+	buttons.lay_out()
+	var problem: String = "the Survey's cogwheel shows with a controller" if buttons.visible else ""
+	_touch(buttons.get_viewport(), Vector2.ONE, true)
+	_touch(buttons.get_viewport(), Vector2.ONE, false)
+	buttons.lay_out()
+	if problem.is_empty() and not buttons.visible:
+		problem = "the Survey's cogwheel doesn't show again on a touch"
 	return problem
 
 
