@@ -982,7 +982,8 @@ func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable)
 
 ## The player rings the wild monster in `state` and the ring waits for a totem (#423): encircled,
 ## the monster strikes only the ring's wall segment nearest to it, even with the player beside it,
-## and the ring breaks on the `hits`-th strike that wears it through, not one before.
+## and the ring breaks on the `hits`-th strike that wears it through, not one before, and comes off
+## the trail but for the tile the player stands on.
 func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
 	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
@@ -999,6 +1000,9 @@ func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
 	var worn: String = _wears_through(state, wall, hits, broken)
 	if not worn.is_empty():
 		return "the waiting ring's nearest wall: " + worn
+	for each: Vector2i in walls:
+		if each != player.tile and trail.tiles.has(each):
+			return "the broken ring's wall %s stayed on the trail" % each
 	return ""
 
 
