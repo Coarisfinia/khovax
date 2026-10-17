@@ -434,6 +434,16 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	return result
 
 
+## Whether `explored` remembers any of the glade that a player in `world`'s basic instance doesn't
+## see across the seam now: ground of an older world.
+static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
+	var seen_across: Dictionary[Vector2i, bool] = _seen_across(world)
+	for tile: Vector2i in explored.tiles_in.get(InstanceBlueprints.GLADE, {}):
+		if not seen_across.has(tile):
+			return true
+	return false
+
+
 ## The glade's tiles, in its own coordinates, that a player in the basic instance of `world` sees
 ## across the seam (#191).
 static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
@@ -472,12 +482,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	# A frame for the fog view to remember the fresh world's sight: of the glade, only what the
 	# player sees of it from the start, across the seam (#191), none of the refused world's.
 	await tree.process_frame
-	var glade: Dictionary = keeper.explored.tiles_in.get(InstanceBlueprints.GLADE, {})
-	var seen_across: Dictionary[Vector2i, bool] = _seen_across(driver.world)
-	var kept_old: bool = false
-	for tile: Vector2i in glade:
-		kept_old = kept_old or not seen_across.has(tile)
-	if result.is_empty() and kept_old:
+	if result.is_empty() and _kept_old_glade(driver.world, keeper.explored):
 		result = "a fresh world kept the ground explored in the refused one: " + content
 	main.queue_free()
 	await tree.process_frame

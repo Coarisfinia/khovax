@@ -582,14 +582,27 @@ func _check_remembered_ground(main: Node) -> String:
 		return "expected some of the glade in sight and some not on arrival"
 	_walk_in(driver.world, 3)
 	fog.show_state(10.0)
+	var result: String = _check_glade_next_door(fog, view, glade_seen, glade_unseen)
+	return result if not result.is_empty() else _check_out_of_sight(fog, far)
+
+
+## Back in the basic instance, next door the glade's explored ground (some of `seen`) lies under
+## light fog and its unexplored ground (some of `unseen`) under thick cloud, out of sight across
+## the seam (#191).
+func _check_glade_next_door(
+		fog: FogView,
+		view: NeighbourView,
+		seen: Array[Vector2i],
+		unseen: Array[Vector2i],
+) -> String:
 	var shift: Vector2i = view.shifts.get(InstanceBlueprints.GLADE, Vector2i.ZERO)
-	# Back on the exit, some of the glade is in sight across the seam (#191): only tiles out of it.
-	var explored: Vector2i = _out_of_sight(driver.state, glade_seen, shift)
-	var unexplored: Vector2i = _out_of_sight(driver.state, glade_unseen, shift)
-	var glade_light: bool = fog.cloud.fog_on(explored + shift) == light
-	if not glade_light or fog.cloud.fog_on(unexplored + shift) != Vector2(1.0, 0.0):
-		return "next door, the glade's explored ground isn't light fog and its unexplored thick"
-	return _check_out_of_sight(fog, far)
+	var explored: Vector2i = _out_of_sight(fog.driver.state, seen, shift) + shift
+	var unexplored: Vector2i = _out_of_sight(fog.driver.state, unseen, shift) + shift
+	if fog.cloud.fog_on(explored) != Vector2(0.0, 1.0):
+		return "next door, the glade's explored ground isn't under light fog"
+	if fog.cloud.fog_on(unexplored) != Vector2(1.0, 0.0):
+		return "next door, the glade's unexplored ground isn't under thick cloud"
+	return ""
 
 
 ## Why `far` in the instance shown, out of every ally's sight, isn't under light fog, or "".
