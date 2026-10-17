@@ -63,9 +63,9 @@ func _draw() -> void:
 	var label: String = corner_text()
 	if not label.is_empty():
 		var font: Font = ThemeDB.fallback_font
-		var size: int = int(area.size.x * 0.3)
+		var font_size: int = int(area.size.x * 0.3)
 		var at: Vector2 = area.end - Vector2(area.size.x * 0.32, area.size.y * 0.1)
-		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, size, ink)
+		draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, ink)
 
 
 ## Lays the button out for a screen of `screen` pixels: in a column at the bottom right corner.
