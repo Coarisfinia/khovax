@@ -748,6 +748,9 @@ func _check_region_file() -> String:
 		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
 			region.wild_monsters,
 		]
+	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
+	if toad == null or toad.species != "moss_toad" or not toad.wounded:
+		return "the beach's wild monster isn't a wounded moss toad"
 	var broken: Dictionary[String, String] = {
 		". . .": "a region file starts with",
 		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
