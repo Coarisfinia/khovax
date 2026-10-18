@@ -60,7 +60,7 @@ func _fall(state: GameState, entity_id: int) -> void:
 	if fallen.slot != Entity.NO_SLOT:
 		var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
 		var downs: bool = knockdown != null and knockdown.enabled
-		if downs and KnockdownFeature.has_ally_near(state, fallen):
+		if downs and knockdown.has_ally_near(state, fallen):
 			knockdown.knock_down(entity_id)
 		else:
 			state.events.append(SentToSpawn.new(entity_id, fallen.slot))

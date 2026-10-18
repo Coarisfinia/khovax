@@ -49,11 +49,12 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _down.erase(removed_id)
 
 
-## Whether the player `player` in `state` has an ally within ALLY_RANGE who could revive them.
-static func has_ally_near(state: GameState, player: Entity) -> bool:
+## Whether the player `player` in `state` has an ally within ALLY_RANGE who could revive them: one
+## who isn't knocked down themselves.
+func has_ally_near(state: GameState, player: Entity) -> bool:
 	for slot: int in GameState.MAX_PLAYERS:
 		var ally: Entity = state.player(slot)
-		if ally != null and ally.id != player.id:
+		if ally != null and ally.id != player.id and not is_down(ally.id):
 			if Hex.distance(ally.tile, player.tile) <= ALLY_RANGE:
 				return true
 	return false
@@ -138,7 +139,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 	for i: int in downed.size():
 		var player: Entity = state.entity(downed[i])
 		var waited: Vector2i = Vector2i(counts[i * 2], counts[i * 2 + 1])
-		var fits: bool = waited.x < DOWN_TICKS and waited.y < REVIVE_TICKS
+		# Revived for no longer than they've been down.
+		var fits: bool = waited.x < DOWN_TICKS and waited.y < REVIVE_TICKS and waited.y <= waited.x
 		if player == null or player.slot == Entity.NO_SLOT or _down.has(downed[i]) or not fits:
 			values.fail("knocked-down player %d isn't one player in the instance" % downed[i])
 			return

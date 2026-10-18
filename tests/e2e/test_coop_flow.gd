@@ -301,7 +301,7 @@ func _check_knocked_down() -> String:
 	var ally: Entity = state.player(1)
 	var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
 	var health: HealthFeature = state.feature(Features.HEALTH) as HealthFeature
-	if not KnockdownFeature.has_ally_near(state, down):
+	if not knockdown.has_ally_near(state, down):
 		return "a player with an ally in the instance has no ally near"
 	knockdown.knock_down(down.id)
 	var stood: Vector2i = down.tile
@@ -309,7 +309,8 @@ func _check_knocked_down() -> String:
 	var revived: bool = false
 	for _tick: int in KnockdownFeature.REVIVE_TICKS:
 		Simulation.step(state, FlowSteps.commands([0, Command.NO_MOVE]))
-		revived = revived or state.events.any(func(e: RefCounted) -> bool: return e is PlayerRevived)
+		var up: Callable = func(e: RefCounted) -> bool: return e is PlayerRevived
+		revived = revived or state.events.any(up)
 	var half: int = Fixed.scale(HealthFeature.PLAYER_HP, HealthFeature.REVIVED_HP)
 	if down.tile != stood or not revived or health.hp_of(state, down.id) != half:
 		return "a knocked-down player walked, or an ally beside them didn't revive them to half HP"
@@ -322,7 +323,10 @@ func _check_knocked_down() -> String:
 	var alone: GameState = InstanceBlueprints.basic(42)
 	if (not sent
 			or knockdown.is_down(down.id)
-			or KnockdownFeature.has_ally_near(alone, alone.player(0))):
+			or (alone.feature(Features.KNOCKDOWN) as KnockdownFeature).has_ally_near(
+		alone,
+		alone.player(0),
+	)):
 		return "a knocked-down player nobody revived wasn't sent back, or a lone player had an ally"
 	return ""
 
