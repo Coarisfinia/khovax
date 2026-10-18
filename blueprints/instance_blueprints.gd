@@ -33,6 +33,12 @@ const WILD_SPECIES: Dictionary[String, Dictionary] = {
 	GLADE: { "moss_toad": 1 },
 	ARENA: { "moss_toad": 1 },
 }
+## Each blueprint's variants (#529), by blueprint: world flag to the variant it chooses, the first
+## of the world's flags set (in their sorted order) choosing. A variant is named after its own
+## region in REGIONS, a region file or a folder of region pieces like a blueprint's, which it is
+## loaded with instead; the rest of the blueprint stays. None yet: the world-changing moments (#499)
+## bring the first.
+const VARIANTS: Dictionary[String, Dictionary] = {}
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
@@ -43,21 +49,27 @@ static func exists(instance_name: String) -> bool:
 	return NAMES.has(instance_name)
 
 
+## The variant of the named blueprint that the world's `flags` (sorted) choose (VARIANTS), or "".
+static func variant(instance_name: String, flags: Array[String]) -> String:
+	var chosen_by: Dictionary = VARIANTS.get(instance_name, { })
+	for flag: String in flags:
+		if chosen_by.has(flag):
+			return str(chosen_by[flag])
+	return ""
+
+
 ## A new instance from the named blueprint, as its state, with `players` players in slots 0 and
-## up (none for an instance loaded before anyone walks in, #148), or null (with an error) for an
-## unknown name, an unreadable region, more players than the region has starts, or an invalid
-## feature order.
-static func create(instance_name: String, seed_value: int, players: int = 1) -> GameState:
-	if not exists(instance_name):
-		push_error("unknown instance blueprint: " + instance_name)
-		return null
-	var region: Region = region_of(instance_name, seed_value)
-	if not region.problem.is_empty():
-		push_error("instance %s has a broken region: %s" % [instance_name, region.problem])
-		return null
-	if players < 0 or players > region.starts.size():
-		var limits: Array = [instance_name, region.starts.size(), players]
-		push_error("instance %s takes 0 to %d players, not %d" % limits)
+## up (none for an instance loaded before anyone walks in, #148), from its `variant_name`'s region
+## ("" for its own), or null (with an error) for an unknown name, an unreadable region, more players
+## than the region has starts, or an invalid feature order.
+static func create(
+	instance_name: String,
+	seed_value: int,
+	players: int = 1,
+	variant_name: String = "",
+) -> GameState:
+	var region: Region = _region_for(instance_name, seed_value, players, variant_name)
+	if region == null:
 		return null
 	var species: SpeciesData = SpeciesContent.load_species()
 	if not species.problem.is_empty():
@@ -97,6 +109,29 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	return state
 
 
+## The region a new instance of the named blueprint's `variant_name` is loaded with for
+## `seed_value` and `players` players, or null (with an error) for an unknown name, an unreadable
+## region or more players than the region has starts.
+static func _region_for(
+	instance_name: String,
+	seed_value: int,
+	players: int,
+	variant_name: String,
+) -> Region:
+	if not exists(instance_name):
+		push_error("unknown instance blueprint: " + instance_name)
+		return null
+	var region: Region = region_of(instance_name, seed_value, variant_name)
+	if not region.problem.is_empty():
+		push_error("instance %s has a broken region: %s" % [instance_name, region.problem])
+		return null
+	if players < 0 or players > region.starts.size():
+		var limits: Array = [instance_name, region.starts.size(), players]
+		push_error("instance %s takes 0 to %d players, not %d" % limits)
+		return null
+	return region
+
+
 ## The features an instance has because of what its region holds: exits, triggers, region pieces
 ## to enter, wild monsters in hiding.
 static func _for_region(region: Region) -> Array[Feature]:
@@ -112,14 +147,16 @@ static func _for_region(region: Region) -> Array[Feature]:
 	return features
 
 
-## The named blueprint's region for `seed_value`: its region file as it is, or its region pieces
-## arranged, the start piece first and the others by file name, and turned unless it's UNTURNED.
-## Its `problem` says what's wrong.
-static func region_of(instance_name: String, seed_value: int) -> Region:
-	var path: String = REGIONS + instance_name + ".md"
+## The named blueprint's region for `seed_value`, from its `variant_name`'s region (#529) or, for
+## "", its own: the region file as it is, or its region pieces arranged, the start piece first and
+## the others by file name, and turned unless the blueprint is UNTURNED. Its `problem` says what's
+## wrong.
+static func region_of(instance_name: String, seed_value: int, variant_name: String = "") -> Region:
+	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
+	var path: String = REGIONS + region_name + ".md"
 	if FileAccess.file_exists(path):
 		return RegionDocument.parse(FileAccess.get_file_as_string(path))
-	var folder: String = REGIONS + instance_name + "/"
+	var folder: String = REGIONS + region_name + "/"
 	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
 		if file.ends_with(".md") and file != START_PIECE:

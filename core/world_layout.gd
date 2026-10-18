@@ -81,12 +81,14 @@ func _way_back(world: World, instance_name: String, from: String) -> Vector3i:
 	return Vector3i(0, 0, -1)
 
 
-## The region of the blueprint `instance_name` for the world's seed, arranged once.
+## The region of the blueprint `instance_name` for the world's seed and its variant there (#529),
+## arranged once.
 func region_for(world: World, instance_name: String) -> Region:
 	if not _regions.has(instance_name):
 		_regions[instance_name] = world.source.region_of(
 			instance_name,
 			world.seed_for(instance_name),
+			world.variant_of(instance_name),
 		)
 	return _regions[instance_name]
 

@@ -6,9 +6,9 @@ extends Node3D
 ## Under FogCloud, their ground lies under thick cloud, or light fog where this machine's player
 ## explored it before (FogView keeps that per instance, #190).
 ##
-## A neighbour's region is read with `InstanceBlueprints.region_of` and the world's seed for it,
-## never by loading the instance: the world's hash covers every loaded instance, so loading one
-## from a view would change the simulation.
+## A neighbour's region is read with `InstanceBlueprints.region_of`, the world's seed for it and its
+## variant there (#529), never by loading the instance: the world's hash covers every loaded
+## instance, so loading one from a view would change the simulation.
 
 @export var driver: GameDriver
 
@@ -20,11 +20,12 @@ var shifts: Dictionary[String, Vector2i] = {}
 var _state: GameState
 ## Every neighbour tile in the local instance's coordinates.
 var _placed: Array[Vector2i] = []
-## Each blueprint's region for the world shown, read once per generation (#212): a purged
-## instance comes back arranged anew.
+## Each blueprint's region for the world shown, read once per generation (#212) and variant (#529):
+## a purged instance comes back arranged anew, and a flag can choose another variant of one not
+## loaded.
 var _regions: Dictionary[String, Region] = {}
-## The generation each region in `_regions` was read for, by name.
-var _generations: Dictionary[String, int] = {}
+## The generation and variant each region in `_regions` was read for, by name.
+var _read_for: Dictionary[String, String] = {}
 var _world: World
 
 
@@ -73,19 +74,26 @@ func region_of(target: String) -> Region:
 	return _regions[target]
 
 
-## Whether a neighbour drawn now has been purged since (#212): it is drawn again, arranged anew.
+## Whether a neighbour drawn now has been purged since (#212) or has another variant (#529): it is
+## drawn again, arranged anew.
 func _rearranged() -> bool:
 	for target: String in grids:
-		if _generations[target] != _world.generation(target):
+		if _read_for[target] != _version(target):
 			return true
 	return false
 
 
+## The generation and variant the neighbour `target` has in the world now.
+func _version(target: String) -> String:
+	return "%d %s" % [_world.generation(target), _world.variant_of(target)]
+
+
 ## A grid drawing the instance `target` where it lies next to `current`.
 func _grid_for(target: String, current: String) -> HexGrid:
-	if not _regions.has(target) or _generations[target] != _world.generation(target):
-		_regions[target] = InstanceBlueprints.region_of(target, _world.seed_for(target))
-		_generations[target] = _world.generation(target)
+	if not _regions.has(target) or _read_for[target] != _version(target):
+		var variant: String = _world.variant_of(target)
+		_regions[target] = InstanceBlueprints.region_of(target, _world.seed_for(target), variant)
+		_read_for[target] = _version(target)
 	var shift: Vector2i = _world.offset(target) - _world.offset(current)
 	shifts[target] = shift
 	var neighbour: HexGrid = HexGrid.new()

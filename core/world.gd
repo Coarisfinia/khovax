@@ -9,8 +9,11 @@ extends RefCounted
 ## roam this one persistent world, saved between sessions (WorldData). A player who walks out
 ## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
 ## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
-## (SentToSpawn, #457) is moved onto their start in the starting instance. Deterministic, like
-## everything in core/.
+## (SentToSpawn, #457) is moved onto their start in the starting instance. The world keeps a set of
+## flags (#529), which choose each blueprint's variant (`InstanceSource.variant`): setting or
+## clearing one purges every loaded instance whose variant it changes, once nobody is in it, so it
+## comes back from its new variant and no player sees it change. Deterministic, like everything in
+## core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
@@ -30,6 +33,12 @@ var start_name: String = ""
 var generations: Dictionary[String, int] = {}
 ## The world tick each loaded instance nobody is in was left behind (or loaded empty), by name.
 var left_at: Dictionary[String, int] = {}
+## The world's flags (#529), sorted: ids that story beats and rules set, each choosing blueprints'
+## variants.
+var flags: Array[String] = []
+## The variant each loaded instance was loaded from, by name ("" for a blueprint's plain one): it
+## keeps it until it's purged, even after a flag chose another.
+var variants: Dictionary[String, String] = {}
 ## What the world loads its instances from (#396), handed in, so the core names no blueprint.
 var source: InstanceSource = null
 ## Where each instance lies in the world, worked out once (#187, #282).
@@ -60,7 +69,7 @@ func _init(
 	set_companions(companion_species)
 	if start.is_empty():
 		return
-	var first: GameState = create_instance(start, players)
+	var first: GameState = create_instance(start, players, chosen_variant(start))
 	if first == null:
 		problem = "the starting instance %s doesn't load" % start
 		return
@@ -88,7 +97,7 @@ func generation(instance_name: String) -> int:
 ## when it can't load.
 func instance(instance_name: String) -> GameState:
 	if not instances.has(instance_name):
-		var loaded: GameState = create_instance(instance_name, 0)
+		var loaded: GameState = create_instance(instance_name, 0, chosen_variant(instance_name))
 		if loaded == null:
 			return null
 		instances[instance_name] = loaded
@@ -96,15 +105,55 @@ func instance(instance_name: String) -> GameState:
 	return instances[instance_name]
 
 
-## A fresh instance of the blueprint `instance_name` at its current generation's seed, with
-## `players` players and the world's companions, not yet among the loaded ones; null when it can't
-## load.
-func create_instance(instance_name: String, players: int) -> GameState:
-	var created: GameState = source.create(instance_name, seed_for(instance_name), players)
+## A fresh instance of the blueprint `instance_name`'s `variant` at its current generation's seed,
+## with `players` players and the world's companions, not yet among the loaded ones, though its
+## variant is noted; null when it can't load.
+func create_instance(instance_name: String, players: int, variant: String) -> GameState:
+	var created: GameState = source.create(instance_name, seed_for(instance_name), players, variant)
 	if created != null:
+		variants[instance_name] = variant
 		created.companions = companions.duplicate()
 		_hand_next_door(instance_name, created)
 	return created
+
+
+## The variant of the blueprint `instance_name` the world's flags choose now (#529).
+func chosen_variant(instance_name: String) -> String:
+	return source.variant(instance_name, flags)
+
+
+## The variant of the blueprint `instance_name` as it is in the world: the one it was loaded from
+## while it's loaded, else the one the flags choose. Its region is read from it.
+func variant_of(instance_name: String) -> String:
+	if variants.has(instance_name):
+		return variants[instance_name]
+	return chosen_variant(instance_name)
+
+
+## Sets the flag `flag` (#529), or clears it when `on` is false: for story beats and the rules that
+## change the world. Every loaded instance whose variant that changes is outdated: purged once
+## nobody is in it (`_purge_left_behind`), or as someone walks in. The starting instance is never
+## purged, so it keeps the variant it was loaded from.
+func set_flag(flag: String, on: bool = true) -> void:
+	if flags.has(flag) == on:
+		return
+	if on:
+		flags.append(flag)
+		flags.sort()
+	else:
+		flags.erase(flag)
+	# The instances not loaded may now have other regions: the layout is worked out again, and the
+	# loaded ones see their neighbours' new ground.
+	_layout = WorldLayout.new()
+	for loaded: String in sorted_names():
+		_hand_next_door(loaded, instances[loaded])
+
+
+## Whether the loaded instance `instance_name` was loaded from another variant than the flags
+## choose now; never the starting instance, which is never purged.
+func _outdated(instance_name: String) -> bool:
+	var chosen: String = chosen_variant(instance_name)
+	return instance_name != start_name and variant_of(instance_name) != chosen
 
 
 ## Hands `state`, the instance `instance_name`, the ground of every instance its exits lead to
@@ -190,23 +239,32 @@ func step(commands: Array[Command]) -> void:
 
 
 ## Notes when each instance was left behind, and purges every one but the starting instance that
-## nobody has been in for PURGE_TICKS (#212): it is dropped, and its next visit loads it fresh at
-## its next generation. Anyone entering it before then resets the count.
+## nobody has been in for PURGE_TICKS (#212), or that nobody is in and a flag outdated (#529).
+## Anyone entering it before then resets the count. Each instance is purged at most once a tick.
 func _purge_left_behind() -> void:
 	for instance_name: String in sorted_names():
 		if has_player(instances[instance_name]):
 			var _entered: bool = left_at.erase(instance_name)
+		elif _outdated(instance_name):
+			_purge(instance_name)
 		elif not left_at.has(instance_name):
 			left_at[instance_name] = tick
 		elif instance_name != start_name and tick - left_at[instance_name] >= PURGE_TICKS:
-			var _dropped: bool = instances.erase(instance_name)
-			var _forgotten: bool = left_at.erase(instance_name)
-			generations[instance_name] = generation(instance_name) + 1
-			# Its region is arranged anew, so the layout is worked out again from it, and the
-			# instances next to it see its new ground.
-			_layout.forget(instance_name)
-			for loaded: String in sorted_names():
-				_hand_next_door(loaded, instances[loaded])
+			_purge(instance_name)
+
+
+## Purges the instance `instance_name` (#212): it is dropped, and its next visit loads it fresh at
+## its next generation, from the variant the flags choose then.
+func _purge(instance_name: String) -> void:
+	var _dropped: bool = instances.erase(instance_name)
+	var _forgotten: bool = left_at.erase(instance_name)
+	var _unvaried: bool = variants.erase(instance_name)
+	generations[instance_name] = generation(instance_name) + 1
+	# Its region is arranged anew, so the layout is worked out again from it, and the instances next
+	# to it see its new ground.
+	_layout.forget(instance_name)
+	for loaded: String in sorted_names():
+		_hand_next_door(loaded, instances[loaded])
 
 
 ## The player in `slot`, in whichever instance they are, or null.
@@ -230,6 +288,11 @@ func instance_of(slot: int) -> String:
 ## that leads back: an east exit arrives from the west. They stay if that instance can't load or
 ## has no way back.
 func _walk_through(from: String, taken: ExitTaken) -> void:
+	# One a flag outdated this tick is purged first, so whoever walks in finds its new variant. Only
+	# here and in `_purge_left_behind`, inside a step, so an instance is purged at most once a tick.
+	var loaded_before: GameState = instances.get(taken.target)
+	if loaded_before != null and not has_player(loaded_before) and _outdated(taken.target):
+		_purge(taken.target)
 	var target: GameState = instance(taken.target)
 	if target == null:
 		return
@@ -274,7 +337,9 @@ static func _entered_event(instance_name: String, entering: Entity) -> InstanceE
 
 
 ## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
-## it, when it was left behind; then every purged blueprint's generation.
+## it, when it was left behind, and the variant it was loaded from unless it's the plain one; then
+## every purged blueprint's generation, then the flags. What isn't there mixes in nothing, so a
+## world without variants or flags hashes as it did before them.
 func state_hash() -> int:
 	var result: int = _mix(2_166_136_261, tick)
 	for instance_name: String in sorted_names():
@@ -282,8 +347,12 @@ func state_hash() -> int:
 		result = _mix(result, instances[instance_name].state_hash())
 		if left_at.has(instance_name):
 			result = _mix(result, left_at[instance_name])
+		if not variant_of(instance_name).is_empty():
+			result = _mix(result, name_code(variant_of(instance_name)))
 	for purged: String in _sorted(generations.keys()):
 		result = _mix(_mix(result, name_code(purged)), generations[purged])
+	for flag: String in flags:
+		result = _mix(result, name_code(flag))
 	return result
 
 
