@@ -119,6 +119,8 @@ func _check_beach_first(
 			"first_domination": "Go to the beach",
 			"three_moss_toads": "Dominate a Moss Toad  0/3",
 		})
+	if result.is_empty():
+		result = _check_card_scene(list, profile.quest_book["first_domination"].shown_name())
 	var menu: GameMenu = list.get_parent().get_node("GameMenu") as GameMenu
 	if result.is_empty():
 		result = _check_quests_tab(menu, profile, "Now: Go to the beach\nLater: Dominate a monster")
@@ -206,6 +208,21 @@ func _check_listed(list: QuestListView, expected: Dictionary[String, String]) ->
 	for id: String in expected:
 		if list.shown.get(id, "") != expected[id] or not list.cards.has(id):
 			return "the quest list shows %s for %s, not %s" % [list.shown.get(id), id, expected[id]]
+	return ""
+
+
+## Laid out in scenes (#437): the list and its cards let touches through to the world, and the
+## first domination's card has its name above its step, both wrapping.
+func _check_card_scene(list: QuestListView, quest_name: String) -> String:
+	var card: PanelContainer = list.cards["first_domination"]
+	var name_label: Label = card.get_node("Lines/Name") as Label
+	var step: Label = card.get_node("Lines/Step") as Label
+	if (list.mouse_filter != Control.MOUSE_FILTER_IGNORE
+			or card.mouse_filter != Control.MOUSE_FILTER_IGNORE
+			or name_label.get_index() != 0 or name_label.text != quest_name
+			or name_label.autowrap_mode != TextServer.AUTOWRAP_WORD_SMART
+			or step.autowrap_mode != TextServer.AUTOWRAP_WORD_SMART):
+		return "the quest list's scenes don't lay out a card as its name above its step"
 	return ""
 
 
