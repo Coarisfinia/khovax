@@ -96,10 +96,6 @@ func generation(instance_name: String) -> int:
 ## The instance loaded from `instance_name`, loading it with nobody in it the first time, or null
 ## when it can't load.
 func instance(instance_name: String) -> GameState:
-	# One outdated by a flag is purged first, so whoever walks in finds its new variant.
-	var loaded_before: GameState = instances.get(instance_name)
-	if loaded_before != null and not has_player(loaded_before) and _outdated(instance_name):
-		_purge(instance_name)
 	if not instances.has(instance_name):
 		var loaded: GameState = create_instance(instance_name, 0, chosen_variant(instance_name))
 		if loaded == null:
@@ -292,6 +288,11 @@ func instance_of(slot: int) -> String:
 ## that leads back: an east exit arrives from the west. They stay if that instance can't load or
 ## has no way back.
 func _walk_through(from: String, taken: ExitTaken) -> void:
+	# One a flag outdated this tick is purged first, so whoever walks in finds its new variant. Only
+	# here and in `_purge_left_behind`, inside a step, so an instance is purged at most once a tick.
+	var loaded_before: GameState = instances.get(taken.target)
+	if loaded_before != null and not has_player(loaded_before) and _outdated(taken.target):
+		_purge(taken.target)
 	var target: GameState = instance(taken.target)
 	if target == null:
 		return

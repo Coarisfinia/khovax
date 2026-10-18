@@ -132,15 +132,15 @@ static func _companions(read: DataReader) -> Array[String]:
 
 
 ## Restores the generation of the purged blueprint `entry` names; the starting instance is never
-## purged. An instance is purged at most once a tick (or, by a flag, once before the first), which
-## also keeps `seed_for`'s draws bounded.
+## purged. An instance is purged only inside a step, at most once a tick, which also keeps
+## `seed_for`'s draws bounded.
 static func _load_generation(world: World, entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
 	var known: bool = world.source.exists(instance_name) and instance_name != world.start_name
 	if not known or world.generations.has(instance_name):
 		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return
-	world.generations[instance_name] = entry.whole("generation", 1, world.tick + 1)
+	world.generations[instance_name] = entry.whole("generation", 1, world.tick)
 
 
 ## Restores the world's flags (#529): each named, at most once.
