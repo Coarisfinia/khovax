@@ -198,13 +198,6 @@ func _build_sheet() -> void:
 	character.driver = driver
 	character.holder = holder
 	tabs.add_child(character)
-	settings = SettingsTab.new()
-	settings.name = "Settings"
-	settings.graphics = graphics
-	settings.survey = survey
-	settings.menu = self
-	var _followed: int = settings.changed.connect(_follow)
-	tabs.add_child(settings)
 	survey_tab = SurveyTab.new()
 	survey_tab.name = "Survey"
 	survey_tab.survey = survey
@@ -213,6 +206,14 @@ func _build_sheet() -> void:
 	quests.name = "Quests"
 	quests.holder = holder
 	tabs.add_child(quests)
+	# The gameplay tabs first, then the system tabs (owner, #465).
+	settings = SettingsTab.new()
+	settings.name = "Settings"
+	settings.graphics = graphics
+	settings.survey = survey
+	settings.menu = self
+	var _followed: int = settings.changed.connect(_follow)
+	tabs.add_child(settings)
 	var credits: CreditsTab = CreditsTab.new()
 	credits.name = "Credits"
 	tabs.add_child(credits)
