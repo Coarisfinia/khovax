@@ -8,20 +8,20 @@ extends VBoxContainer
 ## so do its buttons below it, which say what they do in words, never by color alone (#68). One
 ## more cycles where the Survey shows. The buttons always show here, with no cogwheel (#438): this
 ## tab is where a controller reaches them, since the cogwheel on the screen hides with a controller.
+## Its layout lives in its scene, survey_tab.tscn (#437): this script keeps only what it does.
 
 ## The Survey's choices, whose zoom the tab follows and steps, and whose Survey it reads from.
 var survey: SurveyChoice
+
 ## The Survey drawn in the tab.
-var view: SurveyView
+@onready var view: SurveyView = $View
 ## What the zoom is on now, in words.
-var zoom_text: Label
+@onready var zoom_text: Label = $Row/ZoomText
 ## The button cycling where the Survey shows, which says where it shows now.
-var place_button: Button
+@onready var place_button: Button = $Row/Place
 
 
 func _ready() -> void:
-	view = SurveyView.new()
-	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.bordered = true
 	if survey != null and survey.view != null:
 		var shown: SurveyView = survey.view
@@ -30,22 +30,9 @@ func _ready() -> void:
 		view.holder = shown.holder
 		view.input = shown.input
 		view.neighbours = shown.neighbours
-	add_child(view)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var farther: Button = GameMenu.button("Zoom out", zoom_by.bind(-1))
-	farther.name = "ZoomOut"
-	row.add_child(farther)
-	zoom_text = Label.new()
-	zoom_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(zoom_text)
-	var closer: Button = GameMenu.button("Zoom in", zoom_by.bind(1))
-	closer.name = "ZoomIn"
-	row.add_child(closer)
-	place_button = GameMenu.button("", cycle)
-	place_button.name = "Place"
-	row.add_child(place_button)
-	add_child(row)
+	var _farther: int = ($Row/ZoomOut as Button).pressed.connect(zoom_by.bind(-1))
+	var _closer: int = ($Row/ZoomIn as Button).pressed.connect(zoom_by.bind(1))
+	var _cycled: int = place_button.pressed.connect(cycle)
 
 
 func _process(_delta: float) -> void:
