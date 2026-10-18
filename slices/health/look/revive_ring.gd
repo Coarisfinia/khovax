@@ -49,7 +49,7 @@ func show_state() -> void:
 			rings[entity_id] = _add_ring()
 		rings[entity_id].tile = driver.state.entity(entity_id).tile
 		var revived: int = knockdown.revive_ticks(entity_id)
-		var filled: int = SEGMENTS * revived / KnockdownFeature.REVIVE_TICKS
+		var filled: int = floori(float(SEGMENTS * revived) / KnockdownFeature.REVIVE_TICKS)
 		for i: int in SEGMENTS:
 			(rings[entity_id].get_child(i) as Node3D).visible = i < filled
 
