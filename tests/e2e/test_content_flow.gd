@@ -6,9 +6,9 @@ extends RefCounted
 ## same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
-## species that exist, and broken ones are refused. Factions (#483) load with their own names for
-## the ranks of a standing, and broken ones are refused. Quests and abilities carry path marks
-## (#471).
+## species that exist, side quests name the area they start in (#473), and broken ones are
+## refused. Factions (#483) load with their own names for the ranks of a standing, and broken ones
+## are refused. Quests and abilities carry path marks (#471).
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
 const KIT: String = (
@@ -170,6 +170,27 @@ func _check_instance_steps(content: QuestData) -> String:
 	return _unrefused(cases, content)
 
 
+## Why the side quests (#473) don't read, or "": the pond's chest starts on entering the pond, a
+## quest without a start has none, and a start that isn't reaching a place or entering a piece or
+## an instance, or that has a count, is refused.
+func _check_side_quests(content: QuestData) -> String:
+	var pond: QuestDefinition = content.quests.get("pond_chest")
+	var first: QuestDefinition = content.quests["first_domination"]
+	if (pond == null or pond.starts_on == null or pond.starts_on.condition != "entered"
+			or pond.starts_on.piece != "pond" or first.starts_on != null):
+		return "the pond's chest doesn't start on entering the pond, or another quest has a start"
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
+	var opened: String = "{\"condition\": \"opened\"}"
+	var counted: String = "{\"condition\": \"entered\", \"piece\": \"pond\", \"count\": 1}"
+	var cases: Dictionary[String, String] = {
+		quest % [opened, opened]: "its start must be one of",
+		quest % ["{\"condition\": \"entered\"}", opened]: "its start: its piece or instance",
+		quest % [counted, opened]: "its start happens once",
+		quest % [REACH % "The Beach", opened]: "its start: its place must",
+	}
+	return _unrefused(cases, content)
+
+
 ## Why one of the quests in `cases` isn't refused with the reason it maps to, or "".
 static func _unrefused(cases: Dictionary[String, String], content: QuestData) -> String:
 	for text: String in cases:
@@ -210,6 +231,8 @@ func _check_quests() -> String:
 		return _check_named_steps(content)
 	if not _check_instance_steps(content).is_empty():
 		return _check_instance_steps(content)
+	if not _check_side_quests(content).is_empty():
+		return _check_side_quests(content)
 	var quest: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": [%s]}"
 	var step: String = "{\"condition\": \"dominated\"%s}"
 	var cases: Dictionary[String, String] = {

@@ -17,7 +17,8 @@ extends RefCounted
 ## changes, starting in one too (#350); entering the thicket finishes this player's quest to enter
 ## it, not another player's, and the quest's marker points at the thicket's nearest tile. Entering
 ## the glade finishes this player's quest to enter it, not another player's or another instance,
-## and its marker points at the exit leading there (#370).
+## and its marker points at the exit leading there (#370). A side quest stays hidden until this
+## player enters the area it starts in, and is listed from then on (#473).
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -58,6 +59,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_places()
 	if result.is_empty():
 		result = _check_pieces()
+	if result.is_empty():
+		result = _check_side_quest()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -284,7 +287,8 @@ func _check_list_follows(
 	return result
 
 
-## Chests, places, region pieces and instances count for whoever opened, reached or entered them.
+## Chests, places, region pieces and instances count for whoever opened, reached or entered them;
+## the pond's side quest (#473) is listed once this player entered the pond, not before.
 func _check_finds(
 	driver: GameDriver,
 	bus: EventBus,
@@ -294,8 +298,13 @@ func _check_finds(
 	var result: String = _check_chests(driver, bus, profile, list)
 	if result.is_empty():
 		result = _check_reached(driver, bus, profile)
+	list.show_quests()
+	if result.is_empty() and list.cards.has("pond_chest"):
+		result = "the pond's side quest is listed before this player entered the pond"
 	if result.is_empty():
 		result = _check_entered(driver, bus, profile)
+	if result.is_empty():
+		result = _check_listed(list, { "pond_chest": "Open a chest" })
 	return result if not result.is_empty() else _check_entered_glade(driver, bus, profile)
 
 
@@ -490,6 +499,47 @@ func _check_walk_into_thicket(state: GameState) -> String:
 	if entered != expected or not entered.has("thicket"):
 		return "walking into the thicket entered %s, not %s" % [entered, expected]
 	return ""
+
+
+## A side quest (#473) is hidden and counts nothing until this player enters the area it starts in:
+## the pond's chest isn't open and a chest doesn't finish it, entering another piece doesn't start
+## it, and entering the pond does, open at its first step, listed and on the Quests tab, through
+## saving and loading; a chest then finishes it. One fact can start a side quest and count toward
+## its first step.
+func _check_side_quest() -> String:
+	var profile: Profile = Profile.new()
+	profile.quest_book = QuestContent.load_quests().quests
+	var applied: String = profile.apply(_gain([], 1))
+	applied += profile.apply(_entering("thicket"))
+	if not applied.is_empty() or profile.open_steps().has("pond_chest"):
+		return "the pond's side quest started before the pond was entered: " + applied
+	if profile.quests_done.has("pond_chest") or profile.quest_progress.has("pond_chest"):
+		return "a chest counted toward the pond's side quest before it started"
+	applied = profile.apply(_entering("pond"))
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	loaded.quest_book = profile.quest_book
+	var step: QuestStep = loaded.open_steps().get("pond_chest")
+	if (not applied.is_empty() or step == null
+			or QuestsTab.quest_lines(loaded, "pond_chest") != ["Now: Open a chest"]):
+		return "entering the pond didn't open its side quest, kept through loading: " + applied
+	applied = loaded.apply(_gain([], 1))
+	if not applied.is_empty() or not loaded.quests_done.has("pond_chest"):
+		return "a chest didn't finish the started pond side quest: " + applied
+	var text: String = "{\"id\": \"in_one\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
+	var enter: String = "{\"condition\": \"entered\", \"piece\": \"pond\"}"
+	var at_once: Profile = Profile.new()
+	at_once.quest_book["in_one"] = QuestDefinition.parse("in_one", text % [enter, enter], {})
+	applied = at_once.apply(_entering("pond"))
+	if not applied.is_empty() or at_once.quests_done != ["in_one"]:
+		return "entering the pond didn't both start and finish a side quest asking for it"
+	return ""
+
+
+## A gain of this player entering the region piece `piece`.
+static func _entering(piece: String) -> Gain:
+	var gain: Gain = Gain.new()
+	gain.pieces_entered = [piece]
+	return gain
 
 
 ## How far the nearest of `tiles` is from `from`.
