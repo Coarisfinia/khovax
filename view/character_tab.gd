@@ -4,13 +4,14 @@ extends ScrollContainer
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
 ## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
-## MightPanel), then their dominated monsters (#400,
-## DominatedMonstersList), with the selected one's stats in a pane beside them, or below them on a
-## phone held upright (MonsterDetails, #430), then their materials (MaterialsList, #295). Above them
-## all, the character's name (#399): typed into a field and kept once confirmed (Enter, or leaving
-## the field), with a line that says in words why a name was refused. It scrolls when the screen is
-## too short. Its layout lives in its scene, character_tab.tscn (#437): this script keeps only what
-## it does, and adds the panels that are built from their own classes.
+## MightPanel) and their standing with each faction (#533, FactionStandingsPanel), then their
+## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
+## them, or below them on a phone held upright (MonsterDetails, #430), then their materials
+## (MaterialsList, #295). Above them all, the character's name (#399): typed into a field and kept
+## once confirmed (Enter, or leaving the field), with a line that says in words why a name was
+## refused. It scrolls when the screen is too short. Its layout lives in its scene,
+## character_tab.tscn (#437): this script keeps only what it does, and adds the panels that are
+## built from their own classes.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
@@ -27,6 +28,8 @@ var monsters: DominatedMonstersList
 var shown: String = ""
 ## The player's Might and its parts, above their monsters (#509).
 var might: MightPanel
+## The player's standing with each faction, below their Might (#533).
+var factions: FactionStandingsPanel
 ## The player's materials, below their monsters (#295).
 var materials: MaterialsList
 ## The monsters and their detail pane, side by side or one above the other.
@@ -51,6 +54,9 @@ func _ready() -> void:
 	might = MightPanel.new()
 	might.holder = holder
 	_column.add_child(might)
+	factions = FactionStandingsPanel.new()
+	factions.holder = holder
+	_column.add_child(factions)
 	monsters = DominatedMonstersList.new()
 	monsters.holder = holder
 	# The monsters beside their detail pane, or above it on a portrait screen (place_details, #430).
