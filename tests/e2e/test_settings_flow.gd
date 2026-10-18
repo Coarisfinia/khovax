@@ -208,6 +208,9 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	if tab.monsters.shown != listed:
 		return "the Character tab lists %s, not the dominated monsters" % [tab.monsters.shown]
 	# The materials (#295): none at first, then each with its count, in id order.
+	tab.materials.refresh()
+	if tab.materials.shown != ([MaterialsList.NONE_TEXT] as Array[String]):
+		return "the Character tab lists materials before any is found: %s" % [tab.materials.shown]
 	var found: Gain = Gain.new()
 	found.materials.assign({ "moss": 3, "berry": 1 })
 	var _taken: String = FlowGame.holder(main).keeper.take(found, Time.get_ticks_msec())
