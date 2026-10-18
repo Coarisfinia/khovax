@@ -24,8 +24,6 @@ const NAME_SCALE: float = 1.15
 ## How wide a card is, in font sizes, and never more than this share of the screen's width.
 const WIDTH_FONTS: float = 15.0
 const MAX_WIDTH_SHARE: float = 0.42
-const BACKDROP_ALPHA: float = 0.85
-const BORDER_PIXELS: int = 2
 const DONE_TEXT: String = "Done"
 
 ## Whose quests are listed: this machine's player's profile.
@@ -106,12 +104,7 @@ static func _with_article(species_name: String) -> String:
 ## A new card for quest `id`, named `quest_name`, fading in under the others.
 func _add_card(id: String, quest_name: String) -> void:
 	var card: PanelContainer = PanelContainer.new()
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(Boot.FOG, BACKDROP_ALPHA)
-	style.border_color = Toon.INK
-	style.set_border_width_all(BORDER_PIXELS)
-	style.set_content_margin_all(GAP)
-	card.add_theme_stylebox_override("panel", style)
+	card.add_theme_stylebox_override("panel", UiTheme.card())
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var lines: VBoxContainer = VBoxContainer.new()
 	lines.add_child(_label(quest_name))
