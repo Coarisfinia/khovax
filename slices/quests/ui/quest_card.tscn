@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[node name="Card" type="PanelContainer"]
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+
+[node name="Lines" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Name" type="Label" parent="Lines"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Step" type="Label" parent="Lines"]
+layout_mode = 2
+autowrap_mode = 3

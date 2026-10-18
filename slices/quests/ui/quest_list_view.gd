@@ -7,7 +7,11 @@ extends Control
 ## It keeps to the side of the screen the Survey's corner isn't on (#301). Quests are told apart by
 ## their words, never by color (#68), and the text grows with the screen, so it stays readable on a
 ## phone. It only reads the profile.
+## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn;
+## this script keeps only what it does.
 
+## A quest's card: its name above its step, both wrapping, starting faded out.
+const QUEST_CARD: PackedScene = preload("res://slices/quests/ui/quest_card.tscn")
 ## How quickly a card glides to its place: the share of the way left it closes per second.
 const GLIDE: float = 8.0
 ## How long a card takes to fade in, or out once its quest is finished.
@@ -40,10 +44,6 @@ var cards: Dictionary[String, PanelContainer] = {}
 ## The cards' order from the top, finished ones included until they're gone.
 var order: Array[String] = []
 var _font_size: int = 0
-
-
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _process(delta: float) -> void:
@@ -104,14 +104,12 @@ static func _with_article(species_name: String) -> String:
 
 ## A new card for quest `id`, named `quest_name`, fading in under the others.
 func _add_card(id: String, quest_name: String) -> void:
-	var card: PanelContainer = PanelContainer.new()
+	var card: PanelContainer = QUEST_CARD.instantiate() as PanelContainer
 	card.add_theme_stylebox_override("panel", UiTheme.card())
-	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lines: VBoxContainer = VBoxContainer.new()
-	lines.add_child(_label(quest_name))
-	lines.add_child(_label(""))
-	card.add_child(lines)
-	card.modulate.a = 0.0
+	var name_label: Label = card.get_node("Lines/Name") as Label
+	name_label.text = quest_name
+	name_label.add_theme_color_override("font_color", Toon.INK)
+	_step_label(card).add_theme_color_override("font_color", Toon.INK)
 	add_child(card)
 	_size_text(card)
 	card.position = Vector2(0.0, _bottom())
@@ -123,15 +121,6 @@ func _add_card(id: String, quest_name: String) -> void:
 		1.0,
 		FADE_SECONDS,
 	)
-
-
-## A line of a card's text, in ink, wrapped to the card's width.
-func _label(text: String) -> Label:
-	var label: Label = Label.new()
-	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_color_override("font_color", Toon.INK)
-	return label
 
 
 ## Says quest `id` is done, fades its card out after a while, then lets the cards below move up.
@@ -156,7 +145,12 @@ func _drop(id: String) -> void:
 
 ## The label under quest `id`'s name.
 func _line_label(id: String) -> Label:
-	return cards[id].get_child(0).get_child(1) as Label
+	return _step_label(cards[id])
+
+
+## The label under `card`'s name.
+static func _step_label(card: PanelContainer) -> Label:
+	return card.get_node("Lines/Step") as Label
 
 
 ## Puts the list on the Survey's other side and glides each card the share `glide` of the way to
@@ -187,10 +181,9 @@ func _lay_out(glide: float) -> void:
 ## Sizes `card`'s text to the font size in use: its name a little bigger than its step.
 func _size_text(card: PanelContainer) -> void:
 	var font: int = maxi(MIN_FONT, _font_size)
-	var lines: Node = card.get_child(0)
-	var name_label: Label = lines.get_child(0) as Label
+	var name_label: Label = card.get_node("Lines/Name") as Label
 	name_label.add_theme_font_size_override("font_size", roundi(font * NAME_SCALE))
-	(lines.get_child(1) as Label).add_theme_font_size_override("font_size", font)
+	_step_label(card).add_theme_font_size_override("font_size", font)
 
 
 ## Where a new card starts: under the last one.
