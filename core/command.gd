@@ -11,7 +11,7 @@ const PLACE_TOTEM: int = 1
 ## No wild monster focused (#436).
 const NO_FOCUS: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 4
+const VALUE_COUNT: int = 5
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -23,6 +23,9 @@ var totem: int = NO_TOTEM
 ## The entity id of the wild monster the player focuses (#436), or NO_FOCUS. The special attack
 ## strikes it; the simulation checks it's a wild monster it can strike.
 var focus: int = NO_FOCUS
+## Whether the player, knocked down, chooses to go back to the world's spawn now (#495). A press,
+## like the special: given for the one tick it's pressed.
+var respawn: bool = false
 
 
 func _init(
@@ -30,22 +33,24 @@ func _init(
 	fires: bool = false,
 	place: int = NO_TOTEM,
 	focused: int = NO_FOCUS,
+	gives_up: bool = false,
 ) -> void:
 	move = direction
 	special = fires
 	totem = place
 	focus = focused
+	respawn = gives_up
 
 
 ## The command as integers, for replays: from_values turns them back into the same command.
 func to_values() -> Array[int]:
-	var values: Array[int] = [move, 1 if special else 0, totem, focus]
+	var values: Array[int] = [move, 1 if special else 0, totem, focus, 1 if respawn else 0]
 	return values
 
 
 ## The command from to_values' integers; is_valid_values says whether they make one.
 static func from_values(values: Array[int]) -> Command:
-	return Command.new(values[0], values[1] == 1, values[2], values[3])
+	return Command.new(values[0], values[1] == 1, values[2], values[3], values[4] == 1)
 
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
@@ -58,6 +63,8 @@ func is_valid() -> bool:
 ## Whether `values` are a command's, as to_values gives them, of one a player can give.
 static func is_valid_values(values: Array[int]) -> bool:
 	if values.size() != VALUE_COUNT or (values[1] != 0 and values[1] != 1):
+		return false
+	if values[4] != 0 and values[4] != 1:
 		return false
 	return from_values(values).is_valid()
 

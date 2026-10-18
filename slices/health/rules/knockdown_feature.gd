@@ -3,7 +3,8 @@ extends Feature
 ## Knocked down in co-op (#479): a player at 0 HP with an ally within ALLY_RANGE kneels and can't
 ## move (the health rule knocks them down with `knock_down`). An ally standing next to them for
 ## REVIVE_TICKS in a row revives them (PlayerRevived); standing away starts that over. Nobody
-## revives them within DOWN_TICKS, and they go back to the world's spawn (SentToSpawn, #457).
+## revives them within DOWN_TICKS, and they go back to the world's spawn (SentToSpawn, #457); so do
+## they at once when their command says they choose to (`Command.respawn`, #495).
 
 ## How near an ally has to be for a fallen player to be knocked down rather than sent back.
 const ALLY_RANGE: int = 200
@@ -31,7 +32,7 @@ func start(state: GameState) -> void:
 
 ## Each knocked-down player, in id order: revived once an ally has stood beside them long enough,
 ## sent back once they have waited too long.
-func step(state: GameState, _commands: Array[Command]) -> void:
+func step(state: GameState, commands: Array[Command]) -> void:
 	var downed: Array[int] = knocked_down()
 	for entity_id: int in downed:
 		var player: Entity = state.entity(entity_id)
@@ -39,9 +40,11 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		counts.x += 1
 		counts.y = counts.y + 1 if _ally_beside(state, player) else 0
 		_down[entity_id] = counts
+		var command: Command = Command.of(commands, player.slot)
+		var gives_up: bool = command != null and command.respawn
 		if counts.y >= REVIVE_TICKS:
 			_revive(state, entity_id)
-		elif counts.x >= DOWN_TICKS:
+		elif counts.x >= DOWN_TICKS or gives_up:
 			_send_back(state, player)
 
 
