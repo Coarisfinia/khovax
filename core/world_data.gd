@@ -5,9 +5,9 @@ extends RefCounted
 ## instances and runs them; this writes and reads them.
 
 ## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
-## purging, format 2 no ring seals and format 3 no companions; their saves were played by older
-## rules, which `to_world` refuses anyway.
-const FORMAT: int = 4
+## purging, format 2 no ring seals, format 3 no companions and format 4 no tiles changed in place
+## (#530); the first three's saves were played by older rules, which `to_world` refuses anyway.
+const FORMAT: int = 5
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
@@ -16,8 +16,8 @@ const FORMAT: int = 4
 ## species (#338, only the slots that bring one), every loaded instance
 ## in name order with its state (GameState.to_data) and the tick it was left behind (-1 while
 ## someone is in it), every purged blueprint's generation, the rules version it was played by and
-## its hash, which `to_world` checks. Regions aren't saved: no rule changes one while it's loaded,
-## so each is arranged again from its blueprint and seed.
+## its hash, which `to_world` checks. Regions aren't saved whole: each is arranged again from its
+## blueprint and seed, and only the tiles rules changed in it since (#530) come with its state.
 static func of(world: World) -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for instance_name: String in world.sorted_names():

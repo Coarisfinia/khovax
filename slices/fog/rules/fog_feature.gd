@@ -51,6 +51,13 @@ func entity_removed(state: GameState, _removed_id: int) -> void:
 	_update(state)
 
 
+## A tile changed in place (#530) may block sight or stop blocking it: everyone's is worked out
+## again at once.
+func tile_changed(state: GameState, _tile: Vector2i) -> void:
+	_seen_from.clear()
+	_update(state)
+
+
 ## Reveals `tiles` of the region to every player: from now on they count as seen before. Only an
 ## instance's rules call it, inside a tick (#30), so every machine reveals the same.
 func reveal(state: GameState, tiles: Array[Vector2i]) -> void:

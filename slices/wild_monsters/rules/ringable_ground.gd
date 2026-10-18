@@ -5,7 +5,8 @@ extends RefCounted
 ## and the trail only lies on walkable tiles. So no ring encloses a monster on a tile next to where
 ## the region ends, nor one beside unwalkable ground (rock, water) that joins up with the edge: no
 ## trail cuts through that. Anywhere else, the walkable tiles around the monster and the unwalkable
-## ground beside it make a ring. Only the terrain counts, so a region's answer never changes.
+## ground beside it make a ring. Only the terrain counts, so a region's answer changes only when a
+## tile of it does (#530).
 
 
 ## Every walkable tile of `region` a ring can't enclose a wild monster on.

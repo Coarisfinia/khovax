@@ -42,6 +42,13 @@ func entity_removed(_state: GameState, _id: int) -> void:
 	return
 
 
+## Called when a rule changed a tile's kind in place (#530, GameState.change_tile), also while the
+## feature is off: work derived from the region (sight, cached ground) is worked out again here, at
+## once, so it never lags behind the region, also in a save made after the change.
+func tile_changed(_state: GameState, _tile: Vector2i) -> void:
+	return
+
+
 ## Every value of the feature's state, for the state hash, in a fixed order.
 func hash_values() -> Array[int]:
 	var none: Array[int] = []

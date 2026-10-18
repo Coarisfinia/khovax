@@ -54,7 +54,8 @@ var held: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 ## The tiles of `_unringable_region` no ring can enclose a wild monster on, cached by
-## _unringable_in. Derived from the region, which doesn't change during a session, so not hashed.
+## _unringable_in. Derived from the region, so not hashed, and worked out again when a tile of it
+## changes (#530).
 var _unringable: Dictionary[Vector2i, bool] = {}
 var _unringable_region: Region = null
 
@@ -135,6 +136,10 @@ func _unringable_in(region: Region) -> Dictionary[Vector2i, bool]:
 		_unringable_region = region
 		_unringable = RingableGround.unringable(region)
 	return _unringable
+
+
+func tile_changed(_state: GameState, _tile: Vector2i) -> void:
+	_unringable_region = null
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:

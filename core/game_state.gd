@@ -10,8 +10,13 @@ const MAX_PLAYERS: int = 4
 
 var tick: int = 0
 var rng_seed: int = 0
-## Which tiles exist and their terrain (#36). It doesn't change while the instance is loaded yet.
+## Which tiles exist and their terrain (#36). While the instance is loaded, only `change_tile`
+## changes it.
 var region: Region
+## The tiles `change_tile` changed since the region was arranged (#530), whose kinds are in the
+## region: the save keeps them (`to_data`), since arranging the region again can't give them back.
+## Hashed through the region's tiles.
+var changed_tiles: Dictionary[Vector2i, bool] = {}
 ## The id the next added entity gets. Ids only grow, so a removed entity's id is never reused.
 var next_entity_id: int = 1
 ## Every entity, in id order. Rules always go through entities in this order, never in a
@@ -123,13 +128,38 @@ func set_enabled(id: int, on: bool) -> void:
 		target.enabled = on
 
 
+## Changes the kind of `tile` to `kind` in place (#530), e.g. boulders cleared from a path, keeping
+## the rest of the instance as it is: every feature hears of it at once (Feature.tile_changed), the
+## tick's events get a TileChanged for the views, and the region keeps it until the instance is
+## purged, its save too (`to_data`). Only rules call it, inside a tick. Returns whether the tile
+## changed: not when it's off the region, already of that kind, or of a kind no blueprint has.
+func change_tile(tile: Vector2i, kind: int) -> bool:
+	if not region.has_tile(tile) or region.terrain[tile] == kind:
+		return false
+	var was: int = region.terrain[tile]
+	if not region.change(tile, kind):
+		return false
+	changed_tiles[tile] = true
+	for each: Feature in features:
+		each.tile_changed(self, tile)
+	events.append(TileChanged.new(region, tile, was, kind))
+	return true
+
+
 ## The instance's state as save data (#119): its tick, its entities as id, slot, q and r in id
-## order, the next entity id, and each feature's id, on/off and state, in order. The seed and the
-## region follow from the world's seed and the blueprint, so they aren't saved.
+## order, the next entity id, the tiles changed in place (#530) as q, r and kind in tile order, and
+## each feature's id, on/off and state, in order. The seed and the rest of the region follow from
+## the world's seed and the blueprint, so they aren't saved.
 func to_data() -> Dictionary:
 	var flat: Array[int] = []
 	for each: Entity in entities:
 		flat.append_array([each.id, each.slot, each.tile.x, each.tile.y])
+	var changed: Array[int] = []
+	var tiles: Array[Vector2i] = []
+	tiles.assign(changed_tiles.keys())
+	tiles.sort()
+	for tile: Vector2i in tiles:
+		changed.append_array([tile.x, tile.y, region.terrain[tile]])
 	var saved: Array[Dictionary] = []
 	for each: Feature in features:
 		saved.append({
@@ -141,13 +171,17 @@ func to_data() -> Dictionary:
 		"tick": tick,
 		"next_entity_id": next_entity_id,
 		"entities": flat,
+		"changed_tiles": changed,
 		"features": saved,
 	}
 
 
 ## Restores what `to_data` saved into this state, freshly loaded from the same blueprint and seed:
-## its tick and entities, then each feature's state. Bad data is reported to `data`.
+## the tiles changed in place, its tick and entities, then each feature's state, which is restored
+## after the region, so it's worked out from the changed tiles. Bad data is reported to `data`.
 func load_data(data: DataReader) -> void:
+	if not _load_changed_tiles(data):
+		return
 	tick = data.whole("tick", 0, DataReader.MOST)
 	next_entity_id = data.whole("next_entity_id", 1, DataReader.MOST)
 	var flat: Array[int] = data.wholes("entities", -DataReader.MOST, DataReader.MOST)
@@ -171,6 +205,22 @@ func load_data(data: DataReader) -> void:
 			return
 		features[i].enabled = saved[i].whole("enabled", 0, 1) == 1
 		features[i].load_values(self, saved[i].read("values"))
+
+
+## Changes the region's tiles as `to_data` saved them (#530), without events: a loaded instance
+## shows them from the start. Returns whether they were valid; reports why not to `data`.
+func _load_changed_tiles(data: DataReader) -> bool:
+	var flat: Array[int] = data.wholes("changed_tiles", -DataReader.MOST, DataReader.MOST)
+	if flat.size() % 3 != 0:
+		data.fail("a changed tile is cut off")
+		return false
+	for i: int in range(0, flat.size(), 3):
+		var tile: Vector2i = Vector2i(flat[i], flat[i + 1])
+		if changed_tiles.has(tile) or not region.change(tile, flat[i + 2]):
+			data.fail("tile %s can't be kind %d, or is changed twice" % [tile, flat[i + 2]])
+			return false
+		changed_tiles[tile] = true
+	return true
 
 
 ## Why an entity with these values can't follow the ones restored so far, or "": ids grow and

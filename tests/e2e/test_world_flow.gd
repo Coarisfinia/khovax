@@ -12,7 +12,8 @@ extends RefCounted
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
-## they walk through an exit into another, and only then.
+## they walk through an exit into another, and only then. A rule can change a tile of a loaded
+## instance in place (#530), which the world keeps through its save data.
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -55,12 +56,98 @@ func run(_tree: SceneTree) -> String:
 		_check_start_kept,
 		_check_sent_to_spawn,
 		_check_layout,
+		_check_tile_changed,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
 		if not result.is_empty():
 			return result
 	return ""
+
+
+## A tile changed in place (#530): a rule turns the ground beside the player into rock in the loaded
+## basic instance. The region has it at once, nobody can stand on it, the player's sight is worked
+## out again around it, the tick's events say what it was and what it is, and the hash tells the
+## world from one left alone. The same kind, a tile off the region or a kind no blueprint has
+## change nothing. Through its save data and back, the world keeps the rock without raising the
+## change again, hashes the same and goes on alike; a save with a changed tile that can't be is
+## refused.
+func _check_tile_changed() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var untouched: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	world.step(_still())
+	untouched.step(_still())
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var beside: Vector2i = _free_ground_beside(basic, world.player(0).tile)
+	var seen: Array[Vector2i] = _sight_of(basic)
+	var raised: int = basic.events.size()
+	var refused: bool = basic.change_tile(beside, Region.GROUND) or basic.change_tile(
+		Vector2i(99, 99),
+		Region.BLOCKED,
+	)
+	refused = refused or basic.change_tile(beside, CROWN_KIND) or basic.events.size() != raised
+	if refused or not basic.change_tile(beside, Region.BLOCKED):
+		return "a tile changed to its own kind, off the region or to no kind, or not to rock"
+	var changed: TileChanged = basic.events[basic.events.size() - 1] as TileChanged
+	var told: bool = changed != null and changed.tile == beside and changed.region == basic.region
+	told = told and changed.was == Region.GROUND and changed.kind == Region.BLOCKED
+	if not told or basic.region.is_walkable(beside) or world.state_hash() == untouched.state_hash():
+		return "the tile changed in place wasn't told, isn't rock, or isn't hashed"
+	var sight: Array[Vector2i] = FogFeature.sight(
+		basic.region,
+		world.player(0).tile,
+		FogFeature.SIGHT_RADIUS,
+		basic.next_door,
+	)
+	if _sight_of(basic) == seen or _sight_of(basic) != sight:
+		return "the player's sight wasn't worked out again around the rock"
+	return _check_tile_change_saved(world, beside)
+
+
+## The tiles player 0 sees in `state`.
+static func _sight_of(state: GameState) -> Array[Vector2i]:
+	var seen: Array[Vector2i] = []
+	seen.assign((state.feature(Features.FOG) as FogFeature).visible[0])
+	return seen
+
+
+## `world`, whose basic instance has rock changed in place on `rock`, goes through its save data and
+## back with it, raising nothing, and both go on alike; a changed tile that can't be is refused.
+func _check_tile_change_saved(world: World, rock: Vector2i) -> String:
+	var data: Dictionary = WorldData.of(world)
+	var reloaded: World = WorldData.to_world(data, BlueprintSource.new())
+	if not reloaded.problem.is_empty() or reloaded.state_hash() != world.state_hash():
+		return "the world didn't go through its save data with a changed tile: " + reloaded.problem
+	var basic: GameState = reloaded.instances[InstanceBlueprints.BASIC]
+	if basic.region.terrain[rock] != Region.BLOCKED or not basic.events.is_empty():
+		return "the reloaded world lost the rock, or raised its change again"
+	for _tick: int in 60:
+		world.step(_moving(posmod(world.tick, Hex.DIRECTIONS.size())))
+		reloaded.step(_moving(posmod(reloaded.tick, Hex.DIRECTIONS.size())))
+	if reloaded.state_hash() != world.state_hash():
+		return "the reloaded world went another way than the one with the tile changed"
+	var saved: Array = data["instances"]
+	var first: Dictionary = saved[0]
+	var state: Dictionary = first["state"]
+	var source: BlueprintSource = BlueprintSource.new()
+	for bad: Array in [[rock.x, rock.y, CROWN_KIND], [rock.x, rock.y], [99, 99, Region.WATER]]:
+		state["changed_tiles"] = bad
+		var problem: String = WorldData.to_world(data, source).problem
+		if problem.is_empty():
+			return "a save with the changed tiles %s wasn't refused" % [bad]
+	return ""
+
+
+## A ground tile next to `tile` in `state` that nothing stands on.
+static func _free_ground_beside(state: GameState, tile: Vector2i) -> Vector2i:
+	for direction: Vector2i in Hex.DIRECTIONS:
+		var next: Vector2i = tile + direction
+		var taken: bool = false
+		for each: Entity in state.entities:
+			taken = taken or each.tile == next
+		if state.region.terrain.get(next, -1) == Region.GROUND and not taken:
+			return next
+	return tile
 
 
 ## A player whose HP runs out, here beside the basic instance's wild monster, is sent back to the
