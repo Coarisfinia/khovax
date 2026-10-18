@@ -35,11 +35,12 @@ header_of() {
   awk '/^[[:space:]]*(#|$)/ { print; next } { exit }' "$1"
 }
 
-# Whether a file is exempt: its header carries the marker with a reason. A marker without one, or
-# one below the header, fails the file.
+# Whether a file is exempt: its header carries the marker with a reason, and no other marker sits
+# anywhere in it. A marker without a reason, or one below the header, fails the file.
 exempt() {
-  local file=$1
-  if header_of "$file" | grep -qxE "${marker} \(.*[^ )].*\)"; then
+  local file=$1 markers
+  markers=$(grep -cF 'IGNORE_DETERMINISM_CHECK' "$file" || true)
+  if [ "$markers" = 1 ] && header_of "$file" | grep -qxE "${marker} \(.*[^ )].*\)"; then
     return 0
   fi
   if grep -nF 'IGNORE_DETERMINISM_CHECK' "$file"; then
