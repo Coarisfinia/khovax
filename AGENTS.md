@@ -45,6 +45,8 @@ way; add to it when something bites.
     '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$(agent-gh-token)"; }; f'
   ```
 
+- **Read an issue's or pull request's history before acting on it** (owner's rule, #66): newer
+  events may have arrived since the alert that brought you there.
 - **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
