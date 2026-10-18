@@ -45,6 +45,8 @@ way; add to it when something bites.
     '!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$(agent-gh-token)"; }; f'
   ```
 
+- **Read an issue's or pull request's history before acting on it** (owner's rule, #66): newer
+  events may have arrived since the alert that brought you there.
 - **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
@@ -373,6 +375,9 @@ devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> sli
   make peace with them or work against them, but no humanoid fights a humanoid. Humanoids who side
   with the monsters surrender once their monsters are defeated, and battles between humans are
   fought by their monsters.
+- **The player only ever sees their current rank with a faction** (owner's rule, on #484): never
+  the names of the other ranks, which would spoil what's ahead. Each faction has its own design for
+  its ranks.
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.

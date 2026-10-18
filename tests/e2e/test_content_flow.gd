@@ -497,8 +497,9 @@ func _check_loot_refused() -> String:
 
 
 ## The factions load, each with its own name for every rank but neutral (#483): the Cartographer's
-## Guild's (#484) run from New Face up to Hero and from Betrayer down. A faction file with a wrong
-## id, no name, an unknown field, or not five rank names with more than spaces each way is refused.
+## Guild's (#484) run from Apprentice Charter up to Charted in Legend and from Betrayer down. A
+## faction file with a wrong id, no name, an unknown field, or not five rank names with more than
+## spaces each way is refused.
 func _check_factions() -> String:
 	var content: FactionContent = FactionContent.load_factions()
 	if not content.problem.is_empty() or not content.factions.has("cartographers_guild"):
@@ -507,7 +508,9 @@ func _check_factions() -> String:
 	var names: Array[String] = []
 	for standing: int in [Standings.LOWEST, -1, 0, 1, Standings.HIGHEST]:
 		names.append(guild.rank_name(standing))
-	var expected: Array[String] = ["Edge of the Chart", "Betrayer", "", "New Face", "Hero"]
+	var expected: Array[String] = [
+		"Edge of the Chart", "Betrayer", "", "Apprentice Charter", "Charted in Legend",
+	]
 	if names != expected:
 		return "the Cartographer's Guild's ranks read %s" % [names]
 	var five: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
