@@ -223,7 +223,9 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 		return _meaning_line(meaning, tile)
 	var monster: String = _meaning_line(meaning.get_slice(ON, 0), tile)
 	var kind: String = _tile_line(meaning.get_slice(ON, 1), "%d %d" % [tile.x, tile.y])
-	return monster + "\n" + kind if not kind.is_empty() else ""
+	if monster.is_empty() or kind.is_empty():
+		return ""
+	return monster + "\n" + kind
 
 
 ## The compact line any other legend meaning stands for on `tile`, or "" when not understood.

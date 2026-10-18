@@ -177,6 +177,23 @@ h
 	if RegionDocument.parse(piece + "ground
 ").problem.is_empty():
 		return "a legend hid a wild monster in plain ground"
+	return _check_standing_on(piece.trim_suffix(RegionDocument.HIDING))
+
+
+## A named wild monster can stand on a tile kind (#452): the spot is that kind, and a legend naming
+## no species or no kind is refused.
+func _check_standing_on(piece: String) -> String:
+	var sand: Region = RegionDocument.parse(piece + "a wild monster, always moss_toad, on sand\n")
+	var on_sand: bool = sand.terrain.get(Vector2i.ZERO) == TileKinds.number_of("sand")
+	if not sand.problem.is_empty() or sand.wild_spots.size() != 1 or not on_sand:
+		return "a wild monster standing on sand doesn't read: " + sand.problem
+	var broken_meanings: Array[String] = [
+		"a wild monster, always, on sand",
+		"a wild monster, always moss_toad, on nowhere",
+	]
+	for broken: String in broken_meanings:
+		if RegionDocument.parse(piece + broken + "\n").problem.is_empty():
+			return "a legend read a wild monster without its species or its tile kind: " + broken
 	return _check_companion_strikes()
 
 
