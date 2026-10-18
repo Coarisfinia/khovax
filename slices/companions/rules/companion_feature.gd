@@ -259,6 +259,11 @@ func load_values(state: GameState, values: DataReader) -> void:
 		return
 	_rng = restored
 	_returned = values.wholes("returned", 0, GameState.MAX_PLAYERS - 1)
+	var ordered: Array[int] = _returned.duplicate()
+	ordered.sort()
+	if ordered != _returned:
+		values.fail("the slots whose companion went back aren't in order")
+		return
 	for slot: int in _returned:
 		if _returned.count(slot) > 1 or companion_of(slot) != 0:
 			values.fail("slot %d's companion is both back with its player and here" % slot)
