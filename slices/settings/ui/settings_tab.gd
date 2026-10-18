@@ -5,12 +5,11 @@ extends ScrollContainer
 ## step to the previous or next choice or to hand it back to Auto. The settings' owners (Graphics,
 ## SurveyChoice, the menu's pause) know each setting's choices and keep the player's; the tab only
 ## shows them and passes the player's picks on. It says everything in words, never by color alone
-## (#68). It scrolls when the screen is too short for every row.
+## (#68). It scrolls when the screen is too short for every row. Its layout lives in its scene,
+## settings_tab.tscn (#437): the rows sit in the middle of the tab, as wide as `fit` makes them.
 
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed
-
-const GAP: float = 8.0
 
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
@@ -20,23 +19,15 @@ var survey: SurveyChoice
 var menu: GameMenu
 ## What each setting's row says it's on, by the setting's name. Kept here so tests can read it.
 var shown: Dictionary[String, String] = {}
-var _rows: VBoxContainer
 ## How to word each setting's value and how to step it, by the setting's name.
 var _labels: Dictionary[String, Callable] = {}
 var _steps: Dictionary[String, Callable] = {}
 var _values: Dictionary[String, Label] = {}
 
+@onready var _rows: VBoxContainer = $Middle/Rows
+
 
 func _ready() -> void:
-	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	# The rows sit in the middle of the tab, as wide as `fit` makes them.
-	var middle: CenterContainer = CenterContainer.new()
-	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_rows = VBoxContainer.new()
-	_rows.add_theme_constant_override("separation", roundi(GAP))
-	middle.add_child(_rows)
-	add_child(middle)
 	if graphics != null:
 		_add_row(
 			Graphics.ANTI_ALIASING,

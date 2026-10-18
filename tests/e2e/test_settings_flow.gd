@@ -136,6 +136,9 @@ func _open_menu(menu: GameMenu) -> String:
 	if menu.opacity() < 1.0:
 		return "the menu doesn't finish easing in"
 	var shown: Dictionary[String, String] = menu.settings.shown
+	# Laid out in its scene (#437): it scrolls only up and down.
+	if menu.settings.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+		return "the Settings tab's scene scrolls sideways"
 	var listed: Array[String] = []
 	for setting: String in shown:
 		listed.append(setting)
