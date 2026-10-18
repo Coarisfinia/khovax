@@ -230,11 +230,12 @@ func _check_named() -> String:
 func _check_standings() -> String:
 	var profile: Profile = Profile.new()
 	var standings: Standings = profile.standings
-	if standings.of("starter") != 0:
+	var guild: String = "cartographers_guild"
+	if standings.of(guild) != 0:
 		return "a new profile isn't neutral with a faction"
-	var changed: String = standings.change("starter", 3) + standings.change("starter", 4)
+	var changed: String = standings.change(guild, 3) + standings.change(guild, 4)
 	changed += standings.change("rivals", -2) + standings.change("rivals", -(1 << 62))
-	if not changed.is_empty() or standings.of("starter") != Standings.HIGHEST:
+	if not changed.is_empty() or standings.of(guild) != Standings.HIGHEST:
 		return "pushing a standing past the top didn't stay at the top: %s" % changed
 	if standings.of("rivals") != Standings.LOWEST:
 		return "pushing a standing past the bottom didn't stay at the bottom"
@@ -247,7 +248,7 @@ func _check_standings() -> String:
 	if standings.by_faction.has("Bad id"):
 		return "a faction without a valid id still got a standing"
 	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
-	var expected: Dictionary[String, int] = { "rivals": -1, "starter": Standings.HIGHEST }
+	var expected: Dictionary[String, int] = { "rivals": -1, guild: Standings.HIGHEST }
 	if not loaded.problem.is_empty() or loaded.standings.by_faction != expected:
 		return "the standings didn't survive saving: %s %s" % [
 			loaded.problem,

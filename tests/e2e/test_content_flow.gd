@@ -448,20 +448,20 @@ func _check_loot_refused() -> String:
 	return ""
 
 
-## The factions load, each with its own name for every rank but neutral (#483): the starter
-## faction's run from New Face up to Hero and from Betrayer down. A faction file with a wrong id, no
-## name, an unknown field, or not five rank names with more than spaces each way is refused.
+## The factions load, each with its own name for every rank but neutral (#483): the Cartographer's
+## Guild's (#484) run from New Face up to Hero and from Betrayer down. A faction file with a wrong
+## id, no name, an unknown field, or not five rank names with more than spaces each way is refused.
 func _check_factions() -> String:
 	var content: FactionContent = FactionContent.load_factions()
-	if not content.problem.is_empty() or not content.factions.has("starter"):
+	if not content.problem.is_empty() or not content.factions.has("cartographers_guild"):
 		return "the factions didn't load: " + content.problem
-	var starter: Faction = content.factions["starter"]
+	var guild: Faction = content.factions["cartographers_guild"]
 	var names: Array[String] = []
 	for standing: int in [Standings.LOWEST, -1, 0, 1, Standings.HIGHEST]:
-		names.append(starter.rank_name(standing))
+		names.append(guild.rank_name(standing))
 	var expected: Array[String] = ["Sworn foe", "Betrayer", "", "New Face", "Hero"]
 	if names != expected:
-		return "the starter faction's ranks read %s" % [names]
+		return "the Cartographer's Guild's ranks read %s" % [names]
 	var five: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
 	var faction: String = "{\"id\": \"x\", \"name\": \"X\", \"ranks_up\": %s, \"ranks_down\": %s}"
 	var cases: Dictionary[String, String] = {
