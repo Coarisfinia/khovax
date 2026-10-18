@@ -2,7 +2,8 @@ class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it: Character
 ## (#391), Settings, the Survey (#392) and Quests (#388). The `menu` action (Escape)
-## opens and closes it, and on touch screens a small button does; it eases in and out, never snaps.
+## opens and closes it, and on touch screens a small button does; the close button at its top right
+## and `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
 ## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows
@@ -33,6 +34,11 @@ const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest side, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = 2.2
 const OPEN_TEXT: String = "Menu"
+## The close button's mark, the multiplication sign every font has, and its words on hover.
+const CLOSE_TEXT: String = "×"
+const CLOSE_TIP: String = "Close the menu (Escape, or B on a controller)"
+const CLOSE_NAME: String = "Close"
+const CLOSE_SCALE: float = 1.3
 
 ## The driver, which holds its ticks while the menu pauses the game.
 @export var driver: GameDriver
@@ -82,7 +88,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("menu"):
+	# Cancel (a controller's B) only closes: while the menu is closed, the game keeps it.
+	if event.is_action_pressed("menu") or (_open and event.is_action_pressed("ui_cancel")):
 		toggle()
 		get_viewport().set_input_as_handled()
 	elif _open:
@@ -172,12 +179,16 @@ func lay_out(screen: Vector2) -> void:
 		_font_size = font
 		theme.default_font_size = font
 		_size_buttons(self)
+		# The close mark is a small glyph, so it's drawn larger to read as clearly as a word.
+		close_button().add_theme_font_size_override("font_size", roundi(font * CLOSE_SCALE))
 		character.fit(font)
-	var width: float = minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN)
+	# The close button stands beside the tabs, so they have its width less.
+	var room: float = screen.x - 4.0 * MARGIN - font * BUTTON_FONTS
+	var width: float = minf(font * WIDTH_FONTS, room)
 	settings.fit(width)
 	# Beside the detail pane, the monsters' lines need the same width again, as far as it fits.
 	var beside: bool = screen.x > screen.y
-	character.fit_width(minf(2.0 * width, screen.x - 4.0 * MARGIN) if beside else width)
+	character.fit_width(minf(2.0 * width, room) if beside else width)
 	character.place_details(beside)
 	quests_tab().fit(width)
 	_open_button.size = Vector2.ZERO
@@ -203,7 +214,8 @@ func _follow() -> void:
 		pinch.in_menu = survey_tab.view if _open else null
 
 
-## The sheet: the tabs over the whole screen, and a button that closes the menu below them.
+## The sheet: the tabs over the whole screen, and the button that closes the menu at its top right,
+## beside the tabs, so it's the same on every tab (#554).
 func _build_sheet() -> void:
 	_sheet = PanelContainer.new()
 	_sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -211,9 +223,9 @@ func _build_sheet() -> void:
 	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.visible = false
 	_sheet.modulate.a = 0.0
-	var column: VBoxContainer = VBoxContainer.new()
+	var row: HBoxContainer = HBoxContainer.new()
 	var tabs: TabContainer = TabContainer.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# No panel of its own: the tabs' pages lie on the sheet, so the ink text stays on the fog.
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	character = CHARACTER_TAB.instantiate() as CharacterTab
@@ -234,11 +246,13 @@ func _build_sheet() -> void:
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
 	tabs.add_child(CREDITS_TAB.instantiate())
-	column.add_child(tabs)
-	var close: Button = button("Close", toggle)
-	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	column.add_child(close)
-	_sheet.add_child(column)
+	row.add_child(tabs)
+	var close: Button = button(CLOSE_TEXT, toggle)
+	close.name = CLOSE_NAME
+	close.tooltip_text = CLOSE_TIP
+	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.add_child(close)
+	_sheet.add_child(row)
 	add_child(_sheet)
 
 
@@ -259,6 +273,11 @@ func _pause_chosen() -> int:
 ## The Quests tab, found under the sheet rather than kept in a field of its own.
 func quests_tab() -> QuestsTab:
 	return _sheet.find_child("Quests", true, false) as QuestsTab
+
+
+## The button at the top right that closes the menu, found like the Quests tab.
+func close_button() -> Button:
+	return _sheet.find_child(CLOSE_NAME, true, false) as Button
 
 
 ## Gives every button under `node` a finger-sized smallest side for the font in use.
