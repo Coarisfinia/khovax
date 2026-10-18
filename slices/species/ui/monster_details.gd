@@ -6,6 +6,7 @@ extends VBoxContainer
 
 const TITLE: String = "Details"
 const NONE_TEXT: String = "No monster selected"
+const UNKNOWN_TEXT: String = "Its species' stats can't be read"
 
 ## What the pane shows, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
@@ -27,6 +28,9 @@ func show_monster(
 	ability_names: Dictionary[String, String],
 ) -> void:
 	var lines: Array[String] = [NONE_TEXT]
+	# A monster whose species the data lacks still shows, by its species id.
+	if monster != null and species == null:
+		lines = ["%s, level %d" % [monster.species, monster.level], UNKNOWN_TEXT]
 	if monster != null and species != null:
 		lines = [
 			"%s, level %d" % [species.name, monster.level],

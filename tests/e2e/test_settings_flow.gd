@@ -244,14 +244,28 @@ func _menu_details(tab: CharacterTab) -> String:
 	var first: int = tab.monsters.shown_ids[0]
 	if tab.monsters.selected != first or not details.shown[0].begins_with("Moss Toad, level 1"):
 		return "the detail pane doesn't start on the first monster: %s" % [details.shown]
-	var finch: int = tab.monsters.shown_ids[2]
-	tab.monsters.select(finch)
-	var listed: bool = details.shown.size() == 8 and details.shown[0] == "Storm Finch, level 1"
-	if not listed or not details.shown[5].begins_with("Special: "):
-		return "selecting a monster didn't show its stats: %s" % [details.shown]
-	tab.place_details(false)
+	# A click on the third row, as the mouse gives it.
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	var third: Label = tab.monsters.get_child(1).get_child(2).get_child(0) as Label
+	third.gui_input.emit(click)
+	var expected: Array[String] = [
+		"Storm Finch, level 1",
+		"Types: breeze, mana",
+		"HP: 60",
+		"Strength: 70",
+		"Speed: 90",
+		"Special: Gale Dive",
+		"Passive for you: Tailwind",
+		"Own passive: Light Bones",
+	]
+	if details.shown != expected:
+		return "clicking a monster didn't show its stats: %s" % [details.shown]
+	var menu: GameMenu = tab.get_parent().get_parent().get_parent().get_parent() as GameMenu
+	menu.lay_out(Vector2(360.0, 640.0))
 	var stacked: bool = (details.get_parent() as BoxContainer).vertical
-	tab.place_details(true)
+	menu.lay_out(Vector2(1920.0, 1080.0))
 	if not stacked or (details.get_parent() as BoxContainer).vertical:
 		return "the detail pane isn't below the list upright and beside it on a landscape screen"
 	return ""
