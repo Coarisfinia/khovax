@@ -162,6 +162,7 @@ func _check_refused() -> String:
 		text.replace(color, "\"personal_color\": 1.5"): "the save's personal color",
 		text.replace(color, "\"personal_color\": \"red\""): "the save's personal color",
 		text.replace(nameless, "\"character_name\": \"   \""): "the save's character name",
+		text.replace(nameless, "\"character_name\": 123"): "the save's character name",
 		text.replace(nameless, "\"character_name\": \"%s\"" % "x".repeat(Profile.NAME_LIMIT + 1)): (
 			"the save's character name"
 		),

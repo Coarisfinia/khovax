@@ -112,9 +112,9 @@ func move_monster(monster_id: int, place: int) -> String:
 ## and at most NAME_LIMIT characters.
 static func name_problem(typed: String) -> String:
 	if typed.strip_edges().is_empty():
-		return "A typed needs at least one letter."
+		return "A name needs at least one character besides spaces."
 	if typed.strip_edges().length() > NAME_LIMIT:
-		return "A typed can have at most %d characters." % NAME_LIMIT
+		return "A name can have at most %d characters." % NAME_LIMIT
 	return ""
 
 

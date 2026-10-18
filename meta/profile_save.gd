@@ -160,7 +160,10 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.personal_color = _color(data.get("personal_color"))
 	if profile.personal_color < Profile.AUTO_COLOR:
 		return "the save's personal color is invalid"
-	profile.character_name = str(data.get("character_name", ""))
+	var named: Variant = data.get("character_name", "")
+	if not named is String:
+		return "the save's character name isn't text"
+	profile.character_name = named
 	if (not profile.character_name.is_empty()
 			and not Profile.name_problem(profile.character_name).is_empty()):
 		return "the save's character name is invalid"
