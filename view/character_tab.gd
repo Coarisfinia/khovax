@@ -5,9 +5,10 @@ extends ScrollContainer
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
 ## line says which one is in use, in words (#68). Below it, the player's dominated monsters (#400,
 ## DominatedMonstersList), with the selected one's stats in a pane beside them, or below them on a
-## phone held upright (MonsterDetails, #430). Above them all, the character's name (#399): typed
-## into a field and kept once confirmed (Enter, or leaving the field), with a line that says in
-## words why a name was refused. It scrolls when the screen is too short.
+## phone held upright (MonsterDetails, #430), then their materials (MaterialsList, #295). Above them
+## all, the character's name (#399): typed into a field and kept once confirmed (Enter, or leaving
+## the field), with a line that says in words why a name was refused. It scrolls when the screen is
+## too short.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
@@ -29,6 +30,8 @@ var shown: String = ""
 ## The character's name field, and the line saying why a name was refused ("" when it wasn't).
 var name_field: LineEdit
 var name_note: Label
+## The player's materials, below their monsters (#295).
+var materials: MaterialsList
 var _column: VBoxContainer
 ## The monsters and their detail pane, side by side or one above the other.
 var _pair: BoxContainer
@@ -69,6 +72,9 @@ func _ready() -> void:
 	monsters.details = MonsterDetails.new()
 	_pair.add_child(monsters.details)
 	_column.add_child(_pair)
+	materials = MaterialsList.new()
+	materials.holder = holder
+	_column.add_child(materials)
 	middle.add_child(_column)
 	add_child(middle)
 
