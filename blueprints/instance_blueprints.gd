@@ -85,6 +85,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 	ordered.append(_companions(species))
 	ordered.append(CompanionAttackFeature.new())
 	ordered.append(_specials(species))
+	ordered.append(_health(species))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -165,6 +166,19 @@ static func _companions(content: Content) -> CompanionFeature:
 	return CompanionFeature.new(reaches)
 
 
+## The health feature (#455) with every species' HP, from the species `content`, for companions.
+static func _health(content: Content) -> HealthFeature:
+	return HealthFeature.new(_max_hps(content))
+
+
+## Every species' HP in the species `content`, by species id.
+static func _max_hps(content: Content) -> Dictionary[String, int]:
+	var max_hps: Dictionary[String, int] = {}
+	for species_id: String in content.species:
+		max_hps[species_id] = content.species[species_id].hp
+	return max_hps
+
+
 ## The specials feature (#410) with every species' special's power and cooldown, from the species
 ## `content` and the ability data; a special that doesn't load is an error, and its species has
 ## none.
@@ -194,12 +208,10 @@ static func _wild_monsters(instance_name: String, content: Content) -> WildMonst
 		var weight: int = species[species_id]
 		roster.append(str(species_id))
 		weights.append(weight)
-	var max_hps: Dictionary[String, int] = {}
 	var strengths: Dictionary[String, int] = {}
 	for species_id: String in content.species:
-		max_hps[species_id] = content.species[species_id].hp
 		strengths[species_id] = content.species[species_id].strength
-	return WildMonsterFeature.new(roster, weights, max_hps, strengths)
+	return WildMonsterFeature.new(roster, weights, _max_hps(content), strengths)
 
 
 ## The domination loot feature (#86): every species table there is, and the blueprint's instance
