@@ -29,7 +29,8 @@ const ACTIONS: Array[StringName] = [&"survey", &"survey_zoom_in", &"survey_zoom_
 const COG_TURN: float = TAU / 4.0
 const TURN_SECONDS: float = 0.35
 ## The cogwheel's, the zoom buttons' and the Survey position button's icons (#459): white shapes,
-## drawn in ink, set in from their button's edges by ICON_INSET of its side.
+## drawn in ink. The zoom and position icons are set in from their button's edges by ICON_INSET
+## of its side; the cogwheel draws its own size, turning.
 const COG_ICON: Texture2D = preload("res://assets/game-icons/cog.svg")
 const LENS_ICON: Texture2D = preload("res://assets/game-icons/magnifying-glass.svg")
 const SCREEN_ICON: Texture2D = preload("res://assets/game-icons/resize.svg")
