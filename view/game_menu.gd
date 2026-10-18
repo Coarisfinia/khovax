@@ -16,6 +16,8 @@ const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
+## The Quests tab, laid out in its scene (#437).
+const QUESTS_TAB: PackedScene = preload("res://slices/quests/ui/quests_tab.tscn")
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
 const FONT_SHARE: float = 0.03
 const MIN_FONT: int = 16
@@ -217,8 +219,7 @@ func _build_sheet() -> void:
 	survey_tab.name = "Survey"
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
-	var quests: QuestsTab = QuestsTab.new()
-	quests.name = "Quests"
+	var quests: QuestsTab = QUESTS_TAB.instantiate() as QuestsTab
 	quests.holder = holder
 	tabs.add_child(quests)
 	# The gameplay tabs first, then the system tabs (owner, #465).

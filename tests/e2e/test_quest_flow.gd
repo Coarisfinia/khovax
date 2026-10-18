@@ -227,6 +227,9 @@ func _check_quests_tab(menu: GameMenu, profile: Profile, first: String) -> Strin
 		"three_moss_toads": "Now: Dominate a Moss Toad  0/3",
 	}
 	var shown: Dictionary[String, String] = menu.quests_tab().shown
+	# Laid out in its scene (#437): it scrolls only up and down.
+	if menu.quests_tab().horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+		return "the Quests tab's scene scrolls sideways"
 	for id: String in entered:
 		var _unbooked: bool = profile.quest_book.erase(id)
 	if shown != expected:
