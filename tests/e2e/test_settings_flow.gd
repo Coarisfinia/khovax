@@ -208,6 +208,19 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	if tab.monsters.shown != listed:
 		return "the Character tab lists %s, not the dominated monsters" % [tab.monsters.shown]
 	# The materials (#295): none at first, then each with its count, in id order.
+	# Might (#509): the number and its one part yet, the carried monsters'.
+	var profile: Profile = FlowGame.holder(main).keeper.profile
+	var species: Dictionary[String, Species] = SpeciesContent.load_species().species
+	var part: int = Might.monsters_part(profile, species)
+	tab.might.refresh()
+	if part <= 0 or tab.might.shown != [
+		MightPanel.TOTAL_TEXT % part,
+		MightPanel.MONSTERS_TEXT % part,
+	]:
+		return "the Character tab's Might is %s, not the carried monsters' %d" % [
+			tab.might.shown,
+			part,
+		]
 	tab.materials.refresh()
 	if tab.materials.shown != ([MaterialsList.NONE_TEXT] as Array[String]):
 		return "the Character tab lists materials before any is found: %s" % [tab.materials.shown]

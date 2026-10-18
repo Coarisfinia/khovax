@@ -91,6 +91,16 @@ static func label(text: String) -> Label:
 	return made
 
 
+## Replaces what `box` shows with one label per line of `lines`. The old labels leave it at once,
+## so it never shows both.
+static func show_lines(box: Container, lines: Array[String]) -> void:
+	for old: Node in box.get_children():
+		box.remove_child(old)
+		old.queue_free()
+	for line: String in lines:
+		box.add_child(label(line))
+
+
 ## A button saying `text` that calls `pressed`.
 static func button(text: String, pressed: Callable) -> Button:
 	var made: Button = Button.new()
