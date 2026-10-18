@@ -459,7 +459,7 @@ func _check_factions() -> String:
 	var names: Array[String] = []
 	for standing: int in [Standings.LOWEST, -1, 0, 1, Standings.HIGHEST]:
 		names.append(guild.rank_name(standing))
-	var expected: Array[String] = ["Sworn foe", "Betrayer", "", "New Face", "Hero"]
+	var expected: Array[String] = ["Edge of the Chart", "Betrayer", "", "New Face", "Hero"]
 	if names != expected:
 		return "the Cartographer's Guild's ranks read %s" % [names]
 	var five: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
