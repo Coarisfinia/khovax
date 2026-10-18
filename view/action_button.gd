@@ -9,6 +9,8 @@ extends Control
 ## touch stick doesn't start under it. Subclasses draw the icon and say the numbers.
 
 ## A button's side as a share of the screen's shorter side, never smaller than MIN_SIDE.
+## How far the icon sits in from the button's edges, as a share of its side.
+const ICON_INSET: float = 0.2
 const SIDE_SHARE: float = 0.12
 const MIN_SIDE: float = 72.0
 const MARGIN: float = 16.0
@@ -25,6 +27,8 @@ const INK_PIXELS: float = 3.0
 @export var column_index: int = 0
 
 ## Whether this device has touch input; tests switch it on.
+## The item's or attack's icon (#459): a white shape, drawn in ink.
+var icon: Texture2D
 var touch: bool = DisplayServer.is_touchscreen_available()
 ## The button Godot presses the action with.
 var button: TouchScreenButton
@@ -90,9 +94,12 @@ func rect() -> Rect2:
 	return Rect2(button.position - Vector2(_side, _side) / 2.0, Vector2(_side, _side))
 
 
-## Draws the icon in `area` with `ink`: a dot here; subclasses draw their item's or attack's.
+## Draws `icon` in `area`, tinted with `ink` (its shape is white), or a dot while it has none.
 func _draw_icon(area: Rect2, ink: Color) -> void:
-	draw_circle(area.get_center(), area.size.x * 0.1, ink)
+	if icon == null:
+		draw_circle(area.get_center(), area.size.x * 0.1, ink)
+		return
+	draw_texture_rect(icon, area.grow(-area.size.x * ICON_INSET), false, ink)
 
 
 ## The number in the button's corner: charges left, or the cooldown's seconds; "" for none.

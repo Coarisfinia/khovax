@@ -28,7 +28,8 @@ const ACTIONS: Array[StringName] = [&"survey", &"survey_zoom_in", &"survey_zoom_
 ## How far the cogwheel turns on each tap, and how long that takes.
 const COG_TURN: float = TAU / 4.0
 const TURN_SECONDS: float = 0.35
-const COG_TEETH: int = 8
+## The cogwheel's icon (#459): a white shape, drawn in ink.
+const COG_ICON: Texture2D = preload("res://assets/game-icons/cog.svg")
 ## How far a controller's stick has to move to count as using the controller, past any drift.
 const STICK_USED: float = 0.5
 
@@ -251,17 +252,14 @@ func _draw_backdrop(rect: Rect2, pressed: bool) -> void:
 	draw_rect(rect, Toon.INK, false, INK_PIXELS)
 
 
-## The cogwheel, turned as far as it has: a wheel with teeth and a hole in its middle.
+## The cogwheel, turned as far as it has: its icon (#459), turning about its middle.
 func _draw_cog(rect: Rect2) -> void:
 	_draw_backdrop(rect, cog.is_pressed())
-	var wheel: float = rect.size.x * 0.24
-	var tooth: Vector2 = Vector2(wheel * 0.5, wheel * 0.45)
-	for i: int in COG_TEETH:
-		draw_set_transform(rect.get_center(), cog_angle() + TAU * i / COG_TEETH)
-		draw_rect(Rect2(-tooth.x / 2.0, -wheel - tooth.y, tooth.x, tooth.y + wheel), Toon.INK)
+	var half: float = rect.size.x * 0.32
+	# Turned about its middle: the icon is drawn around the transform's origin.
+	draw_set_transform(rect.get_center(), cog_angle())
+	draw_texture_rect(COG_ICON, Rect2(-half, -half, half * 2.0, half * 2.0), false, Toon.INK)
 	draw_set_transform(Vector2.ZERO)
-	draw_circle(rect.get_center(), wheel, Toon.INK)
-	draw_circle(rect.get_center(), wheel * 0.4, Boot.FOG)
 
 
 ## A screen's outline with a block in its corner: where the Survey shows.

@@ -1,7 +1,8 @@
 class_name SpecialButton
 extends ActionButton
 ## The special attack's touch button (#431): fires this machine's player's companion's special
-## (`special_attack`, #410), as the E key does. It shows a burst for the special and, while it cools
+## (`special_attack`, #410), as the E key does. It shows an explosion icon for the special and,
+## while it cools
 ## down, a circle with the seconds left; it never vanishes (#429), and it's drawn faded while the
 ## special can't fire: cooling down, or no wild monster next to the companion to strike.
 
@@ -9,6 +10,7 @@ extends ActionButton
 
 
 func _init() -> void:
+	icon = preload("res://assets/game-icons/spiky-explosion.svg")
 	action = &"special_attack"
 	column_index = 1
 
@@ -45,17 +47,6 @@ func usable() -> bool:
 		return false
 	var tile: Vector2i = driver.state.entity(companion_id).tile
 	return CompanionAttackFeature.target_next_to(driver.state, wild, tile) != 0
-
-
-## A burst: eight rays around a dot.
-func _draw_icon(area: Rect2, ink: Color) -> void:
-	var middle: Vector2 = area.get_center()
-	var inner: float = area.size.x * 0.1
-	var outer: float = area.size.x * 0.3
-	for ray: int in 8:
-		var way: Vector2 = Vector2.RIGHT.rotated(TAU * ray / 8.0)
-		draw_line(middle + way * inner, middle + way * outer, ink, INK_PIXELS)
-	draw_circle(middle, inner * 0.7, ink)
 
 
 func _cooldown_left() -> int:
