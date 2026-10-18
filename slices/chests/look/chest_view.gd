@@ -19,9 +19,6 @@ const MODEL_SCALE: float = 0.5
 ## Loot on the ground: a small cut gem, a placeholder made of a primitive mesh.
 const GEM_COLOR: Color = Color(0.95, 0.78, 0.3)
 const GEM_SIZE: float = 0.22
-## How large the loot's text stands in the world: a world unit per this many of its pixels.
-const LOOT_PIXEL_SIZE: float = 0.012
-const LOOT_FONT_SIZE: int = 48
 
 @export var driver: GameDriver
 ## Whose loot is this machine's player's.
@@ -102,30 +99,10 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 
 ## Lets the loot rise from `tile` and fade, then frees it.
 func _burst(tile: Vector2i, text: String) -> void:
-	var label: Label3D = Label3D.new()
-	label.text = text
-	label.font_size = LOOT_FONT_SIZE
-	label.pixel_size = LOOT_PIXEL_SIZE
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.render_priority = InkOutline.TEXT_PRIORITY
-	label.outline_render_priority = InkOutline.TEXT_PRIORITY - 1
-	label.outline_size = 8
-	label.outline_modulate = Toon.INK
-	label.position = HexLayout.to_world(tile) + Vector3(0.0, HexGrid.TILE_HEIGHT + 0.6, 0.0)
+	var label: Label3D = RisingText.make(tile, text)
 	add_child(label)
 	bursts.append(label)
-	var tween: Tween = label.create_tween().set_parallel()
-	var rise: Vector3 = label.position + Vector3(0.0, LOOT_RISE, 0.0)
-	var _up: PropertyTweener = tween.tween_property(label, "position", rise, LOOT_SECONDS)
-	var _fade: PropertyTweener = tween.tween_property(label, "modulate:a", 0.0, LOOT_SECONDS)
-	var _outline: PropertyTweener = tween.tween_property(
-		label,
-		"outline_modulate:a",
-		0.0,
-		LOOT_SECONDS,
-	)
-	var _done: CallbackTweener = tween.chain().tween_callback(_drop_burst.bind(label))
+	RisingText.rise(label, LOOT_SECONDS, LOOT_RISE, _drop_burst)
 
 
 func _drop_burst(label: Label3D) -> void:
