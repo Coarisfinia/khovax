@@ -1,8 +1,9 @@
 ## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
 ## draws tiles: features color tiles through `paint` (e.g. TrailView), and know nothing about each
 ## other; TileDecorations stands each kind's decoration on them. A tile a rule changes in place
-## (#530) eases into its new kind's color when its TileChanged event comes. A tool script, so the
-## grid also shows in the editor, as a disc of `radius` rings.
+## (#530) eases into its new kind's color when its TileChanged event comes, or, for a neighbour's
+## grid that hears no events, when it's told to `show_changes` (NeighbourView, #538). A tool script,
+## so the grid also shows in the editor, as a disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
 ## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.
@@ -45,6 +46,8 @@ var _base: Dictionary[Vector2i, Color] = {}
 var _index: Dictionary[Vector2i, int] = {}
 var _transforms: Dictionary[Vector2i, Transform3D] = {}
 var _colors: Dictionary[Vector2i, Color] = {}
+## The kind each tile is shown as, or easing into.
+var _kinds: Dictionary[Vector2i, int] = {}
 ## The tiles easing into their new kind's color after changing in place (#530), each with its tween.
 var easing: Dictionary[Vector2i, Tween] = {}
 
@@ -89,6 +92,14 @@ func paint(colors: Dictionary[Vector2i, Color]) -> void:
 	_paint = colors
 	for tile: Vector2i in _index:
 		_recolor(tile)
+
+
+## Eases every tile whose kind in the region shown is no longer the one it shows (#538): for a
+## neighbour's grid, whose instance's events the driver doesn't hand on.
+func show_changes() -> void:
+	for tile: Vector2i in _index:
+		if _region.terrain[tile] != _kinds[tile]:
+			_ease_into(tile, _region.terrain[tile])
 
 
 ## The tile changes in `events` (#530) of `region`, only the last one of each tile: the driver also
@@ -168,17 +179,21 @@ func _recolor(tile: Vector2i) -> void:
 ## Eases every tile changed in place this tick (#530) from the color it has into its new kind's.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	for changed: TileChanged in changes_in(events, _region):
-		if not _index.has(changed.tile):
-			continue
-		var tile: Vector2i = changed.tile
-		if easing.has(tile):
-			easing[tile].kill()
-		var tween: Tween = create_tween()
-		var to: Color = terrain_color(changed.kind)
-		var ease_to: Callable = _ease.bind(tile)
-		var _eased: MethodTweener = tween.tween_method(ease_to, _base[tile], to, CHANGE_SECONDS)
-		var _done: CallbackTweener = tween.tween_callback(_drop_easing.bind(tile, tween))
-		easing[tile] = tween
+		if _index.has(changed.tile):
+			_ease_into(changed.tile, changed.kind)
+
+
+## Eases `tile` from the color it has into the color of the kind `kind`, calmly, never a flash.
+func _ease_into(tile: Vector2i, kind: int) -> void:
+	if easing.has(tile):
+		easing[tile].kill()
+	_kinds[tile] = kind
+	var tween: Tween = create_tween()
+	var ease_to: Callable = _ease.bind(tile)
+	var to: Color = terrain_color(kind)
+	var _eased: MethodTweener = tween.tween_method(ease_to, _base[tile], to, CHANGE_SECONDS)
+	var _done: CallbackTweener = tween.tween_callback(_drop_easing.bind(tile, tween))
+	easing[tile] = tween
 
 
 ## Shows `tile` in `color`, on its way to its new kind's.
@@ -202,12 +217,14 @@ func _build(region: Region) -> void:
 	_transforms.clear()
 	_colors.clear()
 	_base.clear()
+	_kinds.clear()
 	_tiles.multimesh.instance_count = tiles.size()
 	for i: int in tiles.size():
 		var tile: Vector2i = tiles[i]
 		var center: Vector3 = HexLayout.to_world(tile) + Vector3(0.0, TILE_HEIGHT / 2.0, 0.0)
 		_index[tile] = i
-		_base[tile] = terrain_color(region.terrain[tile])
+		_kinds[tile] = region.terrain[tile]
+		_base[tile] = terrain_color(_kinds[tile])
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
 	paint(_paint)

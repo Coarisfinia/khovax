@@ -87,9 +87,9 @@ func run(tree: SceneTree) -> String:
 	# A walk this long passes the wild monster, whose hits would send the player to the spawn
 	# (#457).
 	_driver.state.set_enabled(Features.WILD_ATTACKS, false)
-	_driver.recording.start_world = WorldData.of(_driver.world)
 	# Stepped by hand from here on.
 	_driver.set_process(false)
+	_record_afresh()
 	_player_view.set_process(false)
 	_trail_view.set_process(false)
 	var _connected: int = _driver.ticked.connect(_forget_worn)
@@ -612,6 +612,16 @@ func _check_forest_and_water() -> String:
 	if not result.is_empty():
 		return "walking through the forest toward water: " + result
 	return ""
+
+
+## Starts the driver's recording afresh from the world as it is now, like a resumed session's: when
+## a slow first frame let the driver tick already, those ticks are in the old recording but not in
+## this world's start.
+func _record_afresh() -> void:
+	var world: World = _driver.world
+	_driver.recording = Replay.new(world.start_name, world.world_seed)
+	_driver.recording.start_world = WorldData.of(world)
+	_driver.recording.begin(world)
 
 
 ## Puts the player on `tile` by hand, standing still. Only tiles walked from here on are expected

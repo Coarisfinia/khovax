@@ -49,6 +49,13 @@ func tile_changed(_state: GameState, _tile: Vector2i) -> void:
 	return
 
 
+## Called when the world handed the instance new ground next door (#538, GameState.hand_next_door),
+## also while the feature is off: work derived from it (sight across the seam) is worked out again
+## here, at once, like `tile_changed`.
+func next_door_changed(_state: GameState) -> void:
+	return
+
+
 ## Every value of the feature's state, for the state hash, in a fixed order.
 func hash_values() -> Array[int]:
 	var none: Array[int] = []

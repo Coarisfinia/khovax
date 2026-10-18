@@ -38,9 +38,10 @@ var companions: Array[String] = []
 ## data the world hands every instance it loads, like the seed; no rule changes it.
 var carried: Array[PackedStringArray] = []
 ## The ground of the instances next door (#191): each tile their regions have that this one doesn't,
-## with its terrain, in this instance's coordinates. The world hands it over from their blueprints
-## and seeds, without loading them, so sight crosses the seam. Derived data, like the region, so
-## it's in no hash; `next_door_version` goes up whenever it changes.
+## with its terrain, in this instance's coordinates. The world hands it over, so sight crosses the
+## seam: a loaded neighbour's region as it is, with its tiles changed in place (#538), and the
+## others' from their blueprints and seeds, without loading them. Derived data, like the region, so
+## it's in no hash; `next_door_version` goes up whenever it changes (`hand_next_door`).
 var next_door: Dictionary[Vector2i, int] = {}
 var next_door_version: int = 0
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
@@ -151,6 +152,15 @@ func change_tile(tile: Vector2i, kind: int) -> bool:
 	return true
 
 
+## Takes `ground` as the ground next door (#191), which only the world hands over: every feature
+## hears of it at once (Feature.next_door_changed), so sight across the seam never lags behind it.
+func hand_next_door(ground: Dictionary[Vector2i, int]) -> void:
+	next_door = ground
+	next_door_version += 1
+	for each: Feature in features:
+		each.next_door_changed(self)
+
+
 ## The instance's state as save data (#119): its tick, its entities as id, slot, q and r in id
 ## order, the next entity id, the tiles changed in place (#530) as q, r and kind in tile order, and
 ## each feature's id, on/off and state, in order. The seed and the rest of the region follow from
@@ -181,12 +191,11 @@ func to_data() -> Dictionary:
 	}
 
 
-## Restores what `to_data` saved into this state, freshly loaded from the same blueprint and seed:
-## the tiles changed in place, its tick and entities, then each feature's state, which is restored
-## after the region, so it's worked out from the changed tiles. Bad data is reported to `data`.
+## Restores the rest of what `to_data` saved into this state, freshly loaded from the same
+## blueprint and seed, once `load_changed_tiles` restored its tiles and the world handed it the
+## ground next door (WorldData): its tick and entities, then each feature's state, which is worked
+## out from both. Bad data is reported to `data`.
 func load_data(data: DataReader) -> void:
-	if not _load_changed_tiles(data):
-		return
 	tick = data.whole("tick", 0, DataReader.MOST)
 	next_entity_id = data.whole("next_entity_id", 1, DataReader.MOST)
 	var flat: Array[int] = data.wholes("entities", -DataReader.MOST, DataReader.MOST)
@@ -214,7 +223,7 @@ func load_data(data: DataReader) -> void:
 
 ## Changes the region's tiles as `to_data` saved them (#530), without events: a loaded instance
 ## shows them from the start. Returns whether they were valid; reports why not to `data`.
-func _load_changed_tiles(data: DataReader) -> bool:
+func load_changed_tiles(data: DataReader) -> bool:
 	var flat: Array[int] = data.wholes("changed_tiles", -DataReader.MOST, DataReader.MOST)
 	if flat.size() % 3 != 0:
 		data.fail("a changed tile is cut off")

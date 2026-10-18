@@ -28,6 +28,13 @@ static func drop_beach_toad(state: GameState) -> void:
 			state.remove_entity(entity_id)
 
 
+## The tiles player 0 sees in `state`.
+static func sight_of(state: GameState) -> Array[Vector2i]:
+	var seen: Array[Vector2i] = []
+	seen.assign((state.feature(Features.FOG) as FogFeature).visible[0])
+	return seen
+
+
 ## One tick's commands with only the player in slot 0: `move`.
 static func command(move: int) -> Array[Command]:
 	var one: Array[Command] = [Command.new(move)]

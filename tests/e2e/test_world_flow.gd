@@ -83,7 +83,7 @@ func _check_tile_changed() -> String:
 	untouched.step(_still())
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var beside: Vector2i = _free_ground_beside(basic, world.player(0).tile)
-	var seen: Array[Vector2i] = _sight_of(basic)
+	var seen: Array[Vector2i] = FlowSteps.sight_of(basic)
 	var raised: int = basic.events.size()
 	var refused: bool = basic.change_tile(beside, Region.GROUND) or basic.change_tile(
 		Vector2i(99, 99),
@@ -103,16 +103,9 @@ func _check_tile_changed() -> String:
 		FogFeature.SIGHT_RADIUS,
 		basic.next_door,
 	)
-	if _sight_of(basic) == seen or _sight_of(basic) != sight:
+	if FlowSteps.sight_of(basic) == seen or FlowSteps.sight_of(basic) != sight:
 		return "the player's sight wasn't worked out again around the rock"
 	return _check_tile_change_saved(world, beside)
-
-
-## The tiles player 0 sees in `state`.
-static func _sight_of(state: GameState) -> Array[Vector2i]:
-	var seen: Array[Vector2i] = []
-	seen.assign((state.feature(Features.FOG) as FogFeature).visible[0])
-	return seen
 
 
 ## `world`, whose basic instance has rock changed in place on `rock`, goes through its save data and

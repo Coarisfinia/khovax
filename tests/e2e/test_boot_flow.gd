@@ -3,8 +3,8 @@ extends RefCounted
 ## in view of the camera, a wild monster's figure standing on its own tile, the instance next door
 ## drawn beyond its exit under the cloud, and the exploration music rising from silence. The ground
 ## explored in an instance stays under light fog, also when it lies next door. A tile a rule changes
-## in place eases into its new look. The Survey has its
-## own flow (test_survey_flow.gd).
+## in place eases into its new look, also next door. The Survey has its own flow
+## (test_survey_flow.gd).
 
 
 func run(tree: SceneTree) -> String:
@@ -711,7 +711,8 @@ static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vecto
 ## Explored ground is remembered per instance (#190): walking into the glade, the basic instance's
 ## ground seen before, now next door, lies under light fog; walking back, the basic instance's
 ## ground out of sight is still seen before, and next door the glade's explored ground lies under
-## light fog and its unexplored ground under thick cloud.
+## light fog and its unexplored ground under thick cloud. A tile changed in place there shows next
+## door (#538).
 func _check_remembered_ground(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var fog: FogView = main.get_node("FogView") as FogView
@@ -736,7 +737,9 @@ func _check_remembered_ground(main: Node) -> String:
 	_walk_in(driver.world, 3)
 	fog.show_state(10.0)
 	var result: String = _check_glade_next_door(fog, view, glade_seen, glade_unseen)
-	return result if not result.is_empty() else _check_out_of_sight(fog, far)
+	if result.is_empty():
+		result = _check_out_of_sight(fog, far)
+	return result if not result.is_empty() else _check_neighbour_change_shown(driver, view)
 
 
 ## Back in the basic instance, next door the glade's explored ground (some of `seen`) lies under
@@ -755,6 +758,36 @@ func _check_glade_next_door(
 		return "next door, the glade's explored ground isn't under light fog"
 	if fog.cloud.fog_on(unexplored) != Vector2(1.0, 0.0):
 		return "next door, the glade's unexplored ground isn't under thick cloud"
+	return ""
+
+
+## A tile changed in place next door (#538): back in the basic instance, with the glade loaded, the
+## glade is drawn next door from its own region. A forest of it cleared to ground keeps its forest
+## color at first and eases into the ground's once the world hands the basic instance the new
+## ground, never in one frame; grown back, it eases back into the forest's.
+func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> String:
+	var glade: GameState = driver.world.instances.get(InstanceBlueprints.GLADE)
+	view.show_state()
+	var grid: HexGrid = view.grids.get(InstanceBlueprints.GLADE)
+	if glade == null or grid == null or grid.shown_region() != glade.region:
+		return "the glade next door isn't drawn from its loaded region"
+	var forest: int = TileKinds.number_of("forest")
+	var tile: Vector2i = glade.region.sorted_tiles()[0]
+	for each: Vector2i in glade.region.sorted_tiles():
+		if glade.region.terrain[each] == forest:
+			tile = each
+	for kind: int in [Region.GROUND, forest]:
+		var before: Color = grid.tile_color_of(tile)
+		var _changed: bool = glade.change_tile(tile, kind)
+		# As the world does once the glade's tick changed it.
+		driver.world.refresh_next_door()
+		view.show_state()
+		var calm: bool = view.grids.get(InstanceBlueprints.GLADE) == grid
+		if not calm or not grid.easing.has(tile) or grid.tile_color_of(tile) != before:
+			return "a tile changed in place next door changed its look at once, or not at all"
+		var _stepped: bool = grid.easing[tile].custom_step(HexGrid.CHANGE_SECONDS + 0.1)
+		if grid.easing.has(tile) or grid.tile_color_of(tile) != grid.terrain_color(kind):
+			return "a tile changed in place next door didn't ease into its new kind's color"
 	return ""
 
 

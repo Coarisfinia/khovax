@@ -19,8 +19,6 @@ var visible: Dictionary[int, Array] = {}
 var revealed: Array[Vector2i] = []
 ## Where each player stood when their sight was last worked out, by slot.
 var _seen_from: Dictionary[int, Vector2i] = {}
-## The version of the ground next door the sight was last worked out with.
-var _next_door_version: int = 0
 
 
 func id() -> int:
@@ -54,6 +52,17 @@ func entity_removed(state: GameState, _removed_id: int) -> void:
 ## A tile changed in place (#530) may block sight or stop blocking it: everyone's is worked out
 ## again at once.
 func tile_changed(state: GameState, _tile: Vector2i) -> void:
+	_see_again(state)
+
+
+## The ground next door changed (#538): a tile there may block sight across the seam or stop
+## blocking it, so everyone's is worked out again at once.
+func next_door_changed(state: GameState) -> void:
+	_see_again(state)
+
+
+## Works out everyone's sight again, wherever they stand.
+func _see_again(state: GameState) -> void:
 	_seen_from.clear()
 	_update(state)
 
@@ -118,12 +127,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 	revealed.sort()
 
 
-## Works out again the sight of every player who moved, or everyone's when the ground next door
-## changed; players who left lose theirs.
+## Works out again the sight of every player who moved; players who left lose theirs.
 func _update(state: GameState) -> void:
-	if state.next_door_version != _next_door_version:
-		_next_door_version = state.next_door_version
-		_seen_from.clear()
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		if player == null:
