@@ -233,7 +233,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   and saves, under the rules for `meta/`). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
-  or loads a `res://slices/` path): data the core holds (a region's `TileTrigger`) and events it
+  or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a region's `TileTrigger`) and events it
   reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and only the
   rules that run them move. The core is `core/` (#297): the tick, the state, the region, the
   world, the grid math and the feature list. Scripts reach each other by `class_name`; where a
