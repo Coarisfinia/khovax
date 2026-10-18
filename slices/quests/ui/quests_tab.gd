@@ -5,8 +5,10 @@ extends ScrollContainer
 ## them (QuestListView.step_line): the steps done, the one it's on with its count, and the ones
 ## still to come. Each step says which it is in words, never by color alone (#68). It only reads
 ## the profile, keeps up with it while shown, and scrolls when the screen is too short for every
-## quest.
+## quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only what it
+## does.
 
+## The gap between rows, as the scene sets it.
 const GAP: float = 8.0
 ## How far a quest's steps sit in from its name, in gaps.
 const STEP_INDENT: float = 3.0
@@ -20,17 +22,11 @@ var holder: ProfileHolder
 ## What the tab shows for each open quest, by quest id: its steps' lines, one per line. Kept here
 ## so tests can read it.
 var shown: Dictionary[String, String] = {}
-var _rows: VBoxContainer
+
+@onready var _rows: VBoxContainer = $Middle/Rows
 
 
 func _ready() -> void:
-	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var middle: CenterContainer = CenterContainer.new()
-	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_rows = VBoxContainer.new()
-	_rows.add_theme_constant_override("separation", roundi(GAP))
-	middle.add_child(_rows)
-	add_child(middle)
 	_show({}, {})
 
 
