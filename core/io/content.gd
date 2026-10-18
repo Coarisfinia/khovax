@@ -6,8 +6,8 @@ extends RefCounted
 ## in CI and here for what a schema can't check: ids unique and matching their file. The slices
 ## read their kinds through their own accessors into their own data (SpeciesContent into
 ## SpeciesData, and so on, #506), so this never names them; the tile blueprints (#116), which the
-## core's TileKinds needs too, are read here, from the tiles slice. Here too: the field helpers they
-## all use.
+## core's TileKinds reads first, live in the core and are read here, from core/data/tiles/ (#506).
+## Here too: the field helpers they all use.
 
 const TILES_DIR: String = "res://core/data/tiles/"
 
