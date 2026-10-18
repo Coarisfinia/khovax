@@ -10,6 +10,8 @@ extends Feature
 const PLAYER_HP: int = 500
 ## The HP of a companion of a species the feature wasn't given one for.
 const UNKNOWN_HP: int = 100
+## How much of their HP a revived player gets back, in thousandths (Fixed): half (#479).
+const REVIVED_HP: int = 500
 
 ## Each species' HP, by species id, from the content data (meta/ reads them).
 var max_hps: Dictionary[String, int] = {}
@@ -27,11 +29,15 @@ func id() -> int:
 
 ## After the wild monsters' strikes it counts, and the companions whose species it reads.
 func requires() -> Array[int]:
-	return [Features.WILD_ATTACKS, Features.COMPANIONS]
+	return [Features.WILD_ATTACKS, Features.COMPANIONS, Features.KNOCKDOWN]
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
 	for event: RefCounted in state.events.duplicate():
+		var revived: PlayerRevived = event as PlayerRevived
+		if revived != null and state.entity(revived.entity_id) != null:
+			var full_hp: int = max_hp_of(state, revived.entity_id)
+			_damage[revived.entity_id] = full_hp - Fixed.scale(full_hp, REVIVED_HP)
 		var struck: WildMonsterStruck = event as WildMonsterStruck
 		if struck == null or struck.target_id == 0 or state.entity(struck.target_id) == null:
 			continue
@@ -46,13 +52,18 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 
 
 ## Raises EntityFell for `entity_id`, whose HP just reached 0. A companion then goes back to its
-## player (#456); a player is sent back to the world's spawn (#457), since nobody can bring them
-## back yet (being knocked down and revived comes with the reviving rules, #479).
+## player (#456). A player with an ally near is knocked down to be revived (#479); otherwise they're
+## sent back to the world's spawn (#457).
 func _fall(state: GameState, entity_id: int) -> void:
 	state.events.append(EntityFell.new(entity_id))
 	var fallen: Entity = state.entity(entity_id)
 	if fallen.slot != Entity.NO_SLOT:
-		state.events.append(SentToSpawn.new(entity_id, fallen.slot))
+		var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
+		var downs: bool = knockdown != null and knockdown.enabled
+		if downs and KnockdownFeature.has_ally_near(state, fallen):
+			knockdown.knock_down(entity_id)
+		else:
+			state.events.append(SentToSpawn.new(entity_id, fallen.slot))
 		return
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	# Only while the companions' rule is on: a disabled feature's state stays as it was.

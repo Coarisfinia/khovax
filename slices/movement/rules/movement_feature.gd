@@ -15,6 +15,8 @@ const MOVE_TICKS: int = 6
 ## Every walking entity's walk, by entity id. Players get one when they are added; other entities
 ## get one from the rule that adds them.
 var walks: Dictionary[int, Walk] = {}
+## The players held still by a later rule (`hold`), by entity id.
+var held: Dictionary[int, bool] = {}
 
 
 func id() -> int:
@@ -29,7 +31,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		if current.ticks_left > 0:
 			current.ticks_left -= 1
 		var command: Command = Command.of(commands, walker.slot)
-		if command != null and not current.is_moving():
+		if command != null and not current.is_moving() and not held.has(walker.id):
 			var _started: bool = _start_move(state, walker, current, command.move)
 
 
@@ -40,6 +42,17 @@ func entity_added(_state: GameState, added: Entity) -> void:
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = walks.erase(removed_id)
+	_dropped = held.erase(removed_id)
+
+
+## Holds the player `entity_id` still, or lets them walk again: a later rule's (a knocked-down
+## player, #479). Their commands don't start steps while held; a step already under way ends. The
+## rule that holds them keeps that in its own state and holds them again on loading.
+func hold(entity_id: int, on: bool) -> void:
+	if on:
+		held[entity_id] = true
+	else:
+		var _released: bool = held.erase(entity_id)
 
 
 ## Gives `added`, an entity no player controls, a walk, standing on its tile: its own rule moves

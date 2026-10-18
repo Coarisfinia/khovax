@@ -64,6 +64,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
+		KnockdownFeature.new(),
 		TrailFeature.new(),
 		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
