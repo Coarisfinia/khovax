@@ -16,7 +16,12 @@
 		"name": { "description": "What the player reads.", "type": "string", "minLength": 1 },
 		"description": { "description": "What it does, for the player.", "type": "string", "minLength": 1 },
 		"power": { "description": "A special's: how much of its species' strength one strike deals, in thousandths (#33, #410): 3000 is three times it.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
-		"cooldown_seconds": { "description": "A special's: the seconds before it can fire again (#410).", "type": "integer", "minimum": 1, "maximum": 3600 }
+		"cooldown_seconds": { "description": "A special's: the seconds before it can fire again (#410).", "type": "integer", "minimum": 1, "maximum": 3600 },
+		"path": {
+			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
+			"enum": ["none", "harmony", "supremacy", "both"],
+			"default": "none"
+		}
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
 	"then": { "required": ["power", "cooldown_seconds"] },

@@ -1,11 +1,12 @@
 class_name QuestListView
 extends Control
 ## The open quests at the side of the screen (#340): one card per quest of this machine's player
-## that isn't finished (Profile.open_steps), with its name and what its current step asks, and the
-## count where the step counts up ("1/3"). A quest that finishes says so and fades out, and the
-## cards below glide up into its place; nothing snaps. It keeps to the side of the screen the
-## Survey's corner isn't on (#301). Quests are told apart by their words, never by color (#68), and
-## the text grows with the screen, so it stays readable on a phone. It only reads the profile.
+## that isn't finished (Profile.open_steps), with its name (and its path mark in words, #471) and
+## what its current step asks, and the count where the step counts up ("1/3"). A quest that
+## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
+## It keeps to the side of the screen the Survey's corner isn't on (#301). Quests are told apart by
+## their words, never by color (#68), and the text grows with the screen, so it stays readable on a
+## phone. It only reads the profile.
 
 ## How quickly a card glides to its place: the share of the way left it closes per second.
 const GLIDE: float = 8.0
@@ -64,7 +65,7 @@ func show_quests() -> void:
 		var progress: QuestProgress = profile.quest_progress.get(id)
 		var line: String = step_line(steps[id], progress.count if progress != null else 0)
 		if not cards.has(id):
-			_add_card(id, profile.quest_book[id].name)
+			_add_card(id, profile.quest_book[id].shown_name())
 		shown[id] = line
 		_line_label(id).text = line
 		_line_label(id).visible = not line.is_empty()

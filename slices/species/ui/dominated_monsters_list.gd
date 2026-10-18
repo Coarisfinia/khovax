@@ -27,7 +27,8 @@ var shown_ids: Array[int] = []
 var selected: int = 0
 ## The pane that shows the selected monster's stats, if the tab has one.
 var details: MonsterDetails
-## Each species' data and each ability's name, by id; a species missing from the data shows its id.
+## Each species' data and each ability's name with its path mark in words (#471), by id; a species
+## missing from the data shows its id.
 var _species: Dictionary[String, Species] = {}
 var _abilities: Dictionary[String, String] = {}
 var _rows: VBoxContainer
@@ -40,7 +41,8 @@ func _ready() -> void:
 	_species = species.species
 	var abilities: SpeciesData = SpeciesContent.load_abilities()
 	for id: String in abilities.abilities:
-		_abilities[id] = abilities.abilities[id].name
+		var ability: Ability = abilities.abilities[id]
+		_abilities[id] = PathMark.tagged(ability.name, ability.path)
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)

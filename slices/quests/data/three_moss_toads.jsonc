@@ -2,5 +2,6 @@
 {
 	"id": "three_moss_toads",
 	"name": "Dominate three moss toads",
+	"path": "supremacy",
 	"steps": [{ "condition": "dominated", "species": "moss_toad", "count": 3 }]
 }

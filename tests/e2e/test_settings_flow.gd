@@ -286,8 +286,8 @@ func _menu_details(tab: CharacterTab) -> String:
 		"HP: 60",
 		"Strength: 70",
 		"Speed: 90",
-		"Special: Gale Dive",
-		"Passive for you: Tailwind",
+		"Special: Gale Dive (Supremacy)",
+		"Passive for you: Tailwind (Harmony and supremacy)",
 		"Own passive: Light Bones",
 	]
 	if details.shown != expected:
