@@ -56,7 +56,7 @@ static func _flow_path() -> String:
 	var from_environment: String = OS.get_environment(FLOW_VARIABLE)
 	if not from_environment.is_empty():
 		return from_environment
-	return str(ProjectSettings.get_setting(FLOW_SETTING, ""))
+	return str(ProjectSettings.get_setting_with_override(FLOW_SETTING))
 
 
 ## Turns anti-aliasing off for the flow, without saving it (#193): the flow waits real time for
