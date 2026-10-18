@@ -726,6 +726,20 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
+## The basic region's wild monsters: the rolled one on (-2, 0), and the beach's wounded moss toad
+## (#448).
+func _check_basic_monsters(region: Region) -> String:
+	var spots: Array[Vector2i] = [Vector2i(-2, 0), FlowSteps.BEACH_TOAD]
+	if region.wild_monsters != spots:
+		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
+			region.wild_monsters,
+		]
+	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
+	if toad == null or toad.species != "moss_toad" or not toad.wounded:
+		return "the beach's wild monster isn't a wounded moss toad"
+	return ""
+
+
 ## The basic instance's region file reads as the disc it draws, with the water by its beach
 ## (#321), the players' starts and its wild monster, and a broken region file says what is wrong.
 func _check_region_file() -> String:
@@ -743,14 +757,9 @@ func _check_region_file() -> String:
 		all_water = all_water and region.terrain.get(water) == Region.WATER
 	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts or not all_water:
 		return "regions/basic.md isn't the disc of radius 3 and the water, with its four starts"
-	var monsters: Array[Vector2i] = [Vector2i(-2, 0), FlowSteps.BEACH_TOAD]
-	if region.wild_monsters != monsters:
-		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
-			region.wild_monsters,
-		]
-	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
-	if toad == null or toad.species != "moss_toad" or not toad.wounded:
-		return "the beach's wild monster isn't a wounded moss toad"
+	var monsters: String = _check_basic_monsters(region)
+	if not monsters.is_empty():
+		return monsters
 	var broken: Dictionary[String, String] = {
 		". . .": "a region file starts with",
 		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
