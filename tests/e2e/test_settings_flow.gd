@@ -282,9 +282,10 @@ func _menu_details(tab: CharacterTab) -> String:
 	var both: int = tab.monsters.size_flags_horizontal & details.size_flags_horizontal
 	if both & Control.SIZE_EXPAND == 0:
 		return "the monsters and their detail pane don't share the row"
-	var paired: float = tab.monsters.get_parent().get_parent().custom_minimum_size.x
+	var column: Control = details.get_parent().get_parent() as Control
+	var paired: float = column.custom_minimum_size.x
 	menu.lay_out(Vector2(360.0, 640.0))
-	if paired <= tab.monsters.get_parent().get_parent().custom_minimum_size.x:
+	if paired <= column.custom_minimum_size.x:
 		return "the column doesn't widen for the detail pane beside the monsters"
 	return ""
 
