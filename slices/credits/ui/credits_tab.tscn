@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://bdrj0d8so1a7f" path="res://slices/credits/ui/credits_tab.gd" id="1_credits"]
+
+[node name="Credits" type="RichTextLabel"]
+focus_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+script = ExtResource("1_credits")

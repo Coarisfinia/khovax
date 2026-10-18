@@ -14,6 +14,8 @@ const PAUSE_CHOICES: Array[String] = ["Off", "On"]
 const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
+## The Credits tab, laid out in its scene (#437).
+const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
 const FONT_SHARE: float = 0.03
 const MIN_FONT: int = 16
@@ -217,9 +219,7 @@ func _build_sheet() -> void:
 	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
-	var credits: CreditsTab = CreditsTab.new()
-	credits.name = "Credits"
-	tabs.add_child(credits)
+	tabs.add_child(CREDITS_TAB.instantiate())
 	column.add_child(tabs)
 	var close: Button = button("Close", toggle)
 	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
