@@ -24,8 +24,8 @@ var unlocked_slots: int = START_SLOTS
 ## Every dominated monster, in the order dominated.
 var dominated_monsters: Array[DominatedMonster] = []
 ## The dominated monsters this player carries, by id, in the order the next one comes in when one
-## faints (#53, #54). They're chosen at the player's base (#50); until it exists, the first three
-## dominated are carried, in the order dominated.
+## faints (#53, #54): the first three of the player's order (`order`, #430), the first of them their
+## companion. Until the player moves one, the first three dominated, in the order dominated.
 var carried: Array[int] = []
 ## The id the next dominated monster gets; ids are never reused.
 var next_monster_id: int = 1
@@ -75,6 +75,35 @@ func apply(result: Gain) -> String:
 
 
 ## Adds a newly dominated monster of `species`, with the next id.
+## Every dominated monster's id in the player's order (#430): the carried ones first, in their
+## order,
+## then the rest in the order dominated.
+func order() -> Array[int]:
+	var ids: Array[int] = carried.duplicate()
+	for monster: DominatedMonster in dominated_monsters:
+		if not ids.has(monster.id):
+			ids.append(monster.id)
+	return ids
+
+
+## Moves the dominated monster `monster_id` to `place` in the player's order (#430), clamped to the
+## order's ends; the first three become the carried ones. Returns why it can't, or "".
+func move_monster(monster_id: int, place: int) -> String:
+	var ids: Array[int] = order()
+	if not ids.has(monster_id):
+		return "no dominated monster %d to move" % monster_id
+	ids.erase(monster_id)
+	var _placed: int = ids.insert(clampi(place, 0, ids.size()), monster_id)
+	var by_id: Dictionary[int, DominatedMonster] = {}
+	for monster: DominatedMonster in dominated_monsters:
+		by_id[monster.id] = monster
+	dominated_monsters.clear()
+	for id: int in ids:
+		dominated_monsters.append(by_id[id])
+	carried.assign(ids.slice(0, CARRY_LIMIT))
+	return ""
+
+
 func _dominate(species: String) -> void:
 	dominated_monsters.append(DominatedMonster.new(next_monster_id, species))
 	if carried.size() < CARRY_LIMIT:

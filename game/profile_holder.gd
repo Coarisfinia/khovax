@@ -85,6 +85,12 @@ func choose_color(color: int) -> void:
 		_report(keeper.choose_color(color, Time.get_ticks_msec()))
 
 
+## Moves the dominated monster `monster_id` to `place` in this player's order (#430).
+func move_monster(monster_id: int, place: int) -> void:
+	if keeper != null:
+		_report(keeper.move_monster(monster_id, place, Time.get_ticks_msec()))
+
+
 ## The quests the profile advances from `content`: none when any quest file couldn't be read, so
 ## progress waits for whole, sound data rather than advancing on part of it.
 static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinition]:

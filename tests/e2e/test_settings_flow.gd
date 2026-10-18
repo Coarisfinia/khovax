@@ -207,6 +207,33 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	]
 	if tab.monsters.shown != listed:
 		return "the Character tab lists %s, not the dominated monsters" % [tab.monsters.shown]
+	return _menu_reorder(tab, main)
+
+
+## The player orders their monsters (#430): moving the one not carried to the front makes it the
+## companion and pushes the third out of the carried three; its row's up button then moves the new
+## second one up again. The order is kept in their profile on disk.
+func _menu_reorder(tab: CharacterTab, main: Node) -> String:
+	var ids: Array[int] = tab.monsters.shown_ids.duplicate()
+	tab.monsters.move(ids[3], 0)
+	var moved: Array[String] = [
+		"Carried 1, companion: Moss Toad, level 1",
+		"Carried 2: Moss Toad, level 1",
+		"Carried 3: Storm Finch, level 1",
+		"Not carried: Storm Finch, level 1",
+	]
+	var reordered: Array[int] = [ids[3], ids[0], ids[1], ids[2]]
+	if tab.monsters.shown != moved or tab.monsters.shown_ids != reordered:
+		return "moving a monster first didn't make it the companion: %s" % [tab.monsters.shown]
+	# The second row's up button: its line, then up, then down.
+	var second: HBoxContainer = tab.monsters.get_child(1).get_child(1) as HBoxContainer
+	(second.get_child(1) as Button).pressed.emit()
+	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
+	var _flushed: String = keeper.flush()
+	var kept: Profile = SaveStore.load_profile(PROFILE_PATH)
+	var expected: Array[int] = [ids[0], ids[3], ids[1]]
+	if tab.monsters.shown_ids[0] != ids[0] or kept.carried != expected:
+		return "a row's up button didn't move it, or the order isn't kept: %s" % [kept.carried]
 	return ""
 
 
