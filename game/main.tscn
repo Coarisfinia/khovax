@@ -34,6 +34,7 @@
 [ext_resource type="Script" path="res://slices/survey/ui/survey_buttons.gd" id="31_survey_buttons"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_pinch.gd" id="32_survey_pinch"]
 [ext_resource type="Script" path="res://slices/domination/ui/totem_button.gd" id="33_totem_button"]
+[ext_resource type="Script" path="res://slices/companions/ui/special_button.gd" id="34_special_button"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -203,6 +204,12 @@ survey = NodePath("../../SurveyChoice")
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("33_totem_button")
+driver = NodePath("../../Driver")
+
+[node name="SpecialButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver") unique_id=4310431043]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("34_special_button")
 driver = NodePath("../../Driver")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]

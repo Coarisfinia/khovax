@@ -1165,19 +1165,47 @@ func _check_totem_button(main: Node) -> String:
 			or totem.corner_text() != str(PlaceholderTotems.CHARGES)
 			or not totem.usable()):
 		return "the totem's button doesn't show its charges, usable, on a waiting ring"
+	if not _presses_alone(totem, stick):
+		return "a touch on the totem's button didn't press place_totem alone, or didn't let go"
+	totem.touch = false
+	return _check_special_button(main)
+
+
+## The special attack's button (#431) shows on a touch screen, with no cooldown while the special is
+## ready, and a touch on it presses special_attack alone.
+func _check_special_button(main: Node) -> String:
+	var special: SpecialButton = main.get_node("Hud/SpecialButton") as SpecialButton
+	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+	special.touch = true
+	special.lay_out_in(special.get_viewport_rect().size)
+	var ready: bool = special.corner_text().is_empty() and special.cooldown_share() == 0.0
+	if not special.visible or not ready:
+		return "the special's button doesn't show, ready, on a touch screen"
+	# No companion here, so nothing to strike with: shown, but faded.
+	if special.usable():
+		return "the special's button shows usable with no companion to strike with"
+	if special.rect().intersects(
+		(main.get_node("Hud/TotemButton") as TotemButton).rect()
+	):
+		return "the special's button covers the totem's"
+	if not _presses_alone(special, stick):
+		return "a touch on the special's button didn't press special_attack alone, or didn't let go"
+	special.touch = false
+	return ""
+
+
+## Whether a touch on `button` presses its action and doesn't start `stick`, and lifting it lets go.
+func _presses_alone(button: ActionButton, stick: TouchStick) -> bool:
 	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
-	touch.position = totem.rect().get_center()
+	touch.position = button.rect().get_center()
 	touch.pressed = true
-	totem.get_viewport().push_input(touch)
-	var pressed: bool = Input.is_action_pressed("place_totem")
+	button.get_viewport().push_input(touch)
+	var pressed: bool = Input.is_action_pressed(button.action)
 	var stick_held: bool = stick.is_held()
 	var lift: InputEventScreenTouch = touch.duplicate() as InputEventScreenTouch
 	lift.pressed = false
-	totem.get_viewport().push_input(lift)
-	if not pressed or stick_held or Input.is_action_pressed("place_totem"):
-		return "a touch on the totem's button didn't press place_totem alone, or didn't let go"
-	totem.touch = false
-	return ""
+	button.get_viewport().push_input(lift)
+	return pressed and not stick_held and not Input.is_action_pressed(button.action)
 
 
 ## Pressing place_totem makes the local player's command place their totem, which starts the ring
