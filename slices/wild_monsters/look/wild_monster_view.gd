@@ -7,7 +7,8 @@ extends Node3D
 ## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. One that steps
 ## away from where no ring could enclose it (#364) glides to its new tile. A fainted one (#410)
 ## stays where it fell, and its figure lies down on its side, still: a shape that tells it apart
-## from a standing one without color (#68, #431). It only reads the state.
+## from a standing one without color (#68, #431). One that strikes (#422) lunges toward what it
+## hit and back, eased, so the hit reads without a flash (#426). It only reads the state.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -22,6 +23,10 @@ const GLIDE_SECONDS: float = 0.8
 ## How long a fainted wild monster's figure takes to lie down, and on which side.
 const FALL_SECONDS: float = 0.5
 const LYING: Vector3 = Vector3(0.0, 0.0, PI / 2.0)
+## How far toward what it hit a striking wild monster lunges, as a share of the way to that tile,
+## and how long the lunge and its way back take.
+const LUNGE_SHARE: float = 0.35
+const LUNGE_SECONDS: float = 0.3
 
 @export var driver: GameDriver
 
@@ -32,6 +37,8 @@ var figures: Dictionary[int, HexPiece] = {}
 var _shown: GameState
 ## The fainted wild monsters whose figures lie down already, by entity id.
 var fallen: Dictionary[int, bool] = {}
+## The lunge running on each figure, so a new hit replaces it rather than fighting it.
+var _lunges: Dictionary[HexPiece, Tween] = {}
 
 
 func _ready() -> void:
@@ -50,6 +57,7 @@ func show_state() -> void:
 	if driver.state != _shown:
 		HexPiece.free_all(figures)
 		fallen.clear()
+		_lunges.clear()
 		_shown = driver.state
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
@@ -61,6 +69,7 @@ func show_state() -> void:
 	for entity_id: int in figures.keys():
 		if not shown.has(entity_id) or driver.state.entity(entity_id) == null:
 			_fade_out(figures[entity_id])
+			var _unlunged: bool = _lunges.erase(figures[entity_id])
 			var _dropped: bool = figures.erase(entity_id)
 			_dropped = fallen.erase(entity_id)
 	for entity_id: int in shown:
@@ -94,6 +103,9 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		var jumped: MonsterJumpedOut = event as MonsterJumpedOut
 		if jumped != null and figures.has(jumped.monster_id):
 			_hop(figures[jumped.monster_id])
+		var struck: WildMonsterStruck = event as WildMonsterStruck
+		if struck != null and figures.has(struck.monster_id):
+			_lunge(figures[struck.monster_id], struck.tile)
 
 
 ## Lifts the figure's model up and lets it land again, easing both ways.
@@ -106,6 +118,30 @@ func _hop(figure: HexPiece) -> void:
 	var _down: PropertyTweener = tween.tween_property(
 		model, "position:y", 0.0, HOP_SECONDS / 2
 	).set_ease(Tween.EASE_IN)
+
+
+## Thrusts the figure's model part of the way toward `target` and brings it back, easing both ways.
+## Only across the ground, so a hop's height plays on; a new hit replaces a lunge still running.
+func _lunge(figure: HexPiece, target: Vector2i) -> void:
+	var model: Node3D = figure.get_child(0) as Node3D
+	var toward: Vector3 = (figure.position_on(target) - figure.tile_position()) * LUNGE_SHARE
+	if _lunges.has(figure) and _lunges[figure].is_valid():
+		_lunges[figure].kill()
+	var tween: Tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_lunges[figure] = tween
+	var _out_x: PropertyTweener = tween.tween_property(
+		model,
+		"position:x",
+		toward.x,
+		LUNGE_SECONDS / 2,
+	)
+	var _out_z: PropertyTweener = tween.parallel().tween_property(
+		model, "position:z", toward.z, LUNGE_SECONDS / 2
+	)
+	var _back_x: PropertyTweener = tween.tween_property(model, "position:x", 0.0, LUNGE_SECONDS / 2)
+	var _back_z: PropertyTweener = tween.parallel().tween_property(
+		model, "position:z", 0.0, LUNGE_SECONDS / 2
+	)
 
 
 ## Moves the figure onto `spot`, gliding there from where it stands, easing both ways.
