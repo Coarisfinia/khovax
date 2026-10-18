@@ -15,7 +15,7 @@ extends Node
 @export var input: LocalInput
 
 ## Where the profile is saved; tests point it elsewhere before the holder enters the tree.
-var save_path: String = SaveStore.PROFILE_PATH
+var save_path: String = ProfileStore.PATH
 ## Null when the save couldn't be read: nothing is taken or saved then.
 var keeper: ProfileKeeper
 
@@ -26,7 +26,7 @@ func _enter_tree() -> void:
 	if keeper != null:
 		return
 	SaveStore.keep_web_storage()
-	var profile: Profile = SaveStore.load_profile(save_path)
+	var profile: Profile = ProfileStore.load_from(save_path)
 	if profile.loaded_generation > 0:
 		push_warning("the newest profile saves were damaged; loaded the one %d back" % [
 			profile.loaded_generation,

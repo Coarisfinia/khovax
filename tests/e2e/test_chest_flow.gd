@@ -177,7 +177,7 @@ func _check_saved(tree: SceneTree) -> String:
 	(main.get_node("EventBus") as EventBus).flush()
 	# The chest's gain is saved at once; the loot's, coming right after, waits for the debounce.
 	var _flushed: String = holder.keeper.flush()
-	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
+	var saved: Profile = ProfileStore.load_from(SAVE_PATH)
 	var result: String = ""
 	var expected: Dictionary[String, int] = OWN_LOOT.merged(FOUND_LOOT)
 	if saved.materials != expected:

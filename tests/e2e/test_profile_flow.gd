@@ -71,7 +71,7 @@ func _check_kept_at_once() -> String:
 	if not problem.is_empty() or _monsters_on_disk() != 50:
 		return "the burst wasn't saved once the interval passed: " + problem
 	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.end_session()
-	var on_disk: Profile = SaveStore.load_profile(SAVE_PATH)
+	var on_disk: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not problem.is_empty() or on_disk.dominated_monsters.size() != 51:
 		return "ending the session didn't flush the pending domination: " + problem
@@ -79,7 +79,7 @@ func _check_kept_at_once() -> String:
 
 
 func _monsters_on_disk() -> int:
-	return SaveStore.load_profile(SAVE_PATH).dominated_monsters.size()
+	return ProfileStore.load_from(SAVE_PATH).dominated_monsters.size()
 
 
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
@@ -107,10 +107,10 @@ func _check_bad_results(profile: Profile) -> String:
 
 ## Saving and loading gives back the same profile, with the next id still unused.
 func _check_save(profile: Profile) -> String:
-	var problem: String = SaveStore.save_profile(profile, SAVE_PATH)
+	var problem: String = ProfileStore.save(profile, SAVE_PATH)
 	if not problem.is_empty():
 		return problem
-	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
+	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(profile):
 		return "the loaded profile differs from the saved one: " + loaded.problem
@@ -120,7 +120,7 @@ func _check_save(profile: Profile) -> String:
 	var three: Array[int] = [1, 2, 3]
 	if loaded.dominated_monsters.back().id != 4 or loaded.carried != three:
 		return "a monster dominated after loading reused an id or joined the carried three"
-	if not SaveStore.load_profile(SAVE_PATH).dominated_monsters.is_empty():
+	if not ProfileStore.load_from(SAVE_PATH).dominated_monsters.is_empty():
 		return "without a save, the game didn't start a new profile"
 	return ""
 
@@ -213,7 +213,7 @@ func _check_named() -> String:
 	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
 	var kept: String = keeper.choose_name("  Ash  ", 0)
 	var _flushed: String = keeper.flush()
-	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
+	var saved: Profile = ProfileStore.load_from(SAVE_PATH)
 	if not kept.is_empty() or saved.character_name != "Ash":
 		return "the name Ash wasn't kept and saved: %s, %s" % [kept, saved.character_name]
 	var empty: String = keeper.choose_name("   ", 0)
@@ -395,8 +395,8 @@ func _check_recovered() -> String:
 	var _first: String = older.apply(_result(["moss_toad"], {}))
 	var newer: Profile = Profile.new()
 	var _second: String = newer.apply(_result(["moss_toad", "ember_fox"], {}))
-	var problem: String = SaveStore.save_profile(older, SAVE_PATH)
-	problem += SaveStore.save_profile(newer, SAVE_PATH)
+	var problem: String = ProfileStore.save(older, SAVE_PATH)
+	problem += ProfileStore.save(newer, SAVE_PATH)
 	var newest: String = FileAccess.get_file_as_string(SAVE_PATH)
 	var damaged_saves: Array[String] = [
 		newest.replace("ember_fox", "ember_cat"),
@@ -405,18 +405,18 @@ func _check_recovered() -> String:
 	]
 	for damaged: String in damaged_saves:
 		_write(SAVE_PATH, damaged)
-		var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
+		var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 		if not problem.is_empty() or loaded.loaded_generation != 1:
 			return "a damaged newest save didn't fall back a generation: " + problem
 		if ProfileSave.to_text(loaded) != ProfileSave.to_text(older):
 			return "the fallback isn't the save before the damaged one"
 	for file: String in [SAVE_PATH, SAVE_PATH + ".1"]:
 		_write(file, "{}")
-	if SaveStore.load_profile(SAVE_PATH).problem.is_empty():
+	if ProfileStore.load_from(SAVE_PATH).problem.is_empty():
 		return "a save with every generation damaged was read"
 	SaveStore.remove(SAVE_PATH)
 	_write(SAVE_PATH, ProfileSave.to_text(newer))
-	if ProfileSave.to_text(SaveStore.load_profile(SAVE_PATH)) != ProfileSave.to_text(newer):
+	if ProfileSave.to_text(ProfileStore.load_from(SAVE_PATH)) != ProfileSave.to_text(newer):
 		return "a plain save from before checksums didn't load"
 	return ""
 

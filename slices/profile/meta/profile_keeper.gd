@@ -14,13 +14,13 @@ extends RefCounted
 const SAVE_INTERVAL_MSEC: int = 30_000
 
 var profile: Profile
-var path: String = SaveStore.PROFILE_PATH
+var path: String = ProfileStore.PATH
 ## Whether the profile has changes the save doesn't have yet.
 var _pending: bool = false
 var _last_save_msec: int = -SAVE_INTERVAL_MSEC
 
 
-func _init(kept: Profile, save_path: String = SaveStore.PROFILE_PATH) -> void:
+func _init(kept: Profile, save_path: String = ProfileStore.PATH) -> void:
 	profile = kept
 	path = save_path
 
@@ -81,7 +81,7 @@ func save_if_due(now_msec: int) -> String:
 func flush() -> String:
 	if not _pending:
 		return ""
-	var problem: String = SaveStore.save_profile(profile, path)
+	var problem: String = ProfileStore.save(profile, path)
 	_pending = not problem.is_empty()
 	return problem
 
