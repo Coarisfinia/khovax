@@ -209,7 +209,7 @@ static func _changed(data: Dictionary, key: String, value: Variant) -> String:
 ## debounced, to its own file, never touching the profile.
 func _check_resumed(tree: SceneTree, world: World) -> String:
 	_settle(world)
-	var problem: String = WorldSave.save(world, WORLD_PATH, _explored)
+	var problem: String = WorldSave.save(world, WORLD_PATH, ExploredSave.beside(_explored))
 	if not problem.is_empty():
 		return "the world couldn't be saved: " + problem
 	var main: Node = _boot(tree)
@@ -324,7 +324,7 @@ func _check_debounced(driver: GameDriver, keeper: WorldKeeper) -> String:
 ## Whether the explored ground saved in the flow's file holds every tile the walk explored.
 func _explored_saved() -> bool:
 	var saved: ExploredGround = ExploredGround.new()
-	if not WorldSave.load_explored(WORLD_PATH, saved).is_empty():
+	if not ExploredSave.load_into(WORLD_PATH, saved).is_empty():
 		return false
 	for instance_name: String in _explored.tiles_in:
 		var tiles: Dictionary = saved.tiles_in.get(instance_name, {})
@@ -360,7 +360,7 @@ static func _saved_tick() -> int:
 ## explored: the
 ## memory is warned about and dropped whole.
 func _check_bad_explored(tree: SceneTree, world: World) -> String:
-	var explored: Dictionary = WorldSave.explored_data(_explored)
+	var explored: Dictionary = ExploredSave.explored_data(_explored)
 	var half: Dictionary = explored.duplicate(true)
 	# The last instance's tiles: the glade's, after the basic instance's.
 	var instances: Array = half["instances"]
@@ -370,7 +370,7 @@ func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var fraction: Dictionary = explored.duplicate(true)
 	fraction["instances"] = [{ "name": InstanceBlueprints.BASIC, "tiles": [0.5, 1] }]
 	var newer: Dictionary = explored.duplicate(true)
-	newer["format"] = WorldSave.EXPLORED_FORMAT + 1
+	newer["format"] = ExploredSave.FORMAT + 1
 	var result: String = await _resumes_forgetting(tree, world, half)
 	if result.is_empty():
 		result = await _resumes_forgetting(tree, world, fraction)
@@ -412,7 +412,7 @@ func _check_purged_explored(tree: SceneTree) -> String:
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
-	var problem: String = WorldSave.save(world, WORLD_PATH, _explored)
+	var problem: String = WorldSave.save(world, WORLD_PATH, ExploredSave.beside(_explored))
 	if world.generation(InstanceBlueprints.GLADE) != 1 or not problem.is_empty():
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
 	var main: Node = _boot(tree)
@@ -430,7 +430,7 @@ func _check_purged_explored(tree: SceneTree) -> String:
 ## A world file the build can't go on from (damaged, in a newer format, played by other rules) is
 ## refused at boot, and a fresh world starts in the starting instance, with nothing explored.
 func _check_boot_refuses(tree: SceneTree, world: World) -> String:
-	var text: String = WorldSave.to_text(world, _explored)
+	var text: String = WorldSave.to_text(world, ExploredSave.beside(_explored))
 	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
 	var result: String = await _boots_fresh(tree, "not a world", false)
 	if result.is_empty():
@@ -441,7 +441,11 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
 		var pair: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC, 2)
-		result = await _boots_fresh(tree, WorldSave.to_text(pair, _explored), true)
+		result = await _boots_fresh(
+			tree,
+			WorldSave.to_text(pair, ExploredSave.beside(_explored)),
+			true,
+		)
 	return result
 
 

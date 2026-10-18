@@ -53,7 +53,7 @@ func saved_world() -> World:
 		_saved_world = saved
 		_saved_tick = saved.tick
 		_explored_world = saved
-		var problem: String = WorldSave.load_explored(path(), explored)
+		var problem: String = ExploredSave.load_into(path(), explored)
 		if not problem.is_empty():
 			push_warning("the explored ground can't be read, so none is remembered: " + problem)
 		# What was seen in an instance purged since won't fit its ground when it comes back.
@@ -83,7 +83,11 @@ func save_if_due(now_msec: int) -> String:
 func flush(now_msec: int) -> String:
 	if not _moved():
 		return ""
-	var problem: String = WorldSave.save(driver.world, path(), explored_in(driver.world))
+	var problem: String = WorldSave.save(
+		driver.world,
+		path(),
+		ExploredSave.beside(explored_in(driver.world)),
+	)
 	if problem.is_empty():
 		_last_save_msec = now_msec
 		_saved_world = driver.world
