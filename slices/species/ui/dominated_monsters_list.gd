@@ -22,8 +22,14 @@ var holder: ProfileHolder
 var shown: Array[String] = []
 ## The monster each row shows, by entity id, in the rows' order.
 var shown_ids: Array[int] = []
-## Each species' name, by id; a species missing from the data shows its id.
-var _names: Dictionary[String, String] = {}
+## The monster whose stats the detail pane shows, by entity id: the first one until the player
+## taps, clicks or moves the focus onto another (#430).
+var selected: int = 0
+## The pane that shows the selected monster's stats, if the tab has one.
+var details: MonsterDetails
+## Each species' data and each ability's name, by id; a species missing from the data shows its id.
+var _species: Dictionary[String, Species] = {}
+var _abilities: Dictionary[String, String] = {}
 var _rows: VBoxContainer
 
 
@@ -31,8 +37,10 @@ func _ready() -> void:
 	var species: Content = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
-	for id: String in species.species:
-		_names[id] = species.species[id].name
+	_species = species.species
+	var abilities: Content = SpeciesContent.load_abilities()
+	for id: String in abilities.abilities:
+		_abilities[id] = abilities.abilities[id].name
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
@@ -56,6 +64,27 @@ func refresh() -> void:
 		lines.append(NONE_TEXT)
 	if lines != shown or ids != shown_ids:
 		_show(lines, ids)
+	if not shown_ids.has(selected):
+		selected = shown_ids[0] if not shown_ids.is_empty() else 0
+	_show_details()
+
+
+## Shows the monster `monster_id`'s stats in the detail pane, as a tap, a click or the focus does.
+func select(monster_id: int) -> void:
+	selected = monster_id
+	_show_details()
+
+
+func _show_details() -> void:
+	if details == null:
+		return
+	var monster: DominatedMonster = null
+	if selected != 0 and holder != null and holder.keeper != null:
+		monster = _monster(holder.keeper.profile, selected)
+	var species: Species = null
+	if monster != null:
+		species = _species.get(monster.species)
+	details.show_monster(monster, species, _abilities)
 
 
 ## A line for each of `profile`'s dominated monsters in `ids`, the player's order: the carried
@@ -88,7 +117,8 @@ static func _monster(profile: Profile, monster_id: int) -> DominatedMonster:
 
 ## `monster`'s species name and level, in words.
 func _described(monster: DominatedMonster) -> String:
-	return "%s, level %d" % [_names.get(monster.species, monster.species), monster.level]
+	var known: Species = _species.get(monster.species)
+	return "%s, level %d" % [known.name if known != null else monster.species, monster.level]
 
 
 ## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any.
@@ -111,6 +141,10 @@ func _row(line: String, monster_id: int, place: int) -> Control:
 		return text
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.mouse_filter = Control.MOUSE_FILTER_STOP
+	# A tap or a click shows it in the detail pane, and so does a controller's focus (#438).
+	text.focus_mode = Control.FOCUS_ALL
+	var _focused: int = text.focus_entered.connect(select.bind(monster_id))
+	var _tapped: int = text.gui_input.connect(_on_row_input.bind(monster_id))
 	text.set_drag_forwarding(
 		func(_at: Vector2) -> Variant: return monster_id,
 		func(_at: Vector2, data: Variant) -> bool: return data is int,
@@ -127,3 +161,9 @@ func _row(line: String, monster_id: int, place: int) -> Control:
 func _dropped(data: Variant, place: int) -> void:
 	var monster_id: int = data
 	move(monster_id, place)
+
+
+func _on_row_input(event: InputEvent, monster_id: int) -> void:
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+		select(monster_id)

@@ -4,9 +4,10 @@ extends ScrollContainer
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
 ## line says which one is in use, in words (#68). Below it, the player's dominated monsters (#400,
-## DominatedMonstersList). Above them all, the character's name (#399): typed into a field and kept
-## once confirmed (Enter, or leaving the field), with a line that says in words why a name was
-## refused. It scrolls when the screen is too short.
+## DominatedMonstersList), with the selected one's stats in a pane beside them, or below them on a
+## phone held upright (MonsterDetails, #430). Above them all, the character's name (#399): typed
+## into a field and kept once confirmed (Enter, or leaving the field), with a line that says in
+## words why a name was refused. It scrolls when the screen is too short.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
@@ -29,6 +30,8 @@ var shown: String = ""
 var name_field: LineEdit
 var name_note: Label
 var _column: VBoxContainer
+## The monsters and their detail pane, side by side or one above the other.
+var _pair: BoxContainer
 var _state: Label
 
 
@@ -60,7 +63,12 @@ func _ready() -> void:
 	_column.add_child(auto_button)
 	monsters = DominatedMonstersList.new()
 	monsters.holder = holder
-	_column.add_child(monsters)
+	# The monsters beside their detail pane, or above it on a portrait screen (place_details, #430).
+	_pair = BoxContainer.new()
+	_pair.add_child(monsters)
+	monsters.details = MonsterDetails.new()
+	_pair.add_child(monsters.details)
+	_column.add_child(_pair)
 	middle.add_child(_column)
 	add_child(middle)
 
@@ -116,6 +124,12 @@ func fit(font: int) -> void:
 	var wheel: int = roundi(font * WHEEL_FONTS)
 	picker.add_theme_constant_override("sv_width", wheel)
 	picker.add_theme_constant_override("sv_height", wheel)
+
+
+## Puts the detail pane beside the monsters (`beside`, on a landscape screen) or below them, on a
+## phone held upright (#430).
+func place_details(beside: bool) -> void:
+	_pair.vertical = not beside
 
 
 ## Makes the tab's column `width` pixels wide, so the monsters' lines fit.
