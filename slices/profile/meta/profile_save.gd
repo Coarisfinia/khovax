@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 8
+const FORMAT: int = 9
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -51,7 +51,7 @@ static func _progress_data(profile: Profile) -> Dictionary:
 	ids.sort()
 	for id: String in ids:
 		var progress: QuestProgress = profile.quest_progress[id]
-		data[id] = { "step": progress.step, "count": progress.count }
+		data[id] = { "step": progress.step, "count": progress.count, "done": progress.done }
 	return data
 
 
@@ -89,6 +89,8 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_7(data)
 	if format < 8:
 		_migrate_to_8(data)
+	if format < 9:
+		_migrate_to_9(data)
 
 
 ## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
@@ -146,6 +148,19 @@ static func _migrate_to_7(data: Dictionary) -> void:
 ## Format 7 to 8: the player is neutral with every faction (#483).
 static func _migrate_to_8(data: Dictionary) -> void:
 	data["standings"] = {}
+
+
+## Format 8 to 9: a quest's progress keeps the steps done (#573). Quests had no choices before, so
+## every step before the one it's on was done, in order: at most QuestProgress.MAX_DONE of them,
+## the latest.
+static func _migrate_to_9(data: Dictionary) -> void:
+	var progress: Variant = data.get("quest_progress")
+	var by_id: Dictionary = progress if progress is Dictionary else {}
+	for id: Variant in by_id:
+		if by_id[id] is Dictionary:
+			var entry: Dictionary = by_id[id]
+			var at: int = _int(entry.get("step"))
+			entry["done"] = range(maxi(0, at - QuestProgress.MAX_DONE), maxi(0, at))
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
@@ -241,14 +256,23 @@ static func _read_quests(profile: Profile, data: Dictionary) -> String:
 
 
 ## A quest's progress from save data, or null when it's malformed: a step and a count, each a
-## whole number from 0 to Profile.MAX_NUMBER.
+## whole number from 0 to Profile.MAX_NUMBER, and the steps done (#573), at most
+## QuestProgress.MAX_DONE of them, each such a number too.
 static func _quest_progress(entry: Variant) -> QuestProgress:
 	if not entry is Dictionary:
 		return null
 	var data: Dictionary = entry
 	var progress: QuestProgress = QuestProgress.new(_int(data.get("step")), _int(data.get("count")))
-	if progress.step < 0 or progress.count < 0 or data.size() != 2:
+	var done: Variant = data.get("done")
+	if progress.step < 0 or progress.count < 0 or data.size() != 3 or not done is Array:
 		return null
+	var done_list: Array = done
+	if done_list.size() > QuestProgress.MAX_DONE:
+		return null
+	for index: Variant in done_list:
+		if _int(index) < 0:
+			return null
+		progress.done.append(_int(index))
 	return progress
 
 

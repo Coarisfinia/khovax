@@ -31,7 +31,7 @@ const INK_WIDTH: float = 0.08
 ## Which player the nearest target is measured from.
 @export var input: LocalInput
 
-## Each marked quest's arrow, by quest id.
+## Each marked quest's arrow, by quest id, or one per choice on a step with choices (targets_of).
 var markers: Dictionary[String, Node3D] = {}
 ## Where each arrow is headed: its target's tile.
 var goals: Dictionary[String, Vector2i] = {}
@@ -71,7 +71,8 @@ func show_quests() -> void:
 
 
 ## The tile each of `profile`'s open quests points at in `state`, by quest id, measured from the
-## player in `slot`; a quest with nothing to point at here isn't listed.
+## player in `slot`; a quest with nothing to point at here isn't listed. A step with choices (#573)
+## points at each of them that's here, by the quest's id, a slash and the choice's index.
 static func targets_of(
 	state: GameState,
 	profile: Profile,
@@ -83,9 +84,12 @@ static func targets_of(
 		return targets
 	var steps: Dictionary[String, QuestStep] = profile.open_steps()
 	for id: String in steps:
-		var candidates: Array[Vector2i] = _candidates(state, steps[id])
-		if not candidates.is_empty():
-			targets[id] = _nearest(candidates, player.tile)
+		var triggers: Array[QuestStep] = steps[id].triggers()
+		for index: int in triggers.size():
+			var candidates: Array[Vector2i] = _candidates(state, triggers[index])
+			var key: String = id if steps[id].choices.is_empty() else "%s/%d" % [id, index]
+			if not candidates.is_empty():
+				targets[key] = _nearest(candidates, player.tile)
 	return targets
 
 

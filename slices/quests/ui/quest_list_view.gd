@@ -73,9 +73,16 @@ func show_quests() -> void:
 		_line_label(id).visible = not line.is_empty()
 
 
-## What `step` asks, worded for the player, with `count` of its count where it counts up. A new
-## condition gets its own wording here; one without any shows only the count.
+## What `step` asks, worded for the player, with `count` of its count where it counts up; a step
+## with choices (#573) offers each of them, joined by "or". A new condition gets its own wording
+## here; one without any shows only the count.
 static func step_line(step: QuestStep, count: int) -> String:
+	if not step.choices.is_empty():
+		var ways: Array[String] = []
+		for choice: QuestStep in step.choices:
+			var way: String = step_line(choice, 0)
+			ways.append(way if ways.is_empty() else way.left(1).to_lower() + way.substr(1))
+		return " or ".join(ways)
 	var asks: String = ""
 	match step.condition:
 		"dominated":

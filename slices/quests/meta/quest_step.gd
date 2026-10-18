@@ -1,10 +1,36 @@
 class_name QuestStep
 extends RefCounted
-## One step of a quest (#184): a single condition, met `count` times. It's checked only against what
-## the player obtains (a Gain), never inside the simulation.
+## One step of a quest (#184): a single condition, met `count` times, or a choice between ways on
+## (#573), each a place to reach or an area to enter, which the Survey marks, leading to a step of
+## its
+## own. It's checked only against what the player obtains (a Gain), never inside the simulation.
 
 ## A step's fields, as the quest schema (slices/quests/data/quests.schema.json) allows them.
-const FIELDS: Array[String] = ["condition", "species", "place", "piece", "instance", "count"]
+const FIELDS: Array[String] = [
+	"id",
+	"condition",
+	"species",
+	"place",
+	"piece",
+	"instance",
+	"count",
+	"choices",
+	"ends",
+]
+## The fields of a step's condition, which a step with choices has none of.
+const CONDITION_FIELDS: Array[String] = [
+	"condition",
+	"species",
+	"place",
+	"piece",
+	"instance",
+	"count",
+]
+## A choice's fields: where it's taken, and the step it leads to.
+const CHOICE_FIELDS: Array[String] = ["condition", "place", "piece", "instance", "next"]
+## The conditions met by being somewhere, which a marker points at: stepping into a place, or
+## entering a region piece or an instance. A side quest's start and a choice are one of them.
+const PLACE_CONDITIONS: Array[String] = ["reached", "entered"]
 ## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
 ## monster this player dominated (of `species`, or any); `opened`, a treasure chest this player got
 ## loot from; `reached`, the place `place` this player stepped into (#339); `entered`, the region
@@ -15,6 +41,16 @@ const CONDITIONS: Array[String] = ["dominated", "opened", "reached", "entered"]
 ## entered is the fact `entered`.
 const INSTANCE_ENTERED: String = "entered_instance"
 
+## Its id, which choices name to lead to it, or "" when nothing does (#573).
+var id: String = ""
+## The quest chain it closes once done (#573), its quest's id, or "" when the quest goes on.
+var ends: String = ""
+## The ways on a branching step offers, each a reached or entered condition with the step it leads
+## to in `next`; empty on a step with a condition of its own.
+var choices: Array[QuestStep] = []
+## On a choice, the id of the step it leads to.
+var next: String = ""
+## What the step asks for, or "" on a step with choices.
 var condition: String = ""
 ## The species a `dominated` step asks for, or "" for any.
 var species: String = ""
@@ -40,27 +76,86 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 		step.problem = "it isn't an object"
 		return step
 	var data: Dictionary = entry
-	step.condition = Content.text_of(data.get("condition"))
-	step.species = Content.text_of(data.get("species"))
-	step.place = Content.text_of(data.get("place"))
-	step.piece = Content.text_of(data.get("piece"))
-	step.instance = Content.text_of(data.get("instance"))
-	step.count = Content.amount(data.get("count", 1))
+	step.id = Content.text_of(data.get("id"))
+	step.ends = Content.text_of(data.get("ends"))
 	step.problem = Content.unknown_field(data, FIELDS)
-	if not step.problem.is_empty():
-		return step
-	if not CONDITIONS.has(step.condition):
-		step.problem = "its condition must be one of %s" % [CONDITIONS]
-	elif (data.has("species")
-			and (step.condition != "dominated" or not known_species.has(step.species))):
-		step.problem = "its species must be one that exists, on a dominated step"
-	elif not _where_problem(data, step).is_empty():
-		step.problem = _where_problem(data, step)
-	elif step.count < 1:
-		step.problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
-	if step.problem.is_empty() and data.has("species"):
-		step.species_name = known_species[step.species].name
+	if step.problem.is_empty():
+		step.problem = _tag_problem(data, step)
+	if step.problem.is_empty() and data.has("choices"):
+		step.problem = step._read_choices(data)
+	elif step.problem.is_empty():
+		step._read_condition(data, known_species)
 	return step
+
+
+## Why `step`'s id or end, read from `data`, is wrong, or "": each an id when it's there.
+static func _tag_problem(data: Dictionary, step: QuestStep) -> String:
+	if data.has("id") and not Content.is_id(step.id):
+		return "its id must be lowercase words joined by underscores"
+	if data.has("ends") and not Content.is_id(step.ends):
+		return "the chain it ends must be a quest's id"
+	return ""
+
+
+## Reads the choices of a branching step from `data`; returns why they're wrong, or "": two or more,
+## each where a marker points with the step it leads to, and no condition of the step's own, nor an
+## end, since a choice always leads on.
+func _read_choices(data: Dictionary) -> String:
+	for field: String in CONDITION_FIELDS:
+		if data.has(field):
+			return "a step with choices has no %s of its own" % field
+	if data.has("ends"):
+		return "a step with choices leads on, so it doesn't end its chain"
+	var entries: Array = data["choices"] if data["choices"] is Array else []
+	if entries.size() < 2:
+		return "its choices are a list of two or more"
+	for index: int in entries.size():
+		var choice: QuestStep = _choice(entries[index])
+		if not choice.problem.is_empty():
+			return "choice %d: %s" % [index, choice.problem]
+		choices.append(choice)
+	return ""
+
+
+## A choice read from `entry`: a reached or entered condition, met once, and the step it leads to.
+## Its `problem` says what's wrong.
+static func _choice(entry: Variant) -> QuestStep:
+	var data: Dictionary = entry if entry is Dictionary else {}
+	var choice: QuestStep = QuestStep.new()
+	choice.problem = Content.unknown_field(data, CHOICE_FIELDS)
+	if entry is Dictionary and choice.problem.is_empty():
+		var trigger: Dictionary = data.duplicate()
+		var _without_next: bool = trigger.erase("next")
+		choice = parse(trigger, {})
+	elif choice.problem.is_empty():
+		choice.problem = "it isn't an object"
+	choice.next = Content.text_of(data.get("next"))
+	if choice.problem.is_empty() and not PLACE_CONDITIONS.has(choice.condition):
+		choice.problem = "its condition must be one of %s" % [PLACE_CONDITIONS]
+	elif choice.problem.is_empty() and not Content.is_id(choice.next):
+		choice.problem = "the step it leads to must be named by its id"
+	return choice
+
+
+## Reads the condition of a step that has one from `data`; `known_species` are the species it may
+## name. Sets `problem` when it's wrong.
+func _read_condition(data: Dictionary, known_species: Dictionary[String, Species]) -> void:
+	condition = Content.text_of(data.get("condition"))
+	species = Content.text_of(data.get("species"))
+	place = Content.text_of(data.get("place"))
+	piece = Content.text_of(data.get("piece"))
+	instance = Content.text_of(data.get("instance"))
+	count = Content.amount(data.get("count", 1))
+	if not CONDITIONS.has(condition):
+		problem = "its condition must be one of %s" % [CONDITIONS]
+	elif data.has("species") and (condition != "dominated" or not known_species.has(species)):
+		problem = "its species must be one that exists, on a dominated step"
+	elif not _where_problem(data, self).is_empty():
+		problem = _where_problem(data, self)
+	elif count < 1:
+		problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
+	if problem.is_empty() and data.has("species"):
+		species_name = known_species[species].name
 
 
 ## Why `step`'s place, piece or instance, read from `data`, doesn't fit, or "": a reached step
@@ -84,10 +179,27 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	return ""
 
 
+## What the player can do to finish it, each a step of its own: its choices, or the step itself.
+func triggers() -> Array[QuestStep]:
+	var own: Array[QuestStep] = [self]
+	return choices if not choices.is_empty() else own
+
+
+## The choice one fact of `fact_condition` takes, `what` as `counts` reads it, or null when it takes
+## none (or the step has no choices).
+func choice_for(fact_condition: String, what: String) -> QuestStep:
+	for choice: QuestStep in choices:
+		if choice.counts(fact_condition, what):
+			return choice
+	return null
+
+
 ## Whether one fact of `fact_condition` (a domination of a species, a chest, a place reached, a
-## piece entered or an INSTANCE_ENTERED) counts here; `what` is the species dominated, the place
-## reached, or the piece or instance entered.
+## piece entered or an INSTANCE_ENTERED) counts here, toward any of its choices on a branching
+## step; `what` is the species dominated, the place reached, or the piece or instance entered.
 func counts(fact_condition: String, what: String) -> bool:
+	if not choices.is_empty():
+		return choice_for(fact_condition, what) != null
 	if condition == "reached":
 		return fact_condition == condition and place == what
 	if condition == "entered" and not instance.is_empty():

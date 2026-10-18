@@ -1,0 +1,18 @@
+// A placeholder branching quest (#573), until real quest chains exist: once the player enters the
+// glade, it marks both the pond and the thicket, and goes on by the one they enter first: a chest
+// by the pond, or a monster in the thicket, each an end of its own.
+{
+	"id": "glade_fork",
+	"name": "Pond or thicket",
+	"starts_on": { "condition": "entered", "instance": "glade" },
+	"steps": [
+		{
+			"choices": [
+				{ "condition": "entered", "piece": "pond", "next": "by_the_pond" },
+				{ "condition": "entered", "piece": "thicket", "next": "in_the_thicket" }
+			]
+		},
+		{ "id": "by_the_pond", "condition": "opened", "ends": "glade_fork" },
+		{ "id": "in_the_thicket", "condition": "dominated", "ends": "glade_fork" }
+	]
+}

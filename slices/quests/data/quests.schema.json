@@ -2,26 +2,15 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/quests/data/quests.schema.json",
 	"title": "Quest",
-	"description": "A quest (#184): a player-facing name and an ordered list of steps, each one condition met a number of times. One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
+	"description": "A quest (#184), one quest chain (#573): a player-facing name and its steps, each one condition met a number of times, or a choice between ways on. The steps follow each other in the file's order, except where a step's choices lead to the steps they name, and the quest ends after a step tagged as its chain's end, or after its last step. One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "name", "steps"],
-	"properties": {
-		"id": {
-			"description": "Stable, never reused: lowercase words joined by underscores.",
-			"type": "string",
-			"pattern": "^[a-z][a-z0-9_]*$"
-		},
-		"name": { "description": "The player-facing name.", "type": "string", "minLength": 1 },
-		"path": {
-			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
-			"enum": ["none", "harmony", "supremacy", "both"],
-			"default": "none"
-		},
-		"starts_on": {
-			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count. Left out, the quest is open from the start.",
+	"$defs": {
+		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"somewhere": {
+			"description": "Being somewhere, met once, which a marker points at: reaching a place, or entering a region piece or an instance.",
 			"type": "object",
-			"additionalProperties": false,
 			"required": ["condition"],
 			"oneOf": [
 				{
@@ -37,10 +26,27 @@
 			],
 			"properties": {
 				"condition": { "enum": ["reached", "entered"] },
-				"place": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-				"piece": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-				"instance": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+				"place": { "$ref": "#/$defs/id" },
+				"piece": { "$ref": "#/$defs/id" },
+				"instance": { "$ref": "#/$defs/id" }
 			}
+		}
+	},
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"$ref": "#/$defs/id"
+		},
+		"name": { "description": "The player-facing name.", "type": "string", "minLength": 1 },
+		"path": {
+			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
+			"enum": ["none", "harmony", "supremacy", "both"],
+			"default": "none"
+		},
+		"starts_on": {
+			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count. Left out, the quest is open from the start.",
+			"$ref": "#/$defs/somewhere",
+			"unevaluatedProperties": false
 		},
 		"standing": {
 			"description": "How finishing it moves the player's standing with a faction (#532): the faction's id, and the change, up when positive and down when negative, held on the standing's scale from -5 to 5.",
@@ -53,49 +59,55 @@
 			}
 		},
 		"steps": {
-			"description": "The steps, in the order the player goes through them.",
+			"description": "The steps, in the order the player goes through them where no choice leads elsewhere.",
 			"type": "array",
 			"minItems": 1,
 			"items": {
 				"type": "object",
 				"additionalProperties": false,
-				"required": ["condition"],
+				"oneOf": [{ "required": ["condition"] }, { "required": ["choices"] }],
 				"allOf": [
 					{
-						"if": { "properties": { "condition": { "const": "reached" } } },
+						"if": { "required": ["condition"], "properties": { "condition": { "const": "reached" } } },
 						"then": { "required": ["place"] },
 						"else": { "not": { "required": ["place"] } }
 					},
 					{
-						"if": { "properties": { "condition": { "const": "entered" } } },
+						"if": { "required": ["condition"], "properties": { "condition": { "const": "entered" } } },
 						"then": { "oneOf": [{ "required": ["piece"] }, { "required": ["instance"] }] },
 						"else": { "not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] } }
+					},
+					{
+						"if": { "required": ["choices"] },
+						"then": {
+							"not": { "anyOf": [{ "required": ["species"] }, { "required": ["count"] }, { "required": ["ends"] }] }
+						}
 					}
 				],
 				"properties": {
+					"id": {
+						"description": "Its id within the quest, which choices name to lead to it; needed only there.",
+						"$ref": "#/$defs/id"
+					},
 					"condition": {
 						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered.",
 						"enum": ["dominated", "opened", "reached", "entered"]
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
-						"type": "string",
-						"pattern": "^[a-z][a-z0-9_]*$"
+						"$ref": "#/$defs/id"
 					},
 					"place": {
 						"description": "On a reached step, and only there, the id of the place it asks for, as a region piece's legend names it.",
-						"type": "string",
-						"pattern": "^[a-z][a-z0-9_]*$"
+						"$ref": "#/$defs/id"
 					},
 					"piece": {
 						"description": "On an entered step, and only there unless it names an instance, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
-						"type": "string",
-						"pattern": "^[a-z][a-z0-9_]*$"
+						"$ref": "#/$defs/id"
 					},
 					"instance": {
 						"description": "On an entered step, and only there unless it names a piece, the name of the instance blueprint it asks for.",
-						"type": "string",
-						"pattern": "^[a-z][a-z0-9_]*$"
+						"$ref": "#/$defs/id"
 					},
 					"count": {
 						"description": "How often the condition is met to finish the step.",
@@ -103,6 +115,23 @@
 						"minimum": 1,
 						"maximum": 1000000000,
 						"default": 1
+					},
+					"choices": {
+						"description": "Instead of a condition, the ways on (#573), two or more, each marked where it's taken: the first one the player takes leads to the step it names.",
+						"type": "array",
+						"minItems": 2,
+						"items": {
+							"$ref": "#/$defs/somewhere",
+							"required": ["next"],
+							"properties": {
+								"next": { "description": "The id of the step it leads to.", "$ref": "#/$defs/id" }
+							},
+							"unevaluatedProperties": false
+						}
+					},
+					"ends": {
+						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished.",
+						"$ref": "#/$defs/id"
 					}
 				}
 			}
