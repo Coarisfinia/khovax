@@ -155,8 +155,10 @@ func lay_out(screen: Vector2) -> void:
 		character.fit(font)
 	var width: float = minf(font * WIDTH_FONTS, screen.x - 4.0 * MARGIN)
 	settings.fit(width)
-	character.fit_width(width)
-	character.place_details(screen.x > screen.y)
+	# Beside the detail pane, the monsters' lines need the same width again, as far as it fits.
+	var beside: bool = screen.x > screen.y
+	character.fit_width(minf(2.0 * width, screen.x - 4.0 * MARGIN) if beside else width)
+	character.place_details(beside)
 	quests_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)

@@ -68,8 +68,12 @@ func _ready() -> void:
 	monsters.holder = holder
 	# The monsters beside their detail pane, or above it on a portrait screen (place_details, #430).
 	_pair = BoxContainer.new()
+	# Both halves share the row: the menu's labels trim rather than ask for a width, so a half that
+	# didn't expand would shrink to its buttons.
+	monsters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pair.add_child(monsters)
 	monsters.details = MonsterDetails.new()
+	monsters.details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pair.add_child(monsters.details)
 	_column.add_child(_pair)
 	materials = MaterialsList.new()
