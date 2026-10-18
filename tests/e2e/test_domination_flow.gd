@@ -913,6 +913,10 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 		return "the special didn't strike the first wild monster for its power"
 	if not felled[0].felled or not wild.is_fainted(first) or wild.is_wild_monster(first):
 		return "the special didn't fell the wild monster"
+	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
+	var shown: String = SpecialStrikeView.text_of(felled[0])
+	if shown != "-%d\n%s" % [damage, SpecialStrikeView.FAINTED_TEXT]:
+		return "the special's strike shows %s, not its damage and that it fainted" % shown
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"

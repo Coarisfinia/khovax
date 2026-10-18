@@ -30,6 +30,7 @@
 [ext_resource type="Script" path="res://slices/tiles/look/canopy_cutaway.gd" id="26_cutaway"]
 [ext_resource type="Script" path="res://slices/quests/ui/quest_list_view.gd" id="28_quest_list"]
 [ext_resource type="Script" path="res://slices/companions/look/companion_view.gd" id="29_companions"]
+[ext_resource type="Script" uid="uid://bwigbhgtb8any" path="res://slices/companions/look/special_strike_view.gd" id="40_special_strike"]
 [ext_resource type="Script" path="res://view/game_menu.gd" id="30_game_menu"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_buttons.gd" id="31_survey_buttons"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_pinch.gd" id="32_survey_pinch"]
@@ -105,6 +106,10 @@ driver = NodePath("../../Driver")
 
 [node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]
 script = ExtResource("29_companions")
+driver = NodePath("../../Driver")
+
+[node name="SpecialStrikeView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
+script = ExtResource("40_special_strike")
 driver = NodePath("../../Driver")
 
 [node name="ChestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
