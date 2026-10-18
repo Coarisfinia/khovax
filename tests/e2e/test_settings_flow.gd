@@ -174,7 +174,7 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 	var picked: Color = PersonalColor.of_number(PICKED)
 	tab.picker.color_changed.emit(picked)
 	player.show_state()
-	var kept: Profile = SaveStore.load_profile(PROFILE_PATH)
+	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
 	if (tab.shown != CharacterTab.CHOSEN_TEXT
 			or not player.circle.color.is_equal_approx(picked)
 			or kept.personal_color != PICKED):
@@ -260,7 +260,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	(second.get_child(1) as Button).pressed.emit()
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	var _flushed: String = keeper.flush()
-	var kept: Profile = SaveStore.load_profile(PROFILE_PATH)
+	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
 	var expected: Array[int] = [ids[0], ids[3], ids[1]]
 	if tab.monsters.shown_ids[0] != ids[0] or kept.carried != expected:
 		return "a row's up button didn't move it, or the order isn't kept: %s" % [kept.carried]

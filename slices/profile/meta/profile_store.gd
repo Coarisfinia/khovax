@@ -1,0 +1,27 @@
+class_name ProfileStore
+extends RefCounted
+## Where the profile is kept on this device, and loading and saving it there through SaveStore's
+## envelopes and generations (#37, #179). It lives in the profile slice (#506): the core's SaveStore
+## never names the profile.
+
+const PATH: String = "user://profile.json"
+
+
+## The saved profile, or a new one when there's no save yet. Its `problem` says why when no
+## generation can be read, and `loaded_generation` which one was when it wasn't the newest.
+static func load_from(path: String = PATH) -> Profile:
+	if not SaveStore.exists(path):
+		return Profile.new()
+	var saved: SaveRead = SaveStore.read_save(path)
+	if not saved.problem.is_empty():
+		var refused: Profile = Profile.new()
+		refused.problem = saved.problem
+		return refused
+	var profile: Profile = ProfileSave.parse(saved.text)
+	profile.loaded_generation = saved.generation
+	return profile
+
+
+## Saves the profile; returns why it couldn't, or "".
+static func save(profile: Profile, path: String = PATH) -> String:
+	return SaveStore.write_save(path, ProfileSave.to_text(profile))

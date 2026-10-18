@@ -61,7 +61,7 @@ func run(tree: SceneTree) -> String:
 		result = await _check_purged_explored(tree)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
-	if result.is_empty() and ProfileSave.to_text(SaveStore.load_profile(PROFILE_PATH)) != carried:
+	if result.is_empty() and ProfileSave.to_text(ProfileStore.load_from(PROFILE_PATH)) != carried:
 		result = "saving the world changed the profile"
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
@@ -173,7 +173,7 @@ static func _carry(species: String) -> String:
 	var gain: Gain = Gain.new()
 	gain.dominated_species.append(species)
 	var _taken: String = profile.apply(gain)
-	var _saved: String = SaveStore.save_profile(profile, PROFILE_PATH)
+	var _saved: String = ProfileStore.save(profile, PROFILE_PATH)
 	return ProfileSave.to_text(profile)
 
 

@@ -31,7 +31,8 @@ const LOST_DISTANCE: int = 2 * MOST_REACH
 const LEAST_REST: int = 10
 const MOST_REST: int = 40
 
-## Each species' reach, by species id, from its stats in the content data (meta/ reads them).
+## Each species' reach, by species id, from its stats in the content data (the species slice reads
+## them).
 var reaches: Dictionary[String, int] = {}
 ## Each companion's player slot, by entity id.
 var owners: Dictionary[int, int] = {}

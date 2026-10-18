@@ -13,8 +13,8 @@ extends Feature
 ## it; otherwise the one the auto attack would. Each strike raises SpecialStruck.
 
 ## Each species' special's power, in thousandths of its strength (Fixed), and its cooldown in
-## ticks, by species id, from the content data (meta/ reads them). A species without a special
-## here has none.
+## ticks, by species id, from the content data (the species slice reads them). A species without a
+## special here has none.
 var powers: Dictionary[String, int] = {}
 var cooldowns: Dictionary[String, int] = {}
 ## The ticks each player's special still cools down, by slot; one that's ready isn't here.

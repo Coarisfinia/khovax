@@ -1387,7 +1387,7 @@ func _check_saved(tree: SceneTree) -> String:
 	driver.ticked.emit(driver.state.tick, events)
 	(main.get_node("EventBus") as EventBus).flush()
 	var species: Array[String] = []
-	for monster: DominatedMonster in SaveStore.load_profile(SAVE_PATH).dominated_monsters:
+	for monster: DominatedMonster in ProfileStore.load_from(SAVE_PATH).dominated_monsters:
 		species.append(monster.species)
 	var expected: String = _dominated_species(events)
 	var saved_one: bool = species.size() == 1 and species[0] == expected

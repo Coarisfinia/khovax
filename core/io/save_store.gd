@@ -7,31 +7,10 @@ extends RefCounted
 ## loading takes the newest whose checksum holds. A new save is written whole to a temporary file
 ## before the generations move up, and on the web it's synced to the browser's storage at once.
 
-const PROFILE_PATH: String = "user://profile.json"
 ## How many saves are kept: the newest and the ones before it.
 const GENERATIONS: int = 3
 ## The envelope's own format.
 const ENVELOPE: int = 1
-
-
-## The saved profile, or a new one when there's no save yet. Its `problem` says why when no
-## generation can be read, and `loaded_generation` which one was when it wasn't the newest.
-static func load_profile(path: String = PROFILE_PATH) -> Profile:
-	if not exists(path):
-		return Profile.new()
-	var saved: SaveRead = read_save(path)
-	if not saved.problem.is_empty():
-		var refused: Profile = Profile.new()
-		refused.problem = saved.problem
-		return refused
-	var profile: Profile = ProfileSave.parse(saved.text)
-	profile.loaded_generation = saved.generation
-	return profile
-
-
-## Saves the profile; returns why it couldn't, or "".
-static func save_profile(profile: Profile, path: String = PROFILE_PATH) -> String:
-	return write_save(path, ProfileSave.to_text(profile))
 
 
 ## The newest generation of the save at `path` whose checksum holds. A plain file from before

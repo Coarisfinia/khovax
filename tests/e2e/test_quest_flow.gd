@@ -88,7 +88,7 @@ func _check_tracked(tree: SceneTree) -> String:
 	# debounce (ProfileKeeper.SAVE_INTERVAL_MSEC), so it's flushed as ending the session would.
 	result += holder.keeper.flush()
 	var expected: Array[String] = ["first_domination"]
-	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
+	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
 		result = "this player's domination didn't finish the first domination on disk"
 	markers.show_quests()
@@ -544,8 +544,8 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	var fresh: Profile = Profile.new()
 	fresh.quest_book = book
 	var applied: String = fresh.apply(_gain(["moss_toad"], 0))
-	applied += SaveStore.save_profile(fresh, SAVE_PATH)
-	var loaded: Profile = SaveStore.load_profile(SAVE_PATH)
+	applied += ProfileStore.save(fresh, SAVE_PATH)
+	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not applied.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(fresh):
 		return "quest progress didn't survive saving and loading: " + applied + loaded.problem

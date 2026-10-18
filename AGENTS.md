@@ -230,7 +230,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   `slices/<name>/`, in fixed subfolders, each only where the slice has one: `rules/` (the
   simulation, under every rule below for `core/`, checked by CI the same way), `look/` (views in
   the world, under the rules for `view/`), `ui/` (screens and menus) and `meta/` (profile, content
-  and saves, under the rules for `meta/`). The split between them holds inside every slice. Shared
+  and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
   or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
@@ -293,16 +293,20 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   technical and never shown to the player.
 - **Commands** (`Command`): the only way into the simulation, one per player per tick, integers
   only. The starting state plus every tick's commands is a replay.
-- **`meta/`, the layers above the simulation** (#37): what lasts between sessions (the `Profile`
-  with its quest progress, in `slices/profile/` since #506, the saved `World`, the player's
-  `Settings`), each in its own file, never
-  inside the simulation. Saves are versioned JSON of integers and ids only, kept by `SaveStore`;
-  gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`, `WorldKeeper`).
+- **Lasting data, above the simulation** (#37): what lasts between sessions (the `Profile` with its
+  quest progress in `slices/profile/`, the saved `World`, the player's `Settings`), each in its own
+  file, never inside the simulation. Saves are versioned JSON of integers and ids only, kept by
+  `SaveStore`; gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`,
+  `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
+  the content reader, JSONC): the core's edge, which reads files and JSON's numbers, so CI's
+  determinism check skips it (#515 looks into closing that), while the core-never-depends-on-a-slice
+  check still covers it.
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read
   only through that slice's accessor; the core gets plain integers and ids. The one exception: the
-  tile blueprints, which the core's `TileKinds` needs, are read by `Content` in `meta/`. Not Godot resources
+  tile blueprints, which the core's `TileKinds` needs, live in the core (owner, #506):
+  `core/data/tiles/`, with their schema in `core/data/schemas/`, read by `Content` in `core/io/`. Not Godot resources
   (owner, #72: no engine lock-in). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) bumps `Simulation.RULES_VERSION` and
   rehashes the golden replays, like any rule change.
