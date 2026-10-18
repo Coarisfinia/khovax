@@ -8,8 +8,8 @@ const DIR: String = "res://slices/loot/data/loot_tables/"
 
 
 ## Every loot table file in `directory`, read and checked.
-static func load_loot_tables(directory: String = DIR) -> Content:
-	var content: Content = Content.new()
+static func load_loot_tables(directory: String = DIR) -> LootData:
+	var content: LootData = LootData.new()
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)

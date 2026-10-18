@@ -10,8 +10,8 @@ const ABILITIES_DIR: String = "res://slices/species/data/abilities/"
 
 
 ## Every species file in `directory`, read and checked.
-static func load_species(directory: String = SPECIES_DIR) -> Content:
-	var content: Content = Content.new()
+static func load_species(directory: String = SPECIES_DIR) -> SpeciesData:
+	var content: SpeciesData = SpeciesData.new()
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)
@@ -23,8 +23,8 @@ static func load_species(directory: String = SPECIES_DIR) -> Content:
 
 
 ## Every ability file in `directory`, read and checked (#222).
-static func load_abilities(directory: String = ABILITIES_DIR) -> Content:
-	var content: Content = Content.new()
+static func load_abilities(directory: String = ABILITIES_DIR) -> SpeciesData:
+	var content: SpeciesData = SpeciesData.new()
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)

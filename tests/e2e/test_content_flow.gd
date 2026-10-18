@@ -22,7 +22,7 @@ const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\
 
 
 func run(_tree: SceneTree) -> String:
-	var content: Content = SpeciesContent.load_species()
+	var content: SpeciesData = SpeciesContent.load_species()
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
 	if (not content.species.has("moss_toad")
@@ -50,8 +50,8 @@ func run(_tree: SceneTree) -> String:
 ## wrong kind, or one that doesn't exist is refused, and so is an ability file with a wrong id,
 ## kind, name or description, a special without its power and cooldown (#410), or a passive with
 ## them.
-func _check_kits(content: Content) -> String:
-	var loaded: Content = SpeciesContent.load_abilities()
+func _check_kits(content: SpeciesData) -> String:
+	var loaded: SpeciesData = SpeciesContent.load_abilities()
 	if not loaded.problem.is_empty():
 		return "the abilities didn't load: " + loaded.problem
 	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)
@@ -107,7 +107,7 @@ func _check_abilities_refused() -> String:
 
 ## Why a step to reach the beach, one to enter the thicket and one to enter the glade don't read,
 ## naming them, or "".
-func _check_named_steps(content: Content) -> String:
+func _check_named_steps(content: QuestData) -> String:
 	var named: QuestDefinition = QuestDefinition.parse(
 		"x",
 		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s, %s]}" % [
@@ -129,7 +129,7 @@ func _check_named_steps(content: Content) -> String:
 ## Why broken steps to enter an instance (#370) aren't refused, with a reason, or "": one naming
 ## both a piece and an instance, an instance on another step, an instance that isn't an id or
 ## isn't a blueprint.
-func _check_instance_steps(content: Content) -> String:
+func _check_instance_steps(content: QuestData) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
 		quest % "{\"condition\": \"opened\", \"instance\": \"glade\"}": (
@@ -143,7 +143,7 @@ func _check_instance_steps(content: Content) -> String:
 
 
 ## Why one of the quests in `cases` isn't refused with the reason it maps to, or "".
-static func _unrefused(cases: Dictionary[String, String], content: Content) -> String:
+static func _unrefused(cases: Dictionary[String, String], content: QuestData) -> String:
 	for text: String in cases:
 		var problem: String = QuestDefinition.parse("x", text, content.species).problem
 		if not problem.begins_with(cases[text]):
@@ -159,7 +159,7 @@ static func _unrefused(cases: Dictionary[String, String], content: Content) -> S
 ## another step, too, and the same for an entered step and its piece or instance, which it names
 ## one of, never both.
 func _check_quests() -> String:
-	var content: Content = QuestContent.load_quests()
+	var content: QuestData = QuestContent.load_quests()
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
 	var first: QuestDefinition = content.quests.get("first_domination")
@@ -318,7 +318,7 @@ func _check_tile_numbers_unique() -> String:
 
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint
 ## lists or a region piece names is one the species data has (#133).
-func _check_wild_species(content: Content) -> String:
+func _check_wild_species(content: SpeciesData) -> String:
 	for instance_name: String in InstanceBlueprints.NAMES:
 		var listed: Dictionary = InstanceBlueprints.WILD_SPECIES.get(instance_name, { })
 		var named: Array[String] = []
@@ -352,7 +352,7 @@ func _check_strip() -> String:
 
 ## Why a species file named x with this text is refused in otherwise empty content, or "".
 func _add_to_empty(text: String) -> String:
-	return Content.new().add_species("x", text)
+	return SpeciesData.new().add_species("x", text)
 
 
 ## Entries a schema might let through or that clash with others are refused, with a reason.
@@ -382,7 +382,7 @@ func _check_refused() -> String:
 		var problem: String = _add_to_empty(text)
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	var twice: Content = Content.new()
+	var twice: SpeciesData = SpeciesData.new()
 	var valid: String = "{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 	valid += KIT + "}"
 	var first: String = twice.add_species("x", valid)
@@ -395,7 +395,7 @@ func _check_refused() -> String:
 ## what the glade's table gives (1 to 2 moss, or a single berry), and the same stream rolls the
 ## same loot.
 func _check_loot_rolls() -> String:
-	var content: Content = LootContent.load_loot_tables()
+	var content: LootData = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		return "the loot tables didn't load: " + content.problem
 	var toad: LootTable = content.loot_tables["moss_toad"]

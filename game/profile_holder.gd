@@ -32,7 +32,7 @@ func _enter_tree() -> void:
 			profile.loaded_generation,
 		])
 	if profile.problem.is_empty():
-		var quests: Content = QuestContent.load_quests()
+		var quests: QuestData = QuestContent.load_quests()
 		if not quests.problem.is_empty():
 			push_warning("the quests can't be read, so none advance: " + quests.problem)
 		profile.quest_book = quest_book_of(quests)
@@ -103,7 +103,7 @@ func move_monster(monster_id: int, place: int) -> void:
 
 ## The quests the profile advances from `content`: none when any quest file couldn't be read, so
 ## progress waits for whole, sound data rather than advancing on part of it.
-static func quest_book_of(content: Content) -> Dictionary[String, QuestDefinition]:
+static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinition]:
 	var none: Dictionary[String, QuestDefinition] = {}
 	return content.quests if content.problem.is_empty() else none
 
