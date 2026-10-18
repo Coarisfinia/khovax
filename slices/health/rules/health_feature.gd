@@ -45,10 +45,15 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_fall(state, target)
 
 
-## Raises EntityFell for `entity_id`, whose HP just reached 0; a companion then goes back to its
-## player (#456).
+## Raises EntityFell for `entity_id`, whose HP just reached 0. A companion then goes back to its
+## player (#456); a player is sent back to the world's spawn (#457), since nobody can bring them
+## back yet (being knocked down and revived comes with the reviving rules, #479).
 func _fall(state: GameState, entity_id: int) -> void:
 	state.events.append(EntityFell.new(entity_id))
+	var fallen: Entity = state.entity(entity_id)
+	if fallen.slot != Entity.NO_SLOT:
+		state.events.append(SentToSpawn.new(entity_id, fallen.slot))
+		return
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	# Only while the companions' rule is on: a disabled feature's state stays as it was.
 	if companions != null and companions.enabled and companions.owners.has(entity_id):

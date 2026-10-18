@@ -84,6 +84,9 @@ func run(tree: SceneTree) -> String:
 		return "the main scene needs Player, Driver, HexGrid, TrailView and Hud/TouchStick"
 	# The recording starts from the world without the toad, like a resumed session's.
 	FlowSteps.drop_beach_toad(_driver.state)
+	# A walk this long passes the wild monster, whose hits would send the player to the spawn
+	# (#457).
+	_driver.state.set_enabled(Features.WILD_ATTACKS, false)
 	_driver.recording.start_world = WorldData.of(_driver.world)
 	# Stepped by hand from here on.
 	_driver.set_process(false)
