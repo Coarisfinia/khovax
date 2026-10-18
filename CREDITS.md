@@ -15,8 +15,8 @@ The assets this game uses, with their authors and licenses. Generated from each 
 ## Game-icons.net
 
 - **Files:** `assets/game-icons/`
-- **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `spiky-explosion.svg`; Delapouite
-  (http://delapouite.com): `totem.svg`
+- **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `magnifying-glass.svg`,
+  `spiky-explosion.svg`; Delapouite (http://delapouite.com): `resize.svg`, `totem.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/` and
   `delapouite/`), with each icon's black square background removed so only its white shape is
   left, which the game tints with its ink

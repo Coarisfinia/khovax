@@ -28,8 +28,12 @@ const ACTIONS: Array[StringName] = [&"survey", &"survey_zoom_in", &"survey_zoom_
 ## How far the cogwheel turns on each tap, and how long that takes.
 const COG_TURN: float = TAU / 4.0
 const TURN_SECONDS: float = 0.35
-## The cogwheel's icon (#459): a white shape, drawn in ink.
+## The cogwheel's, the zoom buttons' and the Survey position button's icons (#459): white shapes,
+## drawn in ink, set in from their button's edges by ICON_INSET of its side.
 const COG_ICON: Texture2D = preload("res://assets/game-icons/cog.svg")
+const LENS_ICON: Texture2D = preload("res://assets/game-icons/magnifying-glass.svg")
+const SCREEN_ICON: Texture2D = preload("res://assets/game-icons/resize.svg")
+const ICON_INSET: float = 0.2
 ## How far a controller's stick has to move to count as using the controller, past any drift.
 const STICK_USED: float = 0.5
 
@@ -262,22 +266,26 @@ func _draw_cog(rect: Rect2) -> void:
 	draw_set_transform(Vector2.ZERO)
 
 
-## A screen's outline with a block in its corner: where the Survey shows.
+## The resize icon (#459): where the Survey shows.
 func _draw_screen(rect: Rect2) -> void:
-	var frame: Rect2 = rect.grow(-rect.size.x * 0.22)
-	draw_rect(frame, Toon.INK, false, INK_PIXELS)
-	var block: float = frame.size.x * 0.4
-	draw_rect(Rect2(frame.end.x - block, frame.position.y, block, block), Toon.INK)
+	draw_texture_rect(SCREEN_ICON, rect.grow(-rect.size.x * ICON_INSET), false, Toon.INK)
 
 
-## A lens with a handle and a plus (`closer`) or a minus in it: zooming in or out.
+## The magnifying glass (#459), with a plus (`closer`) or a minus in its corner: zooming in or out.
 func _draw_lens(rect: Rect2, closer: bool) -> void:
-	var radius: float = rect.size.x * 0.24
-	var middle: Vector2 = rect.get_center() - Vector2(radius, radius) * 0.25
-	draw_arc(middle, radius, 0.0, TAU, 32, Toon.INK, INK_PIXELS)
-	var handle: Vector2 = Vector2.ONE.normalized()
-	draw_line(middle + handle * radius, middle + handle * radius * 1.9, Toon.INK, INK_PIXELS * 2.0)
-	var bar: float = radius * 0.55
-	draw_line(middle - Vector2(bar, 0.0), middle + Vector2(bar, 0.0), Toon.INK, INK_PIXELS)
+	draw_texture_rect(LENS_ICON, rect.grow(-rect.size.x * ICON_INSET), false, Toon.INK)
+	var sign_side: float = rect.size.x * 0.12
+	var corner: Vector2 = rect.end - Vector2(sign_side, sign_side) * 1.6
+	draw_line(
+		corner - Vector2(sign_side, 0.0),
+		corner + Vector2(sign_side, 0.0),
+		Toon.INK,
+		INK_PIXELS,
+	)
 	if closer:
-		draw_line(middle - Vector2(0.0, bar), middle + Vector2(0.0, bar), Toon.INK, INK_PIXELS)
+		draw_line(
+			corner - Vector2(0.0, sign_side),
+			corner + Vector2(0.0, sign_side),
+			Toon.INK,
+			INK_PIXELS,
+		)
