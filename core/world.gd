@@ -75,7 +75,7 @@ func _init(
 	set_carried(_parties_of(companion_species))
 	if start.is_empty():
 		return
-	var first: GameState = create_instance(start, players, chosen_variant(start))
+	var first: GameState = create_instance(start, players, _chosen_variant(start))
 	if first == null:
 		problem = "the starting instance %s doesn't load" % start
 		return
@@ -103,7 +103,7 @@ func generation(instance_name: String) -> int:
 ## when it can't load.
 func instance(instance_name: String) -> GameState:
 	if not instances.has(instance_name):
-		var loaded: GameState = create_instance(instance_name, 0, chosen_variant(instance_name))
+		var loaded: GameState = create_instance(instance_name, 0, _chosen_variant(instance_name))
 		if loaded == null:
 			return null
 		instances[instance_name] = loaded
@@ -125,7 +125,7 @@ func create_instance(instance_name: String, players: int, variant: String) -> Ga
 
 
 ## The variant of the blueprint `instance_name` the world's flags choose now (#529).
-func chosen_variant(instance_name: String) -> String:
+func _chosen_variant(instance_name: String) -> String:
 	return source.variant(instance_name, flags)
 
 
@@ -134,7 +134,7 @@ func chosen_variant(instance_name: String) -> String:
 func variant_of(instance_name: String) -> String:
 	if variants.has(instance_name):
 		return variants[instance_name]
-	return chosen_variant(instance_name)
+	return _chosen_variant(instance_name)
 
 
 ## Sets the flag `flag` (#529), or clears it when `on` is false: for story beats and the rules that
@@ -158,7 +158,7 @@ func set_flag(flag: String, on: bool = true) -> void:
 ## Whether the loaded instance `instance_name` was loaded from another variant than the flags
 ## choose now; never the starting instance, which is never purged.
 func _outdated(instance_name: String) -> bool:
-	var chosen: String = chosen_variant(instance_name)
+	var chosen: String = _chosen_variant(instance_name)
 	return instance_name != start_name and variant_of(instance_name) != chosen
 
 
