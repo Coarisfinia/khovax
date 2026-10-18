@@ -276,6 +276,22 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		var width: float = menu.settings.rows_width()
 		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
 			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
+	return _menu_credits(menu)
+
+
+## The Credits tab (#462) shows every pack CREDITS.md credits, each heading in bold, with its
+## fields' names in bold and no Markdown marks or repository paths left over.
+func _menu_credits(menu: GameMenu) -> String:
+	var shown: String = (menu.find_child("Credits", true, false) as CreditsTab).text
+	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
+	for line: String in markdown.split("\n"):
+		var heading: String = CreditsTab.to_bbcode(line).strip_edges()
+		if line.begins_with(CreditsTab.PACK) and not shown.contains(heading):
+			return "the Credits tab doesn't show the pack " + line
+	if markdown.is_empty() or shown.contains("**") or shown.contains("Files:"):
+		return "the Credits tab shows Markdown marks or repository paths: " + shown.left(200)
+	if not shown.contains("[b]License:[/b]"):
+		return "the Credits tab doesn't name the licenses"
 	return ""
 
 

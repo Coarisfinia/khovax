@@ -22,11 +22,13 @@ const PRESSED: float = 0.12
 static var _theme: Theme
 
 
-## The UI's theme, made once: labels and buttons in ink, buttons rounded with a hover and a press.
+## The UI's theme, made once: labels, rich text and buttons in ink, buttons rounded with a hover
+## and a press.
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = Theme.new()
 		_theme.set_color("font_color", "Label", Toon.INK)
+		_theme.set_color("default_color", "RichTextLabel", Toon.INK)
 		for type: String in ["Button", "CheckButton", "OptionButton"]:
 			_theme.set_color("font_color", type, Toon.INK)
 			_theme.set_color("font_hover_color", type, Toon.INK)
