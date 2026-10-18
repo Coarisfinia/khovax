@@ -237,6 +237,38 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	tab.materials.refresh()
 	if tab.materials.shown != (["Berry: 1", "Moss: 3"] as Array[String]):
 		return "the Character tab's materials are %s, not the ones found" % [tab.materials.shown]
+	return _menu_factions(tab, main)
+
+
+## The standings with the factions (#533): none listed while the player is neutral with all; then
+## each one they aren't neutral with, in id order, with its name, signed standing and rank name, or
+## by its id in words once the content no longer has it; neutral again, it leaves the list.
+func _menu_factions(tab: CharacterTab, main: Node) -> String:
+	var panel: FactionStandingsPanel = tab.factions
+	var neutral: Array[String] = [FactionStandingsPanel.NONE_TEXT]
+	panel.refresh()
+	if panel.shown != neutral:
+		return "the Character tab lists factions while neutral with all: %s" % [panel.shown]
+	var content: FactionContent = FactionContent.load_factions()
+	var ids: Array[String] = []
+	ids.assign(content.factions.keys())
+	ids.sort()
+	if ids.is_empty():
+		return "no faction to stand with: " + content.problem
+	var faction: Faction = content.factions[ids[0]]
+	var standings: Standings = FlowGame.holder(main).keeper.profile.standings
+	var changed: String = standings.change(faction.id, 2) + standings.change("zz_vanished", -1)
+	panel.refresh()
+	var listed: Array[String] = [
+		"%s: +2, %s" % [faction.name, faction.rank_name(2)],
+		"Zz Vanished: -1",
+	]
+	if not changed.is_empty() or panel.shown != listed:
+		return "the Character tab's factions are %s, not %s" % [panel.shown, listed]
+	changed = standings.change(faction.id, -2) + standings.change("zz_vanished", 1)
+	panel.refresh()
+	if not changed.is_empty() or panel.shown != neutral:
+		return "a faction back at neutral stays listed: %s" % [panel.shown]
 	return _menu_reorder(tab, main)
 
 
