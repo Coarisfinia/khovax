@@ -207,11 +207,6 @@ func _check_gamepad_bindings() -> String:
 ## press swap_1 to swap_3. A press swaps to that place in the carried order in the next command
 ## only, and so does a tap on the roster (choose_swap); while the game hears no input, neither does.
 func _check_swap_bindings() -> String:
-	for action: StringName in SWAP_KEYS:
-		if not _press_reaches(SWAP_KEYS[action], KEY_NONE, action):
-			return "a real key event doesn't press %s" % action
-		if not _button_reaches(SWAP_PADS[action], action):
-			return "a real d-pad press doesn't press %s" % action
 	var input: LocalInput = _main.get_node("LocalInput") as LocalInput
 	var state: GameState = _driver.state
 	Input.action_press("swap_2")
@@ -220,7 +215,7 @@ func _check_swap_bindings() -> String:
 	input._process(STEP)
 	var swapped: int = input.command(state).swap
 	if swapped != 2 or input.command(state).swap != Command.NO_SWAP:
-		return "a press of swap_2 didn't swap to the second place in the next command alone"
+		return "a press of swap_2 swapped to %d, not 2 in the next command alone" % swapped
 	input.choose_swap(3)
 	if input.command(state).swap != 3:
 		return "a swap chosen on the roster didn't reach the next command"
@@ -230,6 +225,13 @@ func _check_swap_bindings() -> String:
 	input.blocked = false
 	if heard != Command.NO_SWAP or input.command(state).swap != Command.NO_SWAP:
 		return "a swap chosen while the game hears no input reached a command"
+	# The real presses come last: a press and its release in one frame leave the action just
+	# pressed for the rest of that frame, which the press of swap_2 above would hear too.
+	for action: StringName in SWAP_KEYS:
+		if not _press_reaches(SWAP_KEYS[action], KEY_NONE, action):
+			return "a real key event doesn't press %s" % action
+		if not _button_reaches(SWAP_PADS[action], action):
+			return "a real d-pad press doesn't press %s" % action
 	return ""
 
 

@@ -28,6 +28,8 @@ const STUMP: Vector2i = Vector2i(0, -1)
 const WATER: Vector2i = Vector2i(0, 1)
 ## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
 const CROWN_KIND: int = 250
+## The screen _check_roster lays the roster out for.
+const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
@@ -356,7 +358,9 @@ func _check_roster(tree: SceneTree) -> String:
 	driver.world.set_carried([PackedStringArray(["storm_finch", "moss_toad"])])
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
 	roster.show_state()
-	roster.lay_out_in(roster.get_viewport_rect().size)
+	# Laid out for a desktop screen: the headless one is tiny. The flow steps it by hand from here.
+	roster.set_process(false)
+	roster.lay_out_in(ROSTER_SCREEN)
 	var result: String = _roster_shown(main, roster)
 	if result.is_empty():
 		result = _roster_swaps(main, roster, driver)
@@ -371,16 +375,24 @@ func _roster_shown(main: Node, roster: RosterHud) -> String:
 	var carried: PackedStringArray = ["storm_finch", "moss_toad"]
 	if roster.shown != carried or roster.companion_place != 0:
 		return "the roster doesn't show the carried monsters in order, the first as the companion"
-	var corner: Rect2 = Rect2(Vector2.ZERO, roster.get_viewport_rect().size / 3.0)
+	var corner: Rect2 = Rect2(Vector2.ZERO, ROSTER_SCREEN / 3.0)
 	var first: Rect2 = roster.rect_of(0)
 	if not corner.encloses(roster.rect_of(1)) or first.intersects(roster.rect_of(1)):
-		return "the roster's squares aren't apart in the top left corner"
+		return "the roster's squares %s and %s aren't apart in the top left corner %s" % [
+			first,
+			roster.rect_of(1),
+			corner,
+		]
 	if RosterHud.initials_of("Storm Finch") != "SF":
 		return "the storm finch's square doesn't show its initials"
 	var quests: QuestListView = main.get_node("Hud/QuestList") as QuestListView
 	quests._lay_out(1.0)
-	if quests.position.y < roster.bottom() or roster.bottom() <= first.end.y:
-		return "the quest list doesn't start below the roster"
+	# A position is kept in single precision.
+	if quests.position.y + 0.01 < roster.bottom() or roster.bottom() <= first.end.y:
+		return "the quest list at %s doesn't start below the roster's %f" % [
+			quests.position,
+			roster.bottom(),
+		]
 	return ""
 
 
