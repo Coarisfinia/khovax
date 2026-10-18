@@ -564,8 +564,8 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var tab: SurveyTab = menu.survey_tab
 	# Laid out in its scene (#437): the Survey over the tab, its buttons centred in a row below it.
-	var row: HBoxContainer = tab.get_node("Row") as HBoxContainer
-	if tab.get_child(0) != tab.view or row.alignment != BoxContainer.ALIGNMENT_CENTER:
+	if (tab.get_child(0) != tab.view
+			or (tab.get_node("Row") as HBoxContainer).alignment != BoxContainer.ALIGNMENT_CENTER):
 		return "the Survey tab's scene doesn't put its Survey above its centred row of buttons"
 	menu.toggle()
 	(tab.get_parent() as TabContainer).current_tab = tab.get_index()
