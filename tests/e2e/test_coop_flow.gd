@@ -309,8 +309,7 @@ func _check_knocked_down() -> String:
 	var revived: bool = false
 	for _tick: int in KnockdownFeature.REVIVE_TICKS:
 		Simulation.step(state, FlowSteps.commands([0, Command.NO_MOVE]))
-		var up: Callable = func(e: RefCounted) -> bool: return e is PlayerRevived
-		revived = revived or state.events.any(up)
+		revived = revived or _raised(state, PlayerRevived)
 	var half: int = Fixed.scale(HealthFeature.PLAYER_HP, HealthFeature.REVIVED_HP)
 	if down.tile != stood or not revived or health.hp_of(state, down.id) != half:
 		return "a knocked-down player walked, or an ally beside them didn't revive them to half HP"
@@ -319,7 +318,7 @@ func _check_knocked_down() -> String:
 	var sent: bool = false
 	for _tick: int in KnockdownFeature.DOWN_TICKS:
 		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
-		sent = sent or state.events.any(func(e: RefCounted) -> bool: return e is SentToSpawn)
+		sent = sent or _raised(state, SentToSpawn)
 	var alone: GameState = InstanceBlueprints.basic(42)
 	if (not sent
 			or knockdown.is_down(down.id)
@@ -329,6 +328,14 @@ func _check_knocked_down() -> String:
 	)):
 		return "a knocked-down player nobody revived wasn't sent back, or a lone player had an ally"
 	return ""
+
+
+## Whether an event of the class `kind` was raised in `state`'s last tick.
+static func _raised(state: GameState, kind: Script) -> bool:
+	for event: RefCounted in state.events:
+		if event.get_script() == kind:
+			return true
+	return false
 
 
 ## A simulated player: a list of moves, one per poll, each put `delay` ticks ahead as a network
