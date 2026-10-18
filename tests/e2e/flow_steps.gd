@@ -15,6 +15,17 @@ const BASIC_RING: Array[Vector2i] = [
 	Vector2i(-2, 1),
 	Vector2i(-1, 0),
 ]
+## Where the basic instance's wounded moss toad waits on the beach (#448).
+const BEACH_TOAD: Vector2i = Vector2i(-3, 2)
+
+
+## Takes the beach's wounded toad out of `state`, for flows whose walks cross the beach and aren't
+## about it: it stands in their way and steps about.
+static func drop_beach_toad(state: GameState) -> void:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	for entity_id: int in wild.monsters.duplicate():
+		if state.entity(entity_id).tile == BEACH_TOAD:
+			state.remove_entity(entity_id)
 
 
 ## One tick's commands with only the player in slot 0: `move`.

@@ -82,6 +82,9 @@ func run(tree: SceneTree) -> String:
 	if nodes.has(null):
 		_main.queue_free()
 		return "the main scene needs Player, Driver, HexGrid, TrailView and Hud/TouchStick"
+	# The recording starts from the world without the toad, like a resumed session's.
+	FlowSteps.drop_beach_toad(_driver.state)
+	_driver.recording.start_world = WorldData.of(_driver.world)
 	# Stepped by hand from here on.
 	_driver.set_process(false)
 	_player_view.set_process(false)

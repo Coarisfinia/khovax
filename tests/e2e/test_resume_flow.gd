@@ -47,6 +47,7 @@ func run(tree: SceneTree) -> String:
 		1,
 		[COMPANION],
 	)
+	FlowSteps.drop_beach_toad(world.instances[InstanceBlueprints.BASIC])
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
