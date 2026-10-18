@@ -1,15 +1,17 @@
 class_name CompanionFeature
 extends Feature
-## Companions (#338, the first part of #221): the first monster each player carries walks beside
-## them. Which species that is comes with the session's start (GameState.companions). It joins its
+## Companions (#338, the first part of #221): one monster each player carries walks beside them,
+## the first they carry until they choose another (#55, CompanionSwapFeature): GameState.companions
+## says which species. When the choice changes, the old one goes and the new one joins. It joins its
 ## player in whichever instance they are, on a free tile next to them, as an entity no player
 ## controls: players are the entities with a slot, which walk by commands, draw the trail, take
 ## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
 ## goes when its player leaves the instance (through an exit, the same tick: the feature steps
 ## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
 ## something), it goes and joins them afresh beside them. One at 0 HP goes back to its player
-## (`send_home`, #456) and doesn't join them again in this instance until they leave it through an
-## exit.
+## (`send_home`, #456) and no companion joins them again in this instance until they leave it
+## through an exit, whichever they choose meanwhile: which carried monster fainted isn't tracked yet
+## (#54).
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its

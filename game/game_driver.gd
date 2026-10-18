@@ -90,11 +90,12 @@ static func new_seed() -> int:
 ## Starts a fresh session, in the starting instance, from `seed_value`: the APK test (#61) starts
 ## its own with a fixed seed. The command sources stay.
 func start(seed_value: int) -> void:
-	world = World.new(BlueprintSource.new(), seed_value, instance, players, companions())
+	world = World.new(BlueprintSource.new(), seed_value, instance, players)
 	# No world for an unknown or invalid instance, which InstanceBlueprints.create reports.
 	if not world.problem.is_empty():
 		world = null
 	if world != null:
+		world.set_carried(carried())
 		recording = Replay.new(instance, seed_value)
 		recording.begin(world)
 	_begin_session()
@@ -109,7 +110,7 @@ func resume(saved: World) -> String:
 			return "the saved world's players aren't the session's %d" % players
 	world = saved
 	# Who the players bring is the session's, so a monster dominated since the save comes along.
-	world.set_companions(companions())
+	world.set_carried(carried())
 	recording = Replay.new(saved.start_name, saved.world_seed)
 	recording.start_world = WorldData.of(saved)
 	recording.begin(saved)
@@ -117,15 +118,16 @@ func resume(saved: World) -> String:
 	return ""
 
 
-## Each slot's companion species for a session starting now (#338): this machine's player brings
-## their first carried monster; other players bring none until co-op peers send theirs (#75).
-func companions() -> Array[String]:
-	var species: Array[String] = []
-	var _sized: int = species.resize(GameState.MAX_PLAYERS)
+## Each slot's carried species for a session starting now (#338, #53): this machine's player brings
+## the monsters they carry, the first their companion; other players bring none until co-op peers
+## send theirs (#75).
+func carried() -> Array[PackedStringArray]:
+	var parties: Array[PackedStringArray] = []
+	var _sized: int = parties.resize(GameState.MAX_PLAYERS)
 	var slot: int = input.slot if input != null else 0
 	if holder != null and holder.keeper != null:
-		species[slot] = holder.keeper.profile.companion_species()
-	return species
+		parties[slot] = holder.keeper.profile.carried_species()
+	return parties
 
 
 ## A new session's schedule, from the world's tick on, with no hashes and no time due yet.

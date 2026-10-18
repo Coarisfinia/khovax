@@ -10,8 +10,10 @@ const NO_TOTEM: int = 0
 const PLACE_TOTEM: int = 1
 ## No wild monster focused (#436).
 const NO_FOCUS: int = 0
+## No swap of the companion this tick (#55).
+const NO_SWAP: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 5
+const VALUE_COUNT: int = 6
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -26,6 +28,9 @@ var focus: int = NO_FOCUS
 ## Whether the player, knocked down, chooses to go back to the world's spawn now (#495). A press,
 ## like the special: given for the one tick it's pressed.
 var respawn: bool = false
+## Which of their carried monsters the player makes their companion this tick (#55), counted from 1
+## in the carried order, or NO_SWAP. A press, like the special; the simulation checks they carry it.
+var swap: int = NO_SWAP
 
 
 func _init(
@@ -44,20 +49,30 @@ func _init(
 
 ## The command as integers, for replays: from_values turns them back into the same command.
 func to_values() -> Array[int]:
-	var values: Array[int] = [move, 1 if special else 0, totem, focus, 1 if respawn else 0]
+	var values: Array[int] = [move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap]
 	return values
 
 
 ## The command from to_values' integers; is_valid_values says whether they make one.
 static func from_values(values: Array[int]) -> Command:
-	return Command.new(values[0], values[1] == 1, values[2], values[3], values[4] == 1)
+	var command: Command = Command.new(
+		values[0],
+		values[1] == 1,
+		values[2],
+		values[3],
+		values[4] == 1,
+	)
+	command.swap = values[5]
+	return command
 
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
-## placed or not, and a focus that is an entity id or none.
+## placed or not, a focus that is an entity id or none, and a swap to a place in the carried order
+## or none.
 func is_valid() -> bool:
 	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
-	return moves and (totem == NO_TOTEM or totem == PLACE_TOTEM) and focus >= NO_FOCUS
+	var placed: bool = totem == NO_TOTEM or totem == PLACE_TOTEM
+	return moves and placed and focus >= NO_FOCUS and swap >= NO_SWAP
 
 
 ## Whether `values` are a command's, as to_values gives them, of one a player can give.

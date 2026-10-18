@@ -9,11 +9,12 @@ extends RefCounted
 ## roam this one persistent world, saved between sessions (WorldData). A player who walks out
 ## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
 ## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
-## (SentToSpawn, #457) is moved onto their start in the starting instance. The world keeps a set of
-## flags (#529), which choose each blueprint's variant (`InstanceSource.variant`): setting or
-## clearing one purges every loaded instance whose variant it changes, once nobody is in it, so it
-## comes back from its new variant and no player sees it change. Deterministic, like everything in
-## core/.
+## (SentToSpawn, #457) is moved onto their start in the starting instance. A player who chooses
+## another carried monster as their companion (CompanionChosen, #55) has it as their companion in
+## every instance from then on. The world keeps a set of flags (#529), which choose each blueprint's
+## variant (`InstanceSource.variant`): setting or clearing one purges every loaded instance whose
+## variant it changes, once nobody is in it, so it comes back from its new variant and no player
+## sees it change. Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
@@ -43,9 +44,14 @@ var variants: Dictionary[String, String] = {}
 var source: InstanceSource = null
 ## Where each instance lies in the world, worked out once (#187, #282).
 var _layout: WorldLayout = WorldLayout.new()
-## Each player slot's companion species, or "" for none (#338): who the players bring, which
-## every instance the world loads is handed (GameState.companions). Set when the session starts.
+## Each player slot's companion species, or "" for none (#338): which of their carried monsters
+## walks beside them, which every instance the world loads is handed (GameState.companions). The
+## first they carry when the session starts, until they choose another (#55).
 var companions: Array[String] = []
+## Each player slot's carried monsters' species, in their carried order (#53), empty for none:
+## who the players bring, which every instance the world loads is handed (GameState.carried). Set
+## when the session starts.
+var carried: Array[PackedStringArray] = []
 ## The world's own events of the last tick (#370): players who came into another instance
 ## (InstanceEntered), which no instance's features see. Like an instance's events, they're derived
 ## from what happened, so they're neither hashed nor saved.
@@ -53,8 +59,8 @@ var events: Array[RefCounted] = []
 
 
 ## A world that loads its instances from `instance_source` and starts in the blueprint `start` with
-## `players` players in it, each slot bringing its companion from `companion_species` (by slot; none
-## past its end); with no `start`, an empty one, which only a refused save gives
+## `players` players in it, each slot carrying just its companion from `companion_species` (by slot;
+## none past its end); with no `start`, an empty one, which only a refused save gives
 ## (`WorldData.to_world`).
 func _init(
 	instance_source: InstanceSource,
@@ -113,6 +119,7 @@ func create_instance(instance_name: String, players: int, variant: String) -> Ga
 	if created != null:
 		variants[instance_name] = variant
 		created.companions = companions.duplicate()
+		created.carried = carried.duplicate()
 		_hand_next_door(instance_name, created)
 	return created
 
@@ -169,14 +176,42 @@ func _hand_next_door(instance_name: String, state: GameState) -> void:
 	state.next_door_version += 1
 
 
-## Sets every slot's companion species, by slot ("" or nothing for none), in the world and every
-## instance it has loaded: a session's start decides who the players bring (#338).
+## Sets every slot's companion species, by slot ("" or nothing for none), as the one monster that
+## slot carries.
 func set_companions(companion_species: Array[String]) -> void:
+	var parties: Array[PackedStringArray] = []
+	for species: String in companion_species:
+		parties.append(PackedStringArray([species] if not species.is_empty() else []))
+	set_carried(parties)
+
+
+## Sets every slot's carried species, by slot, in carried order (empty or nothing for none), in the
+## world and every instance it has loaded, each slot's first the companion: a session's start
+## decides who the players bring (#338, #53).
+func set_carried(parties: Array[PackedStringArray]) -> void:
+	carried.clear()
 	companions.clear()
 	for slot: int in GameState.MAX_PLAYERS:
-		companions.append(companion_species[slot] if slot < companion_species.size() else "")
+		var party: PackedStringArray = PackedStringArray()
+		if slot < parties.size():
+			party = parties[slot]
+		carried.append(party)
+		companions.append(party[0] if not party.is_empty() else "")
+	_hand_companions()
+
+
+## Makes the monster at `place` in the carried order of the player in `slot` their companion (#55),
+## in the world and every instance it has loaded.
+func choose_companion(slot: int, place: int) -> void:
+	companions[slot] = carried[slot][place]
+	_hand_companions()
+
+
+## Hands every loaded instance the world's companions and carried species.
+func _hand_companions() -> void:
 	for instance_name: String in sorted_names():
 		instances[instance_name].companions = companions.duplicate()
+		instances[instance_name].carried = carried.duplicate()
 
 
 ## Where tile (0, 0) of the instance `instance_name` lies in the world (#187); see WorldLayout.
@@ -199,8 +234,10 @@ func active() -> Array[String]:
 
 
 ## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
-## every player who walked out through an exit into the instance it leads to (#154). Moving them
-## only after every instance has stepped means no one steps twice in a tick. Last, it purges what
+## every player who walked out through an exit into the instance it leads to (#154) and gives every
+## player who chose another companion (#55) theirs. Moving them only after every instance has
+## stepped
+## means no one steps twice in a tick. Last, it purges what
 ## has been left behind long enough. On a fresh world's first tick, every player enters the
 ## instance they start in; a resumed world's players were already in theirs.
 func step(commands: Array[Command]) -> void:
@@ -222,6 +259,8 @@ func step(commands: Array[Command]) -> void:
 		for event: RefCounted in state.events:
 			if event is ExitTaken or event is SentToSpawn:
 				leaving.append([instance_name, event])
+			elif event is CompanionChosen:
+				choose_companion((event as CompanionChosen).slot, (event as CompanionChosen).place)
 	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
 	var sent: Array[int] = []
 	for move: Array in leaving:
