@@ -892,16 +892,22 @@ func _check_companion_strikes() -> String:
 
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
 ## hiding, `first` the one with the lowest id: with nothing to strike it does nothing, and nor does
-## a press for a slot without a player. Once they jump out, it fells `first` for its power, which
+## a press for a slot without a player. Once they jump out, it fells `first` for its power, even
+## with
+## the player focused, which
 ## faints for good, staying where it fell and saved as it is; it cools down, and once it's ready
-## again it fells the next one.
+## again it fells the one the player focuses (#436).
 func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> String:
 	var wild: WildMonsterFeature = _wild(state)
 	var nobody: Array[Command] = [Command.new(), Command.new(Command.NO_MOVE, true)]
 	if not _specials_in(state, _fire()).is_empty() or not _specials_in(state, nobody).is_empty():
 		return "a special struck a hiding wild monster, or fired for a slot without a player"
 	(state.feature(Features.HIDING) as HidingFeature).hidden.clear()
-	var felled: Array[SpecialStruck] = _specials_in(state, _fire())
+	# A focus that isn't a wild monster (#436), here the player, leaves the usual target.
+	var player_focus: Array[Command] = [
+		Command.new(Command.NO_MOVE, true, Command.NO_TOTEM, state.player(0).id),
+	]
+	var felled: Array[SpecialStruck] = _specials_in(state, player_focus)
 	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
 	if felled.size() != 1 or felled[0].monster_id != first or felled[0].damage != damage:
 		return "the special didn't strike the first wild monster for its power"
@@ -927,11 +933,27 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
 	while specials.cooldown_left(0) > 1:
 		var _waited: Array[SpecialStruck] = _specials_in(state, still)
-	var second: int = _wild(state).monsters[0]
-	var next: Array[SpecialStruck] = _specials_in(state, _fire())
-	if next.size() != 1 or next[0].monster_id != second or not next[0].felled:
-		return "the special, ready again, didn't fell the next wild monster"
+	var aimed: int = _focusable(state)
+	if aimed == 0:
+		return "the special's check needs two wild monsters the companion can strike"
+	var focused: Array[Command] = [Command.new(Command.NO_MOVE, true, Command.NO_TOTEM, aimed)]
+	var next: Array[SpecialStruck] = _specials_in(state, focused)
+	if next.size() != 1 or next[0].monster_id != aimed or not next[0].felled:
+		return "the special, ready again, didn't fell the focused wild monster (#436)"
 	return _check_wild_attacks()
+
+
+## A wild monster the companion in `state` can strike other than the one it strikes unfocused, so a
+## focus on it (#436) shows; 0 if there is none.
+func _focusable(state: GameState) -> int:
+	var wild: WildMonsterFeature = _wild(state)
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var tile: Vector2i = state.entity(companions.companion_of(0)).tile
+	var usual: int = CompanionAttackFeature.target_next_to(state, wild, tile)
+	for monster: int in wild.monsters:
+		if monster != usual and CompanionAttackFeature.can_strike(state, wild, tile, monster):
+			return monster
+	return 0
 
 
 ## Whether the feature `feature_id` of `state`, saved and loaded into `reloaded_state`, hashes the

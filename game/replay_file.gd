@@ -9,7 +9,7 @@ extends RefCounted
 ## world and format 3 the companions (#338); a replay without them has none and still plays. Format
 ## 4 gave every command its special attack (#410) and format 5 its totem (#423): an older replay's
 ## commands fire none and place none.
-const FORMAT: int = 5
+const FORMAT: int = 6
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -81,15 +81,18 @@ static func parse(text: String) -> Replay:
 
 
 ## How many integers a command is in a replay of `format`: only the move before format 4, the
-## special attack too in format 4, and the totem too since.
+## special attack too in format 4, the totem too in format 5, and the focus too since (#436).
 static func _value_count(format: int) -> int:
 	if format < 4:
 		return 1
-	return 2 if format < 5 else Command.VALUE_COUNT
+	if format < 6:
+		return format - 2
+	return Command.VALUE_COUNT
 
 
 ## Changes recorded with `count` integers per command (the tick and slot before them), each
-## widened with zeros to a whole command's: no special attack fired, no totem placed.
+## widened with zeros to a whole command's: no special attack fired, no totem placed, nothing
+## focused.
 static func _widened(old: Array[int], count: int) -> Array[int]:
 	var stride: int = 2 + count
 	var changes: Array[int] = []

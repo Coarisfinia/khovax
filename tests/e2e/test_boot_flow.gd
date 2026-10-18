@@ -396,6 +396,29 @@ func _step_tweens(node: Node, seconds: float) -> void:
 		var _running: bool = tween.custom_step(seconds)
 
 
+## Focusing (#436): a press of focus_next picks the wild monster nearest the player, and the
+## mark's ink ring stands on its tile; with nothing focused the ring hides.
+func _check_focus_mark(main: Node, driver: GameDriver) -> String:
+	var mark: FocusMark = main.get_node("Instance/FocusMark") as FocusMark
+	var tile: Vector2i = driver.state.player(0).tile
+	# A press of focus_next, through the input layer as a player gives it.
+	Input.action_press("focus_next")
+	driver.input._process(0.0)
+	Input.action_release("focus_next")
+	var focus: int = driver.input.command(driver.state).focus
+	var nearest: Array[int] = FocusChoice.nearest(driver.state, tile)
+	if nearest.is_empty() or focus != nearest[0]:
+		return "a press of focus_next didn't focus the nearest wild monster"
+	driver.input.focus = focus
+	mark.show_state()
+	var marked: bool = mark.piece.visible and mark.piece.tile == driver.state.entity(focus).tile
+	driver.input.focus = Command.NO_FOCUS
+	mark.show_state()
+	if not marked or mark.piece.visible:
+		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
+	return ""
+
+
 ## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.
 func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
@@ -404,6 +427,8 @@ func _check_wild_monster_removed(main: Node) -> String:
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
 	var lunged: String = _check_wild_monster_lunges(driver, view, feature)
+	if lunged.is_empty():
+		lunged = _check_focus_mark(main, driver)
 	if not lunged.is_empty():
 		return lunged
 	var monster_id: int = feature.monsters[0]
