@@ -13,7 +13,8 @@ extends RefCounted
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
-## instance in place (#530), which the world keeps through its save data.
+## instance in place (#530), which the world keeps through its save data. A world flag chooses a
+## blueprint's variant, and setting it purges the instance once nobody is in it (#529).
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -53,6 +54,7 @@ func run(_tree: SceneTree) -> String:
 		_check_walk_through,
 		_check_companions,
 		_check_purge,
+		_check_flags,
 		_check_start_kept,
 		_check_sent_to_spawn,
 		_check_layout,
@@ -313,6 +315,52 @@ func _check_left_again(world: World, purged: int) -> String:
 	var kept: bool = reloaded.left_at == world.left_at and reloaded.generations == world.generations
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its purges: " + reloaded.problem
+	return ""
+
+
+## World flags (#529): with RisingSource, setting RISEN chooses the arena's region as the glade's
+## variant. Set while the player is in the glade, it changes the hash but not the glade; through its
+## save data and back the world keeps the flag and the glade's old variant. The tick after the
+## player
+## walks out, the glade is purged, and it comes back at generation 1 from the arena's region, for
+## the world and its layout alike. Clearing the flag purges it again once nobody is in it, and
+## setting a flag that is already set changes nothing.
+func _check_flags() -> String:
+	var world: World = World.new(RisingSource.new(), 3, InstanceBlueprints.BASIC)
+	for direction: int in [0, 1, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
+	var before: int = world.state_hash()
+	world.set_flag(RisingSource.RISEN)
+	world.set_flag(RisingSource.RISEN)
+	var once: bool = world.flags.size() == 1 and world.flags[0] == RisingSource.RISEN
+	if not once or world.state_hash() == before:
+		return "setting a flag didn't set it once, or isn't hashed"
+	world.step(_still())
+	if world.instances.get(InstanceBlueprints.GLADE) != glade or world.variant_of("glade") != "":
+		return "a flag changed the glade while the player was in it"
+	var reloaded: World = WorldData.to_world(WorldData.of(world), RisingSource.new())
+	var kept: bool = reloaded.flags == world.flags and reloaded.variant_of("glade") == ""
+	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
+		return "the world didn't go through its save data with its flag: " + reloaded.problem
+	_walk_in(world, 3)
+	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
+		return "the glade wasn't purged once the player left it after the flag"
+	var risen: GameState = world.instance(InstanceBlueprints.GLADE)
+	var arena: Region = InstanceBlueprints.region_of("glade", world.seed_for("glade"), "arena")
+	var tiles: Array[Vector2i] = risen.region.sorted_tiles()
+	if world.variant_of("glade") != "arena" or tiles != arena.sorted_tiles():
+		return "the glade didn't come back from its variant, the arena's region"
+	# The arena's region has no way back to the basic instance, which only a layout worked out from
+	# the glade's new region notices.
+	if world.layout_problem().is_empty():
+		return "the world's layout still has the glade's old region"
+	world.set_flag(RisingSource.RISEN, false)
+	world.step(_still())
+	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 2:
+		return "clearing the flag didn't purge the glade, which nobody is in"
+	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
+		return "the glade didn't come back as itself once the flag was cleared"
 	return ""
 
 
@@ -726,3 +774,15 @@ func _check_refused() -> String:
 	if with_exit.fits(RegionFormat.parse("origin 0 0\n."), Vector2i(1, 0)):
 		return "a piece fit onto the tile outside an exit"
 	return ""
+
+
+## The blueprints, with a glade that RISEN turns into a variant (#529): the arena's region, as no
+## blueprint has a variant yet.
+class RisingSource:
+	extends BlueprintSource
+
+	const RISEN: String = "glade_risen"
+
+	func variant(instance_name: String, flags: Array[String]) -> String:
+		var risen: bool = instance_name == InstanceBlueprints.GLADE and flags.has(RISEN)
+		return InstanceBlueprints.ARENA if risen else ""

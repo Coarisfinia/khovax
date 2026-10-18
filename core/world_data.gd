@@ -6,16 +6,18 @@ extends RefCounted
 
 ## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
 ## purging, format 2 no ring seals, format 3 no companions and format 4 no tiles changed in place
-## (#530); the first three's saves were played by older rules, which `to_world` refuses anyway.
-const FORMAT: int = 5
+## (#530), format 5 no flags or variants (#529); the first three's saves were played by older
+## rules, which `to_world` refuses anyway.
+const FORMAT: int = 6
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
 ## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
 ## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, each slot's companion
 ## species (#338, only the slots that bring one), every loaded instance
-## in name order with its state (GameState.to_data) and the tick it was left behind (-1 while
-## someone is in it), every purged blueprint's generation, the rules version it was played by and
+## in name order with its state (GameState.to_data), the tick it was left behind (-1 while
+## someone is in it) and the variant it was loaded from (#529), every purged blueprint's generation,
+## the world's flags, the rules version it was played by and
 ## its hash, which `to_world` checks. Regions aren't saved whole: each is arranged again from its
 ## blueprint and seed, and only the tiles rules changed in it since (#530) come with its state.
 static func of(world: World) -> Dictionary:
@@ -26,6 +28,7 @@ static func of(world: World) -> Dictionary:
 				"name": instance_name,
 				"state": world.instances[instance_name].to_data(),
 				"left_at": world.left_at.get(instance_name, -1),
+				"variant": world.variant_of(instance_name),
 			},
 		)
 	var purged: Array[Dictionary] = []
@@ -43,6 +46,7 @@ static func of(world: World) -> Dictionary:
 		"tick": world.tick,
 		"companions": companions,
 		"generations": purged,
+		"flags": world.flags.duplicate(),
 		"instances": saved,
 		"hash": world.state_hash(),
 	}
@@ -67,12 +71,18 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	if read.failed():
 		return World.refused(read.problem)
 	var seed_value: int = (halves[0] << 32) | halves[1]
-	var world: World = World.new(source, seed_value, start, 0, _companions(read))
-	world.instances.clear()
+	# Empty at first, so nothing is loaded or laid out before the flags, variants and generations it
+	# depends on are back.
+	var world: World = World.new(source, seed_value, "", 0, _companions(read))
+	world.start_name = start
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
 	for entry: DataReader in read.entries("generations"):
 		_load_generation(world, entry)
+	_load_flags(world, read)
+	# Every saved variant before any instance loads: an instance's neighbours are read from theirs.
+	for entry: DataReader in read.entries("instances"):
+		world.variants[entry.text("name")] = entry.text("variant")
 	for entry: DataReader in read.entries("instances"):
 		_load_instance(world, entry)
 	# The starting instance stays loaded: replays and the driver start from it.
@@ -90,7 +100,7 @@ static func _load_instance(world: World, entry: DataReader) -> void:
 	if not world.source.exists(instance_name) or world.instances.has(instance_name):
 		entry.fail("instance %s doesn't exist or is saved twice" % instance_name)
 		return
-	var loaded: GameState = world.create_instance(instance_name, 0)
+	var loaded: GameState = world.create_instance(instance_name, 0, entry.text("variant"))
 	if loaded == null:
 		entry.fail("instance %s doesn't load" % instance_name)
 		return
@@ -122,17 +132,29 @@ static func _companions(read: DataReader) -> Array[String]:
 
 
 ## Restores the generation of the purged blueprint `entry` names; the starting instance is never
-## purged. An instance is purged at most once per World.PURGE_TICKS, which also keeps `seed_for`'s
-## draws
-## few.
+## purged. An instance is purged at most once a tick (or, by a flag, once before the first), which
+## also keeps `seed_for`'s draws bounded.
 static func _load_generation(world: World, entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
 	var known: bool = world.source.exists(instance_name) and instance_name != world.start_name
 	if not known or world.generations.has(instance_name):
 		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return
-	var most: int = Fixed.div_floor(world.tick, World.PURGE_TICKS)
-	world.generations[instance_name] = entry.whole("generation", 1, most)
+	world.generations[instance_name] = entry.whole("generation", 1, world.tick + 1)
+
+
+## Restores the world's flags (#529): each named, at most once.
+static func _load_flags(world: World, read: DataReader) -> void:
+	var value: Variant = read.data.get("flags")
+	if not value is Array:
+		read.fail("flags isn't a list")
+		return
+	var flag_list: Array = value
+	for flag: Variant in flag_list:
+		if not flag is String or str(flag).is_empty() or world.flags.has(str(flag)):
+			read.fail("a flag is nameless, not text, or saved twice")
+			return
+		world.set_flag(str(flag))
 
 
 static func _sorted(keys: Array) -> Array[String]:
