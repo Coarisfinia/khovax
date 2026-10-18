@@ -19,6 +19,11 @@ const GLADE: String = "glade"
 ## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
 const ARENA: String = "arena"
 const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
+## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses, a
+## placeholder region until the corrupted instances' own arrive. Its corrupting monster emits
+## GLADE_PURIFIED when it faints (regions/glade_corrupted.md), whose flag purifies it.
+const CORRUPTED_GLADE: String = "glade_corrupted"
+const GLADE_PURIFIED: String = "glade_purified"
 ## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
 ## Every instance in the web of exits is one, so an exit always leads out the same way (#120).
 const UNTURNED: Array[String] = [GLADE, ARENA]
@@ -34,11 +39,17 @@ const WILD_SPECIES: Dictionary[String, Dictionary] = {
 	ARENA: { "moss_toad": 1 },
 }
 ## Each blueprint's variants (#529), by blueprint: world flag to the variant it chooses, the first
-## of the world's flags set (in their sorted order) choosing. A variant is named after its own
-## region in REGIONS, a region file or a folder of region pieces like a blueprint's, which it is
-## loaded with instead; the rest of the blueprint stays. None yet: the world-changing moments (#499)
-## bring the first.
-const VARIANTS: Dictionary[String, Dictionary] = {}
+## of its flags in the order listed that the world has set choosing (#541), so a later story beat
+## listed first overrides an earlier one. A variant is named after its own region in REGIONS, a
+## region file or a folder of region pieces like a blueprint's, which it is loaded with instead; the
+## rest of the blueprint stays. "" is the blueprint's own region: the glade, once its corruption's
+## event was emitted, is purified, the glade again.
+const VARIANTS: Dictionary[String, Dictionary] = {
+	GLADE: {
+		World.EVENT_FLAG + GLADE_PURIFIED: "",
+		CORRUPTED_GLADE: CORRUPTED_GLADE,
+	},
+}
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
@@ -49,11 +60,12 @@ static func exists(instance_name: String) -> bool:
 	return NAMES.has(instance_name)
 
 
-## The variant of the named blueprint that the world's `flags` (sorted) choose (VARIANTS), or "".
+## The variant of the named blueprint that the world's `flags` choose (VARIANTS), or "".
 static func variant(instance_name: String, flags: Array[String]) -> String:
 	var chosen_by: Dictionary = VARIANTS.get(instance_name, { })
-	for flag: String in flags:
-		if chosen_by.has(flag):
+	# A const dictionary keeps the order it's written in, the same on every platform.
+	for flag: Variant in chosen_by:
+		if flags.has(str(flag)):
 			return str(chosen_by[flag])
 	return ""
 

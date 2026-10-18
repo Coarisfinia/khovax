@@ -14,11 +14,15 @@ extends RefCounted
 ## every instance from then on. The world keeps a set of flags (#529), which choose each blueprint's
 ## variant (`InstanceSource.variant`): setting or clearing one purges every loaded instance whose
 ## variant it changes, once nobody is in it, so it comes back from its new variant and no player
-## sees it change. Deterministic, like everything in core/.
+## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
+## EVENT_FLAG + its name, so whatever happens in an instance can change the world. Deterministic,
+## like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
 const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
+## What the flag a named event sets begins with (#541): EVENT_EMITTED_<the event's name>.
+const EVENT_FLAG: String = "EVENT_EMITTED_"
 
 ## The world's seed, which every instance's own seed is drawn from.
 var world_seed: int = 0
@@ -261,6 +265,7 @@ func step(commands: Array[Command]) -> void:
 		if not stepping.has(instance_name):
 			instances[instance_name].events.clear()
 	var leaving: Array[Array] = []
+	var emitted: Array[EventEmitted] = []
 	for instance_name: String in stepping:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
@@ -269,7 +274,10 @@ func step(commands: Array[Command]) -> void:
 				leaving.append([instance_name, event])
 			elif event is CompanionChosen:
 				choose_companion((event as CompanionChosen).slot, (event as CompanionChosen).place)
+			elif event is EventEmitted:
+				emitted.append(event as EventEmitted)
 	_hand_changed_ground(stepping)
+	_set_emitted(emitted)
 	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
 	var sent: Array[int] = []
 	for move: Array in leaving:
@@ -300,6 +308,14 @@ func _hand_changed_ground(stepped: Array[String]) -> void:
 			if state.region.exit_blueprints.has(target):
 				_hand_next_door(loaded, state)
 				break
+
+
+## Sets the flag of every event in `emitted` (#541), raised this tick, once every instance has
+## stepped, so no instance's step sees another's events change the world mid-tick; before anyone
+## walks through an exit, so whoever walks into an instance one outdated finds its new variant.
+func _set_emitted(emitted: Array[EventEmitted]) -> void:
+	for event: EventEmitted in emitted:
+		set_flag(EVENT_FLAG + event.event_name)
 
 
 ## Notes when each instance was left behind, and purges every one but the starting instance that

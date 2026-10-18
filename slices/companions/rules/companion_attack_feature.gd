@@ -49,7 +49,7 @@ func _strike(
 		target: int,
 		damage: int,
 ) -> void:
-	wild.wound(target, damage)
+	wild.wound(state, target, damage)
 	_waits[companion_id] = STRIKE_TICKS
 	state.events.append(CompanionStruck.new(companion_id, target, damage))
 

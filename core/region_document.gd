@@ -15,6 +15,7 @@ extends RefCounted
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
 ##   `, wounded` after it, it starts at a low share of its HP (#389); with
+##   `, emitting <event name>` next, it emits that event when it faints (#541, EventEmitted); with
 ##   `, on <tile blueprint id>` last, it stands on a tile of that kind rather than on ground (#452),
 ##   e.g. `a wild monster, always moss_toad, wounded, on sand`
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
@@ -44,6 +45,10 @@ const LOOT_ON_THE_GROUND: String = "loot on the ground"
 const HIDING: String = "a wild monster hiding in "
 ## What ends a named wild monster's legend meaning when it stands on a tile kind (#452).
 const ON: String = ", on "
+## What a named wild monster's legend meaning says before the event it emits when it faints (#541).
+const EMITTING: String = ", emitting "
+## How a named wild monster's legend meaning begins.
+const NAMED: String = "a wild monster, always "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
@@ -217,9 +222,20 @@ static func _tile_line(meaning: String, where: String) -> String:
 
 
 ## The compact lines a legend meaning stands for on `tile`, or "" for a meaning not understood. A
-## named wild monster standing on a tile kind (#452) is its species line, then the tile's.
+## named wild monster standing on a tile kind (#452) is its species line, then the tile's; one
+## emitting an event (#541) has it at the end of its species line.
 static func _line(meaning: String, tile: Vector2i) -> String:
-	if not meaning.begins_with("a wild monster, always ") or not meaning.contains(ON):
+	if meaning.begins_with(NAMED) and meaning.contains(EMITTING):
+		var after: String = meaning.get_slice(EMITTING, 1)
+		var event_name: String = after.get_slice(", ", 0)
+		var rest: String = meaning.get_slice(EMITTING, 0) + after.trim_prefix(event_name)
+		var lines: PackedStringArray = _line(rest, tile).split("\n")
+		var named: bool = lines[0].begins_with(RegionFormat.SPECIES)
+		if not named or not event_name.is_valid_ascii_identifier():
+			return ""
+		lines[0] += " " + RegionFormat.EMITS + event_name
+		return "\n".join(lines)
+	if not meaning.begins_with(NAMED) or not meaning.contains(ON):
 		return _meaning_line(meaning, tile)
 	var monster: String = _meaning_line(meaning.get_slice(ON, 0), tile)
 	var kind: String = _tile_line(meaning.get_slice(ON, 1), "%d %d" % [tile.x, tile.y])
