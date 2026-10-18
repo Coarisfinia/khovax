@@ -416,6 +416,25 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	mark.show_state()
 	if not marked or mark.piece.visible:
 		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
+	return _check_focus_picked(main, driver)
+
+
+## Tapping or clicking a wild monster focuses it (#486): picking at its figure's place on the screen
+## focuses it, and picking far from every figure focuses nothing.
+func _check_focus_picked(main: Node, driver: GameDriver) -> String:
+	var picker: FocusPicker = main.get_node("FocusPicker") as FocusPicker
+	var target: int = Command.NO_FOCUS
+	for monster: int in picker.wild_view.figures:
+		if picker.wild_view.figures[monster].is_visible_in_tree():
+			target = monster
+	if target == Command.NO_FOCUS:
+		return "no wild monster's figure shows to pick"
+	var figure: HexPiece = picker.wild_view.figures[target]
+	var shown: Vector2 = picker.camera.unproject_position(figure.global_position)
+	var picked: bool = picker.pick(shown) and driver.input.focus == target
+	driver.input.focus = Command.NO_FOCUS
+	if not picked or picker.pick(shown + Vector2(FocusPicker.PICK_PIXELS * 20.0, 0.0)):
+		return "picking a wild monster's figure didn't focus it, or picking far away did"
 	return ""
 
 
