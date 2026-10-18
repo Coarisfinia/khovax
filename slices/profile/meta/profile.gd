@@ -7,7 +7,7 @@ extends RefCounted
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). Quest progress (#184) is kept
 ## here too, advanced by the same gains against the quest definitions it's given, and so are the
 ## player's personal color (#233), which only views read, and their standings with the factions
-## (#483).
+## (#483), which finishing a quest can move (#532).
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -158,8 +158,17 @@ func _advance_quests(condition: String, what: String) -> void:
 			progress.count = 0
 		quest_progress[id] = progress
 		if progress.step >= quest.steps.size():
-			var _finished: bool = quest_progress.erase(id)
-			quests_done.append(id)
+			_finish(quest)
+
+
+## Finishes `quest`: it's done, and moves the standing with the faction it names (#532), held on
+## the scale by Standings.
+func _finish(quest: QuestDefinition) -> void:
+	var _finished: bool = quest_progress.erase(quest.id)
+	quests_done.append(quest.id)
+	if quest.standing != null:
+		# Its faction's id was checked when the quest was read, so the change can't be refused.
+		var _moved: String = standings.change(quest.standing.faction, quest.standing.change)
 
 
 ## The step each open quest in the book is on, by quest id in id order: every quest not finished

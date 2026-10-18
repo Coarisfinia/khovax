@@ -5,9 +5,10 @@ extends RefCounted
 ## list of steps, each one condition met a number of times. Each player's progress through it lives
 ## in their profile (Profile.quest_progress), advanced by what they obtain. A side quest (#473)
 ## starts only when the player enters the area it names; every other quest is open from the start.
+## Finishing a quest can move the player's standing with a faction (#532).
 
 ## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "steps", PathMark.FIELD, "starts_on"]
+const FIELDS: Array[String] = ["id", "name", "steps", PathMark.FIELD, "starts_on", "standing"]
 ## The conditions a side quest can start on: stepping into a place, or entering a region piece or
 ## an instance.
 const START_CONDITIONS: Array[String] = ["reached", "entered"]
@@ -21,6 +22,8 @@ var path: String = PathMark.NONE
 ## What starts a side quest, written like a step that's met once; null for a quest open from the
 ## start.
 var starts_on: QuestStep = null
+## How finishing it moves the player's standing with a faction; null when it doesn't.
+var standing: QuestStanding = null
 ## Why the quest couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -46,6 +49,10 @@ static func parse(
 		quest.problem = quest._check(file_id, data.get("steps"), known_species)
 	if quest.problem.is_empty() and data.has("starts_on"):
 		quest.problem = quest._check_start(data.get("starts_on"))
+	if quest.problem.is_empty() and data.has("standing"):
+		quest.standing = QuestStanding.parse(data.get("standing"))
+		if not quest.standing.problem.is_empty():
+			quest.problem = "its standing: " + quest.standing.problem
 	return quest
 
 
