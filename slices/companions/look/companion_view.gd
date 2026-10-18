@@ -4,13 +4,16 @@ extends Node3D
 ## smaller, standing in a smaller circle in its player's personal color with its player's slot marks
 ## (PlayerCircle, #233), so whose companion it is shows by a shape too, never by color alone (#68).
 ## It glides from tile to tile as it walks, like the players, turning smoothly toward where it goes.
-## It only reads the state.
+## One that goes back to its player at 0 HP (#456) shrinks into them, turning their personal color
+## as it goes, eased. It only reads the state.
 
 ## How big the figure is next to a wild monster's, and its circle next to a player's.
 const FIGURE_SCALE: float = 0.6
 const CIRCLE_SCALE: float = 0.75
 ## How fast the figure turns toward where it walks, in radians per second.
 const TURN_SPEED: float = 10.0
+## How long a companion takes to shrink into its player when it goes back to them.
+const RETURN_SECONDS: float = 0.6
 
 @export var driver: GameDriver
 
@@ -21,6 +24,11 @@ var figures: Dictionary[int, HexPiece] = {}
 var _facing: Dictionary[int, float] = {}
 ## The instance the figures belong to: another instance drops them at once (#189).
 var _shown: GameState
+
+
+func _ready() -> void:
+	if driver != null:
+		var _connected: int = driver.ticked.connect(_on_ticked)
 
 
 func _process(delta: float) -> void:
@@ -53,6 +61,43 @@ func show_state() -> void:
 		# Every frame, so a color the player chooses in the menu shows at once (#391).
 		circle_of(companion_id).paint(PersonalColor.shown(driver, slot))
 		_place(companion_id)
+
+
+## Takes the figure of every companion that went back to its player this tick off the board and
+## shrinks it into them.
+func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+	for event: RefCounted in events:
+		var returned: CompanionReturned = event as CompanionReturned
+		if returned != null and figures.has(returned.companion_id):
+			var figure: HexPiece = figures[returned.companion_id]
+			var _dropped: bool = figures.erase(returned.companion_id)
+			_dropped = _facing.erase(returned.companion_id)
+			_return(figure, returned.slot)
+
+
+## Glides `figure` into the player in `slot` while it shrinks away and takes on their color, then
+## frees it.
+func _return(figure: HexPiece, slot: int) -> void:
+	var player: Entity = driver.state.player(slot)
+	var into: Vector3 = figure.position_on(player.tile) if player != null else figure.position
+	var tint: StandardMaterial3D = StandardMaterial3D.new()
+	tint.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	tint.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	tint.albedo_color = Color(PersonalColor.shown(driver, slot), 0.0)
+	for mesh: Node in figure.find_children("*", "MeshInstance3D", true, false):
+		(mesh as MeshInstance3D).material_overlay = tint
+	var tween: Tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(
+		Tween.EASE_IN_OUT
+	)
+	var _glide: PropertyTweener = tween.tween_property(figure, "position", into, RETURN_SECONDS)
+	var _shrink: PropertyTweener = tween.tween_property(
+		figure,
+		"scale",
+		Vector3.ZERO,
+		RETURN_SECONDS,
+	)
+	var _tinted: PropertyTweener = tween.tween_property(tint, "albedo_color:a", 1.0, RETURN_SECONDS)
+	var _free: CallbackTweener = tween.chain().tween_callback(figure.queue_free)
 
 
 ## The circle under the companion's figure, or null when it has none shown.
