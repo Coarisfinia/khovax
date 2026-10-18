@@ -416,7 +416,52 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	mark.show_state()
 	if not marked or mark.piece.visible:
 		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
+	return _check_focus_picked(main, driver)
+
+
+## Tapping or clicking a wild monster focuses it (#486): picking at its figure's place on the screen
+## focuses it, and picking far from every figure focuses nothing.
+func _check_focus_picked(main: Node, driver: GameDriver) -> String:
+	var picker: FocusPicker = main.get_node("FocusPicker") as FocusPicker
+	var target: int = Command.NO_FOCUS
+	for monster: int in picker.wild_view.figures:
+		if picker.wild_view.figures[monster].is_visible_in_tree():
+			target = monster
+	if target == Command.NO_FOCUS:
+		return "no wild monster's figure shows to pick"
+	var figure: HexPiece = picker.wild_view.figures[target]
+	var shown: Vector2 = picker.camera.unproject_position(figure.global_position)
+	# A left click on it, through the picker's input as the mouse gives it.
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = shown
+	picker._unhandled_input(click)
+	var clicked: bool = driver.input.focus == target
+	driver.input.focus = Command.NO_FOCUS
+	# A quick, still tap on it: down and up on the same point.
+	picker._unhandled_input(_touch(shown, true))
+	picker._unhandled_input(_touch(shown, false))
+	var tapped: bool = driver.input.focus == target
+	driver.input.focus = Command.NO_FOCUS
+	# A touch that slides away before it lifts steers the stick and focuses nothing.
+	picker._unhandled_input(_touch(shown, true))
+	picker._unhandled_input(_touch(shown + Vector2(FocusPicker.TAP_PIXELS * 4.0, 0.0), false))
+	var slid: bool = driver.input.focus != Command.NO_FOCUS
+	if not clicked or not tapped or slid:
+		return "a click or a tap on a wild monster didn't focus it, or a slide did"
+	if picker.pick(shown + Vector2(FocusPicker.PICK_PIXELS * 20.0, 0.0)):
+		return "picking far from every wild monster focused one"
 	return ""
+
+
+## A touch of the first finger at `point`, coming down (`down`) or lifting.
+static func _touch(point: Vector2, down: bool) -> InputEventScreenTouch:
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.index = 0
+	touch.position = point
+	touch.pressed = down
+	return touch
 
 
 ## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.

@@ -36,6 +36,7 @@
 [ext_resource type="Script" path="res://slices/domination/ui/totem_button.gd" id="33_totem_button"]
 [ext_resource type="Script" path="res://slices/companions/ui/special_button.gd" id="34_special_button"]
 [ext_resource type="Script" path="res://slices/wild_monsters/look/focus_mark.gd" id="35_focus_mark"]
+[ext_resource type="Script" path="res://input/focus_picker.gd" id="36_focus_picker"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -48,6 +49,12 @@ holder = NodePath("../ProfileHolder")
 
 [node name="LocalInput" type="Node" parent="." unique_id=1290447713]
 script = ExtResource("2_input")
+
+[node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view")]
+script = ExtResource("36_focus_picker")
+input = NodePath("../LocalInput")
+camera = NodePath("../Camera3D")
+wild_view = NodePath("../Instance/WildMonsterView")
 
 [node name="EventBus" type="Node" parent="." node_paths=PackedStringArray("driver") unique_id=1841841841]
 script = ExtResource("18_bus")
