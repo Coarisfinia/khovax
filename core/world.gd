@@ -152,8 +152,7 @@ func set_flag(flag: String, on: bool = true) -> void:
 	# The instances not loaded may now have other regions: the layout is worked out again, and the
 	# loaded ones see their neighbours' new ground.
 	_layout = WorldLayout.new()
-	for loaded: String in sorted_names():
-		_hand_next_door(loaded, instances[loaded])
+	refresh_next_door()
 
 
 ## Whether the loaded instance `instance_name` was loaded from another variant than the flags
@@ -163,17 +162,27 @@ func _outdated(instance_name: String) -> bool:
 	return instance_name != start_name and variant_of(instance_name) != chosen
 
 
+## Hands every loaded instance the ground next door again (`_hand_next_door`), in name order: once
+## it changed, or once every saved instance is back with its tiles changed in place (WorldData).
+func refresh_next_door() -> void:
+	for loaded: String in sorted_names():
+		_hand_next_door(loaded, instances[loaded])
+
+
 ## Hands `state`, the instance `instance_name`, the ground of every instance its exits lead to
-## (#191), shifted into its coordinates as the views place them (`offset`).
+## (#191), shifted into its coordinates as the views place them (`offset`): a loaded one's region as
+## it is, with its tiles changed in place (#538), or else as it would be arranged.
 func _hand_next_door(instance_name: String, state: GameState) -> void:
-	state.next_door = {}
+	var next_door: Dictionary[Vector2i, int] = {}
 	for target: String in state.region.exit_blueprints:
 		var shift: Vector2i = offset(target) - offset(instance_name)
 		var ground: Region = _layout.region_for(self, target)
+		if instances.has(target):
+			ground = instances[target].region
 		for tile: Vector2i in ground.sorted_tiles():
 			if not state.region.has_tile(tile + shift):
-				state.next_door[tile + shift] = ground.terrain[tile]
-	state.next_door_version += 1
+				next_door[tile + shift] = ground.terrain[tile]
+	state.hand_next_door(next_door)
 
 
 ## Each slot's party from its companion species, by slot: the companion alone, or none for "".
@@ -260,6 +269,7 @@ func step(commands: Array[Command]) -> void:
 				leaving.append([instance_name, event])
 			elif event is CompanionChosen:
 				choose_companion((event as CompanionChosen).slot, (event as CompanionChosen).place)
+	_hand_changed_ground(stepping)
 	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
 	var sent: Array[int] = []
 	for move: Array in leaving:
@@ -274,6 +284,22 @@ func step(commands: Array[Command]) -> void:
 		elif not sent.has((event as ExitTaken).entity_id):
 			_walk_through(from, event as ExitTaken)
 	_purge_left_behind()
+
+
+## Hands the instances next door to any of `stepped` that changed a tile in place this tick (#538)
+## their new ground, so sight across the seam sees it at once.
+func _hand_changed_ground(stepped: Array[String]) -> void:
+	var changed: Array[String] = []
+	for instance_name: String in stepped:
+		for event: RefCounted in instances[instance_name].events:
+			if event is TileChanged and not changed.has(instance_name):
+				changed.append(instance_name)
+	for loaded: String in sorted_names():
+		var state: GameState = instances[loaded]
+		for target: String in changed:
+			if state.region.exit_blueprints.has(target):
+				_hand_next_door(loaded, state)
+				break
 
 
 ## Notes when each instance was left behind, and purges every one but the starting instance that
@@ -301,8 +327,7 @@ func _purge(instance_name: String) -> void:
 	# Its region is arranged anew, so the layout is worked out again from it, and the instances next
 	# to it see its new ground.
 	_layout.forget(instance_name)
-	for loaded: String in sorted_names():
-		_hand_next_door(loaded, instances[loaded])
+	refresh_next_door()
 
 
 ## The player in `slot`, in whichever instance they are, or null.

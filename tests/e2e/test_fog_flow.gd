@@ -5,7 +5,8 @@ extends RefCounted
 ## area to every player (#177): only tiles of the region, each once, in the state hash. The glade's
 ## lookout (#181) reveals the area around it the first time a player steps onto it, once. Sight
 ## crosses the seam (#191): standing on an exit, a player sees the ground of the instance it leads
-## to, which the world hands over without loading it.
+## to, which the world hands over without loading it; a tile changed in place in the loaded instance
+## next door is seen there at once (#538).
 
 const START: Vector2i = Vector2i(1, -1)
 const WEST: int = 3
@@ -147,7 +148,59 @@ func _check_across_the_seam() -> String:
 			return "the player sees %s, which is neither here nor next door" % tile
 	if across == 0:
 		return "a player on the exit sees nothing of the ground next door"
+	return _check_changed_across_the_seam(world)
+
+
+## A tile changed in place next door (#538): with the glade loaded and a second player in it, a rule
+## there turns a tile the player on the basic instance's exit sees across the seam into rock. In the
+## same tick the basic instance gets the rock as its ground next door, and the player's sight is
+## worked out again around it at once, so the world goes through its save data and back alike.
+func _check_changed_across_the_seam(world: World) -> String:
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
+	var shift: Vector2i = world.offset(InstanceBlueprints.GLADE) - world.offset(world.start_name)
+	var seen: Array[Vector2i] = FlowSteps.sight_of(basic)
+	var rock: Vector2i = _blocking_across(basic, basic.player(0).tile)
+	if rock == Vector2i.MAX:
+		return "no tile the player sees across the seam would block their sight as rock"
+	var _joined: Entity = glade.add_entity(1, glade.region.starts[0])
+	var clearing: TileRule = TileRule.new(rock - shift, Region.BLOCKED)
+	glade.features.append(clearing)
+	world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+	if basic.next_door.get(rock, -1) != Region.BLOCKED or FlowSteps.sight_of(basic) == seen:
+		return "the rock changed in place next door isn't the basic instance's ground next door"
+	var sight: Array[Vector2i] = FogFeature.sight(
+		basic.region,
+		basic.player(0).tile,
+		FogFeature.SIGHT_RADIUS,
+		basic.next_door,
+	)
+	if FlowSteps.sight_of(basic) != sight:
+		return "the player's sight wasn't worked out again around the rock next door"
+	glade.features.erase(clearing)
+	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	if not reloaded.problem.is_empty() or reloaded.state_hash() != world.state_hash():
+		return "the world with rock changed next door didn't come back alike: " + reloaded.problem
 	return ""
+
+
+## The first tile next door of `state` that the player standing on `from` sees, and whose turning
+## into rock would hide some other tile from them; Vector2i.MAX when there's none.
+static func _blocking_across(state: GameState, from: Vector2i) -> Vector2i:
+	var seen: Array[Vector2i] = FogFeature.sight(
+		state.region,
+		from,
+		FogFeature.SIGHT_RADIUS,
+		state.next_door,
+	)
+	for tile: Vector2i in seen:
+		if state.next_door.get(tile, -1) == Region.GROUND:
+			var blocked: Dictionary[Vector2i, int] = state.next_door.duplicate()
+			blocked[tile] = Region.BLOCKED
+			var radius: int = FogFeature.SIGHT_RADIUS
+			if FogFeature.sight(state.region, from, radius, blocked).size() < seen.size():
+				return tile
+	return Vector2i.MAX
 
 
 ## Walks player 0 `moves` tiles west, waiting for each move to arrive.
@@ -161,3 +214,24 @@ func _walk_west(state: GameState, moves: int) -> void:
 
 func _tile(state: GameState) -> Vector2i:
 	return state.player(0).tile
+
+
+## A test rule that changes one tile in place on its first step, as a gate or a destroyable tile
+## will.
+class TileRule:
+	extends Feature
+
+	var tile: Vector2i
+	var kind: int
+	var done: bool = false
+
+	func _init(changed_tile: Vector2i, new_kind: int) -> void:
+		tile = changed_tile
+		kind = new_kind
+
+	func id() -> int:
+		return 1002
+
+	func step(state: GameState, _commands: Array[Command]) -> void:
+		if not done:
+			done = state.change_tile(tile, kind)

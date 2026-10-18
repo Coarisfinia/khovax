@@ -91,6 +91,11 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 		world.variants[entry.text("name")] = entry.text("variant")
 	for entry: DataReader in read.entries("instances"):
 		_load_instance(world, entry)
+	# Every instance's tiles changed in place are back before any sight is worked out: it crosses
+	# the seam onto them (#538).
+	world.refresh_next_door()
+	for entry: DataReader in read.entries("instances"):
+		_load_state(world, entry)
 	# The starting instance stays loaded: replays and the driver start from it.
 	if not read.failed() and not world.instances.has(start):
 		read.fail("the starting instance %s isn't among the saved ones" % start)
@@ -100,7 +105,7 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	return world if not read.failed() else World.refused(read.problem)
 
 
-## Loads the instance `entry` names from its blueprint and restores its saved state into it.
+## Loads the instance `entry` names from its blueprint and restores its tiles changed in place.
 static func _load_instance(world: World, entry: DataReader) -> void:
 	var instance_name: String = entry.text("name")
 	if not world.source.exists(instance_name) or world.instances.has(instance_name):
@@ -110,8 +115,19 @@ static func _load_instance(world: World, entry: DataReader) -> void:
 	if loaded == null:
 		entry.fail("instance %s doesn't load" % instance_name)
 		return
-	loaded.load_data(entry.read("state"))
+	if not loaded.load_changed_tiles(entry.read("state")):
+		return
 	world.instances[instance_name] = loaded
+
+
+## Restores the rest of the saved state of the instance `entry` names, if it loaded, and when it was
+## left behind.
+static func _load_state(world: World, entry: DataReader) -> void:
+	var instance_name: String = entry.text("name")
+	var loaded: GameState = world.instances.get(instance_name)
+	if loaded == null or entry.failed():
+		return
+	loaded.load_data(entry.read("state"))
 	# Left behind exactly when nobody is in it, and not so long ago that a step would have purged
 	# it.
 	var left: int = entry.whole("left_at", -1, world.tick)
