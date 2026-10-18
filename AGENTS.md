@@ -233,12 +233,15 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   and saves, under the rules for `meta/`). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
-  or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a region's `TileTrigger`) and events it
-  reads (`ExitTaken`, which the `World` moves a player through) stay in the core, and only the
-  rules that run them move. The core is `core/` (#297): the tick, the state, the region, the
-  world, the grid math and the feature list. Scripts reach each other by `class_name`; where a
-  path is needed (a scene, a model, a `preload`), it is absolute from `res://`, never relative
-  (`./`, `../`), which the same check refuses (#375).
+  or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
+  region's `TileTrigger`) and events it reads (`ExitTaken`, which the `World` moves a player
+  through) stay in the core, and only the rules that run them move. The core is `core/` (#297):
+  the tick, the state, the region, the world, the grid math and the feature list. Scripts reach
+  each other by `class_name`; where a path is needed (a scene, a model, a `preload`), it is
+  absolute from `res://`, never relative (`./`, `../`), which the same check refuses (#375). It
+  also keeps the rules pure and the tests and tools apart (owner, #526): `core/` and every
+  `rules/` never reach a `look/`, `ui/`, `view/`, `input/` or `game/` class or path, nothing
+  outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,

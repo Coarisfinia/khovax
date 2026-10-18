@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Fails when a script reaches a file the wrong way (#375):
-# - The core never depends on a slice: no script under core/ names a class_name declared under
-#   slices/ or names a slices/ path in its code, with or without res://, so a path built from parts
-#   ("res://" + "slices/tiles/data/") is refused too (AGENTS.md, "Vertical slices", #526).
+# Fails when a script reaches a file the wrong way (#375, #526). Each boundary is checked by class
+# name (a class_name declared on the far side) and by path:
+# - The core never depends on a slice: no script under core/ names a slice's class or a slices/
+#   path in its code, with or without res://, so a path built from parts
+#   ("res://" + "slices/tiles/data/") is refused too (AGENTS.md, "Vertical slices").
+# - The rules stay pure: no script under core/ or a slice's rules/ names a class or a path of any
+#   look/, ui/, view/, input/ or game/ folder, so the simulation never leans on what draws or
+#   drives it.
+# - Nothing outside tests/ reaches the tests, and nothing outside tools/ and tests/ reaches the
+#   tools: no class of theirs, no res://tests/ or res://tools/ path. Only paths with their scheme
+#   count here, so a message may still point a reader at a test file. The one exception is the
+#   test builds' mode, which plays the device flow from tests/ (game/test_mode.gd): only its path
+#   is allowed, never a test class.
 # - Paths are absolute from res://: no string in a script starts with ./ or ../, no load or preload
 #   of a path without its scheme, and no scene or resource names a file by a relative path.
 # Comments don't count (a # outside strings, as the determinism check strips them), so the rules
@@ -17,22 +26,60 @@ code_of() {
   perl -pe 's/^((?:[^"'"'"'#]|"(?:\\.|[^"\\])*"|'"'"'(?:\\.|[^'"'"'\\])*'"'"')*)#.*$/$1/' "$1"
 }
 
-slice_classes=$({ git grep -h '^class_name ' -- 'slices/*.gd' || true; } \
-  | awk '{print $2}' | paste -sd'|' -)
-while IFS= read -r -d '' file; do
-  code=$(code_of "$file")
-  if [ -n "$slice_classes" ] && grep -nwE "$slice_classes" <<< "$code"; then
-    echo "::error file=${file}::the core never depends on a slice: see the lines above"
+# The class_names declared in the scripts the pathspecs match, as one alternation.
+classes_in() {
+  { git grep -h '^class_name ' -- "$@" || true; } | awk '{print $2}' | paste -sd'|' -
+}
+
+# Fails a file whose code names one of the classes or matches the path pattern (either may be
+# empty, for none), with the rule it breaks.
+refuse() {
+  local file=$1 code=$2 classes=$3 path=$4 rule=$5 hits
+  hits=$(
+    if [ -n "$classes" ]; then grep -nwE "$classes" <<< "$code" || true; fi
+    if [ -n "$path" ]; then grep -nE "$path" <<< "$code" || true; fi
+  )
+  if [ -n "$hits" ]; then
+    echo "$hits"
+    echo "::error file=${file}::${rule}: see the lines above"
     failed=1
   fi
-  if grep -n 'slices/' <<< "$code"; then
-    echo "::error file=${file}::the core never loads a slice's file: see the lines above"
-    failed=1
-  fi
-done < <(git ls-files -z 'core/*.gd')
+}
+
+slice_classes=$(classes_in 'slices/*.gd')
+presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' 'view/*.gd' \
+  'input/*.gd' 'game/*.gd')
+test_classes=$(classes_in 'tests/*.gd')
+tool_classes=$(classes_in 'tools/*.gd')
 
 while IFS= read -r -d '' file; do
   code=$(code_of "$file")
+  case $file in
+    core/*)
+      refuse "$file" "$code" "$slice_classes" 'slices/' "the core never depends on a slice"
+      ;;
+  esac
+  case $file in
+    core/* | slices/*/rules/*)
+      refuse "$file" "$code" "$presentation_classes" '\b(look|ui|view|input|game)/' \
+        "the rules never depend on what draws or drives them"
+      ;;
+  esac
+  case $file in
+    tests/*) ;;
+    game/test_mode.gd)
+      refuse "$file" "$code" "$test_classes" '' "nothing outside tests/ reaches the tests"
+      ;;
+    *)
+      refuse "$file" "$code" "$test_classes" 'res://tests/' "nothing outside tests/ reaches the tests"
+      ;;
+  esac
+  case $file in
+    tests/* | tools/*) ;;
+    *)
+      refuse "$file" "$code" "$tool_classes" 'res://tools/' "the game never reaches tools/"
+      ;;
+  esac
   # Any string starting with ./ or ../, and every load or preload of a literal path that doesn't
   # start with its scheme (res://, user://, uid://), each found on its own.
   relative=$(
