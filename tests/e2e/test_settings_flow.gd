@@ -162,6 +162,10 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
 	var default: Color = PersonalColor.of(driver.world.world_seed, driver.input.slot)
+	# Laid out in its scene (#437): it scrolls only up and down, and its wheel is a wheel.
+	if (tab.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED
+			or tab.picker.picker_shape != ColorPicker.SHAPE_HSV_WHEEL):
+		return "the Character tab's scene scrolls sideways or has no color wheel"
 	if tab.shown != CharacterTab.AUTO_TEXT or not tab.picker.color.is_equal_approx(default):
 		return "the Character tab doesn't start on Auto's color: %s" % tab.shown
 	var picked: Color = PersonalColor.of_number(PICKED)

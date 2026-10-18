@@ -9,64 +9,45 @@ extends ScrollContainer
 ## phone held upright (MonsterDetails, #430), then their materials (MaterialsList, #295). Above them
 ## all, the character's name (#399): typed into a field and kept once confirmed (Enter, or leaving
 ## the field), with a line that says in words why a name was refused. It scrolls when the screen is
-## too short.
+## too short. Its layout lives in its scene, character_tab.tscn (#437): this script keeps only what
+## it does, and adds the panels that are built from their own classes.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
 const AUTO_TEXT: String = "Auto: this world's color"
 const CHOSEN_TEXT: String = "Your own color"
-const NAME_HINT: String = "Name your character"
 
 ## The driver: whose world gives the default and which slot is this machine's player's.
 var driver: GameDriver
 ## Whose profile keeps the color.
 var holder: ProfileHolder
-var picker: ColorPicker
-## Hands the color back to Auto.
-var auto_button: Button
 ## The player's dominated monsters.
 var monsters: DominatedMonstersList
 ## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
 var shown: String = ""
-## The character's name field, and the line saying why a name was refused ("" when it wasn't).
-var name_field: LineEdit
-var name_note: Label
 ## The player's Might and its parts, above their monsters (#509).
 var might: MightPanel
 ## The player's materials, below their monsters (#295).
 var materials: MaterialsList
-var _column: VBoxContainer
 ## The monsters and their detail pane, side by side or one above the other.
 var _pair: BoxContainer
-var _state: Label
+
+## The wheel, in the scene with no alpha or intensity to pick: the circle is opaque and not lit
+## brighter than white, so RGB alone sits beside the wheel's hue, saturation and value.
+@onready var picker: ColorPicker = $Middle/Column/Picker
+## Hands the color back to Auto.
+@onready var auto_button: Button = $Middle/Column/Auto
+## The character's name field, and the line saying why a name was refused ("" when it wasn't).
+@onready var name_field: LineEdit = $Middle/Column/NameField
+@onready var name_note: Label = $Middle/Column/NameNote
+@onready var _column: VBoxContainer = $Middle/Column
+@onready var _state: Label = $Middle/Column/State
 
 
 func _ready() -> void:
-	horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var middle: CenterContainer = CenterContainer.new()
-	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_column = VBoxContainer.new()
-	_add_name()
-	_column.add_child(GameMenu.label("Personal color"))
-	_state = GameMenu.label("")
-	_column.add_child(_state)
-	picker = ColorPicker.new()
-	picker.picker_shape = ColorPicker.SHAPE_HSV_WHEEL
-	# The circle is opaque and not lit brighter than white: no alpha or intensity to pick, and RGB
-	# alone beside the wheel's hue, saturation and value.
-	picker.edit_alpha = false
-	picker.edit_intensity = false
-	picker.color_modes_visible = false
-	picker.presets_visible = false
-	picker.sampler_visible = false
-	# The column is as wide as the monsters' lines (fit_width); the wheel stays in its middle.
-	picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_set_up_name()
 	var _picked: int = picker.color_changed.connect(_on_picked)
-	_column.add_child(picker)
-	auto_button = GameMenu.button("Auto", choose_auto)
-	auto_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_column.add_child(auto_button)
+	var _auto: int = auto_button.pressed.connect(choose_auto)
 	might = MightPanel.new()
 	might.holder = holder
 	_column.add_child(might)
@@ -85,8 +66,6 @@ func _ready() -> void:
 	materials = MaterialsList.new()
 	materials.holder = holder
 	_column.add_child(materials)
-	middle.add_child(_column)
-	add_child(middle)
 
 
 ## Shows the color in use, the player's own or the world's default while Auto picks it, and their
@@ -120,19 +99,14 @@ func choose_name(typed: String) -> void:
 		name_field.text = holder.keeper.profile.character_name
 
 
-## The name field, filled with the profile's name, under its title, with the refusal line below.
-func _add_name() -> void:
-	_column.add_child(GameMenu.label("Name"))
-	name_field = LineEdit.new()
-	name_field.placeholder_text = NAME_HINT
+## Fills the name field with the profile's name and keeps a name once it's confirmed. Its length
+## limit is the profile's (Profile.NAME_LIMIT), so it's set here rather than in the scene.
+func _set_up_name() -> void:
 	name_field.max_length = Profile.NAME_LIMIT
 	if holder != null and holder.keeper != null:
 		name_field.text = holder.keeper.profile.character_name
 	var _submitted: int = name_field.text_submitted.connect(choose_name)
 	var _left: int = name_field.focus_exited.connect(func() -> void: choose_name(name_field.text))
-	_column.add_child(name_field)
-	name_note = GameMenu.label("")
-	_column.add_child(name_note)
 
 
 ## Sizes the wheel for text of `font` pixels.

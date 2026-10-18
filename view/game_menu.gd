@@ -14,6 +14,8 @@ const PAUSE_CHOICES: Array[String] = ["Off", "On"]
 const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
+## The Character tab, laid out in its scene (#437).
+const CHARACTER_TAB: PackedScene = preload("res://view/character_tab.tscn")
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
@@ -208,8 +210,7 @@ func _build_sheet() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# No panel of its own: the tabs' pages lie on the sheet, so the ink text stays on the fog.
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	character = CharacterTab.new()
-	character.name = "Character"
+	character = CHARACTER_TAB.instantiate() as CharacterTab
 	character.driver = driver
 	character.holder = holder
 	tabs.add_child(character)

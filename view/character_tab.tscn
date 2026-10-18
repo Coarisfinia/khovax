@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://du2yhfu70d8wd" path="res://view/character_tab.gd" id="1_character"]
+
+[node name="Character" type="ScrollContainer"]
+horizontal_scroll_mode = 0
+script = ExtResource("1_character")
+
+[node name="Middle" type="CenterContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Column" type="VBoxContainer" parent="Middle"]
+layout_mode = 2
+
+[node name="NameTitle" type="Label" parent="Middle/Column"]
+layout_mode = 2
+text = "Name"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="NameField" type="LineEdit" parent="Middle/Column"]
+layout_mode = 2
+placeholder_text = "Name your character"
+
+[node name="NameNote" type="Label" parent="Middle/Column"]
+layout_mode = 2
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="ColorTitle" type="Label" parent="Middle/Column"]
+layout_mode = 2
+text = "Personal color"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="State" type="Label" parent="Middle/Column"]
+layout_mode = 2
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Picker" type="ColorPicker" parent="Middle/Column"]
+layout_mode = 2
+size_flags_horizontal = 4
+edit_alpha = false
+edit_intensity = false
+picker_shape = 1
+sampler_visible = false
+color_modes_visible = false
+presets_visible = false
+
+[node name="Auto" type="Button" parent="Middle/Column"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Auto"
