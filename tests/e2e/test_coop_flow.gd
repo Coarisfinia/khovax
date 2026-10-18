@@ -102,7 +102,7 @@ func _check_circles() -> String:
 ## When both players bring a companion, each is joined by theirs, drawn in a circle of their own
 ## color with their own marks, so the two are told apart by more than color too.
 func _check_companions_shown() -> String:
-	_driver.world.set_companions(["storm_finch", "moss_toad"])
+	_driver.world.set_carried([PackedStringArray(["storm_finch"]), PackedStringArray(["moss_toad"])])
 	_driver.world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var view: CompanionView = _main.get_node("Instance/CompanionView") as CompanionView
 	view.show_state()

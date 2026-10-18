@@ -72,7 +72,7 @@ func _init(
 	source = instance_source
 	world_seed = seed_value
 	start_name = start
-	set_companions(companion_species)
+	set_carried(_parties_of(companion_species))
 	if start.is_empty():
 		return
 	var first: GameState = create_instance(start, players, chosen_variant(start))
@@ -176,13 +176,12 @@ func _hand_next_door(instance_name: String, state: GameState) -> void:
 	state.next_door_version += 1
 
 
-## Sets every slot's companion species, by slot ("" or nothing for none), as the one monster that
-## slot carries.
-func set_companions(companion_species: Array[String]) -> void:
+## Each slot's party from its companion species, by slot: the companion alone, or none for "".
+static func _parties_of(companion_species: Array[String]) -> Array[PackedStringArray]:
 	var parties: Array[PackedStringArray] = []
 	for species: String in companion_species:
 		parties.append(PackedStringArray([species] if not species.is_empty() else []))
-	set_carried(parties)
+	return parties
 
 
 ## Sets every slot's carried species, by slot, in carried order (empty or nothing for none), in the
