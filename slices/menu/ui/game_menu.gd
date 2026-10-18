@@ -37,6 +37,8 @@ const OPEN_TEXT: String = "Menu"
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
 const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
 const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
+## How wide their icons are, in font sizes: a little larger than the text, so they read as clearly.
+const ICON_FONTS: float = 1.3
 ## The close button's words on hover: it shows only its icon.
 const CLOSE_TIP: String = "Close the menu (Escape, or B on a controller)"
 const CLOSE_NAME: String = "Close"
@@ -127,10 +129,9 @@ static func button(text: String, pressed: Callable) -> Button:
 	return made
 
 
-## Gives `made` the icon `shown`, scaled to fit the button's height beside its text, if any.
+## Gives `made` the icon `shown`, beside its text, if any; lay_out sizes it with the font.
 static func _with_icon(made: Button, shown: Texture2D) -> Button:
 	made.icon = shown
-	made.expand_icon = true
 	return made
 
 
@@ -187,6 +188,8 @@ func lay_out(screen: Vector2) -> void:
 		_font_size = font
 		theme.default_font_size = font
 		_size_buttons(self)
+		for iconed: Button in [_open_button, close_button()]:
+			iconed.add_theme_constant_override("icon_max_width", roundi(font * ICON_FONTS))
 		character.fit(font)
 	# The close button stands beside the tabs, so they have its width less.
 	var room: float = screen.x - 4.0 * MARGIN - font * BUTTON_FONTS
