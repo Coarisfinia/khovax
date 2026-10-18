@@ -3,17 +3,19 @@ extends RefCounted
 ## nothing dominated; every gain adds its dominations, with ids that are never reused, and its
 ## materials, and is on disk at once; the profile survives saving and loading; a save it can't trust
 ## is refused; an older save is migrated, oldest step first, into the current format with no quest
-## progress (#184); the first three monsters dominated are carried (#53); and a damaged save falls
-## back to the newest intact generation before it (#179).
+## progress (#184); the first three monsters dominated are carried (#53); the standing with each
+## faction stays on its scale and is saved (#483); and a damaged save falls back to the newest
+## intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
-## The keys a newer save format added (#184, #53, #391, #399), which older saves lack.
+## The keys a newer save format added (#184, #53, #391, #399, #483), which older saves lack.
 const ADDED_KEYS: Array[String] = [
 	"quest_progress",
 	"quests_done",
 	"carried",
 	"personal_color",
 	"character_name",
+	"standings",
 ]
 
 
@@ -132,6 +134,7 @@ func _check_refused() -> String:
 	var color: String = "\"personal_color\": -1"
 	var nameless: String = "\"character_name\": \"\""
 	var cases: Dictionary[String, String] = {
+
 		"not json": "not a profile save",
 		text.replace(format, "\"format\": 99"): "save format 99",
 		text.replace(done, "\"quests_done\": [\"a\", \"a\"]"): "a finished quest",
@@ -167,11 +170,17 @@ func _check_refused() -> String:
 			"the save's character name"
 		),
 	}
+	var problem: String = _unrefused(cases)
+	return problem if not problem.is_empty() else _check_named()
+
+
+## Why one of the saves in `cases` wasn't refused with the reason it maps to, or "".
+func _unrefused(cases: Dictionary[String, String]) -> String:
 	for case: String in cases:
 		var problem: String = ProfileSave.parse(case).problem
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
-	return _check_named()
+	return ""
 
 
 ## Might (#508): the carried monsters' part sums each one's HP, twice its strength and its speed,
@@ -211,14 +220,66 @@ func _check_named() -> String:
 	var long: String = keeper.choose_name("x".repeat(Profile.NAME_LIMIT + 1), 0)
 	if empty.is_empty() or long.is_empty() or keeper.profile.character_name != "Ash":
 		return "an empty or too long name wasn't refused, or changed the name"
-	return _check_might()
+	var problem: String = _check_might()
+	return problem if not problem.is_empty() else _check_standings()
+
+
+## Standing with a faction (#483): neutral until something moves it, held between the lowest and
+## the highest standing however far it's pushed, neutral again on coming back to 0, and kept
+## through saving and loading; a faction without a valid id is refused and changes nothing.
+func _check_standings() -> String:
+	var profile: Profile = Profile.new()
+	var standings: Standings = profile.standings
+	if standings.of("starter") != 0:
+		return "a new profile isn't neutral with a faction"
+	var changed: String = standings.change("starter", 3) + standings.change("starter", 4)
+	changed += standings.change("rivals", -2) + standings.change("rivals", -(1 << 62))
+	if not changed.is_empty() or standings.of("starter") != Standings.HIGHEST:
+		return "pushing a standing past the top didn't stay at the top: %s" % changed
+	if standings.of("rivals") != Standings.LOWEST:
+		return "pushing a standing past the bottom didn't stay at the bottom"
+	changed = standings.change("rivals", -Standings.LOWEST)
+	if not changed.is_empty() or standings.by_faction.has("rivals"):
+		return "a standing back at 0 isn't neutral again"
+	changed = standings.change("rivals", -1)
+	if not changed.is_empty() or standings.change("Bad id", 1).is_empty():
+		return "a faction without a valid id was taken, or a valid one refused: %s" % changed
+	if standings.by_faction.has("Bad id"):
+		return "a faction without a valid id still got a standing"
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var expected: Dictionary[String, int] = { "rivals": -1, "starter": Standings.HIGHEST }
+	if not loaded.problem.is_empty() or loaded.standings.by_faction != expected:
+		return "the standings didn't survive saving: %s %s" % [
+			loaded.problem,
+			loaded.standings.by_faction,
+		]
+	return _check_standings_refused()
+
+
+## A save with standings that aren't a dictionary, a faction without a valid id, or a standing that
+## isn't a whole number off neutral on the scale is refused.
+func _check_standings_refused() -> String:
+	var text: String = ProfileSave.to_text(Profile.new())
+	var neutral: String = "\"standings\": {}"
+	var faction_a: String = "the standing with faction a"
+	var cases: Dictionary[String, String] = {
+		text.replace(neutral, "\"standings\": []"): "the save lacks its standings",
+		text.replace(neutral, "\"standings\": {\"Bad id\": 1}"): "the standing with faction Bad",
+		text.replace(neutral, "\"standings\": {\"a\": 0}"): faction_a,
+		text.replace(neutral, "\"standings\": {\"a\": 6}"): faction_a,
+		text.replace(neutral, "\"standings\": {\"a\": -6}"): faction_a,
+		text.replace(neutral, "\"standings\": {\"a\": 1.5}"): faction_a,
+		text.replace(neutral, "\"standings\": {\"a\": \"1\"}"): faction_a,
+	}
+	return _unrefused(cases)
 
 
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
 ## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
 ## formats before 4 carried no monsters (#53): the first three dominated are carried then, and
 ## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
-## starts on Auto; formats before 7 had no character name (#399), which starts empty.
+## starts on Auto; formats before 7 had no character name (#399), which starts empty; and formats
+## before 8 had no standings with factions (#483), which start neutral.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
@@ -247,6 +308,15 @@ func _check_migrated() -> String:
 			"carried": [],
 			"dominated_monsters": [],
 			"personal_color": Profile.AUTO_COLOR,
+		},
+		{
+			"format": 7,
+			"quest_progress": {},
+			"quests_done": [],
+			"carried": [],
+			"dominated_monsters": [],
+			"personal_color": Profile.AUTO_COLOR,
+			"character_name": "",
 		},
 	]
 	for old: Dictionary in olds:
