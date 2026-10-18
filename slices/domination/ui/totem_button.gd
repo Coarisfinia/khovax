@@ -8,6 +8,7 @@ extends ActionButton
 
 
 func _init() -> void:
+	icon = preload("res://assets/game-icons/totem.svg")
 	action = &"place_totem"
 
 
@@ -23,29 +24,6 @@ func usable() -> bool:
 	if not domination.encircled.has(player.id):
 		return false
 	return domination.ring_waiting(driver.state, player.id).has(player.tile)
-
-
-## A totem: a pole standing on a foot, with a diamond on top.
-func _draw_icon(area: Rect2, ink: Color) -> void:
-	var middle: Vector2 = area.get_center()
-	var high: float = area.size.y * 0.3
-	draw_line(
-		middle + Vector2(0.0, -high * 0.4),
-		middle + Vector2(0.0, high),
-		ink,
-		INK_PIXELS * 2.0,
-	)
-	var foot: float = area.size.x * 0.16
-	draw_line(middle + Vector2(-foot, high), middle + Vector2(foot, high), ink, INK_PIXELS * 2.0)
-	var top: Vector2 = middle + Vector2(0.0, -high * 0.75)
-	var corner: float = area.size.x * 0.12
-	var diamond: PackedVector2Array = [
-		top + Vector2(0.0, -corner),
-		top + Vector2(corner, 0.0),
-		top + Vector2(0.0, corner),
-		top + Vector2(-corner, 0.0),
-	]
-	draw_colored_polygon(diamond, ink)
 
 
 func _charges() -> int:
