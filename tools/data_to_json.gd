@@ -1,7 +1,7 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
-## Writes every content data file (data/<kind>/*.jsonc; in a slice's data/, #412, the slice's own
+## Writes every content data file (the core's, core/data/<kind>/*.jsonc, #506; in a slice's data/, #412, the slice's own
 ## kind's files directly, named for the slice so no folder repeats it, #442, and any other kind it
 ## owns in <kind>/) as plain JSON into build/data-json/<kind>/,
 ## with the comments stripped by the game's own stripper (Jsonc), so CI can check each one against
@@ -12,7 +12,7 @@ const SLICES: String = "res://slices/"
 
 
 func _init() -> void:
-	var failed: int = _convert_all("res://data/", "")
+	var failed: int = _convert_all("res://core/data/", "")
 	for slice: String in DirAccess.get_directories_at(SLICES):
 		if DirAccess.dir_exists_absolute(SLICES + slice + "/data"):
 			failed += _convert_all(SLICES + slice + "/data/", slice)
@@ -22,7 +22,7 @@ func _init() -> void:
 ## Converts every kind's folder in `source`. Content lives one folder deep
 ## (<source><kind>/<id>.jsonc), as CI checks it, except in a slice's data/ (`slice` names it), where
 ## the slice's own kind's files sit directly, beside the schemas; anything elsewhere would go
-## unchecked, so it fails instead, except data/schemas/.
+## unchecked, so it fails instead, except core/data/schemas/.
 func _convert_all(source: String, slice: String) -> int:
 	var failed: int = 0
 	for file_name: String in DirAccess.get_files_at(source):

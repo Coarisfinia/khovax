@@ -38,7 +38,7 @@ var fainted: Array[int] = []
 ## The blueprint's species ids for spots the region doesn't name, and how likely each one is.
 var roster: Array[String] = []
 var weights: Array[int] = []
-## Each species' base HP and strength, by species id, from the content data (meta/ reads it).
+## Each species' base HP and strength, by species id, from the content data (the species slice reads it).
 var max_hps: Dictionary[String, int] = {}
 var strengths: Dictionary[String, int] = {}
 ## Each wild monster's species id, by entity id.

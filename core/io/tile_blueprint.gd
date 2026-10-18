@@ -5,7 +5,7 @@ extends RefCounted
 ## color and decoration for the view, and its traits for the rules. A region's legend places it by
 ## its id. Its number is permanent (TileKinds); the rules see only its id, number and traits.
 
-## A tile blueprint file's fields, as its schema (slices/tiles/data/tiles.schema.json) allows them.
+## A tile blueprint file's fields, as its schema (core/data/schemas/tiles.schema.json) allows them.
 const FIELDS: Array[String] = [
 	"id",
 	"number",

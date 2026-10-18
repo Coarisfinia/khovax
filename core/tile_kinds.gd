@@ -5,12 +5,12 @@ extends RefCounted
 ## whose file gives it a permanent number, never reused or changed once shipped (like Features'
 ## ids), so adding a kind never renumbers another. The built-in kinds keep the numbers regions
 ## always had (Region.GROUND, WATER and BLOCKED). Only what rules need is kept here: each kind's id
-## and traits; its color and model are the view's, read from the blueprints in meta/.
+## and traits; its color and model are the view's, read from the blueprints in core/io/ (Content).
 ##
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
 ## so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.
 ##
-## Read here at first use rather than handed over by meta/: the kinds are fixed data of the build,
+## Read here at first use rather than handed over from outside the core: the kinds are fixed data of the build,
 ## never state, so they need no hash of their own: a region hashes its tiles' numbers.
 
 ## Each kind's id, by number; "" for a number no kind has. Empty until first used.

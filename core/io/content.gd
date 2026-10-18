@@ -9,7 +9,7 @@ extends RefCounted
 ## core's TileKinds needs too, are read here, from the tiles slice. Here too: the field helpers they
 ## all use.
 
-const TILES_DIR: String = "res://slices/tiles/data/"
+const TILES_DIR: String = "res://core/data/tiles/"
 
 ## Every tile blueprint, by id.
 var tiles: Dictionary[String, TileBlueprint] = {}

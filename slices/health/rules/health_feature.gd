@@ -13,7 +13,7 @@ const UNKNOWN_HP: int = 100
 ## How much of their HP a revived player gets back, in thousandths (Fixed): half (#479).
 const REVIVED_HP: int = 500
 
-## Each species' HP, by species id, from the content data (meta/ reads them).
+## Each species' HP, by species id, from the content data (the species slice reads them).
 var max_hps: Dictionary[String, int] = {}
 ## The damage each player or companion has taken, by entity id.
 var _damage: Dictionary[int, int] = {}
