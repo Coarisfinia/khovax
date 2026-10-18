@@ -6,8 +6,9 @@ extends RefCounted
 ## the `menu` action opens the menu, easing in; while it's open the player's keys don't walk and,
 ## by default, single player pauses (#302): no tick runs. The tab lists every setting, each on Auto
 ## at first; a step changes one and keeps it, its Auto button hands it back; turning the pause off
-## lets the ticks run on behind the menu; the rows fit a phone's screen; and the action closes the
-## menu, easing out, and the game goes on. Its Character tab (#391) shows the player's personal
+## lets the ticks run on behind the menu; the rows fit a phone's screen; and the close button at its
+## top right, the cancel action (a controller's B) and the menu action each close the menu, easing
+## out, and the game goes on. Its Character tab (#391) shows the player's personal
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
 ## kept in their profile, and its Auto button hands the world's default back. It lists the player's
 ## dominated monsters (#400): none at first, then each by its species' name and level, the three
@@ -129,7 +130,7 @@ func _check_menu() -> String:
 func _open_menu(menu: GameMenu) -> String:
 	if menu.is_open() or menu.opacity() > 0.0:
 		return "the menu shows before it's opened"
-	_press_menu(menu)
+	_press(menu, &"menu")
 	if not menu.is_open() or menu.opacity() >= 1.0:
 		return "the menu action doesn't open the menu, or it snaps open"
 	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
@@ -399,14 +400,48 @@ func _menu_credits(menu: GameMenu) -> String:
 	return ""
 
 
-## The `menu` action closes the menu again, easing out.
+## The close button sits at the menu's top right (#554). It closes the menu, easing out, and so do
+## the cancel action (a controller's B) and the `menu` action, each after opening it again; while
+## the menu is closed, cancel leaves it closed.
 func _close_menu(menu: GameMenu) -> String:
-	_press_menu(menu)
+	# The menu lays itself out for the real screen again, after the tests' other screens.
+	await _tree.process_frame
+	await _tree.process_frame
+	var screen: Vector2 = menu.get_viewport_rect().size
+	var close: Button = menu.close_button()
+	var corner: Rect2 = close.get_global_rect()
+	if corner.end.x < screen.x - 2.0 * GameMenu.MARGIN or corner.position.y > 2.0 * GameMenu.MARGIN:
+		return "the close button isn't at the top right: %s on a %s screen" % [corner, screen]
+	var result: String = await _closes(
+		menu,
+		"the close button",
+		func() -> void: close.pressed.emit(),
+	)
+	if result.is_empty():
+		result = await _reopened(menu, "the cancel action", _press.bind(menu, &"ui_cancel"))
+	if result.is_empty():
+		result = await _reopened(menu, "the menu action", _press.bind(menu, &"menu"))
+	_press(menu, &"ui_cancel")
+	if result.is_empty() and menu.is_open():
+		result = "the cancel action opens the closed menu"
+	return result
+
+
+## Opens the menu again, then checks that `close` closes it.
+func _reopened(menu: GameMenu, way: String, close: Callable) -> String:
+	_press(menu, &"menu")
+	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
+	return await _closes(menu, way, close)
+
+
+## Calling `close` (the `way` the player closes it) closes the open menu, easing out.
+func _closes(menu: GameMenu, way: String, close: Callable) -> String:
+	close.call()
 	if menu.is_open() or menu.opacity() <= 0.0:
-		return "the menu action doesn't close the menu, or it snaps shut"
+		return "%s doesn't close the menu, or it snaps shut" % way
 	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
 	if menu.opacity() > 0.0:
-		return "the menu doesn't finish easing out"
+		return "the menu doesn't finish easing out after %s" % way
 	return ""
 
 
@@ -417,9 +452,10 @@ func _ticks_run(driver: GameDriver) -> bool:
 	return driver.world.tick > tick
 
 
-func _press_menu(menu: GameMenu) -> void:
+## Presses `action` on the menu's viewport, as a key or a controller's button does.
+func _press(menu: GameMenu, action: StringName) -> void:
 	var pressed: InputEventAction = InputEventAction.new()
-	pressed.action = &"menu"
+	pressed.action = action
 	pressed.pressed = true
 	menu.get_viewport().push_input(pressed)
 
