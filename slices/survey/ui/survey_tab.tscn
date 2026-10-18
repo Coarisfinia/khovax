@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://dclj8ywpstpjx" path="res://slices/survey/ui/survey_tab.gd" id="1_tab"]
+[ext_resource type="Script" uid="uid://mow7d5fmfrcn" path="res://slices/survey/ui/survey_view.gd" id="2_view"]
+
+[node name="Survey" type="VBoxContainer"]
+script = ExtResource("1_tab")
+
+[node name="View" type="Control" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_view")
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 2
+alignment = 1
+
+[node name="ZoomOut" type="Button" parent="Row"]
+layout_mode = 2
+text = "Zoom out"
+
+[node name="ZoomText" type="Label" parent="Row"]
+layout_mode = 2
+vertical_alignment = 1
+
+[node name="ZoomIn" type="Button" parent="Row"]
+layout_mode = 2
+text = "Zoom in"
+
+[node name="Place" type="Button" parent="Row"]
+layout_mode = 2

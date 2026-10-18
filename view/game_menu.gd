@@ -22,6 +22,8 @@ const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.ts
 const QUESTS_TAB: PackedScene = preload("res://slices/quests/ui/quests_tab.tscn")
 ## The Settings tab, laid out in its scene (#437).
 const SETTINGS_TAB: PackedScene = preload("res://slices/settings/ui/settings_tab.tscn")
+## The Survey tab, laid out in its scene (#437).
+const SURVEY_TAB: PackedScene = preload("res://slices/survey/ui/survey_tab.tscn")
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
 const FONT_SHARE: float = 0.03
 const MIN_FONT: int = 16
@@ -218,8 +220,7 @@ func _build_sheet() -> void:
 	character.driver = driver
 	character.holder = holder
 	tabs.add_child(character)
-	survey_tab = SurveyTab.new()
-	survey_tab.name = "Survey"
+	survey_tab = SURVEY_TAB.instantiate() as SurveyTab
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
 	var quests: QuestsTab = QUESTS_TAB.instantiate() as QuestsTab
