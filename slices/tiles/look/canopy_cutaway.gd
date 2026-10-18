@@ -63,8 +63,8 @@ func show_state(delta: float) -> void:
 		var before: float = cut.get(tile, 0.0)
 		var now: float = move_toward(before, target, EASE_PER_SECOND * delta)
 		cut[tile] = now
-		if now != before:
-			_draw(decorations.figures[tile], now)
+		# Drawn every frame: a tile changed in place (#530) gets a new, whole figure.
+		_draw(decorations.figures[tile], now)
 
 
 ## The tiles of every drawn figure in `state` that a decoration hides from the camera.

@@ -75,11 +75,13 @@ func _decorate(tile: Vector2i, growing: bool) -> void:
 	figures[tile] = figure
 	figure.visible = _seen.has(tile)
 	if growing:
-		var full: Vector3 = figure.scale
-		figure.scale = Vector3.ZERO
-		var tween: Tween = figure.create_tween()
+		# The model grows, not the figure, whose scale is CanopyCutaway's to cut.
+		var model: Node3D = figure.get_child(0) as Node3D
+		var full: Vector3 = model.scale
+		model.scale = Vector3.ZERO
+		var tween: Tween = model.create_tween()
 		var _grown: PropertyTweener = tween.tween_property(
-			figure,
+			model,
 			"scale",
 			full,
 			HexGrid.CHANGE_SECONDS,

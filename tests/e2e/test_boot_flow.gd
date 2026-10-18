@@ -815,9 +815,14 @@ func _check_tile_change_shown(main: Node) -> String:
 	if grid.easing.has(tile) or grid.tile_color_of(tile) != grid.terrain_color(Region.GROUND):
 		return "a forest cleared in place didn't ease into the ground's color"
 	_change_shown(driver, tile, forest)
-	if not view.figures.has(tile) or view.figures[tile].scale != Vector3.ZERO:
+	if not view.figures.has(tile):
+		return "a forest grown back in place has no trees"
+	var grown: Node3D = view.figures[tile].get_child(0) as Node3D
+	if grown.scale != Vector3.ZERO:
 		return "a forest grown back in place didn't grow its trees in from nothing"
 	driver.start(7)
+	grid.show_state()
+	view.show_state()
 	return ""
 
 
