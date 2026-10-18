@@ -1,0 +1,33 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/factions/data/factions.schema.json",
+	"title": "Faction",
+	"description": "A faction (#483): a player-facing name and its own names for the ranks of the player's standing with it, five each way from neutral. One file per faction, named after its id. Each player's standing is kept in their profile by the faction's id, so an id is never reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "name", "ranks_up", "ranks_down"],
+	"$defs": {
+		"ranks": {
+			"type": "array",
+			"minItems": 5,
+			"maxItems": 5,
+			"items": { "type": "string", "pattern": "\\S" }
+		}
+	},
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": { "description": "The player-facing name.", "type": "string", "pattern": "\\S" },
+		"ranks_up": {
+			"description": "The ranks' names above neutral, from standing +1 up to +5.",
+			"$ref": "#/$defs/ranks"
+		},
+		"ranks_down": {
+			"description": "The ranks' names below neutral, from standing -1 down to -5.",
+			"$ref": "#/$defs/ranks"
+		}
+	}
+}

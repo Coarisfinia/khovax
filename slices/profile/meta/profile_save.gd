@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 7
+const FORMAT: int = 8
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -17,25 +17,30 @@ static func to_text(profile: Profile) -> String:
 	var monsters: Array = []
 	for monster: DominatedMonster in profile.dominated_monsters:
 		monsters.append(monster.to_data())
-	var sorted_materials: Dictionary = {}
-	var names: Array[String] = []
-	names.assign(profile.materials.keys())
-	names.sort()
-	for material: String in names:
-		sorted_materials[material] = profile.materials[material]
 	var data: Dictionary[String, Variant] = {
 		"format": FORMAT,
 		"unlocked_slots": profile.unlocked_slots,
 		"next_monster_id": profile.next_monster_id,
 		"dominated_monsters": monsters,
 		"carried": profile.carried,
-		"materials": sorted_materials,
+		"materials": _sorted(profile.materials),
 		"quest_progress": _progress_data(profile),
 		"quests_done": profile.quests_done,
 		"personal_color": profile.personal_color,
 		"character_name": profile.character_name,
+		"standings": _sorted(profile.standings.by_faction),
 	}
 	return JSON.stringify(data, "\t", false)
+
+
+## `by_id` with its keys in order, so a save reads the same on every machine.
+static func _sorted(by_id: Dictionary) -> Dictionary:
+	var sorted: Dictionary = {}
+	var ids: Array = by_id.keys()
+	ids.sort()
+	for id: Variant in ids:
+		sorted[id] = by_id[id]
+	return sorted
 
 
 ## The quest progress as save data, by quest id in order.
@@ -63,7 +68,13 @@ static func parse(text: String) -> Profile:
 	if format > FORMAT or format < 1:
 		profile.problem = "save format %d, this build reads up to format %d" % [format, FORMAT]
 		return profile
-	# Migrations from older formats, oldest first.
+	_migrate(data, format)
+	profile.problem = _read(profile, data)
+	return profile
+
+
+## Brings `data` in save format `format` up to the current one, oldest step first.
+static func _migrate(data: Dictionary, format: int) -> void:
 	if format < 2:
 		_migrate_to_2(data)
 	if format < 3:
@@ -76,8 +87,8 @@ static func parse(text: String) -> Profile:
 		_migrate_to_6(data)
 	if format < 7:
 		_migrate_to_7(data)
-	profile.problem = _read(profile, data)
-	return profile
+	if format < 8:
+		_migrate_to_8(data)
 
 
 ## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
@@ -132,6 +143,11 @@ static func _migrate_to_7(data: Dictionary) -> void:
 	data["character_name"] = ""
 
 
+## Format 7 to 8: the player is neutral with every faction (#483).
+static func _migrate_to_8(data: Dictionary) -> void:
+	data["standings"] = {}
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -168,7 +184,23 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 			and not Profile.name_problem(profile.character_name).is_empty()):
 		return "the save's character name is invalid"
 	var problem: String = _read_carried(profile, data)
+	if problem.is_empty():
+		problem = _read_standings(profile, data)
 	return problem if not problem.is_empty() else _read_quests(profile, data)
+
+
+## Reads the save's standings with the factions into this profile; returns why it can't, or "".
+static func _read_standings(profile: Profile, data: Dictionary) -> String:
+	var stored: Variant = data.get("standings")
+	if not stored is Dictionary:
+		return "the save lacks its standings"
+	var by_faction: Dictionary = stored
+	for faction: Variant in by_faction:
+		var standing: int = _standing(by_faction[faction])
+		# Neutral is never saved, so a 0 is as wrong as a standing out of range.
+		if standing == 0 or not profile.standings.change(str(faction), standing).is_empty():
+			return "the standing with faction %s in the save is invalid" % faction
+	return ""
 
 
 ## Reads which dominated monsters the save's player carries; returns why it can't, or "".
@@ -242,6 +274,19 @@ static func _color(value: Variant) -> int:
 		return Profile.AUTO_COLOR
 	var color: int = _int(value)
 	return color if color >= 0 and color <= Profile.MAX_COLOR else Profile.AUTO_COLOR - 1
+
+
+## A standing from save data: a whole JSON number from Standings.LOWEST to Standings.HIGHEST;
+## 0, which a save never holds, for anything else.
+static func _standing(value: Variant) -> int:
+	if not (value is int or value is float):
+		return 0
+	var number: float = value
+	# Shifted to start at 0, so _int checks it's whole.
+	var shifted: int = _int(number - Standings.LOWEST)
+	if shifted < 0 or shifted > Standings.HIGHEST - Standings.LOWEST:
+		return 0
+	return shifted + Standings.LOWEST
 
 
 ## A whole JSON number from 0 to Profile.MAX_NUMBER as an integer; -1 for anything else, so a

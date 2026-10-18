@@ -1,0 +1,9 @@
+// The starter faction (#484), which accompanies the player on the main quest: New Face once they
+// join, rising with the story's quests, and Betrayer when a path turns against it. Its name and its
+// ranks below Betrayer are placeholders until #484 decides them.
+{
+	"id": "starter",
+	"name": "Starter Faction",
+	"ranks_up": ["New Face", "Rescuer", "Good friend", "Savior", "Hero"],
+	"ranks_down": ["Betrayer", "Outcast", "Shunned", "Despised", "Sworn foe"]
+}

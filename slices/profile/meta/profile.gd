@@ -5,8 +5,9 @@ extends RefCounted
 ## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
 ## loses nothing), never because of a tick itself. Integers and ids only, like everything that
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). Quest progress (#184) is kept
-## here too, advanced by the same gains against the quest definitions it's given, and so is the
-## player's personal color (#233), which only views read.
+## here too, advanced by the same gains against the quest definitions it's given, and so are the
+## player's personal color (#233), which only views read, and their standings with the factions
+## (#483).
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -42,6 +43,8 @@ var quests_done: Array[String] = []
 ## that isn't here is kept untouched, on purpose: a quest missing from one build's data (dropped by
 ## mistake, or not shipped yet) picks up where the player left it once it's back.
 var quest_book: Dictionary[String, QuestDefinition] = {}
+## The player's standing with each faction (#483).
+var standings: Standings = Standings.new()
 ## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
 ## simulation's (#233).
 var personal_color: int = AUTO_COLOR

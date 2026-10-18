@@ -6,7 +6,8 @@ extends RefCounted
 ## same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
-## species that exist, and broken ones are refused.
+## species that exist, and broken ones are refused. Factions (#483) load with their own names for
+## the ranks of a standing, and broken ones are refused.
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
 const KIT: String = (
@@ -29,20 +30,22 @@ func run(_tree: SceneTree) -> String:
 			or content.species["moss_toad"].name != "Moss Toad"
 			or content.species["storm_finch"].types.size() != 2):
 		return "the placeholder species didn't load as written"
-	var result: String = _check_strip()
-	if result.is_empty():
-		result = _check_refused()
-	if result.is_empty():
-		result = _check_loot_rolls()
-	if result.is_empty():
-		result = _check_loot_refused()
-	if result.is_empty():
-		result = _check_wild_species(content)
-	if result.is_empty():
-		result = _check_tiles()
-	if result.is_empty():
-		result = _check_quests()
-	return result if not result.is_empty() else _check_kits(content)
+	var checks: Array[Callable] = [
+		_check_strip,
+		_check_refused,
+		_check_loot_rolls,
+		_check_loot_refused,
+		_check_wild_species.bind(content),
+		_check_tiles,
+		_check_quests,
+		_check_factions,
+		_check_kits.bind(content),
+	]
+	for check: Callable in checks:
+		var result: String = check.call()
+		if not result.is_empty():
+			return result
+	return ""
 
 
 ## Every ability file reads, and every species names a special and two passives that exist and are
@@ -442,4 +445,36 @@ func _check_loot_refused() -> String:
 		var problem: String = LootTableFile.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
+
+
+## The factions load, each with its own name for every rank but neutral (#483): the starter
+## faction's run from New Face up to Hero and from Betrayer down. A faction file with a wrong id, no
+## name, an unknown field, or not five rank names with more than spaces each way is refused.
+func _check_factions() -> String:
+	var content: FactionContent = FactionContent.load_factions()
+	if not content.problem.is_empty() or not content.factions.has("starter"):
+		return "the factions didn't load: " + content.problem
+	var starter: Faction = content.factions["starter"]
+	var names: Array[String] = []
+	for standing: int in [Standings.LOWEST, -1, 0, 1, Standings.HIGHEST]:
+		names.append(starter.rank_name(standing))
+	var expected: Array[String] = ["Sworn foe", "Betrayer", "", "New Face", "Hero"]
+	if names != expected:
+		return "the starter faction's ranks read %s" % [names]
+	var five: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
+	var faction: String = "{\"id\": \"x\", \"name\": \"X\", \"ranks_up\": %s, \"ranks_down\": %s}"
+	var cases: Dictionary[String, String] = {
+		faction.replace("\"x\"", "\"y\"") % [five, five]: "its id must",
+		faction.replace("\"X\"", "\" \"") % [five, five]: "it needs a name",
+		faction % [five, "[\"a\", \"b\", \"c\", \"d\"]"]: "it needs 5 rank names",
+		faction % [five, "[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"]"]: "it needs 5 rank names",
+		faction % ["[\"a\", \"b\", \"c\", \"d\", \" \"]", five]: "it needs 5 rank names",
+		faction % ["[\"a\", \"b\", \"c\", \"d\", 5]", five]: "it needs 5 rank names",
+		faction.replace("}", ", \"z\": 1}") % [five, five]: "field z",
+	}
+	for text: String in cases:
+		var refusal: String = Faction.parse("x", text).problem
+		if not refusal.begins_with(cases[text]):
+			return "a broken faction gave %s, not %s" % [refusal, cases[text]]
 	return ""
