@@ -285,7 +285,8 @@ func _menu_credits(menu: GameMenu) -> String:
 	var shown: String = (menu.find_child("Credits", true, false) as CreditsTab).text
 	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
 	for line: String in markdown.split("\n"):
-		if line.begins_with(CreditsTab.PACK) and not shown.contains("[b]%s[/b]" % line.substr(3)):
+		var heading: String = CreditsTab.to_bbcode(line).strip_edges()
+		if line.begins_with(CreditsTab.PACK) and not shown.contains(heading):
 			return "the Credits tab doesn't show the pack " + line
 	if markdown.is_empty() or shown.contains("**") or shown.contains("Files:"):
 		return "the Credits tab shows Markdown marks or repository paths: " + shown.left(200)

@@ -10,6 +10,8 @@ const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
 const PACK: String = "## "
 const FILES: String = "- **Files:**"
+## What starts a pack's field.
+const FIELD: String = "- **"
 const UNREADABLE: String = "The credits couldn't be read."
 
 
@@ -47,8 +49,9 @@ static func _bbcode_line(line: String) -> String:
 	var plain: String = line.replace("[", "[lb]").replace("`", "")
 	if plain.begins_with(PACK):
 		return "\n[b]%s[/b]" % plain.trim_prefix(PACK)
-	var parts: PackedStringArray = plain.trim_prefix("- ").split("**")
-	# "**Author:** name" splits into "", "Author:", " name".
-	if parts.size() == 3:
-		return "• [b]%s[/b]%s" % [parts[1], parts[2]]
-	return plain
+	# "- **Author:** name": the field's name in bold, then its value with any other marks dropped.
+	var name_end: int = plain.find("**", FIELD.length())
+	if not plain.begins_with(FIELD) or name_end < 0:
+		return plain.replace("**", "")
+	var field: String = plain.substr(FIELD.length(), name_end - FIELD.length())
+	return "• [b]%s[/b]%s" % [field, plain.substr(name_end + 2).replace("**", "")]
