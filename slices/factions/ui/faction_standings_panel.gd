@@ -2,7 +2,8 @@ class_name FactionStandingsPanel
 extends VBoxContainer
 ## The player's standing with each faction on the menu's Character tab (#533): every faction they
 ## aren't neutral with (Standings), in id order, with its name, the standing as a signed number and
-## the rank the faction names it (Faction.rank_name), all in words, never in color alone (#68). A
+## the rank the faction names it (Faction.rank_name), all in words, never in color alone (#68).
+## Only the current rank's name, never the other ranks' (#484: they would spoil what's ahead). A
 ## faction the content no longer has shows by its id in words, without a rank. It only reads the
 ## profile, and keeps up with it while shown.
 

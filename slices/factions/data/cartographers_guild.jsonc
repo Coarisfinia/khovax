@@ -1,11 +1,18 @@
 // The Cartographer's Guild (#484), the starter faction that accompanies the player on the main
-// quest: it strives to chart the world, explore it and raid its dungeons. New Face once they join,
-// rising with the story's quests. Betrayer when a path turns against it, then struck from its
-// records and marked as a danger on its charts.
+// quest: it strives to chart the world, explore it and raid its dungeons. An Apprentice Charter once
+// they join, rising with the story's quests until the guild writes their name onto its charts.
+// Betrayer when a path turns against it, then struck from its records and marked as a danger on
+// its charts.
 {
 	"id": "cartographers_guild",
 	"name": "Cartographer's Guild",
-	"ranks_up": ["New Face", "Rescuer", "Good friend", "Savior", "Hero"],
+	"ranks_up": [
+		"Apprentice Charter",
+		"Wayfinder",
+		"Pathmaker",
+		"Master Cartographer",
+		"Charted in Legend"
+	],
 	"ranks_down": [
 		"Betrayer",
 		"Struck from the Ledger",

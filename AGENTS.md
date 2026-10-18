@@ -371,6 +371,9 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   make peace with them or work against them, but no humanoid fights a humanoid. Humanoids who side
   with the monsters surrender once their monsters are defeated, and battles between humans are
   fought by their monsters.
+- **The player only ever sees their current rank with a faction** (owner's rule, on #484): never
+  the names of the other ranks, which would spoil what's ahead. Each faction has its own design for
+  its ranks.
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
