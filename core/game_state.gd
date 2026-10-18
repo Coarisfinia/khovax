@@ -142,7 +142,7 @@ func change_tile(tile: Vector2i, kind: int) -> bool:
 	changed_tiles[tile] = true
 	for each: Feature in features:
 		each.tile_changed(self, tile)
-	events.append(TileChanged.new(tile, was, kind))
+	events.append(TileChanged.new(region, tile, was, kind))
 	return true
 
 

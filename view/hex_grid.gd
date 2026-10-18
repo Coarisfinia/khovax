@@ -91,17 +91,17 @@ func paint(colors: Dictionary[Vector2i, Color]) -> void:
 		_recolor(tile)
 
 
-## The tile changes in `events` (#530) that `region` shows as they are now, in order: the driver
-## also passes on the events of an instance the player just left, and a tile changed twice in one
-## frame is shown by its last change.
+## The tile changes in `events` (#530) of `region`, only the last one of each tile: the driver also
+## passes on the events of another instance (the one the player just left), and a tile changed
+## twice in one tick is shown by its last change.
 static func changes_in(events: Array[RefCounted], region: Region) -> Array[TileChanged]:
-	var changes: Array[TileChanged] = []
+	var last: Dictionary[Vector2i, TileChanged] = {}
 	for event: RefCounted in events:
 		var changed: TileChanged = event as TileChanged
-		if changed == null or region == null:
-			continue
-		if region.terrain.get(changed.tile, -1) == changed.kind:
-			changes.append(changed)
+		if changed != null and region != null and changed.region == region:
+			last[changed.tile] = changed
+	var changes: Array[TileChanged] = []
+	changes.assign(last.values())
 	return changes
 
 

@@ -89,7 +89,7 @@ func _check_tile_changed() -> String:
 	if refused or not basic.change_tile(beside, Region.BLOCKED):
 		return "a tile changed to its own kind, off the region or to no kind, or not to rock"
 	var changed: TileChanged = basic.events[basic.events.size() - 1] as TileChanged
-	var told: bool = changed != null and changed.tile == beside
+	var told: bool = changed != null and changed.tile == beside and changed.region == basic.region
 	told = told and changed.was == Region.GROUND and changed.kind == Region.BLOCKED
 	if not told or basic.region.is_walkable(beside) or world.state_hash() == untouched.state_hash():
 		return "the tile changed in place wasn't told, isn't rock, or isn't hashed"
