@@ -37,6 +37,7 @@
 [ext_resource type="Script" path="res://slices/companions/ui/special_button.gd" id="34_special_button"]
 [ext_resource type="Script" path="res://slices/wild_monsters/look/focus_mark.gd" id="35_focus_mark"]
 [ext_resource type="Script" path="res://input/focus_picker.gd" id="36_focus_picker"]
+[ext_resource type="Script" path="res://slices/health/look/revive_ring.gd" id="37_revive_ring"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -95,6 +96,10 @@ driver = NodePath("../../Driver")
 
 [node name="FocusMark" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
 script = ExtResource("35_focus_mark")
+driver = NodePath("../../Driver")
+
+[node name="ReviveRing" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
+script = ExtResource("37_revive_ring")
 driver = NodePath("../../Driver")
 
 [node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]

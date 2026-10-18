@@ -91,6 +91,11 @@ func _send_back(state: GameState, player: Entity) -> void:
 	state.events.append(SentToSpawn.new(player.id, player.slot))
 
 
+## How far a knocked-down player's revive has come, from 0 to REVIVE_TICKS, for the look (#488).
+func revive_ticks(entity_id: int) -> int:
+	return _down.get(entity_id, Vector2i.ZERO).y
+
+
 func _get_up(entity_id: int) -> void:
 	var _dropped: bool = _down.erase(entity_id)
 	_movement.hold(entity_id, false)
