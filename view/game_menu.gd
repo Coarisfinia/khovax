@@ -57,8 +57,8 @@ var _font_size: int = 0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	theme = Theme.new()
-	theme.set_color("font_color", "Label", Toon.INK)
+	# A copy of the UI's theme: the menu scales its own font with the screen.
+	theme = UiTheme.theme().duplicate()
 	_open_button = button(OPEN_TEXT, toggle)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	add_child(_open_button)
@@ -184,10 +184,7 @@ func _follow() -> void:
 func _build_sheet() -> void:
 	_sheet = PanelContainer.new()
 	_sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Boot.FOG
-	style.set_content_margin_all(MARGIN)
-	_sheet.add_theme_stylebox_override("panel", style)
+	_sheet.add_theme_stylebox_override("panel", UiTheme.sheet(MARGIN))
 	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.visible = false
 	_sheet.modulate.a = 0.0
