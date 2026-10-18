@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 6
+const FORMAT: int = 7
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -33,6 +33,7 @@ static func to_text(profile: Profile) -> String:
 		"quest_progress": _progress_data(profile),
 		"quests_done": profile.quests_done,
 		"personal_color": profile.personal_color,
+		"character_name": profile.character_name,
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -73,6 +74,8 @@ static func parse(text: String) -> Profile:
 		_migrate_to_5(data)
 	if format < 6:
 		_migrate_to_6(data)
+	if format < 7:
+		_migrate_to_7(data)
 	profile.problem = _read(profile, data)
 	return profile
 
@@ -124,6 +127,11 @@ static func _migrate_to_6(data: Dictionary) -> void:
 	data["personal_color"] = Profile.AUTO_COLOR
 
 
+## Format 6 to 7: the character isn't named yet (#399).
+static func _migrate_to_7(data: Dictionary) -> void:
+	data["character_name"] = ""
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -152,6 +160,10 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.personal_color = _color(data.get("personal_color"))
 	if profile.personal_color < Profile.AUTO_COLOR:
 		return "the save's personal color is invalid"
+	profile.character_name = str(data.get("character_name", ""))
+	if (not profile.character_name.is_empty()
+			and not Profile.name_problem(profile.character_name).is_empty()):
+		return "the save's character name is invalid"
 	var problem: String = _read_carried(profile, data)
 	return problem if not problem.is_empty() else _read_quests(profile, data)
 

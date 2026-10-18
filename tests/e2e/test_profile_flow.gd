@@ -7,6 +7,14 @@ extends RefCounted
 ## back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
+## The keys a newer save format added (#184, #53, #391, #399), which older saves lack.
+const ADDED_KEYS: Array[String] = [
+	"quest_progress",
+	"quests_done",
+	"carried",
+	"personal_color",
+	"character_name",
+]
 
 
 func run(_tree: SceneTree) -> String:
@@ -122,6 +130,7 @@ func _check_refused() -> String:
 	var done: String = "\"quests_done\": []"
 	var progress: String = "\"quest_progress\": {}"
 	var color: String = "\"personal_color\": -1"
+	var nameless: String = "\"character_name\": \"\""
 	var cases: Dictionary[String, String] = {
 		"not json": "not a profile save",
 		text.replace(format, "\"format\": 99"): "save format 99",
@@ -152,11 +161,31 @@ func _check_refused() -> String:
 		text.replace(color, "\"personal_color\": 16777216"): "the save's personal color",
 		text.replace(color, "\"personal_color\": 1.5"): "the save's personal color",
 		text.replace(color, "\"personal_color\": \"red\""): "the save's personal color",
+		text.replace(nameless, "\"character_name\": \"   \""): "the save's character name",
+		text.replace(nameless, "\"character_name\": \"%s\"" % "x".repeat(Profile.NAME_LIMIT + 1)): (
+			"the save's character name"
+		),
 	}
 	for case: String in cases:
 		var problem: String = ProfileSave.parse(case).problem
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
+	return _check_named()
+
+
+## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an
+## empty one or one too long is refused with a reason in words, leaving the name as it was.
+func _check_named() -> String:
+	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
+	var kept: String = keeper.choose_name("  Ash  ", 0)
+	var _flushed: String = keeper.flush()
+	var saved: Profile = SaveStore.load_profile(SAVE_PATH)
+	if not kept.is_empty() or saved.character_name != "Ash":
+		return "the name Ash wasn't kept and saved: %s, %s" % [kept, saved.character_name]
+	var empty: String = keeper.choose_name("   ", 0)
+	var long: String = keeper.choose_name("x".repeat(Profile.NAME_LIMIT + 1), 0)
+	if empty.is_empty() or long.is_empty() or keeper.profile.character_name != "Ash":
+		return "an empty or too long name wasn't refused, or changed the name"
 	return ""
 
 
@@ -164,14 +193,13 @@ func _check_refused() -> String:
 ## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
 ## formats before 4 carried no monsters (#53): the first three dominated are carried then, and
 ## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
-## starts on Auto.
+## starts on Auto; formats before 7 had no character name (#399), which starts empty.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
-	var _no_progress: bool = current.erase("quest_progress")
-	var _none_done: bool = current.erase("quests_done")
-	var _none_carried: bool = current.erase("carried")
-	var _no_color: bool = current.erase("personal_color")
+	# What older formats lacked.
+	for key: String in ADDED_KEYS:
+		var _dropped: bool = current.erase(key)
 	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
 	var olds: Array[Dictionary] = [
 		{ "format": 1, "runs_finished": 3 },
@@ -186,6 +214,14 @@ func _check_migrated() -> String:
 			"quests_done": [],
 			"carried": [],
 			"dominated_monsters": [],
+		},
+		{
+			"format": 6,
+			"quest_progress": {},
+			"quests_done": [],
+			"carried": [],
+			"dominated_monsters": [],
+			"personal_color": Profile.AUTO_COLOR,
 		},
 	]
 	for old: Dictionary in olds:

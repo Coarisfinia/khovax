@@ -19,6 +19,8 @@ const MAX_NUMBER: int = Fixed.MAX_AMOUNT
 const AUTO_COLOR: int = -1
 ## The largest personal color: white, as 0xRRGGBB.
 const MAX_COLOR: int = 0xffffff
+## The longest name a character can have, in characters.
+const NAME_LIMIT: int = 24
 
 var unlocked_slots: int = START_SLOTS
 ## Every dominated monster: in the order dominated, until the player orders them (`move_monster`).
@@ -43,6 +45,8 @@ var quest_book: Dictionary[String, QuestDefinition] = {}
 ## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
 ## simulation's (#233).
 var personal_color: int = AUTO_COLOR
+## The character's name (#399), the player's own; "" until they name them. Never in the simulation.
+var character_name: String = ""
 ## Why the save couldn't be read, or "" when it could.
 var problem: String = ""
 ## Which of the save's generations it was loaded from: 0 the newest, more when newer ones were
@@ -103,6 +107,17 @@ func move_monster(monster_id: int, place: int) -> String:
 
 
 ## Adds a newly dominated monster of `species`, with the next id.
+## Why `typed` can't be a character's name, in words, or "": it has to have something besides
+## spaces,
+## and at most NAME_LIMIT characters.
+static func name_problem(typed: String) -> String:
+	if typed.strip_edges().is_empty():
+		return "A typed needs at least one letter."
+	if typed.strip_edges().length() > NAME_LIMIT:
+		return "A typed can have at most %d characters." % NAME_LIMIT
+	return ""
+
+
 func _dominate(species: String) -> void:
 	dominated_monsters.append(DominatedMonster.new(next_monster_id, species))
 	if carried.size() < CARRY_LIMIT:

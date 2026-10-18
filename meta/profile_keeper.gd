@@ -56,6 +56,17 @@ func move_monster(monster_id: int, place: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Names the player's character `typed` (#399), its spaces at either end dropped, and saves it like
+## any choice; returns why it can't, in words, or "".
+func choose_name(typed: String, now_msec: int) -> String:
+	var problem: String = Profile.name_problem(typed)
+	if not problem.is_empty():
+		return problem
+	profile.character_name = typed.strip_edges()
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Saves pending changes if the last save is at least SAVE_INTERVAL_MSEC old; returns why it
 ## couldn't, or "".
 func save_if_due(now_msec: int) -> String:

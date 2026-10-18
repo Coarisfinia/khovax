@@ -4,13 +4,15 @@ extends ScrollContainer
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
 ## line says which one is in use, in words (#68). Below it, the player's dominated monsters (#400,
-## DominatedMonstersList). The character's name follows on this tab later. It scrolls when the
-## screen is too short.
+## DominatedMonstersList). Above them all, the character's name (#399): typed into a field and kept
+## once confirmed (Enter, or leaving the field), with a line that says in words why a name was
+## refused. It scrolls when the screen is too short.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
 const AUTO_TEXT: String = "Auto: this world's color"
 const CHOSEN_TEXT: String = "Your own color"
+const NAME_HINT: String = "Name your character"
 
 ## The driver: whose world gives the default and which slot is this machine's player's.
 var driver: GameDriver
@@ -23,6 +25,9 @@ var auto_button: Button
 var monsters: DominatedMonstersList
 ## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
 var shown: String = ""
+## The character's name field, and the line saying why a name was refused ("" when it wasn't).
+var name_field: LineEdit
+var name_note: Label
 var _column: VBoxContainer
 var _state: Label
 
@@ -33,6 +38,7 @@ func _ready() -> void:
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_column = VBoxContainer.new()
+	_add_name()
 	_column.add_child(GameMenu.label("Personal color"))
 	_state = GameMenu.label("")
 	_column.add_child(_state)
@@ -81,6 +87,28 @@ func choose_auto() -> void:
 	if holder != null:
 		holder.choose_color(Profile.AUTO_COLOR)
 	refresh()
+
+
+## Names the character `typed`, as confirming the field does; shows why a name was refused.
+func choose_name(typed: String) -> void:
+	name_note.text = holder.choose_name(typed) if holder != null else ""
+	if name_note.text.is_empty() and holder != null and holder.keeper != null:
+		name_field.text = holder.keeper.profile.character_name
+
+
+## The name field, filled with the profile's name, under its title, with the refusal line below.
+func _add_name() -> void:
+	_column.add_child(GameMenu.label("Name"))
+	name_field = LineEdit.new()
+	name_field.placeholder_text = NAME_HINT
+	name_field.max_length = Profile.NAME_LIMIT
+	if holder != null and holder.keeper != null:
+		name_field.text = holder.keeper.profile.character_name
+	var _submitted: int = name_field.text_submitted.connect(choose_name)
+	var _left: int = name_field.focus_exited.connect(func() -> void: choose_name(name_field.text))
+	_column.add_child(name_field)
+	name_note = GameMenu.label("")
+	_column.add_child(name_note)
 
 
 ## Sizes the wheel for text of `font` pixels.
