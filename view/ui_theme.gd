@@ -18,6 +18,8 @@ const CARD_ALPHA: float = 0.82
 ## How much lighter a hovered button is, and how much darker a pressed one.
 const HOVER: float = 0.08
 const PRESSED: float = 0.12
+## How faded the names of the tabs not chosen are.
+const UNCHOSEN_ALPHA: float = 0.7
 
 static var _theme: Theme
 
@@ -38,7 +40,44 @@ static func theme() -> Theme:
 			_theme.set_stylebox("hover", type, _button(Boot.FOG.lightened(HOVER)))
 			_theme.set_stylebox("pressed", type, _button(Boot.FOG.darkened(PRESSED)))
 			_theme.set_stylebox("focus", type, _focus())
+		_style_tabs(_theme)
 	return _theme
+
+
+## The menu's tabs (#437): rounded on top, in ink on the fog. The chosen tab stands out by shape,
+## not colour alone (#68): it's the fog itself with a thicker ink border and no line below, open to
+## its page; the others are a shade darker, thin-bordered, closed below, their names a little
+## faded.
+static func _style_tabs(styled: Theme) -> void:
+	styled.set_stylebox("tab_selected", "TabContainer", _tab(Boot.FOG, BORDER * 2, false))
+	styled.set_stylebox(
+		"tab_unselected",
+		"TabContainer",
+		_tab(Boot.FOG.darkened(PRESSED), BORDER, true),
+	)
+	styled.set_stylebox(
+		"tab_hovered",
+		"TabContainer",
+		_tab(Boot.FOG.lightened(HOVER), BORDER, true),
+	)
+	styled.set_stylebox("tab_focus", "TabContainer", _focus())
+	styled.set_color("font_selected_color", "TabContainer", Toon.INK)
+	styled.set_color("font_hovered_color", "TabContainer", Toon.INK)
+	styled.set_color("font_unselected_color", "TabContainer", Color(Toon.INK, UNCHOSEN_ALPHA))
+
+
+## A tab filled with `fill`, its ink border `width` wide, rounded on top; `closed` draws its bottom
+## edge too.
+static func _tab(fill: Color, width: int, closed: bool) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = Toon.INK
+	style.set_border_width_all(width)
+	style.border_width_bottom = BORDER if closed else 0
+	style.corner_radius_top_left = CORNER
+	style.corner_radius_top_right = CORNER
+	style.set_content_margin_all(PADDING / 2.0)
+	return style
 
 
 ## A card lying over the game: the fog a little see-through, an ink border, rounded, a shadow.
