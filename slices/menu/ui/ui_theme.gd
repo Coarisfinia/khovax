@@ -24,8 +24,8 @@ const UNCHOSEN_ALPHA: float = 0.7
 static var _theme: Theme
 
 
-## The UI's theme, made once: labels, rich text and buttons in ink, buttons rounded with a hover
-## and a press.
+## The UI's theme, made once: labels, rich text and buttons in ink, their icons too, buttons
+## rounded with a hover and a press.
 static func theme() -> Theme:
 	if _theme == null:
 		_theme = Theme.new()
@@ -36,6 +36,9 @@ static func theme() -> Theme:
 			_theme.set_color("font_hover_color", type, Toon.INK)
 			_theme.set_color("font_pressed_color", type, Toon.INK)
 			_theme.set_color("font_focus_color", type, Toon.INK)
+			# Icons are white shapes (#459), drawn in ink like the text.
+			for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+				_theme.set_color("icon_%s_color" % state, type, Toon.INK)
 			_theme.set_stylebox("normal", type, _button(Boot.FOG))
 			_theme.set_stylebox("hover", type, _button(Boot.FOG.lightened(HOVER)))
 			_theme.set_stylebox("pressed", type, _button(Boot.FOG.darkened(PRESSED)))

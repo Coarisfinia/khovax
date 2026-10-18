@@ -432,7 +432,8 @@ func _menu_credits(menu: GameMenu) -> String:
 	return ""
 
 
-## The close button sits at the menu's top right (#554). It closes the menu, easing out, and so do
+## The close button sits at the menu's top right (#554), showing its icon (#459). It closes the
+## menu, easing out, and so do
 ## the cancel action (a controller's B) and the `menu` action, each after opening it again; while
 ## the menu is closed, cancel leaves it closed.
 func _close_menu(menu: GameMenu) -> String:
@@ -444,6 +445,9 @@ func _close_menu(menu: GameMenu) -> String:
 	var corner: Rect2 = close.get_global_rect()
 	if corner.end.x < screen.x - 2.0 * GameMenu.MARGIN or corner.position.y > 2.0 * GameMenu.MARGIN:
 		return "the close button isn't at the top right: %s on a %s screen" % [corner, screen]
+	# It shows its icon (#459), drawn in ink like the menu's text.
+	if close.icon != GameMenu.CLOSE_ICON or close.get_theme_color("icon_normal_color") != Toon.INK:
+		return "the close button doesn't show its icon in ink"
 	var result: String = await _closes(
 		menu,
 		"the close button",
