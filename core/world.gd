@@ -173,12 +173,18 @@ func step(commands: Array[Command]) -> void:
 		for event: RefCounted in state.events:
 			if event is ExitTaken or event is SentToSpawn:
 				leaving.append([instance_name, event])
+	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
+	var sent: Array[int] = []
+	for move: Array in leaving:
+		var event: RefCounted = move[1]
+		if event is SentToSpawn:
+			sent.append((event as SentToSpawn).entity_id)
 	for move: Array in leaving:
 		var from: String = move[0]
 		var event: RefCounted = move[1]
 		if event is SentToSpawn:
 			_send_to_spawn(from, event as SentToSpawn)
-		else:
+		elif not sent.has((event as ExitTaken).entity_id):
 			_walk_through(from, event as ExitTaken)
 	_purge_left_behind()
 
