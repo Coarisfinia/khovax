@@ -8,7 +8,8 @@ extends RefCounted
 ## it's reached, and a purged one comes back arranged anew. There are no runs (#183): the players
 ## roam this one persistent world, saved between sessions (WorldData). A player who walks out
 ## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
-## way back (#154), and the world raises that they entered it (#370). Deterministic, like
+## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
+## (SentToSpawn, #457) is moved onto their start in the starting instance. Deterministic, like
 ## everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
@@ -170,12 +171,15 @@ func step(commands: Array[Command]) -> void:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
 		for event: RefCounted in state.events:
-			if event is ExitTaken:
+			if event is ExitTaken or event is SentToSpawn:
 				leaving.append([instance_name, event])
 	for move: Array in leaving:
 		var from: String = move[0]
-		var taken: ExitTaken = move[1]
-		_walk_through(from, taken)
+		var event: RefCounted = move[1]
+		if event is SentToSpawn:
+			_send_to_spawn(from, event as SentToSpawn)
+		else:
+			_walk_through(from, event as ExitTaken)
 	_purge_left_behind()
 
 
@@ -235,6 +239,20 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
 	if arrived[0] != null:
 		_raise_entered(taken.target, arrived)
+
+
+## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a
+## new entity, so at full HP: back at the world's spawn.
+func _send_to_spawn(from: String, sent: SentToSpawn) -> void:
+	var spawn: GameState = instance(start_name)
+	if spawn == null or spawn.region.starts.is_empty():
+		return
+	var starts: Array[Vector2i] = spawn.region.starts
+	instances[from].remove_entity(sent.entity_id)
+	var start: Vector2i = starts[mini(sent.slot, starts.size() - 1)]
+	var arrived: Array[Entity] = [spawn.add_entity(sent.slot, start)]
+	if arrived[0] != null:
+		_raise_entered(start_name, arrived)
 
 
 ## Raises that each player among `entities` entered the instance `instance_name`.

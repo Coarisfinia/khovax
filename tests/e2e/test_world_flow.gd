@@ -53,12 +53,35 @@ func run(_tree: SceneTree) -> String:
 		_check_companions,
 		_check_purge,
 		_check_start_kept,
+		_check_sent_to_spawn,
 		_check_layout,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
 		if not result.is_empty():
 			return result
+	return ""
+
+
+## A player whose HP runs out, here beside the basic instance's wild monster, is sent back to the
+## world's spawn (#457): onto their start in the starting instance, as a new entity at full HP.
+func _check_sent_to_spawn() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var first: Entity = world.player(0)
+	var wild: WildMonsterFeature = basic.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	first.tile = basic.entity(wild.monsters[0]).tile + Hex.DIRECTIONS[0]
+	var start: Vector2i = basic.region.starts[0]
+	for _tick: int in WildAttackFeature.STRIKE_TICKS * 60:
+		world.step(FlowSteps.command(Command.NO_MOVE))
+		if world.player(0).id != first.id:
+			break
+	var back: Entity = world.player(0)
+	var health: HealthFeature = basic.feature(Features.HEALTH) as HealthFeature
+	if back.id == first.id or back.tile != start or world.instance_of(0) != world.start_name:
+		return "a player out of HP wasn't sent back onto their start: %s" % back.tile
+	if health.hp_of(basic, back.id) != HealthFeature.PLAYER_HP:
+		return "a player sent back to the spawn isn't at full HP"
 	return ""
 
 
