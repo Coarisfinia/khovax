@@ -11,8 +11,7 @@
 #   tools: no class of theirs, no tests/ or tools/ path.
 # The folder paths are refused where they start a string or follow a /, with or without res://, so
 # a path built from parts is caught too, while a message may still name a file in parentheses. The
-# one exception is the test builds' mode, which plays the device flow from tests/
-# (game/test_mode.gd): only its path is allowed there, never a test class.
+# test builds' mode takes its flow's path from the environment or a project setting (#551).
 # - Paths are absolute from res://: no string in a script starts with ./ or ../, no load or preload
 #   of a path without its scheme, and no scene or resource names a file by a relative path.
 # Comments don't count (a # outside strings, as the determinism check strips them), so the rules
@@ -70,9 +69,6 @@ while IFS= read -r -d '' file; do
   esac
   case $file in
     tests/*) ;;
-    game/test_mode.gd)
-      refuse "$file" "$code" "$test_classes" '' "nothing outside tests/ reaches the tests"
-      ;;
     *)
       refuse "$file" "$code" "$test_classes" "${at}tests/" "nothing outside tests/ reaches the tests"
       ;;

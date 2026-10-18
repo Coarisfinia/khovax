@@ -3,12 +3,19 @@ extends Node
 ## instead of waiting for a player, prints KHOVAX_E2E: PASS or FAIL with the reason for CI to read
 ## (from the device log, the browser console or stdout), and quits with it as the exit code. Only
 ## the test builds have it: their export presets in export_presets.cfg add the TEST_BUILD feature
-## and carry the flow (tests/apk/). In every other build this does nothing. No launch flag is
-## needed: Android starts the game through a launcher activity that drops intent extras.
+## and carry the flow. In every other build this does nothing. No launch flag is needed: Android
+## starts the game through a launcher activity that drops intent extras.
+##
+## Which flow it plays comes from outside the game's code (#551), so no game script names tests/:
+## the FLOW_VARIABLE environment variable first, so CI can start any flow on a desktop or Linux
+## test build, and otherwise the FLOW_SETTING project setting, empty in project.godot and filled
+## for the TEST_BUILD feature with the device flow, since Android and the browser pass the game no
+## environment.
 
 ## The export feature only the test builds' presets set.
 const TEST_BUILD: String = "e2e_test"
-const FLOW: String = "res://tests/apk/apk_flow.gd"
+const FLOW_VARIABLE: String = "KHOVAX_E2E_FLOW"
+const FLOW_SETTING: String = "khovax/e2e_flow"
 
 
 func _ready() -> void:
@@ -19,8 +26,9 @@ func _ready() -> void:
 	WorldKeeper.default_path = ""
 	# Autoloads are ready before the main scene is loaded, so its driver starts on this seed.
 	GameDriver.fixed_seed = 0
-	if not ResourceLoader.exists(FLOW):
-		_report("this build has no device test flow")
+	var flow_path: String = _flow_path()
+	if flow_path.is_empty() or not ResourceLoader.exists(flow_path):
+		_report("this build has no test flow at '%s'" % flow_path)
 		return
 	# The boot scene comes up after the autoloads, starts the game once it has loaded (#243), and
 	# leaves once its fog has lifted. The flow waits for that: the fog stops touches while it hides
@@ -33,7 +41,7 @@ func _ready() -> void:
 	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
 	var errors: ErrorCounter = ErrorCounter.new()
 	OS.add_logger(errors)
-	var flow: Object = (load(FLOW) as GDScript).new()
+	var flow: Object = (load(flow_path) as GDScript).new()
 	var done: Signal = Signal(flow, "finished")
 	flow.call("begin", get_tree().current_scene, get_tree())
 	var result: String = await done
@@ -41,6 +49,14 @@ func _ready() -> void:
 	if result.is_empty() and errors.count > 0:
 		result = "%d error(s) logged during the flow" % errors.count
 	_report(result)
+
+
+## The flow to play: the environment's, or else the one the project setting names.
+static func _flow_path() -> String:
+	var from_environment: String = OS.get_environment(FLOW_VARIABLE)
+	if not from_environment.is_empty():
+		return from_environment
+	return str(ProjectSettings.get_setting(FLOW_SETTING, ""))
 
 
 ## Turns anti-aliasing off for the flow, without saving it (#193): the flow waits real time for

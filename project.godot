@@ -156,6 +156,11 @@ respawn={
 ]
 }
 
+[khovax]
+
+e2e_flow=""
+e2e_flow.e2e_test="res://tests/apk/apk_flow.gd"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
