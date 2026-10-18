@@ -38,7 +38,9 @@ func pick(point: Vector2) -> bool:
 	var nearest: float = PICK_PIXELS
 	for monster: int in wild_view.figures:
 		var figure: HexPiece = wild_view.figures[monster]
-		if not figure.is_visible_in_tree() or camera.is_position_behind(figure.global_position):
+		# Only a figure the camera shows: one just off the screen can project near its edge.
+		if (not figure.is_visible_in_tree()
+				or not camera.is_position_in_frustum(figure.global_position)):
 			continue
 		var shown: float = camera.unproject_position(figure.global_position).distance_to(point)
 		if shown < nearest:

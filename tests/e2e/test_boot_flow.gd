@@ -431,11 +431,37 @@ func _check_focus_picked(main: Node, driver: GameDriver) -> String:
 		return "no wild monster's figure shows to pick"
 	var figure: HexPiece = picker.wild_view.figures[target]
 	var shown: Vector2 = picker.camera.unproject_position(figure.global_position)
-	var picked: bool = picker.pick(shown) and driver.input.focus == target
+	# A left click on it, through the picker's input as the mouse gives it.
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = shown
+	picker._unhandled_input(click)
+	var clicked: bool = driver.input.focus == target
 	driver.input.focus = Command.NO_FOCUS
-	if not picked or picker.pick(shown + Vector2(FocusPicker.PICK_PIXELS * 20.0, 0.0)):
-		return "picking a wild monster's figure didn't focus it, or picking far away did"
+	# A quick, still tap on it: down and up on the same point.
+	picker._unhandled_input(_touch(shown, true))
+	picker._unhandled_input(_touch(shown, false))
+	var tapped: bool = driver.input.focus == target
+	driver.input.focus = Command.NO_FOCUS
+	# A touch that slides away before it lifts steers the stick and focuses nothing.
+	picker._unhandled_input(_touch(shown, true))
+	picker._unhandled_input(_touch(shown + Vector2(FocusPicker.TAP_PIXELS * 4.0, 0.0), false))
+	var slid: bool = driver.input.focus != Command.NO_FOCUS
+	if not clicked or not tapped or slid:
+		return "a click or a tap on a wild monster didn't focus it, or a slide did"
+	if picker.pick(shown + Vector2(FocusPicker.PICK_PIXELS * 20.0, 0.0)):
+		return "picking far from every wild monster focused one"
 	return ""
+
+
+## A touch of the first finger at `point`, coming down (`down`) or lifting.
+static func _touch(point: Vector2, down: bool) -> InputEventScreenTouch:
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.index = 0
+	touch.position = point
+	touch.pressed = down
+	return touch
 
 
 ## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.
