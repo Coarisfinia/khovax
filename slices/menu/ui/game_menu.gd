@@ -16,7 +16,7 @@ const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
 ## The Character tab, laid out in its scene (#437).
-const CHARACTER_TAB: PackedScene = preload("res://view/character_tab.tscn")
+const CHARACTER_TAB: PackedScene = preload("res://slices/menu/ui/character_tab.tscn")
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
 ## The Quests tab, laid out in its scene (#437).

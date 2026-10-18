@@ -107,7 +107,7 @@ func _play(world: World) -> String:
 ## copies go on alike, tick for tick, walking anywhere, back into the basic instance too.
 func _check_round_trip(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
-	var resumed: World = WorldSave.parse(text)
+	var resumed: World = WorldSave.parse(text, BlueprintSource.new())
 	if not resumed.problem.is_empty():
 		return "the saved world was refused: " + resumed.problem
 	if resumed.state_hash() != world.state_hash() or WorldSave.to_text(resumed) != text:
@@ -151,8 +151,9 @@ func _check_refused(world: World) -> String:
 		_with_left_at(data, InstanceBlueprints.BASIC, -1): "instance basic's left_at",
 		_expired(): "instance glade was left behind long enough",
 	}
+	var source: BlueprintSource = BlueprintSource.new()
 	for case: String in cases:
-		var problem: String = WorldSave.parse(case).problem
+		var problem: String = WorldSave.parse(case, source).problem
 		if problem.is_empty() or not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
@@ -313,7 +314,7 @@ func _check_debounced(driver: GameDriver, keeper: WorldKeeper) -> String:
 	problem = keeper.save_if_due(interval * 2)
 	if not problem.is_empty() or _saved_tick() != driver.world.tick:
 		return "the world wasn't saved once the interval passed: " + problem
-	var saved: World = WorldSave.load_from(WORLD_PATH)
+	var saved: World = WorldSave.load_from(BlueprintSource.new(), WORLD_PATH)
 	if saved.state_hash() != driver.world.state_hash():
 		return "the saved world isn't the driver's"
 	if not _explored_saved():
@@ -352,7 +353,7 @@ func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 
 ## The tick of the world saved in the flow's file.
 static func _saved_tick() -> int:
-	return WorldSave.load_from(WORLD_PATH).tick
+	return WorldSave.load_from(BlueprintSource.new(), WORLD_PATH).tick
 
 
 ## A world file whose explored ground is malformed (half a tile after a good instance, a number

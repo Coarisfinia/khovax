@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://du2yhfu70d8wd" path="res://view/character_tab.gd" id="1_character"]
+[ext_resource type="Script" uid="uid://du2yhfu70d8wd" path="res://slices/menu/ui/character_tab.gd" id="1_character"]
 
 [node name="Character" type="ScrollContainer"]
 horizontal_scroll_mode = 0

@@ -17,15 +17,16 @@ const EXPLORED: String = "explored"
 const BESIDE: Array[String] = [EXPLORED]
 
 
-## The world saved at `path`; null when there's none, or an empty world whose `problem` says why
-## the save is refused (no intact generation, not a world, another format or rules version).
-static func load_from(path: String = PATH) -> World:
+## The world saved at `path`, its instances loaded from `source`; null when there's none, or an
+## empty world whose `problem` says why the save is refused (no intact generation, not a world,
+## another format or rules version).
+static func load_from(source: InstanceSource, path: String = PATH) -> World:
 	if not SaveStore.exists(path):
 		return null
 	var saved: SaveRead = SaveStore.read_save(path)
 	if not saved.problem.is_empty():
 		return World.refused(saved.problem)
-	return parse(saved.text)
+	return parse(saved.text, source)
 
 
 ## Saves `world` at `path`, with what lies `beside` it (by key, from BESIDE); returns why it
@@ -40,8 +41,9 @@ static func to_text(world: World, beside: Dictionary = {}) -> String:
 	return JSON.stringify(data)
 
 
-## The world in `text`, or an empty one whose `problem` says why it's refused.
-static func parse(text: String) -> World:
+## The world in `text`, its instances loaded from `source` (the game's blueprints, which the core
+## can't name), or an empty one whose `problem` says why it's refused.
+static func parse(text: String, source: InstanceSource) -> World:
 	var parsed: Variant = json_of(text)
 	if parsed is Dictionary:
 		# What lies beside is read apart by its owner: bad memory doesn't refuse the world.
@@ -51,7 +53,7 @@ static func parse(text: String) -> World:
 	if not parsed is Dictionary or not has_whole_numbers(parsed):
 		return World.refused("not a world save, or it holds a number that isn't whole")
 	var data: Dictionary = whole_numbers(parsed)
-	return WorldData.to_world(data, BlueprintSource.new())
+	return WorldData.to_world(data, source)
 
 
 ## The value in the JSON `text`, or null when it isn't JSON.

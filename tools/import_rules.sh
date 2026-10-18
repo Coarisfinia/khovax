@@ -5,7 +5,7 @@
 #   path in its code, with or without res://, so a path built from parts
 #   ("res://" + "slices/tiles/data/") is refused too (AGENTS.md, "Vertical slices").
 # - The rules stay pure: no script under core/ or a slice's rules/ names a class or a path of any
-#   look/, ui/, view/, input/ or game/ folder, so the simulation never leans on what draws or
+#   look/, ui/ or game/ folder, so the simulation never leans on what draws or
 #   drives it.
 # - Nothing outside tests/ reaches the tests, and nothing outside tools/ and tests/ reaches the
 #   tools: no class of theirs, no tests/ or tools/ path.
@@ -48,7 +48,7 @@ refuse() {
 
 slice_classes=$(classes_in 'slices/*.gd')
 presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' \
-  ':(glob)**/view/**/*.gd' ':(glob)**/input/**/*.gd' ':(glob)**/game/**/*.gd')
+  ':(glob)**/game/**/*.gd')
 test_classes=$(classes_in 'tests/*.gd')
 tool_classes=$(classes_in 'tools/*.gd')
 # Where a folder's path starts: at the start of a string, or after a /.
@@ -63,7 +63,7 @@ while IFS= read -r -d '' file; do
   esac
   case $file in
     core/* | slices/*/rules/*)
-      refuse "$file" "$code" "$presentation_classes" "${at}(look|ui|view|input|game)/" \
+      refuse "$file" "$code" "$presentation_classes" "${at}(look|ui|game)/" \
         "the rules never depend on what draws or drives them"
       ;;
   esac
