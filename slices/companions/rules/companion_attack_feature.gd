@@ -84,14 +84,28 @@ func load_values(state: GameState, values: DataReader) -> void:
 ## an instance may have neither; where an instance has them, InstanceBlueprints lists them before
 ## the companions, so they have stepped already. The special attack (#410) strikes the same one.
 static func target_next_to(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
 	for monster: int in wild.monsters:
-		var hidden: bool = hiding != null and hiding.is_hidden(monster)
-		var sealed: bool = domination != null and domination.is_sealed(monster)
-		if not hidden and not sealed and Hex.distance(state.entity(monster).tile, tile) == 1:
+		if can_strike(state, wild, tile, monster):
 			return monster
 	return 0
+
+
+## Whether a companion on `tile` can strike the entity `monster_id`: a wild monster still standing,
+## next to it, not hiding and not sealing in a ring. Any id is checked, so a command's focus (#436)
+## can't point elsewhere.
+static func can_strike(
+	state: GameState,
+	wild: WildMonsterFeature,
+	tile: Vector2i,
+	monster_id: int,
+) -> bool:
+	if not wild.monsters.has(monster_id) or state.entity(monster_id) == null:
+		return false
+	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var hidden: bool = hiding != null and hiding.is_hidden(monster_id)
+	var sealed: bool = domination != null and domination.is_sealed(monster_id)
+	return not hidden and not sealed and Hex.distance(state.entity(monster_id).tile, tile) == 1
 
 
 ## The waits as entity id and ticks left after one another, by id.

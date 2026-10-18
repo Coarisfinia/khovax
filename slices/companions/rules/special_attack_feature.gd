@@ -9,7 +9,8 @@ extends Feature
 ## cools down for its cooldown; a press while it cools down, or with nothing to strike, does
 ## nothing. The cooldown is the player's, by slot, in this instance: a companion that joins anew
 ## here doesn't reset it.
-## Each strike raises SpecialStruck.
+## The focused wild monster (`Command.focus`, #436) is struck first, when the companion could strike
+## it; otherwise the one the auto attack would. Each strike raises SpecialStruck.
 
 ## Each species' special's power, in thousandths of its strength (Fixed), and its cooldown in
 ## ticks, by species id, from the content data (meta/ reads them). A species without a special
@@ -47,7 +48,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
 		if command != null and command.special and cooldown_left(slot) == 0:
-			_fire(state, slot)
+			_fire(state, slot, command.focus)
 
 
 ## The ticks the special of the player in `slot` still cools down; 0 when it's ready.
@@ -56,8 +57,8 @@ func cooldown_left(slot: int) -> int:
 
 
 ## Fires the special of the companion of the player in `slot`, if they have one here that has a
-## special and something next to it to strike.
-func _fire(state: GameState, slot: int) -> void:
+## special and something next to it to strike: the `focus`, if the companion can strike it.
+func _fire(state: GameState, slot: int, focus: int) -> void:
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var companion_id: int = companions.companion_of(slot)
@@ -66,6 +67,8 @@ func _fire(state: GameState, slot: int) -> void:
 		return
 	var tile: Vector2i = state.entity(companion_id).tile
 	var target: int = CompanionAttackFeature.target_next_to(state, wild, tile)
+	if CompanionAttackFeature.can_strike(state, wild, tile, focus):
+		target = focus
 	if target == 0:
 		return
 	var strength: int = wild.strengths.get(species, 1)

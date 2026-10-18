@@ -35,6 +35,7 @@
 [ext_resource type="Script" path="res://slices/survey/ui/survey_pinch.gd" id="32_survey_pinch"]
 [ext_resource type="Script" path="res://slices/domination/ui/totem_button.gd" id="33_totem_button"]
 [ext_resource type="Script" path="res://slices/companions/ui/special_button.gd" id="34_special_button"]
+[ext_resource type="Script" path="res://slices/wild_monsters/look/focus_mark.gd" id="35_focus_mark"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -83,6 +84,10 @@ neighbours = NodePath("../NeighbourView")
 
 [node name="WildMonsterView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1408221635]
 script = ExtResource("8_wild")
+driver = NodePath("../../Driver")
+
+[node name="FocusMark" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
+script = ExtResource("35_focus_mark")
 driver = NodePath("../../Driver")
 
 [node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]
