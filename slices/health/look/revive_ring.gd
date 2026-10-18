@@ -34,9 +34,11 @@ func _process(_delta: float) -> void:
 ## Matches the rings to the knocked-down players and fills each with its revive. Called every
 ## frame; tests call it.
 func show_state() -> void:
-	var knockdown: KnockdownFeature = null
-	if driver != null and driver.state != null:
-		knockdown = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	# Without a state there's nobody to show: every ring goes.
+	if driver == null or driver.state == null:
+		HexPiece.free_all(rings)
+		return
+	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
 	var down: Array[int] = knockdown.knocked_down() if knockdown != null else []
 	for entity_id: int in rings.keys():
 		if not down.has(entity_id) or driver.state.entity(entity_id) == null:
