@@ -3,7 +3,8 @@ extends ScrollContainer
 ## The menu's Character tab (#391): the player's personal color (#233) on a freeform color wheel,
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
-## line says which one is in use, in words (#68). Below it, the player's dominated monsters (#400,
+## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
+## MightPanel), then their dominated monsters (#400,
 ## DominatedMonstersList), with the selected one's stats in a pane beside them, or below them on a
 ## phone held upright (MonsterDetails, #430), then their materials (MaterialsList, #295). Above them
 ## all, the character's name (#399): typed into a field and kept once confirmed (Enter, or leaving
@@ -30,6 +31,8 @@ var shown: String = ""
 ## The character's name field, and the line saying why a name was refused ("" when it wasn't).
 var name_field: LineEdit
 var name_note: Label
+## The player's Might and its parts, above their monsters (#509).
+var might: MightPanel
 ## The player's materials, below their monsters (#295).
 var materials: MaterialsList
 var _column: VBoxContainer
@@ -64,6 +67,9 @@ func _ready() -> void:
 	auto_button = GameMenu.button("Auto", choose_auto)
 	auto_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_column.add_child(auto_button)
+	might = MightPanel.new()
+	might.holder = holder
+	_column.add_child(might)
 	monsters = DominatedMonstersList.new()
 	monsters.holder = holder
 	# The monsters beside their detail pane, or above it on a portrait screen (place_details, #430).
