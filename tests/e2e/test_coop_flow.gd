@@ -327,7 +327,7 @@ func _check_knocked_down() -> String:
 		alone.player(0),
 	)):
 		return "a knocked-down player nobody revived wasn't sent back, or a lone player had an ally"
-	return ""
+	return _check_gives_up()
 
 
 ## Whether an event of the class `kind` was raised in `state`'s last tick.
@@ -336,6 +336,24 @@ static func _raised(state: GameState, kind: Script) -> bool:
 		if event.get_script() == kind:
 			return true
 	return false
+
+
+## A knocked-down player who chooses to go back to the spawn (#495) is sent back on that tick's
+## command, without waiting out DOWN_TICKS; a respawn press while standing does nothing.
+func _check_gives_up() -> String:
+	var state: GameState = InstanceBlueprints.basic(42, 2)
+	state.set_enabled(Features.WILD_ATTACKS, false)
+	var down: Entity = state.player(0)
+	var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var giving_up: Array[Command] = [Command.new(Command.NO_MOVE, false, Command.NO_TOTEM, 0, true)]
+	Simulation.step(state, giving_up)
+	if _raised(state, SentToSpawn):
+		return "a standing player's respawn press sent them back"
+	knockdown.knock_down(down.id)
+	Simulation.step(state, giving_up)
+	if not _raised(state, SentToSpawn) or knockdown.is_down(down.id):
+		return "a knocked-down player who chose the spawn wasn't sent back at once"
+	return ""
 
 
 ## A simulated player: a list of moves, one per poll, each put `delay` ticks ahead as a network

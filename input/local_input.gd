@@ -21,6 +21,8 @@ var _totem_tapped: bool = false
 var focus: int = Command.NO_FOCUS
 ## How far focus_next (+1) and focus_previous (-1) stepped the focus since the last command.
 var _focus_steps: int = 0
+## Whether respawn was pressed since the last command (#495): going back to the spawn when down.
+var _respawn_pressed: bool = false
 
 
 func _process(_delta: float) -> void:
@@ -32,6 +34,8 @@ func _process(_delta: float) -> void:
 		_focus_steps += 1
 	if Input.is_action_just_pressed("focus_previous"):
 		_focus_steps -= 1
+	if Input.is_action_just_pressed("respawn"):
+		_respawn_pressed = true
 
 
 func command(state: GameState) -> Command:
@@ -39,6 +43,8 @@ func command(state: GameState) -> Command:
 	_special_pressed = false
 	var placing: bool = _totem_tapped or Input.is_action_pressed("place_totem")
 	_totem_tapped = false
+	var gives_up: bool = _respawn_pressed
+	_respawn_pressed = false
 	if blocked:
 		# Presses while the game hears no input don't move the focus afterwards.
 		_focus_steps = 0
@@ -54,4 +60,5 @@ func command(state: GameState) -> Command:
 		fires,
 		Command.PLACE_TOTEM if placing else Command.NO_TOTEM,
 		focus,
+		gives_up,
 	)

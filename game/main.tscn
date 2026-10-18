@@ -38,6 +38,7 @@
 [ext_resource type="Script" path="res://slices/wild_monsters/look/focus_mark.gd" id="35_focus_mark"]
 [ext_resource type="Script" path="res://input/focus_picker.gd" id="36_focus_picker"]
 [ext_resource type="Script" path="res://slices/health/look/revive_ring.gd" id="37_revive_ring"]
+[ext_resource type="Script" path="res://slices/health/ui/respawn_button.gd" id="38_respawn_button"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -227,6 +228,12 @@ driver = NodePath("../../Driver")
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("34_special_button")
+driver = NodePath("../../Driver")
+
+[node name="RespawnButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("38_respawn_button")
 driver = NodePath("../../Driver")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
