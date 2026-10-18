@@ -174,6 +174,30 @@ func _check_refused() -> String:
 	return _check_named()
 
 
+## Might (#508): the carried monsters' part sums each one's HP, twice its strength and its speed,
+## times its level; a monster that isn't carried, or of a species the data lacks, adds nothing.
+func _check_might() -> String:
+	var species: Dictionary[String, Species] = SpeciesContent.load_species().species
+	var profile: Profile = Profile.new()
+	var gain: Gain = Gain.new()
+	gain.dominated_species.assign(["moss_toad", "storm_finch", "moss_toad", "storm_finch"])
+	var _taken: String = profile.apply(gain)
+	var toad: Species = species["moss_toad"]
+	var finch: Species = species["storm_finch"]
+	var each_toad: int = toad.hp + Might.STRENGTH_WEIGHT * toad.strength + toad.speed
+	var each_finch: int = finch.hp + Might.STRENGTH_WEIGHT * finch.strength + finch.speed
+	# The first three are carried: two toads and a finch; the second finch rests.
+	if Might.of(profile, species) != 2 * each_toad + each_finch:
+		return "Might isn't the carried monsters' stats: %d" % Might.of(profile, species)
+	profile.dominated_monsters[0].level = 3
+	if Might.of(profile, species) != 4 * each_toad + each_finch:
+		return "a carried monster's level doesn't multiply its part of Might"
+	profile.dominated_monsters[0].species = "nobody_knows"
+	if Might.of(profile, species) != each_toad + each_finch:
+		return "a monster of an unknown species adds to Might"
+	return ""
+
+
 ## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an
 ## empty one or one too long is refused with a reason in words, leaving the name as it was.
 func _check_named() -> String:
@@ -187,7 +211,7 @@ func _check_named() -> String:
 	var long: String = keeper.choose_name("x".repeat(Profile.NAME_LIMIT + 1), 0)
 	if empty.is_empty() or long.is_empty() or keeper.profile.character_name != "Ash":
 		return "an empty or too long name wasn't refused, or changed the name"
-	return ""
+	return _check_might()
 
 
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
