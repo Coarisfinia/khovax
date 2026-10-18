@@ -1,0 +1,8 @@
+// A placeholder side quest (#473): it starts when the player first enters the glade's pond, and
+// asks for the chest on its far bank, until real side quests exist.
+{
+	"id": "pond_chest",
+	"name": "The chest by the pond",
+	"starts_on": { "condition": "entered", "piece": "pond" },
+	"steps": [{ "condition": "opened" }]
+}

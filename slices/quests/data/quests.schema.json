@@ -18,6 +18,30 @@
 			"enum": ["none", "harmony", "supremacy", "both"],
 			"default": "none"
 		},
+		"starts_on": {
+			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count. Left out, the quest is open from the start.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["condition"],
+			"oneOf": [
+				{
+					"properties": { "condition": { "const": "reached" } },
+					"required": ["place"],
+					"not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] }
+				},
+				{
+					"properties": { "condition": { "const": "entered" } },
+					"not": { "required": ["place"] },
+					"oneOf": [{ "required": ["piece"] }, { "required": ["instance"] }]
+				}
+			],
+			"properties": {
+				"condition": { "enum": ["reached", "entered"] },
+				"place": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+				"piece": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+				"instance": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+			}
+		},
 		"steps": {
 			"description": "The steps, in the order the player goes through them.",
 			"type": "array",

@@ -134,16 +134,23 @@ func _dominate(species: String) -> void:
 ## reaches its count hands over to the next one, and the last step finishes the quest. Saved
 ## progress that no longer fits the quest (its data changed since) settles at the next fact of any
 ## kind: a step already at its count is complete, and a step past the last one finishes the quest.
+## A side quest the fact starts (#473) is started first, so the same fact can count toward its first
+## step; a side quest not started yet counts nothing.
 func _advance_quests(condition: String, what: String) -> void:
 	var ids: Array[String] = []
 	ids.assign(quest_book.keys())
 	ids.sort()
 	for id: String in ids:
+		var start: QuestStep = quest_book[id].starts_on
+		if not _started(id) and start.counts(condition, what):
+			quest_progress[id] = _progress_of(id)
+	for id: String in ids:
 		var quest: QuestDefinition = quest_book[id]
 		var progress: QuestProgress = _progress_of(id)
 		var step: QuestStep = quest.step_at(progress.step)
 		var open: bool = step != null and progress.count < step.count
-		if quests_done.has(id) or (open and not step.counts(condition, what)):
+		var waits: bool = open and not step.counts(condition, what)
+		if quests_done.has(id) or not _started(id) or waits:
 			continue
 		progress.count += 1 if open else 0
 		if step != null and progress.count >= step.count:
@@ -156,7 +163,8 @@ func _advance_quests(condition: String, what: String) -> void:
 
 
 ## The step each open quest in the book is on, by quest id in id order: every quest not finished
-## yet, started or not (#300: what quest markers point at).
+## yet, started or not (#300: what quest markers point at), except a side quest the player hasn't
+## come upon yet (#473).
 func open_steps() -> Dictionary[String, QuestStep]:
 	var steps: Dictionary[String, QuestStep] = {}
 	var ids: Array[String] = []
@@ -164,7 +172,7 @@ func open_steps() -> Dictionary[String, QuestStep]:
 	ids.sort()
 	for id: String in ids:
 		var step: QuestStep = quest_book[id].step_at(_progress_of(id).step)
-		if step != null and not quests_done.has(id):
+		if step != null and not quests_done.has(id) and _started(id):
 			steps[id] = step
 	return steps
 
@@ -172,6 +180,12 @@ func open_steps() -> Dictionary[String, QuestStep]:
 ## The progress of quest `id`: a fresh one when it hasn't started.
 func _progress_of(id: String) -> QuestProgress:
 	return quest_progress.get(id, QuestProgress.new())
+
+
+## Whether quest `id` has started: a quest without a start always has, and a side quest (#473) once
+## the player entered its area, which put its progress in the profile. `id` is in the book.
+func _started(id: String) -> bool:
+	return quest_book[id].starts_on == null or quest_progress.has(id) or quests_done.has(id)
 
 
 ## Why `result` can't be taken over (an empty species, place, piece or instance, a nameless or
