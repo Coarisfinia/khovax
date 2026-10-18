@@ -46,8 +46,4 @@ func refresh() -> void:
 	if lines == shown:
 		return
 	shown = lines
-	for line: Node in _lines.get_children():
-		_lines.remove_child(line)
-		line.queue_free()
-	for line: String in lines:
-		_lines.add_child(GameMenu.label(line))
+	GameMenu.show_lines(_lines, lines)
