@@ -18,8 +18,9 @@ static func stepped(state: GameState, tile: Vector2i, focus: int, steps: int) ->
 	var at: int = near.find(focus)
 	if steps == 0:
 		return focus if at >= 0 else Command.NO_FOCUS
+	# With nothing focused, stepping starts just before the nearest (forward) or after the last.
 	if at < 0:
-		return near[0] if steps > 0 else near[-1]
+		at = -1 if steps > 0 else near.size()
 	return near[posmod(at + steps, near.size())]
 
 

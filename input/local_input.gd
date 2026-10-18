@@ -40,6 +40,8 @@ func command(state: GameState) -> Command:
 	var placing: bool = _totem_tapped or Input.is_action_pressed("place_totem")
 	_totem_tapped = false
 	if blocked:
+		# Presses while the game hears no input don't move the focus afterwards.
+		_focus_steps = 0
 		return Command.new()
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
