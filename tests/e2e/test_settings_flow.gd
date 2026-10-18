@@ -278,6 +278,15 @@ func _menu_details(tab: CharacterTab) -> String:
 	menu.lay_out(Vector2(1920.0, 1080.0))
 	if not stacked or (details.get_parent() as BoxContainer).vertical:
 		return "the detail pane isn't below the list upright and beside it on a landscape screen"
+	# Beside each other, both share the row; the trimmed rows would otherwise shrink to nothing.
+	var both: int = tab.monsters.size_flags_horizontal & details.size_flags_horizontal
+	if both & Control.SIZE_EXPAND == 0:
+		return "the monsters and their detail pane don't share the row"
+	var column: Control = details.get_parent().get_parent() as Control
+	var paired: float = column.custom_minimum_size.x
+	menu.lay_out(Vector2(360.0, 640.0))
+	if paired <= column.custom_minimum_size.x:
+		return "the column doesn't widen for the detail pane beside the monsters"
 	return ""
 
 
