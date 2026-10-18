@@ -21,7 +21,7 @@ const AUTO_COLOR: int = -1
 const MAX_COLOR: int = 0xffffff
 
 var unlocked_slots: int = START_SLOTS
-## Every dominated monster, in the order dominated.
+## Every dominated monster: in the order dominated, until the player orders them (`move_monster`).
 var dominated_monsters: Array[DominatedMonster] = []
 ## The dominated monsters this player carries, by id, in the order the next one comes in when one
 ## faints (#53, #54): the first three of the player's order (`order`, #430), the first of them their
@@ -74,10 +74,8 @@ func apply(result: Gain) -> String:
 	return ""
 
 
-## Adds a newly dominated monster of `species`, with the next id.
 ## Every dominated monster's id in the player's order (#430): the carried ones first, in their
-## order,
-## then the rest in the order dominated.
+## order, then the rest in the order dominated.
 func order() -> Array[int]:
 	var ids: Array[int] = carried.duplicate()
 	for monster: DominatedMonster in dominated_monsters:
@@ -104,6 +102,7 @@ func move_monster(monster_id: int, place: int) -> String:
 	return ""
 
 
+## Adds a newly dominated monster of `species`, with the next id.
 func _dominate(species: String) -> void:
 	dominated_monsters.append(DominatedMonster.new(next_monster_id, species))
 	if carried.size() < CARRY_LIMIT:
