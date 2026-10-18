@@ -45,6 +45,8 @@ func run(tree: SceneTree) -> String:
 		result = await _start(DELAY)
 	if result.is_empty():
 		result = _check_shared_tile()
+	if result.is_empty():
+		result = _check_knocked_down()
 	_main.queue_free()
 	return result
 
@@ -285,6 +287,55 @@ func _script(variant: int) -> Array[int]:
 	for tick: int in TICKS:
 		moves.append(posmod(tick * (2 + variant) + tick % 5, Hex.DIRECTIONS.size() + 1) - 1)
 	return moves
+
+
+## Knocked down in co-op (#479): a player with an ally near is knocked down, not sent back; held
+## still, their commands don't walk them. An ally beside them for REVIVE_TICKS revives them with
+## half
+## their HP. Knocked down again with nobody beside them, they're sent back to the spawn after
+## DOWN_TICKS. Alone, a player has no ally near.
+func _check_knocked_down() -> String:
+	var state: GameState = InstanceBlueprints.basic(42, 2)
+	state.set_enabled(Features.WILD_ATTACKS, false)
+	var down: Entity = state.player(0)
+	var ally: Entity = state.player(1)
+	var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var health: HealthFeature = state.feature(Features.HEALTH) as HealthFeature
+	if not knockdown.has_ally_near(state, down):
+		return "a player with an ally in the instance has no ally near"
+	knockdown.knock_down(down.id)
+	var stood: Vector2i = down.tile
+	ally.tile = down.tile + Hex.DIRECTIONS[0]
+	var revived: bool = false
+	for _tick: int in KnockdownFeature.REVIVE_TICKS:
+		Simulation.step(state, FlowSteps.commands([0, Command.NO_MOVE]))
+		revived = revived or _raised(state, PlayerRevived)
+	var half: int = Fixed.scale(HealthFeature.PLAYER_HP, HealthFeature.REVIVED_HP)
+	if down.tile != stood or not revived or health.hp_of(state, down.id) != half:
+		return "a knocked-down player walked, or an ally beside them didn't revive them to half HP"
+	knockdown.knock_down(down.id)
+	ally.tile = down.tile + Hex.DIRECTIONS[0] * 5
+	var sent: bool = false
+	for _tick: int in KnockdownFeature.DOWN_TICKS:
+		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+		sent = sent or _raised(state, SentToSpawn)
+	var alone: GameState = InstanceBlueprints.basic(42)
+	if (not sent
+			or knockdown.is_down(down.id)
+			or (alone.feature(Features.KNOCKDOWN) as KnockdownFeature).has_ally_near(
+		alone,
+		alone.player(0),
+	)):
+		return "a knocked-down player nobody revived wasn't sent back, or a lone player had an ally"
+	return ""
+
+
+## Whether an event of the class `kind` was raised in `state`'s last tick.
+static func _raised(state: GameState, kind: Script) -> bool:
+	for event: RefCounted in state.events:
+		if event.get_script() == kind:
+			return true
+	return false
 
 
 ## A simulated player: a list of moves, one per poll, each put `delay` ticks ahead as a network

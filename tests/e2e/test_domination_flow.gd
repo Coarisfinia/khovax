@@ -1135,6 +1135,7 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
+		KnockdownFeature.new(),
 		TrailFeature.new(),
 		WildMonsterFeature.new([], [], { WEAK: OUTCOME_HP }, { WEAK: WEAK_STRENGTH }),
 		DominationFeature.new(),
