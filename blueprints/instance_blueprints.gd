@@ -59,7 +59,7 @@ static func create(instance_name: String, seed_value: int, players: int = 1) -> 
 		var limits: Array = [instance_name, region.starts.size(), players]
 		push_error("instance %s takes 0 to %d players, not %d" % limits)
 		return null
-	var species: Content = SpeciesContent.load_species()
+	var species: SpeciesData = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_error("the species don't load: " + species.problem)
 	var ordered: Array[Feature] = [
@@ -159,7 +159,7 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 
 
 ## The companion feature (#338) with every species' reach, from its stats in `content`.
-static func _companions(content: Content) -> CompanionFeature:
+static func _companions(content: SpeciesData) -> CompanionFeature:
 	var reaches: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		var stats: Species = content.species[species_id]
@@ -168,12 +168,12 @@ static func _companions(content: Content) -> CompanionFeature:
 
 
 ## The health feature (#455) with every species' HP, from the species `content`, for companions.
-static func _health(content: Content) -> HealthFeature:
+static func _health(content: SpeciesData) -> HealthFeature:
 	return HealthFeature.new(_max_hps(content))
 
 
 ## Every species' HP in the species `content`, by species id.
-static func _max_hps(content: Content) -> Dictionary[String, int]:
+static func _max_hps(content: SpeciesData) -> Dictionary[String, int]:
 	var max_hps: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		max_hps[species_id] = content.species[species_id].hp
@@ -183,8 +183,8 @@ static func _max_hps(content: Content) -> Dictionary[String, int]:
 ## The specials feature (#410) with every species' special's power and cooldown, from the species
 ## `content` and the ability data; a special that doesn't load is an error, and its species has
 ## none.
-static func _specials(content: Content) -> SpecialAttackFeature:
-	var abilities: Content = SpeciesContent.load_abilities()
+static func _specials(content: SpeciesData) -> SpecialAttackFeature:
+	var abilities: SpeciesData = SpeciesContent.load_abilities()
 	if not abilities.problem.is_empty():
 		push_error("the abilities don't load: " + abilities.problem)
 	var powers: Dictionary[String, int] = {}
@@ -201,7 +201,7 @@ static func _specials(content: Content) -> SpecialAttackFeature:
 
 ## The wild monster feature with the named blueprint's species list and every species' stats from
 ## the species `content` (#219); when it didn't load, its monsters push on nothing.
-static func _wild_monsters(instance_name: String, content: Content) -> WildMonsterFeature:
+static func _wild_monsters(instance_name: String, content: SpeciesData) -> WildMonsterFeature:
 	var species: Dictionary = WILD_SPECIES.get(instance_name, { })
 	var roster: Array[String] = []
 	var weights: Array[int] = []
@@ -219,7 +219,7 @@ static func _wild_monsters(instance_name: String, content: Content) -> WildMonst
 ## table for blanks, if it has one. Tables that don't load are an error; dominations then drop
 ## nothing.
 static func _domination_loot(instance_name: String) -> DominationLootFeature:
-	var content: Content = LootContent.load_loot_tables()
+	var content: LootData = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		push_error("the loot tables don't load: " + content.problem)
 	var species_tables: Dictionary[String, LootTable] = {}
@@ -234,7 +234,7 @@ static func _domination_loot(instance_name: String) -> DominationLootFeature:
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.
 static func _loot_table(table_id: String) -> LootTable:
-	var content: Content = LootContent.load_loot_tables()
+	var content: LootData = LootContent.load_loot_tables()
 	var table: LootTable = content.loot_tables.get(table_id)
 	if not content.problem.is_empty() or table == null or table.kind != LootTable.INSTANCE:
 		return null

@@ -34,11 +34,11 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	var species: Content = SpeciesContent.load_species()
+	var species: SpeciesData = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	_species = species.species
-	var abilities: Content = SpeciesContent.load_abilities()
+	var abilities: SpeciesData = SpeciesContent.load_abilities()
 	for id: String in abilities.abilities:
 		_abilities[id] = abilities.abilities[id].name
 	add_child(GameMenu.label(TITLE))

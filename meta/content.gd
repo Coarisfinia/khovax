@@ -4,22 +4,15 @@ extends RefCounted
 ## (#412: the slice's own kind directly in slices/<slice>/data/, so no folder repeats the slice's
 ## name, #442, and any other kind in slices/<slice>/data/<kind>/), checked against its schema there
 ## in CI and here for what a schema can't check: ids unique and matching their file. The slices
-## read their kinds through their own accessors (QuestContent, SpeciesContent, LootContent); the
-## tile blueprints (#116), which the core's TileKinds needs too, are read here, from the tiles
-## slice. Here too: the field helpers they all use.
+## read their kinds through their own accessors into their own data (SpeciesContent into
+## SpeciesData, and so on, #506), so this never names them; the tile blueprints (#116), which the
+## core's TileKinds needs too, are read here, from the tiles slice. Here too: the field helpers they
+## all use.
 
 const TILES_DIR: String = "res://slices/tiles/data/"
 
-## Every species, by id.
-var species: Dictionary[String, Species] = {}
-## Every loot table, by id.
-var loot_tables: Dictionary[String, LootTable] = {}
 ## Every tile blueprint, by id.
 var tiles: Dictionary[String, TileBlueprint] = {}
-## Every quest, by id.
-var quests: Dictionary[String, QuestDefinition] = {}
-## Every ability, by id (#222).
-var abilities: Dictionary[String, Ability] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -40,18 +33,6 @@ static func load_tiles(directory: String = TILES_DIR) -> Content:
 			content.tiles[tile.id] = tile
 			numbers[tile.number] = true
 	return content
-
-
-## Reads one species file's text, named `file_id`, and adds it; returns why it can't, or "". Its id
-## must be one no species read before has.
-func add_species(file_id: String, text: String) -> String:
-	var entry: Species = Species.parse(file_id, text)
-	# A repeated id is refused as that first, whatever else is wrong with the file, as before #279.
-	if not entry.id.is_empty() and species.has(entry.id):
-		return "its id must match the file name and be unique"
-	if entry.problem.is_empty():
-		species[entry.id] = entry
-	return entry.problem
 
 
 ## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.

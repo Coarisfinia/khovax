@@ -510,7 +510,7 @@ func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
 ## quest counts to three. The first domination asks for the beach first (#321): dominations before
 ## it don't count, and reaching it hands over to dominating.
 func _check_counted() -> String:
-	var content: Content = QuestContent.load_quests()
+	var content: QuestData = QuestContent.load_quests()
 	var profile: Profile = Profile.new()
 	profile.quest_book = content.quests
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
@@ -590,7 +590,7 @@ func _check_broken_data() -> String:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
 		var _stored: bool = file.store_string(files[id])
 		file.close()
-	var content: Content = QuestContent.load_quests(directory)
+	var content: QuestData = QuestContent.load_quests(directory)
 	for id: String in files:
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
 	var _gone: Error = DirAccess.remove_absolute(directory)
