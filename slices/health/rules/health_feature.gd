@@ -45,9 +45,13 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_fall(state, target)
 
 
-## Raises EntityFell for `entity_id`, whose HP just reached 0.
+## Raises EntityFell for `entity_id`, whose HP just reached 0; a companion then goes back to its
+## player (#456).
 func _fall(state: GameState, entity_id: int) -> void:
 	state.events.append(EntityFell.new(entity_id))
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	if companions.owners.has(entity_id):
+		companions.send_home(state, entity_id)
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:

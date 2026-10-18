@@ -284,11 +284,12 @@ func _settle(world: World) -> void:
 			world.step(FlowSteps.command(Command.NO_MOVE))
 
 
-## The player came back with their companion, and the resumed session's recording plays back from
-## the resumed world to the same state.
+## The player came back with their companion, or with it still back in their keeping after it fell
+## (#456), and the resumed session's recording plays back from the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
-	if (driver.state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0) == 0:
-		return "the player came back without their companion"
+	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	if companions.companion_of(0) == 0 and not companions.has_returned(0):
+		return "the player came back without their companion, nor with it back in their keeping"
 	for _tick: int in 30:
 		driver.advance(STEP)
 	driver.recording.finish(driver.world)

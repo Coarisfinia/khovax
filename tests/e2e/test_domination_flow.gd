@@ -77,6 +77,9 @@ const WEAK: String = "weak"
 const STRONG: String = "strong"
 const OUTCOME_HP: int = 100
 const WEAK_STRENGTH: int = 40
+## A companion's HP in the strike checks: enough to outlast several weak wild monsters' hits
+## while its own strikes are counted, and to fall within the fall check's seconds (#456).
+const COMPANION_HP: int = WEAK_STRENGTH * 100
 const STRONG_STRENGTH: int = 400
 ## The weak species' special: three times its strength, more than a weak monster's HP, and its
 ## cooldown.
@@ -1051,28 +1054,35 @@ func _struck_once(
 	return ""
 
 
-## Hit on `companion_tile` until their HP is gone, the companion falls once (#455): EntityFell is
-## raised on the hit that takes the last of it, and later hits neither go below 0 nor fall again.
+## Hit on `companion_tile` until their HP is gone, the companion falls once (#455) and goes back to
+## its player (#456): EntityFell and CompanionReturned are raised on the hit that takes the last of
+## it, the companion leaves the instance, and it doesn't join its player again here.
 func _check_companion_falls(
 	state: GameState,
 	companion_tile: Vector2i,
 	companion_id: int,
 ) -> String:
-	var health: HealthFeature = state.feature(Features.HEALTH) as HealthFeature
 	var falls: int = 0
+	var returns: int = 0
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
-	for _tick: int in WildAttackFeature.STRIKE_TICKS * 20:
-		state.entity(companions.companion_of(0)).tile = companion_tile
+	for _tick: int in WildAttackFeature.STRIKE_TICKS * 110:
+		var companion: Entity = state.entity(companions.companion_of(0))
+		if companion != null:
+			companion.tile = companion_tile
 		Simulation.step(state, still)
 		for event: RefCounted in state.events:
 			var fell: EntityFell = event as EntityFell
 			falls += 1 if fell != null and fell.entity_id == companion_id else 0
-	if falls != 1 or health.hp_of(state, companion_id) != 0:
-		return "the companion fell %d times, at %d HP, not once at 0" % [
+			var returned: CompanionReturned = event as CompanionReturned
+			returns += 1 if returned != null and returned.companion_id == companion_id else 0
+	if falls != 1 or returns != 1 or state.entity(companion_id) != null:
+		return "the companion fell %d times and went back %d times, not once each" % [
 			falls,
-			health.hp_of(state, companion_id),
+			returns,
 		]
+	if companions.companion_of(0) != 0:
+		return "the companion that went back to its player joined them again in the same instance"
 	return ""
 
 
@@ -1111,7 +1121,7 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
-		HealthFeature.new({ WEAK: OUTCOME_HP }),
+		HealthFeature.new({ WEAK: COMPANION_HP }),
 	]
 	return GameState.new(region, 1, ordered)
 

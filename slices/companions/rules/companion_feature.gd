@@ -7,7 +7,9 @@ extends Feature
 ## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
 ## goes when its player leaves the instance (through an exit, the same tick: the feature steps
 ## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
-## something), it goes and joins them afresh beside them.
+## something), it goes and joins them afresh beside them. One at 0 HP goes back to its player
+## (`send_home`, #456) and doesn't join them again in this instance until they leave it through an
+## exit.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -38,6 +40,8 @@ var _species: Dictionary[int, String] = {}
 ## The ticks each companion still rests before its next roaming step, by entity id.
 var _rest: Dictionary[int, int] = {}
 var _rng: Rng
+## The slots whose companion went back to them here and doesn't join again until they leave.
+var _returned: Array[int] = []
 
 
 func _init(species_reaches: Dictionary[String, int] = {}) -> void:
@@ -65,6 +69,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	for event: RefCounted in state.events:
 		if event is ExitTaken:
 			leaving.append((event as ExitTaken).slot)
+			_returned.erase((event as ExitTaken).slot)
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
 		if leaving.has(owners[companion_id]):
@@ -75,10 +80,21 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			state.remove_entity(companion_id)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
-		if player != null and not state.companions[slot].is_empty() and companion_of(slot) == 0:
+		var brings: bool = player != null and not state.companions[slot].is_empty()
+		if brings and companion_of(slot) == 0 and not _returned.has(slot):
 			_join(state, movement, player, state.companions[slot])
 	for companion_id: int in companions():
 		_roam(state, movement, state.entity(companion_id))
+
+
+## Sends the companion `companion_id` back to its player (#456): it leaves the instance, and the
+## player's companion doesn't join them again here until they leave through an exit.
+func send_home(state: GameState, companion_id: int) -> void:
+	var slot: int = owners[companion_id]
+	_returned.append(slot)
+	_returned.sort()
+	state.remove_entity(companion_id)
+	state.events.append(CompanionReturned.new(companion_id, slot))
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
@@ -101,6 +117,11 @@ func companion_of(slot: int) -> int:
 		if owners[companion_id] == slot:
 			return companion_id
 	return 0
+
+
+## Whether the companion of the player in `slot` went back to them here (#456) and stays away.
+func has_returned(slot: int) -> bool:
+	return _returned.has(slot)
 
 
 ## The species of the companion with this entity id, or "".
@@ -189,10 +210,13 @@ func hash_values() -> Array[int]:
 		values.append_array([companion_id, owners[companion_id], _rest[companion_id]])
 		values.append(World.name_code(_species[companion_id]))
 	values.append_array(_rng.hash_values())
+	values.append(_returned.size())
+	values.append_array(_returned)
 	return values
 
 
-## Every companion as its entity id, slot, species and rest, in id order, and the stream's state.
+## Every companion as its entity id, slot, species and rest, in id order, the stream's state and
+## the slots whose companion went back to them.
 ## The reaches follow from the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
@@ -205,7 +229,7 @@ func save_values() -> Dictionary:
 				"rest": _rest[companion_id],
 			},
 		)
-	return { "companions": saved, "rng": _rng.hash_values() }
+	return { "companions": saved, "rng": _rng.hash_values(), "returned": _returned }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
@@ -234,3 +258,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		values.fail("the companions' random stream isn't four 32-bit words, not all zero")
 		return
 	_rng = restored
+	_returned = values.wholes("returned", 0, GameState.MAX_PLAYERS - 1)
+	for slot: int in _returned:
+		if _returned.count(slot) > 1 or companion_of(slot) != 0:
+			values.fail("slot %d's companion is both back with its player and here" % slot)
+			return
