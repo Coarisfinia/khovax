@@ -46,6 +46,16 @@ func choose_color(color: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Moves the dominated monster `monster_id` to `place` in the player's order (#430) and saves it
+## like any choice; returns why it can't, or "".
+func move_monster(monster_id: int, place: int, now_msec: int) -> String:
+	var problem: String = profile.move_monster(monster_id, place)
+	if not problem.is_empty():
+		return problem
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Saves pending changes if the last save is at least SAVE_INTERVAL_MSEC old; returns why it
 ## couldn't, or "".
 func save_if_due(now_msec: int) -> String:
