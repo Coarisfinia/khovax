@@ -1,12 +1,12 @@
 class_name QuestsTab
 extends ScrollContainer
 ## The menu's Quests tab (#388): the same open quests as the list at the side of the screen (#340,
-## Profile.open_steps), each with its name and every one of its steps, worded as the list words
-## them (QuestListView.step_line): the steps done, the one it's on with its count, and the ones
-## still to come. Each step says which it is in words, never by color alone (#68). It only reads
-## the profile, keeps up with it while shown, and scrolls when the screen is too short for every
-## quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only what it
-## does.
+## Profile.open_steps), each with its name and path mark (#471) and every one of its steps, worded
+## as the list words them (QuestListView.step_line): the steps done, the one it's on with its count,
+## and the ones still to come. Each step says which it is in words, never by color alone (#68). It
+## only reads the profile, keeps up with it while shown, and scrolls when the screen is too short
+## for every quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only
+## what it does.
 
 ## The gap between rows, as the scene sets it.
 const GAP: float = 8.0
@@ -43,7 +43,7 @@ func refresh() -> void:
 	if holder != null and holder.keeper != null:
 		var profile: Profile = holder.keeper.profile
 		for id: String in profile.open_steps():
-			names[id] = profile.quest_book[id].name
+			names[id] = profile.quest_book[id].shown_name()
 			lines[id] = "\n".join(quest_lines(profile, id))
 	if lines != shown:
 		_show(names, lines)

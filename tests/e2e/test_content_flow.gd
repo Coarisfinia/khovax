@@ -7,7 +7,8 @@ extends RefCounted
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, and broken ones are refused. Factions (#483) load with their own names for
-## the ranks of a standing, and broken ones are refused.
+## the ranks of a standing, and broken ones are refused. Quests and abilities carry path marks
+## (#471).
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
 const KIT: String = (
@@ -71,7 +72,31 @@ func _check_kits(content: SpeciesData) -> String:
 	var missing: Dictionary[String, Species] = { "b": _copy_kit(finch, "no_such_ability") }
 	if SpeciesKit.problem(missing, loaded.abilities).is_empty():
 		return "a special that doesn't exist wasn't refused"
-	return _check_abilities_refused()
+	var result: String = _check_path_marks(loaded.abilities)
+	return result if not result.is_empty() else _check_abilities_refused()
+
+
+## Quests and abilities read their path marks (#471) as written, none when they have none, and a
+## quest's name shows its mark in words after it (#68); a path that isn't a mark is refused.
+func _check_path_marks(abilities: Dictionary[String, Ability]) -> String:
+	var quests: Dictionary[String, QuestDefinition] = QuestContent.load_quests().quests
+	if (quests["three_moss_toads"].path != PathMark.SUPREMACY
+			or quests["first_domination"].path != PathMark.NONE
+			or abilities["storm_finch_gale_dive"].path != PathMark.SUPREMACY
+			or abilities["moss_toad_damp_hide"].path != PathMark.NONE):
+		return "the path marks didn't read as written"
+	if quests["three_moss_toads"].shown_name() != "Dominate three moss toads (Supremacy)":
+		return "a quest's name doesn't show its path mark in words"
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"path\": %s,"
+	quest += " \"steps\": [{\"condition\": \"opened\"}]}"
+	var ability: String = "{\"id\": \"x\", \"kind\": \"self_passive\", \"name\": \"N\","
+	ability += " \"description\": \"d\", \"path\": %s}"
+	for path: String in ["\"evil\"", "1", "\"\""]:
+		if QuestDefinition.parse("x", quest % path, {}).problem != PathMark.PROBLEM:
+			return "a quest with the path %s wasn't refused" % path
+		if Ability.parse("x", ability % path).problem != PathMark.PROBLEM:
+			return "an ability with the path %s wasn't refused" % path
+	return ""
 
 
 ## A copy of `species`' kit with `special` as its special.

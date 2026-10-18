@@ -4,5 +4,6 @@
 	"id": "storm_finch_tailwind",
 	"kind": "player_passive",
 	"name": "Tailwind",
-	"description": "While the storm finch is out, the player walks a little faster."
+	"description": "While the storm finch is out, the player walks a little faster.",
+	"path": "both"
 }

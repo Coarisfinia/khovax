@@ -13,6 +13,11 @@
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"name": { "description": "The player-facing name.", "type": "string", "minLength": 1 },
+		"path": {
+			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
+			"enum": ["none", "harmony", "supremacy", "both"],
+			"default": "none"
+		},
 		"steps": {
 			"description": "The steps, in the order the player goes through them.",
 			"type": "array",

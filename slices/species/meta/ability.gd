@@ -20,6 +20,7 @@ const FIELDS: Array[String] = [
 	"description",
 	"power",
 	"cooldown_seconds",
+	PathMark.FIELD,
 ]
 
 var id: String = ""
@@ -31,6 +32,8 @@ var description: String = ""
 ## seconds before it can fire again; 0 for a passive.
 var power: int = 0
 var cooldown_seconds: int = 0
+## Its path mark (#471): PathMark.NONE, HARMONY, SUPREMACY or BOTH.
+var path: String = PathMark.NONE
 ## Why the ability couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -49,6 +52,7 @@ static func parse(file_id: String, text: String) -> Ability:
 	ability.description = Content.text_of(data.get("description"))
 	ability.power = Content.amount(data.get("power"))
 	ability.cooldown_seconds = Content.amount(data.get("cooldown_seconds"))
+	ability.path = PathMark.read(data)
 	ability.problem = Content.unknown_field(data, FIELDS)
 	if ability.problem.is_empty() and (ability.id != file_id or not Content.is_id(ability.id)):
 		ability.problem = "its id must match the file name and be lowercase words with underscores"
@@ -56,6 +60,8 @@ static func parse(file_id: String, text: String) -> Ability:
 		ability.problem = "its kind is one of %s" % [KINDS]
 	if ability.problem.is_empty() and (ability.name.is_empty() or ability.description.is_empty()):
 		ability.problem = "it has a name and a description"
+	if ability.problem.is_empty() and ability.path.is_empty():
+		ability.problem = PathMark.PROBLEM
 	if ability.problem.is_empty():
 		ability.problem = ability._strike_problem(data)
 	return ability
