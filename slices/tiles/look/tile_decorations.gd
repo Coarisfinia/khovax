@@ -6,7 +6,9 @@ extends Node3D
 ## it, the same way every time for its tile, and turned as its region piece turns it by hand
 ## (#231). A decoration stays hidden
 ## in the fog until an ally has seen its tile or an event revealed it (as FogView remembers the
-## ground under it), then stays. It only reads the state.
+## ground under it), then stays. When a rule changes a tile in place (#530, TileChanged), its old
+## decoration shrinks away and its new kind's grows in, calmly, over HexGrid.CHANGE_SECONDS. It
+## only reads the state and the tick's events.
 
 ## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
 ## ours (HexLayout.SIZE), so they shrink to fit inside it.
@@ -18,12 +20,19 @@ const OFF_CENTER: float = 0.15
 
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
+## Decorations of tiles changed in place (#530), shrinking away.
+var shrinking: Array[HexPiece] = []
 ## The region the figures stand on: another one clears them.
 var _region: Region
 ## Decorated tiles an ally has seen in this region.
 var _seen: Dictionary[Vector2i, bool] = {}
 ## Each model, loaded once, by path.
 var _models: Dictionary[String, PackedScene] = {}
+
+
+func _ready() -> void:
+	if driver != null:
+		var _connected: int = driver.ticked.connect(_on_ticked)
 
 
 func _process(_delta: float) -> void:
@@ -46,16 +55,58 @@ func show_state() -> void:
 
 
 func _build(region: Region) -> void:
-	for figure: HexPiece in figures.values():
+	for figure: HexPiece in figures.values() + shrinking:
 		figure.queue_free()
 	figures.clear()
+	shrinking.clear()
 	_seen.clear()
 	_region = region
 	for tile: Vector2i in region.sorted_tiles():
-		var blueprint: TileBlueprint = TileLooks.of(region.terrain[tile])
-		if blueprint != null and not blueprint.model.is_empty():
-			var turn: int = region.decoration_turns.get(tile, 0)
-			figures[tile] = _add_figure(tile, blueprint, turn)
+		_decorate(tile, false)
+
+
+## Stands the decoration of `tile`'s kind on it, if the kind has one, grown in calmly if `growing`.
+func _decorate(tile: Vector2i, growing: bool) -> void:
+	var blueprint: TileBlueprint = TileLooks.of(_region.terrain[tile])
+	if blueprint == null or blueprint.model.is_empty():
+		return
+	var turn: int = _region.decoration_turns.get(tile, 0)
+	var figure: HexPiece = _add_figure(tile, blueprint, turn)
+	figures[tile] = figure
+	figure.visible = _seen.has(tile)
+	if growing:
+		var full: Vector3 = figure.scale
+		figure.scale = Vector3.ZERO
+		var tween: Tween = figure.create_tween()
+		var _grown: PropertyTweener = tween.tween_property(
+			figure,
+			"scale",
+			full,
+			HexGrid.CHANGE_SECONDS,
+		)
+
+
+## Swaps the decoration of every tile of the shown region changed in place this tick (#530): the old
+## one shrinks away and is freed, the new kind's grows in.
+func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+	for changed: TileChanged in HexGrid.changes_in(events, _region):
+		if figures.has(changed.tile):
+			_shrink(figures[changed.tile])
+			var _dropped: bool = figures.erase(changed.tile)
+		_decorate(changed.tile, true)
+
+
+func _shrink(figure: HexPiece) -> void:
+	shrinking.append(figure)
+	var tween: Tween = figure.create_tween()
+	var time: float = HexGrid.CHANGE_SECONDS
+	var _shrunk: PropertyTweener = tween.tween_property(figure, "scale", Vector3.ZERO, time)
+	var _free: CallbackTweener = tween.tween_callback(_drop_shrunk.bind(figure))
+
+
+func _drop_shrunk(figure: HexPiece) -> void:
+	shrinking.erase(figure)
+	figure.queue_free()
 
 
 ## Where the decoration on `tile` stands from its tile's middle: a little off it, in a direction and

@@ -1,7 +1,8 @@
 ## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
 ## draws tiles: features color tiles through `paint` (e.g. TrailView), and know nothing about each
-## other; TileDecorations stands each kind's decoration on them. A tool script, so the grid also
-## shows in the editor, as a disc of `radius` rings.
+## other; TileDecorations stands each kind's decoration on them. A tile a rule changes in place
+## (#530) eases into its new kind's color when its TileChanged event comes. A tool script, so the
+## grid also shows in the editor, as a disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
 ## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.
@@ -14,6 +15,9 @@ const TILE_HEIGHT: float = 0.1
 ## Tiles are drawn slightly smaller than their cell, so the gaps read as grid lines.
 const TILE_SCALE: float = 0.94
 const TILES_NODE: String = "Tiles"
+## How long a tile changed in place (#530) takes to ease into its new kind's color: calmly, never a
+## flash.
+const CHANGE_SECONDS: float = 0.8
 
 ## The editor's preview without a running game: a disc of this many rings.
 @export_range(0, 12) var radius: int = 3:
@@ -41,9 +45,13 @@ var _base: Dictionary[Vector2i, Color] = {}
 var _index: Dictionary[Vector2i, int] = {}
 var _transforms: Dictionary[Vector2i, Transform3D] = {}
 var _colors: Dictionary[Vector2i, Color] = {}
+## The tiles easing into their new kind's color after changing in place (#530), each with its tween.
+var easing: Dictionary[Vector2i, Tween] = {}
 
 
 func _ready() -> void:
+	if not Engine.is_editor_hint() and driver != null:
+		var _connected: int = driver.ticked.connect(_on_ticked)
 	# Each tile's color comes from its MultiMesh instance.
 	_material.vertex_color_use_as_albedo = true
 	Toon.apply(_material)
@@ -80,10 +88,21 @@ func show_state() -> void:
 func paint(colors: Dictionary[Vector2i, Color]) -> void:
 	_paint = colors
 	for tile: Vector2i in _index:
-		var color: Color = colors.get(tile, _base[tile])
-		if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
-			_colors[tile] = color
-			_tiles.multimesh.set_instance_color(_index[tile], color)
+		_recolor(tile)
+
+
+## The tile changes in `events` (#530) that `region` shows as they are now, in order: the driver
+## also passes on the events of an instance the player just left, and a tile changed twice in one
+## frame is shown by its last change.
+static func changes_in(events: Array[RefCounted], region: Region) -> Array[TileChanged]:
+	var changes: Array[TileChanged] = []
+	for event: RefCounted in events:
+		var changed: TileChanged = event as TileChanged
+		if changed == null or region == null:
+			continue
+		if region.terrain.get(changed.tile, -1) == changed.kind:
+			changes.append(changed)
+	return changes
 
 
 func has_tile(tile: Vector2i) -> bool:
@@ -138,7 +157,45 @@ func _shown_region() -> Region:
 	return _region
 
 
+## Gives `tile` the color painted onto it, or its kind's.
+func _recolor(tile: Vector2i) -> void:
+	var color: Color = _paint.get(tile, _base[tile])
+	if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
+		_colors[tile] = color
+		_tiles.multimesh.set_instance_color(_index[tile], color)
+
+
+## Eases every tile changed in place this tick (#530) from the color it has into its new kind's.
+func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+	for changed: TileChanged in changes_in(events, _region):
+		if not _index.has(changed.tile):
+			continue
+		var tile: Vector2i = changed.tile
+		if easing.has(tile):
+			easing[tile].kill()
+		var tween: Tween = create_tween()
+		var to: Color = terrain_color(changed.kind)
+		var ease_to: Callable = _ease.bind(tile)
+		var _eased: MethodTweener = tween.tween_method(ease_to, _base[tile], to, CHANGE_SECONDS)
+		var _done: CallbackTweener = tween.tween_callback(_drop_easing.bind(tile, tween))
+		easing[tile] = tween
+
+
+## Shows `tile` in `color`, on its way to its new kind's.
+func _ease(color: Color, tile: Vector2i) -> void:
+	_base[tile] = color
+	_recolor(tile)
+
+
+func _drop_easing(tile: Vector2i, tween: Tween) -> void:
+	if easing.get(tile) == tween:
+		var _dropped: bool = easing.erase(tile)
+
+
 func _build(region: Region) -> void:
+	for tween: Tween in easing.values():
+		tween.kill()
+	easing.clear()
 	_region = region
 	var tiles: Array[Vector2i] = region.sorted_tiles()
 	_index.clear()

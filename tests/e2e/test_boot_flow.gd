@@ -2,7 +2,8 @@ extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
 ## in view of the camera, a wild monster's figure standing on its own tile, the instance next door
 ## drawn beyond its exit under the cloud, and the exploration music rising from silence. The ground
-## explored in an instance stays under light fog, also when it lies next door. The Survey has its
+## explored in an instance stays under light fog, also when it lies next door. A tile a rule changes
+## in place eases into its new look. The Survey has its
 ## own flow (test_survey_flow.gd).
 
 
@@ -789,6 +790,47 @@ func _walk_in(world: World, direction: int) -> void:
 		world.step(still)
 
 
+## A tile changed in place (#530), a forest of the glade cleared to ground, is shown calmly when its
+## event comes: the tile keeps its forest color at first and eases into the ground's, never in one
+## frame, and its trees shrink away; grown back into forest, new trees grow in from nothing. The
+## glade starts afresh afterwards, as the flow had it.
+func _check_tile_change_shown(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
+	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
+	grid.show_state()
+	view.show_state()
+	var forest: int = TileKinds.number_of("forest")
+	var tile: Vector2i = Vector2i.MAX
+	for decorated: Vector2i in view.figures:
+		if driver.state.region.terrain[decorated] == forest:
+			tile = decorated
+	var before: Color = grid.tile_color_of(tile)
+	_change_shown(driver, tile, Region.GROUND)
+	var calm: bool = grid.easing.has(tile) and grid.tile_color_of(tile) == before
+	calm = calm and not view.figures.has(tile) and view.shrinking.size() == 1
+	if not calm:
+		return "a forest cleared in place changed its look at once, or kept its trees"
+	var _stepped: bool = grid.easing[tile].custom_step(HexGrid.CHANGE_SECONDS + 0.1)
+	if grid.easing.has(tile) or grid.tile_color_of(tile) != grid.terrain_color(Region.GROUND):
+		return "a forest cleared in place didn't ease into the ground's color"
+	_change_shown(driver, tile, forest)
+	if not view.figures.has(tile) or view.figures[tile].scale != Vector3.ZERO:
+		return "a forest grown back in place didn't grow its trees in from nothing"
+	driver.start(7)
+	return ""
+
+
+## Changes `tile` of the driver's instance to `kind`, as a rule would, and hands the views the
+## tick's events.
+static func _change_shown(driver: GameDriver, tile: Vector2i, kind: int) -> void:
+	driver.state.events.clear()
+	var _changed: bool = driver.state.change_tile(tile, kind)
+	var events: Array[RefCounted] = []
+	events.assign(driver.state.events)
+	driver.ticked.emit(driver.state.tick, events)
+
+
 ## A post stands on every lookout (#181): none in the basic instance, which has no lookout, and one
 ## on the glade's. Decorations stand on the glade's decorated tiles (#116, #205), on no other tile,
 ## hidden until an ally has seen them.
@@ -804,7 +846,8 @@ func _check_lookouts(main: Node) -> String:
 	var lookout: TileTrigger = driver.state.region.triggers[0]
 	if view.figures.keys() != [lookout.tile]:
 		return "the glade's lookout has no post: %s" % [view.figures.keys()]
-	return _check_decorations(main)
+	var problem: String = _check_decorations(main)
+	return problem if not problem.is_empty() else _check_tile_change_shown(main)
 
 
 ## Each decorated kind's model (forest, shrubs, boulder, stump) stands on exactly the glade's tiles

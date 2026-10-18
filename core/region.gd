@@ -5,7 +5,8 @@ extends RefCounted
 ## the origin, so a region can have any shape. Regions are hand-made Markdown files (regions/*.md,
 ## read by RegionDocument into the compact form RegionFormat reads, #145), or arranged from
 ## hand-made region pieces (regions/<blueprint>/) by RegionArranger (#57). This class holds the
-## region's data and its geometry (turning, placing, fitting, reachability, hashing).
+## region's data and its geometry (turning, placing, fitting, reachability, hashing). Once loaded,
+## only a rule changes it, a few tiles' kinds in place (#530, GameState.change_tile).
 
 ## The built-in kinds' numbers, as the tile blueprints give them; rock blocks sight
 ## (FogFeature).
@@ -88,6 +89,17 @@ func is_walkable(tile: Vector2i) -> bool:
 
 func size() -> int:
 	return terrain.size()
+
+
+## Makes `tile` a tile of kind `kind` in place (#530, GameState.change_tile). Its piece's walkable
+## override goes with its old kind, so the new kind's traits hold. Returns whether it could: not for
+## a tile off the region or a kind no tile blueprint has.
+func change(tile: Vector2i, kind: int) -> bool:
+	if not terrain.has(tile) or TileKinds.id_of(kind).is_empty():
+		return false
+	terrain[tile] = kind
+	var _overridden: bool = walkable_overrides.erase(tile)
+	return true
 
 
 ## The region's tiles, sorted, so their order never depends on how the region was built.
