@@ -1,3 +1,4 @@
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (JSON text, whose numbers arrive as floats)
 class_name WorldSave
 extends RefCounted
 ## The world's file (#119): the persistent world, saved next to the profile and apart from it, so

@@ -245,7 +245,10 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
-  `Engine`, `OS`, global randomness, frame `delta` or `float`: CI greps for them. Randomness comes
+  `Engine`, `OS`, global randomness, frame `delta`, `float`, `FileAccess`, `DirAccess` or `JSON`:
+  CI greps for them (`tools/determinism_check.sh`, #572). A file that can't pass yet is exempt only
+  with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
+  `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
   `Rng.new(state.rng_seed, id())` in `start`, keeps it in its state and hashes it, and draws only
   inside its step; streams keep one system's rolls from shifting another's. Ranges use
@@ -298,9 +301,9 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   file, never inside the simulation. Saves are versioned JSON of integers and ids only, kept by
   `SaveStore`; gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`,
   `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
-  the content reader, JSONC): the core's edge, which reads files and JSON's numbers, so CI's
-  determinism check skips it (#515 looks into closing that), while the core-never-depends-on-a-slice
-  check still covers it.
+  the content reader, JSONC): the core's edge, which reads files and JSON's numbers, so its files
+  that can't pass the determinism check yet carry its exemption marker (#515), while the
+  core-never-depends-on-a-slice check still covers them.
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read

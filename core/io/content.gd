@@ -1,3 +1,4 @@
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads content files, JSON numbers as floats)
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
