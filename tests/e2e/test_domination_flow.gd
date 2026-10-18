@@ -185,7 +185,8 @@ func _check_open_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var ring: Array[Vector2i] = FlowSteps.BASIC_RING
 	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
-	if _wild(state).monsters.size() != 1 or not _domination(state).seals.is_empty():
+	# Both wild monsters stay: the rolled one and the beach's wounded toad (#448).
+	if _wild(state).monsters.size() != 2 or not _domination(state).seals.is_empty():
 		return "an open ring dominated the wild monster or started sealing"
 	if not _domination(state).encircled.is_empty():
 		return "an open ring encircled the wild monster"
@@ -197,7 +198,8 @@ func _check_other_ring() -> String:
 	var state: GameState = InstanceBlueprints.basic(42)
 	var _events: Array[RefCounted] = FlowSteps.walk(state, OTHER_RING)
 	var trail: Trail = _trails(state).shared
-	if _wild(state).monsters.size() != 1 or trail.tiles.size() != OTHER_RING.size() + 1:
+	# The rolled one and the beach's toad (#448) both stay.
+	if _wild(state).monsters.size() != 2 or trail.tiles.size() != OTHER_RING.size() + 1:
 		return "a ring around another tile dominated the wild monster or reset the trail"
 	if not _domination(state).seals.is_empty() or not _domination(state).encircled.is_empty():
 		return "a ring around no wild monster started sealing or waited for a totem"
@@ -393,7 +395,8 @@ func _check_seal_saved() -> String:
 		resumed.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		if resumed.state_hash() != world.state_hash():
 			return "the resumed seal went another way at tick %d" % world.tick
-	if not _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.is_empty():
+	# Only the beach's wounded toad (#448) is left.
+	if _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.size() != 1:
 		return "the resumed seal didn't dominate the wild monster"
 	return ""
 
@@ -490,6 +493,7 @@ func _domination_values(data: Dictionary) -> Dictionary:
 ## leading up to it stays, and each player colors the tile they stand on.
 func _check_together() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
+	FlowSteps.drop_beach_toad(state)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
 	var starts: Array[Vector2i] = [first.tile, second.tile]
@@ -1120,6 +1124,7 @@ func _check_view(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
+	FlowSteps.drop_beach_toad(driver.state)
 	# Drawn now, not left to whether a frame has passed yet.
 	view.show_state()
 	if view.figures.size() != 1:

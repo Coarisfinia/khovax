@@ -307,8 +307,9 @@ func _check_wild_monster(main: Node) -> String:
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
-	if view == null or feature == null or feature.monsters.size() != 1:
-		return "the main scene needs a WildMonsterView, and the basic region one wild monster"
+	# The rolled one, and the beach's wounded moss toad (#448).
+	if view == null or feature == null or feature.monsters.size() != 2:
+		return "the main scene needs a WildMonsterView, and the basic region two wild monsters"
 	var monster: Entity = driver.state.entity(feature.monsters[0])
 	var spot: Vector2i = Vector2i(-2, 0)
 	if monster.tile != spot or monster.slot != Entity.NO_SLOT:
@@ -381,7 +382,7 @@ func _check_wild_monster_removed(main: Node) -> String:
 		return fell
 	driver.state.remove_entity(monster_id)
 	view.show_state()
-	if not feature.monsters.is_empty() or view.figures.has(monster_id):
+	if feature.monsters.has(monster_id) or view.figures.has(monster_id):
 		return "a removed wild monster left its figure or its entry behind"
 	return ""
 
