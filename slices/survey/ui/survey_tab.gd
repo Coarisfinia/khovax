@@ -22,6 +22,7 @@ var survey: SurveyChoice
 
 
 func _ready() -> void:
+	# The view is ready before the tab, which is fine: it reads these first when it draws.
 	view.bordered = true
 	if survey != null and survey.view != null:
 		var shown: SurveyView = survey.view
