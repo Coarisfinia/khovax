@@ -407,7 +407,7 @@ func _check_seal_saved() -> String:
 	var refused: String = _check_seal_refused(world)
 	if not refused.is_empty():
 		return refused
-	var resumed: World = WorldSave.parse(WorldSave.to_text(world))
+	var resumed: World = WorldSave.parse(WorldSave.to_text(world), BlueprintSource.new())
 	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
 		return "the world saved mid-seal didn't resume as it was: " + resumed.problem
 	for _tick: int in MOST_SEAL_TICKS:
@@ -424,7 +424,7 @@ func _check_seal_saved() -> String:
 ## A world saved while its basic instance's ring waits for a totem resumes as it was, and a save
 ## whose waiting ring names its monster twice is refused.
 func _check_wait_saved(world: World) -> String:
-	var resumed: World = WorldSave.parse(WorldSave.to_text(world))
+	var resumed: World = WorldSave.parse(WorldSave.to_text(world), BlueprintSource.new())
 	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
 		return "the world saved while its ring waited didn't resume as it was: " + resumed.problem
 	var data: Dictionary = WorldData.of(world)

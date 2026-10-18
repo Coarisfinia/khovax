@@ -45,7 +45,7 @@ func saved_world() -> World:
 	_explored_world = null
 	if path().is_empty():
 		return null
-	var saved: World = WorldSave.load_from(path())
+	var saved: World = WorldSave.load_from(BlueprintSource.new(), path())
 	if saved != null and not saved.problem.is_empty():
 		push_warning("the saved world can't be resumed, so a fresh one starts: " + saved.problem)
 		return null

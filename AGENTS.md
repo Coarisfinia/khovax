@@ -221,7 +221,7 @@ Game logic and control logic are strictly separated (owner's rule, #26), so that
 and the same commands always give the same game: for replays, lockstep co-op and tests.
 
 ```
-devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, slices/*/look/
+devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> slices/*/look/, ui/
                         ^
               game/ driver: fixed ticks
 ```
@@ -229,7 +229,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
 - **Vertical slices** (owner, #290, #371): what belongs together lives in one folder,
   `slices/<name>/`, in fixed subfolders, each only where the slice has one: `rules/` (the
   simulation, under every rule below for `core/`, checked by CI the same way), `look/` (views in
-  the world, under the rules for `view/`), `ui/` (screens and menus) and `meta/` (profile, content
+  the world, under the presentation's rules below), `ui/` (screens and menus) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
@@ -240,7 +240,7 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   each other by `class_name`; where a path is needed (a scene, a model, a `preload`), it is
   absolute from `res://`, never relative (`./`, `../`), which the same check refuses (#375). It
   also keeps the rules pure and the tests and tools apart (owner, #526): `core/` and every
-  `rules/` never reach a `look/`, `ui/`, `view/`, `input/` or `game/` class or path, nothing
+  `rules/` never reach a `look/`, `ui/` or `game/` class or path, nothing
   outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
@@ -276,8 +276,9 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
 - **Regions** (#36): rules ask `state.region` (`is_walkable`, `has_tile`), never a distance from
   the origin, so a region can have any shape. How regions are read, arranged, left through exits
   and purged is in `Region`, `RegionDocument`, `RegionArranger` and `World`.
-- **Instance blueprints** (`InstanceBlueprints`, in `blueprints/`, outside the core, #396): a
-  new mechanic is a new feature that blueprints list; it never grows the core.
+- **Instance blueprints** (`InstanceBlueprints`, in `slices/board/meta/`, outside the core, #396,
+  #513): a new mechanic is a new feature that blueprints list; it never grows the core. The core
+  gets them only as an `InstanceSource` it's handed (`BlueprintSource`).
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
   these is meant. A `species` is what every monster is, dominated or not; a `dominated_monster` was
   dominated by the player (made to submit, #317: it is never captured or caught); a `wild_monster`
@@ -310,16 +311,17 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   (owner, #72: no engine lock-in). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) bumps `Simulation.RULES_VERSION` and
   rehashes the golden replays, like any rule change.
-- **`input/`, the input layer:** devices to commands. Every device presses the same InputMap
-  actions (`LocalInput`); `HexInput` is the only place floats become a hex direction.
-- **`view/`, the presentation:** scenes that read the state and draw it; they never write it.
-  `HexLayout` is the only tile-to-world conversion. One-shot effects play from the tick's events
-  (the driver's `ticked` signal, #34); lasting looks come from the state.
+- **The presentation** (each slice's `look/` and `ui/`; the hex board everything stands on in
+  `slices/board/look/`, the menu in `slices/menu/ui/`, #507): scenes that read the state and draw
+  it; they never write it. `HexLayout` is the only tile-to-world conversion. One-shot effects play
+  from the tick's events (the driver's `ticked` signal, #34); lasting looks come from the state.
 - **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` in lockstep: real time
   decides when ticks happen, never what they do. It records every session as a `Replay`, and its
-  `EventBus` subscribers never change the world.
+  `EventBus` subscribers never change the world. It also holds the camera, the music and the
+  local input, devices to commands: every device presses the same InputMap actions
+  (`LocalInput`), and `HexInput` is the only place floats become a hex direction.
 - A new mechanic gets its own slice, `slices/<name>/`: its rules and data into a feature in
-  `rules/` with a replay check, its controls into `input/` as commands, and its look into its own
+  `rules/` with a replay check, its controls into `game/`'s local input as commands, and its look into its own
   view in `look/` (like `TrailView` in `slices/trail/look/`, which paints the trail onto
   `HexGrid`; `HexGrid` itself only draws tiles).
 
