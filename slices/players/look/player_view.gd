@@ -15,6 +15,8 @@ extends HexPiece
 const TURN_SPEED: float = 10.0
 const IDLE: StringName = &"Idle"
 const MOVE: StringName = &"Running_A"
+## The clip a knocked-down player plays (#479, #488): down on the ground until revived.
+const DOWN: StringName = &"Sit_Floor_Idle"
 ## Parts of the placeholder model the player doesn't carry: its weapons.
 const HIDDEN_PARTS: Array[String] = [
 	"Knife",
@@ -117,7 +119,11 @@ func show_state() -> void:
 		facing = atan2(heading.x, heading.z)
 	position += spot
 	_follow_crossing()
-	_play(MOVE if moving or crossing != Vector3.ZERO else IDLE)
+	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	if knockdown != null and knockdown.is_down(player.id):
+		_play(DOWN)
+	else:
+		_play(MOVE if moving or crossing != Vector3.ZERO else IDLE)
 
 
 ## The clip the character is playing, or "" without a model.

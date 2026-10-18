@@ -452,6 +452,30 @@ func _check_focus_picked(main: Node, driver: GameDriver) -> String:
 		return "a click or a tap on a wild monster didn't focus it, or a slide did"
 	if picker.pick(shown + Vector2(FocusPicker.PICK_PIXELS * 20.0, 0.0)):
 		return "picking far from every wild monster focused one"
+	return _check_knocked_down_look(main, driver)
+
+
+## The knocked-down look (#488): a knocked-down player sits on the ground, and the revive ring
+## stands around them, none of its marks up while nobody revives them.
+func _check_knocked_down_look(main: Node, driver: GameDriver) -> String:
+	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var player: Entity = driver.state.player(0)
+	var view: PlayerView = main.get_node("Instance/Player") as PlayerView
+	var ring: ReviveRing = main.get_node("Instance/ReviveRing") as ReviveRing
+	knockdown.knock_down(player.id)
+	view.show_state()
+	ring.show_state()
+	var sitting: bool = view.current_clip() == PlayerView.DOWN
+	var looks_down: bool = sitting and ring.filled_marks(player.id) == 0
+	# Back on their feet: as the rule does when they're revived or sent back.
+	(driver.state.feature(Features.MOVEMENT) as MovementFeature).hold(player.id, false)
+	knockdown.entity_removed(driver.state, player.id)
+	view.show_state()
+	ring.show_state()
+	if (not looks_down
+			or view.current_clip() == PlayerView.DOWN
+			or ring.filled_marks(player.id) != -1):
+		return "a knocked-down player didn't sit inside the revive ring, or kept it once up again"
 	return ""
 
 
