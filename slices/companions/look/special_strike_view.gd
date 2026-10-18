@@ -20,13 +20,18 @@ func _ready() -> void:
 
 ## Shows the special `struck` landing on `tile`.
 func show_strike(tile: Vector2i, struck: SpecialStruck) -> void:
-	var text: String = "-%d" % struck.damage
-	if struck.felled:
-		text += "\n" + FAINTED_TEXT
-	var label: Label3D = RisingText.make(tile, text)
+	var label: Label3D = RisingText.make(tile, text_of(struck))
 	add_child(label)
 	strikes.append(label)
 	RisingText.rise(label, SECONDS, RISE, _drop)
+
+
+## What `struck` shows: its damage, and on a second line that the wild monster fainted.
+static func text_of(struck: SpecialStruck) -> String:
+	var text: String = "-%d" % struck.damage
+	if struck.felled:
+		text += "\n" + FAINTED_TEXT
+	return text
 
 
 ## Only for a wild monster in the instance shown: the driver also passes on the events of one the
