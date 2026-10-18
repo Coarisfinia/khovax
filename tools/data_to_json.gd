@@ -1,9 +1,9 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports to whoever runs it (CI) on stderr; that is what it is for.
 extends SceneTree
-## Writes every content data file (the core's, core/data/<kind>/*.jsonc, #506; in a slice's data/, #412, the slice's own
-## kind's files directly, named for the slice so no folder repeats it, #442, and any other kind it
-## owns in <kind>/) as plain JSON into build/data-json/<kind>/,
+## Writes every content data file (the core's, core/data/<kind>/*.jsonc, #506; in a slice's data/,
+## #412, the slice's own kind's files directly, named for the slice so no folder repeats it, #442,
+## and any other kind it owns in <kind>/) as plain JSON into build/data-json/<kind>/,
 ## with the comments stripped by the game's own stripper (Jsonc), so CI can check each one against
 ## its schema: godot --headless --path . -s res://tools/data_to_json.gd
 

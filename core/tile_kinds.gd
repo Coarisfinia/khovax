@@ -10,8 +10,8 @@ extends RefCounted
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
 ## so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.
 ##
-## Read here at first use rather than handed over from outside the core: the kinds are fixed data of the build,
-## never state, so they need no hash of their own: a region hashes its tiles' numbers.
+## Read here at first use rather than handed over from outside the core: the kinds are fixed data
+## of the build, never state, so they need no hash of their own: a region hashes its tiles' numbers.
 
 ## Each kind's id, by number; "" for a number no kind has. Empty until first used.
 static var _ids: Array[String] = []
