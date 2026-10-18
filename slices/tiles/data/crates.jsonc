@@ -1,0 +1,12 @@
+// Crates: sand with a broken crate on it, the beach's scenery around the wounded moss toad (#446).
+// Walkable, so a ring can still be walked around the toad; the pack's decorated small box stands in
+// until a broken crate model comes.
+{
+	"id": "crates",
+	"number": 8, // permanent: never reused or changed once shipped
+	"color": "#e0d2a4",
+	"symbol": "#", // tells it apart without its color (#68)
+	"model": "res://assets/kaykit-dungeon/box_small_decorated.glb",
+	"scale": 1,
+	"traits": { "walkable": true }
+}

@@ -36,7 +36,8 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Files:** `assets/kaykit-dungeon/`
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0
-  (`addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb`)
+  (`addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb`, and `box_small_decorated.gltf.glb` as
+  `box_small_decorated.glb`)
 - **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
 
 ## KayKit Medieval Hexagon Pack 1.0
