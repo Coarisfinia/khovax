@@ -10,7 +10,7 @@ The playground and the first instance: a disc of radius 3, ground with a beach o
    . . . 1 . .
   . m 3 . 4 . .
  ~ . . 2 . . .
-~ ~ s s s w .
+~ ~ w s s s .
  ~ ~ s s s s
 ```
 

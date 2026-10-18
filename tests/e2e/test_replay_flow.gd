@@ -743,9 +743,9 @@ func _check_region_file() -> String:
 		all_water = all_water and region.terrain.get(water) == Region.WATER
 	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts or not all_water:
 		return "regions/basic.md isn't the disc of radius 3 and the water, with its four starts"
-	var monsters: Array[Vector2i] = [Vector2i(-2, 0), Vector2i(0, 2)]
+	var monsters: Array[Vector2i] = [Vector2i(-2, 0), FlowSteps.BEACH_TOAD]
 	if region.wild_monsters != monsters:
-		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (0, 2): %s" % [
+		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
 			region.wild_monsters,
 		]
 	var broken: Dictionary[String, String] = {
