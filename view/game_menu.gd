@@ -213,6 +213,9 @@ func _build_sheet() -> void:
 	quests.name = "Quests"
 	quests.holder = holder
 	tabs.add_child(quests)
+	var credits: CreditsTab = CreditsTab.new()
+	credits.name = "Credits"
+	tabs.add_child(credits)
 	column.add_child(tabs)
 	var close: Button = button("Close", toggle)
 	close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
