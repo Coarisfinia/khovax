@@ -14,7 +14,9 @@ extends RefCounted
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
-##   `, wounded` after it, it starts at a low share of its HP (#389)
+##   `, wounded` after it, it starts at a low share of its HP (#389); with
+##   `, on <tile blueprint id>` last, it stands on a tile of that kind rather than on ground (#452),
+##   e.g. `a wild monster, always moss_toad, wounded, on sand`
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
@@ -40,6 +42,8 @@ const LEGEND: String = "## Legend"
 const LOOT_ON_THE_GROUND: String = "loot on the ground"
 ## A legend meaning placing a wild monster in a tile that hides it (#202), before the tile's kind.
 const HIDING: String = "a wild monster hiding in "
+## What ends a named wild monster's legend meaning when it stands on a tile kind (#452).
+const ON: String = ", on "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 const BUILT_IN: String = ".~^1234mc"
@@ -212,8 +216,20 @@ static func _tile_line(meaning: String, where: String) -> String:
 	return line
 
 
-## The compact line a legend meaning stands for on `tile`, or "" for a meaning not understood.
+## The compact lines a legend meaning stands for on `tile`, or "" for a meaning not understood. A
+## named wild monster standing on a tile kind (#452) is its species line, then the tile's.
 static func _line(meaning: String, tile: Vector2i) -> String:
+	if not meaning.begins_with("a wild monster, always ") or not meaning.contains(ON):
+		return _meaning_line(meaning, tile)
+	var monster: String = _meaning_line(meaning.get_slice(ON, 0), tile)
+	var kind: String = _tile_line(meaning.get_slice(ON, 1), "%d %d" % [tile.x, tile.y])
+	if monster.is_empty() or kind.is_empty():
+		return ""
+	return monster + "\n" + kind
+
+
+## The compact line any other legend meaning stands for on `tile`, or "" when not understood.
+static func _meaning_line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
 	# What lies on the tile: a tile kind, or loot on the ground.
 	var placed: String = _tile_line(meaning, where)

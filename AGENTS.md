@@ -135,6 +135,10 @@ design, scope, security trade-offs).
 **An issue that needs the owner's decision gets a bump comment with the question, and work goes
 on with the next one** (owner's rule): never wait on an answer.
 
+**Every question for the owner goes into an issue labelled `question`** (owner's rule): the owner
+is usually away from the PC, so a question asked only in the chat goes unseen. One that belongs to
+an existing issue is a comment there, and that issue gets the label too.
+
 **A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
 issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
 
