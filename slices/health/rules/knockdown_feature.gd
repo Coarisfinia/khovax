@@ -79,11 +79,6 @@ func knocked_down() -> Array[int]:
 	return ids
 
 
-## How far a knocked-down player's revive has come, from 0 to REVIVE_TICKS, for the look.
-func revive_ticks(entity_id: int) -> int:
-	return _down.get(entity_id, Vector2i.ZERO).y
-
-
 ## Gets the player `entity_id` back on their feet: revived by an ally.
 func _revive(state: GameState, entity_id: int) -> void:
 	_get_up(entity_id)
