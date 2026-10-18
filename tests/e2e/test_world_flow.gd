@@ -11,6 +11,7 @@ extends RefCounted
 ## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
+## A player swaps it for another monster they carry (#55).
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
@@ -53,6 +54,7 @@ func run(_tree: SceneTree) -> String:
 		_check_documents,
 		_check_walk_through,
 		_check_companions,
+		_check_swaps,
 		_check_purge,
 		_check_flags,
 		_check_start_kept,
@@ -271,6 +273,74 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 	if left.companion_of(0) != 0 or basic.entity(companion.id) != null:
 		return "the companion stayed in the basic instance its player left"
 	return ""
+
+
+## Manual swaps (#55): a player carrying a storm finch and a moss toad is joined by the finch.
+## Swapping to the companion they have or to a place they carry nothing in does nothing; swapping
+## to the toad raises that they chose it, and the next tick the toad has taken the finch's place.
+## A recorded session with the swaps plays back the same, and the choice goes through the world's
+## save data and back. With swapping switched off, a swap does nothing. The toad follows its player
+## into the glade.
+func _check_swaps() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	world.set_carried([PackedStringArray(["storm_finch", "moss_toad"])])
+	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 3)
+	recorded.begin(world)
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var joined: bool = _swap_in(world, recorded, Command.NO_SWAP) == 0
+	if not joined or companions.species_of(companions.companion_of(0)) != "storm_finch":
+		return "a player carrying two monsters wasn't joined by the first"
+	if _swap_in(world, recorded, 1) + _swap_in(world, recorded, 3) != 0:
+		return "swapping to the companion they have, or to an empty place, raised a swap"
+	if _swap_in(world, recorded, 2) != 1 or world.companions[0] != "moss_toad":
+		return "swapping to the second carried monster didn't make it the companion"
+	var finch: int = companions.companion_of(0)
+	var _settled: int = _swap_in(world, recorded, Command.NO_SWAP)
+	var toad: int = companions.companion_of(0)
+	if companions.species_of(toad) != "moss_toad" or basic.entity(finch) != null:
+		return "the chosen moss toad didn't take the storm finch's place beside its player"
+	recorded.finish(world)
+	return _check_swap_kept(world, recorded)
+
+
+## The swaps `recorded` in `world` play back the same, and the choice is kept: through the save
+## data, with swapping switched off, and into the glade.
+func _check_swap_kept(world: World, recorded: Replay) -> String:
+	var problem: String = ReplayFile.parse(ReplayFile.to_text(recorded)).play()
+	if not problem.is_empty():
+		return "a recorded session with swaps didn't play back: " + problem
+	var restored: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	var kept: bool = restored.companions == world.companions and restored.carried == world.carried
+	if not restored.problem.is_empty() or not kept:
+		return "the chosen companion didn't go through the save data and back: " + restored.problem
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	basic.set_enabled(Features.COMPANION_SWAPS, false)
+	if _swap_in(world, null, 1) != 0 or world.companions[0] != "moss_toad":
+		return "a player swapped with swapping switched off"
+	basic.set_enabled(Features.COMPANION_SWAPS, true)
+	for direction: int in [0, 1, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	if followed.species_of(followed.companion_of(0)) != "moss_toad":
+		return "the chosen companion didn't follow its player into the glade"
+	return ""
+
+
+## Steps `world` once with player 0 standing and swapping to `swap` (or Command.NO_SWAP), recording
+## the tick into `recorded` if given; returns how many swaps their instance raised.
+func _swap_in(world: World, recorded: Replay, swap: int) -> int:
+	var command: Command = Command.new()
+	command.swap = swap
+	var commands: Array[Command] = [command]
+	world.step(commands)
+	if recorded != null:
+		recorded.record(world, commands)
+	var chosen: int = 0
+	for event: RefCounted in world.instances[world.instance_of(0)].events:
+		chosen += 1 if event is CompanionChosen else 0
+	return chosen
 
 
 ## Purging (#212): the glade, left behind, raises nothing in the ticks it doesn't step (#386), stays

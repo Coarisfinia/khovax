@@ -130,6 +130,7 @@ func _check_hash_covers_fields() -> String:
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
 		"companion": func(state: GameState) -> void: state.companions[0] = "moss_toad",
+		"carried": func(state: GameState) -> void: state.carried[1] = PackedStringArray(["x"]),
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
 		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
@@ -593,28 +594,28 @@ func _check_replay_round_trip() -> String:
 		return "a changed command played without a mismatch at the first checkpoint"
 	# Who the players brought is part of the start (#338): other companions play another game.
 	var swapped: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
-	swapped.companions.reverse()
-	if loaded.companions != recorded.companions or swapped.play().is_empty():
+	swapped.carried.reverse()
+	if loaded.carried != recorded.carried or swapped.play().is_empty():
 		return "the replay didn't keep its companions, or played with others all the same"
 	return _check_older_formats(recorded, loaded)
 
 
-## Replays from before commands had a special attack (#410, format 3) or a totem (#423, format 4)
-## read with none fired and none placed, as `recorded` fires and places none, and play back the
-## same.
+## Replays from before commands had a special attack (#410, format 3), a totem (#423, format 4) or
+## a swap (#55, format 7) read with none fired, placed or swapped, as `recorded` has none, and play
+## back the same. They name each slot's companion alone, which becomes all the slot carries.
 func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
-	for older_format: int in [3, 4]:
-		var values: int = 1 if older_format == 3 else 2
+	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5 }
+	for older_format: int in counts:
 		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 		var kept: Array[int] = []
 		for i: int in range(0, older.changes.size(), Replay.STRIDE):
-			kept.append_array(older.changes.slice(i, i + 2 + values))
+			kept.append_array(older.changes.slice(i, i + 2 + counts[older_format]))
 		older.changes = kept
-		var text: String = ReplayFile.to_text(older).replace(
-			"\"format\": %d" % ReplayFile.FORMAT,
-			"\"format\": %d" % older_format,
-		)
-		var migrated: Replay = ReplayFile.parse(text)
+		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
+		data["format"] = older_format
+		var _erased: bool = data.erase("carried")
+		data["companions"] = ["storm_finch", "moss_toad"]
+		var migrated: Replay = ReplayFile.parse(JSON.stringify(data))
 		if migrated.changes != loaded.changes or not migrated.play().is_empty():
 			return "a replay in format %d didn't read with nothing fired or placed" % older_format
 	return ""
@@ -661,7 +662,7 @@ func _check_replay_validation() -> String:
 		ReplayFile.to_text(invalid_totem): "a recorded command at tick 1 is invalid",
 		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
-		text.replace("\"companions\": [", "\"companions\": [1,"): "not a replay: its companions",
+		text.replace("\"carried\": [", "\"carried\": [1,"): "not a replay: its carried monsters",
 		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
 	}
 	for case: String in cases:

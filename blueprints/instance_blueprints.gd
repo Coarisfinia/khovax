@@ -8,8 +8,8 @@ extends RefCounted
 ## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
 
 ## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338)
-## with its attacks, a trail per player, the wild monsters the region places, dominating them with
-## a ring, and fog of war.
+## with its attacks and swapping it for another carried monster (#55), a trail per player, the wild
+## monsters the region places, dominating them with a ring, and fog of war.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
@@ -94,6 +94,7 @@ static func create(
 			push_error("instance %s's loot table doesn't load" % instance_name)
 			return null
 		ordered.append(ChestFeature.new(table))
+	ordered.append(CompanionSwapFeature.new())
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
 	ordered.append(CompanionAttackFeature.new())

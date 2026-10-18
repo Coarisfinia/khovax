@@ -211,15 +211,15 @@ func _result_problem(result: Gain) -> String:
 	return ""
 
 
-## The species of the player's companion (#338): the first monster they carry; "" when they carry
-## none.
-func companion_species() -> String:
-	if carried.is_empty():
-		return ""
-	for monster: DominatedMonster in dominated_monsters:
-		if monster.id == carried[0]:
-			return monster.species
-	return ""
+## The species of the monsters the player carries (#53), in their carried order: the first is their
+## companion (#338) until they choose another (#55).
+func carried_species() -> PackedStringArray:
+	var species: PackedStringArray = []
+	for monster_id: int in carried:
+		for monster: DominatedMonster in dominated_monsters:
+			if monster.id == monster_id:
+				var _added: bool = species.append(monster.species)
+	return species
 
 
 ## Whether a dominated monster has this id.

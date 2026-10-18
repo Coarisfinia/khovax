@@ -8,14 +8,21 @@ extends RefCounted
 ## The file format; a replay in another format is refused, not misread. Format 2 added the starting
 ## world and format 3 the companions (#338); a replay without them has none and still plays. Format
 ## 4 gave every command its special attack (#410) and format 5 its totem (#423): an older replay's
-## commands fire none and place none.
-const FORMAT: int = 7
+## commands fire none and place none. Format 8 replaced the companions with every slot's carried
+## monsters (#53) and gave every command its swap (#55): an older replay's slots carry just their
+## companion, and its commands swap none.
+const FORMAT: int = 8
+## The first format with every slot's carried monsters instead of only its companion.
+const CARRIED_FORMAT: int = 8
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
 ## The replay as file text.
 static func to_text(replay: Replay) -> String:
 	var hashes: Dictionary[String, String] = {}
+	var carried: Array[Array] = []
+	for party: PackedStringArray in replay.carried:
+		carried.append(Array(party))
 	var sorted: Array[int] = []
 	sorted.assign(replay.checkpoints.keys())
 	sorted.sort()
@@ -27,7 +34,7 @@ static func to_text(replay: Replay) -> String:
 		"instance": replay.instance,
 		"seed": str(replay.seed_value),
 		"players": replay.players,
-		"companions": replay.companions,
+		"carried": carried,
 		"features": replay.features,
 		"ticks": replay.ticks,
 		"changes": replay.changes,
@@ -63,8 +70,7 @@ static func parse(text: String) -> Replay:
 	replay.instance = str(data["instance"])
 	replay.seed_value = str(data["seed"]).to_int()
 	replay.players = _int(data["players"])
-	var companions: Array = data.get("companions", [])
-	replay.companions.assign(companions)
+	replay.carried = _carried(data, format)
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
@@ -81,19 +87,35 @@ static func parse(text: String) -> Replay:
 
 
 ## How many integers a command is in a replay of `format`: only the move before format 4, the
-## special attack too in format 4, the totem too in format 5, the focus too in format 6 (#436), and
-## the choice to go back to the spawn too since (#495).
+## special attack too in format 4, the totem too in format 5, the focus too in format 6 (#436), the
+## choice to go back to the spawn too in format 7 (#495), and the swap too since (#55).
 static func _value_count(format: int) -> int:
 	if format < 4:
 		return 1
-	if format < 7:
+	if format < 8:
 		return format - 2
 	return Command.VALUE_COUNT
 
 
+## Each slot's carried species in the replay's `data` of `format`: its own list, or, in an older
+## format, the slot's companion alone ("" for none).
+static func _carried(data: Dictionary, format: int) -> Array[PackedStringArray]:
+	var parties: Array[PackedStringArray] = []
+	if format >= CARRIED_FORMAT:
+		var lists: Array = data.get("carried", [])
+		for party: Variant in lists:
+			var species: Array = party
+			parties.append(PackedStringArray(species))
+		return parties
+	var companions: Array = data.get("companions", [])
+	for species: Variant in companions:
+		parties.append(PackedStringArray([species] if str(species) != "" else []))
+	return parties
+
+
 ## Changes recorded with `count` integers per command (the tick and slot before them), each
 ## widened with zeros to a whole command's: no special attack fired, no totem placed, nothing
-## focused, no going back to the spawn.
+## focused, no going back to the spawn, no swap.
 static func _widened(old: Array[int], count: int) -> Array[int]:
 	var stride: int = 2 + count
 	var changes: Array[int] = []
@@ -129,6 +151,8 @@ static func _shape_problem(data: Dictionary) -> String:
 			return "not a replay: its %s aren't a list of numbers" % key
 	if not _all_texts(data.get("companions", [])):
 		return "not a replay: its companions aren't a list of species"
+	if not _all_lists_of_texts(data.get("carried", [])):
+		return "not a replay: its carried monsters aren't lists of species"
 	var hashes: Variant = data.get("checkpoints", {})
 	if not _valid_checkpoints(hashes):
 		return "not a replay: its checkpoints aren't ticks with hashes"
@@ -141,6 +165,16 @@ static func _valid_checkpoints(hashes: Variant) -> bool:
 	var by_tick: Dictionary = hashes
 	for tick: Variant in by_tick:
 		if not str(tick).is_valid_int() or not str(by_tick[tick]).is_valid_int():
+			return false
+	return true
+
+
+static func _all_lists_of_texts(values: Variant) -> bool:
+	if not values is Array:
+		return false
+	var items: Array = values
+	for item: Variant in items:
+		if not _all_texts(item):
 			return false
 	return true
 

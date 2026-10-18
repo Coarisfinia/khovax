@@ -29,10 +29,14 @@ var features: Array[Feature] = []
 ## and derived from the tick's own changes, so it is not part of the state's contract or its hash,
 ## though a replay raises the same events.
 var events: Array[RefCounted] = []
-## Each player slot's companion species (#338), or "" for none: the first monster that player
-## carries, which walks beside them. Start data the world hands every instance it loads, like the
-## seed; no rule changes it.
+## Each player slot's companion species (#338), or "" for none: the monster that player carries
+## which walks beside them, the first they carry until they choose another (#55). The world hands it
+## to every instance it loads and changes it when a player chooses (CompanionChosen); no feature
+## changes it.
 var companions: Array[String] = []
+## Each player slot's carried monsters' species, in their carried order (#53), empty for none. Start
+## data the world hands every instance it loads, like the seed; no rule changes it.
+var carried: Array[PackedStringArray] = []
 ## The ground of the instances next door (#191): each tile their regions have that this one doesn't,
 ## with its terrain, in this instance's coordinates. The world hands it over from their blueprints
 ## and seeds, without loading them, so sight crosses the seam. Derived data, like the region, so
@@ -48,6 +52,7 @@ func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> vo
 	region = start_region
 	rng_seed = seed_value
 	var _sized: int = companions.resize(MAX_PLAYERS)
+	_sized = carried.resize(MAX_PLAYERS)
 	problem = order_problem(ordered)
 	if not problem.is_empty():
 		return
@@ -244,12 +249,16 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, the region, every slot's companion species, every entity in id order and, in
-## order, every feature's id, on/off and state.
+## every core value, the region, every slot's companion species and carried species, every entity
+## in id order and, in order, every feature's id, on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
 	for species: String in companions:
 		values.append(World.name_code(species) if not species.is_empty() else 0)
+	for party: PackedStringArray in carried:
+		values.append(party.size())
+		for species: String in party:
+			values.append(World.name_code(species))
 	values.append_array(region.hash_values())
 	values.append(next_entity_id)
 	values.append(entities.size())
