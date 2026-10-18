@@ -6,11 +6,11 @@ extends Control
 ## charges or its cooldown, and never vanishes when empty or cooling down; it shows 0, or a
 ## cooldown circle with the seconds left. One it can't be used on right now is drawn faded, never
 ## hidden. It shows only where touch input exists, and a touch that lands on it is taken, so the
-## touch stick doesn't start under it. Subclasses draw the icon and say the numbers.
+## touch stick doesn't start under it. Subclasses set its icon and say the numbers.
 
-## A button's side as a share of the screen's shorter side, never smaller than MIN_SIDE.
 ## How far the icon sits in from the button's edges, as a share of its side.
 const ICON_INSET: float = 0.2
+## A button's side as a share of the screen's shorter side, never smaller than MIN_SIDE.
 const SIDE_SHARE: float = 0.12
 const MIN_SIDE: float = 72.0
 const MARGIN: float = 16.0
@@ -26,9 +26,9 @@ const INK_PIXELS: float = 3.0
 ## Its place in the column at the bottom right, counted from the bottom.
 @export var column_index: int = 0
 
-## Whether this device has touch input; tests switch it on.
 ## The item's or attack's icon (#459): a white shape, drawn in ink.
 var icon: Texture2D
+## Whether this device has touch input; tests switch it on.
 var touch: bool = DisplayServer.is_touchscreen_available()
 ## The button Godot presses the action with.
 var button: TouchScreenButton
