@@ -244,6 +244,7 @@ script = ExtResource("38_respawn_button")
 driver = NodePath("../../Driver")
 
 [node name="RosterHud" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "survey")]
+process_priority = -1
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("41_roster")

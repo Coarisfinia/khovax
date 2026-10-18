@@ -8,6 +8,8 @@ extends Control
 ## (#54).
 ## A tap or a click on a square swaps to that monster for the next tick (LocalInput.choose_swap,
 ## #55). It moves below the Survey when that shows in the top left corner. It only reads the state.
+## It runs before the rest of the Hud (process_priority in main.tscn), so the quest list below it
+## lays out under where it is this frame.
 
 ## A square's side as a share of the screen's shorter side, never smaller than MIN_SIDE, so a
 ## thumb can hit it on a phone.
