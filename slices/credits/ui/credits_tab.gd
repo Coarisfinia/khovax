@@ -4,7 +4,8 @@ extends RichTextLabel
 ## license, read from CREDITS.md as tools/credits.gd generates it (so it can't drift), and shown
 ## where players can see it, as CC BY asks (#461). It shows each pack's heading and fields, but not
 ## the file's own note on how it's made nor the repository paths. It scrolls itself, with touch, a
-## wheel, the keys or a controller once focused.
+## wheel, the keys or a controller once focused. Its look and layout live in its scene,
+## credits_tab.tscn (#437): this script keeps only what it does.
 
 const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
@@ -16,9 +17,6 @@ const UNREADABLE: String = "The credits couldn't be read."
 
 
 func _ready() -> void:
-	bbcode_enabled = true
-	focus_mode = Control.FOCUS_ALL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var markdown: String = FileAccess.get_file_as_string(PATH)
 	text = to_bbcode(markdown) if not markdown.is_empty() else UNREADABLE
 

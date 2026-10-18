@@ -375,7 +375,11 @@ func _menu_on_screens(menu: GameMenu) -> String:
 ## The Credits tab (#462) shows every pack CREDITS.md credits, each heading in bold, with its
 ## fields' names in bold and no Markdown marks or repository paths left over.
 func _menu_credits(menu: GameMenu) -> String:
-	var shown: String = (menu.find_child("Credits", true, false) as CreditsTab).text
+	var tab: CreditsTab = menu.find_child("Credits", true, false) as CreditsTab
+	# Laid out in its scene (#437): BBCode on, and focusable so a controller scrolls it.
+	if not tab.bbcode_enabled or tab.focus_mode != Control.FOCUS_ALL:
+		return "the Credits tab's scene doesn't render BBCode or take the focus"
+	var shown: String = tab.text
 	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
 	for line: String in markdown.split("\n"):
 		var heading: String = CreditsTab.to_bbcode(line).strip_edges()
