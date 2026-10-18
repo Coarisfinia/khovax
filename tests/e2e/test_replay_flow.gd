@@ -735,8 +735,11 @@ func _check_basic_monsters(region: Region) -> String:
 			region.wild_monsters,
 		]
 	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
+	var sand: int = TileKinds.number_of("sand")
 	if toad == null or toad.species != "moss_toad" or not toad.wounded:
 		return "the beach's wild monster isn't a wounded moss toad"
+	if region.terrain.get(FlowSteps.BEACH_TOAD) != sand:
+		return "the beach's wounded moss toad doesn't stand on sand (#452)"
 	return ""
 
 
