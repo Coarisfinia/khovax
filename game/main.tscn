@@ -40,6 +40,7 @@
 [ext_resource type="Script" path="res://slices/wild_monsters/look/focus_picker.gd" id="36_focus_picker"]
 [ext_resource type="Script" path="res://slices/health/look/revive_ring.gd" id="37_revive_ring"]
 [ext_resource type="Script" path="res://slices/health/ui/respawn_button.gd" id="38_respawn_button"]
+[ext_resource type="Script" path="res://slices/companions/ui/roster_hud.gd" id="41_roster"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -196,12 +197,13 @@ holder = NodePath("../../ProfileHolder")
 input = NodePath("../../LocalInput")
 neighbours = NodePath("../../Instance/NeighbourView")
 
-[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("holder", "survey") unique_id=3403403400]
+[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("holder", "survey", "roster") unique_id=3403403400]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("28_quest_list")
 holder = NodePath("../../ProfileHolder")
 survey = NodePath("../../SurveyChoice")
+roster = NodePath("../RosterHud")
 
 [node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
 layout_mode = 3
@@ -240,6 +242,13 @@ layout_mode = 3
 mouse_filter = 2
 script = ExtResource("38_respawn_button")
 driver = NodePath("../../Driver")
+
+[node name="RosterHud" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "survey")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("41_roster")
+driver = NodePath("../../Driver")
+survey = NodePath("../../SurveyChoice")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
 layout_mode = 3
