@@ -68,14 +68,16 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
-**Keep up to 5 pull requests open** (owner's rule), so the owner can go through them fast. A pull
+**Having 5 pull requests open is the mandatory goal** (owner's rule), so the owner can go through
+them fast: whenever fewer than 5 are open, building the next one comes before anything but the
+owner's comments, right up to the usage budget's stop line. A pull
 request in the merge queue counts as done (owner's rule): it doesn't count toward the 5. Each is
 branched from `main` and independent of the others: never stack pull requests, since they're
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
 and the ones queued before it, so a pull request needs no rebase just because `main` moved; rebase
 it (`git rebase origin/main`) only when it conflicts, fixing what collides (e.g. two rule changes
-each bumping `RULES_VERSION`: take the next number and rehash again), and push. Open a new one whenever fewer than 5 are open.
+each bumping `RULES_VERSION`: take the next number and rehash again), and push.
 
 **Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
