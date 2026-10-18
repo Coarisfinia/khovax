@@ -234,6 +234,26 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var expected: Array[int] = [ids[0], ids[3], ids[1]]
 	if tab.monsters.shown_ids[0] != ids[0] or kept.carried != expected:
 		return "a row's up button didn't move it, or the order isn't kept: %s" % [kept.carried]
+	return _menu_details(tab)
+
+
+## The detail pane (#430) shows the first monster until another is selected, then that one's
+## stats; it sits beside the list on a landscape screen and below it on a portrait one.
+func _menu_details(tab: CharacterTab) -> String:
+	var details: MonsterDetails = tab.monsters.details
+	var first: int = tab.monsters.shown_ids[0]
+	if tab.monsters.selected != first or not details.shown[0].begins_with("Moss Toad, level 1"):
+		return "the detail pane doesn't start on the first monster: %s" % [details.shown]
+	var finch: int = tab.monsters.shown_ids[2]
+	tab.monsters.select(finch)
+	var listed: bool = details.shown.size() == 8 and details.shown[0] == "Storm Finch, level 1"
+	if not listed or not details.shown[5].begins_with("Special: "):
+		return "selecting a monster didn't show its stats: %s" % [details.shown]
+	tab.place_details(false)
+	var stacked: bool = (details.get_parent() as BoxContainer).vertical
+	tab.place_details(true)
+	if not stacked or (details.get_parent() as BoxContainer).vertical:
+		return "the detail pane isn't below the list upright and beside it on a landscape screen"
 	return ""
 
 
