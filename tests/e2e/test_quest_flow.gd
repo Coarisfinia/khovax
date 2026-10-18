@@ -141,7 +141,9 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profil
 	var nearest: int = -1
 	for trigger: TileTrigger in state.region.triggers:
 		var beach: bool = trigger.action == TileTrigger.REACH and trigger.place == "beach"
-		var sand: bool = state.region.terrain[trigger.tile] == TileKinds.number_of("sand")
+		# Sand, or sand with crates on it (#446).
+		var kind: int = state.region.terrain[trigger.tile]
+		var sand: bool = kind in [TileKinds.number_of("sand"), TileKinds.number_of("crates")]
 		if beach and not sand:
 			return "the starting instance's beach isn't sand"
 		var distance: int = Hex.distance(trigger.tile, from)

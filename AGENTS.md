@@ -357,6 +357,12 @@ devices -> input/ -> Command -> core/ + slices/*/rules/ -> GameState -> view/, s
   upright torso and a head; every monster is clearly a monster. Four legs, a tail, a snout and a
   head is fine; so is six legs with a long horizontal belly, an upright torso, two arms and a
   monster's head. Two legs, a human-like upright torso, six arms and a head is not.
+- **Monsters are wolf-smart, and humanoids are never fought** (owner's worldbuilding rules): no
+  monster is smarter than an average wild wolf (packs with leaders and ambushes, never talking).
+  The player fights only monsters, never humanoids. Factions may hate the player, and the player can
+  make peace with them or work against them, but no humanoid fights a humanoid. Humanoids who side
+  with the monsters surrender once their monsters are defeated, and battles between humans are
+  fought by their monsters.
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
