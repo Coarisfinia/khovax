@@ -369,6 +369,33 @@ func _check_fainted_lies(
 	return ""
 
 
+## A wild monster's hit (#422) shows (#426): its figure's model lunges toward the struck tile and
+## comes back to stand on its own.
+func _check_wild_monster_lunges(
+	driver: GameDriver,
+	view: WildMonsterView,
+	feature: WildMonsterFeature,
+) -> String:
+	var monster: Entity = driver.state.entity(feature.monsters[0])
+	var target: Vector2i = monster.tile + Hex.DIRECTIONS[0]
+	var model: Node3D = view.figures[monster.id].get_child(0) as Node3D
+	var events: Array[RefCounted] = [WildMonsterStruck.new(monster.id, 0, target, 1)]
+	driver.ticked.emit(driver.state.tick, events)
+	_step_tweens(view, WildMonsterView.LUNGE_SECONDS / 2)
+	var toward: Vector3 = HexLayout.to_world(target) - HexLayout.to_world(monster.tile)
+	var lunged: bool = model.position.dot(toward) > 0.0
+	_step_tweens(view, WildMonsterView.LUNGE_SECONDS)
+	if not lunged or not model.position.is_zero_approx():
+		return "a wild monster's hit didn't lunge its figure toward the struck tile and back"
+	return ""
+
+
+## Moves every running tween on `node`'s tree on by `seconds`.
+func _step_tweens(node: Node, seconds: float) -> void:
+	for tween: Tween in node.get_tree().get_processed_tweens():
+		var _running: bool = tween.custom_step(seconds)
+
+
 ## A wild monster that leaves the world (dominated, later) takes its figure and its entry with it.
 func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
@@ -376,6 +403,9 @@ func _check_wild_monster_removed(main: Node) -> String:
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
+	var lunged: String = _check_wild_monster_lunges(driver, view, feature)
+	if not lunged.is_empty():
+		return lunged
 	var monster_id: int = feature.monsters[0]
 	var fell: String = _check_fainted_lies(view, feature, monster_id)
 	if not fell.is_empty():
