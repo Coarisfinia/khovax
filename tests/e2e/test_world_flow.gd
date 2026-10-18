@@ -18,7 +18,8 @@ extends RefCounted
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
 ## blueprint's variant, and setting it purges the instance once nobody is in it (#529). A named
 ## event sets its own flag, and the corrupted glade's corrupting monster emits one when it falls,
-## which purifies the glade once nobody is in it (#541).
+## which purifies the glade once nobody is in it (#541). The first time a named event sets its
+## flag, the world raises a world-changing moment, once (#499).
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -63,6 +64,7 @@ func run(tree: SceneTree) -> String:
 		_check_purge,
 		_check_flags,
 		_check_corruption,
+		_check_story_beat,
 		_check_start_kept,
 		_check_sent_to_spawn,
 		_check_layout,
@@ -550,6 +552,9 @@ func _check_corruption() -> String:
 	var emitted: bool = felling.felled > 0 and world.flags.has(purified_flag)
 	if not emitted or InstanceBlueprints.variant("glade", world.flags) != "":
 		return "felling the corrupting monster didn't set its event's flag for the plain glade"
+	var changes: Array[WorldChanged] = _world_changes(world)
+	if changes.size() != 1 or changes[0].event_name != InstanceBlueprints.GLADE_PURIFIED:
+		return "purifying the glade wasn't raised as one world-changing moment"
 	world.step(_still())
 	if world.instances.get(InstanceBlueprints.GLADE) != glade:
 		return "the glade was purified with the player in it"
@@ -563,6 +568,33 @@ func _check_corruption() -> String:
 	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
 		return "the glade didn't come back purified, as the plain glade"
 	return ""
+
+
+## A story beat (#499): a rule raising the named event BEAT, twice a tick, changes the world once.
+## The first tick sets its flag and raises one WorldChanged naming the event and its flag; the next
+## ticks raise the event again, which changes nothing and raises nothing.
+func _check_story_beat() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	world.instances[InstanceBlueprints.BASIC].features.append(Beat.new())
+	world.step(_still())
+	var flag: String = World.EVENT_FLAG + Beat.BEAT
+	var changes: Array[WorldChanged] = _world_changes(world)
+	var once: bool = changes.size() == 1 and changes[0].event_name == Beat.BEAT
+	if not once or changes[0].flag != flag or " ".join(world.flags) != flag:
+		return "a story beat didn't set its flag and raise one world-changing moment"
+	world.step(_still())
+	if not _world_changes(world).is_empty() or " ".join(world.flags) != flag:
+		return "a story beat raised again changed the world again"
+	return ""
+
+
+## The world-changing moments (WorldChanged, #499) the world raised in its last tick, in order.
+func _world_changes(world: World) -> Array[WorldChanged]:
+	var changes: Array[WorldChanged] = []
+	for event: RefCounted in world.events:
+		if event is WorldChanged:
+			changes.append(event as WorldChanged)
+	return changes
 
 
 ## The starting instance is never purged (#212), however long the player stays in the glade.
@@ -975,6 +1007,17 @@ func _check_refused() -> String:
 	if with_exit.fits(RegionFormat.parse("origin 0 0\n."), Vector2i(1, 0)):
 		return "a piece fit onto the tile outside an exit"
 	return ""
+
+
+## A rule that raises the story beat BEAT twice every tick (#499), as two rules seeing it might.
+class Beat:
+	extends Feature
+
+	const BEAT: String = "story_beat"
+
+	func step(state: GameState, _commands: Array[Command]) -> void:
+		state.events.append(EventEmitted.new(BEAT))
+		state.events.append(EventEmitted.new(BEAT))
 
 
 ## A rule that fells every standing storm finch in its instance inside the tick, as a special would
