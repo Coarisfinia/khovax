@@ -77,7 +77,8 @@ func show_quests() -> void:
 ## player in `slot`; a quest with nothing to point at here isn't listed. A step with choices (#573)
 ## points at each of them that's here, by the quest's id, a slash and the choice's index. `here` is
 ## the blueprint name of the instance `state` is (#769), or "" when it isn't known: a step that
-## counts in another instance then points at the exits leading there.
+## counts in another instance, or in one when it isn't known which this is, points at the exits
+## leading there.
 static func targets_of(
 	state: GameState,
 	profile: Profile,
@@ -105,7 +106,7 @@ static func targets_of(
 ## its piece, or the exits leading to its instance, also when it counts there and `state` is
 ## another instance, `here`.
 static func _candidates(state: GameState, step: QuestStep, here: String) -> Array[Vector2i]:
-	var elsewhere: bool = not (here.is_empty() or step.instance.is_empty() or step.instance == here)
+	var elsewhere: bool = not step.instance.is_empty() and step.instance != here
 	if step.enters_instance() or elsewhere:
 		return _exits_to(state, step.instance)
 	if step.condition == "entered":
