@@ -14,10 +14,10 @@ extends RefCounted
 ## Each player has a world
 ## store (PlayerStore, #724), where features keep what the player brings along, like their
 ## companions (#338): every instance the world loads gets a copy, and what the instance the player
-## is
-## in changes in it is taken back into the world once that instance stepped, and handed to every
-## other. The world keeps a set of flags (#529), which choose each blueprint's
-## variant (`InstanceSource.variant`): setting or clearing one purges every loaded instance whose
+## is in changes in it is taken back into the world once that instance stepped, and handed to every
+## other. The world keeps a set of flags (#529), a fresh world starting with its source's (#637),
+## which choose each blueprint's variant (`InstanceSource.variant`): setting or clearing one purges
+## every loaded instance whose
 ## variant it changes, once nobody is in it, so it comes back from its new variant and no player
 ## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
 ## EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story beat
@@ -78,6 +78,9 @@ func _init(
 	stores = PlayerStore.for_every_slot()
 	if start.is_empty():
 		return
+	# Before the first instance loads: flags choose variants.
+	for flag: String in instance_source.starting_flags():
+		set_flag(flag)
 	var first: GameState = create_instance(start, players, _chosen_variant(start))
 	if first == null:
 		problem = "the starting instance %s doesn't load" % start

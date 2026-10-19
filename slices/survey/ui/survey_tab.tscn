@@ -11,6 +11,10 @@ layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_view")
 
+[node name="Held" type="Label" parent="."]
+layout_mode = 2
+horizontal_alignment = 1
+
 [node name="Row" type="HBoxContainer" parent="."]
 layout_mode = 2
 alignment = 1

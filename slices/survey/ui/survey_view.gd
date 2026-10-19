@@ -10,11 +10,14 @@ extends Control
 ## still in the fog stays hidden here too. Every player in the instance is a circle in their
 ## personal color with one mark per slot number, like their circle in the world (#68), gliding
 ## from tile to tile as their figure walks (#354), and every
-## open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. It's
-## centered on this machine's player, gliding after them. Where it shows and how close is
+## open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. Over it,
+## its child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637).
+## It's centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
 ## profile.
 
+## The name of its child that marks faction territory.
+const HELD_MARKS: String = "HeldMarks"
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
 ## A tile's hexagon is drawn a little smaller than the tile, so tiles of one kind stay apart.
@@ -80,6 +83,9 @@ var _region: Region
 func _ready() -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var marks: SurveyHeldMarks = SurveyHeldMarks.new()
+	marks.name = HELD_MARKS
+	add_child(marks)
 
 
 func _process(delta: float) -> void:
@@ -117,6 +123,11 @@ func _draw() -> void:
 		_draw_arrow(to_view(quest_targets[id]))
 	if bordered:
 		draw_rect(Rect2(Vector2.ZERO, size), Toon.INK, false, BORDER_PIXELS)
+
+
+## Its marks of faction territory (#637).
+func held_marks() -> SurveyHeldMarks:
+	return get_node(HELD_MARKS) as SurveyHeldMarks
 
 
 ## Works out what is shown from the state. Called every frame while it shows; tests call it

@@ -1,19 +1,26 @@
 class_name Faction
 extends RefCounted
 ## A faction (#483), read from content data (the factions slice's data/, #72, #412): a player-facing
-## name and its own names for the ranks of the player's standing with it (Standings), five each way
-## from neutral, which has none.
+## name, a symbol that tells it apart where it's marked (#68), its own names for the ranks of the
+## player's standing with it (Standings), five each way from neutral, which has none, and the
+## instances it holds when a world starts (its territory, #637; Territory).
 
 ## A faction file's fields, as its schema (slices/factions/data/factions.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "ranks_up", "ranks_down"]
+const FIELDS: Array[String] = ["id", "name", "symbol", "ranks_up", "ranks_down", "territory"]
+## The most characters a symbol has, so it fits in its mark.
+const SYMBOL_LENGTH: int = 2
 
 var id: String = ""
 ## The player-facing name.
 var name: String = ""
+## What marks it, one or two characters (#68): its territory on the Survey, beside its name.
+var symbol: String = ""
 ## The ranks' names above neutral, from standing 1 up to Standings.HIGHEST.
 var ranks_up: Array[String] = []
 ## The ranks' names below neutral, from standing -1 down to Standings.LOWEST.
 var ranks_down: Array[String] = []
+## The instances it holds when a world starts, by blueprint name, each once (#637).
+var territory: Array[String] = []
 ## Why the faction couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -28,9 +35,12 @@ static func parse(file_id: String, text: String) -> Faction:
 	var data: Dictionary = json.data
 	faction.id = Content.text_of(data.get("id"))
 	faction.name = Content.text_of(data.get("name"))
+	faction.symbol = Content.text_of(data.get("symbol"))
 	faction.problem = Content.unknown_field(data, FIELDS)
 	if faction.problem.is_empty():
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
+	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):
+		faction.problem = "its territory must list instance ids, each once"
 	return faction
 
 
@@ -50,6 +60,8 @@ func _check(file_id: String, raw_up: Variant, raw_down: Variant) -> String:
 		return "its id must match the file name and be lowercase words with underscores"
 	if name.strip_edges().is_empty():
 		return "it needs a name"
+	if symbol.strip_edges().is_empty() or symbol.length() > SYMBOL_LENGTH:
+		return "it needs a symbol of 1 to %d characters" % SYMBOL_LENGTH
 	if not _read_ranks(raw_up, ranks_up) or not _read_ranks(raw_down, ranks_down):
 		return "it needs %d rank names each way, each with more than spaces" % Standings.HIGHEST
 	return ""
@@ -65,3 +77,16 @@ static func _read_ranks(raw: Variant, names: Array[String]) -> bool:
 			return false
 		names.append(rank)
 	return entries.size() == Standings.HIGHEST
+
+
+## Whether `raw` lists instance ids, each once; reads them into `territory`.
+func _read_territory(raw: Variant) -> bool:
+	if not raw is Array:
+		return false
+	var entries: Array = raw
+	for entry: Variant in entries:
+		var instance_name: String = Content.text_of(entry)
+		if not Content.is_id(instance_name) or territory.has(instance_name):
+			return false
+		territory.append(instance_name)
+	return true

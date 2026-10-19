@@ -10,7 +10,8 @@ extends RefCounted
 ## their quest and ends close its own chain (#573), every path reaches an end (#576), and broken
 ## ones are refused; a quest can move
 ## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
-## standing, and broken ones are refused. Quests and abilities carry path marks (#471). Dialogs
+## standing, their symbols and the instances they hold (#637), and broken ones are refused. Quests
+## and abilities carry path marks (#471). Dialogs
 ## (#618) load and read on line by line and answer by answer, and broken ones are refused.
 
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
@@ -30,6 +31,12 @@ const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\
 const STEP_B: String = "{\"id\": \"b\", \"condition\": \"opened\", \"ends\": \"x\"}"
 ## A quest step to open a chest that ends the chain x (#576).
 const OPENED_END: String = "{\"condition\": \"opened\", \"ends\": \"x\"}"
+## A faction file x with a symbol (#637), its ranks up and down left open (#483).
+const FACTION_TEXT: String = (
+	"{\"id\": \"x\", \"name\": \"X\", \"symbol\": \"+\", \"ranks_up\": %s, \"ranks_down\": %s}"
+)
+## Five rank names, as a faction has each way.
+const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
 
 
 func run(_tree: SceneTree) -> String:
@@ -656,8 +663,8 @@ func _check_factions() -> String:
 	]
 	if names != expected:
 		return "the Cartographer's Guild's ranks read %s" % [names]
-	var five: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
-	var faction: String = "{\"id\": \"x\", \"name\": \"X\", \"ranks_up\": %s, \"ranks_down\": %s}"
+	var five: String = FIVE_RANKS
+	var faction: String = FACTION_TEXT
 	var cases: Dictionary[String, String] = {
 		faction.replace("\"x\"", "\"y\"") % [five, five]: "its id must",
 		faction.replace("\"X\"", "\" \"") % [five, five]: "it needs a name",
@@ -667,10 +674,58 @@ func _check_factions() -> String:
 		faction % ["[\"a\", \"b\", \"c\", \"d\", 5]", five]: "it needs 5 rank names",
 		faction.replace("}", ", \"z\": 1}") % [five, five]: "field z",
 	}
+	var refused: String = _factions_refused(cases)
+	return refused if not refused.is_empty() else _check_faction_territory(guild)
+
+
+## Why any faction text among `cases` isn't refused with the beginning of the reason it's mapped to,
+## or "".
+func _factions_refused(cases: Dictionary[String, String]) -> String:
 	for text: String in cases:
 		var refusal: String = Faction.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken faction gave %s, not %s" % [refusal, cases[text]]
+	return ""
+
+
+## The Cartographer's Guild is marked by its symbol and holds the basic instance when a world starts
+## (#637). A faction file without a symbol, with a longer one, or with a territory that isn't a list
+## of instance ids, each once, is refused, and so are two factions holding one instance.
+func _check_faction_territory(guild: Faction) -> String:
+	if guild.symbol != "+" or " ".join(guild.territory) != "glade":
+		return "the guild isn't marked + or doesn't hold the basic instance: %s %s" % [
+			guild.symbol,
+			guild.territory,
+		]
+	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
+	var symbol: String = "\"symbol\": \"+\", "
+	var territory: String = faction.replace("}", ", \"territory\": %s}")
+	var symbolless: String = faction.replace(symbol, "")
+	var refused: String = _factions_refused({
+		symbolless: "it needs a symbol",
+		faction.replace(symbol, "\"symbol\": \"+++\", "): "it needs a symbol",
+		territory % "\"basic\"": "its territory must",
+		territory % "[\"Basic\"]": "its territory must",
+		territory % "[\"basic\", \"basic\"]": "its territory must",
+	})
+	return refused if not refused.is_empty() else _check_held_twice(territory % "[\"basic\"]")
+
+
+## Why two faction files, x and y, both `text` but for their ids, aren't refused for holding the
+## same
+## instance, the basic one, or "".
+func _check_held_twice(text: String) -> String:
+	var directory: String = "user://test_factions/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
+	for id: String in ["x", "y"]:
+		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
+		var _stored: bool = file.store_string(text.replace("\"x\"", "\"%s\"" % id))
+		file.close()
+	var twice: FactionContent = FactionContent.load_factions(directory)
+	for id: String in ["x", "y"]:
+		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
+	if not twice.problem.contains("basic is x's territory already"):
+		return "two factions holding one instance gave %s" % twice.problem
 	return ""
 
 

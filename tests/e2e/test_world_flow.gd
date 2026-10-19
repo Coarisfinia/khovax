@@ -22,7 +22,8 @@ extends RefCounted
 ## blueprint's variant, and setting it purges the instance once nobody is in it (#529). A named
 ## event sets its own flag, and the corrupted glade's corrupting monster emits one when it falls,
 ## which purifies the glade once nobody is in it (#541). The first time a named event sets its
-## flag, the world raises a world-changing moment, once (#499).
+## flag, the world raises a world-changing moment, once (#499). A fresh world starts with the
+## factions' territory as flags, which its save data keeps (#637).
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -76,6 +77,7 @@ func run(tree: SceneTree) -> String:
 		_check_flags,
 		_check_corruption,
 		_check_story_beat,
+		_check_territory,
 		_check_start_kept,
 		_check_sent_to_spawn,
 		_check_layout,
@@ -733,15 +735,39 @@ func _check_corruption() -> String:
 func _check_story_beat() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	world.instances[InstanceBlueprints.BASIC].features.append(Beat.new())
+	var flags: Array[String] = world.flags.duplicate()
 	world.step(_still())
 	var flag: String = World.EVENT_FLAG + Beat.BEAT
+	flags.append(flag)
+	flags.sort()
 	var changes: Array[WorldChanged] = _world_changes(world)
 	var once: bool = changes.size() == 1 and changes[0].event_name == Beat.BEAT
-	if not once or changes[0].flag != flag or " ".join(world.flags) != flag:
+	if not once or changes[0].flag != flag or world.flags != flags:
 		return "a story beat didn't set its flag and raise one world-changing moment"
 	world.step(_still())
-	if not _world_changes(world).is_empty() or " ".join(world.flags) != flag:
+	if not _world_changes(world).is_empty() or world.flags != flags:
 		return "a story beat raised again changed the world again"
+	return ""
+
+
+## Faction territory (#637): a fresh world starts with the factions' territory as flags, so the
+## Cartographer's Guild holds the glade, where the player starts (#712), and nobody the forest;
+## a world loading from a source without territory (RisingSource) starts with no flags; through its
+## save data and back the world keeps who holds what.
+func _check_territory() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.GLADE)
+	var guild: String = "cartographers_guild"
+	var flag: String = Territory.flag(InstanceBlueprints.GLADE, guild)
+	if (" ".join(world.flags) != flag
+			or Territory.holder(world.flags, InstanceBlueprints.GLADE) != guild):
+		return "a fresh world doesn't start with the guild holding the glade: %s" % [world.flags]
+	if not Territory.holder(world.flags, InstanceBlueprints.FOREST).is_empty():
+		return "a fresh world has a holder for the forest"
+	if not World.new(RisingSource.new(), 3, InstanceBlueprints.GLADE).flags.is_empty():
+		return "a world from a source without territory starts with flags"
+	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	if Territory.holder(reloaded.flags, InstanceBlueprints.GLADE) != guild:
+		return "the world didn't keep who holds the glade through its save data"
 	return ""
 
 
@@ -1242,11 +1268,15 @@ class Felling:
 
 
 ## The blueprints, with a glade that RISEN turns into a variant (#529): the arena's region, as no
-## blueprint has a variant yet.
+## blueprint has a variant yet. A world starts with no flags from it, not even the factions'
+## territory (#637), so RISEN is its only one.
 class RisingSource:
 	extends BlueprintSource
 
 	const RISEN: String = "glade_risen"
+
+	func starting_flags() -> Array[String]:
+		return []
 
 	func variant(instance_name: String, flags: Array[String]) -> String:
 		var risen: bool = instance_name == InstanceBlueprints.GLADE and flags.has(RISEN)

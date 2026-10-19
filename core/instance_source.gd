@@ -10,6 +10,12 @@ func exists(_instance_name: String) -> bool:
 	return false
 
 
+## The flags a fresh world starts with (#637), before it loads any instance: e.g. who holds which
+## instance.
+func starting_flags() -> Array[String]:
+	return []
+
+
 ## The variant of the named instance that the world's `flags` (sorted) choose (#529), or "" for
 ## its plain one.
 func variant(_instance_name: String, _flags: Array[String]) -> String:
