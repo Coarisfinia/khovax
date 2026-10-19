@@ -425,6 +425,25 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	return _menu_details(tab)
 
 
+## Each type shows after its family's badge (#627): breeze in the last family, mana in the first.
+## Every family has its own icon, so the badges never tell families apart by color alone (#68).
+func _type_badges(details: MonsterDetails) -> String:
+	var families: Array[int] = []
+	for row: Node in details.find_children("*", "HBoxContainer", true, false):
+		for part: Node in row.get_children():
+			if part is TypeBadge:
+				families.append((part as TypeBadge).family)
+	var wanted: Array[int] = [4, 0]
+	if families != wanted:
+		return "the types don't show their families' badges: %s" % [families]
+	var icons: Dictionary[Texture2D, bool] = {}
+	for icon: Texture2D in TypeBadge.ICONS:
+		icons[icon] = true
+	if icons.size() != TypeChart.FAMILIES.size() or TypeBadge.COLORS.size() != icons.size():
+		return "not every family has its own icon and a color"
+	return ""
+
+
 ## The detail pane (#430) shows the first monster until another is selected, then that one's
 ## stats; it sits beside the list on a landscape screen and below it on a portrait one.
 func _menu_details(tab: CharacterTab) -> String:
@@ -465,7 +484,7 @@ func _menu_details(tab: CharacterTab) -> String:
 	menu.lay_out(Vector2(360.0, 640.0))
 	if paired <= column.custom_minimum_size.x:
 		return "the column doesn't widen for the detail pane beside the monsters"
-	return ""
+	return _type_badges(details)
 
 
 ## While the menu is open (`open`), the player's keys don't walk and no tick runs; once it's

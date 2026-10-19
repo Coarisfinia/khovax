@@ -1,12 +1,16 @@
 class_name MonsterDetails
 extends VBoxContainer
 ## The detail pane on the Character tab (#430): every stat of the dominated monster selected in the
-## list beside it (DominatedMonstersList), in words: its species and level, its types, HP, strength
+## list beside it (DominatedMonstersList), in words: its species and level, its types (each after
+## its family's badge, TypeBadge), HP, strength
 ## and speed, its special attack and its two passives by name. It only reads what it's given.
 
 const TITLE: String = "Details"
 const NONE_TEXT: String = "No monster selected"
 const UNKNOWN_TEXT: String = "Its species' stats can't be read"
+const TYPES_HEADING: String = "Types:"
+## Which line names its types, shown with their family badges.
+const TYPES_LINE: int = 1
 
 ## What the pane shows, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
@@ -34,7 +38,7 @@ func show_monster(
 	if monster != null and species != null:
 		lines = [
 			"%s, level %d" % [species.name, monster.level],
-			"Types: " + ", ".join(species.types),
+			TYPES_HEADING + " " + ", ".join(species.types),
 			"HP: %d" % species.hp,
 			"Strength: %d" % species.strength,
 			"Speed: %d" % species.speed,
@@ -46,3 +50,15 @@ func show_monster(
 		return
 	shown = lines
 	GameMenu.show_lines(_lines, lines)
+	if monster != null and species != null:
+		_badge_types(species.types)
+
+
+## Swaps the types' line for one that shows each type after its family's badge (#627).
+func _badge_types(types: Array[String]) -> void:
+	var plain: Node = _lines.get_child(TYPES_LINE)
+	_lines.remove_child(plain)
+	plain.queue_free()
+	var badged: HBoxContainer = TypeBadge.row(TYPES_HEADING, types)
+	_lines.add_child(badged)
+	_lines.move_child(badged, TYPES_LINE)
