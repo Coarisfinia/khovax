@@ -49,7 +49,7 @@ func show_state() -> void:
 	if driver.state != _shown:
 		_clear()
 		_shown = driver.state
-	var feature: ChestFeature = driver.state.feature(Features.CHESTS) as ChestFeature
+	var feature: ChestFeature = driver.state.feature(ChestFeature.ID) as ChestFeature
 	var closed: Array[Vector2i] = []
 	var lying: Array[Vector2i] = []
 	if feature != null:

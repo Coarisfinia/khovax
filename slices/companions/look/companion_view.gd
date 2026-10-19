@@ -51,7 +51,7 @@ func show_state() -> void:
 		_facing.clear()
 		_chosen.clear()
 		_shown = driver.state
-	var feature: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	var feature: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
 	var shown: Array[int] = feature.companions() if feature != null else []
 	for companion_id: int in figures.keys():
 		if not shown.has(companion_id):
@@ -145,7 +145,7 @@ func circle_of(companion_id: int) -> PlayerCircle:
 func _place(companion_id: int) -> void:
 	var figure: HexPiece = figures[companion_id]
 	figure.tile = driver.state.entity(companion_id).tile
-	var movement: MovementFeature = driver.state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = driver.state.feature(MovementFeature.ID) as MovementFeature
 	var walk: Walk = movement.walk(companion_id) if movement != null else null
 	if walk == null or not walk.is_moving():
 		return

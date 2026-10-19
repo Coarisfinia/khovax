@@ -26,6 +26,8 @@ extends Feature
 ## (a wild monster) stops it. Its rolls come from the feature's own stream. It attacks through
 ## CompanionAttackFeature (#221).
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "companions"
 ## The reach of a species the feature wasn't given one for, and the shortest and longest any
 ## species has, in tiles.
 const LEAST_REACH: int = 1
@@ -57,17 +59,17 @@ func _init(species_reaches: Dictionary[String, int] = {}) -> void:
 	reaches = species_reaches
 
 
-func id() -> int:
-	return Features.COMPANIONS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 
 func start(state: GameState) -> void:
-	_rng = Rng.new(state.rng_seed, id())
+	_rng = Rng.new(state.rng_seed, stream())
 
 
 ## Sends off the companions whose player brings another or lost them, or that fainted, chooses
@@ -75,7 +77,7 @@ func start(state: GameState) -> void:
 ## fainted and has none here be joined by it, then lets each companion roam, in id order. One whose
 ## player takes an exit this tick stays: the world moves it with them (`followers_of`).
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
 		var tile: Vector2i = state.entity(companion_id).tile
@@ -170,7 +172,7 @@ func carry_in(state: GameState, arrived: Entity, carried: Dictionary) -> void:
 	_species[arrived.id] = carried["species"]
 	_short_ids[arrived.id] = carried["short_id"]
 	_rest[arrived.id] = carried["rest"]
-	(state.feature(Features.MOVEMENT) as MovementFeature).add_walk(arrived)
+	(state.feature(MovementFeature.ID) as MovementFeature).add_walk(arrived)
 
 
 ## Every companion's entity id, in id order.
@@ -314,7 +316,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if not CompanionParty.problem(state, slot).is_empty():
 			values.fail(CompanionParty.problem(state, slot))
 			return
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for entry: DataReader in values.entries("companions"):
 		var companion_id: int = entry.whole("entity", 1, DataReader.MOST)
 		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)

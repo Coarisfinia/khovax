@@ -31,7 +31,7 @@ func show_state() -> void:
 	if driver.state != _shown:
 		HexPiece.free_all(figures)
 		_shown = driver.state
-	var feature: NpcFeature = driver.state.feature(Features.NPCS) as NpcFeature
+	var feature: NpcFeature = driver.state.feature(NpcFeature.ID) as NpcFeature
 	if feature == null:
 		return
 	for person: int in feature.npcs:

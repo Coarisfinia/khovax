@@ -24,7 +24,7 @@ func show_state() -> void:
 	var braced: Dictionary[Vector2i, bool] = {}
 	var domination: DominationFeature = null
 	if driver != null and driver.state != null:
-		domination = driver.state.feature(Features.DOMINATION) as DominationFeature
+		domination = driver.state.feature(DominationFeature.ID) as DominationFeature
 	if domination != null:
 		for seal: RingSeal in domination.seals.values():
 			for tile: Vector2i in RingSealing.reinforced(driver.state, seal):

@@ -22,7 +22,7 @@ func _init(
 
 
 func start(state: GameState) -> void:
-	_rng = Rng.new(state.rng_seed, id())
+	_rng = Rng.new(state.rng_seed, stream())
 
 
 ## `times` rolls on `species`' table, added up as {item id: amount}; nothing for a species without
@@ -44,6 +44,6 @@ func save_values() -> Dictionary:
 func load_values(_state: GameState, values: DataReader) -> void:
 	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if restored == null:
-		values.fail("feature %d's loot stream isn't four 32-bit words, not all zero" % id())
+		values.fail("feature %s's loot stream isn't four 32-bit words, not all zero" % id())
 		return
 	_rng = restored

@@ -9,14 +9,22 @@ extends RefCounted
 var enabled: bool = true
 
 
-## The feature's stable number from Features, used for lookups and in the state hash.
-func id() -> int:
-	return Features.NONE
+## The feature's stable id (#784), its `ID` constant: a name, not a hand-kept number, so features
+## built in parallel never claim the same one. Used for lookups, saved, and hashed as its code
+## (World.name_code); never changed once it shipped.
+func id() -> String:
+	return ""
+
+
+## The number of the feature's own random stream (Rng): its id's code, so every feature that rolls
+## draws from a stream of its own.
+func stream() -> int:
+	return World.name_code(id())
 
 
 ## The features that must come earlier in the instance's order, by id.
-func requires() -> Array[int]:
-	var none: Array[int] = []
+func requires() -> Array[String]:
+	var none: Array[String] = []
 	return none
 
 

@@ -22,6 +22,9 @@ extends Feature
 ## enrages the wild monsters of a ring that broke this tick. So it strikes companions where they
 ## stood at the end of the last tick, as they step later.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "wild_attacks"
+
 ## The ticks between two strikes of one wild monster, and how much a trail tile takes before it
 ## gives way. Placeholders to tune (#422).
 const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
@@ -39,37 +42,37 @@ var _ring_walls: Dictionary[Vector2i, bool] = {}
 var _ring_walls_found: bool = false
 
 
-func id() -> int:
-	return Features.WILD_ATTACKS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.TRAIL, Features.WILD_MONSTERS, Features.DOMINATION]
+func requires() -> Array[String]:
+	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID, DominationFeature.ID]
 	return needed
 
 
 func start(state: GameState) -> void:
-	_trail = state.feature(Features.TRAIL) as TrailFeature
+	_trail = state.feature(TrailFeature.ID) as TrailFeature
 
 
 ## Lets every wild monster strike, in id order, once every STRIKE_TICKS. Wear on tiles that left
 ## the trail (a ring that ended) is forgotten first. The features are looked up once: looking one
 ## up goes through them all.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var trail: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
+	var trail: TrailFeature = state.feature(TrailFeature.ID) as TrailFeature
 	# Erasing needs no order, so the keys aren't sorted.
 	for tile: Vector2i in _wear.keys():
 		if not trail.shared.tiles.has(tile):
 			var _dropped: bool = _wear.erase(tile)
 	if state.tick % STRIKE_TICKS != 0:
 		return
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var monsters: Array[Entity] = _find_standing(state, wild)
 	var near: Dictionary[Vector2i, bool] = _near_targets(trail)
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	# Hiding isn't required, since an instance may have none. It steps later, so a wild monster
 	# that jumps out this tick strikes from the next strike on.
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	_ring_walls_found = false
 	for monster: Entity in monsters:
 		var dominator_id: int = 0
@@ -90,7 +93,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 ## the one with the lowest id where several do, and returns the wild monsters, in id order.
 ## Companions aren't required, since an instance may have none.
 func _find_standing(state: GameState, wild: WildMonsterFeature) -> Array[Entity]:
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	_companion_at.clear()
 	_player_at.clear()
 	var monsters: Array[Entity] = []
@@ -127,7 +130,7 @@ func _near_targets(trail: TrailFeature) -> Dictionary[Vector2i, bool]:
 ## The encircled wild monster strikes the wall segment of its waiting ring nearest to it; worn
 ## through, the segment breaks the ring and comes off the trail.
 func _strike_ring(state: GameState, monster: Entity, dominator_id: int, damage: int) -> void:
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var walls: Array[Vector2i] = domination.ring_waiting(state, dominator_id)
 	var wall: Vector2i = walls[RingShape.nearest(walls, monster.tile)]
 	state.events.append(WildMonsterStruck.new(monster.id, 0, wall, damage))
@@ -163,8 +166,8 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 ## it (#626): its damage scaled, and which of the companion's types it was strong against (#764).
 ## Companions are present, since one stands there.
 static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMonsterStruck:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var attacker: String = wild.species_of(struck.monster_id)
 	var defender: String = companions.species_of(struck.target_id)
 	return WildMonsterStruck.new(
@@ -186,7 +189,7 @@ func _worn_through(tile: Vector2i, damage: int) -> bool:
 func _clear(state: GameState, tile: Vector2i) -> void:
 	var _dropped: bool = _wear.erase(tile)
 	var cleared: Array[Vector2i] = [tile]
-	(state.feature(Features.TRAIL) as TrailFeature).clear(state, cleared)
+	(state.feature(TrailFeature.ID) as TrailFeature).clear(state, cleared)
 
 
 ## The tile next to `tile` whose entity in `at` has the lowest id, or `tile` itself when none
@@ -203,7 +206,7 @@ static func _lowest_beside(at: Dictionary[Vector2i, int], tile: Vector2i) -> Vec
 ## The first trail tile next to `tile`, in sorted order, that is no ring's wall, or `tile` itself
 ## when there is none: a wild monster never stands on the trail.
 func _trail_target(state: GameState, tile: Vector2i) -> Vector2i:
-	var trail: TrailFeature = state.feature(Features.TRAIL) as TrailFeature
+	var trail: TrailFeature = state.feature(TrailFeature.ID) as TrailFeature
 	for side: Vector2i in _sides(tile):
 		if trail.shared.tiles.has(side) and not _is_ring_wall(state, side):
 			return side
@@ -214,7 +217,7 @@ func _trail_target(state: GameState, tile: Vector2i) -> Vector2i:
 ## tick, when first asked.
 func _is_ring_wall(state: GameState, tile: Vector2i) -> bool:
 	if not _ring_walls_found:
-		var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+		var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 		_ring_walls = domination.ring_walls(state)
 		_ring_walls_found = true
 	return _ring_walls.has(tile)

@@ -8,6 +8,8 @@ extends Feature
 ## gives already, a controller's stick and d-pad too. Walking on into them doesn't talk again; the
 ## player has to stop or turn away first, so a held direction talks once.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "npcs"
 ## No person: entity ids start at 1.
 const NOBODY: int = 0
 
@@ -19,12 +21,12 @@ var spots: Dictionary[int, NpcSpot] = {}
 var _walking_into: Dictionary[int, int] = {}
 
 
-func id() -> int:
-	return Features.NPCS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 
@@ -43,7 +45,7 @@ func start(state: GameState) -> void:
 ## Every player, in slot order, who stands and walks into a person talks to them, unless they walked
 ## into the same one last tick.
 func step(state: GameState, commands: Array[Command]) -> void:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for slot: int in GameState.MAX_PLAYERS:
 		var into: int = _walked_into(state, movement, slot, Command.of(commands, slot))
 		if into == NOBODY:

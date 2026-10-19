@@ -4,18 +4,21 @@ extends Feature
 ## region raises PieceEntered, once per arrival, for their own quests. No legend marks it: every
 ## piece is one, by its file name. Instances whose region is arranged from pieces have it.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "entering"
+
 ## The piece each player stands in.
 var inside: AreaStanding = AreaStanding.new()
 ## Every piece's id, sorted; the region never changes while it's loaded.
 var _ids: Array[String] = []
 
 
-func id() -> int:
-	return Features.ENTERING
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 

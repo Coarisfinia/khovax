@@ -35,7 +35,7 @@ static func pressure(wild: WildMonsterFeature, monster_id: int) -> int:
 
 ## A new seal of the ring `trail` closed around the wild monsters `inside`.
 static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var seal: RingSeal = RingSeal.new()
 	var spots: Array[Vector2i] = []
 	for monster_id: int in inside:
@@ -57,7 +57,7 @@ static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSea
 ## inside pushes on its own segment, which takes only REINFORCED_SHARE of that while a player
 ## stands on it.
 static func push(state: GameState, seal: RingSeal) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var braced: Array[Vector2i] = reinforced(state, seal)
 	seal.ticks += 1
 	for entity: Entity in state.entities:

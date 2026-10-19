@@ -23,5 +23,5 @@ func is_down() -> bool:
 	if driver == null or driver.state == null or driver.input == null:
 		return false
 	var player: Entity = driver.state.player(driver.input.slot)
-	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var knockdown: KnockdownFeature = driver.state.feature(KnockdownFeature.ID) as KnockdownFeature
 	return player != null and knockdown != null and knockdown.is_down(player.id)

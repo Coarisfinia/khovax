@@ -34,7 +34,7 @@ const OUT_OF_FOREST: int = 5
 ## Takes the beach's wounded toad out of `state`, for flows whose walks cross the beach and aren't
 ## about it: it stands in their way and steps about.
 static func drop_beach_toad(state: GameState) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for entity_id: int in wild.monsters.duplicate():
 		if state.entity(entity_id).tile == BEACH_TOAD:
 			state.remove_entity(entity_id)
@@ -53,7 +53,7 @@ static func party(species: Array[String]) -> CarriedMonsters:
 ## companion, straight in their world store, as a session's start would through the world.
 static func carry(state: GameState, slot: int, species: Array[String]) -> void:
 	var carried: CarriedMonsters = party(species)
-	state.store(slot, Features.COMPANIONS).merge(
+	state.store(slot, CompanionFeature.ID).merge(
 		{
 			"carried": Array(carried.short_ids),
 			"species": Array(carried.species),
@@ -77,7 +77,7 @@ static func parties(by_slot: Array[Array]) -> Array[CarriedMonsters]:
 ## The tiles player 0 sees in `state`.
 static func sight_of(state: GameState) -> Array[Vector2i]:
 	var seen: Array[Vector2i] = []
-	seen.assign((state.feature(Features.FOG) as FogFeature).visible[0])
+	seen.assign((state.feature(FogFeature.ID) as FogFeature).visible[0])
 	return seen
 
 
@@ -149,5 +149,5 @@ static func shortest_path(state: GameState, from: Vector2i, goal: Vector2i) -> A
 
 ## Whether a player can walk onto `tile`: walkable, and nothing that doesn't walk stands there.
 static func walkable_for_players(state: GameState, tile: Vector2i) -> bool:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)

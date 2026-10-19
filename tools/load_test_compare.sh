@@ -14,7 +14,7 @@ base_report=${2:-}
 
 # The mean tick in microseconds, and every feature's share, from one report.
 mean_of() { sed -n 's/^ *tick: mean \([0-9][0-9]*\.[0-9]\) us.*/\1/p' "$1"; }
-features_of() { sed -n 's/^ *feature \([0-9][0-9]*\): \([0-9][0-9]*\.[0-9]\) us per tick$/\1 \2/p' "$1"; }
+features_of() { sed -n 's/^ *feature \([a-z0-9_][a-z0-9_]*\): \([0-9][0-9]*\.[0-9]\) us per tick$/\1 \2/p' "$1"; }
 
 if ! grep -qE '^end state hash -?[0-9]+, same in both passes$' "$head_report"; then
   echo "The load test didn't end with both passes in the same state: it failed, or the simulation isn't deterministic."

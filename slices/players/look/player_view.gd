@@ -105,7 +105,7 @@ func show_state() -> void:
 	# Set explicitly, not left to the tile setter: the spot is added to it once below.
 	position = tile_position()
 	# Without movement in the instance, the player simply stands on its tile.
-	var movement: MovementFeature = driver.state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = driver.state.feature(MovementFeature.ID) as MovementFeature
 	var walk: Walk = movement.walk(player.id) if movement != null else null
 	var moving: bool = walk != null and walk.is_moving()
 	if moving:
@@ -119,7 +119,7 @@ func show_state() -> void:
 		facing = atan2(heading.x, heading.z)
 	position += spot
 	_follow_crossing()
-	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var knockdown: KnockdownFeature = driver.state.feature(KnockdownFeature.ID) as KnockdownFeature
 	if knockdown != null and knockdown.is_down(player.id):
 		_play(DOWN)
 	else:

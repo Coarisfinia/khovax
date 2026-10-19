@@ -67,7 +67,7 @@ func _check_fog_follows() -> String:
 	var region: Region = Region.disc(2 * FogFeature.SIGHT_RADIUS)
 	var state: GameState = GameState.new(region, 1, ordered)
 	var _player: Entity = state.add_entity(0, START)
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	# Just out of sight to the west, until the player walks two tiles towards it.
 	var west: Vector2i = START + Hex.DIRECTIONS[WEST] * (FogFeature.SIGHT_RADIUS + 2)
 	if not fog.sees(0, START) or fog.sees(1, START) or fog.sees(0, west):
@@ -92,7 +92,7 @@ func _check_reveal() -> String:
 	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new()]
 	var state: GameState = GameState.new(Region.disc(2), 2, ordered)
 	var _player: Entity = state.add_entity(0, START)
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	var before: int = state.state_hash()
 	var area: Array[Vector2i] = [Vector2i(2, 0), Vector2i(0, 0), Vector2i(9, 9), Vector2i(2, 0)]
 	fog.reveal(state, area)
@@ -110,10 +110,10 @@ func _check_reveal() -> String:
 ## A player stepping onto the glade's lookout reveals the region within its radius, in a tick, once.
 func _check_lookout() -> String:
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 7, 1)
-	if state.region.triggers.is_empty() or state.feature(Features.TRIGGERS) == null:
+	if state.region.triggers.is_empty() or state.feature(TriggerFeature.ID) == null:
 		return "the glade has no lookout"
 	var lookout: TileTrigger = state.region.triggers[0]
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	state.player(0).tile = lookout.tile
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	var far: Vector2i = lookout.tile + Hex.DIRECTIONS[WEST] * lookout.amount
@@ -140,7 +140,7 @@ func _check_across_the_seam() -> String:
 	var exit: Vector3i = forest.region.exits[way]
 	forest.player(0).tile = Vector2i(exit.x, exit.y)
 	world.step(FlowSteps.command(Command.NO_MOVE))
-	var fog: FogFeature = forest.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = forest.feature(FogFeature.ID) as FogFeature
 	var across: int = 0
 	for tile: Vector2i in fog.visible[0]:
 		if forest.next_door.has(tile):
@@ -206,7 +206,7 @@ static func _blocking_across(state: GameState, from: Vector2i) -> Vector2i:
 
 ## Walks player 0 `moves` tiles west, waiting for each move to arrive.
 func _walk_west(state: GameState, moves: int) -> void:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for _move: int in moves:
 		Simulation.step(state, FlowSteps.command(WEST))
 		while movement.walk(state.player(0).id).is_moving():
@@ -230,8 +230,8 @@ class TileRule:
 		tile = changed_tile
 		kind = new_kind
 
-	func id() -> int:
-		return 1002
+	func id() -> String:
+		return "test_tile_change"
 
 	func step(state: GameState, _commands: Array[Command]) -> void:
 		if not done:

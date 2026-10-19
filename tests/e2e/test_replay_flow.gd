@@ -129,8 +129,8 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
-		"store entry": func(state: GameState) -> void: state.store(0, Features.COMPANIONS)["a"] = 1,
-		"store text": func(state: GameState) -> void: state.store(1, Features.HEALTH)["a"] = "x",
+		"store entry": func(state: GameState) -> void: state.store(0, CompanionFeature.ID)["a"] = 1,
+		"store text": func(state: GameState) -> void: state.store(1, HealthFeature.ID)["a"] = "x",
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
 		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
@@ -150,8 +150,8 @@ func _check_hash_covers_fields() -> String:
 		# Same tile, someone else colored it (#87).
 		"trail colorer": _recolor_trail,
 		"trail dropped": func(state: GameState) -> void: _trail(state).tiles.clear(),
-		"movement off": func(state: GameState) -> void: state.set_enabled(Features.MOVEMENT, false),
-		"trail off": func(state: GameState) -> void: state.set_enabled(Features.TRAIL, false),
+		"moving off": func(state: GameState) -> void: state.set_enabled(MovementFeature.ID, false),
+		"trail off": func(state: GameState) -> void: state.set_enabled(TrailFeature.ID, false),
 	}
 	for field: String in changes:
 		var state: GameState = _state(42)
@@ -210,19 +210,19 @@ func _check_feature_order() -> String:
 ## keeps its state; on again, it continues.
 func _check_switching_features() -> String:
 	var state: GameState = _state(42)
-	state.set_enabled(Features.MOVEMENT, false)
+	state.set_enabled(MovementFeature.ID, false)
 	_walk(state, EAST, 1)
 	if _tile(state) != START:
 		return "the player moved with movement switched off"
-	state.set_enabled(Features.MOVEMENT, true)
-	state.set_enabled(Features.TRAIL, false)
+	state.set_enabled(MovementFeature.ID, true)
+	state.set_enabled(TrailFeature.ID, false)
 	_walk(state, EAST, 1)
 	var moved_to: Vector2i = START + Hex.DIRECTIONS[EAST]
 	if _tile(state) != moved_to:
 		return "movement didn't come back when switched on again"
 	if _trail(state).tiles.has(moved_to):
 		return "the trail grew while switched off"
-	state.set_enabled(Features.TRAIL, true)
+	state.set_enabled(TrailFeature.ID, true)
 	# Back over the start tile to a new one: the trail kept its start tile and grows again.
 	_walk(state, WEST, 2)
 	var beyond_start: Vector2i = START + Hex.DIRECTIONS[WEST]
@@ -236,11 +236,11 @@ func _check_instance_without_trail() -> String:
 	var ordered: Array[Feature] = [MovementFeature.new()]
 	var state: GameState = _state_with(ordered, 42)
 	_walk(state, EAST, 1)
-	if state.feature(Features.TRAIL) != null:
+	if state.feature(TrailFeature.ID) != null:
 		return "an instance without the trail has one"
 	if _tile(state) != START + Hex.DIRECTIONS[EAST]:
 		return "an instance without the trail didn't walk"
-	if InstanceBlueprints.basic(42, 1).feature(Features.TRAIL) == null:
+	if InstanceBlueprints.basic(42, 1).feature(TrailFeature.ID) == null:
 		return "the basic instance lost its trail"
 	return ""
 
@@ -473,7 +473,7 @@ func _check_streams_apart() -> String:
 	for _tick: int in 50:
 		Simulation.step(calm, FlowSteps.command(Command.NO_MOVE))
 		Simulation.step(busy, FlowSteps.command(Command.NO_MOVE))
-	var other: int = Dice.ID + 1
+	var other: String = Dice.ID + "_2"
 	if calm.feature(other).hash_values() != busy.feature(other).hash_values():
 		return "more rolls in one feature shifted another feature's rolls"
 	if calm.feature(Dice.ID).hash_values() == busy.feature(Dice.ID).hash_values():
@@ -483,7 +483,7 @@ func _check_streams_apart() -> String:
 
 ## A state with two dice features: the first rolls `rolls` times a tick, the second once.
 func _two_dice(rolls: int) -> GameState:
-	var ordered: Array[Feature] = [Dice.new(Dice.ID, rolls), Dice.new(Dice.ID + 1, 1)]
+	var ordered: Array[Feature] = [Dice.new(Dice.ID, rolls), Dice.new(Dice.ID + "_2", 1)]
 	return _state_with(ordered, 42)
 
 
@@ -609,9 +609,12 @@ func _check_replay_round_trip() -> String:
 ## format 13) read with none fired, placed, swapped, answered, handed over, used, equipped or
 ## requested, as `recorded` has none, and play back the same. Before format 8 they name each slot's
 ## companion alone, which becomes all the slot carries, and before format 11 the species alone,
-## which get the stand-in short ids of their places (#700), as `recorded`'s are.
+## which get the stand-in short ids of their places (#700), as `recorded`'s are. Before format 15
+## they name the features by their old numbers (#784).
 func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
-	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5, 8: 6, 9: 7, 10: 8, 11: 8, 12: 9, 13: 10 }
+	var counts: Dictionary[int, int] = {
+		3: 1, 4: 2, 7: 5, 8: 6, 9: 7, 10: 8, 11: 8, 12: 9, 13: 10, 14: 11,
+	}
 	for older_format: int in counts:
 		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 		var kept: Array[int] = []
@@ -620,6 +623,7 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		older.changes = kept
 		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
 		data["format"] = older_format
+		data["features"] = _numbered(data["features"])
 		# Before short ids, a slot's carried monsters were its species alone.
 		if older_format < ReplayFile.SHORT_ID_FORMAT:
 			data["carried"] = [["tikazzir"], ["ombulumo"]]
@@ -630,6 +634,15 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		if migrated.changes != loaded.changes or not migrated.play().is_empty():
 			return "a replay in format %d didn't read with nothing fired or placed" % older_format
 	return ""
+
+
+## Feature ids as the numbers a replay from before format 15 names them by (#784).
+static func _numbered(ids: Array) -> Array[int]:
+	var numbers: Array[int] = []
+	for id: Variant in ids:
+		var number: int = ReplayFile.NUMBERED_FEATURES.find_key(id)
+		numbers.append(number)
+	return numbers
 
 
 ## Playback refuses, with a clear message, what this build can't play as recorded.
@@ -978,7 +991,7 @@ func _tile(state: GameState) -> Vector2i:
 
 
 func _movement(state: GameState) -> MovementFeature:
-	return state.feature(Features.MOVEMENT) as MovementFeature
+	return state.feature(MovementFeature.ID) as MovementFeature
 
 
 func _player_walk(state: GameState) -> Walk:
@@ -986,7 +999,7 @@ func _player_walk(state: GameState) -> Walk:
 
 
 func _trails(state: GameState) -> TrailFeature:
-	return state.feature(Features.TRAIL) as TrailFeature
+	return state.feature(TrailFeature.ID) as TrailFeature
 
 
 ## The allies' shared trail (#87).
@@ -1027,12 +1040,12 @@ class BossPhase:
 	func _init(start_tick: int) -> void:
 		from_tick = start_tick
 
-	func id() -> int:
-		return 1000
+	func id() -> String:
+		return "test_boss_phase"
 
 	func step(state: GameState, _commands: Array[Command]) -> void:
 		if state.tick >= from_tick:
-			state.set_enabled(Features.MOVEMENT, false)
+			state.set_enabled(MovementFeature.ID, false)
 
 	func hash_values() -> Array[int]:
 		var values: Array[int] = [from_tick]
@@ -1044,22 +1057,22 @@ class BossPhase:
 class Dice:
 	extends Feature
 
-	const ID: int = 1001
+	const ID: String = "test_dice"
 
-	var feature_id: int = ID
+	var feature_id: String = ID
 	var rolls: int = 1
 	var rng: Rng
 	var last: int = 0
 
-	func _init(id_value: int = ID, rolls_per_tick: int = 1) -> void:
+	func _init(id_value: String = ID, rolls_per_tick: int = 1) -> void:
 		feature_id = id_value
 		rolls = rolls_per_tick
 
-	func id() -> int:
+	func id() -> String:
 		return feature_id
 
 	func start(state: GameState) -> void:
-		rng = Rng.new(state.rng_seed, feature_id)
+		rng = Rng.new(state.rng_seed, stream())
 
 	func step(_state: GameState, _commands: Array[Command]) -> void:
 		for _roll: int in rolls:

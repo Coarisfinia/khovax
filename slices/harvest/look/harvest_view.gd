@@ -36,7 +36,7 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 
 ## Whether the entity `monster_id` lies fainted in the instance shown.
 func _fainted(monster_id: int) -> bool:
-	var feature: Feature = driver.state.feature(Features.WILD_MONSTERS)
+	var feature: Feature = driver.state.feature(WildMonsterFeature.ID)
 	var wild: WildMonsterFeature = feature as WildMonsterFeature
 	return wild != null and wild.is_fainted(monster_id)
 

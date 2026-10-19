@@ -7,15 +7,18 @@ extends Feature
 ## simulation, so whether they hold one is their own machine's to check (LocalInput). It keeps no
 ## state of its own.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "revive_items"
 
-func id() -> int:
-	return Features.REVIVE_ITEMS
+
+func id() -> String:
+	return ID
 
 
 ## After the companions, whose party it changes: a revived companion joins its player on the next
 ## tick.
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.COMPANIONS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [CompanionFeature.ID]
 	return needed
 
 

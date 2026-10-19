@@ -60,7 +60,7 @@ func show_state() -> void:
 		_lunges.clear()
 		_shown = driver.state
 	var feature: WildMonsterFeature = (
-		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+		driver.state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	)
 	# An instance without wild monsters shows no figures.
 	var shown: Array[int] = []
@@ -91,7 +91,7 @@ func show_state() -> void:
 ## it (#137), and in its tile until it jumps out (#202). Not when it's gone.
 static func is_shown(state: GameState, entity_id: int) -> bool:
 	var monster: Entity = state.entity(entity_id)
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var in_hiding: bool = hiding != null and hiding.is_hidden(entity_id)
 	return monster != null and FogView.ally_sees(state, monster.tile) and not in_hiding
 

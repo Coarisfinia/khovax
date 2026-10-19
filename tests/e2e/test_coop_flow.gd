@@ -66,7 +66,7 @@ func _check_two_players_walk() -> String:
 		return "the local player moved before the input delay had passed"
 	_run_frames(TICKS - DELAY)
 	Input.action_release("move_left")
-	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = _driver.state.feature(TrailFeature.ID) as TrailFeature
 	for slot: int in 2:
 		var player: Entity = _driver.state.player(slot)
 		if player.tile == starts[slot] or not trails.shared.tiles.has(player.tile):
@@ -106,7 +106,7 @@ func _check_companions_shown() -> String:
 	_driver.world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	var view: CompanionView = _main.get_node("Instance/CompanionView") as CompanionView
 	view.show_state()
-	var feature: CompanionFeature = _driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	var feature: CompanionFeature = _driver.state.feature(CompanionFeature.ID) as CompanionFeature
 	for slot: int in 2:
 		var circle: PlayerCircle = view.circle_of(feature.companion_of(slot))
 		var expected: Color = PersonalColor.of(_driver.world.world_seed, slot)
@@ -296,11 +296,11 @@ func _script(variant: int) -> Array[int]:
 ## DOWN_TICKS. Alone, a player has no ally near.
 func _check_knocked_down() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
-	state.set_enabled(Features.WILD_ATTACKS, false)
+	state.set_enabled(WildAttackFeature.ID, false)
 	var down: Entity = state.player(0)
 	var ally: Entity = state.player(1)
-	var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
-	var health: HealthFeature = state.feature(Features.HEALTH) as HealthFeature
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	if not knockdown.has_ally_near(state, down):
 		return "a player with an ally in the instance has no ally near"
 	knockdown.knock_down(down.id)
@@ -322,7 +322,7 @@ func _check_knocked_down() -> String:
 	var alone: GameState = InstanceBlueprints.basic(42)
 	if (not sent
 			or knockdown.is_down(down.id)
-			or (alone.feature(Features.KNOCKDOWN) as KnockdownFeature).has_ally_near(
+			or (alone.feature(KnockdownFeature.ID) as KnockdownFeature).has_ally_near(
 		alone,
 		alone.player(0),
 	)):
@@ -342,9 +342,9 @@ static func _raised(state: GameState, kind: Script) -> bool:
 ## command, without waiting out DOWN_TICKS; a respawn press while standing does nothing.
 func _check_gives_up() -> String:
 	var state: GameState = InstanceBlueprints.basic(42, 2)
-	state.set_enabled(Features.WILD_ATTACKS, false)
+	state.set_enabled(WildAttackFeature.ID, false)
 	var down: Entity = state.player(0)
-	var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	var giving_up: Array[Command] = [Command.new(Command.NO_MOVE, false, Command.NO_TOTEM, 0, true)]
 	Simulation.step(state, giving_up)
 	if _raised(state, SentToSpawn):

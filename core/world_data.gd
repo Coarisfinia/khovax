@@ -8,10 +8,10 @@ extends RefCounted
 ## purging, format 2 no ring seals, format 3 no companions, format 4 no tiles changed in place
 ## (#530), format 5 no flags or variants (#529), format 6 no carried monsters (#53), format 7 no
 ## fainted ones (#655), format 8 kept the companions in fields of their own instead of the
-## players' world stores (#724) and format 9 kept no monster's short id (#700). Every one but the
-## fourth and fifth was played by older rules, which
-## `to_world` refuses anyway, so none is read.
-const FORMAT: int = 10
+## players' world stores (#724), format 9 kept no monster's short id (#700) and format 10 numbered
+## the features instead of naming them (#784). Every one but the fourth and fifth was played by
+## older rules, which `to_world` refuses anyway, so none is read.
+const FORMAT: int = 11
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into

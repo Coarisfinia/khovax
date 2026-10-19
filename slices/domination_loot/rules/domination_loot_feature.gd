@@ -8,18 +8,20 @@ extends SpeciesLootFeature
 ## to FULL_ROLLS, so a player who barely helped gets nothing (owner, #86). The numbers are
 ## placeholders, to tune.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "domination_loot"
 const WALL_POINTS: int = 2
 const TICKS_PER_POINT: int = Simulation.TICKS_PER_SECOND
 const POINTS_PER_ROLL: int = 3
 const FULL_ROLLS: int = 3
 
 
-func id() -> int:
-	return Features.DOMINATION_LOOT
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.DOMINATION]
+func requires() -> Array[String]:
+	var needed: Array[String] = [DominationFeature.ID]
 	return needed
 
 

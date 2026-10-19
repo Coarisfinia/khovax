@@ -12,12 +12,12 @@ extends RefCounted
 
 ## The short ids of the monsters the player in `slot` carries, in their carried order, in `state`.
 static func carried(state: GameState, slot: int) -> PackedStringArray:
-	return _carried_of(state.stored(slot, Features.COMPANIONS))
+	return _carried_of(state.stored(slot, CompanionFeature.ID))
 
 
 ## The species of the monsters the player in `slot` carries, in their carried order, in `state`.
 static func carried_species(state: GameState, slot: int) -> PackedStringArray:
-	return _species_of(state.stored(slot, Features.COMPANIONS))
+	return _species_of(state.stored(slot, CompanionFeature.ID))
 
 
 ## The species of the carried monster `short_id` of the player in `slot`, or "" for none.
@@ -29,22 +29,22 @@ static func species_of(state: GameState, slot: int, short_id: String) -> String:
 
 ## The short id of the companion of the player in `slot`, or "" for none.
 static func companion(state: GameState, slot: int) -> String:
-	return _companion_of(state.stored(slot, Features.COMPANIONS))
+	return _companion_of(state.stored(slot, CompanionFeature.ID))
 
 
 ## Whether the carried monster `short_id` of the player in `slot` has fainted.
 static func has_fainted(state: GameState, slot: int, short_id: String) -> bool:
-	return _fainted_of(state.stored(slot, Features.COMPANIONS)).has(short_id)
+	return _fainted_of(state.stored(slot, CompanionFeature.ID)).has(short_id)
 
 
 ## Makes the monster at `place` in the carried order of the player in `slot` their companion.
 static func choose(state: GameState, slot: int, place: int) -> void:
-	state.store(slot, Features.COMPANIONS)["companion"] = carried(state, slot)[place]
+	state.store(slot, CompanionFeature.ID)["companion"] = carried(state, slot)[place]
 
 
 ## Notes that the carried monster `short_id` of the player in `slot` fainted.
 static func faint(state: GameState, slot: int, short_id: String) -> void:
-	var entry: Dictionary = state.store(slot, Features.COMPANIONS)
+	var entry: Dictionary = state.store(slot, CompanionFeature.ID)
 	var down: PackedStringArray = _fainted_of(entry)
 	if not down.has(short_id):
 		var _added: bool = down.append(short_id)
@@ -56,7 +56,7 @@ static func faint(state: GameState, slot: int, short_id: String) -> void:
 ## every instance once this one stepped. The hook reviving plugs into, for the base (#647) and
 ## revive items (#656) once they exist. Nothing for one that hasn't fainted.
 static func revive(state: GameState, slot: int, short_id: String) -> void:
-	var entry: Dictionary = state.store(slot, Features.COMPANIONS)
+	var entry: Dictionary = state.store(slot, CompanionFeature.ID)
 	var down: PackedStringArray = _fainted_of(entry)
 	var place: int = down.find(short_id)
 	if place >= 0:
@@ -76,7 +76,7 @@ static func bring(
 ) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var party: CarriedMonsters = _party_at(parties, slot)
-		var before: Dictionary = world.stored(slot, Features.COMPANIONS)
+		var before: Dictionary = world.stored(slot, CompanionFeature.ID)
 		var chosen: String = _companion_of(before) if keep_chosen else ""
 		if not party.short_ids.has(chosen):
 			chosen = party.short_ids[0] if party.size() > 0 else ""
@@ -92,14 +92,14 @@ static func bring(
 				"companion": chosen,
 				"fainted": down,
 			}
-		world.set_entry(slot, Features.COMPANIONS, entry)
+		world.set_entry(slot, CompanionFeature.ID, entry)
 
 
 ## Every slot's carried monsters in `world`, by slot.
 static func carried_in(world: World) -> Array[CarriedMonsters]:
 	var parties: Array[CarriedMonsters] = []
 	for slot: int in GameState.MAX_PLAYERS:
-		parties.append(_carried_monsters(world.stored(slot, Features.COMPANIONS)))
+		parties.append(_carried_monsters(world.stored(slot, CompanionFeature.ID)))
 	return parties
 
 
@@ -122,20 +122,20 @@ static func _carried_monsters(entry: Dictionary) -> CarriedMonsters:
 
 ## The short id of the companion of the player in `slot` in `world`, or "" for none.
 static func companion_in(world: World, slot: int) -> String:
-	return _companion_of(world.stored(slot, Features.COMPANIONS))
+	return _companion_of(world.stored(slot, CompanionFeature.ID))
 
 
 ## The short ids of the fainted monsters of the player in `slot` in `world`, in the order they
 ## fainted.
 static func fainted_in(world: World, slot: int) -> PackedStringArray:
-	return _fainted_of(world.stored(slot, Features.COMPANIONS))
+	return _fainted_of(world.stored(slot, CompanionFeature.ID))
 
 
 ## Why the party of the player in `slot` in `state`, as a save brought it back, isn't one, or "":
 ## none at all, or the short ids of the monsters they carry, each once, with a named species each,
 ## one of them their companion, and the ones that fainted among them, each once.
 static func problem(state: GameState, slot: int) -> String:
-	var entry: Dictionary = state.stored(slot, Features.COMPANIONS)
+	var entry: Dictionary = state.stored(slot, CompanionFeature.ID)
 	if entry.is_empty():
 		return ""
 	var party: PackedStringArray = _carried_of(entry)

@@ -6,6 +6,8 @@ extends Feature
 ## revives them within DOWN_TICKS, and they go back to the world's spawn (SentToSpawn, #457); so do
 ## they at once when their command says they choose to (`Command.respawn`, #495).
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "knockdown"
 ## How near an ally has to be for a fallen player to be knocked down rather than sent back.
 const ALLY_RANGE: int = 200
 ## How long an ally stands beside a knocked-down player to revive them.
@@ -18,16 +20,16 @@ var _down: Dictionary[int, Vector2i] = {}
 var _movement: MovementFeature
 
 
-func id() -> int:
-	return Features.KNOCKDOWN
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	return [Features.MOVEMENT]
+func requires() -> Array[String]:
+	return [MovementFeature.ID]
 
 
 func start(state: GameState) -> void:
-	_movement = state.feature(Features.MOVEMENT) as MovementFeature
+	_movement = state.feature(MovementFeature.ID) as MovementFeature
 
 
 ## Each knocked-down player, in id order: revived once an ally has stood beside them long enough,

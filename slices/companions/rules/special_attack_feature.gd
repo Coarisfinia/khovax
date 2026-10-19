@@ -13,6 +13,9 @@ extends Feature
 ## The focused wild monster (`Command.focus`, #436) is struck first, when the companion could strike
 ## it; otherwise the one the auto attack would. Each strike raises SpecialStruck.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "specials"
+
 ## Each species' special's power, in thousandths of its strength (Fixed), and its cooldown in
 ## ticks, by species id, from the content data (the species slice reads them). A species without a
 ## special here has none.
@@ -30,12 +33,12 @@ func _init(
 	cooldowns = special_cooldowns
 
 
-func id() -> int:
-	return Features.SPECIALS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.COMPANIONS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID, CompanionFeature.ID]
 	return needed
 
 
@@ -60,8 +63,8 @@ func cooldown_left(slot: int) -> int:
 ## Fires the special of the companion of the player in `slot`, if they have one here that has a
 ## special and something next to it to strike: the `focus`, if the companion can strike it.
 func _fire(state: GameState, slot: int, focus: int) -> void:
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var companion_id: int = companions.companion_of(slot)
 	var species: String = companions.species_of(companion_id)
 	if companion_id == 0 or not powers.has(species):

@@ -319,7 +319,7 @@ func _check_wild_monster(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node_or_null("Instance/WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
-		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+		driver.state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	)
 	# The rolled one, and the beach's wounded Ombulumo (#448).
 	if view == null or feature == null or feature.monsters.size() != 2:
@@ -473,7 +473,7 @@ func _check_focus_picked(main: Node, driver: GameDriver) -> String:
 ## The knocked-down look (#488): a knocked-down player sits on the ground, and the revive ring
 ## stands around them, none of its marks up while nobody revives them.
 func _check_knocked_down_look(main: Node, driver: GameDriver) -> String:
-	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var knockdown: KnockdownFeature = driver.state.feature(KnockdownFeature.ID) as KnockdownFeature
 	var player: Entity = driver.state.player(0)
 	var view: PlayerView = main.get_node("Instance/Player") as PlayerView
 	var ring: ReviveRing = main.get_node("Instance/ReviveRing") as ReviveRing
@@ -483,7 +483,7 @@ func _check_knocked_down_look(main: Node, driver: GameDriver) -> String:
 	var sitting: bool = view.current_clip() == PlayerView.DOWN
 	var looks_down: bool = sitting and ring.filled_marks(player.id) == 0
 	# Back on their feet: as the rule does when they're revived or sent back.
-	(driver.state.feature(Features.MOVEMENT) as MovementFeature).hold(player.id, false)
+	(driver.state.feature(MovementFeature.ID) as MovementFeature).hold(player.id, false)
 	knockdown.entity_removed(driver.state, player.id)
 	view.show_state()
 	ring.show_state()
@@ -508,7 +508,7 @@ func _check_wild_monster_removed(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
 	var feature: WildMonsterFeature = (
-		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+		driver.state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	)
 	var lunged: String = _check_wild_monster_lunges(driver, view, feature)
 	if lunged.is_empty():
@@ -623,7 +623,7 @@ func _check_music(main: Node) -> String:
 func _check_fog(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: FogView = main.get_node("FogView") as FogView
-	var fog: FogFeature = driver.state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = driver.state.feature(FogFeature.ID) as FogFeature
 	var everything: Array = fog.visible[0]
 	var own: Vector2i = driver.state.player(0).tile
 	fog.visible[0] = [own]
@@ -700,7 +700,7 @@ func _fog_levels(view: FogView, own: Vector2i, far: Vector2i) -> String:
 	var dark: bool = gradual and fresh.brightness[far] == FogView.UNSEEN
 	dark = dark and cloud.fog_on(far) == unseen
 	# An area an event reveals (#177) lies under the light fog, though no one saw it.
-	var fog: FogFeature = view.driver.state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = view.driver.state.feature(FogFeature.ID) as FogFeature
 	var area: Array[Vector2i] = [far]
 	fog.reveal(view.driver.state, area)
 	fresh.show_state(10.0)
@@ -806,7 +806,7 @@ func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> S
 
 ## Why `far` in the instance shown, out of every ally's sight, isn't under light fog, or "".
 func _check_out_of_sight(view: FogView, far: Vector2i) -> String:
-	var fog: FogFeature = view.driver.state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = view.driver.state.feature(FogFeature.ID) as FogFeature
 	var everything: Array = fog.visible[0]
 	fog.visible[0] = [view.driver.state.player(0).tile]
 	view.show_state(10.0)
@@ -1064,7 +1064,7 @@ func _check_canopy_cutaway(main: Node) -> String:
 		monster.tile = _unseen_tile_of(state, "forest")
 		cutaway.show_state(10.0)
 		result = _cut_problem(cutaway, [], "with a wild monster in the fog")
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	if result.is_empty():
 		monster.tile = forest
 		hiding.hidden.append(monster.id)
@@ -1139,7 +1139,7 @@ func _drawn_cut(cutaway: CanopyCutaway, tile: Vector2i) -> float:
 
 ## A wild monster in `state` that an ally sees and that isn't hiding, or null.
 func _shown_wild_monster(state: GameState) -> Entity:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for entity_id: int in wild.monsters:
 		if WildMonsterView.is_shown(state, entity_id):
 			return state.entity(entity_id)

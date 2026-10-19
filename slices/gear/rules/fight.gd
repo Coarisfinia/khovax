@@ -12,10 +12,10 @@ const REACH: int = 2
 
 ## Whether the player in `slot` is in a fight in `state`.
 static func involves(state: GameState, slot: int) -> bool:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null:
 		return false
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var tiles: Array[Vector2i] = _tiles_of(state, slot)
 	for monster_id: int in wild.monsters:
 		var monster: Entity = state.entity(monster_id)
@@ -39,7 +39,7 @@ static func _near(tile: Vector2i, tiles: Array[Vector2i]) -> bool:
 
 ## Whether the ring of the player in `slot` is sealing wild monsters in.
 static func _sealing(state: GameState, slot: int) -> bool:
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var player: Entity = state.player(slot)
 	if domination == null or player == null or not domination.seals.has(player.id):
 		return false
@@ -52,7 +52,7 @@ static func _tiles_of(state: GameState, slot: int) -> Array[Vector2i]:
 	var player: Entity = state.player(slot)
 	if player != null:
 		tiles.append(player.tile)
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var companion: Entity = null
 	if companions != null:
 		companion = state.entity(companions.companion_of(slot))

@@ -45,7 +45,7 @@ const BASE_LEGEND: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n
 ## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
 const CROWN_KIND: int = 250
 ## The feature id _check_store_kept keeps its world store entry under: one no feature has.
-const STORE_FEATURE: int = 9_999
+const STORE_FEATURE: String = "test_store"
 ## The screen _check_roster lays the roster out for.
 const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 ## Where _check_roster's profile is saved, apart from the player's own: it spends a revive item.
@@ -187,7 +187,7 @@ func _check_sent_to_spawn() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
 	var first: Entity = world.player(0)
-	var wild: WildMonsterFeature = basic.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	first.tile = basic.entity(wild.monsters[0]).tile + Hex.DIRECTIONS[0]
 	var start: Vector2i = basic.region.starts[0]
 	for _tick: int in WildAttackFeature.STRIKE_TICKS * 60:
@@ -195,7 +195,7 @@ func _check_sent_to_spawn() -> String:
 		if world.player(0).id != first.id:
 			break
 	var back: Entity = world.player(0)
-	var health: HealthFeature = basic.feature(Features.HEALTH) as HealthFeature
+	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
 	if back.id == first.id or back.tile != start or world.instance_of(0) != world.start_name:
 		return "a player out of HP wasn't sent back onto their start: %s" % back.tile
 	if health.hp_of(basic, back.id) != HealthFeature.PLAYER_HP:
@@ -260,7 +260,7 @@ func _check_companions() -> String:
 	CompanionParty.bring(world, FlowSteps.parties([["tikazzir"]]))
 	world.step(_still())
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
 	var companion: Entity = forest.entity(companions.companion_of(0))
 	if companion == null or companions.companion_of(1) != 0:
 		return "only the player bringing a companion should be joined by one"
@@ -282,7 +282,7 @@ func _check_companions() -> String:
 			world.step(_moving(direction) if tick == 0 else _still())
 			if Hex.distance(companion.tile, world.player(0).tile) > reach + 1:
 				return "the companion fell more than a step behind its walking player"
-	var trails: TrailFeature = forest.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = forest.feature(TrailFeature.ID) as TrailFeature
 	for tile: Vector2i in trails.shared.tiles:
 		if trails.shared.tiles[tile] == companion.id:
 			return "the companion colored %s on the trail" % tile
@@ -300,20 +300,20 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 		return "the companion stopped its own player"
 	_idle_until(world, world.tick + MovementFeature.MOVE_TICKS)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var hurt: HealthFeature = forest.feature(Features.HEALTH) as HealthFeature
+	var hurt: HealthFeature = forest.feature(HealthFeature.ID) as HealthFeature
 	hurt.carry_in(forest, companion, { "damage": FOLLOWER_DAMAGE })
 	var hp: int = hurt.hp_of(forest, companion.id)
 	# The rest of the walk into the glade: onto the forest's exit and through it.
 	for direction: int in FlowSteps.INTO_GLADE.slice(1):
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
-	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	var left: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var followed: CompanionFeature = glade.feature(CompanionFeature.ID) as CompanionFeature
+	var left: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
 	if world.instance_of(0) != InstanceBlueprints.GLADE or followed.companion_of(0) == 0:
 		return "the companion didn't follow its player into the glade"
 	if left.companion_of(0) != 0 or forest.entity(companion.id) != null:
 		return "the companion stayed in the forest its player left"
-	var health: HealthFeature = glade.feature(Features.HEALTH) as HealthFeature
+	var health: HealthFeature = glade.feature(HealthFeature.ID) as HealthFeature
 	if health.hp_of(glade, followed.companion_of(0)) != hp:
 		return "the companion arrived in the glade with other HP than it left with: made anew"
 	var beside: Entity = glade.entity(followed.companion_of(0))
@@ -334,7 +334,7 @@ func _check_swaps() -> String:
 	var recorded: Replay = Replay.new(InstanceBlueprints.FOREST, 3)
 	recorded.begin(world)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
 	var joined: bool = _swap_in(world, recorded, Command.NO_SWAP) == 0
 	if not joined or companions.species_of(companions.companion_of(0)) != "tikazzir":
 		return "a player carrying two monsters wasn't joined by the first"
@@ -362,14 +362,14 @@ func _check_swap_kept(world: World, recorded: Replay) -> String:
 	if not restored.problem.is_empty() or not kept:
 		return "the chosen companion didn't go through the save data and back: " + restored.problem
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	forest.set_enabled(Features.COMPANION_SWAPS, false)
+	forest.set_enabled(CompanionSwapFeature.ID, false)
 	if _swap_in(world, null, 1) != 0 or CompanionParty.companion_in(world, 0) != _second:
 		return "a player swapped with swapping switched off"
-	forest.set_enabled(Features.COMPANION_SWAPS, true)
+	forest.set_enabled(CompanionSwapFeature.ID, true)
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
-	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var followed: CompanionFeature = glade.feature(CompanionFeature.ID) as CompanionFeature
 	if followed.species_of(followed.companion_of(0)) != "ombulumo":
 		return "the chosen companion didn't follow its player into the glade"
 	return ""
@@ -455,7 +455,7 @@ func _check_fainted_kept() -> String:
 	CompanionParty.bring(world, party)
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
 	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
 	companions.send_home(forest, companions.companion_of(0))
 	var _relieved: int = _swap_in(world, null, Command.NO_SWAP)
@@ -467,7 +467,7 @@ func _check_fainted_kept() -> String:
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
-	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var there: CompanionFeature = glade.feature(CompanionFeature.ID) as CompanionFeature
 	var toad_joined: bool = there.species_of(there.companion_of(0)) == "ombulumo"
 	if not toad_joined or not CompanionParty.has_fainted(
 		glade,
@@ -506,14 +506,14 @@ func _check_revived(world: World) -> String:
 	if not _revive_in(world).is_empty():
 		return "a revive item revived something with nothing fainted"
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
-	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var there: CompanionFeature = glade.feature(CompanionFeature.ID) as CompanionFeature
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var finch_joined: bool = there.species_of(there.companion_of(0)) == "tikazzir"
 	if not finch_joined or CompanionParty.has_fainted(forest, 0, _first):
 		return "the revived finch didn't join its player, or stayed fainted in the forest"
-	var toad_down: Dictionary = world.stored(0, Features.COMPANIONS).duplicate(true)
+	var toad_down: Dictionary = world.stored(0, CompanionFeature.ID).duplicate(true)
 	toad_down["fainted"] = [_second]
-	world.set_entry(0, Features.COMPANIONS, toad_down)
+	world.set_entry(0, CompanionFeature.ID, toad_down)
 	CompanionParty.bring(world, FlowSteps.parties([["tikazzir"]]))
 	if not CompanionParty.fainted_in(world, 0).is_empty():
 		return "a fainted monster no longer carried wasn't forgotten"
@@ -529,7 +529,7 @@ func _check_two_of_one_species() -> String:
 	CompanionParty.bring(world, FlowSteps.parties([["tikazzir", "tikazzir"]]))
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
 	if companions.short_id_of(companions.companion_of(0)) != _first:
 		return "a player carrying two Tikazzir wasn't joined by the first"
 	companions.send_home(forest, companions.companion_of(0))
@@ -625,7 +625,7 @@ func _roster_swaps(main: Node, roster: RosterHud, driver: GameDriver) -> String:
 ## The toad, once it joined and fainted (#597), shows on the roster as fainted, the finch not.
 func _roster_fainted(roster: RosterHud, driver: GameDriver) -> String:
 	var _joined: int = _swap_in(driver.world, null, Command.NO_SWAP)
-	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
 	if companions.companion_of(0) == 0:
 		return "the toad didn't join its player once swapped to"
 	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
@@ -1438,7 +1438,7 @@ class Felling:
 	var felled: int = 0
 
 	func step(state: GameState, _commands: Array[Command]) -> void:
-		var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 		for monster: int in wild.monsters.duplicate():
 			if wild.species_of(monster) == "tikazzir":
 				wild.wound(state, monster, wild.hp_of(monster), true)

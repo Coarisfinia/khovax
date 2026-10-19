@@ -82,10 +82,10 @@ func run(tree: SceneTree) -> String:
 ## player walks onto the lookout and a chest.
 func _play(world: World) -> String:
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var wild: WildMonsterFeature = forest.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = forest.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var count: int = wild.monsters.size()
 	var tile: Vector2i = world.player(0).tile
-	var domination: DominationFeature = forest.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = forest.feature(DominationFeature.ID) as DominationFeature
 	for next: Vector2i in RING:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
@@ -106,8 +106,8 @@ func _play(world: World) -> String:
 	for goal: Vector2i in goals:
 		for direction: int in FlowSteps.shortest_path(glade, world.player(0).tile, goal):
 			_walk_in(world, direction)
-	var triggers: TriggerFeature = glade.feature(Features.TRIGGERS) as TriggerFeature
-	var chests: ChestFeature = glade.feature(Features.CHESTS) as ChestFeature
+	var triggers: TriggerFeature = glade.feature(TriggerFeature.ID) as TriggerFeature
+	var chests: ChestFeature = glade.feature(ChestFeature.ID) as ChestFeature
 	if triggers.fired.is_empty() or chests.chests.size() == glade.region.chests.size():
 		return "the walk in the glade didn't reach its lookout and a chest"
 	return ""
@@ -290,7 +290,7 @@ func _settle(world: World) -> void:
 	while sealing:
 		sealing = false
 		for each: GameState in world.instances.values():
-			var feature: Feature = each.feature(Features.DOMINATION)
+			var feature: Feature = each.feature(DominationFeature.ID)
 			sealing = sealing or not (feature as DominationFeature).seals.is_empty()
 		if sealing:
 			world.step(FlowSteps.command(Command.NO_MOVE))
@@ -299,7 +299,7 @@ func _settle(world: World) -> void:
 ## The player came back with their companion, or with it still back in their keeping after it fell
 ## (#456), and the resumed session's recording plays back from the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
-	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
 	var fainted: bool = CompanionParty.has_fainted(
 		driver.state,
 		0,
@@ -480,7 +480,7 @@ static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
 ## the seam (#191).
 static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var fog: FogFeature = forest.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = forest.feature(FogFeature.ID) as FogFeature
 	var glade_at: Vector2i = world.offset(InstanceBlueprints.GLADE)
 	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.FOREST)
 	var seen: Dictionary[Vector2i, bool] = {}
@@ -553,7 +553,7 @@ func _walk_in(world: World, direction: int) -> void:
 ## Remembers every tile player 0 sees in `world` now, per instance, as FogView does.
 func _remember(world: World) -> void:
 	for instance_name: String in world.instances:
-		var fog: FogFeature = world.instances[instance_name].feature(Features.FOG) as FogFeature
+		var fog: FogFeature = world.instances[instance_name].feature(FogFeature.ID) as FogFeature
 		var seen: Dictionary[Vector2i, bool] = _explored.tiles_of(
 			instance_name,
 			world.generation(instance_name),

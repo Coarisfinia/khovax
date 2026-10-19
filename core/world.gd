@@ -196,13 +196,13 @@ func _hand_next_door(instance_name: String, state: GameState) -> void:
 ## Sets the entry of the feature `feature_id` in the world store of the player in `slot` to
 ## `values` (#724), in the world and every instance it has loaded: for what a session's start
 ## decides, like who the players bring (#53), which the slices set through their own rules.
-func set_entry(slot: int, feature_id: int, values: Dictionary) -> void:
+func set_entry(slot: int, feature_id: String, values: Dictionary) -> void:
 	stores[slot].entries[feature_id] = values.duplicate(true)
 	_hand_stores()
 
 
 ## The entry of the feature `feature_id` in the world store of the player in `slot`, to read only.
-func stored(slot: int, feature_id: int) -> Dictionary:
+func stored(slot: int, feature_id: String) -> Dictionary:
 	return stores[slot].stored(feature_id)
 
 
@@ -481,7 +481,7 @@ func _bring_followers(
 	ids.assign(leaders.keys())
 	ids.sort()
 	for follower_id: int in ids:
-		var carried: Dictionary[int, Dictionary] = {}
+		var carried: Dictionary[String, Dictionary] = {}
 		for each: Feature in left.features:
 			var values: Dictionary = each.carry_out(left, follower_id)
 			if not values.is_empty():
@@ -490,7 +490,7 @@ func _bring_followers(
 		# One whose leading feature the instance next door lacks goes, as every companion did before
 		# #716: it would arrive as no one's there, and staying would leave it behind.
 		var welcome: bool = true
-		for feature_id: int in leaders[follower_id]:
+		for feature_id: String in leaders[follower_id]:
 			welcome = welcome and target.feature(feature_id) != null
 		if not welcome:
 			continue
