@@ -32,6 +32,10 @@ static func load_from(path: String = PATH) -> Settings:
 	return settings
 
 
-## Saves the settings to `path`; returns why it couldn't, or "".
+## Saves the settings to `path`, and syncs them into the browser's storage on the web; returns why
+## it couldn't, or "".
 func save(path: String = PATH) -> String:
-	return SaveStore.write_save(path, JSON.stringify(chosen, "\t", true))
+	var problem: String = SaveStore.write_save(path, JSON.stringify(chosen, "\t", true))
+	if problem.is_empty():
+		WebStorage.sync()
+	return problem

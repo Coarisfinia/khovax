@@ -25,7 +25,7 @@ var keeper: ProfileKeeper
 func _enter_tree() -> void:
 	if keeper != null:
 		return
-	SaveStore.keep_web_storage()
+	WebStorage.keep()
 	var profile: Profile = ProfileStore.load_from(save_path)
 	if profile.loaded_generation > 0:
 		push_warning("the newest profile saves were damaged; loaded the one %d back" % [

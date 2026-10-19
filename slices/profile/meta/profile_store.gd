@@ -22,6 +22,10 @@ static func load_from(path: String = PATH) -> Profile:
 	return profile
 
 
-## Saves the profile; returns why it couldn't, or "".
+## Saves the profile, and syncs it into the browser's storage on the web; returns why it couldn't,
+## or "".
 static func save(profile: Profile, path: String = PATH) -> String:
-	return SaveStore.write_save(path, ProfileSave.to_text(profile))
+	var problem: String = SaveStore.write_save(path, ProfileSave.to_text(profile))
+	if problem.is_empty():
+		WebStorage.sync()
+	return problem
