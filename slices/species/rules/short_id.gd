@@ -27,6 +27,29 @@ static func stand_in(number: int) -> String:
 	return drawn(Rng.new(number, STAND_IN_STREAM))
 
 
+## The short id `short_id` as a whole number from 1 (#771), for a command, which holds whole
+## numbers only: its characters' places in the alphabet as the digits of a number in its base, plus
+## one, so it's never 0. `of_code` turns it back.
+static func code(short_id: String) -> int:
+	var number: int = 0
+	for i: int in short_id.length():
+		number = number * ALPHABET.length() + ALPHABET.find(short_id[i])
+	return number + 1
+
+
+## The short id whose `code` is `number`, or "" when no short id has it.
+static func of_code(number: int) -> String:
+	var rest: int = number - 1
+	var id: String = ""
+	for _i: int in LENGTH:
+		if rest < 0:
+			return ""
+		var place: int = Fixed.div_floor(rest, ALPHABET.length())
+		id = ALPHABET[rest - place * ALPHABET.length()] + id
+		rest = place
+	return id if rest == 0 else ""
+
+
 ## Whether `value` is a short id: text of LENGTH characters of the alphabet.
 static func is_valid(value: Variant) -> bool:
 	if not value is String:

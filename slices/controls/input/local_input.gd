@@ -40,9 +40,9 @@ var _respawn_pressed: bool = false
 var _swap_to: int = Command.NO_SWAP
 ## The code of the dialog answer chosen since the last command (#635), or Command.NO_ANSWER.
 var _answer: int = Command.NO_ANSWER
-## The codes of the territories this player's finished territory quests hand over (#638), waiting
-## for the next commands, one each.
-var _handing: Array[int] = []
+## The requests from this player's profile's outbox (#771), waiting for the next commands, one
+## each.
+var _requests: Array[OutboxEntry] = []
 ## Whether revive_monster was pressed since the last command (#656).
 var _revive_pressed: bool = false
 ## The code of the gear in the player's trap slot (#692, SpikesFeature.code_of), or
@@ -81,10 +81,10 @@ func choose_answer(code: int) -> void:
 	_answer = code
 
 
-## Hands the territory with the code `code` (Territory.code) over in the next command that hands
-## none over yet, as finishing its territory quest does (#638).
-func hand_over(code: int) -> void:
-	_handing.append(code)
+## Sends the request `request` from the profile's outbox (#771) in the next command that carries
+## none yet, like the hand-over of a finished territory quest (#638).
+func send(request: OutboxEntry) -> void:
+	_requests.append(request)
 
 
 func command(state: GameState) -> Command:
@@ -105,7 +105,7 @@ func command(state: GameState) -> Command:
 		var standing: Command = Command.new()
 		# The dialog screen's answers are the one input a dialog lets through.
 		standing.answer = answering
-		standing.hand_over = _next_hand_over()
+		_send_next(standing)
 		standing.trap = trap
 		return standing
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
@@ -123,20 +123,17 @@ func command(state: GameState) -> Command:
 	)
 	given.swap = swap
 	given.answer = answering
-	given.hand_over = _next_hand_over()
+	_send_next(given)
 	given.revive = _reviving()
 	given.trap = trap
 	return given
 
 
-## The code of the next territory waiting to be handed over, taken off the queue, or
-## Command.NO_HAND_OVER.
-func _next_hand_over() -> int:
-	if _handing.is_empty():
-		return Command.NO_HAND_OVER
-	var code: int = _handing[0]
-	_handing.remove_at(0)
-	return code
+## Puts the next request waiting to be sent into `carrier`, taken off the queue, if there is one.
+func _send_next(carrier: Command) -> void:
+	if not _requests.is_empty():
+		var next: OutboxEntry = _requests.pop_front()
+		next.fill(carrier)
 
 
 ## Whether the next command uses a revive item: one was pressed since the last command, and this
