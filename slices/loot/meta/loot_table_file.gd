@@ -59,6 +59,6 @@ static func _read_entries(table: LootTable, entries: Array) -> String:
 		table.maxes.append(high)
 	if total != Fixed.ONE:
 		return "the chances add up to %d thousandths, not %d" % [total, Fixed.ONE]
-	if blanks != (0 if table.kind == LootTable.INSTANCE else 1):
-		return "a species or harvest table has exactly one blank, an instance table none"
+	if blanks != (1 if table.kind in [LootTable.SPECIES, LootTable.HARVEST] else 0):
+		return "a species or harvest table has exactly one blank, an instance or chest table none"
 	return ""

@@ -2,18 +2,20 @@ class_name ChestFeature
 extends Feature
 ## Treasure chests (#124): placed by hand in region pieces (`c`), opened by the first player who
 ## walks onto one. An opened chest bursts into loot and **every player in the instance gets their
-## own
-## roll** on the instance's loot table (owner, #124), not only the one who opened it. The rolls
-## come from the feature's own random stream (#32), so a replay opens the same chests with the
-## same loot; a ChestOpened event says who got what, and each player's loot goes into their own
-## profile (#74). Loot on the ground (#203) is found the same way, by the first player to step on
-## it, with every player rolling their own; a LootFound event says so, as it's no chest.
+## own roll** on the instance's chest table (owner, #124), not only the one who opened it: crafting
+## supplies and basic gear (#694). The rolls come from the feature's own random stream (#32), so a
+## replay opens the same chests with the same loot; a ChestOpened event says who got what, and each
+## player's loot goes into their own profile (#74). Loot on the ground (#203) is found the same way,
+## by the first player to step on it, with every player rolling their own on the instance's loot
+## table (#90), which holds no gear; a LootFound event says so, as it's no chest.
 
 ## How many times each player rolls on the table when a chest opens.
 const ROLLS_PER_PLAYER: int = 1
 
-## The instance's loot table (#90), which the chests roll on.
+## The instance's chest table (#694), which the chests roll on.
 var table: LootTable
+## The instance's loot table (#90), which the loot on the ground rolls on.
+var ground_table: LootTable
 ## Every chest still closed, in the region's order.
 var chests: Array[Vector2i] = []
 ## Every loot spot still lying on the ground, in the region's order.
@@ -21,8 +23,9 @@ var loot_spots: Array[Vector2i] = []
 var _rng: Rng
 
 
-func _init(instance_table: LootTable) -> void:
-	table = instance_table
+func _init(chest_table: LootTable, instance_table: LootTable) -> void:
+	table = chest_table
+	ground_table = instance_table
 
 
 func id() -> int:
@@ -100,19 +103,21 @@ func load_values(state: GameState, values: DataReader) -> void:
 
 ## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event.
 func _open(state: GameState, tile: Vector2i, opener_id: int) -> ChestOpened:
-	return ChestOpened.new(tile, opener_id, _roll_for_players(state))
+	return ChestOpened.new(tile, opener_id, _roll_for_players(state, table))
 
 
 ## Finds the loot on `tile` for the player `finder_id`: every player's roll from it, as the event.
 func _find(state: GameState, tile: Vector2i, finder_id: int) -> LootFound:
-	return LootFound.new(tile, finder_id, _roll_for_players(state))
+	return LootFound.new(tile, finder_id, _roll_for_players(state, ground_table))
 
 
-## Every player's loot from one chest, by slot, in slot order so the stream rolls the same way.
-func _roll_for_players(state: GameState) -> Dictionary[int, Dictionary]:
+## Every player's loot from one roll on `rolled`, by slot, in slot order so the stream rolls the
+## same
+## way.
+func _roll_for_players(state: GameState, rolled: LootTable) -> Dictionary[int, Dictionary]:
 	var loot: Dictionary[int, Dictionary] = {}
 	for slot: int in GameState.MAX_PLAYERS:
 		if state.player(slot) == null:
 			continue
-		loot[slot] = table.roll_times(_rng, ROLLS_PER_PLAYER, table)
+		loot[slot] = rolled.roll_times(_rng, ROLLS_PER_PLAYER, rolled)
 	return loot

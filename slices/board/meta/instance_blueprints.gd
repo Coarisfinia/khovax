@@ -5,7 +5,8 @@ extends RefCounted
 ## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, unless the
 ## blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
 ## blueprint switches game rules on and off by listing them, and they can change during a session.
-## One with an instance loot table (#90) has treasure chests too, rolling on it (#124).
+## One with a chest loot table has treasure chests too, rolling on it (#124, #694), and the loot on
+## its ground rolls on its instance loot table (#90, #203).
 
 ## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338)
 ## with its attacks and swapping it for another carried monster (#55), a trail per player, the wild
@@ -37,9 +38,12 @@ const GLADE_PURIFIED: String = "glade_purified"
 ## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
 ## Every instance in the web of exits is one, so an exit always leads out the same way (#120).
 const UNTURNED: Array[String] = [GLADE, ARENA, FOREST, CASTLE, OUTPOST, MOUNTAIN_PASS]
-## Each blueprint's instance loot table (the loot slice's data/loot_tables/), by blueprint: what its
-## chests hold.
+## Each blueprint's instance loot table (the loot slice's data/loot_tables/), by blueprint: what a
+## blank and the loot on its ground give.
 const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
+## Each blueprint's chest loot table (the loot slice's data/loot_tables/), by blueprint: what its
+## chests hold (#694). Every one also has an instance loot table, for the loot on its ground.
+const CHEST_TABLES: Dictionary[String, String] = { GLADE: "glade_chest" }
 ## Which species live in each blueprint, and how likely each is, for the wild monster spots its
 ## region doesn't name (#133): species id to weight.
 const WILD_SPECIES: Dictionary[String, Dictionary] = {
@@ -114,12 +118,13 @@ static func create(
 		FogFeature.new(),
 	]
 	ordered.append_array(_for_region(region))
-	if LOOT_TABLES.has(instance_name):
-		var table: LootTable = _loot_table(LOOT_TABLES[instance_name])
-		if table == null:
-			push_error("instance %s's loot table doesn't load" % instance_name)
+	if CHEST_TABLES.has(instance_name):
+		var chest_table: LootTable = _loot_table(CHEST_TABLES[instance_name], LootTable.CHEST)
+		var ground_table: LootTable = _blank_table(instance_name)
+		if chest_table == null or ground_table == null:
+			push_error("instance %s's chest or instance loot table doesn't load" % instance_name)
 			return null
-		ordered.append(ChestFeature.new(table))
+		ordered.append(ChestFeature.new(chest_table, ground_table))
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
 	# After the companions, so a swap can't pick a monster that fainted (#597).
@@ -354,14 +359,16 @@ static func _species_tables(directory: String, kind: String) -> Dictionary[Strin
 
 ## The named blueprint's instance loot table, which a species table's blank rolls on, or null.
 static func _blank_table(instance_name: String) -> LootTable:
-	return _loot_table(LOOT_TABLES[instance_name]) if LOOT_TABLES.has(instance_name) else null
+	if not LOOT_TABLES.has(instance_name):
+		return null
+	return _loot_table(LOOT_TABLES[instance_name], LootTable.INSTANCE)
 
 
-## The instance loot table with this id, or null when the tables don't load or it isn't one.
-static func _loot_table(table_id: String) -> LootTable:
+## The loot table with this id and `kind`, or null when the tables don't load or it isn't one.
+static func _loot_table(table_id: String, kind: String) -> LootTable:
 	var content: LootData = LootContent.load_loot_tables()
 	var table: LootTable = content.loot_tables.get(table_id)
-	if not content.problem.is_empty() or table == null or table.kind != LootTable.INSTANCE:
+	if not content.problem.is_empty() or table == null or table.kind != kind:
 		return null
 	return table
 

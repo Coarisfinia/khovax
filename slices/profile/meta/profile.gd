@@ -90,6 +90,8 @@ func apply(result: Gain) -> String:
 		_count_fact(QuestStep.EMITTED, event)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
+	for gear_id: String in result.gear:
+		gear.owned[gear_id] = gear.owned.get(gear_id, 0) + result.gear[gear_id]
 	return ""
 
 
@@ -242,7 +244,7 @@ func _started(id: String) -> bool:
 
 
 ## Why `result` can't be taken over (an empty species, place, piece, instance, answer or world
-## event, a nameless or negative material, or more than the save can hold), or "".
+## event, a nameless or negative material or gear, or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -261,10 +263,21 @@ func _result_problem(result: Gain) -> String:
 	for why: String in named:
 		if named[why].has(""):
 			return why
-	for material: String in result.materials:
-		var count: int = result.materials[material]
-		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:
-			return "material %s has an invalid count" % material
+	var counted: String = _count_problem("material", result.materials, materials)
+	return counted if not counted.is_empty() else _count_problem("gear", result.gear, gear.owned)
+
+
+## Why adding the `found` counts, by id, to the `held` ones can't be done, naming each as `what`,
+## or "".
+static func _count_problem(
+		what: String,
+		found: Dictionary[String, int],
+		held: Dictionary[String, int],
+) -> String:
+	for id: String in found:
+		var count: int = found[id]
+		if id.is_empty() or count < 0 or held.get(id, 0) + count > MAX_NUMBER:
+			return "%s %s has an invalid count" % [what, id]
 	return ""
 
 
