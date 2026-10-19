@@ -2,8 +2,8 @@ extends RefCounted
 ## Content flow (#72): the game's content data loads, and holds together where a schema can't
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; every species has a name for the
-## player (#351), one invented word (#717); and broken entries are refused. Loot tables (#90) load, roll the same for the
-## same stream, and a blank rolls on the instance's table.
+## player (#351), one invented word (#717); and broken entries are refused. Loot tables (#90)
+## load, roll the same for the same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
