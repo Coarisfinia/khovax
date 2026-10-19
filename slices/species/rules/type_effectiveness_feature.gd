@@ -56,16 +56,41 @@ static func scaled(
 	special: bool,
 	defender_species: String,
 ) -> int:
-	var chart: TypeEffectivenessFeature = (
-		state.feature(Features.TYPE_EFFECTIVENESS) as TypeEffectivenessFeature
-	)
-	if chart == null or not chart.enabled:
+	var chart: TypeEffectivenessFeature = _chart_on(state)
+	if chart == null:
 		return maxi(damage, 1)
-	var strike_types: Dictionary[String, String] = (
-		chart.special_types if special else chart.auto_types
-	)
-	var strike_type: String = strike_types.get(attacker_species, "")
+	var strike_type: String = chart._strike_type(attacker_species, special)
 	return maxi(Fixed.scale(damage, chart.factor(strike_type, defender_species)), 1)
+
+
+## Whether a strike by a monster of `attacker_species`, its special or its auto attack, is strong
+## against each type on the chart of one of `defender_species` (weak otherwise), in `state`'s
+## instance, for the hit's look (#701): none while the instance has type effectiveness off.
+static func strong_against(
+	state: GameState,
+	attacker_species: String,
+	special: bool,
+	defender_species: String,
+) -> Array[bool]:
+	var chart: TypeEffectivenessFeature = _chart_on(state)
+	if chart == null:
+		var none: Array[bool] = []
+		return none
+	return chart.strong_types(chart._strike_type(attacker_species, special), defender_species)
+
+
+## Whether a strike of `strike_type` is strong against each of `defender_species`' types on the
+## chart, in their order; weak otherwise. A strike off the chart is neither against any.
+func strong_types(strike_type: String, defender_species: String) -> Array[bool]:
+	var strong: Array[bool] = []
+	var family: int = TypeChart.family_of(strike_type)
+	if family < 0:
+		return strong
+	for defender_type: String in types.get(defender_species, PackedStringArray()):
+		var against: int = TypeChart.family_of(defender_type)
+		if against >= 0:
+			strong.append(STRONG[family][against])
+	return strong
 
 
 ## How hard a strike of `strike_type` hits a monster of `defender_species`, in thousandths (Fixed):
@@ -93,3 +118,17 @@ func factor(strike_type: String, defender_species: String) -> int:
 ## Whether `type`, of the family `family`, is its Greater type rather than its Lesser one.
 static func _is_greater(type: String, family: int) -> bool:
 	return TypeChart.FAMILIES[family][1] == type
+
+
+## The type chart in `state`'s instance while it's on there; null otherwise.
+static func _chart_on(state: GameState) -> TypeEffectivenessFeature:
+	var chart: TypeEffectivenessFeature = (
+		state.feature(Features.TYPE_EFFECTIVENESS) as TypeEffectivenessFeature
+	)
+	return chart if chart != null and chart.enabled else null
+
+
+## The type of the special or the auto attack of `attacker_species`; "" when it has none.
+func _strike_type(attacker_species: String, special: bool) -> String:
+	var strike_types: Dictionary[String, String] = special_types if special else auto_types
+	return strike_types.get(attacker_species, "")

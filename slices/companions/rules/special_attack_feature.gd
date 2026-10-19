@@ -78,7 +78,10 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
 	wild.wound(state, target, damage, true)
 	_cooling[slot] = cooldowns.get(species, 1)
-	state.events.append(SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target)))
+	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
+	state.events.append(
+		SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target), strong),
+	)
 
 
 func hash_values() -> Array[int]:

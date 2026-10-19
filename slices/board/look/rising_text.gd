@@ -27,11 +27,15 @@ static func make(tile: Vector2i, text: String) -> Label3D:
 	return label
 
 
-## Lets `label` rise `distance` while it fades over `seconds`; then `done` is called with it.
+## Lets `label` rise `distance` while it fades over `seconds`, with the sprites on it (a strike's
+## type marks, #701); then `done` is called with it.
 static func rise(label: Label3D, seconds: float, distance: float, done: Callable) -> void:
 	var tween: Tween = label.create_tween().set_parallel()
 	var top: Vector3 = label.position + Vector3(0.0, distance, 0.0)
 	var _up: PropertyTweener = tween.tween_property(label, "position", top, seconds)
 	var _fade: PropertyTweener = tween.tween_property(label, "modulate:a", 0.0, seconds)
 	var _ink: PropertyTweener = tween.tween_property(label, "outline_modulate:a", 0.0, seconds)
+	for child: Node in label.get_children():
+		if child is SpriteBase3D:
+			var _sprite: PropertyTweener = tween.tween_property(child, "modulate:a", 0.0, seconds)
 	var _done: CallbackTweener = tween.chain().tween_callback(done.bind(label))
