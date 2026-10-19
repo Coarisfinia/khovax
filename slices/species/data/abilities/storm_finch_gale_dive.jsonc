@@ -3,7 +3,7 @@
 	"id": "storm_finch_gale_dive",
 	"kind": "special",
 	"name": "Gale Dive",
-	"description": "The Tikazzir folds its wings and drops on its target in a gust.",
+	"description": "The ${MONSTER:storm_finch} folds its wings and drops on its target in a gust.",
 	"power": 3000,
 	"cooldown_seconds": 8,
 	"strike_type": "breeze",

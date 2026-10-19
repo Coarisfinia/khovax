@@ -4,5 +4,5 @@
 	"id": "moss_toad_damp_hide",
 	"kind": "self_passive",
 	"name": "Damp Hide",
-	"description": "The Ombulumo's wet skin shrugs off part of every hit."
+	"description": "The ${MONSTER:moss_toad}'s wet skin shrugs off part of every hit."
 }

@@ -6,8 +6,9 @@ extends Control
 ## simulation in this machine's player's next command (LocalInput.choose_answer), which raises it
 ## as DialogAnswered; reading on changes nothing in the game. Controller, touch and keyboard all
 ## work: the buttons take the focus, so the d-pad or the stick moves it and A (or Enter) confirms.
-## While a dialog is open the player stands. It eases in and out, never snaps, and its text grows
-## with the screen. Its layout lives in dialog_screen.tscn (#437).
+## While a dialog is open the player stands. Its text tags show the names they stand for (#733).
+## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
+## dialog_screen.tscn (#437).
 
 ## The read-on button's words: on to the next line, or the end of the dialog.
 const READ_ON_TEXT: String = "Continue"
@@ -107,8 +108,8 @@ func lay_out(screen: Vector2) -> void:
 func _show_line(index: int) -> void:
 	line_index = index
 	var line: DialogLine = dialog.lines[index]
-	_speaker.text = dialog.speaker
-	_line.text = line.text
+	_speaker.text = TextTags.shown(dialog.speaker)
+	_line.text = TextTags.shown(line.text)
 	# The old buttons leave at once, so the card never shows both lines' buttons.
 	for old: Button in _buttons():
 		_choices.remove_child(old)
@@ -117,7 +118,7 @@ func _show_line(index: int) -> void:
 		var last: bool = dialog.after(index) < 0
 		_add_button(END_TEXT if last else READ_ON_TEXT, _read_on)
 	for answer: DialogAnswer in line.answers:
-		_add_button(answer.text, _answer.bind(answer.id))
+		_add_button(TextTags.shown(answer.text), _answer.bind(answer.id))
 	_size_buttons()
 	_buttons()[0].grab_focus()
 

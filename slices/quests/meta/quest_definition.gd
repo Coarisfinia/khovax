@@ -117,9 +117,10 @@ func _check_links() -> String:
 	return ""
 
 
-## Its name as the player reads it: with its path mark in words after it (#471).
+## Its name as the player reads it: its text tags showing the names they stand for (#733), and its
+## path mark in words after it (#471).
 func shown_name() -> String:
-	return PathMark.tagged(name, path)
+	return PathMark.tagged(TextTags.shown(name), path)
 
 
 ## The step at `index`, or null past the last one (a saved step whose quest was cut short since).
