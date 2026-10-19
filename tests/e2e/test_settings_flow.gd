@@ -345,7 +345,8 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 
 
 ## During a fight, a wild monster beside the player, the slots' buttons still show their gear but
-## don't change it, and a line says why; once it's gone, they change it again.
+## don't change it, and a line says why; a wild monster enraged anywhere in the instance is a
+## fight too.
 func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> String:
 	var state: GameState = FlowGame.driver(main).state
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
@@ -367,6 +368,11 @@ func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> Strin
 	fighter.tile = tile
 	if not locked or panel.shown != expected:
 		return "during a fight, the gear changed or no line says why: %s" % [panel.shown]
+	# Back where it stood but enraged (owner, 1+3 on #690): still a fight, wherever it is.
+	wild.enrage(fighter.id, 0)
+	panel.refresh()
+	if not panel.buttons["ward"].disabled:
+		return "an enraged wild monster in the instance isn't a fight"
 	return ""
 
 
