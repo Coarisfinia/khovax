@@ -81,7 +81,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			player = null
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
-		# One left behind in an instance (#717) may have fainted elsewhere since.
+		# One left behind in an instance (#716) may have fainted elsewhere since.
 		gone = gone or state.has_fainted(owners[companion_id], _species[companion_id])
 		if gone or state.companions[player.slot] != _species[companion_id]:
 			state.remove_entity(companion_id)
