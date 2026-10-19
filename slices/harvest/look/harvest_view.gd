@@ -20,18 +20,24 @@ func _ready() -> void:
 
 
 ## The driver also passes on the events of an instance the player just left: a felled monster
-## that isn't lying on its tile in the instance shown isn't this one's.
+## that isn't lying fainted on its tile in the instance shown isn't this one's.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if input == null:
 		return
 	for event: RefCounted in events:
 		var harvested: Harvested = event as Harvested
 		var lying: Entity = driver.state.entity(harvested.monster_id) if harvested != null else null
-		if lying == null or lying.tile != harvested.tile:
+		if lying == null or lying.tile != harvested.tile or not _fainted(harvested.monster_id):
 			continue
 		var loot: Dictionary = harvested.loot.get(input.slot, {})
 		if not loot.is_empty() and FogView.ally_sees(driver.state, harvested.tile):
 			_burst(harvested.tile, ChestView.loot_text(loot))
+
+
+## Whether the entity `monster_id` lies fainted in the instance shown.
+func _fainted(monster_id: int) -> bool:
+	var wild: WildMonsterFeature = driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	return wild != null and wild.is_fainted(monster_id)
 
 
 ## Shows `text` on `tile` once the special's damage there has faded, then lets it rise and fade.
