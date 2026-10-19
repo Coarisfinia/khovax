@@ -17,6 +17,18 @@ const BASIC_RING: Array[Vector2i] = [
 ]
 ## Where the basic instance's wounded moss toad waits on the beach (#448).
 const BEACH_TOAD: Vector2i = Vector2i(-3, 2)
+## The walk from the forest's start, at (-2, 3), southeast out through its way back into the glade,
+## for flows that walk from one instance into another and back: the playground has no exits (#712).
+const INTO_GLADE: Array[int] = [5, 5, 5]
+## The forest's exit that walk leaves by, and where it lands in the glade, right across from it.
+const FOREST_EXIT: Vector2i = Vector2i(-2, 5)
+const GLADE_ARRIVAL: Vector2i = Vector2i(2, -5)
+## The direction back out of the glade from there, into the forest.
+const OUT_OF_GLADE: int = 2
+## The walk from the glade's start, at (0, 0), out through its north exit into the forest: a step
+## northeast, then northwest onto the exit on (1, -5) and through it. Southeast leads back.
+const INTO_FOREST: Array[int] = [1, 2, 2, 2, 2, 2]
+const OUT_OF_FOREST: int = 5
 
 
 ## Takes the beach's wounded toad out of `state`, for flows whose walks cross the beach and aren't

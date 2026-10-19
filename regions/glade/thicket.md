@@ -1,15 +1,21 @@
 # Glade: thicket
 
-A thicket in the glade (#57): a wild monster in the middle with room to walk a ring around it, rock at two corners, a boulder and shrubs (#205) on its west side, the two shrubs turned apart by hand (#231), forest (#116) along its east and south sides and loot on the ground next to the monster (#203). It joins the glade in the middle of its east and west edges, so its neighbours meet it along the whole edge (#689).
+A thicket in the glade (#57): a wild monster in the middle with room to walk a ring around it, rock at its corners, boulders and shrubs (#205) on its west side, the shrubs turned apart by hand (#231), forest (#116) along its east and south sides and loot on the ground next to the monster (#203). A disc of radius 5 (#712), it joins the glade in the middle of its east and west edges, so its neighbours meet it along the whole edge (#689).
 
 ## Tiles
 
 ```
-  ^ . .
- 🪨 . . j
-🌳 . m . 🌲
- k . 💰 🌲
-  🌲 🌿 ^
+     ^ . . . . ^
+    . . . . . 🌲 .
+   . 🪨 . . . . 🌲 j
+  . 🌳 . . . . . 🌲 .
+ . . . . . . . . 🌲 .
+^ 🌳 . . . m . . . 🌲 ^
+ . 🪨 . . 💰 . . . 🌲 .
+  . 🌿 . . . . . 🌲 .
+   k . . . . . 🌲 .
+    . 🌲 . . 🌲 🌲 .
+     ^ 🌲 🌲 🌿 . ^
 ```
 
 ## Legend

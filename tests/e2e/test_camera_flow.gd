@@ -122,16 +122,18 @@ func _check_under_moved_parent() -> String:
 	return ""
 
 
-## Walking through an exit has no cut (#189): east out of the basic instance into the glade, a
-## while there, and west back. Frame by frame, the camera and the player's figure move in world
-## space without a jump, the instance's views move to the glade's place in the world, and the
-## neighbours stay where they lie in it.
+## Walking through an exit has no cut (#189): southeast out of the forest into the glade, a while
+## there, and northwest back. Frame by frame, the camera and the player's figure move in world space
+## without a jump, the instance's views move to the glade's place in the world, and the neighbours
+## stay where they lie in it.
 func _check_seamless_crossing() -> String:
 	_main.transform = Transform3D.IDENTITY
 	var driver: GameDriver = _main.get_node("Driver") as GameDriver
+	# The playground the flows start in has no exits (#712).
+	driver.instance = InstanceBlueprints.FOREST
 	driver.start(3)
 	var source: CrossingSource = CrossingSource.new()
-	source.basic = driver.state
+	source.forest = driver.state
 	driver.sources = [source]
 	_show_frame(driver)
 	var visited: Array[String] = [driver.local_instance_name()]
@@ -146,9 +148,9 @@ func _check_seamless_crossing() -> String:
 			if not placed.is_empty():
 				return placed
 	var expected: Array[String] = [
-		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
 		InstanceBlueprints.GLADE,
-		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
 	]
 	if visited != expected:
 		return "the walk didn't cross into the glade and back: %s" % [visited]
@@ -173,8 +175,8 @@ func _show_frame_checked(driver: GameDriver) -> String:
 	return ""
 
 
-## In the glade, its views lie at its place in the world, and the basic instance's ground beside
-## it at the world's origin, where it was drawn before the crossing. The cloud reads its fog in the
+## In the glade, its views lie at its place in the world, and the forest's ground beside it at
+## the world's origin, where it was drawn before the crossing. The cloud reads its fog in the
 ## glade's own coordinates (#209): its shader is handed the cloud's transform within the instance,
 ## not its place in the world, where the fog map would be read off by the glade's place.
 func _check_glade_placed(driver: GameDriver) -> String:
@@ -186,9 +188,9 @@ func _check_glade_placed(driver: GameDriver) -> String:
 			glade,
 		]
 	var neighbours: NeighbourView = _main.get_node("Instance/NeighbourView") as NeighbourView
-	var basic: HexGrid = neighbours.grids.get(InstanceBlueprints.BASIC)
-	if basic == null or not basic.global_position.is_equal_approx(Vector3.ZERO):
-		return "in the glade, the basic instance's ground isn't drawn where it lies in the world"
+	var forest: HexGrid = neighbours.grids.get(InstanceBlueprints.FOREST)
+	if forest == null or not forest.global_position.is_equal_approx(Vector3.ZERO):
+		return "in the glade, the forest's ground isn't drawn where it lies in the world"
 	var fog: FogView = _main.get_node("FogView") as FogView
 	fog.show_state(STEP)
 	var cloud: ShaderMaterial = fog.cloud.material_override as ShaderMaterial
@@ -237,9 +239,9 @@ func _ground(point: Vector3) -> Vector3:
 	return Vector3(point.x, 0.0, point.z)
 
 
-## Walks player 0 east out of the basic instance into the glade, waits there, and walks back west:
-## from the start (1, -1) east, northeast onto the exit on (3, -2) and east through it, then
-## through the glade's way back. The player's tile changes as a step starts, so each move is
+## Walks player 0 out of the forest into the glade, waits there, and walks back: from the forest's
+## start (-2, 3) southeast onto its exit on (-2, 5) and through it, then northwest through the
+## glade's way back. The player's tile changes as a step starts, so each move is
 ## picked by the tile being walked to and applies once the step before arrives.
 class CrossingSource:
 	extends CommandSource
@@ -247,21 +249,21 @@ class CrossingSource:
 	## Ticks spent in the glade before walking back.
 	const GLADE_TICKS: int = 20
 	const ROUTE: Dictionary[Vector2i, int] = {
-		Vector2i(1, -1): 0,
-		Vector2i(2, -1): 1,
-		Vector2i(3, -2): 0,
+		Vector2i(-2, 3): 5,
+		Vector2i(-2, 4): 5,
+		Vector2i(-2, 5): 5,
 	}
 
-	## The basic instance, to tell it from the glade.
-	var basic: GameState
+	## The forest, to tell it from the glade.
+	var forest: GameState
 	var _glade_ticks: int = 0
 
 	func poll(schedule: CommandSchedule, tick: int, state: GameState) -> void:
 		var move: int = Command.NO_MOVE
-		if state != basic:
+		if state != forest:
 			_glade_ticks += 1
 			if _glade_ticks > GLADE_TICKS:
-				move = 3
+				move = FlowSteps.OUT_OF_GLADE
 		elif _glade_ticks == 0:
 			move = ROUTE.get(state.player(slot).tile, Command.NO_MOVE)
 		schedule.put(tick + schedule.delay, slot, Command.new(move))

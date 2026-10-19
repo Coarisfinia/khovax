@@ -24,8 +24,8 @@ static var fixed_seed: int = ROLLED_SEED
 ## launch option (#237).
 static var start_instance: String = ""
 
-## The instance the session starts in, by name from InstanceBlueprints.
-@export var instance: String = InstanceBlueprints.BASIC
+## The instance the session starts in, by name from InstanceBlueprints: the glade (#712).
+@export var instance: String = InstanceBlueprints.GLADE
 ## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
 ## build a driver alone.
 @export var keeper: WorldKeeper

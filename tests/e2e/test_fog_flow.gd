@@ -128,23 +128,24 @@ func _check_lookout() -> String:
 	return ""
 
 
-## In the basic instance, the glade's ground next door is handed over without loading the glade,
+## In the forest, the glade's ground next door is handed over without loading the glade,
 ## and a player standing on the exit to it sees some of it, and nothing that is neither here nor
 ## there.
 func _check_across_the_seam() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	if basic.next_door.is_empty() or world.instances.has(InstanceBlueprints.GLADE):
-		return "the basic instance has no ground next door, or the glade was loaded for it"
-	var exit: Vector3i = basic.region.exits[0]
-	basic.player(0).tile = Vector2i(exit.x, exit.y)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	if forest.next_door.is_empty() or world.instances.has(InstanceBlueprints.GLADE):
+		return "the forest has no ground next door, or the glade was loaded for it"
+	var way: int = forest.region.exit_blueprints.find(InstanceBlueprints.GLADE)
+	var exit: Vector3i = forest.region.exits[way]
+	forest.player(0).tile = Vector2i(exit.x, exit.y)
 	world.step(FlowSteps.command(Command.NO_MOVE))
-	var fog: FogFeature = basic.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = forest.feature(Features.FOG) as FogFeature
 	var across: int = 0
 	for tile: Vector2i in fog.visible[0]:
-		if basic.next_door.has(tile):
+		if forest.next_door.has(tile):
 			across += 1
-		elif not basic.region.has_tile(tile):
+		elif not forest.region.has_tile(tile):
 			return "the player sees %s, which is neither here nor next door" % tile
 	if across == 0:
 		return "a player on the exit sees nothing of the ground next door"
@@ -152,30 +153,30 @@ func _check_across_the_seam() -> String:
 
 
 ## A tile changed in place next door (#538): with the glade loaded and a second player in it, a rule
-## there turns a tile the player on the basic instance's exit sees across the seam into rock. In the
-## same tick the basic instance gets the rock as its ground next door, and the player's sight is
+## there turns a tile the player on the forest's exit sees across the seam into rock. In the
+## same tick the forest gets the rock as its ground next door, and the player's sight is
 ## worked out again around it at once, so the world goes through its save data and back alike.
 func _check_changed_across_the_seam(world: World) -> String:
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
 	var shift: Vector2i = world.offset(InstanceBlueprints.GLADE) - world.offset(world.start_name)
-	var seen: Array[Vector2i] = FlowSteps.sight_of(basic)
-	var rock: Vector2i = _blocking_across(basic, basic.player(0).tile)
+	var seen: Array[Vector2i] = FlowSteps.sight_of(forest)
+	var rock: Vector2i = _blocking_across(forest, forest.player(0).tile)
 	if rock == Vector2i.MAX:
 		return "no tile the player sees across the seam would block their sight as rock"
 	var _joined: Entity = glade.add_entity(1, glade.region.starts[0])
 	var clearing: TileRule = TileRule.new(rock - shift, Region.BLOCKED)
 	glade.features.append(clearing)
 	world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
-	if basic.next_door.get(rock, -1) != Region.BLOCKED or FlowSteps.sight_of(basic) == seen:
-		return "the rock changed in place next door isn't the basic instance's ground next door"
+	if forest.next_door.get(rock, -1) != Region.BLOCKED or FlowSteps.sight_of(forest) == seen:
+		return "the rock changed in place next door isn't the forest's ground next door"
 	var sight: Array[Vector2i] = FogFeature.sight(
-		basic.region,
-		basic.player(0).tile,
+		forest.region,
+		forest.player(0).tile,
 		FogFeature.SIGHT_RADIUS,
-		basic.next_door,
+		forest.next_door,
 	)
-	if FlowSteps.sight_of(basic) != sight:
+	if FlowSteps.sight_of(forest) != sight:
 		return "the player's sight wasn't worked out again around the rock next door"
 	glade.features.erase(clearing)
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())

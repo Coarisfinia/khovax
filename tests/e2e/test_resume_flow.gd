@@ -1,6 +1,6 @@
 extends RefCounted
 ## Resume flow (#119): the persistent world is saved and resumed. A world played a while (a wild
-## monster dominated in the basic instance, then out through the exit into the glade, its lookout
+## monster dominated in the forest, then out through the exit into the glade, its lookout
 ## and a chest) turns into save data and back with the same hash, and both go on alike, tick for
 ## tick. Saved to its own file next to the profile, the main scene resumes it where the player
 ## stood, its recording plays back from it, and its keeper saves it debounced; a damaged world file,
@@ -17,15 +17,21 @@ const WORLD_PATH: String = "user://test_resume_world.json"
 const PROFILE_PATH: String = "user://test_resume_profile.json"
 ## The species the flow's profile carries first: the player's companion.
 const COMPANION: String = "storm_finch"
-## After the ring around the basic instance's wild monster (FlowSteps.BASIC_RING), on to the exit
-## on (3, -2).
-const OUT: Array[Vector2i] = [
-	Vector2i(0, -1),
+## The world starts in the forest (#712: the playground has no exits): from its start on (-2, 3) up
+## to its wild monster on (0, -3), around it in a ring, and on to its exit into the glade.
+const RING: Array[Vector2i] = [
+	Vector2i(-1, 2),
+	Vector2i(0, 1),
+	Vector2i(0, 0),
 	Vector2i(1, -1),
-	Vector2i(2, -1),
-	Vector2i(3, -2),
+	Vector2i(1, -2),
+	Vector2i(1, -3),
+	Vector2i(1, -4),
+	Vector2i(0, -4),
+	Vector2i(-1, -3),
+	Vector2i(-1, -2),
+	Vector2i(0, -2),
 ]
-const EAST: int = 0
 ## Ticks both copies of the world go on after the round trip.
 const ONWARD_TICKS: int = 600
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
@@ -40,14 +46,16 @@ func run(tree: SceneTree) -> String:
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	var carried: String = _carry(COMPANION)
+	# A fresh world the main scene starts starts in the forest too; the runner's comes back after.
+	var given: String = GameDriver.start_instance
+	GameDriver.start_instance = InstanceBlueprints.FOREST
 	var world: World = World.new(
 		BlueprintSource.new(),
 		SEED,
-		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
 		1,
 		[COMPANION],
 	)
-	FlowSteps.drop_beach_toad(world.instances[InstanceBlueprints.BASIC])
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
@@ -63,20 +71,22 @@ func run(tree: SceneTree) -> String:
 		result = await _check_boot_refuses(tree, world)
 	if result.is_empty() and ProfileSave.to_text(ProfileStore.load_from(PROFILE_PATH)) != carried:
 		result = "saving the world changed the profile"
+	GameDriver.start_instance = given
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	return result
 
 
-## Plays the world a while: the ring dominates the basic instance's wild monster (the player places
-## their totem on it, #423, and waits for it to seal, #219), the exit leads into the glade, and
-## there the player walks onto the lookout and a chest.
+## Plays the world a while: the ring dominates the forest's wild monster (the player places their
+## totem on it, #423, and waits for it to seal, #219), the exit leads into the glade, and there the
+## player walks onto the lookout and a chest.
 func _play(world: World) -> String:
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var wild: WildMonsterFeature = forest.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var count: int = wild.monsters.size()
 	var tile: Vector2i = world.player(0).tile
-	var domination: DominationFeature = world.instances[InstanceBlueprints.BASIC].feature(
-		Features.DOMINATION,
-	) as DominationFeature
-	for next: Vector2i in FlowSteps.BASIC_RING + OUT:
+	var domination: DominationFeature = forest.feature(Features.DOMINATION) as DominationFeature
+	for next: Vector2i in RING:
 		_walk_in(world, Hex.DIRECTIONS.find(next - tile))
 		tile = next
 		if not domination.encircled.is_empty():
@@ -85,10 +95,10 @@ func _play(world: World) -> String:
 		while not domination.seals.is_empty():
 			world.step(FlowSteps.command(Command.NO_MOVE))
 			_remember(world)
-	_walk_in(world, EAST)
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var wild: WildMonsterFeature = basic.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	if not wild.monsters.is_empty() or world.instance_of(0) != InstanceBlueprints.GLADE:
+	var out: Array[int] = FlowSteps.shortest_path(forest, tile, FlowSteps.FOREST_EXIT)
+	for direction: int in out + [FlowSteps.INTO_GLADE[-1]]:
+		_walk_in(world, direction)
+	if wild.monsters.size() != count - 1 or world.instance_of(0) != InstanceBlueprints.GLADE:
 		return "the walk didn't dominate the wild monster and go on into the glade"
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var goals: Array[Vector2i] = [glade.region.triggers[0].tile]
@@ -104,7 +114,7 @@ func _play(world: World) -> String:
 
 
 ## Through its text and back, the world hashes the same and saves the same text again, and both
-## copies go on alike, tick for tick, walking anywhere, back into the basic instance too.
+## copies go on alike, tick for tick, walking anywhere, back into the forest too.
 func _check_round_trip(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var resumed: World = WorldSave.parse(text, BlueprintSource.new())
@@ -146,9 +156,9 @@ func _check_refused(world: World) -> String:
 		_changed(_fresh_data(), "start", InstanceBlueprints.GLADE): "the starting instance",
 		"not a world": "not a world save",
 		"{}": "format isn't",
-		_changed(data, "generations", [{ "name": "basic", "generation": 1 }]): "purged instance",
+		_changed(data, "generations", [{ "name": "forest", "generation": 1 }]): "purged instance",
 		_with_left_at(data, InstanceBlueprints.GLADE, 0): "instance glade's left_at",
-		_with_left_at(data, InstanceBlueprints.BASIC, -1): "instance basic's left_at",
+		_with_left_at(data, InstanceBlueprints.FOREST, -1): "instance forest's left_at",
 		_expired(): "instance glade was left behind long enough",
 	}
 	var source: BlueprintSource = BlueprintSource.new()
@@ -180,8 +190,8 @@ static func _carry(species: String) -> String:
 
 ## A world's data whose glade, left behind, is saved PURGE_TICKS later without being purged.
 func _expired() -> String:
-	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC)
-	for direction: int in [EAST, 1, EAST, 3]:
+	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		world.step(FlowSteps.command(direction))
 		for _tick: int in MovementFeature.MOVE_TICKS + 1:
 			world.step(FlowSteps.command(Command.NO_MOVE))
@@ -195,7 +205,7 @@ func _expired() -> String:
 
 ## A fresh world's data, with only its starting instance loaded.
 static func _fresh_data() -> Dictionary:
-	return WorldData.of(World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC))
+	return WorldData.of(World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST))
 
 
 ## `data` as text, with `key` set to `value`.
@@ -250,16 +260,16 @@ func _check_camera_centered(tree: SceneTree, main: Node) -> String:
 	return _check_explored(main)
 
 
-## Resumed, the ground explored before the save lies under light fog: the basic instance's, now
-## next door, and the glade's out of sight.
+## Resumed, the ground explored before the save lies under light fog: the forest's, now next door,
+## and the glade's out of sight.
 func _check_explored(main: Node) -> String:
 	var fog: FogView = main.get_node("FogView") as FogView
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	fog.show_state(10.0)
-	# On the ring walked around the basic instance's wild monster.
-	var next_door: Vector2i = FlowSteps.BASIC_RING[3] + view.shifts[InstanceBlueprints.BASIC]
+	# On the ring walked around the forest's wild monster.
+	var next_door: Vector2i = RING[7] + view.shifts[InstanceBlueprints.FOREST]
 	if fog.cloud.fog_on(next_door) != LIGHT:
-		return "resumed, the basic instance's explored ground next door isn't under light fog"
+		return "resumed, the forest's explored ground next door isn't under light fog"
 	var glade: GameState = fog.driver.state
 	var out_of_sight: Array[Vector2i] = []
 	for tile: Vector2i in _explored.tiles_in[InstanceBlueprints.GLADE]:
@@ -364,13 +374,13 @@ static func _saved_tick() -> int:
 func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var explored: Dictionary = ExploredSave.explored_data(_explored)
 	var half: Dictionary = explored.duplicate(true)
-	# The last instance's tiles: the glade's, after the basic instance's.
+	# The last instance's tiles: the glade's, after the forest's.
 	var instances: Array = half["instances"]
 	var last: Dictionary = instances.back()
 	var halved: Array = last["tiles"]
 	halved.append(1)
 	var fraction: Dictionary = explored.duplicate(true)
-	fraction["instances"] = [{ "name": InstanceBlueprints.BASIC, "tiles": [0.5, 1] }]
+	fraction["instances"] = [{ "name": InstanceBlueprints.FOREST, "tiles": [0.5, 1] }]
 	var newer: Dictionary = explored.duplicate(true)
 	newer["format"] = ExploredSave.FORMAT + 1
 	var result: String = await _resumes_forgetting(tree, world, half)
@@ -405,11 +415,11 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 
 ## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
 ## without what was seen in the glade before: it comes back arranged anew, and only what is seen of
-## it from next door now (#191) is remembered, at its new generation. What was seen in the basic
-## instance is kept.
+## it from next door now (#191) is remembered, at its new generation. What was seen in the forest
+## is kept.
 func _check_purged_explored(tree: SceneTree) -> String:
-	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC)
-	for direction: int in [EAST, 1, EAST, 3]:
+	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
@@ -421,11 +431,11 @@ func _check_purged_explored(tree: SceneTree) -> String:
 	await tree.process_frame
 	var explored: ExploredGround = (main.get_node("WorldKeeper") as WorldKeeper).explored
 	var glade_generation: int = explored.generations.get(InstanceBlueprints.GLADE, 1)
-	var basic: Dictionary = explored.tiles_in.get(InstanceBlueprints.BASIC, {})
+	var forest: Dictionary = explored.tiles_in.get(InstanceBlueprints.FOREST, {})
 	main.queue_free()
 	await tree.process_frame
-	if glade_generation != 1 or basic.is_empty():
-		return "resumed, the purged glade's old ground came back, or the basic instance's didn't"
+	if glade_generation != 1 or forest.is_empty():
+		return "resumed, the purged glade's old ground came back, or the forest's didn't"
 	return ""
 
 
@@ -442,7 +452,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 		result = await _boots_fresh(tree, _changed(data, "rules", rules), true)
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
-		var pair: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.BASIC, 2)
+		var pair: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST, 2)
 		result = await _boots_fresh(
 			tree,
 			WorldSave.to_text(pair, ExploredSave.beside(_explored)),
@@ -451,8 +461,8 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	return result
 
 
-## Whether `explored` remembers any of the glade that a player in `world`'s basic instance doesn't
-## see across the seam now: ground of an older world.
+## Whether `explored` remembers any of the glade that a player in `world`'s forest doesn't see
+## across the seam now: ground of an older world.
 static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
 	var seen_across: Dictionary[Vector2i, bool] = _seen_across(world)
 	for tile: Vector2i in explored.tiles_in.get(InstanceBlueprints.GLADE, {}):
@@ -461,17 +471,17 @@ static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
 	return false
 
 
-## The glade's tiles, in its own coordinates, that a player in the basic instance of `world` sees
-## across the seam (#191).
+## The glade's tiles, in its own coordinates, that a player in the forest of `world` sees across
+## the seam (#191).
 static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var fog: FogFeature = basic.feature(Features.FOG) as FogFeature
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var fog: FogFeature = forest.feature(Features.FOG) as FogFeature
 	var glade_at: Vector2i = world.offset(InstanceBlueprints.GLADE)
-	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.BASIC)
+	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.FOREST)
 	var seen: Dictionary[Vector2i, bool] = {}
 	for slot: int in fog.visible:
 		for tile: Vector2i in fog.visible[slot]:
-			if basic.next_door.has(tile):
+			if forest.next_door.has(tile):
 				seen[tile - shift] = true
 	return seen
 
@@ -492,7 +502,13 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
 	# The player brings the companion their profile carries into the fresh world too.
-	var fresh: World = World.new(BlueprintSource.new(), 0, InstanceBlueprints.BASIC, 1, [COMPANION])
+	var fresh: World = World.new(
+		BlueprintSource.new(),
+		0,
+		InstanceBlueprints.FOREST,
+		1,
+		[COMPANION],
+	)
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

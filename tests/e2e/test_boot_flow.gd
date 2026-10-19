@@ -1,7 +1,8 @@
 extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
-## in view of the camera, a wild monster's figure standing on its own tile, the instance next door
-## drawn beyond its exit under the cloud, and the exploration music rising from silence. The ground
+## in view of the camera, a wild monster's figure standing on its own tile, the exploration music
+## rising from silence, and, in the glade, the instances next door drawn beyond its exits under the
+## cloud. The ground
 ## explored in an instance stays under light fog, also when it lies next door. A tile a rule changes
 ## in place eases into its new look, also next door. The Survey has its own flow
 ## (test_survey_flow.gd).
@@ -32,15 +33,15 @@ func run(tree: SceneTree) -> String:
 		_check_toon_look,
 		_check_ink_outline,
 		_check_fog,
-		_check_neighbour_grids,
-		_check_neighbour_cloud,
-		_check_remembered_ground,
 		_check_wild_monster_removed,
 		_check_terrain_colors,
 		_check_music,
 		_check_lookouts,
 		_check_canopy_cutaway,
-		_check_neighbour_follows,
+		# In the glade from here: the playground, which only the tests play, has nothing next door.
+		_check_neighbour_grids,
+		_check_neighbour_cloud,
+		_check_remembered_ground,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -121,6 +122,7 @@ func _check_launch_options() -> String:
 ## would go to is let go of when the options are applied.
 func _check_launched(tree: SceneTree) -> String:
 	var given: int = GameDriver.fixed_seed
+	var given_instance: String = GameDriver.start_instance
 	WorldKeeper.default_path = WorldSave.PATH
 	LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
 	if not WorldKeeper.default_path.is_empty():
@@ -136,7 +138,7 @@ func _check_launched(tree: SceneTree) -> String:
 			driver.local_instance_name(),
 			driver.world.world_seed,
 		]
-	GameDriver.start_instance = ""
+	GameDriver.start_instance = given_instance
 	GameDriver.fixed_seed = given
 	main.queue_free()
 	await tree.process_frame
@@ -709,9 +711,9 @@ static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vecto
 	return tiles[0]
 
 
-## Explored ground is remembered per instance (#190): walking into the glade, the basic instance's
-## ground seen before, now next door, lies under light fog; walking back, the basic instance's
-## ground out of sight is still seen before, and next door the glade's explored ground lies under
+## Explored ground is remembered per instance (#190): walking from the glade into the forest, the
+## glade's ground seen before, now next door, lies under light fog; walking back, the glade's
+## ground out of sight is still seen before, and next door the forest's explored ground lies under
 ## light fog and its unexplored ground under thick cloud. A tile changed in place there shows next
 ## door (#538).
 func _check_remembered_ground(main: Node) -> String:
@@ -719,71 +721,70 @@ func _check_remembered_ground(main: Node) -> String:
 	var fog: FogView = main.get_node("FogView") as FogView
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	var light: Vector2 = Vector2(0.0, 1.0)
-	# Seen while the fog was checked, and out of sight there for a while.
-	var far: Vector2i = Vector2i(-3, 0)
+	# The beach, seen from the glade's start, and out of sight from its north exit.
+	var far: Vector2i = Vector2i(-3, 2)
 	fog.show_state(10.0)
-	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east into the glade.
-	for direction: int in [0, 1, 0]:
+	for direction: int in FlowSteps.INTO_FOREST:
 		_walk_in(driver.world, direction)
 	fog.show_state(10.0)
-	if NeighbourView.name_of(driver.world, driver.state) != InstanceBlueprints.GLADE:
-		return "walking east out of the basic instance didn't lead into the glade"
-	var next_door: Vector2i = far + view.shifts[InstanceBlueprints.BASIC]
+	if NeighbourView.name_of(driver.world, driver.state) != InstanceBlueprints.FOREST:
+		return "walking north out of the glade didn't lead into the forest"
+	var next_door: Vector2i = far + view.shifts[InstanceBlueprints.GLADE]
 	if fog.cloud.fog_on(next_door) != light:
-		return "the basic instance's explored ground next door isn't under light fog"
-	var glade_seen: Array[Vector2i] = _split_by_sight(driver.state, true)
-	var glade_unseen: Array[Vector2i] = _split_by_sight(driver.state, false)
-	if glade_seen.is_empty() or glade_unseen.is_empty():
-		return "expected some of the glade in sight and some not on arrival"
-	_walk_in(driver.world, 3)
+		return "the glade's explored ground next door isn't under light fog"
+	var forest_seen: Array[Vector2i] = _split_by_sight(driver.state, true)
+	var forest_unseen: Array[Vector2i] = _split_by_sight(driver.state, false)
+	if forest_seen.is_empty() or forest_unseen.is_empty():
+		return "expected some of the forest in sight and some not on arrival"
+	_walk_in(driver.world, FlowSteps.OUT_OF_FOREST)
 	fog.show_state(10.0)
-	var result: String = _check_glade_next_door(fog, view, glade_seen, glade_unseen)
+	var result: String = _check_forest_next_door(fog, view, forest_seen, forest_unseen)
 	if result.is_empty():
 		result = _check_out_of_sight(fog, far)
 	return result if not result.is_empty() else _check_neighbour_change_shown(driver, view)
 
 
-## Back in the basic instance, next door the glade's explored ground (some of `seen`) lies under
-## light fog and its unexplored ground (some of `unseen`) under thick cloud, out of sight across
-## the seam (#191).
-func _check_glade_next_door(
+## Back in the glade, next door the forest's explored ground (some of `seen`) lies under light fog
+## and its unexplored ground (some of `unseen`) under thick cloud, out of sight across the seam
+## (#191).
+func _check_forest_next_door(
 		fog: FogView,
 		view: NeighbourView,
 		seen: Array[Vector2i],
 		unseen: Array[Vector2i],
 ) -> String:
-	var shift: Vector2i = view.shifts.get(InstanceBlueprints.GLADE, Vector2i.ZERO)
+	var shift: Vector2i = view.shifts.get(InstanceBlueprints.FOREST, Vector2i.ZERO)
 	var explored: Vector2i = _out_of_sight(fog.driver.state, seen, shift) + shift
 	var unexplored: Vector2i = _out_of_sight(fog.driver.state, unseen, shift) + shift
 	if fog.cloud.fog_on(explored) != Vector2(0.0, 1.0):
-		return "next door, the glade's explored ground isn't under light fog"
+		return "next door, the forest's explored ground isn't under light fog"
 	if fog.cloud.fog_on(unexplored) != Vector2(1.0, 0.0):
-		return "next door, the glade's unexplored ground isn't under thick cloud"
+		return "next door, the forest's unexplored ground isn't under thick cloud"
 	return ""
 
 
-## A tile changed in place next door (#538): back in the basic instance, with the glade loaded, the
-## glade is drawn next door from its own region. A forest of it cleared to ground keeps its forest
-## color at first and eases into the ground's once the world hands the basic instance the new
-## ground, never in one frame; grown back, it eases back into the forest's.
+## A tile changed in place next door (#538): back in the glade, with the forest loaded, the forest
+## is drawn next door from its own region. A forest tile of it cleared to ground keeps its forest
+## color at first and eases into the ground's once the world hands the glade the new ground, never
+## in one frame; grown back, it eases back into the forest's.
 func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> String:
-	var glade: GameState = driver.world.instances.get(InstanceBlueprints.GLADE)
+	var woods: GameState = driver.world.instances.get(InstanceBlueprints.FOREST)
 	view.show_state()
-	var grid: HexGrid = view.grids.get(InstanceBlueprints.GLADE)
-	if glade == null or grid == null or grid.shown_region() != glade.region:
-		return "the glade next door isn't drawn from its loaded region"
+	var grid: HexGrid = view.grids.get(InstanceBlueprints.FOREST)
+	if woods == null or grid == null or grid.shown_region() != woods.region:
+		return "the forest next door isn't drawn from its loaded region"
 	var forest: int = TileKinds.number_of("forest")
-	var tile: Vector2i = glade.region.sorted_tiles()[0]
-	for each: Vector2i in glade.region.sorted_tiles():
-		if glade.region.terrain[each] == forest:
+	var tile: Vector2i = woods.region.sorted_tiles()[0]
+	for each: Vector2i in woods.region.sorted_tiles():
+		if woods.region.terrain[each] == forest:
 			tile = each
 	for kind: int in [Region.GROUND, forest]:
 		var before: Color = grid.tile_color_of(tile)
-		var _changed: bool = glade.change_tile(tile, kind)
-		# As the world does once the glade's tick changed it.
+		var _changed: bool = woods.change_tile(tile, kind)
+		# As the world does once the forest's tick changed it.
 		driver.world.refresh_next_door()
 		view.show_state()
-		var calm: bool = view.grids.get(InstanceBlueprints.GLADE) == grid
+		var calm: bool = view.grids.get(InstanceBlueprints.FOREST) == grid
 		if not calm or not grid.easing.has(tile) or grid.tile_color_of(tile) != before:
 			return "a tile changed in place next door changed its look at once, or not at all"
 		var _stepped: bool = grid.easing[tile].custom_step(HexGrid.CHANGE_SECONDS + 0.1)
@@ -802,7 +803,7 @@ func _check_out_of_sight(view: FogView, far: Vector2i) -> String:
 	fog.visible[0] = everything
 	view.show_state(10.0)
 	if remembered != Vector2(0.0, 1.0):
-		return "back in the basic instance, ground explored before isn't under light fog"
+		return "back in the glade, ground explored before isn't under light fog"
 	return ""
 
 
@@ -889,17 +890,17 @@ func _check_lookouts(main: Node) -> String:
 	return problem if not problem.is_empty() else _check_tile_change_shown(main)
 
 
-## Each decorated kind's model (forest, shrubs, boulder, stump) stands on exactly the glade's tiles
-## of that kind, at its blueprint's scale, cel-shaded, each shown once an ally has seen it; each
-## turned as its piece turns it by hand (the glade turns some), and a little off its tile's middle,
-## not all of them the same way (#231).
+## Each decorated kind's model (forest, shrubs, boulder, stump, the beach's crates) stands on
+## exactly the glade's tiles of that kind, at its blueprint's scale, cel-shaded, each shown once an
+## ally has seen it; each turned as its piece turns it by hand (the glade turns some), and a little
+## off its tile's middle, not all of them the same way (#231).
 func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	view.show_state()
 	var region: Region = driver.state.region
 	var decorated: Array[Vector2i] = []
-	for id: String in ["forest", "shrubs", "boulder", "stump"]:
+	for id: String in ["forest", "shrubs", "boulder", "stump", "crates"]:
 		var tiles: Array[Vector2i] = []
 		for tile: Vector2i in region.sorted_tiles():
 			if region.terrain[tile] == TileKinds.number_of(id):
@@ -986,33 +987,42 @@ func _toon_shaded(model: Node) -> bool:
 	return surfaces > 0
 
 
-## The instance next door (#188): the neighbour view draws the glade, the basic instance's only
-## neighbour, with all its tiles, its way back right beside the basic instance's east exit, read
-## without loading it into the world.
+## The instances next door (#188), which follow the local instance: in the glade, the neighbour
+## view draws the forest and the outpost (#689), the forest with all its tiles and its way back
+## right beside the glade's north exit, read without loading either into the world.
 func _check_neighbour_grids(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: NeighbourView = main.get_node_or_null("Instance/NeighbourView") as NeighbourView
 	if view == null:
 		return "the main scene has no NeighbourView"
 	view.show_state()
-	var glade: HexGrid = view.grids.get(InstanceBlueprints.GLADE)
+	var forest: HexGrid = view.grids.get(InstanceBlueprints.FOREST)
 	var region: Region = InstanceBlueprints.region_of(
-		InstanceBlueprints.GLADE,
-		driver.world.seed_for(InstanceBlueprints.GLADE),
+		InstanceBlueprints.FOREST,
+		driver.world.seed_for(InstanceBlueprints.FOREST),
 	)
-	if view.grids.size() != 1 or glade == null or glade.tile_count() != region.size():
-		return "the neighbours drawn aren't the whole glade alone: %s" % [view.grids.keys()]
+	var names: PackedStringArray = PackedStringArray(view.grids.keys())
+	names.sort()
+	var both: String = ", ".join([InstanceBlueprints.FOREST, InstanceBlueprints.OUTPOST])
+	if ", ".join(names) != both or forest == null or forest.tile_count() != region.size():
+		return "the neighbours drawn aren't the whole forest and the outpost: %s" % [names]
 	var exit: Vector3i = driver.state.region.exits[0]
 	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-	var way: Vector3i = region.exits[region.exit_blueprints.find(InstanceBlueprints.BASIC)]
-	var back: Vector2i = Vector2i(way.x, way.y)
-	var drawn: Vector3 = glade.position + glade.tile_transform(back).origin
-	var lift: Vector3 = Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
-	if not glade.has_tile(back) or not drawn.is_equal_approx(HexLayout.to_world(outside) + lift):
-		return "the glade's way back is drawn at %s, not beside the basic instance's exit" % drawn
+	if not _drawn_beside(forest, region, outside):
+		return "the forest's way back isn't drawn beside the glade's north exit"
 	if driver.world.instances.size() != 1:
 		return "drawing the neighbours loaded an instance into the world"
 	return ""
+
+
+## Whether `grid`, drawing the forest's `region` next door, draws its way back to the glade on the
+## world tile `outside`.
+static func _drawn_beside(grid: HexGrid, region: Region, outside: Vector2i) -> bool:
+	var way: Vector3i = region.exits[region.exit_blueprints.find(InstanceBlueprints.GLADE)]
+	var back: Vector2i = Vector2i(way.x, way.y)
+	var drawn: Vector3 = grid.position + grid.tile_transform(back).origin
+	var lifted: Vector3 = HexLayout.to_world(outside) + Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
+	return grid.has_tile(back) and drawn.is_equal_approx(lifted)
 
 
 ## The canopy cut-away (#328), in the glade: in the open nothing is cut. A player standing in the
@@ -1166,24 +1176,3 @@ static func _farther_than_sight(region: Region, tile: Vector2i) -> bool:
 		if Hex.distance(here, tile) <= FogFeature.SIGHT_RADIUS:
 			return false
 	return true
-
-
-## The neighbours follow the local instance: in the glade, the basic instance, the forest and the
-## outpost are next door (#689).
-func _check_neighbour_follows(main: Node) -> String:
-	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
-	view.show_state()
-	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
-	var names: Array[String] = []
-	names.assign(view.grids.keys())
-	names.sort()
-	var expected: Array[String] = [
-		InstanceBlueprints.BASIC,
-		InstanceBlueprints.FOREST,
-		InstanceBlueprints.OUTPOST,
-	]
-	if names != expected or basic == null or basic.tile_count() != 42:
-		return "in the glade, the neighbours drawn aren't the basic instance: %s" % [
-			view.grids.keys(),
-		]
-	return ""
