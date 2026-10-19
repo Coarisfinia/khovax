@@ -54,7 +54,11 @@ static func parse(text: String) -> Replay:
 	if not parsed is Dictionary:
 		replay.problem = "not a replay"
 		return replay
-	var data: Dictionary = parsed
+	# Every number the game writes is whole, so one that isn't is a damaged replay (#631).
+	if not JsonNumbers.all_whole(parsed):
+		replay.problem = "not a replay: it holds a number that isn't whole"
+		return replay
+	var data: Dictionary = JsonNumbers.wholes(parsed)
 	replay.problem = _shape_problem(data)
 	if not replay.problem.is_empty():
 		return replay
@@ -126,13 +130,13 @@ static func _widened(old: Array[int], count: int) -> Array[int]:
 	return changes
 
 
-## The starting world in a replay's data, with JSON's numbers whole again; empty for none, or for
-## one that isn't a world's data, which then fails to set up.
+## The starting world in a replay's data; empty for none, or for one that isn't a world's data,
+## which then fails to set up.
 static func _start_world(saved: Variant) -> Dictionary:
 	var none: Dictionary = {}
-	if not saved is Dictionary or not JsonNumbers.all_whole(saved):
+	if not saved is Dictionary:
 		return none
-	var world: Dictionary = JsonNumbers.wholes(saved)
+	var world: Dictionary = saved
 	return world
 
 
@@ -189,8 +193,9 @@ static func _all_texts(values: Variant) -> bool:
 	return true
 
 
+## Whether `value` is a number: by now every number in the replay is an integer.
 static func _is_number(value: Variant) -> bool:
-	return value is int or value is float
+	return value is int
 
 
 static func _all_numbers(values: Variant) -> bool:
@@ -203,9 +208,9 @@ static func _all_numbers(values: Variant) -> bool:
 	return true
 
 
-## A JSON number (or anything else) as an integer.
+## A number of the replay, already whole, as an integer.
 static func _int(value: Variant) -> int:
-	var number: int = type_convert(value, TYPE_INT)
+	var number: int = value
 	return number
 
 
