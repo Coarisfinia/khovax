@@ -92,6 +92,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_8,
 		_migrate_to_9,
 		_migrate_to_10,
+		_migrate_to_11,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
