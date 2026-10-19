@@ -54,8 +54,8 @@ func run(tree: SceneTree) -> String:
 		SEED,
 		InstanceBlueprints.FOREST,
 		1,
-		[COMPANION],
 	)
+	CompanionParty.bring(world, [PackedStringArray([COMPANION])])
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
@@ -299,7 +299,11 @@ func _settle(world: World) -> void:
 ## (#456), and the resumed session's recording plays back from the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
 	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
-	var fainted: bool = driver.state.has_fainted(0, driver.state.companions[0])
+	var fainted: bool = CompanionParty.has_fainted(
+		driver.state,
+		0,
+		CompanionParty.companion(driver.state, 0),
+	)
 	if companions.companion_of(0) == 0 and not fainted:
 		return "the player came back without their companion, nor with it back in their keeping"
 	for _tick: int in 30:
@@ -507,8 +511,8 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 		0,
 		InstanceBlueprints.FOREST,
 		1,
-		[COMPANION],
 	)
+	CompanionParty.bring(fresh, [PackedStringArray([COMPANION])])
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

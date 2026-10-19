@@ -1,9 +1,10 @@
 class_name CompanionFeature
 extends Feature
 ## Companions (#338, the first part of #221): one monster each player carries walks beside them,
-## the first they carry until they choose another (#55, CompanionSwapFeature): GameState.companions
-## says which species. When the choice changes, the old one goes and the new one joins. It joins its
-## player in whichever instance they are, on a free tile next to them, as an entity no player
+## the first they carry until they choose another (#55, CompanionSwapFeature): their party says
+## which species (CompanionParty, in their world store, #724). When the choice changes, the old one
+## goes and the new one joins. It joins its player in whichever instance they are, on a free tile
+## next to them, as an entity no player
 ## controls: players are the entities with a slot, which walk by commands, draw the trail, take
 ## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
 ## goes when its player leaves the instance (through an exit, the same tick: the feature steps
@@ -11,10 +12,10 @@ extends Feature
 ## something), it goes and joins them afresh beside them. One at 0 HP faints: it goes back to its
 ## player (`send_home`, #456), and the first monster they carry that hasn't fainted, in their
 ## carried order, is chosen in its place at once (#597), so it joins them the next tick. A fainted
-## one stays fainted (GameState.fainted, kept by the world across exits, instances and sessions):
-## it doesn't join them, nor can they swap to it, until it's revived (`revive`, #655). A player
-## whose companion has fainted while another they carry hasn't, as after a session starts, gets that
-## one chosen. Fainting is kept by species, like the companion choice itself.
+## one stays fainted (in their party, kept by the world across exits, instances and sessions): it
+## doesn't join them, nor can they swap to it, until it's revived (CompanionParty.revive, #655). A
+## player whose companion has fainted while another they carry hasn't, as after a session starts,
+## gets that one chosen. Fainting is kept by species, like the companion choice itself.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -66,9 +67,9 @@ func start(state: GameState) -> void:
 
 
 ## Sends off the companions whose player left, brings another or lost them, or that fainted
-## elsewhere, chooses another for
-## every player whose companion fainted, lets every player who brings one that hasn't fainted and
-## has none here be joined by it, then lets each companion roam, in id order.
+## elsewhere, chooses another for every player whose companion fainted, lets every player who
+## brings one that hasn't fainted and has none here be joined by it, then lets each companion roam,
+## in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	var leaving: Array[int] = []
@@ -81,60 +82,51 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			player = null
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
+		var species: String = _species[companion_id]
 		# One left behind in an instance (#716) may have fainted elsewhere since.
-		gone = gone or state.has_fainted(owners[companion_id], _species[companion_id])
-		if gone or state.companions[player.slot] != _species[companion_id]:
+		gone = gone or CompanionParty.has_fainted(state, owners[companion_id], species)
+		if gone or CompanionParty.companion(state, player.slot) != species:
 			state.remove_entity(companion_id)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
-		var brings: bool = player != null and not state.companions[slot].is_empty()
-		if brings and state.has_fainted(slot, state.companions[slot]):
+		var chosen: String = CompanionParty.companion(state, slot)
+		var brings: bool = player != null and not chosen.is_empty()
+		if brings and CompanionParty.has_fainted(state, slot, chosen):
 			_choose_standing(state, slot)
 		elif brings and companion_of(slot) == 0:
-			_join(state, movement, player, state.companions[slot])
+			_join(state, movement, player, chosen)
 	for companion_id: int in companions():
 		_roam(state, movement, state.entity(companion_id))
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance
-## and stays fainted, which the world takes into every instance once this one stepped, until revived
-## (#655). The first monster they carry that hasn't fainted is chosen in its place (#597).
+## and stays fainted in their party, which the world takes into every instance once this one
+## stepped, until revived (#655). The first monster they carry that hasn't fainted is chosen in its
+## place (#597).
 func send_home(state: GameState, companion_id: int) -> void:
 	var slot: int = owners[companion_id]
-	var fainted: PackedStringArray = state.fainted[slot]
-	var _added: bool = fainted.append(_species[companion_id])
-	state.fainted[slot] = fainted
+	CompanionParty.faint(state, slot, _species[companion_id])
 	state.remove_entity(companion_id)
 	state.events.append(CompanionReturned.new(companion_id, slot))
 	_choose_standing(state, slot)
 
 
-## Brings the fainted carried monster of `species` of the player in `slot` back (#655): it can be
-## swapped to again, and as their companion it joins them on the next tick; the world takes it into
-## every instance once this one stepped. The hook reviving plugs into, for the base (#647) and
-## revive items (#656) once they exist. Nothing for one that hasn't fainted.
-static func revive(state: GameState, slot: int, species: String) -> void:
-	var down: PackedStringArray = state.fainted[slot]
-	var place: int = down.find(species)
-	if place >= 0:
-		down.remove_at(place)
-		state.fainted[slot] = down
-
-
-## Raises CompanionChosen for the first monster the player in `slot` carries that hasn't fainted,
-## unless every one has, or they chose one this tick already (a swap ran before).
+## Makes the first monster the player in `slot` carries that hasn't fainted their companion, and
+## raises CompanionChosen for it, unless every one has, or they chose one this tick already (a swap
+## ran before).
 static func _choose_standing(state: GameState, slot: int) -> void:
 	var next: int = next_standing(state, slot)
 	if next != -1 and not _chosen_this_tick(state, slot):
+		CompanionParty.choose(state, slot, next)
 		state.events.append(CompanionChosen.new(slot, next))
 
 
 ## The place of the first monster the player in `slot` carries that hasn't fainted, in their carried
 ## order, or -1 when every one has.
 static func next_standing(state: GameState, slot: int) -> int:
-	var party: PackedStringArray = state.carried[slot]
+	var party: PackedStringArray = CompanionParty.carried(state, slot)
 	for place: int in party.size():
-		if not state.has_fainted(slot, party[place]):
+		if not CompanionParty.has_fainted(state, slot, party[place]):
 			return place
 	return -1
 
@@ -248,7 +240,7 @@ static func _is_free(state: GameState, movement: MovementFeature, tile: Vector2i
 
 
 ## Every companion's entity id, slot, species (as its name's code) and rest, in id order, and the
-## stream's state. The fainted species are the state's (GameState.fainted).
+## stream's state. The party is the player's world store's (CompanionParty).
 func hash_values() -> Array[int]:
 	var values: Array[int] = [owners.size()]
 	for companion_id: int in companions():
@@ -259,7 +251,7 @@ func hash_values() -> Array[int]:
 
 
 ## Every companion as its entity id, slot, species and rest, in id order, and the stream's state.
-## The reaches follow from the content; the fainted species are the world's to save (WorldData).
+## The reaches follow from the content; the party is the world's to save (CompanionParty).
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for companion_id: int in companions():
@@ -289,7 +281,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
 			values.fail("companion %d isn't one walking entity without a player" % companion_id)
 			return
-		if species.is_empty() or species != state.companions[slot]:
+		if species.is_empty() or species != CompanionParty.companion(state, slot):
 			values.fail("companion %d isn't of its slot's companion species" % companion_id)
 			return
 		owners[companion_id] = slot

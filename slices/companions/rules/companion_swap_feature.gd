@@ -29,8 +29,9 @@ func step(state: GameState, commands: Array[Command]) -> void:
 ## Raises CompanionChosen when the player in `slot` carries a monster at `place` other than their
 ## companion, and it hasn't fainted.
 static func _swap(state: GameState, slot: int, place: int) -> void:
-	var party: PackedStringArray = state.carried[slot]
-	if place >= party.size() or party[place] == state.companions[slot]:
+	var party: PackedStringArray = CompanionParty.carried(state, slot)
+	if place >= party.size() or party[place] == CompanionParty.companion(state, slot):
 		return
-	if not state.has_fainted(slot, party[place]):
+	if not CompanionParty.has_fainted(state, slot, party[place]):
+		CompanionParty.choose(state, slot, place)
 		state.events.append(CompanionChosen.new(slot, place))
