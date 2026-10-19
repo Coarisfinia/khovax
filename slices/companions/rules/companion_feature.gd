@@ -9,11 +9,12 @@ extends Feature
 ## goes when its player leaves the instance (through an exit, the same tick: the feature steps
 ## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
 ## something), it goes and joins them afresh beside them. One at 0 HP faints: it goes back to its
-## player (`send_home`, #456), and the first monster they carry that hasn't fainted here, in their
+## player (`send_home`, #456), and the first monster they carry that hasn't fainted, in their
 ## carried order, is chosen in its place at once (#597), so it joins them the next tick. A fainted
-## one doesn't join them again in this instance, nor can they swap to it, until they leave it
-## through an exit (#655 keeps it fainted beyond). Fainting is kept by species, like the companion
-## choice itself.
+## one stays fainted (GameState.fainted, kept by the world across exits, instances and sessions):
+## it doesn't join them, nor can they swap to it, until it's revived (`revive`, #655). A player
+## whose companion has fainted while another they carry hasn't, as after a session starts, gets that
+## one chosen. Fainting is kept by species, like the companion choice itself.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -45,15 +46,10 @@ var _species: Dictionary[int, String] = {}
 ## The ticks each companion still rests before its next roaming step, by entity id.
 var _rest: Dictionary[int, int] = {}
 var _rng: Rng
-## The species that fainted here, by slot, in the order they fainted: none joins again until its
-## player leaves.
-var _fainted: Array[PackedStringArray] = []
 
 
 func _init(species_reaches: Dictionary[String, int] = {}) -> void:
 	reaches = species_reaches
-	for _slot: int in GameState.MAX_PLAYERS:
-		_fainted.append(PackedStringArray())
 
 
 func id() -> int:
@@ -69,15 +65,15 @@ func start(state: GameState) -> void:
 	_rng = Rng.new(state.rng_seed, id())
 
 
-## Sends off the companions whose player left, brings another or lost them, lets every player who
-## brings one and has none here be joined by it, then lets each companion roam, in id order.
+## Sends off the companions whose player left, brings another or lost them, chooses another for
+## every player whose companion fainted, lets every player who brings one that hasn't fainted and
+## has none here be joined by it, then lets each companion roam, in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	var leaving: Array[int] = []
 	for event: RefCounted in state.events:
 		if event is ExitTaken:
 			leaving.append((event as ExitTaken).slot)
-			_fainted[(event as ExitTaken).slot] = PackedStringArray()
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
 		if leaving.has(owners[companion_id]):
@@ -89,33 +85,53 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
 		var brings: bool = player != null and not state.companions[slot].is_empty()
-		if brings and companion_of(slot) == 0 and not has_fainted(slot, state.companions[slot]):
+		if brings and state.has_fainted(slot, state.companions[slot]):
+			_choose_standing(state, slot)
+		elif brings and companion_of(slot) == 0:
 			_join(state, movement, player, state.companions[slot])
 	for companion_id: int in companions():
 		_roam(state, movement, state.entity(companion_id))
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance
-## and doesn't join them again here until they leave through an exit. The first monster they carry
-## that hasn't fainted here is chosen in its place (#597), unless they chose one this tick already.
+## and stays fainted, which the world takes into every instance once this one stepped, until revived
+## (#655). The first monster they carry that hasn't fainted is chosen in its place (#597).
 func send_home(state: GameState, companion_id: int) -> void:
 	var slot: int = owners[companion_id]
-	var fainted: PackedStringArray = _fainted[slot]
+	var fainted: PackedStringArray = state.fainted[slot]
 	var _added: bool = fainted.append(_species[companion_id])
-	_fainted[slot] = fainted
+	state.fainted[slot] = fainted
 	state.remove_entity(companion_id)
 	state.events.append(CompanionReturned.new(companion_id, slot))
+	_choose_standing(state, slot)
+
+
+## Brings the fainted carried monster of `species` of the player in `slot` back (#655): it can be
+## swapped to again, and as their companion it joins them on the next tick; the world takes it into
+## every instance once this one stepped. The hook reviving plugs into, for the base (#647) and
+## revive items (#656) once they exist. Nothing for one that hasn't fainted.
+static func revive(state: GameState, slot: int, species: String) -> void:
+	var down: PackedStringArray = state.fainted[slot]
+	var place: int = down.find(species)
+	if place >= 0:
+		down.remove_at(place)
+		state.fainted[slot] = down
+
+
+## Raises CompanionChosen for the first monster the player in `slot` carries that hasn't fainted,
+## unless every one has, or they chose one this tick already (a swap ran before).
+static func _choose_standing(state: GameState, slot: int) -> void:
 	var next: int = next_standing(state, slot)
 	if next != -1 and not _chosen_this_tick(state, slot):
 		state.events.append(CompanionChosen.new(slot, next))
 
 
-## The place of the first monster the player in `slot` carries that hasn't fainted here, in their
-## carried order, or -1 when every one has.
-func next_standing(state: GameState, slot: int) -> int:
+## The place of the first monster the player in `slot` carries that hasn't fainted, in their carried
+## order, or -1 when every one has.
+static func next_standing(state: GameState, slot: int) -> int:
 	var party: PackedStringArray = state.carried[slot]
 	for place: int in party.size():
-		if not has_fainted(slot, party[place]):
+		if not state.has_fainted(slot, party[place]):
 			return place
 	return -1
 
@@ -148,11 +164,6 @@ func companion_of(slot: int) -> int:
 		if owners[companion_id] == slot:
 			return companion_id
 	return 0
-
-
-## Whether the player in `slot`'s carried monster of `species` fainted here (#597) and stays away.
-func has_fainted(slot: int, species: String) -> bool:
-	return _fainted[slot].has(species)
 
 
 ## The species of the companion with this entity id, or "".
@@ -233,24 +244,19 @@ static func _is_free(state: GameState, movement: MovementFeature, tile: Vector2i
 	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)
 
 
-## Every companion's entity id, slot, species (as its name's code) and rest, in id order, the
-## stream's state, then each slot's fainted species.
+## Every companion's entity id, slot, species (as its name's code) and rest, in id order, and the
+## stream's state. The fainted species are the state's (GameState.fainted).
 func hash_values() -> Array[int]:
 	var values: Array[int] = [owners.size()]
 	for companion_id: int in companions():
 		values.append_array([companion_id, owners[companion_id], _rest[companion_id]])
 		values.append(World.name_code(_species[companion_id]))
 	values.append_array(_rng.hash_values())
-	for fainted: PackedStringArray in _fainted:
-		values.append(fainted.size())
-		for species: String in fainted:
-			values.append(World.name_code(species))
 	return values
 
 
-## Every companion as its entity id, slot, species and rest, in id order, the stream's state and
-## each slot's fainted species.
-## The reaches follow from the content.
+## Every companion as its entity id, slot, species and rest, in id order, and the stream's state.
+## The reaches follow from the content; the fainted species are the world's to save (WorldData).
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for companion_id: int in companions():
@@ -262,7 +268,7 @@ func save_values() -> Dictionary:
 				"rest": _rest[companion_id],
 			},
 		)
-	return { "companions": saved, "rng": _rng.hash_values(), "fainted": _saved_fainted() }
+	return { "companions": saved, "rng": _rng.hash_values() }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
@@ -280,8 +286,9 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
 			values.fail("companion %d isn't one walking entity without a player" % companion_id)
 			return
-		if species.is_empty() or species != state.companions[slot]:
-			values.fail("companion %d isn't of its slot's companion species" % companion_id)
+		var chosen: bool = not species.is_empty() and species == state.companions[slot]
+		if not chosen or state.has_fainted(slot, species):
+			values.fail("companion %d isn't its slot's standing companion species" % companion_id)
 			return
 		owners[companion_id] = slot
 		_species[companion_id] = species
@@ -291,30 +298,3 @@ func load_values(state: GameState, values: DataReader) -> void:
 		values.fail("the companions' random stream isn't four 32-bit words, not all zero")
 		return
 	_rng = restored
-	_load_fainted(state, values)
-
-
-## The fainted species as their slot and species, by slot, in the order they fainted.
-func _saved_fainted() -> Array[Dictionary]:
-	var saved: Array[Dictionary] = []
-	for slot: int in GameState.MAX_PLAYERS:
-		for species: String in _fainted[slot]:
-			saved.append({ "slot": slot, "species": species })
-	return saved
-
-
-## Each slot's fainted species: each carried, listed once, and none of them here as its companion.
-func _load_fainted(state: GameState, values: DataReader) -> void:
-	for slot: int in GameState.MAX_PLAYERS:
-		_fainted[slot] = PackedStringArray()
-	for entry: DataReader in values.entries("fainted"):
-		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
-		var species: String = entry.text("species")
-		var listed: PackedStringArray = _fainted[slot]
-		var here: int = companion_of(slot)
-		var away: bool = here == 0 or _species[here] != species
-		if not state.carried[slot].has(species) or listed.has(species) or not away:
-			values.fail("slot %d's fainted %s isn't carried, away and once" % [slot, species])
-			return
-		var _added: bool = listed.append(species)
-		_fainted[slot] = listed

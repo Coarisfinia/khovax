@@ -37,6 +37,11 @@ var companions: Array[String] = []
 ## Each player slot's carried monsters' species, in their carried order (#53), empty for none. Start
 ## data the world hands every instance it loads, like the seed; no rule changes it.
 var carried: Array[PackedStringArray] = []
+## Each player slot's carried species that fainted (#597), in the order they fainted: none walks
+## beside them or is swapped to until it's revived (#655). The world hands it to every instance it
+## loads, like `carried`; within an instance only the companions' rule changes it, as one faints or
+## is revived, and the world takes that into every other instance once it stepped (World.fainted).
+var fainted: Array[PackedStringArray] = []
 ## The ground of the instances next door (#191): each tile their regions have that this one doesn't,
 ## with its terrain, in this instance's coordinates. The world hands it over, so sight crosses the
 ## seam: a loaded neighbour's region as it is, with its tiles changed in place (#538), and the
@@ -54,6 +59,7 @@ func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> vo
 	rng_seed = seed_value
 	var _sized: int = companions.resize(MAX_PLAYERS)
 	_sized = carried.resize(MAX_PLAYERS)
+	_sized = fainted.resize(MAX_PLAYERS)
 	problem = order_problem(ordered)
 	if not problem.is_empty():
 		return
@@ -100,6 +106,11 @@ func remove_entity(id: int) -> void:
 			for each: Feature in features:
 				each.entity_removed(self, id)
 			return
+
+
+## Whether the carried monster of `species` of the player in `slot` has fainted (#597, #655).
+func has_fainted(slot: int, species: String) -> bool:
+	return fainted[slot].has(species)
 
 
 ## The entity with this id, or null.
@@ -258,16 +269,15 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, the region, every slot's companion species and carried species, every entity
+## every core value, the region, every slot's companion species, carried species and fainted
+## species, every entity
 ## in id order and, in order, every feature's id, on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
 	for species: String in companions:
 		values.append(World.name_code(species) if not species.is_empty() else 0)
-	for party: PackedStringArray in carried:
-		values.append(party.size())
-		for species: String in party:
-			values.append(World.name_code(species))
+	values.append_array(_species_values(carried))
+	values.append_array(_species_values(fainted))
 	values.append_array(region.hash_values())
 	values.append(next_entity_id)
 	values.append(entities.size())
@@ -285,6 +295,16 @@ func state_hash() -> int:
 		result = _mix(result, value & 0xffff_ffff)
 		result = _mix(result, (value >> 32) & 0xffff_ffff)
 	return result
+
+
+## Each slot's species in `parties` for the hash: how many, then each one's name code, in order.
+static func _species_values(parties: Array[PackedStringArray]) -> Array[int]:
+	var values: Array[int] = []
+	for party: PackedStringArray in parties:
+		values.append(party.size())
+		for species: String in party:
+			values.append(World.name_code(species))
+	return values
 
 
 static func _mix(current: int, word: int) -> int:

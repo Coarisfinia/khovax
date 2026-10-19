@@ -11,7 +11,8 @@ extends RefCounted
 ## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
 ## (SentToSpawn, #457) is moved onto their start in the starting instance. A player who chooses
 ## another carried monster as their companion (CompanionChosen, #55) has it as their companion in
-## every instance from then on. The world keeps a set of flags (#529), which choose each blueprint's
+## every instance from then on, and a carried monster that faints anywhere stays fainted everywhere
+## until it's revived (#655). The world keeps a set of flags (#529), which choose each blueprint's
 ## variant (`InstanceSource.variant`): setting or clearing one purges every loaded instance whose
 ## variant it changes, once nobody is in it, so it comes back from its new variant and no player
 ## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
@@ -57,6 +58,11 @@ var companions: Array[String] = []
 ## who the players bring, which every instance the world loads is handed (GameState.carried). Set
 ## when the session starts.
 var carried: Array[PackedStringArray] = []
+## Each player slot's carried species that fainted, in the order they fainted (#655): they stay
+## fainted across exits, instances and sessions, until a rule revives one. Every instance the world
+## loads is handed it (GameState.fainted); one fainting or revived in an instance is taken into the
+## world once that instance stepped (`_take_fainted`).
+var fainted: Array[PackedStringArray] = []
 ## The world's own events of the last tick (#370): players who came into another instance
 ## (InstanceEntered) and world-changing moments (WorldChanged, #499), which no instance's features
 ## see. Like an instance's events, they're derived from what happened, so they're neither hashed
@@ -126,6 +132,7 @@ func create_instance(instance_name: String, players: int, variant: String) -> Ga
 		variants[instance_name] = variant
 		created.companions = companions.duplicate()
 		created.carried = carried.duplicate()
+		created.fainted = fainted.duplicate()
 		_hand_next_door(instance_name, created)
 	return created
 
@@ -201,16 +208,25 @@ static func _parties_of(companion_species: Array[String]) -> Array[PackedStringA
 
 ## Sets every slot's carried species, by slot, in carried order (empty or nothing for none), in the
 ## world and every instance it has loaded, each slot's first the companion: a session's start
-## decides who the players bring (#338, #53).
+## decides who the players bring (#338, #53). The ones that fainted stay fainted (#655), and a
+## fainted one no longer carried is forgotten.
 func set_carried(parties: Array[PackedStringArray]) -> void:
+	var was_fainted: Array[PackedStringArray] = fainted.duplicate()
 	carried.clear()
 	companions.clear()
+	fainted.clear()
 	for slot: int in GameState.MAX_PLAYERS:
 		var party: PackedStringArray = PackedStringArray()
 		if slot < parties.size():
 			party = parties[slot]
 		carried.append(party)
 		companions.append(party[0] if not party.is_empty() else "")
+		var down: PackedStringArray = PackedStringArray()
+		if slot < was_fainted.size():
+			for species: String in was_fainted[slot]:
+				if party.has(species):
+					var _added: bool = down.append(species)
+		fainted.append(down)
 	_hand_companions()
 
 
@@ -221,11 +237,26 @@ func choose_companion(slot: int, place: int) -> void:
 	_hand_companions()
 
 
-## Hands every loaded instance the world's companions and carried species.
+## Takes each slot's fainted monsters from `stepped` into the world where its rules changed them
+## this tick (#655): one fainted there, or was revived. Every instance was handed the world's
+## before it stepped, and a slot's player is in one instance only, so only theirs changes that
+## slot's. Then hands the world's to every loaded instance, when any changed.
+func _take_fainted(stepped: GameState) -> void:
+	var taken: bool = false
+	for slot: int in GameState.MAX_PLAYERS:
+		if stepped.fainted[slot] != fainted[slot]:
+			fainted[slot] = stepped.fainted[slot]
+			taken = true
+	if taken:
+		_hand_companions()
+
+
+## Hands every loaded instance the world's companions, carried species and fainted ones.
 func _hand_companions() -> void:
 	for instance_name: String in sorted_names():
 		instances[instance_name].companions = companions.duplicate()
 		instances[instance_name].carried = carried.duplicate()
+		instances[instance_name].fainted = fainted.duplicate()
 
 
 ## Where tile (0, 0) of the instance `instance_name` lies in the world (#187); see WorldLayout.
@@ -271,6 +302,8 @@ func step(commands: Array[Command]) -> void:
 	for instance_name: String in stepping:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
+		# Before a choice hands the world's fainted ones back over this instance's.
+		_take_fainted(state)
 		for event: RefCounted in state.events:
 			if event is ExitTaken or event is SentToSpawn:
 				leaving.append([instance_name, event])
