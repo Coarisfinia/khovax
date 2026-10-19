@@ -333,8 +333,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` in lockstep: real time
   decides when ticks happen, never what they do. It records every session as a `Replay`, and the
   `EventBus`'s subscribers never change the world. It also holds the boot, the launch options and
-  test mode; the slices hold everything it wires (#514), the `EventBus` and the `WorldKeeper`
-  included (`slices/board/`).
+  test mode; the slices hold everything it wires (#514), the `EventBus`, the `WorldKeeper` and
+  `WebStorage` included (`slices/board/`).
 - **The controls** (`slices/controls/input/`, #514): devices to commands. Every device presses the
   same InputMap actions (`LocalInput`), and `HexInput` is the only place floats become a hex
   direction.
