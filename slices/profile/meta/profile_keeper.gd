@@ -66,6 +66,16 @@ func equip(slot: String, gear_id: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Spends one of the item `item` the player holds (#656), saved like a gain; returns why it can't,
+## or "".
+func spend(item: String, now_msec: int) -> String:
+	var problem: String = profile.spend(item)
+	if not problem.is_empty():
+		return problem
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Names the player's character `typed` (#399), its spaces at either end dropped, and saves it like
 ## any choice; returns why it can't, in words, or "".
 func choose_name(typed: String, now_msec: int) -> String:

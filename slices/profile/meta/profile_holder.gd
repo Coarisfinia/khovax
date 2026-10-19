@@ -8,8 +8,8 @@ extends Node
 ## the region pieces and instances they enter (#350, #370), the answers they choose in dialogs
 ## (#636) and the events that change the world (#707), which every player gains. A territory quest
 ## it finishes hands its territory over in this player's next command (#638), so the world changes
-## in a tick, the same on every machine and in the replay. The player's personal color (#391) is
-## kept in it too, saved the same way.
+## in a tick, the same on every machine and in the replay. A revive item they used (#656) is spent
+## from it. The player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -65,6 +65,7 @@ func _ready() -> void:
 	bus.subscribe(&"InstanceEntered", _on_event)
 	bus.subscribe(&"DialogAnswered", _on_event)
 	bus.subscribe(&"WorldChanged", _on_event)
+	bus.subscribe(&"MonsterRevived", _on_revived)
 
 
 func _process(_delta: float) -> void:
@@ -100,6 +101,13 @@ func _hand_over_since(done: int) -> void:
 		var territory: QuestTerritory = profile.quest_book[profile.quests_done[index]].territory
 		if territory != null:
 			input.hand_over(Territory.code(territory.instance, territory.faction))
+
+
+## Spends the revive item this machine's player used (#656).
+func _on_revived(event: RefCounted) -> void:
+	var revived: MonsterRevived = event as MonsterRevived
+	if keeper != null and revived.slot == input.slot:
+		_report(keeper.spend(ReviveItem.ID, Time.get_ticks_msec()))
 
 
 ## This machine's player's chosen personal color (#391), as 0xRRGGBB, or Profile.AUTO_COLOR, also

@@ -3,8 +3,8 @@
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
   `sprout.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
-  `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `resize.svg`, `totem.svg`; Sbed
-  (http://opengameart.org/content/95-game-icons): `cancel.svg`
+  `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `resize.svg`,
+  `totem.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white
   shape is left, which the game tints with its ink
@@ -15,6 +15,6 @@
   (`magnifying-glass.svg`), the button that moves it (`resize.svg`), the button that sends a
   knocked-down player back to the spawn (`exit-door.svg`), the buttons that open the menu
   (`hamburger-menu.svg`) and close it (`cancel.svg`), the gear slots (#690): ward
-  (`magic-shield.svg`), trap (`wolf-trap.svg`) and throw (`berries-bowl.svg`), and the type
-  families' badges (#627): `magic-swirl.svg`, `evil-moon.svg`, `fist.svg`, `sprout.svg` and
-  `tornado.svg`
+  (`magic-shield.svg`), trap (`wolf-trap.svg`) and throw (`berries-bowl.svg`), the type families'
+  badges (#627): `magic-swirl.svg`, `evil-moon.svg`, `fist.svg`, `sprout.svg` and `tornado.svg`,
+  and the revive item's button (#656): `herbs-bundle.svg`

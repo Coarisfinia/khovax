@@ -14,7 +14,8 @@ extends RefCounted
 ## older replay's commands answer none. Format 10 gave every command its territory handed over
 ## (#638): an older replay's commands hand none over. Format 11 gave every carried monster its short
 ## id (#700): an older replay's carried monsters get stand-ins by their place (ShortId.stand_in).
-const FORMAT: int = 11
+## Format 12 gave every command its revive item (#656): an older replay's commands revive none.
+const FORMAT: int = 12
 ## The first format with every slot's carried monsters instead of only its companion.
 const CARRIED_FORMAT: int = 8
 ## The first format with every carried monster's short id.
@@ -101,12 +102,15 @@ static func parse(text: String) -> Replay:
 ## How many integers a command is in a replay of `format`: only the move before format 4, the
 ## special attack too in format 4, the totem too in format 5, the focus too in format 6 (#436), the
 ## choice to go back to the spawn too in format 7 (#495), the swap too in format 8 (#55), the
-## dialog answer too in format 9 (#635), and the territory handed over too since (#638).
+## dialog answer too in format 9 (#635), the territory handed over too in formats 10 and 11 (#638),
+## and the revive item too since format 12 (#656).
 static func _value_count(format: int) -> int:
 	if format < 4:
 		return 1
-	if format < 10:
+	if format < 11:
 		return format - 2
+	if format < 12:
+		return 8
 	return Command.VALUE_COUNT
 
 
@@ -153,7 +157,8 @@ static func _valid(party: CarriedMonsters) -> CarriedMonsters:
 
 ## Changes recorded with `count` integers per command (the tick and slot before them), each
 ## widened with zeros to a whole command's: no special attack fired, no totem placed, nothing
-## focused, no going back to the spawn, no swap, no answer, no territory handed over.
+## focused, no going back to the spawn, no swap, no answer, no territory handed over, no revive
+## item.
 static func _widened(old: Array[int], count: int) -> Array[int]:
 	var stride: int = 2 + count
 	var changes: Array[int] = []

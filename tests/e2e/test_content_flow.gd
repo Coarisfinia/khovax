@@ -622,8 +622,8 @@ func _check_refused() -> String:
 
 
 ## The placeholder tables load. A roll on the toad's table gives 2 to 4 berries, or on its blank
-## what the glade's table gives (1 to 2 moss, or a single berry), and the same stream rolls the
-## same loot.
+## what the glade's table gives (1 to 2 moss, a single berry or a single revive herb, #656), and the
+## same stream rolls the same loot.
 func _check_loot_rolls() -> String:
 	var content: LootData = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
@@ -636,12 +636,29 @@ func _check_loot_rolls() -> String:
 		if loot != _roll(toad, glade, seed_value):
 			return "seed %d rolled two different loots" % seed_value
 		var own: bool = loot.get("berry", 0) >= 2 and loot["berry"] <= 4
-		var blank: bool = loot.get("berry", 0) == 1 or loot.get("moss", 0) in [1, 2]
+		var single: bool = loot.get("berry", 0) == 1 or loot.get(ReviveItem.ID, 0) == 1
+		var blank: bool = single or loot.get("moss", 0) in [1, 2]
 		if loot.size() != 1 or not (own or blank):
 			return "seed %d rolled %s" % [seed_value, loot]
 		hits[own] += 1
 	if hits[true] == 0 or hits[false] == 0:
 		return "the toad's rolls never gave its berries or never hit the blank"
+	return _check_revive_herbs(content)
+
+
+## The glade's own rolls and its chests' give a revive herb (#656) now and then.
+func _check_revive_herbs(content: LootData) -> String:
+	var herb_tables: Array[String] = ["glade", "glade_chest"]
+	for table_id: String in herb_tables:
+		var herbs: int = 0
+		for seed_value: int in 200:
+			var rolled: int = _roll(content.loot_tables[table_id], null, seed_value).get(
+				ReviveItem.ID,
+				0,
+			)
+			herbs += rolled
+		if herbs == 0:
+			return "the %s table's rolls never gave a revive herb" % table_id
 	return ""
 
 

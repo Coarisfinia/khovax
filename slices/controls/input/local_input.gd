@@ -8,12 +8,16 @@ extends Node
 ## shoulder buttons) step the focus through the wild monsters near the player (#436). swap_1 to
 ## swap_3 (keys 1 to 3, the d-pad's left, up and right, or a tap on the roster, RosterHud) make the
 ## monster at that place in the carried order the companion (#540): one press swaps once.
+## revive_monster (V, or the d-pad's down) uses a revive item (#656) in the next command, only while
+## this player's profile holds one: the items are in the profile, outside the simulation.
 
 ## The swap actions, in the carried order's places from 1.
 const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 
 ## The player slot this machine's player controls.
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
+## This machine's player's profile, which holds their revive items (#656).
+@export var holder: ProfileHolder
 
 ## Whether the game hears no input, as while the menu is open over it (#362): the player stands.
 var blocked: bool = false
@@ -39,6 +43,8 @@ var _answer: int = Command.NO_ANSWER
 ## The codes of the territories this player's finished territory quests hand over (#638), waiting
 ## for the next commands, one each.
 var _handing: Array[int] = []
+## Whether revive_monster was pressed since the last command (#656).
+var _revive_pressed: bool = false
 
 
 func _process(_delta: float) -> void:
@@ -55,6 +61,8 @@ func _process(_delta: float) -> void:
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
+	if Input.is_action_just_pressed("revive_monster"):
+		_revive_pressed = true
 
 
 ## Swaps to the monster at `place` in the carried order, from 1, in the next command, as a tap on
@@ -87,8 +95,9 @@ func command(state: GameState) -> Command:
 	var answering: int = _answer
 	_answer = Command.NO_ANSWER
 	if blocked or in_dialog:
-		# Presses while the game hears no input don't move the focus afterwards.
+		# Presses while the game hears no input don't move the focus or use an item afterwards.
 		_focus_steps = 0
+		_revive_pressed = false
 		var standing: Command = Command.new()
 		# The dialog screen's answers are the one input a dialog lets through.
 		standing.answer = answering
@@ -110,6 +119,7 @@ func command(state: GameState) -> Command:
 	given.swap = swap
 	given.answer = answering
 	given.hand_over = _next_hand_over()
+	given.revive = _reviving()
 	return given
 
 
@@ -121,3 +131,11 @@ func _next_hand_over() -> int:
 	var code: int = _handing[0]
 	_handing.remove_at(0)
 	return code
+
+
+## Whether the next command uses a revive item: one was pressed since the last command, and this
+## player's profile holds one (#656).
+func _reviving() -> bool:
+	var pressed: bool = _revive_pressed
+	_revive_pressed = false
+	return pressed and ReviveItem.held(holder) > 0
