@@ -4,8 +4,9 @@ extends RefCounted
 ## player-facing name and a list of steps, each one condition met a number of times, or a choice
 ## between ways on. A quest is one quest chain (#573): its steps follow each other in the file's
 ## order, except where a step's choices lead to the steps they name, and it ends after a step tagged
-## as its chain's end, or after its last step. A quest without choices is one path from its first
-## step to its last. Each player's progress through it lives in their profile
+## as its chain's end. A quest without choices is one path from its first step to its last, which
+## is tagged as the end; in every quest, every path must reach a tagged end (#576, QuestPaths).
+## Each player's progress through it lives in their profile
 ## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
 ## player enters the area it names; every other quest is open from the start. Finishing a quest,
 ## by whichever end, can move the player's standing with a faction (#532).
@@ -93,12 +94,13 @@ func _check(
 		if not step.problem.is_empty():
 			return "step %d: %s" % [index, step.problem]
 		steps.append(step)
-	return _check_links()
+	var links: String = _check_links()
+	return links if not links.is_empty() else QuestPaths.problem(self)
 
 
 ## Why the steps don't hold together as one chain, or "": no two share an id, every choice leads to
 ## a step that exists, and a step ends this quest's chain, never another's. Whether every path
-## reaches an end is checked apart (#576).
+## reaches an end is QuestPaths' check (#576).
 func _check_links() -> String:
 	for index: int in steps.size():
 		var step: QuestStep = steps[index]
