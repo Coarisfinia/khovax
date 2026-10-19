@@ -501,27 +501,56 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 
 
 ## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
+<<<<<<< HEAD
 ## player walked its stream, grove and felling, not when another player entered the last one. The
 ## hand-over waits in the profile's outbox (#771) and goes in this player's next command, which the
 ## replay records, and the world clears the forest's old holder in the same tick as it hands the
 ## forest to the guild. The world records the request applied and acknowledges it, and the outbox
 ## drops it; the same request sent again, as at the start of a session after a crash, is
 ## acknowledged but not handed over twice.
+=======
+## player walked its stream, grove and felling, not when another player entered the last one, nor
+## when this player entered a felling in another instance, since its steps count only in the
+## forest (#769); meanwhile its marker in the glade points at an exit leading there. The
+## territory goes over in this player's next command, which the replay records, and the world
+## clears the forest's old holder in the same tick as it hands the forest to the guild.
+>>>>>>> 57da1da (Quest steps can name the instance they count in (#769))
 func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var forest: String = InstanceBlueprints.FOREST
 	var quest: String = "guild_charts_the_forest"
 	driver.world.set_flag(Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
-	_emit(driver, bus, PieceEntered.new("stream", 1, 0))
-	_emit(driver, bus, PieceEntered.new("grove", 1, 0))
-	_emit(driver, bus, PieceEntered.new("felling", 9, 1))
-	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
-		return "another player entering the felling finished the forest's territory quest"
+	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
+	_emit_in(driver, bus, PieceEntered.new("grove", 1, 0), forest)
+	_emit_in(driver, bus, PieceEntered.new("felling", 9, 1), forest)
+	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), InstanceBlueprints.GLADE)
 	_emit(driver, bus, PieceEntered.new("felling", 1, 0))
+<<<<<<< HEAD
 	if profile.outbox.entries.size() != 1:
 		return "finishing the forest's territory quest didn't post its hand-over to the outbox"
 	var request: OutboxEntry = profile.outbox.entries[0]
 	_tick(driver, bus)
+=======
+	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
+		return "another player, or this one outside the forest, finished its territory quest"
+	var glade: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(
+		glade,
+		profile,
+		0,
+		InstanceBlueprints.GLADE,
+	)
+	var marked: Vector2i = targets.get(quest, -Vector2i.ONE)
+	var exit_at: int = -1
+	for i: int in glade.region.exits.size():
+		if Vector2i(glade.region.exits[i].x, glade.region.exits[i].y) == marked:
+			exit_at = i
+	if exit_at < 0 or glade.region.exit_blueprints[exit_at] != forest:
+		return "the forest's territory quest isn't marked on an exit from the glade leading there"
+	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), forest)
+	for _tick: int in 3:
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+>>>>>>> 57da1da (Quest steps can name the instance they count in (#769))
 	var held: Array[String] = []
 	for flag: String in driver.world.flags:
 		if flag.begins_with(Territory.flag(forest, "")):
@@ -1029,6 +1058,12 @@ func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
 	var events: Array[RefCounted] = [event]
 	driver.ticked.emit(driver.state.tick, events)
 	bus.flush()
+
+
+## Hands `event` to the bus as one the instance `instance_name` raised (#769), then flushes it.
+func _emit_in(driver: GameDriver, bus: EventBus, event: RefCounted, instance_name: String) -> void:
+	driver.world.instance(instance_name).events.append(event)
+	_emit(driver, bus, event)
 
 
 ## Steps count up one fact at a time: only the species a step asks for counts, a step at its count

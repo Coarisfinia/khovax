@@ -3,7 +3,8 @@ extends RefCounted
 ## One step of a quest (#184): a single condition, met `count` times, or a choice between ways on
 ## (#573), each a place to reach or an area to enter, which the Survey marks, or an answer to give
 ## in a dialog (#636), leading to a step of its own. It's checked only against what the player
-## obtains (a Gain), never inside the simulation.
+## obtains (a Gain), never inside the simulation. A step naming an instance counts only there
+## (#769), as every step of a territory quest does.
 ## A step, a choice or a step that ends the chain can emit an event once it's done or taken (#575),
 ## which can start a side quest (`QuestDefinition.starts_on`).
 
@@ -69,8 +70,9 @@ const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]
 ## `reached`, the place `place` this player stepped into (#339); `entered`, the region
 ## piece `piece` (#350) or the instance `instance` (#370) this player entered; `answered`, the
 ## answer `answer` this player chose in the dialog `dialog` (#636); `obtained`, one of the item
-## `item` this player obtained (#686), counted one per item. Defeating a monster waits until its
-## event exists.
+## `item` this player obtained (#686), counted one per item. Each of them but entering an instance
+## can name an `instance` too, and then counts only there (#769). Defeating a monster waits until
+## its event exists.
 const CONDITIONS: Array[String] = [
 	"dominated",
 	"opened",
@@ -111,7 +113,8 @@ var place: String = ""
 ## The region piece an `entered` step asks for, by its file name, or "" when it asks for an
 ## instance.
 var piece: String = ""
-## The instance an `entered` step asks for, by its blueprint name, or "" when it asks for a piece.
+## The instance an `entered` step without a piece asks for, by its blueprint name; on any other
+## step, the one it counts in only (#769), or "" for anywhere.
 var instance: String = ""
 ## The answer an `answered` step asks for (#636); its fields are "" on any other step.
 var answer: QuestAnswer = QuestAnswer.new()
@@ -223,11 +226,12 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 
 ## Why `step`'s place, piece, instance, dialog and answer, event or item, read from `data`, doesn't
 ## fit, or "": a reached step names a place, an entered step a piece (#350) or an instance (#370),
-## never both, an answered step a dialog and its answer (#636), an emitted condition an event
-## (#575) and an obtained step an item (#686), each as an id, and no other step names any; a
-## dominated step's quest target is an id too (#625). Whether
-## the dialog has the answer is QuestContent's check, which reads the dialogs. The instance must
-## be a blueprint that exists.
+## or both for a piece in that instance, an answered step a dialog and its answer (#636), an
+## emitted condition an event (#575) and an obtained step an item (#686), each as an id, and no
+## other step names any; a dominated step's quest target is an id too (#625). Every step but an
+## emitted condition, which happens in the whole world, may name the instance it counts in (#769).
+## Whether the dialog has the answer is QuestContent's check, which reads the dialogs. The
+## instance must be a blueprint that exists.
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	if (step.condition == EMITTED) != data.has("event"):
 		return "its event is what an emitted condition asks for, and only that"
@@ -235,8 +239,9 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		return "its item is what an obtained step asks for, and only that"
 	if (step.condition == "reached") != data.has("place"):
 		return "its place is what a reached step asks for, and only that"
-	if (step.condition == "entered") != (data.has("piece") != data.has("instance")):
-		return "its piece or instance is what an entered step asks for, one of them, and only that"
+	var area: String = _area_problem(data, step.condition)
+	if not area.is_empty():
+		return area
 	var answered: bool = step.condition == ANSWERED
 	if answered != data.has("dialog") or answered != data.has("answer"):
 		return "its dialog and answer are what an answered step asks for, both, and only that"
@@ -258,17 +263,30 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	return ""
 
 
+## Why the piece and instance read from `data` don't fit a step of `step_condition`, or "": only an
+## entered step names a piece, and it names a piece or an instance, or both; an emitted condition
+## names no instance, since an event happens in the whole world (#769).
+static func _area_problem(data: Dictionary, step_condition: String) -> String:
+	if data.has("piece") and step_condition != "entered":
+		return "its piece is what an entered step asks for, and only that"
+	if step_condition == "entered" and not (data.has("piece") or data.has("instance")):
+		return "its piece or instance is what an entered step asks for"
+	if step_condition == EMITTED and data.has("instance"):
+		return "its instance is where it counts, and an event counts everywhere"
+	return ""
+
+
 ## What the player can do to finish it, each a step of its own: its choices, or the step itself.
 func triggers() -> Array[QuestStep]:
 	var own: Array[QuestStep] = [self]
 	return choices if not choices.is_empty() else own
 
 
-## The choice one fact of `fact_condition` takes, `what` as `counts` reads it, or null when it takes
-## none (or the step has no choices).
-func choice_for(fact_condition: String, what: String) -> QuestStep:
+## The choice one fact of `fact_condition` takes, `what` and `where` as `counts` reads them, or null
+## when it takes none (or the step has no choices).
+func choice_for(fact_condition: String, what: String, where: String) -> QuestStep:
 	for choice: QuestStep in choices:
-		if choice.counts(fact_condition, what):
+		if choice.counts(fact_condition, what, where):
 			return choice
 	return null
 
@@ -278,10 +296,19 @@ func choice_for(fact_condition: String, what: String) -> QuestStep:
 ## item obtained) counts here, toward any of its choices on a branching step; `what` is the species
 ## or the quest target dominated, the
 ## place reached, the piece or instance entered, the answer chosen as `answer_key` names it, the
-## event emitted or the item obtained.
-func counts(fact_condition: String, what: String) -> bool:
+## event emitted or the item obtained; `where` is the instance it happened in, by blueprint name,
+## which a step naming an instance asks for (#769), or "" for none.
+func counts(fact_condition: String, what: String, where: String) -> bool:
 	if not choices.is_empty():
-		return choice_for(fact_condition, what) != null
+		return choice_for(fact_condition, what, where) != null
+	if enters_instance():
+		return fact_condition == INSTANCE_ENTERED and instance == what
+	return (instance.is_empty() or instance == where) and _asks_for(fact_condition, what)
+
+
+## Whether one fact of `fact_condition`, `what` as `counts` reads them, is what its own condition
+## asks for, wherever it happened.
+func _asks_for(fact_condition: String, what: String) -> bool:
 	if condition == EMITTED:
 		return fact_condition == condition and event == what
 	if condition == ANSWERED:
@@ -290,13 +317,16 @@ func counts(fact_condition: String, what: String) -> bool:
 		return fact_condition == condition and place == what
 	if condition == "obtained":
 		return fact_condition == condition and item == what
-	if condition == "entered" and not instance.is_empty():
-		return fact_condition == INSTANCE_ENTERED and instance == what
 	if condition == "entered":
 		return fact_condition == condition and piece == what
 	if not quarry.target.is_empty():
 		return fact_condition == TARGET_DOMINATED and quarry.target == what
 	return fact_condition == condition and quarry.fits(what, "")
+
+
+## Whether it asks to enter its instance, naming no piece in it (#370).
+func enters_instance() -> bool:
+	return condition == "entered" and piece.is_empty()
 
 
 ## The answer `answer_id` of the dialog `dialog_id` as one fact (#636): both ids, which never hold

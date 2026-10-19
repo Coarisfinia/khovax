@@ -4,9 +4,10 @@ extends Node
 ## domination of that player and their loot from every chest opened (#124) and every wild monster
 ## felled (#629) taken over at once and saved debounced (ProfileKeeper, #73), and whatever is
 ## pending saved when the game quits or goes to the background. The same dominations and chests
-## advance the player's quests (#184), in the profile, and so do the places they step into (#339),
-## the region pieces and instances they enter (#350, #370), the answers they choose in dialogs
-## (#636) and the events that change the world (#707), which every player gains. What the profile
+## advance the player's quests (#184), in the profile, each in the instance it happened in (#769),
+## and so do the places they step into (#339), the region pieces and instances they enter (#350,
+## #370), the answers they choose in dialogs (#636) and the events that change the world (#707),
+## which every player gains. What the profile
 ## asks the world to do, like handing over the territory of a territory quest it finished (#638),
 ## waits in its outbox (#771) and goes in this player's next commands, so the world changes in a
 ## tick, the same on every machine and in the replay; it's sent again at the start of every session
@@ -95,6 +96,7 @@ func _on_event(event: RefCounted) -> void:
 		return
 	var gain: Gain = _gain_of(event)
 	if gain != null:
+		gain.instance = bus.instance_of(event)
 		_report(keeper.take(gain, Time.get_ticks_msec()))
 		_send_new()
 

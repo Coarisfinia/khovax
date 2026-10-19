@@ -10,6 +10,9 @@ extends RefCounted
 ## It's handed to the profile the moment it happens, not at the session's end, and saved at once
 ## (ProfileKeeper), so a crash mid-session never loses a domination (owner, #73).
 
+## The instance it happened in, by blueprint name (#769), which a quest step naming an instance asks
+## for; "" for the world's events, which happen everywhere.
+var instance: String = ""
 var dominated_species: Array[String] = []
 ## The short id of each dominated monster (#700), in the same order. A monster this lacks one for
 ## gets a stand-in (ShortId.stand_in).

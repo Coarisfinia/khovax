@@ -184,18 +184,33 @@ func _check_named_steps(content: QuestData) -> String:
 	return ""
 
 
-## Why broken steps to enter an instance (#370) aren't refused, with a reason, or "": one naming
-## both a piece and an instance, an instance on another step, an instance that isn't an id or
-## isn't a blueprint. Then the answered steps.
+## Why steps naming an instance don't read, or "": a chest opened and a piece entered there, each
+## counting only there (#769), and a step to enter it (#370). An instance that isn't an id or isn't
+## a blueprint is refused, with a reason, and so is one on a start waiting on an event, which
+## happens everywhere. Then the answered steps.
 func _check_instance_steps(content: QuestData) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
+	var there: String = ", \"instance\": \"glade\""
+	var opened: String = "{\"condition\": \"opened\"%s}" % there
+	var entered: String = ENTER % ("start\"" + there + ", \"ends\": \"x")
+	var tied: QuestDefinition = QuestDefinition.parse(
+		"x",
+		quest % (opened + ", " + entered),
+		content.species,
+	)
+	var piece: QuestStep = tied.steps[1] if tied.steps.size() == 2 else QuestStep.new()
+	if (not tied.problem.is_empty() or tied.steps[0].instance != "glade"
+			or piece.instance != "glade" or piece.piece != "start" or piece.enters_instance()
+			or not piece.counts("entered", "start", "glade") or piece.counts("entered", "start", "")
+			or tied.steps[0].counts("opened", "", "forest")):
+		return "steps counting only in the glade didn't read, or counted elsewhere: " + tied.problem
+	var waiting: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
-		quest % "{\"condition\": \"opened\", \"instance\": \"glade\"}": (
-			"step 0: its piece or instance"
-		),
-		quest % (ENTER_INSTANCE % "glade\", \"piece\": \"start"): "step 0: its piece or instance",
 		quest % (ENTER_INSTANCE % "The Glade"): "step 0: its instance must be an id",
 		quest % (ENTER_INSTANCE % "nowhere"): "step 0: its instance must be an instance",
+		waiting % ["{\"condition\": \"emitted\", \"event\": \"e\"%s}" % there, OPENED_END]: (
+			"its start: its instance is where it counts"
+		),
 	}
 	var problem: String = _unrefused(cases, content)
 	return problem if not problem.is_empty() else _check_answered_steps(content)
@@ -270,10 +285,11 @@ func _check_quest_standings(content: QuestData) -> String:
 
 
 ## Why territory quests (#638) don't read, or "": every one names an instance that exists and a
-## faction, filed by the code a command hands it over by, and starts once the player enters that
-## instance (the ground rules in AGENTS.md), while the quests that aren't territory
-## quests name none; a territory that isn't an object, has another field, or doesn't name an
-## instance and a faction by their ids is refused.
+## faction, filed by the code a command hands it over by, starts once the player enters that
+## instance and has every step count only there (#769, the ground rules in AGENTS.md), while the
+## quests that aren't territory quests name none; a territory that isn't an object, has another
+## field, or doesn't name an instance and a faction by their ids is refused, and so is a territory
+## quest with a step that doesn't name its instance, or names another.
 func _check_quest_territories(content: QuestData) -> String:
 	var handed: int = 0
 	for id: String in content.quests:
@@ -286,10 +302,14 @@ func _check_quest_territories(content: QuestData) -> String:
 		var start: QuestStep = content.quests[id].starts_on
 		if start == null or start.condition != "entered" or start.instance != territory.instance:
 			return "%s doesn't start once the player enters %s" % [id, territory.instance]
+		for step: QuestStep in content.quests[id].steps:
+			if step.instance != territory.instance:
+				return "%s has a step that doesn't count only in %s" % [id, territory.instance]
 		handed += 1
 	if handed == 0 or content.quests["first_domination"].territory != null:
 		return "no quest hands a territory over, or the first domination does"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"territory\": %s, \"steps\": [%s]}"
+	var forest: String = "{\"instance\": \"forest\", \"faction\": \"a\"}"
 	var cases: Dictionary[String, String] = {
 		quest % ["\"forest\"", OPENED_END]: "its territory: it isn't",
 		quest % ["{\"instance\": \"forest\", \"faction\": \"a\", \"by\": 1}", OPENED_END]:
@@ -297,6 +317,10 @@ func _check_quest_territories(content: QuestData) -> String:
 		quest % ["{\"instance\": \"Forest\", \"faction\": \"a\"}", OPENED_END]:
 		"its territory: it names",
 		quest % ["{\"instance\": \"forest\"}", OPENED_END]: "its territory: it names",
+		quest % [forest, OPENED_END]: "step 0: a territory quest's steps name its instance forest",
+		quest % [forest, OPENED_END.replace("{", "{\"instance\": \"glade\", ")]: (
+			"step 0: a territory quest's steps name"
+		),
 	}
 	var problem: String = _unrefused(cases, content)
 	return problem if not problem.is_empty() else _check_branches(content)
@@ -310,7 +334,7 @@ func _check_branches(content: QuestData) -> String:
 	var fork: QuestDefinition = content.quests.get("glade_fork")
 	if (fork == null or fork.steps[0].choices.size() != 2
 			or fork.steps[0].choices[0].piece != "pond"
-			or fork.next_index(0, "entered", "thicket") != 2
+			or fork.next_index(0, "entered", "thicket", "") != 2
 			or fork.steps[1].ends != "glade_fork" or fork.steps[2].ends != "glade_fork"):
 		return "the glade's fork didn't read as a choice between two ends"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"

@@ -409,8 +409,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Territory quests keep to ground rules** (draft for the owner's review, #638): a territory
   quest (`territory` in its quest data) names one instance and one faction, and finishing it hands
   that instance to that faction, whoever held it. It's written for its territory: its steps happen
-  there (its region pieces, places and monsters), and no two territory quests are one quest
-  renamed. It has a clear goal there that fits its faction (chart it, hold its points, clear the
+  there (its region pieces, places and monsters), each naming its instance, so it counts only there
+  (#769), and no two territory quests are one quest renamed. It has a clear goal there that fits its faction (chart it, hold its points, clear the
   monsters another faction keeps there, bring something back). It's a side quest that starts once
   the player first enters its territory, so it never shows before they've been there. It asks to
   fight monsters only: battling a humanoid's monsters in a trainer fight is fine, the humanoid

@@ -10,7 +10,9 @@ extends RefCounted
 ## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
 ## player enters the area it names, or once a quest emits the event it names (#575); every other
 ## quest is open from the start. Finishing a quest, by whichever end, can move the player's standing
-## with a faction (#532), and finishing a territory quest hands its instance to its faction (#638).
+## with a faction (#532), and finishing a territory quest hands its instance to its faction (#638);
+## its
+## steps all count only there (#769).
 
 ## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
 const FIELDS: Array[String] = [
@@ -69,7 +71,21 @@ static func parse(
 		quest.territory = QuestTerritory.parse(data.get("territory"))
 		if not quest.territory.problem.is_empty():
 			quest.problem = "its territory: " + quest.territory.problem
+		else:
+			quest.problem = quest._territory_steps_problem()
 	return quest
+
+
+## Why a step or choice of this territory quest doesn't happen in its territory, or "": each names
+## the territory's instance as where it counts (#769), the ground rules in AGENTS.md.
+func _territory_steps_problem() -> String:
+	for index: int in steps.size():
+		for trigger: QuestStep in steps[index].triggers():
+			if trigger.instance != territory.instance:
+				return "step %d: a territory quest's steps name its instance %s" % [
+					index, territory.instance,
+				]
+	return ""
 
 
 ## Why the side quest's start, read from `entry`, is wrong, or "": a reached, entered or emitted
@@ -152,16 +168,17 @@ func index_of(step_id: String) -> int:
 
 
 ## The index of the step that comes after the step at `index` once it's done, by the fact
-## (`fact_condition`, `what`, as QuestStep.counts reads them) that did it: the step the choice it
+## (`fact_condition`, `what` and `where`, as QuestStep.counts reads them) that did it: the step the
+## choice it
 ## took leads to (the first choice's, for saved progress settling on a fact that takes none), past
 ## the last step when it ends the chain, or the next one in the file.
-func next_index(index: int, fact_condition: String, what: String) -> int:
+func next_index(index: int, fact_condition: String, what: String, where: String) -> int:
 	var step: QuestStep = step_at(index)
 	if step == null or not step.ends.is_empty():
 		return steps.size()
 	if step.choices.is_empty():
 		return index + 1
-	var choice: QuestStep = step.choice_for(fact_condition, what)
+	var choice: QuestStep = step.choice_for(fact_condition, what, where)
 	return index_of(choice.next if choice != null else step.choices[0].next)
 
 
