@@ -291,7 +291,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		values.fail("the companions' random stream isn't four 32-bit words, not all zero")
 		return
 	_rng = restored
-	_load_fainted(values)
+	_load_fainted(state, values)
 
 
 ## The fainted species as their slot and species, by slot, in the order they fainted.
@@ -303,8 +303,8 @@ func _saved_fainted() -> Array[Dictionary]:
 	return saved
 
 
-## Each slot's fainted species: each once, and none of them here as its companion.
-func _load_fainted(values: DataReader) -> void:
+## Each slot's fainted species: each carried, listed once, and none of them here as its companion.
+func _load_fainted(state: GameState, values: DataReader) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		_fainted[slot] = PackedStringArray()
 	for entry: DataReader in values.entries("fainted"):
@@ -314,7 +314,7 @@ func _load_fainted(values: DataReader) -> void:
 		var here: int = companion_of(slot)
 		var away: bool = here == 0 or _species[here] != species
 		if not state.carried[slot].has(species) or listed.has(species) or not away:
-			values.fail("slot %d's fainted %s isn't away and listed once" % [slot, species])
+			values.fail("slot %d's fainted %s isn't carried, away and once" % [slot, species])
 			return
 		var _added: bool = listed.append(species)
 		_fainted[slot] = listed
