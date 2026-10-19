@@ -183,7 +183,7 @@ func _check_named_steps(content: QuestData) -> String:
 
 ## Why broken steps to enter an instance (#370) aren't refused, with a reason, or "": one naming
 ## both a piece and an instance, an instance on another step, an instance that isn't an id or
-## isn't a blueprint.
+## isn't a blueprint. Then the answered steps.
 func _check_instance_steps(content: QuestData) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
@@ -193,6 +193,20 @@ func _check_instance_steps(content: QuestData) -> String:
 		quest % (ENTER_INSTANCE % "glade\", \"piece\": \"start"): "step 0: its piece or instance",
 		quest % (ENTER_INSTANCE % "The Glade"): "step 0: its instance must be an id",
 		quest % (ENTER_INSTANCE % "nowhere"): "step 0: its instance must be an instance",
+	}
+	var problem: String = _unrefused(cases, content)
+	return problem if not problem.is_empty() else _check_answered_steps(content)
+
+
+## Why broken answered steps (#636) aren't refused, with a reason, or "": an answered step names a
+## dialog and its answer, both, each an id, and no other step names either.
+func _check_answered_steps(content: QuestData) -> String:
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
+	var cases: Dictionary[String, String] = {
+		quest % "{\"condition\": \"answered\", \"dialog\": \"a\"}": "step 0: its dialog and answer",
+		quest % "{\"condition\": \"opened\", \"answer\": \"a\"}": "step 0: its dialog and answer",
+		quest % (ANSWERED % ["A Dialog", "a"]): "step 0: its dialog must",
+		quest % (ANSWERED % ["a", "An Answer"]): "step 0: its answer must",
 	}
 	return _unrefused(cases, content)
 
@@ -328,8 +342,7 @@ static func _unrefused(cases: Dictionary[String, String], content: QuestData) ->
 ## its blueprint (#370). Quests with a wrong id, name, step, condition, species, place, piece,
 ## instance or count are refused, with a reason: a reached step without a place, or a place on
 ## another step, too, and the same for an entered step and its piece or instance, which it names
-## one of, never both, and for an answered step and its dialog and answer, which it names both of
-## (#636).
+## one of, never both, and the same for an answered step and its dialog and answer (#636).
 func _check_quests() -> String:
 	var content: QuestData = QuestContent.load_quests()
 	if not content.problem.is_empty():
@@ -376,12 +389,6 @@ func _check_quests() -> String:
 		quest % ["x", "N", step % "" + ", " + step % ", \"count\": 0"]: "step 1: its count",
 		quest % ["x", "N", step % ", \"count\": 1.5"]: "step 0: its count",
 		quest % ["x", "N", step % ", \"when\": 1"]: "step 0: field when",
-		quest % ["x", "N", "{\"condition\": \"answered\", \"dialog\": \"a\"}"]: (
-			"step 0: its dialog and answer"
-		),
-		quest % ["x", "N", step % ", \"answer\": \"a\""]: "step 0: its dialog and answer",
-		quest % ["x", "N", ANSWERED % ["A Dialog", "a"]]: "step 0: its dialog must",
-		quest % ["x", "N", ANSWERED % ["a", "An Answer"]]: "step 0: its answer must",
 		quest % ["x", "N", "7"]: "step 0: it isn't",
 	}
 	return _unrefused(cases, content)

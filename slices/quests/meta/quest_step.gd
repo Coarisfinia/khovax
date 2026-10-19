@@ -95,14 +95,8 @@ var place: String = ""
 var piece: String = ""
 ## The instance an `entered` step asks for, by its blueprint name, or "" when it asks for a piece.
 var instance: String = ""
-## The dialog an `answered` step asks for, by its id (#636).
-var dialog: String = ""
-## The answer an `answered` step asks for, by its id within `dialog`.
-var answer: String = ""
-## Who speaks that dialog and what the answer says, as the player reads them, or "" (QuestContent
-## fills them in from the dialogs).
-var speaker: String = ""
-var answer_text: String = ""
+## The answer an `answered` step asks for (#636); its fields are "" on any other step.
+var answer: QuestAnswer = QuestAnswer.new()
 var count: int = 1
 ## Why the step couldn't be read, or "" when it could.
 var problem: String = ""
@@ -189,8 +183,8 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 	place = Content.text_of(data.get("place"))
 	piece = Content.text_of(data.get("piece"))
 	instance = Content.text_of(data.get("instance"))
-	dialog = Content.text_of(data.get("dialog"))
-	answer = Content.text_of(data.get("answer"))
+	answer.dialog = Content.text_of(data.get("dialog"))
+	answer.id = Content.text_of(data.get("answer"))
 	event = Content.text_of(data.get("event"))
 	count = Content.amount(data.get("count", 1))
 	if not CONDITIONS.has(condition) and condition != EMITTED:
@@ -225,8 +219,8 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"place": step.place,
 		"piece": step.piece,
 		"instance": step.instance,
-		"dialog": step.dialog,
-		"answer": step.answer,
+		"dialog": step.answer.dialog,
+		"answer": step.answer.id,
 		"event": step.event,
 	}
 	for field: String in named:
@@ -262,7 +256,7 @@ func counts(fact_condition: String, what: String) -> bool:
 	if condition == EMITTED:
 		return fact_condition == condition and event == what
 	if condition == ANSWERED:
-		return fact_condition == condition and answer_key(dialog, answer) == what
+		return fact_condition == condition and answer.key() == what
 	if condition == "reached":
 		return fact_condition == condition and place == what
 	if condition == "entered" and not instance.is_empty():

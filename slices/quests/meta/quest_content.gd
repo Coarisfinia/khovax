@@ -46,12 +46,13 @@ static func _answers_problem(quest: QuestDefinition, dialogs: DialogContent) -> 
 		for trigger: QuestStep in quest.steps[index].triggers():
 			if trigger.condition != QuestStep.ANSWERED:
 				continue
-			var dialog: Dialog = dialogs.dialogs.get(trigger.dialog)
-			var answer: DialogAnswer = dialog.answer_of(trigger.answer) if dialog != null else null
+			var asked: QuestAnswer = trigger.answer
+			var dialog: Dialog = dialogs.dialogs.get(asked.dialog)
+			var answer: DialogAnswer = dialog.answer_of(asked.id) if dialog != null else null
 			if answer == null:
 				return "step %d: the dialog %s has no answer %s" % [
-					index, trigger.dialog, trigger.answer,
+					index, asked.dialog, asked.id,
 				]
-			trigger.speaker = dialog.speaker
-			trigger.answer_text = answer.text
+			asked.speaker = dialog.speaker
+			asked.text = answer.text
 	return ""
