@@ -1045,7 +1045,7 @@ func _check_kind_and_place(tiles: String) -> String:
 	var grove: Vector2i = Vector2i(-1, 0)
 	var expected: bool = region.problem.is_empty() and region.triggers.size() == 2
 	expected = expected and region.terrain.get(grove, -1) == TileKinds.number_of("forest")
-	expected = expected and region.decoration_turns == { grove: 2 }
+	expected = expected and region.looks.decoration_turns == { grove: 2 }
 	expected = expected and region.terrain.get(Vector2i(1, 0), -1) == Region.GROUND
 	for trigger: TileTrigger in region.triggers:
 		var place: String = "grove" if trigger.tile == grove else "beach"
@@ -1060,19 +1060,19 @@ func _check_kind_and_place(tiles: String) -> String:
 ## and moving with a placed piece; and whether the overrides are hashed: `plain`, the same document
 ## without them, hashes otherwise.
 func _turned_and_overridden(region: Region, plain: String) -> bool:
-	var expected: bool = region.decoration_turns == { STUMP: 3 }
-	expected = expected and region.height_overrides == { STUMP: 30 }
+	var expected: bool = region.looks.decoration_turns == { STUMP: 3 }
+	expected = expected and region.looks.height_overrides == { STUMP: 30 }
 	expected = expected and TileKinds.is_walkable(region.terrain[STUMP])
 	expected = expected and not region.is_walkable(STUMP) and region.is_walkable(Vector2i.ZERO)
 	expected = expected and region.is_walkable(WATER) and not TileKinds.is_walkable(Region.WATER)
 	var turned: Region = region.turned(4)
-	expected = expected and turned.decoration_turns == { Hex.turn(STUMP, 4): 1 }
-	expected = expected and turned.height_overrides == { Hex.turn(STUMP, 4): 30 }
+	expected = expected and turned.looks.decoration_turns == { Hex.turn(STUMP, 4): 1 }
+	expected = expected and turned.looks.height_overrides == { Hex.turn(STUMP, 4): 30 }
 	expected = expected and not turned.is_walkable(Hex.turn(STUMP, 4))
 	var placed: Region = Region.new()
 	placed.place(region, Vector2i(5, -2))
-	expected = expected and placed.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
-	expected = expected and placed.height_overrides == { STUMP + Vector2i(5, -2): 30 }
+	expected = expected and placed.looks.decoration_turns == { STUMP + Vector2i(5, -2): 3 }
+	expected = expected and placed.looks.height_overrides == { STUMP + Vector2i(5, -2): 30 }
 	var moved: Vector2i = Vector2i(5, -2)
 	expected = expected and not placed.is_walkable(STUMP + moved)
 	expected = expected and placed.is_walkable(WATER + moved)
@@ -1188,7 +1188,7 @@ func _check_room_caught() -> String:
 	var problem: String = _room_problem(region, look)
 	if not problem.contains("forest") or not problem.contains(str(Hex.DIRECTIONS[3])):
 		return "a forest under a crown that leaves no room for it wasn't caught: " + problem
-	region.height_overrides[Hex.DIRECTIONS[3]] = crown.clearance
+	region.looks.height_overrides[Hex.DIRECTIONS[3]] = crown.clearance
 	if not _room_problem(region, look).is_empty():
 		return "a forest set low enough by hand didn't fit: " + _room_problem(region, look)
 	return ""
@@ -1215,7 +1215,7 @@ static func _room_problem(region: Region, look: Callable) -> String:
 			var tall: int = 0
 			if below != null:
 				var measured: int = TileLooks.height_of(region.terrain[under])
-				tall = region.height_overrides.get(under, measured)
+				tall = region.looks.height_overrides.get(under, measured)
 			if below != null and tall > crown.clearance:
 				return "%s on %s is taller (%d) than %s's crown on %s leaves room for (%d)" % [
 					below.id,

@@ -1,5 +1,5 @@
-// A scout of the Cartographer's Guild (#484) greets the player (#618): the first dialog, until an
-// NPC (#557) speaks it. Asking about the glade leads on; either farewell ends it.
+// A scout of the Cartographer's Guild (#484) greets the player (#618), who talks to them east of
+// the glade's start (#557). Asking about the glade leads on; either farewell ends it.
 {
 	"id": "guild_scout_greeting",
 	"speaker": "Guild Scout",

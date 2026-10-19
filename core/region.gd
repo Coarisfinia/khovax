@@ -18,14 +18,8 @@ const MAX_TILES: int = 4096
 
 ## Every tile's kind, its number in TileKinds, by tile.
 var terrain: Dictionary[Vector2i, int] = {}
-## How far a tile's decoration is turned, in sixths of a turn counter-clockwise like Hex.turn, for
-## the tiles whose piece turns it by hand (#231); it turns with the region. A look, not a rule:
-## not hashed, and only the views read it.
-var decoration_turns: Dictionary[Vector2i, int] = {}
-## How tall a tile stands, set by hand in its region piece (#232), in hundredths of a tile's radius,
-## for the check that a crown above it leaves it room; every other tile is as tall as its tallest
-## object, measured from the models. Not a rule, so not hashed.
-var height_overrides: Dictionary[Vector2i, int] = {}
+## How the tiles look where their piece sets it by hand (turned decorations, #231; heights, #232).
+var looks: PieceLooks = PieceLooks.new()
 ## Placed tiles whose piece overrides their kind's walkable trait (#201): whether walkers can stand
 ## on each. A rule, so it's hashed with the tiles.
 var walkable_overrides: Dictionary[Vector2i, bool] = {}
@@ -37,6 +31,9 @@ var wild_monsters: Array[Vector2i] = []
 ## (#133; every other spot rolls one from its blueprint's list) or a wounded start (#389). Not
 ## hashed here: the wild monster feature hashes each wild monster's species and HP.
 var wild_spots: Dictionary[Vector2i, WildSpot] = {}
+## The people standing on the region's tiles (#557), by tile: NpcFeature stands one there when the
+## instance loads, whom players can talk to. Not hashed here: the feature hashes them.
+var npcs: Dictionary[Vector2i, NpcSpot] = {}
 ## Where treasure chests stand when the instance loads, in the region file's reading order. Not
 ## hashed here: the chest feature takes them over and hashes the ones still closed.
 var chests: Array[Vector2i] = []
@@ -148,11 +145,9 @@ func turned(turns: int) -> Region:
 		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
 	for spot: Vector2i in wild_spots:
 		region.wild_spots[Hex.turn(spot, turns)] = wild_spots[spot]
-	for tile: Vector2i in decoration_turns:
-		var turn: int = posmod(decoration_turns[tile] + turns, Hex.DIRECTIONS.size())
-		region.decoration_turns[Hex.turn(tile, turns)] = turn
-	for tile: Vector2i in height_overrides:
-		region.height_overrides[Hex.turn(tile, turns)] = height_overrides[tile]
+	for spot: Vector2i in npcs:
+		region.npcs[Hex.turn(spot, turns)] = npcs[spot]
+	region.looks = looks.turned(turns)
 	for tile: Vector2i in walkable_overrides:
 		region.walkable_overrides[Hex.turn(tile, turns)] = walkable_overrides[tile]
 	for tile: Vector2i in piece_of:
@@ -181,9 +176,9 @@ func outside_exits() -> Array[Vector2i]:
 	return outside
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, chests, connectors, exits, triggers and
-## which piece each tile came from. The players' starts stay this region's own. Callers check `fits`
-## first.
+## Adds `piece`, moved by `offset`, with its wild monsters, people, chests, connectors, exits,
+## triggers and which piece each tile came from. The players' starts stay this region's own. Callers
+## check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
 		terrain[tile + offset] = piece.terrain[tile]
@@ -191,10 +186,9 @@ func place(piece: Region, offset: Vector2i) -> void:
 		wild_monsters.append(spot + offset)
 	for spot: Vector2i in piece.wild_spots:
 		wild_spots[spot + offset] = piece.wild_spots[spot]
-	for tile: Vector2i in piece.decoration_turns:
-		decoration_turns[tile + offset] = piece.decoration_turns[tile]
-	for tile: Vector2i in piece.height_overrides:
-		height_overrides[tile + offset] = piece.height_overrides[tile]
+	for spot: Vector2i in piece.npcs:
+		npcs[spot + offset] = piece.npcs[spot]
+	looks.place(piece.looks, offset)
 	for tile: Vector2i in piece.walkable_overrides:
 		walkable_overrides[tile + offset] = piece.walkable_overrides[tile]
 	for spot: Vector2i in piece.chests:

@@ -70,7 +70,7 @@ func _decorate(tile: Vector2i, growing: bool) -> void:
 	var blueprint: TileBlueprint = TileLooks.of(_region.terrain[tile])
 	if blueprint == null or blueprint.model.is_empty():
 		return
-	var turn: int = _region.decoration_turns.get(tile, 0)
+	var turn: int = _region.looks.decoration_turns.get(tile, 0)
 	var figure: HexPiece = _add_figure(tile, blueprint, turn)
 	figures[tile] = figure
 	figure.visible = _seen.has(tile)

@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://slices/board/look/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://slices/settings/look/graphics.gd" id="14_graphics"]
 [ext_resource type="Script" path="res://slices/chests/look/chest_view.gd" id="15_chests"]
+[ext_resource type="Script" path="res://slices/npcs/look/npc_view.gd" id="44_npcs"]
 [ext_resource type="Script" path="res://slices/fog/look/fog_cloud.gd" id="16_cloud"]
 [ext_resource type="Script" path="res://slices/triggers/look/lookout_view.gd" id="17_lookouts"]
 [ext_resource type="Script" path="res://slices/board/look/event_bus.gd" id="18_bus"]
@@ -126,6 +127,10 @@ input = NodePath("../../LocalInput")
 script = ExtResource("15_chests")
 driver = NodePath("../../Driver")
 input = NodePath("../../LocalInput")
+
+[node name="NpcView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=557557557]
+script = ExtResource("44_npcs")
+driver = NodePath("../../Driver")
 
 [node name="LookoutView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1810181018]
 script = ExtResource("17_lookouts")
@@ -267,8 +272,9 @@ script = ExtResource("41_roster")
 driver = NodePath("../../Driver")
 survey = NodePath("../../SurveyChoice")
 
-[node name="DialogScreen" parent="Hud" node_paths=PackedStringArray("input") instance=ExtResource("43_dialog")]
+[node name="DialogScreen" parent="Hud" node_paths=PackedStringArray("input", "bus") instance=ExtResource("43_dialog")]
 input = NodePath("../../LocalInput")
+bus = NodePath("../../EventBus")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
 layout_mode = 3

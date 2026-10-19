@@ -26,6 +26,9 @@ extends RefCounted
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
+## - `a person to talk to, <npc id>`: a person standing there (#557), a humanoid who never fights,
+##   whom a player talks to by walking into them; with `, saying <dialog id>` after it, talking
+##   opens that dialog (#635), e.g. `a person to talk to, guild_scout, saying guild_scout_greeting`
 ## - `loot on the ground`: loot the first player to step here finds, every player in the instance
 ##   getting their own roll, like a chest's (#203)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
@@ -60,6 +63,9 @@ const NAMED_CLAUSES: Dictionary[String, String] = {
 	EMITTING: RegionFormat.EMITS,
 	TARGETED: RegionFormat.TARGET,
 }
+## How a person's legend meaning begins (#557), and what it says before the dialog they open.
+const NPC: String = "a person to talk to, "
+const SAYING: String = ", saying "
 ## How a named wild monster's legend meaning begins.
 const NAMED: String = "a wild monster, always "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
@@ -303,13 +309,7 @@ static func _line(meaning: String, tile: Vector2i) -> String:
 ## The compact line any other legend meaning stands for on `tile`, or "" when not understood.
 static func _meaning_line(meaning: String, tile: Vector2i) -> String:
 	var where: String = "%d %d" % [tile.x, tile.y]
-	# What lies on the tile: a tile kind, or loot on the ground.
-	var placed: String = _tile_line(meaning, where)
-	if meaning == LOOT_ON_THE_GROUND:
-		placed = RegionFormat.LOOT + where
-	var hides_in: String = meaning.trim_prefix(HIDING)
-	if meaning.begins_with(HIDING) and TileKinds.hides(TileKinds.number_of(hides_in)):
-		placed = "%s%s %s" % [RegionFormat.TILE, where, hides_in]
+	var placed: String = _placed_line(meaning, where)
 	if not placed.is_empty():
 		return placed
 	var words: PackedStringArray = meaning.replace(",", "").split(" ", false)
@@ -329,6 +329,22 @@ static func _meaning_line(meaning: String, tile: Vector2i) -> String:
 	if meaning.contains("; ") and not meaning.get_slice("; ", 0).strip_edges().is_empty():
 		return _trigger_lines(meaning, where)
 	return ""
+
+
+## The compact line of what lies or stands on `where` by a legend meaning: a tile kind, loot on the
+## ground, a person (#557) or a tile hiding a wild monster; "" for any other meaning.
+static func _placed_line(meaning: String, where: String) -> String:
+	if meaning == LOOT_ON_THE_GROUND:
+		return RegionFormat.LOOT + where
+	if meaning.begins_with(NPC):
+		var said: PackedStringArray = meaning.trim_prefix(NPC).split(SAYING)
+		# One word each, so a stray space can't read as a dialog the legend never named.
+		var words: bool = said.size() <= 2 and not "".join(said).contains(" ")
+		return "%s%s %s" % [RegionFormat.NPC, where, " ".join(said)] if words else ""
+	var hides_in: String = meaning.trim_prefix(HIDING)
+	if meaning.begins_with(HIDING) and TileKinds.hides(TileKinds.number_of(hides_in)):
+		return "%s%s %s" % [RegionFormat.TILE, where, hides_in]
+	return _tile_line(meaning, where)
 
 
 ## The compact lines a legend trigger (`a lookout; stepping here reveals within 8`) stands for on
