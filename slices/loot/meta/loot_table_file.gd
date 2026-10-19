@@ -5,7 +5,8 @@ extends RefCounted
 ## fields, its id against the file name, and that its chances add up to 100 %, and hands the rules
 ## the table's plain data.
 
-## A loot table file's fields, as its schema (slices/loot/data/loot_tables.schema.json) allows them.
+## A loot table file's fields, as its schemas (slices/loot/data/loot_tables.schema.json and
+## harvest_tables.schema.json beside it) allow them.
 const FIELDS: Array[String] = ["id", "kind", "entries"]
 const ITEM_FIELDS: Array[String] = ["item", "chance", "min", "max"]
 const BLANK_FIELDS: Array[String] = ["blank", "chance"]
@@ -25,7 +26,7 @@ static func parse(file_id: String, text: String) -> LootTable:
 	if table.problem.is_empty() and (table.id != file_id or not Content.is_id(table.id)):
 		table.problem = "its id must match the file name and be lowercase words with underscores"
 	if table.problem.is_empty() and not LootTable.KINDS.has(table.kind):
-		table.problem = "its kind is species or instance"
+		table.problem = "its kind is one of %s" % [LootTable.KINDS]
 	var raw: Variant = data.get("entries")
 	var entries: Array = raw if raw is Array else []
 	if table.problem.is_empty():
@@ -58,6 +59,6 @@ static func _read_entries(table: LootTable, entries: Array) -> String:
 		table.maxes.append(high)
 	if total != Fixed.ONE:
 		return "the chances add up to %d thousandths, not %d" % [total, Fixed.ONE]
-	if blanks != (1 if table.kind == LootTable.SPECIES else 0):
-		return "a species table has exactly one blank, an instance table none"
+	if blanks != (0 if table.kind == LootTable.INSTANCE else 1):
+		return "a species or harvest table has exactly one blank, an instance table none"
 	return ""

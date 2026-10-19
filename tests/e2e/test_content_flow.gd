@@ -45,6 +45,7 @@ func run(_tree: SceneTree) -> String:
 		_check_strip,
 		_check_refused,
 		_check_loot_rolls,
+		_check_harvest_tables,
 		_check_loot_refused,
 		_check_wild_species.bind(content),
 		_check_tiles,
@@ -581,6 +582,27 @@ func _check_loot_rolls() -> String:
 	return ""
 
 
+## Every species has its own harvest table (#687), apart from its domination loot table: each loads
+## as a harvest table named after a species, and a felled toad's rolls give what dominating it
+## never does.
+func _check_harvest_tables() -> String:
+	var content: LootData = LootContent.load_loot_tables(LootContent.HARVEST_DIR)
+	if not content.problem.is_empty():
+		return "the harvest tables didn't load: " + content.problem
+	var species: SpeciesData = SpeciesContent.load_species()
+	for species_id: String in species.species:
+		var table: LootTable = content.loot_tables.get(species_id)
+		if table == null or table.kind != LootTable.HARVEST:
+			return "%s has no harvest table" % species_id
+	var toad: LootTable = content.loot_tables["moss_toad"]
+	var dominated: LootTable = LootContent.load_loot_tables().loot_tables["moss_toad"]
+	for seed_value: int in 100:
+		for item: String in _roll(toad, null, seed_value):
+			if dominated.items.has(item):
+				return "a felled toad dropped %s, which dominating it gives" % item
+	return ""
+
+
 ## One roll on `table` from a fresh stream of `seed_value`.
 func _roll(table: LootTable, instance_table: LootTable, seed_value: int) -> Dictionary[String, int]:
 	return table.roll(Rng.new(seed_value, 1), instance_table)
@@ -593,8 +615,9 @@ func _check_loot_refused() -> String:
 	var table: String = "{\"id\": \"x\", \"kind\": \"%s\", \"entries\": [%s]}"
 	var cases: Dictionary[String, String] = {
 		table % ["instance", item % [500, 1, 1]]: "the chances add up",
-		table % ["species", item % [1000, 1, 1]]: "a species table has exactly one",
-		table % ["instance", "%s, %s" % [item % [500, 1, 1], blank % 500]]: "a species table",
+		table % ["species", item % [1000, 1, 1]]: "a species or harvest table has exactly one",
+		table % ["harvest", item % [1000, 1, 1]]: "a species or harvest table has exactly one",
+		table % ["instance", "%s, %s" % [item % [500, 1, 1], blank % 500]]: "a species or harvest",
 		table % ["instance", item % [1000, 3, 2]]: "entry 0 needs",
 		table % ["chest", item % [1000, 1, 1]]: "its kind",
 		table % ["instance", "{\"blank\": true, \"chance\": 1000, \"min\": 1}"]: "field min",
