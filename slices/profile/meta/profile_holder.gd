@@ -22,6 +22,8 @@ extends Node
 var save_path: String = ProfileStore.PATH
 ## Null when the save couldn't be read: nothing is taken or saved then.
 var keeper: ProfileKeeper
+## Every piece of gear's id (#694): loot with one of these ids is gear, the rest materials.
+var _gear_ids: Array[String] = []
 
 
 ## Loads the profile on entering the tree, before any node's _ready: the driver starts the session
@@ -40,6 +42,13 @@ func _enter_tree() -> void:
 		if not quests.problem.is_empty():
 			push_warning("the quests can't be read, so none advance: " + quests.problem)
 		profile.quest_book = quest_book_of(quests)
+		var gear: GearContent = GearContent.load_gear()
+		if not gear.problem.is_empty():
+			push_warning("the gear can't be read, so gear found counts as materials: %s" % [
+				gear.problem,
+			])
+		else:
+			_gear_ids.assign(gear.items.keys())
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
@@ -156,7 +165,8 @@ func _gain_of(event: RefCounted) -> Gain:
 	else:
 		_add_quest_fact(gain, event, input.slot)
 	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
-	empty = empty and gain.materials.is_empty() and gain.places_reached.is_empty()
+	empty = empty and gain.materials.is_empty() and gain.gear.is_empty()
+	empty = empty and gain.places_reached.is_empty()
 	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
 	empty = empty and gain.answers_chosen.is_empty()
 	empty = empty and gain.world_events.is_empty()
@@ -193,11 +203,14 @@ static func _rolls_of(event: RefCounted) -> Dictionary[int, Dictionary]:
 	return none
 
 
-## Adds a roll of loot, {item id: amount}, to `gain`'s materials.
-static func _add_loot(gain: Gain, loot: Dictionary) -> void:
+## Adds a roll of loot, {item id: amount}, to `gain`: its gear (#694), and the rest as materials.
+func _add_loot(gain: Gain, loot: Dictionary) -> void:
 	for item: Variant in loot:
 		var amount: int = loot[item]
-		gain.materials[str(item)] = amount
+		if _gear_ids.has(str(item)):
+			gain.gear[str(item)] = amount
+		else:
+			gain.materials[str(item)] = amount
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.

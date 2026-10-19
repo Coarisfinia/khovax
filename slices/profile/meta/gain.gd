@@ -1,9 +1,9 @@
 class_name Gain
 extends RefCounted
-## What the player just obtained in the world (#37): monsters dominated, materials found, chests
-## opened, places reached, region pieces and instances entered, answers chosen in dialogs, the facts
-## quests count too (#184, #339, #350, #370, #636), and the world's events, which every player gains
-## (#707).
+## What the player just obtained in the world (#37): monsters dominated, materials and gear found
+## (#694), chests opened, places reached, region pieces and instances entered, answers chosen in
+## dialogs, the facts quests count too (#184, #339, #350, #370, #636), and the world's events, which
+## every player gains (#707).
 ## It's handed to the profile the moment it happens, not at the session's end, and saved at once
 ## (ProfileKeeper), so a crash mid-session never loses a domination (owner, #73).
 
@@ -12,6 +12,8 @@ var dominated_species: Array[String] = []
 ## gets a stand-in (ShortId.stand_in).
 var dominated_short_ids: Array[String] = []
 var materials: Dictionary[String, int] = {}
+## Gear found (#694), by id: how many of each.
+var gear: Dictionary[String, int] = {}
 ## Treasure chests this player got loot from, which only quests count.
 var chests_opened: int = 0
 ## The places this player stepped into (#339), by id, which only quests count.

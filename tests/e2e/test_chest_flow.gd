@@ -1,15 +1,17 @@
 extends RefCounted
 ## Chest flow (#124): the glade's region pieces place treasure chests by hand, and they stay on
 ## their pieces however the seed arranges and turns them. A player who walks onto a chest opens it:
-## it bursts into loot, every player in the instance gets their own roll on the glade's loot table
+## it bursts into loot, every player in the instance gets their own roll on the glade's chest table
 ## (owner, #124), and the chest is gone, so walking there again opens nothing. The same seed opens
-## the same chest with the same loot. Instances without a loot table have no chests. This
+## the same chest with the same loot. Instances without a chest table have no chests. This
 ## machine's player's own loot lands in their profile and its save; the others' doesn't (#74).
 ## The chests show (#135): one on every closed chest's tile, and an opened one bursts into this
 ## machine's player's own loot, each item named with its amount, and sinks away. Loot on the
 ## ground (#203) works the same, without a chest: the glade's pieces place it, the first player to
 ## step on it finds it, every player rolls their own, it's gone after, it reaches this machine's
-## player's profile, and it shows as a gem that bursts the same way.
+## player's profile, and it shows as a gem that bursts the same way. Chests hold crafting supplies
+## and basic gear (#694), a piece for every slot, while the loot on the ground holds no gear; gear
+## from a chest lands in the profile's gear, not its materials.
 
 const SEED: int = 7
 ## Where the flow's profile is saved, apart from the player's own.
@@ -18,6 +20,8 @@ const SAVE_PATH: String = "user://test_chest_profile.json"
 const OWN_LOOT: Dictionary[String, int] = { "moss": 2 }
 ## Slot 0's loot from the loot on the ground the save step finds.
 const FOUND_LOOT: Dictionary[String, int] = { "berry": 3 }
+## Slot 0's gear from another chest the save step opens.
+const OWN_GEAR: Dictionary[String, int] = { "warding_charm": 1 }
 
 ## The direction the last _open_first_chest walked in.
 var _direction: int = 0
@@ -25,6 +29,8 @@ var _direction: int = 0
 
 func run(tree: SceneTree) -> String:
 	var result: String = _check_placed()
+	if result.is_empty():
+		result = _check_tables()
 	if result.is_empty():
 		result = _check_opened()
 	if result.is_empty():
@@ -35,7 +41,7 @@ func run(tree: SceneTree) -> String:
 		if _first_loot() != _first_loot():
 			result = "the same seed opened the chest with different loot"
 	if result.is_empty() and InstanceBlueprints.basic(SEED).feature(Features.CHESTS) != null:
-		result = "an instance without a loot table has chests"
+		result = "an instance without a chest table has chests"
 	if result.is_empty():
 		result = await _check_saved(tree)
 	return result
@@ -56,6 +62,26 @@ func _check_placed() -> String:
 				return "seed %d put loot on %s, which isn't free ground" % [seed_value, spot]
 		if chests.loot_spots.is_empty():
 			return "seed %d's glade has no loot on the ground" % seed_value
+	return ""
+
+
+## The glade's chests hold crafting supplies and a loose piece of gear for every slot (#694); the
+## loot on its ground holds no gear.
+func _check_tables() -> String:
+	var chests: ChestFeature = InstanceBlueprints.create("glade", SEED, 1).feature(
+		Features.CHESTS,
+	) as ChestFeature
+	var gear: GearContent = GearContent.load_gear()
+	var slots: Array[String] = []
+	for item: String in chests.table.items:
+		var piece: GearItem = gear.items.get(item)
+		if piece != null and piece.rarity == GearItem.RARITIES[0] and not slots.has(piece.slot):
+			slots.append(piece.slot)
+	if slots.size() != GearSlots.SLOTS.size() or not chests.table.items.has("moss"):
+		return "the glade's chests hold basic gear for %s and %s" % [slots, chests.table.items]
+	for item: String in chests.ground_table.items:
+		if gear.items.has(item):
+			return "the glade's loot on the ground holds the gear %s" % item
 	return ""
 
 
@@ -173,6 +199,9 @@ func _check_saved(tree: SceneTree) -> String:
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	driver.ticked.emit(driver.state.tick, _chest_opened())
+	var gear_loot: Dictionary[int, Dictionary] = { 0: OWN_GEAR }
+	var gear_chest: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, gear_loot)]
+	driver.ticked.emit(driver.state.tick, gear_chest)
 	driver.ticked.emit(driver.state.tick, _loot_found())
 	(main.get_node("EventBus") as EventBus).flush()
 	# The chest's gain is saved at once; the loot's, coming right after, waits for the debounce.
@@ -184,6 +213,11 @@ func _check_saved(tree: SceneTree) -> String:
 		result = "the profile saved %s from the chest and the loot, not %s" % [
 			saved.materials,
 			expected,
+		]
+	if result.is_empty() and saved.gear.owned != OWN_GEAR:
+		result = "the profile saved the gear %s from the chest, not %s" % [
+			saved.gear.owned,
+			OWN_GEAR,
 		]
 	if result.is_empty():
 		result = _check_shown(main.get_node("Instance/ChestView") as ChestView, driver)
