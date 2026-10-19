@@ -167,7 +167,11 @@ background; only wait in the foreground for a result the very next step needs.
 
 ### Before you push
 
-- **Don't run tests or lint locally** (owner's rule): CI takes care of them. Lint, the script check,
+- **Run gdstyle's check before every push** (owner's rule, #761; it's instant), after `gdstyle fmt
+  .`: `gdstyle check --no-color --ignore quality/max-file-length .` and, for the file length outside
+  `tests/`, `git ls-files -z '*.gd' ':!tests/' | xargs -0 gdstyle check --no-color --select
+  quality/max-file-length`. Fix what it finds.
+- **Don't run other tests or lint locally** (owner's rule): CI takes care of them. The script check,
   the e2e tests, the unused code and asset checks and the load test all run on every push, so push
   and let CI check, after a rebase too. Run one locally only to reproduce a CI failure.
 - **Check exit codes without pipes**, or with `${PIPESTATUS[0]}`: a pipe hides the exit code.
@@ -497,9 +501,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   superseded version, so an exact pin would break CI on the next security update.
 - **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
   matching means a change altered what the game does. If that is on purpose, add the rule change's
-  file to `core/rules_changes/` (`<issue>-<slug>.md`: the `issue` and, once it's open, the `pr` in
-  its frontmatter, one line on what plays differently linking both; the rules version,
-  `RulesChanges`, is their count, #736), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
+  file to `core/rules_changes/` (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then
+  one line on what plays differently linking the issue; no `pr`, which CI refuses: the squash
+  commit that added the file names it, `git log --diff-filter=A -- core/rules_changes/<file>`,
+  #758; the rules version, `RulesChanges`, is their count, #736), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
   in the pull request why the game plays out differently. CI fails a changed golden replay that
   comes without a new file. Never rehash to make a surprise go away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
