@@ -385,7 +385,10 @@ func _check_store_kept() -> String:
 	glade.store(0, STORE_FEATURE)["count"] = 4
 	world.step(_still())
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	if world.stored(0, STORE_FEATURE)["count"] != 4 or forest.stored(0, STORE_FEATURE)["count"] != 4:
+	if world.stored(
+		0,
+		STORE_FEATURE,
+	)["count"] != 4 or forest.stored(0, STORE_FEATURE)["count"] != 4:
 		return "the store entry changed in the glade wasn't taken into the world and handed on"
 	var data: Dictionary = WorldData.of(world)
 	var restored: World = WorldData.to_world(data, BlueprintSource.new())
@@ -415,14 +418,21 @@ func _check_fainted_kept() -> String:
 	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
 	companions.send_home(forest, companions.companion_of(0))
 	var _relieved: int = _swap_in(world, null, Command.NO_SWAP)
-	if CompanionParty.fainted_in(world, 0) != PackedStringArray(["storm_finch"]) or CompanionParty.companion_in(world, 0) != "moss_toad":
+	if CompanionParty.fainted_in(
+		world,
+		0,
+	) != PackedStringArray(["storm_finch"]) or CompanionParty.companion_in(world, 0) != "moss_toad":
 		return "the world didn't keep the fainted finch, or didn't choose the toad in its place"
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
 	var toad_joined: bool = there.species_of(there.companion_of(0)) == "moss_toad"
-	if not toad_joined or not CompanionParty.has_fainted(glade, 0, "storm_finch") or _swap_in(world, null, 1) != 0:
+	if not toad_joined or not CompanionParty.has_fainted(
+		glade,
+		0,
+		"storm_finch",
+	) or _swap_in(world, null, 1) != 0:
 		return "through the exit, the finch didn't stay fainted, or the toad didn't join"
 	return _check_fainted_restored(world, party)
 
