@@ -244,14 +244,9 @@ func _started(id: String) -> bool:
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
-	for species: String in result.dominated_species:
-		if species.is_empty():
-			return "a dominated monster has no species"
-	if result.dominated_short_ids.size() > result.dominated_species.size():
-		return "a dominated monster's short id has no species"
-	for short_id: String in result.dominated_short_ids:
-		if not short_id.is_empty() and not ShortId.is_valid(short_id):
-			return "a dominated monster's short id %s isn't one" % short_id
+	var dominated: String = _dominated_problem(result)
+	if not dominated.is_empty():
+		return dominated
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
 	if result.places_reached.has(""):
@@ -266,6 +261,19 @@ func _result_problem(result: Gain) -> String:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:
 			return "material %s has an invalid count" % material
+	return ""
+
+
+## Why `result`'s dominated monsters can't be taken over (one without a species, or a short id
+## without a monster or that isn't one, #700), or "".
+static func _dominated_problem(result: Gain) -> String:
+	if result.dominated_species.has(""):
+		return "a dominated monster has no species"
+	if result.dominated_short_ids.size() > result.dominated_species.size():
+		return "a dominated monster's short id has no species"
+	for short_id: String in result.dominated_short_ids:
+		if not short_id.is_empty() and not ShortId.is_valid(short_id):
+			return "a dominated monster's short id %s isn't one" % short_id
 	return ""
 
 

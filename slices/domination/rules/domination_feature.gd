@@ -310,8 +310,8 @@ func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingS
 		slot,
 		tile,
 		species,
-		short_id,
 	)
+	dominated.short_id = short_id
 	DominationShares.add_contributions(state, seal, dominated)
 	state.events.append(dominated)
 

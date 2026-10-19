@@ -1675,6 +1675,16 @@ func _check_species() -> String:
 	var listed: Array = InstanceBlueprints.WILD_SPECIES[InstanceBlueprints.BASIC].keys()
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
+	var dominated: String = _check_short_ids()
+	if not dominated.is_empty():
+		return dominated
+	var wounded: String = _check_wounded()
+	return wounded if not wounded.is_empty() else _check_relieved()
+
+
+## Every wild monster gets a short id (#700), the same for the same seed and apart from the others',
+## and the domination carries it, with its species.
+func _check_short_ids() -> String:
 	var state: GameState = InstanceBlueprints.basic(1)
 	var short_ids: Dictionary[String, bool] = {}
 	for monster: int in _wild(state).monsters:
@@ -1690,8 +1700,7 @@ func _check_species() -> String:
 		return "the domination didn't carry the dominated monster's species"
 	if _dominated(events)[0].short_id != first:
 		return "the domination didn't carry the dominated monster's short id"
-	var wounded: String = _check_wounded()
-	return wounded if not wounded.is_empty() else _check_relieved()
+	return ""
 
 
 ## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never

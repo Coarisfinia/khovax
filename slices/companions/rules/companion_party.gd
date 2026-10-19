@@ -75,9 +75,7 @@ static func bring(
 	keep_chosen: bool = false,
 ) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
-		var party: CarriedMonsters = CarriedMonsters.new()
-		if slot < parties.size() and parties[slot] != null:
-			party = parties[slot]
+		var party: CarriedMonsters = _party_at(parties, slot)
 		var before: Dictionary = world.stored(slot, Features.COMPANIONS)
 		var chosen: String = _companion_of(before) if keep_chosen else ""
 		if not party.short_ids.has(chosen):
@@ -101,14 +99,25 @@ static func bring(
 static func carried_in(world: World) -> Array[CarriedMonsters]:
 	var parties: Array[CarriedMonsters] = []
 	for slot: int in GameState.MAX_PLAYERS:
-		var entry: Dictionary = world.stored(slot, Features.COMPANIONS)
-		var party: CarriedMonsters = CarriedMonsters.new()
-		var party_species: PackedStringArray = _species_of(entry)
-		var short_ids: PackedStringArray = _carried_of(entry)
-		for place: int in mini(short_ids.size(), party_species.size()):
-			party = party.add(short_ids[place], party_species[place])
-		parties.append(party)
+		parties.append(_carried_monsters(world.stored(slot, Features.COMPANIONS)))
 	return parties
+
+
+## The party at `slot` in `parties`, or an empty one when there's none.
+static func _party_at(parties: Array[CarriedMonsters], slot: int) -> CarriedMonsters:
+	if slot < parties.size() and parties[slot] != null:
+		return parties[slot]
+	return CarriedMonsters.new()
+
+
+## The monsters the party `entry` carries, in carried order.
+static func _carried_monsters(entry: Dictionary) -> CarriedMonsters:
+	var party: CarriedMonsters = CarriedMonsters.new()
+	var party_species: PackedStringArray = _species_of(entry)
+	var short_ids: PackedStringArray = _carried_of(entry)
+	for place: int in mini(short_ids.size(), party_species.size()):
+		party = party.add(short_ids[place], party_species[place])
+	return party
 
 
 ## The short id of the companion of the player in `slot` in `world`, or "" for none.

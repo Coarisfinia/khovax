@@ -54,8 +54,6 @@ func run(_tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_save(profile)
 	if result.is_empty():
-		result = _check_short_ids()
-	if result.is_empty():
 		result = _check_refused()
 	if result.is_empty():
 		result = _check_migrated()
@@ -120,7 +118,8 @@ func _check_bad_results(profile: Profile) -> String:
 	return ""
 
 
-## Saving and loading gives back the same profile, with the next id still unused.
+## Saving and loading gives back the same profile, with the next id still unused; then the short
+## ids (#700).
 func _check_save(profile: Profile) -> String:
 	var problem: String = ProfileStore.save(profile, SAVE_PATH)
 	if not problem.is_empty():
@@ -137,7 +136,7 @@ func _check_save(profile: Profile) -> String:
 		return "a monster dominated after loading reused an id or joined the carried three"
 	if not ProfileStore.load_from(SAVE_PATH).dominated_monsters.is_empty():
 		return "without a save, the game didn't start a new profile"
-	return ""
+	return _check_short_ids()
 
 
 ## A dominated monster keeps the short id it had in the wild (#700) through saving and loading, and
@@ -155,6 +154,12 @@ func _check_short_ids() -> String:
 	var expected: Array[String] = ["abc2345", ShortId.stand_in(2)]
 	if not loaded.problem.is_empty() or kept != expected:
 		return "the dominated monsters' short ids weren't kept: %s %s" % [kept, loaded.problem]
+	return _check_short_ids_read(profile)
+
+
+## `profile`'s save from before short ids (format 11) gives each monster the stand-in for its id,
+## and one with a short id that isn't one is refused.
+func _check_short_ids_read(profile: Profile) -> String:
 	var data: Dictionary = JSON.parse_string(ProfileSave.to_text(profile))
 	data["format"] = 11
 	var monsters: Array = data["dominated_monsters"]
