@@ -52,6 +52,9 @@ jobs:
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The parent too: the rules changes check compares with it.
+          fetch-depth: 2
 
       - name: "🧰 Install gdstyle (the linter)"
         run: |
@@ -97,6 +100,11 @@ jobs:
         # forbidden list and the exemption marker (#515) are in the script.
         timeout-minutes: 5
         run: bash tools/determinism_check.sh
+
+      - name: "🔖 Check a changed golden replay comes with a rules change"
+        # The parent is the base on a pull request's merge commit, the queue's previous commit in
+        # the merge queue, and the previous commit on main (squash merges only).
+        run: bash tools/rules_changes_check.sh HEAD^1
 
       - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot

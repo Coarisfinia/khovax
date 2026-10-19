@@ -79,7 +79,7 @@ squash-merged, which rewrites the history a stacked branch is built on. Work tha
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
 and the ones queued before it, so a pull request needs no rebase just because `main` moved; rebase
 it (`git rebase origin/main`) only when it conflicts, fixing what collides (e.g. two rule changes
-each bumping `RULES_VERSION`: take the next number and rehash again), and push.
+that each rehashed the golden replays: rehash again on top), and push.
 
 **Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
@@ -330,8 +330,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   tile blueprints, which the core's `TileKinds` needs, live in the core (owner, #506):
   `core/data/tiles/`, with their schema in `core/data/schemas/`, read by `Content` in `core/io/`. Not Godot resources
   (owner, #72: no engine lock-in). **Tile traits are
-  rules** (`TileKinds`): changing one (e.g. `walkable`) bumps `Simulation.RULES_VERSION` and
-  rehashes the golden replays, like any rule change.
+  rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the
+  golden replays below).
 - **The presentation** (each slice's `look/` and `ui/`; the hex board everything stands on in
   `slices/board/look/`, the menu in `slices/menu/ui/`, #507): scenes that read the state and draw
   it; they never write it. `HexLayout` is the only tile-to-world conversion. One-shot effects play
@@ -484,10 +484,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   image's signed Ubuntu archive. They must match the image's own Mesa, and the archive drops a
   superseded version, so an exact pin would break CI on the next security update.
 - **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
-  matching means a change altered what the game does. If that is on purpose, bump
-  `Simulation.RULES_VERSION`, rehash them (`godot --headless --path . -s
-  res://tests/replays/rehash.gd`) and say in the pull request why the game plays out differently.
-  Never rehash to make a surprise go away.
+  matching means a change altered what the game does. If that is on purpose, add the rule change's
+  file to `core/rules_changes/` (`<issue>-<slug>.md`: the `issue` and, once it's open, the `pr` in
+  its frontmatter, one line on what plays differently linking both; the rules version,
+  `RulesChanges`, is their count, #736), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
+  in the pull request why the game plays out differently. CI fails a changed golden replay that
+  comes without a new file. Never rehash to make a surprise go away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/export_templates.sh`

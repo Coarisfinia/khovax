@@ -43,7 +43,7 @@ static func of(world: World) -> Dictionary:
 			stores.append({ "slot": slot, "entries": entries })
 	return {
 		"format": FORMAT,
-		"rules": Simulation.RULES_VERSION,
+		"rules": RulesChanges.version(),
 		"seed": [(world.world_seed >> 32) & 0xffff_ffff, world.world_seed & 0xffff_ffff],
 		"start": world.start_name,
 		"tick": world.tick,
@@ -65,8 +65,8 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var rules: int = read.whole("rules", 0, DataReader.MOST)
 	if not read.failed() and format != FORMAT:
 		read.fail("world format %d, this build reads format %d" % [format, FORMAT])
-	if not read.failed() and rules != Simulation.RULES_VERSION:
-		read.fail("played by rules %d, this build has %d" % [rules, Simulation.RULES_VERSION])
+	if not read.failed() and rules != RulesChanges.version():
+		read.fail("played by rules %d, this build has %d" % [rules, RulesChanges.version()])
 	var halves: Array[int] = read.wholes("seed", 0, 0xffff_ffff)
 	var start: String = read.text("start")
 	if not read.failed() and (halves.size() != 2 or not source.exists(start)):
