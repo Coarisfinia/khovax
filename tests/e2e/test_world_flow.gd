@@ -25,6 +25,8 @@ extends RefCounted
 ## flag, the world raises a world-changing moment, once (#499).
 
 const SEEDS: int = 40
+## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
+const FOLLOWER_DAMAGE: int = 3
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
 ## test's big region.
 const INSTANCE_SEEDS: int = 6
@@ -272,8 +274,9 @@ func _check_companions() -> String:
 	return _check_companion_passed(world, companion)
 
 
-## Standing southeast of its player, the companion lets them walk through, and it follows them out
-## through the exit into the glade, while the one left in the forest goes.
+## Standing southeast of its player, the companion lets them walk through. Hurt, it follows them out
+## through the exit into the glade (#716): the world moves it along with them, beside them, as hurt
+## as it left (a companion made anew would be unhurt), and nothing of it stays in the forest.
 func _check_companion_passed(world: World, companion: Entity) -> String:
 	var start: Vector2i = world.player(0).tile
 	companion.tile = start + Hex.DIRECTIONS[5]
@@ -281,17 +284,26 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 	if world.player(0).tile != start + Hex.DIRECTIONS[5]:
 		return "the companion stopped its own player"
 	_idle_until(world, world.tick + MovementFeature.MOVE_TICKS)
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var hurt: HealthFeature = forest.feature(Features.HEALTH) as HealthFeature
+	hurt.carry_in(forest, companion, { "damage": FOLLOWER_DAMAGE })
+	var hp: int = hurt.hp_of(forest, companion.id)
 	# The rest of the walk into the glade: onto the forest's exit and through it.
 	for direction: int in FlowSteps.INTO_GLADE.slice(1):
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var left: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	if world.instance_of(0) != InstanceBlueprints.GLADE or followed.companion_of(0) == 0:
 		return "the companion didn't follow its player into the glade"
 	if left.companion_of(0) != 0 or forest.entity(companion.id) != null:
 		return "the companion stayed in the forest its player left"
+	var health: HealthFeature = glade.feature(Features.HEALTH) as HealthFeature
+	if health.hp_of(glade, followed.companion_of(0)) != hp:
+		return "the companion arrived in the glade with other HP than it left with: made anew"
+	var beside: Entity = glade.entity(followed.companion_of(0))
+	if Hex.distance(beside.tile, world.player(0).tile) > followed.reach_of_companion(beside.id):
+		return "the companion arrived out of its reach of its player"
 	return ""
 
 

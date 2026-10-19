@@ -9,7 +9,9 @@ extends RefCounted
 ## roam this one persistent world, saved between sessions (WorldData). A player who walks out
 ## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
 ## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
-## (SentToSpawn, #457) is moved onto their start in the starting instance. Each player has a world
+## (SentToSpawn, #457) is moved onto their start in the starting instance. Whoever follows a player
+## (Feature.followers_of, #716), like their companion, moves with them, carrying its data along.
+## Each player has a world
 ## store (PlayerStore, #724), where features keep what the player brings along, like their
 ## companions (#338): every instance the world loads gets a copy, and what the instance the player
 ## is
@@ -387,9 +389,13 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	var arrival: Vector2i = _arrival(from, taken, target.region)
 	if not target.region.has_tile(arrival):
 		return
+	# Who follows them is asked while they're still there, so a feature may find them by their
+	# player.
+	var leaders: Dictionary[int, Array] = _followers(instances[from], taken.slot)
 	instances[from].remove_entity(taken.entity_id)
 	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
 	if arrived[0] != null:
+		_bring_followers(instances[from], leaders, target, arrival)
 		_raise_entered(taken.target, arrived)
 
 
@@ -418,11 +424,74 @@ func _send_to_spawn(from: String, sent: SentToSpawn) -> void:
 	if spawn == null or spawn.region.starts.is_empty():
 		return
 	var starts: Array[Vector2i] = spawn.region.starts
+	var leaders: Dictionary[int, Array] = _followers(instances[from], sent.slot)
 	instances[from].remove_entity(sent.entity_id)
 	var start: Vector2i = starts[mini(sent.slot, starts.size() - 1)]
 	var arrived: Array[Entity] = [spawn.add_entity(sent.slot, start)]
 	if arrived[0] != null:
+		_bring_followers(instances[from], leaders, spawn, start)
 		_raise_entered(start_name, arrived)
+
+
+## Moves the followers `leaders` names (`_followers`, #716) out of `left` into `target` along with
+## their player: each as a new entity on the first walkable tile beside `beside`, in direction order
+## (or on it), and each feature there restores what it kept on it (`carry_out`, `carry_in`).
+## Followers walk through with their player rather than being made anew, so nothing is left behind
+## and what they had (HP, a wait) comes along. Every exit leads to another instance, so `left` is
+## `target` only for one sent to the spawn of the instance they're in: their followers stay, and
+## rejoin them by walking.
+func _bring_followers(
+	left: GameState,
+	leaders: Dictionary[int, Array],
+	target: GameState,
+	beside: Vector2i,
+) -> void:
+	if left == target:
+		return
+	var ids: Array[int] = []
+	ids.assign(leaders.keys())
+	ids.sort()
+	for follower_id: int in ids:
+		var carried: Dictionary[int, Dictionary] = {}
+		for each: Feature in left.features:
+			var values: Dictionary = each.carry_out(left, follower_id)
+			if not values.is_empty():
+				carried[each.id()] = values
+		left.remove_entity(follower_id)
+		# One whose leading feature the instance next door lacks goes, as every companion did before
+		# #716: it would arrive as no one's there, and staying would leave it behind.
+		var welcome: bool = true
+		for feature_id: int in leaders[follower_id]:
+			welcome = welcome and target.feature(feature_id) != null
+		if not welcome:
+			continue
+		# Never refused: an entity without a slot is always added.
+		var arrived: Entity = target.add_entity(Entity.NO_SLOT, _beside(target.region, beside))
+		for each: Feature in target.features:
+			if carried.has(each.id()):
+				each.carry_in(target, arrived, carried[each.id()])
+
+
+## Every entity in `state` that follows the player in `slot`, with the ids of the features that
+## lead it (`Feature.followers_of`).
+static func _followers(state: GameState, slot: int) -> Dictionary[int, Array]:
+	var found: Dictionary[int, Array] = {}
+	for each: Feature in state.features:
+		for follower_id: int in each.followers_of(state, slot):
+			if state.entity(follower_id) == null:
+				continue
+			if not found.has(follower_id):
+				found[follower_id] = []
+			found[follower_id].append(each.id())
+	return found
+
+
+## The first walkable tile next to `tile` in `region`, in direction order, or `tile` itself.
+static func _beside(region: Region, tile: Vector2i) -> Vector2i:
+	for direction: Vector2i in Hex.DIRECTIONS:
+		if region.is_walkable(tile + direction):
+			return tile + direction
+	return tile
 
 
 ## Raises that each player among `entities` entered the instance `instance_name`.
