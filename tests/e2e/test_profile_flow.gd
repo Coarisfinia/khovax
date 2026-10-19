@@ -5,11 +5,12 @@ extends RefCounted
 ## is refused; an older save is migrated, oldest step first, into the current format with no quest
 ## progress (#184), and an open quest's earlier steps done (#573); the first three monsters
 ## dominated are carried (#53); the standing with each faction stays on its scale and is saved
-## (#483); gear goes into a slot only while the player owns it, and is saved (#690); and a damaged
-## save falls back to the newest intact generation before it (#179).
+## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
+## toward the story's paths counts the path-marked choices and is saved (#658); and a damaged save
+## falls back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
-## The keys a newer save format added (#184, #53, #391, #399, #483), which older saves lack.
+## The keys a newer save format added (#184, #53, #391, #399, #483, #658), which older saves lack.
 const ADDED_KEYS: Array[String] = [
 	"quest_progress",
 	"quests_done",
@@ -19,6 +20,7 @@ const ADDED_KEYS: Array[String] = [
 	"standings",
 	"gear",
 	"equipped",
+	"path_leaning",
 ]
 ## A save's quest progress for quest a with the steps done (#573) left open.
 const PROGRESS_DONE: String = (
@@ -280,7 +282,9 @@ func _check_standings_refused() -> String:
 		text.replace(neutral, "\"standings\": {\"a\": \"1\"}"): faction_a,
 	}
 	var problem: String = _unrefused(cases)
-	return problem if not problem.is_empty() else _check_gear()
+	if problem.is_empty():
+		problem = _check_gear()
+	return problem if not problem.is_empty() else _check_leaning()
 
 
 ## Gear (#690): a slot takes only gear the player owns, one piece per slot, so a piece owned once
@@ -314,13 +318,42 @@ func _check_gear() -> String:
 	return _unrefused(cases)
 
 
+## The leaning toward the story's paths (#658): even, toward neither, on a new profile; each
+## path-marked choice leans one toward its path, toward both for a mark of both and toward neither
+## for none; the path with more is the one leaned toward; it's kept through saving and loading, and
+## a save whose leaning isn't a whole count for each path is refused.
+func _check_leaning() -> String:
+	var profile: Profile = Profile.new()
+	if profile.leaning.toward() != PathMark.NONE:
+		return "a new profile leans toward a path"
+	for mark: String in [PathMark.BOTH, PathMark.HARMONY, PathMark.NONE, PathMark.HARMONY]:
+		profile.leaning.lean(mark)
+	if profile.leaning.harmony != 3 or profile.leaning.supremacy != 1:
+		return "the choices leaned %d, %d" % [profile.leaning.harmony, profile.leaning.supremacy]
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	if not loaded.problem.is_empty() or loaded.leaning.toward() != PathMark.HARMONY:
+		return "the leaning toward harmony didn't survive saving: " + loaded.problem
+	var text: String = ProfileSave.to_text(Profile.new())
+	var even: String = "\"supremacy\": 0"
+	var invalid: String = "the save's path leaning"
+	var cases: Dictionary[String, String] = {
+		text.replace(even, "\"supremacy\": -1"): invalid,
+		text.replace(even, "\"supremacy\": 0.5"): invalid,
+		text.replace(even, "\"supremacy\": \"1\""): invalid,
+		text.replace(even, "\"supremacy\": 0, \"strength\": 1"): invalid,
+		text.replace(even, "\"supreme\": 0"): invalid,
+	}
+	return _unrefused(cases)
+
+
 ## Older saves load into the current format, migrated oldest step first: format 1 still counted
 ## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
 ## formats before 4 carried no monsters (#53): the first three dominated are carried then, and
 ## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
 ## starts on Auto; formats before 7 had no character name (#399), which starts empty; formats
-## before 8 had no standings with factions (#483), which start neutral; and formats before 10 had
-## no gear (#690): none is owned, and every gear slot starts empty.
+## before 8 had no standings with factions (#483), which start neutral; formats before 10 had no
+## gear (#690): none is owned, and every gear slot starts empty; and formats before 11 had no
+## leaning toward the paths (#658), which starts even.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
@@ -340,7 +373,7 @@ func _check_migrated() -> String:
 ## What a save in each older format holds that the current one doesn't, or holds otherwise.
 func _old_saves() -> Array[Dictionary]:
 	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
-	return [
+	var olds: Array[Dictionary] = [
 		{ "format": 1, "runs_finished": 3 },
 		{ "format": 1 },
 		{ "format": 2, "runs_finished": 3 },
@@ -382,6 +415,11 @@ func _old_saves() -> Array[Dictionary]:
 			"standings": {},
 		},
 	]
+	# Format 10 is format 9's with the gear (#690).
+	var ten: Dictionary = olds[-1].duplicate()
+	ten.merge({ "format": 10, "gear": {}, "equipped": {} }, true)
+	olds.append(ten)
+	return olds
 
 
 ## A format 4 save's first quest, open or finished, is the renamed first quest (#317).

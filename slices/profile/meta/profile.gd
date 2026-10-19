@@ -7,7 +7,8 @@ extends RefCounted
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). Quest progress (#184) is kept
 ## here too, advanced by the same gains against the quest definitions it's given, and so are the
 ## player's personal color (#233), which only views read, and their standings with the factions
-## (#483), which finishing a quest can move (#532), and their gear (#690).
+## (#483), which finishing a quest can move (#532), their gear (#690), and their leaning toward
+## the story's paths (#658), which finishing a path-marked quest moves.
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -48,6 +49,8 @@ var quest_book: Dictionary[String, QuestDefinition] = {}
 var standings: Standings = Standings.new()
 ## The gear the player owns and what's in their gear slots (#690).
 var gear: GearSlots = GearSlots.new()
+## How far the player's choices lean them toward harmony and supremacy (#658).
+var leaning: PathLeaning = PathLeaning.new()
 ## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
 ## simulation's (#233).
 var personal_color: int = AUTO_COLOR
@@ -193,11 +196,12 @@ static func _emits(step: QuestStep, condition: String, what: String) -> Array[St
 	return events
 
 
-## Finishes `quest`: it's done, and moves the standing with the faction it names (#532), held on
-## the scale by Standings.
+## Finishes `quest`: it's done, leans the player toward its path (#658), and moves the standing
+## with the faction it names (#532), held on the scale by Standings.
 func _finish(quest: QuestDefinition) -> void:
 	var _finished: bool = quest_progress.erase(quest.id)
 	quests_done.append(quest.id)
+	leaning.lean(quest.path)
 	if quest.standing != null:
 		# Its faction's id was checked when the quest was read, so the change can't be refused.
 		var _moved: String = standings.change(quest.standing.faction, quest.standing.change)

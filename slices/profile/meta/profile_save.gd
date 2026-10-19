@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 10
+const FORMAT: int = 11
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -31,6 +31,10 @@ static func to_text(profile: Profile) -> String:
 		"standings": _sorted(profile.standings.by_faction),
 		"gear": _sorted(profile.gear.owned),
 		"equipped": _sorted(profile.gear.equipped),
+		"path_leaning": {
+			"harmony": profile.leaning.harmony,
+			"supremacy": profile.leaning.supremacy,
+		},
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -169,6 +173,12 @@ static func _migrate_to_10(data: Dictionary) -> void:
 	data["equipped"] = {}
 
 
+## Format 10 to 11: the player leans toward neither path yet (#658). Quests finished before count
+## for nothing: the save has no quest data to tell which were path-marked.
+static func _migrate_to_11(data: Dictionary) -> void:
+	data["path_leaning"] = { "harmony": 0, "supremacy": 0 }
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -204,7 +214,13 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 		return "the save's character name is invalid"
 	var problem: String = ""
 	# Each reads its part once the parts before it were sound.
-	for reader: Callable in [_read_carried, _read_standings, _read_gear, _read_quests]:
+	for reader: Callable in [
+		_read_carried,
+		_read_standings,
+		_read_leaning,
+		_read_gear,
+		_read_quests,
+	]:
 		if problem.is_empty():
 			problem = reader.call(profile, data)
 	return problem
@@ -250,6 +266,18 @@ static func _read_standings(profile: Profile, data: Dictionary) -> String:
 		# Neutral is never saved, so a 0 is as wrong as a standing out of range.
 		if standing == 0 or not profile.standings.change(str(faction), standing).is_empty():
 			return "the standing with faction %s in the save is invalid" % faction
+	return ""
+
+
+## Reads the save's leaning toward the paths (#658) into this profile; returns why it can't, or "":
+## a count for each path, each a whole number from 0 to Profile.MAX_NUMBER, and nothing else.
+static func _read_leaning(profile: Profile, data: Dictionary) -> String:
+	var stored: Variant = data.get("path_leaning")
+	var leaning: Dictionary = stored if stored is Dictionary else {}
+	profile.leaning.harmony = _int(leaning.get("harmony"))
+	profile.leaning.supremacy = _int(leaning.get("supremacy"))
+	if leaning.size() != 2 or profile.leaning.harmony < 0 or profile.leaning.supremacy < 0:
+		return "the save's path leaning is invalid"
 	return ""
 
 
