@@ -882,10 +882,13 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 ## The glade's region pieces, read straight from their files, its start piece first.
 func _glade_pieces() -> Array[Region]:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
-	var files: Array[String] = [InstanceBlueprints.START_PIECE]
+	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
 		if file.ends_with(".md") and file != InstanceBlueprints.START_PIECE:
 			files.append(file)
+	# In a fixed order, as the blueprints read them: the order is part of the arrangement.
+	files.sort()
+	files.push_front(InstanceBlueprints.START_PIECE)
 	var pieces: Array[Region] = []
 	for file: String in files:
 		pieces.append(RegionDocument.parse(FileAccess.get_file_as_string(folder + file)))
