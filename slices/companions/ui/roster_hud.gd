@@ -104,9 +104,8 @@ func show_state() -> void:
 ## Whether each of `party`, the monsters the player in `slot` carries, fainted in `state` (#597).
 static func _fainted_in(state: GameState, slot: int, party: PackedStringArray) -> Array[bool]:
 	var down: Array[bool] = []
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	for species: String in party:
-		down.append(companions != null and companions.has_fainted(slot, species))
+		down.append(state.has_fainted(slot, species))
 	return down
 
 

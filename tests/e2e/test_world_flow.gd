@@ -14,6 +14,7 @@ extends RefCounted
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## A player swaps it for another monster they carry (#55), by a tap or a click on the roster at the
 ## top left of the screen, which shows the monsters they carry and which is their companion (#540).
+## One that faints stays fainted through exits, saves and session starts until revived (#655).
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
@@ -66,6 +67,7 @@ func run(tree: SceneTree) -> String:
 		_check_walk_through,
 		_check_companions,
 		_check_swaps,
+		_check_fainted_kept,
 		_check_purge,
 		_check_flags,
 		_check_corruption,
@@ -353,6 +355,70 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 	for event: RefCounted in world.instances[world.instance_of(0)].events:
 		chosen += 1 if event is CompanionChosen else 0
 	return chosen
+
+
+## A fainted monster stays fainted (#655): the storm finch faints beside its player in the basic
+## instance, the toad is chosen in its place, and the world keeps the finch fainted. Through the
+## exit into the glade, the toad joins its player there and a swap back to the finch does nothing;
+## the finch stays fainted through the world's save data and back, and through a session's start
+## that brings the same monsters, as the restored world goes on. Revived in the glade
+## (CompanionFeature.revive), it can be swapped to again and joins its player, and the world takes
+## it into the basic instance too. A fainted one its player no longer carries is forgotten.
+func _check_fainted_kept() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var party: Array[PackedStringArray] = [PackedStringArray(["storm_finch", "moss_toad"])]
+	world.set_carried(party)
+	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
+	companions.send_home(basic, companions.companion_of(0))
+	var _relieved: int = _swap_in(world, null, Command.NO_SWAP)
+	if world.fainted[0] != PackedStringArray(["storm_finch"]) or world.companions[0] != "moss_toad":
+		return "the world didn't keep the fainted finch, or didn't choose the toad in its place"
+	for direction: int in [0, 1, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var toad_joined: bool = there.species_of(there.companion_of(0)) == "moss_toad"
+	if not toad_joined or not glade.has_fainted(0, "storm_finch") or _swap_in(world, null, 1) != 0:
+		return "through the exit, the finch didn't stay fainted, or the toad didn't join"
+	return _check_fainted_restored(world, party)
+
+
+## `world`, with the finch fainted, goes through its save data and a session's start bringing
+## `party`, and the restored world goes on with the finch fainted; then it's revived there.
+func _check_fainted_restored(world: World, party: Array[PackedStringArray]) -> String:
+	var restored: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	if not restored.problem.is_empty():
+		return "the world with a fainted finch didn't go through its save data: " + restored.problem
+	restored.set_carried(party)
+	restored.choose_companion(0, 1)
+	var _stood: int = _swap_in(restored, null, Command.NO_SWAP)
+	var kept: GameState = restored.instances[InstanceBlueprints.GLADE]
+	if restored.fainted != world.fainted or not kept.has_fainted(0, "storm_finch"):
+		return "the fainted finch didn't stay fainted through the save and a session's start"
+	return _check_revived(restored)
+
+
+## Revived, the finch can be swapped to again and joins its player in the glade; a fainted one no
+## longer carried is forgotten.
+func _check_revived(world: World) -> String:
+	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	CompanionFeature.revive(glade, 0, "storm_finch")
+	if _swap_in(world, null, 1) != 1 or not world.fainted[0].is_empty():
+		return "the revived finch couldn't be swapped to, or the world kept it fainted"
+	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
+	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
+	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var finch_joined: bool = there.species_of(there.companion_of(0)) == "storm_finch"
+	if not finch_joined or basic.has_fainted(0, "storm_finch"):
+		return "the revived finch didn't join its player, or stayed fainted in the basic instance"
+	world.fainted[0] = PackedStringArray(["moss_toad"])
+	world.set_carried([PackedStringArray(["storm_finch"])])
+	if not world.fainted[0].is_empty():
+		return "a fainted monster no longer carried wasn't forgotten"
+	return ""
 
 
 ## The roster (#540) in the main scene: carrying a storm finch and a moss toad, it shows both at

@@ -6,16 +6,18 @@ extends RefCounted
 
 ## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
 ## purging, format 2 no ring seals, format 3 no companions, format 4 no tiles changed in place
-## (#530), format 5 no flags or variants (#529) and format 6 no carried monsters (#53); the first
-## three's and the sixth's saves were played by older rules, which `to_world` refuses anyway.
-const FORMAT: int = 7
+## (#530), format 5 no flags or variants (#529), format 6 no carried monsters (#53) and format 7 no
+## fainted ones (#655); the first three's, the sixth's and the seventh's saves were played by older
+## rules, which `to_world` refuses anyway.
+const FORMAT: int = 8
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
 ## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
 ## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, each slot's companion
 ## species (#338, only the slots that bring one), every carried monster's slot and species (#53), in
-## slot and carried order, every loaded instance
+## slot and carried order, every fainted one's (#655), in slot order and the order they fainted,
+## every loaded instance
 ## in name order with its state (GameState.to_data), the tick it was left behind (-1 while
 ## someone is in it) and the variant it was loaded from (#529), every purged blueprint's generation,
 ## the world's flags, the rules version it was played by and
@@ -37,11 +39,14 @@ static func of(world: World) -> Dictionary:
 		purged.append({ "name": instance_name, "generation": world.generations[instance_name] })
 	var companions: Array[Dictionary] = []
 	var carried: Array[Dictionary] = []
+	var fainted: Array[Dictionary] = []
 	for slot: int in GameState.MAX_PLAYERS:
 		if not world.companions[slot].is_empty():
 			companions.append({ "slot": slot, "species": world.companions[slot] })
 		for species: String in world.carried[slot]:
 			carried.append({ "slot": slot, "species": species })
+		for species: String in world.fainted[slot]:
+			fainted.append({ "slot": slot, "species": species })
 	return {
 		"format": FORMAT,
 		"rules": Simulation.RULES_VERSION,
@@ -50,6 +55,7 @@ static func of(world: World) -> Dictionary:
 		"tick": world.tick,
 		"companions": companions,
 		"carried": carried,
+		"fainted": fainted,
 		"generations": purged,
 		"flags": world.flags.duplicate(),
 		"instances": saved,
@@ -169,6 +175,21 @@ static func _load_companions(world: World, read: DataReader) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		if not parties[slot].is_empty() and not chosen.has(slot):
 			read.fail("slot %d carries monsters but has no companion" % slot)
+	_load_fainted(world, read)
+
+
+## Restores each slot's fainted species from the save into `world` (#655), once its carried ones are
+## back: each carried, and listed once.
+static func _load_fainted(world: World, read: DataReader) -> void:
+	for entry: DataReader in read.entries("fainted"):
+		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
+		var species: String = entry.text("species")
+		var down: PackedStringArray = world.fainted[slot]
+		if not world.carried[slot].has(species) or down.has(species):
+			entry.fail("slot %d's fainted %s isn't carried, or is saved twice" % [slot, species])
+			return
+		var _added: bool = down.append(species)
+		world.fainted[slot] = down
 
 
 ## Restores the generation of the purged blueprint `entry` names; the starting instance is never
