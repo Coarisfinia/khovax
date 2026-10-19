@@ -51,8 +51,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_fall(state, target)
 
 
-## Raises EntityFell for `entity_id`, whose HP just reached 0. A companion then goes back to its
-## player (#456). A player with an ally near is knocked down to be revived (#479); otherwise they're
+## Raises EntityFell for `entity_id`, whose HP just reached 0. A companion then faints: it goes back
+## to its player (#456), and the next one they carry is chosen (#597). A player with an ally near is
+## knocked down to be revived (#479); otherwise they're
 ## sent back to the world's spawn (#457).
 func _fall(state: GameState, entity_id: int) -> void:
 	state.events.append(EntityFell.new(entity_id))

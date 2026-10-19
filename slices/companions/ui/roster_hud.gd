@@ -4,8 +4,8 @@ extends Control
 ## carries, in their carried order (#53), with its species' initials and its place's number, the key
 ## that swaps to it (1 to 3; the d-pad's left, up and right on a controller). The companion's square
 ## is drawn bold, with a pointer under it, and the reserve's thin and faded, so which is which shows
-## by a shape too, never by color alone (#68). Which carried monster fainted isn't tracked yet
-## (#54).
+## by a shape too, never by color alone (#68). One that fainted here (#597) is crossed out and
+## faded further, and can't be swapped to.
 ## A tap or a click on a square swaps to that monster for the next tick (LocalInput.choose_swap,
 ## #55). It moves below the Survey when that shows in the top left corner. It only reads the state.
 ## It runs before the rest of the Hud (process_priority in main.tscn), so the quest list below it
@@ -22,6 +22,8 @@ const POINTER_SHARE: float = 0.18
 const BACKDROP_ALPHA: float = 0.7
 ## How a reserve's square is drawn next to the companion's: faded and thin.
 const RESERVE_ALPHA: float = 0.55
+## How a fainted one's square is drawn: faded further, and crossed out.
+const FAINTED_ALPHA: float = 0.35
 const INK_PIXELS: float = 2.0
 const COMPANION_INK_PIXELS: float = 6.0
 
@@ -33,6 +35,8 @@ const COMPANION_INK_PIXELS: float = 6.0
 var shown: PackedStringArray = PackedStringArray()
 ## The companion's place among `shown`, from 0, or -1 when none of them is the companion.
 var companion_place: int = -1
+## Whether each square's monster fainted here (#597), in carried order.
+var fainted: Array[bool] = []
 ## The initials shown for each species, by id; a species missing from the data shows its id's.
 var _initials: Dictionary[String, String] = {}
 var _side: float = 0.0
@@ -84,14 +88,26 @@ func _draw() -> void:
 func show_state() -> void:
 	var party: PackedStringArray = PackedStringArray()
 	var companion: String = ""
+	var down: Array[bool] = []
 	if driver != null and driver.state != null and driver.input != null:
 		var slot: int = driver.input.slot
 		party = driver.state.carried[slot]
 		companion = driver.state.companions[slot]
-	if party != shown or party.find(companion) != companion_place:
+		down = _fainted_in(driver.state, slot, party)
+	if party != shown or party.find(companion) != companion_place or down != fainted:
 		shown = party
 		companion_place = party.find(companion)
+		fainted = down
 		queue_redraw()
+
+
+## Whether each of `party`, the monsters the player in `slot` carries, fainted in `state` (#597).
+static func _fainted_in(state: GameState, slot: int, party: PackedStringArray) -> Array[bool]:
+	var down: Array[bool] = []
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	for species: String in party:
+		down.append(companions != null and companions.has_fainted(slot, species))
+	return down
 
 
 ## Lays the squares out for a screen of `screen` pixels: in a row from the top left corner, below
@@ -124,12 +140,12 @@ static func initials_of(species_name: String) -> String:
 	return letters
 
 
-## The square of the monster at `place`: its initials, its place's number in the corner, and for
-## the companion a bold frame and a pointer under it.
+## The square of the monster at `place`: its initials, its place's number in the corner, for the
+## companion a bold frame and a pointer under it, and for a fainted one a cross over it.
 func _draw_square(place: int) -> void:
 	var area: Rect2 = rect_of(place)
 	var chosen: bool = place == companion_place
-	var faded: float = 1.0 if chosen else RESERVE_ALPHA
+	var faded: float = FAINTED_ALPHA if has_fainted(place) else (1.0 if chosen else RESERVE_ALPHA)
 	draw_rect(area, Color(FogView.FOG, BACKDROP_ALPHA * faded))
 	var ink: Color = Color(Toon.INK, faded)
 	draw_rect(area, ink, false, COMPANION_INK_PIXELS if chosen else INK_PIXELS)
@@ -143,6 +159,21 @@ func _draw_square(place: int) -> void:
 	draw_string(font, corner, str(place + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
 	if chosen:
 		_draw_pointer(area, ink)
+	if has_fainted(place):
+		_draw_cross(area, ink)
+
+
+## Whether the monster at `place` (from 0) fainted here (#597).
+func has_fainted(place: int) -> bool:
+	return place < fainted.size() and fainted[place]
+
+
+## A bold cross over a fainted monster's square, corner to corner.
+func _draw_cross(area: Rect2, ink: Color) -> void:
+	var top_right: Vector2 = Vector2(area.end.x, area.position.y)
+	var bottom_left: Vector2 = Vector2(area.position.x, area.end.y)
+	draw_line(area.position, area.end, ink, COMPANION_INK_PIXELS)
+	draw_line(top_right, bottom_left, ink, COMPANION_INK_PIXELS)
 
 
 ## The pointer under the companion's square: a triangle pointing up at it.

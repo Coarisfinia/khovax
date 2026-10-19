@@ -349,7 +349,7 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 ## it. A tap on the toad's square swaps to it in the local player's next command without starting
 ## the touch stick, and a left click on the finch's swaps to the finch; while the game hears no
 ## input (the menu is open) a tap swaps nothing. Swapped to the toad, the roster shows it as the
-## companion.
+## companion, and once it faints, as fainted (#597).
 func _check_roster(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -414,6 +414,21 @@ func _roster_swaps(main: Node, roster: RosterHud, driver: GameDriver) -> String:
 	roster.show_state()
 	if roster.companion_place != 1:
 		return "the roster didn't show the toad as the companion once swapped to it"
+	return _roster_fainted(roster, driver)
+
+
+## The toad, once it joined and fainted (#597), shows on the roster as fainted, the finch not.
+func _roster_fainted(roster: RosterHud, driver: GameDriver) -> String:
+	var _joined: int = _swap_in(driver.world, null, Command.NO_SWAP)
+	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
+	if companions.companion_of(0) == 0:
+		return "the toad didn't join its player once swapped to"
+	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
+	companions.send_home(driver.state, companions.companion_of(0))
+	roster.show_state()
+	var expected: Array[bool] = [false, true]
+	if roster.fainted != expected:
+		return "the roster shows %s fainted, not just the toad" % [roster.fainted]
 	return ""
 
 

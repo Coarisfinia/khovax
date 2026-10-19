@@ -106,9 +106,10 @@ static func create(
 			push_error("instance %s's loot table doesn't load" % instance_name)
 			return null
 		ordered.append(ChestFeature.new(table))
-	ordered.append(CompanionSwapFeature.new())
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
+	# After the companions, so a swap can't pick a monster that fainted (#597).
+	ordered.append(CompanionSwapFeature.new())
 	ordered.append_array(_attacks(species))
 	# After the specials, whose strikes fell the wild monsters it drops materials for.
 	ordered.append(_harvest(instance_name))
