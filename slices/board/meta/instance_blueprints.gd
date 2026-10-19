@@ -109,8 +109,7 @@ static func create(
 	ordered.append(CompanionSwapFeature.new())
 	# Last, so a companion whose player walks out through an exit this tick goes with them.
 	ordered.append(_companions(species))
-	ordered.append(CompanionAttackFeature.new())
-	ordered.append(_specials(species))
+	ordered.append_array(_attacks(species))
 	# After the specials, whose strikes fell the wild monsters it drops materials for.
 	ordered.append(_harvest(instance_name))
 	ordered.append(_health(species))
@@ -232,15 +231,17 @@ static func _max_hps(content: SpeciesData) -> Dictionary[String, int]:
 	return max_hps
 
 
-## The specials feature (#410) with every species' special's power and cooldown, from the species
-## `content` and the ability data; a special that doesn't load is an error, and its species has
-## none.
-static func _specials(content: SpeciesData) -> SpecialAttackFeature:
+## The features that strike monsters, in their order: the type chart (#626), which doesn't step,
+## the companions' auto attacks, and the specials (#410), with every species' special's power and
+## cooldown, from the species `content` and the ability data. A special that doesn't load is an
+## error, and its species has none.
+static func _attacks(content: SpeciesData) -> Array[Feature]:
 	var abilities: SpeciesData = SpeciesContent.load_abilities()
 	if not abilities.problem.is_empty():
 		push_error("the abilities don't load: " + abilities.problem)
 	var powers: Dictionary[String, int] = {}
 	var cooldowns: Dictionary[String, int] = {}
+	var special_types: Dictionary[String, String] = {}
 	for species_id: String in content.species:
 		var special: Ability = abilities.abilities.get(content.species[species_id].special)
 		if special == null or special.kind != Ability.SPECIAL:
@@ -248,7 +249,27 @@ static func _specials(content: SpeciesData) -> SpecialAttackFeature:
 			continue
 		powers[species_id] = special.power
 		cooldowns[species_id] = special.cooldown_seconds * Simulation.TICKS_PER_SECOND
-	return SpecialAttackFeature.new(powers, cooldowns)
+		special_types[species_id] = special.strike_type
+	var attacks: Array[Feature] = [
+		_type_chart(content, special_types),
+		CompanionAttackFeature.new(),
+		SpecialAttackFeature.new(powers, cooldowns),
+	]
+	return attacks
+
+
+## The type chart's feature (#626) with every species' types and auto attack's type from the
+## species `content`, and its special's type from `special_types`.
+static func _type_chart(
+	content: SpeciesData,
+	special_types: Dictionary[String, String],
+) -> TypeEffectivenessFeature:
+	var types: Dictionary[String, PackedStringArray] = {}
+	var auto_types: Dictionary[String, String] = {}
+	for species_id: String in content.species:
+		types[species_id] = PackedStringArray(content.species[species_id].types)
+		auto_types[species_id] = content.species[species_id].strike_type
+	return TypeEffectivenessFeature.new(types, auto_types, special_types)
 
 
 ## The wild monster feature with the named blueprint's species list and every species' stats from

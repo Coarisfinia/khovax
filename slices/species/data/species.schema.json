@@ -4,11 +4,18 @@
 	"title": "Species",
 	"description": "What a monster is, dominated or not (#45, #72). One file per species, named after its id.",
 	"type": "object",
+	"$defs": {
+		"type": {
+			"description": "A type from the type chart (#68).",
+			"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
+		}
+	},
 	"additionalProperties": false,
 	"required": [
 		"id",
 		"name",
 		"types",
+		"strike_type",
 		"hp",
 		"strength",
 		"speed",
@@ -34,9 +41,11 @@
 			"minItems": 1,
 			"maxItems": 2,
 			"uniqueItems": true,
-			"items": {
-				"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
-			}
+			"items": { "$ref": "#/$defs/type" }
+		},
+		"strike_type": {
+			"description": "Its auto attack's type (#626), whatever fits it, not necessarily one of its own.",
+			"$ref": "#/$defs/type"
 		},
 		"hp": { "description": "Base HP, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"strength": { "description": "Base strength, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 },

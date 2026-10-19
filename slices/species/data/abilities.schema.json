@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/species/data/abilities.schema.json",
 	"title": "Ability",
-	"description": "Something a species brings (#222): a special attack the player triggers (#221), a passive that helps the player while the companion is active, or one that helps the companion itself. A special attack is one species' own (#228). One file per ability, named after its id.",
+	"description": "Something a species brings (#222): a special attack the player triggers (#221), a passive that helps the player while the companion is active, or one that helps the companion itself. A special attack is one species' own (#228) and has its own type (#626). One file per ability, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "kind", "name", "description"],
@@ -17,6 +17,10 @@
 		"description": { "description": "What it does, for the player.", "type": "string", "minLength": 1 },
 		"power": { "description": "A special's: how much of its species' strength one strike deals, in thousandths (#33, #410): 3000 is three times it.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"cooldown_seconds": { "description": "A special's: the seconds before it can fire again (#410).", "type": "integer", "minimum": 1, "maximum": 3600 },
+		"strike_type": {
+			"description": "A special's: its type from the type chart (#626), whatever fits it, not necessarily one of its species'.",
+			"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
+		},
 		"path": {
 			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
 			"enum": ["none", "harmony", "supremacy", "both"],
@@ -24,6 +28,6 @@
 		}
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
-	"then": { "required": ["power", "cooldown_seconds"] },
-	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }] } }
+	"then": { "required": ["power", "cooldown_seconds", "strike_type"] },
+	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }] } }
 }

@@ -3,6 +3,7 @@
 	"id": "moss_toad",
 	"name": "Moss Toad",
 	"types": ["growth"],
+	"strike_type": "growth", // its auto attack's (#626)
 	"hp": 120, // sturdy
 	"strength": 40,
 	"speed": 40,

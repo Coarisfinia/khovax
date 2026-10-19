@@ -24,3 +24,4 @@ const HEALTH: int = 17
 const KNOCKDOWN: int = 18
 const COMPANION_SWAPS: int = 19
 const HARVEST: int = 20
+const TYPE_EFFECTIVENESS: int = 21

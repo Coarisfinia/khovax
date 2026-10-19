@@ -9,7 +9,8 @@ extends Feature
 ## tile of the allies' trail (#87), the lowest id or the first tile in sorted order among each. A
 ## trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off the trail
 ## (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks open.
-## Companions and players have no HP yet, so a hit on them only raises the event (#426).
+## A hit on a companion or a player comes off their HP (HealthFeature, #455); one on a companion
+## follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -145,7 +146,10 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 		side = _lowest_beside(_player_at, tile)
 	if side != tile:
 		var target_id: int = _companion_at.get(side, _player_at.get(side, 0))
-		state.events.append(WildMonsterStruck.new(monster.id, target_id, side, damage))
+		var hit: int = damage
+		if _companion_at.has(side):
+			hit = _on_companion(state, monster.id, target_id, damage)
+		state.events.append(WildMonsterStruck.new(monster.id, target_id, side, hit))
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
@@ -153,6 +157,17 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 	state.events.append(WildMonsterStruck.new(monster.id, 0, side, damage))
 	if _worn_through(side, damage):
 		_clear(state, side)
+
+
+## The damage of the wild monster `monster_id`'s strike of `damage` on the companion
+## `companion_id`, after the type chart where the instance has it (#626). Companions are present,
+## since one stands there.
+static func _on_companion(state: GameState, monster_id: int, companion_id: int, damage: int) -> int:
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var attacker: String = wild.species_of(monster_id)
+	var defender: String = companions.species_of(companion_id)
+	return TypeEffectivenessFeature.scaled(state, damage, attacker, false, defender)
 
 
 ## Adds `damage` to the wear on the trail tile `tile`; whether it's worn through now.

@@ -4,6 +4,7 @@
 	"id": "storm_finch",
 	"name": "Storm Finch",
 	"types": ["breeze", "mana"],
+	"strike_type": "breeze",
 	"hp": 60,
 	"strength": 70,
 	"speed": 90,

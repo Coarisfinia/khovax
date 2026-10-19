@@ -12,10 +12,12 @@ extends RefCounted
 ## standing, and broken ones are refused. Quests and abilities carry path marks (#471). Dialogs
 ## (#618) load and read on line by line and answer by answer, and broken ones are refused.
 
-## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
+## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
+## valid species ends.
 const KIT: String = (
-	", \"name\": \"X\", \"speed\": 1, \"archetype\": \"pusher\", \"special\": \"a_special\","
-	+ " \"player_passive\": \"a_passive\", \"self_passive\": \"its_passive\""
+	", \"name\": \"X\", \"strike_type\": \"might\", \"speed\": 1, \"archetype\": \"pusher\","
+	+ " \"special\": \"a_special\", \"player_passive\": \"a_passive\","
+	+ " \"self_passive\": \"its_passive\""
 )
 ## A quest step to reach a place, its id left open (#339).
 const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
@@ -33,7 +35,8 @@ func run(_tree: SceneTree) -> String:
 		return "the species data didn't load: " + content.problem
 	if (not content.species.has("moss_toad")
 			or content.species["moss_toad"].name != "Moss Toad"
-			or content.species["storm_finch"].types.size() != 2):
+			or content.species["storm_finch"].types.size() != 2
+			or content.species["moss_toad"].strike_type != "growth"):
 		return "the placeholder species didn't load as written"
 	var checks: Array[Callable] = [
 		_check_strip,
@@ -58,8 +61,8 @@ func run(_tree: SceneTree) -> String:
 ## Every ability file reads, and every species names a special and two passives that exist and are
 ## of their kind, its special its own (#222, #228). A special two species share, an ability of the
 ## wrong kind, or one that doesn't exist is refused, and so is an ability file with a wrong id,
-## kind, name or description, a special without its power and cooldown (#410), or a passive with
-## them.
+## kind, name or description, a special without its power and cooldown (#410) or a strike type on
+## the chart (#626), or a passive with any of them.
 func _check_kits(content: SpeciesData) -> String:
 	var loaded: SpeciesData = SpeciesContent.load_abilities()
 	if not loaded.problem.is_empty():
@@ -118,7 +121,10 @@ static func _copy_kit(species: Species, special: String) -> Species:
 func _check_abilities_refused() -> String:
 	var ability: String = "{\"id\": \"%s\", \"kind\": \"%s\", \"name\": \"%s\","
 	ability += " \"description\": \"d\"}"
-	var special: String = ability.replace("}", ", \"power\": 3000, \"cooldown_seconds\": 8}")
+	var special: String = ability.replace(
+		"}",
+		", \"power\": 3000, \"cooldown_seconds\": 8, \"strike_type\": \"titan\"}",
+	)
 	var cases: Dictionary[String, String] = {
 		ability % ["y", "special", "N"]: "its id must",
 		ability % ["x", "attack", "N"]: "its kind",
@@ -127,15 +133,17 @@ func _check_abilities_refused() -> String:
 		ability.replace("}", ", \"damage\": 1}") % ["x", "special", "N"]: "field damage",
 		ability % ["x", "special", "N"]: "a special has a power and a cooldown",
 		special.replace(", \"power\": 3000", "") % ["x", "special", "N"]: "a special has a power",
-		special % ["x", "self_passive", "N"]: "a special has a power and a cooldown, a passive",
+		special % ["x", "self_passive", "N"]: "a special has a power, a cooldown and a strike",
+		special.replace("titan", "fire") % ["x", "special", "N"]: "a special has a strike type",
 	}
 	for text: String in cases:
 		var problem: String = Ability.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected an ability refusal starting %s, got: %s" % [cases[text], problem]
 	var read: Ability = Ability.parse("x", special % ["x", "special", "N"])
-	if not read.problem.is_empty() or read.power != 3000 or read.cooldown_seconds != 8:
-		return "a special's power and cooldown didn't read: " + read.problem
+	if (not read.problem.is_empty() or read.power != 3000 or read.cooldown_seconds != 8
+			or read.strike_type != "titan"):
+		return "a special's power, cooldown and strike type didn't read: " + read.problem
 	return ""
 
 
@@ -502,6 +510,8 @@ func _check_refused() -> String:
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("pusher", "digger") + "}": "its archetype",
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("might", "fire") + "}": "its strike type",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"a_special\"", "7") + "}": "it names a special",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
