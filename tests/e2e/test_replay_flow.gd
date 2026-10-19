@@ -623,7 +623,8 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		older.changes = kept
 		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
 		data["format"] = older_format
-		data["features"] = _numbered(data["features"])
+		var named: Array = data["features"]
+		data["features"] = _numbered(named)
 		# Before short ids, a slot's carried monsters were its species alone.
 		if older_format < ReplayFile.SHORT_ID_FORMAT:
 			data["carried"] = [["tikazzir"], ["ombulumo"]]
