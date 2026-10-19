@@ -179,7 +179,10 @@ background; only wait in the foreground for a result the very next step needs.
   one that doesn't load leaves Godot's window showing. The script sets `root.mode = Window.MODE_MINIMIZED`, runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
   `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Run it with
-  `--audio-driver Dummy`, so the music stays silent (headless runs already are). Publish it on
+  `--audio-driver Dummy`, so the music stays silent (headless runs already are). **Under WSLg**, add
+  `--display-driver wayland` (its X server dropped Godot's connection) and leave the root window
+  as it is instead of minimizing it: a minimized Wayland window stops drawing, its `SubViewport`
+  too, so the PNG shows a frame from before it was minimized. Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead. **Before and after pictures always go in

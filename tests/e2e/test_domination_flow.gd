@@ -1077,6 +1077,11 @@ func _check_type_effectiveness() -> String:
 				factor,
 				TYPE_FACTORS[strike],
 			]
+	# A strike is strong or weak against each of the struck species' types (#701): the Lesser
+	# Growth strike on shadow and might, strong and then weak.
+	var mixed: Array[bool] = [true, false]
+	if chart.strong_types("growth", "mixed") != mixed:
+		return "a growth strike on shadow and might isn't strong and then weak"
 	var result: String = _typed_strikes(true)
 	result = result if not result.is_empty() else _typed_strikes(false)
 	return result if not result.is_empty() else _check_least_damage()
@@ -1116,6 +1121,31 @@ func _typed_strikes(on: bool) -> String:
 	var felled: Array[SpecialStruck] = _specials_in(state, _fire())
 	if felled.size() != 1 or felled[0].damage != special:
 		return "with the chart %s, the special didn't strike for %d" % [on, special]
+	return _special_marks(felled[0], on)
+
+
+## Why the weak species' special `struck`, with the type chart `on` or off, didn't carry the
+## chart's marks (#701), or "": with it on, strong against the wild monster's one type, shown as one
+## mark after the damage and tinted as strong; with it off, none and untinted.
+static func _special_marks(struck: SpecialStruck, on: bool) -> String:
+	var strong: Array[bool] = [true] if on else []
+	if struck.strong != strong:
+		return "with the chart %s, the special's hit was strong %s, not %s" % [
+			on,
+			struck.strong,
+			strong,
+		]
+	var label: Label3D = RisingText.make(Vector2i.ZERO, SpecialStrikeView.text_of(struck))
+	TypeMarks.add_to(label, struck.strong)
+	var marks: int = label.get_child_count()
+	var tint: Color = label.modulate
+	label.free()
+	if marks != strong.size() or tint != (TypeMarks.STRONG_TINT if on else Color.WHITE):
+		return "with the chart %s, the special's damage showed %d marks tinted %s" % [
+			on,
+			marks,
+			tint,
+		]
 	return ""
 
 

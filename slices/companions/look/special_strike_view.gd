@@ -1,7 +1,8 @@
 class_name SpecialStrikeView
 extends Node3D
 ## A companion's special attack landing (#431): the damage rises from the struck wild monster and
-## fades, and says so in words when it fainted, never by color alone (#68). Calm, as the camera is:
+## fades, with the type chart's marks after it (TypeMarks, #701), and says so in words when it
+## fainted, never by color alone (#68). Calm, as the camera is:
 ## no shake and no flash. It only reads the tick's events and the state.
 
 const SECONDS: float = 1.2
@@ -21,6 +22,7 @@ func _ready() -> void:
 ## Shows the special `struck` landing on `tile`.
 func show_strike(tile: Vector2i, struck: SpecialStruck) -> void:
 	var label: Label3D = RisingText.make(tile, text_of(struck))
+	TypeMarks.add_to(label, struck.strong)
 	add_child(label)
 	strikes.append(label)
 	RisingText.rise(label, SECONDS, RISE, _drop)
