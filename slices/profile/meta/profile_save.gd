@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 11
+const FORMAT: int = 12
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -93,6 +93,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_9,
 		_migrate_to_10,
 		_migrate_to_11,
+		_migrate_to_12,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -178,6 +179,17 @@ static func _migrate_to_10(data: Dictionary) -> void:
 ## for nothing: the save has no quest data to tell which were path-marked.
 static func _migrate_to_11(data: Dictionary) -> void:
 	data["path_leaning"] = { "harmony": 0, "supremacy": 0 }
+
+
+## Format 11 to 12: every dominated monster gets a short id (#700): a stand-in drawn from its id,
+## since the one it had in the wild wasn't kept.
+static func _migrate_to_12(data: Dictionary) -> void:
+	var monsters: Variant = data.get("dominated_monsters")
+	var monster_list: Array = monsters if monsters is Array else []
+	for entry: Variant in monster_list:
+		if entry is Dictionary:
+			var fields: Dictionary = entry
+			fields["short_id"] = ShortId.stand_in(_int(fields.get("id")))
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
@@ -349,8 +361,10 @@ static func _monster(entry: Variant) -> DominatedMonster:
 		_int(data.get("id")),
 		str(data.get("species", "")),
 		_int(data.get("level")),
+		Content.text_of(data.get("short_id")),
 	)
-	if monster.id < 1 or monster.species.is_empty() or monster.level < 1:
+	var named: bool = not monster.species.is_empty() and ShortId.is_valid(monster.short_id)
+	if monster.id < 1 or not named or monster.level < 1:
 		return null
 	return monster
 

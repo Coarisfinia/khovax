@@ -2,7 +2,7 @@ class_name CompanionFeature
 extends Feature
 ## Companions (#338, the first part of #221): one monster each player carries walks beside them,
 ## the first they carry until they choose another (#55, CompanionSwapFeature): their party says
-## which species (CompanionParty, in their world store, #724). When the choice changes, the old one
+## which monster (CompanionParty, in their world store, #724). When the choice changes, the old one
 ## goes and the new one joins. It joins its player in whichever instance they are, on a free tile
 ## next to them, as an entity no player
 ## controls: players are the entities with a slot, which walk by commands, draw the trail, take
@@ -16,7 +16,8 @@ extends Feature
 ## one stays fainted (in their party, kept by the world across exits, instances and sessions): it
 ## doesn't join them, nor can they swap to it, until it's revived (CompanionParty.revive, #655). A
 ## player whose companion has fainted while another they carry hasn't, as after a session starts,
-## gets that one chosen. Fainting is kept by species, like the companion choice itself.
+## gets that one chosen. Fainting is kept by the monster's short id (#700), like the companion
+## choice itself, so two carried monsters of one species are two companions.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -45,6 +46,8 @@ var reaches: Dictionary[String, int] = {}
 var owners: Dictionary[int, int] = {}
 ## Each companion's species, by entity id.
 var _species: Dictionary[int, String] = {}
+## Each companion's short id (#700), its place in its player's party, by entity id.
+var _short_ids: Dictionary[int, String] = {}
 ## The ticks each companion still rests before its next roaming step, by entity id.
 var _rest: Dictionary[int, int] = {}
 var _rng: Rng
@@ -77,9 +80,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var player: Entity = state.player(owners[companion_id])
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
-		var species: String = _species[companion_id]
-		gone = gone or CompanionParty.has_fainted(state, owners[companion_id], species)
-		if gone or CompanionParty.companion(state, player.slot) != species:
+		var short_id: String = _short_ids[companion_id]
+		gone = gone or CompanionParty.has_fainted(state, owners[companion_id], short_id)
+		if gone or CompanionParty.companion(state, player.slot) != short_id:
 			state.remove_entity(companion_id)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
@@ -99,7 +102,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 ## place (#597).
 func send_home(state: GameState, companion_id: int) -> void:
 	var slot: int = owners[companion_id]
-	CompanionParty.faint(state, slot, _species[companion_id])
+	CompanionParty.faint(state, slot, _short_ids[companion_id])
 	state.remove_entity(companion_id)
 	state.events.append(CompanionReturned.new(companion_id, slot))
 	_choose_standing(state, slot)
@@ -136,6 +139,7 @@ static func _chosen_this_tick(state: GameState, slot: int) -> bool:
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = owners.erase(removed_id)
 	_dropped = _species.erase(removed_id)
+	_dropped = _short_ids.erase(removed_id)
 	_dropped = _rest.erase(removed_id)
 
 
@@ -147,17 +151,24 @@ func followers_of(_state: GameState, slot: int) -> Array[int]:
 	return following
 
 
-## The companion `entity_id`'s slot, species and rest, to walk on with them next door (#716).
+## The companion `entity_id`'s slot, species, short id and rest, to walk on with them next door
+## (#716).
 func carry_out(_state: GameState, entity_id: int) -> Dictionary:
 	if not owners.has(entity_id):
 		return {}
-	return { "slot": owners[entity_id], "species": _species[entity_id], "rest": _rest[entity_id] }
+	return {
+		"slot": owners[entity_id],
+		"species": _species[entity_id],
+		"short_id": _short_ids[entity_id],
+		"rest": _rest[entity_id],
+	}
 
 
 ## Makes `arrived` the companion `carried` describes, walking like the one that left (#716).
 func carry_in(state: GameState, arrived: Entity, carried: Dictionary) -> void:
 	owners[arrived.id] = carried["slot"]
 	_species[arrived.id] = carried["species"]
+	_short_ids[arrived.id] = carried["short_id"]
 	_rest[arrived.id] = carried["rest"]
 	(state.feature(Features.MOVEMENT) as MovementFeature).add_walk(arrived)
 
@@ -183,6 +194,11 @@ func species_of(companion_id: int) -> String:
 	return _species.get(companion_id, "")
 
 
+## The short id of the companion with this entity id (#700), or "".
+func short_id_of(companion_id: int) -> String:
+	return _short_ids.get(companion_id, "")
+
+
 ## How far from its player the companion with this entity id roams, in tiles.
 func reach_of_companion(companion_id: int) -> int:
 	return reaches.get(species_of(companion_id), LEAST_REACH)
@@ -195,9 +211,9 @@ static func reach_of(hp: int, strength: int, speed: int) -> int:
 	return clampi(LEAST_REACH + widened, LEAST_REACH, MOST_REACH)
 
 
-## Adds the companion of `species` beside `player`: on the first free neighboring tile, or on the
-## player's own tile when none is free.
-func _join(state: GameState, movement: MovementFeature, player: Entity, species: String) -> void:
+## Adds the carried monster `short_id` as the companion beside `player`: on the first free
+## neighboring tile, or on the player's own tile when none is free.
+func _join(state: GameState, movement: MovementFeature, player: Entity, short_id: String) -> void:
 	var tile: Vector2i = player.tile
 	for direction: int in Hex.DIRECTIONS.size():
 		if _is_free(state, movement, player.tile + Hex.DIRECTIONS[direction]):
@@ -206,7 +222,8 @@ func _join(state: GameState, movement: MovementFeature, player: Entity, species:
 	# Can't be refused: an entity without a slot is always added.
 	var companion: Entity = state.add_entity(Entity.NO_SLOT, tile)
 	owners[companion.id] = player.slot
-	_species[companion.id] = species
+	_species[companion.id] = CompanionParty.species_of(state, player.slot, short_id)
+	_short_ids[companion.id] = short_id
 	_rest[companion.id] = 0
 	movement.add_walk(companion)
 
@@ -256,18 +273,20 @@ static func _is_free(state: GameState, movement: MovementFeature, tile: Vector2i
 	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)
 
 
-## Every companion's entity id, slot, species (as its name's code) and rest, in id order, and the
-## stream's state. The party is the player's world store's (CompanionParty).
+## Every companion's entity id, slot, rest, species and short id (as their names' codes), in id
+## order, and the stream's state. The party is the player's world store's (CompanionParty).
 func hash_values() -> Array[int]:
 	var values: Array[int] = [owners.size()]
 	for companion_id: int in companions():
 		values.append_array([companion_id, owners[companion_id], _rest[companion_id]])
 		values.append(World.name_code(_species[companion_id]))
+		values.append(World.name_code(_short_ids[companion_id]))
 	values.append_array(_rng.hash_values())
 	return values
 
 
-## Every companion as its entity id, slot, species and rest, in id order, and the stream's state.
+## Every companion as its entity id, slot, species, short id and rest, in id order, and the stream's
+## state.
 ## The reaches follow from the content; the party is the world's to save (CompanionParty).
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
@@ -277,6 +296,7 @@ func save_values() -> Dictionary:
 				"entity": companion_id,
 				"slot": owners[companion_id],
 				"species": _species[companion_id],
+				"short_id": _short_ids[companion_id],
 				"rest": _rest[companion_id],
 			},
 		)
@@ -284,10 +304,11 @@ func save_values() -> Dictionary:
 
 
 ## Every player's party in the world store must be one (CompanionParty.problem), then every
-## companion one walking entity without a player, of its slot's companion species.
+## companion one walking entity without a player, its slot's companion, of that one's species.
 func load_values(state: GameState, values: DataReader) -> void:
 	owners.clear()
 	_species.clear()
+	_short_ids.clear()
 	_rest.clear()
 	for slot: int in GameState.MAX_PLAYERS:
 		if not CompanionParty.problem(state, slot).is_empty():
@@ -298,17 +319,22 @@ func load_values(state: GameState, values: DataReader) -> void:
 		var companion_id: int = entry.whole("entity", 1, DataReader.MOST)
 		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
 		var species: String = entry.text("species")
+		var short_id: String = entry.text("short_id")
 		var standing: Entity = state.entity(companion_id)
 		var walks: bool = movement != null and movement.walk(companion_id) != null
 		var taken: bool = owners.has(companion_id) or companion_of(slot) != 0
 		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
 			values.fail("companion %d isn't one walking entity without a player" % companion_id)
 			return
-		if species.is_empty() or species != CompanionParty.companion(state, slot):
-			values.fail("companion %d isn't of its slot's companion species" % companion_id)
+		var chosen: bool = short_id == CompanionParty.companion(state, slot)
+		if (short_id.is_empty()
+				or not chosen
+				or species != CompanionParty.species_of(state, slot, short_id)):
+			values.fail("companion %d isn't its slot's companion, of its species" % companion_id)
 			return
 		owners[companion_id] = slot
 		_species[companion_id] = species
+		_short_ids[companion_id] = short_id
 		_rest[companion_id] = entry.whole("rest", 0, MOST_REST)
 	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if restored == null:

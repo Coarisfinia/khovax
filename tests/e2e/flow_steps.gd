@@ -40,6 +40,40 @@ static func drop_beach_toad(state: GameState) -> void:
 			state.remove_entity(entity_id)
 
 
+## The monsters of `species` a player carries, in order, each with the stand-in short id of its
+## place from 1 (ShortId.stand_in), as an old replay's are.
+static func party(species: Array[String]) -> CarriedMonsters:
+	var carried: CarriedMonsters = CarriedMonsters.new()
+	for place: int in species.size():
+		carried = carried.add(ShortId.stand_in(place + 1), species[place])
+	return carried
+
+
+## Gives the player in `slot` in `state` the party of `species` (FlowSteps.party), the first their
+## companion, straight in their world store, as a session's start would through the world.
+static func carry(state: GameState, slot: int, species: Array[String]) -> void:
+	var carried: CarriedMonsters = party(species)
+	state.store(slot, Features.COMPANIONS).merge(
+		{
+			"carried": Array(carried.short_ids),
+			"species": Array(carried.species),
+			"companion": carried.short_ids[0],
+			"fainted": [],
+		},
+		true,
+	)
+
+
+## Each slot's party, by slot, from each slot's species (FlowSteps.party).
+static func parties(by_slot: Array[Array]) -> Array[CarriedMonsters]:
+	var made: Array[CarriedMonsters] = []
+	for species: Array in by_slot:
+		var named: Array[String] = []
+		named.assign(species)
+		made.append(party(named))
+	return made
+
+
 ## The tiles player 0 sees in `state`.
 static func sight_of(state: GameState) -> Array[Vector2i]:
 	var seen: Array[Vector2i] = []

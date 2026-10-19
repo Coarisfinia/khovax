@@ -595,7 +595,10 @@ func _check_replay_round_trip() -> String:
 	# Who the players brought is part of the start (#338): other companions play another game.
 	var swapped: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 	swapped.carried.reverse()
-	if loaded.carried != recorded.carried or swapped.play().is_empty():
+	var kept: bool = loaded.carried.size() == recorded.carried.size()
+	for slot: int in loaded.carried.size():
+		kept = kept and loaded.carried[slot].same_as(recorded.carried[slot])
+	if not kept or swapped.play().is_empty():
 		return "the replay didn't keep its companions, or played with others all the same"
 	return _check_older_formats(recorded, loaded)
 
@@ -604,7 +607,8 @@ func _check_replay_round_trip() -> String:
 ## swap (#55, format 7), a dialog answer (#635, format 8) or a territory handed over (#638, format
 ## 9) read with none fired, placed, swapped, answered or handed over, as `recorded` has none, and
 ## play back the same. Before format 8 they name each slot's companion alone, which becomes all the
-## slot carries.
+## slot carries, and before format 11 the species alone, which get the stand-in short ids of their
+## places (#700), as `recorded`'s are.
 func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5, 8: 6, 9: 7 }
 	for older_format: int in counts:
@@ -615,6 +619,8 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		older.changes = kept
 		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
 		data["format"] = older_format
+		# Before short ids, a slot's carried monsters were its species alone.
+		data["carried"] = [["storm_finch"], ["moss_toad"]]
 		if older_format < ReplayFile.CARRIED_FORMAT:
 			var _erased: bool = data.erase("carried")
 			data["companions"] = ["storm_finch", "moss_toad"]
@@ -724,7 +730,7 @@ func _recorded_run() -> Replay:
 	)
 	CompanionParty.bring(
 		world,
-		[PackedStringArray(["storm_finch"]), PackedStringArray(["moss_toad"])],
+		FlowSteps.parties([["storm_finch"], ["moss_toad"]]),
 	)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)

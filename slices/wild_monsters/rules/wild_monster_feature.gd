@@ -4,7 +4,8 @@ extends Feature
 ## as an entity no player controls, and each is of a species (#133). A spot whose region piece names
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
-## species. Each stands where it is (its look is a placeholder, #85), unless no ring could enclose
+## species. Each gets its short id (#700) from the same stream once every spot has its species. Each
+## stands where it is (its look is a placeholder, #85), unless no ring could enclose
 ## it
 ## there (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where
 ## one could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
@@ -44,6 +45,8 @@ var max_hps: Dictionary[String, int] = {}
 var strengths: Dictionary[String, int] = {}
 ## Each wild monster's species id, by entity id.
 var _species: Dictionary[int, String] = {}
+## Each wild monster's short id (#700), by entity id: a dominated one keeps it.
+var _short_ids: Dictionary[int, String] = {}
 ## Each wild monster's HP left, by entity id.
 var _hp: Dictionary[int, int] = {}
 ## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
@@ -104,6 +107,9 @@ func start(state: GameState) -> void:
 			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
 		if named != null and not named.emits.is_empty():
 			_emits[monster.id] = named.emits
+	# Drawn after every species, so the species roll as they did before short ids.
+	for monster: int in monsters:
+		_short_ids[monster] = ShortId.drawn(rng)
 	_known.sort()
 
 
@@ -153,6 +159,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	fainted.erase(removed_id)
 	held.erase(removed_id)
 	var _dropped: bool = _species.erase(removed_id)
+	_dropped = _short_ids.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
 	_dropped = _rage.erase(removed_id)
 	_dropped = _emits.erase(removed_id)
@@ -174,6 +181,11 @@ func is_wild_monster(entity_id: int) -> bool:
 ## The species id of the wild monster with this entity id, or "" when it has none.
 func species_of(entity_id: int) -> String:
 	return _species.get(entity_id, "")
+
+
+## The short id of the wild monster with this entity id (#700), or "" when it has none.
+func short_id_of(entity_id: int) -> String:
+	return _short_ids.get(entity_id, "")
 
 
 ## The wild monster's HP left, its species' full HP, and its species' strength.
@@ -229,7 +241,8 @@ func enrage(entity_id: int, heal: int) -> void:
 	_hp[entity_id] = mini(hp_of(entity_id) + Fixed.scale(full, heal), full)
 
 
-## Each wild monster still in the instance as its entity's id, its species and its HP left, in id
+## Each wild monster still in the instance as its entity's id, its species, its short id and its HP
+## left, in id
 ## order, the fainted ones among them at 0 HP, and the event a standing one emits when it faints, if
 ## any (#541). The roster, the species this instance can place and their stats follow from the
 ## blueprint, the region and the content.
@@ -242,6 +255,7 @@ func save_values() -> Dictionary:
 		var entry: Dictionary = {
 			"entity": monster,
 			"species": _species[monster],
+			"short_id": _short_ids[monster],
 			"hp": _hp[monster],
 		}
 		entry["rage"] = rage_of(monster)
@@ -256,6 +270,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	fainted.clear()
 	held.clear()
 	_species.clear()
+	_short_ids.clear()
 	_hp.clear()
 	_rage.clear()
 	_emits.clear()
@@ -272,7 +287,12 @@ func load_values(state: GameState, values: DataReader) -> void:
 				species,
 			])
 			return
+		var short_id: String = entry.text("short_id")
+		if not ShortId.is_valid(short_id):
+			values.fail("wild monster %d has no valid short id" % monster)
+			return
 		_species[monster] = species
+		_short_ids[monster] = short_id
 		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
 		if _hp[monster] == 0:
 			fainted.append(monster)
@@ -291,7 +311,7 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [monsters.size()]
 	for monster: int in monsters:
 		values.append(monster)
-		values.append(_known.find(_species[monster]))
+		values.append_array([_known.find(_species[monster]), World.name_code(_short_ids[monster])])
 		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
 		values.append(rage_of(monster))
 	values.append(held.size())
@@ -299,6 +319,7 @@ func hash_values() -> Array[int]:
 	values.append(fainted.size())
 	for monster: int in fainted:
 		values.append_array([monster, _known.find(_species[monster])])
+		values.append(World.name_code(_short_ids[monster]))
 	# Only a region naming events adds them, so every other instance hashes as before (#541).
 	if not _emits.is_empty():
 		values.append(_emits.size())

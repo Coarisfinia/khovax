@@ -403,7 +403,7 @@ func _check_seal_saved() -> String:
 		InstanceBlueprints.BASIC,
 		2,
 	)
-	CompanionParty.bring(world, [PackedStringArray([COMPANION])])
+	CompanionParty.bring(world, FlowSteps.parties([[COMPANION]]))
 	for next: Vector2i in FlowSteps.BASIC_RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
@@ -883,7 +883,7 @@ func _check_companion_strikes() -> String:
 	for side: Vector2i in Hex.DIRECTIONS:
 		spots.append(hemmed + side)
 	var state: GameState = _strike_state(spots)
-	state.store(0, Features.COMPANIONS)["companion"] = WEAK
+	FlowSteps.carry(state, 0, [WEAK])
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
 	if not _strikes_over(state, 1).is_empty():
 		return "the companion struck before it stood next to a wild monster"
@@ -1034,7 +1034,7 @@ static func _specials_in(state: GameState, commands: Array[Command]) -> Array[Sp
 func _check_wild_attacks() -> String:
 	var spots: Array[Vector2i] = [Vector2i.ZERO]
 	var state: GameState = _strike_state(spots)
-	state.store(0, Features.COMPANIONS)["companion"] = WEAK
+	FlowSteps.carry(state, 0, [WEAK])
 	var beside: Vector2i = Vector2i(1, 0)
 	var player: Entity = state.add_entity(0, beside)
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
@@ -1106,7 +1106,7 @@ func _check_least_damage() -> String:
 func _typed_strikes(on: bool) -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [_type_chart()])
 	state.set_enabled(Features.TYPE_EFFECTIVENESS, on)
-	state.store(0, Features.COMPANIONS)["companion"] = WEAK
+	FlowSteps.carry(state, 0, [WEAK])
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var hit: int = Fixed.scale(WEAK_STRENGTH, 1500 if on else Fixed.ONE)
@@ -1170,8 +1170,7 @@ static func _type_chart() -> TypeEffectivenessFeature:
 ## to the fainted one does nothing. Once every one carried has fainted, none is chosen or joins.
 func _check_relieved() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO])
-	state.store(0, Features.COMPANIONS)["carried"] = [WEAK, STRONG]
-	state.store(0, Features.COMPANIONS)["companion"] = WEAK
+	FlowSteps.carry(state, 0, [WEAK, STRONG])
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
@@ -1660,7 +1659,9 @@ func _dominated_species(events: Array[RefCounted]) -> String:
 
 ## Species (#133): a spot its region piece names always has that species (the arena's boss is a
 ## storm finch); the others roll from their blueprint's list, the same way for the same seed, every
-## species on the list turning up over enough seeds, and the domination carries it.
+## species on the list turning up over enough seeds, and the domination carries it. Every wild
+## monster gets a short id (#700), the same for the same seed and apart from the others', and the
+## domination carries it too.
 func _check_species() -> String:
 	var rolled: Dictionary[String, bool] = {}
 	for seed_value: int in 24:
@@ -1675,10 +1676,20 @@ func _check_species() -> String:
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var state: GameState = InstanceBlueprints.basic(1)
+	var short_ids: Dictionary[String, bool] = {}
+	for monster: int in _wild(state).monsters:
+		short_ids[_wild(state).short_id_of(monster)] = true
+	var first: String = _wild(state).short_id_of(_wild(state).monsters[0])
+	var again: GameState = InstanceBlueprints.basic(1)
+	var same: bool = _wild(again).short_id_of(_wild(again).monsters[0]) == first
+	if not ShortId.is_valid(first) or short_ids.size() != _wild(state).monsters.size() or not same:
+		return "the wild monsters' short ids aren't valid, apart, and the same for the same seed"
 	var events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
 	events.append_array(_settle(state))
 	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
+	if _dominated(events)[0].short_id != first:
+		return "the domination didn't carry the dominated monster's short id"
 	var wounded: String = _check_wounded()
 	return wounded if not wounded.is_empty() else _check_relieved()
 

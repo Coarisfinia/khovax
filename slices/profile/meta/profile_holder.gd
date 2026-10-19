@@ -144,6 +144,7 @@ func _gain_of(event: RefCounted) -> Gain:
 		var dominated: WildMonsterDominated = event as WildMonsterDominated
 		if dominated.dominator_slot == input.slot:
 			gain.dominated_species.append(dominated.species)
+			gain.dominated_short_ids.append(dominated.short_id)
 	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
 		gain.chests_opened = 1
 		_add_loot(gain, (event as ChestOpened).loot[input.slot])
