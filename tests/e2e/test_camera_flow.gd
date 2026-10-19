@@ -17,6 +17,8 @@ const EPSILON: float = 0.0001
 const SETTLED: float = 0.01
 ## A long straight walk, 20 s of frames.
 const WALK_STEPS: int = 1200
+## The camera eases in at the distance beyond its dead zone per this many seconds.
+const EASE_SECONDS: float = 1.0
 
 var _main: Node3D
 var _camera: FollowCamera
@@ -160,9 +162,9 @@ func _check_seamless_crossing() -> String:
 	return ""
 
 
-## On a long walk the camera catches up with the player and doesn't lose them (#726): its cap is
-## above walking speed, so after a long straight walk it trails the player by its dead zone plus
-## the speed it eases at, walking speed, and no further.
+## On a long walk the camera keeps up with the player (#726): its cap is above walking speed, so
+## after a long straight walk it trails the player at a steady distance, and once the player stops
+## it settles with them back inside the dead zone.
 func _check_keeps_up() -> String:
 	var walking: float = _walking_speed()
 	if _camera.max_speed <= walking:
@@ -177,9 +179,16 @@ func _check_keeps_up() -> String:
 	for i: int in WALK_STEPS:
 		_player_view.global_position = start + Vector3.RIGHT * walking * STEP * (i + 1)
 		_camera.advance(STEP)
+	# The camera eases in at as many units per second as the target is beyond the dead zone, so
+	# it moves at walking speed when the player is the ground walked in EASE_SECONDS beyond it.
+	var steady: float = _camera.dead_zone_radius + walking * EASE_SECONDS
 	var behind: float = _camera.focus.distance_to(_ground(_player_view.global_position))
-	if behind > _camera.dead_zone_radius + walking + SETTLED:
-		return "after a long walk the camera trails the player by %f" % behind
+	if behind > steady + SETTLED:
+		return "after a long walk the camera trails the player by %f, not %f" % [behind, steady]
+	_advance(1200)
+	var left: float = _camera.focus.distance_to(_ground(_player_view.global_position))
+	if left > _camera.dead_zone_radius + SETTLED:
+		return "after a long walk and 20 s standing, the player is %f from the focus" % left
 	return ""
 
 
