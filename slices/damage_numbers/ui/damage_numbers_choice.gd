@@ -62,7 +62,9 @@ func step_size(steps: int) -> String:
 ## The player's choice for `setting`, one of `count` values, or `auto` when there's none: a saved
 ## value outside them counts as Auto.
 func _pick(setting: String, count: int, auto: int) -> int:
-	var chosen: int = _chosen(setting)
+	var chosen: int = -1
+	if graphics != null:
+		chosen = graphics.settings.chosen.get(setting, -1)
 	return chosen if chosen >= 0 and chosen < count else auto
 
 
@@ -73,14 +75,9 @@ func _labelled(setting: String, count: int, words: String) -> String:
 	return "Auto (%s)" % words
 
 
-func _chosen(setting: String) -> int:
-	if graphics == null:
-		return -1
-	return graphics.settings.chosen.get(setting, -1)
-
-
+## Keeps `value` for `setting` in the player's Settings; returns why it couldn't be saved, or "".
 func _choose(setting: String, value: int) -> String:
-	if graphics == null:
-		return ""
-	graphics.settings.chosen[setting] = value
-	return graphics.settings.save(graphics.settings_path)
+	if graphics != null:
+		graphics.settings.chosen[setting] = value
+		return graphics.settings.save(graphics.settings_path)
+	return ""
