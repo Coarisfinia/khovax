@@ -47,7 +47,8 @@ func _enter_tree() -> void:
 			push_warning("the gear can't be read, so gear found counts as materials: %s" % [
 				gear.problem,
 			])
-		_gear_ids.assign(gear.items.keys())
+		else:
+			_gear_ids.assign(gear.items.keys())
 		keeper = ProfileKeeper.new(profile, save_path)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
