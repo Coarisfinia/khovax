@@ -658,7 +658,7 @@ func _check_emitted() -> String:
 	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\", \"emits\": \"won\"}]}"
 	var waiting: String = "{\"id\": \"%s\", \"name\": \"N\", "
 	waiting += "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"%s\"}, "
-	waiting += "\"steps\": [{\"condition\": \"%s\"}]}"
+	waiting += "\"steps\": [{\"condition\": \"%s\", \"ends\": \"%s\"}]}"
 	var starts: Dictionary[String, Array] = {
 		"after_pond": ["took_pond", "opened"],
 		"after_thicket": ["took_thicket", "opened"],
@@ -667,7 +667,7 @@ func _check_emitted() -> String:
 	var profile: Profile = Profile.new()
 	profile.quest_book["fork"] = QuestDefinition.parse("fork", text, {})
 	for id: String in starts:
-		profile.quest_book[id] = QuestDefinition.parse(id, waiting % ([id] + starts[id]), {})
+		profile.quest_book[id] = QuestDefinition.parse(id, waiting % ([id] + starts[id] + [id]), {})
 	var applied: String = ""
 	for id: String in profile.quest_book:
 		applied += profile.quest_book[id].problem
