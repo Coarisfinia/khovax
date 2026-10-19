@@ -111,6 +111,8 @@ static func create(
 	ordered.append(_companions(species))
 	ordered.append(CompanionAttackFeature.new())
 	ordered.append(_specials(species))
+	# After the specials, whose strikes fell the wild monsters it drops materials for.
+	ordered.append(_harvest(instance_name))
 	ordered.append(_health(species))
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
@@ -265,10 +267,19 @@ static func _wild_monsters(instance_name: String, content: SpeciesData) -> WildM
 	return WildMonsterFeature.new(roster, weights, _max_hps(content), strengths)
 
 
-## The domination loot feature (#86): every species table there is, and the blueprint's instance
-## table for blanks, if it has one. Tables that don't load are an error; dominations then drop
-## nothing.
+## The domination loot feature (#86) and the harvest of felled wild monsters (#629), each with every
+## species table there is and the blueprint's instance table for blanks, if it has one. Tables that
+## don't load are an error; dominations and felled monsters then drop nothing.
 static func _domination_loot(instance_name: String) -> DominationLootFeature:
+	return DominationLootFeature.new(_species_tables(), _blank_table(instance_name))
+
+
+static func _harvest(instance_name: String) -> HarvestFeature:
+	return HarvestFeature.new(_species_tables(), _blank_table(instance_name))
+
+
+## Every species loot table there is, by species id.
+static func _species_tables() -> Dictionary[String, LootTable]:
 	var content: LootData = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		push_error("the loot tables don't load: " + content.problem)
@@ -276,10 +287,12 @@ static func _domination_loot(instance_name: String) -> DominationLootFeature:
 	for table: LootTable in content.loot_tables.values():
 		if table.kind == LootTable.SPECIES:
 			species_tables[table.id] = table
-	var instance_table: LootTable = null
-	if LOOT_TABLES.has(instance_name):
-		instance_table = _loot_table(LOOT_TABLES[instance_name])
-	return DominationLootFeature.new(species_tables, instance_table)
+	return species_tables
+
+
+## The named blueprint's instance loot table, which a species table's blank rolls on, or null.
+static func _blank_table(instance_name: String) -> LootTable:
+	return _loot_table(LOOT_TABLES[instance_name]) if LOOT_TABLES.has(instance_name) else null
 
 
 ## The instance loot table with this id, or null when the tables don't load or it isn't one.

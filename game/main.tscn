@@ -41,6 +41,7 @@
 [ext_resource type="Script" path="res://slices/health/look/revive_ring.gd" id="37_revive_ring"]
 [ext_resource type="Script" path="res://slices/health/ui/respawn_button.gd" id="38_respawn_button"]
 [ext_resource type="Script" path="res://slices/companions/ui/roster_hud.gd" id="41_roster"]
+[ext_resource type="Script" path="res://slices/harvest/look/harvest_view.gd" id="42_harvest"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -112,6 +113,11 @@ driver = NodePath("../../Driver")
 [node name="SpecialStrikeView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
 script = ExtResource("40_special_strike")
 driver = NodePath("../../Driver")
+
+[node name="HarvestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input")]
+script = ExtResource("42_harvest")
+driver = NodePath("../../Driver")
+input = NodePath("../../LocalInput")
 
 [node name="ChestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input") unique_id=1351350135]
 script = ExtResource("15_chests")

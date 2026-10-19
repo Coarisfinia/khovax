@@ -32,7 +32,10 @@ extends RefCounted
 ## one hiding in its tile alone, and one sealing in a ring (#409): its seal was worked out from its
 ## HP, so a save taken mid-seal resumes. A save taken while a ring waits resumes too. Its player
 ## fires its special attack (#410): lethal, it fells the wild monster next to it, which faints for
-## good where it fell, and then it cools down. A wild monster strikes once a second too (#422): the
+## good where it fell, and then it cools down. The felled monster drops crafting materials (#629):
+## every player in the instance rolls their own on its species' loot table, from a stream a save
+## resumes, and this machine's player's own roll bursts from it and lands in their profile, while
+## another player's doesn't. A wild monster strikes once a second too (#422): the
 ## companion next to it first, then the player, then the trail, whose tile gives way once worn
 ## through; encircled, it strikes only its ring's wall, and wearing through it breaks the ring.
 ##
@@ -85,6 +88,8 @@ const STRONG_STRENGTH: int = 400
 ## cooldown.
 const SPECIAL_POWER: int = 3000
 const SPECIAL_TICKS: int = 50
+## What a felled weak monster drops (#629): its loot table always rolls this.
+const HIDE_LOOT: Dictionary[String, int] = { "hide": 2 }
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
@@ -920,7 +925,29 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
-	return _check_special_cooldown(state, spots)
+	var result: String = _check_harvest(state, first)
+	return result if not result.is_empty() else _check_special_cooldown(state, spots)
+
+
+## The wild monster `first`, felled in `state`'s last tick, dropped its materials where it lies
+## (#629): the only player's roll on its species' table.
+func _check_harvest(state: GameState, first: int) -> String:
+	var dropped: Array[Harvested] = []
+	for event: RefCounted in state.events:
+		if event is Harvested:
+			dropped.append(event as Harvested)
+	if dropped.size() != 1 or dropped[0].monster_id != first:
+		return "the felled wild monster dropped %d lots of materials, not one" % dropped.size()
+	var harvested: Harvested = dropped[0]
+	var rolled: bool = harvested.loot.keys() == [0]
+	if not rolled or ChestView.loot_text(harvested.loot[0]) != ChestView.loot_text(HIDE_LOOT):
+		return "the felled wild monster dropped %s, not the player's %s" % [
+			harvested.loot,
+			HIDE_LOOT,
+		]
+	if harvested.tile != state.entity(first).tile or harvested.species != WEAK:
+		return "the materials didn't drop where the felled wild monster lies"
+	return ""
 
 
 ## After the special felled a wild monster in `state`: the wild monsters and the cooldown load back
@@ -932,6 +959,8 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 		return "the fainted wild monster didn't load back as saved"
 	if not _reloads(state, reloaded_state, Features.SPECIALS):
 		return "the special's cooldown didn't load back as saved"
+	if not _reloads(state, reloaded_state, Features.HARVEST):
+		return "the harvest's rolls didn't load back as saved"
 	if specials.cooldown_left(0) != SPECIAL_TICKS or not _specials_in(state, _fire()).is_empty():
 		return "the special didn't cool down for its cooldown"
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
@@ -1148,9 +1177,23 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		CompanionFeature.new(),
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
+		HarvestFeature.new({ WEAK: _hide_table() }),
 		HealthFeature.new({ WEAK: COMPANION_HP }),
 	]
 	return GameState.new(region, 1, ordered)
+
+
+## The weak species' loot table in the strike checks: it always rolls HIDE_LOOT.
+static func _hide_table() -> LootTable:
+	var table: LootTable = LootTable.new()
+	table.id = WEAK
+	table.kind = LootTable.SPECIES
+	for item: String in HIDE_LOOT:
+		table.items.append(item)
+		table.chances.append(Fixed.ONE)
+		table.mins.append(HIDE_LOOT[item])
+		table.maxes.append(HIDE_LOOT[item])
+	return table
 
 
 ## The companions' strikes over `ticks` ticks of the player standing still.
@@ -1393,10 +1436,41 @@ func _check_saved(tree: SceneTree) -> String:
 	var saved_one: bool = species.size() == 1 and species[0] == expected
 	if result.is_empty() and (expected.is_empty() or not saved_one):
 		result = "the dominated %s wasn't saved into the profile: %s" % [expected, species]
+	if result.is_empty():
+		result = _check_harvest_taken(main)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
+
+
+## A wild monster felled in sight (#629): this machine's player's own materials burst from where it
+## lies and land in their profile; a drop with only another player's roll shows and gives nothing.
+func _check_harvest_taken(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var holder: ProfileHolder = FlowGame.holder(main)
+	var view: HarvestView = main.get_node("Instance/HarvestView") as HarvestView
+	var monster: Entity = driver.state.entity(_wild(driver.state).monsters[0])
+	monster.tile = FlowSteps.sight_of(driver.state)[0]
+	var had: int = holder.keeper.profile.materials.get("hide", 0)
+	var others: Dictionary[int, Dictionary] = { 1: HIDE_LOOT }
+	var dropped: Array[RefCounted] = [Harvested.new(monster.id, WEAK, monster.tile, others)]
+	driver.ticked.emit(driver.state.tick, dropped)
+	if not view.bursts.is_empty():
+		return "another player's materials burst for this one"
+	var mine: Dictionary[int, Dictionary] = { 0: HIDE_LOOT, 1: { "moss": 1 } }
+	dropped = [Harvested.new(monster.id, WEAK, monster.tile, mine)]
+	driver.ticked.emit(driver.state.tick, dropped)
+	(main.get_node("EventBus") as EventBus).flush()
+	var gained: int = holder.keeper.profile.materials.get("hide", 0) - had
+	if view.bursts.size() != 1 or view.bursts[0].text != ChestView.loot_text(HIDE_LOOT):
+		return "the felled wild monster's materials didn't burst into this player's own"
+	if gained != HIDE_LOOT["hide"] or holder.keeper.profile.materials.has("moss"):
+		return "the profile took %d hide from the felled wild monster, not this player's %s" % [
+			gained,
+			HIDE_LOOT,
+		]
+	return ""
 
 
 ## The species of the first wild monster dominated in `events`, or "".
