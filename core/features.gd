@@ -27,3 +27,4 @@ const HARVEST: int = 20
 const TYPE_EFFECTIVENESS: int = 21
 const DIALOGS: int = 22
 const TERRITORY: int = 23
+const REVIVE_ITEMS: int = 24

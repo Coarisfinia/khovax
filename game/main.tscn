@@ -43,6 +43,7 @@
 [ext_resource type="Script" path="res://slices/companions/ui/roster_hud.gd" id="41_roster"]
 [ext_resource type="Script" path="res://slices/harvest/look/harvest_view.gd" id="42_harvest"]
 [ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
+[ext_resource type="Script" path="res://slices/revive_items/ui/revive_button.gd" id="44_revive_button"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -53,8 +54,9 @@ input = NodePath("../LocalInput")
 keeper = NodePath("../WorldKeeper")
 holder = NodePath("../ProfileHolder")
 
-[node name="LocalInput" type="Node" parent="." unique_id=1290447713]
+[node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=1290447713]
 script = ExtResource("2_input")
+holder = NodePath("../ProfileHolder")
 
 [node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view")]
 script = ExtResource("36_focus_picker")
@@ -249,6 +251,13 @@ layout_mode = 3
 mouse_filter = 2
 script = ExtResource("38_respawn_button")
 driver = NodePath("../../Driver")
+
+[node name="ReviveButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "holder")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("44_revive_button")
+driver = NodePath("../../Driver")
+holder = NodePath("../../ProfileHolder")
 
 [node name="RosterHud" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "survey")]
 process_priority = -1

@@ -110,6 +110,20 @@ func _count_obtained(item: String, amount: int) -> void:
 		_count_fact("obtained", item)
 
 
+## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
+## it can't (they hold none), or "", and changes nothing when it can't. The last one spent is gone
+## from their materials.
+func spend(item: String) -> String:
+	var count: int = materials.get(item, 0)
+	if count <= 0:
+		return "no %s to spend" % item
+	if count == 1:
+		var _erased: bool = materials.erase(item)
+	else:
+		materials[item] = count - 1
+	return ""
+
+
 ## Every dominated monster's id in the player's order (#430): the carried ones first, in their
 ## order, then the rest in the order dominated.
 func order() -> Array[int]:

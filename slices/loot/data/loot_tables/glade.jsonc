@@ -1,10 +1,12 @@
 // A placeholder instance table for the glade: what a blank rolled there gives, and later what its
-// chests hold (#124). Always something small, never nothing (#90).
+// chests hold (#124). Always something small, never nothing (#90). Now and then a revive herb
+// (#656), which brings back a fainted carried monster.
 {
 	"id": "glade",
 	"kind": "instance",
 	"entries": [
 		{ "item": "moss", "chance": 700, "min": 1, "max": 2 },
-		{ "item": "berry", "chance": 300, "min": 1, "max": 1 }
+		{ "item": "berry", "chance": 200, "min": 1, "max": 1 },
+		{ "item": "revive_herb", "chance": 100, "min": 1, "max": 1 }
 	]
 }

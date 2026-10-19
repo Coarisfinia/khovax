@@ -17,7 +17,7 @@ const NO_ANSWER: int = 0
 ## No territory handed over this tick (#638).
 const NO_HAND_OVER: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 8
+const VALUE_COUNT: int = 9
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -43,6 +43,10 @@ var answer: int = NO_ANSWER
 ## (#638), as the code of the instance and the faction (a whole number, never NO_HAND_OVER), or
 ## NO_HAND_OVER. Sent once, like the special; the simulation checks a territory quest names it.
 var hand_over: int = NO_HAND_OVER
+## Whether the player uses a revive item this tick (#656), bringing back one of their fainted
+## carried monsters. A press, like the special; the simulation checks one has fainted, and the
+## player's own machine only sends it while their profile holds a revive item.
+var revive: bool = false
 
 
 func _init(
@@ -63,6 +67,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, hand_over,
+		1 if revive else 0,
 	]
 	return values
 
@@ -79,6 +84,7 @@ static func from_values(values: Array[int]) -> Command:
 	command.swap = values[5]
 	command.answer = values[6]
 	command.hand_over = values[7]
+	command.revive = values[8] == 1
 	return command
 
 
@@ -94,10 +100,13 @@ func is_valid() -> bool:
 
 ## Whether `values` are a command's, as to_values gives them, of one a player can give.
 static func is_valid_values(values: Array[int]) -> bool:
-	if values.size() != VALUE_COUNT or (values[1] != 0 and values[1] != 1):
+	if values.size() != VALUE_COUNT:
 		return false
-	if values[4] != 0 and values[4] != 1:
-		return false
+	# The presses: the special, going back to the spawn and the revive item.
+	var presses: Array[int] = [values[1], values[4], values[8]]
+	for press: int in presses:
+		if press != 0 and press != 1:
+			return false
 	return from_values(values).is_valid()
 
 

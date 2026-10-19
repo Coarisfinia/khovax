@@ -16,7 +16,9 @@ extends RefCounted
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## A player swaps it for another monster they carry (#55), by a tap or a click on the roster at the
 ## top left of the screen, which shows the monsters they carry and which is their companion (#540).
-## One that faints stays fainted through exits, saves and session starts until revived (#655).
+## One that faints stays fainted through exits, saves and session starts until revived (#655), as
+## a revive item does (#656), which the local player uses by its button or its key while their
+## profile holds one, and which their profile spends.
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
@@ -46,6 +48,8 @@ const CROWN_KIND: int = 250
 const STORE_FEATURE: int = 9_999
 ## The screen _check_roster lays the roster out for.
 const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
+## Where _check_roster's profile is saved, apart from the player's own: it spends a revive item.
+const ROSTER_PROFILE: String = "user://test_world_profile.json"
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
@@ -386,6 +390,20 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 	return chosen
 
 
+## Steps `world` once with player 0 standing and using a revive item (#656); returns the short ids
+## their instance raised as revived.
+func _revive_in(world: World) -> Array[String]:
+	var command: Command = Command.new()
+	command.revive = true
+	var commands: Array[Command] = [command]
+	world.step(commands)
+	var revived: Array[String] = []
+	for event: RefCounted in world.instances[world.instance_of(0)].events:
+		if event is MonsterRevived:
+			revived.append((event as MonsterRevived).short_id)
+	return revived
+
+
 ## A player's world store (#724): an entry a feature keeps there, ints and ids in lists and tables,
 ## is handed to the instance the player walks into, and what a rule changes in it there is taken
 ## back into the world after the tick and handed to the instance they left. It goes through the
@@ -475,13 +493,18 @@ func _check_fainted_restored(world: World, party: Array[CarriedMonsters]) -> Str
 	return _check_revived(restored)
 
 
-## Revived, the finch can be swapped to again and joins its player in the glade; a fainted one no
-## longer carried is forgotten.
+## Revived by a revive item (#656), raising MonsterRevived once, the finch can be swapped to again
+## and joins its player in the glade; another revive item, with none fainted, revives nothing. A
+## fainted one no longer carried is forgotten.
 func _check_revived(world: World) -> String:
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
-	CompanionParty.revive(glade, 0, _first)
+	var finch: Array[String] = [_first]
+	if _revive_in(world) != finch:
+		return "a revive item didn't bring back the fainted finch, once"
 	if _swap_in(world, null, 1) != 1 or not CompanionParty.fainted_in(world, 0).is_empty():
 		return "the revived finch couldn't be swapped to, or the world kept it fainted"
+	if not _revive_in(world).is_empty():
+		return "a revive item revived something with nothing fainted"
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
@@ -530,7 +553,7 @@ func _check_two_of_one_species() -> String:
 ## input (the menu is open) a tap swaps nothing. Swapped to the toad, the roster shows it as the
 ## companion, and once it faints, as fainted (#597).
 func _check_roster(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree)
+	var main: Node = await FlowGame.start(tree, ROSTER_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	CompanionParty.bring(driver.world, FlowSteps.parties([["storm_finch", "moss_toad"]]))
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
@@ -541,8 +564,11 @@ func _check_roster(tree: SceneTree) -> String:
 	var result: String = _roster_shown(main, roster)
 	if result.is_empty():
 		result = _roster_swaps(main, roster, driver)
+	if result.is_empty():
+		result = _check_revive_item(main, driver)
 	main.queue_free()
 	await tree.process_frame
+	SaveStore.remove(ROSTER_PROFILE)
 	return result
 
 
@@ -609,6 +635,43 @@ func _roster_fainted(roster: RosterHud, driver: GameDriver) -> String:
 	if roster.fainted != expected:
 		return "the roster shows %s fainted, not just the toad" % [roster.fainted]
 	return ""
+
+
+## The revive item (#656), with the toad fainted: its button shows its icon and 0, faded, while the
+## profile holds none, and its key uses none. With one held, the button shows 1, usable, and the key
+## uses it in the next command, which brings the toad back; the profile spends it, and the button
+## shows 0 again. A controller's d-pad down uses one too.
+func _check_revive_item(main: Node, driver: GameDriver) -> String:
+	var button: ReviveButton = main.get_node("Hud/ReviveButton") as ReviveButton
+	var holder: ProfileHolder = FlowGame.holder(main)
+	if button.icon == null or button.corner_text() != "0" or button.usable():
+		return "the revive item's button doesn't show its icon and 0, faded, with none held"
+	if _revive_pressed(driver).revive:
+		return "the revive key used a revive item the profile doesn't hold"
+	holder.keeper.profile.materials[ReviveItem.ID] = 1
+	if button.corner_text() != "1" or not button.usable():
+		return "the revive item's button doesn't show 1, usable, with one held and the toad fainted"
+	var commands: Array[Command] = [_revive_pressed(driver)]
+	driver.world.step(commands)
+	driver.ticked.emit(driver.state.tick, driver.state.events)
+	(main.get_node("EventBus") as EventBus).flush()
+	if not CompanionParty.fainted_in(driver.world, 0).is_empty():
+		return "the revive key didn't bring the fainted toad back"
+	if ReviveItem.held(holder) != 0 or button.corner_text() != "0" or button.usable():
+		return "the profile didn't spend the revive item used, or its button didn't show 0"
+	var pad: bool = false
+	for event: InputEvent in InputMap.action_get_events(&"revive_monster"):
+		var pressed: InputEventJoypadButton = event as InputEventJoypadButton
+		pad = pad or (pressed != null and pressed.button_index == JOY_BUTTON_DPAD_DOWN)
+	return "" if pad else "a controller's d-pad down doesn't use a revive item"
+
+
+## The local player's next command after a press of the revive key (#656).
+static func _revive_pressed(driver: GameDriver) -> Command:
+	Input.action_press(&"revive_monster")
+	driver.input._process(0.0)
+	Input.action_release(&"revive_monster")
+	return driver.input.command(driver.state)
 
 
 ## Touches the roster at `at` and lifts the finger, or left clicks there with the mouse (`click`).

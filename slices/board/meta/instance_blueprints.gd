@@ -129,6 +129,8 @@ static func create(
 	ordered.append(_companions(species))
 	# After the companions, so a swap can't pick a monster that fainted (#597).
 	ordered.append(CompanionSwapFeature.new())
+	# After the companions too, whose fainted ones a revive item brings back (#656).
+	ordered.append(ReviveItemFeature.new())
 	ordered.append_array(_attacks(species))
 	# After the specials, whose strikes fell the wild monsters it drops materials for.
 	ordered.append(_harvest(instance_name))
