@@ -360,26 +360,26 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 	return chosen
 
 
-## A fainted monster stays fainted (#655): the storm finch faints beside its player in the basic
-## instance, the toad is chosen in its place, and the world keeps the finch fainted. Through the
-## exit into the glade, the toad joins its player there and a swap back to the finch does nothing;
+## A fainted monster stays fainted (#655): the storm finch faints beside its player in the forest,
+## the toad is chosen in its place, and the world keeps the finch fainted. Through the exit into the
+## glade, the toad joins its player there and a swap back to the finch does nothing;
 ## the finch stays fainted through the world's save data and back, and through a session's start
 ## that brings the same monsters, as the restored world goes on. Revived in the glade
 ## (CompanionFeature.revive), it can be swapped to again and joins its player, and the world takes
-## it into the basic instance too. A fainted one its player no longer carries is forgotten.
+## it into the forest too. A fainted one its player no longer carries is forgotten.
 func _check_fainted_kept() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	var party: Array[PackedStringArray] = [PackedStringArray(["storm_finch", "moss_toad"])]
 	world.set_carried(party)
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	# Fainted by hand: the domination flow makes one faint under a wild monster's strikes.
-	companions.send_home(basic, companions.companion_of(0))
+	companions.send_home(forest, companions.companion_of(0))
 	var _relieved: int = _swap_in(world, null, Command.NO_SWAP)
 	if world.fainted[0] != PackedStringArray(["storm_finch"]) or world.companions[0] != "moss_toad":
 		return "the world didn't keep the fainted finch, or didn't choose the toad in its place"
-	for direction: int in [0, 1, 0]:
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
@@ -413,10 +413,10 @@ func _check_revived(world: World) -> String:
 		return "the revived finch couldn't be swapped to, or the world kept it fainted"
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var finch_joined: bool = there.species_of(there.companion_of(0)) == "storm_finch"
-	if not finch_joined or basic.has_fainted(0, "storm_finch"):
-		return "the revived finch didn't join its player, or stayed fainted in the basic instance"
+	if not finch_joined or forest.has_fainted(0, "storm_finch"):
+		return "the revived finch didn't join its player, or stayed fainted in the forest"
 	world.fainted[0] = PackedStringArray(["moss_toad"])
 	world.set_carried([PackedStringArray(["storm_finch"])])
 	if not world.fainted[0].is_empty():
