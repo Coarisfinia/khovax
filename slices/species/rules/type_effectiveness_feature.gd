@@ -8,7 +8,8 @@ extends Feature
 ## type and ×0.75 against a Lesser one, and a dual-typed monster's two multiply, with no cap.
 ## It doesn't step: the features whose strikes land on a monster (a companion's auto attack and
 ## special on a wild monster, a wild monster's strike on a companion) scale their damage through
-## `scaled`. Switched off, every strike deals its plain damage.
+## `scaled`. Switched off, every strike deals its plain damage. Either way a strike that lands
+## deals at least 1 (owner, #702): `scaled` is the last step of every strike's damage.
 
 const STRONG_FROM_LESSER: int = 1500
 const STRONG_FROM_GREATER: int = 2000
@@ -47,7 +48,7 @@ func id() -> int:
 
 ## The damage of a strike of `damage` by a monster of `attacker_species`, its special or its auto
 ## attack, on one of `defender_species`, in `state`'s instance: after the chart while the instance
-## has type effectiveness on, the plain damage otherwise. Rounds down (Fixed).
+## has type effectiveness on, the plain damage otherwise. Rounds down (Fixed), but never below 1.
 static func scaled(
 	state: GameState,
 	damage: int,
@@ -59,12 +60,12 @@ static func scaled(
 		state.feature(Features.TYPE_EFFECTIVENESS) as TypeEffectivenessFeature
 	)
 	if chart == null or not chart.enabled:
-		return damage
+		return maxi(damage, 1)
 	var strike_types: Dictionary[String, String] = (
 		chart.special_types if special else chart.auto_types
 	)
 	var strike_type: String = strike_types.get(attacker_species, "")
-	return Fixed.scale(damage, chart.factor(strike_type, defender_species))
+	return maxi(Fixed.scale(damage, chart.factor(strike_type, defender_species)), 1)
 
 
 ## How hard a strike of `strike_type` hits a monster of `defender_species`, in thousandths (Fixed):

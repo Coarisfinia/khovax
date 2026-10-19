@@ -1078,7 +1078,19 @@ func _check_type_effectiveness() -> String:
 				TYPE_FACTORS[strike],
 			]
 	var result: String = _typed_strikes(true)
-	return result if not result.is_empty() else _typed_strikes(false)
+	result = result if not result.is_empty() else _typed_strikes(false)
+	return result if not result.is_empty() else _check_least_damage()
+
+
+## A strike that lands deals at least 1 (#702): a strike of 1 at ×0.5 still deals 1.
+func _check_least_damage() -> String:
+	var auto_types: Dictionary[String, String] = { WEAK: "mana" }
+	var types: Dictionary[String, PackedStringArray] = { "greater": PackedStringArray(["arcane"]) }
+	var chart: TypeEffectivenessFeature = TypeEffectivenessFeature.new(types, auto_types)
+	var state: GameState = _strike_state([Vector2i.ZERO], [chart])
+	state.set_enabled(Features.TYPE_EFFECTIVENESS, true)
+	var damage: int = TypeEffectivenessFeature.scaled(state, 1, WEAK, false, "greater")
+	return "" if damage == 1 else "a strike of 1 at ×0.5 dealt %d, not 1" % damage
 
 
 ## Why the weak species' strikes, with the type chart `on` or off, weren't for their damage after
