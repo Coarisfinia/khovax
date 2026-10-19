@@ -1452,7 +1452,8 @@ func _check_harvest_taken(main: Node) -> String:
 	var view: HarvestView = main.get_node("Instance/HarvestView") as HarvestView
 	var monster: Entity = driver.state.entity(_wild(driver.state).monsters[0])
 	monster.tile = FlowSteps.sight_of(driver.state)[0]
-	_wild(driver.state).wound(monster.id, _wild(driver.state).hp_of(monster.id), true)
+	var wild: WildMonsterFeature = _wild(driver.state)
+	wild.wound(driver.state, monster.id, wild.hp_of(monster.id), true)
 	var had: int = holder.keeper.profile.materials.get("hide", 0)
 	var others: Dictionary[int, Dictionary] = { 1: HIDE_LOOT }
 	var dropped: Array[RefCounted] = [Harvested.new(monster.id, WEAK, monster.tile, others)]
