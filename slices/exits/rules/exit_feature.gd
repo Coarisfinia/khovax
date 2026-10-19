@@ -26,12 +26,12 @@ func step(state: GameState, commands: Array[Command]) -> void:
 			continue
 		var target: String = _exit_towards(state.region, player.tile, command.move)
 		if not target.is_empty():
-			state.events.append(_taken(player, target))
+			state.events.append(_taken(player, target, command.move))
 
 
-## The event of `player` leaving through an exit to `target`.
-static func _taken(player: Entity, target: String) -> ExitTaken:
-	return ExitTaken.new(player.id, player.slot, target)
+## The event of `player` leaving through an exit to `target` on side `side`.
+static func _taken(player: Entity, target: String, side: int) -> ExitTaken:
+	return ExitTaken.new(player.id, player.slot, target, player.tile, side)
 
 
 ## The blueprint the exit on `tile` leading to side `side` goes to, or "".

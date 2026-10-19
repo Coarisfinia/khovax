@@ -394,6 +394,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The player only ever sees their current rank with a faction** (owner's rule, on #484): never
   the names of the other ranks, which would spoil what's ahead. Each faction has its own design for
   its ranks.
+- **Places connect across several tiles, never one** (owner's rule, on #689): region pieces join
+  in the middle of a flat edge, so neighbours meet along the whole edge, and every exit to another
+  instance is at least three tiles wide. The world flow checks both.
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.

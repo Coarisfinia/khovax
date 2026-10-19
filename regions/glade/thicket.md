@@ -1,15 +1,15 @@
 # Glade: thicket
 
-A thicket in the glade (#57): a wild monster in the middle with room to walk a ring around it, rock at two corners, a boulder and shrubs (#205) on its west side, the two shrubs turned apart by hand (#231), forest (#116) along its east side and loot on the ground next to the monster (#203), open on three sides.
+A thicket in the glade (#57): a wild monster in the middle with room to walk a ring around it, rock at two corners, a boulder and shrubs (#205) on its west side, the two shrubs turned apart by hand (#231), forest (#116) along its east and south sides and loot on the ground next to the monster (#203). It joins the glade in the middle of its east and west edges, so its neighbours meet it along the whole edge (#689).
 
 ## Tiles
 
 ```
-  j . ^
- 🪨 . . 🌲
-🌳 . m . k
- l . 💰 🌲
-  ^ 🌿 🌲
+  ^ . .
+ 🪨 . . j
+🌳 . m . 🌲
+ k . 💰 🌲
+  🌲 🌿 ^
 ```
 
 ## Legend
@@ -22,6 +22,5 @@ A thicket in the glade (#57): a wild monster in the middle with room to walk a r
 - `💰`: loot on the ground
 - `^`: rock
 - `m`: a wild monster, of a species rolled from the instance blueprint's list
-- `j`: joins another piece to the northwest
-- `k`: joins another piece to the east
-- `l`: joins another piece to the southwest
+- `j`: joins another piece to the east
+- `k`: joins another piece to the west
