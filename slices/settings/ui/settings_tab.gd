@@ -3,8 +3,9 @@ extends ScrollContainer
 ## The menu's Settings tab (#362, once #355's settings menu): the player's settings (#161), one row
 ## per setting with its name and what it's on now, "Auto (…)" while Auto picks it, and buttons to
 ## step to the previous or next choice or to hand it back to Auto. The settings' owners (Graphics,
-## SurveyChoice, the menu's pause) know each setting's choices and keep the player's; the tab only
-## shows them and passes the player's picks on. It says everything in words, never by color alone
+## SurveyChoice, DamageNumbersChoice, the menu's pause) know each setting's choices and keep the
+## player's; the tab only shows them and passes the player's picks on. It says everything in words,
+## never by color alone
 ## (#68). It scrolls when the screen is too short for every row. Its layout lives in its scene,
 ## settings_tab.tscn (#437): the rows sit in the middle of the tab, as wide as `fit` makes them.
 
@@ -38,6 +39,20 @@ func _ready() -> void:
 	if survey != null:
 		_add_row(SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
 		_add_row(SurveyChoice.ZOOM_SETTING, "Survey zoom", survey.zoom_label, survey.zoom_by)
+	if graphics != null:
+		var damage_numbers: DamageNumbersChoice = DamageNumbersChoice.new(graphics)
+		_add_row(
+			DamageNumbersChoice.SHOWN_SETTING,
+			"Damage numbers",
+			damage_numbers.shown_label,
+			damage_numbers.step_shown,
+		)
+		_add_row(
+			DamageNumbersChoice.SIZE_SETTING,
+			"Damage number size",
+			damage_numbers.size_label,
+			damage_numbers.step_size,
+		)
 	if menu != null and graphics != null:
 		_add_row(
 			GameMenu.PAUSE_SETTING,

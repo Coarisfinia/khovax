@@ -38,29 +38,25 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var target: int = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
 			continue
-		var species: String = companions.species_of(companion_id)
-		var damage: int = wild.strengths.get(species, 1)
-		damage = TypeEffectivenessFeature.scaled(
-			state,
-			damage,
-			species,
-			false,
-			wild.species_of(target),
-		)
-		_strike(state, wild, companion_id, target, damage)
+		_strike(state, wild, companion_id, companions.species_of(companion_id), target)
 
 
-## The companion strikes `target` for `damage`, then waits STRIKE_TICKS.
+## The companion `companion_id`, a `species`, strikes `target` for its strength after the type
+## chart, then waits STRIKE_TICKS.
 func _strike(
 		state: GameState,
 		wild: WildMonsterFeature,
 		companion_id: int,
+		species: String,
 		target: int,
-		damage: int,
 ) -> void:
+	var struck: String = wild.species_of(target)
+	var strength: int = wild.strengths.get(species, 1)
+	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
 	wild.wound(state, target, damage)
 	_waits[companion_id] = STRIKE_TICKS
-	state.events.append(CompanionStruck.new(companion_id, target, damage))
+	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, false, struck)
+	state.events.append(CompanionStruck.new(companion_id, target, damage, strong))
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
