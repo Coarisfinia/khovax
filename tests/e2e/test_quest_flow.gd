@@ -1179,7 +1179,9 @@ func _check_broken_data() -> String:
 	if not content.problem.ends_with("its standing's faction must be one that exists"):
 		return "a quest moving the standing with no faction that exists wasn't refused"
 	var astray: String = "\"territory\": {\"instance\": \"forest\", \"faction\": \"strangers\"}"
-	content = _load_written({ "a_good": good.replace("\"steps\"", astray + ", \"steps\"") })
+	# Its step counts in its territory, as every territory quest's does (#769).
+	var in_forest: String = good.replace("\"opened\"", "\"opened\", \"instance\": \"forest\"")
+	content = _load_written({ "a_good": in_forest.replace("\"steps\"", astray + ", \"steps\"") })
 	if not content.problem.ends_with("its territory's faction must be one that exists"):
 		return "a quest handing its territory to no faction that exists wasn't refused (#638)"
 	return _check_dialog_ids()
