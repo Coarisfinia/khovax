@@ -130,7 +130,7 @@ func _add_figure(tile: Vector2i, blueprint: TileBlueprint, turn: int) -> HexPiec
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
 	var model: Node3D = _models[path].instantiate() as Node3D
-	model.scale = Vector3.ONE * MODEL_SCALE * blueprint.scale
+	model.scale = Vector3.ONE * MODEL_SCALE * TileLooks.scale_of(blueprint)
 	model.rotation.y = TAU * turn / Hex.DIRECTIONS.size()
 	model.position = off_center(tile)
 	Toon.apply_to_model(model)

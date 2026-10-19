@@ -34,10 +34,10 @@
 			"pattern": "^res://assets/.+[.](gltf|glb)$"
 		},
 		"scale": {
-			"description": "How much larger than the pack made it the model is drawn (1 when left out), for a model too small to read from the camera.",
-			"type": "number",
-			"exclusiveMinimum": 0,
-			"maximum": 4
+			"description": "How much larger than the pack made it the model is drawn, in hundredths (150 is 1.5 times; 100 when left out), for a model too small to read from the camera.",
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 400
 		},
 		"reach": {
 			"description": "How many rings of tiles around its own the decoration's crown covers (#232), e.g. a large tree's; 0 when left out.",

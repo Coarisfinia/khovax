@@ -45,7 +45,13 @@ static func _measured(blueprint: TileBlueprint) -> int:
 		var box: AABB = _in_model(model, mesh) * mesh.get_aabb()
 		top = maxf(top, box.end.y)
 	model.free()
-	return ceili(top * blueprint.scale * HEIGHT_UNITS)
+	return ceili(top * scale_of(blueprint) * HEIGHT_UNITS)
+
+
+## How much larger than the pack made it `blueprint`'s model is drawn, as a factor: the blueprint
+## keeps it in whole hundredths (#588).
+static func scale_of(blueprint: TileBlueprint) -> float:
+	return float(blueprint.scale) / TileBlueprint.FULL_SCALE
 
 
 ## `node`'s transform within `model`, every parent's on the way included: imported models nest.

@@ -340,9 +340,9 @@ func _check_quests() -> String:
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
 ## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
 ## a stump are walkable and a boulder isn't (#205), each with its model, and sand is plain and
-## walkable (#321); every model a blueprint names exists; the stump is drawn at scale 4, every
-## other kind at 1, the default; no two kinds share a symbol (#68). Broken blueprints, and two
-## with one number, are refused.
+## walkable (#321); every model a blueprint names exists; the stump is drawn at 400 hundredths
+## of its size (#588), every other kind at 100, the default; no two kinds share a symbol (#68).
+## Broken blueprints, and two with one number, are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -375,7 +375,7 @@ func _check_tiles() -> String:
 			return "tile blueprints %s and %s share one symbol" % [symbols[tile.symbol], tile.id]
 		symbols[tile.symbol] = tile.id
 		var missing: bool = not tile.model.is_empty() and not ResourceLoader.exists(tile.model)
-		if missing or tile.scale != (4.0 if tile.id == "stump" else 1.0):
+		if missing or tile.scale != (400 if tile.id == "stump" else TileBlueprint.FULL_SCALE):
 			return "tile blueprint %s's model %s doesn't exist, or it's drawn at scale %s" % [
 				tile.id,
 				tile.model,
@@ -403,7 +403,8 @@ func _check_tiles_refused() -> String:
 		tile % ["x", "9", "#000000", walks + ", \"swims\": true", ""]: "field swims",
 		tile % ["x", "9", "#000000", walks, ", \"size\": 1"]: "field size",
 		tile % ["x", "9", "#000000", walks, ", \"scale\": 0"]: "its scale",
-		tile % ["x", "9", "#000000", walks, ", \"scale\": 9"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 401"]: "its scale",
+		tile % ["x", "9", "#000000", walks, ", \"scale\": 1.5"]: "its scale",
 		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
 		tile % ["x", "9", "#000000", walks, ", \"reach\": 9"]: "its reach",
 		tile % ["x", "9", "#000000", walks, ", \"clearance\": -1"]: "its reach",
@@ -415,7 +416,7 @@ func _check_tiles_refused() -> String:
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
 	var largest: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,
-			", \"scale\": 4"])
+			", \"scale\": 400"])
 	if not largest.problem.is_empty() or largest.scale != TileBlueprint.MAX_SCALE:
 		return "the largest scale is refused or misread: %s" % largest.problem
 	var crown: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,

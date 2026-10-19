@@ -5,6 +5,6 @@
 	"color": "#6b8a4a",
 	"symbol": "=", // tells it apart without its color (#68)
 	"model": "res://assets/kaykit-hexagon/tree_single_B_cut.gltf",
-	"scale": 4, // the pack's stump is too small to read from the camera
+	"scale": 400, // in hundredths: the pack's stump is too small to read from the camera
 	"traits": { "walkable": true }
 }
