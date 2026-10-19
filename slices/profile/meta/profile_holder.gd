@@ -4,9 +4,9 @@ extends Node
 ## domination of that player and their loot from every chest opened (#124) and every wild monster
 ## felled (#629) taken over at once and saved debounced (ProfileKeeper, #73), and whatever is
 ## pending saved when the game quits or goes to the background. The same dominations and chests
-## advance the player's quests (#184), in the
-## profile, and so do the places they step into (#339) and the region pieces and instances they
-## enter (#350, #370). The player's personal color (#391) is kept in it too, saved the same way.
+## advance the player's quests (#184), in the profile, and so do the places they step into (#339),
+## the region pieces and instances they enter (#350, #370) and the answers they choose in dialogs
+## (#636). The player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -51,6 +51,7 @@ func _ready() -> void:
 	bus.subscribe(&"PlaceReached", _on_event)
 	bus.subscribe(&"PieceEntered", _on_event)
 	bus.subscribe(&"InstanceEntered", _on_event)
+	bus.subscribe(&"DialogAnswered", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -120,7 +121,8 @@ static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinit
 ## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
 ## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
 ## (#203), which is no chest, or from a wild monster felled (#629); a place they stepped into
-## (#339), or a region piece or an instance they entered (#350, #370).
+## (#339), a region piece or an instance they entered (#350, #370), or an answer they chose in a
+## dialog (#636).
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterDominated:
@@ -138,9 +140,13 @@ func _gain_of(event: RefCounted) -> Gain:
 		gain.pieces_entered.append((event as PieceEntered).piece)
 	elif event is InstanceEntered and (event as InstanceEntered).slot == input.slot:
 		gain.instances_entered.append((event as InstanceEntered).instance)
+	elif event is DialogAnswered and (event as DialogAnswered).slot == input.slot:
+		var answered: DialogAnswered = event as DialogAnswered
+		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
 	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
 	empty = empty and gain.materials.is_empty() and gain.places_reached.is_empty()
 	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
+	empty = empty and gain.answers_chosen.is_empty()
 	return null if empty else gain
 
 

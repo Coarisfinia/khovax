@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/quests/data/quests.schema.json",
 	"title": "Quest",
-	"description": "A quest (#184), one quest chain (#573): a player-facing name and its steps, each one condition met a number of times, or a choice between ways on. The steps follow each other in the file's order, except where a step's choices lead to the steps they name, and the quest ends after a step tagged as its chain's end, which every path must reach (#576). One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
+	"description": "A quest (#184), one quest chain (#573): a player-facing name and its steps, each one condition met a number of times, or a choice between ways on, each taken by being somewhere or by an answer in a dialog (#636). The steps follow each other in the file's order, except where a step's choices lead to the steps they name, and the quest ends after a step tagged as its chain's end, which every path must reach (#576). One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "name", "steps"],
@@ -33,6 +33,16 @@
 				"place": { "$ref": "#/$defs/id" },
 				"piece": { "$ref": "#/$defs/id" },
 				"instance": { "$ref": "#/$defs/id" }
+			}
+		},
+		"answered": {
+			"description": "An answer chosen in a dialog (#636), met once: the dialog's id and the answer's, as a file in slices/dialogs/data/ names them.",
+			"type": "object",
+			"required": ["condition", "dialog", "answer"],
+			"properties": {
+				"condition": { "const": "answered" },
+				"dialog": { "$ref": "#/$defs/id" },
+				"answer": { "$ref": "#/$defs/id" }
 			}
 		}
 	},
@@ -92,6 +102,11 @@
 						"else": { "not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] } }
 					},
 					{
+						"if": { "required": ["condition"], "properties": { "condition": { "const": "answered" } } },
+						"then": { "required": ["dialog", "answer"] },
+						"else": { "not": { "anyOf": [{ "required": ["dialog"] }, { "required": ["answer"] }] } }
+					},
+					{
 						"if": { "required": ["choices"] },
 						"then": {
 							"not": { "anyOf": [{ "required": ["species"] }, { "required": ["count"] }, { "required": ["ends"] }] }
@@ -104,8 +119,8 @@
 						"$ref": "#/$defs/id"
 					},
 					"condition": {
-						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered.",
-						"enum": ["dominated", "opened", "reached", "entered"]
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered. answered: an answer this player chose in a dialog (#636).",
+						"enum": ["dominated", "opened", "reached", "entered", "answered"]
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
@@ -123,6 +138,14 @@
 						"description": "On an entered step, and only there unless it names a piece, the name of the instance blueprint it asks for.",
 						"$ref": "#/$defs/id"
 					},
+					"dialog": {
+						"description": "On an answered step, and only there, the id of the dialog it asks for an answer in.",
+						"$ref": "#/$defs/id"
+					},
+					"answer": {
+						"description": "On an answered step, and only there, the id of the answer it asks for, one of that dialog's.",
+						"$ref": "#/$defs/id"
+					},
 					"count": {
 						"description": "How often the condition is met to finish the step.",
 						"type": "integer",
@@ -131,11 +154,11 @@
 						"default": 1
 					},
 					"choices": {
-						"description": "Instead of a condition, the ways on (#573), two or more, each marked where it's taken: the first one the player takes leads to the step it names.",
+						"description": "Instead of a condition, the ways on (#573), two or more, each marked where it's taken or taken by an answer in a dialog (#636): the first one the player takes leads to the step it names.",
 						"type": "array",
 						"minItems": 2,
 						"items": {
-							"$ref": "#/$defs/somewhere",
+							"oneOf": [{ "$ref": "#/$defs/somewhere" }, { "$ref": "#/$defs/answered" }],
 							"required": ["next"],
 							"properties": {
 								"next": { "description": "The id of the step it leads to.", "$ref": "#/$defs/id" },
