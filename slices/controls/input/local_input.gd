@@ -17,6 +17,10 @@ const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 
 ## Whether the game hears no input, as while the menu is open over it (#362): the player stands.
 var blocked: bool = false
+## Whether a dialog is open on screen (#635): the player stands, as while blocked, and the d-pad,
+## the stick and A choose on the dialog screen instead. Its own flag, so the menu opening and
+## closing over a dialog doesn't let the player walk off.
+var in_dialog: bool = false
 ## Whether the special attack was pressed since the last command.
 var _special_pressed: bool = false
 ## Whether place_totem was pressed since the last command.
@@ -30,6 +34,8 @@ var _focus_steps: int = 0
 var _respawn_pressed: bool = false
 ## The place in the carried order chosen since the last command (#540), from 1, or Command.NO_SWAP.
 var _swap_to: int = Command.NO_SWAP
+## The code of the dialog answer chosen since the last command (#635), or Command.NO_ANSWER.
+var _answer: int = Command.NO_ANSWER
 
 
 func _process(_delta: float) -> void:
@@ -54,6 +60,12 @@ func choose_swap(place: int) -> void:
 	_swap_to = place
 
 
+## Sends the answer with the code `code` (DialogFeature.code) in the next command, as choosing it on
+## the dialog screen does (#635).
+func choose_answer(code: int) -> void:
+	_answer = code
+
+
 func command(state: GameState) -> Command:
 	var fires: bool = _special_pressed
 	_special_pressed = false
@@ -63,10 +75,15 @@ func command(state: GameState) -> Command:
 	_respawn_pressed = false
 	var swap: int = _swap_to
 	_swap_to = Command.NO_SWAP
-	if blocked:
+	var answering: int = _answer
+	_answer = Command.NO_ANSWER
+	if blocked or in_dialog:
 		# Presses while the game hears no input don't move the focus afterwards.
 		_focus_steps = 0
-		return Command.new()
+		var standing: Command = Command.new()
+		# The dialog screen's answers are the one input a dialog lets through.
+		standing.answer = answering
+		return standing
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
 	# Only the tie between two directions depends on the tile; without a player nothing walks.
@@ -81,4 +98,5 @@ func command(state: GameState) -> Command:
 		gives_up,
 	)
 	given.swap = swap
+	given.answer = answering
 	return given

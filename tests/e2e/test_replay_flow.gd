@@ -600,11 +600,12 @@ func _check_replay_round_trip() -> String:
 	return _check_older_formats(recorded, loaded)
 
 
-## Replays from before commands had a special attack (#410, format 3), a totem (#423, format 4) or
-## a swap (#55, format 7) read with none fired, placed or swapped, as `recorded` has none, and play
-## back the same. They name each slot's companion alone, which becomes all the slot carries.
+## Replays from before commands had a special attack (#410, format 3), a totem (#423, format 4), a
+## swap (#55, format 7) or a dialog answer (#635, format 8) read with none fired, placed, swapped or
+## answered, as `recorded` has none, and play back the same. Before format 8 they name each slot's
+## companion alone, which becomes all the slot carries.
 func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
-	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5 }
+	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5, 8: 6 }
 	for older_format: int in counts:
 		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 		var kept: Array[int] = []
@@ -613,8 +614,9 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		older.changes = kept
 		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
 		data["format"] = older_format
-		var _erased: bool = data.erase("carried")
-		data["companions"] = ["storm_finch", "moss_toad"]
+		if older_format < ReplayFile.CARRIED_FORMAT:
+			var _erased: bool = data.erase("carried")
+			data["companions"] = ["storm_finch", "moss_toad"]
 		var migrated: Replay = ReplayFile.parse(JSON.stringify(data))
 		if migrated.changes != loaded.changes or not migrated.play().is_empty():
 			return "a replay in format %d didn't read with nothing fired or placed" % older_format
