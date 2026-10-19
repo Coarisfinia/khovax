@@ -22,6 +22,12 @@ const COLORS: Array[Color] = [
 ## The badge's side, in the menu's font size; the icon fills this share of the circle.
 const FONTS: float = 1.4
 const ICON_SHARE: float = 0.62
+## Every circle has a thin light ring inside a thin ink edge (#719), so its edge shows on any
+## ground: the ink on the light menu, the light ring on a dark one. Their widths are these shares
+## of the badge's side.
+const RING_COLOR: Color = Color.WHITE
+const RING_SHARE: float = 0.07
+const EDGE_SHARE: float = 0.04
 
 ## The family it shows, or -1 for a type that isn't on the chart (drawn as nothing).
 var family: int = -1
@@ -43,7 +49,11 @@ func _draw() -> void:
 		return
 	var side: float = minf(size.x, size.y)
 	var center: Vector2 = size / 2.0
-	draw_circle(center, side / 2.0, COLORS[family])
+	var edge: float = maxf(1.0, side * EDGE_SHARE)
+	var ring: float = maxf(1.0, side * RING_SHARE)
+	draw_circle(center, side / 2.0, Toon.INK, true, -1.0, true)
+	draw_circle(center, side / 2.0 - edge, RING_COLOR, true, -1.0, true)
+	draw_circle(center, side / 2.0 - edge - ring, COLORS[family], true, -1.0, true)
 	var icon_side: float = side * ICON_SHARE
 	var icon_rect: Rect2 = Rect2(center - Vector2.ONE * icon_side / 2.0, Vector2.ONE * icon_side)
 	draw_texture_rect(ICONS[family], icon_rect, false)
