@@ -58,7 +58,7 @@
 			"default": "none"
 		},
 		"starts_on": {
-			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count, or until a quest emits the event named here (#575). Left out, the quest is open from the start.",
+			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count, or until a quest emits the event named here (#575) or it changes the world (#707, such as glade_purified). Left out, the quest is open from the start.",
 			"oneOf": [
 				{ "$ref": "#/$defs/somewhere", "unevaluatedProperties": false },
 				{

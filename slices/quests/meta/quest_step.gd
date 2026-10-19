@@ -53,8 +53,9 @@ const ANSWERED: String = "answered"
 ## The conditions a choice can have: being somewhere, which a marker points at (stepping into a
 ## place, or entering a region piece or an instance), or an answer chosen.
 const CHOICE_CONDITIONS: Array[String] = ["reached", "entered", ANSWERED]
-## The condition met by an event a quest emitted (#575), named by `event`: only a side quest's start
-## waits on one, since a step waiting on it would have nothing to show the player.
+## The condition met by an event a quest emitted (#575), or one that changed the world (#707, such
+## as glade_purified), named by `event`: only a side quest's start waits on one, since a step
+## waiting on it would have nothing to show the player.
 const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
 const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]

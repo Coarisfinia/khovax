@@ -5,10 +5,11 @@ extends Node
 ## felled (#629) taken over at once and saved debounced (ProfileKeeper, #73), and whatever is
 ## pending saved when the game quits or goes to the background. The same dominations and chests
 ## advance the player's quests (#184), in the profile, and so do the places they step into (#339),
-## the region pieces and instances they enter (#350, #370) and the answers they choose in dialogs
-## (#636). A territory quest it finishes hands its territory over in this player's next command
-## (#638), so the world changes in a tick, the same on every machine and in the replay. The
-## player's personal color (#391) is kept in it too, saved the same way.
+## the region pieces and instances they enter (#350, #370), the answers they choose in dialogs
+## (#636) and the events that change the world (#707), which every player gains. A territory quest
+## it finishes hands its territory over in this player's next command (#638), so the world changes
+## in a tick, the same on every machine and in the replay. The player's personal color (#391) is
+## kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -54,6 +55,7 @@ func _ready() -> void:
 	bus.subscribe(&"PieceEntered", _on_event)
 	bus.subscribe(&"InstanceEntered", _on_event)
 	bus.subscribe(&"DialogAnswered", _on_event)
+	bus.subscribe(&"WorldChanged", _on_event)
 
 
 func _process(_delta: float) -> void:
@@ -137,7 +139,8 @@ static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinit
 ## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
 ## (#203), which is no chest, or from a wild monster felled (#629); a place they stepped into
 ## (#339), a region piece or an instance they entered (#350, #370), or an answer they chose in a
-## dialog (#636).
+## dialog (#636); or an event that changed the world (#707), which is every player's, wherever they
+## are: the world raises it on every machine.
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if event is WildMonsterDominated:
@@ -149,20 +152,31 @@ func _gain_of(event: RefCounted) -> Gain:
 		_add_loot(gain, (event as ChestOpened).loot[input.slot])
 	elif _rolls_of(event).has(input.slot):
 		_add_loot(gain, _rolls_of(event)[input.slot])
-	elif event is PlaceReached and (event as PlaceReached).slot == input.slot:
-		gain.places_reached.append((event as PlaceReached).place)
-	elif event is PieceEntered and (event as PieceEntered).slot == input.slot:
-		gain.pieces_entered.append((event as PieceEntered).piece)
-	elif event is InstanceEntered and (event as InstanceEntered).slot == input.slot:
-		gain.instances_entered.append((event as InstanceEntered).instance)
-	elif event is DialogAnswered and (event as DialogAnswered).slot == input.slot:
-		var answered: DialogAnswered = event as DialogAnswered
-		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
+	else:
+		_add_quest_fact(gain, event, input.slot)
 	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
 	empty = empty and gain.materials.is_empty() and gain.places_reached.is_empty()
 	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
 	empty = empty and gain.answers_chosen.is_empty()
+	empty = empty and gain.world_events.is_empty()
 	return null if empty else gain
+
+
+## Adds to `gain` the fact only quests count that `event` is for the player in `slot`, if any: a
+## place they reached, a region piece or an instance they entered, an answer they chose, or an event
+## that changed the world, which is every player's.
+static func _add_quest_fact(gain: Gain, event: RefCounted, slot: int) -> void:
+	if event is PlaceReached and (event as PlaceReached).slot == slot:
+		gain.places_reached.append((event as PlaceReached).place)
+	elif event is PieceEntered and (event as PieceEntered).slot == slot:
+		gain.pieces_entered.append((event as PieceEntered).piece)
+	elif event is InstanceEntered and (event as InstanceEntered).slot == slot:
+		gain.instances_entered.append((event as InstanceEntered).instance)
+	elif event is DialogAnswered and (event as DialogAnswered).slot == slot:
+		var answered: DialogAnswered = event as DialogAnswered
+		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
+	elif event is WorldChanged:
+		gain.world_events.append((event as WorldChanged).event_name)
 
 
 ## Every player's loot from `event`, by slot, when it's loot that counts as no chest: found on the

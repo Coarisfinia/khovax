@@ -25,10 +25,11 @@ extends RefCounted
 ## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
 ## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
-## starting the side quests waiting on it. Choosing an answer in a dialog finishes this player's
-## quest asking for it, not another player's choice nor another answer, and takes the way on of a
-## choice asking for it (#636); a quest naming a dialog or an answer that no dialog file has is
-## refused, and one that names an existing answer words it as the dialog does.
+## starting the side quests waiting on it, and so does an event that changed the world (#707).
+## Choosing an answer in a dialog finishes this player's quest asking for it, not another player's
+## choice nor another answer, and takes the way on of a choice asking for it (#636); a quest naming
+## a dialog or an answer that no dialog file has is refused, and one that names an existing answer
+## words it as the dialog does.
 ## Finishing a territory quest hands its instance to its faction in the world (#638).
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
@@ -60,6 +61,12 @@ const SCOUT: String = "guild_scout_greeting"
 const PROMISE: String = (
 	"{\"id\": \"promise\", \"name\": \"A promise\", \"steps\": [{\"condition\": \"answered\", "
 	+ "\"dialog\": \"%s\", \"answer\": \"%s\", \"ends\": \"promise\"}]}"
+)
+## A side quest that starts once the glade is purified (#707), a world event, not a quest's.
+const AFTER_PURIFIED: String = (
+	"{\"id\": \"after_purified\", \"name\": \"After the glade\", "
+	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"glade_purified\"}, "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_purified\"}]}"
 )
 ## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
 const BETRAYAL: String = (
@@ -343,7 +350,9 @@ func _check_finds(
 		result = _check_entered_glade(driver, bus, profile)
 	if result.is_empty():
 		result = _check_answered(driver, bus, profile)
-	return result if not result.is_empty() else _check_territory(driver, bus, profile)
+	if result.is_empty():
+		result = _check_territory(driver, bus, profile)
+	return result if not result.is_empty() else _check_world_event(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,
@@ -472,6 +481,20 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 		return "finishing the forest's territory quest left its holders at %s" % [held]
 	if not driver.recording.changes.has(Territory.code(forest, GUILD)):
 		return "the replay didn't record the forest handed over"
+	return ""
+
+
+## An event that changed the world (#707) reaches this player's profile, wherever they are, and
+## starts the side quest waiting on it; another world event doesn't.
+func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var waiting: QuestDefinition = QuestDefinition.parse("after_purified", AFTER_PURIFIED, {})
+	profile.quest_book[waiting.id] = waiting
+	_emit(driver, bus, WorldChanged.new("glade_corrupted", World.EVENT_FLAG + "glade_corrupted"))
+	if profile.open_steps().has(waiting.id):
+		return "another world event started the side quest waiting on the glade's purifying"
+	_emit(driver, bus, WorldChanged.new("glade_purified", World.EVENT_FLAG + "glade_purified"))
+	if not profile.open_steps().has(waiting.id):
+		return "the glade's purifying didn't start the side quest waiting on it"
 	return ""
 
 
