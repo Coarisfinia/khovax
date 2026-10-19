@@ -600,6 +600,8 @@ func _close_menu(menu: GameMenu) -> String:
 	if result.is_empty():
 		result = await _reopened(menu, "the cancel action", _press.bind(menu, &"ui_cancel"))
 	if result.is_empty():
+		result = await _reopened(menu, "a controller's B", _press_b.bind(menu))
+	if result.is_empty():
 		result = await _reopened(menu, "the menu action", _press.bind(menu, &"menu"))
 	_press(menu, &"ui_cancel")
 	if result.is_empty() and menu.is_open():
@@ -636,6 +638,14 @@ func _ticks_run(driver: GameDriver) -> bool:
 func _press(menu: GameMenu, action: StringName) -> void:
 	var pressed: InputEventAction = InputEventAction.new()
 	pressed.action = action
+	pressed.pressed = true
+	menu.get_viewport().push_input(pressed)
+
+
+## Presses a controller's B on the menu's viewport, which `ui_cancel` binds (#721).
+func _press_b(menu: GameMenu) -> void:
+	var pressed: InputEventJoypadButton = InputEventJoypadButton.new()
+	pressed.button_index = JOY_BUTTON_B
 	pressed.pressed = true
 	menu.get_viewport().push_input(pressed)
 
