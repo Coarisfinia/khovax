@@ -22,8 +22,9 @@ extends Camera3D
 		_place()
 ## The camera only moves once the target is further than this from its focus.
 @export var dead_zone_radius: float = 2.0
-## World units per second.
-@export var max_speed: float = 2.0
+## World units per second: just above walking speed (a tile every MovementFeature.MOVE_TICKS ticks),
+## so the camera never falls behind a walking player for good (#726).
+@export var max_speed: float = 6.5
 ## World units per second squared; low, so the camera eases in and out.
 @export var acceleration: float = 1.5
 

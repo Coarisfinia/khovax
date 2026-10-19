@@ -1,9 +1,9 @@
 extends RefCounted
 ## Camera flow: the camera looks down at the player from a fixed 65 degree angle, stays put while
-## the
-## player moves inside its dead zone, and follows smoothly once the player leaves it, without jumps,
-## sudden speed changes or any rotation, also under a moved and turned parent, and walking through
-## an exit into the next instance moves neither the camera nor the player's figure with a jump.
+## the player moves inside its dead zone, and follows smoothly once the player leaves it, without
+## jumps, sudden speed changes or any rotation, also under a moved and turned parent, walking
+## through an exit into the next instance moves neither the camera nor the player's figure with a
+## jump, and on a long walk the camera catches up with the player.
 ## Time is stepped by hand, so the flow is deterministic; one last step lets the engine's own frames
 ## drive it.
 
@@ -15,6 +15,10 @@ const EPSILON: float = 0.0001
 ## The camera slows down as the target comes back inside the dead zone, so it approaches the
 ## zone's edge without ever quite reaching it: "settled" allows this much beyond the edge.
 const SETTLED: float = 0.01
+## A long straight walk, 20 s of frames.
+const WALK_STEPS: int = 1200
+## The camera eases in at the distance beyond its dead zone per this many seconds.
+const EASE_SECONDS: float = 1.0
 
 var _main: Node3D
 var _camera: FollowCamera
@@ -46,6 +50,7 @@ func run(tree: SceneTree) -> String:
 		_check_follows_smoothly,
 		_check_under_moved_parent,
 		_check_seamless_crossing,
+		_check_keeps_up,
 	]
 	var result: String = ""
 	for step: Callable in steps:
@@ -157,12 +162,41 @@ func _check_seamless_crossing() -> String:
 	return ""
 
 
+## On a long walk the camera keeps up with the player (#726): its cap is above walking speed, so
+## after a long straight walk it trails the player at a steady distance, and once the player stops
+## it settles with them back inside the dead zone.
+func _check_keeps_up() -> String:
+	var walking: float = _walking_speed()
+	if _camera.max_speed <= walking:
+		return "the camera's cap %f units/s is not above walking speed %f" % [
+			_camera.max_speed,
+			walking,
+		]
+	# Standing still on the camera's focus first, so the walk starts from a resting camera.
+	_player_view.global_position = _camera.focus
+	_advance(600)
+	var start: Vector3 = _player_view.global_position
+	for i: int in WALK_STEPS:
+		_player_view.global_position = start + Vector3.RIGHT * walking * STEP * (i + 1)
+		_camera.advance(STEP)
+	# The camera eases in at as many units per second as the target is beyond the dead zone, so
+	# it moves at walking speed when the player is the ground walked in EASE_SECONDS beyond it.
+	var steady: float = _camera.dead_zone_radius + walking * EASE_SECONDS
+	var behind: float = _camera.focus.distance_to(_ground(_player_view.global_position))
+	if behind > steady + SETTLED:
+		return "after a long walk the camera trails the player by %f, not %f" % [behind, steady]
+	_advance(1200)
+	var left: float = _camera.focus.distance_to(_ground(_player_view.global_position))
+	if left > _camera.dead_zone_radius + SETTLED:
+		return "after a long walk and 20 s standing, the player is %f from the focus" % left
+	return ""
+
+
 ## Shows one frame and checks that neither the camera nor the player's figure jumped: the camera
 ## moves at most at its capped speed, the figure at most at walking speed, and as much again for the
 ## step across an exit, which the next walk can join.
 func _show_frame_checked(driver: GameDriver) -> String:
-	var tile: float = HexLayout.to_world(Vector2i(1, 0)).length()
-	var walking: float = tile / MovementFeature.MOVE_TICKS * Simulation.TICKS_PER_SECOND * STEP
+	var walking: float = _walking_speed() * STEP
 	var camera_before: Vector3 = _camera.global_position
 	var player_before: Vector3 = _player_view.global_position
 	_show_frame(driver)
@@ -233,6 +267,12 @@ func _check_placed() -> String:
 func _advance(steps: int) -> void:
 	for _i: int in steps:
 		_camera.advance(STEP)
+
+
+## World units per second a walking player covers: a tile every MovementFeature.MOVE_TICKS ticks.
+func _walking_speed() -> float:
+	var tile: float = HexLayout.to_world(Vector2i(1, 0)).length()
+	return tile / MovementFeature.MOVE_TICKS * Simulation.TICKS_PER_SECOND
 
 
 func _ground(point: Vector3) -> Vector3:
