@@ -191,6 +191,9 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 	var picked: Color = PersonalColor.of_number(PICKED)
 	tab.picker.color_changed.emit(picked)
 	player.show_state()
+	# Saved debounced like a gain (#391): a tick before the menu paused the game may have saved the
+	# start instance's entry (#730), so the pick waits; flushing saves it, as quitting would.
+	var _flushed: String = holder.keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
 	if (tab.shown != CharacterTab.CHOSEN_TEXT
 			or not player.circle.color.is_equal_approx(picked)
