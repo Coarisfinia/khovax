@@ -856,6 +856,7 @@ func _check_documents() -> String:
 		tiles % ["🟫🟫\n🟫🟫", base]: "the tiles need an odd",
 		tiles % ["🔴z🟫", base + "- `z`: forest"]: "a tile is one wide emoji, never `z`",
 		tiles % ["🔴🌵🟫", base]: "the legend doesn't explain `🌵`",
+		tiles % ["🔴❤️🟫", base]: "a tile is one wide emoji, never",
 		tiles % ["🔴🌲🟫", base + "- `🌲`: jungle"]: "the legend doesn't explain `🌲`",
 		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, turned 6"]: "tile (0, 0)'s turn 6",
 		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",

@@ -67,6 +67,8 @@ const BUILT_IN: Dictionary[String, String] = {
 }
 ## Below this code point a character is narrow (letters, digits, punctuation), never a tile (#711).
 const FIRST_WIDE: int = 0x2000
+## The joiner and variation selectors that build an emoji out of several code points: a tile is one.
+const JOINERS: Array[int] = [0x200d, 0xfe0e, 0xfe0f]
 ## What a tile kind's legend meaning says, after the kind, to turn its decoration (#231) or to
 ## override its walkable trait (#201), each clause after a ", ".
 const TURNED: String = "turned "
@@ -135,11 +137,12 @@ static func _unexplained(rows: Array[String], legend: Dictionary[String, String]
 	return ""
 
 
-## The first narrow character in `rows`, a space aside, or "".
+## The first narrow character in `rows`, a space aside, or a joiner, or "".
 static func _narrow(rows: Array[String]) -> String:
 	for row: String in rows:
 		for symbol: String in row:
-			if symbol != " " and symbol.unicode_at(0) < FIRST_WIDE:
+			var code: int = symbol.unicode_at(0)
+			if symbol != " " and (code < FIRST_WIDE or JOINERS.has(code)):
 				return symbol
 	return ""
 
