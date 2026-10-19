@@ -73,7 +73,7 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 		return
 	var strength: int = wild.strengths.get(species, 1)
 	var damage: int = Fixed.scale(strength, powers[species])
-	wild.wound(target, damage, true)
+	wild.wound(state, target, damage, true)
 	_cooling[slot] = cooldowns.get(species, 1)
 	state.events.append(SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target)))
 

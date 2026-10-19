@@ -48,6 +48,9 @@ var _species: Dictionary[int, String] = {}
 var _hp: Dictionary[int, int] = {}
 ## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
 var _rage: Dictionary[int, int] = {}
+## The event each wild monster its region names one for emits when it faints (#541), by entity id:
+## dropped once emitted, so it's emitted once.
+var _emits: Dictionary[int, String] = {}
 ## The wild monsters held where they stand whatever the ground, in id order: HidingFeature holds
 ## the hidden ones (#202) and lets them go when they jump out, and restores them on loading, so
 ## they aren't saved here.
@@ -99,6 +102,8 @@ func start(state: GameState) -> void:
 		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
 		if named != null and named.wounded:
 			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
+		if named != null and not named.emits.is_empty():
+			_emits[monster.id] = named.emits
 	_known.sort()
 
 
@@ -150,6 +155,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _species.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
 	_dropped = _rage.erase(removed_id)
+	_dropped = _emits.erase(removed_id)
 
 
 ## Holds the wild monster with this entity id where it stands, or lets it go again.
@@ -196,8 +202,9 @@ func is_fainted(entity_id: int) -> bool:
 
 
 ## Takes `damage` off the wild monster's HP. A non-lethal hit (#221) never takes it below 1, so it
-## weakens it for a domination; a `lethal` one (#410) can take it to 0, and then it faints.
-func wound(entity_id: int, damage: int, lethal: bool = false) -> void:
+## weakens it for a domination; a `lethal` one (#410) can take it to 0, and then it faints,
+## emitting in `state` the event its region names for it, if any (#541).
+func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) -> void:
 	if not is_wild_monster(entity_id):
 		return
 	_hp[entity_id] = maxi(hp_of(entity_id) - damage, 0 if lethal else 1)
@@ -207,6 +214,9 @@ func wound(entity_id: int, damage: int, lethal: bool = false) -> void:
 		var _calmed: bool = _rage.erase(entity_id)
 		fainted.append(entity_id)
 		fainted.sort()
+		if _emits.has(entity_id):
+			state.events.append(EventEmitted.new(_emits[entity_id]))
+			var _emitted: bool = _emits.erase(entity_id)
 
 
 ## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
@@ -220,8 +230,8 @@ func enrage(entity_id: int, heal: int) -> void:
 
 
 ## Each wild monster still in the instance as its entity's id, its species and its HP left, in id
-## order, the fainted ones among them at 0 HP. The roster, the species this instance can place and
-## their stats follow from the
+## order, the fainted ones among them at 0 HP, and the event a standing one emits when it faints, if
+## any (#541). The roster, the species this instance can place and their stats follow from the
 ## blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
@@ -235,6 +245,8 @@ func save_values() -> Dictionary:
 			"hp": _hp[monster],
 		}
 		entry["rage"] = rage_of(monster)
+		if _emits.has(monster):
+			entry["emits"] = _emits[monster]
 		saved.append(entry)
 	return { "wild_monsters": saved }
 
@@ -246,6 +258,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	_species.clear()
 	_hp.clear()
 	_rage.clear()
+	_emits.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
 		var species: String = entry.text("species")
@@ -268,6 +281,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		var rage: int = entry.whole("rage", 0, MOST_RAGE)
 		if rage > 0:
 			_rage[monster] = rage
+		if (entry.data as Dictionary).has("emits"):
+			_emits[monster] = entry.text("emits")
 	monsters.sort()
 	fainted.sort()
 
@@ -284,4 +299,10 @@ func hash_values() -> Array[int]:
 	values.append(fainted.size())
 	for monster: int in fainted:
 		values.append_array([monster, _known.find(_species[monster])])
+	# Only a region naming events adds them, so every other instance hashes as before (#541).
+	if not _emits.is_empty():
+		values.append(_emits.size())
+	for monster: int in monsters:
+		if _emits.has(monster):
+			values.append_array([monster, World.name_code(_emits[monster])])
 	return values

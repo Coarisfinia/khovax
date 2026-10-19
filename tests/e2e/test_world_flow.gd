@@ -16,7 +16,9 @@ extends RefCounted
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
-## blueprint's variant, and setting it purges the instance once nobody is in it (#529).
+## blueprint's variant, and setting it purges the instance once nobody is in it (#529). A named
+## event sets its own flag, and the corrupted glade's corrupting monster emits one when it falls,
+## which purifies the glade once nobody is in it (#541).
 
 const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
@@ -60,6 +62,7 @@ func run(tree: SceneTree) -> String:
 		_check_swaps,
 		_check_purge,
 		_check_flags,
+		_check_corruption,
 		_check_start_kept,
 		_check_sent_to_spawn,
 		_check_layout,
@@ -525,6 +528,43 @@ func _check_flags() -> String:
 	return ""
 
 
+## A corrupted instance (#541): with the glade's corrupting flag set, the player walks into the
+## corrupted glade. Its corrupting monster, felled inside a tick, emits its event, and the world
+## sets that event's flag, which chooses the purified glade over the corrupted one; the glade stays
+## corrupted while the player is in it, and the world goes through its save data and back with the
+## flag and the corrupted glade. The tick the player walks out, it's purged, and it comes back as
+## the plain glade.
+func _check_corruption() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
+	for direction: int in [0, 1, 0]:
+		_walk_in(world, direction)
+	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
+	if glade == null or world.variant_of("glade") != InstanceBlueprints.CORRUPTED_GLADE:
+		return "the player didn't walk into the corrupted glade"
+	var felling: Felling = Felling.new()
+	glade.features.append(felling)
+	world.step(_still())
+	glade.features.erase(felling)
+	var purified_flag: String = World.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED
+	var emitted: bool = felling.felled > 0 and world.flags.has(purified_flag)
+	if not emitted or InstanceBlueprints.variant("glade", world.flags) != "":
+		return "felling the corrupting monster didn't set its event's flag for the plain glade"
+	world.step(_still())
+	if world.instances.get(InstanceBlueprints.GLADE) != glade:
+		return "the glade was purified with the player in it"
+	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	var kept: bool = reloaded.variant_of("glade") == InstanceBlueprints.CORRUPTED_GLADE
+	if not kept or reloaded.state_hash() != world.state_hash():
+		return "the world didn't go through its save data with its flags: " + reloaded.problem
+	_walk_in(world, 3)
+	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
+		return "the glade wasn't purged once the player left it"
+	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
+		return "the glade didn't come back purified, as the plain glade"
+	return ""
+
+
 ## The starting instance is never purged (#212), however long the player stays in the glade.
 func _check_start_kept() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
@@ -935,6 +975,21 @@ func _check_refused() -> String:
 	if with_exit.fits(RegionFormat.parse("origin 0 0\n."), Vector2i(1, 0)):
 		return "a piece fit onto the tile outside an exit"
 	return ""
+
+
+## A rule that fells every standing storm finch in its instance inside the tick, as a special would
+## (#541), counting them in `felled`.
+class Felling:
+	extends Feature
+
+	var felled: int = 0
+
+	func step(state: GameState, _commands: Array[Command]) -> void:
+		var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+		for monster: int in wild.monsters.duplicate():
+			if wild.species_of(monster) == "storm_finch":
+				wild.wound(state, monster, wild.hp_of(monster), true)
+				felled += 1
 
 
 ## The blueprints, with a glade that RISEN turns into a variant (#529): the arena's region, as no

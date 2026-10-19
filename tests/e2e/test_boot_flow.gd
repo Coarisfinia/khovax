@@ -349,11 +349,12 @@ func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 ## A wild monster felled by a special (#410) lies down on its side and stops idling (#431): a
 ## shape that tells it apart from a standing one, not only a color.
 func _check_fainted_lies(
+	state: GameState,
 	view: WildMonsterView,
 	feature: WildMonsterFeature,
 	monster_id: int,
 ) -> String:
-	feature.wound(monster_id, feature.hp_of(monster_id), true)
+	feature.wound(state, monster_id, feature.hp_of(monster_id), true)
 	view.show_state()
 	var figure: HexPiece = view.figures.get(monster_id)
 	var model: Node3D = figure.get_child(0) as Node3D if figure != null else null
@@ -502,7 +503,7 @@ func _check_wild_monster_removed(main: Node) -> String:
 	if not lunged.is_empty():
 		return lunged
 	var monster_id: int = feature.monsters[0]
-	var fell: String = _check_fainted_lies(view, feature, monster_id)
+	var fell: String = _check_fainted_lies(driver.state, view, feature, monster_id)
 	if not fell.is_empty():
 		return fell
 	driver.state.remove_entity(monster_id)
