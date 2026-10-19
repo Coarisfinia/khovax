@@ -18,16 +18,15 @@ var problem: String = ""
 static func load_factions(directory: String = DIR) -> FactionContent:
 	var content: FactionContent = FactionContent.new()
 	var taken: Dictionary[String, String] = {}
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var faction: Faction = Faction.parse(file_name.get_basename(), text)
-			if faction.problem.is_empty():
-				faction.problem = _hold(faction, taken)
-			if not faction.problem.is_empty():
-				content.problem = file_name + ": " + faction.problem
-				return content
-			content.factions[faction.id] = faction
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		var faction: Faction = Faction.parse(file_id, texts[file_id])
+		if faction.problem.is_empty():
+			faction.problem = _hold(faction, taken)
+		if not faction.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + faction.problem
+			return content
+		content.factions[faction.id] = faction
 	return content
 
 

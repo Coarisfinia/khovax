@@ -22,22 +22,13 @@ static func load_quests(
 	content.problem = species.problem + factions.problem
 	if not content.problem.is_empty():
 		return content
-	# Sorted, so the quests are read in the same order on every machine.
-	var file_names: Array[String] = []
-	file_names.assign(DirAccess.get_files_at(directory))
-	file_names.sort()
-	for file_name: String in file_names:
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var quest: QuestDefinition = QuestDefinition.parse(
-				file_name.get_basename(),
-				text,
-				content.species,
-			)
-			if quest.standing != null and not factions.factions.has(quest.standing.faction):
-				quest.problem = "its standing's faction must be one that exists"
-			if not quest.problem.is_empty():
-				content.problem = file_name + ": " + quest.problem
-				return content
-			content.quests[quest.id] = quest
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		var quest: QuestDefinition = QuestDefinition.parse(file_id, texts[file_id], content.species)
+		if quest.standing != null and not factions.factions.has(quest.standing.faction):
+			quest.problem = "its standing's faction must be one that exists"
+		if not quest.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + quest.problem
+			return content
+		content.quests[quest.id] = quest
 	return content

@@ -22,24 +22,28 @@ var problem: String = ""
 static func load_tiles(directory: String = TILES_DIR) -> Content:
 	var content: Content = Content.new()
 	var numbers: Dictionary[int, bool] = {}
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var tile: TileBlueprint = TileBlueprint.parse(file_name.get_basename(), text)
-			if tile.problem.is_empty() and numbers.has(tile.number):
-				tile.problem = "its number %d is another tile blueprint's" % tile.number
-			if not tile.problem.is_empty():
-				content.problem = file_name + ": " + tile.problem
-				return content
-			content.tiles[tile.id] = tile
-			numbers[tile.number] = true
+	var texts: Dictionary[String, String] = texts_in(directory)
+	for file_id: String in texts:
+		var tile: TileBlueprint = TileBlueprint.parse(file_id, texts[file_id])
+		if tile.problem.is_empty() and numbers.has(tile.number):
+			tile.problem = "its number %d is another tile blueprint's" % tile.number
+		if not tile.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + tile.problem
+			return content
+		content.tiles[tile.id] = tile
+		numbers[tile.number] = true
 	return content
 
 
-## The text of every JSONC file in `directory`, by its file name without the extension.
+## The text of every JSONC file in `directory`, by its file name without the extension, in file
+## name order (#713): every content reader reads through this, so all of them read their files,
+## and name the first bad one, in the same order on every machine.
 static func texts_in(directory: String) -> Dictionary[String, String]:
+	var file_names: Array[String] = []
+	file_names.assign(DirAccess.get_files_at(directory))
+	file_names.sort()
 	var texts: Dictionary[String, String] = {}
-	for file_name: String in DirAccess.get_files_at(directory):
+	for file_name: String in file_names:
 		if file_name.ends_with(".jsonc"):
 			texts[file_name.get_basename()] = FileAccess.get_file_as_string(directory + file_name)
 	return texts
