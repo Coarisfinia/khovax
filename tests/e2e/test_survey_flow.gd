@@ -138,8 +138,12 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 	var region: Region = survey.neighbours.region_of(target)
 	if world.instances.has(target) or region == null:
 		return "the glade's neighbour %s is loaded already, or not drawn next door" % target
-	var keeper: WorldKeeper = survey.keeper
-	var there: Dictionary[Vector2i, bool] = _explore_next_door(driver, keeper, region, target)
+	var there: Dictionary[Vector2i, bool] = _explore_next_door(
+		driver,
+		survey.keeper,
+		region,
+		target,
+	)
 	var loaded: Array[String] = world.sorted_names()
 	var before: int = world.state_hash()
 	survey.show_state()
@@ -207,26 +211,12 @@ func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyV
 	return ""
 
 
-<<<<<< < HEAD
-
-
 ## Why the Survey's held marks (#637) don't follow the holder flags, or "". With every holder flag
 ## cleared, nothing is marked and it says nobody holds the instance the player is in. Once a flag
 ## says the Cartographer's Guild holds it, it's marked and said in words, by symbol and name. Once
 ## the guild holds the first instance next door too, if there is one, that one is marked in the
 ## middle of what shows of it. The world's holder flags are put back after, whichever start it had.
-==  ==  ==  =
-## Why the Survey doesn't mark the basic instance next door, which the Cartographer's Guild holds
-## (#637), with the guild, in the middle of what shows of it, and not the glade, which nobody holds,
-## or doesn't mark the glade too, at its top edge, once a flag says the guild holds it, or doesn't
-## say
-## so in words, by symbol and name, or "". The flag is cleared again after.
-
-
->>>>>> > df627f5(Refuse two factions sharing a symbol, check territory names blueprints(# 637))
 func _survey_held(driver: GameDriver, survey: SurveyView) -> String:
-
-
 	var kept: Array[String] = _holder_flags(driver.world)
 	for flag: String in kept:
 		driver.world.set_flag(flag, false)
@@ -235,6 +225,9 @@ func _survey_held(driver: GameDriver, survey: SurveyView) -> String:
 		driver.world.set_flag(flag, false)
 	for flag: String in kept:
 		driver.world.set_flag(flag)
+	# Drawn again from the world as it was, so the later steps see what the menu's Survey sees.
+	survey.show_state()
+	survey.held_marks().show_state()
 	return why
 
 
@@ -648,8 +641,8 @@ func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32
 
 
 ## Why the menu's Survey tab (#392) doesn't show what the Survey shows, over the tab, with a line
-## saying nobody holds the glade (#637), or its zoom
-## key, its buttons or a pinch on it don't step the one zoom it follows, or "".
+## saying the Cartographer's Guild holds the glade, where the player starts (#637, #712), or its
+## zoom key, its buttons or a pinch on it don't step the one zoom it follows, or "".
 func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var tab: SurveyTab = menu.survey_tab
@@ -671,7 +664,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var same: bool = (tab.view.tiles.keys() == survey.tiles.keys()
 			and tab.view.circles.keys() == survey.circles.keys()
 			and tab.view.quest_targets == survey.quest_targets
-			and tab.held_text.text == TerritoryText.NOT_HELD_TEXT)
+			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Cartographer's Guild"])
 	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
 		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
 	var key: InputEventAction = InputEventAction.new()
