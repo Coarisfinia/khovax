@@ -89,6 +89,7 @@ func flush(now_msec: int) -> String:
 		ExploredSave.beside(explored_in(driver.world)),
 	)
 	if problem.is_empty():
+		WebStorage.sync()
 		_last_save_msec = now_msec
 		_saved_world = driver.world
 		_saved_tick = driver.world.tick

@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (files, JSON, OS and ProjectSettings)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (files and JSON)
 class_name SaveStore
 extends RefCounted
 ## How saves are kept on this device (#37, #179), so a crash, a full disk or a damaged file never
@@ -6,7 +6,8 @@ extends RefCounted
 ## "checksum": <SHA-256 of the text>, "text": ...}`, so a damaged one is detected instead of
 ## half-read. Each save keeps GENERATIONS - 1 older ones next to it (`<path>.1`, `<path>.2`), and
 ## loading takes the newest whose checksum holds. A new save is written whole to a temporary file
-## before the generations move up, and on the web it's synced to the browser's storage at once.
+## before the generations move up. On the web, whoever saves syncs it into the browser's storage
+## (#590), so the core names no platform.
 
 ## How many saves are kept: the newest and the ones before it.
 const GENERATIONS: int = 3
@@ -45,23 +46,17 @@ static func write_save(path: String, text: String) -> String:
 	if file == null or not file.store_string(JSON.stringify(envelope, "\t") + "\n"):
 		return "couldn't write %s" % temporary
 	file.close()
+	var folder: DirAccess = DirAccess.open(path.get_base_dir())
+	if folder == null:
+		return "couldn't open the folder of %s" % path
 	# Godot's rename replaces an existing target on every platform, Windows included.
 	for generation: int in range(GENERATIONS - 1, 0, -1):
 		var older: String = _generation_path(path, generation - 1)
 		if FileAccess.file_exists(older):
-			var moved_up: Error = DirAccess.rename_absolute(
-				ProjectSettings.globalize_path(older),
-				ProjectSettings.globalize_path(_generation_path(path, generation)),
-			)
-			if moved_up != OK:
+			if folder.rename(older, _generation_path(path, generation)) != OK:
 				return "couldn't keep %s as an older generation" % older
-	var moved: Error = DirAccess.rename_absolute(
-		ProjectSettings.globalize_path(temporary),
-		ProjectSettings.globalize_path(path),
-	)
-	if moved != OK:
+	if folder.rename(temporary, path) != OK:
 		return "couldn't put the new save in place at %s" % path
-	_sync_web()
 	return ""
 
 
@@ -80,19 +75,12 @@ static func remove(path: String) -> void:
 	var files: Array[String] = [path + ".tmp"]
 	for generation: int in GENERATIONS:
 		files.append(_generation_path(path, generation))
+	var folder: DirAccess = DirAccess.open(path.get_base_dir())
+	if folder == null:
+		return
 	for file: String in files:
 		if FileAccess.file_exists(file):
-			var _gone: Error = DirAccess.remove_absolute(ProjectSettings.globalize_path(file))
-	_sync_web()
-
-
-## Asks the browser to keep this game's storage rather than evict it under pressure. Nothing off
-## the web.
-static func keep_web_storage() -> void:
-	if OS.has_feature("web"):
-		var _asked: Variant = JavaScriptBridge.eval(
-			"navigator.storage && navigator.storage.persist && navigator.storage.persist()"
-		)
+			var _gone: Error = folder.remove(file)
 
 
 ## The text inside an envelope, or "" when it isn't one that holds. A plain save from before
@@ -120,10 +108,3 @@ static func _opened(content: String) -> String:
 ## Where generation `generation` of the save at `path` lies: 0 is the newest.
 static func _generation_path(path: String, generation: int) -> String:
 	return path if generation == 0 else "%s.%d" % [path, generation]
-
-
-## On the web, files land in the browser's storage only when it's synced; Godot syncs a frame
-## later, which a closed tab can miss, so a save syncs at once.
-static func _sync_web() -> void:
-	if OS.has_feature("web"):
-		JavaScriptBridge.force_fs_sync()
