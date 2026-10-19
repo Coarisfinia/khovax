@@ -7,7 +7,8 @@ extends RefCounted
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), and broken ones are
-## refused. Factions (#483) load with their own names for the ranks of a standing, and broken ones
+## refused; a quest can move the standing with a faction (#532). Factions (#483) load with their own
+## names for the ranks of a standing, and broken ones
 ## are refused. Quests and abilities carry path marks (#471).
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
@@ -172,7 +173,7 @@ func _check_instance_steps(content: QuestData) -> String:
 
 ## Why the side quests (#473) don't read, or "": the pond's chest starts on entering the pond, a
 ## quest without a start has none, and a start that isn't reaching a place or entering a piece or
-## an instance, or that has a count, is refused.
+## an instance, or that has a count, is refused. Then the standings quests move.
 func _check_side_quests(content: QuestData) -> String:
 	var pond: QuestDefinition = content.quests.get("pond_chest")
 	var first: QuestDefinition = content.quests["first_domination"]
@@ -188,6 +189,41 @@ func _check_side_quests(content: QuestData) -> String:
 		quest % [counted, opened]: "its start happens once",
 		quest % [REACH % "The Beach", opened]: "its start: its place must",
 	}
+	var result: String = _unrefused(cases, content)
+	return result if not result.is_empty() else _check_quest_standings(content)
+
+
+## Why the standings quests move (#532) don't read, or "": the first domination raises the
+## Cartographer's Guild by one, the toads' quest moves none, and a standing that isn't an object,
+## has another field, names no faction id, or changes by nothing, a fraction, text or more than the
+## whole scale is refused.
+func _check_quest_standings(content: QuestData) -> String:
+	var raised: QuestStanding = content.quests["first_domination"].standing
+	if (raised == null or raised.faction != "cartographers_guild" or raised.change != 1
+			or content.quests["three_moss_toads"].standing != null):
+		return "the first domination doesn't raise the guild by one, or another quest moves one"
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"standing\": %s, \"steps\": [%s]}"
+	var opened: String = "{\"condition\": \"opened\"}"
+	var standing: String = "{\"faction\": \"%s\", \"change\": %s}"
+	var cases: Dictionary[String, String] = {
+		quest % ["1", opened]: "its standing: it isn't",
+		quest % [
+			"{\"faction\": \"a\", \"change\": 1, \"by\": 1}",
+			opened,
+		]: "its standing: field by",
+		quest % [standing % ["The Guild", "1"], opened]: "its standing: its faction",
+		quest % ["{\"change\": 1}", opened]: "its standing: its faction",
+		quest % [standing % ["a", "0"], opened]: "its standing: its change",
+		quest % [standing % ["a", "11"], opened]: "its standing: its change",
+		quest % [standing % ["a", "-11"], opened]: "its standing: its change",
+		quest % [standing % ["a", "1.5"], opened]: "its standing: its change",
+		quest % [standing % ["a", "\"1\""], opened]: "its standing: its change",
+		quest % ["{\"faction\": \"a\"}", opened]: "its standing: its change",
+	}
+	var lowering: String = quest % [standing % ["a", "-10"], opened]
+	var lowered: QuestDefinition = QuestDefinition.parse("x", lowering, {})
+	if not lowered.problem.is_empty() or lowered.standing.change != -QuestStanding.MAX_CHANGE:
+		return "a quest lowering a standing by the whole scale didn't read: " + lowered.problem
 	return _unrefused(cases, content)
 
 

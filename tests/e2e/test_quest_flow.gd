@@ -18,7 +18,10 @@ extends RefCounted
 ## it, not another player's, and the quest's marker points at the thicket's nearest tile. Entering
 ## the glade finishes this player's quest to enter it, not another player's or another instance,
 ## and its marker points at the exit leading there (#370). A side quest stays hidden until this
-## player enters the area it starts in, and is listed from then on (#473).
+## player enters the area it starts in, and is listed from then on (#473). Finishing a quest moves
+## the standing with the faction it names, held on the scale (#532): the first domination raises
+## the Cartographer's Guild by one, saved with the profile, and a quest naming a faction that
+## doesn't exist is refused.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -42,6 +45,16 @@ const REACH_BEACH: String = (
 	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
 	+ "{\"condition\": \"reached\", \"place\": \"beach\"}]}"
 )
+## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
+const BETRAYAL: String = (
+	"{\"id\": \"betrayal\", \"name\": \"Betray the guild\", "
+	+ "\"standing\": {\"faction\": \"cartographers_guild\", \"change\": -10}, "
+	+ "\"steps\": [{\"condition\": \"opened\"}]}"
+)
+## A quest's standing with a faction that doesn't exist.
+const STRANGER_STANDING: String = "\"standing\": {\"faction\": \"strangers\", \"change\": 1}"
+## The faction whose standing the first domination raises (#532).
+const GUILD: String = "cartographers_guild"
 ## A small region with the beach on its east, `b`; players 1 and 2 start west of it.
 const BEACH_REGION: String = (
 	"# Beach\n\n## Tiles\n\n```\n . . b b\n. 1 2 . b\n . . b b\n```\n\n## Legend\n\n"
@@ -94,6 +107,8 @@ func _check_tracked(tree: SceneTree) -> String:
 	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	if result.is_empty() and (profile.quests_done != expected or loaded.quests_done != expected):
 		result = "this player's domination didn't finish the first domination on disk"
+	if result.is_empty() and loaded.standings.of(GUILD) != 1:
+		result = "finishing the first domination didn't raise the guild on disk (#532)"
 	markers.show_quests()
 	if result.is_empty() and markers.markers.has("first_domination"):
 		result = "the finished first domination still has a marker"
@@ -595,7 +610,7 @@ func _check_counted() -> String:
 		return "one moss toad didn't count one toward its step: " + applied
 	if toads == null or toads.count != 1 or first == null or first.step != 1:
 		return "the toads' quest didn't count up, or the beach didn't hand over to dominating"
-	if not profile.quests_done.is_empty():
+	if not profile.quests_done.is_empty() or profile.standings.of(GUILD) != 0:
 		return "a domination before the beach finished the first domination"
 	applied = profile.apply(_gain(["moss_toad", "moss_toad"], 1))
 	if (not applied.is_empty()
@@ -603,7 +618,22 @@ func _check_counted() -> String:
 		return "a gain didn't hand a full step to the next one: %s" % profile.quests_done
 	if not profile.quest_progress.is_empty():
 		return "finished quests kept their progress"
-	return _check_kept(profile.quest_book)
+	var result: String = _check_standing(profile)
+	return result if not result.is_empty() else _check_kept(profile.quest_book)
+
+
+## Finishing a quest moves the standing with the faction it names (#532): the first domination
+## raised the guild by one, and a quest lowering it further than its scale holds it at the lowest.
+func _check_standing(profile: Profile) -> String:
+	if profile.standings.of(GUILD) != 1:
+		return "finishing the first domination didn't raise the guild by one"
+	var betrayal: QuestDefinition = QuestDefinition.parse("betrayal", BETRAYAL, {})
+	profile.quest_book[betrayal.id] = betrayal
+	var applied: String = betrayal.problem + profile.apply(_gain([], 1))
+	var _unbooked: bool = profile.quest_book.erase(betrayal.id)
+	if not applied.is_empty() or profile.standings.of(GUILD) != Standings.LOWEST:
+		return "a quest lowering the guild past its scale didn't hold it at the lowest: " + applied
+	return ""
 
 
 ## Progress within a step survives saving and loading, and counts on from there.
@@ -648,14 +678,28 @@ func _check_settled() -> String:
 	return ""
 
 
-## Quest data with one broken file gives an empty quest book, so no quest advances on part of it.
+## Quest data with one broken file gives an empty quest book, so no quest advances on part of it,
+## and so does a quest moving the standing with a faction that doesn't exist (#532).
 func _check_broken_data() -> String:
-	var directory: String = "user://broken_quests_test/"
-	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
-	var files: Dictionary[String, String] = {
-		"a_good": "{\"id\": \"a_good\", \"name\": \"N\", \"steps\": [{\"condition\": \"opened\"}]}",
+	var good: String = "{\"id\": \"a_good\", \"name\": \"N\", "
+	good += "\"steps\": [{\"condition\": \"opened\"}]}"
+	var content: QuestData = _load_written({
+		"a_good": good,
 		"b_broken": "{\"id\": \"b_broken\", \"name\": \"N\", \"steps\": []}",
-	}
+	})
+	if content.problem.is_empty() or not ProfileHolder.quest_book_of(content).is_empty():
+		return "quest data with a broken file still gave quests to advance"
+	var stranger: String = good.replace("\"steps\"", STRANGER_STANDING + ", \"steps\"")
+	content = _load_written({ "a_good": stranger })
+	if not content.problem.ends_with("its standing's faction must be one that exists"):
+		return "a quest moving the standing with no faction that exists wasn't refused"
+	return ""
+
+
+## The quests read from a directory holding `files`, quest text by id; the directory is gone after.
+static func _load_written(files: Dictionary[String, String]) -> QuestData:
+	var directory: String = "user://written_quests_test/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
 	for id: String in files:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
 		var _stored: bool = file.store_string(files[id])
@@ -664,9 +708,7 @@ func _check_broken_data() -> String:
 	for id: String in files:
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
 	var _gone: Error = DirAccess.remove_absolute(directory)
-	if content.problem.is_empty() or not ProfileHolder.quest_book_of(content).is_empty():
-		return "quest data with a broken file still gave quests to advance"
-	return ""
+	return content
 
 
 func _gain(species: Array[String], chests: int) -> Gain:
