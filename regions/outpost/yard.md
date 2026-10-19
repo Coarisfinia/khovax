@@ -5,24 +5,26 @@ The outpost's yard (#689): a sandy square with crates in the middle, posts of st
 ## Tiles
 
 ```
-     . . . 🌳 . .
-    . . . . . . .
-   . . . . F . . .
-  k . . : : : . . .
- . . . 📦 : : : . . .
-. . . : : : 📦 : . . .
- . . . : : 📦 : . . .
-  🌳 🌳 . : : : . . j
-   . . . m . . . .
-    . . . 🌳 . . .
-     . . . 🌳 . .
+     🟫🟫🟫🌳🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🟫🟫🟫🟫🐦🟫🟫🟫
+  🧷🟫🟫🟨🟨🟨🟫🟫🟫
+ 🟫🟫🟫📦🟨🟨🟨🟫🟫🟫
+🟫🟫🟫🟨🟨🟨📦🟨🟫🟫🟫
+ 🟫🟫🟫🟨🟨📦🟨🟫🟫🟫
+  🌳🌳🟫🟨🟨🟨🟫🟫🔗
+   🟫🟫🟫👾🟫🟫🟫🟫
+    🟫🟫🟫🌳🟫🟫🟫
+     🟫🟫🟫🌳🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the southeast
-- `k`: joins another piece to the northwest
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the southeast
+- `🧷`: joins another piece to the northwest
 - `🌳`: shrubs
 - `📦`: crates
-- `:`: sand
-- `F`: a wild monster, always storm_finch
+- `🟨`: sand
+- `🐦`: a wild monster, always storm_finch

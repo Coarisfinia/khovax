@@ -5,23 +5,25 @@ A dense grove (#689): trees all round, a path through the middle and a clearing 
 ## Tiles
 
 ```
-     . . j . . .
-    . . . . . . .
-   🌲 🌲 🌲 🌲 . 🪨 🌲 🌲
-  🌲 h 🌲 🌲 . 🌲 🌲 🌲 🌲
- 🌲 🌲 🌲 🌲 . . 🌲 h 🌲 🌲
-🌲 🌲 🪨 🌲 . m . 🌲 🌲 🌲 🌲
- 🌲 🌲 🌲 🌲 . . 🌲 🌲 🌲 🌲
-  🌲 🌲 h 🌲 . 🌲 🌲 h 🌲
-   🌲 🌲 🌲 🌲 . 🌲 🌲 🌲
-    . . . . . . .
-     . . . k . .
+     🟫🟫🔗🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🌲🌲🌲🌲🟫🪨🌲🌲
+  🌲🦉🌲🌲🟫🌲🌲🌲🌲
+ 🌲🌲🌲🌲🟫🟫🌲🦉🌲🌲
+🌲🌲🪨🌲🟫👾🟫🌲🌲🌲🌲
+ 🌲🌲🌲🌲🟫🟫🌲🌲🌲🌲
+  🌲🌲🦉🌲🟫🌲🌲🦉🌲
+   🌲🌲🌲🌲🟫🌲🌲🌲
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🟫🟫🧷🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northeast
-- `k`: joins another piece to the southwest
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the northeast
+- `🧷`: joins another piece to the southwest
 - `🌲`: forest
 - `🪨`: boulder
-- `h`: a wild monster hiding in forest
+- `🦉`: a wild monster hiding in forest

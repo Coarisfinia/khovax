@@ -183,12 +183,12 @@ func _check_hiding_legend() -> String:
 ## Tiles
 
 ```
-h
+🦔
 ```
 
 ## Legend
 
-- `h`: "
+- `🦔`: "
 	piece += RegionDocument.HIDING
 	var shrubs: Region = RegionDocument.parse(piece + "shrubs
 ")
@@ -1654,9 +1654,10 @@ func _check_species() -> String:
 ## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never
 ## below 1, while the one beside it starts at full.
 func _check_wounded() -> String:
-	var tiles: String = "# W\n\n## Tiles\n\n```\nw 1 t\n```\n\n## Legend\n\n"
-	tiles += "- `w`: a wild monster, always moss_toad, wounded\n"
-	tiles += "- `t`: a wild monster, always moss_toad\n"
+	var tiles: String = "# W\n\n## Tiles\n\n```\n🤕🔴🐸\n```\n\n## Legend\n\n"
+	tiles += "- `🤕`: a wild monster, always moss_toad, wounded\n"
+	tiles += "- `🐸`: a wild monster, always moss_toad\n"
+	tiles += "- `🔴`: where player 1 starts\n"
 	var region: Region = RegionDocument.parse(tiles)
 	var marked: int = 0
 	for spot: WildSpot in region.wild_spots.values():

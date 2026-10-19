@@ -5,22 +5,28 @@ The mountain pass's start piece (#689): the foot of the pass, a valley between r
 ## Tiles
 
 ```
-     . x x x . ^
-    ^ . 3 1 . . ^
-   ^ . 4 2 🪨 . ^ ^
-  ^ ^ . . . . . ^ ^
- . ^ . . 🪨 . . ^ ^ ^
-. . . . . . . 🪨 ^ ^ ^
- . . . . m . . ^ ^ ^
-  . . . . . . ^ ^ ^
-   j . . . . ^ ^ ^
-    . . . ^ ^ ^ ^
-     . . ^ ^ ^ ^
+     🟫🚪🚪🚪🟫⬛
+    ⬛🟫🟢🔴🟫🟫⬛
+   ⬛🟫🟡🔵🪨🟫⬛⬛
+  ⬛⬛🟫🟫🟫🟫🟫⬛⬛
+ 🟫⬛🟫🟫🪨🟫🟫⬛⬛⬛
+🟫🟫🟫🟫🟫🟫🟫🪨⬛⬛⬛
+ 🟫🟫🟫🟫👾🟫🟫⬛⬛⬛
+  🟫🟫🟫🟫🟫🟫⬛⬛⬛
+   🔗🟫🟫🟫🟫⬛⬛⬛
+    🟫🟫🟫⬛⬛⬛⬛
+     🟫🟫⬛⬛⬛⬛
 ```
 
 ## Legend
 
-- `j`: joins another piece to the west
-- `x`: exit to the northeast, to outpost
-- `1` to `4`: where players 1 to 4 start
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the west
+- `🚪`: exit to the northeast, to outpost
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
 - `🪨`: boulder

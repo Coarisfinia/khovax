@@ -5,25 +5,27 @@ One of the outpost's holds (#689): open sand in a ring of crates with its middle
 ## Tiles
 
 ```
-     . . . . . 🌳
-    . . 🌳 . . . 🌳
-   . . 📦 📦 📦 📦 🌳 .
-  k . . . . . 📦 . .
- . . . . : : . 📦 . .
-. . 📦 . : P : . T . .
- . . 📦 . : : . . . .
-  . . 📦 . . . . . j
-   . . m 📦 📦 📦 . .
-    . . . 🌳 . . .
-     🌳 . . . . .
+     🟫🟫🟫🟫🟫🌳
+    🟫🟫🌳🟫🟫🟫🌳
+   🟫🟫📦📦📦📦🌳🟫
+  🧷🟫🟫🟫🟫🟫📦🟫🟫
+ 🟫🟫🟫🟫🟨🟨🟫📦🟫🟫
+🟫🟫📦🟫🟨🏰🟨🟫🐸🟫🟫
+ 🟫🟫📦🟫🟨🟨🟫🟫🟫🟫
+  🟫🟫📦🟫🟫🟫🟫🟫🔗
+   🟫🟫👾📦📦📦🟫🟫
+    🟫🟫🟫🌳🟫🟫🟫
+     🌳🟫🟫🟫🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the southeast
-- `k`: joins another piece to the northwest
-- `P`: a hold to take later; stepping here reaches the place outpost_south_hold
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the southeast
+- `🧷`: joins another piece to the northwest
+- `🏰`: a hold to take later; stepping here reaches the place outpost_south_hold
 - `🌳`: shrubs
 - `📦`: crates
-- `:`: sand
-- `T`: a wild monster, always moss_toad
+- `🟨`: sand
+- `🐸`: a wild monster, always moss_toad

@@ -5,27 +5,32 @@ The forest's start piece (#689): where the trees begin, north of the glade. Its 
 ## Tiles
 
 ```
-     . . j . . .
-    . . . . . . .
-   . . m . . . . .
-  y . . . . . 🌲 🌲 .
- y . . . 🪨 . 🌲 🌲 🌲 🌲
-y . 🌳 . . . . 🪵 h 🌲 .
- . 🌳 . . . . 🌲 🌲 . 🌲
-  . . . 3 . 4 🌲 🌲 🌲
-   . . . 1 2 🌲 🌲 🌲
-    . . . . . . .
-     . . x x x .
+     🟫🟫🔗🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🟫🟫👾🟫🟫🟫🟫🟫
+  🌀🟫🟫🟫🟫🟫🌲🌲🟫
+ 🌀🟫🟫🟫🪨🟫🌲🌲🌲🌲
+🌀🟫🌳🟫🟫🟫🟫🪵🦉🌲🟫
+ 🟫🌳🟫🟫🟫🟫🌲🌲🟫🌲
+  🟫🟫🟫🟢🟫🟡🌲🌲🌲
+   🟫🟫🟫🔴🔵🌲🌲🌲
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🟫🚪🚪🚪🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northeast
-- `x`: exit to the southeast, to glade
-- `y`: exit to the west, to castle
-- `1` to `4`: where players 1 to 4 start
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the northeast
+- `🚪`: exit to the southeast, to glade
+- `🌀`: exit to the west, to castle
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
 - `🌲`: forest
 - `🌳`: shrubs
 - `🪵`: stump
 - `🪨`: boulder
-- `h`: a wild monster hiding in forest
+- `🦉`: a wild monster hiding in forest

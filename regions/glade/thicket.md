@@ -5,28 +5,28 @@ A thicket in the glade (#57): a wild monster in the middle with room to walk a r
 ## Tiles
 
 ```
-     ^ . . . . ^
-    . . . . . 🌲 .
-   . 🪨 . . . . 🌲 j
-  . 🌳 . . . . . 🌲 .
- . . . . . . . . 🌲 .
-^ 🌳 . . . m . . . 🌲 ^
- . 🪨 . . 💰 . . . 🌲 .
-  . 🌿 . . . . . 🌲 .
-   k . . . . . 🌲 .
-    . 🌲 . . 🌲 🌲 .
-     ^ 🌲 🌲 🌿 . ^
+     ⬛🟫🟫🟫🟫⬛
+    🟫🟫🟫🟫🟫🌲🟫
+   🟫🪨🟫🟫🟫🟫🌲🔗
+  🟫🌳🟫🟫🟫🟫🟫🌲🟫
+ 🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫
+⬛🌳🟫🟫🟫👾🟫🟫🟫🌲⬛
+ 🟫🪨🟫🟫💰🟫🟫🟫🌲🟫
+  🟫🌿🟫🟫🟫🟫🟫🌲🟫
+   🧷🟫🟫🟫🟫🟫🌲🟫
+    🟫🌲🟫🟫🌲🌲🟫
+     ⬛🌲🌲🌿🟫⬛
 ```
 
 ## Legend
 
-- `.`: ground
+- `🟫`: ground
 - `🌲`: forest
 - `🌳`: shrubs
 - `🌿`: shrubs, turned 2
 - `🪨`: boulder
 - `💰`: loot on the ground
-- `^`: rock
-- `m`: a wild monster, of a species rolled from the instance blueprint's list
-- `j`: joins another piece to the east
-- `k`: joins another piece to the west
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the east
+- `🧷`: joins another piece to the west

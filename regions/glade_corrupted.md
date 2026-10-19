@@ -5,24 +5,24 @@ The corrupted glade (#541): the variant the flag glade_corrupted chooses for the
 ## Tiles
 
 ```
-     . f f f . .
-    . 🪵 . . . 🪵 .
-   . . . ^ . . . .
-  🪵 . . . . . . 🪵 .
- . . ^ . . . . . . .
-. 🪵 . . . B . . . 🪵 .
- . . . . . . . ^ . .
-  . 🪵 . . . . . . .
-   . . ^ . . 🪵 . o
-    . 🪵 . . . . o
-     . . . 🪵 . o
+     🟫🚪🚪🚪🟫🟫
+    🟫🪵🟫🟫🟫🪵🟫
+   🟫🟫🟫⬛🟫🟫🟫🟫
+  🪵🟫🟫🟫🟫🟫🟫🪵🟫
+ 🟫🟫⬛🟫🟫🟫🟫🟫🟫🟫
+🟫🪵🟫🟫🟫🦅🟫🟫🟫🪵🟫
+ 🟫🟫🟫🟫🟫🟫🟫⬛🟫🟫
+  🟫🪵🟫🟫🟫🟫🟫🟫🟫
+   🟫🟫⬛🟫🟫🪵🟫🌀
+    🟫🪵🟫🟫🟫🟫🌀
+     🟫🟫🟫🪵🟫🌀
 ```
 
 ## Legend
 
-- `.`: ground
-- `^`: rock
+- `🟫`: ground
+- `⬛`: rock
 - `🪵`: stump
-- `B`: a wild monster, always storm_finch, emitting glade_purified
-- `f`: exit to the northwest, to forest
-- `o`: exit to the southeast, to outpost
+- `🦅`: a wild monster, always storm_finch, emitting glade_purified
+- `🚪`: exit to the northwest, to forest
+- `🌀`: exit to the southeast, to outpost

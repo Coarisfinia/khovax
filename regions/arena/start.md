@@ -5,18 +5,21 @@ The arena (#127): one region piece that is never turned, the way a boss arena ke
 ## Tiles
 
 ```
-   ^ . . ^
-  . . B . .
- . . . . . .
-. . . . . . .
- . . 1 2 . .
-  . 3 4 . .
-   ^ . . ^
+   ⬛🟫🟫⬛
+  🟫🟫🐦🟫🟫
+ 🟫🟫🟫🟫🟫🟫
+🟫🟫🟫🟫🟫🟫🟫
+ 🟫🟫🔴🔵🟫🟫
+  🟫🟢🟡🟫🟫
+   ⬛🟫🟫⬛
 ```
 
 ## Legend
 
-- `.`: ground
-- `^`: rock
-- `1` to `4`: where players 1 to 4 start
-- `B`: a wild monster, always storm_finch
+- `🟫`: ground
+- `⬛`: rock
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
+- `🐦`: a wild monster, always storm_finch

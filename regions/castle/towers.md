@@ -5,24 +5,26 @@ Two fallen towers (#689), each a ring of wall with a gap, with shrubs grown over
 ## Tiles
 
 ```
-     . . . . . .
-    . . ^ . . . .
-   . . . 🌳 🌳 . . .
-  j . . 🪵 . . 🌳 🌳 .
- . . ^ . . . . ^ ^ .
-. . . ^ 🪵 F . ^ 🌳 . .
- . ^ . . . 🪵 . ^ . .
-  . . . . . . . . k
-   . . 🪵 . . . . .
-    . . . g ^ . .
-     . 🌳 . 🪵 . .
+     🟫🟫🟫🟫🟫🟫
+    🟫🟫⬛🟫🟫🟫🟫
+   🟫🟫🟫🌳🌳🟫🟫🟫
+  🔗🟫🟫🪵🟫🟫🌳🌳🟫
+ 🟫🟫⬛🟫🟫🟫🟫⬛⬛🟫
+🟫🟫🟫⬛🪵🐦🟫⬛🌳🟫🟫
+ 🟫⬛🟫🟫🟫🪵🟫⬛🟫🟫
+  🟫🟫🟫🟫🟫🟫🟫🟫🧷
+   🟫🟫🪵🟫🟫🟫🟫🟫
+    🟫🟫🟫🦔⬛🟫🟫
+     🟫🌳🟫🪵🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northwest
-- `k`: joins another piece to the southeast
+- `🟫`: ground
+- `⬛`: rock
+- `🔗`: joins another piece to the northwest
+- `🧷`: joins another piece to the southeast
 - `🌳`: shrubs
 - `🪵`: stump
-- `g`: a wild monster hiding in shrubs
-- `F`: a wild monster, always storm_finch
+- `🦔`: a wild monster hiding in shrubs
+- `🐦`: a wild monster, always storm_finch

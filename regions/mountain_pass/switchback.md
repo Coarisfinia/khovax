@@ -5,21 +5,24 @@ A switchback in the pass (#689): the path doubles back between rock walls, a wil
 ## Tiles
 
 ```
-     ^ ^ ^ ^ . .
-    ^ ^ ^ ^ ^ . .
-   . . . ^ ^ ^ . k
-  . . 🪨 . . ^ . . .
- . . . . . . . . . .
-. . . . . m . . . . .
- . . . ^ . . . 🪨 🪨 .
-  . . . ^ ^ . . . .
-   j . ^ ^ ^ ^ . .
-    . . ^ ^ ^ ^ ^
-     . . ^ ^ ^ ^
+     ⬛⬛⬛⬛🟫🟫
+    ⬛⬛⬛⬛⬛🟫🟫
+   🟫🟫🟫⬛⬛⬛🟫🧷
+  🟫🟫🪨🟫🟫⬛🟫🟫🟫
+ 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫
+🟫🟫🟫🟫🟫👾🟫🟫🟫🟫🟫
+ 🟫🟫🟫⬛🟫🟫🟫🪨🪨🟫
+  🟫🟫🟫⬛⬛🟫🟫🟫🟫
+   🔗🟫⬛⬛⬛⬛🟫🟫
+    🟫🟫⬛⬛⬛⬛⬛
+     🟫🟫⬛⬛⬛⬛
 ```
 
 ## Legend
 
-- `j`: joins another piece to the west
-- `k`: joins another piece to the east
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the west
+- `🧷`: joins another piece to the east
 - `🪨`: boulder

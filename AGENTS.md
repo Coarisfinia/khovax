@@ -113,6 +113,11 @@ the seconds left.
 **The agent decides the region legend's format** (owner's rule, on #389): how a region file marks
 a tile, a place or a monster isn't the owner's call; pick a clear wording and note it in the issue.
 
+**Region files use only same-width emoji** (owner's rule, #711): every tile in a region's grid is
+one emoji as wide as two spaces, so a region reads as a neat picture; a letter, digit or other
+narrow character is refused, and so is any emoji the legend doesn't explain. Pick single-code-point
+emoji that show as emoji by default (no variation selector).
+
 **Track queued work as GitHub issues.** Every idea or request that isn't being built right now gets an
 issue assigned to the owner. Nothing waits only in a chat. **Read the issue and all its comments
 before starting work on it**: the owner decides things in comments, and the description alone can be

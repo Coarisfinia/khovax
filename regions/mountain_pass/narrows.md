@@ -5,21 +5,23 @@ The narrows (#689): the pass at its tightest, three tiles wide, widening where a
 ## Tiles
 
 ```
-     ^ ^ ^ ^ . .
-    ^ ^ ^ ^ ^ . .
-   ^ ^ ^ ^ ^ . . k
-  ^ ^ ^ . . . . . .
- . ^ ^ . F . . . . .
-. . ^ . . . . . ^ . .
- . . . . . . ^ ^ ^ .
-  . . . . . ^ ^ ^ ^
-   j . . ^ ^ ^ ^ ^
-    . . ^ ^ ^ ^ ^
-     . . ^ ^ ^ ^
+     ⬛⬛⬛⬛🟫🟫
+    ⬛⬛⬛⬛⬛🟫🟫
+   ⬛⬛⬛⬛⬛🟫🟫🧷
+  ⬛⬛⬛🟫🟫🟫🟫🟫🟫
+ 🟫⬛⬛🟫🐦🟫🟫🟫🟫🟫
+🟫🟫⬛🟫🟫🟫🟫🟫⬛🟫🟫
+ 🟫🟫🟫🟫🟫🟫⬛⬛⬛🟫
+  🟫🟫🟫🟫🟫⬛⬛⬛⬛
+   🔗🟫🟫⬛⬛⬛⬛⬛
+    🟫🟫⬛⬛⬛⬛⬛
+     🟫🟫⬛⬛⬛⬛
 ```
 
 ## Legend
 
-- `j`: joins another piece to the west
-- `k`: joins another piece to the east
-- `F`: a wild monster, always storm_finch
+- `🟫`: ground
+- `⬛`: rock
+- `🔗`: joins another piece to the west
+- `🧷`: joins another piece to the east
+- `🐦`: a wild monster, always storm_finch

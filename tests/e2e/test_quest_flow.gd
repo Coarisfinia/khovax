@@ -59,10 +59,11 @@ const BETRAYAL: String = (
 const STRANGER_STANDING: String = "\"standing\": {\"faction\": \"strangers\", \"change\": 1}"
 ## The faction whose standing the first domination raises (#532).
 const GUILD: String = "cartographers_guild"
-## A small region with the beach on its east, `b`; players 1 and 2 start west of it.
+## A small region with the beach on its east, `🐚`; players 1 and 2 start west of it.
 const BEACH_REGION: String = (
-	"# Beach\n\n## Tiles\n\n```\n . . b b\n. 1 2 . b\n . . b b\n```\n\n## Legend\n\n"
-	+ "- `b`: the beach; stepping here reaches the place beach\n"
+	"# Beach\n\n## Tiles\n\n```\n 🟫🟫🐚🐚\n🟫🔴🔵🟫🐚\n 🟫🟫🐚🐚\n```\n\n## Legend\n\n"
+	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🔵`: where player 2 starts\n"
+	+ "- `🐚`: the beach; stepping here reaches the place beach\n"
 )
 
 

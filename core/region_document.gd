@@ -6,11 +6,13 @@ extends RefCounted
 ## number of rows and its middle row an odd number of tiles. Nothing refers to a tile by numbers:
 ## connectors, exits and named species are symbols in the grid, which the legend explains.
 ##
-## RegionFormat.parse's symbols need no legend entry (`.` ground, `~` water, `^` rock, `1`-`4`
-## players'
-## starts, `m` a wild monster, `c` a treasure chest), though one may describe them. Any other
-## symbol is ground (a wild monster's spot for a named species) and its legend entry says what it
-## is, as a list item "- `X`: <meaning>", the meaning being one of:
+## Every tile is one wide emoji, as wide as two spaces in a monospace font, so the grid reads as a
+## neat picture (#711): tiles sit side by side, and a space is half a tile, which offsets a row or
+## leaves a gap (two spaces where a tile is missing). The legend explains every symbol, as a list
+## item "- `X`: <meaning>"; a letter, digit or other narrow character is refused. A meaning in
+## BUILT_IN is one of RegionFormat.parse's own (ground, water, rock, a player's start, a wild
+## monster of a rolled species, a treasure chest). Any other symbol is ground (a wild monster's spot
+## for a named species), and its meaning is one of:
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
@@ -51,7 +53,22 @@ const EMITTING: String = ", emitting "
 const NAMED: String = "a wild monster, always "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
-const BUILT_IN: String = ".~^1234mc"
+## The legend meanings that stand for RegionFormat.parse's own symbols, each with its symbol there.
+const BUILT_IN: Dictionary[String, String] = {
+	"ground": ".",
+	"water": "~",
+	"rock": "^",
+	"where player 1 starts": "1",
+	"where player 2 starts": "2",
+	"where player 3 starts": "3",
+	"where player 4 starts": "4",
+	"a wild monster, of a species rolled from the instance blueprint's list": "m",
+	"a treasure chest": "c",
+}
+## Below this code point a character is narrow (letters, digits, punctuation), never a tile (#711).
+const FIRST_WIDE: int = 0x2000
+## The joiner and variation selectors that build an emoji out of several code points: a tile is one.
+const JOINERS: Array[int] = [0x200d, 0xfe0e, 0xfe0f]
 ## What a tile kind's legend meaning says, after the kind, to turn its decoration (#231) or to
 ## override its walkable trait (#201), each clause after a ", ".
 const TURNED: String = "turned "
@@ -63,6 +80,11 @@ const HEIGHT: String = "height "
 ## The region a Markdown region document describes; its `problem` says what's wrong.
 static func parse(text: String) -> Region:
 	var rows: Array[String] = _grid(text)
+	var narrow: String = _narrow(rows)
+	if not narrow.is_empty():
+		return _refused("a tile is one wide emoji, never `%s`" % narrow)
+	for r: int in rows.size():
+		rows[r] = _laid_out(rows[r])
 	var origin: Vector2i = _origin(rows)
 	if origin.y < 0:
 		return _refused("the tiles need an odd number of rows, the middle one odd in tiles")
@@ -92,7 +114,9 @@ static func _compact_row(
 	var compact: String = row
 	for column: int in row.length():
 		var symbol: String = row[column]
-		if symbol != " " and not BUILT_IN.contains(symbol):
+		if BUILT_IN.has(legend.get(symbol, "")):
+			compact[column] = BUILT_IN[legend[symbol]]
+		elif symbol != " ":
 			var tile: Vector2i = Vector2i(Fixed.div_floor(column - origin_column - r, 2), r)
 			var line: String = _line(legend[symbol], tile)
 			lines.append(line)
@@ -106,11 +130,31 @@ static func _unexplained(rows: Array[String], legend: Dictionary[String, String]
 	for row: String in rows:
 		for column: int in row.length():
 			var symbol: String = row[column]
-			var custom: bool = symbol != " " and not BUILT_IN.contains(symbol)
 			var meaning: String = legend.get(symbol, "")
-			if custom and _line(meaning, Vector2i.ZERO).is_empty():
+			var explained: bool = (BUILT_IN.has(meaning)
+					or not _line(meaning, Vector2i.ZERO).is_empty())
+			if symbol != " " and not explained:
 				return symbol
 	return ""
+
+
+## The first narrow character in `rows`, a space aside, or a joiner, or "".
+static func _narrow(rows: Array[String]) -> String:
+	for row: String in rows:
+		for symbol: String in row:
+			var code: int = symbol.unicode_at(0)
+			if symbol != " " and (code < FIRST_WIDE or JOINERS.has(code)):
+				return symbol
+	return ""
+
+
+## Row `row` laid out by doubled column, one character per column: a space is half a tile, and each
+## tile's emoji, two columns wide, takes its first column, with a space for its second.
+static func _laid_out(row: String) -> String:
+	var laid: String = ""
+	for symbol: String in row:
+		laid += symbol if symbol == " " else symbol + " "
+	return laid
 
 
 static func _refused(problem: String) -> Region:
