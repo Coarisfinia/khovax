@@ -34,11 +34,14 @@ const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest side, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = 2.2
 const OPEN_TEXT: String = "Menu"
-## The close button's mark, the multiplication sign every font has, and its words on hover.
-const CLOSE_TEXT: String = "×"
+## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
+const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
+const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
+## How wide their icons are, in font sizes: a little larger than the text, so they read as clearly.
+const ICON_FONTS: float = 1.3
+## The close button's words on hover: it shows only its icon.
 const CLOSE_TIP: String = "Close the menu (Escape, or B on a controller)"
 const CLOSE_NAME: String = "Close"
-const CLOSE_SCALE: float = 1.3
 
 ## The driver, which holds its ticks while the menu pauses the game.
 @export var driver: GameDriver
@@ -75,7 +78,7 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
-	_open_button = button(OPEN_TEXT, toggle)
+	_open_button = _with_icon(button(OPEN_TEXT, toggle), OPEN_ICON)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	add_child(_open_button)
 	_build_sheet()
@@ -123,6 +126,12 @@ static func button(text: String, pressed: Callable) -> Button:
 	var made: Button = Button.new()
 	made.text = text
 	var _connected: int = made.pressed.connect(pressed)
+	return made
+
+
+## Gives `made` the icon `shown`, beside its text, if any; lay_out sizes it with the font.
+static func _with_icon(made: Button, shown: Texture2D) -> Button:
+	made.icon = shown
 	return made
 
 
@@ -179,8 +188,8 @@ func lay_out(screen: Vector2) -> void:
 		_font_size = font
 		theme.default_font_size = font
 		_size_buttons(self)
-		# The close mark is a small glyph, so it's drawn larger to read as clearly as a word.
-		close_button().add_theme_font_size_override("font_size", roundi(font * CLOSE_SCALE))
+		for iconed: Button in [_open_button, close_button()]:
+			iconed.add_theme_constant_override("icon_max_width", roundi(font * ICON_FONTS))
 		character.fit(font)
 	# The close button stands beside the tabs, so they have its width less.
 	var room: float = screen.x - 4.0 * MARGIN - font * BUTTON_FONTS
@@ -247,7 +256,7 @@ func _build_sheet() -> void:
 	tabs.add_child(settings)
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
-	var close: Button = button(CLOSE_TEXT, toggle)
+	var close: Button = _with_icon(button("", toggle), CLOSE_ICON)
 	close.name = CLOSE_NAME
 	close.tooltip_text = CLOSE_TIP
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
