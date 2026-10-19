@@ -2,8 +2,8 @@ extends RefCounted
 ## Content flow (#72): the game's content data loads, and holds together where a schema can't
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; every species has a name for the
-## player (#351); and broken entries are refused. Loot tables (#90) load, roll the same for the
-## same stream, and a blank rolls on the instance's table.
+## player (#351), one invented word (#717); and broken entries are refused. Loot tables (#90)
+## load, roll the same for the same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
@@ -16,7 +16,7 @@ extends RefCounted
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
 const KIT: String = (
-	", \"name\": \"X\", \"strike_type\": \"might\", \"speed\": 1, \"archetype\": \"pusher\","
+	", \"name\": \"Xo\", \"strike_type\": \"might\", \"speed\": 1, \"archetype\": \"pusher\","
 	+ " \"special\": \"a_special\", \"player_passive\": \"a_passive\","
 	+ " \"self_passive\": \"its_passive\""
 )
@@ -37,7 +37,7 @@ func run(_tree: SceneTree) -> String:
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
 	if (not content.species.has("moss_toad")
-			or content.species["moss_toad"].name != "Moss Toad"
+			or content.species["moss_toad"].name != "Ombulumo"
 			or content.species["storm_finch"].types.size() != 2
 			or content.species["moss_toad"].strike_type != "growth"):
 		return "the placeholder species didn't load as written"
@@ -98,7 +98,7 @@ func _check_path_marks(abilities: Dictionary[String, Ability]) -> String:
 			or abilities["storm_finch_gale_dive"].path != PathMark.SUPREMACY
 			or abilities["moss_toad_damp_hide"].path != PathMark.NONE):
 		return "the path marks didn't read as written"
-	if quests["three_moss_toads"].shown_name() != "Dominate three moss toads (Supremacy)":
+	if quests["three_moss_toads"].shown_name() != "Dominate three Ombulumo (Supremacy)":
 		return "a quest's name doesn't show its path mark in words"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"path\": %s,"
 	quest += " \"steps\": [{\"condition\": \"opened\"}]}"
@@ -337,7 +337,7 @@ func _check_quests() -> String:
 			or any_domination.count != 1):
 		return "the first domination isn't one domination of any species"
 	if (toad_step.species != "moss_toad"
-			or toad_step.species_name != "Moss Toad"
+			or toad_step.species_name != "Ombulumo"
 			or toad_step.count != 3):
 		return "the toads' quest isn't three moss toads"
 	if not _check_named_steps(content).is_empty():
@@ -541,9 +541,14 @@ func _check_refused() -> String:
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"a_special\"", "7") + "}": "it names a special",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
-		+ KIT.replace("\"name\": \"X\", ", "") + "}": "it needs a name",
+		+ KIT.replace("\"name\": \"Xo\", ", "") + "}": "it needs a name",
 		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
-		+ KIT.replace("\"X\"", "\" \"") + "}": "it needs a name",
+		+ KIT.replace("\"Xo\"", "\" \"") + "}": "it needs a name",
+		# A description isn't a name (#717): two words, or small letters only.
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("\"Xo\"", "\"Moss Toad\"") + "}": "it needs a name",
+		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("\"Xo\"", "\"xo\"") + "}": "it needs a name",
 	}
 	for text: String in cases:
 		var problem: String = _add_to_empty(text)

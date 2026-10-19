@@ -31,9 +31,9 @@
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"name": {
-			"description": "What the player reads (#351); code and saves use the id.",
+			"description": "What the player reads (#351); code and saves use the id. One invented word, never a description (#717).",
 			"type": "string",
-			"pattern": "\\S"
+			"pattern": "^[A-Z][a-z]+$"
 		},
 		"types": {
 			"description": "One or two types from the type chart (#68), never two of the same family.",

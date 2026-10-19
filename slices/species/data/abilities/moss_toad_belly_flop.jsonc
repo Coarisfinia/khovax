@@ -3,7 +3,7 @@
 	"id": "moss_toad_belly_flop",
 	"kind": "special",
 	"name": "Belly Flop",
-	"description": "The moss toad leaps and lands on its target with all its soggy weight.",
+	"description": "The Ombulumo leaps and lands on its target with all its soggy weight.",
 	"power": 4000,
 	"cooldown_seconds": 12,
 	"strike_type": "might" // all weight, none of its moss (#626: a strike's type is its own)

@@ -511,8 +511,8 @@ func _roster_shown(main: Node, roster: RosterHud) -> String:
 			roster.rect_of(1),
 			corner,
 		]
-	if RosterHud.initials_of("Storm Finch") != "SF":
-		return "the storm finch's square doesn't show its initials"
+	if RosterHud.initials_of("Tikazzir") != "T":
+		return "the Tikazzir's square doesn't show its initial"
 	var quests: QuestListView = main.get_node("Hud/QuestList") as QuestListView
 	quests._lay_out(1.0)
 	# A position is kept in single precision.
