@@ -13,7 +13,7 @@ const SPACING: float = 0.34
 ## Just above the tile's top, so the dots never flicker into it.
 const LIFT: float = HexGrid.TILE_HEIGHT + DOT_RADIUS
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The slot whose mark each tile shows, by tile: what the dots are drawn from, kept here because
 ## the headless renderer can't read a MultiMesh back.

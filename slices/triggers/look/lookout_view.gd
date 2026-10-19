@@ -9,7 +9,7 @@ const POST_HEIGHT: float = 1.4
 const POST_COLOR: Color = Color(0.55, 0.38, 0.22)
 const PENNANT_COLOR: Color = Color(0.85, 0.3, 0.25)
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The post shown on each lookout's tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}

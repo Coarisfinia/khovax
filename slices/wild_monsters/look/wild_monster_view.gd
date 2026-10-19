@@ -28,7 +28,7 @@ const LYING: Vector3 = Vector3(0.0, 0.0, PI / 2.0)
 const LUNGE_SHARE: float = 0.35
 const LUNGE_SECONDS: float = 0.3
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The figure shown for each wild monster, by entity id: a piece on the tile holding the model.
 var figures: Dictionary[int, HexPiece] = {}

@@ -8,7 +8,7 @@ const SECONDS: float = 1.2
 const RISE: float = 0.6
 const FAINTED_TEXT: String = "fainted"
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The damage still rising, newest last. Kept here so tests can read it.
 var strikes: Array[Label3D] = []

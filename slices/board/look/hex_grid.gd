@@ -27,7 +27,7 @@ const CHANGE_SECONDS: float = 0.8
 		if is_node_ready():
 			_build(_shown_region())
 ## The grid shows this driver's region; without one (e.g. in the editor), a disc of `radius` rings.
-@export var driver: GameDriver
+@export var driver: Session
 
 ## A region to show instead of the driver's, e.g. a neighbouring instance's (NeighbourView, #188);
 ## set before the grid enters the tree.
@@ -156,7 +156,7 @@ func tile_multimesh() -> MultiMesh:
 
 
 ## The fixed region, the running game's region, or the editor's preview disc. In the editor (and a
-## headless import) the driver isn't running: GameDriver isn't a tool script, so it has no state to
+## headless import) the driver isn't running: Session isn't a tool script, so it has no state to
 ## read there.
 func _shown_region() -> Region:
 	if fixed_region != null:

@@ -110,7 +110,7 @@ func place_in(screen: Vector2) -> void:
 		alpha = OVER_GAME_ALPHA
 	elif shown != Place.OPAQUE:
 		alpha = CORNER_ALPHA
-	view.backdrop = Color(Boot.FOG, alpha)
+	view.backdrop = Color(FogView.FOG, alpha)
 	view.bordered = shown != Place.OVER_GAME and shown != Place.OPAQUE
 	if not view.bordered:
 		view.position = Vector2.ZERO

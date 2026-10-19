@@ -249,6 +249,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   also keeps the rules pure and the tests and tools apart (owner, #526): `core/` and every
   `rules/` never reach a `look/`, `ui/`, `input/` or `game/` class or path, nothing
   outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
+  **`game/` wires the game together and nothing reaches back into it** (owner, #514): it may name
+  any slice, but no script outside `game/`, `tests/` and `tools/` names a `game/` class or path,
+  and no scene or resource outside them names a `game/` file. The slices see the driver only as a
+  `Session` (`slices/board/look/`), which `GameDriver` extends.
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
@@ -325,12 +329,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The presentation** (each slice's `look/` and `ui/`; the hex board everything stands on in
   `slices/board/look/`, the menu in `slices/menu/ui/`, #507): scenes that read the state and draw
   it; they never write it. `HexLayout` is the only tile-to-world conversion. One-shot effects play
-  from the tick's events (the driver's `ticked` signal, #34); lasting looks come from the state.
+  from the tick's events (the session's `ticked` signal, #34); lasting looks come from the state.
 - **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` in lockstep: real time
-  decides when ticks happen, never what they do. It records every session as a `Replay`, and its
-  `EventBus` subscribers never change the world. It also holds the boot, test mode and the
-  `WorldKeeper`; the camera (`slices/camera/look/`), the music (`slices/music/look/`) and this
-  player's `ProfileHolder` (`slices/profile/meta/`) live in slices (#514).
+  decides when ticks happen, never what they do. It records every session as a `Replay`, and the
+  `EventBus`'s subscribers never change the world. It also holds the boot, the launch options and
+  test mode; the slices hold everything it wires (#514), the `EventBus` and the `WorldKeeper`
+  included (`slices/board/`).
 - **The controls** (`slices/controls/input/`, #514): devices to commands. Every device presses the
   same InputMap actions (`LocalInput`), and `HexInput` is the only place floats become a hex
   direction.

@@ -7,6 +7,10 @@
 # - The rules stay pure: no script under core/ or a slice's rules/ names a class or a path of any
 #   look/, ui/, input/ or game/ folder, so the simulation never leans on what draws or
 #   drives it.
+# - game/ is where the game is wired together, so it may reach any slice, and nothing but the tests
+#   and the tools reaches back into it (owner, #514): no script elsewhere names a game/ class or a
+#   game/ path, and no scene or resource outside game/ names a game/ file. The slices see the
+#   driver only as a Session.
 # - Nothing outside tests/ reaches the tests, and nothing outside tools/ and tests/ reaches the
 #   tools: no class of theirs, no tests/ or tools/ path.
 # The folder paths are refused where they start a string or follow a /, with or without res://, so
@@ -49,6 +53,7 @@ refuse() {
 slice_classes=$(classes_in 'slices/*.gd')
 presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' \
   ':(glob)**/input/**/*.gd' ':(glob)**/game/**/*.gd')
+game_classes=$(classes_in 'game/*.gd')
 test_classes=$(classes_in 'tests/*.gd')
 tool_classes=$(classes_in 'tools/*.gd')
 # Where a folder's path starts: at the start of a string, or after a /.
@@ -65,6 +70,12 @@ while IFS= read -r -d '' file; do
     core/* | slices/*/rules/*)
       refuse "$file" "$code" "$presentation_classes" "${at}(look|ui|input|game)/" \
         "the rules never depend on what draws or drives them"
+      ;;
+  esac
+  case $file in
+    game/* | tests/* | tools/*) ;;
+    *)
+      refuse "$file" "$code" "$game_classes" "${at}game/" "nothing outside game/ reaches game/"
       ;;
   esac
   case $file in
@@ -94,6 +105,11 @@ done < <(git ls-files -z '*.gd')
 
 if git grep -nE '\bpath="[^"]*"' -- '*.tscn' '*.tres' | grep -vE '\bpath="[a-z]+://'; then
   echo "::error::scenes and resources name files absolute from res://: see the lines above"
+  failed=1
+fi
+
+if git grep -n 'res://game/' -- '*.tscn' '*.tres' ':!game/' ':!tests/' ':!tools/'; then
+  echo "::error::nothing outside game/ reaches game/: see the lines above"
   failed=1
 fi
 

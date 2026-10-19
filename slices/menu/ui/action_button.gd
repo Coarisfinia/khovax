@@ -58,7 +58,7 @@ func _draw() -> void:
 	var area: Rect2 = rect()
 	var faded: float = 1.0 if usable() else UNUSABLE_ALPHA
 	var alpha: float = PRESSED_ALPHA if button.is_pressed() else BACKDROP_ALPHA
-	draw_rect(area, Color(Boot.FOG, alpha * faded))
+	draw_rect(area, Color(FogView.FOG, alpha * faded))
 	var ink: Color = Color(Toon.INK, faded)
 	draw_rect(area, ink, false, INK_PIXELS)
 	_draw_icon(area, ink)

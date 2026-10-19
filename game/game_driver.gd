@@ -1,5 +1,5 @@
 class_name GameDriver
-extends Node
+extends Session
 ## Runs the simulation at its fixed tick rate, in lockstep (#38). Real time only decides when ticks
 ## happen, never what they do: before each tick it polls its command sources (the local player,
 ## later network peers or a replay), and runs the tick once every player's command for it is known.
@@ -7,13 +7,7 @@ extends Node
 ## views draw. A session plays one world (#148, #158): every instance a player is in steps, and the
 ## views follow this machine's player into whichever instance they walk. A session is the span from
 ## loading the game to quitting it, which replays and lockstep co-op work in; it's technical and
-## never shown to the player.
-
-## After every tick, with the tick's number and the events the features and the world raised in it,
-## in order: how views learn about one-shot moments (a domination, a ring breaking) to play an
-## effect. Every tick is announced exactly once, however many ticks a frame runs. `events` is the
-## view's own copy, and the events themselves must only be read.
-signal ticked(tick: int, events: Array[RefCounted])
+## never shown to the player. The slices see it as a Session, whose ticks it announces.
 
 ## Ticks one frame may run; more real time than this is dropped.
 const MAX_TICKS_PER_FRAME: int = 5
@@ -32,24 +26,14 @@ static var start_instance: String = ""
 
 ## The instance the session starts in, by name from InstanceBlueprints.
 @export var instance: String = InstanceBlueprints.BASIC
-@export var input: LocalInput
 ## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
 ## build a driver alone.
 @export var keeper: WorldKeeper
-## Holds this machine's player's profile, whose first carried monster is their companion (#338);
-## none in tests that build a driver alone, whose players then bring none.
-@export var holder: ProfileHolder
 ## Players in the session, in slots 0 and up. Each slot needs a command source, or ticks wait.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
 @export_range(0, 20) var input_delay: int = 0
 
-## The world: every instance it has loaded.
-var world: World
-## The instance this machine's player is in now, which the views draw; null without a world.
-var state: GameState:
-	get:
-		return _local_instance()
 ## Where every slot's commands come from; the local player's by default. Tests replace them.
 var sources: Array[CommandSource] = []
 var schedule: CommandSchedule
@@ -192,15 +176,8 @@ func _step() -> bool:
 		events.append_array(state.events)
 	# The world's own: who came into another instance (#370).
 	events.append_array(world.events)
-	ticked.emit(world.tick, events)
+	announce(world.tick, events)
 	return true
-
-
-## The instance this machine's player is in, or the starting one before they're placed.
-func _local_instance() -> GameState:
-	if world == null:
-		return null
-	return world.instances.get(local_instance_name())
 
 
 ## The blueprint name of the instance this machine's player is in, or of the starting one before

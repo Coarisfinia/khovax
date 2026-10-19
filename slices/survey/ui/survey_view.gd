@@ -41,7 +41,7 @@ const EXIT_BACK: float = 0.15
 const EXIT_MIN_PIXELS: float = 18.0
 const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 
-@export var driver: GameDriver
+@export var driver: Session
 ## Where the explored ground is kept with the world.
 @export var keeper: WorldKeeper
 ## Whose quests are marked: this machine's player's profile.
@@ -55,7 +55,7 @@ const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 ## whole screen.
 var across: float = 20.0
 ## What is drawn behind the tiles: the fog's color, see-through over the game or not.
-var backdrop: Color = Boot.FOG
+var backdrop: Color = FogView.FOG
 ## Whether an ink border is drawn round it, in a corner.
 var bordered: bool = false
 ## Each tile shown, by tile: its kind's blueprint, for its color and symbol. Kept here so tests can

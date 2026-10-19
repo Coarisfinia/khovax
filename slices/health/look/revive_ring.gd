@@ -10,7 +10,7 @@ const SEGMENTS: int = 12
 const RADIUS: float = 0.8
 const MARK: Vector3 = Vector3(0.12, 0.06, 0.24)
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The ring shown for each knocked-down player, by entity id: a piece on their tile holding the
 ## marks.

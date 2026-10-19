@@ -19,7 +19,7 @@ const AUTO_TEXT: String = "Auto: this world's color"
 const CHOSEN_TEXT: String = "Your own color"
 
 ## The driver: whose world gives the default and which slot is this machine's player's.
-var driver: GameDriver
+var driver: Session
 ## Whose profile keeps the color.
 var holder: ProfileHolder
 ## The player's dominated monsters.

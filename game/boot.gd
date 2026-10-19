@@ -18,8 +18,8 @@ signal game_started(game: Node)
 
 ## The game's main scene, which the boot scene loads.
 const GAME: String = "res://game/main.tscn"
-## The fog's color: the clouds' light shade (FogCloud).
-const FOG: Color = Color(0.86, 0.88, 0.93)
+## The fog's color (FogView.FOG).
+const FOG: Color = FogView.FOG
 ## What the fog's caption says while the game loads.
 const LOADING: String = "Loading the world…"
 ## The caption's color and size: the web page's captions' (the web presets' head_include).
@@ -31,10 +31,6 @@ const SETTLE_FRAMES: int = 10
 const LIFT_SECONDS: float = 0.4
 ## The export feature only the test builds have (TestMode).
 const TEST_BUILD: String = "e2e_test"
-
-## Whether the boot fog still hides the game: the game's own fog waits to draw back until it lifts
-## (FogView), so the world shows fully fogged first, then opens around the player (owner, #250).
-static var covering: bool = false
 
 ## The game, once it has loaded; null until then.
 var game: Node
@@ -56,7 +52,7 @@ func _ready() -> void:
 	cover.mouse_filter = Control.MOUSE_FILTER_STOP
 	layer.add_child(cover)
 	cover.add_child(_caption())
-	covering = true
+	FogView.boot_covering = true
 	set_process(false)
 	# Two frames' starts with a frame drawn in between, so the fog is on screen; the headless
 	# renderer never signals a drawn frame, so the frames' starts are what's awaited.
@@ -79,7 +75,7 @@ func _process(_delta: float) -> void:
 
 ## However the boot scene goes, its fog no longer hides the game.
 func _exit_tree() -> void:
-	covering = false
+	FogView.boot_covering = false
 
 
 ## Starts the loaded game under the fog: it becomes the current scene.
@@ -108,7 +104,7 @@ func _caption() -> Label:
 
 ## Lifts the fog calmly, with its caption, then leaves.
 func _lift() -> void:
-	covering = false
+	FogView.boot_covering = false
 	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tween: Tween = create_tween()
 	var _clear: PropertyTweener = tween.tween_property(cover, "modulate:a", 0.0, LIFT_SECONDS)

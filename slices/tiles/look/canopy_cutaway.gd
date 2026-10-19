@@ -22,7 +22,7 @@ const EASE_PER_SECOND: float = 2.0
 ## How much of a decoration's height stays once it's cut away.
 const KEPT: float = 0.5
 
-@export var driver: GameDriver
+@export var driver: Session
 @export var decorations: TileDecorations
 
 ## How far each decoration is cut away as drawn now, by tile: 0 whole, 1 cut down to KEPT. Kept

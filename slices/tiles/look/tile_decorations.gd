@@ -16,7 +16,7 @@ const MODEL_SCALE: float = 0.8
 ## How far from its tile's middle a decoration stands at most, in world units.
 const OFF_CENTER: float = 0.15
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
