@@ -34,7 +34,8 @@ var carried: Array[int] = []
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
-## Each quest started and not finished, by id: the step it's on and the count within it.
+## Each quest started and not finished, by id: the step it's on, the count within it and the steps
+## done.
 var quest_progress: Dictionary[String, QuestProgress] = {}
 ## The ids of the quests finished, in the order finished.
 var quests_done: Array[String] = []
@@ -131,9 +132,11 @@ func _dominate(species: String) -> void:
 ## Counts one fact (a `condition`, with the species of a domination, the place reached, or the
 ## piece or instance entered) toward every quest in the book whose current step asks for it, in id
 ## order, so quests finished together are listed in the same order on every machine. A step that
-## reaches its count hands over to the next one, and the last step finishes the quest. Saved
-## progress that no longer fits the quest (its data changed since) settles at the next fact of any
-## kind: a step already at its count is complete, and a step past the last one finishes the quest.
+## reaches its count hands over to the next one (on a step with choices, #573, the one the choice
+## the fact took leads to), and a step that ends the chain, or the last one, finishes the quest.
+## Saved progress that no longer fits the quest (its data changed since) settles at the next fact
+## of any kind: a step already at its count is complete, and a step past the last one finishes the
+## quest.
 ## A side quest the fact starts (#473) is started first, so the same fact can count toward its first
 ## step; a side quest not started yet counts nothing.
 func _advance_quests(condition: String, what: String) -> void:
@@ -154,8 +157,7 @@ func _advance_quests(condition: String, what: String) -> void:
 			continue
 		progress.count += 1 if open else 0
 		if step != null and progress.count >= step.count:
-			progress.step += 1
-			progress.count = 0
+			progress.move_to(quest.next_index(progress.step, condition, what))
 		quest_progress[id] = progress
 		if progress.step >= quest.steps.size():
 			_finish(quest)

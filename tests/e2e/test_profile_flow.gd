@@ -3,9 +3,9 @@ extends RefCounted
 ## nothing dominated; every gain adds its dominations, with ids that are never reused, and its
 ## materials, and is on disk at once; the profile survives saving and loading; a save it can't trust
 ## is refused; an older save is migrated, oldest step first, into the current format with no quest
-## progress (#184); the first three monsters dominated are carried (#53); the standing with each
-## faction stays on its scale and is saved (#483); and a damaged save falls back to the newest
-## intact generation before it (#179).
+## progress (#184), and an open quest's earlier steps done (#573); the first three monsters
+## dominated are carried (#53); the standing with each faction stays on its scale and is saved
+## (#483); and a damaged save falls back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 ## The keys a newer save format added (#184, #53, #391, #399, #483), which older saves lack.
@@ -17,6 +17,10 @@ const ADDED_KEYS: Array[String] = [
 	"character_name",
 	"standings",
 ]
+## A save's quest progress for quest a with the steps done (#573) left open.
+const PROGRESS_DONE: String = (
+	"\"quest_progress\": {\"a\": {\"step\": 0, \"count\": 0, \"done\": %s}}"
+)
 
 
 func run(_tree: SceneTree) -> String:
@@ -345,6 +349,38 @@ func _check_migrated_quest() -> String:
 	var expected: Array[String] = ["first_domination"]
 	if not done.problem.is_empty() or done.quests_done != expected:
 		return "a format 4 save's finished first quest wasn't renamed: %s" % done.problem
+	return _check_migrated_done()
+
+
+## A format 8 save's quest progress, from before quests had choices (#573), has every step before
+## the one it's on done, in order, and keeps them through saving. A current save's progress without
+## its steps done, or with steps done that aren't a list of whole numbers from 0, is refused.
+func _check_migrated_done() -> String:
+	var text: String = ProfileSave.to_text(Profile.new())
+	var progress: String = "\"quest_progress\": {}"
+	var cases: Dictionary[String, String] = {
+		text.replace(progress, PROGRESS_DONE.replace(", \"done\": %s", "")): "quest a's",
+		text.replace(progress, PROGRESS_DONE % "7"): "quest a's",
+		text.replace(progress, PROGRESS_DONE % "[-1]"): "quest a's",
+		text.replace(progress, PROGRESS_DONE % "[0.5]"): "quest a's",
+	}
+	var refused: String = _unrefused(cases)
+	if not refused.is_empty():
+		return refused
+	var save: Variant = JSON.parse_string(ProfileSave.to_text(Profile.new()))
+	var data: Dictionary = save
+	data["format"] = 8
+	data["quest_progress"] = {
+		"toads": { "step": 2, "count": 1 },
+		"fresh": { "step": 0, "count": 0 },
+	}
+	var loaded: Profile = ProfileSave.parse(JSON.stringify(data))
+	var two: Array[int] = [0, 1]
+	var again: Profile = ProfileSave.parse(ProfileSave.to_text(loaded))
+	if (not loaded.problem.is_empty() or loaded.quest_progress["toads"].done != two
+			or not loaded.quest_progress["fresh"].done.is_empty()
+			or again.quest_progress["toads"].done != two):
+		return "a format 8 save's quest progress didn't get its steps done: %s" % loaded.problem
 	return ""
 
 

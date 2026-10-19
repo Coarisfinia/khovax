@@ -1,9 +1,10 @@
 class_name QuestsTab
 extends ScrollContainer
 ## The menu's Quests tab (#388): the same open quests as the list at the side of the screen (#340,
-## Profile.open_steps), each with its name and path mark (#471) and every one of its steps, worded
-## as the list words them (QuestListView.step_line): the steps done, the one it's on with its count,
-## and the ones still to come. Each step says which it is in words, never by color alone (#68). It
+## Profile.open_steps), each with its name and path mark (#471) and its steps on the player's way,
+## worded as the list words them (QuestListView.step_line): the steps done, the one it's on with its
+## count, and the ones still to come up to its next choice (#573). Each step says which it is in
+## words, never by color alone (#68). It
 ## only reads the profile, keeps up with it while shown, and scrolls when the screen is too short
 ## for every quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only
 ## what it does.
@@ -54,23 +55,33 @@ func fit(width: float) -> void:
 	_rows.custom_minimum_size.x = width
 
 
-## Each step of `profile`'s open quest `id`, worded: done, the one it's on with its count, or
-## later.
+## The steps of `profile`'s open quest `id` on the player's way, worded: the ones done, in the order
+## done, the one it's on with its count, and the ones sure to come later, up to its next choice
+## (#573), whose way on isn't known yet.
 static func quest_lines(profile: Profile, id: String) -> Array[String]:
 	var progress: QuestProgress = profile.quest_progress.get(id, QuestProgress.new())
-	var steps: Array[QuestStep] = profile.quest_book[id].steps
+	var quest: QuestDefinition = profile.quest_book[id]
+	var lines: Array[String] = _done_lines(quest, progress)
+	var current: QuestStep = quest.step_at(progress.step)
+	if current != null:
+		lines.append(CURRENT_STEP + QuestListView.step_line(current, progress.count))
+	for index: int in quest.steps_after(progress.step):
+		lines.append(LATER_STEP + QuestListView.step_line(quest.steps[index], 0))
+	return lines
+
+
+## The steps of `quest` that `progress` has done, worded in the order done: a step with choices as
+## the choice taken, the one leading to the step after it on the way.
+static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Array[String]:
+	var way: Array[int] = progress.done.duplicate()
+	way.append(progress.step)
 	var lines: Array[String] = []
-	for index: int in steps.size():
-		var step: QuestStep = steps[index]
-		var prefix: String = LATER_STEP
-		var count: int = 0
-		if index < progress.step:
-			prefix = DONE_STEP
-			count = step.count
-		elif index == progress.step:
-			prefix = CURRENT_STEP
-			count = progress.count
-		lines.append(prefix + QuestListView.step_line(step, count))
+	for at: int in progress.done.size():
+		var step: QuestStep = quest.step_at(way[at])
+		if step != null:
+			var taken: QuestStep = quest.choice_to(way[at], way[at + 1])
+			var shown_step: QuestStep = taken if taken != null else step
+			lines.append(DONE_STEP + QuestListView.step_line(shown_step, shown_step.count))
 	return lines
 
 

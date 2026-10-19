@@ -21,7 +21,9 @@ extends RefCounted
 ## player enters the area it starts in, and is listed from then on (#473). Finishing a quest moves
 ## the standing with the faction it names, held on the scale (#532): the first domination raises
 ## the Cartographer's Guild by one, saved with the profile, and a quest naming a faction that
-## doesn't exist is refused.
+## doesn't exist is refused. A quest chain with a choice (#573) marks every way on, goes on by the
+## one this player takes, keeps the way taken through saving and loading, and ends where that way
+## ends, moving its standing there too.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -74,6 +76,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_pieces()
 	if result.is_empty():
 		result = _check_side_quest()
+	if result.is_empty():
+		result = _check_branching()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -547,6 +551,95 @@ func _check_side_quest() -> String:
 	applied = at_once.apply(_entering("pond"))
 	if not applied.is_empty() or at_once.quests_done != ["in_one"]:
 		return "entering the pond didn't both start and finish a side quest asking for it"
+	return ""
+
+
+## The glade's fork (#573): entering the glade starts it on its choice, listed as both ways on and
+## marked over the pond and the thicket, each its nearest tile. Entering the thicket takes that way:
+## the tab shows the way taken, done, then a domination, which ends the chain; the pond's chest
+## never counts toward it. The pond's way, kept through saving and loading, ends at a chest.
+func _check_branching() -> String:
+	var book: Dictionary[String, QuestDefinition] = QuestContent.load_quests().quests
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var thicket: Profile = Profile.new()
+	thicket.quest_book = book
+	var entered: Gain = Gain.new()
+	entered.instances_entered = ["glade"]
+	var applied: String = thicket.apply(entered)
+	var choosing: Array[String] = ["Now: Enter the pond or enter the thicket"]
+	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "glade_fork") != choosing:
+		return "entering the glade didn't open its fork on its choice: %s" % [
+			QuestsTab.quest_lines(thicket, "glade_fork"),
+		]
+	var result: String = _check_fork_marked(state, thicket)
+	applied = thicket.apply(_entering("thicket"))
+	var way: Array[String] = ["Done: Enter the thicket", "Now: Dominate a monster"]
+	if result.is_empty() and QuestsTab.quest_lines(thicket, "glade_fork") != way:
+		result = "the thicket's way isn't shown taken: %s" % [
+			QuestsTab.quest_lines(thicket, "glade_fork"),
+		]
+	applied += thicket.apply(_gain([], 1))
+	if result.is_empty() and thicket.quests_done.has("glade_fork"):
+		result = "the pond's chest counted on the thicket's way"
+	applied += thicket.apply(_gain(["moss_toad"], 0))
+	if result.is_empty() and (not applied.is_empty() or not thicket.quests_done.has("glade_fork")):
+		result = "a domination didn't end the thicket's way: " + applied
+	return result if not result.is_empty() else _check_pond_way(book, entered)
+
+
+## The glade's fork, on its choice, is marked over the pond's and the thicket's nearest tiles, one
+## marker each, and not as a whole.
+func _check_fork_marked(state: GameState, profile: Profile) -> String:
+	var from: Vector2i = state.player(0).tile
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	var pieces: Array[String] = ["pond", "thicket"]
+	for index: int in pieces.size():
+		var tiles: Array[Vector2i] = []
+		for tile: Vector2i in state.region.piece_of:
+			if state.region.piece_of[tile] == pieces[index]:
+				tiles.append(tile)
+		var target: Vector2i = targets.get("glade_fork/%d" % index, -Vector2i.ONE)
+		if not tiles.has(target) or Hex.distance(target, from) != _nearest(tiles, from):
+			return "the glade's fork isn't marked over the nearest tile of the %s" % pieces[index]
+	if targets.has("glade_fork"):
+		return "the glade's fork is marked as a whole besides its choices"
+	return ""
+
+
+## Entering the pond takes the pond's way, kept through saving and loading, and a chest ends it.
+func _check_pond_way(book: Dictionary[String, QuestDefinition], entered: Gain) -> String:
+	var pond: Profile = Profile.new()
+	pond.quest_book = book
+	var applied: String = pond.apply(entered) + pond.apply(_entering("pond"))
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(pond))
+	loaded.quest_book = book
+	var way: Array[String] = ["Done: Enter the pond", "Now: Open a chest"]
+	if not applied.is_empty() or QuestsTab.quest_lines(loaded, "glade_fork") != way:
+		return "the pond's way wasn't kept through loading: %s" % [
+			QuestsTab.quest_lines(loaded, "glade_fork"),
+		]
+	applied = loaded.apply(_gain([], 1))
+	if not applied.is_empty() or not loaded.quests_done.has("glade_fork"):
+		return "a chest didn't end the pond's way: " + applied
+	return _check_branch_standing()
+
+
+## A chain that ends on the way chosen, past the other way's steps, moves the standing it names
+## (#532) like any finished quest.
+func _check_branch_standing() -> String:
+	var text: String = "{\"id\": \"fork\", \"name\": \"N\", %s, \"steps\": [{\"choices\": ["
+	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\"}, "
+	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", \"next\": \"lost\"}]}, "
+	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\"}, "
+	text += "{\"id\": \"lost\", \"condition\": \"dominated\"}]}"
+	var profile: Profile = Profile.new()
+	var standing: String = STRANGER_STANDING.replace("strangers", GUILD)
+	profile.quest_book["fork"] = QuestDefinition.parse("fork", text % standing, {})
+	var applied: String = profile.quest_book["fork"].problem
+	applied += profile.apply(_entering("pond")) + profile.apply(_gain([], 1))
+	if (not applied.is_empty() or profile.quests_done != ["fork"]
+			or profile.standings.of(GUILD) != 1):
+		return "a chain ending on its chosen way didn't move its standing: " + applied
 	return ""
 
 

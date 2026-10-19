@@ -6,10 +6,10 @@ extends RefCounted
 ## same stream, and a blank rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
-## species that exist, side quests name the area they start in (#473), and broken ones are
-## refused; a quest can move the standing with a faction (#532). Factions (#483) load with their own
-## names for the ranks of a standing, and broken ones
-## are refused. Quests and abilities carry path marks (#471).
+## species that exist, side quests name the area they start in (#473), choices lead to steps of
+## their quest and ends close its own chain (#573), and broken ones are refused; a quest can move
+## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
+## standing, and broken ones are refused. Quests and abilities carry path marks (#471).
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
 const KIT: String = (
@@ -22,6 +22,8 @@ const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
 const ENTER: String = "{\"condition\": \"entered\", \"piece\": \"%s\"}"
 ## A quest step to enter an instance, its blueprint left open (#370).
 const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\"}"
+## A quest step with the id b that ends the chain x (#573).
+const STEP_B: String = "{\"id\": \"b\", \"condition\": \"opened\", \"ends\": \"x\"}"
 
 
 func run(_tree: SceneTree) -> String:
@@ -224,6 +226,44 @@ func _check_quest_standings(content: QuestData) -> String:
 	var lowered: QuestDefinition = QuestDefinition.parse("x", lowering, {})
 	if not lowered.problem.is_empty() or lowered.standing.change != -QuestStanding.MAX_CHANGE:
 		return "a quest lowering a standing by the whole scale didn't read: " + lowered.problem
+	var problem: String = _unrefused(cases, content)
+	return problem if not problem.is_empty() else _check_branches(content)
+
+
+## Why branching quests (#573) don't read, or "": the glade's fork offers the pond and the thicket,
+## each leading to its own step, and both end its chain. Choices that aren't two or more, aren't a
+## place or an area, have a count, or lead nowhere are refused; so are a step with choices that has
+## a condition or an end, two steps with one id, and an end naming another chain.
+func _check_branches(content: QuestData) -> String:
+	var fork: QuestDefinition = content.quests.get("glade_fork")
+	if (fork == null or fork.steps[0].choices.size() != 2
+			or fork.steps[0].choices[0].piece != "pond"
+			or fork.next_index(0, "entered", "thicket") != 2
+			or fork.steps[1].ends != "glade_fork" or fork.steps[2].ends != "glade_fork"):
+		return "the glade's fork didn't read as a choice between two ends"
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"
+	var choices: String = "{\"choices\": [%s]}"
+	var to_b: String = "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"%s\"}"
+	var two: String = to_b % "b" + ", " + to_b % "b"
+	var cases: Dictionary[String, String] = {
+		quest % (choices % (to_b % "b")): "step 0: its choices are a list of two",
+		quest % (choices % (two + ", 7")): "step 0: choice 2: it isn't",
+		quest % (choices % (to_b % "b" + ", {\"condition\": \"opened\", \"next\": \"b\"}")): (
+			"step 0: choice 1: its condition"
+		),
+		quest % (choices % (two.replace("}", ", \"count\": 1}"))): "step 0: choice 0: field count",
+		quest % (choices % (to_b % "b" + ", " + to_b % "c")): "step 0: a choice leads to c",
+		quest % (choices % (to_b % "b" + ", " + to_b % "Bee")): "step 0: choice 1: the step",
+		quest % ((choices % two).replace("{\"choices", "{\"condition\": \"opened\", \"choices")): (
+			"step 0: a step with choices has no condition"
+		),
+		quest % ((choices % two).replace("{\"choices", "{\"ends\": \"x\", \"choices")): (
+			"step 0: a step with choices leads on"
+		),
+		quest % STEP_B: "step 1: its id b",
+		quest % "{\"condition\": \"opened\", \"ends\": \"y\"}": "step 0: it ends the chain y",
+		quest % "{\"condition\": \"opened\", \"id\": \"B\"}": "step 0: its id must",
+	}
 	return _unrefused(cases, content)
 
 
