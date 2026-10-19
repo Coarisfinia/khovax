@@ -177,17 +177,26 @@ func _explore_next_door(
 
 
 ## Why the Survey doesn't show exactly the exits on the tiles it shows, those of `here` and those of
-## `there` next door, shifted by `shift`, or "".
+## `there` next door, shifted by `shift`, and of the other instances next door (#689), or "".
 func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyView) -> String:
 	var everywhere: Array[Vector3i] = []
 	everywhere.append_array(here.exits)
 	for exit: Vector3i in there.exits:
 		everywhere.append(exit + Vector3i(shift.x, shift.y, 0))
+	for other: String in survey.neighbours.shifts:
+		var moved: Vector2i = survey.neighbours.shifts[other]
+		for exit: Vector3i in survey.neighbours.region_of(other).exits:
+			var placed: Vector3i = exit + Vector3i(moved.x, moved.y, 0)
+			if moved != shift and not everywhere.has(placed):
+				everywhere.append(placed)
 	var shown: Array[Vector3i] = []
 	for exit: Vector3i in everywhere:
 		if survey.tiles.has(Vector2i(exit.x, exit.y)):
 			shown.append(exit)
-	if shown.size() <= here.exits.size() or survey.exits != shown:
+	var drawn: Array[Vector3i] = survey.exits.duplicate()
+	drawn.sort()
+	shown.sort()
+	if shown.size() <= here.exits.size() or drawn != shown:
 		return "the Survey doesn't show the exits here and next door on the tiles it shows: %s" % [
 			survey.exits,
 		]

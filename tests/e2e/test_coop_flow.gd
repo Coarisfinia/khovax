@@ -17,7 +17,6 @@ const DELAY: int = 3
 ## Polls the late player's source misses before its commands arrive.
 const LATE_POLLS: int = 5
 const EAST: int = 0
-const WEST: int = 3
 
 var _tree: SceneTree
 var _main: Node
@@ -51,21 +50,22 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## The local player walks east with the keys while the second player's source walks west, in the
+## The local player walks west with the keys while the second player's source walks east, in the
 ## same ticks: each moves by its own slot's command, leaves its own trail, and has its own view.
+## Neither reaches the basic instance's east exit, which would take them into the glade (#689).
 ## The keys' first command lands only after the input delay: the first ticks stand still.
 func _check_two_players_walk() -> String:
-	var west: Array[int] = []
+	var east: Array[int] = []
 	for _tick: int in TICKS:
-		west.append(WEST)
-	_driver.sources = [LocalSource.new(_driver.input), ScriptedSource.new(1, west)]
+		east.append(EAST)
+	_driver.sources = [LocalSource.new(_driver.input), ScriptedSource.new(1, east)]
 	var starts: Array[Vector2i] = [_driver.state.player(0).tile, _driver.state.player(1).tile]
-	Input.action_press("move_right")
+	Input.action_press("move_left")
 	_run_frames(DELAY)
 	if _driver.state.player(0).tile != starts[0]:
 		return "the local player moved before the input delay had passed"
 	_run_frames(TICKS - DELAY)
-	Input.action_release("move_right")
+	Input.action_release("move_left")
 	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
 	for slot: int in 2:
 		var player: Entity = _driver.state.player(slot)

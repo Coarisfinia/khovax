@@ -18,7 +18,16 @@ const LOAD: String = "load"
 const GLADE: String = "glade"
 ## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
 const ARENA: String = "arena"
-const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA]
+## Room for the upcoming features (#689), each arranged from five large region pieces in a line,
+## joined across whole edges: a forest north of the glade, with trees and rock to harvest later
+## (#675); the ruined castle west of the forest, to be corrupted (#574); a faction outpost southeast
+## of the glade, with holds for control points (#643); and the mountain pass southwest of the
+## outpost, with a sealed side passage for a hidden gate (#500).
+const FOREST: String = "forest"
+const CASTLE: String = "castle"
+const OUTPOST: String = "outpost"
+const MOUNTAIN_PASS: String = "mountain_pass"
+const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA, FOREST, CASTLE, OUTPOST, MOUNTAIN_PASS]
 ## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses, a
 ## placeholder region until the corrupted instances' own arrive. Its corrupting monster emits
 ## GLADE_PURIFIED when it faints (regions/glade_corrupted.md), whose flag purifies it.
@@ -26,7 +35,7 @@ const CORRUPTED_GLADE: String = "glade_corrupted"
 const GLADE_PURIFIED: String = "glade_purified"
 ## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
 ## Every instance in the web of exits is one, so an exit always leads out the same way (#120).
-const UNTURNED: Array[String] = [GLADE, ARENA]
+const UNTURNED: Array[String] = [GLADE, ARENA, FOREST, CASTLE, OUTPOST, MOUNTAIN_PASS]
 ## Each blueprint's instance loot table (the loot slice's data/loot_tables/), by blueprint: what its
 ## chests hold.
 const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
@@ -37,6 +46,10 @@ const WILD_SPECIES: Dictionary[String, Dictionary] = {
 	LOAD: { "moss_toad": 1, "storm_finch": 1 },
 	GLADE: { "moss_toad": 1 },
 	ARENA: { "moss_toad": 1 },
+	FOREST: { "moss_toad": 2, "storm_finch": 1 },
+	CASTLE: { "moss_toad": 1, "storm_finch": 1 },
+	OUTPOST: { "moss_toad": 1, "storm_finch": 1 },
+	MOUNTAIN_PASS: { "moss_toad": 1, "storm_finch": 2 },
 }
 ## Each blueprint's variants (#529), by blueprint: world flag to the variant it chooses, the first
 ## of its flags in the order listed that the world has set choosing (#541), so a later story beat

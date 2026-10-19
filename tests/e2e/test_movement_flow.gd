@@ -251,16 +251,17 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 
 ## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from
-## (-1, 0), next to the wild monster, the player runs along the row to the grid's edge; letting go
-## stops it.
+## (-2, 1), the player runs along the row to the grid's edge, a row below the east exit's tiles
+## (#689); letting go stops it.
 func _check_stick_walk() -> String:
+	_place(Vector2i(-2, 1))
 	_send_stick(Vector2(0.15, 0.0))
 	var drift: String = _hold([], _send_stick.bind(Vector2.ZERO))
 	if not drift.is_empty():
 		return "a stick drifting inside the dead zone: " + drift
 	_send_stick(Vector2(1.0, 0.0))
 	var result: String = _hold(
-		[Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
+		[Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)],
 		_send_stick.bind(Vector2.ZERO),
 	)
 	return "pushing the stick right: " + result if not result.is_empty() else ""
@@ -280,32 +281,27 @@ func _send_axis(axis: JoyAxis, value: float) -> void:
 	Input.parse_input_event(motion)
 
 
-## Each walk starts where the previous one stopped: (1, -1) is the player's start tile.
+## Each walk starts where the previous one stopped: (1, -1) is the player's start tile. The walks
+## keep off the east edge's tiles from (3, -2) down, which lead out to the glade (#689).
 func _check_paths() -> String:
 	var walks: Array[Leg] = [
-		Leg.new(["move_left"], [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)]),
-		Leg.new(
-			["move_right"],
-			[Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(2, -1), Vector2i(3, -1)],
-		),
-		# Straight up from an odd row starts north-west; the next north-east step would leave the
-		# grid.
-		Leg.new(["move_up"], [Vector2i(3, -2)]),
 		Leg.new(
 			["move_down", "move_left"],
-			[Vector2i(2, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 2), Vector2i(-2, 3)],
+			[Vector2i(0, 0), Vector2i(-1, 1), Vector2i(-2, 2), Vector2i(-3, 3)],
 		),
+		Leg.new(["move_right"], [Vector2i(-2, 3), Vector2i(-1, 3), Vector2i(0, 3)]),
 		# Straight up and back down through both row parities: north-west and north-east in turn,
 		# then south-east and south-west, each zigzag staying in its column.
 		Leg.new(
 			["move_up"],
-			[Vector2i(-2, 2), Vector2i(-1, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(0, -2),
-				Vector2i(1, -3)],
+			[Vector2i(0, 2), Vector2i(1, 1), Vector2i(1, 0), Vector2i(2, -1), Vector2i(2, -2),
+				Vector2i(3, -3)],
 		),
+		Leg.new(["move_left"], [Vector2i(2, -3), Vector2i(1, -3), Vector2i(0, -3)]),
 		Leg.new(
 			["move_down"],
-			[Vector2i(1, -2), Vector2i(0, -1), Vector2i(0, 0), Vector2i(-1, 1), Vector2i(-1, 2),
-				Vector2i(-2, 3)],
+			[Vector2i(0, -2), Vector2i(-1, -1), Vector2i(-1, 0), Vector2i(-2, 1), Vector2i(-2, 2),
+				Vector2i(-3, 3)],
 		),
 	]
 	for walk: Leg in walks:
@@ -315,11 +311,11 @@ func _check_paths() -> String:
 	return _check_touch_paths()
 
 
-## The touch stick continues from where the keys stopped, at (-2, 3).
+## The touch stick continues from where the keys stopped, at (-3, 3).
 func _check_touch_paths() -> String:
 	var result: String = _walk_by_touch(
 		Vector2(TouchStick.RADIUS, 0.0),
-		[Vector2i(-1, 3), Vector2i(0, 3)],
+		[Vector2i(-2, 3), Vector2i(-1, 3), Vector2i(0, 3)],
 	)
 	if not result.is_empty():
 		return "dragging right: " + result

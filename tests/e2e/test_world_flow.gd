@@ -3,7 +3,8 @@ extends RefCounted
 ## Every exit leads to a blueprint that exists and has the way back on the opposite side; the basic
 ## instance's east edge leads to the glade; the glade keeps its layout, so its way back stays west
 ## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
-## refused. The web is validated as a whole (#143): every blueprint loads as a full instance, every
+## refused. Pieces join and exits lead out across several tiles, never one (#689). The web is
+## validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
 ## can be reached from the starting instance. In every region file and region piece, the walkable
 ## tiles hang together, so a blocking tile never cuts a part off, and every tile under a crown
@@ -25,6 +26,8 @@ const SEEDS: int = 40
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
 ## test's big region.
 const INSTANCE_SEEDS: int = 6
+## How many tiles wide every join between region pieces and every exit is at least (#689).
+const SEAM_WIDTH: int = 3
 ## Where _check_documents' region document has its stump, turned and set lower (#232) by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
@@ -46,11 +49,13 @@ func run(tree: SceneTree) -> String:
 		if not problem.is_empty():
 			return problem
 	var basic: Region = InstanceBlueprints.region_of(InstanceBlueprints.BASIC, 0)
-	var east: bool = basic.exits.size() == 1 and basic.exits[0] == Vector3i(3, -2, 0)
-	if not east or basic.exit_blueprints[0] != InstanceBlueprints.GLADE:
+	var east: Array[Vector3i] = [Vector3i(3, -2, 0), Vector3i(3, -1, 0), Vector3i(3, 0, 0)]
+	var to_glade: bool = basic.exit_blueprints.count(InstanceBlueprints.GLADE) == east.size()
+	if basic.exits != east or not to_glade:
 		return "the basic instance's east edge doesn't lead to the glade: %s" % [basic.exits]
 	var steps: Array[Callable] = [
 		_check_glade_exit,
+		_check_wide_seams,
 		_check_refused,
 		_check_exits_reachable,
 		_check_pieces_connected,
@@ -179,8 +184,10 @@ func _check_sent_to_spawn() -> String:
 
 ## Walking through exits (#154): from the basic instance's start, onto its exit on (3, -2) and on
 ## east into the glade, arriving on the glade's way back; then west again, back onto the basic
-## instance's exit, while the glade stays loaded for the next visit. The player enters the basic
-## instance on the first tick, then the glade, then the basic instance again, and nothing else.
+## instance's exit, while the glade stays loaded for the next visit. The exit is three tiles wide
+## (#689): one step southeast along it and east again, the player lands on the glade's tile right
+## across from that one. The player enters the basic instance on the first tick, then the glade,
+## the basic instance and the glade again, and nothing else.
 func _check_walk_through() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	_entered.clear()
@@ -202,8 +209,12 @@ func _check_walk_through() -> String:
 		return "walking west out of the glade didn't lead back onto the basic instance's exit"
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"
+	for direction: int in [5, 0]:
+		_walk_in(world, direction)
+	if world.instance_of(0) != InstanceBlueprints.GLADE or world.player(0).tile != Vector2i(-2, 1):
+		return "walking out of the wide exit's second tile didn't land across from it in the glade"
 	var basic: String = InstanceBlueprints.BASIC
-	var expected: Array[String] = [basic, InstanceBlueprints.GLADE, basic]
+	var expected: Array[String] = [basic, InstanceBlueprints.GLADE, basic, InstanceBlueprints.GLADE]
 	if _entered != expected:
 		return "walking there and back entered %s, not %s" % [_entered, expected]
 	return ""
@@ -978,7 +989,8 @@ func _check_layout() -> String:
 	)
 	var exit: Vector3i = basic.exits[0]
 	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-	var back: Vector2i = Vector2i(glade.exits[0].x, glade.exits[0].y)
+	var way: Vector3i = glade.exits[glade.exit_blueprints.find(InstanceBlueprints.BASIC)]
+	var back: Vector2i = Vector2i(way.x, way.y)
 	var landing: Vector2i = back + world.offset(InstanceBlueprints.GLADE)
 	if world.offset(InstanceBlueprints.BASIC) != Vector2i.ZERO or landing != outside:
 		return "walking out of the basic instance's east exit doesn't land on the glade's way back"
@@ -990,19 +1002,66 @@ func _layout_problem(seed_value: int) -> String:
 	return World.new(BlueprintSource.new(), seed_value, InstanceBlueprints.BASIC).layout_problem()
 
 
-## For every seed the glade's way back is on its west side, where the region ends.
+## For every seed the glade's way back is on its west side, three tiles wide (#689), where the
+## region ends, and no exit of it leads out onto a tile of its own.
 func _check_glade_exit() -> String:
+	var west: Array[Vector3i] = [Vector3i(-2, 0, 3), Vector3i(-2, 1, 3), Vector3i(-2, 2, 3)]
 	for seed_value: int in SEEDS:
 		var glade: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
-		var outside: Array[Vector2i] = glade.outside_exits()
-		var west: Vector3i = Vector3i(-2, 0, 3)
-		var kept: bool = glade.exits.size() == 1 and glade.exits[0] == west
-		if not kept or glade.has_tile(outside[0]) or not glade.problem.is_empty():
+		var back: Array[Vector3i] = []
+		for i: int in glade.exits.size():
+			if glade.exit_blueprints[i] == InstanceBlueprints.BASIC:
+				back.append(glade.exits[i])
+		var covered: bool = false
+		for outside: Vector2i in glade.outside_exits():
+			covered = covered or glade.has_tile(outside)
+		if back != west or covered or not glade.problem.is_empty():
 			return "seed %d's glade has its way back at %s: %s" % [
 				seed_value,
 				glade.exits,
 				glade.problem,
 			]
+	return ""
+
+
+## Joins and exits are wide (#689): in every blueprint's arranged region, for every seed, two pieces
+## that meet touch along at least SEAM_WIDTH walkable tiles of each, and every exit to another
+## instance is at least SEAM_WIDTH tiles wide.
+func _check_wide_seams() -> String:
+	for instance_name: String in InstanceBlueprints.NAMES:
+		var exits: Region = InstanceBlueprints.region_of(instance_name, 0)
+		for target: String in exits.exit_blueprints:
+			if exits.exit_blueprints.count(target) < SEAM_WIDTH:
+				return "%s's exit to %s is narrower than %d tiles" % [
+					instance_name,
+					target,
+					SEAM_WIDTH,
+				]
+		for seed_value: int in INSTANCE_SEEDS:
+			var region: Region = InstanceBlueprints.region_of(instance_name, seed_value)
+			var narrow: String = _narrow_seam(region)
+			if not narrow.is_empty():
+				return "%s at seed %d: %s" % [instance_name, seed_value, narrow]
+	return ""
+
+
+## The first two pieces of `region` that meet along fewer than SEAM_WIDTH walkable tiles of the
+## first, as text, or "".
+static func _narrow_seam(region: Region) -> String:
+	var touching: Dictionary[String, int] = {}
+	for tile: Vector2i in region.sorted_tiles():
+		var piece: String = region.piece_of.get(tile, "")
+		var met: Array[String] = []
+		for direction: Vector2i in Hex.DIRECTIONS:
+			var other: String = region.piece_of.get(tile + direction, piece)
+			var walks: bool = region.is_walkable(tile) and region.is_walkable(tile + direction)
+			if other != piece and walks and not met.has(other):
+				met.append(other)
+		for other: String in met:
+			touching[piece + " and " + other] = touching.get(piece + " and " + other, 0) + 1
+	for pair: String in touching:
+		if touching[pair] < SEAM_WIDTH:
+			return "%s meet along %d tiles" % [pair, touching[pair]]
 	return ""
 
 

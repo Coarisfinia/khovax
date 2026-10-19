@@ -50,35 +50,64 @@ func problem(world: World) -> String:
 
 ## Places every instance the web reaches, breadth first from the starting instance, checking every
 ## exit against the places already given; the first exit that doesn't fit is `_layout_problem`.
+## An exit may be many tiles wide (#689): the instance it leads into lies where every one of them
+## lands on a way back.
 func _lay_out(world: World) -> void:
 	_offsets[world.start_name] = Vector2i.ZERO
 	var queue: Array[String] = [world.start_name]
 	while not queue.is_empty():
 		var from: String = queue.pop_front()
 		var region: Region = region_for(world, from)
-		for i: int in region.exits.size():
-			var target: String = region.exit_blueprints[i]
-			var back: Vector3i = _way_back(world, target, from)
-			var exit: Vector3i = region.exits[i]
-			var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-			var placed: Vector2i = _offsets[from] + outside - Vector2i(back.x, back.y)
-			if back.z < 0:
-				_note("%s's exit to %s has no way back" % [from, target])
+		var targets: Array[String] = []
+		for target: String in region.exit_blueprints:
+			if not targets.has(target):
+				targets.append(target)
+		for target: String in targets:
+			var back: Region = region_for(world, target)
+			var placed: Array[Vector2i] = _places(region, from, back, target)
+			if placed.is_empty():
+				_note("%s's exit to %s has no way back lined up with it" % [from, target])
 			elif not _offsets.has(target):
-				_offsets[target] = placed
+				_offsets[target] = _offsets[from] + placed[0]
 				queue.append(target)
-			elif _offsets[target] != placed:
+			elif not placed.has(_offsets[target] - _offsets[from]):
 				_note("%s doesn't fit where %s's exit leads into it" % [target, from])
 
 
-## The exit in `instance_name` that leads back to `from` as (q, r, side), or z = -1 when there's
-## none.
-func _way_back(world: World, instance_name: String, from: String) -> Vector3i:
-	var region: Region = region_for(world, instance_name)
+## Every shift from the instance `from`, with `region`, to the instance `target`, with `back`, that
+## lands each of the exits to it on a way back facing it, in a fixed order; none when there's no
+## such shift.
+static func _places(region: Region, from: String, back: Region, target: String) -> Array[Vector2i]:
+	var shifts: Array[Vector2i] = []
+	var first: int = region.exit_blueprints.find(target)
+	var exit: Vector3i = region.exits[first]
+	for i: int in back.exits.size():
+		var way: Vector3i = back.exits[i]
+		var shift: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
+		shift -= Vector2i(way.x, way.y)
+		if back.exit_blueprints[i] == from and _lands(region, from, back, target, shift):
+			shifts.append(shift)
+	return shifts
+
+
+## Whether every exit of `region` (the instance `from`'s) to `target` lands, `shift` away, on an
+## exit of `back` (the target's region) leading back to `from` out the opposite side.
+static func _lands(
+	region: Region,
+	from: String,
+	back: Region,
+	target: String,
+	shift: Vector2i,
+) -> bool:
 	for i: int in region.exits.size():
-		if region.exit_blueprints[i] == from:
-			return region.exits[i]
-	return Vector3i(0, 0, -1)
+		var exit: Vector3i = region.exits[i]
+		var tile: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z] - shift
+		var side: int = posmod(exit.z + 3, Hex.DIRECTIONS.size())
+		var way: int = back.exits.find(Vector3i(tile.x, tile.y, side))
+		var lands: bool = way >= 0 and back.exit_blueprints[way] == from
+		if region.exit_blueprints[i] == target and not lands:
+			return false
+	return true
 
 
 ## The region of the blueprint `instance_name` for the world's seed and its variant there (#529),

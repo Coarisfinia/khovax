@@ -386,18 +386,31 @@ func _walk_through(from: String, taken: ExitTaken) -> void:
 	var target: GameState = instance(taken.target)
 	if target == null:
 		return
-	var arrival: Vector2i = Vector2i.ZERO
-	var found: bool = false
-	for i: int in target.region.exits.size():
-		if target.region.exit_blueprints[i] == from and not found:
-			arrival = Vector2i(target.region.exits[i].x, target.region.exits[i].y)
-			found = true
-	if not found:
+	var arrival: Vector2i = _arrival(from, taken, target.region)
+	if not target.region.has_tile(arrival):
 		return
 	instances[from].remove_entity(taken.entity_id)
 	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
 	if arrived[0] != null:
 		_raise_entered(taken.target, arrived)
+
+
+## Where the player who took `taken` out of `from` lands in `region`, the instance it leads to: on
+## the way back right across from the exit's tile, where the layout puts the two side by side, so
+## an exit many tiles wide (#689) lands each one beside its own; else on its first way back, or off
+## the region when it has none.
+func _arrival(from: String, taken: ExitTaken, region: Region) -> Vector2i:
+	var across: Vector2i = taken.tile + Hex.DIRECTIONS[taken.side] + offset(from)
+	across -= offset(taken.target)
+	var first: Vector2i = Vector2i(Region.MAX_TILES, Region.MAX_TILES)
+	for i: int in range(region.exits.size() - 1, -1, -1):
+		var back: Vector3i = region.exits[i]
+		if region.exit_blueprints[i] != from:
+			continue
+		first = Vector2i(back.x, back.y)
+		if first == across:
+			return across
+	return first
 
 
 ## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a

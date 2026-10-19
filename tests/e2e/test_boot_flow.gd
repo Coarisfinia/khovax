@@ -1004,7 +1004,8 @@ func _check_neighbour_grids(main: Node) -> String:
 		return "the neighbours drawn aren't the whole glade alone: %s" % [view.grids.keys()]
 	var exit: Vector3i = driver.state.region.exits[0]
 	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-	var back: Vector2i = Vector2i(region.exits[0].x, region.exits[0].y)
+	var way: Vector3i = region.exits[region.exit_blueprints.find(InstanceBlueprints.BASIC)]
+	var back: Vector2i = Vector2i(way.x, way.y)
 	var drawn: Vector3 = glade.position + glade.tile_transform(back).origin
 	var lift: Vector3 = Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
 	if not glade.has_tile(back) or not drawn.is_equal_approx(HexLayout.to_world(outside) + lift):
@@ -1167,12 +1168,21 @@ static func _farther_than_sight(region: Region, tile: Vector2i) -> bool:
 	return true
 
 
-## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
+## The neighbours follow the local instance: in the glade, the basic instance, the forest and the
+## outpost are next door (#689).
 func _check_neighbour_follows(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	view.show_state()
 	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
-	if view.grids.size() != 1 or basic == null or basic.tile_count() != 42:
+	var names: Array[String] = []
+	names.assign(view.grids.keys())
+	names.sort()
+	var expected: Array[String] = [
+		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
+		InstanceBlueprints.OUTPOST,
+	]
+	if names != expected or basic == null or basic.tile_count() != 42:
 		return "in the glade, the neighbours drawn aren't the basic instance: %s" % [
 			view.grids.keys(),
 		]
