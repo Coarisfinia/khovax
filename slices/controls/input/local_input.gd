@@ -45,6 +45,10 @@ var _answer: int = Command.NO_ANSWER
 var _handing: Array[int] = []
 ## Whether revive_monster was pressed since the last command (#656).
 var _revive_pressed: bool = false
+## The code of the gear in the player's trap slot (#692, SpikesFeature.code_of), or
+## Command.NO_TRAP: every command carries it, also while the game hears no input. Whoever holds the
+## player's profile keeps it current (GameDriver).
+var trap: int = Command.NO_TRAP
 
 
 func _process(_delta: float) -> void:
@@ -102,6 +106,7 @@ func command(state: GameState) -> Command:
 		# The dialog screen's answers are the one input a dialog lets through.
 		standing.answer = answering
 		standing.hand_over = _next_hand_over()
+		standing.trap = trap
 		return standing
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
@@ -120,6 +125,7 @@ func command(state: GameState) -> Command:
 	given.answer = answering
 	given.hand_over = _next_hand_over()
 	given.revive = _reviving()
+	given.trap = trap
 	return given
 
 

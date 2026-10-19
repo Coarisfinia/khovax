@@ -1,7 +1,8 @@
-// Basic spikes for the trap slot (#690). They do nothing yet: their effect comes with #692.
+// Basic spikes for the trap slot (#690): the ring hurts the wild monsters pushing on it (#692).
 {
 	"id": "thorn_spikes",
 	"name": "Thorn spikes",
 	"slot": "trap",
-	"rarity": "loose"
+	"rarity": "loose",
+	"damage": 5 // a placeholder to tune: a nudge next to a companion's strike
 }

@@ -2,9 +2,9 @@ class_name GearSlots
 extends RefCounted
 ## The player's gear (#690): what they own, and what's in each of their gear slots (owner, #223):
 ## the ward slot (warding gear and totems), the trap slot (spikes) and the throw slot (berries).
-## Chests give basic gear (#694); gear has no effect yet. Part of the profile, saved by
-## ProfileSave; which slot a piece goes into is content's (GearItem), checked by whoever offers it,
-## so a save keeps a piece whose data changed since.
+## Chests give basic gear (#694); only spikes have an effect yet (#692). Part of the profile, saved
+## by ProfileSave; which slot a piece goes into is content's (GearItem), checked by whoever offers
+## it, so a save keeps a piece whose data changed since.
 
 ## The slots, in the order they're shown. Saved by name: never rename one.
 const SLOTS: Array[String] = ["ward", "trap", "throw"]

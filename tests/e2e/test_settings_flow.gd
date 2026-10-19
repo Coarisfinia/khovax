@@ -326,7 +326,8 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 	return ""
 
 
-## Pressing the slots puts the player's gear in, and the gear is kept in their profile on disk.
+## Pressing the slots puts the player's gear in, and the gear is kept in their profile on disk; the
+## spikes in the trap slot go into the player's commands (#692).
 func _gear_changes(panel: GearPanel, main: Node) -> String:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	keeper.profile.gear.owned.assign({ "warding_charm": 1, "thorn_spikes": 1 })
@@ -344,6 +345,11 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 	]
 	if panel.shown != lines or kept.gear.equipped != expected:
 		return "pressing the slots put in %s, kept %s" % [panel.shown, kept.gear.equipped]
+	var driver: GameDriver = FlowGame.driver(main)
+	driver.send_gear()
+	var trap: int = driver.input.command(driver.state).trap
+	if trap != SpikesFeature.code_of("thorn_spikes"):
+		return "the spikes in the trap slot aren't in the player's command: %d" % trap
 	return ""
 
 

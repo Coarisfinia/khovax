@@ -42,6 +42,9 @@ extends RefCounted
 ## With the type chart on (#626), the strikes between monsters follow it by each strike's own type;
 ## switched off, they deal their plain damage.
 ## A companion that faints is swapped for the next monster its player carries (#597).
+## With spikes in their trap slot, sent in their commands (#692), the player's ring hurts the wild
+## monster pushing on it once a second for the spikes' damage, while it waits for a totem and while
+## it seals, never below 1 HP; without, it doesn't.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -112,6 +115,9 @@ const BIG_RING: int = 3
 const WORN: int = 10
 ## No second player on the outcome's wall.
 const NO_HELPER: int = -1
+## The spikes' damage in the spikes check (#692), and their gear's id.
+const SPIKES_DAMAGE: int = 7
+const SPIKES: String = "test_spikes"
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -674,6 +680,8 @@ func _check_outcomes() -> String:
 	var enraged: String = _check_enraged()
 	if enraged.is_empty():
 		enraged = _check_target_dominated()
+	if enraged.is_empty():
+		enraged = _check_spikes()
 	return enraged if not enraged.is_empty() else _check_moves_away()
 
 
@@ -690,6 +698,61 @@ func _check_target_dominated() -> String:
 	if dominated.size() != 1 or dominated[0].target != "old_toad":
 		return "dominating the quest target old_toad didn't name it in its domination"
 	return ""
+
+
+## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
+## the player's commands carry no trap, and with their spikes in them it's hurt once in
+## STRIKE_TICKS for their damage. Worn down to 2 HP, it's hurt once more while the ring seals, and
+## then holds at 1 HP.
+func _check_spikes() -> String:
+	var spikes: Array[Feature] = [
+		SpikesFeature.new({ SpikesFeature.code_of(SPIKES): SPIKES_DAMAGE }),
+	]
+	var state: GameState = _outcome_state(WEAK, [Vector2i.ZERO], "", spikes)
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
+	var monster: int = _wild(state).monsters[0]
+	if _domination(state).encircled.is_empty():
+		return "the spikes check's ring doesn't wait for a totem"
+	var bare: Array[SpikesStruck] = _spiked_over(state, false, 2 * SpikesFeature.STRIKE_TICKS)
+	var spiked: Array[SpikesStruck] = _spiked_over(state, true, SpikesFeature.STRIKE_TICKS)
+	var hp: int = _wild(state).hp_of(monster)
+	if not bare.is_empty() or spiked.size() != 1 or hp != OUTCOME_HP - SPIKES_DAMAGE:
+		return "spikes hurt %d times without, %d with, to %d HP" % [bare.size(), spiked.size(), hp]
+	if spiked[0].monster_id != monster or spiked[0].damage != SPIKES_DAMAGE:
+		return "the spikes didn't hurt the ringed monster for their damage"
+	_wild(state).wound(state, monster, hp - 2)
+	# The totem's tick counts too: the ring seals from the domination's step, before the spikes'.
+	var sealing: Array[SpikesStruck] = _spiked_over(state, true, 1, true)
+	while not _domination(state).seals.is_empty() and sealing.size() < 2:
+		sealing.append_array(_spiked_over(state, true, 1))
+	if sealing.size() != 2 or _wild(state).hp_of(monster) != 1:
+		return "a sealing monster was hurt %d times, to %d HP, not twice to 1" % [
+			sealing.size(),
+			_wild(state).hp_of(monster),
+		]
+	return ""
+
+
+## The spikes' hurts over `ticks` ticks of the player in slot 0 standing, with the spikes in their
+## commands or (`spiked` false) no trap, placing their totem with `placing`.
+func _spiked_over(
+		state: GameState,
+		spiked: bool,
+		ticks: int,
+		placing: bool = false,
+) -> Array[SpikesStruck]:
+	var still: Array[Command] = FlowSteps.totem() if placing else FlowSteps.command(Command.NO_MOVE)
+	if spiked:
+		still[0].trap = SpikesFeature.code_of(SPIKES)
+	var hurts: Array[SpikesStruck] = []
+	for _tick: int in ticks:
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			if event is SpikesStruck:
+				hurts.append(event as SpikesStruck)
+	return hurts
 
 
 ## In a disc with rock running from its edge to (-2, 0): the monster on the edge at (4, 0) and the
@@ -873,8 +936,13 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 
 
 ## A disc with monsters of `species` on `spots`, each the quest target `target` when it's given
-## (#625), and no player yet.
-func _outcome_state(species: String, spots: Array[Vector2i], target: String = "") -> GameState:
+## (#625), and no player yet, then the `extra` features.
+func _outcome_state(
+		species: String,
+		spots: Array[Vector2i],
+		target: String = "",
+		extra: Array[Feature] = [],
+) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
 	# One shared spot: the regions only read it.
@@ -890,6 +958,7 @@ func _outcome_state(species: String, spots: Array[Vector2i], target: String = ""
 		DominationFeature.new(),
 		EnrageFeature.new(),
 	]
+	ordered.append_array(extra)
 	return GameState.new(region, 1, ordered)
 
 

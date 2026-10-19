@@ -16,8 +16,10 @@ const NO_SWAP: int = 0
 const NO_ANSWER: int = 0
 ## No territory handed over this tick (#638).
 const NO_HAND_OVER: int = 0
+## No gear in the player's trap slot (#692).
+const NO_TRAP: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 9
+const VALUE_COUNT: int = 10
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -47,6 +49,11 @@ var hand_over: int = NO_HAND_OVER
 ## carried monsters. A press, like the special; the simulation checks one has fainted, and the
 ## player's own machine only sends it while their profile holds a revive item.
 var revive: bool = false
+## The gear in the player's trap slot (#692), as the code of its id (SpikesFeature.code_of), or
+## NO_TRAP. Not a press but a standing value, like the move: every command carries it while it's
+## equipped, so it changes the game only from the tick it's sent. The simulation checks it names
+## spikes.
+var trap: int = NO_TRAP
 
 
 func _init(
@@ -67,7 +74,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, hand_over,
-		1 if revive else 0,
+		1 if revive else 0, trap,
 	]
 	return values
 
@@ -85,16 +92,18 @@ static func from_values(values: Array[int]) -> Command:
 	command.answer = values[6]
 	command.hand_over = values[7]
 	command.revive = values[8] == 1
+	command.trap = values[9]
 	return command
 
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
 ## placed or not, a focus that is an entity id or none, a swap to a place in the carried order or
-## none, an answer's code or none, and a territory's code or none.
+## none, an answer's code or none, a territory's code or none, and a trap's code or none.
 func is_valid() -> bool:
 	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
 	var placed: bool = totem == NO_TOTEM or totem == PLACE_TOTEM
 	var chosen: bool = swap >= NO_SWAP and answer >= NO_ANSWER and hand_over >= NO_HAND_OVER
+	chosen = chosen and trap >= NO_TRAP
 	return moves and placed and focus >= NO_FOCUS and chosen
 
 

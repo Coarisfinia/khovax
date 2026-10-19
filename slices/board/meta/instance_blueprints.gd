@@ -113,6 +113,8 @@ static func create(
 		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
 		# wild monsters of a ring that broke.
 		WildAttackFeature.new(),
+		# After domination, whose rings' wild monsters it hurts (#692).
+		_spikes(),
 		_domination_loot(instance_name),
 		EnrageFeature.new(),
 		FogFeature.new(),
@@ -265,6 +267,19 @@ static func _territory() -> TerritoryFeature:
 		if not exists(handed[0]):
 			push_error("a territory quest hands over %s, which doesn't exist" % handed[0])
 	return TerritoryFeature.new(content.handovers)
+
+
+## The spikes' feature (#692) with every spikes' damage, by the code of its gear id, from the gear's
+## content data. Gear that doesn't load is an error, and no spikes hurt then.
+static func _spikes() -> SpikesFeature:
+	var content: GearContent = GearContent.load_gear()
+	if not content.problem.is_empty():
+		push_error("the gear doesn't load: " + content.problem)
+	var damages: Dictionary[int, int] = {}
+	for item: GearItem in content.items.values():
+		if item.damage > 0:
+			damages[SpikesFeature.code_of(item.id)] = item.damage
+	return SpikesFeature.new(damages)
 
 
 ## Every species' HP in the species `content`, by species id.
