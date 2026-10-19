@@ -3,8 +3,9 @@ extends RefCounted
 ## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
 ## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; next
 ## door it shows exactly what was explored there, at its place in the world, and the exits on the
-## tiles it shows, loading nothing; it marks each instance shown that a faction holds with its
-## holder's symbol, and its menu tab says who holds the glade (#637); it marks every player by slot
+## tiles it shows, one chevron per exit in its middle (#790), loading nothing; it marks each
+## instance shown that a faction holds with its holder's symbol, and its menu tab says who holds the
+## glade (#637); it marks every player by slot
 ## and every open quest's target;
 ## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
 ## their range, and both choices are kept. In every place, on desktop screens and phones held
@@ -201,14 +202,55 @@ func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyV
 	for exit: Vector3i in everywhere:
 		if survey.tiles.has(Vector2i(exit.x, exit.y)):
 			shown.append(exit)
-	var drawn: Array[Vector3i] = survey.exits.duplicate()
+	var drawn: Array[Vector3i] = []
+	drawn.assign(survey.exits.keys())
 	drawn.sort()
 	shown.sort()
 	if shown.size() <= here.exits.size() or drawn != shown:
 		return "the Survey doesn't show the exits here and next door on the tiles it shows: %s" % [
 			survey.exits,
 		]
+	return _survey_exit_arrows(here, survey)
+
+
+## Why an exit here, three tiles wide (#689), doesn't show exactly one chevron, on its middle tile
+## (#790), or "".
+func _survey_exit_arrows(here: Region, survey: SurveyView) -> String:
+	for i: int in here.exits.size():
+		var side: int = here.exits[i].z
+		var tiles: Array[Vector2i] = []
+		for j: int in here.exits.size():
+			var same: bool = here.exit_blueprints[j] == here.exit_blueprints[i]
+			if same and here.exits[j].z == side:
+				tiles.append(Vector2i(here.exits[j].x, here.exits[j].y))
+		var middle: Array[Vector2i] = []
+		for tile: Vector2i in tiles:
+			if tiles.all(func(other: Vector2i) -> bool: return Hex.distance(tile, other) <= 1):
+				middle.append(tile)
+		if tiles.size() != 3 or middle.size() != 1:
+			return "the exit to %s here isn't three tiles in a row: %s" % [
+				here.exit_blueprints[i],
+				tiles,
+			]
+		var on: Array[Vector2] = []
+		for arrow: SurveyExitArrow in survey.exit_arrows():
+			if arrow.side == side and _near_any(arrow.at, tiles):
+				on.append(arrow.at)
+		if on.size() != 1 or not on[0].is_equal_approx(SurveyView.ground_of(middle[0])):
+			return "the exit to %s shows chevrons at %s, not one on its middle tile %s" % [
+				here.exit_blueprints[i],
+				on,
+				middle[0],
+			]
 	return ""
+
+
+## Whether `ground` lies on one of `tiles` or between two of them.
+func _near_any(ground: Vector2, tiles: Array[Vector2i]) -> bool:
+	for tile: Vector2i in tiles:
+		if ground.distance_to(SurveyView.ground_of(tile)) < HexLayout.SIZE * sqrt(3.0):
+			return true
+	return false
 
 
 ## Why the Survey's held marks (#637) don't follow the holder flags, or "". With every holder flag
