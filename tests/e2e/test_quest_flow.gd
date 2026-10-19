@@ -502,8 +502,11 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 
 ## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
 ## player walked its stream, grove and felling, not when another player entered the last one. The
-## territory goes over in this player's next command, which the replay records, and the world
-## clears the forest's old holder in the same tick as it hands the forest to the guild.
+## hand-over waits in the profile's outbox (#771) and goes in this player's next command, which the
+## replay records, and the world clears the forest's old holder in the same tick as it hands the
+## forest to the guild. The world records the request applied and acknowledges it, and the outbox
+## drops it; the same request sent again, as at the start of a session after a crash, is
+## acknowledged but not handed over twice.
 func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var forest: String = InstanceBlueprints.FOREST
 	var quest: String = "guild_charts_the_forest"
@@ -515,8 +518,10 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
 		return "another player entering the felling finished the forest's territory quest"
 	_emit(driver, bus, PieceEntered.new("felling", 1, 0))
-	for _tick: int in 3:
-		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	if profile.outbox.entries.size() != 1:
+		return "finishing the forest's territory quest didn't post its hand-over to the outbox"
+	var request: OutboxEntry = profile.outbox.entries[0]
+	_tick(driver, bus)
 	var held: Array[String] = []
 	for flag: String in driver.world.flags:
 		if flag.begins_with(Territory.flag(forest, "")):
@@ -526,7 +531,39 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 		return "finishing the forest's territory quest left its holders at %s" % [held]
 	if not driver.recording.changes.has(Territory.code(forest, GUILD)):
 		return "the replay didn't record the forest handed over"
+	return _check_territory_resent(driver, bus, profile, request)
+
+
+## The territory quest's hand-over `request`, applied and acknowledged, is out of the outbox and
+## recorded as applied; sent again, it's acknowledged once more but not handed over twice, so the
+## forest stays with the holder it has meanwhile.
+func _check_territory_resent(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	request: OutboxEntry,
+) -> String:
+	var forest: String = InstanceBlueprints.FOREST
+	var applied: Array = driver.world.stored(0, Features.TERRITORY).get(OutboxReceipts.APPLIED, [])
+	if not profile.outbox.entries.is_empty() or applied != [request.id]:
+		return "the applied hand-over stayed in the outbox, or wasn't recorded: %s" % [applied]
+	driver.world.set_flag(Territory.flag(forest, GUILD), false)
+	driver.world.set_flag(Territory.flag(forest, "rivals"))
+	var acknowledged: Array = []
+	var heard: Callable = func(event: RequestApplied) -> void: acknowledged.append(event.request)
+	bus.subscribe(&"RequestApplied", heard)
+	driver.input.send(request)
+	_tick(driver, bus)
+	if Territory.holder(driver.world.flags, forest) != "rivals" or acknowledged != [request.id]:
+		return "the hand-over sent again was handed over twice, or not acknowledged"
 	return ""
+
+
+## Runs a few ticks and hands their events out.
+func _tick(driver: GameDriver, bus: EventBus) -> void:
+	for _step: int in 3:
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	bus.flush()
 
 
 ## An event that changed the world (#707) reaches this player's profile, wherever they are, and

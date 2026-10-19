@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 12
+const FORMAT: int = 13
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -35,6 +35,7 @@ static func to_text(profile: Profile) -> String:
 			"harmony": profile.leaning.harmony,
 			"supremacy": profile.leaning.supremacy,
 		},
+		"outbox": profile.outbox.to_data(),
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -94,6 +95,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_10,
 		_migrate_to_11,
 		_migrate_to_12,
+		_migrate_to_13,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -192,6 +194,12 @@ static func _migrate_to_12(data: Dictionary) -> void:
 			fields["short_id"] = ShortId.stand_in(_int(fields.get("id")))
 
 
+## Format 12 to 13: the outbox is empty (#771). A territory quest finished before had its hand-over
+## sent then.
+static func _migrate_to_13(data: Dictionary) -> void:
+	data["outbox"] = []
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -233,6 +241,7 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 		_read_leaning,
 		_read_gear,
 		_read_quests,
+		_read_outbox,
 	]:
 		if problem.is_empty():
 			problem = reader.call(profile, data)
@@ -329,6 +338,11 @@ static func _read_quests(profile: Profile, data: Dictionary) -> String:
 			return "quest %s's progress in the save is malformed or it's finished" % id
 		profile.quest_progress[str(id)] = progress
 	return ""
+
+
+## Reads the save's outbox (#771) into this profile; returns why it can't, or "".
+static func _read_outbox(profile: Profile, data: Dictionary) -> String:
+	return profile.outbox.load_data(data.get("outbox"))
 
 
 ## A quest's progress from save data, or null when it's malformed: a step and a count, each a

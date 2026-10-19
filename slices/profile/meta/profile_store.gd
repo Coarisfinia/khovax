@@ -6,10 +6,15 @@ extends RefCounted
 
 const PATH: String = "user://profile.json"
 
+## Which of the save's generations the last `load_from` read the profile from: 0 the newest, more
+## when newer ones were damaged (SaveStore).
+static var loaded_generation: int = 0
+
 
 ## The saved profile, or a new one when there's no save yet. Its `problem` says why when no
 ## generation can be read, and `loaded_generation` which one was when it wasn't the newest.
 static func load_from(path: String = PATH) -> Profile:
+	loaded_generation = 0
 	if not SaveStore.exists(path):
 		return Profile.new()
 	var saved: SaveRead = SaveStore.read_save(path)
@@ -18,7 +23,7 @@ static func load_from(path: String = PATH) -> Profile:
 		refused.problem = saved.problem
 		return refused
 	var profile: Profile = ProfileSave.parse(saved.text)
-	profile.loaded_generation = saved.generation
+	loaded_generation = saved.generation
 	return profile
 
 

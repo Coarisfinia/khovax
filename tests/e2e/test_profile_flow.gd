@@ -7,11 +7,13 @@ extends RefCounted
 ## dominated are carried (#53); the standing with each faction stays on its scale and is saved
 ## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
 ## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
-## monster keeps its short id (#700); and a damaged save falls back to the newest intact generation
+## monster keeps its short id (#700); the outbox's requests to the world are saved until the world
+## acknowledges them (#771); and a damaged save falls back to the newest intact generation
 ## before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
-## The keys a newer save format added (#184, #53, #391, #399, #483, #658), which older saves lack.
+## The keys a newer save format added (#184, #53, #391, #399, #483, #658, #771), which older saves
+## lack.
 const ADDED_KEYS: Array[String] = [
 	"quest_progress",
 	"quests_done",
@@ -22,6 +24,7 @@ const ADDED_KEYS: Array[String] = [
 	"gear",
 	"equipped",
 	"path_leaning",
+	"outbox",
 ]
 ## A save's quest progress for quest a with the steps done (#573) left open.
 const PROGRESS_DONE: String = (
@@ -383,6 +386,51 @@ func _check_leaning() -> String:
 		text.replace(even, "\"supremacy\": 0, \"strength\": 1"): invalid,
 		text.replace(even, "\"supreme\": 0"): invalid,
 	}
+	var problem: String = _unrefused(cases)
+	return problem if not problem.is_empty() else _check_outbox()
+
+
+## The outbox (#771) keeps its requests, in the order posted, through saving and loading, each
+## under a short id no other has (#791); a request the world acknowledged is dropped. A save whose
+## outbox has a request twice, one whose id isn't a short id, of a kind there isn't or with no data,
+## or that isn't a list, is refused.
+func _check_outbox() -> String:
+	var profile: Profile = Profile.new()
+	var first: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 41)
+	var _second: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 42)
+	var dropped: bool = profile.outbox.drop(first.id) and not profile.outbox.drop(first.id)
+	var _third: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 43)
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var kept: Array[int] = []
+	var ids: Array[String] = []
+	for entry: OutboxEntry in loaded.outbox.entries:
+		kept.append(entry.data)
+		ids.append(entry.id)
+	var unique: bool = ids.size() == 2 and ids[0] != ids[1]
+	var expected: Array[int] = [42, 43]
+	if not dropped or not loaded.problem.is_empty() or kept != expected or not unique:
+		return "the outbox didn't keep its requests: %s %s %s" % [kept, ids, loaded.problem]
+	for id: String in ids:
+		if not ShortId.is_valid(id) or ShortId.of_code(ShortId.code(id)) != id:
+			return "the outbox's id %s isn't a short id a command can carry" % id
+	return _check_outbox_refused(ProfileSave.to_text(profile), loaded.outbox.entries[0].to_data())
+
+
+## A save `text` whose outbox has `request` twice, has it with an id that isn't a short id, of a
+## kind there isn't or without its data, or whose outbox isn't a list, is refused.
+func _check_outbox_refused(text: String, request: Dictionary) -> String:
+	var cases: Dictionary[String, String] = {}
+	for outbox: Variant in [
+		[request, request],
+		[request.merged({ "id": "abl2345" }, true)],
+		[request.merged({ "id": 7 }, true)],
+		[request.merged({ "kind": 9 }, true)],
+		[{ "id": request["id"], "kind": OutboxEntry.TERRITORY }],
+		{ "entries": [request] },
+	]:
+		var data: Dictionary = JSON.parse_string(text)
+		data["outbox"] = outbox
+		cases[JSON.stringify(data)] = "the save's outbox"
 	return _unrefused(cases)
 
 
@@ -392,8 +440,9 @@ func _check_leaning() -> String:
 ## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
 ## starts on Auto; formats before 7 had no character name (#399), which starts empty; formats
 ## before 8 had no standings with factions (#483), which start neutral; formats before 10 had no
-## gear (#690): none is owned, and every gear slot starts empty; and formats before 11 had no
-## leaning toward the paths (#658), which starts even.
+## gear (#690): none is owned, and every gear slot starts empty; formats before 11 had no leaning
+## toward the paths (#658), which starts even; and formats before 13 had no outbox (#771), which
+## starts empty.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
@@ -571,7 +620,7 @@ func _check_recovered() -> String:
 	for damaged: String in damaged_saves:
 		_write(SAVE_PATH, damaged)
 		var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
-		if not problem.is_empty() or loaded.loaded_generation != 1:
+		if not problem.is_empty() or ProfileStore.loaded_generation != 1:
 			return "a damaged newest save didn't fall back a generation: " + problem
 		if ProfileSave.to_text(loaded) != ProfileSave.to_text(older):
 			return "the fallback isn't the save before the damaged one"

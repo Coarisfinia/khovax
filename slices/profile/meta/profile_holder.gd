@@ -6,10 +6,12 @@ extends Node
 ## pending saved when the game quits or goes to the background. The same dominations and chests
 ## advance the player's quests (#184), in the profile, and so do the places they step into (#339),
 ## the region pieces and instances they enter (#350, #370), the answers they choose in dialogs
-## (#636) and the events that change the world (#707), which every player gains. A territory quest
-## it finishes hands its territory over in this player's next command (#638), so the world changes
-## in a tick, the same on every machine and in the replay. A revive item they used (#656) is spent
-## from it. The player's personal color (#391) is kept in it too, saved the same way.
+## (#636) and the events that change the world (#707), which every player gains. What the profile
+## asks the world to do, like handing over the territory of a territory quest it finished (#638),
+## waits in its outbox (#771) and goes in this player's next commands, so the world changes in a
+## tick, the same on every machine and in the replay; it's sent again at the start of every session
+## until the world acknowledges it (RequestApplied). A revive item they used (#656) is spent from
+## it. The player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -24,6 +26,8 @@ var save_path: String = ProfileStore.PATH
 var keeper: ProfileKeeper
 ## Every piece of gear's id (#694): loot with one of these ids is gear, the rest materials.
 var _gear_ids: Array[String] = []
+## The ids of the outbox's requests sent this session (#771).
+var _sent: Array[String] = []
 
 
 ## Loads the profile on entering the tree, before any node's _ready: the driver starts the session
@@ -33,9 +37,9 @@ func _enter_tree() -> void:
 		return
 	WebStorage.keep()
 	var profile: Profile = ProfileStore.load_from(save_path)
-	if profile.loaded_generation > 0:
+	if ProfileStore.loaded_generation > 0:
 		push_warning("the newest profile saves were damaged; loaded the one %d back" % [
-			profile.loaded_generation,
+			ProfileStore.loaded_generation,
 		])
 	if profile.problem.is_empty():
 		var quests: QuestData = QuestContent.load_quests()
@@ -66,6 +70,10 @@ func _ready() -> void:
 	bus.subscribe(&"DialogAnswered", _on_event)
 	bus.subscribe(&"WorldChanged", _on_event)
 	bus.subscribe(&"MonsterRevived", _on_revived)
+	bus.subscribe(&"RequestApplied", _on_applied)
+	if keeper != null:
+		# What the world hasn't acknowledged yet goes again, from the start of every session.
+		_send_new()
 
 
 func _process(_delta: float) -> void:
@@ -87,20 +95,26 @@ func _on_event(event: RefCounted) -> void:
 		return
 	var gain: Gain = _gain_of(event)
 	if gain != null:
-		var done: int = keeper.profile.quests_done.size()
 		_report(keeper.take(gain, Time.get_ticks_msec()))
-		_hand_over_since(done)
+		_send_new()
 
 
-## Hands over the territory of every territory quest finished after the first `done` ones (#638),
-## in the order finished, in this player's next commands.
-func _hand_over_since(done: int) -> void:
-	var profile: Profile = keeper.profile
-	for index: int in range(done, profile.quests_done.size()):
-		# A quest is finished only from the book, so the book has it.
-		var territory: QuestTerritory = profile.quest_book[profile.quests_done[index]].territory
-		if territory != null:
-			input.hand_over(Territory.code(territory.instance, territory.faction))
+## Sends every request in the outbox not sent this session yet (#771), in the order posted, in
+## this player's next commands.
+func _send_new() -> void:
+	for request: OutboxEntry in keeper.profile.outbox.entries:
+		if not _sent.has(request.id):
+			input.send(request)
+			_sent.append(request.id)
+
+
+## Drops a request of this player's the world acknowledged from the outbox (#771).
+func _on_applied(event: RefCounted) -> void:
+	var applied: RequestApplied = event as RequestApplied
+	if keeper != null and applied.slot == input.slot:
+		# A request drawn later may get the same id.
+		_sent.erase(applied.request)
+		_report(keeper.acknowledge(applied.request, Time.get_ticks_msec()))
 
 
 ## Spends the revive item this machine's player used (#656).

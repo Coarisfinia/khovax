@@ -87,6 +87,15 @@ func choose_name(typed: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Drops the request `request` the world acknowledged (#771) from the outbox, and saves it like
+## any change; returns why it couldn't be saved, or "". One not in the outbox changes nothing.
+func acknowledge(request: String, now_msec: int) -> String:
+	if not profile.outbox.drop(request):
+		return ""
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Saves pending changes if the last save is at least SAVE_INTERVAL_MSEC old; returns why it
 ## couldn't, or "".
 func save_if_due(now_msec: int) -> String:
