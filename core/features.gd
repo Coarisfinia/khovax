@@ -29,4 +29,3 @@ const DIALOGS: int = 22
 const TERRITORY: int = 23
 const REVIVE_ITEMS: int = 24
 const NPCS: int = 26
-const NPCS: int = 26
