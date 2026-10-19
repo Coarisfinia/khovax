@@ -810,7 +810,8 @@ func _check_start_corrupted() -> String:
 	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
 	world.step(_still())
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
-	var corrupted: bool = world.variant_of(InstanceBlueprints.GLADE) == InstanceBlueprints.CORRUPTED_GLADE
+	var variant: String = world.variant_of(InstanceBlueprints.GLADE)
+	var corrupted: bool = variant == InstanceBlueprints.CORRUPTED_GLADE
 	if (glade == null
 			or glade == plain
 			or not corrupted
@@ -821,7 +822,7 @@ func _check_start_corrupted() -> String:
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
 	if (reloaded.state_hash() != world.state_hash()
 			or reloaded.generation(InstanceBlueprints.GLADE) != 1):
-		return "the world didn't go through its save data with its purged start: " + reloaded.problem
+		return "the purged start didn't go through the save data: " + reloaded.problem
 	_walk_in(world, FlowSteps.OUT_OF_FOREST)
 	var back: bool = world.instance_of(0) == InstanceBlueprints.GLADE
 	if not back or world.instances[InstanceBlueprints.GLADE] != glade:
