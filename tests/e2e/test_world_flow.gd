@@ -81,6 +81,7 @@ func run(tree: SceneTree) -> String:
 		_check_story_beat,
 		_check_territory,
 		_check_start_kept,
+		_check_start_corrupted,
 		_check_sent_to_spawn,
 		_check_layout,
 		_check_tile_changed,
@@ -782,8 +783,8 @@ func _world_changes(world: World) -> Array[WorldChanged]:
 	return changes
 
 
-## The starting instance, here the forest, is never purged (#212), however long the player stays in
-## the glade.
+## The starting instance, here the forest, isn't purged for being left behind (#212), however long
+## the player stays in the glade.
 func _check_start_kept() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE:
@@ -791,6 +792,36 @@ func _check_start_kept() -> String:
 	_idle_until(world, world.tick + World.PURGE_TICKS + 1)
 	if not world.instances.has(InstanceBlueprints.FOREST) or world.generation("forest") != 0:
 		return "the starting instance was purged"
+	return ""
+
+
+## The starting instance changes with the story too (#727): with the player out in the forest,
+## setting the glade's corrupting flag purges the glade, where the world starts, and loads it again
+## at once from the corrupted glade, which has starts; the world goes through its save data and
+## back with it, and walking back in leads into the corrupted glade.
+func _check_start_corrupted() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.GLADE)
+	FlowSteps.drop_beach_toad(world.instances[InstanceBlueprints.GLADE])
+	for direction: int in FlowSteps.INTO_FOREST:
+		_walk_in(world, direction)
+	if world.instance_of(0) != InstanceBlueprints.FOREST:
+		return "the player didn't walk out of the glade into the forest"
+	var plain: GameState = world.instances[InstanceBlueprints.GLADE]
+	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
+	world.step(_still())
+	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
+	var corrupted: bool = world.variant_of("glade") == InstanceBlueprints.CORRUPTED_GLADE
+	if glade == null or glade == plain or not corrupted or world.generation("glade") != 1:
+		return "the starting glade wasn't purged and loaded again corrupted"
+	if glade.region.starts.size() != GameState.MAX_PLAYERS:
+		return "the corrupted glade has no start for every player"
+	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	if reloaded.state_hash() != world.state_hash() or reloaded.generation("glade") != 1:
+		return "the world didn't go through its save data with its purged start: " + reloaded.problem
+	_walk_in(world, FlowSteps.OUT_OF_FOREST)
+	var back: bool = world.instance_of(0) == InstanceBlueprints.GLADE
+	if not back or world.instances[InstanceBlueprints.GLADE] != glade:
+		return "walking back didn't lead into the corrupted glade"
 	return ""
 
 

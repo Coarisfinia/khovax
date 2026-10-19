@@ -38,7 +38,8 @@ var tick: int = 0
 var instances: Dictionary[String, GameState] = {}
 ## Why the world couldn't be set up, or "" when it could.
 var problem: String = ""
-## The blueprint the world starts in: the origin of the world's layout (#187). Never purged.
+## The blueprint the world starts in: the origin of the world's layout (#187). Always loaded: only
+## a flag's variant change purges it (#727), and it's loaded again at once.
 var start_name: String = ""
 ## How often each blueprint's instance has been purged, by name; none for one never purged.
 var generations: Dictionary[String, int] = {}
@@ -145,8 +146,8 @@ func variant_of(instance_name: String) -> String:
 
 ## Sets the flag `flag` (#529), or clears it when `on` is false: for story beats and the rules that
 ## change the world. Every loaded instance whose variant that changes is outdated: purged once
-## nobody is in it (`_purge_left_behind`), or as someone walks in. The starting instance is never
-## purged, so it keeps the variant it was loaded from.
+## nobody is in it (`_purge_left_behind`), or as someone walks in or is sent to the spawn. The
+## starting instance too (#727), which is loaded again at once from its new variant.
 func set_flag(flag: String, on: bool = true) -> void:
 	if flags.has(flag) == on:
 		return
@@ -162,10 +163,9 @@ func set_flag(flag: String, on: bool = true) -> void:
 
 
 ## Whether the loaded instance `instance_name` was loaded from another variant than the flags
-## choose now; never the starting instance, which is never purged.
+## choose now.
 func _outdated(instance_name: String) -> bool:
-	var chosen: String = _chosen_variant(instance_name)
-	return instance_name != start_name and variant_of(instance_name) != chosen
+	return variant_of(instance_name) != _chosen_variant(instance_name)
 
 
 ## Hands every loaded instance the ground next door again (`_hand_next_door`), in name order: once
@@ -332,8 +332,9 @@ static func _changed_event(event_name: String, flag: String) -> WorldChanged:
 	return WorldChanged.new(event_name, flag)
 
 
-## Notes when each instance was left behind, and purges every one but the starting instance that
-## nobody has been in for PURGE_TICKS (#212), or that nobody is in and a flag outdated (#529).
+## Notes when each instance was left behind, and purges every one nobody is in that a flag
+## outdated (#529, the starting instance too, #727), or but the starting instance that nobody has
+## been in for PURGE_TICKS (#212).
 ## Anyone entering it before then resets the count. Each instance is purged at most once a tick.
 func _purge_left_behind() -> void:
 	for instance_name: String in sorted_names():
@@ -348,7 +349,8 @@ func _purge_left_behind() -> void:
 
 
 ## Purges the instance `instance_name` (#212): it is dropped, and its next visit loads it fresh at
-## its next generation, from the variant the flags choose then.
+## its next generation, from the variant the flags choose then. The starting instance is loaded
+## again at once (#727): replays and the driver start from it, and a save always holds it.
 func _purge(instance_name: String) -> void:
 	var _dropped: bool = instances.erase(instance_name)
 	var _forgotten: bool = left_at.erase(instance_name)
@@ -358,6 +360,8 @@ func _purge(instance_name: String) -> void:
 	# to it see its new ground.
 	_layout.forget(instance_name)
 	refresh_next_door()
+	if instance_name == start_name:
+		var _reloaded: GameState = instance(start_name)
 
 
 ## The player in `slot`, in whichever instance they are, or null.
@@ -381,12 +385,7 @@ func instance_of(slot: int) -> String:
 ## that leads back: an east exit arrives from the west. They stay if that instance can't load or
 ## has no way back.
 func _walk_through(from: String, taken: ExitTaken) -> void:
-	# One a flag outdated this tick is purged first, so whoever walks in finds its new variant. Only
-	# here and in `_purge_left_behind`, inside a step, so an instance is purged at most once a tick.
-	var loaded_before: GameState = instances.get(taken.target)
-	if loaded_before != null and not has_player(loaded_before) and _outdated(taken.target):
-		_purge(taken.target)
-	var target: GameState = instance(taken.target)
+	var target: GameState = _entering(taken.target)
 	if target == null:
 		return
 	var arrival: Vector2i = _arrival(from, taken, target.region)
@@ -423,7 +422,7 @@ func _arrival(from: String, taken: ExitTaken, region: Region) -> Vector2i:
 ## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a
 ## new entity, so at full HP: back at the world's spawn.
 func _send_to_spawn(from: String, sent: SentToSpawn) -> void:
-	var spawn: GameState = instance(start_name)
+	var spawn: GameState = _entering(start_name)
 	if spawn == null or spawn.region.starts.is_empty():
 		return
 	var starts: Array[Vector2i] = spawn.region.starts
@@ -434,6 +433,17 @@ func _send_to_spawn(from: String, sent: SentToSpawn) -> void:
 	if arrived[0] != null:
 		_bring_followers(instances[from], leaders, spawn, start)
 		_raise_entered(start_name, arrived)
+
+
+## The instance `instance_name`, which a player is about to enter, loading it if need be, or null
+## when it can't load. One a flag outdated this tick is purged first, so whoever comes in finds its
+## new variant. Only here and in `_purge_left_behind`, inside a step, so an instance is
+## purged at most once a tick.
+func _entering(instance_name: String) -> GameState:
+	var loaded_before: GameState = instances.get(instance_name)
+	if loaded_before != null and not has_player(loaded_before) and _outdated(instance_name):
+		_purge(instance_name)
+	return instance(instance_name)
 
 
 ## Moves the followers `leaders` names (`_followers`, #716) out of `left` into `target` along with
