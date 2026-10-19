@@ -23,6 +23,10 @@ for file in "$folder"/*; do
     echo "::error file=${file}::its frontmatter is its issue (the file's number), nothing else (no pr: git log finds it)"
     failed=1
   fi
+  if grep -q '/pull/[0-9]' "$file"; then
+    echo "::error file=${file}::it links its issue, not its pull request (git log finds that)"
+    failed=1
+  fi
 done
 
 changed=$(git diff --name-only --diff-filter=M "$base" HEAD -- 'tests/replays/*.replay')
