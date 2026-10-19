@@ -6,7 +6,7 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 9
+const FORMAT: int = 10
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -29,6 +29,8 @@ static func to_text(profile: Profile) -> String:
 		"personal_color": profile.personal_color,
 		"character_name": profile.character_name,
 		"standings": _sorted(profile.standings.by_faction),
+		"gear": _sorted(profile.gear.owned),
+		"equipped": _sorted(profile.gear.equipped),
 	}
 	return JSON.stringify(data, "\t", false)
 
@@ -75,22 +77,20 @@ static func parse(text: String) -> Profile:
 
 ## Brings `data` in save format `format` up to the current one, oldest step first.
 static func _migrate(data: Dictionary, format: int) -> void:
-	if format < 2:
-		_migrate_to_2(data)
-	if format < 3:
-		_migrate_to_3(data)
-	if format < 4:
-		_migrate_to_4(data)
-	if format < 5:
-		_migrate_to_5(data)
-	if format < 6:
-		_migrate_to_6(data)
-	if format < 7:
-		_migrate_to_7(data)
-	if format < 8:
-		_migrate_to_8(data)
-	if format < 9:
-		_migrate_to_9(data)
+	# The step from format n to n + 1 is at n - 1, so a save in format n takes every one from there.
+	var steps: Array[Callable] = [
+		_migrate_to_2,
+		_migrate_to_3,
+		_migrate_to_4,
+		_migrate_to_5,
+		_migrate_to_6,
+		_migrate_to_7,
+		_migrate_to_8,
+		_migrate_to_9,
+		_migrate_to_10,
+	]
+	for step: int in range(format - 1, steps.size()):
+		steps[step].call(data)
 
 
 ## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
@@ -163,6 +163,12 @@ static func _migrate_to_9(data: Dictionary) -> void:
 			entry["done"] = range(maxi(0, at - QuestProgress.MAX_DONE), maxi(0, at))
 
 
+## Format 9 to 10: the player owns no gear, and their gear slots are empty (#690).
+static func _migrate_to_10(data: Dictionary) -> void:
+	data["gear"] = {}
+	data["equipped"] = {}
+
+
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
@@ -183,11 +189,9 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 			return "a dominated monster in the save is malformed or its id isn't unique"
 		profile.dominated_monsters.append(monster)
 	var by_name: Dictionary = stored
-	for material: Variant in by_name:
-		var count: int = _int(by_name[material])
-		if count < 0 or str(material).is_empty():
-			return "material %s has an invalid count" % material
-		profile.materials[str(material)] = count
+	var counted: String = _read_counts(by_name, profile.materials)
+	if not counted.is_empty():
+		return "material " + counted
 	profile.personal_color = _color(data.get("personal_color"))
 	if profile.personal_color < Profile.AUTO_COLOR:
 		return "the save's personal color is invalid"
@@ -198,10 +202,41 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	if (not profile.character_name.is_empty()
 			and not Profile.name_problem(profile.character_name).is_empty()):
 		return "the save's character name is invalid"
-	var problem: String = _read_carried(profile, data)
-	if problem.is_empty():
-		problem = _read_standings(profile, data)
-	return problem if not problem.is_empty() else _read_quests(profile, data)
+	var problem: String = ""
+	# Each reads its part once the parts before it were sound.
+	for reader: Callable in [_read_carried, _read_standings, _read_gear, _read_quests]:
+		if problem.is_empty():
+			problem = reader.call(profile, data)
+	return problem
+
+
+## Reads a save's counts by id, `stored`, into `counts`; returns why one can't be (its id is empty,
+## or its count isn't a whole number from 0), or "".
+static func _read_counts(stored: Dictionary, counts: Dictionary[String, int]) -> String:
+	for id: Variant in stored:
+		var count: int = _int(stored[id])
+		if count < 0 or str(id).is_empty():
+			return "%s has an invalid count" % id
+		counts[str(id)] = count
+	return ""
+
+
+## Reads the save's gear and what's in each gear slot (#690); returns why it can't, or "".
+static func _read_gear(profile: Profile, data: Dictionary) -> String:
+	var owned: Variant = data.get("gear")
+	var equipped: Variant = data.get("equipped")
+	if not owned is Dictionary or not equipped is Dictionary:
+		return "the save lacks its gear"
+	var by_id: Dictionary = owned
+	var counted: String = _read_counts(by_id, profile.gear.owned)
+	if not counted.is_empty():
+		return "gear " + counted
+	var by_slot: Dictionary = equipped
+	for slot: Variant in by_slot:
+		var gear_id: String = Content.text_of(by_slot[slot])
+		if gear_id.is_empty() or not profile.gear.equip(str(slot), gear_id).is_empty():
+			return "the gear in slot %s in the save isn't owned, or the slot isn't one" % slot
+	return ""
 
 
 ## Reads the save's standings with the factions into this profile; returns why it can't, or "".

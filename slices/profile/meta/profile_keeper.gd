@@ -56,6 +56,16 @@ func move_monster(monster_id: int, place: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Puts the gear `gear_id` into the player's `slot`, or empties it with "" (#690), and saves it like
+## any choice; returns why it can't, or "".
+func equip(slot: String, gear_id: String, now_msec: int) -> String:
+	var problem: String = profile.gear.equip(slot, gear_id)
+	if not problem.is_empty():
+		return problem
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Names the player's character `typed` (#399), its spaces at either end dropped, and saves it like
 ## any choice; returns why it can't, in words, or "".
 func choose_name(typed: String, now_msec: int) -> String:

@@ -1,0 +1,7 @@
+// A basic pouch of berries for the throw slot (#690). It does nothing yet: berries come with #693.
+{
+	"id": "berry_pouch",
+	"name": "Berry pouch",
+	"slot": "throw",
+	"rarity": "loose"
+}
