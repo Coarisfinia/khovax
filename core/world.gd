@@ -15,8 +15,9 @@ extends RefCounted
 ## variant (`InstanceSource.variant`): setting or clearing one purges every loaded instance whose
 ## variant it changes, once nobody is in it, so it comes back from its new variant and no player
 ## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
-## EVENT_FLAG + its name, so whatever happens in an instance can change the world. Deterministic,
-## like everything in core/.
+## EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story beat
+## does, and the first time it sets its flag the world raises that it changed (WorldChanged, #499).
+## Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
@@ -57,8 +58,9 @@ var companions: Array[String] = []
 ## when the session starts.
 var carried: Array[PackedStringArray] = []
 ## The world's own events of the last tick (#370): players who came into another instance
-## (InstanceEntered), which no instance's features see. Like an instance's events, they're derived
-## from what happened, so they're neither hashed nor saved.
+## (InstanceEntered) and world-changing moments (WorldChanged, #499), which no instance's features
+## see. Like an instance's events, they're derived from what happened, so they're neither hashed
+## nor saved.
 var events: Array[RefCounted] = []
 
 
@@ -313,9 +315,18 @@ func _hand_changed_ground(stepped: Array[String]) -> void:
 ## Sets the flag of every event in `emitted` (#541), raised this tick, once every instance has
 ## stepped, so no instance's step sees another's events change the world mid-tick; before anyone
 ## walks through an exit, so whoever walks into an instance one outdated finds its new variant.
+## The first time an event sets its flag, the world raises that it changed (WorldChanged, #499).
 func _set_emitted(emitted: Array[EventEmitted]) -> void:
 	for event: EventEmitted in emitted:
-		set_flag(EVENT_FLAG + event.event_name)
+		var flag: String = EVENT_FLAG + event.event_name
+		if not flags.has(flag):
+			set_flag(flag)
+			events.append(_changed_event(event.event_name, flag))
+
+
+## That the event `event_name` changed the world by setting `flag`.
+static func _changed_event(event_name: String, flag: String) -> WorldChanged:
+	return WorldChanged.new(event_name, flag)
 
 
 ## Notes when each instance was left behind, and purges every one but the starting instance that
