@@ -9,12 +9,13 @@ extends RefCounted
 
 ## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338)
 ## with its attacks and swapping it for another carried monster (#55), a trail per player, the wild
-## monsters the region places, dominating them with a ring, and fog of war.
+## monsters the region places, dominating them with a ring, and fog of war. Only the tests play it
+## (#712): no exit leads to it, so they load it directly.
 const BASIC: String = "basic"
 ## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
 const LOAD: String = "load"
-## The first region arranged from region pieces (#57): a glade the seed puts together, east of the
-## basic instance (#140).
+## The first region arranged from region pieces (#57): a glade the seed puts together, where the
+## world starts (#712).
 const GLADE: String = "glade"
 ## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
 const ARENA: String = "arena"

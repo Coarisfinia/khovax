@@ -121,6 +121,7 @@ func _check_launch_options() -> String:
 ## would go to is let go of when the options are applied.
 func _check_launched(tree: SceneTree) -> String:
 	var given: int = GameDriver.fixed_seed
+	var given_instance: String = GameDriver.start_instance
 	WorldKeeper.default_path = WorldSave.PATH
 	LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
 	if not WorldKeeper.default_path.is_empty():
@@ -136,7 +137,7 @@ func _check_launched(tree: SceneTree) -> String:
 			driver.local_instance_name(),
 			driver.world.world_seed,
 		]
-	GameDriver.start_instance = ""
+	GameDriver.start_instance = given_instance
 	GameDriver.fixed_seed = given
 	main.queue_free()
 	await tree.process_frame

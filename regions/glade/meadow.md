@@ -1,0 +1,31 @@
+# Glade: meadow
+
+An open meadow in the glade (#712): two wild monsters graze in the open, each with room to walk a ring around it, among shrubs (#205), a boulder and a stump, with a few trees (#116) on its west side. A disc of radius 5, it joins the glade in the middle of its east and west edges, so its neighbours meet it along the whole edge (#689).
+
+## Tiles
+
+```
+     . . . . . .
+    . 🌳 . . . . .
+   . . . m . . . j
+  . . . . . . 🌳 . .
+ 🌲 . . . . . . . . .
+🌲 🌲 . . 🪨 . . . . . .
+ 🌲 . . . . . . m . .
+  . . 🌳 . . . . . .
+   k . . . . . 🌿 .
+    . . . 🪵 . . .
+     . . . . . .
+```
+
+## Legend
+
+- `.`: ground
+- `🌲`: forest
+- `🌳`: shrubs
+- `🌿`: shrubs, turned 3
+- `🪨`: boulder
+- `🪵`: stump
+- `m`: a wild monster, of a species rolled from the instance blueprint's list
+- `j`: joins another piece to the east
+- `k`: joins another piece to the west

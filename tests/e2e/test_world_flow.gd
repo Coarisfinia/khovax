@@ -1,8 +1,9 @@
 extends RefCounted
 ## World flow (#120, #139): the instances hang together through exits in their region pieces.
-## Every exit leads to a blueprint that exists and has the way back on the opposite side; the basic
-## instance's east edge leads to the glade; the glade keeps its layout, so its way back stays west
-## for every seed, and arranging its pieces never covers the tile outside it. Broken exit lines are
+## Every exit leads to a blueprint that exists and has the way back on the opposite side; the
+## playground has no exits, so no way leads to it (#712); the glade keeps its layout, so its ways
+## out stay on its start piece for every seed, and arranging its pieces never covers the tile
+## outside them. Broken exit lines are
 ## refused. Pieces join and exits lead out across several tiles, never one (#689). The web is
 ## validated as a whole (#143): every blueprint loads as a full instance, every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
@@ -49,11 +50,9 @@ func run(tree: SceneTree) -> String:
 		var problem: String = InstanceBlueprints.exit_problem(instance_name)
 		if not problem.is_empty():
 			return problem
-	var basic: Region = InstanceBlueprints.region_of(InstanceBlueprints.BASIC, 0)
-	var east: Array[Vector3i] = [Vector3i(3, -2, 0), Vector3i(3, -1, 0), Vector3i(3, 0, 0)]
-	var to_glade: bool = basic.exit_blueprints.count(InstanceBlueprints.GLADE) == east.size()
-	if basic.exits != east or not to_glade:
-		return "the basic instance's east edge doesn't lead to the glade: %s" % [basic.exits]
+	# Without a way back, no exit can lead to it either: exit_problem refuses that.
+	if not InstanceBlueprints.region_of(InstanceBlueprints.BASIC, 0).exits.is_empty():
+		return "the playground, which only the tests play, has an exit"
 	var steps: Array[Callable] = [
 		_check_glade_exit,
 		_check_wide_seams,
@@ -184,39 +183,42 @@ func _check_sent_to_spawn() -> String:
 	return ""
 
 
-## Walking through exits (#154): from the basic instance's start, onto its exit on (3, -2) and on
-## east into the glade, arriving on the glade's way back; then west again, back onto the basic
-## instance's exit, while the glade stays loaded for the next visit. The exit is three tiles wide
-## (#689): one step southeast along it and east again, the player lands on the glade's tile right
-## across from that one. The player enters the basic instance on the first tick, then the glade,
-## the basic instance and the glade again, and nothing else.
+## Walking through exits (#154): from the forest's start, onto its exit on (-2, 5) and on southeast
+## into the glade, arriving on the glade's way back; then northwest again, back onto the forest's
+## exit, while the glade stays loaded for the next visit. The exit is three tiles wide (#689): one
+## step east along it and southeast again, the player lands on the glade's tile right across from
+## that one. The player enters the forest on the first tick, then the glade, the forest and the
+## glade again, and nothing else.
 func _check_walk_through() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	_entered.clear()
-	# From the start at (1, -1): east, northeast onto the exit on (3, -2), and east once more.
-	for direction: int in [0, 1, 0]:
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	var arrived: Entity = world.player(0)
 	if glade == null or world.instance_of(0) != InstanceBlueprints.GLADE:
-		return "walking east out of the basic instance didn't lead into the glade"
-	if arrived.tile != Vector2i(
-		-2,
-		0,
-	) or world.instances[InstanceBlueprints.BASIC].player(0) != null:
+		return "walking southeast out of the forest didn't lead into the glade"
+	var left_forest: bool = world.instances[InstanceBlueprints.FOREST].player(0) == null
+	if arrived.tile != FlowSteps.GLADE_ARRIVAL or not left_forest:
 		return "the player arrived on %s, not the glade's way back" % arrived.tile
-	_walk_in(world, 3)
+	_walk_in(world, FlowSteps.OUT_OF_GLADE)
 	var back: Entity = world.player(0)
-	if world.instance_of(0) != InstanceBlueprints.BASIC or back.tile != Vector2i(3, -2):
-		return "walking west out of the glade didn't lead back onto the basic instance's exit"
+	if world.instance_of(0) != InstanceBlueprints.FOREST or back.tile != FlowSteps.FOREST_EXIT:
+		return "walking northwest out of the glade didn't lead back onto the forest's exit"
 	if world.instances[InstanceBlueprints.GLADE] != glade:
 		return "coming back loaded a new glade instead of the same one"
-	for direction: int in [5, 0]:
+	for direction: int in [0, 5]:
 		_walk_in(world, direction)
-	if world.instance_of(0) != InstanceBlueprints.GLADE or world.player(0).tile != Vector2i(-2, 1):
+	var across: Vector2i = FlowSteps.GLADE_ARRIVAL + Hex.DIRECTIONS[0]
+	if world.instance_of(0) != InstanceBlueprints.GLADE or world.player(0).tile != across:
 		return "walking out of the wide exit's second tile didn't land across from it in the glade"
-	var basic: String = InstanceBlueprints.BASIC
-	var expected: Array[String] = [basic, InstanceBlueprints.GLADE, basic, InstanceBlueprints.GLADE]
+	var forest: String = InstanceBlueprints.FOREST
+	var expected: Array[String] = [
+		forest,
+		InstanceBlueprints.GLADE,
+		forest,
+		InstanceBlueprints.GLADE,
+	]
 	if _entered != expected:
 		return "walking there and back entered %s, not %s" % [_entered, expected]
 	return ""
@@ -226,19 +228,19 @@ func _check_walk_through() -> String:
 ## other player, who brings none, isn't. A weak species' reach is shorter than a strong one's.
 ## Standing, the player watches it roam within its reach; walking off, they're never more than a
 ## step out of it, and only players color the trail. The player walks through it, and it follows
-## them out through the exit into the glade, while the one in the basic instance goes.
+## them out through the exit into the glade, while the one in the forest goes.
 func _check_companions() -> String:
 	var world: World = World.new(
 		BlueprintSource.new(),
 		3,
-		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
 		2,
 		["storm_finch"],
 	)
 	world.step(_still())
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
-	var companion: Entity = basic.entity(companions.companion_of(0))
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
+	var companion: Entity = forest.entity(companions.companion_of(0))
 	if companion == null or companions.companion_of(1) != 0:
 		return "only the player bringing a companion should be joined by one"
 	if Hex.distance(companion.tile, world.player(0).tile) != 1:
@@ -259,33 +261,33 @@ func _check_companions() -> String:
 			world.step(_moving(direction) if tick == 0 else _still())
 			if Hex.distance(companion.tile, world.player(0).tile) > reach + 1:
 				return "the companion fell more than a step behind its walking player"
-	var trails: TrailFeature = basic.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = forest.feature(Features.TRAIL) as TrailFeature
 	for tile: Vector2i in trails.shared.tiles:
 		if trails.shared.tiles[tile] == companion.id:
 			return "the companion colored %s on the trail" % tile
 	return _check_companion_passed(world, companion)
 
 
-## Standing east of its player, the companion lets them walk through, and it follows them out
-## through the exit into the glade, while the one left in the basic instance goes.
+## Standing southeast of its player, the companion lets them walk through, and it follows them out
+## through the exit into the glade, while the one left in the forest goes.
 func _check_companion_passed(world: World, companion: Entity) -> String:
 	var start: Vector2i = world.player(0).tile
-	companion.tile = start + Hex.DIRECTIONS[0]
-	world.step(_moving(0))
-	if world.player(0).tile != start + Hex.DIRECTIONS[0]:
+	companion.tile = start + Hex.DIRECTIONS[5]
+	world.step(_moving(5))
+	if world.player(0).tile != start + Hex.DIRECTIONS[5]:
 		return "the companion stopped its own player"
 	_idle_until(world, world.tick + MovementFeature.MOVE_TICKS)
-	# From (2, -1), northeast onto the exit on (3, -2), and east once more.
-	for direction: int in [1, 0]:
+	# The rest of the walk into the glade: onto the forest's exit and through it.
+	for direction: int in FlowSteps.INTO_GLADE.slice(1):
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var left: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var left: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	if world.instance_of(0) != InstanceBlueprints.GLADE or followed.companion_of(0) == 0:
 		return "the companion didn't follow its player into the glade"
-	if left.companion_of(0) != 0 or basic.entity(companion.id) != null:
-		return "the companion stayed in the basic instance its player left"
+	if left.companion_of(0) != 0 or forest.entity(companion.id) != null:
+		return "the companion stayed in the forest its player left"
 	return ""
 
 
@@ -296,12 +298,12 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 ## save data and back. With swapping switched off, a swap does nothing. The toad follows its player
 ## into the glade.
 func _check_swaps() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	world.set_carried([PackedStringArray(["storm_finch", "moss_toad"])])
-	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 3)
+	var recorded: Replay = Replay.new(InstanceBlueprints.FOREST, 3)
 	recorded.begin(world)
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	var joined: bool = _swap_in(world, recorded, Command.NO_SWAP) == 0
 	if not joined or companions.species_of(companions.companion_of(0)) != "storm_finch":
 		return "a player carrying two monsters wasn't joined by the first"
@@ -312,7 +314,7 @@ func _check_swaps() -> String:
 	var finch: int = companions.companion_of(0)
 	var _settled: int = _swap_in(world, recorded, Command.NO_SWAP)
 	var toad: int = companions.companion_of(0)
-	if companions.species_of(toad) != "moss_toad" or basic.entity(finch) != null:
+	if companions.species_of(toad) != "moss_toad" or forest.entity(finch) != null:
 		return "the chosen moss toad didn't take the storm finch's place beside its player"
 	recorded.finish(world)
 	return _check_swap_kept(world, recorded)
@@ -328,12 +330,12 @@ func _check_swap_kept(world: World, recorded: Replay) -> String:
 	var kept: bool = restored.companions == world.companions and restored.carried == world.carried
 	if not restored.problem.is_empty() or not kept:
 		return "the chosen companion didn't go through the save data and back: " + restored.problem
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	basic.set_enabled(Features.COMPANION_SWAPS, false)
+	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	forest.set_enabled(Features.COMPANION_SWAPS, false)
 	if _swap_in(world, null, 1) != 0 or world.companions[0] != "moss_toad":
 		return "a player swapped with swapping switched off"
-	basic.set_enabled(Features.COMPANION_SWAPS, true)
-	for direction: int in [0, 1, 0]:
+	forest.set_enabled(Features.COMPANION_SWAPS, true)
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
@@ -537,12 +539,12 @@ static func _press_roster(roster: RosterHud, at: Vector2, click: bool, pressed: 
 ## goes through its save data and back with the tick the glade was left and its generation, and
 ## hashes the same.
 func _check_purge() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	var first_seed: int = world.seed_for(InstanceBlueprints.GLADE)
-	for direction: int in [0, 1, 0, 3]:
+	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(InstanceBlueprints.GLADE, -1)
-	if left < 0 or world.instance_of(0) != InstanceBlueprints.BASIC:
+	if left < 0 or world.instance_of(0) != InstanceBlueprints.FOREST:
 		return "walking into the glade and back didn't leave it behind"
 	var glade_left: GameState = world.instances[InstanceBlueprints.GLADE]
 	glade_left.events.append(RefCounted.new())
@@ -555,7 +557,7 @@ func _check_purge() -> String:
 	world.step(_still())
 	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
 		return "the glade wasn't purged an hour after it was left behind"
-	_walk_in(world, 0)
+	_walk_in(world, FlowSteps.INTO_GLADE[-1])
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	var reseeded: bool = glade != null and glade.rng_seed == world.seed_for("glade")
 	if not reseeded or glade.rng_seed == first_seed or world.left_at.has("glade"):
@@ -566,7 +568,7 @@ func _check_purge() -> String:
 ## Leaving the glade again, after it was purged at `purged`, starts a new count, and the world goes
 ## through its save data and back with both.
 func _check_left_again(world: World, purged: int) -> String:
-	_walk_in(world, 3)
+	_walk_in(world, FlowSteps.OUT_OF_GLADE)
 	if world.left_at.get(InstanceBlueprints.GLADE, -1) <= purged:
 		return "leaving the glade again didn't start a new count"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
@@ -584,8 +586,8 @@ func _check_left_again(world: World, purged: int) -> String:
 ## the world and its layout alike. Clearing the flag purges it again once nobody is in it, and
 ## setting a flag that is already set changes nothing.
 func _check_flags() -> String:
-	var world: World = World.new(RisingSource.new(), 3, InstanceBlueprints.BASIC)
-	for direction: int in [0, 1, 0]:
+	var world: World = World.new(RisingSource.new(), 3, InstanceBlueprints.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	var before: int = world.state_hash()
@@ -601,7 +603,7 @@ func _check_flags() -> String:
 	var kept: bool = reloaded.flags == world.flags and reloaded.variant_of("glade") == ""
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flag: " + reloaded.problem
-	_walk_in(world, 3)
+	_walk_in(world, FlowSteps.OUT_OF_GLADE)
 	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
 		return "the glade wasn't purged once the player left it after the flag"
 	var risen: GameState = world.instance(InstanceBlueprints.GLADE)
@@ -609,7 +611,7 @@ func _check_flags() -> String:
 	var tiles: Array[Vector2i] = risen.region.sorted_tiles()
 	if world.variant_of("glade") != "arena" or tiles != arena.sorted_tiles():
 		return "the glade didn't come back from its variant, the arena's region"
-	# The arena's region has no way back to the basic instance, which only a layout worked out from
+	# The arena's region has no way back to the forest, which only a layout worked out from
 	# the glade's new region notices.
 	if world.layout_problem().is_empty():
 		return "the world's layout still has the glade's old region"
@@ -629,9 +631,9 @@ func _check_flags() -> String:
 ## flag and the corrupted glade. The tick the player walks out, it's purged, and it comes back as
 ## the plain glade.
 func _check_corruption() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
-	for direction: int in [0, 1, 0]:
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	if glade == null or world.variant_of("glade") != InstanceBlueprints.CORRUPTED_GLADE:
@@ -654,7 +656,7 @@ func _check_corruption() -> String:
 	var kept: bool = reloaded.variant_of("glade") == InstanceBlueprints.CORRUPTED_GLADE
 	if not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flags: " + reloaded.problem
-	_walk_in(world, 3)
+	_walk_in(world, FlowSteps.OUT_OF_GLADE)
 	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
 		return "the glade wasn't purged once the player left it"
 	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
@@ -689,13 +691,14 @@ func _world_changes(world: World) -> Array[WorldChanged]:
 	return changes
 
 
-## The starting instance is never purged (#212), however long the player stays in the glade.
+## The starting instance, here the forest, is never purged (#212), however long the player stays in
+## the glade.
 func _check_start_kept() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
-	for direction: int in [0, 1, 0]:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	_idle_until(world, world.tick + World.PURGE_TICKS + 1)
-	if not world.instances.has(InstanceBlueprints.BASIC) or world.generation("basic") != 0:
+	if not world.instances.has(InstanceBlueprints.FOREST) or world.generation("forest") != 0:
 		return "the starting instance was purged"
 	return ""
 
@@ -990,7 +993,7 @@ func _unreachable_exit(region: Region) -> String:
 ## Every blueprint with exits can be reached from the starting instance by walking through exits,
 ## so no part of the web is cut off.
 func _check_web_connected() -> String:
-	var reached: Array[String] = [InstanceBlueprints.BASIC]
+	var reached: Array[String] = [InstanceBlueprints.GLADE]
 	var next: int = 0
 	while next < reached.size():
 		for target: String in InstanceBlueprints.region_of(reached[next], 0).exit_blueprints:
@@ -1004,29 +1007,29 @@ func _check_web_connected() -> String:
 	return ""
 
 
-## The world (#148): the session starts in the basic instance, and the glade loads with nobody in
+## The world (#148): the session starts in the glade (#712), and the forest loads with nobody in
 ## it. Only the instance a player is in steps, every instance's seed is its own and the same every
 ## session, and the world's hash covers every loaded instance.
 func _check_world() -> String:
-	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
-	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
-	if not world.problem.is_empty() or glade == null or glade.player(0) != null:
-		return "the world didn't start, or the glade didn't load empty: " + world.problem
-	var seeds: Array[int] = [world.seed_for(InstanceBlueprints.BASIC), glade.rng_seed]
-	var again: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
-	if seeds[0] == seeds[1] or again.seed_for("glade") != seeds[1]:
+	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.GLADE)
+	var forest: GameState = world.instance(InstanceBlueprints.FOREST)
+	if not world.problem.is_empty() or forest == null or forest.player(0) != null:
+		return "the world didn't start, or the forest didn't load empty: " + world.problem
+	var seeds: Array[int] = [world.seed_for(InstanceBlueprints.GLADE), forest.rng_seed]
+	var again: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.GLADE)
+	if seeds[0] == seeds[1] or again.seed_for("forest") != seeds[1]:
 		return "the instances' seeds aren't their own, or differ between sessions: %s" % [seeds]
 	var hashed: int = world.state_hash()
 	for _tick: int in 10:
 		world.step(_still())
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	if basic.tick != 10 or glade.tick != 0 or world.active().size() != 1:
-		return "the world stepped the wrong instances: basic %d, glade %d" % [
-			basic.tick,
+	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	if glade.tick != 10 or forest.tick != 0 or world.active().size() != 1:
+		return "the world stepped the wrong instances: glade %d, forest %d" % [
 			glade.tick,
+			forest.tick,
 		]
 	var stepped: int = world.state_hash()
-	glade.tick += 1
+	forest.tick += 1
 	if hashed == stepped or world.state_hash() == stepped:
 		return "the world's hash doesn't cover every loaded instance"
 	return ""
@@ -1037,52 +1040,52 @@ func _still() -> Array[Command]:
 	return commands
 
 
-## The web lies in one world (#187): the glade sits so that walking out of the basic instance's east
-## exit lands next to it on the glade's way back, and for every seed no two instances overlap.
+## The web lies in one world (#187): the forest sits so that walking out of the glade's north exit
+## lands next to it on the forest's way back, and for every seed no two instances overlap.
 func _check_layout() -> String:
 	for seed_value: int in SEEDS:
 		var problem: String = _layout_problem(seed_value)
 		if not problem.is_empty():
 			return "seed %d: %s" % [seed_value, problem]
-	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.BASIC)
-	var basic: Region = InstanceBlueprints.region_of(
-		InstanceBlueprints.BASIC,
-		world.seed_for("basic"),
-	)
+	var world: World = World.new(BlueprintSource.new(), 7, InstanceBlueprints.GLADE)
 	var glade: Region = InstanceBlueprints.region_of(
 		InstanceBlueprints.GLADE,
 		world.seed_for(InstanceBlueprints.GLADE),
 	)
-	var exit: Vector3i = basic.exits[0]
+	var forest: Region = InstanceBlueprints.region_of(
+		InstanceBlueprints.FOREST,
+		world.seed_for(InstanceBlueprints.FOREST),
+	)
+	var exit: Vector3i = glade.exits[glade.exit_blueprints.find(InstanceBlueprints.FOREST)]
 	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-	var way: Vector3i = glade.exits[glade.exit_blueprints.find(InstanceBlueprints.BASIC)]
+	var way: Vector3i = forest.exits[forest.exit_blueprints.find(InstanceBlueprints.GLADE)]
 	var back: Vector2i = Vector2i(way.x, way.y)
-	var landing: Vector2i = back + world.offset(InstanceBlueprints.GLADE)
-	if world.offset(InstanceBlueprints.BASIC) != Vector2i.ZERO or landing != outside:
-		return "walking out of the basic instance's east exit doesn't land on the glade's way back"
+	var landing: Vector2i = back + world.offset(InstanceBlueprints.FOREST)
+	if world.offset(InstanceBlueprints.GLADE) != Vector2i.ZERO or landing != outside:
+		return "walking out of the glade's north exit doesn't land on the forest's way back"
 	return ""
 
 
 ## Why seed `seed_value`'s web can't be laid out as one world, or "".
 func _layout_problem(seed_value: int) -> String:
-	return World.new(BlueprintSource.new(), seed_value, InstanceBlueprints.BASIC).layout_problem()
+	return World.new(BlueprintSource.new(), seed_value, InstanceBlueprints.GLADE).layout_problem()
 
 
-## For every seed the glade's way back is on its west side, three tiles wide (#689), where the
-## region ends, and no exit of it leads out onto a tile of its own.
+## For every seed the glade's way to the forest is on its start piece's north edge, three tiles wide
+## (#689), where the region ends, and no exit of it leads out onto a tile of its own.
 func _check_glade_exit() -> String:
-	var west: Array[Vector3i] = [Vector3i(-2, 0, 3), Vector3i(-2, 1, 3), Vector3i(-2, 2, 3)]
+	var north: Array[Vector3i] = [Vector3i(1, -5, 2), Vector3i(2, -5, 2), Vector3i(3, -5, 2)]
 	for seed_value: int in SEEDS:
 		var glade: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
-		var back: Array[Vector3i] = []
+		var way: Array[Vector3i] = []
 		for i: int in glade.exits.size():
-			if glade.exit_blueprints[i] == InstanceBlueprints.BASIC:
-				back.append(glade.exits[i])
+			if glade.exit_blueprints[i] == InstanceBlueprints.FOREST:
+				way.append(glade.exits[i])
 		var covered: bool = false
 		for outside: Vector2i in glade.outside_exits():
 			covered = covered or glade.has_tile(outside)
-		if back != west or covered or not glade.problem.is_empty():
-			return "seed %d's glade has its way back at %s: %s" % [
+		if way != north or covered or not glade.problem.is_empty():
+			return "seed %d's glade has its way to the forest at %s: %s" % [
 				seed_value,
 				glade.exits,
 				glade.problem,

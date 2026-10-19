@@ -1,9 +1,10 @@
 extends RefCounted
 ## The one e2e flow on the devices (#61, #102): the main scene, a fixed seed, and the touch stick
-## walking the player, tick by tick, so the game is exactly the same everywhere: out through the
-## basic instance's east exit into the glade, a few steps in, and back (#139, #152). It checks that
-## the player walked into the glade and back, the trail grew and the camera follows, and that the
-## game ended in exactly the expected state. It runs on an Android emulator and in headless Chrome
+## walking the player, tick by tick, so the game is exactly the same everywhere: from the glade's
+## start, where the world starts (#712), out through its north exit into the forest, a few steps in,
+## and back (#139, #152). It checks that the player walked into the forest and back, the trail grew
+## and the camera follows, and that the game ended in exactly the expected state. It runs on an
+## Android emulator and in headless Chrome
 ## in CI (started by
 ## game/test_mode.gd in the test APK and the test web build), and headless in the required check
 ## (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a pass on a device means it plays
@@ -15,21 +16,20 @@ signal finished(result: String)
 const SEED: int = 7
 const STEP: float = 1.0 / Simulation.TICKS_PER_SECOND
 ## The finger's drags from where it touched down, in RADIUS units, and the ticks each one is held:
-## from the start on (1, -1) a step east, a step northeast onto the exit on (3, -2), east through it
-## into the glade and on, then west all the way back out into the basic instance.
+## from the start on (0, 0) a step northeast, then northwest onto the exit on (1, -5), through it
+## into the forest and on, then southeast all the way back out into the glade.
 const LEGS: Array[Vector2] = [
-	Vector2(1.0, 0.0),
 	Vector2(0.5, -0.866),
-	Vector2(1.0, 0.0),
-	Vector2(-1.0, 0.0),
+	Vector2(-0.5, -0.866),
+	Vector2(0.5, 0.866),
 ]
-const LEG_TICKS: Array[int] = [6, 6, 30, 48]
+const LEG_TICKS: Array[int] = [6, 42, 48]
 ## Ticks the finger rests lifted after the last leg.
 const REST_TICKS: int = 20
 const FINGER: int = 0
 ## The state hash after the scripted walk; when a rule change alters it on purpose, update it with
 ## the golden replays (see AGENTS.md).
-const EXPECTED_HASH: int = 2_184_447_780
+const EXPECTED_HASH: int = 4_264_892_266
 
 ## Every instance the player stood in during the walk.
 var _visited: Dictionary[String, bool] = {}
@@ -48,6 +48,8 @@ func run(main: Node, tree: SceneTree) -> String:
 	var camera: Camera3D = main.get_node("Camera3D") as Camera3D
 	var origin: Vector2 = main.get_viewport().get_visible_rect().size / 2.0
 	driver.set_process(false)
+	# Where the world starts, also under the e2e runner, whose flows start in the playground.
+	driver.instance = InstanceBlueprints.GLADE
 	driver.start(SEED)
 	_visited.clear()
 	var start: Vector2i = driver.state.player(0).tile
@@ -65,10 +67,10 @@ func _result(
 	start: Vector2i,
 	camera_before: Vector3,
 ) -> String:
-	if not _visited.has(InstanceBlueprints.GLADE):
-		return "the walk never reached the glade: %s" % [_visited.keys()]
-	if driver.world.instance_of(0) != InstanceBlueprints.BASIC:
-		return "the walk didn't come back into the basic instance"
+	if not _visited.has(InstanceBlueprints.FOREST):
+		return "the walk never reached the forest: %s" % [_visited.keys()]
+	if driver.world.instance_of(0) != InstanceBlueprints.GLADE:
+		return "the walk didn't come back into the glade"
 	var player: Entity = driver.state.player(0)
 	var trails: TrailFeature = driver.state.feature(Features.TRAIL) as TrailFeature
 	if player.tile == start or trails.shared.tiles.size() < 3:

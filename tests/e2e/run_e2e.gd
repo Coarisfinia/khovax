@@ -32,6 +32,9 @@ func _initialize() -> void:
 		quit(1)
 		return
 	options.apply()
+	# The flows boot the playground, which only the tests play (#712), unless they're given another.
+	if GameDriver.start_instance.is_empty():
+		GameDriver.start_instance = InstanceBlueprints.BASIC
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
 	var tests: Array[String] = []
