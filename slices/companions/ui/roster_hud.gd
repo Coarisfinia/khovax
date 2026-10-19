@@ -91,8 +91,8 @@ func show_state() -> void:
 	var down: Array[bool] = []
 	if driver != null and driver.state != null and driver.input != null:
 		var slot: int = driver.input.slot
-		party = driver.state.carried[slot]
-		companion = driver.state.companions[slot]
+		party = CompanionParty.carried(driver.state, slot)
+		companion = CompanionParty.companion(driver.state, slot)
 		down = _fainted_in(driver.state, slot, party)
 	if party != shown or party.find(companion) != companion_place or down != fainted:
 		shown = party
@@ -105,7 +105,7 @@ func show_state() -> void:
 static func _fainted_in(state: GameState, slot: int, party: PackedStringArray) -> Array[bool]:
 	var down: Array[bool] = []
 	for species: String in party:
-		down.append(state.has_fainted(slot, species))
+		down.append(CompanionParty.has_fainted(state, slot, species))
 	return down
 
 

@@ -79,7 +79,7 @@ func start(seed_value: int) -> void:
 	if not world.problem.is_empty():
 		world = null
 	if world != null:
-		world.set_carried(carried())
+		CompanionParty.bring(world, carried())
 		recording = Replay.new(instance, seed_value)
 		recording.begin(world)
 	_begin_session()
@@ -95,12 +95,7 @@ func resume(saved: World) -> String:
 	world = saved
 	# Who the players bring is the session's, so a monster dominated since the save comes along; a
 	# companion chosen before the save (#55) stays theirs while they still carry it.
-	var chosen: Array[String] = world.companions.duplicate()
-	world.set_carried(carried())
-	for slot: int in GameState.MAX_PLAYERS:
-		var place: int = world.carried[slot].find(chosen[slot])
-		if place > 0:
-			world.choose_companion(slot, place)
+	CompanionParty.bring(world, carried(), true)
 	recording = Replay.new(saved.start_name, saved.world_seed)
 	recording.start_world = WorldData.of(saved)
 	recording.begin(saved)

@@ -129,8 +129,8 @@ func _check_hash_covers_fields() -> String:
 		"tick": func(state: GameState) -> void: state.tick += 1,
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
-		"companion": func(state: GameState) -> void: state.companions[0] = "moss_toad",
-		"carried": func(state: GameState) -> void: state.carried[1] = PackedStringArray(["x"]),
+		"store entry": func(state: GameState) -> void: state.store(0, Features.COMPANIONS)["a"] = 1,
+		"store text": func(state: GameState) -> void: state.store(1, Features.HEALTH)["a"] = "x",
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
 		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
@@ -718,7 +718,10 @@ func _recorded_run() -> Replay:
 		42,
 		InstanceBlueprints.BASIC,
 		2,
-		["storm_finch", "moss_toad"],
+	)
+	CompanionParty.bring(
+		world,
+		[PackedStringArray(["storm_finch"]), PackedStringArray(["moss_toad"])],
 	)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)

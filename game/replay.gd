@@ -49,7 +49,7 @@ func _init(instance_name: String = "", seed_number: int = 0) -> void:
 ## instance's features.
 func begin(world: World) -> void:
 	features = _feature_ids(world.instances[instance])
-	carried = world.carried.duplicate()
+	carried = CompanionParty.carried_in(world)
 	players = 0
 	for slot: int in GameState.MAX_PLAYERS:
 		if world.player(slot) != null:
@@ -142,7 +142,7 @@ func _setup_problem() -> String:
 func _run(check: bool) -> String:
 	if start_world.is_empty():
 		played = World.new(BlueprintSource.new(), seed_value, instance, players)
-		played.set_carried(carried)
+		CompanionParty.bring(played, carried)
 	else:
 		played = WorldData.to_world(start_world, BlueprintSource.new())
 	if not played.problem.is_empty():
@@ -151,8 +151,9 @@ func _run(check: bool) -> String:
 	# slot.
 	var named: Array[PackedStringArray] = carried.duplicate()
 	var _sized: int = named.resize(GameState.MAX_PLAYERS)
-	if played.carried != named:
-		return "the replay's carried monsters %s aren't its world's %s" % [named, played.carried]
+	var brought: Array[PackedStringArray] = CompanionParty.carried_in(played)
+	if brought != named:
+		return "the replay's carried monsters %s aren't its world's %s" % [named, brought]
 	if not played.instances.has(instance):
 		return "the replay's starting world doesn't hold its instance %s" % instance
 	var start: Array[int] = _feature_ids(played.instances[instance])

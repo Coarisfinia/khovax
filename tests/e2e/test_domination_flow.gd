@@ -402,8 +402,8 @@ func _check_seal_saved() -> String:
 		42,
 		InstanceBlueprints.BASIC,
 		2,
-		[COMPANION],
 	)
+	CompanionParty.bring(world, [PackedStringArray([COMPANION])])
 	for next: Vector2i in FlowSteps.BASIC_RING:
 		var direction: int = Hex.DIRECTIONS.find(next - world.player(0).tile)
 		for tick: int in MovementFeature.MOVE_TICKS:
@@ -883,7 +883,7 @@ func _check_companion_strikes() -> String:
 	for side: Vector2i in Hex.DIRECTIONS:
 		spots.append(hemmed + side)
 	var state: GameState = _strike_state(spots)
-	state.companions[0] = WEAK
+	state.store(0, Features.COMPANIONS)["companion"] = WEAK
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
 	if not _strikes_over(state, 1).is_empty():
 		return "the companion struck before it stood next to a wild monster"
@@ -1034,7 +1034,7 @@ static func _specials_in(state: GameState, commands: Array[Command]) -> Array[Sp
 func _check_wild_attacks() -> String:
 	var spots: Array[Vector2i] = [Vector2i.ZERO]
 	var state: GameState = _strike_state(spots)
-	state.companions[0] = WEAK
+	state.store(0, Features.COMPANIONS)["companion"] = WEAK
 	var beside: Vector2i = Vector2i(1, 0)
 	var player: Entity = state.add_entity(0, beside)
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
@@ -1087,7 +1087,7 @@ func _check_type_effectiveness() -> String:
 func _typed_strikes(on: bool) -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [_type_chart()])
 	state.set_enabled(Features.TYPE_EFFECTIVENESS, on)
-	state.companions[0] = WEAK
+	state.store(0, Features.COMPANIONS)["companion"] = WEAK
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var hit: int = Fixed.scale(WEAK_STRENGTH, 1500 if on else Fixed.ONE)
@@ -1124,8 +1124,8 @@ static func _type_chart() -> TypeEffectivenessFeature:
 ## to the fainted one does nothing. Once every one carried has fainted, none is chosen or joins.
 func _check_relieved() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO])
-	state.carried[0] = PackedStringArray([WEAK, STRONG])
-	state.companions[0] = WEAK
+	state.store(0, Features.COMPANIONS)["carried"] = [WEAK, STRONG]
+	state.store(0, Features.COMPANIONS)["companion"] = WEAK
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
@@ -1144,7 +1144,7 @@ func _check_relieved() -> String:
 
 
 ## Steps `state` with the companion of slot 0 kept beside the wild monster in the middle until it
-## faints; returns the places chosen in its place, each made the companion as the world would.
+## faints; returns the places chosen in its place.
 func _faint_companion(state: GameState) -> Array[int]:
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
@@ -1160,7 +1160,6 @@ func _faint_companion(state: GameState) -> Array[int]:
 			var swap: CompanionChosen = event as CompanionChosen
 			if swap != null:
 				chosen.append(swap.place)
-				state.companions[0] = state.carried[0][swap.place]
 	return chosen
 
 

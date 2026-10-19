@@ -6,19 +6,18 @@ extends RefCounted
 
 ## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
 ## purging, format 2 no ring seals, format 3 no companions, format 4 no tiles changed in place
-## (#530), format 5 no flags or variants (#529), format 6 no carried monsters (#53) and format 7 no
-## fainted ones (#655); the first three's, the sixth's and the seventh's saves were played by older
-## rules, which `to_world` refuses anyway.
-const FORMAT: int = 8
+## (#530), format 5 no flags or variants (#529), format 6 no carried monsters (#53), format 7 no
+## fainted ones (#655) and format 8 kept the companions in fields of their own instead of the
+## players' world stores (#724). Every one but the fourth and fifth was played by older rules, which
+## `to_world` refuses anyway, so none is read.
+const FORMAT: int = 9
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
 ## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
-## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, each slot's companion
-## species (#338, only the slots that bring one), every carried monster's slot and species (#53), in
-## slot and carried order, every fainted one's (#655), in slot order and the order they fainted,
-## every loaded instance
-## in name order with its state (GameState.to_data), the tick it was left behind (-1 while
+## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, every player's world
+## store that isn't empty (#724), in slot order, every loaded instance in name order with its state
+## (GameState.to_data), the tick it was left behind (-1 while
 ## someone is in it) and the variant it was loaded from (#529), every purged blueprint's generation,
 ## the world's flags, the rules version it was played by and
 ## its hash, which `to_world` checks. Regions aren't saved whole: each is arranged again from its
@@ -37,25 +36,18 @@ static func of(world: World) -> Dictionary:
 	var purged: Array[Dictionary] = []
 	for instance_name: String in _sorted(world.generations.keys()):
 		purged.append({ "name": instance_name, "generation": world.generations[instance_name] })
-	var companions: Array[Dictionary] = []
-	var carried: Array[Dictionary] = []
-	var fainted: Array[Dictionary] = []
+	var stores: Array[Dictionary] = []
 	for slot: int in GameState.MAX_PLAYERS:
-		if not world.companions[slot].is_empty():
-			companions.append({ "slot": slot, "species": world.companions[slot] })
-		for species: String in world.carried[slot]:
-			carried.append({ "slot": slot, "species": species })
-		for species: String in world.fainted[slot]:
-			fainted.append({ "slot": slot, "species": species })
+		var entries: Array[Dictionary] = world.stores[slot].to_data()
+		if not entries.is_empty():
+			stores.append({ "slot": slot, "entries": entries })
 	return {
 		"format": FORMAT,
 		"rules": Simulation.RULES_VERSION,
 		"seed": [(world.world_seed >> 32) & 0xffff_ffff, world.world_seed & 0xffff_ffff],
 		"start": world.start_name,
 		"tick": world.tick,
-		"companions": companions,
-		"carried": carried,
-		"fainted": fainted,
+		"stores": stores,
 		"generations": purged,
 		"flags": world.flags.duplicate(),
 		"instances": saved,
@@ -85,7 +77,7 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	# Empty at first, so nothing is loaded or laid out before the flags, variants and generations it
 	# depends on are back.
 	var world: World = World.new(source, seed_value, "", 0)
-	_load_companions(world, read)
+	_load_stores(world, read)
 	world.start_name = start
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
@@ -145,51 +137,18 @@ static func _load_state(world: World, entry: DataReader) -> void:
 		world.left_at[instance_name] = left
 
 
-## Restores each slot's carried species and companion from the save into `world`, before any
-## instance loads: every species named, in slot order, and every slot that carries any with exactly
-## one companion among them.
-static func _load_companions(world: World, read: DataReader) -> void:
-	var parties: Array[PackedStringArray] = []
-	var _sized: int = parties.resize(GameState.MAX_PLAYERS)
-	var last_slot: int = 0
-	for entry: DataReader in read.entries("carried"):
-		# From the slot before on: the carried monsters are saved in slot order.
-		var slot: int = entry.whole("slot", last_slot, GameState.MAX_PLAYERS - 1)
-		var named: String = entry.text("species")
-		if named.is_empty():
-			entry.fail("a monster slot %d carries is nameless" % slot)
-		var party: PackedStringArray = parties[slot]
-		var _added: bool = party.append(named)
-		parties[slot] = party
-		last_slot = slot
-	world.set_carried(parties)
-	var chosen: Array[int] = []
-	for entry: DataReader in read.entries("companions"):
-		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
-		var place: int = parties[slot].find(entry.text("species"))
-		if place < 0 or chosen.has(slot):
-			entry.fail("slot %d's companion isn't one it carries, or is saved twice" % slot)
+## Restores every player's world store from the save into `world` (#724), before any instance
+## loads, so each is handed a copy: each slot once, its entries as PlayerStore reads them.
+static func _load_stores(world: World, read: DataReader) -> void:
+	var seen: Array[int] = []
+	for saved: DataReader in read.entries("stores"):
+		var slot: int = saved.whole("slot", 0, GameState.MAX_PLAYERS - 1)
+		if seen.has(slot):
+			saved.fail("slot %d's world store is saved twice" % slot)
 			return
-		world.choose_companion(slot, place)
-		chosen.append(slot)
-	for slot: int in GameState.MAX_PLAYERS:
-		if not parties[slot].is_empty() and not chosen.has(slot):
-			read.fail("slot %d carries monsters but has no companion" % slot)
-	_load_fainted(world, read)
-
-
-## Restores each slot's fainted species from the save into `world` (#655), once its carried ones are
-## back: each carried, and listed once.
-static func _load_fainted(world: World, read: DataReader) -> void:
-	for entry: DataReader in read.entries("fainted"):
-		var slot: int = entry.whole("slot", 0, GameState.MAX_PLAYERS - 1)
-		var species: String = entry.text("species")
-		var down: PackedStringArray = world.fainted[slot]
-		if not world.carried[slot].has(species) or down.has(species):
-			entry.fail("slot %d's fainted %s isn't carried, or is saved twice" % [slot, species])
-			return
-		var _added: bool = down.append(species)
-		world.fainted[slot] = down
+		seen.append(slot)
+		for entry: DataReader in saved.entries("entries"):
+			world.stores[slot].load_entry(entry)
 
 
 ## Restores the generation of the purged blueprint `entry` names; the starting instance is never
