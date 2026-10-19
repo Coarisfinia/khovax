@@ -7,7 +7,7 @@ extends RefCounted
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). Quest progress (#184) is kept
 ## here too, advanced by the same gains against the quest definitions it's given, and so are the
 ## player's personal color (#233), which only views read, and their standings with the factions
-## (#483), which finishing a quest can move (#532).
+## (#483), which finishing a quest can move (#532), and their gear (#690).
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -46,6 +46,8 @@ var quests_done: Array[String] = []
 var quest_book: Dictionary[String, QuestDefinition] = {}
 ## The player's standing with each faction (#483).
 var standings: Standings = Standings.new()
+## The gear the player owns and what's in their gear slots (#690).
+var gear: GearSlots = GearSlots.new()
 ## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
 ## simulation's (#233).
 var personal_color: int = AUTO_COLOR

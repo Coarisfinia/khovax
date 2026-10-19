@@ -1,0 +1,7 @@
+// Basic warding gear for the ward slot (#690). It does nothing yet: its effect comes with #691.
+{
+	"id": "warding_charm",
+	"name": "Warding charm",
+	"slot": "ward",
+	"rarity": "loose"
+}

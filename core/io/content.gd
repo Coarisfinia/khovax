@@ -36,6 +36,15 @@ static func load_tiles(directory: String = TILES_DIR) -> Content:
 	return content
 
 
+## The text of every JSONC file in `directory`, by its file name without the extension.
+static func texts_in(directory: String) -> Dictionary[String, String]:
+	var texts: Dictionary[String, String] = {}
+	for file_name: String in DirAccess.get_files_at(directory):
+		if file_name.ends_with(".jsonc"):
+			texts[file_name.get_basename()] = FileAccess.get_file_as_string(directory + file_name)
+	return texts
+
+
 ## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.
 static func is_id(text: String) -> bool:
 	var pattern: RegEx = RegEx.create_from_string("^[a-z][a-z0-9_]*$")

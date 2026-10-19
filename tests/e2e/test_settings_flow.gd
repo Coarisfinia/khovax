@@ -12,7 +12,8 @@ extends RefCounted
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
 ## kept in their profile, and its Auto button hands the world's default back. It lists the player's
 ## dominated monsters (#400): none at first, then each by its species' name and level, the three
-## they carry first, in order, the first their companion, each marked in words.
+## they carry first, in order, the first their companion, each marked in words. Its gear slots
+## (#690) change with a press outside a fight and are kept in the profile, and stay put during one.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
 const PROFILE_PATH: String = "user://test_settings_profile.json"
@@ -285,7 +286,88 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	panel.refresh()
 	if not changed.is_empty() or panel.shown != neutral:
 		return "a faction back at neutral stays listed: %s" % [panel.shown]
-	return _menu_reorder(tab, main)
+	return _menu_gear(tab, main)
+
+
+## The gear slots (#690), each a button with its slot's icon that a controller can focus, empty at
+## first. Pressing one puts the player's next piece of gear for it in, in id order, and empties it
+## after the last; a slot without gear for it stays empty. The gear is kept in their profile on
+## disk. No wild monster is near, so no fight stops it.
+func _menu_gear(tab: CharacterTab, main: Node) -> String:
+	var state: GameState = FlowGame.driver(main).state
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var nearby: Array[int] = wild.monsters.duplicate()
+	wild.monsters.clear()
+	var result: String = _gear_starts_empty(tab.gear)
+	if result.is_empty():
+		result = _gear_changes(tab.gear, main)
+	if result.is_empty():
+		result = _menu_gear_fight(tab.gear, main, nearby)
+	wild.monsters.assign(nearby)
+	return result if not result.is_empty() else _menu_reorder(tab, main)
+
+
+## Every gear slot starts empty and free to change, its button showing its slot's icon and taking
+## a controller's focus.
+func _gear_starts_empty(panel: GearPanel) -> String:
+	panel.refresh()
+	var empty: Array[String] = []
+	for slot: String in GearSlots.SLOTS:
+		empty.append(GearPanel.SLOT_TEXT % [slot.capitalize(), GearPanel.EMPTY_TEXT])
+		var button: Button = panel.buttons[slot]
+		if button.icon != GearPanel.ICONS[slot] or button.focus_mode != Control.FOCUS_ALL:
+			return "the %s slot's button lacks its icon or a controller's focus" % slot
+	empty.append(GearPanel.FREE_TEXT)
+	if panel.shown != empty:
+		return "the gear slots don't start empty and free to change: %s" % [panel.shown]
+	return ""
+
+
+## Pressing the slots puts the player's gear in, and the gear is kept in their profile on disk.
+func _gear_changes(panel: GearPanel, main: Node) -> String:
+	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
+	keeper.profile.gear.owned.assign({ "warding_charm": 1, "thorn_spikes": 1 })
+	# Ward on, trap on, throw has nothing for it; ward off and on again.
+	for slot: String in ["ward", "trap", "throw", "ward", "ward"]:
+		panel.buttons[slot].pressed.emit()
+	var _flushed: String = keeper.flush()
+	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
+	var expected: Dictionary[String, String] = { "ward": "warding_charm", "trap": "thorn_spikes" }
+	var lines: Array[String] = [
+		"Ward: Warding charm (Loose)",
+		"Trap: Thorn spikes (Loose)",
+		"Throw: empty",
+		GearPanel.FREE_TEXT,
+	]
+	if panel.shown != lines or kept.gear.equipped != expected:
+		return "pressing the slots put in %s, kept %s" % [panel.shown, kept.gear.equipped]
+	return ""
+
+
+## During a fight, a wild monster beside the player, the slots' buttons still show their gear but
+## don't change it, and a line says why; once it's gone, they change it again.
+func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> String:
+	var state: GameState = FlowGame.driver(main).state
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var fighter: Entity = null
+	for monster_id: int in nearby:
+		if fighter == null and (hiding == null or not hiding.is_hidden(monster_id)):
+			fighter = state.entity(monster_id)
+	if fighter == null:
+		return "no wild monster in sight to fight"
+	var tile: Vector2i = fighter.tile
+	fighter.tile = state.player(FlowGame.driver(main).input.slot).tile
+	wild.monsters.assign([fighter.id])
+	var expected: Array[String] = panel.shown.slice(0, GearSlots.SLOTS.size())
+	expected.append(GearPanel.FIGHT_TEXT)
+	panel.buttons["ward"].pressed.emit()
+	panel.refresh()
+	var locked: bool = panel.buttons["ward"].disabled
+	fighter.tile = tile
+	if not locked or panel.shown != expected:
+		return "during a fight, the gear changed or no line says why: %s" % [panel.shown]
+	return ""
 
 
 ## The player orders their monsters (#430): moving the one not carried to the front makes it the

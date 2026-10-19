@@ -6,8 +6,9 @@ extends ScrollContainer
 ## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
 ## MightPanel) and their standing with each faction (#533, FactionStandingsPanel), then their
 ## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
-## them, or below them on a phone held upright (MonsterDetails, #430), then their materials
-## (MaterialsList, #295). Above them all, the character's name (#399): typed into a field and kept
+## them, or below them on a phone held upright (MonsterDetails, #430), then their gear slots (#690,
+## GearPanel) and their materials (MaterialsList, #295). Above them all, the character's name
+## (#399): typed into a field and kept
 ## once confirmed (Enter, or leaving the field), with a line that says in words why a name was
 ## refused. It scrolls when the screen is too short. Its layout lives in its scene,
 ## character_tab.tscn (#437): this script keeps only what it does, and adds the panels that are
@@ -30,7 +31,9 @@ var shown: String = ""
 var might: MightPanel
 ## The player's standing with each faction, below their Might (#533).
 var factions: FactionStandingsPanel
-## The player's materials, below their monsters (#295).
+## The player's gear slots, below their monsters (#690).
+var gear: GearPanel
+## The player's materials, below their gear (#295).
 var materials: MaterialsList
 ## The monsters and their detail pane, side by side or one above the other.
 var _pair: BoxContainer
@@ -69,6 +72,10 @@ func _ready() -> void:
 	monsters.details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pair.add_child(monsters.details)
 	_column.add_child(_pair)
+	gear = GearPanel.new()
+	gear.driver = driver
+	gear.holder = holder
+	_column.add_child(gear)
 	materials = MaterialsList.new()
 	materials.holder = holder
 	_column.add_child(materials)
@@ -120,6 +127,7 @@ func fit(font: int) -> void:
 	var wheel: int = roundi(font * WHEEL_FONTS)
 	picker.add_theme_constant_override("sv_width", wheel)
 	picker.add_theme_constant_override("sv_height", wheel)
+	gear.fit(font)
 
 
 ## Puts the detail pane beside the monsters (`beside`, on a landscape screen) or below them, on a

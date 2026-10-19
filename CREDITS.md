@@ -15,9 +15,10 @@ The assets this game uses, with their authors and licenses. Generated from each 
 ## Game-icons.net
 
 - **Files:** `assets/game-icons/`
-- **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `magnifying-glass.svg`,
-  `spiky-explosion.svg`; Delapouite (http://delapouite.com): `exit-door.svg`,
-  `hamburger-menu.svg`, `resize.svg`, `totem.svg`; Sbed
+- **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `magic-shield.svg`,
+  `magnifying-glass.svg`, `spiky-explosion.svg`, `wolf-trap.svg`; Delapouite
+  (http://delapouite.com): `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `resize.svg`,
+  `totem.svg`; Sbed
   (http://opengameart.org/content/95-game-icons): `cancel.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white

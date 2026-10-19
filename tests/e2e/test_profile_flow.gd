@@ -5,7 +5,8 @@ extends RefCounted
 ## is refused; an older save is migrated, oldest step first, into the current format with no quest
 ## progress (#184), and an open quest's earlier steps done (#573); the first three monsters
 ## dominated are carried (#53); the standing with each faction stays on its scale and is saved
-## (#483); and a damaged save falls back to the newest intact generation before it (#179).
+## (#483); gear goes into a slot only while the player owns it, and is saved (#690); and a damaged
+## save falls back to the newest intact generation before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 ## The keys a newer save format added (#184, #53, #391, #399, #483), which older saves lack.
@@ -16,6 +17,8 @@ const ADDED_KEYS: Array[String] = [
 	"personal_color",
 	"character_name",
 	"standings",
+	"gear",
+	"equipped",
 ]
 ## A save's quest progress for quest a with the steps done (#573) left open.
 const PROGRESS_DONE: String = (
@@ -276,6 +279,38 @@ func _check_standings_refused() -> String:
 		text.replace(neutral, "\"standings\": {\"a\": 1.5}"): faction_a,
 		text.replace(neutral, "\"standings\": {\"a\": \"1\"}"): faction_a,
 	}
+	var problem: String = _unrefused(cases)
+	return problem if not problem.is_empty() else _check_gear()
+
+
+## Gear (#690): a slot takes only gear the player owns, one piece per slot, so a piece owned once
+## can't be in two; emptied, it's free again. The gear and the slots survive saving, and a save with
+## gear that isn't counted right, or in a slot that isn't one or that the player doesn't own, is
+## refused.
+func _check_gear() -> String:
+	var profile: Profile = Profile.new()
+	var gear: GearSlots = profile.gear
+	gear.owned.assign({ "charm": 1 })
+	var refused: String = gear.equip("ward", "spikes") + gear.equip("hat", "charm")
+	var taken: String = gear.equip("ward", "charm")
+	refused += gear.equip("trap", "charm")
+	taken += gear.equip("ward", "") + gear.equip("trap", "charm")
+	var expected: Dictionary[String, String] = { "trap": "charm" }
+	if not taken.is_empty() or refused.is_empty() or gear.equipped != expected:
+		return "gear went into the wrong slots: %s, %s" % [taken, gear.equipped]
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(profile):
+		return "the gear didn't survive saving: " + loaded.problem
+	var text: String = ProfileSave.to_text(Profile.new())
+	var none: String = "\"gear\": {}"
+	var empty: String = "\"equipped\": {}"
+	var cases: Dictionary[String, String] = {
+		text.replace(none, "\"gear\": []"): "the save lacks its gear",
+		text.replace(none, "\"gear\": {\"a\": -1}"): "gear a has an invalid count",
+		text.replace(none, "\"gear\": {\"a\": 0.5}"): "gear a has an invalid count",
+		text.replace(empty, "\"equipped\": {\"ward\": \"a\"}"): "the gear in slot ward",
+		text.replace(empty, "\"equipped\": {\"ward\": 7}"): "the gear in slot ward",
+	}
 	return _unrefused(cases)
 
 
@@ -283,16 +318,29 @@ func _check_standings_refused() -> String:
 ## finished runs (#197), formats before 3 had no quest progress (#184), which starts empty, and
 ## formats before 4 carried no monsters (#53): the first three dominated are carried then, and
 ## formats before 5 named them captured (#317); formats before 6 had no personal color (#391), which
-## starts on Auto; formats before 7 had no character name (#399), which starts empty; and formats
-## before 8 had no standings with factions (#483), which start neutral.
+## starts on Auto; formats before 7 had no character name (#399), which starts empty; formats
+## before 8 had no standings with factions (#483), which start neutral; and formats before 10 had
+## no gear (#690): none is owned, and every gear slot starts empty.
 func _check_migrated() -> String:
 	var text: String = ProfileSave.to_text(Profile.new())
 	var current: Dictionary = _as_captured(text)
 	# What older formats lacked.
 	for key: String in ADDED_KEYS:
 		var _dropped: bool = current.erase(key)
+	for old: Dictionary in _old_saves():
+		var save: Dictionary = current.duplicate()
+		save.merge(old, true)
+		var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
+		if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != text:
+			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
+	var problem: String = _check_migrated_quest()
+	return problem if not problem.is_empty() else _check_migrated_carried()
+
+
+## What a save in each older format holds that the current one doesn't, or holds otherwise.
+func _old_saves() -> Array[Dictionary]:
 	# Format 1 with its run count and without it, and format 2 with a stale run count and without.
-	var olds: Array[Dictionary] = [
+	return [
 		{ "format": 1, "runs_finished": 3 },
 		{ "format": 1 },
 		{ "format": 2, "runs_finished": 3 },
@@ -323,15 +371,17 @@ func _check_migrated() -> String:
 			"personal_color": Profile.AUTO_COLOR,
 			"character_name": "",
 		},
+		{
+			"format": 9,
+			"quest_progress": {},
+			"quests_done": [],
+			"carried": [],
+			"dominated_monsters": [],
+			"personal_color": Profile.AUTO_COLOR,
+			"character_name": "",
+			"standings": {},
+		},
 	]
-	for old: Dictionary in olds:
-		var save: Dictionary = current.duplicate()
-		save.merge(old, true)
-		var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
-		if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != text:
-			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
-	var problem: String = _check_migrated_quest()
-	return problem if not problem.is_empty() else _check_migrated_carried()
 
 
 ## A format 4 save's first quest, open or finished, is the renamed first quest (#317).

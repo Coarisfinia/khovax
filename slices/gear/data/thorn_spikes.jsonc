@@ -1,0 +1,7 @@
+// Basic spikes for the trap slot (#690). They do nothing yet: their effect comes with #692.
+{
+	"id": "thorn_spikes",
+	"name": "Thorn spikes",
+	"slot": "trap",
+	"rarity": "loose"
+}

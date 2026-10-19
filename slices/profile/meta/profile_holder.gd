@@ -103,6 +103,12 @@ func move_monster(monster_id: int, place: int) -> void:
 		_report(keeper.move_monster(monster_id, place, Time.get_ticks_msec()))
 
 
+## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690).
+func equip(slot: String, gear_id: String) -> void:
+	if keeper != null:
+		_report(keeper.equip(slot, gear_id, Time.get_ticks_msec()))
+
+
 ## The quests the profile advances from `content`: none when any quest file couldn't be read, so
 ## progress waits for whole, sound data rather than advancing on part of it.
 static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinition]:

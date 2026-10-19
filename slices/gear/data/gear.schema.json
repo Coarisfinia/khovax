@@ -1,0 +1,25 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/gear/data/gear.schema.json",
+	"title": "Gear",
+	"description": "A piece of gear (#690): a player-facing name, the slot it goes into and its rarity (#291). One file per piece, named after its id. Each player's gear is kept in their profile by its id, so an id is never reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "name", "slot", "rarity"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": { "description": "The player-facing name.", "type": "string", "pattern": "\\S" },
+		"slot": {
+			"description": "The slot it goes into (owner, #223): ward (warding gear and totems), trap (spikes) or throw (berries).",
+			"enum": ["ward", "trap", "throw"]
+		},
+		"rarity": {
+			"description": "Its rarity (#291), lowest to highest, then bound for uniques and artifacts.",
+			"enum": ["loose", "knotted", "warded", "sealed", "unbroken", "bound"]
+		}
+	}
+}
