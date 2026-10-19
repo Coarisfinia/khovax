@@ -7,6 +7,6 @@
 	"color": "#e0d2a4",
 	"symbol": "#", // tells it apart without its color (#68)
 	"model": "res://assets/kaykit-dungeon/box_small_decorated.glb",
-	"scale": 1,
+	"scale": 100, // hundredths: as the pack made it
 	"traits": { "walkable": true }
 }

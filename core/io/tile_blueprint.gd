@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (parses JSON; a model's scale is a float)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (parses JSON, whose numbers come as floats)
 class_name TileBlueprint
 extends RefCounted
 ## A kind of tile a region is made of (#116), read from content data (core/data/tiles/, #72,
@@ -25,8 +25,10 @@ const MAX_NUMBER: int = 255
 ## a typo can't make one tile overshadow the region.
 const MAX_HEIGHT: int = RegionFormat.MAX_HEIGHT
 const MAX_REACH: int = 3
+## A model's scale as the pack made it, in hundredths (#588: whole numbers, like the clearance).
+const FULL_SCALE: int = 100
 ## The largest a model may be scaled up, so a typo can't cover the region in one decoration.
-const MAX_SCALE: float = 4.0
+const MAX_SCALE: int = 4 * FULL_SCALE
 
 var id: String = ""
 ## The kind's permanent number in Region.terrain, never reused or changed once shipped; -1 when
@@ -39,8 +41,9 @@ var color: Color = Color.BLACK
 var symbol: String = ""
 ## The decoration drawn on every tile of this kind, a res:// path, or "" for none.
 var model: String = ""
-## How much larger than the pack made it the model is drawn, for a model too small to read.
-var scale: float = 1.0
+## How much larger than the pack made it the model is drawn, in hundredths (150 is 1.5 times),
+## for a model too small to read; the look turns it into a factor where it draws.
+var scale: int = FULL_SCALE
 ## How many rings around its tile its decoration's crown covers, and how much height the crown
 ## leaves free beneath it, in hundredths of a tile's radius: every tile under the crown must fit
 ## (#232). How tall a tile is gets measured from its objects' models (TileLooks.height_of).
@@ -98,13 +101,9 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 		return "its number is a whole number from 0 to %d" % MAX_NUMBER
 	if not walks is bool:
 		return "its traits say whether it's walkable"
-	var given_scale: Variant = data.get("scale", 1.0)
-	var drawn: float = 0.0
-	if given_scale is int or given_scale is float:
-		drawn = given_scale
-	if drawn <= 0.0 or drawn > MAX_SCALE:
-		return "its scale is a number above 0, at most %s" % MAX_SCALE
-	scale = drawn
+	scale = _whole(data.get("scale", FULL_SCALE), MAX_SCALE)
+	if scale < 1:
+		return "its scale is a whole number of hundredths from 1 to %d" % MAX_SCALE
 	color = Color.html(html)
 	return ""
 
