@@ -1,11 +1,12 @@
 class_name SpeciesLootFeature
 extends Feature
-## What the features share that roll a wild monster's species' loot table (#86): for a domination
-## (DominationLootFeature) and for a felled one (HarvestFeature, #629). Each holds every species'
-## table, the instance's table that a blank rolls on (#90), and its own random stream, which it
-## hashes and saves; the subclass says when it rolls and for whom.
+## What the features share that roll a table of a wild monster's species (#86): its loot table for
+## a domination (DominationLootFeature), its harvest table for a felled one (HarvestFeature, #629,
+## #687). Each holds its table of every species, the instance's table that a blank rolls on (#90),
+## and its own random stream, which it hashes and saves; the subclass says when it rolls and for
+## whom.
 
-## Each species' loot table, by species id; a species without one drops nothing.
+## Each species' table this feature rolls, by species id; a species without one drops nothing.
 var tables: Dictionary[String, LootTable] = {}
 ## The instance's loot table, which a blank rolls on, or null for none.
 var instance_table: LootTable

@@ -1315,11 +1315,11 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 	return GameState.new(region, 1, ordered)
 
 
-## The weak species' loot table in the strike checks: it always rolls HIDE_LOOT.
+## The weak species' harvest table in the strike checks: it always rolls HIDE_LOOT.
 static func _hide_table() -> LootTable:
 	var table: LootTable = LootTable.new()
 	table.id = WEAK
-	table.kind = LootTable.SPECIES
+	table.kind = LootTable.HARVEST
 	for item: String in HIDE_LOOT:
 		table.items.append(item)
 		table.chances.append(Fixed.ONE)
