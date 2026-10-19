@@ -5,7 +5,8 @@ extends RefCounted
 ## out stay on its start piece for every seed, and arranging its pieces never covers the tile
 ## outside them. Broken exit lines are
 ## refused. Pieces join and exits lead out across several tiles, never one (#689). The web is
-## validated as a whole (#143): every blueprint loads as a full instance, every
+## validated as a whole (#143): every blueprint loads as a full instance, every variant of the
+## starting one with a start for every player (#742), every
 ## exit can be walked to from the players' starts for every seed, and every blueprint with exits
 ## can be reached from the starting instance. In every region file and region piece, the walkable
 ## tiles hang together, so a blocking tile never cuts a part off, and every tile under a crown
@@ -65,6 +66,7 @@ func run(tree: SceneTree) -> String:
 		_check_wide_seams,
 		_check_refused,
 		_check_exits_reachable,
+		_check_start_variants,
 		_check_pieces_connected,
 		_check_room,
 		_check_web_connected,
@@ -797,8 +799,8 @@ func _check_start_kept() -> String:
 
 ## The starting instance changes with the story too (#727): with the player out in the forest,
 ## setting the glade's corrupting flag purges the glade, where the world starts, and loads it again
-## at once from the corrupted glade, which has starts; the world goes through its save data and
-## back with it, and walking back in leads into the corrupted glade.
+## at once from the corrupted glade (_check_start_variants sees it has starts); the world goes
+## through its save data and back with it, and walking back in leads into the corrupted glade.
 func _check_start_corrupted() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.GLADE)
 	FlowSteps.drop_beach_toad(world.instances[InstanceBlueprints.GLADE])
@@ -817,8 +819,6 @@ func _check_start_corrupted() -> String:
 			or not corrupted
 			or world.generation(InstanceBlueprints.GLADE) != 1):
 		return "the starting glade wasn't purged and loaded again corrupted"
-	if glade.region.starts.size() != GameState.MAX_PLAYERS:
-		return "the corrupted glade has no start for every player"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
 	if (reloaded.state_hash() != world.state_hash()
 			or reloaded.generation(InstanceBlueprints.GLADE) != 1):
@@ -991,6 +991,32 @@ func _check_exits_reachable() -> String:
 				return "%s's exit %s can't be walked to for seed %d" % [
 					instance_name,
 					stranded,
+					seed_value,
+				]
+	return ""
+
+
+## Every variant of the starting blueprint, its own region included, loads with a start for every
+## player for every seed (#742): a flag's variant change purges the starting instance and loads it
+## again at once (#727), with nothing to fall back on if it can't load.
+func _check_start_variants() -> String:
+	var variants: Array[String] = [""]
+	var chosen: Dictionary = InstanceBlueprints.VARIANTS.get(InstanceBlueprints.GLADE, { })
+	for flag: Variant in chosen:
+		if not variants.has(str(chosen[flag])):
+			variants.append(str(chosen[flag]))
+	for variant: String in variants:
+		for seed_value: int in INSTANCE_SEEDS:
+			var state: GameState = InstanceBlueprints.create(
+				InstanceBlueprints.GLADE,
+				seed_value,
+				GameState.MAX_PLAYERS,
+				variant,
+			)
+			if state == null:
+				return "the starting glade's variant '%s' doesn't load %d players, seed %d" % [
+					variant,
+					GameState.MAX_PLAYERS,
 					seed_value,
 				]
 	return ""
