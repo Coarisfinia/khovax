@@ -153,7 +153,9 @@ static func _parse_loot(region: Region, line: String) -> String:
 	if parts.size() != 3 or not parts[1].is_valid_int() or not parts[2].is_valid_int():
 		return "a loot line reads \"loot <q> <r>\": " + line
 	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
-	if not region.is_walkable(tile) or region.loot_spots.has(tile) or region.chests.has(tile):
+	var taken: bool = (region.loot_spots.has(tile) or region.chests.has(tile)
+			or region.npcs.has(tile))
+	if not region.is_walkable(tile) or taken:
 		return "loot on %s isn't on free ground" % tile
 	region.loot_spots.append(tile)
 	return ""
