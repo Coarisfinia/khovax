@@ -312,7 +312,8 @@ func _load_fainted(values: DataReader) -> void:
 		var species: String = entry.text("species")
 		var listed: PackedStringArray = _fainted[slot]
 		var here: int = companion_of(slot)
-		if species.is_empty() or listed.has(species) or (here != 0 and _species[here] == species):
+		var away: bool = here == 0 or _species[here] != species
+		if not state.carried[slot].has(species) or listed.has(species) or not away:
 			values.fail("slot %d's fainted %s isn't away and listed once" % [slot, species])
 			return
 		var _added: bool = listed.append(species)
