@@ -921,7 +921,7 @@ func _check_decorations(main: Node) -> String:
 	var offsets: Dictionary[Vector3, bool] = {}
 	for tile: Vector2i in decorated:
 		offsets[TileDecorations.off_center(tile)] = true
-	if region.decoration_turns.is_empty() or offsets.size() < 2 or offsets.has(Vector3.ZERO):
+	if region.looks.decoration_turns.is_empty() or offsets.size() < 2 or offsets.has(Vector3.ZERO):
 		return "the glade turns no decoration by hand, or all stand alike: %s" % [offsets.keys()]
 	return _check_decorations_in_fog(driver, view, decorated)
 
@@ -941,7 +941,7 @@ func _decoration_problem(
 		model = view.figures[tile].get_child(0) as Node3D
 	if model == null or model.scene_file_path != blueprint.model or model.scale != size:
 		return "the %s on %s has no model, another one, or another size" % [id, tile]
-	var turn: float = TAU * region.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
+	var turn: float = TAU * region.looks.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
 	var off: Vector3 = model.position
 	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER
 	off_center = off_center and off.is_equal_approx(TileDecorations.off_center(tile))

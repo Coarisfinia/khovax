@@ -31,6 +31,8 @@ const EMITS: String = "emits="
 const TARGET: String = "target="
 ## The start of a tile trigger's line (#181, #183).
 const TRIGGER: String = "trigger "
+## The start of a line standing a person on a tile (#557): `npc <q> <r> <npc id> [<dialog id>]`.
+const NPC: String = "npc "
 ## The start of a line placing loot on the ground on a tile (#203).
 const LOOT: String = "loot "
 ## The start of a line placing a tile blueprint on a tile (#116).
@@ -53,7 +55,8 @@ const MAX_HEIGHT: int = 1000
 ## <side>` for each connector, `exit <q> <r> <side> <blueprint>` for each exit, `species <q> <r>
 ## <species id>` for a wild monster spot whose species it names, and `trigger <q> <r> <when>
 ## <action> <amount>` for each tile trigger (`<place id>` for the amount of one that marks a
-## place). A line `tile <q> <r> <tile blueprint id>` makes a
+## place), and `npc <q> <r> <npc id> [<dialog id>]` for each person standing there. A line
+## `tile <q> <r> <tile blueprint id>` makes a
 ## tile of the grid that kind, before the other lines are read.
 static func parse(text: String) -> Region:
 	var region: Region = Region.new()
@@ -63,7 +66,8 @@ static func parse(text: String) -> Region:
 	for line: String in text.split("\n"):
 		var content: String = line.strip_edges()
 		var keyed: bool = (content.begins_with(EXIT) or content.begins_with(SPECIES)
-				or content.begins_with(TRIGGER) or content.begins_with(LOOT))
+				or content.begins_with(TRIGGER) or content.begins_with(LOOT)
+				or content.begins_with(NPC))
 		if content.begins_with(TILE):
 			tile_lines.append(content)
 		elif content.begins_with(CONNECTOR) or keyed:
@@ -126,7 +130,8 @@ static func _parse_connector(region: Region, line: String) -> String:
 	return ""
 
 
-## Reads one keyed line: a tile's kind, a connector, an exit, a named species or a trigger.
+## Reads one keyed line: a tile's kind, a connector, an exit, a named species, a trigger, loot or
+## a person.
 ## Returns why it can't, or "".
 static func _parse_keyed(region: Region, line: String) -> String:
 	if line.begins_with(TILE):
@@ -137,6 +142,8 @@ static func _parse_keyed(region: Region, line: String) -> String:
 		return _parse_trigger(region, line)
 	if line.begins_with(LOOT):
 		return _parse_loot(region, line)
+	if line.begins_with(NPC):
+		return _parse_npc(region, line)
 	return _parse_connector(region, line)
 
 
@@ -149,6 +156,27 @@ static func _parse_loot(region: Region, line: String) -> String:
 	if not region.is_walkable(tile) or region.loot_spots.has(tile) or region.chests.has(tile):
 		return "loot on %s isn't on free ground" % tile
 	region.loot_spots.append(tile)
+	return ""
+
+
+## Reads one `npc <q> <r> <npc id> [<dialog id>]` line; returns why it can't, or "". A person
+## stands on ground nothing else stands on (no player's start, wild monster, chest or loot), once,
+## and both ids are identifiers.
+static func _parse_npc(region: Region, line: String) -> String:
+	var parts: PackedStringArray = line.split(" ", false)
+	var sized: bool = parts.size() == 4 or parts.size() == 5
+	if not sized or not parts[1].is_valid_int() or not parts[2].is_valid_int():
+		return "an npc line reads \"npc <q> <r> <npc id> [<dialog id>]\": " + line
+	var dialog: String = parts[4] if parts.size() == 5 else ""
+	var named: bool = parts[3].is_valid_ascii_identifier()
+	if not named or not (dialog.is_empty() or dialog.is_valid_ascii_identifier()):
+		return "an npc's id and dialog are identifiers: " + line
+	var tile: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
+	var taken: bool = (region.starts.has(tile) or region.wild_monsters.has(tile)
+			or region.chests.has(tile) or region.loot_spots.has(tile) or region.npcs.has(tile))
+	if not region.is_walkable(tile) or taken:
+		return "npc on %s isn't on free ground" % tile
+	region.npcs[tile] = NpcSpot.new(parts[3], dialog)
 	return ""
 
 
@@ -213,14 +241,14 @@ static func _parse_tile_extra(region: Region, tile: Vector2i, extra: String) -> 
 		if turn < 0 or turn >= Hex.DIRECTIONS.size():
 			return "tile %s's turn %d isn't 0 to 5" % [tile, turn]
 		if turn != 0:
-			region.decoration_turns[tile] = turn
+			region.looks.decoration_turns[tile] = turn
 	elif extra == WALKABLE or extra == NOT_WALKABLE:
 		region.walkable_overrides[tile] = extra == WALKABLE
 	elif extra.begins_with(HEIGHT) and extra.trim_prefix(HEIGHT).is_valid_int():
 		var height: int = extra.trim_prefix(HEIGHT).to_int()
 		if height < 0 or height > MAX_HEIGHT:
 			return "tile %s's height %d isn't 0 to %d" % [tile, height, MAX_HEIGHT]
-		region.height_overrides[tile] = height
+		region.looks.height_overrides[tile] = height
 	else:
 		return "tile %s: %s is neither a turn nor %s or %s" % [tile, extra, WALKABLE, NOT_WALKABLE]
 	return ""

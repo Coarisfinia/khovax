@@ -169,7 +169,7 @@ static func _region_for(
 
 
 ## The features an instance has because of what its region holds: exits, triggers, region pieces
-## to enter, wild monsters in hiding.
+## to enter, wild monsters in hiding, people to talk to.
 static func _for_region(region: Region) -> Array[Feature]:
 	var features: Array[Feature] = []
 	if not region.exits.is_empty():
@@ -180,6 +180,8 @@ static func _for_region(region: Region) -> Array[Feature]:
 		features.append(EnteringFeature.new())
 	if HidingFeature.has_hiding(region):
 		features.append(HidingFeature.new())
+	if not region.npcs.is_empty():
+		features.append(NpcFeature.new())
 	return features
 
 

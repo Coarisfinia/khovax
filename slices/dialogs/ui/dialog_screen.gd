@@ -6,7 +6,8 @@ extends Control
 ## simulation in this machine's player's next command (LocalInput.choose_answer), which raises it
 ## as DialogAnswered; reading on changes nothing in the game. Controller, touch and keyboard all
 ## work: the buttons take the focus, so the d-pad or the stick moves it and A (or Enter) confirms.
-## While a dialog is open the player stands. Its text tags show the names they stand for (#733).
+## While a dialog is open the player stands. Talking to a person (NpcTalkedTo, #557) opens their
+## dialog for the player who talked. Its text tags show the names they stand for (#733).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
@@ -27,6 +28,8 @@ const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
+## The world's events, which say when this machine's player talks to a person.
+@export var bus: EventBus
 
 ## The dialog open now, or null.
 var dialog: Dialog
@@ -47,6 +50,8 @@ func _ready() -> void:
 	# A copy of the UI's theme: the screen scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
+	if bus != null:
+		bus.subscribe(&"NpcTalkedTo", _on_talked)
 
 
 func _process(_delta: float) -> void:
@@ -65,6 +70,12 @@ func open(dialog_id: String) -> bool:
 	_show_line(0)
 	_ease(true)
 	return true
+
+
+## Opens the dialog of the person this machine's player talked to, unless one is open already.
+func _on_talked(event: NpcTalkedTo) -> void:
+	if input != null and event.slot == input.slot and not event.dialog.is_empty() and not is_open():
+		var _opened: bool = open(event.dialog)
 
 
 ## Whether a dialog is open.

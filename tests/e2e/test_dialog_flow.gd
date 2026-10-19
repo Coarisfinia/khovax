@@ -5,11 +5,18 @@ extends RefCounted
 ## Every chosen answer reaches the simulation in the player's command, is raised as DialogAnswered
 ## naming the dialog and the answer, and is recorded in the session's replay; reading on raises
 ## nothing, nor does an answer no dialog has. While the menu is open over a dialog, its buttons
-## rest. A dialog that doesn't exist doesn't open.
+## rest. A dialog that doesn't exist doesn't open. In the glade, the guild scout stands east of the
+## start (#557): walking into them talks to them, raised as NpcTalkedTo, which opens their greeting;
+## they never step aside, and a held direction talks once, until the player stops and walks into
+## them again.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "guild_scout_greeting"
 const SCREEN: Vector2i = Vector2i(1152, 648)
+## Where the guild scout stands in the glade, east of the start, and the tile west of them.
+const SCOUT: Vector2i = Vector2i(3, 0)
+const BESIDE_SCOUT: Vector2i = Vector2i(2, 0)
+const EAST: int = 0
 
 ## Every event the session announced since the flow last looked.
 var _heard: Array[RefCounted] = []
@@ -35,6 +42,10 @@ func run(tree: SceneTree) -> String:
 		result = await _rest_under_menu(tree, main, driver, screen)
 	if result.is_empty():
 		result = await _choose_with_click(tree, driver, screen)
+	if result.is_empty():
+		result = await _talk_to_scout(tree, main, driver, screen)
+	if result.is_empty():
+		result = _talk_once_while_held()
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(PROFILE)
@@ -142,6 +153,63 @@ func _choose_with_click(
 	if answered.size() != 1 or answered[0].answer != "promise_to_look":
 		return "the click raised %d answers" % answered.size()
 	return ""
+
+
+## In the glade, the player walks east with the keys into the guild scout, who stops them: that
+## talks to the scout once, for the player, and opens the scout's greeting.
+func _talk_to_scout(
+	tree: SceneTree,
+	main: Node,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	driver.instance = InstanceBlueprints.GLADE
+	driver.start(0)
+	_heard.clear()
+	Input.action_press("move_right")
+	for _tick: int in MovementFeature.MOVE_TICKS * 4:
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	Input.action_release("move_right")
+	(main.get_node("EventBus") as EventBus).flush()
+	await tree.process_frame
+	var talked: Array[NpcTalkedTo] = _talked(_heard)
+	if driver.state.player(0).tile != BESIDE_SCOUT or talked.size() != 1:
+		return "walking into the scout from %s talked %d times" % [
+			driver.state.player(0).tile,
+			talked.size(),
+		]
+	if talked[0].npc != "guild_scout" or talked[0].slot != 0 or talked[0].dialog != GREETING:
+		return "talking named %s and %s for slot %d" % [
+			talked[0].npc,
+			talked[0].dialog,
+			talked[0].slot,
+		]
+	if not screen.is_open() or screen.shown_speaker() != "Guild Scout":
+		return "talking to the scout didn't open their greeting"
+	return ""
+
+
+## A player walking on into the scout talks only once; stopping and walking into them again talks
+## again.
+static func _talk_once_while_held() -> String:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
+	var talks: Array[int] = []
+	for move: int in [EAST, EAST, EAST, Command.NO_MOVE, EAST]:
+		Simulation.step(state, FlowSteps.command(move))
+		talks.append(_talked(state.events).size())
+	if talks != [1, 0, 0, 0, 1] or state.player(0).tile != BESIDE_SCOUT:
+		return "walking on into the scout talked %s, standing on %s" % [talks, state.player(0).tile]
+	return ""
+
+
+## The NpcTalkedTo events among `events`.
+static func _talked(events: Array[RefCounted]) -> Array[NpcTalkedTo]:
+	var talked: Array[NpcTalkedTo] = []
+	for event: RefCounted in events:
+		if event is NpcTalkedTo:
+			talked.append(event as NpcTalkedTo)
+	return talked
 
 
 ## Presses and lets go of a controller's `button`, as the screen's viewport hears it.
