@@ -7,7 +7,7 @@ extends Node3D
 ## rise over it: first the blow, then what it dropped. Only for a wild monster in the instance
 ## shown, and never through the fog. It only reads the tick's events and the state.
 
-@export var driver: GameDriver
+@export var driver: Session
 ## Whose materials are this machine's player's.
 @export var input: LocalInput
 

@@ -25,7 +25,7 @@ const RESERVE_ALPHA: float = 0.55
 const INK_PIXELS: float = 2.0
 const COMPANION_INK_PIXELS: float = 6.0
 
-@export var driver: GameDriver
+@export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.
 @export var survey: SurveyChoice
 
@@ -130,7 +130,7 @@ func _draw_square(place: int) -> void:
 	var area: Rect2 = rect_of(place)
 	var chosen: bool = place == companion_place
 	var faded: float = 1.0 if chosen else RESERVE_ALPHA
-	draw_rect(area, Color(Boot.FOG, BACKDROP_ALPHA * faded))
+	draw_rect(area, Color(FogView.FOG, BACKDROP_ALPHA * faded))
 	var ink: Color = Color(Toon.INK, faded)
 	draw_rect(area, ink, false, COMPANION_INK_PIXELS if chosen else INK_PIXELS)
 	var font: Font = ThemeDB.fallback_font

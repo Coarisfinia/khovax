@@ -44,7 +44,7 @@ const CLOSE_TIP: String = "Close the menu (Escape, or B on a controller)"
 const CLOSE_NAME: String = "Close"
 
 ## The driver, which holds its ticks while the menu pauses the game.
-@export var driver: GameDriver
+@export var driver: Session
 ## The local player's input, which the menu blocks while it's open.
 @export var input: LocalInput
 ## Whose settings the Settings tab shows; it keeps every setting's choice (Settings' one owner).

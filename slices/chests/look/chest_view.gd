@@ -20,7 +20,7 @@ const MODEL_SCALE: float = 0.5
 const GEM_COLOR: Color = Color(0.95, 0.78, 0.3)
 const GEM_SIZE: float = 0.22
 
-@export var driver: GameDriver
+@export var driver: Session
 ## Whose loot is this machine's player's.
 @export var input: LocalInput
 

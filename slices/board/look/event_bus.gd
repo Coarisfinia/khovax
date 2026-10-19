@@ -7,7 +7,7 @@ extends Node
 ## never changes the world, since anything that matters inside it is a rule in the simulation
 ## (#26). Views keep the driver's `ticked` signal, since their effects play in step with the ticks.
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The events not yet handed out, in the order the ticks raised them.
 var queued: Array[RefCounted] = []

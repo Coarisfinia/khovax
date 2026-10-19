@@ -40,9 +40,9 @@ static func theme() -> Theme:
 			for state: String in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
 				_theme.set_color("icon_%s_color" % state, type, Toon.INK)
 			_theme.set_color("icon_disabled_color", type, Color(Toon.INK, UNCHOSEN_ALPHA))
-			_theme.set_stylebox("normal", type, _button(Boot.FOG))
-			_theme.set_stylebox("hover", type, _button(Boot.FOG.lightened(HOVER)))
-			_theme.set_stylebox("pressed", type, _button(Boot.FOG.darkened(PRESSED)))
+			_theme.set_stylebox("normal", type, _button(FogView.FOG))
+			_theme.set_stylebox("hover", type, _button(FogView.FOG.lightened(HOVER)))
+			_theme.set_stylebox("pressed", type, _button(FogView.FOG.darkened(PRESSED)))
 			_theme.set_stylebox("focus", type, _focus())
 		_style_tabs(_theme)
 	return _theme
@@ -53,16 +53,16 @@ static func theme() -> Theme:
 ## its page; the others are a shade darker, thin-bordered, closed below, their names a little
 ## faded.
 static func _style_tabs(styled: Theme) -> void:
-	styled.set_stylebox("tab_selected", "TabContainer", _tab(Boot.FOG, BORDER * 2, false))
+	styled.set_stylebox("tab_selected", "TabContainer", _tab(FogView.FOG, BORDER * 2, false))
 	styled.set_stylebox(
 		"tab_unselected",
 		"TabContainer",
-		_tab(Boot.FOG.darkened(PRESSED), BORDER, true),
+		_tab(FogView.FOG.darkened(PRESSED), BORDER, true),
 	)
 	styled.set_stylebox(
 		"tab_hovered",
 		"TabContainer",
-		_tab(Boot.FOG.lightened(HOVER), BORDER, true),
+		_tab(FogView.FOG.lightened(HOVER), BORDER, true),
 	)
 	styled.set_stylebox("tab_focus", "TabContainer", _focus())
 	styled.set_color("font_selected_color", "TabContainer", Toon.INK)
@@ -86,7 +86,7 @@ static func _tab(fill: Color, width: int, closed: bool) -> StyleBoxFlat:
 
 ## A card lying over the game: the fog a little see-through, an ink border, rounded, a shadow.
 static func card() -> StyleBoxFlat:
-	var style: StyleBoxFlat = _rounded(Color(Boot.FOG, CARD_ALPHA))
+	var style: StyleBoxFlat = _rounded(Color(FogView.FOG, CARD_ALPHA))
 	style.border_color = Toon.INK
 	style.set_border_width_all(BORDER)
 	style.shadow_color = Color(Toon.INK, SHADOW_ALPHA)
@@ -97,7 +97,7 @@ static func card() -> StyleBoxFlat:
 ## A sheet covering the whole screen: the fog, opaque, with `margin` pixels inside.
 static func sheet(margin: float) -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Boot.FOG
+	style.bg_color = FogView.FOG
 	style.set_content_margin_all(margin)
 	return style
 

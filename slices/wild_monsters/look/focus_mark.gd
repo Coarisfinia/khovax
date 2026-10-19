@@ -9,7 +9,7 @@ extends Node3D
 const RADIUS: float = 0.7
 const THICKNESS: float = 0.08
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The piece standing on the focused monster's tile, holding the ring.
 var piece: HexPiece

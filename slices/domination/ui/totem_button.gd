@@ -4,7 +4,7 @@ extends ActionButton
 ## (`place_totem`, #423), as the T key does. It shows the totem's icon and its charges left, 0 when
 ## it has none, and is drawn faded while the player stands on no ring waiting for a totem.
 
-@export var driver: GameDriver
+@export var driver: Session
 
 
 func _init() -> void:

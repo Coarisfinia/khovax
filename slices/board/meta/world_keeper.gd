@@ -14,7 +14,7 @@ extends Node
 static var default_path: String = WorldSave.PATH
 
 ## Whose world is saved.
-@export var driver: GameDriver
+@export var driver: Session
 
 ## Where this keeper keeps the world, or "" for `default_path`; tests point it elsewhere.
 var save_path: String = ""

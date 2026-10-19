@@ -253,7 +253,7 @@ func _take_touch() -> void:
 
 
 func _draw_backdrop(rect: Rect2, pressed: bool) -> void:
-	draw_rect(rect, Color(Boot.FOG, PRESSED_ALPHA if pressed else BACKDROP_ALPHA))
+	draw_rect(rect, Color(FogView.FOG, PRESSED_ALPHA if pressed else BACKDROP_ALPHA))
 	draw_rect(rect, Toon.INK, false, INK_PIXELS)
 
 

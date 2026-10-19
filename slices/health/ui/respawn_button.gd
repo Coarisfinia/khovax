@@ -4,7 +4,7 @@ extends ActionButton
 ## (#495), pressing `respawn` as the X key and a controller's top face button do. It shows a door
 ## and only while the player is knocked down (#479): there's nothing to choose otherwise.
 
-@export var driver: GameDriver
+@export var driver: Session
 
 
 func _init() -> void:

@@ -25,7 +25,7 @@ const HALF_WIDTH: float = 0.42
 const LENGTH: float = 0.66
 const INK_WIDTH: float = 0.08
 
-@export var driver: GameDriver
+@export var driver: Session
 ## Whose quests are marked: this machine's player's profile.
 @export var holder: ProfileHolder
 ## Which player the nearest target is measured from.

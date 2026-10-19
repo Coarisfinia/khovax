@@ -7,7 +7,7 @@ extends Node
 ## reads the trail and domination features' state and never writes it; an instance without the trail
 ## paints nothing.
 
-@export var driver: GameDriver
+@export var driver: Session
 @export var grid: HexGrid
 @export var trail_color: Color = Color(0.86, 0.74, 0.36):
 	set(value):

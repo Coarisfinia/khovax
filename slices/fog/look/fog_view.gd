@@ -7,7 +7,7 @@ extends Node
 ## sickness), and always moves (owner, #243, #248, #250): when it starts drawing an instance, at
 ## the start or on arriving in another, the whole region is thick cloud, and the fog draws back
 ## in a widening circle around this machine's player, each ring of tiles starting to clear a
-## moment after the one inside it. While the boot fog still hides the game (Boot.covering), the
+## moment after the one inside it. While the boot fog still hides the game (boot_covering), the
 ## circle waits, so the player first sees the world fully fogged. No hole ever opens in one frame.
 ## Wild
 ## monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
@@ -24,8 +24,15 @@ const EASE_PER_SECOND: float = 1.5
 ## How long after the fog view starts drawing an instance each ring of tiles around this
 ## machine's player waits before it starts to clear: the circle's pace.
 const RING_SECONDS: float = 0.12
+## The fog's color: the clouds' light shade (FogCloud), also the boot fog's and the menus' backdrop.
+const FOG: Color = Color(0.86, 0.88, 0.93)
 
-@export var driver: GameDriver
+## Whether the boot fog still hides the game (Boot sets it): the game's own fog waits to draw back
+## until it lifts, so the world shows fully fogged first, then opens around the player (owner,
+## #250).
+static var boot_covering: bool = false
+
+@export var driver: Session
 @export var cloud: FogCloud
 ## Keeps what was seen with the world, so it lasts beyond the session; none in tests that build a
 ## fog view alone, which then remembers for the session only.
@@ -67,7 +74,7 @@ func show_state(delta: float) -> void:
 		_region = null
 	if driver.state.region != _region:
 		_switch_to(driver.state)
-	if not Boot.covering:
+	if not boot_covering:
 		_since_switch += delta
 	for tile: Vector2i in _region.sorted_tiles():
 		var target: float = _target(fog, tile)

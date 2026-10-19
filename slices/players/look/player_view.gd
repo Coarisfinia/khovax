@@ -36,7 +36,7 @@ const SPOTS: Array[Vector3] = [
 ## How fast a player eases to its spot and back to the center, in world units per second.
 const SPOT_SPEED: float = 1.2
 
-@export var driver: GameDriver
+@export var driver: Session
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
 ## The character model, a child of this piece: it turns and animates; the piece moves.
 @export var model: Node3D

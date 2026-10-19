@@ -6,7 +6,7 @@ extends ActionButton
 ## down, a circle with the seconds left; it never vanishes (#429), and it's drawn faded while the
 ## special can't fire: cooling down, or no wild monster next to the companion to strike.
 
-@export var driver: GameDriver
+@export var driver: Session
 
 
 func _init() -> void:

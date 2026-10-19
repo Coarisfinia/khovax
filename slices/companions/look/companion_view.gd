@@ -15,7 +15,7 @@ const TURN_SPEED: float = 10.0
 ## How long a companion takes to shrink into its player when it goes back to them.
 const RETURN_SECONDS: float = 0.6
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## The figure shown for each companion, by entity id: a piece on the tile holding the model, then
 ## the circle.

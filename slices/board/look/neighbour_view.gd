@@ -12,7 +12,7 @@ extends Node3D
 ## its variant there (#529), never by loading the instance: the world's hash covers every loaded
 ## instance, so loading one from a view would change the simulation.
 
-@export var driver: GameDriver
+@export var driver: Session
 
 ## Each neighbour's grid, by blueprint name, placed relative to the local instance.
 var grids: Dictionary[String, HexGrid] = {}
