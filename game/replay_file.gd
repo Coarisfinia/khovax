@@ -127,7 +127,8 @@ static func _carried(data: Dictionary, format: int) -> Array[CarriedMonsters]:
 			lists.append([species] if str(species) != "" else [])
 	for party: Variant in lists:
 		var species_list: Array = party
-		parties.append(_stood_in(species_list) if _all_texts(species_list) else null)
+		var named: bool = _all_texts(species_list) and not species_list.has("")
+		parties.append(_stood_in(species_list) if named else null)
 	return parties
 
 
@@ -139,12 +140,13 @@ static func _stood_in(species_list: Array) -> CarriedMonsters:
 	return party
 
 
-## `party` when every short id in it is one, null otherwise.
+## `party` when every short id in it is one, each once, with a named species, null otherwise.
 static func _valid(party: CarriedMonsters) -> CarriedMonsters:
-	if party == null:
+	if party == null or party.species.has(""):
 		return null
-	for short_id: String in party.short_ids:
-		if not ShortId.is_valid(short_id):
+	for place: int in party.size():
+		var short_id: String = party.short_ids[place]
+		if not ShortId.is_valid(short_id) or party.short_ids.find(short_id) != place:
 			return null
 	return party
 

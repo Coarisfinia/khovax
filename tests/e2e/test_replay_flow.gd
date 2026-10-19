@@ -672,6 +672,8 @@ func _check_replay_validation() -> String:
 		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
 		text.replace("\"carried\": [", "\"carried\": [1,"): "not a replay: its carried monsters",
+		text.replace("\"storm_finch\"", "\"\""): "not a replay: its carried monsters",
+		text.replace("\"short_id\": \"", "\"short_id\": \"l"): "not a replay: its carried monsters",
 		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
 		text.replace(
 			"\"ticks\": ",

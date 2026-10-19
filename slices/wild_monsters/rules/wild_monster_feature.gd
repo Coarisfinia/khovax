@@ -107,9 +107,13 @@ func start(state: GameState) -> void:
 			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
 		if named != null and not named.emits.is_empty():
 			_emits[monster.id] = named.emits
-	# Drawn after every species, so the species roll as they did before short ids.
+	# Drawn after every species, so the species roll as they did before short ids; one already
+	# taken here is drawn again, so no two share one.
 	for monster: int in monsters:
-		_short_ids[monster] = ShortId.drawn(rng)
+		var short_id: String = ShortId.drawn(rng)
+		while _short_ids.values().has(short_id):
+			short_id = ShortId.drawn(rng)
+		_short_ids[monster] = short_id
 	_known.sort()
 
 
@@ -288,8 +292,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 			])
 			return
 		var short_id: String = entry.text("short_id")
-		if not ShortId.is_valid(short_id):
-			values.fail("wild monster %d has no valid short id" % monster)
+		if not ShortId.is_valid(short_id) or _short_ids.values().has(short_id):
+			values.fail("wild monster %d has no valid short id of its own" % monster)
 			return
 		_species[monster] = species
 		_short_ids[monster] = short_id
