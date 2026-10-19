@@ -12,6 +12,7 @@ const FIELDS: Array[String] = [
 	"id",
 	"condition",
 	"species",
+	"target",
 	"item",
 	"place",
 	"piece",
@@ -28,6 +29,7 @@ const FIELDS: Array[String] = [
 const CONDITION_FIELDS: Array[String] = [
 	"condition",
 	"species",
+	"target",
 	"item",
 	"place",
 	"piece",
@@ -62,8 +64,9 @@ const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
 const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]
 ## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
-## monster this player dominated (of `species`, or any); `opened`, a treasure chest this player got
-## loot from; `reached`, the place `place` this player stepped into (#339); `entered`, the region
+## monster this player dominated (the `quarry`: of `species`, or any, or the one quest target
+## `target` a region's legend marks, #625); `opened`, a treasure chest this player got loot from;
+## `reached`, the place `place` this player stepped into (#339); `entered`, the region
 ## piece `piece` (#350) or the instance `instance` (#370) this player entered; `answered`, the
 ## answer `answer` this player chose in the dialog `dialog` (#636); `obtained`, one of the item
 ## `item` this player obtained (#686), counted one per item. Defeating a monster waits until its
@@ -76,6 +79,9 @@ const CONDITIONS: Array[String] = [
 	ANSWERED,
 	"obtained",
 ]
+## The fact of a quest target dominated (#625), which a dominated step naming a target counts; a
+## domination of a species is the fact `dominated`.
+const TARGET_DOMINATED: String = "dominated_target"
 ## The fact of an instance entered, which an entered step naming an instance counts; a piece
 ## entered is the fact `entered`.
 const INSTANCE_ENTERED: String = "entered_instance"
@@ -95,9 +101,8 @@ var emits: String = ""
 var event: String = ""
 ## What the step asks for, or "" on a step with choices.
 var condition: String = ""
-## The species a `dominated` step asks for, its name as the player reads it (#351) included, or
-## null for any.
-var species: Species = null
+## The wild monster a `dominated` step asks for (#625): any, on any other step.
+var quarry: QuestQuarry = QuestQuarry.new()
 ## The item an `obtained` step asks for, by its id, as loot tables name it: a material or a piece
 ## of gear (#694).
 var item: String = ""
@@ -193,6 +198,7 @@ static func _choice(entry: Variant) -> QuestStep:
 func _read_condition(data: Dictionary, known_species: Dictionary[String, Species]) -> void:
 	condition = Content.text_of(data.get("condition"))
 	var species_id: String = Content.text_of(data.get("species"))
+	quarry.target = Content.text_of(data.get("target"))
 	item = Content.text_of(data.get("item"))
 	place = Content.text_of(data.get("place"))
 	piece = Content.text_of(data.get("piece"))
@@ -205,18 +211,21 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 		problem = "its condition must be one of %s" % [CONDITIONS]
 	elif data.has("species") and (condition != "dominated" or not known_species.has(species_id)):
 		problem = "its species must be one that exists, on a dominated step"
+	elif data.has("target") and (condition != "dominated" or data.has("species") or count != 1):
+		problem = "its target is one monster a dominated step asks for, once, instead of a species"
 	elif not _where_problem(data, self).is_empty():
 		problem = _where_problem(data, self)
 	elif count < 1:
 		problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	if problem.is_empty() and data.has("species"):
-		species = known_species[species_id]
+		quarry.species = known_species[species_id]
 
 
 ## Why `step`'s place, piece, instance, dialog and answer, event or item, read from `data`, doesn't
 ## fit, or "": a reached step names a place, an entered step a piece (#350) or an instance (#370),
 ## never both, an answered step a dialog and its answer (#636), an emitted condition an event
-## (#575) and an obtained step an item (#686), each as an id, and no other step names any. Whether
+## (#575) and an obtained step an item (#686), each as an id, and no other step names any; a
+## dominated step's quest target is an id too (#625). Whether
 ## the dialog has the answer is QuestContent's check, which reads the dialogs. The instance must
 ## be a blueprint that exists.
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
@@ -239,6 +248,7 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"answer": step.answer.id,
 		"event": step.event,
 		"item": step.item,
+		"target": step.quarry.target,
 	}
 	for field: String in named:
 		if data.has(field) and not TileTrigger.is_place_id(named[field]):
@@ -263,9 +273,10 @@ func choice_for(fact_condition: String, what: String) -> QuestStep:
 	return null
 
 
-## Whether one fact of `fact_condition` (a domination of a species, a chest, a place reached, a
-## piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED or an item obtained)
-## counts here, toward any of its choices on a branching step; `what` is the species dominated, the
+## Whether one fact of `fact_condition` (a domination of a species, a TARGET_DOMINATED, a chest, a
+## place reached, a piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED or an
+## item obtained) counts here, toward any of its choices on a branching step; `what` is the species
+## or the quest target dominated, the
 ## place reached, the piece or instance entered, the answer chosen as `answer_key` names it, the
 ## event emitted or the item obtained.
 func counts(fact_condition: String, what: String) -> bool:
@@ -283,7 +294,9 @@ func counts(fact_condition: String, what: String) -> bool:
 		return fact_condition == INSTANCE_ENTERED and instance == what
 	if condition == "entered":
 		return fact_condition == condition and piece == what
-	return fact_condition == condition and (species == null or species.id == what)
+	if not quarry.target.is_empty():
+		return fact_condition == TARGET_DOMINATED and quarry.target == what
+	return fact_condition == condition and quarry.fits(what, "")
 
 
 ## The answer `answer_id` of the dialog `dialog_id` as one fact (#636): both ids, which never hold

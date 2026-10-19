@@ -51,9 +51,11 @@ var _short_ids: Dictionary[int, String] = {}
 var _hp: Dictionary[int, int] = {}
 ## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
 var _rage: Dictionary[int, int] = {}
-## The event each wild monster its region names one for emits when it faints (#541), by entity id:
-## dropped once emitted, so it's emitted once.
-var _emits: Dictionary[int, String] = {}
+## What the region's legend says of a wild monster beyond its species, by entity id, for each it
+## names an event or a quest target for: the event it emits when it faints (#541), dropped once
+## emitted, so it's emitted once, and the quest target it is (#625), the content id a quest's step
+## names it by, kept after it faints. Rules read it; only this feature writes it.
+var marks: Dictionary[int, WildSpot] = {}
 ## The wild monsters held where they stand whatever the ground, in id order: HidingFeature holds
 ## the hidden ones (#202) and lets them go when they jump out, and restores them on loading, so
 ## they aren't saved here.
@@ -105,8 +107,8 @@ func start(state: GameState) -> void:
 		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
 		if named != null and named.wounded:
 			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
-		if named != null and not named.emits.is_empty():
-			_emits[monster.id] = named.emits
+		if named != null and not (named.emits + named.target).is_empty():
+			marks[monster.id] = WildSpot.mark(named.emits, named.target)
 	# Drawn after every species, so the species roll as they did before short ids; one already
 	# taken here is drawn again, so no two share one.
 	for monster: int in monsters:
@@ -166,7 +168,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	_dropped = _short_ids.erase(removed_id)
 	_dropped = _hp.erase(removed_id)
 	_dropped = _rage.erase(removed_id)
-	_dropped = _emits.erase(removed_id)
+	_dropped = marks.erase(removed_id)
 
 
 ## Holds the wild monster with this entity id where it stands, or lets it go again.
@@ -230,9 +232,9 @@ func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) 
 		var _calmed: bool = _rage.erase(entity_id)
 		fainted.append(entity_id)
 		fainted.sort()
-		if _emits.has(entity_id):
-			state.events.append(EventEmitted.new(_emits[entity_id]))
-			var _emitted: bool = _emits.erase(entity_id)
+		if not _emits_of(entity_id).is_empty():
+			state.events.append(EventEmitted.new(_emits_of(entity_id)))
+			marks[entity_id].emits = ""
 
 
 ## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
@@ -246,9 +248,9 @@ func enrage(entity_id: int, heal: int) -> void:
 
 
 ## Each wild monster still in the instance as its entity's id, its species, its short id and its HP
-## left, in id
-## order, the fainted ones among them at 0 HP, and the event a standing one emits when it faints, if
-## any (#541). The roster, the species this instance can place and their stats follow from the
+## left, in id order, the fainted ones among them at 0 HP, the event a standing one emits when it
+## faints, if any (#541), and the quest target it is, if any (#625). The roster, the species this
+## instance can place and their stats follow from the
 ## blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
@@ -263,8 +265,10 @@ func save_values() -> Dictionary:
 			"hp": _hp[monster],
 		}
 		entry["rage"] = rage_of(monster)
-		if _emits.has(monster):
-			entry["emits"] = _emits[monster]
+		if not _emits_of(monster).is_empty():
+			entry["emits"] = _emits_of(monster)
+		if not WildSpot.target_in(marks, monster).is_empty():
+			entry["target"] = WildSpot.target_in(marks, monster)
 		saved.append(entry)
 	return { "wild_monsters": saved }
 
@@ -277,7 +281,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	_short_ids.clear()
 	_hp.clear()
 	_rage.clear()
-	_emits.clear()
+	marks.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
 		var species: String = entry.text("species")
@@ -298,6 +302,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		_species[monster] = species
 		_short_ids[monster] = short_id
 		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
+		if (entry.data as Dictionary).has("target"):
+			marks[monster] = WildSpot.mark("", entry.text("target"))
 		if _hp[monster] == 0:
 			fainted.append(monster)
 			continue
@@ -306,7 +312,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if rage > 0:
 			_rage[monster] = rage
 		if (entry.data as Dictionary).has("emits"):
-			_emits[monster] = entry.text("emits")
+			marks[monster] = WildSpot.mark(entry.text("emits"), WildSpot.target_in(marks, monster))
 	monsters.sort()
 	fainted.sort()
 
@@ -324,10 +330,33 @@ func hash_values() -> Array[int]:
 	for monster: int in fainted:
 		values.append_array([monster, _known.find(_species[monster])])
 		values.append(World.name_code(_short_ids[monster]))
-	# Only a region naming events adds them, so every other instance hashes as before (#541).
-	if not _emits.is_empty():
-		values.append(_emits.size())
-	for monster: int in monsters:
-		if _emits.has(monster):
-			values.append_array([monster, World.name_code(_emits[monster])])
+	var emits: Dictionary[int, String] = {}
+	var targets: Dictionary[int, String] = {}
+	for monster: int in marks:
+		if not _emits_of(monster).is_empty():
+			emits[monster] = _emits_of(monster)
+		if not WildSpot.target_in(marks, monster).is_empty():
+			targets[monster] = WildSpot.target_in(marks, monster)
+	_hash_names(values, emits)
+	_hash_names(values, targets)
 	return values
+
+
+## The event the wild monster with this entity id still emits when it faints (#541), or "".
+func _emits_of(entity_id: int) -> String:
+	var mark: WildSpot = marks.get(entity_id)
+	return mark.emits if mark != null else ""
+
+
+## Adds `names`, each by its monster's entity id, to `values`, in id order after how many there
+## are. Only a region naming events (#541) or quest targets (#625) has any, so every other instance
+## hashes as before.
+static func _hash_names(values: Array[int], names: Dictionary[int, String]) -> void:
+	if names.is_empty():
+		return
+	values.append(names.size())
+	var ids: Array[int] = []
+	ids.assign(names.keys())
+	ids.sort()
+	for monster: int in ids:
+		values.append_array([monster, World.name_code(names[monster])])

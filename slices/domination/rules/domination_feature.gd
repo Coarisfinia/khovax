@@ -302,6 +302,7 @@ func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingS
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
 	var short_id: String = wild.short_id_of(monster_id)
+	var target: String = WildSpot.target_in(wild.marks, monster_id)
 	var slot: int = state.entity(dominator_id).slot
 	state.remove_entity(monster_id)
 	var dominated: WildMonsterDominated = WildMonsterDominated.new(
@@ -312,6 +313,7 @@ func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingS
 		species,
 	)
 	dominated.short_id = short_id
+	dominated.target = target
 	DominationShares.add_contributions(state, seal, dominated)
 	state.events.append(dominated)
 

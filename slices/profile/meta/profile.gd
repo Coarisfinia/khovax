@@ -76,6 +76,8 @@ func apply(result: Gain) -> String:
 		var short_ids: Array[String] = result.dominated_short_ids
 		_dominate(species, short_ids[i] if i < short_ids.size() else "")
 		_count_fact("dominated", species)
+	for target: String in result.targets_dominated:
+		_count_fact(QuestStep.TARGET_DOMINATED, target)
 	for _chest: int in result.chests_opened:
 		_count_fact("opened", "")
 	for place: String in result.places_reached:
@@ -258,8 +260,9 @@ func _started(id: String) -> bool:
 	return quest_book[id].starts_on == null or quest_progress.has(id) or quests_done.has(id)
 
 
-## Why `result` can't be taken over (an empty species, place, piece, instance, answer or world
-## event, a nameless or negative material or gear, or more than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, quest target, place, piece, instance,
+## answer or world event, a nameless or negative material or gear, or more than the save can hold),
+## or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -269,6 +272,7 @@ func _result_problem(result: Gain) -> String:
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
 	var named: Dictionary[String, Array] = {
+		"a quest target dominated has no id": result.targets_dominated,
 		"a place reached has no id": result.places_reached,
 		"a region piece entered has no id": result.pieces_entered,
 		"an instance entered has no name": result.instances_entered,
