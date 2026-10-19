@@ -1,7 +1,8 @@
 class_name CompanionAttackFeature
 extends Feature
 ## Companions fight on their own (#221): every companion strikes a wild monster next to it once a
-## second, the one with the lowest id, for its species' strength. The hit is non-lethal, an auto
+## second, the one with the lowest id, for its species' strength, after the type chart where the
+## instance has it (TypeEffectivenessFeature, #626). The hit is non-lethal, an auto
 ## attack's property: it never takes a wild monster below 1 HP, so it weakens it for a domination
 ## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Nor are ones
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
@@ -37,7 +38,15 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var target: int = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
 			continue
-		var damage: int = wild.strengths.get(companions.species_of(companion_id), 1)
+		var species: String = companions.species_of(companion_id)
+		var damage: int = wild.strengths.get(species, 1)
+		damage = TypeEffectivenessFeature.scaled(
+			state,
+			damage,
+			species,
+			false,
+			wild.species_of(target),
+		)
 		_strike(state, wild, companion_id, target, damage)
 
 

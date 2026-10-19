@@ -1,8 +1,8 @@
 class_name Species
 extends RefCounted
 ## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
-## base stats, wild archetype and its three abilities (#222). Everything here is integers and ids,
-## ready for the simulation.
+## its auto attack's type, base stats, wild archetype and its three abilities (#222). Everything
+## here is integers and ids, ready for the simulation.
 
 const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pusher"]
 ## A species file's fields, as its schema (slices/species/data/species.schema.json) allows them.
@@ -10,6 +10,7 @@ const FIELDS: Array[String] = [
 	"id",
 	"name",
 	"types",
+	"strike_type",
 	"hp",
 	"strength",
 	"speed",
@@ -24,6 +25,9 @@ var id: String = ""
 var name: String = ""
 ## One or two types (#68); dual types are the norm later in the game.
 var types: Array[String] = []
+## Its auto attack's type, from the chart, whatever fits it rather than one of its own (owner on
+## #626).
+var strike_type: String = ""
 var hp: int = 0
 var strength: int = 0
 ## Higher is faster (#222).
@@ -39,10 +43,11 @@ var self_passive: String = ""
 var problem: String = ""
 
 
-## Reads its speed, archetype and abilities from a species file's `data`; returns why it can't, or
-## "". Whether the abilities exist is checked against the ability data (Content).
+## Reads its speed, archetype, strike type and abilities from a species file's `data`; returns why
+## it can't, or "". Whether the abilities exist is checked against the ability data (Content).
 func read_kit(data: Dictionary) -> String:
 	speed = Content.amount(data.get("speed"))
+	strike_type = Content.text_of(data.get("strike_type"))
 	archetype = Content.text_of(data.get("archetype"))
 	special = Content.text_of(data.get("special"))
 	player_passive = Content.text_of(data.get("player_passive"))
@@ -51,6 +56,8 @@ func read_kit(data: Dictionary) -> String:
 		return "speed is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	if not ARCHETYPES.has(archetype):
 		return "its archetype is one of %s" % [ARCHETYPES]
+	if TypeChart.family_of(strike_type) < 0:
+		return "its strike type is a type on the chart"
 	for ability: String in [special, player_passive, self_passive]:
 		if not Content.is_id(ability):
 			return "it names a special and two passives by their ids"

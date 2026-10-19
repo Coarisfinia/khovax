@@ -3,9 +3,10 @@ extends Feature
 ## Specials (#410, part of #221): a player fires their companion's special attack with a command
 ## (`Command.special`), once per press. It strikes the wild monster the companion's auto attack
 ## would (CompanionAttackFeature.target_next_to: next to it, not hiding, not sealing in a ring) for
-## the special's power times its species' strength, and it's lethal: it can take the monster to
-## 0 HP, and then it faints for good (WildMonsterFeature.wound). Each special is its species' own
-## (#228): its power and cooldown come from its ability data. Once it fires, that player's special
+## the special's power times its species' strength, after the type chart where the instance has it
+## (TypeEffectivenessFeature, #626), and it's lethal: it can take the monster to 0 HP, and then it
+## faints for good (WildMonsterFeature.wound). Each special is its species' own (#228): its power,
+## cooldown and strike type come from its ability data. Once it fires, that player's special
 ## cools down for its cooldown; a press while it cools down, or with nothing to strike, does
 ## nothing. The cooldown is the player's, by slot, in this instance: a companion that joins anew
 ## here doesn't reset it.
@@ -73,6 +74,8 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 		return
 	var strength: int = wild.strengths.get(species, 1)
 	var damage: int = Fixed.scale(strength, powers[species])
+	var struck: String = wild.species_of(target)
+	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
 	wild.wound(state, target, damage, true)
 	_cooling[slot] = cooldowns.get(species, 1)
 	state.events.append(SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target)))

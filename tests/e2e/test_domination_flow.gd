@@ -38,6 +38,8 @@ extends RefCounted
 ## another player's doesn't. A wild monster strikes once a second too (#422): the
 ## companion next to it first, then the player, then the trail, whose tile gives way once worn
 ## through; encircled, it strikes only its ring's wall, and wearing through it breaks the ring.
+## With the type chart on (#626), the strikes between monsters follow it by each strike's own type;
+## switched off, they deal their plain damage.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -90,6 +92,17 @@ const SPECIAL_POWER: int = 3000
 const SPECIAL_TICKS: int = 50
 ## What a felled weak monster drops (#629): its loot table always rolls this.
 const HIDE_LOOT: Dictionary[String, int] = { "hide": 2 }
+## The type checks' strikes, by the strike's type and the struck species (_type_chart), and how
+## hard each hits in thousandths (#626): a Greater strike on a double weakness ×4, a Lesser one
+## ×1.5 twice, one on its own family's Greater type ×0.5, a strong and a weak one multiplying, and
+## a strike on a species without types ×1.
+const TYPE_FACTORS: Dictionary[String, int] = {
+	"titan double": 4000,
+	"might double": 2250,
+	"mana greater": 500,
+	"growth mixed": 1125,
+	"titan none": 1000,
+}
 ## A small ring and a big one around the disc's middle, by their radius.
 const SMALL_RING: int = 1
 const BIG_RING: int = 3
@@ -1044,7 +1057,65 @@ func _check_wild_attacks() -> String:
 		return "the trail beside it: " + struck
 	if not _wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)).is_empty():
 		return "the wild monster struck with nothing next to it"
-	return _check_ring_worn(state, player, hits)
+	struck = _check_ring_worn(state, player, hits)
+	return struck if not struck.is_empty() else _check_type_effectiveness()
+
+
+## Type effectiveness (#626): the chart's factors, a dual type's two multiplying. With the chart
+## on, the weak species' strikes follow it by their own types, not its type: its auto attack, a
+## Lesser Titan strike, hits a wild monster of its own Lesser Nature type ×1.5, and so does a wild
+## monster's on the companion; its special, a Greater Titan strike, ×2. Switched off, they deal
+## their plain damage.
+func _check_type_effectiveness() -> String:
+	var chart: TypeEffectivenessFeature = _type_chart()
+	for strike: String in TYPE_FACTORS:
+		var factor: int = chart.factor(strike.get_slice(" ", 0), strike.get_slice(" ", 1))
+		if factor != TYPE_FACTORS[strike]:
+			return "a %s strike hits ×%d thousandths, not %d" % [
+				strike,
+				factor,
+				TYPE_FACTORS[strike],
+			]
+	var result: String = _typed_strikes(true)
+	return result if not result.is_empty() else _typed_strikes(false)
+
+
+## Why the weak species' strikes, with the type chart `on` or off, weren't for their damage after
+## it, or "": a companion beside a wild monster, both of the weak species, strike each other once
+## in a second, and then the player fires the special.
+func _typed_strikes(on: bool) -> String:
+	var state: GameState = _strike_state([Vector2i.ZERO], [_type_chart()])
+	state.set_enabled(Features.TYPE_EFFECTIVENESS, on)
+	state.companions[0] = WEAK
+	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var hit: int = Fixed.scale(WEAK_STRENGTH, 1500 if on else Fixed.ONE)
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var struck: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(1, 0))
+	var monster: int = _wild(state).monsters[0]
+	if (struck.size() != 1 or struck[0].damage != hit
+			or _wild(state).hp_of(monster) != OUTCOME_HP - hit):
+		return "with the chart %s, the strikes weren't for %d" % [on, hit]
+	var special: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
+	special = Fixed.scale(special, 2000 if on else Fixed.ONE)
+	var felled: Array[SpecialStruck] = _specials_in(state, _fire())
+	if felled.size() != 1 or felled[0].damage != special:
+		return "with the chart %s, the special didn't strike for %d" % [on, special]
+	return ""
+
+
+## The type chart's feature for the type checks: the weak species is Lesser Nature, its auto attack
+## Lesser Titan and its special Greater Titan.
+static func _type_chart() -> TypeEffectivenessFeature:
+	var types: Dictionary[String, PackedStringArray] = {
+		WEAK: PackedStringArray(["growth"]),
+		"double": PackedStringArray(["growth", "breeze"]),
+		"greater": PackedStringArray(["arcane"]),
+		"mixed": PackedStringArray(["shadow", "might"]),
+	}
+	var auto_types: Dictionary[String, String] = { WEAK: "might" }
+	var special_types: Dictionary[String, String] = { WEAK: "titan" }
+	return TypeEffectivenessFeature.new(types, auto_types, special_types)
 
 
 ## Why the wild monster in `state` didn't strike `tile` once a second and wear it through with
@@ -1163,8 +1234,8 @@ func _wild_strikes_over(
 
 
 ## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
-## specials, and the wild monsters' attacks.
-func _strike_state(spots: Array[Vector2i]) -> GameState:
+## specials, and the wild monsters' attacks, then the `extra` features.
+func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
@@ -1180,6 +1251,7 @@ func _strike_state(spots: Array[Vector2i]) -> GameState:
 		HarvestFeature.new({ WEAK: _hide_table() }),
 		HealthFeature.new({ WEAK: COMPANION_HP }),
 	]
+	ordered.append_array(extra)
 	return GameState.new(region, 1, ordered)
 
 
