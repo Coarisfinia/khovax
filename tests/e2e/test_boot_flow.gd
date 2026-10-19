@@ -1004,7 +1004,8 @@ func _check_neighbour_grids(main: Node) -> String:
 		return "the neighbours drawn aren't the whole glade alone: %s" % [view.grids.keys()]
 	var exit: Vector3i = driver.state.region.exits[0]
 	var outside: Vector2i = Vector2i(exit.x, exit.y) + Hex.DIRECTIONS[exit.z]
-	var back: Vector2i = Vector2i(region.exits[0].x, region.exits[0].y)
+	var way: Vector3i = region.exits[region.exit_blueprints.find(InstanceBlueprints.BASIC)]
+	var back: Vector2i = Vector2i(way.x, way.y)
 	var drawn: Vector3 = glade.position + glade.tile_transform(back).origin
 	var lift: Vector3 = Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)
 	if not glade.has_tile(back) or not drawn.is_equal_approx(HexLayout.to_world(outside) + lift):
