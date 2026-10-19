@@ -7,8 +7,9 @@ extends RefCounted
 ## back from the instance the player is in once that has stepped (World): a player is in one
 ## instance each tick, so no two instances change one store in a tick. The core copies, hashes,
 ## saves and reads it back without knowing what an entry means; only the feature it belongs to
-## reads and writes it. An entry holds ints and ids only: whole numbers, text, and lists and tables
-## (with text keys) of them.
+## reads and writes it, inside a tick: the world hands the stores to an instance only once it's
+## loaded, so a feature never reads its entry in `start`. An entry holds ints and ids only: whole
+## numbers, text, and lists and tables (with text keys) of them.
 
 ## Each feature's entry, by feature id.
 var entries: Dictionary[int, Dictionary] = {}
@@ -124,6 +125,10 @@ static func _add_hashed(values: Array[int], value: Variant) -> void:
 		for key: String in keys:
 			values.append(World.name_code(key))
 			_add_hashed(values, table[key])
+	else:
+		# Not ints and ids, which no entry may hold (a save of it is refused): its kind alone still
+		# changes the hash, so it never goes unseen.
+		values.append_array([typeof(value), 0])
 
 
 ## Whether `value` is ints and ids only: a whole number a save holds exactly, text, or a list or a

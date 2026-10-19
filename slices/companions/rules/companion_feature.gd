@@ -266,10 +266,16 @@ func save_values() -> Dictionary:
 	return { "companions": saved, "rng": _rng.hash_values() }
 
 
+## Every player's party in the world store must be one (CompanionParty.problem), then every
+## companion one walking entity without a player, of its slot's companion species.
 func load_values(state: GameState, values: DataReader) -> void:
 	owners.clear()
 	_species.clear()
 	_rest.clear()
+	for slot: int in GameState.MAX_PLAYERS:
+		if not CompanionParty.problem(state, slot).is_empty():
+			values.fail(CompanionParty.problem(state, slot))
+			return
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	for entry: DataReader in values.entries("companions"):
 		var companion_id: int = entry.whole("entity", 1, DataReader.MOST)

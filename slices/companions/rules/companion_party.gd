@@ -97,6 +97,33 @@ static func fainted_in(world: World, slot: int) -> PackedStringArray:
 	return _fainted_of(world.stored(slot, Features.COMPANIONS))
 
 
+## Why the party of the player in `slot` in `state`, as a save brought it back, isn't one, or "":
+## none at all, or a list of named species they carry, one of them their companion, and the ones
+## that fainted among them, each once.
+static func problem(state: GameState, slot: int) -> String:
+	var entry: Dictionary = state.stored(slot, Features.COMPANIONS)
+	if entry.is_empty():
+		return ""
+	var party: PackedStringArray = _carried_of(entry)
+	var down: PackedStringArray = _fainted_of(entry)
+	var listed: bool = _lists_species(entry, "carried") and _lists_species(entry, "fainted")
+	if not listed or party.is_empty() or party.has("") or not party.has(_companion_of(entry)):
+		return "slot %d's party isn't named carried species with a companion among them" % slot
+	for place: int in down.size():
+		if not party.has(down[place]) or down.find(down[place]) != place:
+			return "slot %d's fainted %s isn't carried, or is listed twice" % [slot, down[place]]
+	return ""
+
+
+## Whether `entry` lists only text under `key`.
+static func _lists_species(entry: Dictionary, key: String) -> bool:
+	var value: Variant = entry.get(key, [])
+	if not value is Array:
+		return false
+	var items: Array = value
+	return _species_list(entry, key).size() == items.size()
+
+
 static func _carried_of(entry: Dictionary) -> PackedStringArray:
 	return _species_list(entry, "carried")
 
