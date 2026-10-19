@@ -91,13 +91,21 @@ func _check_boot(tree: SceneTree) -> String:
 	return result
 
 
-## Launch options (#237) read as given: a seed, an instance blueprint and invincibility, leaving a
-## script's own arguments (no `--`) alone; an unknown
-## option, a seed that isn't 0 or more and an unknown instance blueprint are refused with a reason.
+## Launch options (#237) read as given: a seed, an instance blueprint, invincibility and a user
+## folder (#786), leaving a script's own arguments (no `--`) alone; an unknown option, a seed that
+## isn't 0 or more, an unknown instance blueprint and a user folder that isn't a folder name are
+## refused with a reason.
 func _check_launch_options() -> String:
-	var args: PackedStringArray = ["--seed=42", "ticks=9", "--instance=glade", "--invincible"]
+	var args: PackedStringArray = [
+		"--seed=42",
+		"ticks=9",
+		"--instance=glade",
+		"--invincible",
+		"--user-dir=786-branch",
+	]
 	var options: LaunchOptions = LaunchOptions.parse(args)
 	var read: bool = options.seed_value == 42 and options.instance == "glade" and options.invincible
+	read = read and options.user_dir == "786-branch"
 	if not options.problem.is_empty() or not read or not options.is_test_world():
 		return "launch options didn't read as given: %s" % options.problem
 	var refusals: Dictionary[String, String] = {
@@ -107,6 +115,8 @@ func _check_launch_options() -> String:
 		"--instance=nowhere": "no instance blueprint nowhere; there are basic",
 		"--instance=glade=x": "no instance blueprint glade=x",
 		"--seed=4=2": "not an option, or not a seed",
+		"--user-dir=": "not a folder name",
+		"--user-dir=a/b": "not a folder name: a/b",
 	}
 	for arg: String in refusals:
 		var problem: String = LaunchOptions.parse([arg]).problem
