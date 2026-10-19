@@ -9,7 +9,8 @@ extends RefCounted
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
 ## their quest and ends close its own chain (#573), and broken ones are refused; a quest can move
 ## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
-## standing, and broken ones are refused. Quests and abilities carry path marks (#471).
+## standing, and broken ones are refused. Quests and abilities carry path marks (#471). Dialogs
+## (#618) load and read on line by line and answer by answer, and broken ones are refused.
 
 ## A species file's speed, archetype, abilities (#222) and name (#351), as a valid species ends.
 const KIT: String = (
@@ -43,6 +44,8 @@ func run(_tree: SceneTree) -> String:
 		_check_tiles,
 		_check_quests,
 		_check_factions,
+		_check_dialogs,
+		_check_dialogs_refused,
 		_check_kits.bind(content),
 	]
 	for check: Callable in checks:
@@ -604,4 +607,54 @@ func _check_factions() -> String:
 		var refusal: String = Faction.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken faction gave %s, not %s" % [refusal, cases[text]]
+	return ""
+
+
+## The dialogs load (#618): the guild scout's greeting reads on from its first line to its second,
+## where asking about the glade leads to the line about it and the farewell ends it, as the glade
+## line's only answer does too. An answer the line doesn't offer leads nowhere.
+func _check_dialogs() -> String:
+	var content: DialogContent = DialogContent.load_dialogs()
+	if not content.problem.is_empty() or not content.dialogs.has("guild_scout_greeting"):
+		return "the dialogs didn't load: " + content.problem
+	var greeting: Dialog = content.dialogs["guild_scout_greeting"]
+	var walked: Array[int] = [
+		greeting.after(0),
+		greeting.after(1, "ask_about_glade"),
+		greeting.after(1, "leave_scout"),
+		greeting.after(2, "promise_to_look"),
+		greeting.after(1, "no_such_answer"),
+		greeting.after(0, "ask_about_glade"),
+	]
+	if greeting.speaker != "Guild Scout" or walked != [1, 2, -1, -1, -1, -1]:
+		return "the guild scout's greeting reads %s, by %s" % [walked, greeting.speaker]
+	return ""
+
+
+## Dialog files with a wrong id, no speaker or lines, a line without text, an answer without an id,
+## two lines or answers sharing an id, or an answer leading to no line are refused (#618).
+func _check_dialogs_refused() -> String:
+	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lines\": [%s]}"
+	var line: String = "{\"id\": \"a\", \"text\": \"T\", \"answers\": [%s]}"
+	var answer: String = "{\"id\": \"%s\", \"text\": \"T\", \"next\": \"%s\"}"
+	var cases: Dictionary[String, String] = {
+		dialog.replace("\"x\"", "\"y\"") % "{\"text\": \"T\"}": "its id must",
+		dialog.replace("\"S\"", "\" \"") % "{\"text\": \"T\"}": "it needs a speaker",
+		dialog % "": "it needs a list",
+		dialog % "{\"text\": \" \"}": "line 0: a line needs a text",
+		dialog % "{\"text\": \"T\", \"answers\": []}": "line 0: a line's answers",
+		dialog % (line % "{\"text\": \"T\"}"): "line 0: an answer needs an id",
+		dialog % (line % (answer % ["b", "z"])): "line 0: answer b leads to z",
+		dialog % ("%s, {\"id\": \"a\", \"text\": \"T\"}" % (line % (answer % ["b", "a"]))): (
+			"line 1: another line"
+		),
+		dialog % (line % ("%s, %s" % [answer % ["b", "a"], answer % ["b", "a"]])): (
+			"line 0: another answer"
+		),
+		dialog % "{\"text\": \"T\", \"z\": 1}": "line 0: field z",
+	}
+	for text: String in cases:
+		var refusal: String = Dialog.parse("x", text).problem
+		if not refusal.begins_with(cases[text]):
+			return "a broken dialog gave %s, not %s" % [refusal, cases[text]]
 	return ""

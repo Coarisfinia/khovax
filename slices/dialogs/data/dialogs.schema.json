@@ -1,0 +1,58 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/dialogs/data/dialogs.schema.json",
+	"title": "Dialog",
+	"description": "A dialog (#618): who speaks it, always a person (monsters never talk), and the lines they say, read in the file's order. A line can offer the player answers instead of reading on: each ends the dialog, or leads to the line it names. Choosing an answer raises an event naming the dialog's id and the answer's id, which quests count and branch on (#573, #624), so neither id is ever reused or changed once shipped. One file per dialog, named after its id.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "speaker", "lines"],
+	"$defs": {
+		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"text": { "type": "string", "pattern": "\\S" }
+	},
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"$ref": "#/$defs/id"
+		},
+		"speaker": { "description": "The player-facing name of who says the lines.", "$ref": "#/$defs/text" },
+		"lines": {
+			"description": "The lines, in the order they're read where no answer leads elsewhere; the dialog ends after the last.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["text"],
+				"properties": {
+					"id": {
+						"description": "Its id within the dialog, which answers name to lead to it; needed only there, and unique.",
+						"$ref": "#/$defs/id"
+					},
+					"text": { "description": "What the speaker says.", "$ref": "#/$defs/text" },
+					"answers": {
+						"description": "The answers the player chooses from; left out, the dialog reads on to the next line.",
+						"type": "array",
+						"minItems": 1,
+						"items": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["id", "text"],
+							"properties": {
+								"id": {
+									"description": "Unique within the dialog, never reused: what quests name the answer by.",
+									"$ref": "#/$defs/id"
+								},
+								"text": { "description": "What the player says.", "$ref": "#/$defs/text" },
+								"next": {
+									"description": "The id of the line it leads to; left out, the dialog ends with it.",
+									"$ref": "#/$defs/id"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
