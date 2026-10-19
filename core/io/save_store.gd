@@ -53,9 +53,10 @@ static func write_save(path: String, text: String) -> String:
 	for generation: int in range(GENERATIONS - 1, 0, -1):
 		var older: String = _generation_path(path, generation - 1)
 		if FileAccess.file_exists(older):
-			if folder.rename(older, _generation_path(path, generation)) != OK:
+			var newer: String = _generation_path(path, generation)
+			if folder.rename(older.get_file(), newer.get_file()) != OK:
 				return "couldn't keep %s as an older generation" % older
-	if folder.rename(temporary, path) != OK:
+	if folder.rename(temporary.get_file(), path.get_file()) != OK:
 		return "couldn't put the new save in place at %s" % path
 	return ""
 
@@ -70,7 +71,8 @@ static func exists(path: String) -> bool:
 	return false
 
 
-## Deletes the save at `path` with every generation and its temporary file.
+## Deletes the save at `path` with every generation and its temporary file. Only the tests delete
+## saves, so nothing syncs a deletion into the browser's storage.
 static func remove(path: String) -> void:
 	var files: Array[String] = [path + ".tmp"]
 	for generation: int in GENERATIONS:
@@ -80,7 +82,7 @@ static func remove(path: String) -> void:
 		return
 	for file: String in files:
 		if FileAccess.file_exists(file):
-			var _gone: Error = folder.remove(file)
+			var _gone: Error = folder.remove(file.get_file())
 
 
 ## The text inside an envelope, or "" when it isn't one that holds. A plain save from before
