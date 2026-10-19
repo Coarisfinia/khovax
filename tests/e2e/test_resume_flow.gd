@@ -138,7 +138,8 @@ func _check_round_trip(world: World) -> String:
 
 ## Save data the build can't go on from is refused whole: another format, other rules, a seed or
 ## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
-## purging that doesn't add up (#212): the starting instance purged, an instance left behind while
+## purging that doesn't add up (#212): a blueprint purged that doesn't exist, an instance left
+## behind while
 ## someone is in it or not left behind while nobody is, or one left long enough to be purged.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
@@ -156,7 +157,7 @@ func _check_refused(world: World) -> String:
 		_changed(_fresh_data(), "start", InstanceBlueprints.GLADE): "the starting instance",
 		"not a world": "not a world save",
 		"{}": "format isn't",
-		_changed(data, "generations", [{ "name": "forest", "generation": 1 }]): "purged instance",
+		_changed(data, "generations", [{ "name": "nowhere", "generation": 1 }]): "purged instance",
 		_with_left_at(data, InstanceBlueprints.GLADE, 0): "instance glade's left_at",
 		_with_left_at(data, InstanceBlueprints.FOREST, -1): "instance forest's left_at",
 		_expired(): "instance glade was left behind long enough",
