@@ -87,8 +87,8 @@ static func step_line(step: QuestStep, count: int) -> String:
 	match step.condition:
 		"dominated":
 			var what: String = "a monster"
-			if not step.species.is_empty():
-				what = _with_article(step.species_name)
+			if step.species != null:
+				what = _with_article(step.species.name)
 			asks = "Dominate " + what
 		"opened":
 			asks = "Open a chest"
@@ -98,6 +98,8 @@ static func step_line(step: QuestStep, count: int) -> String:
 			asks = "Enter the " + _words(step.piece if step.instance.is_empty() else step.instance)
 		QuestStep.ANSWERED:
 			asks = _answer_line(step)
+		"obtained":
+			asks = "Collect " + _words(step.item)
 	if step.count > 1:
 		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
 	return asks
@@ -111,7 +113,8 @@ static func _answer_line(step: QuestStep) -> String:
 	return "Tell the %s: \"%s\"" % [step.answer.speaker, step.answer.text]
 
 
-## An id (a place, a region piece or an instance) as words: they have no player-facing names yet.
+## An id (a place, a region piece, an instance or an item) as words: they have no player-facing
+## names yet.
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
 

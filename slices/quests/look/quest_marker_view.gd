@@ -119,7 +119,7 @@ static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	for entity_id: int in ids:
 		var entity: Entity = state.entity(entity_id)
 		var hidden: bool = hiding != null and hiding.is_hidden(entity_id)
-		var fits: bool = step.species.is_empty() or wild.species_of(entity_id) == step.species
+		var fits: bool = step.species == null or wild.species_of(entity_id) == step.species.id
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)
 	return tiles

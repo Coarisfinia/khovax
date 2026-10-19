@@ -4,6 +4,9 @@ extends RefCounted
 ## (#694), chests opened, places reached, region pieces and instances entered, answers chosen in
 ## dialogs, the facts quests count too (#184, #339, #350, #370, #636), and the world's events, which
 ## every player gains (#707).
+## Loot counts toward quests once the player obtains it (#686): loot landing in their missed-loot
+## chest (#242) isn't obtained yet, and taking it out is, like taking it from their own chest
+## (#293), so only taking it out hands a Gain.
 ## It's handed to the profile the moment it happens, not at the session's end, and saved at once
 ## (ProfileKeeper), so a crash mid-session never loses a domination (owner, #73).
 

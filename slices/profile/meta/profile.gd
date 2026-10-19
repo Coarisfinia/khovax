@@ -90,9 +90,24 @@ func apply(result: Gain) -> String:
 		_count_fact(QuestStep.EMITTED, event)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
+		_count_obtained(material, result.materials[material])
 	for gear_id: String in result.gear:
 		gear.owned[gear_id] = gear.owned.get(gear_id, 0) + result.gear[gear_id]
+		_count_obtained(gear_id, result.gear[gear_id])
 	return ""
+
+
+## Counts `amount` of the item `item` just obtained (#686) toward the quests, one at a time, so one
+## gain can finish a step and count toward the next; it stops once no open step asks for the item,
+## so a large amount costs no more than the steps asking for it.
+func _count_obtained(item: String, amount: int) -> void:
+	for _counted: int in amount:
+		var asked: bool = false
+		for step: QuestStep in open_steps().values():
+			asked = asked or step.counts("obtained", item)
+		if not asked:
+			return
+		_count_fact("obtained", item)
 
 
 ## Every dominated monster's id in the player's order (#430): the carried ones first, in their

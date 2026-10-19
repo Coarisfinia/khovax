@@ -117,6 +117,11 @@
 						"else": { "not": { "anyOf": [{ "required": ["dialog"] }, { "required": ["answer"] }] } }
 					},
 					{
+						"if": { "required": ["condition"], "properties": { "condition": { "const": "obtained" } } },
+						"then": { "required": ["item"] },
+						"else": { "not": { "required": ["item"] } }
+					},
+					{
 						"if": { "required": ["choices"] },
 						"then": {
 							"not": { "anyOf": [{ "required": ["species"] }, { "required": ["count"] }, { "required": ["ends"] }] }
@@ -129,11 +134,15 @@
 						"$ref": "#/$defs/id"
 					},
 					"condition": {
-						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered. answered: an answer this player chose in a dialog (#636).",
-						"enum": ["dominated", "opened", "reached", "entered", "answered"]
+						"description": "dominated: a wild monster this player dominated. opened: a treasure chest this player got loot from. reached: a place this player stepped into. entered: a region piece or an instance this player entered. answered: an answer this player chose in a dialog (#636). obtained: one of an item this player obtained (#686), counted one per item, once it's theirs: loot in their missed-loot chest counts when they take it out.",
+						"enum": ["dominated", "opened", "reached", "entered", "answered", "obtained"]
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
+						"$ref": "#/$defs/id"
+					},
+					"item": {
+						"description": "On an obtained step, and only there, the id of the item it asks for, as loot tables name it.",
 						"$ref": "#/$defs/id"
 					},
 					"place": {
