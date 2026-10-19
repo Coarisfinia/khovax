@@ -12,7 +12,9 @@ extends RefCounted
 ## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
 ## standing, their symbols and the instances they hold (#637), and broken ones are refused. Quests
 ## and abilities carry path marks (#471). Dialogs
-## (#618) load and read on line by line and answer by answer, and broken ones are refused.
+## (#618) load and read on line by line and answer by answer, and broken ones are refused. Every
+## text tag (#733) in a dialog, a quest's name or an ability's description names content that
+## exists, shows its current name, and broken tags are refused.
 
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
@@ -61,6 +63,7 @@ func run(_tree: SceneTree) -> String:
 		_check_dialogs,
 		_check_dialogs_refused,
 		_check_kits.bind(content),
+		_check_text_tags,
 	]
 	for check: Callable in checks:
 		var result: String = check.call()
@@ -789,4 +792,43 @@ func _check_dialogs_refused() -> String:
 		var refusal: String = Dialog.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken dialog gave %s, not %s" % [refusal, cases[text]]
+	return ""
+
+
+## Every text tag (#733) in the texts that show them (a dialog's speaker, lines and answers, a
+## quest's name, an ability's description) names content that exists, and shows its current name;
+## a tag of an unknown kind, with an id that doesn't exist, or written wrong is refused.
+func _check_text_tags() -> String:
+	var tags: TextTags = TextTags.load_tags()
+	if not tags.problem.is_empty():
+		return "the text tags' names didn't load: " + tags.problem
+	var texts: Array[String] = []
+	for dialog: Dialog in DialogContent.load_dialogs().dialogs.values():
+		texts.append(dialog.speaker)
+		for line: DialogLine in dialog.lines:
+			texts.append(line.text)
+			for answer: DialogAnswer in line.answers:
+				texts.append(answer.text)
+	for quest: QuestDefinition in QuestContent.load_quests().quests.values():
+		texts.append(quest.name)
+	for ability: Ability in SpeciesContent.load_abilities().abilities.values():
+		texts.append(ability.description)
+	for text: String in texts:
+		if not tags.problem_in(text).is_empty():
+			return "the text \"%s\" has a broken tag: %s" % [text, tags.problem_in(text)]
+	var glade: String = DialogContent.load_dialogs().dialogs["guild_scout_greeting"].lines[2].text
+	if not TextTags.shown(glade).begins_with("A glade, thick with Ombulumo. Something"):
+		return "the scout's glade line shows %s" % TextTags.shown(glade)
+	var shown: String = tags.resolve("${FACTION:cartographers_guild} sells ${GEAR:berry_pouch}")
+	if shown != "Cartographer's Guild sells Berry pouch":
+		return "faction and gear tags show %s" % shown
+	var cases: Dictionary[String, String] = {
+		"${BEAST:moss_toad}": "its kind must be one of",
+		"${MONSTER:no_such_toad}": "no MONSTER has the id no_such_toad",
+		"${MONSTER:Moss Toad}": "a tag is written",
+		"${MONSTER:moss_toad": "a tag is written",
+	}
+	for text: String in cases:
+		if not tags.problem_in(text).contains(cases[text]):
+			return "the broken tag %s wasn't refused: %s" % [text, tags.problem_in(text)]
 	return ""

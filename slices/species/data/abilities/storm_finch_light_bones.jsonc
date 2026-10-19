@@ -4,5 +4,5 @@
 	"id": "storm_finch_light_bones",
 	"kind": "self_passive",
 	"name": "Light Bones",
-	"description": "The Tikazzir dodges more often, being so light."
+	"description": "The ${MONSTER:storm_finch} dodges more often, being so light."
 }

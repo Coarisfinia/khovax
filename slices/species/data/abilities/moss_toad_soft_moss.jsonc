@@ -4,6 +4,6 @@
 	"id": "moss_toad_soft_moss",
 	"kind": "player_passive",
 	"name": "Soft Moss",
-	"description": "While the Ombulumo is out, the player's rings hold a little longer.",
+	"description": "While the ${MONSTER:moss_toad} is out, the player's rings hold a little longer.",
 	"path": "harmony"
 }
