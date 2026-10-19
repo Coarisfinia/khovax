@@ -40,6 +40,7 @@ func tick_fraction() -> float:
 	return 0.0
 
 
-## Holds the ticks while a menu is open (`on`), or lets them run again.
-func pause(_on: bool) -> void:
-	pass
+## Holds the ticks while a menu is open (`on`), or lets them run again: real time stops reaching
+## the session. The driver refines it for co-op.
+func pause(on: bool) -> void:
+	set_process(not on)
