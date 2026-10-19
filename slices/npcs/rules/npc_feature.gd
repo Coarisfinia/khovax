@@ -26,8 +26,7 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [MovementFeature.ID]
-	return needed
+	return [MovementFeature.ID]
 
 
 func start(state: GameState) -> void:
