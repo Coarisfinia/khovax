@@ -84,6 +84,8 @@ func apply(result: Gain) -> String:
 		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name)
 	for answer: String in result.answers_chosen:
 		_count_fact(QuestStep.ANSWERED, answer)
+	for event: String in result.world_events:
+		_count_fact(QuestStep.EMITTED, event)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -235,8 +237,8 @@ func _started(id: String) -> bool:
 	return quest_book[id].starts_on == null or quest_progress.has(id) or quests_done.has(id)
 
 
-## Why `result` can't be taken over (an empty species, place, piece, instance or answer, a nameless
-## or negative material, or more than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, place, piece, instance, answer or world
+## event, a nameless or negative material, or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -245,14 +247,16 @@ func _result_problem(result: Gain) -> String:
 			return "a dominated monster has no species"
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
-	if result.places_reached.has(""):
-		return "a place reached has no id"
-	if result.pieces_entered.has(""):
-		return "a region piece entered has no id"
-	if result.instances_entered.has(""):
-		return "an instance entered has no name"
-	if result.answers_chosen.has(""):
-		return "an answer chosen has no id"
+	var named: Dictionary[String, Array] = {
+		"a place reached has no id": result.places_reached,
+		"a region piece entered has no id": result.pieces_entered,
+		"an instance entered has no name": result.instances_entered,
+		"an answer chosen has no id": result.answers_chosen,
+		"a world event has no name": result.world_events,
+	}
+	for why: String in named:
+		if named[why].has(""):
+			return why
 	for material: String in result.materials:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:
