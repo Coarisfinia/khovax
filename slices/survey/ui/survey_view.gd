@@ -4,13 +4,13 @@ extends Control
 ## next door (#353, the ones NeighbourView draws, at their places in the world), as far as they have
 ## explored them. It draws each tile they explored (FogView's memory, ExploredGround), sees now or
 ## had revealed (#177) in its kind's color (TileLooks) with its kind's symbol over it, so no kind
-## is told by color alone (#68), a tile nobody can walk onto ringed in ink, and every exit on a
-## tile shown as a chevron pointing out across its side; the rest stays the backdrop, the fog's
-## color, so what is
-## still in the fog stays hidden here too. Every player in the instance is a circle in their
-## personal color with one mark per slot number, like their circle in the world (#68), gliding
-## from tile to tile as their figure walks (#354), and every
-## open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it. Over it,
+## is told by color alone (#68), a tile nobody can walk onto ringed in ink, and every exit with a
+## tile shown as one chevron in its middle pointing out across its side (SurveyExitArrow, #790);
+## the rest stays the backdrop, the fog's color, so what is still in the fog stays hidden here too.
+## Every player in the instance is a circle in their personal color with one mark per slot number,
+## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
+## and every open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it.
+## Over it,
 ## its child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637).
 ## It's centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
@@ -35,9 +35,9 @@ const SYMBOL_SHARE: float = 1.1
 const SYMBOL_MIN_PIXELS: int = 8
 const SYMBOL_COLOR: Color = Color.WHITE
 const BORDER_PIXELS: float = 2.0
-## An exit's chevron, in shares of the way to the next tile: its half width, how far its tip
-## reaches past the tile's middle, across the side into the ground next door, and how far its base
-## lies behind it. The way is never taken as shorter than the pixels below.
+## An exit's chevron, in shares of the way from one tile to the next: its half width, how far its
+## tip reaches past the exit's middle, across the side into the ground next door, and how far its
+## base lies behind it. The way is never taken as shorter than the pixels below.
 const EXIT_HALF_WIDTH: float = 0.35
 const EXIT_REACH: float = 0.75
 const EXIT_BACK: float = 0.15
@@ -67,8 +67,8 @@ var tiles: Dictionary[Vector2i, TileBlueprint] = {}
 ## The tiles shown that nobody can walk onto.
 var blocking: Dictionary[Vector2i, bool] = {}
 ## Each exit on a tile shown, here or next door, as (q, r, side) in the coordinates of the instance
-## this machine's player is in.
-var exits: Array[Vector3i] = []
+## this machine's player is in: the blueprint it leads to.
+var exits: Dictionary[Vector3i, String] = {}
 ## Where each player in the instance is drawn, by slot, on the ground in world units: on their
 ## tile, or between the tile they walk from and their own while they walk, as their figure glides
 ## (#354).
@@ -94,7 +94,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	show_state()
-	var own: Vector2 = circles.get(_slot(), _ground(Vector2i.ZERO))
+	var own: Vector2 = circles.get(_slot(), ground_of(Vector2i.ZERO))
 	_middle = _middle.lerp(own, 1.0 - exp(-GLIDE * delta))
 	queue_redraw()
 
@@ -115,8 +115,8 @@ func _draw() -> void:
 			draw_polyline(shape, Toon.INK, INK_PIXELS)
 		if font_size > 0:
 			_draw_symbol(font, font_size, at, tiles[tile].symbol)
-	for exit: Vector3i in exits:
-		_draw_exit(Vector2i(exit.x, exit.y), exit.z)
+	for arrow: SurveyExitArrow in exit_arrows():
+		_draw_exit(on_view(arrow.at), arrow.side)
 	for slot: int in circles:
 		_draw_player(on_view(circles[slot]), slot, PersonalColor.shown(driver, slot))
 	for id: String in quest_targets:
@@ -145,14 +145,15 @@ func show_state() -> void:
 		# Another instance: the middle starts on this machine's player, never sliding across.
 		_region = state.region
 		var own: Entity = state.player(_slot())
-		_middle = _ground(own.tile if own != null else Vector2i.ZERO)
+		_middle = ground_of(own.tile if own != null else Vector2i.ZERO)
 	var known: Dictionary = _explored(state)
 	for tile: Vector2i in state.region.sorted_tiles():
 		if known.has(tile) or FogView.ally_sees(state, tile):
 			_show_tile(tile, state.region, tile)
-	for exit: Vector3i in state.region.exits:
+	for i: int in state.region.exits.size():
+		var exit: Vector3i = state.region.exits[i]
 		if tiles.has(Vector2i(exit.x, exit.y)):
-			exits.append(exit)
+			exits[exit] = state.region.exit_blueprints[i]
 	_show_neighbours(state)
 	for slot: int in GameState.MAX_PLAYERS:
 		var player: Entity = state.player(slot)
@@ -162,9 +163,14 @@ func show_state() -> void:
 		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot())
 
 
+## The chevrons drawn for `exits`: one per exit, in its middle (#790).
+func exit_arrows() -> Array[SurveyExitArrow]:
+	return SurveyExitArrow.of(exits)
+
+
 ## Where `tile` is drawn, in the view's own pixels.
 func to_view(tile: Vector2i) -> Vector2:
-	return on_view(_ground(tile))
+	return on_view(ground_of(tile))
 
 
 ## Where the ground point `ground`, in world units, is drawn, in the view's own pixels.
@@ -219,16 +225,16 @@ func _show_neighbours(state: GameState) -> void:
 		for tile: Vector2i in region.sorted_tiles():
 			if known.has(tile):
 				_show_tile(tile + shift, region, tile)
-		for exit: Vector3i in region.exits:
+		for i: int in region.exits.size():
+			var exit: Vector3i = region.exits[i]
 			if known.has(Vector2i(exit.x, exit.y)):
-				exits.append(exit + Vector3i(shift.x, shift.y, 0))
+				exits[exit + Vector3i(shift.x, shift.y, 0)] = region.exit_blueprints[i]
 
 
-## An exit's chevron on `tile`, pointing out across its side `side`, in ink round a light fill: the
-## shape says where a way leads next door (#68).
-func _draw_exit(tile: Vector2i, side: int) -> void:
-	var from: Vector2 = to_view(tile)
-	var out: Vector2 = to_view(tile + Hex.DIRECTIONS[side]) - from
+## An exit's chevron from `from`, its middle in the view's pixels, pointing out across its side
+## `side`, in ink round a light fill: the shape says where a way leads next door (#68).
+func _draw_exit(from: Vector2, side: int) -> void:
+	var out: Vector2 = to_view(Hex.DIRECTIONS[side]) - to_view(Vector2i.ZERO)
 	out = out.normalized() * maxf(out.length(), EXIT_MIN_PIXELS)
 	var wide: Vector2 = out.orthogonal() * EXIT_HALF_WIDTH
 	var base: Vector2 = from - out * EXIT_BACK
@@ -306,15 +312,15 @@ func _seen(instance_name: String) -> Dictionary:
 func _walked_ground(state: GameState, walker: Entity) -> Vector2:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	var walk: Walk = movement.walk(walker.id) if movement != null else null
-	var standing: Vector2 = _ground(walker.tile)
+	var standing: Vector2 = ground_of(walker.tile)
 	if walk == null or not walk.is_moving():
 		return standing
 	var left: float = walk.ticks_left - driver.tick_fraction()
-	return standing.lerp(_ground(walk.from), clampf(left / MovementFeature.MOVE_TICKS, 0.0, 1.0))
+	return standing.lerp(ground_of(walk.from), clampf(left / MovementFeature.MOVE_TICKS, 0.0, 1.0))
 
 
 ## A tile's middle on the ground, as the survey lays it out: north up.
-static func _ground(tile: Vector2i) -> Vector2:
+static func ground_of(tile: Vector2i) -> Vector2:
 	var world: Vector3 = HexLayout.to_world(tile)
 	return Vector2(world.x, world.z)
 
