@@ -65,7 +65,8 @@ func start(state: GameState) -> void:
 	_rng = Rng.new(state.rng_seed, id())
 
 
-## Sends off the companions whose player left, brings another or lost them, chooses another for
+## Sends off the companions whose player left, brings another or lost them, or that fainted
+## elsewhere, chooses another for
 ## every player whose companion fainted, lets every player who brings one that hasn't fainted and
 ## has none here be joined by it, then lets each companion roam, in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
@@ -80,6 +81,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			player = null
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
+		# One left behind in an instance (#717) may have fainted elsewhere since.
+		gone = gone or state.has_fainted(owners[companion_id], _species[companion_id])
 		if gone or state.companions[player.slot] != _species[companion_id]:
 			state.remove_entity(companion_id)
 	for slot: int in GameState.MAX_PLAYERS:
@@ -286,9 +289,8 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if standing == null or standing.slot != Entity.NO_SLOT or not walks or taken:
 			values.fail("companion %d isn't one walking entity without a player" % companion_id)
 			return
-		var chosen: bool = not species.is_empty() and species == state.companions[slot]
-		if not chosen or state.has_fainted(slot, species):
-			values.fail("companion %d isn't its slot's standing companion species" % companion_id)
+		if species.is_empty() or species != state.companions[slot]:
+			values.fail("companion %d isn't of its slot's companion species" % companion_id)
 			return
 		owners[companion_id] = slot
 		_species[companion_id] = species
