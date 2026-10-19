@@ -27,4 +27,4 @@ The outpost's yard (#689): a sandy square with crates in the middle, posts of st
 - `🌳`: shrubs
 - `📦`: crates
 - `🟨`: sand
-- `🐦`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always tikazzir

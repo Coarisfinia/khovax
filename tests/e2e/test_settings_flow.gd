@@ -221,7 +221,7 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	if tab.monsters.shown != none:
 		return "the Character tab lists monsters before any is dominated: %s" % [tab.monsters.shown]
 	var gain: Gain = Gain.new()
-	gain.dominated_species.assign(["moss_toad", "storm_finch", "storm_finch", "moss_toad"])
+	gain.dominated_species.assign(["ombulumo", "tikazzir", "tikazzir", "ombulumo"])
 	var problem: String = FlowGame.holder(main).keeper.take(gain, Time.get_ticks_msec())
 	if not problem.is_empty():
 		return "the dominations aren't taken: " + problem

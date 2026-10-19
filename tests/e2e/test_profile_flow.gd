@@ -36,7 +36,7 @@ func run(_tree: SceneTree) -> String:
 	var profile: Profile = Profile.new()
 	if profile.unlocked_slots != 1 or not profile.dominated_monsters.is_empty():
 		return "a new profile doesn't start with one slot and nothing dominated"
-	var applied: String = profile.apply(_result(["ember_fox", "moss_toad"], { "crystal": 2 }))
+	var applied: String = profile.apply(_result(["ember_fox", "ombulumo"], { "crystal": 2 }))
 	applied += profile.apply(_result(["ember_fox"], { "crystal": 1, "feather": 3 }))
 	if not applied.is_empty():
 		return "a valid gain was refused: " + applied
@@ -71,11 +71,11 @@ func run(_tree: SceneTree) -> String:
 ## flushes whatever is pending.
 func _check_kept_at_once() -> String:
 	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
-	var problem: String = keeper.take(_result(["moss_toad"], {}), 0)
+	var problem: String = keeper.take(_result(["ombulumo"], {}), 0)
 	if not problem.is_empty() or _monsters_on_disk() != 1:
 		return "the first domination wasn't on disk right away: " + problem
 	for ms: int in range(100, 5000, 100):
-		problem += keeper.take(_result(["moss_toad"], {}), ms)
+		problem += keeper.take(_result(["ombulumo"], {}), ms)
 	var interval: int = ProfileKeeper.SAVE_INTERVAL_MSEC
 	problem += keeper.save_if_due(interval - 1)
 	if not problem.is_empty() or _monsters_on_disk() != 1:
@@ -83,7 +83,7 @@ func _check_kept_at_once() -> String:
 	problem = keeper.save_if_due(interval)
 	if not problem.is_empty() or _monsters_on_disk() != 50:
 		return "the burst wasn't saved once the interval passed: " + problem
-	problem = keeper.take(_result(["moss_toad"], {}), interval + 1) + keeper.end_session()
+	problem = keeper.take(_result(["ombulumo"], {}), interval + 1) + keeper.end_session()
 	var on_disk: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not problem.is_empty() or on_disk.dominated_monsters.size() != 51:
@@ -98,9 +98,9 @@ func _monsters_on_disk() -> int:
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
 func _check_bad_results(profile: Profile) -> String:
 	var before: String = ProfileSave.to_text(profile)
-	var no_chests: Gain = _result(["moss_toad"], {})
+	var no_chests: Gain = _result(["ombulumo"], {})
 	no_chests.chests_opened = -1
-	var bad_id: Gain = _result(["moss_toad"], {})
+	var bad_id: Gain = _result(["ombulumo"], {})
 	bad_id.dominated_short_ids.assign(["l1o0ij-"])
 	var bad: Array[Gain] = [
 		no_chests,
@@ -133,7 +133,7 @@ func _check_save(profile: Profile) -> String:
 		return "the loaded profile differs from the saved one: " + loaded.problem
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
 		return "saving left its temporary file behind"
-	var _dominated: String = loaded.apply(_result(["moss_toad"], {}))
+	var _dominated: String = loaded.apply(_result(["ombulumo"], {}))
 	var three: Array[int] = [1, 2, 3]
 	if loaded.dominated_monsters.back().id != 4 or loaded.carried != three:
 		return "a monster dominated after loading reused an id or joined the carried three"
@@ -147,7 +147,7 @@ func _check_save(profile: Profile) -> String:
 ## gives each the stand-in for its id, and a save with a short id that isn't one is refused.
 func _check_short_ids() -> String:
 	var profile: Profile = Profile.new()
-	var gain: Gain = _result(["moss_toad", "moss_toad"], {})
+	var gain: Gain = _result(["ombulumo", "ombulumo"], {})
 	gain.dominated_short_ids.assign(["abc2345"])
 	var _taken: String = profile.apply(gain)
 	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
@@ -174,7 +174,40 @@ func _check_short_ids_read(profile: Profile) -> String:
 	var bad: String = ProfileSave.to_text(profile).replace("abc2345", "abl2345")
 	if not ProfileSave.parse(bad).problem.begins_with("a dominated monster"):
 		return "a save with a short id that isn't one wasn't refused"
+	return _check_old_species_ids()
+
+
+## A save from before a species' id was its name (format 13, #763) names its monsters and quests by
+## the old ids, which load renamed: a quest under way, and a finished one.
+func _check_old_species_ids() -> String:
+	var profile: Profile = Profile.new()
+	var _taken: String = profile.apply(_result(["ombulumo", "tikazzir"], {}))
+	profile.quest_progress["three_ombulumo"] = QuestProgress.new(0, 1)
+	var migrated: Profile = ProfileSave.parse(_format_13(profile))
+	var species: Array[String] = []
+	for monster: DominatedMonster in migrated.dominated_monsters:
+		species.append(monster.species)
+	var expected: Array[String] = ["ombulumo", "tikazzir"]
+	if (not migrated.problem.is_empty()
+			or species != expected
+			or not migrated.quest_progress.has("three_ombulumo")):
+		return "a format 13 save's old species ids weren't renamed: %s %s" % [
+			species,
+			migrated.problem,
+		]
+	profile.quest_progress.clear()
+	profile.quests_done.append("three_ombulumo")
+	var finished: Profile = ProfileSave.parse(_format_13(profile))
+	if not finished.problem.is_empty() or finished.quests_done != ["three_ombulumo"]:
+		return "a format 13 save's finished quest wasn't renamed: " + finished.problem
 	return ""
+
+
+## `profile`'s save as format 13 wrote it, with the species and quest ids from before #763.
+func _format_13(profile: Profile) -> String:
+	var text: String = ProfileSave.to_text(profile).replace("\"format\": 14", "\"format\": 13")
+	text = text.replace("three_ombulumo", "three_moss_toads")
+	return text.replace("ombulumo", "moss_toad").replace("tikazzir", "storm_finch")
 
 
 ## A save that isn't one, comes from a newer build, or contradicts itself is refused, not misread.
@@ -241,10 +274,10 @@ func _check_might() -> String:
 	var species: Dictionary[String, Species] = SpeciesContent.load_species().species
 	var profile: Profile = Profile.new()
 	var gain: Gain = Gain.new()
-	gain.dominated_species.assign(["moss_toad", "storm_finch", "moss_toad", "storm_finch"])
+	gain.dominated_species.assign(["ombulumo", "tikazzir", "ombulumo", "tikazzir"])
 	var _taken: String = profile.apply(gain)
-	var toad: Species = species["moss_toad"]
-	var finch: Species = species["storm_finch"]
+	var toad: Species = species["ombulumo"]
+	var finch: Species = species["tikazzir"]
 	var each_toad: int = toad.hp + Might.STRENGTH_WEIGHT * toad.strength + toad.speed
 	var each_finch: int = finch.hp + Might.STRENGTH_WEIGHT * finch.strength + finch.speed
 	# The first three are carried: two toads and a finch; the second finch rests.
@@ -574,7 +607,7 @@ func _as_captured(text: String) -> Dictionary:
 ## or four, is refused.
 func _check_migrated_carried() -> String:
 	var profile: Profile = Profile.new()
-	var four: Array = ["ember_fox", "moss_toad", "ember_fox", "moss_toad"]
+	var four: Array = ["ember_fox", "ombulumo", "ember_fox", "ombulumo"]
 	var _dominated: String = profile.apply(_result(four, {}))
 	var save: Dictionary = _as_captured(ProfileSave.to_text(profile))
 	save["format"] = 4
@@ -606,9 +639,9 @@ func _result(species: Array, materials: Dictionary) -> Gain:
 func _check_recovered() -> String:
 	SaveStore.remove(SAVE_PATH)
 	var older: Profile = Profile.new()
-	var _first: String = older.apply(_result(["moss_toad"], {}))
+	var _first: String = older.apply(_result(["ombulumo"], {}))
 	var newer: Profile = Profile.new()
-	var _second: String = newer.apply(_result(["moss_toad", "ember_fox"], {}))
+	var _second: String = newer.apply(_result(["ombulumo", "ember_fox"], {}))
 	var problem: String = ProfileStore.save(older, SAVE_PATH)
 	problem += ProfileStore.save(newer, SAVE_PATH)
 	var newest: String = FileAccess.get_file_as_string(SAVE_PATH)

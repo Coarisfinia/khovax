@@ -1,6 +1,6 @@
 // A placeholder species until real content exists: slow, sturdy, Lesser Nature.
 {
-	"id": "moss_toad",
+	"id": "ombulumo",
 	"name": "Ombulumo",
 	"types": ["growth"],
 	"strike_type": "growth", // its auto attack's (#626)
@@ -8,7 +8,7 @@
 	"strength": 40,
 	"speed": 40,
 	"archetype": "pusher",
-	"special": "moss_toad_belly_flop",
-	"player_passive": "moss_toad_soft_moss",
-	"self_passive": "moss_toad_damp_hide"
+	"special": "ombulumo_belly_flop",
+	"player_passive": "ombulumo_soft_moss",
+	"self_passive": "ombulumo_damp_hide"
 }

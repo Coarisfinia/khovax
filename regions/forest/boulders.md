@@ -1,6 +1,6 @@
 # Forest: boulder field
 
-A field of boulders among the trees (#689): rock to harvest later (#675), shrubs and scattered trees, a wild monster in the middle and a storm finch to the south. Joins the forest on its north and south edges.
+A field of boulders among the trees (#689): rock to harvest later (#675), shrubs and scattered trees, a wild monster in the middle and a Tikazzir to the south. Joins the forest on its north and south edges.
 
 ## Tiles
 
@@ -27,4 +27,4 @@ A field of boulders among the trees (#689): rock to harvest later (#675), shrubs
 - `🌲`: forest
 - `🌳`: shrubs
 - `🪨`: boulder
-- `🐦`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always tikazzir

@@ -47,10 +47,10 @@ func run(_tree: SceneTree) -> String:
 	var content: SpeciesData = SpeciesContent.load_species()
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
-	if (not content.species.has("moss_toad")
-			or content.species["moss_toad"].name != "Ombulumo"
-			or content.species["storm_finch"].types.size() != 2
-			or content.species["moss_toad"].strike_type != "growth"):
+	if (not content.species.has("ombulumo")
+			or content.species["ombulumo"].name != "Ombulumo"
+			or content.species["tikazzir"].types.size() != 2
+			or content.species["ombulumo"].strike_type != "growth"):
 		return "the placeholder species didn't load as written"
 	var checks: Array[Callable] = [
 		_check_strip,
@@ -86,8 +86,8 @@ func _check_kits(content: SpeciesData) -> String:
 	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)
 	if not problem.is_empty():
 		return "the species' abilities don't hold together: " + problem
-	var finch: Species = content.species["storm_finch"]
-	var toad: Species = content.species["moss_toad"]
+	var finch: Species = content.species["tikazzir"]
+	var toad: Species = content.species["ombulumo"]
 	var shared: Dictionary[String, Species] = { "a": toad, "b": _copy_kit(finch, toad.special) }
 	if not SpeciesKit.problem(shared, loaded.abilities).contains("share the special"):
 		return "two species sharing a special weren't refused"
@@ -105,12 +105,12 @@ func _check_kits(content: SpeciesData) -> String:
 ## quest's name shows its mark in words after it (#68); a path that isn't a mark is refused.
 func _check_path_marks(abilities: Dictionary[String, Ability]) -> String:
 	var quests: Dictionary[String, QuestDefinition] = QuestContent.load_quests().quests
-	if (quests["three_moss_toads"].path != PathMark.SUPREMACY
+	if (quests["three_ombulumo"].path != PathMark.SUPREMACY
 			or quests["first_domination"].path != PathMark.NONE
-			or abilities["storm_finch_gale_dive"].path != PathMark.SUPREMACY
-			or abilities["moss_toad_damp_hide"].path != PathMark.NONE):
+			or abilities["tikazzir_gale_dive"].path != PathMark.SUPREMACY
+			or abilities["ombulumo_damp_hide"].path != PathMark.NONE):
 		return "the path marks didn't read as written"
-	if quests["three_moss_toads"].shown_name() != "Dominate three Ombulumo (Supremacy)":
+	if quests["three_ombulumo"].shown_name() != "Dominate three Ombulumo (Supremacy)":
 		return "a quest's name doesn't show its path mark in words"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"path\": %s,"
 	quest += " \"steps\": [{\"condition\": \"opened\"}]}"
@@ -242,7 +242,7 @@ func _check_side_quests(content: QuestData) -> String:
 func _check_quest_standings(content: QuestData) -> String:
 	var raised: QuestStanding = content.quests["first_domination"].standing
 	if (raised == null or raised.faction != "cartographers_guild" or raised.change != 1
-			or content.quests["three_moss_toads"].standing != null):
+			or content.quests["three_ombulumo"].standing != null):
 		return "the first domination doesn't raise the guild by one, or another quest moves one"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"standing\": %s, \"steps\": [%s]}"
 	var standing: String = "{\"faction\": \"%s\", \"change\": %s}"
@@ -385,7 +385,7 @@ func _check_quests() -> String:
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
 	var first: QuestDefinition = content.quests.get("first_domination")
-	var toads: QuestDefinition = content.quests.get("three_moss_toads")
+	var toads: QuestDefinition = content.quests.get("three_ombulumo")
 	if first == null or first.name.is_empty() or first.steps.size() != 2 or toads == null:
 		return "the quests didn't load as written"
 	if first.steps[0].condition != "reached" or first.steps[0].place != "beach":
@@ -398,8 +398,8 @@ func _check_quests() -> String:
 		return "the first domination isn't one domination of any species"
 	var toad: Species = toad_step.quarry.species
 	toad = toad if toad != null else Species.new()
-	if toad.id != "moss_toad" or toad.name != "Ombulumo" or toad_step.count != 3:
-		return "the toads' quest isn't three moss toads"
+	if toad.id != "ombulumo" or toad.name != "Ombulumo" or toad_step.count != 3:
+		return "the toads' quest isn't three Ombulumo"
 	if not _check_named_steps(content).is_empty():
 		return _check_named_steps(content)
 	if not _check_instance_steps(content).is_empty():
@@ -420,7 +420,7 @@ func _check_quests() -> String:
 		quest % ["x", "N", step % ", \"piece\": \"thicket\""]: "step 0: its piece",
 		quest % ["x", "N", ENTER % "The Thicket"]: "step 0: its piece must",
 		quest % ["x", "N", step % ", \"species\": \"ember_cat\""]: "step 0: its species",
-		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"moss_toad\"}"]: (
+		quest % ["x", "N", "{\"condition\": \"opened\", \"species\": \"ombulumo\"}"]: (
 			"step 0: its species"
 		),
 		quest % ["x", "N", step % "" + ", " + step % ", \"count\": 0"]: "step 1: its count",
@@ -444,7 +444,7 @@ func _check_target_steps(content: QuestData) -> String:
 		quest % ["dominated", target % "Old"]: "step 0: its target must",
 		quest % ["opened", target % "old_toad"]: "step 0: its target",
 		quest % ["dominated", target % "old_toad" + ", \"count\": 2"]: "step 0: its target",
-		quest % ["dominated", target % "old_toad" + ", \"species\": \"moss_toad\""]: (
+		quest % ["dominated", target % "old_toad" + ", \"species\": \"ombulumo\""]: (
 			"step 0: its target"
 		),
 	}
@@ -595,9 +595,9 @@ func _check_strip() -> String:
 	return ""
 
 
-## Why a species file named x with this text is refused in otherwise empty content, or "".
+## Why a species file named xo with this text is refused in otherwise empty content, or "".
 func _add_to_empty(text: String) -> String:
-	return SpeciesData.new().add_species("x", text)
+	return SpeciesData.new().add_species("xo", text)
 
 
 ## Entries a schema might let through or that clash with others are refused, with a reason.
@@ -605,40 +605,43 @@ func _check_refused() -> String:
 	var cases: Dictionary[String, String] = {
 		"{\"id\": \"other\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id",
 		# Mana and Arcane are one family's two types.
-		"{\"id\": \"x\", \"types\": [\"mana\", \"arcane\"], \"hp\": 1, \"strength\": 1}": (
+		"{\"id\": \"xo\", \"types\": [\"mana\", \"arcane\"], \"hp\": 1, \"strength\": 1}": (
 			"type arcane"
 		),
-		"{\"id\": \"x\", \"types\": [\"fire\"], \"hp\": 1, \"strength\": 1}": "type fire",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1.5, \"strength\": 1}": "hp and strength",
-		"{\"id\": \"x\", \"types\": [], \"hp\": 1, \"strength\": 1}": "a species has one",
+		"{\"id\": \"xo\", \"types\": [\"fire\"], \"hp\": 1, \"strength\": 1}": "type fire",
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1.5, \"strength\": 1}": "hp and strength",
+		"{\"id\": \"xo\", \"types\": [], \"hp\": 1, \"strength\": 1}": "a species has one",
 		"{\"id\": 7, \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id must be",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1, \"y\": 1}": "field y",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1, \"y\": 1}": "field y",
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("pusher", "digger") + "}": "its archetype",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("might", "fire") + "}": "its strike type",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"a_special\"", "7") + "}": "it names a special",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"name\": \"Xo\", ", "") + "}": "it needs a name",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"Xo\"", "\" \"") + "}": "it needs a name",
 		# A description isn't a name (#717): two words, or small letters only.
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"Xo\"", "\"Moss Toad\"") + "}": "it needs a name",
-		"{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"Xo\"", "\"xo\"") + "}": "it needs a name",
+		# Its id is its name in lower case (#763).
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("\"Xo\"", "\"Zo\"") + "}": "its id must be its name",
 	}
 	for text: String in cases:
 		var problem: String = _add_to_empty(text)
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
 	var twice: SpeciesData = SpeciesData.new()
-	var valid: String = "{\"id\": \"x\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+	var valid: String = "{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 	valid += KIT + "}"
-	var first: String = twice.add_species("x", valid)
-	if not first.is_empty() or not twice.add_species("x", valid).begins_with("its id"):
+	var first: String = twice.add_species("xo", valid)
+	if not first.is_empty() or not twice.add_species("xo", valid).begins_with("its id"):
 		return "a second species with the same id was accepted"
 	return ""
 
@@ -650,7 +653,7 @@ func _check_loot_rolls() -> String:
 	var content: LootData = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		return "the loot tables didn't load: " + content.problem
-	var toad: LootTable = content.loot_tables["moss_toad"]
+	var toad: LootTable = content.loot_tables["ombulumo"]
 	var glade: LootTable = content.loot_tables["glade"]
 	var hits: Dictionary[bool, int] = { true: 0, false: 0 }
 	for seed_value: int in 100:
@@ -696,8 +699,8 @@ func _check_harvest_tables() -> String:
 		var table: LootTable = content.loot_tables.get(species_id)
 		if table == null or table.kind != LootTable.HARVEST:
 			return "%s has no harvest table" % species_id
-	var toad: LootTable = content.loot_tables["moss_toad"]
-	var dominated: LootTable = LootContent.load_loot_tables().loot_tables["moss_toad"]
+	var toad: LootTable = content.loot_tables["ombulumo"]
+	var dominated: LootTable = LootContent.load_loot_tables().loot_tables["ombulumo"]
 	for seed_value: int in 100:
 		for item: String in _roll(toad, null, seed_value):
 			if dominated.items.has(item):
@@ -911,10 +914,10 @@ func _check_text_tags() -> String:
 	if shown != "Cartographer's Guild sells Berry pouch":
 		return "faction and gear tags show %s" % shown
 	var cases: Dictionary[String, String] = {
-		"${BEAST:moss_toad}": "its kind must be one of",
+		"${BEAST:ombulumo}": "its kind must be one of",
 		"${MONSTER:no_such_toad}": "no MONSTER has the id no_such_toad",
 		"${MONSTER:Moss Toad}": "a tag is written",
-		"${MONSTER:moss_toad": "a tag is written",
+		"${MONSTER:ombulumo": "a tag is written",
 	}
 	for text: String in cases:
 		if not tags.problem_in(text).contains(cases[text]):

@@ -107,6 +107,9 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	entry.name = Content.text_of(data.get("name"))
 	if wrong.is_empty() and RegEx.create_from_string(NAME_PATTERN).search(entry.name) == null:
 		wrong = "it needs a name: one invented word, capitalised (#717)"
+	# Code, data and saves name a species by its id, which is its name (owner, #763).
+	if wrong.is_empty() and entry.id != entry.name.to_lower():
+		wrong = "its id must be its name in lower case (#763)"
 	return wrong
 
 

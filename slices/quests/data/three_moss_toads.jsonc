@@ -1,9 +1,0 @@
-// A placeholder quest with a step that counts up, until real quests exist.
-{
-	"id": "three_moss_toads",
-	"name": "Dominate three ${MONSTER:moss_toad}",
-	"path": "supremacy",
-	"steps": [
-		{ "condition": "dominated", "species": "moss_toad", "count": 3, "ends": "three_moss_toads" }
-	]
-}

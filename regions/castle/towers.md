@@ -1,6 +1,6 @@
 # Castle: towers
 
-Two fallen towers (#689), each a ring of wall with a gap, with shrubs grown over the ruins and a storm finch between them. Joins the castle on its northwest and southeast edges.
+Two fallen towers (#689), each a ring of wall with a gap, with shrubs grown over the ruins and a Tikazzir between them. Joins the castle on its northwest and southeast edges.
 
 ## Tiles
 
@@ -27,4 +27,4 @@ Two fallen towers (#689), each a ring of wall with a gap, with shrubs grown over
 - `🌳`: shrubs
 - `🪵`: stump
 - `🦔`: a wild monster hiding in shrubs
-- `🐦`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always tikazzir

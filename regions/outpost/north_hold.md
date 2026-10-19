@@ -28,4 +28,4 @@ One of the outpost's holds (#689): open sand in a ring of stumps with its middle
 - `🌳`: shrubs
 - `🪵`: stump
 - `🟨`: sand
-- `🐸`: a wild monster, always moss_toad
+- `🐸`: a wild monster, always ombulumo

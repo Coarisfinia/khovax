@@ -430,6 +430,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (b, m, l, o, u) for round, gentle monsters, sharp ones (k, t, z, i) for spiky, fast ones. Every
   name is first searched as an exact phrase ("name" in quotes) in a browser, and any real hit
   rules it out; the search results go onto the species' issue.
+- **A species' id is its name, in lower case** (owner's rule, #763): `ombulumo` for Ombulumo,
+  everywhere: its file, its abilities, harvest and loot tables, legends, quests, text tags and
+  saves. Renaming a species renames its id with it, and lasting data naming the old id migrates
+  forward. The content flow refuses a species whose id isn't its name.
 - **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no

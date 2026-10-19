@@ -14,7 +14,7 @@
 		},
 		"kind": { "enum": ["special", "player_passive", "self_passive"] },
 		"name": { "description": "What the player reads.", "type": "string", "minLength": 1 },
-		"description": { "description": "What it does, for the player; it may name content with text tags, like ${MONSTER:moss_toad} (#733, TextTags).", "type": "string", "minLength": 1 },
+		"description": { "description": "What it does, for the player; it may name content with text tags, like ${MONSTER:ombulumo} (#733, TextTags).", "type": "string", "minLength": 1 },
 		"power": { "description": "A special's: how much of its species' strength one strike deals, in thousandths (#33, #410): 3000 is three times it.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"cooldown_seconds": { "description": "A special's: the seconds before it can fire again (#410).", "type": "integer", "minimum": 1, "maximum": 3600 },
 		"strike_type": {

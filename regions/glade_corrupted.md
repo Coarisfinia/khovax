@@ -23,7 +23,7 @@ The corrupted glade (#541): the variant the flag glade_corrupted chooses for the
 - `🟫`: ground
 - `⬛`: rock
 - `🪵`: stump
-- `🦅`: a wild monster, always storm_finch, emitting glade_purified
+- `🦅`: a wild monster, always tikazzir, emitting glade_purified
 - `🔴`: where player 1 starts
 - `🔵`: where player 2 starts
 - `🟢`: where player 3 starts

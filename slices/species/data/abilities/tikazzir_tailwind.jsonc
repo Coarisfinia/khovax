@@ -1,9 +1,9 @@
 // A placeholder until the abilities do something (#222): its effect comes with the system that
 // uses it.
 {
-	"id": "storm_finch_tailwind",
+	"id": "tikazzir_tailwind",
 	"kind": "player_passive",
 	"name": "Tailwind",
-	"description": "While the ${MONSTER:storm_finch} is out, the player walks a little faster.",
+	"description": "While the ${MONSTER:tikazzir} is out, the player walks a little faster.",
 	"path": "both"
 }

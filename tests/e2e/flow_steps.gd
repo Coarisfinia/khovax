@@ -15,7 +15,7 @@ const BASIC_RING: Array[Vector2i] = [
 	Vector2i(-2, 1),
 	Vector2i(-1, 0),
 ]
-## Where the basic instance's wounded moss toad waits on the beach (#448).
+## Where the basic instance's wounded Ombulumo waits on the beach (#448).
 const BEACH_TOAD: Vector2i = Vector2i(-3, 2)
 ## The walk from the forest's start, at (-2, 3), southeast out through its way back into the glade,
 ## for flows that walk from one instance into another and back: the playground has no exits (#712).

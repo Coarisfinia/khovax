@@ -1,7 +1,7 @@
 /* A placeholder dual-type species: quick and frail. Breeze and Mana come from two different
    families, as dual types must. */
 {
-	"id": "storm_finch",
+	"id": "tikazzir",
 	"name": "Tikazzir",
 	"types": ["breeze", "mana"],
 	"strike_type": "breeze",
@@ -9,7 +9,7 @@
 	"strength": 70,
 	"speed": 90,
 	"archetype": "flyer",
-	"special": "storm_finch_gale_dive",
-	"player_passive": "storm_finch_tailwind",
-	"self_passive": "storm_finch_light_bones"
+	"special": "tikazzir_gale_dive",
+	"player_passive": "tikazzir_tailwind",
+	"self_passive": "tikazzir_light_bones"
 }

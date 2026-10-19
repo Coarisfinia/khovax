@@ -1,6 +1,6 @@
 # Forest: stream
 
-A stream through the forest (#689), crossed at two fords, with trees on both banks and a moss toad by the water. Joins the forest on its north and south edges.
+A stream through the forest (#689), crossed at two fords, with trees on both banks and an Ombulumo by the water. Joins the forest on its north and south edges.
 
 ## Tiles
 
@@ -27,4 +27,4 @@ A stream through the forest (#689), crossed at two fords, with trees on both ban
 - `🌲`: forest
 - `🪨`: boulder
 - `🦔`: a wild monster hiding in shrubs
-- `🐸`: a wild monster, always moss_toad
+- `🐸`: a wild monster, always ombulumo

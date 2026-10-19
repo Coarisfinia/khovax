@@ -1,6 +1,6 @@
 # Castle: keep
 
-The castle's keep (#689): a small walled ring with three gaps, the heart of the castle where the corruption of #574 will sit, guarded for now by a storm finch. Joins the castle on its northwest and southeast edges.
+The castle's keep (#689): a small walled ring with three gaps, the heart of the castle where the corruption of #574 will sit, guarded for now by a Tikazzir. Joins the castle on its northwest and southeast edges.
 
 ## Tiles
 
@@ -26,4 +26,4 @@ The castle's keep (#689): a small walled ring with three gaps, the heart of the 
 - `🔗`: joins another piece to the northwest
 - `🧷`: joins another piece to the southeast
 - `🪨`: boulder
-- `🐦`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always tikazzir
