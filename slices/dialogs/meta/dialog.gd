@@ -43,11 +43,11 @@ func line_index(line_id: String) -> int:
 
 ## The index of the line that follows the one at `index` once the player picks the answer with the
 ## id `answer_id` there ("" on a line without answers), or -1 when the dialog ends there or the line
-## offers no such answer.
+## offers no such answer (on a line without answers, any but "").
 func after(index: int, answer_id: String = "") -> int:
 	var line: DialogLine = lines[index]
 	if line.answers.is_empty():
-		return index + 1 if index + 1 < lines.size() else -1
+		return index + 1 if index + 1 < lines.size() and answer_id.is_empty() else -1
 	for answer: DialogAnswer in line.answers:
 		if answer.id == answer_id:
 			return line_index(answer.next)

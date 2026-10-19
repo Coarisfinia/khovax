@@ -612,7 +612,7 @@ func _check_factions() -> String:
 
 ## The dialogs load (#618): the guild scout's greeting reads on from its first line to its second,
 ## where asking about the glade leads to the line about it and the farewell ends it, as the glade
-## line's only answer does too.
+## line's only answer does too. An answer the line doesn't offer leads nowhere.
 func _check_dialogs() -> String:
 	var content: DialogContent = DialogContent.load_dialogs()
 	if not content.problem.is_empty() or not content.dialogs.has("guild_scout_greeting"):
@@ -624,8 +624,9 @@ func _check_dialogs() -> String:
 		greeting.after(1, "leave_scout"),
 		greeting.after(2, "promise_to_look"),
 		greeting.after(1, "no_such_answer"),
+		greeting.after(0, "ask_about_glade"),
 	]
-	if greeting.speaker != "Guild Scout" or walked != [1, 2, -1, -1, -1]:
+	if greeting.speaker != "Guild Scout" or walked != [1, 2, -1, -1, -1, -1]:
 		return "the guild scout's greeting reads %s, by %s" % [walked, greeting.speaker]
 	return ""
 
