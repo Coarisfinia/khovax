@@ -18,6 +18,9 @@ var graphics: Graphics
 var survey: SurveyChoice
 ## The menu, whose pause is a setting.
 var menu: GameMenu
+## Whether the damage numbers show and how large, kept in `graphics`' Settings; held here so the
+## rows' callables stay bound to it.
+var damage_numbers: DamageNumbersChoice
 ## What each setting's row says it's on, by the setting's name. Kept here so tests can read it.
 var shown: Dictionary[String, String] = {}
 ## How to word each setting's value and how to step it, by the setting's name.
@@ -40,7 +43,7 @@ func _ready() -> void:
 		_add_row(SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
 		_add_row(SurveyChoice.ZOOM_SETTING, "Survey zoom", survey.zoom_label, survey.zoom_by)
 	if graphics != null:
-		var damage_numbers: DamageNumbersChoice = DamageNumbersChoice.new(graphics)
+		damage_numbers = DamageNumbersChoice.new(graphics)
 		_add_row(
 			DamageNumbersChoice.SHOWN_SETTING,
 			"Damage numbers",
