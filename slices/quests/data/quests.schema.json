@@ -122,9 +122,13 @@
 						"else": { "not": { "required": ["item"] } }
 					},
 					{
+						"if": { "required": ["target"] },
+						"then": { "properties": { "condition": { "const": "dominated" }, "count": { "const": 1 } }, "required": ["condition"], "not": { "required": ["species"] } }
+					},
+					{
 						"if": { "required": ["choices"] },
 						"then": {
-							"not": { "anyOf": [{ "required": ["species"] }, { "required": ["count"] }, { "required": ["ends"] }] }
+							"not": { "anyOf": [{ "required": ["species"] }, { "required": ["target"] }, { "required": ["count"] }, { "required": ["ends"] }] }
 						}
 					}
 				],
@@ -139,6 +143,10 @@
 					},
 					"species": {
 						"description": "On a dominated step, the species id it asks for; any species when left out.",
+						"$ref": "#/$defs/id"
+					},
+					"target": {
+						"description": "On a dominated step, instead of a species, the quest target it asks for (#625): the one wild monster a region piece's legend marks as `the quest target <id>`, so the step's count is 1.",
 						"$ref": "#/$defs/id"
 					},
 					"item": {

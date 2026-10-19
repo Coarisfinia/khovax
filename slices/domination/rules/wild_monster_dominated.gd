@@ -15,6 +15,9 @@ var species: String
 ## The dominated monster's short id (ShortId, #700), which it keeps in the profile; set by whoever
 ## raises the event.
 var short_id: String = ""
+## The quest target the dominated monster was (#625), as its region's legend names it, or "": a
+## content id, which a quest's step asks for that one monster by.
+var target: String = ""
 ## What each player in the instance did for the ring that dominated it, by slot (#86): how many
 ## tiles of its wall they colored, and how many ticks they stood on its wall while it sealed. A slot
 ## that did neither is missing.

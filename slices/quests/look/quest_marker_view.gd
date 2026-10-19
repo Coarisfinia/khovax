@@ -2,7 +2,8 @@ class_name QuestMarkerView
 extends Node3D
 ## Every open quest's marker (#300, owner: quests always have a marker): an arrow floating
 ## over what this machine's player's quest asks for next, the nearest wild monster of the species a
-## domination step names (any, when it names none), the nearest closed treasure chest, the nearest
+## domination step names (any, when it names none), or the one quest target it names (#625), the
+## nearest closed treasure chest, the nearest
 ## tile of the place a reached step names (#339) or of the region piece an entered step names
 ## (#350), or the nearest exit leading to the instance it names (#370). It shows through the fog,
 ## so it leads the player into it; a wild monster still hiding in its tile (#202) isn't pointed
@@ -93,8 +94,9 @@ static func targets_of(
 	return targets
 
 
-## The tiles `step` could be met at in `state`: wild monsters of its species that aren't hiding,
-## in id order, the closed chests, the tiles of its place, in the legend's order, the tiles of
+## The tiles `step` could be met at in `state`: wild monsters of its species, or its quest target
+## (#625), that aren't hiding, in id order, the closed chests, the tiles of its place, in the
+## legend's order, the tiles of
 ## its piece, or the exits leading to its instance.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	if step.condition == "entered":
@@ -119,7 +121,8 @@ static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	for entity_id: int in ids:
 		var entity: Entity = state.entity(entity_id)
 		var hidden: bool = hiding != null and hiding.is_hidden(entity_id)
-		var fits: bool = step.species == null or wild.species_of(entity_id) == step.species.id
+		var target: String = WildSpot.target_in(wild.marks, entity_id)
+		var fits: bool = step.quarry.fits(wild.species_of(entity_id), target)
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)
 	return tiles

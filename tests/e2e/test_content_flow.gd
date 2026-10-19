@@ -378,7 +378,8 @@ static func _unrefused(cases: Dictionary[String, String], content: QuestData) ->
 ## its blueprint (#370). Quests with a wrong id, name, step, condition, species, place, piece,
 ## instance or count are refused, with a reason: a reached step without a place, or a place on
 ## another step, too, and the same for an entered step and its piece or instance, which it names
-## one of, never both, and the same for an answered step and its dialog and answer (#636).
+## one of, never both, and the same for an answered step and its dialog and answer (#636), and a
+## quest target (#625).
 func _check_quests() -> String:
 	var content: QuestData = QuestContent.load_quests()
 	if not content.problem.is_empty():
@@ -392,10 +393,11 @@ func _check_quests() -> String:
 	var any_domination: QuestStep = first.steps[1]
 	var toad_step: QuestStep = toads.steps[0]
 	if (any_domination.condition != "dominated"
-			or any_domination.species != null
+			or any_domination.quarry.species != null
 			or any_domination.count != 1):
 		return "the first domination isn't one domination of any species"
-	var toad: Species = toad_step.species if toad_step.species != null else Species.new()
+	var toad: Species = toad_step.quarry.species
+	toad = toad if toad != null else Species.new()
 	if toad.id != "moss_toad" or toad.name != "Ombulumo" or toad_step.count != 3:
 		return "the toads' quest isn't three moss toads"
 	if not _check_named_steps(content).is_empty():
@@ -425,6 +427,26 @@ func _check_quests() -> String:
 		quest % ["x", "N", step % ", \"count\": 1.5"]: "step 0: its count",
 		quest % ["x", "N", step % ", \"when\": 1"]: "step 0: field when",
 		quest % ["x", "N", "7"]: "step 0: it isn't",
+	}
+	return _unrefused(cases, content) + _check_target_steps(content)
+
+
+## Why a step asking for a quest target (#625) isn't read, or isn't refused when it's no id, sits
+## on a step other than a domination, comes with a species or counts more than once, or "".
+func _check_target_steps(content: QuestData) -> String:
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [{\"condition\": \"%s\"%s}]}"
+	var target: String = ", \"target\": \"%s\""
+	var asked: String = quest % ["dominated", target % "old_toad" + ", \"ends\": \"x\""]
+	var read: QuestDefinition = QuestDefinition.parse("x", asked, {})
+	if not read.problem.is_empty() or read.steps[0].quarry.target != "old_toad":
+		return "a step asking for the quest target old_toad didn't read: " + read.problem
+	var cases: Dictionary[String, String] = {
+		quest % ["dominated", target % "Old"]: "step 0: its target must",
+		quest % ["opened", target % "old_toad"]: "step 0: its target",
+		quest % ["dominated", target % "old_toad" + ", \"count\": 2"]: "step 0: its target",
+		quest % ["dominated", target % "old_toad" + ", \"species\": \"moss_toad\""]: (
+			"step 0: its target"
+		),
 	}
 	return _unrefused(cases, content)
 

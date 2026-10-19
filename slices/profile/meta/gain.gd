@@ -14,6 +14,9 @@ var dominated_species: Array[String] = []
 ## The short id of each dominated monster (#700), in the same order. A monster this lacks one for
 ## gets a stand-in (ShortId.stand_in).
 var dominated_short_ids: Array[String] = []
+## The quest targets among the monsters dominated (#625), by the ids their regions' legends name
+## them by, which only quests count.
+var targets_dominated: Array[String] = []
 var materials: Dictionary[String, int] = {}
 ## Gear found (#694), by id: how many of each.
 var gear: Dictionary[String, int] = {}

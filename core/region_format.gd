@@ -26,6 +26,9 @@ const WOUNDED: String = "wounded"
 ## A species line's word naming the event its wild monster emits when it faints (#541):
 ## `emits=<event name>`.
 const EMITS: String = "emits="
+## A species line's word naming the quest target its wild monster is (#625): `target=<id>`, an id
+## like a place's (TileTrigger.is_place_id).
+const TARGET: String = "target="
 ## The start of a tile trigger's line (#181, #183).
 const TRIGGER: String = "trigger "
 ## The start of a line placing loot on the ground on a tile (#203).
@@ -223,27 +226,44 @@ static func _parse_tile_extra(region: Region, tile: Vector2i, extra: String) -> 
 	return ""
 
 
-## Reads one `species <q> <r> <species id> [wounded] [emits=<event name>]` line; returns why it
-## can't, or "". It names the species of a wild monster spot, once, and the event its monster emits
-## when it faints (#541), an identifier.
+## Reads one `species <q> <r> <species id> [wounded] [emits=<event name>] [target=<id>]` line;
+## returns why it can't, or "". It names the species of a wild monster spot, once, the event its
+## monster emits when it faints (#541), an identifier, and the quest target it is (#625), an id
+## no other spot of the region has.
 static func _parse_species(region: Region, line: String) -> String:
 	var parts: PackedStringArray = line.split(" ", false)
 	var extras: PackedStringArray = parts.slice(4)
 	var wounded: bool = extras.has(WOUNDED)
-	var emits: String = ""
-	for extra: String in extras:
-		if extra.begins_with(EMITS) and extra.trim_prefix(EMITS).is_valid_ascii_identifier():
-			emits = extra.trim_prefix(EMITS) if emits.is_empty() else ""
-	var understood: bool = extras.size() == int(wounded) + int(not emits.is_empty())
+	var emits: String = _extra(extras, EMITS)
+	var target: String = _extra(extras, TARGET)
+	var understood: bool = emits.is_valid_ascii_identifier() or emits.is_empty()
+	understood = understood and (TileTrigger.is_place_id(target) or target.is_empty())
+	var named: int = int(wounded) + int(not emits.is_empty()) + int(not target.is_empty())
+	understood = understood and extras.size() == named
 	var sized: bool = parts.size() >= 4 and understood
 	if not sized or not parts[1].is_valid_int() or not parts[2].is_valid_int():
-		var form: String = "species <q> <r> <species id> [wounded] [emits=<event>]"
+		var form: String = "species <q> <r> <species id> [wounded] [emits=<event>] [target=<id>]"
 		return "a species line reads \"%s\": %s" % [form, line]
 	var spot: Vector2i = Vector2i(parts[1].to_int(), parts[2].to_int())
 	if not region.wild_monsters.has(spot) or region.wild_spots.has(spot):
 		return "species %s names no wild monster spot, or one named before" % spot
-	region.wild_spots[spot] = WildSpot.new(parts[3], wounded, emits)
+	for other: WildSpot in region.wild_spots.values():
+		if not target.is_empty() and other.target == target:
+			return "species %s: the quest target %s is one monster, marked once" % [spot, target]
+	region.wild_spots[spot] = WildSpot.new(parts[3], wounded, emits, target)
 	return ""
+
+
+## What the one extra of `extras` starting with `key` names after it, or "" when none or several
+## do.
+static func _extra(extras: PackedStringArray, key: String) -> String:
+	var found: String = ""
+	for extra: String in extras:
+		if extra.begins_with(key):
+			if not found.is_empty():
+				return ""
+			found = extra.trim_prefix(key)
+	return found
 
 
 ## Reads one row of a region file into the region; returns why it can't, or "".

@@ -32,7 +32,9 @@ extends RefCounted
 ## words it as the dialog does.
 ## Finishing a territory quest hands its instance to its faction in the world (#638). A step asking
 ## for an item counts each one this player obtains (#686), one gain finishing a step and counting on
-## toward the next, and has no marker.
+## toward the next, and has no marker. A region's legend can mark one wild monster as a quest
+## target (#625): a quest asking for it is marked over that one monster, not over another of its
+## species, and only dominating it counts.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -93,6 +95,18 @@ const BEACH_REGION: String = (
 	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🔵`: where player 2 starts\n"
 	+ "- `🐚`: the beach; stepping here reaches the place beach\n"
 )
+## A region whose legend marks one moss toad, wounded on sand, as the quest target old_toad (#625),
+## east of player 1, and another moss toad, next to player 1, as none.
+const TARGET_REGION: String = (
+	"# Pond\n\n## Tiles\n\n```\n 🟫🟫🟫🟫\n🔴🐸🟫🟫🎯\n 🟫🟫🟫🟫\n```\n\n## Legend\n\n"
+	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🐸`: a wild monster, always moss_toad\n"
+	+ "- `🎯`: a wild monster, always moss_toad, wounded, the quest target old_toad, on sand\n"
+)
+## A quest that asks to dominate the quest target old_toad.
+const OLD_TOAD: String = (
+	"{\"id\": \"old_toad\", \"name\": \"The old toad\", \"steps\": ["
+	+ "{\"condition\": \"dominated\", \"target\": \"old_toad\", \"ends\": \"old_toad\"}]}"
+)
 
 
 func run(tree: SceneTree) -> String:
@@ -111,6 +125,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_branching()
 	if result.is_empty():
 		result = _check_obtained()
+	result = result if not result.is_empty() else _check_target()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -157,6 +172,24 @@ func _check_tracked(tree: SceneTree) -> String:
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
+
+
+## This player dominating the quest target old_toad (#625), handed out by the bus, finishes the
+## quest asking for it.
+func _check_target_tracked(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	profile.quest_book["old_toad"] = QuestDefinition.parse("old_toad", OLD_TOAD, {})
+	var dominated: WildMonsterDominated = WildMonsterDominated.new(
+		93,
+		1,
+		0,
+		Vector2i.ZERO,
+		"moss_toad",
+	)
+	dominated.target = "old_toad"
+	_emit(driver, bus, dominated)
+	if not profile.quests_done.has("old_toad"):
+		return "this player dominating the quest target old_toad didn't finish its quest"
+	return ""
 
 
 ## The fresh first domination asks for the beach: it's marked there and listed as going there;
@@ -448,7 +481,7 @@ func _check_entered_glade(driver: GameDriver, bus: EventBus, profile: Profile) -
 
 
 ## Promising the scout to look counts for this player when they chose that answer, not when another
-## player did, nor for another answer of the same dialog (#636).
+## player did, nor for another answer of the same dialog (#636). Then a quest target (#625).
 func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var promise: QuestDefinition = QuestDefinition.parse(
 		"promise",
@@ -463,7 +496,7 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 	_emit(driver, bus, DialogAnswered.new(SCOUT, "promise_to_look", 1, 0))
 	if not profile.quests_done.has("promise"):
 		return "this player promising the scout didn't finish the quest asking for it"
-	return ""
+	return _check_target_tracked(driver, bus, profile)
 
 
 ## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
@@ -571,6 +604,55 @@ func _check_place_marker(state: GameState, profile: Profile) -> String:
 	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("reach_beach", from)
 	if not beach.has(target) or Hex.distance(target, from) != _nearest(beach, from):
 		return "the quest to reach the beach isn't marked on its nearest tile"
+	return ""
+
+
+## The region's quest target old_toad (#625) is its marked moss toad's, kept through a save, and
+## not the other's, which is nearer the player.
+func _check_target() -> String:
+	var region: Region = RegionDocument.parse(TARGET_REGION)
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		TrailFeature.new(),
+		WildMonsterFeature.new(),
+	]
+	var state: GameState = GameState.new(region, 3, ordered)
+	if not region.problem.is_empty() or not state.problem.is_empty():
+		return "the region with a quest target didn't read: " + region.problem + state.problem
+	var _player: Entity = state.add_entity(0, region.starts[0])
+	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	wild.load_values(state, DataReader.new(wild.save_values()))
+	var marked: Vector2i = Vector2i.ZERO
+	var unmarked: int = 0
+	for monster: int in wild.monsters:
+		if WildSpot.target_in(wild.marks, monster) == "old_toad":
+			marked = state.entity(monster).tile
+		elif WildSpot.target_in(wild.marks, monster).is_empty():
+			unmarked += 1
+	if marked != Vector2i(2, 0) or unmarked != 1:
+		return "the legend's quest target isn't the one moss toad it marks, after a save"
+	return _check_target_quest(state, marked)
+
+
+## The quest asking for old_toad is marked over it on `state`'s `marked` tile and listed as
+## dominating it; dominating a moss toad leaves it open, and dominating the target finishes it.
+func _check_target_quest(state: GameState, marked: Vector2i) -> String:
+	var profile: Profile = Profile.new()
+	profile.quest_book["old_toad"] = QuestDefinition.parse("old_toad", OLD_TOAD, {})
+	var step: QuestStep = profile.quest_book["old_toad"].steps[0]
+	if QuestMarkerView.targets_of(state, profile, 0).get("old_toad", Vector2i.ZERO) != marked:
+		return "the quest asking for old_toad isn't marked over it"
+	if QuestListView.step_line(step, 0) != "Dominate the old toad":
+		return "the quest asking for old_toad reads %s" % QuestListView.step_line(step, 0)
+	var applied: String = profile.apply(_gain(["moss_toad"], 0))
+	if not applied.is_empty() or profile.quests_done.has("old_toad"):
+		return "dominating another moss toad counted toward old_toad: " + applied
+	var targeted: Gain = _gain(["moss_toad"], 0)
+	targeted.targets_dominated.append("old_toad")
+	applied = profile.apply(targeted)
+	var done: Array[String] = ["old_toad"]
+	if not applied.is_empty() or profile.quests_done != done:
+		return "dominating old_toad didn't finish the quest asking for it: " + applied
 	return ""
 
 

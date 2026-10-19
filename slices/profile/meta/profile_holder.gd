@@ -160,11 +160,9 @@ static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinit
 ## are: the world raises it on every machine.
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
-	if event is WildMonsterDominated:
-		var dominated: WildMonsterDominated = event as WildMonsterDominated
-		if dominated.dominator_slot == input.slot:
-			gain.dominated_species.append(dominated.species)
-			gain.dominated_short_ids.append(dominated.short_id)
+	if (event is WildMonsterDominated
+			and (event as WildMonsterDominated).dominator_slot == input.slot):
+		_add_domination(gain, event as WildMonsterDominated)
 	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
 		gain.chests_opened = 1
 		_add_loot(gain, (event as ChestOpened).loot[input.slot])
@@ -196,6 +194,15 @@ static func _add_quest_fact(gain: Gain, event: RefCounted, slot: int) -> void:
 		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
 	elif event is WorldChanged:
 		gain.world_events.append((event as WorldChanged).event_name)
+
+
+## Adds `dominated` to `gain`: its species, its short id (#700), and the quest target it was, if
+## any (#625).
+static func _add_domination(gain: Gain, dominated: WildMonsterDominated) -> void:
+	gain.dominated_species.append(dominated.species)
+	gain.dominated_short_ids.append(dominated.short_id)
+	if not dominated.target.is_empty():
+		gain.targets_dominated.append(dominated.target)
 
 
 ## Every player's loot from `event`, by slot, when it's loot that counts as no chest: found on the

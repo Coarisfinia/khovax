@@ -956,7 +956,8 @@ func _moving(direction: int) -> Array[Command]:
 ## too) on their tiles, a kind's decoration turned by hand (#231) and its walkable trait overridden
 ## for one tile (#201) where the legend says so, both of which turn along with the region and move
 ## with a placed piece, and a grid without a single middle, a symbol the legend doesn't explain, a
-## clause it doesn't know, a turn past five sixths or a place without an id (#339) is refused. A
+## clause it doesn't know, a turn past five sixths, a place without an id (#339) or a quest target
+## without one, or marking two monsters (#625), is refused. A
 ## place's symbol can name its tile kind too (#349), which must be walkable. The glade's pieces
 ## have forest.
 func _check_documents() -> String:
@@ -986,7 +987,8 @@ func _check_documents() -> String:
 
 
 ## A grid without a single middle, a narrow or unexplained symbol, a clause the legend doesn't know,
-## a turn past five sixths or a place without an id is refused; the glade's thicket has forest.
+## a turn past five sixths, a place or a quest target without an id is refused; the glade's thicket
+## has forest.
 func _check_refusals(tiles: String) -> String:
 	var base: String = BASE_LEGEND
 	var refusals: Dictionary[String, String] = {
@@ -1008,6 +1010,12 @@ func _check_refusals(tiles: String) -> String:
 		),
 		tiles % ["🔴🪨🟫", base + "- `🪨`: boulder; stepping here reaches the place beach"]: (
 			"trigger (0, 0) isn't on ground"
+		),
+		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always moss_toad, the quest target Old"]: (
+			"a species line reads"
+		),
+		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always moss_toad, the quest target old"]: (
+			"species (1, 0): the quest target old is one monster"
 		),
 	}
 	for text: String in refusals:

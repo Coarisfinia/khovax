@@ -20,7 +20,8 @@ extends RefCounted
 ## strong one breaks a big ring fast, and a small ring too, only later (the issue leaves that to
 ## level and weakening). A broken ring dominates nothing, says so, and starts its trail over. A
 ## second player standing on the wall segment the strong one pushes on reinforces it (#227), and
-## the small ring holds; standing on any other segment of it, they don't, and it breaks.
+## the small ring holds; standing on any other segment of it, they don't, and it breaks. A ring
+## dominating a monster its region marks as a quest target (#625) names the target.
 ##
 ## A wild monster where no ring could enclose it (#364), on the region's edge or beside rock that
 ## runs to the edge, steps away at its own pace to the nearest tile where one could and stays
@@ -671,7 +672,24 @@ func _check_outcomes() -> String:
 			beside,
 		]
 	var enraged: String = _check_enraged()
+	if enraged.is_empty():
+		enraged = _check_target_dominated()
 	return enraged if not enraged.is_empty() else _check_moves_away()
+
+
+## A ring dominating a wild monster its region marks as a quest target (#625) names the target in
+## the domination, so the dominator's quest asking for it counts it.
+func _check_target_dominated() -> String:
+	var state: GameState = _outcome_state(WEAK, [Vector2i.ZERO], "old_toad")
+	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
+	var _player: Entity = state.add_entity(0, ring[0])
+	_close(state, ring.slice(1))
+	var events: Array[RefCounted] = _step_off(state)
+	events.append_array(_settle(state))
+	var dominated: Array[WildMonsterDominated] = _dominated(events)
+	if dominated.size() != 1 or dominated[0].target != "old_toad":
+		return "dominating the quest target old_toad didn't name it in its domination"
+	return ""
 
 
 ## In a disc with rock running from its edge to (-2, 0): the monster on the edge at (4, 0) and the
@@ -854,12 +872,13 @@ func _step_off(state: GameState) -> Array[RefCounted]:
 	return events
 
 
-## A disc with monsters of `species` on `spots`, and no player yet.
-func _outcome_state(species: String, spots: Array[Vector2i]) -> GameState:
+## A disc with monsters of `species` on `spots`, each the quest target `target` when it's given
+## (#625), and no player yet.
+func _outcome_state(species: String, spots: Array[Vector2i], target: String = "") -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
 	# One shared spot: the regions only read it.
-	var named: WildSpot = WildSpot.new(species)
+	var named: WildSpot = WildSpot.new(species, false, "", target)
 	for spot: Vector2i in spots:
 		region.wild_spots[spot] = named
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP, STRONG: OUTCOME_HP }

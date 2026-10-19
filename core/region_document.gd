@@ -18,8 +18,11 @@ extends RefCounted
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
 ##   `, wounded` after it, it starts at a low share of its HP (#389); with
 ##   `, emitting <event name>` next, it emits that event when it faints (#541, EventEmitted); with
-##   `, on <tile blueprint id>` last, it stands on a tile of that kind rather than on ground (#452),
-##   e.g. `a wild monster, always moss_toad, wounded, on sand`
+##   `, the quest target <id>` next, it's the one monster a quest's step asks for by that id
+##   (#625, like a place's); with `, on <tile blueprint id>` last, it stands on a tile of that kind
+##   rather than on ground (#452),
+##   e.g. `a wild monster, always moss_toad, wounded, on sand` or
+##   `a wild monster, always moss_toad, the quest target old_toad`
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
@@ -49,6 +52,14 @@ const HIDING: String = "a wild monster hiding in "
 const ON: String = ", on "
 ## What a named wild monster's legend meaning says before the event it emits when it faints (#541).
 const EMITTING: String = ", emitting "
+## What a named wild monster's legend meaning says before the quest target it is (#625).
+const TARGETED: String = ", the quest target "
+## The clauses a named wild monster's legend meaning may have after its species and wounding, each
+## with the word its species line carries it in.
+const NAMED_CLAUSES: Dictionary[String, String] = {
+	EMITTING: RegionFormat.EMITS,
+	TARGETED: RegionFormat.TARGET,
+}
 ## How a named wild monster's legend meaning begins.
 const NAMED: String = "a wild monster, always "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
@@ -267,18 +278,19 @@ static func _tile_line(meaning: String, where: String) -> String:
 
 ## The compact lines a legend meaning stands for on `tile`, or "" for a meaning not understood. A
 ## named wild monster standing on a tile kind (#452) is its species line, then the tile's; one
-## emitting an event (#541) has it at the end of its species line.
+## emitting an event (#541) or a quest's target (#625) has it at the end of its species line.
 static func _line(meaning: String, tile: Vector2i) -> String:
-	if meaning.begins_with(NAMED) and meaning.contains(EMITTING):
-		var after: String = meaning.get_slice(EMITTING, 1)
-		var event_name: String = after.get_slice(", ", 0)
-		var rest: String = meaning.get_slice(EMITTING, 0) + after.trim_prefix(event_name)
-		var lines: PackedStringArray = _line(rest, tile).split("\n")
-		var named: bool = lines[0].begins_with(RegionFormat.SPECIES)
-		if not named or not event_name.is_valid_ascii_identifier():
-			return ""
-		lines[0] += " " + RegionFormat.EMITS + event_name
-		return "\n".join(lines)
+	for clause: String in NAMED_CLAUSES:
+		if meaning.begins_with(NAMED) and meaning.contains(clause):
+			var after: String = meaning.get_slice(clause, 1)
+			var named: String = after.get_slice(", ", 0)
+			var rest: String = meaning.get_slice(clause, 0) + after.trim_prefix(named)
+			var lines: PackedStringArray = _line(rest, tile).split("\n")
+			var species_line: bool = lines[0].begins_with(RegionFormat.SPECIES)
+			if not species_line or not named.is_valid_ascii_identifier():
+				return ""
+			lines[0] += " " + NAMED_CLAUSES[clause] + named
+			return "\n".join(lines)
 	if not meaning.begins_with(NAMED) or not meaning.contains(ON):
 		return _meaning_line(meaning, tile)
 	var monster: String = _meaning_line(meaning.get_slice(ON, 0), tile)
