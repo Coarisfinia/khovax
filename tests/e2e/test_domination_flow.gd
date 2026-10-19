@@ -1087,6 +1087,8 @@ func _check_least_damage() -> String:
 	var auto_types: Dictionary[String, String] = { WEAK: "mana" }
 	var types: Dictionary[String, PackedStringArray] = { "greater": PackedStringArray(["arcane"]) }
 	var chart: TypeEffectivenessFeature = TypeEffectivenessFeature.new(types, auto_types)
+	if chart.factor("mana", "greater") != 500:
+		return "a mana strike on the Greater arcane type isn't ×0.5"
 	var state: GameState = _strike_state([Vector2i.ZERO], [chart])
 	state.set_enabled(Features.TYPE_EFFECTIVENESS, true)
 	var damage: int = TypeEffectivenessFeature.scaled(state, 1, WEAK, false, "greater")

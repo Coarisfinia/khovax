@@ -8,8 +8,8 @@ extends Feature
 ## type and ×0.75 against a Lesser one, and a dual-typed monster's two multiply, with no cap.
 ## It doesn't step: the features whose strikes land on a monster (a companion's auto attack and
 ## special on a wild monster, a wild monster's strike on a companion) scale their damage through
-## `scaled`. Switched off, every strike deals its plain damage. Either way a strike that lands
-## deals at least 1 (owner, #702): `scaled` is the last step of every strike's damage.
+## `scaled`. Switched off, every strike deals its plain damage (at least 1). Either way a strike
+## that lands deals at least 1 (owner, #702): `scaled` is the last step of every strike's damage.
 
 const STRONG_FROM_LESSER: int = 1500
 const STRONG_FROM_GREATER: int = 2000
