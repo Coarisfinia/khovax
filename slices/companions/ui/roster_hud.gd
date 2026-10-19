@@ -87,25 +87,28 @@ func _draw() -> void:
 ## Matches the squares to the state. Called every frame; tests call it after stepping.
 func show_state() -> void:
 	var party: PackedStringArray = PackedStringArray()
+	var party_species: PackedStringArray = PackedStringArray()
 	var companion: String = ""
 	var down: Array[bool] = []
 	if driver != null and driver.state != null and driver.input != null:
 		var slot: int = driver.input.slot
 		party = CompanionParty.carried(driver.state, slot)
+		party_species = CompanionParty.carried_species(driver.state, slot)
 		companion = CompanionParty.companion(driver.state, slot)
 		down = _fainted_in(driver.state, slot, party)
-	if party != shown or party.find(companion) != companion_place or down != fainted:
-		shown = party
+	if party_species != shown or party.find(companion) != companion_place or down != fainted:
+		shown = party_species
 		companion_place = party.find(companion)
 		fainted = down
 		queue_redraw()
 
 
-## Whether each of `party`, the monsters the player in `slot` carries, fainted in `state` (#597).
+## Whether each of `party`, the short ids of the monsters the player in `slot` carries, fainted in
+## `state` (#597).
 static func _fainted_in(state: GameState, slot: int, party: PackedStringArray) -> Array[bool]:
 	var down: Array[bool] = []
-	for species: String in party:
-		down.append(CompanionParty.has_fainted(state, slot, species))
+	for short_id: String in party:
+		down.append(CompanionParty.has_fainted(state, slot, short_id))
 	return down
 
 

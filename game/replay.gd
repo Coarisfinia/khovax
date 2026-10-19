@@ -18,9 +18,10 @@ var seed_value: int = 0
 ## the instance and the seed.
 var start_world: Dictionary = {}
 var players: int = 1
-## Each slot's carried species, in carried order, empty for none (#338, #53): who the players
-## brought, part of the start. The first a slot carries is its companion when the session starts.
-var carried: Array[PackedStringArray] = []
+## Each slot's carried monsters, in carried order, empty or null for none (#338, #53, #700): who
+## the players brought, part of the start. The first a slot carries is its companion when the
+## session starts.
+var carried: Array[CarriedMonsters] = []
 ## The rules version and the instance's feature ids when it was recorded: a replay of other rules
 ## would play out differently, so playback refuses it with a clear message.
 var rules: int = RulesChanges.version()
@@ -149,11 +150,11 @@ func _run(check: bool) -> String:
 		return played.problem
 	# An older replay names only the slots up to the last that brings one; the world names every
 	# slot.
-	var named: Array[PackedStringArray] = carried.duplicate()
-	var _sized: int = named.resize(GameState.MAX_PLAYERS)
-	var brought: Array[PackedStringArray] = CompanionParty.carried_in(played)
-	if brought != named:
-		return "the replay's carried monsters %s aren't its world's %s" % [named, brought]
+	var brought: Array[CarriedMonsters] = CompanionParty.carried_in(played)
+	for slot: int in GameState.MAX_PLAYERS:
+		var named: CarriedMonsters = carried[slot] if slot < carried.size() else null
+		if not brought[slot].same_as(named):
+			return "the replay's carried monsters of slot %d aren't its world's" % slot
 	if not played.instances.has(instance):
 		return "the replay's starting world doesn't hold its instance %s" % instance
 	var start: Array[int] = _feature_ids(played.instances[instance])

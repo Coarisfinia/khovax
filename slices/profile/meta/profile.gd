@@ -71,8 +71,10 @@ func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
 		return refusal
-	for species: String in result.dominated_species:
-		_dominate(species)
+	for i: int in result.dominated_species.size():
+		var species: String = result.dominated_species[i]
+		var short_ids: Array[String] = result.dominated_short_ids
+		_dominate(species, short_ids[i] if i < short_ids.size() else "")
 		_count_fact("dominated", species)
 	for _chest: int in result.chests_opened:
 		_count_fact("opened", "")
@@ -119,7 +121,6 @@ func move_monster(monster_id: int, place: int) -> String:
 	return ""
 
 
-## Adds a newly dominated monster of `species`, with the next id.
 ## Why `typed` can't be a character's name, in words, or "": it has to have something besides
 ## spaces,
 ## and at most NAME_LIMIT characters.
@@ -131,8 +132,11 @@ static func name_problem(typed: String) -> String:
 	return ""
 
 
-func _dominate(species: String) -> void:
-	dominated_monsters.append(DominatedMonster.new(next_monster_id, species))
+## Adds a newly dominated monster of `species`, with the next id, keeping `short_id` (#700), or a
+## stand-in for "".
+func _dominate(species: String, short_id: String) -> void:
+	var kept: String = short_id if not short_id.is_empty() else ShortId.stand_in(next_monster_id)
+	dominated_monsters.append(DominatedMonster.new(next_monster_id, species, 1, kept))
 	if carried.size() < CARRY_LIMIT:
 		carried.append(next_monster_id)
 	next_monster_id += 1
@@ -242,9 +246,9 @@ func _started(id: String) -> bool:
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
-	for species: String in result.dominated_species:
-		if species.is_empty():
-			return "a dominated monster has no species"
+	var dominated: String = _dominated_problem(result)
+	if not dominated.is_empty():
+		return dominated
 	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
 		return "the opened chests' count is invalid"
 	var named: Dictionary[String, Array] = {
@@ -264,15 +268,28 @@ func _result_problem(result: Gain) -> String:
 	return ""
 
 
-## The species of the monsters the player carries (#53), in their carried order: the first is their
-## companion (#338) until they choose another (#55).
-func carried_species() -> PackedStringArray:
-	var species: PackedStringArray = []
+## Why `result`'s dominated monsters can't be taken over (one without a species, or a short id
+## without a monster or that isn't one, #700), or "".
+static func _dominated_problem(result: Gain) -> String:
+	if result.dominated_species.has(""):
+		return "a dominated monster has no species"
+	if result.dominated_short_ids.size() > result.dominated_species.size():
+		return "a dominated monster's short id has no species"
+	for short_id: String in result.dominated_short_ids:
+		if not short_id.is_empty() and not ShortId.is_valid(short_id):
+			return "a dominated monster's short id %s isn't one" % short_id
+	return ""
+
+
+## The monsters the player carries (#53), in their carried order: the first is their companion
+## (#338) until they choose another (#55).
+func carried_monsters() -> Array[DominatedMonster]:
+	var monsters: Array[DominatedMonster] = []
 	for monster_id: int in carried:
 		for monster: DominatedMonster in dominated_monsters:
 			if monster.id == monster_id:
-				var _added: bool = species.append(monster.species)
-	return species
+				monsters.append(monster)
+	return monsters
 
 
 ## Whether a dominated monster has this id.

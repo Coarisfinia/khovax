@@ -55,7 +55,7 @@ func run(tree: SceneTree) -> String:
 		InstanceBlueprints.FOREST,
 		1,
 	)
-	CompanionParty.bring(world, [PackedStringArray([COMPANION])])
+	CompanionParty.bring(world, FlowSteps.parties([[COMPANION]]))
 	var result: String = _play(world)
 	if result.is_empty():
 		result = _check_round_trip(world)
@@ -513,7 +513,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 		InstanceBlueprints.FOREST,
 		1,
 	)
-	CompanionParty.bring(fresh, [PackedStringArray([COMPANION])])
+	CompanionParty.bring(fresh, FlowSteps.parties([[COMPANION]]))
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content

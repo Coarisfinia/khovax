@@ -6,8 +6,9 @@ extends RefCounted
 ## progress (#184), and an open quest's earlier steps done (#573); the first three monsters
 ## dominated are carried (#53); the standing with each faction stays on its scale and is saved
 ## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
-## toward the story's paths counts the path-marked choices and is saved (#658); and a damaged save
-## falls back to the newest intact generation before it (#179).
+## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
+## monster keeps its short id (#700); and a damaged save falls back to the newest intact generation
+## before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
 ## The keys a newer save format added (#184, #53, #391, #399, #483, #658), which older saves lack.
@@ -96,8 +97,11 @@ func _check_bad_results(profile: Profile) -> String:
 	var before: String = ProfileSave.to_text(profile)
 	var no_chests: Gain = _result(["moss_toad"], {})
 	no_chests.chests_opened = -1
+	var bad_id: Gain = _result(["moss_toad"], {})
+	bad_id.dominated_short_ids.assign(["l1o0ij-"])
 	var bad: Array[Gain] = [
 		no_chests,
+		bad_id,
 		_result(["ember_fox", ""], {}),
 		_result([], { "crystal": -1 }),
 		_result([], { "": 1 }),
@@ -114,7 +118,8 @@ func _check_bad_results(profile: Profile) -> String:
 	return ""
 
 
-## Saving and loading gives back the same profile, with the next id still unused.
+## Saving and loading gives back the same profile, with the next id still unused; then the short
+## ids (#700).
 func _check_save(profile: Profile) -> String:
 	var problem: String = ProfileStore.save(profile, SAVE_PATH)
 	if not problem.is_empty():
@@ -131,6 +136,41 @@ func _check_save(profile: Profile) -> String:
 		return "a monster dominated after loading reused an id or joined the carried three"
 	if not ProfileStore.load_from(SAVE_PATH).dominated_monsters.is_empty():
 		return "without a save, the game didn't start a new profile"
+	return _check_short_ids()
+
+
+## A dominated monster keeps the short id it had in the wild (#700) through saving and loading, and
+## one dominated without one gets the stand-in for its id. A save from before short ids (format 11)
+## gives each the stand-in for its id, and a save with a short id that isn't one is refused.
+func _check_short_ids() -> String:
+	var profile: Profile = Profile.new()
+	var gain: Gain = _result(["moss_toad", "moss_toad"], {})
+	gain.dominated_short_ids.assign(["abc2345"])
+	var _taken: String = profile.apply(gain)
+	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var kept: Array[String] = []
+	for monster: DominatedMonster in loaded.dominated_monsters:
+		kept.append(monster.short_id)
+	var expected: Array[String] = ["abc2345", ShortId.stand_in(2)]
+	if not loaded.problem.is_empty() or kept != expected:
+		return "the dominated monsters' short ids weren't kept: %s %s" % [kept, loaded.problem]
+	return _check_short_ids_read(profile)
+
+
+## `profile`'s save from before short ids (format 11) gives each monster the stand-in for its id,
+## and one with a short id that isn't one is refused.
+func _check_short_ids_read(profile: Profile) -> String:
+	var data: Dictionary = JSON.parse_string(ProfileSave.to_text(profile))
+	data["format"] = 11
+	var monsters: Array = data["dominated_monsters"]
+	for entry: Dictionary in monsters:
+		var _dropped: bool = entry.erase("short_id")
+	var migrated: Profile = ProfileSave.parse(JSON.stringify(data))
+	if migrated.problem != "" or migrated.dominated_monsters[0].short_id != ShortId.stand_in(1):
+		return "a format 11 save's monsters didn't get stand-in short ids: " + migrated.problem
+	var bad: String = ProfileSave.to_text(profile).replace("abc2345", "abl2345")
+	if not ProfileSave.parse(bad).problem.begins_with("a dominated monster"):
+		return "a save with a short id that isn't one wasn't refused"
 	return ""
 
 

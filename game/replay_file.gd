@@ -12,10 +12,13 @@ extends RefCounted
 ## monsters (#53) and gave every command its swap (#55): an older replay's slots carry just their
 ## companion, and its commands swap none. Format 9 gave every command its dialog answer (#635): an
 ## older replay's commands answer none. Format 10 gave every command its territory handed over
-## (#638): an older replay's commands hand none over.
-const FORMAT: int = 10
+## (#638): an older replay's commands hand none over. Format 11 gave every carried monster its short
+## id (#700): an older replay's carried monsters get stand-ins by their place (ShortId.stand_in).
+const FORMAT: int = 11
 ## The first format with every slot's carried monsters instead of only its companion.
 const CARRIED_FORMAT: int = 8
+## The first format with every carried monster's short id.
+const SHORT_ID_FORMAT: int = 11
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -23,8 +26,8 @@ const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players
 static func to_text(replay: Replay) -> String:
 	var hashes: Dictionary[String, String] = {}
 	var carried: Array[Array] = []
-	for party: PackedStringArray in replay.carried:
-		carried.append(Array(party))
+	for party: CarriedMonsters in replay.carried:
+		carried.append(party.to_data() if party != null else [])
 	var sorted: Array[int] = []
 	sorted.assign(replay.checkpoints.keys())
 	sorted.sort()
@@ -77,6 +80,9 @@ static func parse(text: String) -> Replay:
 	replay.seed_value = str(data["seed"]).to_int()
 	replay.players = _int(data["players"])
 	replay.carried = _carried(data, format)
+	if replay.carried.has(null):
+		replay.problem = "not a replay: its carried monsters aren't short ids with species"
+		return replay
 	replay.ticks = _int(data["ticks"])
 	replay.features = _ints(data.get("features"))
 	replay.changes = _ints(data.get("changes"))
@@ -104,20 +110,45 @@ static func _value_count(format: int) -> int:
 	return Command.VALUE_COUNT
 
 
-## Each slot's carried species in the replay's `data` of `format`: its own list, or, in an older
-## format, the slot's companion alone ("" for none).
-static func _carried(data: Dictionary, format: int) -> Array[PackedStringArray]:
-	var parties: Array[PackedStringArray] = []
-	if format >= CARRIED_FORMAT:
-		var lists: Array = data.get("carried", [])
+## Each slot's carried monsters in the replay's `data` of `format`, null for a slot whose list isn't
+## one: its own list, or, in an older format, its species alone (before format 8, the slot's
+## companion alone, "" for none), each with the stand-in short id of its place.
+static func _carried(data: Dictionary, format: int) -> Array[CarriedMonsters]:
+	var parties: Array[CarriedMonsters] = []
+	var lists: Array = data.get("carried", [])
+	if format >= SHORT_ID_FORMAT:
 		for party: Variant in lists:
-			var species: Array = party
-			parties.append(PackedStringArray(species))
+			parties.append(_valid(CarriedMonsters.of_data(party)))
 		return parties
-	var companions: Array = data.get("companions", [])
-	for species: Variant in companions:
-		parties.append(PackedStringArray([species] if str(species) != "" else []))
+	if format < CARRIED_FORMAT:
+		lists = []
+		var companions: Array = data.get("companions", [])
+		for species: Variant in companions:
+			lists.append([species] if str(species) != "" else [])
+	for party: Variant in lists:
+		var species_list: Array = party
+		var named: bool = _all_texts(species_list) and not species_list.has("")
+		parties.append(_stood_in(species_list) if named else null)
 	return parties
+
+
+## The species in `species_list`, in order, each with the stand-in short id of its place.
+static func _stood_in(species_list: Array) -> CarriedMonsters:
+	var party: CarriedMonsters = CarriedMonsters.new()
+	for place: int in species_list.size():
+		party = party.add(ShortId.stand_in(place + 1), str(species_list[place]))
+	return party
+
+
+## `party` when every short id in it is one, each once, with a named species, null otherwise.
+static func _valid(party: CarriedMonsters) -> CarriedMonsters:
+	if party == null or party.species.has(""):
+		return null
+	for place: int in party.size():
+		var short_id: String = party.short_ids[place]
+		if not ShortId.is_valid(short_id) or party.short_ids.find(short_id) != place:
+			return null
+	return party
 
 
 ## Changes recorded with `count` integers per command (the tick and slot before them), each
@@ -158,8 +189,8 @@ static func _shape_problem(data: Dictionary) -> String:
 			return "not a replay: its %s aren't a list of numbers" % key
 	if not _all_texts(data.get("companions", [])):
 		return "not a replay: its companions aren't a list of species"
-	if not _all_lists_of_texts(data.get("carried", [])):
-		return "not a replay: its carried monsters aren't lists of species"
+	if not _all_lists(data.get("carried", [])):
+		return "not a replay: its carried monsters aren't lists"
 	var hashes: Variant = data.get("checkpoints", {})
 	if not _valid_checkpoints(hashes):
 		return "not a replay: its checkpoints aren't ticks with hashes"
@@ -176,12 +207,14 @@ static func _valid_checkpoints(hashes: Variant) -> bool:
 	return true
 
 
-static func _all_lists_of_texts(values: Variant) -> bool:
+## Whether `values` is a list of lists, as every format's carried monsters are; what they hold is
+## checked as they're read (`_carried`).
+static func _all_lists(values: Variant) -> bool:
 	if not values is Array:
 		return false
 	var items: Array = values
 	for item: Variant in items:
-		if not _all_texts(item):
+		if not item is Array:
 			return false
 	return true
 

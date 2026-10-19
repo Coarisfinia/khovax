@@ -103,15 +103,18 @@ func resume(saved: World) -> String:
 	return ""
 
 
-## Each slot's carried species for a session starting now (#338, #53): this machine's player brings
-## the monsters they carry, the first their companion; other players bring none until co-op peers
-## send theirs (#75).
-func carried() -> Array[PackedStringArray]:
-	var parties: Array[PackedStringArray] = []
+## Each slot's carried monsters for a session starting now (#338, #53, #700): this machine's player
+## brings the monsters they carry, the first their companion; other players bring none until co-op
+## peers send theirs (#75).
+func carried() -> Array[CarriedMonsters]:
+	var parties: Array[CarriedMonsters] = []
 	var _sized: int = parties.resize(GameState.MAX_PLAYERS)
 	var slot: int = input.slot if input != null else 0
 	if holder != null and holder.keeper != null:
-		parties[slot] = holder.keeper.profile.carried_species()
+		var party: CarriedMonsters = CarriedMonsters.new()
+		for monster: DominatedMonster in holder.keeper.profile.carried_monsters():
+			party = party.add(monster.short_id, monster.species)
+		parties[slot] = party
 	return parties
 
 

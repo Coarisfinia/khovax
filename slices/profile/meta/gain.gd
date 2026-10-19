@@ -8,6 +8,9 @@ extends RefCounted
 ## (ProfileKeeper), so a crash mid-session never loses a domination (owner, #73).
 
 var dominated_species: Array[String] = []
+## The short id of each dominated monster (#700), in the same order. A monster this lacks one for
+## gets a stand-in (ShortId.stand_in).
+var dominated_short_ids: Array[String] = []
 var materials: Dictionary[String, int] = {}
 ## Treasure chests this player got loot from, which only quests count.
 var chests_opened: int = 0
