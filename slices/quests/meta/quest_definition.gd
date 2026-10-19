@@ -10,10 +10,18 @@ extends RefCounted
 ## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
 ## player enters the area it names, or once a quest emits the event it names (#575); every other
 ## quest is open from the start. Finishing a quest, by whichever end, can move the player's standing
-## with a faction (#532).
+## with a faction (#532), and finishing a territory quest hands its instance to its faction (#638).
 
 ## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "steps", PathMark.FIELD, "starts_on", "standing"]
+const FIELDS: Array[String] = [
+	"id",
+	"name",
+	"steps",
+	PathMark.FIELD,
+	"starts_on",
+	"standing",
+	"territory",
+]
 
 var id: String = ""
 ## The player-facing name.
@@ -26,6 +34,8 @@ var path: String = PathMark.NONE
 var starts_on: QuestStep = null
 ## How finishing it moves the player's standing with a faction; null when it doesn't.
 var standing: QuestStanding = null
+## The territory finishing it hands over (#638); null for a quest that isn't a territory quest.
+var territory: QuestTerritory = null
 ## Why the quest couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -55,6 +65,10 @@ static func parse(
 		quest.standing = QuestStanding.parse(data.get("standing"))
 		if not quest.standing.problem.is_empty():
 			quest.problem = "its standing: " + quest.standing.problem
+	if quest.problem.is_empty() and data.has("territory"):
+		quest.territory = QuestTerritory.parse(data.get("territory"))
+		if not quest.territory.problem.is_empty():
+			quest.problem = "its territory: " + quest.territory.problem
 	return quest
 
 

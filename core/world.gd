@@ -22,6 +22,8 @@ extends RefCounted
 ## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
 ## EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story beat
 ## does, and the first time it sets its flag the world raises that it changed (WorldChanged, #499).
+## A rule can also replace a kind of flag (FlagReplaced, #638), clearing the others of its kind in
+## the same tick as it sets its own, like a territory changing hands.
 ## Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
@@ -272,6 +274,7 @@ func step(commands: Array[Command]) -> void:
 			instances[instance_name].events.clear()
 	var leaving: Array[Array] = []
 	var emitted: Array[EventEmitted] = []
+	var replaced: Array[FlagReplaced] = []
 	for instance_name: String in stepping:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
@@ -281,8 +284,11 @@ func step(commands: Array[Command]) -> void:
 				leaving.append([instance_name, event])
 			elif event is EventEmitted:
 				emitted.append(event as EventEmitted)
+			elif event is FlagReplaced:
+				replaced.append(event as FlagReplaced)
 	_hand_changed_ground(stepping)
 	_set_emitted(emitted)
+	_replace_flags(replaced)
 	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
 	var sent: Array[int] = []
 	for move: Array in leaving:
@@ -325,6 +331,16 @@ func _set_emitted(emitted: Array[EventEmitted]) -> void:
 		if not flags.has(flag):
 			set_flag(flag)
 			events.append(_changed_event(event.event_name, flag))
+
+
+## Carries out every flag replacement in `replaced` (#638), raised this tick, in the order raised,
+## like the emitted events' flags: each clears every flag of its kind but its own, then sets it.
+func _replace_flags(replaced: Array[FlagReplaced]) -> void:
+	for event: FlagReplaced in replaced:
+		for held: String in flags.duplicate():
+			if held.begins_with(event.kind) and held != event.flag:
+				set_flag(held, false)
+		set_flag(event.flag)
 
 
 ## That the event `event_name` changed the world by setting `flag`.

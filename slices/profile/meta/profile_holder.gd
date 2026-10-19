@@ -6,7 +6,9 @@ extends Node
 ## pending saved when the game quits or goes to the background. The same dominations and chests
 ## advance the player's quests (#184), in the profile, and so do the places they step into (#339),
 ## the region pieces and instances they enter (#350, #370) and the answers they choose in dialogs
-## (#636). The player's personal color (#391) is kept in it too, saved the same way.
+## (#636). A territory quest it finishes hands its territory over in this player's next command
+## (#638), so the world changes in a tick, the same on every machine and in the replay. The
+## player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
 
@@ -73,7 +75,20 @@ func _on_event(event: RefCounted) -> void:
 		return
 	var gain: Gain = _gain_of(event)
 	if gain != null:
+		var done: int = keeper.profile.quests_done.size()
 		_report(keeper.take(gain, Time.get_ticks_msec()))
+		_hand_over_since(done)
+
+
+## Hands over the territory of every territory quest finished after the first `done` ones (#638),
+## in the order finished, in this player's next commands.
+func _hand_over_since(done: int) -> void:
+	var profile: Profile = keeper.profile
+	for index: int in range(done, profile.quests_done.size()):
+		# A quest is finished only from the book, so the book has it.
+		var territory: QuestTerritory = profile.quest_book[profile.quests_done[index]].territory
+		if territory != null:
+			input.hand_over(Territory.code(territory.instance, territory.faction))
 
 
 ## This machine's player's chosen personal color (#391), as 0xRRGGBB, or Profile.AUTO_COLOR, also

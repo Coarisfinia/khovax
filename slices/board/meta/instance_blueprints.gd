@@ -127,8 +127,7 @@ static func create(
 	ordered.append_array(_attacks(species))
 	# After the specials, whose strikes fell the wild monsters it drops materials for.
 	ordered.append(_harvest(instance_name))
-	ordered.append(_health(species))
-	ordered.append(_dialogs())
+	ordered.append_array([_health(species), _dialogs(), _territory()])
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -245,6 +244,15 @@ static func _dialogs() -> DialogFeature:
 	if not content.problem.is_empty():
 		push_error("the dialogs don't load: " + content.problem)
 	return DialogFeature.new(content.answers)
+
+
+## The territory feature (#638) with every territory a quest hands over, by code, from the quests'
+## content data.
+static func _territory() -> TerritoryFeature:
+	var content: QuestData = QuestContent.load_quests()
+	if not content.problem.is_empty():
+		push_error("the quests don't load: " + content.problem)
+	return TerritoryFeature.new(content.handovers)
 
 
 ## Every species' HP in the species `content`, by species id.
