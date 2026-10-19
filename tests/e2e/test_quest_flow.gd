@@ -21,7 +21,8 @@ extends RefCounted
 ## player enters the area it starts in, and is listed from then on (#473). Finishing a quest moves
 ## the standing with the faction it names, held on the scale (#532): the first domination raises
 ## the Cartographer's Guild by one, saved with the profile, and a quest naming a faction that
-## doesn't exist is refused. A quest chain with a choice (#573) marks every way on, goes on by the
+## doesn't exist is refused; finishing a path-marked quest leans the player toward its path
+## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
 ## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
 ## starting the side quests waiting on it.
@@ -761,6 +762,8 @@ func _check_counted() -> String:
 
 ## Finishing a quest moves the standing with the faction it names (#532): the first domination
 ## raised the guild by one, and a quest lowering it further than its scale holds it at the lowest.
+## Finishing a path-marked quest leans the player toward its path (#658): the toads' quest, marked
+## supremacy, leans them one toward it, and the unmarked ones toward neither.
 func _check_standing(profile: Profile) -> String:
 	if profile.standings.of(GUILD) != 1:
 		return "finishing the first domination didn't raise the guild by one"
@@ -770,6 +773,12 @@ func _check_standing(profile: Profile) -> String:
 	var _unbooked: bool = profile.quest_book.erase(betrayal.id)
 	if not applied.is_empty() or profile.standings.of(GUILD) != Standings.LOWEST:
 		return "a quest lowering the guild past its scale didn't hold it at the lowest: " + applied
+	var leaning: PathLeaning = profile.leaning
+	if leaning.supremacy != 1 or leaning.harmony != 0 or leaning.toward() != PathMark.SUPREMACY:
+		return "the quests finished didn't lean the player one toward supremacy: %d, %d" % [
+			leaning.harmony,
+			leaning.supremacy,
+		]
 	return ""
 
 
