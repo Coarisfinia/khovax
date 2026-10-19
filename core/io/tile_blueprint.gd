@@ -127,10 +127,4 @@ static func _number(value: Variant) -> int:
 
 ## A JSON number that is a whole number from 0 to `most`, or -1 for anything else.
 static func _whole(value: Variant, most: int) -> int:
-	if not (value is int or value is float):
-		return -1
-	var given: float = value
-	if given != floorf(given) or given < 0.0 or given > most:
-		return -1
-	var whole: int = type_convert(value, TYPE_INT)
-	return whole
+	return JsonNumbers.whole(value, 0, most, -1)

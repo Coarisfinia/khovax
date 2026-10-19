@@ -118,6 +118,10 @@ issue assigned to the owner. Nothing waits only in a chat. **Read the issue and 
 before starting work on it**: the owner decides things in comments, and the description alone can be
 out of date.
 
+**Anything off, missing or tech debt gets an issue** (owner's rule, #630): whenever an agent or
+subagent notices something wrong, missing or owed while working, it files a GitHub issue before
+its work is done, labelled `question`, with numbered options and a ★ on the recommendation.
+
 **`blocking` issues come first** (owner's rule). An open issue labelled `blocking` goes before
 everything else, tech debt included.
 
@@ -306,7 +310,8 @@ devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> sli
   `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
   the content reader, JSONC): the core's edge, which reads files and JSON's numbers, so its files
   that can't pass the determinism check yet carry its exemption marker (#515), while the
-  core-never-depends-on-a-slice check still covers them.
+  core-never-depends-on-a-slice check still covers them. A reader takes JSON's numbers as whole
+  numbers through `JsonNumbers` (#589), never by checking floats itself.
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read

@@ -132,7 +132,7 @@ func _check_round_trip(world: World) -> String:
 ## someone is in it or not left behind while nobody is, or one left long enough to be purged.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
-	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
+	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
 	var cases: Dictionary[String, String] = {
 		_changed(data, "format", WorldData.FORMAT + 1): "world format",
 		_changed(data, "rules", Simulation.RULES_VERSION - 1): "played by rules",
@@ -432,7 +432,7 @@ func _check_purged_explored(tree: SceneTree) -> String:
 ## refused at boot, and a fresh world starts in the starting instance, with nothing explored.
 func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	var text: String = WorldSave.to_text(world, ExploredSave.beside(_explored))
-	var data: Dictionary = WorldSave.whole_numbers(JSON.parse_string(text))
+	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
 	var result: String = await _boots_fresh(tree, "not a world", false)
 	if result.is_empty():
 		result = await _boots_fresh(tree, _changed(data, "format", WorldData.FORMAT + 1), true)

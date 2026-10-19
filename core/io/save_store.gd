@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (files, JSON floats, OS and ProjectSettings)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (files, JSON, OS and ProjectSettings)
 class_name SaveStore
 extends RefCounted
 ## How saves are kept on this device (#37, #179), so a crash, a full disk or a damaged file never
@@ -107,11 +107,7 @@ static func _opened(content: String) -> String:
 	var fields: Array[String] = ["save", "checksum", "text"]
 	if fields.all(func(field: String) -> bool: return not envelope.has(field)):
 		return content
-	var version: Variant = envelope.get("save")
-	if not (version is float or version is int):
-		return ""
-	var number: float = version
-	if number != ENVELOPE:
+	if JsonNumbers.whole(envelope.get("save"), ENVELOPE, ENVELOPE, -1) != ENVELOPE:
 		return ""
 	var text: Variant = envelope.get("text")
 	var checksum: Variant = envelope.get("checksum")

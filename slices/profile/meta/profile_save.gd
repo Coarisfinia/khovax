@@ -270,33 +270,17 @@ static func _monster(entry: Variant) -> DominatedMonster:
 ## A personal color from save data: Profile.AUTO_COLOR, or a color as 0xRRGGBB; below AUTO_COLOR
 ## for anything else.
 static func _color(value: Variant) -> int:
-	if (value is int or value is float) and value == Profile.AUTO_COLOR:
-		return Profile.AUTO_COLOR
-	var color: int = _int(value)
-	return color if color >= 0 and color <= Profile.MAX_COLOR else Profile.AUTO_COLOR - 1
+	# AUTO_COLOR sits right below the colors, so one range takes both.
+	return JsonNumbers.whole(value, Profile.AUTO_COLOR, Profile.MAX_COLOR, Profile.AUTO_COLOR - 1)
 
 
 ## A standing from save data: a whole JSON number from Standings.LOWEST to Standings.HIGHEST;
 ## 0, which a save never holds, for anything else.
 static func _standing(value: Variant) -> int:
-	if not (value is int or value is float):
-		return 0
-	var number: float = value
-	# Shifted to start at 0, so _int checks it's whole.
-	var shifted: int = _int(number - Standings.LOWEST)
-	if shifted < 0 or shifted > Standings.HIGHEST - Standings.LOWEST:
-		return 0
-	return shifted + Standings.LOWEST
+	return JsonNumbers.whole(value, Standings.LOWEST, Standings.HIGHEST, 0)
 
 
 ## A whole JSON number from 0 to Profile.MAX_NUMBER as an integer; -1 for anything else, so a
-## fraction or
-## an out-of-range number is refused instead of rounded.
+## fraction or an out-of-range number is refused instead of rounded.
 static func _int(value: Variant) -> int:
-	if not (value is int or value is float):
-		return -1
-	var number: float = value
-	if number != floorf(number) or number < 0.0 or number > Profile.MAX_NUMBER:
-		return -1
-	var whole: int = type_convert(value, TYPE_INT)
-	return whole
+	return JsonNumbers.whole(value, 0, Profile.MAX_NUMBER, -1)

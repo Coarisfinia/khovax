@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads content files, JSON numbers as floats)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads content files, #591)
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
@@ -44,13 +44,7 @@ static func is_id(text: String) -> bool:
 
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.
 static func amount(value: Variant) -> int:
-	if not (value is int or value is float):
-		return 0
-	var number: float = value
-	if number != floorf(number) or number < 1.0 or number > Fixed.MAX_AMOUNT:
-		return 0
-	var whole: int = type_convert(value, TYPE_INT)
-	return whole
+	return JsonNumbers.whole(value, 1, Fixed.MAX_AMOUNT, 0)
 
 
 ## Why `data` has a field outside `allowed`, or "".
