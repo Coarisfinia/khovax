@@ -361,9 +361,9 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 ## instance, the toad is chosen in its place, and the world keeps the finch fainted. Through the
 ## exit into the glade, the toad joins its player there and a swap back to the finch does nothing;
 ## the finch stays fainted through the world's save data and back, and through a session's start
-## that brings the same monsters. Revived in the glade (CompanionFeature.revive), it can be swapped
-## to again and joins its player, and the world takes it into the basic instance too. A fainted one
-## its player no longer carries is forgotten.
+## that brings the same monsters, as the restored world goes on. Revived in the glade
+## (CompanionFeature.revive), it can be swapped to again and joins its player, and the world takes
+## it into the basic instance too. A fainted one its player no longer carries is forgotten.
 func _check_fainted_kept() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.BASIC)
 	var party: Array[PackedStringArray] = [PackedStringArray(["storm_finch", "moss_toad"])]
@@ -383,12 +383,22 @@ func _check_fainted_kept() -> String:
 	var toad_joined: bool = there.species_of(there.companion_of(0)) == "moss_toad"
 	if not toad_joined or not glade.has_fainted(0, "storm_finch") or _swap_in(world, null, 1) != 0:
 		return "through the exit, the finch didn't stay fainted, or the toad didn't join"
+	return _check_fainted_restored(world, party)
+
+
+## `world`, with the finch fainted, goes through its save data and a session's start bringing
+## `party`, and the restored world goes on with the finch fainted; then it's revived there.
+func _check_fainted_restored(world: World, party: Array[PackedStringArray]) -> String:
 	var restored: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
-	world.set_carried(party)
-	world.choose_companion(0, 1)
-	if restored.fainted != world.fainted or world.fainted[0] != PackedStringArray(["storm_finch"]):
-		return "the fainted finch didn't stay through the save or a start: " + restored.problem
-	return _check_revived(world)
+	if not restored.problem.is_empty():
+		return "the world with a fainted finch didn't go through its save data: " + restored.problem
+	restored.set_carried(party)
+	restored.choose_companion(0, 1)
+	var _stood: int = _swap_in(restored, null, Command.NO_SWAP)
+	var kept: GameState = restored.instances[InstanceBlueprints.GLADE]
+	if restored.fainted != world.fainted or not kept.has_fainted(0, "storm_finch"):
+		return "the fainted finch didn't stay fainted through the save and a session's start"
+	return _check_revived(restored)
 
 
 ## Revived, the finch can be swapped to again and joins its player in the glade; a fainted one no
