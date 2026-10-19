@@ -664,6 +664,10 @@ func _check_replay_validation() -> String:
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
 		text.replace("\"carried\": [", "\"carried\": [1,"): "not a replay: its carried monsters",
 		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
+		text.replace(
+			"\"ticks\": ",
+			"\"ticks\": 10.5, \"was\": ",
+		): "not a replay: it holds a number",
 	}
 	for case: String in cases:
 		var problem: String = ReplayFile.parse(case).play()

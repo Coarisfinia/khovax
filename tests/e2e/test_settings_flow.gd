@@ -33,6 +33,8 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_back_to_auto()
 	if result.is_empty():
+		result = _check_fraction_dropped()
+	if result.is_empty():
 		result = await _check_menu()
 	tree.root.msaa_3d = msaa_before
 	_forget()
@@ -90,6 +92,19 @@ func _check_back_to_auto() -> String:
 	restarted.free()
 	if not problem.is_empty() or not label.begins_with("Auto ("):
 		return "Auto again, after a restart: %s (%s)" % [problem, label]
+	return ""
+
+
+## A hand-edited settings file whose value isn't a whole number drops that setting back to Auto
+## and keeps the others (#631).
+func _check_fraction_dropped() -> String:
+	var text: String = JSON.stringify({ Graphics.ANTI_ALIASING: 0.5, GameMenu.PAUSE_SETTING: 0 })
+	var problem: String = SaveStore.write_save(SETTINGS_PATH, text)
+	var kept: Settings = Settings.load_from(SETTINGS_PATH)
+	SaveStore.remove(SETTINGS_PATH)
+	if (not problem.is_empty() or kept.chosen.size() != 1
+			or kept.chosen.get(GameMenu.PAUSE_SETTING) != 0):
+		return "a fractional setting isn't dropped: %s %s" % [problem, kept.chosen]
 	return ""
 
 

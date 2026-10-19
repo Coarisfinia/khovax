@@ -1,7 +1,8 @@
 class_name Settings
 extends RefCounted
 ## The player's own settings on this device (#161), kept apart from the profile's game progress:
-## every setting the player chose instead of "Auto", by its name. A setting that isn't here is Auto.
+## every setting the player chose instead of "Auto", by its name. A setting that isn't here is Auto,
+## and so is one whose saved value isn't a whole number (#631).
 ## Saved as JSON next to the profile and kept like a save (SaveStore: checksum, older generations).
 ## Settings aren't progress, so when no generation can be read they're dropped for the defaults
 ## rather than refused.
@@ -26,9 +27,9 @@ static func load_from(path: String = PATH) -> Settings:
 	var saved: Dictionary = parsed
 	for setting: Variant in saved:
 		var value: Variant = saved[setting]
-		if setting is String and (value is float or value is int):
-			var number: float = value
-			settings.chosen[setting] = int(number)
+		if setting is String and (value is float or value is int) and JsonNumbers.all_whole(value):
+			var number: int = JsonNumbers.wholes(value)
+			settings.chosen[setting] = number
 	return settings
 
 
