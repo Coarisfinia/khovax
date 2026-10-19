@@ -11,8 +11,9 @@ extends RefCounted
 ## commands fire none and place none. Format 8 replaced the companions with every slot's carried
 ## monsters (#53) and gave every command its swap (#55): an older replay's slots carry just their
 ## companion, and its commands swap none. Format 9 gave every command its dialog answer (#635): an
-## older replay's commands answer none.
-const FORMAT: int = 9
+## older replay's commands answer none. Format 10 gave every command its territory handed over
+## (#638): an older replay's commands hand none over.
+const FORMAT: int = 10
 ## The first format with every slot's carried monsters instead of only its companion.
 const CARRIED_FORMAT: int = 8
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
@@ -93,12 +94,12 @@ static func parse(text: String) -> Replay:
 
 ## How many integers a command is in a replay of `format`: only the move before format 4, the
 ## special attack too in format 4, the totem too in format 5, the focus too in format 6 (#436), the
-## choice to go back to the spawn too in format 7 (#495), the swap too in format 8 (#55), and the
-## dialog answer too since (#635).
+## choice to go back to the spawn too in format 7 (#495), the swap too in format 8 (#55), the
+## dialog answer too in format 9 (#635), and the territory handed over too since (#638).
 static func _value_count(format: int) -> int:
 	if format < 4:
 		return 1
-	if format < 9:
+	if format < 10:
 		return format - 2
 	return Command.VALUE_COUNT
 
@@ -121,7 +122,7 @@ static func _carried(data: Dictionary, format: int) -> Array[PackedStringArray]:
 
 ## Changes recorded with `count` integers per command (the tick and slot before them), each
 ## widened with zeros to a whole command's: no special attack fired, no totem placed, nothing
-## focused, no going back to the spawn, no swap, no answer.
+## focused, no going back to the spawn, no swap, no answer, no territory handed over.
 static func _widened(old: Array[int], count: int) -> Array[int]:
 	var stride: int = 2 + count
 	var changes: Array[int] = []

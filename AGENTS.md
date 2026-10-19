@@ -402,6 +402,15 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   make peace with them or work against them, but no humanoid fights a humanoid. Humanoids who side
   with the monsters surrender once their monsters are defeated, and battles between humans are
   fought by their monsters.
+- **Territory quests keep to ground rules** (draft for the owner's review, #638): a territory
+  quest (`territory` in its quest data) names one instance and one faction, and finishing it hands
+  that instance to that faction, whoever held it. It's written for its territory: its steps happen
+  there (its region pieces, places and monsters), and no two territory quests are one quest
+  renamed. It has a clear goal there that fits its faction (chart it, hold its points, clear the
+  monsters another faction keeps there, bring something back). It's a side quest that starts once
+  the player first enters its territory, so it never shows before they've been there. It asks to
+  fight monsters only: battling a humanoid's monsters in a trainer fight is fine, the humanoid
+  themselves never (owner, #638). CI checks what it can (#639).
 - **The player only ever sees their current rank with a faction** (owner's rule, on #484): never
   the names of the other ranks, which would spoil what's ahead. Each faction has its own design for
   its ranks.

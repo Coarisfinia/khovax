@@ -82,6 +82,16 @@
 				"change": { "type": "integer", "minimum": -10, "maximum": 10, "not": { "const": 0 } }
 			}
 		},
+		"territory": {
+			"description": "Makes it a territory quest (#638): finishing it hands the instance named here to the faction named here, whoever held it before. Every territory quest keeps to the ground rules in AGENTS.md.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["instance", "faction"],
+			"properties": {
+				"instance": { "description": "The instance's blueprint name.", "$ref": "#/$defs/id" },
+				"faction": { "description": "The id of the faction it's handed to.", "$ref": "#/$defs/id" }
+			}
+		},
 		"steps": {
 			"description": "The steps, in the order the player goes through them where no choice leads elsewhere.",
 			"type": "array",

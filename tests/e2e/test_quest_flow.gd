@@ -29,6 +29,7 @@ extends RefCounted
 ## quest asking for it, not another player's choice nor another answer, and takes the way on of a
 ## choice asking for it (#636); a quest naming a dialog or an answer that no dialog file has is
 ## refused, and one that names an existing answer words it as the dialog does.
+## Finishing a territory quest hands its instance to its faction in the world (#638).
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -340,7 +341,9 @@ func _check_finds(
 		result = _check_listed(list, { "pond_chest": "Open a chest" })
 	if result.is_empty():
 		result = _check_entered_glade(driver, bus, profile)
-	return result if not result.is_empty() else _check_answered(driver, bus, profile)
+	if result.is_empty():
+		result = _check_answered(driver, bus, profile)
+	return result if not result.is_empty() else _check_territory(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,
@@ -440,6 +443,35 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 	_emit(driver, bus, DialogAnswered.new(SCOUT, "promise_to_look", 1, 0))
 	if not profile.quests_done.has("promise"):
 		return "this player promising the scout didn't finish the quest asking for it"
+	return ""
+
+
+## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
+## player walked its stream, grove and felling, not when another player entered the last one. The
+## territory goes over in this player's next command, which the replay records, and the world
+## clears the forest's old holder in the same tick as it hands the forest to the guild.
+func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var forest: String = InstanceBlueprints.FOREST
+	var quest: String = "guild_charts_the_forest"
+	driver.world.set_flag(Territory.flag(forest, "rivals"))
+	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
+	_emit(driver, bus, PieceEntered.new("stream", 1, 0))
+	_emit(driver, bus, PieceEntered.new("grove", 1, 0))
+	_emit(driver, bus, PieceEntered.new("felling", 9, 1))
+	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
+		return "another player entering the felling finished the forest's territory quest"
+	_emit(driver, bus, PieceEntered.new("felling", 1, 0))
+	for _tick: int in 3:
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	var held: Array[String] = []
+	for flag: String in driver.world.flags:
+		if flag.begins_with(Territory.flag(forest, "")):
+			held.append(flag)
+	var to_guild: bool = held.size() == 1 and held[0] == Territory.flag(forest, GUILD)
+	if not profile.quests_done.has(quest) or not to_guild:
+		return "finishing the forest's territory quest left its holders at %s" % [held]
+	if not driver.recording.changes.has(Territory.code(forest, GUILD)):
+		return "the replay didn't record the forest handed over"
 	return ""
 
 
@@ -895,7 +927,8 @@ func _check_settled() -> String:
 
 
 ## Quest data with one broken file gives an empty quest book, so no quest advances on part of it,
-## and so does a quest moving the standing with a faction that doesn't exist (#532).
+## and so does a quest moving the standing with a faction that doesn't exist (#532), or handing its
+## territory to one (#638).
 func _check_broken_data() -> String:
 	var good: String = "{\"id\": \"a_good\", \"name\": \"N\", "
 	good += "\"steps\": [{\"condition\": \"opened\", \"ends\": \"a_good\"}]}"
@@ -909,6 +942,10 @@ func _check_broken_data() -> String:
 	content = _load_written({ "a_good": stranger })
 	if not content.problem.ends_with("its standing's faction must be one that exists"):
 		return "a quest moving the standing with no faction that exists wasn't refused"
+	var astray: String = "\"territory\": {\"instance\": \"forest\", \"faction\": \"strangers\"}"
+	content = _load_written({ "a_good": good.replace("\"steps\"", astray + ", \"steps\"") })
+	if not content.problem.ends_with("its territory's faction must be one that exists"):
+		return "a quest handing its territory to no faction that exists wasn't refused (#638)"
 	return _check_dialog_ids()
 
 

@@ -9,8 +9,9 @@ const DIR: String = "res://slices/quests/data/"
 
 
 ## Every quest file in `directory`, read and checked; the species its steps name must be in
-## `species_directory`, the faction whose standing it moves (#532) in `faction_directory`, and the
-## dialogs and answers its answered steps and choices name (#636) in `dialog_directory`.
+## `species_directory`, the faction whose standing it moves (#532), or that it hands its territory
+## to (#638), in `faction_directory`, and the dialogs and answers its answered steps and choices
+## name (#636) in `dialog_directory`.
 static func load_quests(
 	directory: String = DIR,
 	species_directory: String = SpeciesContent.SPECIES_DIR,
@@ -32,6 +33,8 @@ static func load_quests(
 			quest.problem = "its standing's faction must be one that exists"
 		if quest.problem.is_empty():
 			quest.problem = _answers_problem(quest, dialogs)
+		if quest.problem.is_empty() and quest.territory != null:
+			quest.problem = _code_territory(content, quest.territory, factions)
 		if not quest.problem.is_empty():
 			content.problem = file_id + ".jsonc: " + quest.problem
 			return content
@@ -55,4 +58,22 @@ static func _answers_problem(quest: QuestDefinition, dialogs: DialogContent) -> 
 				]
 			asked.speaker = dialog.speaker
 			asked.text = answer.text
+	return ""
+
+
+## Files `territory` in `content` by its code (#638); why it can't be, or "": its faction doesn't
+## exist, or a command couldn't tell it from none, or from another territory with the same code.
+static func _code_territory(
+	content: QuestData,
+	territory: QuestTerritory,
+	factions: FactionContent,
+) -> String:
+	if not factions.factions.has(territory.faction):
+		return "its territory's faction must be one that exists"
+	var handed: PackedStringArray = PackedStringArray([territory.instance, territory.faction])
+	var by: int = Territory.code(territory.instance, territory.faction)
+	if (by == Command.NO_HAND_OVER
+			or (content.handovers.has(by) and content.handovers[by] != handed)):
+		return "its territory's code is taken: hand over another instance or faction"
+	content.handovers[by] = handed
 	return ""
