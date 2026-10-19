@@ -8,6 +8,10 @@
 	"required": ["id", "name", "steps"],
 	"$defs": {
 		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"emits": {
+			"description": "The event it emits once it's done, or taken on a choice (#575): any id, which can start a side quest waiting on it.",
+			"$ref": "#/$defs/id"
+		},
 		"somewhere": {
 			"description": "Being somewhere, met once, which a marker points at: reaching a place, or entering a region piece or an instance.",
 			"type": "object",
@@ -44,9 +48,19 @@
 			"default": "none"
 		},
 		"starts_on": {
-			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count. Left out, the quest is open from the start.",
-			"$ref": "#/$defs/somewhere",
-			"unevaluatedProperties": false
+			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count, or until a quest emits the event named here (#575). Left out, the quest is open from the start.",
+			"oneOf": [
+				{ "$ref": "#/$defs/somewhere", "unevaluatedProperties": false },
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["condition", "event"],
+					"properties": {
+						"condition": { "const": "emitted" },
+						"event": { "description": "The event it waits on.", "$ref": "#/$defs/id" }
+					}
+				}
+			]
 		},
 		"standing": {
 			"description": "How finishing it moves the player's standing with a faction (#532): the faction's id, and the change, up when positive and down when negative, held on the standing's scale from -5 to 5.",
@@ -124,7 +138,8 @@
 							"$ref": "#/$defs/somewhere",
 							"required": ["next"],
 							"properties": {
-								"next": { "description": "The id of the step it leads to.", "$ref": "#/$defs/id" }
+								"next": { "description": "The id of the step it leads to.", "$ref": "#/$defs/id" },
+								"emits": { "$ref": "#/$defs/emits" }
 							},
 							"unevaluatedProperties": false
 						}
@@ -132,7 +147,8 @@
 					"ends": {
 						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished. Every path through every quest, a linear one included, must reach a step tagged so, which the content check walks (#576).",
 						"$ref": "#/$defs/id"
-					}
+					},
+					"emits": { "$ref": "#/$defs/emits" }
 				}
 			}
 		}

@@ -23,7 +23,8 @@ extends RefCounted
 ## the Cartographer's Guild by one, saved with the profile, and a quest naming a faction that
 ## doesn't exist is refused. A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
-## ends, moving its standing there too.
+## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
+## starting the side quests waiting on it.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -641,6 +642,48 @@ func _check_branch_standing() -> String:
 	if (not applied.is_empty() or profile.quests_done != ["fork"]
 			or profile.standings.of(GUILD) != 1):
 		return "a chain ending on its chosen way didn't move its standing: " + applied
+	return _check_emitted()
+
+
+## Steps and choices emit events (#575): taking the thicket's way, which leads to the same end as
+## the pond's, emits its own event, which starts the side quest waiting on it but not the one
+## waiting on the pond's; the end emits its own, which starts another side quest only once the
+## chain ends. A step can't wait on an event itself.
+func _check_emitted() -> String:
+	var text: String = "{\"id\": \"fork\", \"name\": \"N\", \"steps\": [{\"choices\": ["
+	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\", "
+	text += "\"emits\": \"took_pond\"}, "
+	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", \"next\": \"won\", "
+	text += "\"emits\": \"took_thicket\"}]}, "
+	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\", \"emits\": \"won\"}]}"
+	var waiting: String = "{\"id\": \"%s\", \"name\": \"N\", "
+	waiting += "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"%s\"}, "
+	waiting += "\"steps\": [{\"condition\": \"%s\"}]}"
+	var starts: Dictionary[String, Array] = {
+		"after_pond": ["took_pond", "opened"],
+		"after_thicket": ["took_thicket", "opened"],
+		"after_won": ["won", "dominated"],
+	}
+	var profile: Profile = Profile.new()
+	profile.quest_book["fork"] = QuestDefinition.parse("fork", text, {})
+	for id: String in starts:
+		profile.quest_book[id] = QuestDefinition.parse(id, waiting % ([id] + starts[id]), {})
+	var applied: String = ""
+	for id: String in profile.quest_book:
+		applied += profile.quest_book[id].problem
+	applied += profile.apply(_entering("thicket"))
+	if not applied.is_empty() or profile.open_steps().keys() != ["after_thicket", "fork"]:
+		return "taking the thicket's way didn't start just its side quest: " + applied
+	applied = profile.apply(_gain([], 1))
+	if not applied.is_empty() or profile.open_steps().keys() != ["after_won"]:
+		return "the chain's end didn't start the side quest waiting on it: " + applied
+	applied = profile.apply(_gain(["moss_toad"], 0))
+	if not applied.is_empty() or profile.quests_done != ["after_thicket", "fork", "after_won"]:
+		return "the side quests an event started didn't go on: %s" % profile.quests_done
+	var step_waits: String = text.replace("\"condition\": \"opened\"", "\"condition\": \"emitted\"")
+	step_waits = step_waits.replace("\"ends\"", "\"event\": \"took_pond\", \"ends\"")
+	if QuestDefinition.parse("fork", step_waits, {}).problem.is_empty():
+		return "a step waiting on an event wasn't refused"
 	return ""
 
 
