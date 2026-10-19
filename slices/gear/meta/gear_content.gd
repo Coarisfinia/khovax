@@ -19,7 +19,7 @@ static func load_gear(directory: String = DIR) -> GearContent:
 	for file_id: String in texts:
 		var item: GearItem = GearItem.parse(file_id, texts[file_id])
 		if not item.problem.is_empty():
-			content.problem = "%s.jsonc: %s" % [file_id, item.problem]
+			content.problem = file_id + ".jsonc: " + item.problem
 			return content
 		content.items[item.id] = item
 	return content

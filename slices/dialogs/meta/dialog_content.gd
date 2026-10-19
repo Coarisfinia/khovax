@@ -18,16 +18,15 @@ var problem: String = ""
 ## Every dialog file in `directory`, read and checked.
 static func load_dialogs(directory: String = DIR) -> DialogContent:
 	var content: DialogContent = DialogContent.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var dialog: Dialog = Dialog.parse(file_name.get_basename(), text)
-			if dialog.problem.is_empty():
-				dialog.problem = content._code_answers(dialog)
-			if not dialog.problem.is_empty():
-				content.problem = file_name + ": " + dialog.problem
-				return content
-			content.dialogs[dialog.id] = dialog
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		var dialog: Dialog = Dialog.parse(file_id, texts[file_id])
+		if dialog.problem.is_empty():
+			dialog.problem = content._code_answers(dialog)
+		if not dialog.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + dialog.problem
+			return content
+		content.dialogs[dialog.id] = dialog
 	return content
 
 

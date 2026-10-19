@@ -12,25 +12,23 @@ const ABILITIES_DIR: String = "res://slices/species/data/abilities/"
 ## Every species file in `directory`, read and checked.
 static func load_species(directory: String = SPECIES_DIR) -> SpeciesData:
 	var content: SpeciesData = SpeciesData.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			content.problem = content.add_species(file_name.get_basename(), text)
-			if not content.problem.is_empty():
-				content.problem = file_name + ": " + content.problem
-				return content
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		content.problem = content.add_species(file_id, texts[file_id])
+		if not content.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + content.problem
+			return content
 	return content
 
 
 ## Every ability file in `directory`, read and checked (#222).
 static func load_abilities(directory: String = ABILITIES_DIR) -> SpeciesData:
 	var content: SpeciesData = SpeciesData.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var ability: Ability = Ability.parse(file_name.get_basename(), text)
-			if not ability.problem.is_empty():
-				content.problem = file_name + ": " + ability.problem
-				return content
-			content.abilities[ability.id] = ability
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		var ability: Ability = Ability.parse(file_id, texts[file_id])
+		if not ability.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + ability.problem
+			return content
+		content.abilities[ability.id] = ability
 	return content

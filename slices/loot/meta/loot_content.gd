@@ -12,12 +12,11 @@ const HARVEST_DIR: String = "res://slices/loot/data/harvest_tables/"
 ## checked.
 static func load_loot_tables(directory: String = DIR) -> LootData:
 	var content: LootData = LootData.new()
-	for file_name: String in DirAccess.get_files_at(directory):
-		if file_name.ends_with(".jsonc"):
-			var text: String = FileAccess.get_file_as_string(directory + file_name)
-			var table: LootTable = LootTableFile.parse(file_name.get_basename(), text)
-			if not table.problem.is_empty():
-				content.problem = file_name + ": " + table.problem
-				return content
-			content.loot_tables[table.id] = table
+	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	for file_id: String in texts:
+		var table: LootTable = LootTableFile.parse(file_id, texts[file_id])
+		if not table.problem.is_empty():
+			content.problem = file_id + ".jsonc: " + table.problem
+			return content
+		content.loot_tables[table.id] = table
 	return content
