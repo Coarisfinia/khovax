@@ -11,7 +11,8 @@ extends RefCounted
 ## instances and
 ## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
-## A player swaps it for another monster they carry (#55).
+## A player swaps it for another monster they carry (#55), by a tap or a click on the roster at the
+## top left of the screen, which shows the monsters they carry and which is their companion (#540).
 ## The world raises that a player entered an instance (#370) when they start in it and whenever
 ## they walk through an exit into another, and only then. A rule can change a tile of a loaded
 ## instance in place (#530), which the world keeps through its save data. A world flag chooses a
@@ -27,6 +28,8 @@ const STUMP: Vector2i = Vector2i(0, -1)
 const WATER: Vector2i = Vector2i(0, 1)
 ## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
 const CROWN_KIND: int = 250
+## The screen _check_roster lays the roster out for.
+const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 
 ## The made-up crown _check_room_caught gives CROWN_KIND.
 var _crown: TileBlueprint
@@ -34,7 +37,7 @@ var _crown: TileBlueprint
 var _entered: Array[String] = []
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	for instance_name: String in InstanceBlueprints.NAMES:
 		var problem: String = InstanceBlueprints.exit_problem(instance_name)
 		if not problem.is_empty():
@@ -66,7 +69,7 @@ func run(_tree: SceneTree) -> String:
 		var result: String = step.call()
 		if not result.is_empty():
 			return result
-	return ""
+	return await _check_roster(tree)
 
 
 ## A tile changed in place (#530): a rule turns the ground beside the player into rock in the loaded
@@ -334,6 +337,101 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 	for event: RefCounted in world.instances[world.instance_of(0)].events:
 		chosen += 1 if event is CompanionChosen else 0
 	return chosen
+
+
+## The roster (#540) in the main scene: carrying a storm finch and a moss toad, it shows both at
+## the top left, apart, in that order, the finch as the companion, and the quest list starts below
+## it. A tap on the toad's square swaps to it in the local player's next command without starting
+## the touch stick, and a left click on the finch's swaps to the finch; while the game hears no
+## input (the menu is open) a tap swaps nothing. Swapped to the toad, the roster shows it as the
+## companion.
+func _check_roster(tree: SceneTree) -> String:
+	var main: Node = await FlowGame.start(tree)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	driver.world.set_carried([PackedStringArray(["storm_finch", "moss_toad"])])
+	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
+	roster.show_state()
+	# Laid out for a desktop screen: the headless one is tiny. The flow steps it by hand from here.
+	roster.set_process(false)
+	roster.lay_out_in(ROSTER_SCREEN)
+	var result: String = _roster_shown(main, roster)
+	if result.is_empty():
+		result = _roster_swaps(main, roster, driver)
+	main.queue_free()
+	await tree.process_frame
+	return result
+
+
+## The roster shows the finch and the toad at the top left, apart, the finch as the companion, and
+## the quest list starts below it.
+func _roster_shown(main: Node, roster: RosterHud) -> String:
+	var carried: PackedStringArray = ["storm_finch", "moss_toad"]
+	if roster.shown != carried or roster.companion_place != 0:
+		return "the roster doesn't show the carried monsters in order, the first as the companion"
+	var corner: Rect2 = Rect2(Vector2.ZERO, ROSTER_SCREEN / 3.0)
+	var first: Rect2 = roster.rect_of(0)
+	if not corner.encloses(roster.rect_of(1)) or first.intersects(roster.rect_of(1)):
+		return "the roster's squares %s and %s aren't apart in the top left corner %s" % [
+			first,
+			roster.rect_of(1),
+			corner,
+		]
+	if RosterHud.initials_of("Storm Finch") != "SF":
+		return "the storm finch's square doesn't show its initials"
+	var quests: QuestListView = main.get_node("Hud/QuestList") as QuestListView
+	quests._lay_out(1.0)
+	# A position is kept in single precision.
+	if quests.position.y + 0.01 < roster.bottom() or roster.bottom() <= first.end.y:
+		return "the quest list at %s doesn't start below the roster's %f" % [
+			quests.position,
+			roster.bottom(),
+		]
+	return ""
+
+
+## Taps and clicks on the roster's squares swap, but not while the game hears no input, and the
+## swap made shows.
+func _roster_swaps(main: Node, roster: RosterHud, driver: GameDriver) -> String:
+	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
+	_tap_roster(roster, roster.rect_of(1).get_center(), false)
+	var tapped: int = driver.input.command(driver.state).swap
+	if tapped != 2 or stick.is_held():
+		return "a tap on the toad's square didn't swap to it alone, or started the touch stick"
+	_tap_roster(roster, roster.rect_of(0).get_center(), true)
+	if driver.input.command(driver.state).swap != 1:
+		return "a click on the finch's square didn't swap to it"
+	driver.input.blocked = true
+	_tap_roster(roster, roster.rect_of(1).get_center(), false)
+	driver.input.blocked = false
+	if driver.input.command(driver.state).swap != Command.NO_SWAP:
+		return "a tap on the roster swapped while the game heard no input"
+	var _chosen: int = _swap_in(driver.world, null, 2)
+	roster.show_state()
+	if roster.companion_place != 1:
+		return "the roster didn't show the toad as the companion once swapped to it"
+	return ""
+
+
+## Touches the roster at `at` and lifts the finger, or left clicks there with the mouse (`click`).
+static func _tap_roster(roster: RosterHud, at: Vector2, click: bool) -> void:
+	_press_roster(roster, at, click, true)
+	_press_roster(roster, at, click, false)
+
+
+## Presses (`pressed`) or lets go at `at` on the roster's screen: a finger, or the mouse's left
+## button (`click`).
+static func _press_roster(roster: RosterHud, at: Vector2, click: bool, pressed: bool) -> void:
+	if click:
+		var button: InputEventMouseButton = InputEventMouseButton.new()
+		button.button_index = MOUSE_BUTTON_LEFT
+		button.position = at
+		button.pressed = pressed
+		roster.get_viewport().push_input(button)
+		return
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.position = at
+	touch.pressed = pressed
+	roster.get_viewport().push_input(touch)
 
 
 ## Purging (#212): the glade, left behind, raises nothing in the ticks it doesn't step (#386), stays

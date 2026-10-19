@@ -5,8 +5,8 @@ extends RefCounted
 ## edge, at a wild monster and at water but not in a forest, and the view glides the player between
 ## tiles without jumps.
 ## Real key and touch events reach the actions too. The special attack's key (#410) fires it in the
-## local player's next command, once per press. Time is stepped by hand, so the flow is
-## deterministic.
+## local player's next command, once per press, and so do the swap keys and the d-pad (#540), which
+## moves nothing. Time is stepped by hand, so the flow is deterministic.
 
 const STEP: float = 1.0 / 60.0
 ## Seconds to walk from one tile to the next.
@@ -31,11 +31,17 @@ const STICK: Dictionary[String, Vector2] = {
 	"move_left": Vector2(-1.0, 0.0),
 	"move_right": Vector2(1.0, 0.0),
 }
-const D_PAD: Dictionary[String, JoyButton] = {
-	"move_up": JOY_BUTTON_DPAD_UP,
-	"move_down": JOY_BUTTON_DPAD_DOWN,
-	"move_left": JOY_BUTTON_DPAD_LEFT,
-	"move_right": JOY_BUTTON_DPAD_RIGHT,
+## The swap actions' keys, by physical position, and d-pad buttons (#540): the d-pad swaps, and
+## moving stays on the left stick and the keys.
+const SWAP_KEYS: Dictionary[StringName, Key] = {
+	&"swap_1": KEY_1,
+	&"swap_2": KEY_2,
+	&"swap_3": KEY_3,
+}
+const SWAP_PADS: Dictionary[StringName, JoyButton] = {
+	&"swap_1": JOY_BUTTON_DPAD_LEFT,
+	&"swap_2": JOY_BUTTON_DPAD_UP,
+	&"swap_3": JOY_BUTTON_DPAD_RIGHT,
 }
 const ARROW_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_UP,
@@ -172,8 +178,8 @@ func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
 	return pressed
 
 
-## Every action also has its left-stick direction and its D-pad button (#11), and a real D-pad
-## press reaches it, like keys and the touch stick do.
+## Every action also has its left-stick direction (#11), and no controller button: the d-pad swaps
+## the companion instead (#540).
 func _check_gamepad_bindings() -> String:
 	for i: int in ACTIONS.size():
 		var action: String = ACTIONS[i]
@@ -182,7 +188,6 @@ func _check_gamepad_bindings() -> String:
 		var has_button: bool = false
 		for event: InputEvent in InputMap.action_get_events(action):
 			var motion: InputEventJoypadMotion = event as InputEventJoypadMotion
-			var button: InputEventJoypadButton = event as InputEventJoypadButton
 			if motion != null:
 				# The left stick's own axis for the direction, never another stick or a trigger.
 				var axis: JoyAxis = JOY_AXIS_LEFT_X if stick.x != 0.0 else JOY_AXIS_LEFT_Y
@@ -192,15 +197,46 @@ func _check_gamepad_bindings() -> String:
 					axis_value,
 				)
 				has_stick = has_stick or matches
-			if button != null:
-				has_button = has_button or button.button_index == D_PAD[action]
-		if not has_stick or not has_button or not _button_reaches(D_PAD[action], action):
-			return "%s isn't bound to its stick direction and its D-pad button" % action
+			has_button = has_button or event is InputEventJoypadButton
+		if not has_stick or has_button:
+			return "%s isn't bound to its stick direction alone among the controller's" % action
+	return _check_swap_bindings()
+
+
+## Swapping (#540): keys 1 to 3, by their physical position, and the d-pad's left, up and right
+## press swap_1 to swap_3. A press swaps to that place in the carried order in the next command
+## only, and so does a tap on the roster (choose_swap); while the game hears no input, neither does.
+func _check_swap_bindings() -> String:
+	var input: LocalInput = _main.get_node("LocalInput") as LocalInput
+	var state: GameState = _driver.state
+	Input.action_press("swap_2")
+	input._process(STEP)
+	Input.action_release("swap_2")
+	input._process(STEP)
+	var swapped: int = input.command(state).swap
+	if swapped != 2 or input.command(state).swap != Command.NO_SWAP:
+		return "a press of swap_2 swapped to %d, not 2 in the next command alone" % swapped
+	input.choose_swap(3)
+	if input.command(state).swap != 3:
+		return "a swap chosen on the roster didn't reach the next command"
+	input.blocked = true
+	input.choose_swap(1)
+	var heard: int = input.command(state).swap
+	input.blocked = false
+	if heard != Command.NO_SWAP or input.command(state).swap != Command.NO_SWAP:
+		return "a swap chosen while the game hears no input reached a command"
+	# The real presses come last: a press and its release in one frame leave the action just
+	# pressed for the rest of that frame, which the press of swap_2 above would hear too.
+	for action: StringName in SWAP_KEYS:
+		if not _press_reaches(SWAP_KEYS[action], KEY_NONE, action):
+			return "a real key event doesn't press %s" % action
+		if not _button_reaches(SWAP_PADS[action], action):
+			return "a real d-pad press doesn't press %s" % action
 	return ""
 
 
 ## Whether a real press of the joypad button presses the action.
-func _button_reaches(index: JoyButton, action: String) -> bool:
+func _button_reaches(index: JoyButton, action: StringName) -> bool:
 	var press: InputEventJoypadButton = InputEventJoypadButton.new()
 	press.button_index = index
 	press.pressed = true

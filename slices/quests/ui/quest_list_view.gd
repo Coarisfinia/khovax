@@ -4,9 +4,9 @@ extends Control
 ## that isn't finished (Profile.open_steps), with its name (and its path mark in words, #471) and
 ## what its current step asks, and the count where the step counts up ("1/3"). A quest that
 ## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
-## It keeps to the side of the screen the Survey's corner isn't on (#301). Quests are told apart by
-## their words, never by color (#68), and the text grows with the screen, so it stays readable on a
-## phone. It only reads the profile.
+## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
+## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
+## with the screen, so it stays readable on a phone. It only reads the profile.
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn;
 ## this script keeps only what it does.
 
@@ -35,6 +35,8 @@ const DONE_TEXT: String = "Done"
 @export var holder: ProfileHolder
 ## Where the Survey shows, so the list keeps out of its corner.
 @export var survey: SurveyChoice
+## The roster in the top left corner (#540), which the list starts below when it's on that side.
+@export var roster: RosterHud
 
 ## What each listed quest's card says under its name, by quest id: the step, or that it's done.
 ## Kept here so tests can read what is shown.
@@ -166,7 +168,10 @@ func _lay_out(glide: float) -> void:
 		place = survey.place_shown()
 	var survey_left: bool = (place == SurveyChoice.Place.TOP_LEFT
 			or place == SurveyChoice.Place.BOTTOM_LEFT)
-	position = Vector2(screen.x - width - MARGIN if survey_left else MARGIN, MARGIN)
+	position = Vector2(
+		screen.x - width - MARGIN if survey_left else MARGIN,
+		MARGIN if survey_left or roster == null else roster.bottom(),
+	)
 	var y: float = 0.0
 	for id: String in order:
 		var card: PanelContainer = cards[id]

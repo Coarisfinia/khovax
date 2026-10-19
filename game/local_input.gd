@@ -5,7 +5,12 @@ extends Node
 ## `slot`. A press of the special attack (#410) fires it in the next command: one press fires once,
 ## and a press between two ticks isn't lost. place_totem places their totem (#423) while it's held,
 ## and a tap between two ticks isn't lost either. focus_next and focus_previous (Q and R, or the
-## shoulder buttons) step the focus through the wild monsters near the player (#436).
+## shoulder buttons) step the focus through the wild monsters near the player (#436). swap_1 to
+## swap_3 (keys 1 to 3, the d-pad's left, up and right, or a tap on the roster, RosterHud) make the
+## monster at that place in the carried order the companion (#540): one press swaps once.
+
+## The swap actions, in the carried order's places from 1.
+const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 
 ## The player slot this machine's player controls.
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
@@ -23,6 +28,8 @@ var focus: int = Command.NO_FOCUS
 var _focus_steps: int = 0
 ## Whether respawn was pressed since the last command (#495): going back to the spawn when down.
 var _respawn_pressed: bool = false
+## The place in the carried order chosen since the last command (#540), from 1, or Command.NO_SWAP.
+var _swap_to: int = Command.NO_SWAP
 
 
 func _process(_delta: float) -> void:
@@ -36,6 +43,15 @@ func _process(_delta: float) -> void:
 		_focus_steps -= 1
 	if Input.is_action_just_pressed("respawn"):
 		_respawn_pressed = true
+	for place: int in SWAP_ACTIONS.size():
+		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
+			_swap_to = place + 1
+
+
+## Swaps to the monster at `place` in the carried order, from 1, in the next command, as a tap on
+## the roster does.
+func choose_swap(place: int) -> void:
+	_swap_to = place
 
 
 func command(state: GameState) -> Command:
@@ -45,6 +61,8 @@ func command(state: GameState) -> Command:
 	_totem_tapped = false
 	var gives_up: bool = _respawn_pressed
 	_respawn_pressed = false
+	var swap: int = _swap_to
+	_swap_to = Command.NO_SWAP
 	if blocked:
 		# Presses while the game hears no input don't move the focus afterwards.
 		_focus_steps = 0
@@ -55,10 +73,12 @@ func command(state: GameState) -> Command:
 	var tile: Vector2i = player.tile if player != null else Vector2i.ZERO
 	focus = FocusChoice.stepped(state, tile, focus, _focus_steps)
 	_focus_steps = 0
-	return Command.new(
+	var given: Command = Command.new(
 		HexInput.direction_toward(vector, tile),
 		fires,
 		Command.PLACE_TOTEM if placing else Command.NO_TOTEM,
 		focus,
 		gives_up,
 	)
+	given.swap = swap
+	return given
