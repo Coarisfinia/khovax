@@ -93,31 +93,10 @@ jobs:
         run: bash tools/repeated_folders.sh
 
       - name: "🎲 Check the simulation stays deterministic"
-        # core/ and every slice's rules/ hold the rules: plain RefCounted classes without nodes,
-        # input, time, engine or OS state, global randomness, frame delta or floats (see AGENTS.md,
-        # "Architecture"; vertical slices, #290).
-        # Comments are stripped first (a # outside strings), so the rules can be explained in them.
-        run: |
-          forbidden='\b(Node|Node2D|Node3D|CanvasItem|Control|Window|Viewport|Resource)\b|\b(Input|InputMap|Time|Engine|OS|DisplayServer|RenderingServer|ProjectSettings)\.|\b(randf|randi|randf_range|randi_range|randfn|randomize|seed|rand_from_seed)\(|\bdelta\b|\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
-          failed=0
-          mapfile -t slice_rules < <(find slices -type d -name rules -print)
-          rules=(core "${slice_rules[@]}")
-          # A rules script extends RefCounted, or another class of the rules (e.g. Feature).
-          rule_classes=$(grep -rh '^class_name ' "${rules[@]}" | awk '{print $2}' | paste -sd'|' -)
-          while read -r file; do
-            code=$(perl -pe 's/^((?:[^"'"'"'#]|"(?:\\.|[^"\\])*"|'"'"'(?:\\.|[^'"'"'\\])*'"'"')*)#.*$/$1/' "$file")
-            if ! grep -qxE "extends (RefCounted|${rule_classes})" <<< "$code"; then
-              echo "::error file=${file}::rules scripts extend RefCounted or a class of the rules"
-              failed=1
-            fi
-            if grep -nE "$forbidden" <<< "$code"; then
-              echo "::error file=${file}::the rules must stay deterministic: see the lines above"
-              failed=1
-            fi
-          # core/io/ reads and writes files and JSON's numbers, so it can't pass (#506, #515): it's
-          # the core's edge, never stepped by the simulation.
-          done < <(find "${rules[@]}" -name '*.gd' -not -path 'core/io/*')
-          exit "$failed"
+        # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
+        # forbidden list and the exemption marker (#515) are in the script.
+        timeout-minutes: 5
+        run: bash tools/determinism_check.sh
 
       - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot

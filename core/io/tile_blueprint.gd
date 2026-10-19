@@ -1,3 +1,4 @@
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (parses JSON; a model's scale is a float)
 class_name TileBlueprint
 extends RefCounted
 ## A kind of tile a region is made of (#116), read from content data (core/data/tiles/, #72,

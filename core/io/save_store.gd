@@ -1,3 +1,4 @@
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (files, JSON floats, OS and ProjectSettings)
 class_name SaveStore
 extends RefCounted
 ## How saves are kept on this device (#37, #179), so a crash, a full disk or a damaged file never
