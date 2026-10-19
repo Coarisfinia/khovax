@@ -30,7 +30,9 @@ extends RefCounted
 ## choice nor another answer, and takes the way on of a choice asking for it (#636); a quest naming
 ## a dialog or an answer that no dialog file has is refused, and one that names an existing answer
 ## words it as the dialog does.
-## Finishing a territory quest hands its instance to its faction in the world (#638).
+## Finishing a territory quest hands its instance to its faction in the world (#638). A step asking
+## for an item counts each one this player obtains (#686), one gain finishing a step and counting on
+## toward the next, and has no marker.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -74,6 +76,13 @@ const BETRAYAL: String = (
 	+ "\"standing\": {\"faction\": \"cartographers_guild\", \"change\": -10}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"betrayal\"}]}"
 )
+## A quest asking for feathers twice over (#686): five, then three more.
+const FEATHERS: String = (
+	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
+	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"count\": 5}, "
+	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"count\": 3, "
+	+ "\"ends\": \"feathers\"}]}"
+)
 ## A quest's standing with a faction that doesn't exist.
 const STRANGER_STANDING: String = "\"standing\": {\"faction\": \"strangers\", \"change\": 1}"
 ## The faction whose standing the first domination raises (#532).
@@ -100,6 +109,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_side_quest()
 	if result.is_empty():
 		result = _check_branching()
+	if result.is_empty():
+		result = _check_obtained()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -811,6 +822,45 @@ func _check_answered_choice() -> String:
 	if not applied.is_empty() or profile.quests_done != ["fork"]:
 		return "a domination didn't end the way leaving the scout took: " + applied
 	return ""
+
+
+## A step asking for feathers (#686) counts each feather obtained, not a bone, nor a chest opened
+## that rolled none: three show 3/5, and four more finish it and count the two left over toward the
+## next step. It has no marker, and an item is asked for only on an obtained step.
+func _check_obtained() -> String:
+	var profile: Profile = Profile.new()
+	profile.quest_book["feathers"] = QuestDefinition.parse("feathers", FEATHERS, {})
+	var applied: String = profile.quest_book["feathers"].problem
+	applied += profile.apply(_gain([], 1)) + profile.apply(_obtaining({ "feather": 3, "bone": 1 }))
+	if not applied.is_empty() or QuestsTab.quest_lines(profile, "feathers")[0] != (
+		"Now: Collect feather  3/5"
+	):
+		return "three feathers didn't count three toward five: %s %s" % [
+			applied,
+			QuestsTab.quest_lines(profile, "feathers"),
+		]
+	applied = profile.apply(_obtaining({ "feather": 4 }))
+	var lines: Array[String] = ["Done: Collect feather  5/5", "Now: Collect feather  2/3"]
+	if not applied.is_empty() or QuestsTab.quest_lines(profile, "feathers") != lines:
+		return "four more feathers didn't finish five and count on: %s" % [
+			QuestsTab.quest_lines(profile, "feathers"),
+		]
+	if profile.materials.get("feather", 0) != 7:
+		return "the feathers obtained weren't all kept: %s" % profile.materials
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	if QuestMarkerView.targets_of(state, profile, 0).has("feathers"):
+		return "a step asking for an item is marked in the world"
+	var stray: String = FEATHERS.replace("\"condition\": \"obtained\"", "\"condition\": \"opened\"")
+	if QuestDefinition.parse("feathers", stray, {}).problem.is_empty():
+		return "a step naming an item without asking for it wasn't refused"
+	return ""
+
+
+## A gain of this player obtaining `items`, {item id: amount}.
+static func _obtaining(items: Dictionary[String, int]) -> Gain:
+	var gain: Gain = Gain.new()
+	gain.materials = items
+	return gain
 
 
 ## A gain of this player entering the region piece `piece`.

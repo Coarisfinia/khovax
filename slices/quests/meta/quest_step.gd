@@ -12,6 +12,7 @@ const FIELDS: Array[String] = [
 	"id",
 	"condition",
 	"species",
+	"item",
 	"place",
 	"piece",
 	"instance",
@@ -27,6 +28,7 @@ const FIELDS: Array[String] = [
 const CONDITION_FIELDS: Array[String] = [
 	"condition",
 	"species",
+	"item",
 	"place",
 	"piece",
 	"instance",
@@ -63,9 +65,17 @@ const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]
 ## monster this player dominated (of `species`, or any); `opened`, a treasure chest this player got
 ## loot from; `reached`, the place `place` this player stepped into (#339); `entered`, the region
 ## piece `piece` (#350) or the instance `instance` (#370) this player entered; `answered`, the
-## answer `answer` this player chose in the dialog `dialog` (#636). Defeating a monster waits until
-## its event exists.
-const CONDITIONS: Array[String] = ["dominated", "opened", "reached", "entered", ANSWERED]
+## answer `answer` this player chose in the dialog `dialog` (#636); `obtained`, one of the item
+## `item` this player obtained (#686), counted one per item. Defeating a monster waits until its
+## event exists.
+const CONDITIONS: Array[String] = [
+	"dominated",
+	"opened",
+	"reached",
+	"entered",
+	ANSWERED,
+	"obtained",
+]
 ## The fact of an instance entered, which an entered step naming an instance counts; a piece
 ## entered is the fact `entered`.
 const INSTANCE_ENTERED: String = "entered_instance"
@@ -85,10 +95,12 @@ var emits: String = ""
 var event: String = ""
 ## What the step asks for, or "" on a step with choices.
 var condition: String = ""
-## The species a `dominated` step asks for, or "" for any.
-var species: String = ""
-## That species' name, as the player reads it (#351), or "".
-var species_name: String = ""
+## The species a `dominated` step asks for, its name as the player reads it (#351) included, or
+## null for any.
+var species: Species = null
+## The item an `obtained` step asks for, by its id, as loot tables name it: a material or a piece
+## of gear (#694).
+var item: String = ""
 ## The place a `reached` step asks for, as region legends name it (TileTrigger.REACH).
 var place: String = ""
 ## The region piece an `entered` step asks for, by its file name, or "" when it asks for an
@@ -180,7 +192,8 @@ static func _choice(entry: Variant) -> QuestStep:
 ## name. Sets `problem` when it's wrong.
 func _read_condition(data: Dictionary, known_species: Dictionary[String, Species]) -> void:
 	condition = Content.text_of(data.get("condition"))
-	species = Content.text_of(data.get("species"))
+	var species_id: String = Content.text_of(data.get("species"))
+	item = Content.text_of(data.get("item"))
 	place = Content.text_of(data.get("place"))
 	piece = Content.text_of(data.get("piece"))
 	instance = Content.text_of(data.get("instance"))
@@ -190,25 +203,27 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 	count = Content.amount(data.get("count", 1))
 	if not CONDITIONS.has(condition) and condition != EMITTED:
 		problem = "its condition must be one of %s" % [CONDITIONS]
-	elif data.has("species") and (condition != "dominated" or not known_species.has(species)):
+	elif data.has("species") and (condition != "dominated" or not known_species.has(species_id)):
 		problem = "its species must be one that exists, on a dominated step"
 	elif not _where_problem(data, self).is_empty():
 		problem = _where_problem(data, self)
 	elif count < 1:
 		problem = "its count is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	if problem.is_empty() and data.has("species"):
-		species_name = known_species[species].name
+		species = known_species[species_id]
 
 
-## Why `step`'s place, piece, instance, dialog and answer or event, read from `data`, doesn't fit,
-## or "": a reached step names a place, an entered step a piece (#350) or an instance (#370), never
-## both, an answered step a dialog and its answer (#636), and an emitted condition an event (#575),
-## each as an id, and no other step names any. Whether the dialog has the answer is
-## QuestContent's check, which reads the dialogs. The instance must
+## Why `step`'s place, piece, instance, dialog and answer, event or item, read from `data`, doesn't
+## fit, or "": a reached step names a place, an entered step a piece (#350) or an instance (#370),
+## never both, an answered step a dialog and its answer (#636), an emitted condition an event
+## (#575) and an obtained step an item (#686), each as an id, and no other step names any. Whether
+## the dialog has the answer is QuestContent's check, which reads the dialogs. The instance must
 ## be a blueprint that exists.
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	if (step.condition == EMITTED) != data.has("event"):
 		return "its event is what an emitted condition asks for, and only that"
+	if (step.condition == "obtained") != data.has("item"):
+		return "its item is what an obtained step asks for, and only that"
 	if (step.condition == "reached") != data.has("place"):
 		return "its place is what a reached step asks for, and only that"
 	if (step.condition == "entered") != (data.has("piece") != data.has("instance")):
@@ -223,6 +238,7 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"dialog": step.answer.dialog,
 		"answer": step.answer.id,
 		"event": step.event,
+		"item": step.item,
 	}
 	for field: String in named:
 		if data.has(field) and not TileTrigger.is_place_id(named[field]):
@@ -248,9 +264,10 @@ func choice_for(fact_condition: String, what: String) -> QuestStep:
 
 
 ## Whether one fact of `fact_condition` (a domination of a species, a chest, a place reached, a
-## piece entered, an INSTANCE_ENTERED, an answer ANSWERED or an event EMITTED) counts here, toward
-## any of its choices on a branching step; `what` is the species dominated, the place reached, the
-## piece or instance entered, the answer chosen as `answer_key` names it, or the event emitted.
+## piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED or an item obtained)
+## counts here, toward any of its choices on a branching step; `what` is the species dominated, the
+## place reached, the piece or instance entered, the answer chosen as `answer_key` names it, the
+## event emitted or the item obtained.
 func counts(fact_condition: String, what: String) -> bool:
 	if not choices.is_empty():
 		return choice_for(fact_condition, what) != null
@@ -260,11 +277,13 @@ func counts(fact_condition: String, what: String) -> bool:
 		return fact_condition == condition and answer.key() == what
 	if condition == "reached":
 		return fact_condition == condition and place == what
+	if condition == "obtained":
+		return fact_condition == condition and item == what
 	if condition == "entered" and not instance.is_empty():
 		return fact_condition == INSTANCE_ENTERED and instance == what
 	if condition == "entered":
 		return fact_condition == condition and piece == what
-	return fact_condition == condition and (species.is_empty() or species == what)
+	return fact_condition == condition and (species == null or species.id == what)
 
 
 ## The answer `answer_id` of the dialog `dialog_id` as one fact (#636): both ids, which never hold
