@@ -631,7 +631,7 @@ func _check_replay_refusals() -> String:
 		"{}": "not a replay",
 		text.replace("\"format\": %d" % ReplayFile.FORMAT, "\"format\": 99"): "replay format 99",
 		text.replace(
-			"\"rules\": %d" % Simulation.RULES_VERSION,
+			"\"rules\": %d" % RulesChanges.version(),
 			"\"rules\": 0",
 		): "recorded with rules",
 		text.replace("\"basic\"", "\"nowhere\""): "instance nowhere",
@@ -695,7 +695,7 @@ func _check_rehash() -> String:
 
 
 ## Every golden replay in tests/replays/ plays back to its recorded checkpoints. One that fails
-## means the rules changed what it does: on purpose, bump Simulation.RULES_VERSION and rehash
+## means the rules changed what it does: on purpose, add a file to core/rules_changes/ and rehash
 ## (tests/replays/rehash.gd), and say why in the pull request.
 func _check_golden_replays() -> String:
 	var folder: String = "res://tests/replays/"

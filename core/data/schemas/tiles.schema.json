@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/core/data/schemas/tiles.schema.json",
 	"title": "Tile blueprint",
-	"description": "A kind of tile a region is made of (#116): its look and its traits. One file per kind, named after its id; a region's legend places it by its id. Its traits are rules: changing one changes what the game does, so it bumps Simulation.RULES_VERSION and rehashes the golden replays, like any rule change.",
+	"description": "A kind of tile a region is made of (#116): its look and its traits. One file per kind, named after its id; a region's legend places it by its id. Its traits are rules: changing one changes what the game does, so it adds a file to core/rules_changes/ (the rules version) and rehashes the golden replays, like any rule change.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "number", "color", "symbol", "traits"],

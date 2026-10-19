@@ -2,8 +2,9 @@
 # The tool reports to whoever runs it on stdout and stderr; that is what it is for.
 extends SceneTree
 ## Rehashes every golden replay under the current rules, after a rules change made on purpose
-## (bump Simulation.RULES_VERSION in the same change, and say in the pull request why the game
-## plays out differently): godot --headless --path . -s res://tests/replays/rehash.gd
+## (add its file to core/rules_changes/ in the same change, see RulesChanges, and say in the pull
+## request why the game plays out differently):
+## godot --headless --path . -s res://tests/replays/rehash.gd
 ## A golden replay can also start as a file with only its start and commands: this adds the
 ## checkpoints.
 

@@ -145,7 +145,7 @@ func _check_refused(world: World) -> String:
 	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
 	var cases: Dictionary[String, String] = {
 		_changed(data, "format", WorldData.FORMAT + 1): "world format",
-		_changed(data, "rules", Simulation.RULES_VERSION - 1): "played by rules",
+		_changed(data, "rules", RulesChanges.version() - 1): "played by rules",
 		_changed(data, "tick", world.tick + 1): "the world doesn't hash",
 		# Another seed arranges other regions, which the saved tiles may not even fit.
 		_changed(data, "seed", [0, SEED + 1]): "",
@@ -452,7 +452,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	if result.is_empty():
 		result = await _boots_fresh(tree, _changed(data, "format", WorldData.FORMAT + 1), true)
 	if result.is_empty():
-		var rules: int = Simulation.RULES_VERSION + 1
+		var rules: int = RulesChanges.version() + 1
 		result = await _boots_fresh(tree, _changed(data, "rules", rules), true)
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
