@@ -32,9 +32,10 @@ extends RefCounted
 ## words it as the dialog does.
 ## Finishing a territory quest hands its instance to its faction in the world (#638). A step asking
 ## for an item counts each one this player obtains (#686), one gain finishing a step and counting on
-## toward the next, and has no marker. A region's legend can mark one wild monster as a quest
-## target (#625): a quest asking for it is marked over that one monster, not over another of its
-## species, and only dominating it counts.
+## toward the next, and has no marker; one asking for an item no loot or harvest table drops is
+## refused (#766). A region's legend can mark one wild monster as a quest target (#625): a quest
+## asking for it is marked over that one monster, not over another of its species, and only
+## dominating it counts.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -908,7 +909,8 @@ func _check_answered_choice() -> String:
 
 ## A step asking for feathers (#686) counts each feather obtained, not a bone, nor a chest opened
 ## that rolled none: three show 3/5, and four more finish it and count the two left over toward the
-## next step. It has no marker, and an item is asked for only on an obtained step.
+## next step. It has no marker, and an item is asked for only on an obtained step, and only one that
+## a loot or harvest table drops (#766).
 func _check_obtained() -> String:
 	var profile: Profile = Profile.new()
 	profile.quest_book["feathers"] = QuestDefinition.parse("feathers", FEATHERS, {})
@@ -935,6 +937,13 @@ func _check_obtained() -> String:
 	var stray: String = FEATHERS.replace("\"condition\": \"obtained\"", "\"condition\": \"opened\"")
 	if QuestDefinition.parse("feathers", stray, {}).problem.is_empty():
 		return "a step naming an item without asking for it wasn't refused"
+	var dropped: QuestData = _load_written({ "feathers": FEATHERS })
+	var typo: QuestData = _load_written({ "feathers": FEATHERS.replace("feather\"", "feathre\"") })
+	if not dropped.problem.is_empty() or not typo.problem.contains("drops the item feathre"):
+		return "only an item no table drops should be refused: %s / %s" % [
+			dropped.problem,
+			typo.problem,
+		]
 	return ""
 
 
