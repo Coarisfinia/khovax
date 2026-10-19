@@ -227,15 +227,16 @@ Game logic and control logic are strictly separated (owner's rule, #26), so that
 and the same commands always give the same game: for replays, lockstep co-op and tests.
 
 ```
-devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> slices/*/look/, ui/
-                        ^
-              game/ driver: fixed ticks
+devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameState -> look/, ui/
+                                  ^
+                        game/ driver: fixed ticks
 ```
 
 - **Vertical slices** (owner, #290, #371): what belongs together lives in one folder,
   `slices/<name>/`, in fixed subfolders, each only where the slice has one: `rules/` (the
   simulation, under every rule below for `core/`, checked by CI the same way), `look/` (views in
-  the world, under the presentation's rules below), `ui/` (screens and menus) and `meta/` (profile, content
+  the world, under the presentation's rules below), `ui/` (screens and menus), `input/` (devices to
+  commands, only in `slices/controls/`, #514) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
@@ -246,7 +247,7 @@ devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> sli
   each other by `class_name`; where a path is needed (a scene, a model, a `preload`), it is
   absolute from `res://`, never relative (`./`, `../`), which the same check refuses (#375). It
   also keeps the rules pure and the tests and tools apart (owner, #526): `core/` and every
-  `rules/` never reach a `look/`, `ui/` or `game/` class or path, nothing
+  `rules/` never reach a `look/`, `ui/`, `input/` or `game/` class or path, nothing
   outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
@@ -327,11 +328,14 @@ devices -> game/ input -> Command -> core/ + slices/*/rules/ -> GameState -> sli
   from the tick's events (the driver's `ticked` signal, #34); lasting looks come from the state.
 - **`game/`, the driver:** `GameDriver` runs whole ticks of the `World` in lockstep: real time
   decides when ticks happen, never what they do. It records every session as a `Replay`, and its
-  `EventBus` subscribers never change the world. It also holds the camera, the music and the
-  local input, devices to commands: every device presses the same InputMap actions
-  (`LocalInput`), and `HexInput` is the only place floats become a hex direction.
+  `EventBus` subscribers never change the world. It also holds the boot, test mode and the
+  `WorldKeeper`; the camera (`slices/camera/look/`), the music (`slices/music/look/`) and this
+  player's `ProfileHolder` (`slices/profile/meta/`) live in slices (#514).
+- **The controls** (`slices/controls/input/`, #514): devices to commands. Every device presses the
+  same InputMap actions (`LocalInput`), and `HexInput` is the only place floats become a hex
+  direction.
 - A new mechanic gets its own slice, `slices/<name>/`: its rules and data into a feature in
-  `rules/` with a replay check, its controls into `game/`'s local input as commands, and its look into its own
+  `rules/` with a replay check, its controls into `LocalInput` as commands, and its look into its own
   view in `look/` (like `TrailView` in `slices/trail/look/`, which paints the trail onto
   `HexGrid`; `HexGrid` itself only draws tiles).
 

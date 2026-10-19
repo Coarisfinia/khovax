@@ -2,7 +2,7 @@ class_name Hex
 extends RefCounted
 ## Hex grid math for the simulation. Tiles are integer axial coordinates (q, r) as Vector2i,
 ## pointy-top. Integers only: where tiles are drawn lives in HexLayout (the board's look), and
-## turning analog input into a direction lives in HexInput (game).
+## turning analog input into a direction lives in HexInput (the controls).
 
 ## How finely Hex.line divides each step, so points along a line stay whole numbers.
 const LINE_SCALE: int = 1_000_000
