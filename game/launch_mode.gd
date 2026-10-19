@@ -7,8 +7,9 @@ extends Node
 
 func _ready() -> void:
 	var options: LaunchOptions = LaunchOptions.parse(OS.get_cmdline_user_args())
-	if not options.problem.is_empty():
-		push_error("launch options: " + options.problem)
+	var problem: String = options.problem
+	if problem.is_empty():
+		problem = options.apply()
+	if not problem.is_empty():
+		push_error("launch options: " + problem)
 		get_tree().quit(1)
-		return
-	options.apply()

@@ -134,7 +134,8 @@ func _check_launched(tree: SceneTree) -> String:
 	var given: int = GameDriver.fixed_seed
 	var given_instance: String = GameDriver.start_instance
 	WorldKeeper.default_path = WorldSave.PATH
-	LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
+	# Without a user folder there's nothing that can fail to apply.
+	var _applied: String = LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
 	if not WorldKeeper.default_path.is_empty():
 		WorldKeeper.default_path = ""
 		return "a launched test world would resume or overwrite the player's own"

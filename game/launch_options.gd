@@ -69,22 +69,27 @@ func is_test_world() -> bool:
 
 ## Sets the options given up for the main scene, before it loads: its driver starts from the seed,
 ## in the instance, and a test world keeps no save; `user://` moves to the folder given. Options
-## not given change nothing.
-func apply() -> void:
+## not given change nothing. Returns why they couldn't be applied, or "": a user folder that can't
+## be created must stop the run before anything is saved.
+func apply() -> String:
 	if not user_dir.is_empty():
-		_redirect_user_dir()
+		var not_redirected: String = _redirect_user_dir()
+		if not not_redirected.is_empty():
+			return not_redirected
 	if seed_value != GameDriver.ROLLED_SEED:
 		GameDriver.fixed_seed = seed_value
 	if not instance.is_empty():
 		GameDriver.start_instance = instance
 	if is_test_world():
 		WorldKeeper.default_path = ""
+	return ""
 
 
 ## Points `user://` at the folder `user_dir` names. Godot reads these settings on every `user://`
 ## path, so nothing read or written before (only the engine's own logs) stays in the default
-## folder; it creates the user folder only at startup, so this creates the new one.
-func _redirect_user_dir() -> void:
+## folder; it creates the user folder only at startup, so this creates the new one. Returns why it
+## couldn't, or "".
+func _redirect_user_dir() -> String:
 	ProjectSettings.set_setting("application/config/use_custom_user_dir", true)
 	ProjectSettings.set_setting(
 		"application/config/custom_user_dir_name",
@@ -92,4 +97,5 @@ func _redirect_user_dir() -> void:
 	)
 	var made: Error = DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
 	if made != OK:
-		push_error("couldn't create the user folder %s: %s" % [OS.get_user_data_dir(), made])
+		return "couldn't create the user folder %s: %s" % [OS.get_user_data_dir(), made]
+	return ""

@@ -33,7 +33,11 @@ func _initialize() -> void:
 		printerr("the runner needs a seed, e.g. -- --seed=0. ", options.problem)
 		quit(1)
 		return
-	options.apply()
+	var not_applied: String = options.apply()
+	if not not_applied.is_empty():
+		printerr("the launch options couldn't be applied: ", not_applied)
+		quit(1)
+		return
 	# The flows boot the playground, which only the tests play (#712), unless they're given another.
 	if GameDriver.start_instance.is_empty():
 		GameDriver.start_instance = InstanceBlueprints.BASIC
