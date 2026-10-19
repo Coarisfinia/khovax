@@ -82,6 +82,8 @@ func apply(result: Gain) -> String:
 		_count_fact("entered", piece)
 	for instance_name: String in result.instances_entered:
 		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name)
+	for answer: String in result.answers_chosen:
+		_count_fact(QuestStep.ANSWERED, answer)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -145,11 +147,11 @@ func _count_fact(condition: String, what: String) -> void:
 
 
 ## Counts one fact (a `condition`, with the species of a domination, the place reached, the piece or
-## instance entered, or the event emitted) toward every quest in the book whose current step asks
-## for it, in id order, so quests finished together are listed in the same order on every machine.
-## A step that reaches its count hands over to the next one (on a step with choices, #573, the one
-## the choice the fact took leads to), and a step that ends the chain, or the last one, finishes
-## the quest.
+## instance entered, the answer chosen, or the event emitted) toward every quest in the book whose
+## current step asks for it, in id order, so quests finished together are listed in the same order
+## on every machine. A step that reaches its count hands over to the next one (on a step with
+## choices, #573, the one the choice the fact took leads to), and a step that ends the chain, or
+## the last one, finishes the quest.
 ## Saved progress that no longer fits the quest (its data changed since) settles at the next fact
 ## of any kind: a step already at its count is complete, and a step past the last one finishes the
 ## quest.
@@ -233,8 +235,8 @@ func _started(id: String) -> bool:
 	return quest_book[id].starts_on == null or quest_progress.has(id) or quests_done.has(id)
 
 
-## Why `result` can't be taken over (an empty species, place, piece or instance, a nameless or
-## negative material, or more than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, place, piece, instance or answer, a nameless
+## or negative material, or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
@@ -249,6 +251,8 @@ func _result_problem(result: Gain) -> String:
 		return "a region piece entered has no id"
 	if result.instances_entered.has(""):
 		return "an instance entered has no name"
+	if result.answers_chosen.has(""):
+		return "an answer chosen has no id"
 	for material: String in result.materials:
 		var count: int = result.materials[material]
 		if material.is_empty() or count < 0 or materials.get(material, 0) + count > MAX_NUMBER:

@@ -96,9 +96,19 @@ static func step_line(step: QuestStep, count: int) -> String:
 			asks = "Go to the " + _words(step.place)
 		"entered":
 			asks = "Enter the " + _words(step.piece if step.instance.is_empty() else step.instance)
+		QuestStep.ANSWERED:
+			asks = _answer_line(step)
 	if step.count > 1:
 		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
 	return asks
+
+
+## What an answered `step` asks (#636): the answer's text to its dialog's speaker, or its id in
+## words when the dialogs weren't read with it.
+static func _answer_line(step: QuestStep) -> String:
+	if step.answer_text.is_empty():
+		return "Answer " + _words(step.answer)
+	return "Tell the %s: \"%s\"" % [step.speaker, step.answer_text]
 
 
 ## An id (a place, a region piece or an instance) as words: they have no player-facing names yet.

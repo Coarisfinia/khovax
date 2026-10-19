@@ -27,6 +27,8 @@ const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
 const ENTER: String = "{\"condition\": \"entered\", \"piece\": \"%s\"}"
 ## A quest step to enter an instance, its blueprint left open (#370).
 const ENTER_INSTANCE: String = "{\"condition\": \"entered\", \"instance\": \"%s\"}"
+## A quest step to choose an answer in a dialog, both ids left open (#636).
+const ANSWERED: String = "{\"condition\": \"answered\", \"dialog\": \"%s\", \"answer\": \"%s\"}"
 ## A quest step with the id b that ends the chain x (#573).
 const STEP_B: String = "{\"id\": \"b\", \"condition\": \"opened\", \"ends\": \"x\"}"
 ## A quest step to open a chest that ends the chain x (#576).
@@ -326,7 +328,8 @@ static func _unrefused(cases: Dictionary[String, String], content: QuestData) ->
 ## its blueprint (#370). Quests with a wrong id, name, step, condition, species, place, piece,
 ## instance or count are refused, with a reason: a reached step without a place, or a place on
 ## another step, too, and the same for an entered step and its piece or instance, which it names
-## one of, never both.
+## one of, never both, and for an answered step and its dialog and answer, which it names both of
+## (#636).
 func _check_quests() -> String:
 	var content: QuestData = QuestContent.load_quests()
 	if not content.problem.is_empty():
@@ -373,6 +376,12 @@ func _check_quests() -> String:
 		quest % ["x", "N", step % "" + ", " + step % ", \"count\": 0"]: "step 1: its count",
 		quest % ["x", "N", step % ", \"count\": 1.5"]: "step 0: its count",
 		quest % ["x", "N", step % ", \"when\": 1"]: "step 0: field when",
+		quest % ["x", "N", "{\"condition\": \"answered\", \"dialog\": \"a\"}"]: (
+			"step 0: its dialog and answer"
+		),
+		quest % ["x", "N", step % ", \"answer\": \"a\""]: "step 0: its dialog and answer",
+		quest % ["x", "N", ANSWERED % ["A Dialog", "a"]]: "step 0: its dialog must",
+		quest % ["x", "N", ANSWERED % ["a", "An Answer"]]: "step 0: its answer must",
 		quest % ["x", "N", "7"]: "step 0: it isn't",
 	}
 	return _unrefused(cases, content)

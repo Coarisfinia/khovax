@@ -41,6 +41,15 @@ func line_index(line_id: String) -> int:
 	return -1
 
 
+## The answer with the id `answer_id`, on whichever line offers it, or null when none has it.
+func answer_of(answer_id: String) -> DialogAnswer:
+	for line: DialogLine in lines:
+		for answer: DialogAnswer in line.answers:
+			if answer.id == answer_id:
+				return answer
+	return null
+
+
 ## The index of the line that follows the one at `index` once the player picks the answer with the
 ## id `answer_id` there ("" on a line without answers), or -1 when the dialog ends there or the line
 ## offers no such answer (on a line without answers, any but "").

@@ -25,7 +25,10 @@ extends RefCounted
 ## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
 ## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
-## starting the side quests waiting on it.
+## starting the side quests waiting on it. Choosing an answer in a dialog finishes this player's
+## quest asking for it, not another player's choice nor another answer, and takes the way on of a
+## choice asking for it (#636); a quest naming a dialog or an answer that no dialog file has is
+## refused, and one that names an existing answer words it as the dialog does.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
 ## A quest with two steps, for the counting: two moss toads, then a chest.
@@ -48,6 +51,14 @@ const ENTER_GLADE: String = (
 const REACH_BEACH: String = (
 	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
 	+ "{\"condition\": \"reached\", \"place\": \"beach\", \"ends\": \"reach_beach\"}]}"
+)
+## The dialog the answered steps ask about (#636).
+const SCOUT: String = "guild_scout_greeting"
+## A quest that asks to promise the scout to look at the glade, in the scout's dialog; its dialog
+## and answer are left open.
+const PROMISE: String = (
+	"{\"id\": \"promise\", \"name\": \"A promise\", \"steps\": [{\"condition\": \"answered\", "
+	+ "\"dialog\": \"%s\", \"answer\": \"%s\", \"ends\": \"promise\"}]}"
 )
 ## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
 const BETRAYAL: String = (
@@ -327,7 +338,9 @@ func _check_finds(
 		result = _check_entered(driver, bus, profile)
 	if result.is_empty():
 		result = _check_listed(list, { "pond_chest": "Open a chest" })
-	return result if not result.is_empty() else _check_entered_glade(driver, bus, profile)
+	if result.is_empty():
+		result = _check_entered_glade(driver, bus, profile)
+	return result if not result.is_empty() else _check_answered(driver, bus, profile)
 
 
 ## A chest counts for this player when they got loot from it, not when only another player did,
@@ -408,6 +421,25 @@ func _check_entered_glade(driver: GameDriver, bus: EventBus, profile: Profile) -
 	_emit(driver, bus, InstanceEntered.new("glade", 1, 0))
 	if not profile.quests_done.has("enter_glade"):
 		return "this player entering the glade didn't finish the quest to enter it"
+	return ""
+
+
+## Promising the scout to look counts for this player when they chose that answer, not when another
+## player did, nor for another answer of the same dialog (#636).
+func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	var promise: QuestDefinition = QuestDefinition.parse(
+		"promise",
+		PROMISE % [SCOUT, "promise_to_look"],
+		{},
+	)
+	profile.quest_book[promise.id] = promise
+	_emit(driver, bus, DialogAnswered.new(SCOUT, "promise_to_look", 9, 1))
+	_emit(driver, bus, DialogAnswered.new(SCOUT, "leave_scout", 1, 0))
+	if not promise.problem.is_empty() or profile.quests_done.has("promise"):
+		return "another player's or another answer counted as the promise: " + promise.problem
+	_emit(driver, bus, DialogAnswered.new(SCOUT, "promise_to_look", 1, 0))
+	if not profile.quests_done.has("promise"):
+		return "this player promising the scout didn't finish the quest asking for it"
 	return ""
 
 
@@ -691,6 +723,38 @@ func _check_emitted() -> String:
 	step_waits = step_waits.replace("\"ends\"", "\"event\": \"took_pond\", \"ends\"")
 	if QuestDefinition.parse("fork", step_waits, {}).problem.is_empty():
 		return "a step waiting on an event wasn't refused"
+	return _check_answered_choice()
+
+
+## A choice taken by an answer (#636): leaving the scout takes the way to a domination, past the
+## chest that asking about the glade leads to, and the tab shows both ways as answers.
+func _check_answered_choice() -> String:
+	var choice: String = "{\"condition\": \"answered\", \"dialog\": \"%s\", " % SCOUT
+	choice += "\"answer\": \"%s\", \"next\": \"%s\"}"
+	var text: String = "{\"id\": \"fork\", \"name\": \"N\", \"steps\": [{\"choices\": "
+	text += "[%s, %s]}, " % [
+		choice % ["ask_about_glade", "won"],
+		choice % ["leave_scout", "lost"],
+	]
+	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\"}, "
+	text += "{\"id\": \"lost\", \"condition\": \"dominated\", \"ends\": \"fork\"}]}"
+	var profile: Profile = Profile.new()
+	profile.quest_book["fork"] = QuestDefinition.parse("fork", text, {})
+	var choosing: Array[String] = ["Now: Answer ask about glade or answer leave scout"]
+	var applied: String = profile.quest_book["fork"].problem
+	if not applied.is_empty() or QuestsTab.quest_lines(profile, "fork") != choosing:
+		return "a choice between answers isn't shown as one: %s %s" % [
+			applied,
+			QuestsTab.quest_lines(profile, "fork"),
+		]
+	var left: Gain = Gain.new()
+	left.answers_chosen = [QuestStep.answer_key(SCOUT, "leave_scout")]
+	applied = profile.apply(left) + profile.apply(_gain([], 1))
+	if not applied.is_empty() or not profile.quests_done.is_empty():
+		return "leaving the scout didn't take the way to a domination: " + applied
+	applied = profile.apply(_gain(["moss_toad"], 0))
+	if not applied.is_empty() or profile.quests_done != ["fork"]:
+		return "a domination didn't end the way leaving the scout took: " + applied
 	return ""
 
 
@@ -845,6 +909,29 @@ func _check_broken_data() -> String:
 	content = _load_written({ "a_good": stranger })
 	if not content.problem.ends_with("its standing's faction must be one that exists"):
 		return "a quest moving the standing with no faction that exists wasn't refused"
+	return _check_dialog_ids()
+
+
+## A quest naming a dialog or an answer that no dialog file has is refused (#636), and one naming
+## the scout's promise reads, worded as the scout's dialog has it.
+func _check_dialog_ids() -> String:
+	var unknown: Dictionary[String, String] = {
+		"no_dialog": PROMISE % ["no_such_dialog", "promise_to_look"],
+		"no_answer": PROMISE % [SCOUT, "no_such_answer"],
+	}
+	for case: String in unknown:
+		var refused: QuestData = _load_written({ "promise": unknown[case] })
+		if not refused.problem.contains("step 0: the dialog"):
+			return "a quest naming %s wasn't refused: %s" % [case, refused.problem]
+	var content: QuestData = _load_written({ "promise": PROMISE % [SCOUT, "promise_to_look"] })
+	var line: String = ""
+	if content.problem.is_empty():
+		line = QuestListView.step_line(content.quests["promise"].steps[0], 0)
+	if line != "Tell the Guild Scout: \"I'll take a look.\"":
+		return "the scout's promise didn't read as the dialog words it: %s %s" % [
+			content.problem,
+			line,
+		]
 	return ""
 
 
