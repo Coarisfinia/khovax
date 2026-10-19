@@ -675,7 +675,7 @@ func _check_factions() -> String:
 		faction.replace("}", ", \"z\": 1}") % [five, five]: "field z",
 	}
 	var refused: String = _factions_refused(cases)
-	return refused if not refused.is_empty() else _check_faction_territory(guild)
+	return refused if not refused.is_empty() else _check_faction_territory(content)
 
 
 ## Why any faction text among `cases` isn't refused with the beginning of the reason it's mapped to,
@@ -688,45 +688,58 @@ func _factions_refused(cases: Dictionary[String, String]) -> String:
 	return ""
 
 
-## The Cartographer's Guild is marked by its symbol and holds the basic instance when a world starts
-## (#637). A faction file without a symbol, with a longer one, or with a territory that isn't a list
-## of instance ids, each once, is refused, and so are two factions holding one instance.
-func _check_faction_territory(guild: Faction) -> String:
+## The Cartographer's Guild is marked by its symbol and holds the glade, where the player starts
+## (#637, #712), when a world starts, and every faction's territory names instance blueprints that
+## exist. A faction file without a symbol, with a longer one, or with a territory that isn't a list
+## of instance ids, each once, is refused, and so are two factions holding one instance or sharing a
+## symbol.
+func _check_faction_territory(content: FactionContent) -> String:
+	var guild: Faction = content.factions["cartographers_guild"]
 	if guild.symbol != "+" or " ".join(guild.territory) != "glade":
-		return "the guild isn't marked + or doesn't hold the basic instance: %s %s" % [
+		return "the guild isn't marked + or doesn't hold the glade: %s %s" % [
 			guild.symbol,
 			guild.territory,
 		]
+	for each: Faction in content.factions.values():
+		for instance_name: String in each.territory:
+			if not InstanceBlueprints.exists(instance_name):
+				return "%s's territory %s isn't an instance blueprint" % [each.id, instance_name]
 	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
 	var symbol: String = "\"symbol\": \"+\", "
 	var territory: String = faction.replace("}", ", \"territory\": %s}")
-	var symbolless: String = faction.replace(symbol, "")
 	var refused: String = _factions_refused({
-		symbolless: "it needs a symbol",
+		faction.replace(symbol, ""): "it needs a symbol",
 		faction.replace(symbol, "\"symbol\": \"+++\", "): "it needs a symbol",
 		territory % "\"basic\"": "its territory must",
 		territory % "[\"Basic\"]": "its territory must",
 		territory % "[\"basic\", \"basic\"]": "its territory must",
 	})
-	return refused if not refused.is_empty() else _check_held_twice(territory % "[\"basic\"]")
+	if not refused.is_empty():
+		return refused
+	var held: String = territory % "[\"basic\"]"
+	var twice: String = _pair_problem(held, held)
+	if not twice.contains("basic is x's territory already"):
+		return "two factions holding one instance gave %s" % twice
+	var shared: String = _pair_problem(held, territory % "[\"glade\"]")
+	if not shared.contains("its symbol + is x's already"):
+		return "two factions sharing a symbol gave %s" % shared
+	return ""
 
 
-## Why two faction files, x and y, both `text` but for their ids, aren't refused for holding the
-## same
-## instance, the basic one, or "".
-func _check_held_twice(text: String) -> String:
+## Why the factions in two faction files, x from `text_x` and y from `text_y` with its id made y,
+## are refused together, or "".
+func _pair_problem(text_x: String, text_y: String) -> String:
 	var directory: String = "user://test_factions/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
-	for id: String in ["x", "y"]:
+	var texts: Dictionary[String, String] = { "x": text_x, "y": text_y.replace("\"x\"", "\"y\"") }
+	for id: String in texts:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(text.replace("\"x\"", "\"%s\"" % id))
+		var _stored: bool = file.store_string(texts[id])
 		file.close()
-	var twice: FactionContent = FactionContent.load_factions(directory)
-	for id: String in ["x", "y"]:
+	var problem: String = FactionContent.load_factions(directory).problem
+	for id: String in texts:
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
-	if not twice.problem.contains("basic is x's territory already"):
-		return "two factions holding one instance gave %s" % twice.problem
-	return ""
+	return problem
 
 
 ## The dialogs load (#618): the guild scout's greeting reads on from its first line to its second,

@@ -207,12 +207,26 @@ func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyV
 	return ""
 
 
+<<<<<< < HEAD
+
+
 ## Why the Survey's held marks (#637) don't follow the holder flags, or "". With every holder flag
 ## cleared, nothing is marked and it says nobody holds the instance the player is in. Once a flag
 ## says the Cartographer's Guild holds it, it's marked and said in words, by symbol and name. Once
 ## the guild holds the first instance next door too, if there is one, that one is marked in the
 ## middle of what shows of it. The world's holder flags are put back after, whichever start it had.
+==  ==  ==  =
+## Why the Survey doesn't mark the basic instance next door, which the Cartographer's Guild holds
+## (#637), with the guild, in the middle of what shows of it, and not the glade, which nobody holds,
+## or doesn't mark the glade too, at its top edge, once a flag says the guild holds it, or doesn't
+## say
+## so in words, by symbol and name, or "". The flag is cleared again after.
+
+
+>>>>>> > df627f5(Refuse two factions sharing a symbol, check territory names blueprints(# 637))
 func _survey_held(driver: GameDriver, survey: SurveyView) -> String:
+
+
 	var kept: Array[String] = _holder_flags(driver.world)
 	for flag: String in kept:
 		driver.world.set_flag(flag, false)
