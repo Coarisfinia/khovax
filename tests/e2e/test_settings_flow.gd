@@ -345,8 +345,8 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 
 
 ## During a fight, a wild monster beside the player, the slots' buttons still show their gear but
-## don't change it, and a line says why; a wild monster enraged anywhere in the instance is a
-## fight too.
+## don't change it, and a line says why; the player's ring sealing a wild monster in, and a wild
+## monster enraged anywhere in the instance, are fights too.
 func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> String:
 	var state: GameState = FlowGame.driver(main).state
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
@@ -368,11 +368,33 @@ func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> Strin
 	fighter.tile = tile
 	if not locked or panel.shown != expected:
 		return "during a fight, the gear changed or no line says why: %s" % [panel.shown]
+	var sealing: String = _gear_locked_by_seal(panel, state, fighter.id)
+	if not sealing.is_empty():
+		return sealing
 	# Back where it stood but enraged (owner, 1+3 on #690): still a fight, wherever it is.
 	wild.enrage(fighter.id, 0)
 	panel.refresh()
 	if not panel.buttons["ward"].disabled:
 		return "an enraged wild monster in the instance isn't a fight"
+	return ""
+
+
+## While the player's ring seals the wild monster `monster_id` in (owner, 1+3 on #690), wherever it
+## stands, the gear stays put; the seal is taken off again afterwards.
+func _gear_locked_by_seal(panel: GearPanel, state: GameState, monster_id: int) -> String:
+	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	if domination == null:
+		return "the instance has no rings to seal a wild monster in"
+	var player_id: int = state.player(panel.driver.input.slot).id
+	var seal: RingSeal = RingSeal.new()
+	seal.monsters.assign([monster_id])
+	domination.seals[player_id] = seal
+	panel.refresh()
+	var locked: bool = panel.buttons["ward"].disabled
+	var _unsealed: bool = domination.seals.erase(player_id)
+	panel.refresh()
+	if not locked:
+		return "the player's ring sealing a wild monster in isn't a fight"
 	return ""
 
 
