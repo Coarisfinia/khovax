@@ -7,6 +7,22 @@ func exists(instance_name: String) -> bool:
 	return InstanceBlueprints.exists(instance_name)
 
 
+## The factions' territory as content data has it (Territory, #637), naming only instances that
+## exist; factions that don't load are an error, and hold nothing then.
+func starting_flags() -> Array[String]:
+	var content: FactionContent = FactionContent.load_factions()
+	if not content.problem.is_empty():
+		push_error("the factions don't load: " + content.problem)
+		return []
+	var flags: Array[String] = Territory.starting_flags(content)
+	for faction: Faction in content.factions.values():
+		for instance_name: String in faction.territory:
+			if not exists(instance_name):
+				push_error("%s's territory %s doesn't exist" % [faction.id, instance_name])
+				flags.erase(Territory.flag(instance_name, faction.id))
+	return flags
+
+
 func variant(instance_name: String, flags: Array[String]) -> String:
 	return InstanceBlueprints.variant(instance_name, flags)
 

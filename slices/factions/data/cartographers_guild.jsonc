@@ -6,6 +6,7 @@
 {
 	"id": "cartographers_guild",
 	"name": "Cartographer's Guild",
+	"symbol": "+", // a compass's cross, which marks its territory (#68)
 	"ranks_up": [
 		"Apprentice Charter",
 		"Wayfinder",
@@ -19,5 +20,7 @@
 		"Uncharted",
 		"Marked Hazard",
 		"Edge of the Chart"
-	]
+	],
+	// The guild's home, the glade, where the player starts (#637, #712).
+	"territory": ["glade"]
 }

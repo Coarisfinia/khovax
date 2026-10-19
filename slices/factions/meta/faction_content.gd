@@ -13,15 +13,35 @@ var factions: Dictionary[String, Faction] = {}
 var problem: String = ""
 
 
-## Every faction file in `directory`, read and checked.
+## Every faction file in `directory`, read and checked, with no instance in two factions' territory
+## and no two factions with one symbol (#637).
 static func load_factions(directory: String = DIR) -> FactionContent:
 	var content: FactionContent = FactionContent.new()
+	var taken: Dictionary[String, String] = {}
 	for file_name: String in DirAccess.get_files_at(directory):
 		if file_name.ends_with(".jsonc"):
 			var text: String = FileAccess.get_file_as_string(directory + file_name)
 			var faction: Faction = Faction.parse(file_name.get_basename(), text)
+			if faction.problem.is_empty():
+				faction.problem = _hold(faction, taken)
 			if not faction.problem.is_empty():
 				content.problem = file_name + ": " + faction.problem
 				return content
 			content.factions[faction.id] = faction
 	return content
+
+
+## Notes `faction`'s territory and symbol in `taken`, each instance and symbol by its faction's id;
+## returns why one is another faction's already, or "": a symbol is the only thing telling two
+## factions' territory apart (#68).
+static func _hold(faction: Faction, taken: Dictionary[String, String]) -> String:
+	for instance_name: String in faction.territory:
+		if taken.has(instance_name):
+			return "%s is %s's territory already" % [instance_name, taken[instance_name]]
+		taken[instance_name] = faction.id
+	# The space keeps symbols apart from instance names, which are ids.
+	var symbol_key: String = "symbol " + faction.symbol
+	if taken.has(symbol_key):
+		return "its symbol %s is %s's already" % [faction.symbol, taken[symbol_key]]
+	taken[symbol_key] = faction.id
+	return ""
