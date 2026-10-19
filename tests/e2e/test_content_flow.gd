@@ -270,7 +270,8 @@ func _check_quest_standings(content: QuestData) -> String:
 
 
 ## Why territory quests (#638) don't read, or "": every one names an instance that exists and a
-## faction, filed by the code a command hands it over by, while the quests that aren't territory
+## faction, filed by the code a command hands it over by, and starts once the player enters that
+## instance (the ground rules in AGENTS.md), while the quests that aren't territory
 ## quests name none; a territory that isn't an object, has another field, or doesn't name an
 ## instance and a faction by their ids is refused.
 func _check_quest_territories(content: QuestData) -> String:
@@ -282,6 +283,9 @@ func _check_quest_territories(content: QuestData) -> String:
 		var by: int = Territory.code(territory.instance, territory.faction)
 		if not InstanceBlueprints.exists(territory.instance) or not content.handovers.has(by):
 			return "%s hands over %s, which doesn't exist or isn't filed" % [id, territory.instance]
+		var start: QuestStep = content.quests[id].starts_on
+		if start == null or start.condition != "entered" or start.instance != territory.instance:
+			return "%s doesn't start once the player enters %s" % [id, territory.instance]
 		handed += 1
 	if handed == 0 or content.quests["first_domination"].territory != null:
 		return "no quest hands a territory over, or the first domination does"

@@ -252,6 +252,9 @@ static func _territory() -> TerritoryFeature:
 	var content: QuestData = QuestContent.load_quests()
 	if not content.problem.is_empty():
 		push_error("the quests don't load: " + content.problem)
+	for handed: PackedStringArray in content.handovers.values():
+		if not exists(handed[0]):
+			push_error("a territory quest hands over %s, which doesn't exist" % handed[0])
 	return TerritoryFeature.new(content.handovers)
 
 
