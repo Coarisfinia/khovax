@@ -17,10 +17,14 @@ for file in "$folder"/*; do
     failed=1
     continue
   fi
-  if [ "$(sed -n '1p;4p' "$file" | paste -sd' ' -)" != '--- ---' ] \
-    || ! sed -n 2p "$file" | grep -qx "issue: ${BASH_REMATCH[1]}" \
-    || ! sed -n 3p "$file" | grep -qxE 'pr: [0-9]+'; then
-    echo "::error file=${file}::its frontmatter is its issue (the file's number) and its pr, nothing else"
+  # No pr (#758): the squash commit that added the file names it (git log --diff-filter=A).
+  if [ "$(sed -n '1p;3p' "$file" | paste -sd' ' -)" != '--- ---' ] \
+    || ! sed -n 2p "$file" | grep -qx "issue: ${BASH_REMATCH[1]}"; then
+    echo "::error file=${file}::its frontmatter is its issue (the file's number), nothing else (no pr: git log finds it)"
+    failed=1
+  fi
+  if grep -q '/pull/[0-9]' "$file"; then
+    echo "::error file=${file}::it links its issue, not its pull request (git log finds that)"
     failed=1
   fi
 done
