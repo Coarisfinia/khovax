@@ -13,8 +13,8 @@ The glade's start piece (#57), where the world starts (#712): a disc of radius 5
 . . . . . 1 3 . . . .
  ~ . . . 2 4 . . 🌲 .
   ~ s s . . . . . .
-   ~ ~ w s s . . o
-    ~ ~ 📦 s s . o
+   ~ ~ 📦 s s . . o
+    ~ ~ w s s . o
      ~ ~ ~ 📦 s o
 ```
 

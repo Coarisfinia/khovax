@@ -879,11 +879,15 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 	return ""
 
 
-## The glade's region pieces, read straight from their files.
+## The glade's region pieces, read straight from their files, its start piece first.
 func _glade_pieces() -> Array[Region]:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
+	var files: Array[String] = [InstanceBlueprints.START_PIECE]
+	for file: String in DirAccess.get_files_at(folder):
+		if file.ends_with(".md") and file != InstanceBlueprints.START_PIECE:
+			files.append(file)
 	var pieces: Array[Region] = []
-	for file: String in ["start.md", "pond.md", "thicket.md"]:
+	for file: String in files:
 		pieces.append(RegionDocument.parse(FileAccess.get_file_as_string(folder + file)))
 	return pieces
 

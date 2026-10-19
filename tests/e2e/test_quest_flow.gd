@@ -383,17 +383,22 @@ func _check_entered(driver: GameDriver, bus: EventBus, profile: Profile) -> Stri
 	return ""
 
 
-## The quest to enter the glade is marked on the basic instance's exit leading there, and counts
+## The quest to enter the glade is marked on the forest's nearest exit leading there, and counts
 ## for this player when they entered the glade, not when another player did, nor for another
 ## instance, nor for a piece of the same name.
 func _check_entered_glade(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var glade: QuestDefinition = QuestDefinition.parse("enter_glade", ENTER_GLADE, {})
 	profile.quest_book[glade.id] = glade
-	var basic: GameState = InstanceBlueprints.create(InstanceBlueprints.BASIC, 3, 1)
-	var exit: Vector3i = basic.region.exits[basic.region.exit_blueprints.find("glade")]
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(basic, profile, 0)
-	if targets.get("enter_glade", -Vector2i.ONE) != Vector2i(exit.x, exit.y):
-		return "the quest to enter the glade isn't marked on the exit leading there"
+	var forest: GameState = InstanceBlueprints.create(InstanceBlueprints.FOREST, 3, 1)
+	var ways: Array[Vector2i] = []
+	for i: int in forest.region.exits.size():
+		if forest.region.exit_blueprints[i] == "glade":
+			ways.append(Vector2i(forest.region.exits[i].x, forest.region.exits[i].y))
+	var from: Vector2i = forest.player(0).tile
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(forest, profile, 0)
+	var target: Vector2i = targets.get("enter_glade", -Vector2i.ONE)
+	if not ways.has(target) or Hex.distance(target, from) != _nearest(ways, from):
+		return "the quest to enter the glade isn't marked on the nearest exit leading there"
 	_emit(driver, bus, InstanceEntered.new("glade", 9, 1))
 	_emit(driver, bus, InstanceEntered.new("basic", 1, 0))
 	_emit(driver, bus, PieceEntered.new("glade", 1, 0))

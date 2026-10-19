@@ -230,9 +230,10 @@ func _check_walk_through() -> String:
 ## step out of it, and only players color the trail. The player walks through it, and it follows
 ## them out through the exit into the glade, while the one in the forest goes.
 func _check_companions() -> String:
+	# A seed whose companion's first roll keeps it beside its player: it may step on the first tick.
 	var world: World = World.new(
 		BlueprintSource.new(),
-		3,
+		0,
 		InstanceBlueprints.FOREST,
 		2,
 		["storm_finch"],
