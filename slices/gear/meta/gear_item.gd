@@ -1,11 +1,14 @@
 class_name GearItem
 extends RefCounted
 ## A piece of gear (#690), read from content data (the gear slice's data/, #72, #412): a
-## player-facing name, the slot it goes into (GearSlots.SLOTS) and its rarity (#291). It has no
-## effect yet: each slot's comes with its own issue.
+## player-facing name, the slot it goes into (GearSlots.SLOTS), its rarity (#291) and, for spikes
+## in the trap slot, their damage (SpikesFeature, #692). The other slots' effects come with their
+## own issues.
 
 ## A gear file's fields, as its schema (slices/gear/data/gear.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "slot", "rarity"]
+const FIELDS: Array[String] = ["id", "name", "slot", "rarity", "damage"]
+## The slot whose gear, spikes, has damage (#692).
+const TRAP: String = "trap"
 ## The rarities (#291), lowest to highest, then bound for uniques and artifacts.
 const RARITIES: Array[String] = ["loose", "knotted", "warded", "sealed", "unbroken", "bound"]
 
@@ -16,6 +19,9 @@ var name: String = ""
 var slot: String = ""
 ## Its rarity, one of RARITIES.
 var rarity: String = ""
+## The damage spikes deal each time they hurt a wild monster pushing on the ring (#692), a whole
+## amount; 0 for gear of another slot.
+var damage: int = 0
 ## Why the gear couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -32,6 +38,10 @@ static func parse(file_id: String, text: String) -> GearItem:
 	item.name = Content.text_of(data.get("name"))
 	item.slot = Content.text_of(data.get("slot"))
 	item.rarity = Content.text_of(data.get("rarity"))
+	item.damage = Content.amount(data.get("damage"))
+	if data.has("damage") and item.damage == 0:
+		item.problem = "its damage must be a whole number from 1 to %d" % Fixed.MAX_AMOUNT
+		return item
 	item.problem = Content.unknown_field(data, FIELDS)
 	if item.problem.is_empty():
 		item.problem = item._check(file_id)
@@ -53,4 +63,6 @@ func _check(file_id: String) -> String:
 		return "its slot must be one of %s" % [GearSlots.SLOTS]
 	if not RARITIES.has(rarity):
 		return "its rarity must be one of %s" % [RARITIES]
+	if (damage > 0) != (slot == TRAP):
+		return "spikes, in the trap slot, need damage, and no other gear has any"
 	return ""

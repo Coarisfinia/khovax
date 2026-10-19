@@ -605,13 +605,13 @@ func _check_replay_round_trip() -> String:
 
 ## Replays from before commands had a special attack (#410, format 3), a totem (#423, format 4), a
 ## swap (#55, format 7), a dialog answer (#635, format 8), a territory handed over (#638, format
-## 9) or a revive item (#656, format 11) read with none fired, placed, swapped, answered, handed
-## over
-## or used, as `recorded` has none, and play back the same. Before format 8 they name each slot's
+## 9), a revive item (#656, format 11) or a trap (#692, format 12) read with none fired, placed,
+## swapped, answered, handed over, used or equipped, as `recorded` has none, and play back the same.
+## Before format 8 they name each slot's
 ## companion alone, which becomes all the slot carries, and before format 11 the species alone,
 ## which get the stand-in short ids of their places (#700), as `recorded`'s are.
 func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
-	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5, 8: 6, 9: 7, 10: 8, 11: 8 }
+	var counts: Dictionary[int, int] = { 3: 1, 4: 2, 7: 5, 8: 6, 9: 7, 10: 8, 11: 8, 12: 9 }
 	for older_format: int in counts:
 		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 		var kept: Array[int] = []

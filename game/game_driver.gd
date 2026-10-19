@@ -155,6 +155,7 @@ func advance(delta: float) -> void:
 ## Runs the next tick if every player's command for it is known; returns whether it ran.
 func _step() -> bool:
 	var tick: int = world.tick + 1
+	send_gear()
 	for source: CommandSource in sources:
 		source.poll(schedule, tick, state)
 	if not schedule.is_complete(tick):
@@ -176,6 +177,15 @@ func _step() -> bool:
 	events.append_array(world.events)
 	announce(world.tick, events)
 	return true
+
+
+## Hands the gear in this machine's player's trap slot to their input, which sends it in their
+## commands (#692): their profile changes outside the simulation, so it reaches it this way.
+func send_gear() -> void:
+	if input != null and holder != null and holder.keeper != null:
+		var equipped: Dictionary[String, String] = holder.keeper.profile.gear.equipped
+		var trap_id: String = equipped.get(GearItem.TRAP, "")
+		input.trap = SpikesFeature.code_of(trap_id)
 
 
 ## The blueprint name of the instance this machine's player is in, or of the starting one before

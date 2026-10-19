@@ -28,4 +28,5 @@ const TYPE_EFFECTIVENESS: int = 21
 const DIALOGS: int = 22
 const TERRITORY: int = 23
 const REVIVE_ITEMS: int = 24
+const SPIKES: int = 25
 const NPCS: int = 26
