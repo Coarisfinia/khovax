@@ -30,28 +30,28 @@ const SAVE_PATH: String = "user://test_quest_profile.json"
 const TWO_STEPS: String = (
 	"{\"id\": \"toads_then_chest\", \"name\": \"Two toads, then a chest\", \"steps\": ["
 	+ "{\"condition\": \"dominated\", \"species\": \"moss_toad\", \"count\": 2}, "
-	+ "{\"condition\": \"opened\"}]}"
+	+ "{\"condition\": \"opened\", \"ends\": \"toads_then_chest\"}]}"
 )
 ## A quest that asks to enter the glade's thicket.
 const ENTER_THICKET: String = (
 	"{\"id\": \"enter_thicket\", \"name\": \"Into the thicket\", \"steps\": ["
-	+ "{\"condition\": \"entered\", \"piece\": \"thicket\"}]}"
+	+ "{\"condition\": \"entered\", \"piece\": \"thicket\", \"ends\": \"enter_thicket\"}]}"
 )
 ## A quest that asks to enter the glade.
 const ENTER_GLADE: String = (
 	"{\"id\": \"enter_glade\", \"name\": \"Into the glade\", \"steps\": ["
-	+ "{\"condition\": \"entered\", \"instance\": \"glade\"}]}"
+	+ "{\"condition\": \"entered\", \"instance\": \"glade\", \"ends\": \"enter_glade\"}]}"
 )
 ## A quest that asks to reach the beach.
 const REACH_BEACH: String = (
 	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
-	+ "{\"condition\": \"reached\", \"place\": \"beach\"}]}"
+	+ "{\"condition\": \"reached\", \"place\": \"beach\", \"ends\": \"reach_beach\"}]}"
 )
 ## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
 const BETRAYAL: String = (
 	"{\"id\": \"betrayal\", \"name\": \"Betray the guild\", "
 	+ "\"standing\": {\"faction\": \"cartographers_guild\", \"change\": -10}, "
-	+ "\"steps\": [{\"condition\": \"opened\"}]}"
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"betrayal\"}]}"
 )
 ## A quest's standing with a faction that doesn't exist.
 const STRANGER_STANDING: String = "\"standing\": {\"faction\": \"strangers\", \"change\": 1}"
@@ -210,7 +210,7 @@ func _check_marked_monster(
 ## A quest asking for a species is marked only when one of that species is here.
 func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profile) -> String:
 	var text: String = "{\"id\": \"absent\", \"name\": \"Absent\", \"steps\": "
-	text += "[{\"condition\": \"dominated\", \"species\": \"storm_finch\"}]}"
+	text += "[{\"condition\": \"dominated\", \"species\": \"storm_finch\", \"ends\": \"absent\"}]}"
 	var known: Dictionary[String, Species] = SpeciesContent.load_species().species
 	var absent: QuestDefinition = QuestDefinition.parse("absent", text, known)
 	profile.quest_book[absent.id] = absent
@@ -336,7 +336,7 @@ func _check_chests(
 	list: QuestListView,
 ) -> String:
 	var text: String = "{\"id\": \"open_one\", \"name\": \"Open a chest\", "
-	text += "\"steps\": [{\"condition\": \"opened\"}]}"
+	text += "\"steps\": [{\"condition\": \"opened\", \"ends\": \"open_one\"}]}"
 	var chest: QuestDefinition = QuestDefinition.parse("open_one", text, {})
 	profile.quest_book[chest.id] = chest
 	var listed: String = _check_listed(list, { "open_one": "Open a chest" })
@@ -547,7 +547,8 @@ func _check_side_quest() -> String:
 	var text: String = "{\"id\": \"in_one\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var enter: String = "{\"condition\": \"entered\", \"piece\": \"pond\"}"
 	var at_once: Profile = Profile.new()
-	at_once.quest_book["in_one"] = QuestDefinition.parse("in_one", text % [enter, enter], {})
+	var ending: String = enter.replace("}", ", \"ends\": \"in_one\"}")
+	at_once.quest_book["in_one"] = QuestDefinition.parse("in_one", text % [enter, ending], {})
 	applied = at_once.apply(_entering("pond"))
 	if not applied.is_empty() or at_once.quests_done != ["in_one"]:
 		return "entering the pond didn't both start and finish a side quest asking for it"
@@ -751,10 +752,10 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 ## fact of any kind.
 func _check_settled() -> String:
 	var any_domination: String = "{\"id\": \"%s\", \"name\": \"N\", "
-	any_domination += "\"steps\": [{\"condition\": \"dominated\"}]}"
+	any_domination += "\"steps\": [{\"condition\": \"dominated\", \"ends\": \"%s\"}]}"
 	var profile: Profile = Profile.new()
 	for id: String in ["zz_last", "aa_first"]:
-		profile.quest_book[id] = QuestDefinition.parse(id, any_domination % id, {})
+		profile.quest_book[id] = QuestDefinition.parse(id, any_domination % [id, id], {})
 	var applied: String = profile.apply(_gain(["moss_toad"], 0))
 	var sorted: Array[String] = ["aa_first", "zz_last"]
 	if not applied.is_empty() or profile.quests_done != sorted:
@@ -775,7 +776,7 @@ func _check_settled() -> String:
 ## and so does a quest moving the standing with a faction that doesn't exist (#532).
 func _check_broken_data() -> String:
 	var good: String = "{\"id\": \"a_good\", \"name\": \"N\", "
-	good += "\"steps\": [{\"condition\": \"opened\"}]}"
+	good += "\"steps\": [{\"condition\": \"opened\", \"ends\": \"a_good\"}]}"
 	var content: QuestData = _load_written({
 		"a_good": good,
 		"b_broken": "{\"id\": \"b_broken\", \"name\": \"N\", \"steps\": []}",

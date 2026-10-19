@@ -2,10 +2,9 @@ class_name QuestPaths
 extends RefCounted
 ## Checks that every path through a quest chain reaches an end (#576): from its first step, through
 ## every choice, no path stops at a step that isn't an end, and none gets stuck in a loop without a
-## way out. Paths may end differently. In a branching quest only a step tagged as its chain's end
-## ends it (#569); a quest without choices is one path, which its last step ends, as before (#573).
-## Choices that lead to a step that doesn't exist are refused before this, in
-## QuestDefinition._check_links.
+## way out. Paths may end differently, but only at a step tagged as its chain's end, in every quest,
+## a linear one included (owner, #576: explicitly where the quest ends). Choices that lead to a
+## step that doesn't exist are refused before this, in QuestDefinition._check_links.
 
 
 ## Why a path through `quest`'s steps never reaches an end, or "": the first step reachable from
@@ -49,22 +48,14 @@ static func _finishing(quest: QuestDefinition) -> Array[bool]:
 
 
 ## The indices of the steps the step at `index` can lead to, past the last step when it ends the
-## chain, or none when a path stops there without an end: a branching quest's last step, untagged.
+## chain, or none when a path stops there without an end: the last step, untagged.
 static func _next(quest: QuestDefinition, index: int) -> Array[int]:
 	var step: QuestStep = quest.steps[index]
 	var after: Array[int] = []
 	if not step.ends.is_empty():
 		after.append(quest.steps.size())
-	elif step.choices.is_empty() and (index + 1 < quest.steps.size() or not _branches(quest)):
+	elif step.choices.is_empty() and index + 1 < quest.steps.size():
 		after.append(index + 1)
 	for choice: QuestStep in step.choices:
 		after.append(quest.index_of(choice.next))
 	return after
-
-
-## Whether any of `quest`'s steps offers choices.
-static func _branches(quest: QuestDefinition) -> bool:
-	for step: QuestStep in quest.steps:
-		if not step.choices.is_empty():
-			return true
-	return false

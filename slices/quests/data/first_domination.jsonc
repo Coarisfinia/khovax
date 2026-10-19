@@ -5,5 +5,8 @@
 	"id": "first_domination",
 	"name": "Dominate your first monster",
 	"standing": { "faction": "cartographers_guild", "change": 1 },
-	"steps": [{ "condition": "reached", "place": "beach" }, { "condition": "dominated" }]
+	"steps": [
+		{ "condition": "reached", "place": "beach" },
+		{ "condition": "dominated", "ends": "first_domination" }
+	]
 }

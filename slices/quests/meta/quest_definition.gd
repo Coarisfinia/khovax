@@ -4,8 +4,8 @@ extends RefCounted
 ## player-facing name and a list of steps, each one condition met a number of times, or a choice
 ## between ways on. A quest is one quest chain (#573): its steps follow each other in the file's
 ## order, except where a step's choices lead to the steps they name, and it ends after a step tagged
-## as its chain's end, or after its last step. A quest without choices is one path from its first
-## step to its last; in one with choices, every path must reach a tagged end (#576, QuestPaths).
+## as its chain's end. A quest without choices is one path from its first step to its last, which
+## is tagged as the end; in every quest, every path must reach a tagged end (#576, QuestPaths).
 ## Each player's progress through it lives in their profile
 ## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
 ## player enters the area it names; every other quest is open from the start. Finishing a quest,

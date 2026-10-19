@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/quests/data/quests.schema.json",
 	"title": "Quest",
-	"description": "A quest (#184), one quest chain (#573): a player-facing name and its steps, each one condition met a number of times, or a choice between ways on. The steps follow each other in the file's order, except where a step's choices lead to the steps they name, and the quest ends after a step tagged as its chain's end, or after its last step. One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
+	"description": "A quest (#184), one quest chain (#573): a player-facing name and its steps, each one condition met a number of times, or a choice between ways on. The steps follow each other in the file's order, except where a step's choices lead to the steps they name, and the quest ends after a step tagged as its chain's end, which every path must reach (#576). One file per quest, named after its id. Each player's progress is kept in their profile by the quest's id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "name", "steps"],
@@ -130,7 +130,7 @@
 						}
 					},
 					"ends": {
-						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished. In a quest with choices, every path must reach a step tagged so, which the content check walks (#576).",
+						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished. Every path through every quest, a linear one included, must reach a step tagged so, which the content check walks (#576).",
 						"$ref": "#/$defs/id"
 					}
 				}

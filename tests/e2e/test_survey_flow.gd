@@ -197,7 +197,7 @@ func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyV
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
 func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> String:
 	var text: String = "{\"id\": \"survey_any\", \"name\": \"Any\", "
-	text += "\"steps\": [{\"condition\": \"dominated\"}]}"
+	text += "\"steps\": [{\"condition\": \"dominated\", \"ends\": \"survey_any\"}]}"
 	profile.quest_book["survey_any"] = QuestDefinition.parse("survey_any", text, {})
 	survey.show_state()
 	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(driver.state, profile, 0)
