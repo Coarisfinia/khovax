@@ -136,8 +136,6 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_species()
 	if result.is_empty():
-		result = _check_relieved()
-	if result.is_empty():
 		result = await _check_view(tree)
 	if result.is_empty():
 		result = await _check_saved(tree)
@@ -1636,7 +1634,8 @@ func _check_species() -> String:
 	events.append_array(_settle(state))
 	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
-	return _check_wounded()
+	var wounded: String = _check_wounded()
+	return wounded if not wounded.is_empty() else _check_relieved()
 
 
 ## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never
