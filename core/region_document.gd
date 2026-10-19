@@ -131,7 +131,8 @@ static func _unexplained(rows: Array[String], legend: Dictionary[String, String]
 		for column: int in row.length():
 			var symbol: String = row[column]
 			var meaning: String = legend.get(symbol, "")
-			var explained: bool = BUILT_IN.has(meaning) or not _line(meaning, Vector2i.ZERO).is_empty()
+			var explained: bool = (BUILT_IN.has(meaning)
+					or not _line(meaning, Vector2i.ZERO).is_empty())
 			if symbol != " " and not explained:
 				return symbol
 	return ""

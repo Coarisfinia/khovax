@@ -37,6 +37,8 @@ const SEAM_WIDTH: int = 3
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
 const WATER: Vector2i = Vector2i(0, 1)
+## The legend lines every test region document starts with: player 1's start and ground (#711).
+const BASE_LEGEND: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n"
 ## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
 const CROWN_KIND: int = 250
 ## The feature id _check_store_kept keeps its world store entry under: one no feature has.
@@ -830,8 +832,7 @@ func _moving(direction: int) -> Array[Command]:
 ## have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
-	var base: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n"
-	var legend: String = base + "- `🔗`: joins another piece to the west\n"
+	var legend: String = BASE_LEGEND + "- `🔗`: joins another piece to the west\n"
 	legend += "- `🚪`: exit to the east, to glade\n- `🐦`: a wild monster, always storm_finch\n"
 	legend += "- `🌲`: forest\n"
 	legend += "- `💧`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
@@ -852,6 +853,13 @@ func _check_documents() -> String:
 	expected = expected and _turned_and_overridden(region, plain)
 	if not region.problem.is_empty() or not expected:
 		return "a region document didn't read as drawn: %s" % region.problem
+	return _check_refusals(tiles)
+
+
+## A grid without a single middle, a narrow or unexplained symbol, a clause the legend doesn't know,
+## a turn past five sixths or a place without an id is refused; the glade's thicket has forest.
+func _check_refusals(tiles: String) -> String:
+	var base: String = BASE_LEGEND
 	var refusals: Dictionary[String, String] = {
 		tiles % ["🟫🟫\n🟫🟫", base]: "the tiles need an odd",
 		tiles % ["🔴z🟫", base + "- `z`: forest"]: "a tile is one wide emoji, never `z`",
@@ -878,6 +886,7 @@ func _check_documents() -> String:
 		if not problem.begins_with(refusals[text]):
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
 	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
+	var forest: int = TileKinds.number_of("forest")
 	if not RegionDocument.parse(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
 	return _check_kind_and_place(tiles)
