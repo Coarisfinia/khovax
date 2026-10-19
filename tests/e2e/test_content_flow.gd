@@ -396,7 +396,8 @@ func _check_quests() -> String:
 			or any_domination.quarry.species != null
 			or any_domination.count != 1):
 		return "the first domination isn't one domination of any species"
-	var toad: Species = toad_step.quarry.species if toad_step.quarry.species != null else Species.new()
+	var toad: Species = toad_step.quarry.species
+	toad = toad if toad != null else Species.new()
 	if toad.id != "moss_toad" or toad.name != "Ombulumo" or toad_step.count != 3:
 		return "the toads' quest isn't three moss toads"
 	if not _check_named_steps(content).is_empty():

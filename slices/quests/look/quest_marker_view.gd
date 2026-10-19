@@ -95,7 +95,8 @@ static func targets_of(
 
 
 ## The tiles `step` could be met at in `state`: wild monsters of its species, or its quest target
-## (#625), that aren't hiding, in id order, the closed chests, the tiles of its place, in the legend's order, the tiles of
+## (#625), that aren't hiding, in id order, the closed chests, the tiles of its place, in the
+## legend's order, the tiles of
 ## its piece, or the exits leading to its instance.
 static func _candidates(state: GameState, step: QuestStep) -> Array[Vector2i]:
 	if step.condition == "entered":

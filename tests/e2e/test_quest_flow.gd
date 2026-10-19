@@ -125,8 +125,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_branching()
 	if result.is_empty():
 		result = _check_obtained()
-	if result.is_empty():
-		result = _check_target()
+	result = result if not result.is_empty() else _check_target()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
