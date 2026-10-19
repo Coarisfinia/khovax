@@ -76,6 +76,17 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _damage.erase(removed_id)
 
 
+## The damage a follower has taken (#716), so it arrives next door as hurt as it left.
+func carry_out(_state: GameState, entity_id: int) -> Dictionary:
+	if not _damage.has(entity_id):
+		return {}
+	return { "damage": _damage[entity_id] }
+
+
+func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
+	_damage[arrived.id] = carried["damage"]
+
+
 ## The HP `entity_id` has left in `state`.
 func hp_of(state: GameState, entity_id: int) -> int:
 	var taken: int = _damage.get(entity_id, 0)

@@ -67,6 +67,17 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _waits.erase(removed_id)
 
 
+## A companion's wait before its next strike (#716): walking through an exit doesn't reset it.
+func carry_out(_state: GameState, entity_id: int) -> Dictionary:
+	if not _waits.has(entity_id):
+		return {}
+	return { "wait": _waits[entity_id] }
+
+
+func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
+	_waits[arrived.id] = carried["wait"]
+
+
 func hash_values() -> Array[int]:
 	var flat: Array[int] = _flat()
 	var values: Array[int] = [flat.size()]

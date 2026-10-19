@@ -7,8 +7,9 @@ extends Feature
 ## next to them, as an entity no player
 ## controls: players are the entities with a slot, which walk by commands, draw the trail, take
 ## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
-## goes when its player leaves the instance (through an exit, the same tick: the feature steps
-## last) or brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
+## follows its player (#716): when they take an exit, the world moves it along with them, keeping
+## its rest, its HP and its wait (`carry_out`), so it's never left behind. It goes when its player
+## brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
 ## something), it goes and joins them afresh beside them. One at 0 HP faints: it goes back to its
 ## player (`send_home`, #456), and the first monster they carry that hasn't fainted, in their
 ## carried order, is chosen in its place at once (#597), so it joins them the next tick. A fainted
@@ -66,24 +67,17 @@ func start(state: GameState) -> void:
 	_rng = Rng.new(state.rng_seed, id())
 
 
-## Sends off the companions whose player left, brings another or lost them, or that fainted
-## elsewhere, chooses another for every player whose companion fainted, lets every player who
-## brings one that hasn't fainted and has none here be joined by it, then lets each companion roam,
-## in id order.
+## Sends off the companions whose player brings another or lost them, or that fainted, chooses
+## another for every player whose companion fainted, lets every player who brings one that hasn't
+## fainted and has none here be joined by it, then lets each companion roam, in id order. One whose
+## player takes an exit this tick stays: the world moves it with them (`followers_of`).
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
-	var leaving: Array[int] = []
-	for event: RefCounted in state.events:
-		if event is ExitTaken:
-			leaving.append((event as ExitTaken).slot)
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
-		if leaving.has(owners[companion_id]):
-			player = null
 		var tile: Vector2i = state.entity(companion_id).tile
 		var gone: bool = player == null or Hex.distance(tile, player.tile) > LOST_DISTANCE
 		var species: String = _species[companion_id]
-		# One left behind in an instance (#716) may have fainted elsewhere since.
 		gone = gone or CompanionParty.has_fainted(state, owners[companion_id], species)
 		if gone or CompanionParty.companion(state, player.slot) != species:
 			state.remove_entity(companion_id)
@@ -143,6 +137,29 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = owners.erase(removed_id)
 	_dropped = _species.erase(removed_id)
 	_dropped = _rest.erase(removed_id)
+
+
+## The companion of the player in `slot`, which goes where they go (#716).
+func followers_of(_state: GameState, slot: int) -> Array[int]:
+	var following: Array[int] = []
+	if companion_of(slot) != 0:
+		following.append(companion_of(slot))
+	return following
+
+
+## The companion `entity_id`'s slot, species and rest, to walk on with them next door (#716).
+func carry_out(_state: GameState, entity_id: int) -> Dictionary:
+	if not owners.has(entity_id):
+		return {}
+	return { "slot": owners[entity_id], "species": _species[entity_id], "rest": _rest[entity_id] }
+
+
+## Makes `arrived` the companion `carried` describes, walking like the one that left (#716).
+func carry_in(state: GameState, arrived: Entity, carried: Dictionary) -> void:
+	owners[arrived.id] = carried["slot"]
+	_species[arrived.id] = carried["species"]
+	_rest[arrived.id] = carried["rest"]
+	(state.feature(Features.MOVEMENT) as MovementFeature).add_walk(arrived)
 
 
 ## Every companion's entity id, in id order.

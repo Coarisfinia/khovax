@@ -42,6 +42,28 @@ func entity_removed(_state: GameState, _id: int) -> void:
 	return
 
 
+## The entities in `state` that follow the player in `slot` (#716), like their companion: when the
+## player takes an exit, the World moves these along with them, as new entities beside them in the
+## instance it leads to, carrying each feature's data on them (`carry_out`, `carry_in`). None by
+## default.
+func followers_of(_state: GameState, _slot: int) -> Array[int]:
+	var none: Array[int] = []
+	return none
+
+
+## The feature's data on `entity_id`, a follower about to leave `state` with its player (#716), for
+## `carry_in` to restore on the entity it becomes next door: whole numbers and ids only, empty when
+## the feature keeps nothing on it. The World never reads it.
+func carry_out(_state: GameState, _entity_id: int) -> Dictionary:
+	return {}
+
+
+## Restores on `arrived`, the entity a follower became in `state`, what this feature's `carry_out`
+## gave for it (#716), after it's added (so after `entity_added`).
+func carry_in(_state: GameState, _arrived: Entity, _carried: Dictionary) -> void:
+	return
+
+
 ## Called when a rule changed a tile's kind in place (#530, GameState.change_tile), also while the
 ## feature is off: work derived from the region (sight, cached ground) is worked out again here, at
 ## once, so it never lags behind the region, also in a save made after the change.
