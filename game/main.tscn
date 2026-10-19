@@ -42,6 +42,7 @@
 [ext_resource type="Script" path="res://slices/health/ui/respawn_button.gd" id="38_respawn_button"]
 [ext_resource type="Script" path="res://slices/companions/ui/roster_hud.gd" id="41_roster"]
 [ext_resource type="Script" path="res://slices/harvest/look/harvest_view.gd" id="42_harvest"]
+[ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -256,6 +257,9 @@ mouse_filter = 2
 script = ExtResource("41_roster")
 driver = NodePath("../../Driver")
 survey = NodePath("../../SurveyChoice")
+
+[node name="DialogScreen" parent="Hud" node_paths=PackedStringArray("input") instance=ExtResource("43_dialog")]
+input = NodePath("../../LocalInput")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
 layout_mode = 3

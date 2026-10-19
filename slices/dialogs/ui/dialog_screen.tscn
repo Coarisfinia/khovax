@@ -1,0 +1,32 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://slices/dialogs/ui/dialog_screen.gd" id="1_screen"]
+
+[node name="DialogScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_screen")
+
+[node name="Card" type="PanelContainer" parent="."]
+visible = false
+modulate = Color(1, 1, 1, 0)
+layout_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Card"]
+layout_mode = 2
+
+[node name="Speaker" type="Label" parent="Card/Rows"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Line" type="Label" parent="Card/Rows"]
+layout_mode = 2
+autowrap_mode = 3
+
+[node name="Choices" type="VBoxContainer" parent="Card/Rows"]
+layout_mode = 2

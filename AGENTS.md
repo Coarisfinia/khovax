@@ -371,6 +371,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Godot rewrites `project.godot` in its own form** whenever it runs: its own order, no comments,
   and settings equal to their default left out (four warnings are errors by default). Keep the file
   in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
+  It overrides `ui_accept` to add a controller's A (#635): Godot's built-in one has keys only, so
+  without it no controller could press a focused button.
 - **The headless renderer is a dummy**: a MultiMesh's instance transforms can't be read back, so
   code that tests need to inspect keeps its own copy of what it gave the renderer.
 - **The simulation is deterministic**: see "Architecture" above. No Godot physics in gameplay.

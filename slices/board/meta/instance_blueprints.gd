@@ -128,6 +128,7 @@ static func create(
 	# After the specials, whose strikes fell the wild monsters it drops materials for.
 	ordered.append(_harvest(instance_name))
 	ordered.append(_health(species))
+	ordered.append(_dialogs())
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -236,6 +237,14 @@ static func _companions(content: SpeciesData) -> CompanionFeature:
 ## The health feature (#455) with every species' HP, from the species `content`, for companions.
 static func _health(content: SpeciesData) -> HealthFeature:
 	return HealthFeature.new(_max_hps(content))
+
+
+## The dialog feature (#635) with every dialog's answers, by code, from the dialogs' content data.
+static func _dialogs() -> DialogFeature:
+	var content: DialogContent = DialogContent.load_dialogs()
+	if not content.problem.is_empty():
+		push_error("the dialogs don't load: " + content.problem)
+	return DialogFeature.new(content.answers)
 
 
 ## Every species' HP in the species `content`, by species id.
