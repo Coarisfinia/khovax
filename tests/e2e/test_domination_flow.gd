@@ -40,6 +40,7 @@ extends RefCounted
 ## through; encircled, it strikes only its ring's wall, and wearing through it breaks the ring.
 ## With the type chart on (#626), the strikes between monsters follow it by each strike's own type;
 ## switched off, they deal their plain damage.
+## A companion that faints is swapped for the next monster its player carries (#597).
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -1118,6 +1119,64 @@ static func _type_chart() -> TypeEffectivenessFeature:
 	return TypeEffectivenessFeature.new(types, auto_types, special_types)
 
 
+## A companion that faints is swapped for the next monster its player carries (#597): the faint
+## chooses the first one carried that hasn't fainted, which joins the next tick, while a swap back
+## to the fainted one does nothing. Once every one carried has fainted, none is chosen or joins.
+func _check_relieved() -> String:
+	var state: GameState = _strike_state([Vector2i.ZERO])
+	state.carried[0] = PackedStringArray([WEAK, STRONG])
+	state.companions[0] = WEAK
+	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var chosen: Array[int] = _faint_companion(state)
+	if chosen.size() != 1 or chosen[0] != 1:
+		return "the fainted companion wasn't swapped for the next one carried: %s" % [chosen]
+	if _swaps_in(state, 1) != 0:
+		return "a swap picked the carried monster that fainted"
+	if companions.species_of(companions.companion_of(0)) != STRONG:
+		return "the next one carried didn't join its player the tick after the faint"
+	chosen = _faint_companion(state)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not chosen.is_empty() or companions.companion_of(0) != 0:
+		return "a companion was chosen or joined with every monster carried fainted"
+	return ""
+
+
+## Steps `state` with the companion of slot 0 kept beside the wild monster in the middle until it
+## faints; returns the places chosen in its place, each made the companion as the world would.
+func _faint_companion(state: GameState) -> Array[int]:
+	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	var chosen: Array[int] = [-1]
+	var companion: Entity = state.entity(companions.companion_of(0))
+	for _tick: int in WildAttackFeature.STRIKE_TICKS * 110:
+		if companion == null or state.entity(companion.id) == null:
+			break
+		chosen.clear()
+		companion.tile = Vector2i(-1, 0)
+		Simulation.step(state, still)
+		for event: RefCounted in state.events:
+			var swap: CompanionChosen = event as CompanionChosen
+			if swap != null:
+				chosen.append(swap.place)
+				state.companions[0] = state.carried[0][swap.place]
+	return chosen
+
+
+## Steps `state` once with player 0 standing and swapping to `swap`; returns how many swaps it
+## raised.
+func _swaps_in(state: GameState, swap: int) -> int:
+	var command: Command = Command.new()
+	command.swap = swap
+	var commands: Array[Command] = [command]
+	Simulation.step(state, commands)
+	var raised: int = 0
+	for event: RefCounted in state.events:
+		raised += 1 if event is CompanionChosen else 0
+	return raised
+
+
 ## Why the wild monster in `state` didn't strike `tile` once a second and wear it through with
 ## `hits` strikes, `gone` turning true on the last one and not before, or "".
 func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable) -> String:
@@ -1246,6 +1305,7 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 		WildAttackFeature.new(),
 		HidingFeature.new(),
 		CompanionFeature.new(),
+		CompanionSwapFeature.new(),
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
 		HarvestFeature.new({ WEAK: _hide_table() }),
@@ -1574,7 +1634,8 @@ func _check_species() -> String:
 	events.append_array(_settle(state))
 	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
-	return _check_wounded()
+	var wounded: String = _check_wounded()
+	return wounded if not wounded.is_empty() else _check_relieved()
 
 
 ## A legend can mark a wild monster wounded (#389): it starts at WOUNDED_HP of its full HP, never

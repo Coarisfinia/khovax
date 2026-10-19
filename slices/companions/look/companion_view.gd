@@ -5,7 +5,8 @@ extends Node3D
 ## (PlayerCircle, #233), so whose companion it is shows by a shape too, never by color alone (#68).
 ## It glides from tile to tile as it walks, like the players, turning smoothly toward where it goes.
 ## One that goes back to its player at 0 HP (#456) shrinks into them, turning their personal color
-## as it goes, eased. It only reads the state.
+## as it goes, eased; the one chosen in its place (#597), or by a swap (#55), grows out of them as
+## it joins. It only reads the state.
 
 ## How big the figure is next to a wild monster's, and its circle next to a player's.
 const FIGURE_SCALE: float = 0.6
@@ -24,6 +25,8 @@ var figures: Dictionary[int, HexPiece] = {}
 var _facing: Dictionary[int, float] = {}
 ## The instance the figures belong to: another instance drops them at once (#189).
 var _shown: GameState
+## The slots whose player chose another companion, whose next figure grows out of them.
+var _chosen: Array[int] = []
 
 
 func _ready() -> void:
@@ -46,6 +49,7 @@ func show_state() -> void:
 	if driver.state != _shown:
 		HexPiece.free_all(figures)
 		_facing.clear()
+		_chosen.clear()
 		_shown = driver.state
 	var feature: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
 	var shown: Array[int] = feature.companions() if feature != null else []
@@ -58,15 +62,21 @@ func show_state() -> void:
 		var slot: int = feature.owners[companion_id]
 		if not figures.has(companion_id):
 			figures[companion_id] = _add_figure(slot)
+			if _chosen.has(slot):
+				_chosen.erase(slot)
+				_grow(companion_id, slot)
 		# Every frame, so a color the player chooses in the menu shows at once (#391).
 		circle_of(companion_id).paint(PersonalColor.shown(driver, slot))
 		_place(companion_id)
 
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
-## shrinks it into them.
+## shrinks it into them, and notes whose player chose another, so it grows out of them.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	for event: RefCounted in events:
+		var chosen: CompanionChosen = event as CompanionChosen
+		if chosen != null and not _chosen.has(chosen.slot):
+			_chosen.append(chosen.slot)
 		var returned: CompanionReturned = event as CompanionReturned
 		if returned != null and figures.has(returned.companion_id):
 			var figure: HexPiece = figures[returned.companion_id]
@@ -98,6 +108,30 @@ func _return(figure: HexPiece, slot: int) -> void:
 	)
 	var _tinted: PropertyTweener = tween.tween_property(tint, "albedo_color:a", 1.0, RETURN_SECONDS)
 	var _free: CallbackTweener = tween.chain().tween_callback(figure.queue_free)
+
+
+## Grows the new figure of the companion `companion_id` out of the player in `slot`: its model
+## glides from them to its tile as it grows to its size, eased, the return played backwards.
+func _grow(companion_id: int, slot: int) -> void:
+	var player: Entity = driver.state.player(slot)
+	if player == null:
+		return
+	var figure: HexPiece = figures[companion_id]
+	var model: Node3D = figure.get_child(0) as Node3D
+	var tile: Vector2i = driver.state.entity(companion_id).tile
+	model.position = figure.position_on(player.tile) - figure.position_on(tile)
+	model.scale = Vector3.ZERO
+	var tween: Tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(
+		Tween.EASE_IN_OUT
+	)
+	var size: Vector3 = Vector3.ONE * FIGURE_SCALE
+	var _glide: PropertyTweener = tween.tween_property(
+		model,
+		"position",
+		Vector3.ZERO,
+		RETURN_SECONDS,
+	)
+	var _grown: PropertyTweener = tween.tween_property(model, "scale", size, RETURN_SECONDS)
 
 
 ## The circle under the companion's figure, or null when it has none shown.

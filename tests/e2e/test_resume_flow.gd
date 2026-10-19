@@ -289,7 +289,8 @@ func _settle(world: World) -> void:
 ## (#456), and the resumed session's recording plays back from the resumed world to the same state.
 func _check_recorded(driver: GameDriver) -> String:
 	var companions: CompanionFeature = driver.state.feature(Features.COMPANIONS) as CompanionFeature
-	if companions.companion_of(0) == 0 and not companions.has_returned(0):
+	var fainted: bool = companions.has_fainted(0, driver.state.companions[0])
+	if companions.companion_of(0) == 0 and not fainted:
 		return "the player came back without their companion, nor with it back in their keeping"
 	for _tick: int in 30:
 		driver.advance(STEP)
