@@ -1168,12 +1168,21 @@ static func _farther_than_sight(region: Region, tile: Vector2i) -> bool:
 	return true
 
 
-## The neighbours follow the local instance: in the glade, the basic instance is the one next door.
+## The neighbours follow the local instance: in the glade, the basic instance, the forest and the
+## outpost are next door (#689).
 func _check_neighbour_follows(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	view.show_state()
 	var basic: HexGrid = view.grids.get(InstanceBlueprints.BASIC)
-	if view.grids.size() != 1 or basic == null or basic.tile_count() != 42:
+	var names: Array[String] = []
+	names.assign(view.grids.keys())
+	names.sort()
+	var expected: Array[String] = [
+		InstanceBlueprints.BASIC,
+		InstanceBlueprints.FOREST,
+		InstanceBlueprints.OUTPOST,
+	]
+	if names != expected or basic == null or basic.tile_count() != 42:
 		return "in the glade, the neighbours drawn aren't the basic instance: %s" % [
 			view.grids.keys(),
 		]

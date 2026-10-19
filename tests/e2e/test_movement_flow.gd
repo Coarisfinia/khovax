@@ -251,16 +251,17 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 
 ## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from
-## (-1, 0), next to the wild monster, the player runs along the row to the grid's edge; letting go
-## stops it.
+## (-2, 1), the player runs along the row to the grid's edge, a row below the east exit's tiles
+## (#689); letting go stops it.
 func _check_stick_walk() -> String:
+	_place(Vector2i(-2, 1))
 	_send_stick(Vector2(0.15, 0.0))
 	var drift: String = _hold([], _send_stick.bind(Vector2.ZERO))
 	if not drift.is_empty():
 		return "a stick drifting inside the dead zone: " + drift
 	_send_stick(Vector2(1.0, 0.0))
 	var result: String = _hold(
-		[Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0), Vector2i(3, 0)],
+		[Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1), Vector2i(2, 1)],
 		_send_stick.bind(Vector2.ZERO),
 	)
 	return "pushing the stick right: " + result if not result.is_empty() else ""

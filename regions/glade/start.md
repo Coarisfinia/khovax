@@ -6,9 +6,9 @@ The glade's start piece (#57): a disc of radius 2 where players 1 to 4 begin, wi
 
 ```
   f f f
- 🪓 . L j
+ 🪓 🌲 L j
 x . 1 3 o
- x 2 🌲 o
+ x 2 . o
   x 4 o
 ```
 
