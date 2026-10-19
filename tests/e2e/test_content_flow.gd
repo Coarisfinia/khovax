@@ -7,7 +7,8 @@ extends RefCounted
 ## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
 ## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
-## their quest and ends close its own chain (#573), and broken ones are refused; a quest can move
+## their quest and ends close its own chain (#573), every path reaches an end (#576), and broken
+## ones are refused; a quest can move
 ## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
 ## standing, and broken ones are refused. Quests and abilities carry path marks (#471).
 
@@ -263,6 +264,29 @@ func _check_branches(content: QuestData) -> String:
 		quest % STEP_B: "step 1: its id b",
 		quest % "{\"condition\": \"opened\", \"ends\": \"y\"}": "step 0: it ends the chain y",
 		quest % "{\"condition\": \"opened\", \"id\": \"B\"}": "step 0: its id must",
+	}
+	var problem: String = _unrefused(cases, content)
+	return problem if not problem.is_empty() else _check_paths(content, quest, to_b)
+
+
+## Why quests whose paths don't all reach an end (#576) aren't refused, or "": a branching quest's
+## path stopping at its last step, untagged, and a loop without a way out are; a loop with a way
+## out reads.
+func _check_paths(content: QuestData, quest: String, to: String) -> String:
+	var looping: String = "{\"id\": \"c\", \"choices\": [%s, %s]}"
+	var way_out: String = quest % (looping % [to % "c", to % "b"])
+	var parsed: QuestDefinition = QuestDefinition.parse("x", way_out, content.species)
+	if not parsed.problem.is_empty():
+		return "a loop with a way out didn't read: " + parsed.problem
+	var fork: String = "{\"choices\": [%s, %s]}" % [to % "b", to % "c"]
+	var stopping: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s, %s]}" % [
+		fork,
+		STEP_B,
+		"{\"id\": \"c\", \"condition\": \"opened\"}",
+	]
+	var cases: Dictionary[String, String] = {
+		stopping: "step 2: a path stops there, but it isn't tagged",
+		quest % (looping % [to % "c", to % "c"]): "step 0: no path on from it reaches an end",
 	}
 	return _unrefused(cases, content)
 

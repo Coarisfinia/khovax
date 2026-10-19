@@ -631,7 +631,7 @@ func _check_branch_standing() -> String:
 	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\"}, "
 	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", \"next\": \"lost\"}]}, "
 	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\"}, "
-	text += "{\"id\": \"lost\", \"condition\": \"dominated\"}]}"
+	text += "{\"id\": \"lost\", \"condition\": \"dominated\", \"ends\": \"fork\"}]}"
 	var profile: Profile = Profile.new()
 	var standing: String = STRANGER_STANDING.replace("strangers", GUILD)
 	profile.quest_book["fork"] = QuestDefinition.parse("fork", text % standing, {})

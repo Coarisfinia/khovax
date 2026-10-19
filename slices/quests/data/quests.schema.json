@@ -130,7 +130,7 @@
 						}
 					},
 					"ends": {
-						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished.",
+						"description": "Tags the step as an end of the quest's chain (#573), the quest's own id: once it's done, the quest is finished. In a quest with choices, every path must reach a step tagged so, which the content check walks (#576).",
 						"$ref": "#/$defs/id"
 					}
 				}
