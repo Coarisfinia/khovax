@@ -107,7 +107,8 @@ func _next(slot: String) -> String:
 	var choices: Array[String] = []
 	for gear_id: String in holder.keeper.profile.gear.owned:
 		var item: GearItem = _items.get(gear_id)
-		if item != null and item.slot == slot:
+		var count: int = holder.keeper.profile.gear.owned[gear_id]
+		if item != null and item.slot == slot and count > 0:
 			choices.append(gear_id)
 	choices.sort()
 	choices.append("")
