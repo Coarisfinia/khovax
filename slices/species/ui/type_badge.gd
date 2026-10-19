@@ -1,0 +1,73 @@
+class_name TypeBadge
+extends Control
+## A type family's badge (#627): its icon in a circle on its color. Families have no names (#68),
+## so both types of a family show the same badge; the icon is what tells them apart, the color
+## only backs it (never color alone, #68).
+
+## Each family's icon and color, by family id (TypeChart.FAMILIES).
+const ICONS: Array[Texture2D] = [
+	preload("res://assets/game-icons/magic-swirl.svg"),
+	preload("res://assets/game-icons/evil-moon.svg"),
+	preload("res://assets/game-icons/fist.svg"),
+	preload("res://assets/game-icons/sprout.svg"),
+	preload("res://assets/game-icons/tornado.svg"),
+]
+const COLORS: Array[Color] = [
+	Color("8e44c8"),
+	Color("3b3557"),
+	Color("a0612b"),
+	Color("2f8f3a"),
+	Color("2c7fb8"),
+]
+## The badge's side, in the menu's font size; the icon fills this share of the circle.
+const FONTS: float = 1.4
+const ICON_SHARE: float = 0.62
+
+## The family it shows, or -1 for a type that isn't on the chart (drawn as nothing).
+var family: int = -1
+
+
+func _init(type: String = "") -> void:
+	family = TypeChart.family_of(type)
+	tooltip_text = type
+
+
+func _notification(what: int) -> void:
+	# The menu scales its font with the screen; the badge follows it, as the labels beside it do.
+	if what == NOTIFICATION_THEME_CHANGED or what == NOTIFICATION_ENTER_TREE:
+		custom_minimum_size = Vector2.ONE * get_theme_default_font_size() * FONTS
+
+
+func _draw() -> void:
+	if family < 0:
+		return
+	var side: float = minf(size.x, size.y)
+	var center: Vector2 = size / 2.0
+	draw_circle(center, side / 2.0, COLORS[family])
+	var icon_side: float = side * ICON_SHARE
+	var icon_rect: Rect2 = Rect2(center - Vector2.ONE * icon_side / 2.0, Vector2.ONE * icon_side)
+	draw_texture_rect(ICONS[family], icon_rect, false)
+
+
+## A row naming `types`, each after its family's badge: what a monster's types show as.
+static func row(heading: String, types: Array[String]) -> HBoxContainer:
+	var made: HBoxContainer = HBoxContainer.new()
+	made.add_child(_plain(heading))
+	for type: String in types:
+		_add_badged(made, type)
+	return made
+
+
+## Adds `type`'s badge and name to `badged_row`.
+static func _add_badged(badged_row: HBoxContainer, type: String) -> void:
+	badged_row.add_child(TypeBadge.new(type))
+	badged_row.add_child(_plain(type))
+
+
+## A label that keeps its whole text: these are short, and a trimmed one would shrink to nothing
+## in a row.
+static func _plain(text: String) -> Label:
+	var made: Label = Label.new()
+	made.text = text
+	made.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return made
