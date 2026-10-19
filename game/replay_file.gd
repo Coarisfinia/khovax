@@ -130,9 +130,9 @@ static func _widened(old: Array[int], count: int) -> Array[int]:
 ## one that isn't a world's data, which then fails to set up.
 static func _start_world(saved: Variant) -> Dictionary:
 	var none: Dictionary = {}
-	if not saved is Dictionary or not WorldSave.has_whole_numbers(saved):
+	if not saved is Dictionary or not JsonNumbers.all_whole(saved):
 		return none
-	var world: Dictionary = WorldSave.whole_numbers(saved)
+	var world: Dictionary = JsonNumbers.wholes(saved)
 	return world
 
 

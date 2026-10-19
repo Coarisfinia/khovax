@@ -62,9 +62,9 @@ static func explored_data(explored: ExploredGround) -> Dictionary:
 ## Reads the explored ground `data` (as `explored_data` wrote it) into `into`; returns the first
 ## problem, or "".
 static func _read(data: Variant, into: ExploredGround) -> String:
-	if not data is Dictionary or not WorldSave.has_whole_numbers(data):
+	if not data is Dictionary or not JsonNumbers.all_whole(data):
 		return "not explored ground, or it holds a number that isn't whole"
-	var read: DataReader = DataReader.new(WorldSave.whole_numbers(data))
+	var read: DataReader = DataReader.new(JsonNumbers.wholes(data))
 	var format: int = read.whole("format", 0, DataReader.MOST)
 	if not read.failed() and (format < 1 or format > FORMAT):
 		read.fail("explored ground format %d, this build reads %d" % [format, FORMAT])
