@@ -5,23 +5,26 @@ The saddle at the top of the pass (#689): a wide hollow between the peaks, with 
 ## Tiles
 
 ```
-     ^ ^ ^ ^ . .
-    ^ ^ ^ ^ . . .
-   ^ ^ ^ 🪨 . . . k
-  ^ ^ ^ 🪨 . . . . .
- . ^ . . . . . . . .
-. . . . . m 🌳 . . . .
- . . . . . . 🪨 🌳 ^ .
-  . . . . 🪨 🌳 ^ ^ ^
-   j . T . 🪨 ^ ^ ^
-    . . . ^ ^ ^ ^
-     . . ^ ^ ^ ^
+     ⬛⬛⬛⬛🟫🟫
+    ⬛⬛⬛⬛🟫🟫🟫
+   ⬛⬛⬛🪨🟫🟫🟫🧷
+  ⬛⬛⬛🪨🟫🟫🟫🟫🟫
+ 🟫⬛🟫🟫🟫🟫🟫🟫🟫🟫
+🟫🟫🟫🟫🟫👾🌳🟫🟫🟫🟫
+ 🟫🟫🟫🟫🟫🟫🪨🌳⬛🟫
+  🟫🟫🟫🟫🪨🌳⬛⬛⬛
+   🔗🟫🐸🟫🪨⬛⬛⬛
+    🟫🟫🟫⬛⬛⬛⬛
+     🟫🟫⬛⬛⬛⬛
 ```
 
 ## Legend
 
-- `j`: joins another piece to the west
-- `k`: joins another piece to the east
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the west
+- `🧷`: joins another piece to the east
 - `🌳`: shrubs
 - `🪨`: boulder
-- `T`: a wild monster, always moss_toad
+- `🐸`: a wild monster, always moss_toad

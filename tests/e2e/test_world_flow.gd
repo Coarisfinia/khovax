@@ -830,11 +830,12 @@ func _moving(direction: int) -> Array[Command]:
 ## have forest.
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
-	var legend: String = "- `j`: joins another piece to the west\n"
-	legend += "- `x`: exit to the east, to glade\n- `B`: a wild monster, always storm_finch\n"
+	var base: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n"
+	var legend: String = base + "- `🔗`: joins another piece to the west\n"
+	legend += "- `🚪`: exit to the east, to glade\n- `🐦`: a wild monster, always storm_finch\n"
 	legend += "- `🌲`: forest\n"
-	legend += "- `w`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
-	var grid: String = " 🪓 🌲\nj 1 x\n B w"
+	legend += "- `💧`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
+	var grid: String = " 🪓🌲\n🔗🔴🚪\n 🐦💧"
 	var region: Region = RegionDocument.parse(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
@@ -852,19 +853,22 @@ func _check_documents() -> String:
 	if not region.problem.is_empty() or not expected:
 		return "a region document didn't read as drawn: %s" % region.problem
 	var refusals: Dictionary[String, String] = {
-		tiles % [". .\n. .", ""]: "the tiles need an odd",
-		tiles % ["1 z .", ""]: "the legend doesn't explain `z`",
-		tiles % ["1 🌲 .", "- `🌲`: jungle"]: "the legend doesn't explain `🌲`",
-		tiles % ["1 🪓 .", "- `🪓`: stump, turned 6"]: "tile (0, 0)'s turn 6",
-		tiles % ["1 🪓 .", "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",
-		tiles % ["1 🪓 .", "- `🪓`: stump, turned 2, turned 4"]: "tile (0, 0) says its turn",
-		tiles % ["1 🪓 .", "- `🪓`: stump, walkable, not walkable"]: "tile (0, 0) says its turn",
-		tiles % ["1 🪓 .", "- `🪓`: stump, height 1001"]: "tile (0, 0)'s height 1001",
-		tiles % ["1 🪓 .", "- `🪓`: stump, height 2, height 3"]: "tile (0, 0) says its turn",
-		tiles % ["1 b .", "- `b`: a beach; stepping here reaches the place Beach"]: (
-			"the legend doesn't explain `b`"
+		tiles % ["🟫🟫\n🟫🟫", base]: "the tiles need an odd",
+		tiles % ["🔴z🟫", base + "- `z`: forest"]: "a tile is one wide emoji, never `z`",
+		tiles % ["🔴🌵🟫", base]: "the legend doesn't explain `🌵`",
+		tiles % ["🔴🌲🟫", base + "- `🌲`: jungle"]: "the legend doesn't explain `🌲`",
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, turned 6"]: "tile (0, 0)'s turn 6",
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, flying"]: "the legend doesn't explain `🪓`",
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, turned 2, turned 4"]: "tile (0, 0) says its turn",
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, walkable, not walkable"]: (
+			"tile (0, 0) says its turn"
 		),
-		tiles % ["1 b .", "- `b`: boulder; stepping here reaches the place beach"]: (
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, height 1001"]: "tile (0, 0)'s height 1001",
+		tiles % ["🔴🪓🟫", base + "- `🪓`: stump, height 2, height 3"]: "tile (0, 0) says its turn",
+		tiles % ["🔴🐚🟫", base + "- `🐚`: a beach; stepping here reaches the place Beach"]: (
+			"the legend doesn't explain `🐚`"
+		),
+		tiles % ["🔴🪨🟫", base + "- `🪨`: boulder; stepping here reaches the place beach"]: (
 			"trigger (0, 0) isn't on ground"
 		),
 	}
@@ -887,9 +891,10 @@ static func _species_on(region: Region, spot: Vector2i) -> String:
 ## A legend symbol naming a tile kind and a place at once (#349) makes its tiles that kind and part
 ## of that place, a turn and all; one naming something else before the place leaves them ground.
 func _check_kind_and_place(tiles: String) -> String:
-	var legend: String = "- `g`: forest, turned 2; stepping here reaches the place grove\n"
-	legend += "- `b`: the beach; stepping here reaches the place beach"
-	var region: Region = RegionDocument.parse(tiles % ["g 1 b", legend])
+	var legend: String = "- `🌲`: forest, turned 2; stepping here reaches the place grove\n"
+	legend += "- `🐚`: the beach; stepping here reaches the place beach\n"
+	legend += "- `🔴`: where player 1 starts"
+	var region: Region = RegionDocument.parse(tiles % ["🌲🔴🐚", legend])
 	var grove: Vector2i = Vector2i(-1, 0)
 	var expected: bool = region.problem.is_empty() and region.triggers.size() == 2
 	expected = expected and region.terrain.get(grove, -1) == TileKinds.number_of("forest")

@@ -5,28 +5,28 @@ A pond in the glade (#57): water in the middle, ground around it, a treasure che
 ## Tiles
 
 ```
-     . . . 🌲 🌲 .
-    . 🪨 c . . . .
-   . . . . ~ . . j
-  . h . ~ ~ ~ . . .
- . 🌳 . ~ ~ ~ ~ . . .
-. . . ~ ~ ~ ~ ~ . . .
- . . . . ~ ~ ~ . . .
-  . . 🌲 . . . . 🪵 .
-   k . 🌲 🌳 . 🌲 . .
-    . 🌲 🪵 🌲 . 🌲 .
-     . 🌲 🌲 . . .
+     🟫🟫🟫🌲🌲🟫
+    🟫🪨🧰🟫🟫🟫🟫
+   🟫🟫🟫🟫🟦🟫🟫🔗
+  🟫🦔🟫🟦🟦🟦🟫🟫🟫
+ 🟫🌳🟫🟦🟦🟦🟦🟫🟫🟫
+🟫🟫🟫🟦🟦🟦🟦🟦🟫🟫🟫
+ 🟫🟫🟫🟫🟦🟦🟦🟫🟫🟫
+  🟫🟫🌲🟫🟫🟫🟫🪵🟫
+   🧷🟫🌲🌳🟫🌲🟫🟫
+    🟫🌲🪵🌲🟫🌲🟫
+     🟫🌲🌲🟫🟫🟫
 ```
 
 ## Legend
 
-- `.`: ground
+- `🟫`: ground
 - `🌲`: forest
 - `🌳`: shrubs
-- `h`: a wild monster hiding in shrubs
+- `🦔`: a wild monster hiding in shrubs
 - `🪵`: stump
 - `🪨`: boulder
-- `~`: water
-- `c`: a treasure chest
-- `j`: joins another piece to the east
-- `k`: joins another piece to the west
+- `🟦`: water
+- `🧰`: a treasure chest
+- `🔗`: joins another piece to the east
+- `🧷`: joins another piece to the west

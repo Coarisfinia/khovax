@@ -5,25 +5,30 @@ The faction outpost's start piece (#689): its gate, a palisade of stumps to the 
 ## Tiles
 
 ```
-     x . . . . .
-    x . 🪵 🪵 🪵 🪵 .
-   x . 2 . . . 🪵 .
-  . . 1 4 . : : 🪵 .
- . . 3 . . : : : 🪵 .
-. . . . . . : : . . .
- . . . . . . 📦 📦 . .
-  . . 📦 . m . 📦 . j
-   . . . . . . . .
-    . . . . . . .
-     . y y y . .
+     🚪🟫🟫🟫🟫🟫
+    🚪🟫🪵🪵🪵🪵🟫
+   🚪🟫🔵🟫🟫🟫🪵🟫
+  🟫🟫🔴🟡🟫🟨🟨🪵🟫
+ 🟫🟫🟢🟫🟫🟨🟨🟨🪵🟫
+🟫🟫🟫🟫🟫🟫🟨🟨🟫🟫🟫
+ 🟫🟫🟫🟫🟫🟫📦📦🟫🟫
+  🟫🟫📦🟫👾🟫📦🟫🔗
+   🟫🟫🟫🟫🟫🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🌀🌀🌀🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the southeast
-- `x`: exit to the northwest, to glade
-- `y`: exit to the southwest, to mountain_pass
-- `1` to `4`: where players 1 to 4 start
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the southeast
+- `🚪`: exit to the northwest, to glade
+- `🌀`: exit to the southwest, to mountain_pass
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
 - `🪵`: stump
 - `📦`: crates
-- `:`: sand
+- `🟨`: sand

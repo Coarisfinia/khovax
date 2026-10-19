@@ -5,27 +5,27 @@ An open meadow in the glade (#712): two wild monsters graze in the open, each wi
 ## Tiles
 
 ```
-     . . . . . .
-    . 🌳 . . . . .
-   . . . m . . . j
-  . . . . . . 🌳 . .
- 🌲 . . . . . . . . .
-🌲 🌲 . . 🪨 . . . . . .
- 🌲 . . . . . . m . .
-  . . 🌳 . . . . . .
-   k . . . . . 🌿 .
-    . . . 🪵 . . .
-     . . . . . .
+     🟫🟫🟫🟫🟫🟫
+    🟫🌳🟫🟫🟫🟫🟫
+   🟫🟫🟫👾🟫🟫🟫🔗
+  🟫🟫🟫🟫🟫🟫🌳🟫🟫
+ 🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫
+🌲🌲🟫🟫🪨🟫🟫🟫🟫🟫🟫
+ 🌲🟫🟫🟫🟫🟫🟫👾🟫🟫
+  🟫🟫🌳🟫🟫🟫🟫🟫🟫
+   🧷🟫🟫🟫🟫🟫🌿🟫
+    🟫🟫🟫🪵🟫🟫🟫
+     🟫🟫🟫🟫🟫🟫
 ```
 
 ## Legend
 
-- `.`: ground
+- `🟫`: ground
 - `🌲`: forest
 - `🌳`: shrubs
 - `🌿`: shrubs, turned 3
 - `🪨`: boulder
 - `🪵`: stump
-- `m`: a wild monster, of a species rolled from the instance blueprint's list
-- `j`: joins another piece to the east
-- `k`: joins another piece to the west
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the east
+- `🧷`: joins another piece to the west

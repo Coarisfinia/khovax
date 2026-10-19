@@ -5,30 +5,33 @@ The glade's start piece (#57), where the world starts (#712): a disc of radius 5
 ## Tiles
 
 ```
-     . f f f . .
-    . . 🌲 . . 🌲 .
-   . 🌲 . . . 🌲 🌲 j
-  . 🪓 . . L . 🌲 . .
- . . . . . . . . 🌲 .
-. . . . . 1 3 . . . .
- ~ . . . 2 4 . . 🌲 .
-  ~ s s . . . . . .
-   ~ ~ 📦 s s . . o
-    ~ ~ w s s . o
-     ~ ~ ~ 📦 s o
+     🟫🚪🚪🚪🟫🟫
+    🟫🟫🌲🟫🟫🌲🟫
+   🟫🌲🟫🟫🟫🌲🌲🔗
+  🟫🪓🟫🟫🔭🟫🌲🟫🟫
+ 🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫
+🟫🟫🟫🟫🟫🔴🟢🟫🟫🟫🟫
+ 🟦🟫🟫🟫🔵🟡🟫🟫🌲🟫
+  🟦🐚🐚🟫🟫🟫🟫🟫🟫
+   🟦🟦📦🐚🐚🟫🟫🌀
+    🟦🟦🤕🐚🐚🟫🌀
+     🟦🟦🟦📦🐚🌀
 ```
 
 ## Legend
 
-- `.`: ground
-- `~`: water
+- `🟫`: ground
+- `🟦`: water
 - `🌲`: forest
 - `🪓`: stump, turned 3
-- `s`: sand; stepping here reaches the place beach
+- `🐚`: sand; stepping here reaches the place beach
 - `📦`: crates; stepping here reaches the place beach
-- `w`: a wild monster, always moss_toad, wounded, on sand
-- `1` to `4`: where players 1 to 4 start
-- `j`: joins another piece to the east
-- `f`: exit to the northwest, to forest
-- `o`: exit to the southeast, to outpost
-- `L`: a lookout; stepping here reveals within 8
+- `🤕`: a wild monster, always moss_toad, wounded, on sand
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
+- `🔗`: joins another piece to the east
+- `🚪`: exit to the northwest, to forest
+- `🌀`: exit to the southeast, to outpost
+- `🔭`: a lookout; stepping here reveals within 8

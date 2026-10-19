@@ -5,21 +5,24 @@ The castle's great hall (#689): its walls still standing with doors east and wes
 ## Tiles
 
 ```
-     . . . . . .
-    . . . . . . .
-   . . ^ ^ ^ ^ . .
-  j . ^ . 📦 . ^ . .
- . . . . . . . ^ . .
-. . . . . m . . . . .
- . . ^ . . . . . . .
-  . . ^ . 📦 . ^ . k
-   . . ^ ^ ^ ^ . .
-    . . . . . . .
-     . . . . . .
+     🟫🟫🟫🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🟫🟫⬛⬛⬛⬛🟫🟫
+  🔗🟫⬛🟫📦🟫⬛🟫🟫
+ 🟫🟫🟫🟫🟫🟫🟫⬛🟫🟫
+🟫🟫🟫🟫🟫👾🟫🟫🟫🟫🟫
+ 🟫🟫⬛🟫🟫🟫🟫🟫🟫🟫
+  🟫🟫⬛🟫📦🟫⬛🟫🧷
+   🟫🟫⬛⬛⬛⬛🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🟫🟫🟫🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northwest
-- `k`: joins another piece to the southeast
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the northwest
+- `🧷`: joins another piece to the southeast
 - `📦`: crates

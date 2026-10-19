@@ -5,35 +5,38 @@ The load test's region (#101): a disc of radius 12, the four starts in the middl
 ## Tiles
 
 ```
-            m . . m . . m . . m . . m
-           m . . m . . m . . m . . m .
-          m . . m . . m . . m . . m . .
-         m . . m . . m . . m . . m . . m
-        m . . m . . m . . m . . m . . m .
-       m . . m . . m . . m . . m . . m . .
-      m . . m . . m . . m . . m . . m . . m
-     m . . m . . m . . m . . m . . m . . m .
-    m . . m . . m . . m . . m . . m . . m . .
-   m . . m . . m . . m . . m . . m . . m . . m
-  m . . m . . m . . m . . . . . m . . m . . m .
- m . . m . . m . . m . . 1 . . m . . m . . m . .
-m . . m . . m . . m . 3 . 4 . m . . m . . m . . m
- . . m . . m . . m . . 2 . . m . . m . . m . . m
-  . m . . m . . m . . . . . m . . m . . m . . m
-   m . . m . . m . . m . . m . . m . . m . . m
-    . . m . . m . . m . . m . . m . . m . . m
-     . m . . m . . m . . m . . m . . m . . m
-      m . . m . . m . . m . . m . . m . . m
-       . . m . . m . . m . . m . . m . . m
-        . m . . m . . m . . m . . m . . m
-         m . . m . . m . . m . . m . . m
-          . . m . . m . . m . . m . . m
-           . m . . m . . m . . m . . m
-            m . . m . . m . . m . . m
+            👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+           👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫
+          👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫
+         👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+        👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫
+       👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫
+      👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+     👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫
+    👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫
+   👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+  👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫🟫🟫🟫👾🟫🟫👾🟫🟫👾🟫
+ 👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫🔴🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫
+👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟢🟫🟡🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+ 🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫🔵🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+  🟫👾🟫🟫👾🟫🟫👾🟫🟫🟫🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+   👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+    🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+     🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+      👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+       🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+        🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+         👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+          🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+           🟫👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
+            👾🟫🟫👾🟫🟫👾🟫🟫👾🟫🟫👾
 ```
 
 ## Legend
 
-- `.`: ground
-- `1` to `4`: where players 1 to 4 start
-- `m`: a wild monster, of a species rolled from the instance blueprint's list
+- `🟫`: ground
+- `🔴`: where player 1 starts
+- `🔵`: where player 2 starts
+- `🟢`: where player 3 starts
+- `🟡`: where player 4 starts
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list

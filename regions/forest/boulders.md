@@ -5,24 +5,26 @@ A field of boulders among the trees (#689): rock to harvest later (#675), shrubs
 ## Tiles
 
 ```
-     . . j . . .
-    . . . . . . .
-   . . . 🪨 🪨 🪨 . .
-  🌲 🌳 🌳 . . 🪨 . . 🌲
- . 🪨 🪨 🌲 m . . . 🌳 .
-. 🪨 🪨 🪨 . . . . 🌳 🌲 .
- . 🪨 🪨 . . 🌲 🪨 🪨 . 🌲
-  . 🌲 . . 🌲 . 🪨 🪨 .
-   . . 🌳 🌳 F . 🪨 🌲
-    . . . . . . .
-     . . . k . .
+     🟫🟫🔗🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🟫🟫🟫🪨🪨🪨🟫🟫
+  🌲🌳🌳🟫🟫🪨🟫🟫🌲
+ 🟫🪨🪨🌲👾🟫🟫🟫🌳🟫
+🟫🪨🪨🪨🟫🟫🟫🟫🌳🌲🟫
+ 🟫🪨🪨🟫🟫🌲🪨🪨🟫🌲
+  🟫🌲🟫🟫🌲🟫🪨🪨🟫
+   🟫🟫🌳🌳🐦🟫🪨🌲
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🟫🟫🧷🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northeast
-- `k`: joins another piece to the southwest
+- `🟫`: ground
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the northeast
+- `🧷`: joins another piece to the southwest
 - `🌲`: forest
 - `🌳`: shrubs
 - `🪨`: boulder
-- `F`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always storm_finch

@@ -5,22 +5,25 @@ The castle's keep (#689): a small walled ring with three gaps, the heart of the 
 ## Tiles
 
 ```
-     . . . . 🪨 .
-    . . . . . ^ .
-   . . . . 🪨 🪨 . .
-  j . . ^ ^ ^ . . 🪨
- . . . ^ . . . . . .
-. . . ^ . F . ^ . . .
- . . . . . . . . m .
-  . 🪨 . ^ ^ ^ . . k
-   🪨 . . . . . . .
-    . ^ . . . . .
-     . . . . . .
+     🟫🟫🟫🟫🪨🟫
+    🟫🟫🟫🟫🟫⬛🟫
+   🟫🟫🟫🟫🪨🪨🟫🟫
+  🔗🟫🟫⬛⬛⬛🟫🟫🪨
+ 🟫🟫🟫⬛🟫🟫🟫🟫🟫🟫
+🟫🟫🟫⬛🟫🐦🟫⬛🟫🟫🟫
+ 🟫🟫🟫🟫🟫🟫🟫🟫👾🟫
+  🟫🪨🟫⬛⬛⬛🟫🟫🧷
+   🪨🟫🟫🟫🟫🟫🟫🟫
+    🟫⬛🟫🟫🟫🟫🟫
+     🟫🟫🟫🟫🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northwest
-- `k`: joins another piece to the southeast
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the northwest
+- `🧷`: joins another piece to the southeast
 - `🪨`: boulder
-- `F`: a wild monster, always storm_finch
+- `🐦`: a wild monster, always storm_finch

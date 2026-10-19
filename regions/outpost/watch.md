@@ -5,24 +5,27 @@ The outpost's watch (#689): a lookout in a ring of rock with one way in, which r
 ## Tiles
 
 ```
-     . . . 🌳 . 🌳
-    . . . . . . 🌳
-   . . . . . . . .
-  k . . . . . . 🪨 .
- . . m . ^ ^ . . 🪨 .
-. . . . ^ Q . . 🌳 . .
- . 🪨 . . ^ ^ . . . .
-  . 🪨 . . . . . . j
-   . 🌳 . . . . g .
-    . . . . . . .
-     🌳 . 🌳 . . .
+     🟫🟫🟫🌳🟫🌳
+    🟫🟫🟫🟫🟫🟫🌳
+   🟫🟫🟫🟫🟫🟫🟫🟫
+  🧷🟫🟫🟫🟫🟫🟫🪨🟫
+ 🟫🟫👾🟫⬛⬛🟫🟫🪨🟫
+🟫🟫🟫🟫⬛🗼🟫🟫🌳🟫🟫
+ 🟫🪨🟫🟫⬛⬛🟫🟫🟫🟫
+  🟫🪨🟫🟫🟫🟫🟫🟫🔗
+   🟫🌳🟫🟫🟫🟫🦔🟫
+    🟫🟫🟫🟫🟫🟫🟫
+     🌳🟫🌳🟫🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the southeast
-- `k`: joins another piece to the northwest
-- `Q`: a lookout to hold later; stepping here reveals within 8
+- `🟫`: ground
+- `⬛`: rock
+- `👾`: a wild monster, of a species rolled from the instance blueprint's list
+- `🔗`: joins another piece to the southeast
+- `🧷`: joins another piece to the northwest
+- `🗼`: a lookout to hold later; stepping here reveals within 8
 - `🌳`: shrubs
 - `🪨`: boulder
-- `g`: a wild monster hiding in shrubs
+- `🦔`: a wild monster hiding in shrubs

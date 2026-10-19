@@ -5,25 +5,26 @@ A felling in the forest (#689): a clearing of stumps ringed by trees, stacked lo
 ## Tiles
 
 ```
-     . . j . . .
-    . . . . . . .
-   . 🌲 🪵 . 🪵 . 🌲 .
-  . 🌲 . 🪵 . . . 🌲 .
- . 🌲 🪵 . . . 📦 . 🌲 .
-. 🌲 . . . . . 🪵 . 🌲 .
- . h . 📦 . . W . 🌲 .
-  . 🌲 . 🪵 . . 🪵 🌲 .
-   . 🌲 . 🪵 . . 🌲 .
-    . . . . . . .
-     . . . k . .
+     🟫🟫🔗🟫🟫🟫
+    🟫🟫🟫🟫🟫🟫🟫
+   🟫🌲🪵🟫🪵🟫🌲🟫
+  🟫🌲🟫🪵🟫🟫🟫🌲🟫
+ 🟫🌲🪵🟫🟫🟫📦🟫🌲🟫
+🟫🌲🟫🟫🟫🟫🟫🪵🟫🌲🟫
+ 🟫🦉🟫📦🟫🟫🤕🟫🌲🟫
+  🟫🌲🟫🪵🟫🟫🪵🌲🟫
+   🟫🌲🟫🪵🟫🟫🌲🟫
+    🟫🟫🟫🟫🟫🟫🟫
+     🟫🟫🟫🧷🟫🟫
 ```
 
 ## Legend
 
-- `j`: joins another piece to the northeast
-- `k`: joins another piece to the southwest
+- `🟫`: ground
+- `🔗`: joins another piece to the northeast
+- `🧷`: joins another piece to the southwest
 - `🌲`: forest
 - `🪵`: stump
 - `📦`: crates
-- `h`: a wild monster hiding in forest
-- `W`: a wild monster, always moss_toad, wounded
+- `🦉`: a wild monster hiding in forest
+- `🤕`: a wild monster, always moss_toad, wounded
