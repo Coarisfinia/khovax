@@ -455,8 +455,8 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 	var quest: String = "guild_charts_the_forest"
 	driver.world.set_flag(Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
-	for piece: String in ["stream", "grove"]:
-		_emit(driver, bus, PieceEntered.new(piece, 1, 0))
+	_emit(driver, bus, PieceEntered.new("stream", 1, 0))
+	_emit(driver, bus, PieceEntered.new("grove", 1, 0))
 	_emit(driver, bus, PieceEntered.new("felling", 9, 1))
 	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
 		return "another player entering the felling finished the forest's territory quest"
