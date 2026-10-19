@@ -333,8 +333,8 @@ static func _changed_event(event_name: String, flag: String) -> WorldChanged:
 
 
 ## Notes when each instance was left behind, and purges every one nobody is in that a flag
-## outdated (#529, the starting instance too, #727), or but the starting instance that nobody has
-## been in for PURGE_TICKS (#212).
+## outdated (#529; the starting instance too, #727), and every one but the starting instance that
+## nobody has been in for PURGE_TICKS (#212).
 ## Anyone entering it before then resets the count. Each instance is purged at most once a tick.
 func _purge_left_behind() -> void:
 	for instance_name: String in sorted_names():
