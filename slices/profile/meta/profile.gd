@@ -68,15 +68,15 @@ func apply(result: Gain) -> String:
 		return refusal
 	for species: String in result.dominated_species:
 		_dominate(species)
-		_advance_quests("dominated", species)
+		_count_fact("dominated", species)
 	for _chest: int in result.chests_opened:
-		_advance_quests("opened", "")
+		_count_fact("opened", "")
 	for place: String in result.places_reached:
-		_advance_quests("reached", place)
+		_count_fact("reached", place)
 	for piece: String in result.pieces_entered:
-		_advance_quests("entered", piece)
+		_count_fact("entered", piece)
 	for instance_name: String in result.instances_entered:
-		_advance_quests(QuestStep.INSTANCE_ENTERED, instance_name)
+		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 	return ""
@@ -129,23 +129,35 @@ func _dominate(species: String) -> void:
 	next_monster_id += 1
 
 
-## Counts one fact (a `condition`, with the species of a domination, the place reached, or the
-## piece or instance entered) toward every quest in the book whose current step asks for it, in id
-## order, so quests finished together are listed in the same order on every machine. A step that
-## reaches its count hands over to the next one (on a step with choices, #573, the one the choice
-## the fact took leads to), and a step that ends the chain, or the last one, finishes the quest.
+## Counts one fact, then every event the quests it advanced emitted (#575), in the order emitted:
+## each as a fact of its own, which can start side quests waiting on it. Only a side quest's start
+## waits on an event, and each starts once, so the events always run out.
+func _count_fact(condition: String, what: String) -> void:
+	var pending: Array[String] = _advance_quests(condition, what)
+	while not pending.is_empty():
+		var event: String = pending.pop_front()
+		pending.append_array(_advance_quests(QuestStep.EMITTED, event))
+
+
+## Counts one fact (a `condition`, with the species of a domination, the place reached, the piece or
+## instance entered, or the event emitted) toward every quest in the book whose current step asks
+## for it, in id order, so quests finished together are listed in the same order on every machine.
+## A step that reaches its count hands over to the next one (on a step with choices, #573, the one
+## the choice the fact took leads to), and a step that ends the chain, or the last one, finishes
+## the quest.
 ## Saved progress that no longer fits the quest (its data changed since) settles at the next fact
 ## of any kind: a step already at its count is complete, and a step past the last one finishes the
 ## quest.
 ## A side quest the fact starts (#473) is started first, so the same fact can count toward its first
-## step; a side quest not started yet counts nothing.
-func _advance_quests(condition: String, what: String) -> void:
+## step; a side quest not started yet counts nothing. Returns the events the steps done and the
+## choices taken emit, in that order.
+func _advance_quests(condition: String, what: String) -> Array[String]:
 	var ids: Array[String] = []
 	ids.assign(quest_book.keys())
 	ids.sort()
+	var emitted: Array[String] = []
 	for id: String in ids:
-		var start: QuestStep = quest_book[id].starts_on
-		if not _started(id) and start.counts(condition, what):
+		if not _started(id) and quest_book[id].starts_on.counts(condition, what):
 			quest_progress[id] = _progress_of(id)
 	for id: String in ids:
 		var quest: QuestDefinition = quest_book[id]
@@ -157,10 +169,26 @@ func _advance_quests(condition: String, what: String) -> void:
 			continue
 		progress.count += 1 if open else 0
 		if step != null and progress.count >= step.count:
+			emitted.append_array(_emits(step, condition, what))
 			progress.move_to(quest.next_index(progress.step, condition, what))
 		quest_progress[id] = progress
 		if progress.step >= quest.steps.size():
 			_finish(quest)
+	return emitted
+
+
+## The events `step`, now done by a fact (`condition`, `what`), emits (#575): its own, then that of
+## the choice the fact took, the first one for saved progress settling on a fact that takes none,
+## as QuestDefinition.next_index goes on.
+static func _emits(step: QuestStep, condition: String, what: String) -> Array[String]:
+	var choice: QuestStep = step.choice_for(condition, what)
+	if choice == null and not step.choices.is_empty():
+		choice = step.choices[0]
+	var events: Array[String] = []
+	for emitter: QuestStep in [step, choice]:
+		if emitter != null and not emitter.emits.is_empty():
+			events.append(emitter.emits)
+	return events
 
 
 ## Finishes `quest`: it's done, and moves the standing with the faction it names (#532), held on

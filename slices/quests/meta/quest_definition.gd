@@ -8,8 +8,9 @@ extends RefCounted
 ## is tagged as the end; in every quest, every path must reach a tagged end (#576, QuestPaths).
 ## Each player's progress through it lives in their profile
 ## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
-## player enters the area it names; every other quest is open from the start. Finishing a quest,
-## by whichever end, can move the player's standing with a faction (#532).
+## player enters the area it names, or once a quest emits the event it names (#575); every other
+## quest is open from the start. Finishing a quest, by whichever end, can move the player's standing
+## with a faction (#532).
 
 ## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
 const FIELDS: Array[String] = ["id", "name", "steps", PathMark.FIELD, "starts_on", "standing"]
@@ -57,8 +58,8 @@ static func parse(
 	return quest
 
 
-## Why the side quest's start, read from `entry`, is wrong, or "": a reached or entered condition
-## with the place, piece or instance it names, met once.
+## Why the side quest's start, read from `entry`, is wrong, or "": a reached, entered or emitted
+## condition with the place, piece, instance or event it names, met once.
 func _check_start(entry: Variant) -> String:
 	starts_on = QuestStep.parse(entry, {})
 	# A start that read is an object: QuestStep.parse refuses anything else.
@@ -67,8 +68,8 @@ func _check_start(entry: Variant) -> String:
 		starts_on.problem = Content.unknown_field(data, QuestStep.CONDITION_FIELDS)
 	if not starts_on.problem.is_empty():
 		return "its start: " + starts_on.problem
-	if not QuestStep.PLACE_CONDITIONS.has(starts_on.condition):
-		return "its start must be one of %s" % [QuestStep.PLACE_CONDITIONS]
+	if not QuestStep.START_CONDITIONS.has(starts_on.condition):
+		return "its start must be one of %s" % [QuestStep.START_CONDITIONS]
 	if data.has("count"):
 		return "its start happens once, so it has no count"
 	return ""
@@ -93,6 +94,8 @@ func _check(
 		var step: QuestStep = QuestStep.parse(entries[index], known_species)
 		if not step.problem.is_empty():
 			return "step %d: %s" % [index, step.problem]
+		if step.condition == QuestStep.EMITTED:
+			return "step %d: only a side quest's start waits on an event" % index
 		steps.append(step)
 	var links: String = _check_links()
 	return links if not links.is_empty() else QuestPaths.problem(self)
