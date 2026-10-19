@@ -224,10 +224,10 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 		return "the dominations aren't taken: " + problem
 	tab.refresh()
 	var listed: Array[String] = [
-		"Carried 1, companion: Moss Toad, level 1",
-		"Carried 2: Storm Finch, level 1",
-		"Carried 3: Storm Finch, level 1",
-		"Not carried: Moss Toad, level 1",
+		"Carried 1, companion: Ombulumo, level 1",
+		"Carried 2: Tikazzir, level 1",
+		"Carried 3: Tikazzir, level 1",
+		"Not carried: Ombulumo, level 1",
 	]
 	if tab.monsters.shown != listed:
 		return "the Character tab lists %s, not the dominated monsters" % [tab.monsters.shown]
@@ -405,10 +405,10 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var ids: Array[int] = tab.monsters.shown_ids.duplicate()
 	tab.monsters.move(ids[3], 0)
 	var moved: Array[String] = [
-		"Carried 1, companion: Moss Toad, level 1",
-		"Carried 2: Moss Toad, level 1",
-		"Carried 3: Storm Finch, level 1",
-		"Not carried: Storm Finch, level 1",
+		"Carried 1, companion: Ombulumo, level 1",
+		"Carried 2: Ombulumo, level 1",
+		"Carried 3: Tikazzir, level 1",
+		"Not carried: Tikazzir, level 1",
 	]
 	var reordered: Array[int] = [ids[3], ids[0], ids[1], ids[2]]
 	if tab.monsters.shown != moved or tab.monsters.shown_ids != reordered:
@@ -449,7 +449,7 @@ func _type_badges(details: MonsterDetails) -> String:
 func _menu_details(tab: CharacterTab) -> String:
 	var details: MonsterDetails = tab.monsters.details
 	var first: int = tab.monsters.shown_ids[0]
-	if tab.monsters.selected != first or not details.shown[0].begins_with("Moss Toad, level 1"):
+	if tab.monsters.selected != first or not details.shown[0].begins_with("Ombulumo, level 1"):
 		return "the detail pane doesn't start on the first monster: %s" % [details.shown]
 	# A click on the third row, as the mouse gives it.
 	var click: InputEventMouseButton = InputEventMouseButton.new()
@@ -458,7 +458,7 @@ func _menu_details(tab: CharacterTab) -> String:
 	var third: Label = tab.monsters.get_child(1).get_child(2).get_child(0) as Label
 	third.gui_input.emit(click)
 	var expected: Array[String] = [
-		"Storm Finch, level 1",
+		"Tikazzir, level 1",
 		"Types: breeze, mana",
 		"HP: 60",
 		"Strength: 70",

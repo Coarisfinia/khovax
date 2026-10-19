@@ -131,7 +131,7 @@ func bottom() -> float:
 	return _top + _side * (1.0 + POINTER_SHARE) + GAP * 2.0
 
 
-## A species' initials: the first letter of each word of its name, as "SF" for "Storm Finch".
+## A species' initials: the first letter of each word of its name, as "T" for "Tikazzir".
 static func initials_of(species_name: String) -> String:
 	var letters: String = ""
 	for word: String in species_name.split(" ", false):

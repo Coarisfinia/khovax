@@ -14,7 +14,7 @@
 		},
 		{
 			"id": "glade",
-			"text": "A glade, thick with moss toads. Something has soured it lately; the toads won't sit still.",
+			"text": "A glade, thick with Ombulumo. Something has soured it lately; they won't sit still.",
 			"answers": [{ "id": "promise_to_look", "text": "I'll take a look." }]
 		}
 	]

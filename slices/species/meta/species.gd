@@ -19,6 +19,9 @@ const FIELDS: Array[String] = [
 	"player_passive",
 	"self_passive",
 ]
+## A species' name is one invented word (owner, #717), never a description like "Moss Toad": a
+## capital, then small letters. Its schema has the same pattern.
+const NAME_PATTERN: String = "^[A-Z][a-z]+$"
 
 var id: String = ""
 ## What the player reads (#351); code and saves use the id.
@@ -102,8 +105,8 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	if wrong.is_empty():
 		wrong = entry.read_kit(data)
 	entry.name = Content.text_of(data.get("name"))
-	if wrong.is_empty() and entry.name.strip_edges().is_empty():
-		wrong = "it needs a name"
+	if wrong.is_empty() and RegEx.create_from_string(NAME_PATTERN).search(entry.name) == null:
+		wrong = "it needs a name: one invented word, capitalised (#717)"
 	return wrong
 
 

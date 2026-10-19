@@ -141,7 +141,7 @@ func _check_beach_first(
 	if result.is_empty():
 		result = _check_listed(list, {
 			"first_domination": "Go to the beach",
-			"three_moss_toads": "Dominate a Moss Toad  0/3",
+			"three_moss_toads": "Dominate an Ombulumo  0/3",
 		})
 	if result.is_empty():
 		result = _check_card_scene(list, profile.quest_book["first_domination"].shown_name())
@@ -265,7 +265,7 @@ func _check_quests_tab(menu: GameMenu, profile: Profile, first: String) -> Strin
 		"enter_glade": "Now: Enter the glade",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
-		"three_moss_toads": "Now: Dominate a Moss Toad  0/3",
+		"three_moss_toads": "Now: Dominate an Ombulumo  0/3",
 	}
 	var shown: Dictionary[String, String] = menu.quests_tab().shown
 	# Laid out in its scene (#437): it scrolls only up and down.
@@ -301,7 +301,7 @@ func _check_list_follows(
 	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
 	var result: String = _check_listed(list, {
 		"first_domination": QuestListView.DONE_TEXT,
-		"three_moss_toads": "Dominate a Moss Toad  1/3",
+		"three_moss_toads": "Dominate an Ombulumo  1/3",
 	})
 	if result.is_empty():
 		result = await _check_dropped(tree, list)

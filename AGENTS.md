@@ -400,6 +400,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Every attack is a species' own** (owner, #228): no move shared by every monster, and no
   borrowed move names. What attacks have in common is a property (a non-lethal auto attack, like a
   bird-style monster's beak strike, never takes a wild monster below 1 HP), not a common move.
+- **Every species has a fantasy name** (owner's rule, #717): one invented word ("Degaea",
+  "Zylopakas"), never a description ("Moss toad", "dark skeleton wolf"); the content flow refuses
+  anything but one capitalised word. Its sound matches the monster (bouba/kiki): round, soft sounds
+  (b, m, l, o, u) for round, gentle monsters, sharp ones (k, t, z, i) for spiky, fast ones. Every
+  name is first searched as an exact phrase ("name" in quotes) in a browser, and any real hit
+  rules it out; the search results go onto the species' issue.
 - **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
