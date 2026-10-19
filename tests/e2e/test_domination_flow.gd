@@ -1128,7 +1128,9 @@ func _typed_strikes(on: bool) -> String:
 ## chart's marks (#701), or "": with it on, strong against the wild monster's one type, shown as one
 ## mark after the damage and tinted as strong; with it off, none and untinted.
 static func _special_marks(struck: SpecialStruck, on: bool) -> String:
-	var strong: Array[bool] = [true] if on else []
+	var strong: Array[bool] = []
+	if on:
+		strong.append(true)
 	if struck.strong != strong:
 		return "with the chart %s, the special's hit was strong %s, not %s" % [
 			on,
