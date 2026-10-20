@@ -42,8 +42,8 @@ const STUMP: Vector2i = Vector2i(0, -1)
 const WATER: Vector2i = Vector2i(0, 1)
 ## The legend lines every test region document starts with: player 1's start and ground (#711).
 const BASE_LEGEND: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n"
-## A made-up tile kind number for _check_room_caught's crown: no blueprint has it.
-const CROWN_KIND: int = 250
+## A made-up tile kind for _check_room_caught's crown: no blueprint has its id.
+const CROWN_KIND: String = "test_crown"
 ## The feature id _check_store_kept keeps its world store entry under: one no feature has.
 const STORE_FEATURE: String = "test_store"
 ## The screen _check_roster lays the roster out for.
@@ -161,7 +161,13 @@ func _check_tile_change_saved(world: World, rock: Vector2i) -> String:
 	var first: Dictionary = saved[0]
 	var state: Dictionary = first["state"]
 	var source: BlueprintSource = BlueprintSource.new()
-	for bad: Array in [[rock.x, rock.y, CROWN_KIND], [rock.x, rock.y], [99, 99, Region.WATER]]:
+	var bad_saves: Array[Array] = [
+		[{ "q": rock.x, "r": rock.y, "kind": CROWN_KIND }],
+		[{ "q": rock.x, "r": rock.y }],
+		[{ "q": 99, "r": 99, "kind": Region.WATER }],
+		[rock.x, rock.y, 2],
+	]
+	for bad: Array in bad_saves:
 		state["changed_tiles"] = bad
 		var problem: String = WorldData.to_world(data, source).problem
 		if problem.is_empty():
@@ -176,7 +182,7 @@ static func _free_ground_beside(state: GameState, tile: Vector2i) -> Vector2i:
 		var taken: bool = false
 		for each: Entity in state.entities:
 			taken = taken or each.tile == next
-		if state.region.terrain.get(next, -1) == Region.GROUND and not taken:
+		if state.region.terrain.get(next, "") == Region.GROUND and not taken:
 			return next
 	return tile
 
@@ -1024,10 +1030,10 @@ func _check_documents() -> String:
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
 	expected = expected and _species_on(region, Vector2i(-1, 1)) == "tikazzir"
-	var forest: int = TileKinds.number_of("forest")
+	var forest: String = "forest"
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
-	expected = expected and region.terrain[STUMP] == TileKinds.number_of("stump")
+	expected = expected and region.terrain[STUMP] == "stump"
 	var plain: String = tiles % [
 		grid,
 		legend.replace(", not walkable", "").replace(", walkable", ""),
@@ -1075,7 +1081,7 @@ func _check_refusals(tiles: String) -> String:
 		if not problem.begins_with(refusals[text]):
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
 	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
-	var forest: int = TileKinds.number_of("forest")
+	var forest: String = "forest"
 	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
 	return _check_kind_and_place(tiles)
@@ -1096,9 +1102,9 @@ func _check_kind_and_place(tiles: String) -> String:
 	var region: Region = RegionDocument.parse(tiles % ["🌲🔴🐚", legend])
 	var grove: Vector2i = Vector2i(-1, 0)
 	var expected: bool = region.problem.is_empty() and region.triggers.size() == 2
-	expected = expected and region.terrain.get(grove, -1) == TileKinds.number_of("forest")
+	expected = expected and region.terrain.get(grove, "") == "forest"
 	expected = expected and region.looks.decoration_turns == { grove: 2 }
-	expected = expected and region.terrain.get(Vector2i(1, 0), -1) == Region.GROUND
+	expected = expected and region.terrain.get(Vector2i(1, 0), "") == Region.GROUND
 	for trigger: TileTrigger in region.triggers:
 		var place: String = "grove" if trigger.tile == grove else "beach"
 		expected = expected and trigger.action == TileTrigger.REACH and trigger.place == place
@@ -1223,20 +1229,20 @@ func _check_room() -> String:
 ## lower by hand in its piece (a height override, #232) fits.
 func _check_room_caught() -> String:
 	var crown: TileBlueprint = TileBlueprint.new()
-	crown.id = "test_crown"
+	crown.id = CROWN_KIND
 	crown.reach = 1
-	crown.clearance = TileLooks.height_of(TileKinds.number_of("stump"))
+	crown.clearance = TileLooks.height_of("stump")
 	_crown = crown
 	var look: Callable = _crown_look
 	var region: Region = Region.disc(2)
 	region.terrain[Vector2i.ZERO] = CROWN_KIND
-	region.terrain[Hex.DIRECTIONS[0]] = TileKinds.number_of("stump")
+	region.terrain[Hex.DIRECTIONS[0]] = "stump"
 	if not _room_problem(region, look).is_empty():
 		return "a stump didn't fit under a crown that leaves room for it: " + _room_problem(
 			region,
 			look,
 		)
-	region.terrain[Hex.DIRECTIONS[3]] = TileKinds.number_of("forest")
+	region.terrain[Hex.DIRECTIONS[3]] = "forest"
 	var problem: String = _room_problem(region, look)
 	if not problem.contains("forest") or not problem.contains(str(Hex.DIRECTIONS[3])):
 		return "a forest under a crown that leaves no room for it wasn't caught: " + problem
@@ -1247,7 +1253,7 @@ func _check_room_caught() -> String:
 
 
 ## The blueprint of `kind` for _check_room_caught: its made-up crown, or the real one.
-func _crown_look(kind: int) -> TileBlueprint:
+func _crown_look(kind: String) -> TileBlueprint:
 	return _crown if kind == CROWN_KIND else TileLooks.of(kind)
 
 

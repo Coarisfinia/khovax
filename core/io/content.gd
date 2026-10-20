@@ -21,17 +21,13 @@ var problem: String = ""
 ## Every tile blueprint file in `directory`, read and checked.
 static func load_tiles(directory: String = TILES_DIR) -> Content:
 	var content: Content = Content.new()
-	var numbers: Dictionary[int, bool] = {}
 	var texts: Dictionary[String, String] = texts_in(directory)
 	for file_id: String in texts:
 		var tile: TileBlueprint = TileBlueprint.parse(file_id, texts[file_id])
-		if tile.problem.is_empty() and numbers.has(tile.number):
-			tile.problem = "its number %d is another tile blueprint's" % tile.number
 		if not tile.problem.is_empty():
 			content.problem = file_id + ".jsonc: " + tile.problem
 			return content
 		content.tiles[tile.id] = tile
-		numbers[tile.number] = true
 	return content
 
 

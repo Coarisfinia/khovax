@@ -1,7 +1,6 @@
 // Water: nobody walks it, but sight passes over it. Built in: `~` in a region file.
 {
 	"id": "water",
-	"number": 1, // permanent: never reused or changed once shipped
 	"color": "#4073b3",
 	"symbol": "~", // tells it apart without its color (#68)
 	"traits": { "walkable": false }

@@ -47,7 +47,7 @@ var _index: Dictionary[Vector2i, int] = {}
 var _transforms: Dictionary[Vector2i, Transform3D] = {}
 var _colors: Dictionary[Vector2i, Color] = {}
 ## The kind each tile is shown as, or easing into.
-var _kinds: Dictionary[Vector2i, int] = {}
+var _kinds: Dictionary[Vector2i, String] = {}
 ## The tiles easing into their new kind's color after changing in place (#530), each with its tween.
 var easing: Dictionary[Vector2i, Tween] = {}
 
@@ -140,7 +140,7 @@ func tile_color_of(tile: Vector2i) -> Color:
 
 
 ## The color a tile of this kind (Region.terrain) has when nothing paints it: its tile blueprint's.
-func terrain_color(kind: int) -> Color:
+func terrain_color(kind: String) -> Color:
 	var blueprint: TileBlueprint = TileLooks.of(kind)
 	return blueprint.color if blueprint != null else Color.BLACK
 
@@ -184,7 +184,7 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 
 
 ## Eases `tile` from the color it has into the color of the kind `kind`, calmly, never a flash.
-func _ease_into(tile: Vector2i, kind: int) -> void:
+func _ease_into(tile: Vector2i, kind: String) -> void:
 	if easing.has(tile):
 		easing[tile].kill()
 	_kinds[tile] = kind

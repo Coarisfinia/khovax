@@ -213,7 +213,7 @@ func _check_hiding_legend() -> String:
 ## no species or no kind is refused.
 func _check_standing_on(piece: String) -> String:
 	var sand: Region = RegionDocument.parse(piece + "a wild monster, always ombulumo, on sand\n")
-	var on_sand: bool = sand.terrain.get(Vector2i.ZERO) == TileKinds.number_of("sand")
+	var on_sand: bool = sand.terrain.get(Vector2i.ZERO) == "sand"
 	if not sand.problem.is_empty() or sand.wild_spots.size() != 1 or not on_sand:
 		return "a wild monster standing on sand doesn't read: " + sand.problem
 	var broken_meanings: Array[String] = [

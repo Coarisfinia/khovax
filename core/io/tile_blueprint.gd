@@ -3,14 +3,12 @@ class_name TileBlueprint
 extends RefCounted
 ## A kind of tile a region is made of (#116), read from content data (core/data/tiles/, #72,
 ## #506): its ground color and decoration for the view, and its traits for the rules. A region's
-## legend places it by its id. Its number is permanent (TileKinds); the rules see only its id,
-## number and traits.
+## legend places it by its id, named after its file (#802); the rules see only its id and traits
+## (TileKinds).
 
 ## Its schema, which says the fields a tile blueprint file and its traits may have (SchemaFields,
 ## #825).
 const SCHEMA: String = "res://core/data/schemas/tiles.schema.json"
-## The largest number a kind may have, so a typo can't make the kind list huge.
-const MAX_NUMBER: int = 255
 ## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
 ## a typo can't make one tile overshadow the region.
 const MAX_HEIGHT: int = PieceLooks.MAX_HEIGHT
@@ -21,9 +19,6 @@ const FULL_SCALE: int = 100
 const MAX_SCALE: int = 4 * FULL_SCALE
 
 var id: String = ""
-## The kind's permanent number in Region.terrain, never reused or changed once shipped; -1 when
-## the file doesn't give a valid one.
-var number: int = -1
 ## The tile's ground color.
 var color: Color = Color.BLACK
 ## What tells the kind apart without its color (#68): one printable ASCII character, so every font
@@ -63,7 +58,6 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
 	blueprint.symbol = Content.text_of(data.get("symbol"))
-	blueprint.number = _number(data.get("number"))
 	blueprint.reach = _whole(data.get("reach", 0), MAX_REACH)
 	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
 	blueprint.walkable = walks is bool and walks
@@ -90,8 +84,6 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 		return "its color is #rrggbb"
 	if RegEx.create_from_string("^[!-~]$").search(symbol) == null:
 		return "its symbol is one printable ASCII character"
-	if number < 0 or number > MAX_NUMBER:
-		return "its number is a whole number from 0 to %d" % MAX_NUMBER
 	if not walks is bool:
 		return "its traits say whether it's walkable"
 	scale = _whole(data.get("scale", FULL_SCALE), MAX_SCALE)
@@ -110,11 +102,6 @@ func _size_problem() -> String:
 			MAX_HEIGHT,
 		]
 	return ""
-
-
-## A JSON number that is a whole kind number from 0 to MAX_NUMBER, or -1 for anything else.
-static func _number(value: Variant) -> int:
-	return _whole(value, MAX_NUMBER)
 
 
 ## A JSON number that is a whole number from 0 to `most`, or -1 for anything else.

@@ -4,8 +4,8 @@ extends RefCounted
 ## types come from the type chart, never two from one family; every species has a name for the
 ## player (#351), one invented word (#717); and broken entries are refused. Loot tables (#90)
 ## load, roll the same for the same stream, and a blank rolls on the instance's table.
-## Tile blueprints (#116) load, the built-in ones with the numbers and traits regions always had,
-## and broken ones are refused. Quests (#184) load with the steps they're written with, name only
+## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
+## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
 ## their quest and ends close its own chain (#573), every path reaches an end (#576), and broken
 ## ones are refused; a quest can move
@@ -482,12 +482,13 @@ func _check_target_steps(content: QuestData) -> String:
 	return _unrefused(cases, content)
 
 
-## Every tile blueprint file reads, its id matching its file; ground, water and rock keep their
-## numbers and walkability; the rules number every kind by its file's number; forest, shrubs and
-## a stump are walkable and a boulder isn't (#205), each with its model, and sand is plain and
-## walkable (#321); every model a blueprint names exists; the stump is drawn at 400 hundredths
-## of its size (#588), every other kind at 100, the default; no two kinds share a symbol (#68).
-## Broken blueprints, and two with one number, are refused.
+## Every tile blueprint file reads, its id matching its file; ground, water and rock are the
+## built-in
+## kinds and keep their walkability; the rules know every kind by its file's name (#802); forest,
+## shrubs and a stump are walkable and a boulder isn't (#205), each with its model, and sand is
+## plain and walkable (#321); every model a blueprint names exists; the stump is drawn at 400
+## hundredths of its size (#588), every other kind at 100, the default; no two kinds share a symbol
+## (#68). Broken blueprints are refused.
 func _check_tiles() -> String:
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
@@ -504,18 +505,16 @@ func _check_tiles() -> String:
 	}
 	var plain: Array[String] = ["ground", "water", "rock", "sand"]
 	for id: String in walkable:
-		var kind: int = TileKinds.number_of(id)
-		if (not content.tiles.has(id) or TileKinds.is_walkable(kind) != walkable[id]
+		if (not content.tiles.has(id) or TileKinds.is_walkable(id) != walkable[id]
 				or content.tiles[id].model.is_empty() != plain.has(id)):
 			return "tile blueprint %s is missing, not as walkable as written, or (un)decorated" % id
-	var built_in: Array[int] = [Region.GROUND, Region.WATER, Region.BLOCKED]
-	if built_in != [content.tiles["ground"].number, content.tiles["water"].number,
-			content.tiles["rock"].number]:
-		return "the built-in tile kinds don't keep their numbers"
+	for built_in: String in [Region.GROUND, Region.WATER, Region.BLOCKED]:
+		if not content.tiles.has(built_in):
+			return "the built-in tile kind %s has no tile blueprint" % built_in
 	var symbols: Dictionary[String, String] = {}
 	for tile: TileBlueprint in content.tiles.values():
-		if TileKinds.number_of(tile.id) != tile.number or TileKinds.id_of(tile.number) != tile.id:
-			return "the rules don't number tile blueprint %s by its file" % tile.id
+		if not TileKinds.has(tile.id):
+			return "the rules don't know tile blueprint %s by its file's name" % tile.id
 		if symbols.has(tile.symbol):
 			return "tile blueprints %s and %s share one symbol" % [symbols[tile.symbol], tile.id]
 		symbols[tile.symbol] = tile.id
@@ -526,69 +525,48 @@ func _check_tiles() -> String:
 				tile.model,
 				tile.scale,
 			]
-	var result: String = _check_tiles_refused()
-	return result if not result.is_empty() else _check_tile_numbers_unique()
+	return _check_tiles_refused()
 
 
-## Tile blueprints with a wrong id, number, color, symbol (#68), scale, crown (#232) or trait are
-## refused, with a reason; the largest scale is read, and so is a crown's reach and clearance.
+## Tile blueprints with a wrong id, color, symbol (#68), scale, crown (#232) or trait are
+## refused, with a reason, and so is one still giving a number (#802); the largest scale is read,
+## and so is a crown's reach and clearance.
 func _check_tiles_refused() -> String:
 	var tile: String = (
-		"{\"id\": \"%s\", \"number\": %s, \"color\": \"%s\", \"symbol\": \"x\", "
+		"{\"id\": \"%s\", \"color\": \"%s\", \"symbol\": \"x\", "
 		+ "\"traits\": {%s}%s}"
 	)
 	var walks: String = "\"walkable\": true"
 	var cases: Dictionary[String, String] = {
-		tile % ["y", "9", "#000000", walks, ""]: "its id must",
-		tile % ["x", "-1", "#000000", walks, ""]: "its number",
-		tile % ["x", "1.5", "#000000", walks, ""]: "its number",
-		tile % ["x", "\"9\"", "#000000", walks, ""]: "its number",
-		tile % ["x", "9", "green", walks, ""]: "its color",
-		tile % ["x", "9", "#000000", "", ""]: "its traits",
-		tile % ["x", "9", "#000000", walks + ", \"swims\": true", ""]: "field swims",
-		tile % ["x", "9", "#000000", walks, ", \"size\": 1"]: "field size",
-		tile % ["x", "9", "#000000", walks, ", \"scale\": 0"]: "its scale",
-		tile % ["x", "9", "#000000", walks, ", \"scale\": 401"]: "its scale",
-		tile % ["x", "9", "#000000", walks, ", \"scale\": 1.5"]: "its scale",
-		tile % ["x", "9", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
-		tile % ["x", "9", "#000000", walks, ", \"reach\": 9"]: "its reach",
-		tile % ["x", "9", "#000000", walks, ", \"clearance\": -1"]: "its reach",
-		tile.replace(", \"symbol\": \"x\"", "") % ["x", "9", "#000000", walks, ""]: "its symbol",
-		tile.replace("\"x\", ", "\"xy\", ") % ["x", "9", "#000000", walks, ""]: "its symbol",
+		tile % ["y", "#000000", walks, ""]: "its id must",
+		tile % ["x", "#000000", walks, ", \"number\": 9"]: "field number",
+		tile % ["x", "green", walks, ""]: "its color",
+		tile % ["x", "#000000", "", ""]: "its traits",
+		tile % ["x", "#000000", walks + ", \"swims\": true", ""]: "field swims",
+		tile % ["x", "#000000", walks, ", \"size\": 1"]: "field size",
+		tile % ["x", "#000000", walks, ", \"scale\": 0"]: "its scale",
+		tile % ["x", "#000000", walks, ", \"scale\": 401"]: "its scale",
+		tile % ["x", "#000000", walks, ", \"scale\": 1.5"]: "its scale",
+		tile % ["x", "#000000", walks, ", \"scale\": \"2\""]: "its scale",
+		tile % ["x", "#000000", walks, ", \"reach\": 9"]: "its reach",
+		tile % ["x", "#000000", walks, ", \"clearance\": -1"]: "its reach",
+		tile.replace(", \"symbol\": \"x\"", "") % ["x", "#000000", walks, ""]: "its symbol",
+		tile.replace("\"x\", ", "\"xy\", ") % ["x", "#000000", walks, ""]: "its symbol",
 	}
 	for text: String in cases:
 		var problem: String = TileBlueprint.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	var largest: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,
+	var largest: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "#000000", walks,
 			", \"scale\": 400"])
 	if not largest.problem.is_empty() or largest.scale != TileBlueprint.MAX_SCALE:
 		return "the largest scale is refused or misread: %s" % largest.problem
-	var crown: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "9", "#000000", walks,
+	var crown: TileBlueprint = TileBlueprint.parse("x", tile % ["x", "#000000", walks,
 			", \"reach\": 1, \"clearance\": 40"])
 	if (not crown.problem.is_empty()
 			or crown.reach != 1
 			or crown.clearance != 40):
 		return "a crown's reach or clearance is refused or misread: %s" % crown.problem
-	return ""
-
-
-## Two tile blueprints with the same number are refused: a number names one kind forever.
-func _check_tile_numbers_unique() -> String:
-	var directory: String = "user://tile_numbers_test/"
-	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
-	var tile: String = "{\"id\": \"%s\", \"number\": 7, \"color\": \"#000000\", "
-	tile += "\"symbol\": \"%s\", \"traits\": {\"walkable\": true}}"
-	for id: String in ["a", "b"]:
-		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(tile % [id, id])
-		file.close()
-	var problem: String = Content.load_tiles(directory).problem
-	for id: String in ["a", "b"]:
-		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
-	var _gone: Error = DirAccess.remove_absolute(directory)
-	if not problem.begins_with("b.jsonc: its number 7"):
-		return "two tile blueprints with one number weren't refused: %s" % problem
 	return ""
 
 

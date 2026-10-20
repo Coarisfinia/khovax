@@ -1,67 +1,49 @@
 class_name TileKinds
 extends RefCounted
 ## The kinds of tile a region is made of (#116), as the rules see them: Region.terrain holds one
-## kind per tile, as its number. Each kind is a tile blueprint (content data, read by Content),
-## whose file gives it a permanent number, never reused or changed once shipped, so adding a kind
-## never renumbers another. The built-in kinds keep the numbers regions
-## always had (Region.GROUND, WATER and BLOCKED). Only what rules need is kept here: each kind's id
-## and traits; its color and model are the view's, read from the blueprints in core/io/ (Content).
+## kind per tile, as its id. Each kind is a tile blueprint (content data, read by Content), named
+## by its file (#802), never by a hand-kept number, so parallel pull requests adding kinds never
+## claim the same one; an id is never reused or renamed once shipped. Only what rules need is kept
+## here: each kind's traits; its color and model are the view's, read from the blueprints in
+## core/io/ (Content).
 ##
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,
 ## so it adds a file to core/rules_changes/ and rehashes the golden replays, like any rule change.
 ##
 ## Read here at first use rather than handed over from outside the core: the kinds are fixed data
-## of the build, never state, so they need no hash of their own: a region hashes its tiles' numbers.
+## of the build, never state, so they need no hash of their own: a region hashes its tiles' kinds,
+## each as its id's code (StateHash.name_code).
 
-## Each kind's id, by number; "" for a number no kind has. Empty until first used.
-static var _ids: Array[String] = []
-## Whether walkers can stand on each kind, by number.
-static var _walkable: Array[bool] = []
-## Whether wild monsters hide in each kind, by number (#202).
-static var _hides: Array[bool] = []
+## Whether walkers can stand on each kind, by id. Empty until first used.
+static var _walkable: Dictionary[String, bool] = {}
+## Whether wild monsters hide in each kind, by id (#202).
+static var _hides: Dictionary[String, bool] = {}
 
 
-## The number of the kind with this id, or -1 when there's none.
-static func number_of(id: String) -> int:
+## Whether a tile blueprint has the id `kind`.
+static func has(kind: String) -> bool:
 	_read_once()
-	return _ids.find(id) if not id.is_empty() else -1
-
-
-## The id of kind `kind`, or "" for a number no kind has.
-static func id_of(kind: int) -> String:
-	_read_once()
-	return _ids[kind] if kind >= 0 and kind < _ids.size() else ""
+	return _walkable.has(kind)
 
 
 ## Whether walkers can stand on a tile of kind `kind`.
-static func is_walkable(kind: int) -> bool:
+static func is_walkable(kind: String) -> bool:
 	_read_once()
-	return kind >= 0 and kind < _walkable.size() and _walkable[kind]
+	return _walkable.has(kind) and _walkable[kind]
 
 
 ## Whether a wild monster standing on a tile of kind `kind` hides there (#202).
-static func hides(kind: int) -> bool:
+static func hides(kind: String) -> bool:
 	_read_once()
-	return kind >= 0 and kind < _hides.size() and _hides[kind]
-
-
-## How many numbers there are, the largest kind's plus one; gaps count, as kinds nobody has.
-static func count() -> int:
-	_read_once()
-	return _ids.size()
+	return _hides.has(kind) and _hides[kind]
 
 
 static func _read_once() -> void:
-	if not _ids.is_empty():
+	if not _walkable.is_empty():
 		return
 	var content: Content = Content.load_tiles()
 	if not content.problem.is_empty():
 		push_error("the tile blueprints didn't load: " + content.problem)
 	for tile: TileBlueprint in content.tiles.values():
-		if tile.number >= _ids.size():
-			var _ids_grown: int = _ids.resize(tile.number + 1)
-			var _walkable_grown: int = _walkable.resize(tile.number + 1)
-			var _hides_grown: int = _hides.resize(tile.number + 1)
-		_ids[tile.number] = tile.id
-		_walkable[tile.number] = tile.walkable
-		_hides[tile.number] = tile.hides
+		_walkable[tile.id] = tile.walkable
+		_hides[tile.id] = tile.hides

@@ -135,7 +135,7 @@ func _check_hash_covers_fields() -> String:
 		"store entry": func(state: GameState) -> void: state.store(0, CompanionFeature.ID)["a"] = 1,
 		"store text": func(state: GameState) -> void: state.store(1, HealthFeature.ID)["a"] = "x",
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
-		"region tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = 0,
+		"added tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = "rock",
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
 		"next_entity_id": func(state: GameState) -> void: state.next_entity_id += 1,
 		"entity id": func(state: GameState) -> void: state.player(0).id += 1,
@@ -828,7 +828,7 @@ func _check_basic_monsters(region: Region) -> String:
 			region.wild_monsters,
 		]
 	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
-	var sand: int = TileKinds.number_of("sand")
+	var sand: String = "sand"
 	if toad == null or toad.species != "ombulumo" or not toad.wounded:
 		return "the beach's wild monster isn't a wounded Ombulumo"
 	if region.terrain.get(FlowSteps.BEACH_TOAD) != sand:
@@ -861,7 +861,7 @@ func _check_region_file() -> String:
 		return broken
 	# Tiles left of the origin and rows above it have negative coordinates.
 	var left: Region = FlowSteps.region(" 🟦⬛\n🔴🟫🟫\n 🟫")
-	var expected: Dictionary[Vector2i, int] = {
+	var expected: Dictionary[Vector2i, String] = {
 		Vector2i(0, -1): Region.WATER,
 		Vector2i(1, -1): Region.BLOCKED,
 		Vector2i(-1, 0): Region.GROUND,

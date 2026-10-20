@@ -1,7 +1,6 @@
 // Plain ground: the tile most of a region is made of. Built in: `.` in a region file.
 {
 	"id": "ground",
-	"number": 0, // permanent: never reused or changed once shipped
 	"color": "#5c8c52",
 	"symbol": ".", // tells it apart without its color (#68)
 	"traits": { "walkable": true }

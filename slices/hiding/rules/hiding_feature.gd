@@ -59,7 +59,7 @@ func is_hidden(entity_id: int) -> bool:
 
 ## Whether a wild monster on `tile` of `region` hides there.
 static func hides_at(region: Region, tile: Vector2i) -> bool:
-	var kind: int = region.terrain.get(tile, Region.GROUND)
+	var kind: String = region.terrain.get(tile, Region.GROUND)
 	return TileKinds.hides(kind)
 
 

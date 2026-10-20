@@ -1,7 +1,6 @@
 // Sand: plain walkable ground by the water, the beach's (#321). No decoration.
 {
 	"id": "sand",
-	"number": 7, // permanent: never reused or changed once shipped
 	"color": "#e0d2a4",
 	"symbol": ":", // tells it apart without its color (#68)
 	"traits": { "walkable": true }

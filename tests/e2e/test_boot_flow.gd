@@ -582,7 +582,7 @@ func _check_terrain_colors(main: Node) -> String:
 	var region: Region = Region.disc(1)
 	region.terrain[Vector2i(1, 0)] = Region.WATER
 	region.terrain[Vector2i(-1, 0)] = Region.BLOCKED
-	region.terrain[Vector2i(0, 1)] = TileKinds.number_of("forest")
+	region.terrain[Vector2i(0, 1)] = "forest"
 	driver.state.region = region
 	grid.show_state()
 	if grid.tile_count() != region.size():
@@ -784,12 +784,12 @@ func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> S
 	var grid: HexGrid = view.grids.get(InstanceBlueprints.FOREST)
 	if woods == null or grid == null or grid.shown_region() != woods.region:
 		return "the forest next door isn't drawn from its loaded region"
-	var forest: int = TileKinds.number_of("forest")
+	var forest: String = "forest"
 	var tile: Vector2i = woods.region.sorted_tiles()[0]
 	for each: Vector2i in woods.region.sorted_tiles():
 		if woods.region.terrain[each] == forest:
 			tile = each
-	for kind: int in [Region.GROUND, forest]:
+	for kind: String in [Region.GROUND, forest]:
 		var before: Color = grid.tile_color_of(tile)
 		var _changed: bool = woods.change_tile(tile, kind)
 		# As the world does once the forest's tick changed it.
@@ -846,7 +846,7 @@ func _check_tile_change_shown(main: Node) -> String:
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	grid.show_state()
 	view.show_state()
-	var forest: int = TileKinds.number_of("forest")
+	var forest: String = "forest"
 	var tile: Vector2i = Vector2i.MAX
 	for decorated: Vector2i in view.figures:
 		if driver.state.region.terrain[decorated] == forest:
@@ -874,7 +874,7 @@ func _check_tile_change_shown(main: Node) -> String:
 
 ## Changes `tile` of the driver's instance to `kind`, as a rule would, and hands the views the
 ## tick's events.
-static func _change_shown(driver: GameDriver, tile: Vector2i, kind: int) -> void:
+static func _change_shown(driver: GameDriver, tile: Vector2i, kind: String) -> void:
 	driver.state.events.clear()
 	var _changed: bool = driver.state.change_tile(tile, kind)
 	var events: Array[RefCounted] = []
@@ -914,7 +914,7 @@ func _check_decorations(main: Node) -> String:
 	for id: String in ["forest", "shrubs", "boulder", "stump", "crates"]:
 		var tiles: Array[Vector2i] = []
 		for tile: Vector2i in region.sorted_tiles():
-			if region.terrain[tile] == TileKinds.number_of(id):
+			if region.terrain[tile] == id:
 				tiles.append(tile)
 		if tiles.is_empty():
 			return "the glade has no %s" % id
@@ -1157,7 +1157,7 @@ func _unseen_tile_of(state: GameState, id: String) -> Vector2i:
 
 func _tile_of(state: GameState, id: String, seen: bool) -> Vector2i:
 	for tile: Vector2i in _split_by_sight(state, seen):
-		if state.region.terrain[tile] == TileKinds.number_of(id):
+		if state.region.terrain[tile] == id:
 			return tile
 	return Vector2i.MAX
 

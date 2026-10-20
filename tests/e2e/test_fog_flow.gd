@@ -167,7 +167,7 @@ func _check_changed_across_the_seam(world: World) -> String:
 	var clearing: TileRule = TileRule.new(rock - shift, Region.BLOCKED)
 	glade.features.append(clearing)
 	world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
-	if forest.next_door.get(rock, -1) != Region.BLOCKED or FlowSteps.sight_of(forest) == seen:
+	if forest.next_door.get(rock, "") != Region.BLOCKED or FlowSteps.sight_of(forest) == seen:
 		return "the rock changed in place next door isn't the forest's ground next door"
 	var sight: Array[Vector2i] = FogFeature.sight(
 		forest.region,
@@ -194,8 +194,8 @@ static func _blocking_across(state: GameState, from: Vector2i) -> Vector2i:
 		state.next_door,
 	)
 	for tile: Vector2i in seen:
-		if state.next_door.get(tile, -1) == Region.GROUND:
-			var blocked: Dictionary[Vector2i, int] = state.next_door.duplicate()
+		if state.next_door.get(tile, "") == Region.GROUND:
+			var blocked: Dictionary[Vector2i, String] = state.next_door.duplicate()
 			blocked[tile] = Region.BLOCKED
 			var radius: int = FogFeature.SIGHT_RADIUS
 			if FogFeature.sight(state.region, from, radius, blocked).size() < seen.size():
@@ -222,10 +222,10 @@ class TileRule:
 	extends Feature
 
 	var tile: Vector2i
-	var kind: int
+	var kind: String
 	var done: bool = false
 
-	func _init(changed_tile: Vector2i, new_kind: int) -> void:
+	func _init(changed_tile: Vector2i, new_kind: String) -> void:
 		tile = changed_tile
 		kind = new_kind
 

@@ -39,7 +39,7 @@ var stores: Array[PlayerStore] = []
 ## seam: a loaded neighbour's region as it is, with its tiles changed in place (#538), and the
 ## others' from their blueprints and seeds, without loading them. Derived data, like the region, so
 ## it's in no hash; `next_door_version` goes up whenever it changes (`hand_next_door`).
-var next_door: Dictionary[Vector2i, int] = {}
+var next_door: Dictionary[Vector2i, String] = {}
 var next_door_version: int = 0
 ## Why the instance's feature order is invalid, or "" when it is valid. An invalid state has no
 ## features and must not be run: InstanceBlueprints.create refuses it.
@@ -156,10 +156,10 @@ func set_enabled(id: String, on: bool) -> void:
 ## tick's events get a TileChanged for the views, and the region keeps it until the instance is
 ## purged, its save too (`to_data`). Only rules call it, inside a tick. Returns whether the tile
 ## changed: not when it's off the region, already of that kind, or of a kind no blueprint has.
-func change_tile(tile: Vector2i, kind: int) -> bool:
+func change_tile(tile: Vector2i, kind: String) -> bool:
 	if not region.has_tile(tile) or region.terrain[tile] == kind:
 		return false
-	var was: int = region.terrain[tile]
+	var was: String = region.terrain[tile]
 	if not region.change(tile, kind):
 		return false
 	changed_tiles[tile] = true
@@ -171,7 +171,7 @@ func change_tile(tile: Vector2i, kind: int) -> bool:
 
 ## Takes `ground` as the ground next door (#191), which only the world hands over: every feature
 ## hears of it at once (Feature.next_door_changed), so sight across the seam never lags behind it.
-func hand_next_door(ground: Dictionary[Vector2i, int]) -> void:
+func hand_next_door(ground: Dictionary[Vector2i, String]) -> void:
 	next_door = ground
 	next_door_version += 1
 	for each: Feature in features:
@@ -179,19 +179,20 @@ func hand_next_door(ground: Dictionary[Vector2i, int]) -> void:
 
 
 ## The instance's state as save data (#119): its tick, its entities as id, slot, q and r in id
-## order, the next entity id, the tiles changed in place (#530) as q, r and kind in tile order, and
+## order, the next entity id, the tiles changed in place (#530), each its q, r and kind's id (#802),
+## in tile order, and
 ## each feature's id, on/off and state, in order. The seed and the rest of the region follow from
 ## the world's seed and the blueprint, so they aren't saved.
 func to_data() -> Dictionary:
 	var flat: Array[int] = []
 	for each: Entity in entities:
 		flat.append_array([each.id, each.slot, each.tile.x, each.tile.y])
-	var changed: Array[int] = []
+	var changed: Array[Dictionary] = []
 	var tiles: Array[Vector2i] = []
 	tiles.assign(changed_tiles.keys())
 	tiles.sort()
 	for tile: Vector2i in tiles:
-		changed.append_array([tile.x, tile.y, region.terrain[tile]])
+		changed.append({ "q": tile.x, "r": tile.y, "kind": region.terrain[tile] })
 	var saved: Array[Dictionary] = []
 	for each: Feature in features:
 		saved.append({
@@ -241,17 +242,19 @@ func load_data(data: DataReader) -> void:
 ## Changes the region's tiles as `to_data` saved them (#530), without events: a loaded instance
 ## shows them from the start. Returns whether they were valid; reports why not to `data`.
 func load_changed_tiles(data: DataReader) -> bool:
-	var flat: Array[int] = data.wholes("changed_tiles", -DataReader.MOST, DataReader.MOST)
-	if flat.size() % 3 != 0:
-		data.fail("a changed tile is cut off")
-		return false
-	for i: int in range(0, flat.size(), 3):
-		var tile: Vector2i = Vector2i(flat[i], flat[i + 1])
-		if changed_tiles.has(tile) or not region.change(tile, flat[i + 2]):
-			data.fail("tile %s can't be kind %d, or is changed twice" % [tile, flat[i + 2]])
+	for changed: DataReader in data.entries("changed_tiles"):
+		var tile: Vector2i = Vector2i(
+			changed.whole("q", -DataReader.MOST, DataReader.MOST),
+			changed.whole("r", -DataReader.MOST, DataReader.MOST),
+		)
+		var kind: String = changed.text("kind")
+		if data.failed():
+			return false
+		if changed_tiles.has(tile) or not region.change(tile, kind):
+			data.fail("tile %s can't be kind %s, or is changed twice" % [tile, kind])
 			return false
 		changed_tiles[tile] = true
-	return true
+	return not data.failed()
 
 
 ## Why an entity with these values can't follow the ones restored so far, or "": ids grow and
