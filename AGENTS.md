@@ -299,7 +299,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   name, never a hand-kept number, so parallel pull requests never claim the same one, #784; never
   reused or renamed once shipped), its own state,
   a `step` called in order each tick (the order is `FeatureFactories`' list in the blueprints slice,
-  reviewed like code; each blueprint's data file lists its rules, #823, and what its region pieces' legends place brings the features that run it, #879), the features it `requires` earlier in the order (and those it reads that an instance may
+  reviewed like code; each blueprint's data file names its rule set and the rules it adds or drops, #823, #941, and what its region pieces' legends place brings the features that run it, #879), the features it `requires` earlier in the order (and those it reads that an instance may
   lack: `after` when they step earlier, `before` when they step later, #822; the replay flow
   checks that every feature it reads is declared), and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching

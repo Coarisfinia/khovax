@@ -1,0 +1,9 @@
+// The rules every instance has unless its blueprint adds or drops one (#941).
+{
+	"id": "standard",
+	"features": [
+		"movement", "knockdown", "trail", "health", "domination", "wild_attacks", "spikes",
+		"domination_loot", "enrage", "fog", "companions", "companion_swaps", "revive_items",
+		"type_effectiveness", "companion_attacks", "specials", "harvest", "dialogs", "territory"
+	]
+}

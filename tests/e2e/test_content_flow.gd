@@ -41,6 +41,10 @@ const FACTION_TEXT: String = (
 )
 ## Five rank names, as a faction has each way.
 const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
+## A blueprint file x on the rule set small (#941), its last fields left open.
+const BLUEPRINT: String = "{\"id\": \"x\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}%s}"
+## A rule set file small (#941), its rules left open.
+const RULE_SET: String = "{\"id\": \"small\", \"features\": [%s]}"
 
 
 func run(_tree: SceneTree) -> String:
@@ -60,6 +64,7 @@ func run(_tree: SceneTree) -> String:
 		_check_loot_refused,
 		_check_wild_species.bind(content),
 		_check_blueprints,
+		_check_rule_sets,
 		_check_realms,
 		_check_tiles,
 		_check_quests,
@@ -592,8 +597,8 @@ func _check_wild_species(content: SpeciesContent) -> String:
 ## The glade's blueprint reads as written (#823): its rules, loot tables and variants in their
 ## order. What its region holds brings the rest (#879): its people only to the glade itself, its
 ## chests to its corrupted variant too, through its chest table. A blueprint file with a wrong id,
-## an unknown field, an unknown or repeated feature or one its region brings, no species, a weight
-## below 1, a chest table without a loot table, or a variant without its region is refused.
+## an unknown field, no species, a weight below 1, a chest table without a loot table, or a variant
+## without its region is refused.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
@@ -618,26 +623,65 @@ func _check_blueprints() -> String:
 	)
 	if first != PackedStringArray([WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
 		return "the glade's variants read %s" % [glade.variants]
-	var blueprint: String = (
-		"{\"id\": \"x\", \"features\": [\"movement\"], \"wild_species\": {\"a\": 1}%s}"
+	return _blueprints_refused({
+		BLUEPRINT.replace("\"x\"", "\"y\"") % "": "its id must",
+		BLUEPRINT % ", \"z\": 1": "field z",
+		BLUEPRINT.replace("\"a\": 1", "") % "": "its wild_species",
+		BLUEPRINT.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
+		BLUEPRINT % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
+		BLUEPRINT % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
+		BLUEPRINT % ", \"turned\": 1": "turned must",
+	})
+
+
+## A blueprint's rules are its rule set's, less the ones it drops, then the ones it adds (#941). A
+## blueprint naming an unknown rule set, dropping a rule its set lacks, adding one it has, an
+## unknown or repeated rule or one its region brings, or leaving no rule is refused, and so is a
+## rule set file with a wrong id, no rule, or an unknown, repeated or region-brought one.
+func _check_rule_sets() -> String:
+	var changed: Blueprint = Blueprint.parse(
+		"x",
+		BLUEPRINT % ", \"drop_rules\": [\"fog\"], \"add_rules\": [\"movement\", \"trail\"]",
+		_small_rule_set(),
 	)
-	var cases: Dictionary[String, String] = {
-		blueprint.replace("\"x\"", "\"y\"") % "": "its id must",
-		blueprint % ", \"z\": 1": "field z",
-		blueprint.replace("\"a\": 1", "") % "": "its wild_species",
-		blueprint.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
-		blueprint % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
-		blueprint.replace("\"movement\"", "\"flying\"") % "": "its features",
-		blueprint.replace("\"movement\"", "\"fog\", \"fog\"") % "": "its features",
-		blueprint.replace("\"movement\"", "\"exits\"") % "": "its features",
-		blueprint % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
-		blueprint % ", \"turned\": 1": "turned must",
+	if PackedStringArray(changed.features) != PackedStringArray(["movement", "trail"]):
+		return "a blueprint dropping and adding rules read %s" % [changed.features]
+	var set_cases: Dictionary[String, String] = {
+		RULE_SET.replace("small", "big") % "\"fog\"": "its id must",
+		RULE_SET % "": "its features",
+		RULE_SET % "\"flying\"": "its features",
+		RULE_SET % "\"fog\", \"fog\"": "its features",
+		RULE_SET % "\"exits\"": "its features",
 	}
+	for text: String in set_cases:
+		var refused: String = RuleSet.parse("small", text).problem
+		if not refused.begins_with(set_cases[text]):
+			return "a broken rule set gave %s, not %s" % [refused, set_cases[text]]
+	return _blueprints_refused({
+		BLUEPRINT.replace("small", "big") % "": "its rules must be",
+		BLUEPRINT % ", \"drop_rules\": [\"fog\"]": "its rules must leave",
+		BLUEPRINT % ", \"drop_rules\": [\"trail\"]": "its drop_rules",
+		BLUEPRINT % ", \"drop_rules\": [\"flying\"]": "its drop_rules",
+		BLUEPRINT % ", \"add_rules\": [\"fog\"]": "its add_rules",
+		BLUEPRINT % ", \"add_rules\": [\"flying\"]": "its add_rules",
+		BLUEPRINT % ", \"add_rules\": [\"trail\", \"trail\"]": "its add_rules",
+		BLUEPRINT % ", \"add_rules\": [\"exits\"]": "its add_rules",
+	})
+
+
+## Why a blueprint file in `cases` wasn't refused with the reason it maps to, read against
+## _small_rule_set, or "".
+func _blueprints_refused(cases: Dictionary[String, String]) -> String:
 	for text: String in cases:
-		var refusal: String = Blueprint.parse("x", text).problem
+		var refusal: String = Blueprint.parse("x", text, _small_rule_set()).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken blueprint gave %s, not %s" % [refusal, cases[text]]
 	return ""
+
+
+## The rule set "small", holding only fog, by its id.
+func _small_rule_set() -> Dictionary[String, RuleSet]:
+	return { "small": RuleSet.parse("small", RULE_SET % "\"fog\"") }
 
 
 ## Every realm file (#865) reads, found by listing its folder, and draws instances that exist,

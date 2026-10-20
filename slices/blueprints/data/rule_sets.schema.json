@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/blueprints/data/rule_sets.schema.json",
+	"title": "Rule set",
+	"description": "A named list of rules (#941) that instance blueprints name as their rules, so the rules most instances share are written once. One file per rule set, named after its id, which blueprints name, so an id is never reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "features"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"features": {
+			"description": "The ids of the rules (features) it holds, each once (#30, #823). What a region holds brings the features that run it, which are never listed here (#879). They step in the order the blueprints slice's FeatureFactories gives them, which also lists the ids there are.",
+			"type": "array",
+			"minItems": 1,
+			"uniqueItems": true,
+			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+		}
+	}
+}
