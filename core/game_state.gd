@@ -61,13 +61,13 @@ func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> vo
 ## Why `ordered` isn't a valid feature order (a feature twice, or one before a feature it
 ## requires), or "" when it is.
 static func order_problem(ordered: Array[Feature]) -> String:
-	var seen: Array[int] = []
+	var seen: Array[String] = []
 	for each: Feature in ordered:
 		if seen.has(each.id()):
-			return "feature %d appears twice" % each.id()
-		for needed: int in each.requires():
+			return "feature %s appears twice" % each.id()
+		for needed: String in each.requires():
 			if not seen.has(needed):
-				return "feature %d needs feature %d before it" % [each.id(), needed]
+				return "feature %s needs feature %s before it" % [each.id(), needed]
 		seen.append(each.id())
 	return ""
 
@@ -100,13 +100,13 @@ func remove_entity(id: int) -> void:
 
 ## The entry of the feature `feature_id` in the world store of the player in `slot` (#724), to read
 ## and write in place: only that feature's rules write it.
-func store(slot: int, feature_id: int) -> Dictionary:
+func store(slot: int, feature_id: String) -> Dictionary:
 	return stores[slot].entry(feature_id)
 
 
 ## The entry of the feature `feature_id` in the world store of the player in `slot`, to read only:
 ## for views and other features, which never write it.
-func stored(slot: int, feature_id: int) -> Dictionary:
+func stored(slot: int, feature_id: String) -> Dictionary:
 	return stores[slot].stored(feature_id)
 
 
@@ -126,8 +126,8 @@ func player(slot: int) -> Entity:
 	return null
 
 
-## The instance's feature with this id from Features, or null when the instance doesn't have it.
-func feature(id: int) -> Feature:
+## The instance's feature with this id (Feature.id), or null when the instance doesn't have it.
+func feature(id: String) -> Feature:
 	for candidate: Feature in features:
 		if candidate.id() == id:
 			return candidate
@@ -136,7 +136,7 @@ func feature(id: int) -> Feature:
 
 ## Switches a feature on or off. Only rules call this, inside a tick; it applies from the
 ## feature's next step on. Does nothing for a feature the instance doesn't have.
-func set_enabled(id: int, on: bool) -> void:
+func set_enabled(id: String, on: bool) -> void:
 	var target: Feature = feature(id)
 	if target != null:
 		target.enabled = on
@@ -222,7 +222,7 @@ func load_data(data: DataReader) -> void:
 		data.fail("the instance has %d features, the save %d" % [features.size(), saved.size()])
 		return
 	for i: int in features.size():
-		if saved[i].whole("id", 0, DataReader.MOST) != features[i].id():
+		if saved[i].text("id") != features[i].id():
 			data.fail("the instance's features are in another order than the save's")
 			return
 		features[i].enabled = saved[i].whole("enabled", 0, 1) == 1
@@ -267,7 +267,7 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
 ## every core value, every slot's world store (#724), the region, every entity in id order and, in
-## order, every feature's id, on/off and state.
+## order, every feature's id (as its code, World.name_code), on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
 	for each: PlayerStore in stores:
@@ -283,7 +283,7 @@ func state_hash() -> int:
 		values.append(each.tile.x)
 		values.append(each.tile.y)
 	for each: Feature in features:
-		values.append(each.id())
+		values.append(World.name_code(each.id()))
 		values.append(1 if each.enabled else 0)
 		values.append_array(each.hash_values())
 	var result: int = 2_166_136_261

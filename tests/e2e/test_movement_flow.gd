@@ -104,7 +104,7 @@ func run(tree: SceneTree) -> String:
 	FlowSteps.drop_beach_toad(_driver.state)
 	# A walk this long passes the wild monster, whose hits would send the player to the spawn
 	# (#457).
-	_driver.state.set_enabled(Features.WILD_ATTACKS, false)
+	_driver.state.set_enabled(WildAttackFeature.ID, false)
 	# Stepped by hand from here on.
 	_driver.set_process(false)
 	_record_afresh()
@@ -450,7 +450,7 @@ func _check_look(walked: bool, ran: bool, last_from: Vector2i) -> String:
 ## Forgets a walked tile a wild monster wore off the trail this tick (#422): the walks linger beside
 ## one. The domination flow checks the wear itself.
 func _forget_worn(_tick: int, events: Array[RefCounted]) -> void:
-	var trail: Trail = (_driver.state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (_driver.state.feature(TrailFeature.ID) as TrailFeature).shared
 	for event: RefCounted in events:
 		var struck: WildMonsterStruck = event as WildMonsterStruck
 		if struck != null and struck.target_id == 0 and not trail.tiles.has(struck.tile):
@@ -463,7 +463,7 @@ func _check_trail() -> String:
 	var expected: Array[Vector2i] = []
 	expected.assign(_walked.keys())
 	expected.sort()
-	var feature: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var feature: TrailFeature = _driver.state.feature(TrailFeature.ID) as TrailFeature
 	var trail: Trail = feature.shared
 	if trail.sorted_tiles() != expected:
 		return "the trail is %s, expected %s" % [trail.sorted_tiles(), expected]
@@ -701,10 +701,10 @@ func _record_afresh() -> void:
 func _place(tile: Vector2i) -> void:
 	var player: Entity = _driver.state.player(0)
 	player.tile = tile
-	var movement: MovementFeature = _driver.state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = _driver.state.feature(MovementFeature.ID) as MovementFeature
 	movement.walk(player.id).from = tile
 	_player_view.show_state()
-	var trails: TrailFeature = _driver.state.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = _driver.state.feature(TrailFeature.ID) as TrailFeature
 	_walked.clear()
 	for colored: Vector2i in trails.shared.tiles:
 		_walked[colored] = true

@@ -26,8 +26,8 @@ static func stepped(state: GameState, tile: Vector2i, focus: int, steps: int) ->
 
 ## The wild monsters within RANGE of `tile`, not hiding, nearest first, ties by id.
 static func nearest(state: GameState, tile: Vector2i) -> Array[int]:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var near: Array[int] = []
 	if wild == null:
 		return near

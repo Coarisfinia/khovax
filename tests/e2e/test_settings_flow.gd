@@ -301,7 +301,7 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 ## disk. No wild monster is near, so no fight stops it.
 func _menu_gear(tab: CharacterTab, main: Node) -> String:
 	var state: GameState = FlowGame.driver(main).state
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var nearby: Array[int] = wild.monsters.duplicate()
 	wild.monsters.clear()
 	var result: String = _gear_starts_empty(tab.gear)
@@ -361,8 +361,8 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 ## monster enraged anywhere in the instance, are fights too.
 func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> String:
 	var state: GameState = FlowGame.driver(main).state
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var fighter: Entity = null
 	for monster_id: int in nearby:
 		if fighter == null and (hiding == null or not hiding.is_hidden(monster_id)):
@@ -394,7 +394,7 @@ func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> Strin
 ## While the player's ring seals the wild monster `monster_id` in (owner, 1+3 on #690), wherever it
 ## stands, the gear stays put; the seal is taken off again afterwards.
 func _gear_locked_by_seal(panel: GearPanel, state: GameState, monster_id: int) -> String:
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	if domination == null:
 		return "the instance has no rings to seal a wild monster in"
 	var player_id: int = state.player(panel.driver.input.slot).id

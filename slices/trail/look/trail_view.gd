@@ -26,12 +26,12 @@ func show_state() -> void:
 	if driver == null or driver.state == null or grid == null:
 		return
 	var colors: Dictionary[Vector2i, Color] = {}
-	var feature: TrailFeature = driver.state.feature(Features.TRAIL) as TrailFeature
+	var feature: TrailFeature = driver.state.feature(TrailFeature.ID) as TrailFeature
 	if feature != null:
 		for tile: Vector2i in feature.shared.tiles:
 			colors[tile] = trail_color
 	var domination: DominationFeature = (
-		driver.state.feature(Features.DOMINATION) as DominationFeature
+		driver.state.feature(DominationFeature.ID) as DominationFeature
 	)
 	if domination != null:
 		for seal: RingSeal in domination.seals.values():

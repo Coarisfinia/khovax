@@ -11,6 +11,8 @@ extends Feature
 ## their command (Command.trap), which carries it every tick. It keeps no state of its own: the
 ## strikes fall on the instance's ticks.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "spikes"
 ## The ticks between two hurts of the spikes, as between two auto attacks.
 const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
 
@@ -23,12 +25,12 @@ func _init(spikes_damages: Dictionary[int, int] = {}) -> void:
 	damages = spikes_damages
 
 
-func id() -> int:
-	return Features.SPIKES
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.DOMINATION]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID, DominationFeature.ID]
 	return needed
 
 
@@ -42,8 +44,8 @@ static func code_of(gear_id: String) -> int:
 func step(state: GameState, commands: Array[Command]) -> void:
 	if state.tick % STRIKE_TICKS != 0:
 		return
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var rings: Dictionary[int, Array] = {}
 	for dominator_id: int in domination.seals:
 		rings[dominator_id] = domination.seals[dominator_id].monsters

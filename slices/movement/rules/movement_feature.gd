@@ -9,6 +9,8 @@ extends Feature
 ## EntityMoved event. Walkers go in entity id order, each player moved by the command of their
 ## slot; a walker no player controls (a companion) is moved by its own rule, through `try_step`.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "movement"
 ## Ticks to walk from one tile to the next.
 const MOVE_TICKS: int = 6
 
@@ -19,8 +21,8 @@ var walks: Dictionary[int, Walk] = {}
 var held: Dictionary[int, bool] = {}
 
 
-func id() -> int:
-	return Features.MOVEMENT
+func id() -> String:
+	return ID
 
 
 func step(state: GameState, commands: Array[Command]) -> void:

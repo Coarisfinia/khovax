@@ -46,7 +46,7 @@ func show_state() -> void:
 		return
 	if driver.state.region != _region:
 		_build(driver.state.region)
-	var fog: FogFeature = driver.state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = driver.state.feature(FogFeature.ID) as FogFeature
 	for tile: Vector2i in figures:
 		var revealed: bool = fog != null and fog.revealed.has(tile)
 		if revealed or FogView.ally_sees(driver.state, tile):

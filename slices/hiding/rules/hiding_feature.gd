@@ -8,6 +8,8 @@ extends Feature
 ## enclose it (#364).
 ## Instances whose region has such a monster have it.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "hiding"
 ## How near a player comes before a hidden wild monster jumps out: next to it.
 const NEAR: int = 1
 
@@ -15,18 +17,18 @@ const NEAR: int = 1
 var hidden: Array[int] = []
 
 
-func id() -> int:
-	return Features.HIDING
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID]
 	return needed
 
 
 ## Hides every wild monster that starts on a tile that hides.
 func start(state: GameState) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for monster: int in wild.monsters:
 		if hides_at(state.region, state.entity(monster).tile):
 			hidden.append(monster)
@@ -34,7 +36,7 @@ func start(state: GameState) -> void:
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var still: Array[int] = []
 	for monster: int in hidden:
 		var tile: Vector2i = state.entity(monster).tile
@@ -81,7 +83,7 @@ func save_values() -> Dictionary:
 
 
 func load_values(state: GameState, values: DataReader) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var saved: Array[int] = values.wholes("hidden", 1, DataReader.MOST)
 	hidden.clear()
 	for monster: int in saved:

@@ -8,21 +8,23 @@ extends SpeciesLootFeature
 ## harvest table drops nothing. The rolls draw from this
 ## feature's own stream, in slot order. The number of rolls is a placeholder, to tune.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "harvest"
 const ROLLS_PER_PLAYER: int = 1
 
 
-func id() -> int:
-	return Features.HARVEST
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.SPECIALS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID, SpecialAttackFeature.ID]
 	return needed
 
 
 ## Rolls the materials of every wild monster felled this tick, in the order they fell.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	# Copied, as the loop adds Harvested events to the same list.
 	for event: RefCounted in state.events.duplicate():
 		var struck: SpecialStruck = event as SpecialStruck

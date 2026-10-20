@@ -35,7 +35,7 @@ func _charges() -> int:
 func _domination() -> DominationFeature:
 	if driver == null or driver.state == null:
 		return null
-	return driver.state.feature(Features.DOMINATION) as DominationFeature
+	return driver.state.feature(DominationFeature.ID) as DominationFeature
 
 
 func _player() -> Entity:

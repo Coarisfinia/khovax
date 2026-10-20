@@ -9,6 +9,8 @@ extends Feature
 ## by the first player to step on it, with every player rolling their own on the instance's loot
 ## table (#90), which holds no gear; a LootFound event says so, as it's no chest.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "chests"
 ## How many times each player rolls on the table when a chest opens.
 const ROLLS_PER_PLAYER: int = 1
 
@@ -28,19 +30,19 @@ func _init(chest_table: LootTable, instance_table: LootTable) -> void:
 	ground_table = instance_table
 
 
-func id() -> int:
-	return Features.CHESTS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 
 func start(state: GameState) -> void:
 	chests = state.region.chests.duplicate()
 	loot_spots = state.region.loot_spots.duplicate()
-	_rng = Rng.new(state.rng_seed, id())
+	_rng = Rng.new(state.rng_seed, stream())
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:

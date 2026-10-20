@@ -77,7 +77,7 @@ func _wanted() -> Dictionary[Vector2i, int]:
 	var wanted: Dictionary[Vector2i, int] = {}
 	if driver == null or driver.state == null or driver.world == null:
 		return wanted
-	var trails: TrailFeature = driver.state.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = driver.state.feature(TrailFeature.ID) as TrailFeature
 	var players: int = 0
 	for entity: Entity in driver.state.entities:
 		players += 1 if entity.slot != Entity.NO_SLOT else 0

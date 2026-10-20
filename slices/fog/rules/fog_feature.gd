@@ -7,6 +7,8 @@ extends Feature
 ## its tiles count as seen before for every player, also in the state hash. How it is drawn
 ## (remembered tiles, allies' sight, monsters in fog) is FogView's.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "fog"
 ## How far every player sees, in steps, until traits from dominated monsters change it (#65).
 const SIGHT_RADIUS: int = 5
 
@@ -21,12 +23,12 @@ var revealed: Array[Vector2i] = []
 var _seen_from: Dictionary[int, Vector2i] = {}
 
 
-func id() -> int:
-	return Features.FOG
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 

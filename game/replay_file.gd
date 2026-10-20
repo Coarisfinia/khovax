@@ -18,11 +18,45 @@ extends RefCounted
 ## Format 13 gave every command its trap gear (#692): an older replay's commands carry no trap.
 ## Format 14 gave every command the id of the request from the profile's outbox it carries (#771):
 ## an older replay's commands carry none, so its hand-overs are applied as they come.
-const FORMAT: int = 14
+## Format 15 named the features by their ids instead of numbers (#784): an older replay's numbers
+## are read as their features' ids (NUMBERED_FEATURES).
+const FORMAT: int = 15
 ## The first format with every slot's carried monsters instead of only its companion.
 const CARRIED_FORMAT: int = 8
 ## The first format with every carried monster's short id.
 const SHORT_ID_FORMAT: int = 11
+## The first format with the features' ids instead of their numbers.
+const NAMED_FEATURES_FORMAT: int = 15
+## Each feature's id by the number an older replay names it by (#784): the numbers features had
+## before they were named, kept only to read those replays.
+const NUMBERED_FEATURES: Dictionary[int, String] = {
+	1: MovementFeature.ID,
+	2: TrailFeature.ID,
+	3: WildMonsterFeature.ID,
+	4: DominationFeature.ID,
+	5: ChestFeature.ID,
+	6: FogFeature.ID,
+	7: ExitFeature.ID,
+	8: TriggerFeature.ID,
+	9: EnrageFeature.ID,
+	10: HidingFeature.ID,
+	11: DominationLootFeature.ID,
+	12: CompanionFeature.ID,
+	13: EnteringFeature.ID,
+	14: CompanionAttackFeature.ID,
+	15: SpecialAttackFeature.ID,
+	16: WildAttackFeature.ID,
+	17: HealthFeature.ID,
+	18: KnockdownFeature.ID,
+	19: CompanionSwapFeature.ID,
+	20: HarvestFeature.ID,
+	21: TypeEffectivenessFeature.ID,
+	22: DialogFeature.ID,
+	23: TerritoryFeature.ID,
+	24: ReviveItemFeature.ID,
+	25: SpikesFeature.ID,
+	26: NpcFeature.ID,
+}
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -88,7 +122,8 @@ static func parse(text: String) -> Replay:
 		replay.problem = "not a replay: its carried monsters aren't short ids with species"
 		return replay
 	replay.ticks = _int(data["ticks"])
-	replay.features = _ints(data.get("features"))
+	var listed: Array = data["features"]
+	replay.features = _feature_ids(listed, format)
 	replay.changes = _ints(data.get("changes"))
 	var count: int = _value_count(format)
 	if replay.changes.size() % (2 + count) != 0:
@@ -198,9 +233,10 @@ static func _shape_problem(data: Dictionary) -> String:
 			return "not a replay: its %s isn't a number" % key
 	if not data["seed"] is String or not str(data["seed"]).is_valid_int():
 		return "not a replay: its seed isn't a whole number"
-	for key: String in ["changes", "features"]:
-		if not _all_numbers(data.get(key)):
-			return "not a replay: its %s aren't a list of numbers" % key
+	if not _all_numbers(data.get("changes")):
+		return "not a replay: its changes aren't a list of numbers"
+	if not _all_numbers(data.get("features")) and not _all_texts(data.get("features")):
+		return "not a replay: its features aren't a list of numbers or ids"
 	if not _all_texts(data.get("companions", [])):
 		return "not a replay: its companions aren't a list of species"
 	if not _all_lists(data.get("carried", [])):
@@ -262,6 +298,21 @@ static func _all_numbers(values: Variant) -> bool:
 static func _int(value: Variant) -> int:
 	var number: int = value
 	return number
+
+
+## The feature ids in a replay of `format`, read from their numbers before format 15 (#784). An
+## item of the wrong kind, or a number no feature had, becomes "", which no feature's id is, so the
+## replay is refused when it's played.
+static func _feature_ids(values: Array, format: int) -> Array[String]:
+	var ids: Array[String] = []
+	for item: Variant in values:
+		var id: String = ""
+		if format >= NAMED_FEATURES_FORMAT and item is String:
+			id = item
+		elif format < NAMED_FEATURES_FORMAT and item is int:
+			id = NUMBERED_FEATURES.get(item, "")
+		ids.append(id)
+	return ids
 
 
 ## A JSON array as integers; empty for anything that isn't an array.

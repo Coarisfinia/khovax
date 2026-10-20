@@ -25,7 +25,7 @@ var carried: Array[CarriedMonsters] = []
 ## The rules version and the instance's feature ids when it was recorded: a replay of other rules
 ## would play out differently, so playback refuses it with a clear message.
 var rules: int = RulesChanges.version()
-var features: Array[int] = []
+var features: Array[String] = []
 var ticks: int = 0
 ## Every change of a slot's command, STRIDE integers each, in tick and slot order. A slot keeps its
 ## last command until it changes, so standing still or holding a direction costs nothing.
@@ -157,7 +157,7 @@ func _run(check: bool) -> String:
 			return "the replay's carried monsters of slot %d aren't its world's" % slot
 	if not played.instances.has(instance):
 		return "the replay's starting world doesn't hold its instance %s" % instance
-	var start: Array[int] = _feature_ids(played.instances[instance])
+	var start: Array[String] = _feature_ids(played.instances[instance])
 	if check and start != features:
 		return "the instance's features are now %s, recorded with %s" % [start, features]
 	# Every slot starts idle; a recorded change replaces its command rather than changing it.
@@ -191,8 +191,8 @@ func _checkpoint(check: bool) -> String:
 	return ""
 
 
-static func _feature_ids(state: GameState) -> Array[int]:
-	var ids: Array[int] = []
+static func _feature_ids(state: GameState) -> Array[String]:
+	var ids: Array[String] = []
 	for each: Feature in state.features:
 		ids.append(each.id())
 	return ids

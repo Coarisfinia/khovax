@@ -7,18 +7,21 @@ extends Feature
 ## it, starting there, or arriving there through an exit (#348). Instances whose region has
 ## triggers have it.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "triggers"
+
 ## The index of every trigger in `state.region.triggers` that has fired, sorted.
 var fired: Array[int] = []
 ## The place each player stands in. Coming to stand in another place reaches it.
 var standing: AreaStanding = AreaStanding.new()
 
 
-func id() -> int:
-	return Features.TRIGGERS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT, Features.FOG]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID, FogFeature.ID]
 	return needed
 
 
@@ -78,7 +81,7 @@ static func _fires(state: GameState, trigger: TileTrigger) -> bool:
 ## Runs `trigger`'s action.
 static func _act(state: GameState, trigger: TileTrigger) -> void:
 	if trigger.action == TileTrigger.REVEAL:
-		var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+		var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 		fog.reveal(state, Hex.disc(trigger.amount, trigger.tile))
 
 

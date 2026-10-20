@@ -6,16 +6,19 @@ extends Feature
 ## comes after movement in an instance's order. Walking over the trail again changes nothing; a
 ## domination clears only the ring that made it (DominationFeature, through `clear`).
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "trail"
+
 ## The allies' trail.
 var shared: Trail = Trail.new()
 
 
-func id() -> int:
-	return Features.TRAIL
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 

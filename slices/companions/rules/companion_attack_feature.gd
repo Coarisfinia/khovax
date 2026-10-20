@@ -8,6 +8,8 @@ extends Feature
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
 ## raises CompanionStruck. A companion that just joined or has nothing to strike is ready at once.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "companion_attacks"
 ## The ticks between two strikes of one companion.
 const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
 
@@ -16,19 +18,19 @@ const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
 var _waits: Dictionary[int, int] = {}
 
 
-func id() -> int:
-	return Features.COMPANION_ATTACKS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.COMPANIONS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID, CompanionFeature.ID]
 	return needed
 
 
 ## Lets every companion, in id order, strike a wild monster next to it once its wait is over.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for companion_id: int in companions.companions():
 		var wait: int = _waits.get(companion_id, 0)
 		if wait > 1:
@@ -88,7 +90,7 @@ func save_values() -> Dictionary:
 
 func load_values(state: GameState, values: DataReader) -> void:
 	_waits.clear()
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var flat: Array[int] = values.wholes("waits", 0, DataReader.MOST)
 	for i: int in range(0, flat.size() - 1, 2):
 		if companions.owners.has(flat[i]) and flat[i + 1] > 0:
@@ -117,8 +119,8 @@ static func can_strike(
 ) -> bool:
 	if not wild.monsters.has(monster_id) or state.entity(monster_id) == null:
 		return false
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var hidden: bool = hiding != null and hiding.is_hidden(monster_id)
 	var sealed: bool = domination != null and domination.is_sealed(monster_id)
 	return not hidden and not sealed and Hex.distance(state.entity(monster_id).tile, tile) == 1

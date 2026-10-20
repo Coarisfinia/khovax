@@ -29,7 +29,7 @@ const REST_TICKS: int = 20
 const FINGER: int = 0
 ## The state hash after the scripted walk; when a rule change alters it on purpose, update it with
 ## the golden replays (see AGENTS.md).
-const EXPECTED_HASH: int = 3_467_822_714
+const EXPECTED_HASH: int = 2_251_046_639
 
 ## Every instance the player stood in during the walk.
 var _visited: Dictionary[String, bool] = {}
@@ -72,7 +72,7 @@ func _result(
 	if driver.world.instance_of(0) != InstanceBlueprints.GLADE:
 		return "the walk didn't come back into the glade"
 	var player: Entity = driver.state.player(0)
-	var trails: TrailFeature = driver.state.feature(Features.TRAIL) as TrailFeature
+	var trails: TrailFeature = driver.state.feature(TrailFeature.ID) as TrailFeature
 	if player.tile == start or trails.shared.tiles.size() < 3:
 		return "the touch stick didn't walk the player (on %s, from %s)" % [player.tile, start]
 	if camera.global_position.is_equal_approx(camera_before):

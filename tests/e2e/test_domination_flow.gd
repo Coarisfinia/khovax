@@ -153,7 +153,7 @@ func run(tree: SceneTree) -> String:
 ## player next to it, once; a legend can't hide one in plain ground.
 func _check_hiding() -> String:
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 0)
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	if hiding == null or hiding.hidden.size() != 1:
 		return "the glade's wild monster in the shrubs doesn't start hidden"
 	var monster: int = hiding.hidden[0]
@@ -470,7 +470,7 @@ func _check_wait_saved(world: World) -> String:
 ## a totem (#423), and never while it seals (#409).
 func _check_strikes_in_ring(world: World, sealing: bool) -> String:
 	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
-	var companions: CompanionFeature = basic.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = basic.feature(CompanionFeature.ID) as CompanionFeature
 	var companion: Entity = basic.entity(companions.companion_of(0))
 	if companion == null:
 		return "the first player's companion didn't join them"
@@ -527,7 +527,7 @@ func _domination_values(data: Dictionary) -> Dictionary:
 		if instance["name"] != InstanceBlueprints.BASIC:
 			continue
 		for feature: Dictionary in instance["state"]["features"]:
-			if feature["id"] == Features.DOMINATION:
+			if feature["id"] == DominationFeature.ID:
 				return feature["values"]
 	return { "seals": [], "waiting": [] }
 
@@ -842,7 +842,7 @@ func _enraged_further(state: GameState, monster: int) -> String:
 	if not worn.is_empty():
 		return worn
 	var wild: WildMonsterFeature = _wild(state)
-	var enrage: EnrageFeature = state.feature(Features.ENRAGE) as EnrageFeature
+	var enrage: EnrageFeature = state.feature(EnrageFeature.ID) as EnrageFeature
 	var broken: Array[RefCounted] = [_broken_around(monster)]
 	for stack: int in range(2, WildMonsterFeature.MOST_RAGE + 3):
 		var before: int = wild.strength_of(monster)
@@ -975,7 +975,7 @@ func _check_companion_strikes() -> String:
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
 	if not _strikes_over(state, 1).is_empty():
 		return "the companion struck before it stood next to a wild monster"
-	var companion_id: int = (state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
 	state.entity(companion_id).tile = hemmed
 	var first: int = _wild(state).monsters[0]
 	var ticks: int = 4 * CompanionAttackFeature.STRIKE_TICKS
@@ -991,7 +991,7 @@ func _check_companion_strikes() -> String:
 		return "the companion's hits left the wild monster at %d HP, not 1" % [
 			_wild(state).hp_of(first),
 		]
-	(state.feature(Features.HIDING) as HidingFeature).hidden.append_array(_wild(state).monsters)
+	(state.feature(HidingFeature.ID) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
 	return _check_special(state, first, spots)
@@ -1009,7 +1009,7 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var nobody: Array[Command] = [Command.new(), Command.new(Command.NO_MOVE, true)]
 	if not _specials_in(state, _fire()).is_empty() or not _specials_in(state, nobody).is_empty():
 		return "a special struck a hiding wild monster, or fired for a slot without a player"
-	(state.feature(Features.HIDING) as HidingFeature).hidden.clear()
+	(state.feature(HidingFeature.ID) as HidingFeature).hidden.clear()
 	# A focus that isn't a wild monster (#436), here the player, leaves the usual target.
 	var player_focus: Array[Command] = [
 		Command.new(Command.NO_MOVE, true, Command.NO_TOTEM, state.player(0).id),
@@ -1027,7 +1027,7 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	# With the damage numbers off (#764), only that it fainted.
 	if DamageNumbersView.text_of(felled[0], false) != DamageNumbersView.FAINTED_TEXT:
 		return "with the damage numbers off, the special's strike still shows its damage"
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
 	var result: String = _check_harvest(state, first)
@@ -1058,13 +1058,15 @@ func _check_harvest(state: GameState, first: int) -> String:
 ## After the special felled a wild monster in `state`: the wild monsters and the cooldown load back
 ## as saved, the special cools down for its cooldown, and once it's ready it fells the next one.
 func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String:
-	var specials: SpecialAttackFeature = state.feature(Features.SPECIALS) as SpecialAttackFeature
+	var specials: SpecialAttackFeature = (
+		state.feature(SpecialAttackFeature.ID) as SpecialAttackFeature
+	)
 	var reloaded_state: GameState = _strike_state(spots)
-	if not _reloads(state, reloaded_state, Features.WILD_MONSTERS):
+	if not _reloads(state, reloaded_state, WildMonsterFeature.ID):
 		return "the fainted wild monster didn't load back as saved"
-	if not _reloads(state, reloaded_state, Features.SPECIALS):
+	if not _reloads(state, reloaded_state, SpecialAttackFeature.ID):
 		return "the special's cooldown didn't load back as saved"
-	if not _reloads(state, reloaded_state, Features.HARVEST):
+	if not _reloads(state, reloaded_state, HarvestFeature.ID):
 		return "the harvest's rolls didn't load back as saved"
 	if specials.cooldown_left(0) != SPECIAL_TICKS or not _specials_in(state, _fire()).is_empty():
 		return "the special didn't cool down for its cooldown"
@@ -1085,7 +1087,7 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 ## focus on it (#436) shows; 0 if there is none.
 func _focusable(state: GameState) -> int:
 	var wild: WildMonsterFeature = _wild(state)
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var tile: Vector2i = state.entity(companions.companion_of(0)).tile
 	var usual: int = CompanionAttackFeature.target_next_to(state, wild, tile)
 	for monster: int in wild.monsters:
@@ -1096,7 +1098,7 @@ func _focusable(state: GameState) -> int:
 
 ## Whether the feature `feature_id` of `state`, saved and loaded into `reloaded_state`, hashes the
 ## same.
-static func _reloads(state: GameState, reloaded_state: GameState, feature_id: int) -> bool:
+static func _reloads(state: GameState, reloaded_state: GameState, feature_id: String) -> bool:
 	var feature: Feature = state.feature(feature_id)
 	var reloaded: Feature = reloaded_state.feature(feature_id)
 	reloaded.load_values(reloaded_state, DataReader.new(feature.save_values()))
@@ -1129,7 +1131,7 @@ func _check_wild_attacks() -> String:
 	var beside: Vector2i = Vector2i(1, 0)
 	var player: Entity = state.add_entity(0, beside)
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
-	var companion_id: int = (state.feature(Features.COMPANIONS) as CompanionFeature).companion_of(0)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
 	var struck: String = _struck_once(state, Vector2i(-1, 0), companion_id, "the companion")
 	if struck.is_empty():
 		struck = _check_companion_falls(state, Vector2i(-1, 0), companion_id)
@@ -1142,7 +1144,7 @@ func _check_wild_attacks() -> String:
 		WildAttackFeature.TILE_INTEGRITY + WEAK_STRENGTH - 1,
 		WEAK_STRENGTH,
 	)
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	var gave_way: Callable = func() -> bool: return not trail.tiles.has(beside)
 	struck = _wears_through(state, beside, hits, gave_way)
 	if not struck.is_empty():
@@ -1186,7 +1188,7 @@ func _check_least_damage() -> String:
 	if chart.factor("mana", "greater") != 500:
 		return "a mana strike on the Greater arcane type isn't ×0.5"
 	var state: GameState = _strike_state([Vector2i.ZERO], [chart])
-	state.set_enabled(Features.TYPE_EFFECTIVENESS, true)
+	state.set_enabled(TypeEffectivenessFeature.ID, true)
 	var damage: int = TypeEffectivenessFeature.scaled(state, 1, WEAK, false, "greater")
 	return "" if damage == 1 else "a strike of 1 at ×0.5 dealt %d, not 1" % damage
 
@@ -1196,7 +1198,7 @@ func _check_least_damage() -> String:
 ## in a second, and then the player fires the special.
 func _typed_strikes(on: bool) -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [_type_chart()])
-	state.set_enabled(Features.TYPE_EFFECTIVENESS, on)
+	state.set_enabled(TypeEffectivenessFeature.ID, on)
 	FlowSteps.carry(state, 0, [WEAK])
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
@@ -1269,7 +1271,7 @@ func _check_relieved() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO])
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
 	var _player: Entity = state.add_entity(0, Vector2i(3, 0))
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	var chosen: Array[int] = _faint_companion(state)
 	if chosen.size() != 1 or chosen[0] != 1:
@@ -1288,7 +1290,7 @@ func _check_relieved() -> String:
 ## Steps `state` with the companion of slot 0 kept beside the wild monster in the middle until it
 ## faints; returns the places chosen in its place.
 func _faint_companion(state: GameState) -> Array[int]:
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
 	var chosen: Array[int] = [-1]
 	var companion: Entity = state.entity(companions.companion_of(0))
@@ -1340,7 +1342,7 @@ func _wears_through(state: GameState, tile: Vector2i, hits: int, gone: Callable)
 ## the trail but for the tile the player stands on.
 func _check_ring_worn(state: GameState, player: Entity, hits: int) -> String:
 	var ring: Array[Vector2i] = Hex.ring(SMALL_RING)
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	player.tile = ring[0]
 	var _colored: bool = trail.color(ring[0], player.id)
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, ring.slice(1))
@@ -1369,7 +1371,7 @@ func _struck_once(
 		what: String,
 ) -> String:
 	var ticks: int = WildAttackFeature.STRIKE_TICKS
-	var health: HealthFeature = state.feature(Features.HEALTH) as HealthFeature
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var before: int = health.hp_of(state, target_id)
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, companion_tile)
 	if strikes.size() != 1 or strikes[0].target_id != target_id:
@@ -1391,7 +1393,7 @@ func _check_companion_falls(
 	var falls: int = 0
 	var returns: int = 0
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	for _tick: int in WildAttackFeature.STRIKE_TICKS * 110:
 		var companion: Entity = state.entity(companions.companion_of(0))
 		if companion != null:
@@ -1420,7 +1422,7 @@ func _wild_strikes_over(
 		companion_tile: Vector2i,
 ) -> Array[WildMonsterStruck]:
 	var still: Array[Command] = FlowSteps.command(Command.NO_MOVE)
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var strikes: Array[WildMonsterStruck] = []
 	for _tick: int in ticks:
 		var companion: Entity = state.entity(companions.companion_of(0))
@@ -1840,12 +1842,12 @@ func _first_species(state: GameState) -> String:
 
 
 func _wild(state: GameState) -> WildMonsterFeature:
-	return state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	return state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 
 
 func _trails(state: GameState) -> TrailFeature:
-	return state.feature(Features.TRAIL) as TrailFeature
+	return state.feature(TrailFeature.ID) as TrailFeature
 
 
 func _domination(state: GameState) -> DominationFeature:
-	return state.feature(Features.DOMINATION) as DominationFeature
+	return state.feature(DominationFeature.ID) as DominationFeature

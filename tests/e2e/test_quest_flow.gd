@@ -257,7 +257,7 @@ func _check_marked_monster(
 	profile: Profile,
 ) -> String:
 	var state: GameState = driver.state
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null or wild.monsters.is_empty():
 		return "the starting instance needs wild monsters to mark"
 	var from: Vector2i = state.player(0).tile
@@ -569,7 +569,7 @@ func _check_territory_resent(
 	request: OutboxEntry,
 ) -> String:
 	var forest: String = InstanceBlueprints.FOREST
-	var applied: Array = driver.world.stored(0, Features.TERRITORY).get(OutboxReceipts.APPLIED, [])
+	var applied: Array = driver.world.stored(0, TerritoryFeature.ID).get(OutboxReceipts.APPLIED, [])
 	if not profile.outbox.entries.is_empty() or applied != [request.id]:
 		return "the applied hand-over stayed in the outbox, or wasn't recorded: %s" % [applied]
 	driver.world.set_flag(Territory.flag(forest, GUILD), false)
@@ -683,7 +683,7 @@ func _check_target() -> String:
 	if not region.problem.is_empty() or not state.problem.is_empty():
 		return "the region with a quest target didn't read: " + region.problem + state.problem
 	var _player: Entity = state.add_entity(0, region.starts[0])
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	wild.load_values(state, DataReader.new(wild.save_values()))
 	var marked: Vector2i = Vector2i.ZERO
 	var unmarked: int = 0

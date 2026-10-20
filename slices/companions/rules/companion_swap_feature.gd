@@ -7,14 +7,17 @@ extends Feature
 ## companion they already have, a place they carry nothing in, or a monster that fainted (#597) and
 ## hasn't been revived (#655) does nothing.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "companion_swaps"
 
-func id() -> int:
-	return Features.COMPANION_SWAPS
+
+func id() -> String:
+	return ID
 
 
 ## After the companions, which it swaps: a player's own swap comes last in the tick.
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.COMPANIONS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [CompanionFeature.ID]
 	return needed
 
 

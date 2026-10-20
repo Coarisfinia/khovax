@@ -36,7 +36,7 @@ func cooldown_share() -> float:
 
 func usable() -> bool:
 	var companions: CompanionFeature = _companions()
-	var wild: WildMonsterFeature = _feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = _feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var special: SpecialAttackFeature = _special()
 	if special == null or not special.enabled or companions == null or wild == null:
 		return false
@@ -55,14 +55,14 @@ func _cooldown_left() -> int:
 
 
 func _special() -> SpecialAttackFeature:
-	return _feature(Features.SPECIALS) as SpecialAttackFeature
+	return _feature(SpecialAttackFeature.ID) as SpecialAttackFeature
 
 
 func _companions() -> CompanionFeature:
-	return _feature(Features.COMPANIONS) as CompanionFeature
+	return _feature(CompanionFeature.ID) as CompanionFeature
 
 
-func _feature(feature_id: int) -> Feature:
+func _feature(feature_id: String) -> Feature:
 	if driver == null or driver.state == null:
 		return null
 	return driver.state.feature(feature_id)

@@ -73,7 +73,7 @@ static func add_contributions(
 	seal: RingSeal,
 	dominated: WildMonsterDominated,
 ) -> void:
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	for wall: Vector2i in seal.walls:
 		var colorer_id: int = trail.tiles.get(wall, 0)
 		var colorer: Entity = state.entity(colorer_id)

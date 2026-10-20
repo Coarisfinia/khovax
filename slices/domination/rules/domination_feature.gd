@@ -29,6 +29,9 @@ extends Feature
 ## ring off the trail through TrailFeature.clear: features later in the order change an earlier one
 ## only through its public methods.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "domination"
+
 ## Every sealing ring, by its dominator's entity id.
 var seals: Dictionary[int, RingSeal] = {}
 ## Every ring waiting for a totem, as the wild monsters it encircles (in id order), by its
@@ -42,12 +45,12 @@ var _edge: Array[Vector2i] = []
 var _edge_region: Region = null
 
 
-func id() -> int:
-	return Features.DOMINATION
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.TRAIL, Features.WILD_MONSTERS]
+func requires() -> Array[String]:
+	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID]
 	return needed
 
 
@@ -66,7 +69,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 func _place_totems(state: GameState, commands: Array[Command]) -> void:
 	if encircled.is_empty():
 		return
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	for entity: Entity in state.entities:
 		var command: Command = Command.of(commands, entity.slot)
 		if command == null or command.totem != Command.PLACE_TOTEM:
@@ -84,7 +87,7 @@ func _place_totems(state: GameState, commands: Array[Command]) -> void:
 ## The wall of the ring waiting for a totem of the dominator `dominator_id`: the trail tiles next to
 ## the tiles it encircles.
 func ring_waiting(state: GameState, dominator_id: int) -> Array[Vector2i]:
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	return RingShape.wall_around(state.region, trail, _spots(state, encircled[dominator_id]))
 
 
@@ -95,8 +98,8 @@ func ring_waiting(state: GameState, dominator_id: int) -> Array[Vector2i]:
 ## in. This relies on no wild monster stepping into a ring after it closed: one that moves (#364)
 ## never steps onto the trail, and a ring's inside only borders the outside through its trail.
 func _close_rings(state: GameState) -> void:
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for grew: TrailGrew in _grown(state):
 		if wild.monsters.is_empty() or not RingShape.may_close(trail, grew):
 			continue
@@ -184,7 +187,7 @@ func _push(state: GameState, dominator_id: int) -> void:
 func _takers(state: GameState, dominator_id: int, seal: RingSeal) -> Dictionary[int, int]:
 	var takers: Dictionary[int, int] = {}
 	if seal.monsters.size() > 1:
-		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+		var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 		takers = DominationShares.hand_out(
 			seal.monsters,
 			DominationShares.contributions(state, trail, seal),
@@ -211,7 +214,7 @@ func _clear_ring(state: GameState, walls: Array[Vector2i]) -> void:
 	for wall: Vector2i in walls:
 		if not needed.has(wall):
 			cleared.append(wall)
-	(state.feature(Features.TRAIL) as TrailFeature).clear(state, cleared)
+	(state.feature(TrailFeature.ID) as TrailFeature).clear(state, cleared)
 
 
 ## The players whose rings are sealing, in id order.
@@ -299,7 +302,7 @@ func _edge_of(region: Region) -> Array[Vector2i]:
 
 func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingSeal) -> void:
 	var tile: Vector2i = state.entity(monster_id).tile
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
 	var short_id: String = wild.short_id_of(monster_id)
 	var target: String = WildSpot.target_in(wild.marks, monster_id)
@@ -370,7 +373,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if not problem.is_empty():
 			values.fail("sealing ring of %d: %s" % [dominator_id, problem])
 			return
-		var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+		var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 		var seal: RingSeal = RingSealing.build(state, trail, monsters)
 		if dominator_of(state, trail, seal.walls) != dominator_id:
 			values.fail("sealing ring of %d: its domination goes to someone else" % dominator_id)
@@ -390,7 +393,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 ## other ring, its monsters in no other ring and enclosed, and its domination still theirs.
 func _load_waiting(state: GameState, values: DataReader) -> void:
 	encircled.clear()
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	for entry: DataReader in values.entries("waiting"):
 		var dominator_id: int = entry.whole("dominator", 1, DataReader.MOST)
 		var dominator: Entity = state.entity(dominator_id)
@@ -417,8 +420,8 @@ func _load_waiting(state: GameState, values: DataReader) -> void:
 ## Why the saved monsters can't be in the ring, or "": they must be wild monsters, in increasing id
 ## order (so none twice), in no other ring, and enclosed by the trail.
 func _monsters_problem(state: GameState, monsters: Array[int]) -> String:
-	var trail: Trail = (state.feature(Features.TRAIL) as TrailFeature).shared
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if monsters.is_empty():
 		return "it has no wild monsters"
 	var edge: Array[Vector2i] = _edge_of(state.region)

@@ -11,21 +11,23 @@ extends Feature
 ## ring that broke has ended, and a monster is sealed in one ring at a time, so the extra strength
 ## first pushes on the next ring that closes around it.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "enrage"
 ## How much of a wild monster's full HP each enraging heals (thousandths). A placeholder to tune.
 const HEAL: int = 250
 
 
-func id() -> int:
-	return Features.ENRAGE
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.WILD_MONSTERS, Features.DOMINATION]
+func requires() -> Array[String]:
+	var needed: Array[String] = [WildMonsterFeature.ID, DominationFeature.ID]
 	return needed
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for event: RefCounted in state.events:
 		var broken: RingBroken = event as RingBroken
 		if broken == null:

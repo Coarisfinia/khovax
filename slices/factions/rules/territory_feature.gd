@@ -7,6 +7,9 @@ extends Feature
 ## profile's outbox (#771) with its request's id: the ids it applied are kept in its entry in the
 ## player's world store (OutboxReceipts), so one sent again isn't handed over twice.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "territory"
+
 ## Every territory a quest hands over, by its code: the instance's name and the faction's id (the
 ## quests' content data).
 var handovers: Dictionary[int, PackedStringArray] = {}
@@ -16,8 +19,8 @@ func _init(by_code: Dictionary[int, PackedStringArray] = {}) -> void:
 	handovers = by_code
 
 
-func id() -> int:
-	return Features.TERRITORY
+func id() -> String:
+	return ID
 
 
 ## Hands over the territory of every player's command, in slot order, that names one, unless its

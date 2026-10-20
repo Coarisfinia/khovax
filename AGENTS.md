@@ -274,7 +274,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
   `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
-  `Rng.new(state.rng_seed, id())` in `start`, keeps it in its state and hashes it, and draws only
+  `Rng.new(state.rng_seed, stream())` in `start`, keeps it in its state and hashes it, and draws only
   inside its step; streams keep one system's rolls from shifting another's. Ranges use
   `below`/`between` (no modulo bias), never `next_u32() % n`. **Numbers** (#33, `Fixed`): amounts
   (HP, strength, power, damage) are whole integers up to `Fixed.MAX_AMOUNT`, fractions are in
@@ -285,8 +285,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Every game rule is a feature** (owner's rule, #30): modular, and every one can be switched on or
   off per instance, also during a session (e.g. a boss phase). The core holds no game rule: only the
   tick, the seed, the region, the entities and the instance's features in their step order. A feature
-  (in its slice's `rules/`, extends `Feature`) has a stable id in `Features` (never reused), its own state,
-  a `step` called in order each tick, the features it `requires` earlier in the order, and its
+  (in its slice's `rules/`, extends `Feature`) has a stable string id, its own `ID` constant (a
+  name, never a hand-kept number, so parallel pull requests never claim the same one, #784; never
+  reused or renamed once shipped), its own state,
+  a `step` called in order each tick (the order is the list in `InstanceBlueprints`, reviewed like
+  code), the features it `requires` earlier in the order, and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
   into each other: a feature may read the features it `requires` and change them only through
   their public methods (e.g. `DominationFeature` clears a ring off the trail with `TrailFeature.clear`), never

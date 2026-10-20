@@ -38,7 +38,7 @@ func show_state() -> void:
 	if driver == null or driver.state == null:
 		HexPiece.free_all(rings)
 		return
-	var knockdown: KnockdownFeature = driver.state.feature(Features.KNOCKDOWN) as KnockdownFeature
+	var knockdown: KnockdownFeature = driver.state.feature(KnockdownFeature.ID) as KnockdownFeature
 	var down: Array[int] = knockdown.knocked_down() if knockdown != null else []
 	for entity_id: int in rings.keys():
 		if not down.has(entity_id) or driver.state.entity(entity_id) == null:

@@ -6,6 +6,8 @@ extends Feature
 ## damage taken is kept, so an entity nothing hit is at full HP without an entry. Healing and what
 ## happens at 0 HP come later (#456, #457, #458).
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "health"
 ## A player's HP. A placeholder to tune: a few wild hits' worth (#455).
 const PLAYER_HP: int = 500
 ## The HP of a companion of a species the feature wasn't given one for.
@@ -23,13 +25,13 @@ func _init(species_max_hps: Dictionary[String, int] = {}) -> void:
 	max_hps = species_max_hps
 
 
-func id() -> int:
-	return Features.HEALTH
+func id() -> String:
+	return ID
 
 
 ## After the wild monsters' strikes it counts, and the companions whose species it reads.
-func requires() -> Array[int]:
-	return [Features.WILD_ATTACKS, Features.COMPANIONS, Features.KNOCKDOWN]
+func requires() -> Array[String]:
+	return [WildAttackFeature.ID, CompanionFeature.ID, KnockdownFeature.ID]
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
@@ -59,14 +61,14 @@ func _fall(state: GameState, entity_id: int) -> void:
 	state.events.append(EntityFell.new(entity_id))
 	var fallen: Entity = state.entity(entity_id)
 	if fallen.slot != Entity.NO_SLOT:
-		var knockdown: KnockdownFeature = state.feature(Features.KNOCKDOWN) as KnockdownFeature
+		var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 		var downs: bool = knockdown != null and knockdown.enabled
 		if downs and knockdown.has_ally_near(state, fallen):
 			knockdown.knock_down(entity_id)
 		else:
 			state.events.append(SentToSpawn.new(entity_id, fallen.slot))
 		return
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	# Only while the companions' rule is on: a disabled feature's state stays as it was.
 	if companions != null and companions.enabled and companions.owners.has(entity_id):
 		companions.send_home(state, entity_id)
@@ -98,7 +100,7 @@ func max_hp_of(state: GameState, entity_id: int) -> int:
 	var entity: Entity = state.entity(entity_id)
 	if entity != null and entity.slot != Entity.NO_SLOT:
 		return PLAYER_HP
-	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	return max_hps.get(companions.species_of(entity_id), UNKNOWN_HP)
 
 

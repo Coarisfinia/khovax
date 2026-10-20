@@ -95,7 +95,7 @@ func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 		instance_name,
 		driver.world.generation(instance_name),
 	)
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	survey.show_state()
 	var hidden: int = 0
 	for tile: Vector2i in state.region.sorted_tiles():

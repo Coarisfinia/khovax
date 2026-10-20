@@ -5,18 +5,21 @@ extends Feature
 ## region ends), so this raises an ExitTaken event instead, and the world moves them into the
 ## instance the exit leads to. Instances whose region has exits have it.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "exits"
 
-func id() -> int:
-	return Features.EXITS
+
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.MOVEMENT]
+func requires() -> Array[String]:
+	var needed: Array[String] = [MovementFeature.ID]
 	return needed
 
 
 func step(state: GameState, commands: Array[Command]) -> void:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for player: Entity in state.entities:
 		if player.slot == Entity.NO_SLOT:
 			continue

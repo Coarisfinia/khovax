@@ -293,7 +293,7 @@ static func _hexagon(radius: float) -> PackedVector2Array:
 ## remembers there, as FogView does.
 func _explored(state: GameState) -> Dictionary:
 	var known: Dictionary = _seen(driver.local_instance_name()).duplicate()
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	if fog != null:
 		for tile: Vector2i in fog.revealed:
 			known[tile] = true
@@ -311,7 +311,7 @@ func _seen(instance_name: String) -> Dictionary:
 ## Where `walker` is on the ground: on its tile, or while it walks between the tile it walks from
 ## and its own, by tick and by how far real time is into the next one, as its figure glides.
 func _walked_ground(state: GameState, walker: Entity) -> Vector2:
-	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	var walk: Walk = movement.walk(walker.id) if movement != null else null
 	var standing: Vector2 = ground_of(walker.tile)
 	if walk == null or not walk.is_moving():

@@ -18,6 +18,8 @@ extends Feature
 ## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
 ## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "wild_monsters"
 ## The stats of a species the feature wasn't given any for: it pushes on nothing.
 const UNKNOWN_MAX_HP: int = 1
 const UNKNOWN_STRENGTH: int = 0
@@ -81,17 +83,17 @@ func _init(
 	strengths = species_strengths
 
 
-func id() -> int:
-	return Features.WILD_MONSTERS
+func id() -> String:
+	return ID
 
 
-func requires() -> Array[int]:
-	var needed: Array[int] = [Features.TRAIL]
+func requires() -> Array[String]:
+	var needed: Array[String] = [TrailFeature.ID]
 	return needed
 
 
 func start(state: GameState) -> void:
-	var rng: Rng = Rng.new(state.rng_seed, id())
+	var rng: Rng = Rng.new(state.rng_seed, stream())
 	_known = roster.duplicate()
 	for spot: Vector2i in state.region.wild_monsters:
 		var named: WildSpot = state.region.wild_spots.get(spot)
@@ -142,7 +144,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 ## tile something stands on.
 static func _blocked(state: GameState) -> Dictionary[Vector2i, bool]:
 	var blocked: Dictionary[Vector2i, bool] = {}
-	for tile: Vector2i in (state.feature(Features.TRAIL) as TrailFeature).shared.tiles:
+	for tile: Vector2i in (state.feature(TrailFeature.ID) as TrailFeature).shared.tiles:
 		blocked[tile] = true
 	for entity: Entity in state.entities:
 		blocked[entity.tile] = true

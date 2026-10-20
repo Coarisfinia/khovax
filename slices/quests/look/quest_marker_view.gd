@@ -118,14 +118,14 @@ static func _candidates(state: GameState, step: QuestStep, here: String) -> Arra
 				tiles.append(trigger.tile)
 		return tiles
 	if step.condition == "opened":
-		var chests: ChestFeature = state.feature(Features.CHESTS) as ChestFeature
+		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
 		if chests != null:
 			tiles.assign(chests.chests)
 		return tiles
-	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null or step.condition != "dominated":
 		return tiles
-	var hiding: HidingFeature = state.feature(Features.HIDING) as HidingFeature
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var ids: Array[int] = wild.monsters.duplicate()
 	ids.sort()
 	for entity_id: int in ids:

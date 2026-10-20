@@ -15,7 +15,7 @@ const APPLIED: String = "applied"
 ## out, recording it as applied. Command.NO_REQUEST, a command without an id (replays from before
 ## #771), is always new and never recorded.
 ## A code that's no short id's (ShortId.of_code) is never applied.
-static func take(state: GameState, slot: int, feature_id: int, request: int) -> bool:
+static func take(state: GameState, slot: int, feature_id: String, request: int) -> bool:
 	if request == Command.NO_REQUEST:
 		return true
 	var id: String = ShortId.of_code(request)

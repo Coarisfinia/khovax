@@ -11,6 +11,8 @@ extends Feature
 ## `scaled`. Switched off, every strike deals its plain damage (at least 1). Either way a strike
 ## that lands deals at least 1 (owner, #702): `scaled` is the last step of every strike's damage.
 
+## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
+const ID: String = "type_effectiveness"
 const STRONG_FROM_LESSER: int = 1500
 const STRONG_FROM_GREATER: int = 2000
 const WEAK_AGAINST_LESSER: int = 750
@@ -42,8 +44,8 @@ func _init(
 	special_types = special_strike_types
 
 
-func id() -> int:
-	return Features.TYPE_EFFECTIVENESS
+func id() -> String:
+	return ID
 
 
 ## The damage of a strike of `damage` by a monster of `attacker_species`, its special or its auto
@@ -123,7 +125,7 @@ static func _is_greater(type: String, family: int) -> bool:
 ## The type chart in `state`'s instance while it's on there; null otherwise.
 static func _chart_on(state: GameState) -> TypeEffectivenessFeature:
 	var chart: TypeEffectivenessFeature = (
-		state.feature(Features.TYPE_EFFECTIVENESS) as TypeEffectivenessFeature
+		state.feature(ID) as TypeEffectivenessFeature
 	)
 	return chart if chart != null and chart.enabled else null
 

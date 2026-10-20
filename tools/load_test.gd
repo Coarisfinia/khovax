@@ -83,9 +83,9 @@ func _run_headless() -> void:
 	])
 	# Tick times from the untimed pass, so they carry no observer overhead.
 	_print_spread("tick", second.ticks.slice(WARM_UP))
-	for feature_id: int in first.features:
+	for feature_id: String in first.features:
 		var per_tick: float = first.features[feature_id] / float(_ticks - WARM_UP)
-		print("  feature %d: %.1f us per tick" % [feature_id, per_tick])
+		print("  feature %s: %.1f us per tick" % [feature_id, per_tick])
 	var same: bool = first.end_hash == second.end_hash
 	print("end state hash %d, %s" % [first.end_hash, "same in both passes" if same else "DIFFERS"])
 	quit(0 if same else 1)
@@ -154,7 +154,7 @@ class LoadPass:
 	## Each tick's duration, in microseconds.
 	var ticks: Array[int] = []
 	## Each feature's total time over the pass, in microseconds, by feature id.
-	var features: Dictionary[int, int] = {}
+	var features: Dictionary[String, int] = {}
 	var entities: int = 0
 	var dominations: int = 0
 	var end_hash: int = 0
@@ -164,7 +164,7 @@ class LoadPass:
 	var counting: bool = false
 
 	## Called by Simulation.step after each feature: adds the time since the last mark to it.
-	func observe(feature_id: int) -> void:
+	func observe(feature_id: String) -> void:
 		var now: int = Time.get_ticks_usec()
 		if counting:
 			features[feature_id] = features.get(feature_id, 0) + now - mark

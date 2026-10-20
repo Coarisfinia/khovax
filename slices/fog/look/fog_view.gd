@@ -62,7 +62,7 @@ func _process(delta: float) -> void:
 func show_state(delta: float) -> void:
 	if driver == null or driver.state == null or cloud == null:
 		return
-	var fog: FogFeature = driver.state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = driver.state.feature(FogFeature.ID) as FogFeature
 	if fog == null:
 		brightness.clear()
 		cloud.show_fog(null, brightness)
@@ -136,7 +136,7 @@ func _remember_next_door(fog: FogFeature, delta: float) -> void:
 ## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
 ## switched off.
 static func ally_sees(state: GameState, tile: Vector2i) -> bool:
-	var fog: FogFeature = state.feature(Features.FOG) as FogFeature
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	if fog == null or not fog.enabled:
 		return true
 	for slot: int in GameState.MAX_PLAYERS:
