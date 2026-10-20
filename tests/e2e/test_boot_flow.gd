@@ -833,7 +833,8 @@ static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vecto
 ## ground out of sight is still seen before, and next door the forest's explored ground lies under
 ## light fog and its unexplored ground under thick cloud. A tile changed in place there shows next
 ## door (#538). Back in the glade, the decorations on its ground explored before rise out of the
-## fog with it (#945).
+## fog with it (#945), and next door the forest's do too, while its unexplored ones stay hidden
+## (#1043).
 func _check_remembered_ground(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var fog: FogView = main.get_node("FogView") as FogView
@@ -863,7 +864,43 @@ func _check_remembered_ground(main: Node) -> String:
 		result = _check_out_of_sight(fog, far)
 	if result.is_empty():
 		result = _check_decorations_remembered(main)
+	if result.is_empty():
+		result = _check_neighbour_decorations(main, forest_seen, forest_unseen)
 	return result if not result.is_empty() else _check_neighbour_change_shown(driver, view)
+
+
+## Back in the glade, the forest next door stands its decorations (#1043), placed like its grid: on
+## a tile seen on arrival (explored) its decoration has risen out of the light fog whole, and on one
+## never seen it stays hidden under the thick cloud.
+func _check_neighbour_decorations(
+	main: Node,
+	forest_seen: Array[Vector2i],
+	forest_unseen: Array[Vector2i],
+) -> String:
+	var next_door: NeighbourDecorations = (
+		main.get_node("Instance/NeighbourDecorations") as NeighbourDecorations
+	)
+	next_door.show_state(10.0)
+	var forest: TileDecorations = next_door.views.get(FlowSteps.FOREST)
+	var grid: HexGrid = next_door.neighbours.grids.get(FlowSteps.FOREST)
+	if forest == null or grid == null or forest.position != grid.position:
+		return "the forest next door has no decorations, or they stand apart from its ground"
+	var counted: Vector2i = Vector2i.ZERO
+	for tile: Vector2i in forest_seen:
+		if not forest.figures.has(tile):
+			continue
+		counted.x += 1
+		if not forest.figures[tile].visible or forest.risen[tile] != 1.0:
+			return "next door, the decoration on the forest's explored %s is hidden" % [tile]
+	for tile: Vector2i in forest_unseen:
+		if not forest.figures.has(tile):
+			continue
+		counted.y += 1
+		if forest.figures[tile].visible or forest.risen[tile] != 0.0:
+			return "next door, the decoration on the forest's unexplored %s shows" % [tile]
+	if counted.x == 0 or counted.y == 0:
+		return "expected decorations next door on the forest's explored and unexplored ground"
+	return ""
 
 
 ## Back in the glade (#945), a decoration on its ground explored before that no event revealed and

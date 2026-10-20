@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://slices/triggers/look/lookout_view.gd" id="17_lookouts"]
 [ext_resource type="Script" path="res://slices/board/look/event_bus.gd" id="18_bus"]
 [ext_resource type="Script" path="res://slices/tiles/look/tile_decorations.gd" id="19_decorations"]
+[ext_resource type="Script" path="res://slices/tiles/look/neighbour_decorations.gd" id="43_neighbour_decorations"]
 [ext_resource type="Script" path="res://slices/board/look/neighbour_view.gd" id="20_neighbours"]
 [ext_resource type="Script" path="res://slices/board/look/instance_root.gd" id="21_instance"]
 [ext_resource type="Script" path="res://slices/board/meta/world_keeper.gd" id="22_keeper"]
@@ -131,6 +132,11 @@ fog = NodePath("../../FogView")
 [node name="NeighbourView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1880188018]
 script = ExtResource("20_neighbours")
 driver = NodePath("../../Driver")
+
+[node name="NeighbourDecorations" type="Node3D" parent="Instance" node_paths=PackedStringArray("neighbours", "fog") unique_id=1043104310]
+script = ExtResource("43_neighbour_decorations")
+neighbours = NodePath("../NeighbourView")
+fog = NodePath("../../FogView")
 
 [node name="FogCloud" type="MeshInstance3D" parent="Instance" node_paths=PackedStringArray("neighbours") unique_id=1560156156]
 script = ExtResource("16_cloud")
