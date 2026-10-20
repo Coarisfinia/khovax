@@ -16,9 +16,10 @@ static func flag(instance_name: String, faction_id: String) -> String:
 	return FLAG_START + instance_name + FLAG_BY + faction_id
 
 
-## The code a command hands the instance `instance_name` to the faction `faction_id` by (#638,
-## Command.hand_over): its flag's code (CommandCodes), never Command.NO_HAND_OVER for a territory
-## a quest hands over (the quests' content files it with CommandCodes.file).
+## The code a command hands the instance `instance_name` to the faction `faction_id` by (#638, the
+## data of an OutboxEntry.TERRITORY request): its flag's code (CommandCodes), never
+## CommandCodes.NONE for a territory a quest hands over (the quests' content files it with
+## CommandCodes.file).
 static func code(instance_name: String, faction_id: String) -> int:
 	return CommandCodes.of(flag(instance_name, faction_id))
 

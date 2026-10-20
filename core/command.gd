@@ -14,14 +14,12 @@ const NO_FOCUS: int = 0
 const NO_SWAP: int = 0
 ## No answer chosen in a dialog this tick (#635).
 const NO_ANSWER: int = CommandCodes.NONE
-## No territory handed over this tick (#638).
-const NO_HAND_OVER: int = CommandCodes.NONE
 ## No gear in the player's trap slot (#692).
 const NO_TRAP: int = CommandCodes.NONE
 ## No request from the player's profile's outbox this tick (#771).
 const NO_REQUEST: int = 0
-## No revive item used this tick (#656).
-const NO_REVIVE: int = 0
+## No kind of request this tick (#818): a command without a request.
+const NO_REQUEST_KIND: int = 0
 ## How many integers a command is in a replay (to_values).
 const VALUE_COUNT: int = 11
 
@@ -45,27 +43,23 @@ var swap: int = NO_SWAP
 ## own id (a whole number, never NO_ANSWER), or NO_ANSWER. A press, like the special; the
 ## simulation checks a dialog has that answer.
 var answer: int = NO_ANSWER
-## The territory the player hands to a faction this tick, having finished a territory quest
-## (#638), as the code of the instance and the faction (a whole number, never NO_HAND_OVER), or
-## NO_HAND_OVER. A request from the player's profile's outbox (#771), with its id in `request`; the
-## simulation checks a territory quest names it.
-var hand_over: int = NO_HAND_OVER
-## The carried monster the player uses a revive item on this tick (#656), the one they picked
-## (#780), as its short id's code (ShortId.code), or NO_REVIVE. A press, like the special; the
-## simulation checks they carry it and it has fainted, and the player's own machine only sends it
-## while their profile holds a revive item.
-var revive: int = NO_REVIVE
 ## The gear in the player's trap slot (#692), as the code of its id (SpikesFeature.code_of,
 ## CommandCodes), or NO_TRAP. Not a press but a standing value, like the move: every command carries
 ## it while it's equipped, so it changes the game only from the tick it's sent. The simulation
 ## checks it names spikes.
 var trap: int = NO_TRAP
 ## The id of the request from the player's profile's outbox (#771, Outbox) this command carries, as
-## its short id's code (ShortId.code, #791), or NO_REQUEST: its data is in its kind's own field
-## (`hand_over`). The world records the ids it
-## applied, so a request sent again (at every session's start, until the world acknowledges it) is
-## never applied twice.
+## its short id's code (ShortId.code, #791), or NO_REQUEST. The world records the ids it applied, so
+## a request sent again (at every session's start, until the world acknowledges it) is never
+## applied twice.
 var request: int = NO_REQUEST
+## What the request asks for (#818), a kind the outbox knows (OutboxEntry.KINDS: handing a
+## territory over, using a revive item), or NO_REQUEST_KIND. Every kind rides in these same two
+## fields, so a new kind of request never grows the command; the feature carrying out a kind checks
+## its data.
+var request_kind: int = NO_REQUEST_KIND
+## The request's data, as its kind reads it (OutboxEntry): a whole number from 0.
+var request_data: int = 0
 
 
 func _init(
@@ -85,9 +79,8 @@ func _init(
 ## The command as integers, for replays: from_values turns them back into the same command.
 func to_values() -> Array[int]:
 	var values: Array[int] = [
-		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, hand_over,
-		revive, trap,
-		request,
+		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, trap, request,
+		request_kind, request_data,
 	]
 	return values
 
@@ -103,23 +96,24 @@ static func from_values(values: Array[int]) -> Command:
 	)
 	command.swap = values[5]
 	command.answer = values[6]
-	command.hand_over = values[7]
-	command.revive = values[8]
-	command.trap = values[9]
-	command.request = values[10]
+	command.trap = values[7]
+	command.request = values[8]
+	command.request_kind = values[9]
+	command.request_data = values[10]
 	return command
 
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
 ## placed or not, a focus that is an entity id or none, a swap to a place in the carried order or
-## none, an answer's code or none, a territory's code or none, a revived monster's code or none, a
-## trap's code or none, and a request's id or none.
+## none, an answer's code or none, a trap's code or none, and a request with both its id and its
+## kind, or none at all.
 func is_valid() -> bool:
 	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
 	var placed: bool = totem == NO_TOTEM or totem == PLACE_TOTEM
-	var chosen: bool = swap >= NO_SWAP and answer >= NO_ANSWER and hand_over >= NO_HAND_OVER
-	chosen = chosen and revive >= NO_REVIVE and trap >= NO_TRAP
-	chosen = chosen and request >= NO_REQUEST
+	var chosen: bool = swap >= NO_SWAP and answer >= NO_ANSWER and trap >= NO_TRAP
+	var requests: bool = request > NO_REQUEST and request_kind > NO_REQUEST_KIND
+	var none: bool = request == NO_REQUEST and request_kind == NO_REQUEST_KIND and request_data == 0
+	chosen = chosen and (none or (requests and request_data >= 0))
 	return moves and placed and focus >= NO_FOCUS and chosen
 
 

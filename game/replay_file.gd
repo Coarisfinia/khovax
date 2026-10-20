@@ -5,12 +5,13 @@ extends RefCounted
 ## numbers can't hold every 64-bit integer exactly. Every field is checked for its shape as it's
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
 
-## The file format (16 since a command's revive item names the monster it brings back by its short
-## id's code, #780); a replay in another format is refused, not misread. A replay records the rules
+## The file format (17 since every request from a profile's outbox, the revive item's included,
+## rides in a command's fixed request kind and data, #818); a replay in another format is refused,
+## not misread. A replay records the rules
 ## version it was played by, and Replay refuses one recorded under other rules, so an older format,
 ## which always came with other rules, could never play anyway (#819): like WorldData, only this
 ## format is read.
-const FORMAT: int = 16
+const FORMAT: int = 17
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 

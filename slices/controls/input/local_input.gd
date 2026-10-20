@@ -8,9 +8,14 @@ extends Node
 ## shoulder buttons) step the focus through the wild monsters near the player (#436). swap_1 to
 ## swap_3 (keys 1 to 3, the d-pad's left, up and right, or a tap on the roster, RosterHud) make the
 ## monster at that place in the carried order the companion (#540): one press swaps once.
-## revive_monster (V, or the d-pad's down) uses a revive item (#656) in the next command, on the
-## fainted monster the player picks (#780, RevivePick), only while this player's profile holds one:
-## the items are in the profile, outside the simulation. While picking, the player stands.
+## revive_monster (V, or the d-pad's down) uses a revive item (#656) on the fainted monster the
+## player picks (#780, RevivePick), only while this player's profile holds one: the items are in the
+## profile, outside the simulation, which posts the use as a request to its outbox (#818,
+## revive_chosen) that goes in the next command. While picking, the player stands.
+
+## A revive item is used on the fainted monster `short_id` (#818): the profile spends it and posts
+## the request, sent back here (`send`) for the next command.
+signal revive_chosen(short_id: String)
 
 ## The swap actions, in the carried order's places from 1.
 const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
@@ -109,7 +114,7 @@ func command(state: GameState) -> Command:
 		_focus_steps = 0
 		revive_pick.drop()
 		return _standing(answering)
-	var reviving: int = _reviving(state)
+	_revive(state)
 	# While picking a fainted monster to revive (#780), the arrows move the pick, not the player,
 	# and other presses are dropped.
 	if not revive_pick.picked.is_empty():
@@ -131,7 +136,6 @@ func command(state: GameState) -> Command:
 	given.swap = swap
 	given.answer = answering
 	_send_next(given)
-	given.revive = reviving
 	given.trap = trap
 	return given
 
@@ -153,8 +157,17 @@ func _send_next(carrier: Command) -> void:
 		next.fill(carrier)
 
 
-## The revive item the next command uses (Command.revive), only while this player's profile holds
-## one (#656): on the fainted monster they picked (#780).
-func _reviving(state: GameState) -> int:
+## Uses a revive item on the fainted monster the player picked (#780), only while this player's
+## profile holds one (#656): whoever ties their profile to the session (ProfileTie) spends it and
+## posts it to the profile's outbox, which sends it in the next command.
+func _revive(state: GameState) -> void:
 	var holds: bool = ReviveItem.held(holder) > 0 and state.player(slot) != null
-	return revive_pick.chosen(ReviveItemFeature.fainted(state, slot), holds)
+	# One an item is already on its way to (#818) isn't offered again.
+	var fainted: PackedStringArray = PackedStringArray()
+	var on_the_way: PackedStringArray = ReviveItem.on_the_way(holder)
+	for short_id: String in ReviveItemFeature.fainted(state, slot):
+		if not on_the_way.has(short_id):
+			var _added: bool = fainted.append(short_id)
+	var reviving: String = revive_pick.chosen(fainted, holds)
+	if not reviving.is_empty():
+		revive_chosen.emit(reviving)

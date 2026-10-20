@@ -72,10 +72,11 @@ func acknowledge(request: String) -> void:
 		_report(keeper.acknowledge(request, Time.get_ticks_msec()))
 
 
-## Spends one `item` the player used, like a revive item (#656).
-func spend(item: String) -> void:
+## Spends one `item` the player uses, like a revive item (#656), and posts the request of `kind`
+## (OutboxEntry.KINDS) with its `data` that uses it to the outbox, in one change (#818).
+func spend_on(item: String, kind: int, data: int) -> void:
 	if keeper != null:
-		_report(keeper.spend(item, Time.get_ticks_msec()))
+		_report(keeper.spend_on(item, kind, data, Time.get_ticks_msec()))
 
 
 ## Whether loot with the id `item` is gear (#694) rather than a material.

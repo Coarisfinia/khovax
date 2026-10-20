@@ -12,12 +12,9 @@ const APPLIED: String = "applied"
 
 ## Takes the request `request` of the player in `slot` for the feature `feature_id`, inside its
 ## step: acknowledges it (RequestApplied) and returns whether it's new, so the feature carries it
-## out, recording it as applied. Command.NO_REQUEST, a command without an id (replays from before
-## #771), is always new and never recorded.
-## A code that's no short id's (ShortId.of_code) is never applied.
+## out, recording it as applied. A command without an id (Command.NO_REQUEST, #818) or with a code
+## that's no short id's (ShortId.of_code) never comes from an outbox, so it's never applied.
 static func take(state: GameState, slot: int, feature_id: String, request: int) -> bool:
-	if request == Command.NO_REQUEST:
-		return true
 	var id: String = ShortId.of_code(request)
 	if id.is_empty():
 		return false

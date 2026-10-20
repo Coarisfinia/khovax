@@ -1,11 +1,13 @@
 class_name ReviveItemFeature
 extends Feature
-## Revive items (#656): a player who uses one (Command.revive) brings back the fainted monster they
-## carry that they picked (#780, LocalInput), wherever they are (CompanionParty.revive, #655), and
-## MonsterRevived says so, which spends the item from their profile. On one that isn't carried or
-## hasn't fainted nothing happens, so nothing is spent. The items are in the player's profile,
-## outside the simulation, so whether they hold one is their own machine's to check (LocalInput).
-## It keeps no state of its own.
+## Revive items (#656): a player who uses one brings back the fainted monster they carry that they
+## picked (#780, LocalInput), wherever they are (CompanionParty.revive, #655), and MonsterRevived
+## says so. Using one is a request from their profile's outbox (#818, OutboxEntry.REVIVE) whose data
+## is the monster's short id's code, posted as the item is spent from the profile: the ids it
+## applied are kept in its entry in the player's world store (OutboxReceipts), so one sent again
+## revives nothing twice. On one that isn't carried or hasn't fainted anymore nothing happens, and
+## the request is acknowledged all the same. The items are in the player's profile, outside the
+## simulation, so whether they hold one is their own machine's to check (ProfileTie).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "revive_items"
@@ -22,12 +24,16 @@ func requires() -> Array[String]:
 	return needed
 
 
-## Revives the fainted monster each player here, in slot order, uses a revive item on.
+## Revives the fainted monster each player here, in slot order, uses a revive item on, unless its
+## request was applied before.
 func step(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
-		if command != null and command.revive != Command.NO_REVIVE and state.player(slot) != null:
-			_revive(state, slot, ShortId.of_code(command.revive))
+		var reviving: bool = command != null and command.request_kind == OutboxEntry.REVIVE
+		if not reviving or state.player(slot) == null:
+			continue
+		if OutboxReceipts.take(state, slot, id(), command.request):
+			_revive(state, slot, ShortId.of_code(command.request_data))
 
 
 ## Brings back the monster `short_id` the player in `slot` carries, if it has fainted, raising

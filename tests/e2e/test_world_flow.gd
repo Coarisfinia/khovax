@@ -56,6 +56,8 @@ var _crown: TileBlueprint
 ## The short ids of the first and second monster a party FlowSteps.party makes carries.
 var _first: String = ShortId.stand_in(1)
 var _second: String = ShortId.stand_in(2)
+## Where the revive requests' ids the world flow sends come from (#818).
+var _request_ids: Rng = Rng.new(1, OutboxEntry.ID_STREAM)
 ## The instances player 0 entered while _walk_in walked them, in order (#370).
 var _entered: Array[String] = []
 
@@ -397,10 +399,14 @@ func _swap_in(world: World, recorded: Replay, swap: int) -> int:
 
 
 ## Steps `world` once with player 0 standing and using a revive item (#656) on their carried monster
-## `short_id` (#780); returns the short ids their instance raised as revived.
-func _revive_in(world: World, short_id: String) -> Array[String]:
+## `short_id` (#780), a request from their outbox with the id `request` (#818), or a new one for "";
+## returns the short ids their instance raised as revived.
+func _revive_in(world: World, short_id: String, request: String = "") -> Array[String]:
 	var command: Command = Command.new()
-	command.revive = ShortId.code(short_id)
+	var id: String = request if not request.is_empty() else ShortId.drawn(_request_ids)
+	command.request = ShortId.code(id)
+	command.request_kind = OutboxEntry.REVIVE
+	command.request_data = ShortId.code(short_id)
 	var commands: Array[Command] = [command]
 	world.step(commands)
 	var revived: Array[String] = []
@@ -501,13 +507,19 @@ func _check_fainted_restored(world: World, party: Array[CarriedMonsters]) -> Str
 
 ## Revived by a revive item (#656), raising MonsterRevived once, the finch can be swapped to again
 ## and joins its player in the glade; another revive item on it, not fainted anymore, revives
-## nothing. A
+## nothing. Fainted again, the same request sent again revives nothing (#818), a new one does. A
 ## fainted one no longer carried is forgotten.
 func _check_revived(world: World) -> String:
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var finch: Array[String] = [_first]
-	if _revive_in(world, _first) != finch:
+	var request: String = ShortId.drawn(_request_ids)
+	if _revive_in(world, _first, request) != finch:
 		return "a revive item didn't bring back the fainted finch, once"
+	var finch_down: Dictionary = world.stored(0, CompanionFeature.ID).duplicate(true)
+	finch_down["fainted"] = [_first]
+	world.set_entry(0, CompanionFeature.ID, finch_down)
+	if not _revive_in(world, _first, request).is_empty() or _revive_in(world, _first) != finch:
+		return "a revive request sent again revived the finch again, or a new one didn't"
 	if _swap_in(world, null, 1) != 1 or not CompanionParty.fainted_in(world, 0).is_empty():
 		return "the revived finch couldn't be swapped to, or the world kept it fainted"
 	if not _revive_in(world, _first).is_empty():
@@ -647,16 +659,16 @@ func _roster_fainted(roster: RosterHud, driver: GameDriver) -> String:
 ## The revive item (#656), with the toad fainted: its button shows its icon and 0, faded, while the
 ## profile holds none, and its key uses none. With one held, the button shows 1, usable; with the
 ## finch fainted too, the player picks which one comes back (#780, _check_revive_pick). With the
-## toad alone fainted, the key uses it on the toad at once in the next command, which brings the
-## toad back; the profile spends it, and the button shows 0 again. A controller's d-pad down uses
-## one too.
+## toad alone fainted, the key uses it on the toad at once in the next command, a request from the
+## profile's outbox (#818) posted as the profile spends it, so the button shows 0 again; the request
+## brings the toad back, and the profile drops it. A controller's d-pad down uses one too.
 func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var button: ReviveButton = main.get_node("Hud/ReviveButton") as ReviveButton
 	var holder: ProfileHolder = FlowGame.holder(main)
 	if button.icon == null or button.corner_text() != "0" or button.usable():
 		return "the revive item's button doesn't show its icon and 0, faded, with none held"
 	var unheld: Command = await _pressed(driver, &"revive_monster")
-	if unheld.revive != Command.NO_REVIVE:
+	if unheld.request_kind == OutboxEntry.REVIVE:
 		return "the revive key used a revive item the profile doesn't hold"
 	holder.keeper.profile.materials[ReviveItem.ID] = 1
 	if button.corner_text() != "1" or not button.usable():
@@ -666,15 +678,17 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 		return picked
 	var single: Command = await _pressed(driver, &"revive_monster")
 	var commands: Array[Command] = [single]
-	if commands[0].revive != ShortId.code(_second):
+	if _revived_by(commands[0]) != _second:
 		return "the revive key didn't use the item on the toad, the only one fainted, at once"
+	if ReviveItem.held(holder) != 0 or button.corner_text() != "0" or button.usable():
+		return "the profile didn't spend the revive item used, or its button didn't show 0"
 	driver.world.step(commands)
 	driver.ticked.emit(driver.state.tick, driver.state.events)
 	(main.get_node("EventBus") as EventBus).flush()
 	if not CompanionParty.fainted_in(driver.world, 0).is_empty():
 		return "the revive key didn't bring the fainted toad back"
-	if ReviveItem.held(holder) != 0 or button.corner_text() != "0" or button.usable():
-		return "the profile didn't spend the revive item used, or its button didn't show 0"
+	if not holder.keeper.profile.outbox.entries.is_empty():
+		return "the profile kept the revive request the world took"
 	var pad: bool = false
 	for event: InputEvent in InputMap.action_get_events(&"revive_monster"):
 		var pressed: InputEventJoypadButton = event as InputEventJoypadButton
@@ -692,7 +706,7 @@ func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	CompanionParty.faint(driver.state, 0, _first)
 	var picking: Command = await _pressed(driver, &"revive_monster")
 	roster.show_state()
-	var standing: bool = picking.move == Command.NO_MOVE and picking.revive == Command.NO_REVIVE
+	var standing: bool = picking.move == Command.NO_MOVE and _revived_by(picking).is_empty()
 	if not standing or driver.input.revive_pick.picked != _first or roster.picked_place != 0:
 		return "the revive key didn't pick the finch, shown on the roster, with the player standing"
 	var _right: Command = await _pressed(driver, &"ui_right")
@@ -705,13 +719,32 @@ func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	var again: Command = await _pressed(driver, &"revive_monster")
 	var _second_press: Command = await _pressed(driver, &"revive_monster")
 	again = await _pressed(driver, &"ui_accept")
-	if again.revive != ShortId.code(_second):
+	if _revived_by(again) != _second:
 		return "Enter didn't use the item on the toad the pick moved on to"
+	_undo(main, again)
 	_tap_roster(roster, roster.rect_of(0).get_center(), false)
-	if driver.input.command(driver.state).revive != ShortId.code(_first):
+	again = driver.input.command(driver.state)
+	if _revived_by(again) != _first:
 		return "a tap on the fainted finch's square didn't use the item on it"
+	_undo(main, again)
 	CompanionParty.revive(driver.state, 0, _first)
 	return ""
+
+
+## The short id of the monster `command` uses a revive item on (#818: a request from the profile's
+## outbox), or "" for none.
+static func _revived_by(command: Command) -> String:
+	if command.request_kind != OutboxEntry.REVIVE:
+		return ""
+	return ShortId.of_code(command.request_data)
+
+
+## Undoes the revive item `command` uses, without stepping it: the profile in `main` drops its
+## request from the outbox and holds the item again.
+static func _undo(main: Node, command: Command) -> void:
+	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
+	var _saved: String = keeper.acknowledge(ShortId.of_code(command.request), 0)
+	keeper.profile.materials[ReviveItem.ID] = 1
 
 
 ## The local player's next command after a press of the InputMap action `action`, in a frame of its

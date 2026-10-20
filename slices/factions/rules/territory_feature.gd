@@ -1,9 +1,10 @@
 class_name TerritoryFeature
 extends Feature
 ## Territory changing hands (#638): a player who finishes a territory quest sends the territory it
-## hands over in their command, as its code (Territory.code), and this raises that the instance is
-## handed to the faction (Territory.handed_over), which the world carries out once every instance
-## has stepped. A code no territory quest has is ignored. A hand-over comes from the player's
+## hands over in their command, as a request (OutboxEntry.TERRITORY) whose data is its code
+## (Territory.code), and this raises that the instance is handed to the faction
+## (Territory.handed_over), which the world carries out once every instance has stepped. A code no
+## territory quest has is ignored. A hand-over comes from the player's
 ## profile's outbox (#771) with its request's id: the ids it applied are kept in its entry in the
 ## player's world store (OutboxReceipts), so one sent again isn't handed over twice.
 
@@ -30,10 +31,10 @@ func id() -> String:
 func step(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
-		var handing: bool = command != null and command.hand_over != Command.NO_HAND_OVER
-		if not handing or state.player(slot) == null or not handovers.has(command.hand_over):
+		var handing: bool = command != null and command.request_kind == OutboxEntry.TERRITORY
+		if not handing or state.player(slot) == null or not handovers.has(command.request_data):
 			continue
 		if not OutboxReceipts.take(state, slot, id(), command.request):
 			continue
-		var handed: PackedStringArray = handovers[command.hand_over]
+		var handed: PackedStringArray = handovers[command.request_data]
 		state.events.append(Territory.handed_over(handed[0], handed[1]))
