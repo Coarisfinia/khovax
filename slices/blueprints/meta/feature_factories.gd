@@ -1,21 +1,22 @@
 class_name FeatureFactories
 extends RefCounted
-## Every feature an instance blueprint can list (#823), by its id, with what builds it from the
-## instance's FeatureSetup: a feature that reads content data from its slice's factory, one that
-## reads nothing with new(). A feature whose region holds nothing for it (no exits, no triggers)
-## builds as null and is left out. The order here is the step order every instance's features
+## Every feature an instance can have (#823), by its id, with what builds it from the instance's
+## FeatureSetup: a feature that reads content data from its slice's factory, one that reads nothing
+## with new(). Its blueprint lists the rules, and what its region holds brings the rest
+## (RegionFeatures, #879). The order here is the step order every instance's features
 ## take, reviewed like code; each feature's `requires`, `after` and `before` are checked against
 ## it when an instance loads (GameState.order_problem).
 
 static var _factories: Dictionary[String, Callable] = {}
 
 
-## Whether a feature with this id can be listed.
+## Whether a feature with this id exists.
 static func has(feature_id: String) -> bool:
 	return _all().has(feature_id)
 
 
-## The listed features, built for `setup` in the step order; those built as null are left out.
+## The listed features, built for `setup` in the step order; one that fails to build (null) is left
+## out.
 static func build(listed: Array[String], setup: FeatureSetup) -> Array[Feature]:
 	var features: Array[Feature] = []
 	for feature_id: String in _all():
@@ -44,13 +45,13 @@ static func _all() -> Dictionary[String, Callable]:
 			DominationLootFeature.ID: DominationLootFactory.build,
 			EnrageFeature.ID: _plain(EnrageFeature),
 			FogFeature.ID: _plain(FogFeature),
-			# What the region holds: exits, triggers, region pieces to enter, wild monsters in
-			# hiding, people to talk to.
-			ExitFeature.ID: _exits,
-			TriggerFeature.ID: _triggers,
-			EnteringFeature.ID: _entering,
-			HidingFeature.ID: _hiding,
-			NpcFeature.ID: _npcs,
+			# What the region holds (RegionFeatures): exits, triggers, region pieces to enter, wild
+			# monsters in hiding, people to talk to.
+			ExitFeature.ID: _plain(ExitFeature),
+			TriggerFeature.ID: _plain(TriggerFeature),
+			EnteringFeature.ID: _plain(EnteringFeature),
+			HidingFeature.ID: _plain(HidingFeature),
+			NpcFeature.ID: _plain(NpcFeature),
 			ChestFeature.ID: ChestFactory.build,
 			# The companions and the features built on them. A companion whose player walks out
 			# through an exit goes with them whatever the order: the world moves it after the tick
@@ -78,33 +79,3 @@ static func _all() -> Dictionary[String, Callable]:
 ## What builds a feature that reads nothing: its class's new().
 static func _plain(feature: GDScript) -> Callable:
 	return func(_setup: FeatureSetup) -> Feature: return feature.new()
-
-
-static func _exits(setup: FeatureSetup) -> ExitFeature:
-	if setup.region.exits.is_empty():
-		return null
-	return ExitFeature.new()
-
-
-static func _triggers(setup: FeatureSetup) -> TriggerFeature:
-	if setup.region.placed(TriggerPlacements.KIND).is_empty():
-		return null
-	return TriggerFeature.new()
-
-
-static func _entering(setup: FeatureSetup) -> EnteringFeature:
-	if setup.region.piece_of.is_empty():
-		return null
-	return EnteringFeature.new()
-
-
-static func _hiding(setup: FeatureSetup) -> HidingFeature:
-	if not HidingFeature.has_hiding(setup.region):
-		return null
-	return HidingFeature.new()
-
-
-static func _npcs(setup: FeatureSetup) -> NpcFeature:
-	if setup.region.placed(NpcPlacements.KIND).is_empty():
-		return null
-	return NpcFeature.new()

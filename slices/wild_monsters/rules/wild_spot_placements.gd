@@ -9,6 +9,14 @@ extends PlacementReader
 const KIND: String = "wild_spot"
 
 
+func kinds() -> Array[String]:
+	return [KIND]
+
+
+func feature() -> String:
+	return WildMonsterFeature.ID
+
+
 func kind_of(meaning: String) -> String:
 	return KIND if WildSpot.read(meaning) != null else ""
 

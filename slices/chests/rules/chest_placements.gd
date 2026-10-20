@@ -13,5 +13,13 @@ const MEANINGS: Dictionary[String, String] = {
 }
 
 
+func kinds() -> Array[String]:
+	return [CHEST, LOOT]
+
+
+func feature() -> String:
+	return ChestFeature.ID
+
+
 func kind_of(meaning: String) -> String:
 	return MEANINGS.get(meaning, "")

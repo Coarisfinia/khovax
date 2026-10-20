@@ -8,6 +8,14 @@ extends PlacementReader
 const KIND: String = "trigger"
 
 
+func kinds() -> Array[String]:
+	return [KIND]
+
+
+func feature() -> String:
+	return TriggerFeature.ID
+
+
 func kind_of(meaning: String) -> String:
 	return KIND if TileTrigger.read(meaning) != null else ""
 
