@@ -112,7 +112,7 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 
 
 func hash_values() -> Array[int]:
-	var flat: Array[int] = _flat()
+	var flat: Array[int] = DataReader.flat_pairs(_cooling)
 	var values: Array[int] = [flat.size()]
 	values.append_array(flat)
 	return values
@@ -120,20 +120,17 @@ func hash_values() -> Array[int]:
 
 ## Each cooling player's slot and ticks left, by slot.
 func save_values() -> Dictionary:
-	return { "cooling": _flat() }
+	return { "cooling": DataReader.flat_pairs(_cooling) }
 
 
 func load_values(_state: GameState, values: DataReader) -> void:
 	_cooling.clear()
-	var flat: Array[int] = values.wholes("cooling", 0, DataReader.MOST)
-	if flat.size() % 2 != 0:
-		values.fail("a special's cooldown is cut off")
-		return
-	for i: int in range(0, flat.size(), 2):
-		if flat[i] >= GameState.MAX_PLAYERS or _cooling.has(flat[i]) or flat[i + 1] < 1:
-			values.fail("cooldown %d isn't one player's" % flat[i])
+	var saved: Dictionary[int, int] = values.pairs("cooling", 0, DataReader.MOST)
+	for slot: int in saved:
+		if slot >= GameState.MAX_PLAYERS or saved[slot] < 1:
+			values.fail("cooldown %d isn't one player's" % slot)
 			return
-		_cooling[flat[i]] = flat[i + 1]
+		_cooling[slot] = saved[slot]
 
 
 ## The cooling slots, in order.
@@ -142,11 +139,3 @@ func _slots() -> Array[int]:
 	slots.assign(_cooling.keys())
 	slots.sort()
 	return slots
-
-
-## The cooldowns as slot and ticks left after one another, by slot.
-func _flat() -> Array[int]:
-	var flat: Array[int] = []
-	for slot: int in _slots():
-		flat.append_array([slot, _cooling[slot]])
-	return flat
