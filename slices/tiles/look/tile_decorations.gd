@@ -4,11 +4,12 @@ extends Node3D
 ## trees), cel-shaded like every model and scaled to sit inside its tile, times the blueprint's own
 ## scale. Natural things don't stand in the middle of their tile, so each one stands a little off
 ## it, the same way every time for its tile, and turned as its region piece turns it by hand
-## (#231). A decoration stays hidden
-## in the fog until an ally has seen its tile or an event revealed it (as FogView remembers the
-## ground under it), then stays. When a rule changes a tile in place (#530, TileChanged), its old
-## decoration shrinks away and its new kind's grows in, calmly, over HexGrid.CHANGE_SECONDS. It
-## only reads the state and the tick's events.
+## (#231). A decoration rises out of the fog's thick cloud as the cloud over its tile thins
+## (FogView.thinned), so it shows wherever the ground does: in sight, revealed, or explored before,
+## also on coming back to an instance or resuming a save (#945), and never pops in or out. When a
+## rule changes a tile in place (#530, TileChanged), its old decoration shrinks away and its new
+## kind's grows in, calmly, over HexGrid.CHANGE_SECONDS. It only reads the state and the tick's
+## events.
 
 ## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
 ## ours (HexLayout.SIZE), so they shrink to fit inside it.
@@ -17,15 +18,18 @@ const MODEL_SCALE: float = 0.8
 const OFF_CENTER: float = 0.15
 
 @export var driver: Session
+## The fog the decorations rise out of; none shows every decoration.
+@export var fog: FogView
 
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
 ## Decorations of tiles changed in place (#530), shrinking away.
 var shrinking: Array[HexPiece] = []
+## How far each decoration has risen out of the fog as drawn now, by tile: 0 hidden, 1 whole. Kept
+## here, since the headless renderer can't be read back.
+var risen: Dictionary[Vector2i, float] = {}
 ## The region the figures stand on: another one clears them.
 var _region: Region
-## Decorated tiles an ally has seen in this region.
-var _seen: Dictionary[Vector2i, bool] = {}
 ## Each model, loaded once, by path.
 var _models: Dictionary[String, PackedScene] = {}
 
@@ -35,23 +39,35 @@ func _ready() -> void:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 
 
-func _process(_delta: float) -> void:
-	show_state()
+func _process(delta: float) -> void:
+	show_state(delta)
 
 
-## Matches the decorations to the current state. Called every frame; tests call it after changing
-## the state.
-func show_state() -> void:
+## Draws the decoration on `tile` as far risen as `risen` says: its model grows from nothing, eased
+## at both ends, rather than fading, which the Compatibility renderer ignores. The model grows, not
+## the figure, whose scale is CanopyCutaway's to cut.
+func _draw(tile: Vector2i) -> void:
+	var figure: HexPiece = figures[tile]
+	var model: Node3D = figure.get_child(0) as Node3D
+	var size: float = MODEL_SCALE * TileLooks.scale_of(TileLooks.of(_region.terrain[tile]))
+	model.scale = Vector3.ONE * size * smoothstep(0.0, 1.0, risen[tile])
+	figure.visible = risen[tile] > 0.0
+
+
+## Matches the decorations to the current state and eases each one `delta` seconds towards how far
+## the fog over its tile has thinned. Called every frame; tests call it with a long `delta` to let
+## it settle.
+func show_state(delta: float) -> void:
 	if driver == null or driver.state == null:
 		return
 	if driver.state.region != _region:
 		_build(driver.state.region)
-	var fog: FogFeature = driver.state.feature(FogFeature.ID) as FogFeature
 	for tile: Vector2i in figures:
-		var revealed: bool = fog != null and fog.revealed.has(tile)
-		if revealed or FogView.ally_sees(driver.state, tile):
-			_seen[tile] = true
-		figures[tile].visible = _seen.has(tile)
+		var target: float = fog.thinned(tile) if fog != null else 1.0
+		var now: float = move_toward(risen[tile], target, delta / HexGrid.CHANGE_SECONDS)
+		if now != risen[tile]:
+			risen[tile] = now
+			_draw(tile)
 
 
 func _build(region: Region) -> void:
@@ -59,33 +75,22 @@ func _build(region: Region) -> void:
 		figure.queue_free()
 	figures.clear()
 	shrinking.clear()
-	_seen.clear()
+	risen.clear()
 	_region = region
 	for tile: Vector2i in region.sorted_tiles():
-		_decorate(tile, false)
+		_decorate(tile)
 
 
-## Stands the decoration of `tile`'s kind on it, if the kind has one, grown in calmly if `growing`.
-func _decorate(tile: Vector2i, growing: bool) -> void:
+## Stands the decoration of `tile`'s kind on it, if the kind has one, still hidden: it rises as the
+## fog lets it, or grows in calmly where the fog is gone.
+func _decorate(tile: Vector2i) -> void:
 	var blueprint: TileBlueprint = TileLooks.of(_region.terrain[tile])
 	if blueprint == null or blueprint.model.is_empty():
 		return
 	var turn: int = _region.looks.decoration_turns.get(tile, 0)
-	var figure: HexPiece = _add_figure(tile, blueprint, turn)
-	figures[tile] = figure
-	figure.visible = _seen.has(tile)
-	if growing:
-		# The model grows, not the figure, whose scale is CanopyCutaway's to cut.
-		var model: Node3D = figure.get_child(0) as Node3D
-		var full: Vector3 = model.scale
-		model.scale = Vector3.ZERO
-		var tween: Tween = model.create_tween()
-		var _grown: PropertyTweener = tween.tween_property(
-			model,
-			"scale",
-			full,
-			HexGrid.CHANGE_SECONDS,
-		)
+	figures[tile] = _add_figure(tile, blueprint, turn)
+	risen[tile] = 0.0
+	_draw(tile)
 
 
 ## Swaps the decoration of every tile of the shown region changed in place this tick (#530): the old
@@ -95,7 +100,8 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		if figures.has(changed.tile):
 			_shrink(figures[changed.tile])
 			var _dropped: bool = figures.erase(changed.tile)
-		_decorate(changed.tile, true)
+			var _forgotten: bool = risen.erase(changed.tile)
+		_decorate(changed.tile)
 
 
 func _shrink(figure: HexPiece) -> void:
@@ -130,7 +136,6 @@ func _add_figure(tile: Vector2i, blueprint: TileBlueprint, turn: int) -> HexPiec
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
 	var model: Node3D = _models[path].instantiate() as Node3D
-	model.scale = Vector3.ONE * MODEL_SCALE * TileLooks.scale_of(blueprint)
 	model.rotation.y = TAU * turn / Hex.DIRECTIONS.size()
 	model.position = off_center(tile)
 	Toon.apply_to_model(model)
