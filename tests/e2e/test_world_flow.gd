@@ -294,7 +294,8 @@ func _at_forest_exit() -> World:
 func _check_held_until_read() -> String:
 	var world: World = _at_forest_exit()
 	var out: int = FlowSteps.INTO_GLADE[-1]
-	var session: Session = Session.new()
+	# A driver kept out of the tree, so it never starts a world of its own: only its world is read.
+	var session: GameDriver = GameDriver.new()
 	session.world = world
 	var input: LocalInput = LocalInput.new()
 	var source: LocalSource = LocalSource.new(input, session)
