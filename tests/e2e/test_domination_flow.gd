@@ -759,7 +759,8 @@ func _spiked_over(
 	var still: Array[Command] = FlowSteps.totem() if placing else FlowSteps.command(Command.NO_MOVE)
 	var first: Array[Command] = FlowSteps.totem() if placing else FlowSteps.command(Command.NO_MOVE)
 	if trap != NO_TRAP_CHANGE:
-		first[0].request = ShortId.code(ShortId.drawn(Rng.new(1, OutboxEntry.ID_STREAM)))
+		# The first id a profile's outbox draws (Outbox, #942).
+		first[0].request = ShortId.code(ShortId.of_code(1))
 		first[0].request_kind = OutboxEntry.TRAP
 		first[0].request_data = trap
 	var hurts: Array[SpikesStruck] = []

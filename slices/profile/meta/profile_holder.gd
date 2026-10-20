@@ -87,6 +87,19 @@ func acknowledge(request: String) -> void:
 		_report(keeper.acknowledge(request, Time.get_ticks_msec()))
 
 
+## The code up to which this player's profile saw every request it sent acknowledged
+## (Outbox.confirmed, #942), for every command to carry, or Command.NO_REQUEST without a profile.
+func confirmed() -> int:
+	return keeper.profile.outbox.confirmed() if keeper != null else Command.NO_REQUEST
+
+
+## Draws the outbox's next ids above the request code `highest` the world holds for this player as
+## a session starts (Outbox.catch_up, #942).
+func catch_up_outbox(highest: int) -> void:
+	if keeper != null:
+		keeper.profile.outbox.catch_up(highest)
+
+
 ## Spends one `item` the player uses, like a revive item (#656), and posts the request of `kind`
 ## (OutboxEntry.KINDS) with its `data` that uses it to the outbox, in one change (#818).
 func spend_on(item: String, kind: int, data: int) -> void:

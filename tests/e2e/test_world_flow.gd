@@ -57,8 +57,8 @@ var _crown: TileBlueprint
 ## The short ids of the first and second monster a party FlowSteps.party makes carries.
 var _first: String = ShortId.stand_in(1)
 var _second: String = ShortId.stand_in(2)
-## Where the revive requests' ids the world flow sends come from (#818).
-var _request_ids: Rng = Rng.new(1, OutboxEntry.ID_STREAM)
+## Where the revive requests' ids the world flow sends come from (#818), on a stream of its own.
+var _request_ids: Rng = Rng.new(1, 818)
 ## The instances player 0 entered while _walk_in walked them, in order (#370).
 var _entered: Array[String] = []
 

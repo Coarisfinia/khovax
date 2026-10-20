@@ -18,8 +18,6 @@ const TRAP: int = 3
 const CARRY: int = 4
 ## Every kind there is.
 const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY]
-## The stream the profile's outbox draws ids from (Outbox).
-const ID_STREAM: int = 771
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the
 ## world records the ids it applied.

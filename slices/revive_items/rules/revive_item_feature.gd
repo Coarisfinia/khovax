@@ -32,7 +32,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		var reviving: bool = command != null and command.request_kind == OutboxEntry.REVIVE
 		if not reviving or state.player(slot) == null:
 			continue
-		if OutboxReceipts.take(state, slot, id(), command.request):
+		if OutboxReceipts.take(state, slot, id(), command):
 			_revive(state, slot, ShortId.of_code(command.request_data))
 
 

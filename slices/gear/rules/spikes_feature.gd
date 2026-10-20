@@ -107,7 +107,7 @@ func _change_traps(state: GameState, commands: Array[Command]) -> void:
 		var changing: bool = command != null and command.request_kind == OutboxEntry.TRAP
 		if not changing or state.player(slot) == null:
 			continue
-		if not OutboxReceipts.take(state, slot, id(), command.request):
+		if not OutboxReceipts.take(state, slot, id(), command):
 			continue
 		var entry: Dictionary = state.store(slot, id())
 		if command.request_data == CommandCodes.NONE:

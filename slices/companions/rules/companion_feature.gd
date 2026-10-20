@@ -128,7 +128,7 @@ func _take_parties(state: GameState, commands: Array[Command]) -> void:
 		var command: Command = Command.of(commands, slot)
 		var carrying: bool = command != null and command.request_kind == OutboxEntry.CARRY
 		if carrying and state.player(slot) != null:
-			if OutboxReceipts.take(state, slot, ID, command.request):
+			if OutboxReceipts.take(state, slot, ID, command):
 				CompanionParty.take_request(state, slot, command.request_data, _species_by_code)
 
 

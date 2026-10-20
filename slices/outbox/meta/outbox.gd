@@ -7,32 +7,52 @@ extends RefCounted
 ## one of the player's next commands (OutboxEntry.fill), and again at the start of every session
 ## until the world acknowledges it (RequestApplied); the world records the ids it applied
 ## (OutboxReceipts), so one sent again is never applied twice. At worst, it's applied a session
-## later. A request's id is a short id (ShortId, as monsters have, #791), drawn here, outside the
-## simulation, at random: so a profile starting over never gives an id an old one's world already
-## applied.
+## later. A request's id is a short id (ShortId, as monsters have, #791), drawn in order (#942):
+## the next code (ShortId.code) above every id drawn before, every request here and every id the
+## world holds for the player (catch_up), so a profile starting over, or one whose save lost its
+## newest requests, never gives an id the world already applied. Drawn in order, the ids up to
+## the one just below the oldest request here have all been acknowledged (`confirmed`), which
+## every command tells the world, so it can forget its receipts of them.
 
 ## The requests not acknowledged yet, in the order posted.
 var entries: Array[OutboxEntry] = []
-## Where ids are drawn from: seeded at random once, the first time one is drawn.
-var _rng: Rng = null
+## The code (ShortId.code) of the newest id drawn, or of a higher one the world holds (catch_up).
+var _newest: int = Command.NO_REQUEST
 
 
 ## Posts a request of `kind` (OutboxEntry.KINDS) with its `data`, under a new id, and returns it.
 func post(kind: int, data: int) -> OutboxEntry:
-	if _rng == null:
-		_rng = Rng.new(randi(), OutboxEntry.ID_STREAM)
-	var id: String = ShortId.drawn(_rng)
-	while _index_of(id) >= 0:
-		id = ShortId.drawn(_rng)
-	var entry: OutboxEntry = OutboxEntry.new(id, kind, data)
+	for request: OutboxEntry in entries:
+		_newest = maxi(_newest, ShortId.code(request.id))
+	_newest += 1
+	var entry: OutboxEntry = OutboxEntry.new(ShortId.of_code(_newest), kind, data)
 	entries.append(entry)
 	return entry
+
+
+## Draws the next ids above the request code `highest` (#942): the highest the world holds for
+## the player as a session starts (OutboxReceipts.highest).
+func catch_up(highest: int) -> void:
+	_newest = maxi(_newest, highest)
+
+
+## The code up to which every request this outbox sent was acknowledged (#942), for every command
+## to carry (Command.acknowledged): just below its oldest request, or the newest id drawn while
+## it's empty. A request dropped only once acknowledged, every id below the oldest one here was.
+func confirmed() -> int:
+	if entries.is_empty():
+		return _newest
+	var oldest: int = ShortId.code(entries[0].id)
+	for request: OutboxEntry in entries:
+		oldest = mini(oldest, ShortId.code(request.id))
+	return oldest - 1
 
 
 ## Drops the request `request` the world acknowledged; returns whether it was here.
 func drop(request: String) -> bool:
 	var at: int = _index_of(request)
 	if at >= 0:
+		_newest = maxi(_newest, ShortId.code(request))
 		entries.remove_at(at)
 	return at >= 0
 
