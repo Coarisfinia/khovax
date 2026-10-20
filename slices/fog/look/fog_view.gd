@@ -133,6 +133,19 @@ func _remember_next_door(fog: FogFeature, delta: float) -> void:
 			brightness[here] = move_toward(now, target, EASE_PER_SECOND * delta)
 
 
+## How far the thick cloud over `tile` of the instance shown has thinned as drawn now, from 0 (never
+## seen) to 1 (seen before, or now): what stands on the ground rises out of the cloud with it
+## (TileDecorations, #945), so it eases with the fog and is remembered as the ground is. 1 without
+## fog; 0 while the instance shown isn't drawn yet, which starts under thick cloud.
+func thinned(tile: Vector2i) -> float:
+	if driver == null or driver.state == null or driver.state.feature(FogFeature.ID) == null:
+		return 1.0
+	if driver.state.region != _region:
+		return 0.0
+	var bright: float = brightness.get(tile, UNSEEN)
+	return clampf(inverse_lerp(UNSEEN, REMEMBERED, bright), 0.0, 1.0)
+
+
 ## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
 ## switched off.
 static func ally_sees(state: GameState, tile: Vector2i) -> bool:

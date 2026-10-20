@@ -827,7 +827,8 @@ static func _out_of_sight(state: GameState, tiles: Array[Vector2i], shift: Vecto
 ## glade's ground seen before, now next door, lies under light fog; walking back, the glade's
 ## ground out of sight is still seen before, and next door the forest's explored ground lies under
 ## light fog and its unexplored ground under thick cloud. A tile changed in place there shows next
-## door (#538).
+## door (#538). Back in the glade, the decorations on its ground explored before rise out of the
+## fog with it (#945).
 func _check_remembered_ground(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var fog: FogView = main.get_node("FogView") as FogView
@@ -839,6 +840,8 @@ func _check_remembered_ground(main: Node) -> String:
 	for direction: int in FlowSteps.INTO_FOREST:
 		_walk_in(driver.world, direction)
 	fog.show_state(10.0)
+	# The forest's decorations stand in place of the glade's, as every frame would have them.
+	(main.get_node("Instance/TileDecorations") as TileDecorations).show_state(10.0)
 	if NeighbourView.name_of(driver.world, driver.state) != FlowSteps.FOREST:
 		return "walking north out of the glade didn't lead into the forest"
 	var next_door: Vector2i = far + view.shifts[FlowSteps.GLADE]
@@ -853,7 +856,48 @@ func _check_remembered_ground(main: Node) -> String:
 	var result: String = _check_forest_next_door(fog, view, forest_seen, forest_unseen)
 	if result.is_empty():
 		result = _check_out_of_sight(fog, far)
+	if result.is_empty():
+		result = _check_decorations_remembered(main)
 	return result if not result.is_empty() else _check_neighbour_change_shown(driver, view)
+
+
+## Back in the glade (#945), a decoration on its ground explored before that no event revealed and
+## no ally sees now (remembered as a resumed save remembers it) shows again as the fog remembers
+## the ground under it: it rises out of the cloud as the cloud thins, never popping in, and stands
+## whole once it has.
+func _check_decorations_remembered(main: Node) -> String:
+	var fog: FogView = main.get_node("FogView") as FogView
+	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
+	var explored: Vector2i = _explore_far_decoration(fog)
+	fog.show_state(10.0)
+	view.show_state(0.1)
+	if not view.figures.has(explored) or fog.brightness[explored] != FogView.REMEMBERED:
+		return "expected a decoration on the glade's ground explored before, out of sight"
+	var rising: bool = view.figures[explored].visible and view.risen[explored] > 0.0
+	rising = rising and view.risen[explored] < 1.0
+	view.show_state(10.0)
+	if not view.figures[explored].visible or view.risen[explored] != 1.0:
+		return "back in the glade, the decoration on ground explored before is hidden"
+	if not rising:
+		return "back in the glade, a decoration on ground explored before popped in"
+	return ""
+
+
+## Remembers a decorated tile of the instance `fog` shows as explored, one that no event revealed
+## and no ally sees, and returns it.
+static func _explore_far_decoration(fog: FogView) -> Vector2i:
+	var state: GameState = fog.driver.state
+	var revealed: Array[Vector2i] = (state.feature(FogFeature.ID) as FogFeature).revealed
+	var far: Vector2i = Vector2i.MAX
+	for tile: Vector2i in state.region.sorted_tiles():
+		var blueprint: TileBlueprint = TileLooks.of(state.region.terrain[tile])
+		var decorated: bool = blueprint != null and not blueprint.model.is_empty()
+		if decorated and not revealed.has(tile) and not FogView.ally_sees(state, tile):
+			far = tile
+	var world: World = fog.driver.world
+	var ground: ExploredGround = fog.keeper.explored_in(world)
+	ground.tiles_of(FlowSteps.GLADE, world.generation(FlowSteps.GLADE))[far] = true
+	return far
 
 
 ## Back in the glade, next door the forest's explored ground (some of `seen`) lies under light fog
@@ -946,7 +990,7 @@ func _check_tile_change_shown(main: Node) -> String:
 	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
 	grid.show_state()
-	view.show_state()
+	view.show_state(10.0)
 	var forest: String = "forest"
 	var tile: Vector2i = Vector2i.MAX
 	for decorated: Vector2i in view.figures:
@@ -969,7 +1013,8 @@ func _check_tile_change_shown(main: Node) -> String:
 		return "a forest grown back in place didn't grow its trees in from nothing"
 	driver.start(7)
 	grid.show_state()
-	view.show_state()
+	(main.get_node("FogView") as FogView).show_state(10.0)
+	view.show_state(10.0)
 	return ""
 
 
@@ -1009,7 +1054,8 @@ func _check_lookouts(main: Node) -> String:
 func _check_decorations(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
-	view.show_state()
+	(main.get_node("FogView") as FogView).show_state(10.0)
+	view.show_state(10.0)
 	var region: Region = driver.state.region
 	var decorated: Array[Vector2i] = []
 	for id: String in ["forest", "shrubs", "boulder", "stump", "crates"]:
@@ -1038,8 +1084,8 @@ func _check_decorations(main: Node) -> String:
 	return _check_decorations_in_fog(driver, view, decorated)
 
 
-## What's wrong with the decoration of kind `id` on `tile`, or "": its model and size, its turn and
-## where it stands in its tile.
+## What's wrong with the decoration of kind `id` on `tile`, or "": its model and size (none while
+## the fog hides it), its turn and where it stands in its tile.
 func _decoration_problem(
 	view: TileDecorations,
 	region: Region,
@@ -1051,8 +1097,10 @@ func _decoration_problem(
 	var model: Node3D = null
 	if view.figures.has(tile):
 		model = view.figures[tile].get_child(0) as Node3D
-	if model == null or model.scene_file_path != blueprint.model or model.scale != size:
-		return "the %s on %s has no model, another one, or another size" % [id, tile]
+	if model == null or model.scene_file_path != blueprint.model:
+		return "the %s on %s has no model, or another one" % [id, tile]
+	if model.scale != size * view.risen[tile]:
+		return "the %s on %s has another size: %s" % [id, tile, model.scale]
 	var turn: float = TAU * region.looks.decoration_turns.get(tile, 0) / Hex.DIRECTIONS.size()
 	var off: Vector3 = model.position
 	var off_center: bool = off.length() <= TileDecorations.OFF_CENTER

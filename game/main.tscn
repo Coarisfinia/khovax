@@ -123,9 +123,10 @@ driver = NodePath("../Driver")
 script = ExtResource("3_grid")
 driver = NodePath("../../Driver")
 
-[node name="TileDecorations" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1161161160]
+[node name="TileDecorations" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "fog") unique_id=1161161160]
 script = ExtResource("19_decorations")
 driver = NodePath("../../Driver")
+fog = NodePath("../../FogView")
 
 [node name="NeighbourView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=1880188018]
 script = ExtResource("20_neighbours")
