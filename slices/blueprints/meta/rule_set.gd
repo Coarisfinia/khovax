@@ -17,20 +17,20 @@ var problem: String = ""
 
 ## A rule set read from a rule set file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> RuleSet:
-	var read: RuleSet = RuleSet.new()
+	var rule_set: RuleSet = RuleSet.new()
 	var json: JSON = JSON.new()
 	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		read.problem = "not a JSON object"
-		return read
+		rule_set.problem = "not a JSON object"
+		return rule_set
 	var data: Dictionary = json.data
-	read.id = Content.text_of(data.get("id"))
-	read.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
-	if read.problem.is_empty() and (read.id != file_id or not Content.is_id(read.id)):
-		read.problem = "its id must match the file name and be lowercase words with underscores"
-	var listed: bool = read_rules(data.get("features"), read.features)
-	if read.problem.is_empty() and (not listed or read.features.is_empty()):
-		read.problem = "its features must be one or more rules' feature ids, each once"
-	return read
+	rule_set.id = Content.text_of(data.get("id"))
+	rule_set.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	if rule_set.problem.is_empty() and (rule_set.id != file_id or not Content.is_id(rule_set.id)):
+		rule_set.problem = "its id must match the file name and be lowercase words with underscores"
+	var listed: bool = read_rules(data.get("features"), rule_set.features)
+	if rule_set.problem.is_empty() and (not listed or rule_set.features.is_empty()):
+		rule_set.problem = "its features must be one or more rules' feature ids, each once"
+	return rule_set
 
 
 ## Whether `raw` lists rules' feature ids, each once and none already in `into`, none of which a
