@@ -61,4 +61,7 @@ func _view_for(target: String) -> TileDecorations:
 	view.name = target
 	view.position = _grids[target].position
 	add_child(view)
+	# Eased here, once a frame (show_state), not again by its own _process, which entering the tree
+	# turned on.
+	view.set_process(false)
 	return view
