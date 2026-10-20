@@ -52,18 +52,25 @@ const CHOICE_FIELDS: Array[String] = [
 	"next",
 	"emits",
 ]
+## The conditions of a step, each counted from facts a Gain carries (CONDITIONS says what each
+## asks for).
+const DOMINATED: String = "dominated"
+const OPENED: String = "opened"
+const REACHED: String = "reached"
+const ENTERED: String = "entered"
+const OBTAINED: String = "obtained"
 ## The condition met by an answer the player chose in a dialog (#636), named by `dialog` and
 ## `answer`, as the dialogs' files name them.
 const ANSWERED: String = "answered"
 ## The conditions a choice can have: being somewhere, which a marker points at (stepping into a
 ## place, or entering a region piece or an instance), or an answer chosen.
-const CHOICE_CONDITIONS: Array[String] = ["reached", "entered", ANSWERED]
+const CHOICE_CONDITIONS: Array[String] = [REACHED, ENTERED, ANSWERED]
 ## The condition met by an event a quest emitted (#575), or one that changed the world (#707, such
 ## as glade_purified), named by `event`: only a side quest's start waits on one, since a step
 ## waiting on it would have nothing to show the player.
 const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
-const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]
+const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED]
 ## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
 ## monster this player dominated (the `quarry`: of `species`, or any, or the one quest target
 ## `target` a region's legend marks, #625); `opened`, a treasure chest this player got loot from;
@@ -74,12 +81,12 @@ const START_CONDITIONS: Array[String] = ["reached", "entered", EMITTED]
 ## can name an `instance` too, and then counts only there (#769). Defeating a monster waits until
 ## its event exists.
 const CONDITIONS: Array[String] = [
-	"dominated",
-	"opened",
-	"reached",
-	"entered",
+	DOMINATED,
+	OPENED,
+	REACHED,
+	ENTERED,
 	ANSWERED,
-	"obtained",
+	OBTAINED,
 ]
 ## The fact of a quest target dominated (#625), which a dominated step naming a target counts; a
 ## domination of a species is the fact `dominated`.
@@ -212,9 +219,9 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 	count = Content.amount(data.get("count", 1))
 	if not CONDITIONS.has(condition) and condition != EMITTED:
 		problem = "its condition must be one of %s" % [CONDITIONS]
-	elif data.has("species") and (condition != "dominated" or not known_species.has(species_id)):
+	elif data.has("species") and (condition != DOMINATED or not known_species.has(species_id)):
 		problem = "its species must be one that exists, on a dominated step"
-	elif data.has("target") and (condition != "dominated" or data.has("species") or count != 1):
+	elif data.has("target") and (condition != DOMINATED or data.has("species") or count != 1):
 		problem = "its target is one monster a dominated step asks for, once, instead of a species"
 	elif not _where_problem(data, self).is_empty():
 		problem = _where_problem(data, self)
@@ -235,9 +242,9 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	if (step.condition == EMITTED) != data.has("event"):
 		return "its event is what an emitted condition asks for, and only that"
-	if (step.condition == "obtained") != data.has("item"):
+	if (step.condition == OBTAINED) != data.has("item"):
 		return "its item is what an obtained step asks for, and only that"
-	if (step.condition == "reached") != data.has("place"):
+	if (step.condition == REACHED) != data.has("place"):
 		return "its place is what a reached step asks for, and only that"
 	var area: String = _area_problem(data, step.condition)
 	if not area.is_empty():
@@ -267,9 +274,9 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 ## entered step names a piece, and it names a piece or an instance, or both; an emitted condition
 ## names no instance, since an event happens in the whole world (#769).
 static func _area_problem(data: Dictionary, step_condition: String) -> String:
-	if data.has("piece") and step_condition != "entered":
+	if data.has("piece") and step_condition != ENTERED:
 		return "its piece is what an entered step asks for, and only that"
-	if step_condition == "entered" and not (data.has("piece") or data.has("instance")):
+	if step_condition == ENTERED and not (data.has("piece") or data.has("instance")):
 		return "its piece or instance is what an entered step asks for"
 	if step_condition == EMITTED and data.has("instance"):
 		return "its instance is where it counts, and an event counts everywhere"
@@ -313,11 +320,11 @@ func _asks_for(fact_condition: String, what: String) -> bool:
 		return fact_condition == condition and event == what
 	if condition == ANSWERED:
 		return fact_condition == condition and answer.key() == what
-	if condition == "reached":
+	if condition == REACHED:
 		return fact_condition == condition and place == what
-	if condition == "obtained":
+	if condition == OBTAINED:
 		return fact_condition == condition and item == what
-	if condition == "entered":
+	if condition == ENTERED:
 		return fact_condition == condition and piece == what
 	if not quarry.target.is_empty():
 		return fact_condition == TARGET_DOMINATED and quarry.target == what
@@ -326,7 +333,7 @@ func _asks_for(fact_condition: String, what: String) -> bool:
 
 ## Whether it asks to enter its instance, naming no piece in it (#370).
 func enters_instance() -> bool:
-	return condition == "entered" and piece.is_empty()
+	return condition == ENTERED and piece.is_empty()
 
 
 ## The answer `answer_id` of the dialog `dialog_id` as one fact (#636): both ids, which never hold

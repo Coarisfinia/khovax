@@ -239,7 +239,7 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profil
 			return "the starting instance's beach isn't sand"
 		var distance: int = Hex.distance(trigger.tile, from)
 		nearest = distance if beach and (nearest < 0 or distance < nearest) else nearest
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, profile, 0)
 	if (nearest < 0 or not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "the first domination isn't marked over the starting instance's nearest beach tile"
@@ -264,7 +264,7 @@ func _check_marked_monster(
 	var nearest: int = Hex.distance(state.entity(wild.monsters[0]).tile, from)
 	for entity_id: int in wild.monsters:
 		nearest = mini(nearest, Hex.distance(state.entity(entity_id).tile, from))
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, profile, 0)
 	if (not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "after the beach, the first domination isn't marked over the nearest wild monster"
@@ -284,7 +284,7 @@ func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profil
 	var any_finch: bool = false
 	for entity_id: int in wild.monsters:
 		any_finch = any_finch or wild.species_of(entity_id) == "tikazzir"
-	var marked: bool = QuestMarkerView.targets_of(state, profile, 0).has("absent")
+	var marked: bool = QuestTargets.of(state, profile, 0).has("absent")
 	var _dropped: bool = profile.quest_book.erase("absent")
 	if marked != any_finch:
 		return "a quest is marked although nothing it asks for is here, or the other way round"
@@ -466,7 +466,7 @@ func _check_entered_glade(driver: GameDriver, bus: EventBus, profile: Profile) -
 		if forest.region.exit_blueprints[i] == "glade":
 			ways.append(Vector2i(forest.region.exits[i].x, forest.region.exits[i].y))
 	var from: Vector2i = forest.player(0).tile
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(forest, profile, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(forest, profile, 0)
 	var target: Vector2i = targets.get("enter_glade", -Vector2i.ONE)
 	if not ways.has(target) or Hex.distance(target, from) != _nearest(ways, from):
 		return "the quest to enter the glade isn't marked on the nearest exit leading there"
@@ -545,7 +545,7 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 ## to the forest it counts in (#769), or "".
 func _check_territory_marked(profile: Profile, quest: String) -> String:
 	var glade: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(
 		glade,
 		profile,
 		0,
@@ -664,7 +664,7 @@ func _check_place_marker(state: GameState, profile: Profile) -> String:
 	var beach: Array[Vector2i] = []
 	for trigger: TileTrigger in state.region.triggers:
 		beach.append(trigger.tile)
-	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("reach_beach", from)
+	var target: Vector2i = QuestTargets.of(state, profile, 0).get("reach_beach", from)
 	if not beach.has(target) or Hex.distance(target, from) != _nearest(beach, from):
 		return "the quest to reach the beach isn't marked on its nearest tile"
 	return ""
@@ -703,7 +703,7 @@ func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 	var profile: Profile = Profile.new()
 	profile.quest_book["old_toad"] = QuestDefinition.parse("old_toad", OLD_TOAD, {})
 	var step: QuestStep = profile.quest_book["old_toad"].steps[0]
-	if QuestMarkerView.targets_of(state, profile, 0).get("old_toad", Vector2i.ZERO) != marked:
+	if QuestTargets.of(state, profile, 0).get("old_toad", Vector2i.ZERO) != marked:
 		return "the quest asking for old_toad isn't marked over it"
 	if QuestListView.step_line(step, 0) != "Dominate the old toad":
 		return "the quest asking for old_toad reads %s" % QuestListView.step_line(step, 0)
@@ -738,7 +738,7 @@ func _check_pieces() -> String:
 	for tile: Vector2i in state.region.piece_of:
 		if state.region.piece_of[tile] == "thicket":
 			thicket.append(tile)
-	var target: Vector2i = QuestMarkerView.targets_of(state, profile, 0).get("enter_thicket", from)
+	var target: Vector2i = QuestTargets.of(state, profile, 0).get("enter_thicket", from)
 	if not thicket.has(target) or Hex.distance(target, from) != _nearest(thicket, from):
 		return "the quest to enter the thicket isn't marked on its nearest tile"
 	return _check_walk_into_thicket(state)
@@ -843,7 +843,7 @@ func _check_branching() -> String:
 ## marker each, and not as a whole.
 func _check_fork_marked(state: GameState, profile: Profile) -> String:
 	var from: Vector2i = state.player(0).tile
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(state, profile, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, profile, 0)
 	var pieces: Array[String] = ["pond", "thicket"]
 	for index: int in pieces.size():
 		var tiles: Array[Vector2i] = []
@@ -994,7 +994,7 @@ func _check_obtained() -> String:
 	if profile.materials.get("feather", 0) != 7:
 		return "the feathers obtained weren't all kept: %s" % profile.materials
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
-	if QuestMarkerView.targets_of(state, profile, 0).has("feathers"):
+	if QuestTargets.of(state, profile, 0).has("feathers"):
 		return "a step asking for an item is marked in the world"
 	var stray: String = FEATHERS.replace("\"condition\": \"obtained\"", "\"condition\": \"opened\"")
 	if QuestDefinition.parse("feathers", stray, {}).problem.is_empty():

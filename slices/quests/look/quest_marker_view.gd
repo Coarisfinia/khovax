@@ -1,16 +1,10 @@
 class_name QuestMarkerView
 extends Node3D
 ## Every open quest's marker (#300, owner: quests always have a marker): an arrow floating
-## over what this machine's player's quest asks for next, the nearest wild monster of the species a
-## domination step names (any, when it names none), or the one quest target it names (#625), the
-## nearest closed treasure chest, the nearest
-## tile of the place a reached step names (#339) or of the region piece an entered step names
-## (#350), or the nearest exit leading to the instance it names (#370), or that the step counts in
-## while the player is elsewhere (#769). It shows through the fog,
-## so it leads the player into it; a wild monster still hiding in its tile (#202) isn't pointed
-## at, since that would give it away. The arrow's shape, not its color, says what it is (#68). It
+## over what this machine's player's quest asks for next (QuestTargets). It shows through the fog,
+## so it leads the player into it. The arrow's shape, not its color, says what it is (#68). It
 ## glides after a moving target, eases in and out, and bobs gently; it only reads the state and
-## the profile. The same targets will be marked on the Survey (#301).
+## the profile. The Survey marks the same targets (#301).
 
 ## How high over the tile's top the arrow floats, and how far and how slowly it bobs.
 const HEIGHT: float = 2.6
@@ -33,7 +27,8 @@ const INK_WIDTH: float = 0.08
 ## Which player the nearest target is measured from.
 @export var input: LocalInput
 
-## Each marked quest's arrow, by quest id, or one per choice on a step with choices (targets_of).
+## Each marked quest's arrow, by quest id, or one per choice on a step with choices
+## (QuestTargets.of).
 var markers: Dictionary[String, Node3D] = {}
 ## Where each arrow is headed: its target's tile.
 var goals: Dictionary[String, Vector2i] = {}
@@ -61,7 +56,7 @@ func show_quests() -> void:
 	var targets: Dictionary[String, Vector2i] = {}
 	if driver != null and driver.state != null and holder != null and holder.keeper != null:
 		var here: String = driver.local_instance_name()
-		targets = targets_of(driver.state, holder.keeper.profile, input.slot, here)
+		targets = QuestTargets.of(driver.state, holder.keeper.profile, input.slot, here)
 	for id: String in markers.keys():
 		if not targets.has(id):
 			_shrink_away(markers[id])
@@ -71,98 +66,6 @@ func show_quests() -> void:
 		if not markers.has(id):
 			markers[id] = _add_arrow(_over(targets[id]))
 		goals[id] = targets[id]
-
-
-## The tile each of `profile`'s open quests points at in `state`, by quest id, measured from the
-## player in `slot`; a quest with nothing to point at here isn't listed. A step with choices (#573)
-## points at each of them that's here, by the quest's id, a slash and the choice's index. `here` is
-## the blueprint name of the instance `state` is (#769), or "" when it isn't known: a step that
-## counts in another instance, or in one when it isn't known which this is, points at the exits
-## leading there.
-static func targets_of(
-	state: GameState,
-	profile: Profile,
-	slot: int,
-	here: String = "",
-) -> Dictionary[String, Vector2i]:
-	var targets: Dictionary[String, Vector2i] = {}
-	var player: Entity = state.player(slot)
-	if player == null:
-		return targets
-	var steps: Dictionary[String, QuestStep] = profile.open_steps()
-	for id: String in steps:
-		var triggers: Array[QuestStep] = steps[id].triggers()
-		for index: int in triggers.size():
-			var candidates: Array[Vector2i] = _candidates(state, triggers[index], here)
-			var key: String = id if steps[id].choices.is_empty() else "%s/%d" % [id, index]
-			if not candidates.is_empty():
-				targets[key] = _nearest(candidates, player.tile)
-	return targets
-
-
-## The tiles `step` could be met at in `state`: wild monsters of its species, or its quest target
-## (#625), that aren't hiding, in id order, the closed chests, the tiles of its place, in the
-## legend's order, the tiles of
-## its piece, or the exits leading to its instance, also when it counts there and `state` is
-## another instance, `here`.
-static func _candidates(state: GameState, step: QuestStep, here: String) -> Array[Vector2i]:
-	var elsewhere: bool = not step.instance.is_empty() and step.instance != here
-	if step.enters_instance() or elsewhere:
-		return _exits_to(state, step.instance)
-	if step.condition == "entered":
-		return _piece_tiles(state, step.piece)
-	var tiles: Array[Vector2i] = []
-	if step.condition == "reached":
-		for trigger: TileTrigger in state.region.triggers:
-			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
-				tiles.append(trigger.tile)
-		return tiles
-	if step.condition == "opened":
-		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
-		if chests != null:
-			tiles.assign(chests.chests)
-		return tiles
-	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	if wild == null or step.condition != "dominated":
-		return tiles
-	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
-	var ids: Array[int] = wild.monsters.duplicate()
-	ids.sort()
-	for entity_id: int in ids:
-		var entity: Entity = state.entity(entity_id)
-		var hidden: bool = hiding != null and hiding.is_hidden(entity_id)
-		var target: String = WildSpot.target_in(wild.marks, entity_id)
-		var fits: bool = step.quarry.fits(wild.species_of(entity_id), target)
-		if entity != null and fits and not hidden:
-			tiles.append(entity.tile)
-	return tiles
-
-
-## The tiles of the exits in `state` leading to the instance `instance_name`.
-static func _exits_to(state: GameState, instance_name: String) -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
-	for i: int in state.region.exits.size():
-		if state.region.exit_blueprints[i] == instance_name:
-			tiles.append(Vector2i(state.region.exits[i].x, state.region.exits[i].y))
-	return tiles
-
-
-## The tiles of the region piece `piece` in `state`.
-static func _piece_tiles(state: GameState, piece: String) -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
-	for tile: Vector2i in state.region.piece_of:
-		if state.region.piece_of[tile] == piece:
-			tiles.append(tile)
-	return tiles
-
-
-## The tile of `tiles` nearest to `from`; the first one on a tie.
-static func _nearest(tiles: Array[Vector2i], from: Vector2i) -> Vector2i:
-	var best: Vector2i = tiles[0]
-	for tile: Vector2i in tiles:
-		if Hex.distance(tile, from) < Hex.distance(best, from):
-			best = tile
-	return best
 
 
 ## Where an arrow over `tile` floats, before bobbing.

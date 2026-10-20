@@ -324,7 +324,7 @@ func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> 
 	text += "\"steps\": [{\"condition\": \"dominated\", \"ends\": \"survey_any\"}]}"
 	profile.quest_book["survey_any"] = QuestDefinition.parse("survey_any", text, {})
 	survey.show_state()
-	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(driver.state, profile, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(driver.state, profile, 0)
 	var marked: Dictionary[String, Vector2i] = survey.quest_targets.duplicate()
 	var _dropped: bool = profile.quest_book.erase("survey_any")
 	if not marked.has("survey_any") or marked != targets:

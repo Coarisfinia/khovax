@@ -9,7 +9,7 @@ extends Control
 ## the rest stays the backdrop, the fog's color, so what is still in the fog stays hidden here too.
 ## Every player in the instance is a circle in their personal color with one mark per slot number,
 ## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
-## and every open quest's target (QuestMarkerView.targets_of, #300) an arrow pointing down at it.
+## and every open quest's target (QuestTargets.of, #300) an arrow pointing down at it.
 ## Over it,
 ## its child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637).
 ## It's centered on this machine's player, gliding after them. Where it shows and how close is
@@ -161,7 +161,7 @@ func show_state() -> void:
 			circles[slot] = _walked_ground(state, player)
 	if holder != null and holder.keeper != null:
 		var here: String = driver.local_instance_name()
-		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot(), here)
+		quest_targets = QuestTargets.of(state, holder.keeper.profile, _slot(), here)
 
 
 ## The chevrons drawn for `exits`: one per exit, in its middle (#790).
