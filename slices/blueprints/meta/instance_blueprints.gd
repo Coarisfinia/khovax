@@ -2,89 +2,65 @@ class_name InstanceBlueprints
 extends RefCounted
 ## Instance blueprints (#117): what an instance is loaded from, by name. A blueprint is a region and
 ## the features an instance has, in their step order. The region is a fixed region file,
-## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, unless the
-## blueprint keeps its layout, turns (#57, #127). The players start on the region's starts. A
-## blueprint switches game rules on and off by listing them, and they can change during a session.
-## One with a chest loot table has treasure chests too, rolling on it (#124, #694), and the loot on
-## its ground rolls on its instance loot table (#90, #203).
+## regions/<name>.md, or region pieces in regions/<name>/ that the seed arranges and, if the
+## blueprint is turned, turns (#57, #127). The players start on the region's starts. A blueprint
+## switches game rules on and off by listing them, and they can change during a session. One with a
+## chest loot table has treasure chests too, rolling on it (#124, #694), and the loot on its ground
+## rolls on its instance loot table (#90, #203). What tells blueprints apart is content data, one
+## file each (Blueprint, #823).
 
-## The playground: the hand-made region regions/basic.md, walking, each player's companion (#338)
-## with its attacks and swapping it for another carried monster (#55), a trail per player, the wild
-## monsters the region places, dominating them with a ring, and fog of war. Only the tests play it
-## (#712): no exit leads to it, so they load it directly.
+## The names the code and the tests load blueprints by; the blueprints themselves are the files in
+## BlueprintContent.DIR. The playground (#338), which only the tests play (#712).
 const BASIC: String = "basic"
-## The load test's (#101): a big region full of wild monsters, the same rules as every instance.
+## The load test's (#101).
 const LOAD: String = "load"
-## The first region arranged from region pieces (#57): a glade the seed puts together, where the
-## world starts (#712).
+## The glade, where the world starts (#712).
 const GLADE: String = "glade"
-## A boss-style arena (#127): one region piece that is never turned, so it plays as it is drawn.
+## A boss-style arena (#127).
 const ARENA: String = "arena"
-## Room for the upcoming features (#689), each arranged from five large region pieces in a line,
-## joined across whole edges: a forest north of the glade, with trees and rock to harvest later
-## (#675); the ruined castle west of the forest, to be corrupted (#574); a faction outpost southeast
-## of the glade, with holds for control points (#643); and the mountain pass southwest of the
-## outpost, with a sealed side passage for a hidden gate (#500).
+## Room for the upcoming features (#689).
 const FOREST: String = "forest"
 const CASTLE: String = "castle"
 const OUTPOST: String = "outpost"
 const MOUNTAIN_PASS: String = "mountain_pass"
-const NAMES: Array[String] = [BASIC, LOAD, GLADE, ARENA, FOREST, CASTLE, OUTPOST, MOUNTAIN_PASS]
-## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses, a
-## placeholder region until the corrupted instances' own arrive. Its corrupting monster emits
-## GLADE_PURIFIED when it faints (regions/glade_corrupted.md), whose flag purifies it.
+## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses
+## (glade.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
+## (regions/glade_corrupted.md), whose flag purifies it.
 const CORRUPTED_GLADE: String = "glade_corrupted"
 const GLADE_PURIFIED: String = "glade_purified"
-## The blueprints whose region pieces keep the layout they're drawn in: the seed doesn't turn them.
-## Every instance in the web of exits is one, so an exit always leads out the same way (#120).
-const UNTURNED: Array[String] = [GLADE, ARENA, FOREST, CASTLE, OUTPOST, MOUNTAIN_PASS]
-## Each blueprint's instance loot table (the loot slice's data/loot_tables/), by blueprint: what a
-## blank and the loot on its ground give.
-const LOOT_TABLES: Dictionary[String, String] = { GLADE: "glade" }
-## Each blueprint's chest loot table (the loot slice's data/loot_tables/), by blueprint: what its
-## chests hold (#694). Every one also has an instance loot table, for the loot on its ground.
-const CHEST_TABLES: Dictionary[String, String] = { GLADE: "glade_chest" }
-## Which species live in each blueprint, and how likely each is, for the wild monster spots its
-## region doesn't name (#133): species id to weight.
-const WILD_SPECIES: Dictionary[String, Dictionary] = {
-	BASIC: { "ombulumo": 3, "tikazzir": 1 },
-	LOAD: { "ombulumo": 1, "tikazzir": 1 },
-	GLADE: { "ombulumo": 1 },
-	ARENA: { "ombulumo": 1 },
-	FOREST: { "ombulumo": 2, "tikazzir": 1 },
-	CASTLE: { "ombulumo": 1, "tikazzir": 1 },
-	OUTPOST: { "ombulumo": 1, "tikazzir": 1 },
-	MOUNTAIN_PASS: { "ombulumo": 1, "tikazzir": 2 },
-}
-## Each blueprint's variants (#529), by blueprint: world flag to the variant it chooses, the first
-## of its flags in the order listed that the world has set choosing (#541), so a later story beat
-## listed first overrides an earlier one. A variant is named after its own region in REGIONS, a
-## region file or a folder of region pieces like a blueprint's, which it is loaded with instead; the
-## rest of the blueprint stays. "" is the blueprint's own region: the glade, once its corruption's
-## event was emitted, is purified, the glade again.
-const VARIANTS: Dictionary[String, Dictionary] = {
-	GLADE: {
-		WorldFlags.EVENT_FLAG + GLADE_PURIFIED: "",
-		CORRUPTED_GLADE: CORRUPTED_GLADE,
-	},
-}
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
 
+## The blueprints' content data, read on first use and kept: it doesn't change while the game runs.
+static var _content: BlueprintContent = null
+
+
+## The name of every blueprint there is, in file name order.
+static func names() -> Array[String]:
+	var all: Array[String] = []
+	all.assign(_loaded().blueprints.keys())
+	return all
+
+
+## The named blueprint's content data, or null when there's none.
+static func blueprint(instance_name: String) -> Blueprint:
+	return _loaded().blueprints.get(instance_name)
+
 
 ## Whether a blueprint of this name exists.
 static func exists(instance_name: String) -> bool:
-	return NAMES.has(instance_name)
+	return _loaded().blueprints.has(instance_name)
 
 
-## The variant of the named blueprint that the world's `flags` choose (VARIANTS), or "".
+## The variant of the named blueprint that the world's `flags` choose (Blueprint.variants), or "".
 static func variant(instance_name: String, flags: Array[String]) -> String:
-	var chosen_by: Dictionary = VARIANTS.get(instance_name, { })
-	# A const dictionary keeps the order it's written in, the same on every platform.
-	for flag: Variant in chosen_by:
-		if flags.has(str(flag)):
-			return str(chosen_by[flag])
+	var named: Blueprint = blueprint(instance_name)
+	if named == null:
+		return ""
+	for chosen_by: PackedStringArray in named.variants:
+		if flags.has(chosen_by[0]):
+			return chosen_by[1]
 	return ""
 
 
@@ -120,8 +96,8 @@ static func create(
 		FogFeature.new(),
 	]
 	ordered.append_array(_for_region(region))
-	if CHEST_TABLES.has(instance_name):
-		var chest_table: LootTable = _loot_table(CHEST_TABLES[instance_name], LootTable.CHEST)
+	if not blueprint(instance_name).chest_table.is_empty():
+		var chest_table: LootTable = _chest_table(instance_name)
 		var ground_table: LootTable = _blank_table(instance_name)
 		if chest_table == null or ground_table == null:
 			push_error("instance %s's chest or instance loot table doesn't load" % instance_name)
@@ -190,8 +166,7 @@ static func _for_region(region: Region) -> Array[Feature]:
 
 ## The named blueprint's region for `seed_value`, from its `variant_name`'s region (#529) or, for
 ## "", its own: the region file as it is, or its region pieces arranged, the start piece first and
-## the others by file name, and turned unless the blueprint is UNTURNED. Its `problem` says what's
-## wrong.
+## the others by file name, and turned if the blueprint is. Its `problem` says what's wrong.
 static func region_of(instance_name: String, seed_value: int, variant_name: String = "") -> Region:
 	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
 	var path: String = REGIONS + region_name + ".md"
@@ -209,7 +184,8 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	for piece: Region in pieces:
 		if not piece.problem.is_empty():
 			return piece
-	return RegionArranger.arrange(pieces, seed_value, not UNTURNED.has(instance_name))
+	var named: Blueprint = blueprint(instance_name)
+	return RegionArranger.arrange(pieces, seed_value, named != null and named.turned)
 
 
 ## The region a Markdown region document describes (RegionDocument), with what every slice places
@@ -342,13 +318,11 @@ static func _type_chart(
 ## The wild monster feature with the named blueprint's species list and every species' stats from
 ## the species `content` (#219); when it didn't load, its monsters push on nothing.
 static func _wild_monsters(instance_name: String, content: SpeciesData) -> WildMonsterFeature:
-	var species: Dictionary = WILD_SPECIES.get(instance_name, { })
+	var species: Dictionary[String, int] = blueprint(instance_name).wild_species
 	var roster: Array[String] = []
+	roster.assign(species.keys())
 	var weights: Array[int] = []
-	for species_id: Variant in species:
-		var weight: int = species[species_id]
-		roster.append(str(species_id))
-		weights.append(weight)
+	weights.assign(species.values())
 	var strengths: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		strengths[species_id] = content.species[species_id].strength
@@ -386,9 +360,13 @@ static func _species_tables(directory: String, kind: String) -> Dictionary[Strin
 
 ## The named blueprint's instance loot table, which a species table's blank rolls on, or null.
 static func _blank_table(instance_name: String) -> LootTable:
-	if not LOOT_TABLES.has(instance_name):
-		return null
-	return _loot_table(LOOT_TABLES[instance_name], LootTable.INSTANCE)
+	var table_id: String = blueprint(instance_name).loot_table
+	return null if table_id.is_empty() else _loot_table(table_id, LootTable.INSTANCE)
+
+
+## The named blueprint's chest loot table, which its chests hold, or null.
+static func _chest_table(instance_name: String) -> LootTable:
+	return _loot_table(blueprint(instance_name).chest_table, LootTable.CHEST)
 
 
 ## The loot table with this id and `kind`, or null when the tables don't load or it isn't one.
@@ -409,3 +387,14 @@ static func _piece(path: String) -> Region:
 	for tile: Vector2i in piece.terrain:
 		piece.piece_of[tile] = piece_id
 	return piece
+
+
+## The blueprints' content data, read on first use; blueprints that don't load are an error, and
+## there are none then.
+static func _loaded() -> BlueprintContent:
+	if _content == null:
+		_content = BlueprintContent.load_blueprints()
+		if not _content.problem.is_empty():
+			push_error("the instance blueprints don't load: " + _content.problem)
+			_content.blueprints.clear()
+	return _content

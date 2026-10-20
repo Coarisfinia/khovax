@@ -1,0 +1,5 @@
+// The load test's (#101): a big region full of wild monsters.
+{
+	"id": "load",
+	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
+}

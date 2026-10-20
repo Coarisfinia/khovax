@@ -1,0 +1,55 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/blueprints/data/blueprints.schema.json",
+	"title": "Instance blueprint",
+	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, regions/<id>.md or the region pieces in regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "wild_species"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores, the name of its region too.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"turned": {
+			"description": "Whether the seed turns its region pieces (#57, #127); false keeps the layout they're drawn in. Every instance in the web of exits keeps it, so an exit always leads out the same way (#120). A region file is never turned.",
+			"type": "boolean",
+			"default": false
+		},
+		"loot_table": {
+			"description": "Its instance loot table (the loot slice's data/loot_tables/): what a blank and the loot on its ground give (#90, #203).",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"chest_table": {
+			"description": "Its chest loot table (the loot slice's data/loot_tables/): its treasure chests roll on it (#124, #694). A blueprint with one needs a loot_table too, for the loot on its ground.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"wild_species": {
+			"description": "Which species live in it, and how likely each is, for the wild monster spots its region doesn't name (#133): species id to weight, rolled in the order written.",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
+		},
+		"variants": {
+			"description": "Its variants (#529, #541): the first entry whose world flag is set chooses its region, so a later story beat listed first overrides an earlier one. The rest of the blueprint stays.",
+			"type": "array",
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["flag", "region"],
+				"properties": {
+					"flag": { "description": "The world flag that chooses it.", "type": "string", "pattern": "\\S" },
+					"region": {
+						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own.",
+						"type": "string",
+						"pattern": "^([a-z][a-z0-9_]*)?$"
+					}
+				}
+			}
+		}
+	}
+}

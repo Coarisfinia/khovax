@@ -1,0 +1,15 @@
+// The first region arranged from region pieces (#57): a glade the seed puts together, where the
+// world starts (#712).
+{
+	"id": "glade",
+	"loot_table": "glade",
+	"chest_table": "glade_chest",
+	"wild_species": { "ombulumo": 1 },
+	"variants": [
+		// Once its corrupting monster faints, it emits glade_purified (regions/glade_corrupted.md),
+		// which purifies it: the glade again.
+		{ "flag": "EVENT_EMITTED_glade_purified", "region": "" },
+		// Corrupted (#541), a placeholder region until the corrupted instances' own arrive.
+		{ "flag": "glade_corrupted", "region": "glade_corrupted" }
+	]
+}
