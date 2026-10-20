@@ -5,8 +5,8 @@ extends RefCounted
 ## in the trap slot, their damage (SpikesFeature, #692). The other slots' effects come with their
 ## own issues.
 
-## A gear file's fields, as its schema (slices/gear/data/gear.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "slot", "rarity", "damage"]
+## Its schema, which says the fields a gear file may have (SchemaFields, #825).
+const SCHEMA: String = "res://slices/gear/data/gear.schema.json"
 ## The slot whose gear, spikes, has damage (#692).
 const TRAP: String = "trap"
 ## The rarities (#291), lowest to highest, then bound for uniques and artifacts.
@@ -43,7 +43,7 @@ static func parse(file_id: String, text: String) -> GearItem:
 	if data.has("damage") and item.damage == 0:
 		item.problem = "its damage must be a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 		return item
-	item.problem = Content.unknown_field(data, FIELDS)
+	item.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if item.problem.is_empty():
 		item.problem = item._check(file_id)
 	return item

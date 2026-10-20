@@ -5,11 +5,12 @@ extends RefCounted
 ## fields, its id against the file name, and that its chances add up to 100 %, and hands the rules
 ## the table's plain data.
 
-## A loot table file's fields, as its schemas (slices/loot/data/loot_tables.schema.json and
-## harvest_tables.schema.json beside it) allow them.
-const FIELDS: Array[String] = ["id", "kind", "entries"]
-const ITEM_FIELDS: Array[String] = ["item", "chance", "min", "max"]
-const BLANK_FIELDS: Array[String] = ["blank", "chance"]
+## Its schema, which says the fields a loot table file and its entries may have (SchemaFields,
+## #825); a harvest table's schema (harvest_tables.schema.json beside it) allows the same.
+const SCHEMA: String = "res://slices/loot/data/loot_tables.schema.json"
+## Where an item's entry and the blank's are in the schema.
+const ITEM_POINTER: String = "/properties/entries/items/oneOf/0"
+const BLANK_POINTER: String = "/properties/entries/items/oneOf/1"
 
 
 ## A table read from a loot table file's text, named `file_id`; its `problem` says what's wrong.
@@ -20,7 +21,7 @@ static func parse(file_id: String, text: String) -> LootTable:
 		table.problem = "not a JSON object"
 		return table
 	var data: Dictionary = json.data
-	table.problem = Content.unknown_field(data, FIELDS)
+	table.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	table.id = Content.text_of(data.get("id"))
 	table.kind = Content.text_of(data.get("kind"))
 	if table.problem.is_empty() and (table.id != file_id or not Content.is_id(table.id)):
@@ -41,7 +42,7 @@ static func _read_entries(table: LootTable, entries: Array) -> String:
 	for entry: Variant in entries:
 		var fields: Dictionary = entry if entry is Dictionary else { }
 		var blank: bool = fields.get("blank") is bool and fields["blank"]
-		var unknown: String = Content.unknown_field(fields, BLANK_FIELDS if blank else ITEM_FIELDS)
+		var unknown: String = Content.unknown_field(fields, _entry_fields(blank))
 		if not unknown.is_empty():
 			return unknown
 		var chance: int = Content.amount(fields.get("chance"))
@@ -62,3 +63,8 @@ static func _read_entries(table: LootTable, entries: Array) -> String:
 	if blanks != (1 if table.kind in [LootTable.SPECIES, LootTable.HARVEST] else 0):
 		return "a species or harvest table has exactly one blank, an instance or chest table none"
 	return ""
+
+
+## The fields an entry may have: the blank's, or an item's.
+static func _entry_fields(blank: bool) -> Array[String]:
+	return SchemaFields.at(SCHEMA, BLANK_POINTER if blank else ITEM_POINTER)

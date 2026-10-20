@@ -14,16 +14,8 @@ extends RefCounted
 ## its
 ## steps all count only there (#769).
 
-## A quest file's fields, as its schema (slices/quests/data/quests.schema.json) allows them.
-const FIELDS: Array[String] = [
-	"id",
-	"name",
-	"steps",
-	PathMark.FIELD,
-	"starts_on",
-	"standing",
-	"territory",
-]
+## Its schema, which says the fields a quest file and its parts may have (SchemaFields, #825).
+const SCHEMA: String = "res://slices/quests/data/quests.schema.json"
 
 var id: String = ""
 ## The player-facing name.
@@ -58,7 +50,7 @@ static func parse(
 	quest.id = Content.text_of(data.get("id"))
 	quest.name = Content.text_of(data.get("name"))
 	quest.path = PathMark.read(data)
-	quest.problem = Content.unknown_field(data, FIELDS)
+	quest.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if quest.problem.is_empty():
 		quest.problem = quest._check(file_id, data.get("steps"), known_species)
 	if quest.problem.is_empty() and data.has("starts_on"):
@@ -94,14 +86,15 @@ func _check_start(entry: Variant) -> String:
 	starts_on = QuestStep.parse(entry, {})
 	# A start that read is an object: QuestStep.parse refuses anything else.
 	var data: Dictionary = entry if entry is Dictionary else {}
+	if starts_on.problem.is_empty() and data.has("count"):
+		return "its start happens once, so it has no count"
 	if starts_on.problem.is_empty():
-		starts_on.problem = Content.unknown_field(data, QuestStep.CONDITION_FIELDS)
+		var fields: Array[String] = SchemaFields.at(SCHEMA, QuestStep.START_POINTER)
+		starts_on.problem = Content.unknown_field(data, fields)
 	if not starts_on.problem.is_empty():
 		return "its start: " + starts_on.problem
 	if not QuestStep.START_CONDITIONS.has(starts_on.condition):
 		return "its start must be one of %s" % [QuestStep.START_CONDITIONS]
-	if data.has("count"):
-		return "its start happens once, so it has no count"
 	return ""
 
 

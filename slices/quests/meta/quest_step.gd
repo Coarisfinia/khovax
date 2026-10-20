@@ -8,24 +8,11 @@ extends RefCounted
 ## A step, a choice or a step that ends the chain can emit an event once it's done or taken (#575),
 ## which can start a side quest (`QuestDefinition.starts_on`).
 
-## A step's fields, as the quest schema (slices/quests/data/quests.schema.json) allows them.
-const FIELDS: Array[String] = [
-	"id",
-	"condition",
-	"species",
-	"target",
-	"item",
-	"place",
-	"piece",
-	"instance",
-	"dialog",
-	"answer",
-	"count",
-	"event",
-	"choices",
-	"ends",
-	"emits",
-]
+## Where a step is in the quest schema (QuestDefinition.SCHEMA), which says the fields it may have
+## (SchemaFields, #825); a side quest's start, read like a step, is beside it, and so is a choice.
+const POINTER: String = "/properties/steps/items"
+const START_POINTER: String = "/properties/starts_on"
+const CHOICE_POINTER: String = POINTER + "/properties/choices/items"
 ## The fields of a step's condition, which a step with choices has none of.
 const CONDITION_FIELDS: Array[String] = [
 	"condition",
@@ -39,18 +26,6 @@ const CONDITION_FIELDS: Array[String] = [
 	"answer",
 	"event",
 	"count",
-]
-## A choice's fields: where it's taken, or the answer that takes it, the step it leads to, and the
-## event it emits.
-const CHOICE_FIELDS: Array[String] = [
-	"condition",
-	"place",
-	"piece",
-	"instance",
-	"dialog",
-	"answer",
-	"next",
-	"emits",
 ]
 ## The conditions of a step, each counted from facts a Gain carries (CONDITIONS says what each
 ## asks for).
@@ -141,7 +116,7 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 	step.id = Content.text_of(data.get("id"))
 	step.ends = Content.text_of(data.get("ends"))
 	step.emits = Content.text_of(data.get("emits"))
-	step.problem = Content.unknown_field(data, FIELDS)
+	step.problem = Content.unknown_field(data, _fields())
 	if step.problem.is_empty():
 		step.problem = _tag_problem(data, step)
 	if step.problem.is_empty() and data.has("choices"):
@@ -149,6 +124,15 @@ static func parse(entry: Variant, known_species: Dictionary[String, Species]) ->
 	elif step.problem.is_empty():
 		step._read_condition(data, known_species)
 	return step
+
+
+## The fields a step may have, and a side quest's start, which is read like one.
+static func _fields() -> Array[String]:
+	var fields: Array[String] = SchemaFields.at(QuestDefinition.SCHEMA, POINTER)
+	for field: String in SchemaFields.at(QuestDefinition.SCHEMA, START_POINTER):
+		if not fields.has(field):
+			fields.append(field)
+	return fields
 
 
 ## Why `step`'s id, end or emitted event, read from `data`, is wrong, or "": each an id when it's
@@ -188,7 +172,8 @@ func _read_choices(data: Dictionary) -> String:
 static func _choice(entry: Variant) -> QuestStep:
 	var data: Dictionary = entry if entry is Dictionary else {}
 	var choice: QuestStep = QuestStep.new()
-	choice.problem = Content.unknown_field(data, CHOICE_FIELDS)
+	var fields: Array[String] = SchemaFields.at(QuestDefinition.SCHEMA, CHOICE_POINTER)
+	choice.problem = Content.unknown_field(data, fields)
 	if entry is Dictionary and choice.problem.is_empty():
 		var trigger: Dictionary = data.duplicate()
 		var _without_next: bool = trigger.erase("next")
