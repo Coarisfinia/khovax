@@ -1076,7 +1076,7 @@ func _check_refusals(tiles: String) -> String:
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
 	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
 	var forest: int = TileKinds.number_of("forest")
-	if not RegionDocument.parse(thicket).terrain.values().has(forest):
+	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
 	return _check_kind_and_place(tiles)
 
@@ -1180,7 +1180,7 @@ func _check_start_variants() -> String:
 ## a boulder) never cuts part of a piece off.
 func _check_pieces_connected() -> String:
 	for path: String in _region_files():
-		var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
+		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))
 		if not piece.problem.is_empty() or _disconnected(piece):
 			return "%s has walkable tiles cut off from the rest: %s" % [path, piece.problem]
 	return ""
@@ -1204,7 +1204,7 @@ func _check_room() -> String:
 	var look: Callable = Callable(TileLooks, "of")
 	for path: String in _region_files():
 		var problem: String = _room_problem(
-			RegionDocument.parse(FileAccess.get_file_as_string(path)),
+			InstanceBlueprints.read_region(FileAccess.get_file_as_string(path)),
 			look,
 		)
 		if not problem.is_empty():

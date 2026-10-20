@@ -31,16 +31,11 @@ var wild_monsters: Array[Vector2i] = []
 ## (#133; every other spot rolls one from its blueprint's list) or a wounded start (#389). Not
 ## hashed here: the wild monster feature hashes each wild monster's species and HP.
 var wild_spots: Dictionary[Vector2i, WildSpot] = {}
-## The people standing on the region's tiles (#557), by tile: NpcFeature stands one there when the
-## instance loads, whom players can talk to. Not hashed here: the feature hashes them.
-var npcs: Dictionary[Vector2i, NpcSpot] = {}
-## Where treasure chests stand when the instance loads, in the region file's reading order. Not
-## hashed here: the chest feature takes them over and hashes the ones still closed.
-var chests: Array[Vector2i] = []
-## Where loot lies on the ground when the instance loads (#203), in the region file's reading order:
-## found by stepping onto it, like a chest without one. Not hashed here: the chest feature takes
-## them over and hashes the ones still lying.
-var loot_spots: Array[Vector2i] = []
+## What the legend places on the region's ground for the slices to run (#824), people, chests and
+## loot among them: by kind, each such tile in the region file's reading order, with the legend's
+## meaning there. The core never reads those meanings: each kind's slice does (PlacementReader).
+## Not hashed here: the features that run them hash what they change.
+var placements: Dictionary[String, Dictionary] = {}
 ## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
 ## arranging uses them up, so a region in a state has none and they aren't hashed.
@@ -134,10 +129,6 @@ func turned(turns: int) -> Region:
 	region.wild_monsters.assign(
 		wild_monsters.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
 	)
-	region.chests.assign(chests.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)))
-	region.loot_spots.assign(
-		loot_spots.map(func(tile: Vector2i) -> Vector2i: return Hex.turn(tile, turns)),
-	)
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	region.exits.assign(exits.map(_turned_connector.bind(turns)))
 	region.exit_blueprints = exit_blueprints.duplicate()
@@ -145,14 +136,32 @@ func turned(turns: int) -> Region:
 		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
 	for spot: Vector2i in wild_spots:
 		region.wild_spots[Hex.turn(spot, turns)] = wild_spots[spot]
-	for spot: Vector2i in npcs:
-		region.npcs[Hex.turn(spot, turns)] = npcs[spot]
+	for kind: String in placements:
+		var tiles: Dictionary[Vector2i, String] = placed(kind)
+		for tile: Vector2i in tiles:
+			region.add_placement(kind, Hex.turn(tile, turns), tiles[tile])
 	region.looks = looks.turned(turns)
 	for tile: Vector2i in walkable_overrides:
 		region.walkable_overrides[Hex.turn(tile, turns)] = walkable_overrides[tile]
 	for tile: Vector2i in piece_of:
 		region.piece_of[Hex.turn(tile, turns)] = piece_of[tile]
 	return region
+
+
+## The tiles of `kind` the legend places (#824), in the region file's reading order, each with its
+## legend meaning.
+func placed(kind: String) -> Dictionary[Vector2i, String]:
+	var found: Dictionary[Vector2i, String] = {}
+	if placements.has(kind):
+		found.assign(placements[kind])
+	return found
+
+
+## Places a thing of `kind` on `tile`, as the legend's `meaning` says.
+func add_placement(kind: String, tile: Vector2i, meaning: String) -> void:
+	if not placements.has(kind):
+		placements[kind] = {}
+	placements[kind][tile] = meaning
 
 
 ## Whether `piece`, moved by `offset`, would lie on tiles this region doesn't have yet, leaving the
@@ -176,7 +185,7 @@ func outside_exits() -> Array[Vector2i]:
 	return outside
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, people, chests, connectors, exits,
+## Adds `piece`, moved by `offset`, with its wild monsters, placements, connectors, exits,
 ## triggers and which piece each tile came from. The players' starts stay this region's own. Callers
 ## check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
@@ -186,15 +195,13 @@ func place(piece: Region, offset: Vector2i) -> void:
 		wild_monsters.append(spot + offset)
 	for spot: Vector2i in piece.wild_spots:
 		wild_spots[spot + offset] = piece.wild_spots[spot]
-	for spot: Vector2i in piece.npcs:
-		npcs[spot + offset] = piece.npcs[spot]
+	for kind: String in piece.placements:
+		var tiles: Dictionary[Vector2i, String] = piece.placed(kind)
+		for tile: Vector2i in tiles:
+			add_placement(kind, tile + offset, tiles[tile])
 	looks.place(piece.looks, offset)
 	for tile: Vector2i in piece.walkable_overrides:
 		walkable_overrides[tile + offset] = piece.walkable_overrides[tile]
-	for spot: Vector2i in piece.chests:
-		chests.append(spot + offset)
-	for spot: Vector2i in piece.loot_spots:
-		loot_spots.append(spot + offset)
 	for connector: Vector3i in piece.connectors:
 		connectors.append(connector + Vector3i(offset.x, offset.y, 0))
 	for exit: Vector3i in piece.exits:

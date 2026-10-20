@@ -3,8 +3,10 @@ extends RefCounted
 ## What one symbol of a region document's legend stands for (#145), read from its meaning, and how
 ## it builds that onto the tiles it's drawn on: RegionDocument reads the document and builds its
 ## Region with these (#824). A meaning is one of:
-## - `ground`, `water` or `rock`, `where player <n> starts` (on ground), `a treasure chest` (on
-##   ground) or `a wild monster, of a species rolled from the instance blueprint's list` (on ground)
+## - `ground`, `water` or `rock`, `where player <n> starts` (on ground) or `a wild monster, of a
+##   species rolled from the instance blueprint's list` (on ground)
+## - what a slice places on ground, as its PlacementReader reads it (#824): a person to talk to
+##   (NpcSpot), a treasure chest or loot on the ground (ChestPlacements)
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
 ## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
@@ -18,11 +20,6 @@ extends RefCounted
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
-## - `a person to talk to, <npc id>`: a person standing there (#557), a humanoid who never fights,
-##   whom a player talks to by walking into them; with `, saying <dialog id>` after it, talking
-##   opens that dialog (#635), e.g. `a person to talk to, guild_scout, saying guild_scout_greeting`
-## - `loot on the ground`: loot the first player to step here finds, every player in the instance
-##   getting their own roll, like a chest's (#203)
 ## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
 ##   within 8`, with TileTrigger's whens and actions in words: `stepping here`,
 ##   `reveals within <n>`, `reaches the place <place id>` (#339: every tile of a place has it, e.g.
@@ -47,14 +44,10 @@ const START: String = "where player %d starts"
 ## A wild monster's meaning whose species is rolled from its blueprint's list (WildMonsterFeature,
 ## #19).
 const ROLLED: String = "a wild monster, of a species rolled from the instance blueprint's list"
-## A treasure chest's meaning, placed by hand (ChestFeature, #124).
-const CHEST: String = "a treasure chest"
 const CONNECTOR: String = "joins another piece to the "
 ## An exit's meaning, before its side and, after TO, its blueprint.
 const EXIT: String = "exit to the "
 const TO: String = ", to "
-## A legend meaning placing loot on the ground (#203).
-const LOOT_ON_THE_GROUND: String = "loot on the ground"
 ## A legend meaning placing a wild monster in a tile that hides it (#202), before the tile's kind.
 const HIDING: String = "a wild monster hiding in "
 ## How a named wild monster's legend meaning begins, and the clauses that may follow its species,
@@ -65,9 +58,6 @@ const WOUNDED: String = "wounded"
 const EMITTING: String = "emitting "
 const TARGETED: String = "the quest target "
 const ON: String = "on "
-## How a person's legend meaning begins (#557), and what it says before the dialog they open.
-const NPC: String = "a person to talk to, "
-const SAYING: String = ", saying "
 ## What separates what a trigger's tile is from its when and action.
 const TRIGGER: String = "; "
 ## A trigger's when and actions in words, each with TileTrigger's own.
@@ -90,8 +80,9 @@ var terrain: int = Region.GROUND
 ## The player slot starting here, or -1.
 var start: int = -1
 var wild_monster: bool = false
-var chest: bool = false
-var loot: bool = false
+## The kind of thing a slice places here (#824, PlacementReader), or "", and the meaning it reads.
+var placement: String = ""
+var meaning_said: String = ""
 ## The tile kind (TileKinds' number) it names, or -1, with each turn, walkable override and height
 ## its clauses say, refused when one is said twice or is out of range.
 var kind: int = -1
@@ -100,8 +91,6 @@ var walkable_overrides: Array[bool] = []
 var heights: Array[int] = []
 ## What it names about its wild monster (#133), or null.
 var wild_spot: WildSpot = null
-## The person standing here (#557), or null.
-var npc: NpcSpot = null
 ## The side a connector or exit opens to, or -1, and the blueprint an exit leads to.
 var connector_side: int = -1
 var exit_side: int = -1
@@ -110,8 +99,9 @@ var exit_blueprint: String = ""
 var trigger: TileTrigger = null
 
 
-## What `meaning` stands for, or null when it isn't understood.
-static func read(meaning: String) -> LegendMeaning:
+## What `meaning` stands for, or null when it isn't understood; `readers` read what the slices
+## place.
+static func read(meaning: String, readers: Array[PlacementReader]) -> LegendMeaning:
 	var read_one: LegendMeaning = LegendMeaning.new()
 	var understood: bool = false
 	if meaning.begins_with(NAMED):
@@ -119,18 +109,18 @@ static func read(meaning: String) -> LegendMeaning:
 	elif meaning.contains(TRIGGER):
 		understood = read_one._read_trigger(meaning)
 	else:
-		understood = read_one._read_placed(meaning) or read_one._read_kind(meaning)
+		understood = (read_one._read_placed(meaning)
+				or read_one._read_slices(meaning, readers)
+				or read_one._read_kind(meaning))
 	return read_one if understood else null
 
 
-## Builds what lies on `tile` itself: its terrain, its kind with its clauses, and a wild monster or
-## a chest on it. Returns why it can't, or "".
+## Builds what lies on `tile` itself: its terrain, its kind with its clauses, and a wild monster
+## on it. Returns why it can't, or "".
 func lay(region: Region, tile: Vector2i) -> String:
 	region.terrain[tile] = terrain
 	if wild_monster:
 		region.wild_monsters.append(tile)
-	if chest:
-		region.chests.append(tile)
 	if kind < 0:
 		return ""
 	region.terrain[tile] = kind
@@ -151,8 +141,8 @@ func lay(region: Region, tile: Vector2i) -> String:
 
 
 ## Places what stands on `tile` or leads off it, once every tile is laid: a connector or exit,
-## which open from ground to the edge, a named wild monster, a trigger, loot or a person. Returns
-## why it can't, or "".
+## which open from ground to the edge, a named wild monster, a trigger, or what a slice places.
+## Returns why it can't, or "".
 func place(region: Region, tile: Vector2i) -> String:
 	var side: int = maxi(connector_side, exit_side)
 	if side >= 0:
@@ -180,20 +170,13 @@ func place(region: Region, tile: Vector2i) -> String:
 	return _place_on_ground(region, tile)
 
 
-## Places loot or a person on `tile`, each on ground nothing else stands on; a person neither on a
-## player's start nor by a wild monster. Returns why it can't, or "".
+## Places what a slice places on `tile`, which must be ground. Returns why it can't, or "".
 func _place_on_ground(region: Region, tile: Vector2i) -> String:
-	var taken: bool = (region.loot_spots.has(tile) or region.chests.has(tile)
-			or region.npcs.has(tile))
-	if loot:
-		if not region.is_walkable(tile) or taken:
-			return "loot on %s isn't on free ground" % tile
-		region.loot_spots.append(tile)
-	if npc != null:
-		taken = taken or region.starts.has(tile) or region.wild_monsters.has(tile)
-		if not region.is_walkable(tile) or taken:
-			return "npc on %s isn't on free ground" % tile
-		region.npcs[tile] = npc
+	if placement.is_empty():
+		return ""
+	if not region.is_walkable(tile):
+		return "%s on %s isn't on ground" % [placement, tile]
+	region.add_placement(placement, tile, meaning_said)
 	return ""
 
 
@@ -266,16 +249,14 @@ func _set_trigger(when: String, action: String, amount: String) -> bool:
 	return true
 
 
-## Reads a meaning built in, or one placing something on ground: a connector, an exit, loot, a
-## person or a wild monster hiding in a tile kind. Returns whether it could.
+## Reads a meaning built in, or one placing something on ground: a connector, an exit or a wild
+## monster hiding in a tile kind. Returns whether it could.
 func _read_placed(meaning: String) -> bool:
 	for slot: int in GameState.MAX_PLAYERS:
 		start = slot if meaning == START % (slot + 1) else start
 	wild_monster = meaning == ROLLED
-	chest = meaning == CHEST
-	loot = meaning == LOOT_ON_THE_GROUND
 	terrain = TERRAINS.get(meaning, Region.GROUND)
-	if start >= 0 or wild_monster or chest or loot or TERRAINS.has(meaning):
+	if start >= 0 or wild_monster or TERRAINS.has(meaning):
 		return true
 	if meaning.begins_with(CONNECTOR):
 		connector_side = SIDES.find(meaning.trim_prefix(CONNECTOR))
@@ -287,19 +268,22 @@ func _read_placed(meaning: String) -> bool:
 		exit_side = SIDES.find(exit[0])
 		exit_blueprint = exit[1]
 		return exit_side >= 0
-	if meaning.begins_with(NPC):
-		var said: PackedStringArray = meaning.trim_prefix(NPC).split(SAYING)
-		var dialog: String = said[1] if said.size() == 2 else ""
-		var named: bool = said.size() <= 2 and said[0].is_valid_ascii_identifier()
-		if named and (dialog.is_empty() or dialog.is_valid_ascii_identifier()):
-			npc = NpcSpot.new(said[0], dialog)
-			return true
-		return false
 	var hides_in: int = TileKinds.number_of(meaning.trim_prefix(HIDING))
 	if meaning.begins_with(HIDING) and TileKinds.hides(hides_in):
 		wild_monster = true
 		kind = hides_in
 		return true
+	return false
+
+
+## Reads a meaning one of `readers` knows, placing something of a slice's on ground (#824); returns
+## whether one did.
+func _read_slices(meaning: String, readers: Array[PlacementReader]) -> bool:
+	for reader: PlacementReader in readers:
+		placement = reader.kind_of(meaning)
+		if not placement.is_empty():
+			meaning_said = meaning
+			return true
 	return false
 
 

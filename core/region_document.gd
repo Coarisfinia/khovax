@@ -10,7 +10,8 @@ extends RefCounted
 ## neat picture (#711): tiles sit side by side, and a space is half a tile, which offsets a row or
 ## leaves a gap (two spaces where a tile is missing). The legend explains every symbol, as a list
 ## item "- `X`: <meaning>"; a letter, digit or other narrow character is refused. Each meaning is
-## one LegendMeaning reads, and the document builds its Region with them (#824).
+## one LegendMeaning reads, with the readers of what the slices place (PlacementReader), and the
+## document builds its Region with them (#824).
 
 const TILES: String = "## Tiles"
 const LEGEND: String = "## Legend"
@@ -20,8 +21,9 @@ const FIRST_WIDE: int = 0x2000
 const JOINERS: Array[int] = [0x200d, 0xfe0e, 0xfe0f]
 
 
-## The region a Markdown region document describes; its `problem` says what's wrong.
-static func parse(text: String) -> Region:
+## The region a Markdown region document describes, with what the slices place read by `readers`
+## (InstanceBlueprints hands every slice's over); its `problem` says what's wrong.
+static func parse(text: String, readers: Array[PlacementReader] = []) -> Region:
 	var rows: Array[String] = _grid(text)
 	var narrow: String = _narrow(rows)
 	if not narrow.is_empty():
@@ -31,7 +33,7 @@ static func parse(text: String) -> Region:
 	var origin: Vector2i = _origin(rows)
 	if origin.y < 0:
 		return _refused("the tiles need an odd number of rows, the middle one odd in tiles")
-	var meanings: Dictionary[String, LegendMeaning] = _meanings(text)
+	var meanings: Dictionary[String, LegendMeaning] = _meanings(text, readers)
 	var unexplained: String = _unexplained(rows, meanings)
 	if not unexplained.is_empty():
 		return _refused("the legend doesn't explain `%s`" % unexplained)
@@ -147,15 +149,18 @@ static func _grid(text: String) -> Array[String]:
 	return rows
 
 
-## Every legend entry, by symbol: what LegendMeaning reads its meaning as, or null.
-static func _meanings(text: String) -> Dictionary[String, LegendMeaning]:
+## Every legend entry, by symbol: what LegendMeaning reads its meaning as, with `readers`, or null.
+static func _meanings(
+	text: String,
+	readers: Array[PlacementReader],
+) -> Dictionary[String, LegendMeaning]:
 	var entries: Dictionary[String, LegendMeaning] = {}
 	var pattern: RegEx = RegEx.create_from_string("^- `(.)`: (.+)$")
 	for line: String in _section(text, LEGEND).split("\n"):
 		var found: RegExMatch = pattern.search(line.strip_edges())
 		if found != null:
 			var meaning: String = found.get_string(2).strip_edges().trim_suffix(".")
-			entries[found.get_string(1)] = LegendMeaning.read(meaning)
+			entries[found.get_string(1)] = LegendMeaning.read(meaning, readers)
 	return entries
 
 
