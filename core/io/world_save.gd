@@ -20,7 +20,7 @@ const BESIDE: Array[String] = [EXPLORED]
 
 ## The world saved at `path`, its instances loaded from `source`; null when there's none, or an
 ## empty world whose `problem` says why the save is refused (no intact generation, not a world,
-## another format or rules version).
+## another format or rules).
 static func load_from(source: InstanceSource, path: String = PATH) -> World:
 	if not SaveStore.exists(path):
 		return null

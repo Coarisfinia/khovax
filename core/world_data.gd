@@ -10,9 +10,10 @@ extends RefCounted
 ## fainted ones (#655), format 8 kept the companions in fields of their own instead of the
 ## players' world stores (#724), format 9 kept no monster's short id (#700), format 10 numbered
 ## the features instead of naming them (#784) and format 11 numbered the kinds of the tiles changed
-## in place instead of naming them (#802). Every one but the fourth and fifth was played by
-## older rules, which `to_world` refuses anyway, so none is read.
-const FORMAT: int = 12
+## in place instead of naming them (#802) and format 12 recorded the rules as a count, not as
+## their id (#876). Every one but the fourth and fifth was played by older rules, which `to_world`
+## refuses anyway, so none is read.
+const FORMAT: int = 13
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
@@ -21,7 +22,7 @@ const FORMAT: int = 12
 ## store that isn't empty (#724), in slot order, every loaded instance in name order with its state
 ## (GameState.to_data), the tick it was left behind (-1 while
 ## someone is in it) and the variant it was loaded from (#529), every purged blueprint's generation,
-## the world's flags, the rules version it was played by and
+## the world's flags, the id of the rules it was played by and
 ## its hash, which `to_world` checks. Regions aren't saved whole: each is arranged again from its
 ## blueprint and seed, and only the tiles rules changed in it since (#530) come with its state.
 static func of(world: World) -> Dictionary:
@@ -45,7 +46,7 @@ static func of(world: World) -> Dictionary:
 			stores.append({ "slot": slot, "entries": entries })
 	return {
 		"format": FORMAT,
-		"rules": RulesChanges.version(),
+		"rules": RulesChanges.id(),
 		"seed": [(world.world_seed >> 32) & 0xffff_ffff, world.world_seed & 0xffff_ffff],
 		"start": world.start_name,
 		"tick": world.tick,
@@ -64,11 +65,11 @@ static func of(world: World) -> Dictionary:
 static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var read: DataReader = DataReader.new(data)
 	var format: int = read.whole("format", 0, DataReader.MOST)
-	var rules: int = read.whole("rules", 0, DataReader.MOST)
 	if not read.failed() and format != FORMAT:
 		read.fail("world format %d, this build reads format %d" % [format, FORMAT])
-	if not read.failed() and rules != RulesChanges.version():
-		read.fail("played by rules %d, this build has %d" % [rules, RulesChanges.version()])
+	var rules: String = read.text("rules")
+	if not read.failed() and rules != RulesChanges.id():
+		read.fail("played by rules %s, this build has %s" % [rules, RulesChanges.id()])
 	var halves: Array[int] = read.wholes("seed", 0, 0xffff_ffff)
 	var start: String = read.text("start")
 	if not read.failed() and (halves.size() != 2 or not source.exists(start)):

@@ -1,24 +1,31 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (counts the rule change files, #736)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (lists the rule change files, #736)
 class_name RulesChanges
 extends RefCounted
-## The version of the rules (#736), recorded in every replay and world save: the number of rule
+## The id of the rules (#736, #876), recorded in every replay and world save: a digest of the rule
 ## changes, one file each in core/rules_changes/. A change that makes existing replays play out
 ## differently adds its file there, `<issue>-<slug>.md` with the issue in its frontmatter and one
 ## line on what plays differently, and rehashes the golden replays in the same change
 ## (tests/replays/rehash.gd): an old replay then fails with a clear message, not a mismatch.
-## Adding the file is the bump, so parallel rule changes never claim the same number. Git keeps
-## when each arrived and its pull request (`git log --diff-filter=A -- core/rules_changes/`, #758).
+## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
+## the folder is append-only (tools/rules_changes_check.sh): a file is never deleted or renamed.
+## Git keeps when each arrived and its pull request
+## (`git log --diff-filter=A -- core/rules_changes/`, #758).
 
 const FOLDER: String = "res://core/rules_changes/"
+## How many hex characters of the digest the id keeps.
+const LENGTH: int = 16
 
-static var _version: int = -1
+static var _id: String = ""
 
 
-## The version of the rules: how many rule changes there have been. Counted once, then remembered.
-static func version() -> int:
-	if _version < 0:
-		_version = 0
+## The id of the rules: the first LENGTH hex characters of the SHA-256 of the rule change files'
+## names, sorted and one per line. Worked out once, then remembered.
+static func id() -> String:
+	if _id.is_empty():
+		var names: Array[String] = []
 		for file_name: String in DirAccess.get_files_at(FOLDER):
 			if file_name.ends_with(".md"):
-				_version += 1
-	return _version
+				names.append(file_name)
+		names.sort()
+		_id = "\n".join(PackedStringArray(names)).sha256_text().left(LENGTH)
+	return _id

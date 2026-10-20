@@ -711,10 +711,16 @@ func _check_replay_refusals() -> String:
 			"\"format\": %d" % ReplayFile.FORMAT,
 			"\"format\": %d" % (ReplayFile.FORMAT - 1),
 		): "replay format %d was recorded by an older build" % (ReplayFile.FORMAT - 1),
+		# Another digest of the rule changes (#876).
 		text.replace(
-			"\"rules\": %d" % RulesChanges.version(),
-			"\"rules\": 0",
-		): "recorded with rules",
+			"\"rules\": \"%s\"" % RulesChanges.id(),
+			"\"rules\": \"0000000000000000\"",
+		): "recorded with rules 0000000000000000",
+		# A count of the rule changes, as an older format recorded them.
+		text.replace(
+			"\"rules\": \"%s\"" % RulesChanges.id(),
+			"\"rules\": 67",
+		): "not a replay: its rules aren't an id",
 		text.replace("\"basic\"", "\"nowhere\""): "instance nowhere",
 		text.replace("\"players\": 2", "\"players\": 9"): "instance basic with 9 players",
 	}

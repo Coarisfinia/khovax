@@ -527,7 +527,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   file to `core/rules_changes/` (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then
   one line on what plays differently linking the issue; no `pr`, which CI refuses: the squash
   commit that added the file names it, `git log --diff-filter=A -- core/rules_changes/<file>`,
-  #758; the rules version, `RulesChanges`, is their count, #736), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
+  #758; the rules id, `RulesChanges`, is a digest of their names, #876, so the folder is
+  append-only: CI refuses a file deleted or renamed), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
   in the pull request why the game plays out differently. CI fails a changed golden replay that
   comes without a new file. Never rehash to make a surprise go away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
