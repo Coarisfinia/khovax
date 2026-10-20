@@ -16,6 +16,10 @@ var answers: Dictionary[int, PackedStringArray] = {}
 var leads: Dictionary[int, int] = {}
 ## How many lines each dialog has, by its id.
 var line_counts: Dictionary[String, int] = {}
+## Whether each dialog locks, by its id (#912).
+var locking: Dictionary[String, bool] = {}
+## Whether each answer commits, by its code (#912).
+var committing: Dictionary[int, bool] = {}
 
 
 ## Every dialog file in `directory`, read and checked.
@@ -37,6 +41,7 @@ func add(file_id: String, text: String) -> String:
 	if dialog.problem.is_empty():
 		dialogs[dialog.id] = dialog
 		line_counts[dialog.id] = dialog.lines.size()
+		locking[dialog.id] = dialog.lock
 	return dialog.problem
 
 
@@ -49,4 +54,5 @@ func _code_answers(dialog: Dialog) -> String:
 			if not CommandCodes.file(answers, by, PackedStringArray([dialog.id, answer.id])):
 				return "answer %s's code is taken: give it another id" % answer.id
 			leads[by] = dialog.line_index(answer.next)
+			committing[by] = answer.commits
 	return ""
