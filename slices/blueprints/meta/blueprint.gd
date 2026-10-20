@@ -67,6 +67,8 @@ func _read_species(raw: Variant) -> bool:
 	if not raw is Dictionary:
 		return false
 	var entries: Dictionary = raw
+	# JSON reads an object into a Dictionary in the order it's written, which a Dictionary keeps,
+	# the same on every platform. Content.amount takes only whole weights, 1 to Fixed.MAX_AMOUNT.
 	for species_id: Variant in entries:
 		var weight: int = Content.amount(entries[species_id])
 		if not Content.is_id(str(species_id)) or weight == 0:
