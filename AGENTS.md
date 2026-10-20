@@ -279,7 +279,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The simulation:** the core (`core/`: `Simulation.step(state, commands)`, `GameState`, the grid
   math `Hex`) and the features (each slice's `rules/`). Plain `RefCounted` classes (or subclasses of its classes),
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
-  `Engine`, `OS`, global randomness, frame `delta`, `float`, `FileAccess`, `DirAccess` or `JSON`:
+  `Engine`, `OS`, global randomness, frame `delta`, `float` or float-backed types (`Vector2`, `Color`,
+  `Rect2` and the like; `Vector2i` and `Rect2i` are fine), `FileAccess`, `DirAccess` or `JSON`:
   CI greps for them (`tools/determinism_check.sh`, #572). A file that can't pass yet is exempt only
   with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
   `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes

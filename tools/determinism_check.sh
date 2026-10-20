@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fails when the simulation could stop being deterministic (AGENTS.md, "Architecture"). core/ and
 # every slice's rules/ hold the rules: plain RefCounted classes (or classes of the rules, e.g.
-# Feature) without nodes, input, time, engine or OS state, global randomness, frame delta, floats,
+# Feature) without nodes, input, time, engine or OS state, global randomness, frame delta, floats
+# (float-backed engine types such as Vector2 or Color too; Vector2i and Rect2i stay allowed),
 # or file and JSON access (#572: reading happens before a tick, never inside one).
 # Comments are stripped first (a # outside strings, as tools/import_rules.sh does), so the rules
 # can be explained in them.
@@ -19,6 +20,7 @@ forbidden_parts=(
   '\bdelta\b'
   '\bfloat\b|[0-9]\.[0-9]|[0-9][eE][-+]?[0-9]'
   '\b(FileAccess|DirAccess|JSON)\b'
+  '\b(Vector2|Vector3|Vector4|Color|Rect2|AABB|Plane|Basis|Quaternion|Transform2D|Transform3D|Projection)\b'
 )
 forbidden=$(IFS='|'; echo "${forbidden_parts[*]}")
 marker='# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK'
