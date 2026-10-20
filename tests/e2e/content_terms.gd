@@ -189,7 +189,7 @@ static func _rule_problem(kind: String, id: String, name: String, related: Strin
 	if not marks.is_empty():
 		return "%s has %s, which only another kind's names have" % [shown, marks]
 	if name.is_empty():
-		return ""
+		return "" if id == id.to_lower() else "its id must be lower case (#763)"
 	var own_id: String = RegEx.create_from_string("[ '-]").sub(name.to_lower(), "_", true)
 	if kind == "special" or kind == "passive":
 		own_id = "%s_%s" % [related, own_id]
@@ -206,7 +206,7 @@ static func _words_of(kind: String, id: String) -> String:
 			return id.get_slice(" of ", 0).replace("_", " ")
 		"place":
 			return id.replace("_", " ")
-	return id.capitalize()
+	return id.replace("_", " ").capitalize()
 
 
 ## Whether `shown` keeps the shape of `kind`'s rule (NAME_RULES).
@@ -230,7 +230,7 @@ static func _keeps_shape(kind: String, shown: String, related: String) -> bool:
 				and _syllables(lower.get_slice(" ", 0)) in [1, 2, 3]
 			)
 		"region":
-			return shown == _corrupted(related.capitalize())
+			return shown == _corrupted(related.replace("_", " ").capitalize())
 		"piece", "place":
 			return _matches("^[a-z]+( [a-z]+)*$", shown)
 		"faction":

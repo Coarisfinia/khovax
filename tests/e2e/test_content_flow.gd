@@ -46,6 +46,45 @@ const FACTION_TEXT: String = (
 const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
 ## A blueprint file x on the rule set small (#941), its last fields left open.
 const BLUEPRINT: String = "{\"id\": \"x\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}%s}"
+## What ContentTerms says of a name that breaks its kind's shape.
+const REFUSED: String = "isn't a name its kind allows"
+## Each kind's name rule (#909) on names it allows ("" expected) and names it refuses (what the
+## problem holds), as "<kind> <id> <name> <related>", with "-" for no name or no related.
+const NAME_CASES: Dictionary[String, String] = {
+	"species ombulumo Ombulumo growth": "",
+	"special ombulumo_bulum_bolom Bulum-bolom ombulumo": "",
+	"passive ombulumo_mulbo_lulbo Mulbo-lulbo ombulumo": "",
+	"passive tikazzir_zirki_kirki Zirki-kirki tikazzir": "",
+	"realm ardvaun - -": "",
+	"instance dhorvone_stolm - -": "",
+	"region lymwen_hoall - lumwen_hoal": "",
+	"region dhyrvone_stolmm - dhorvone_stolm": "",
+	"piece north_hold_of_lumwen_hoal - -": "",
+	"place sealed_passage - -": "",
+	"faction amvrel_velmarai Amvrel_Velmarai -": "",
+	"person teska_na_amvrel Teska_na_Amvrel -": "",
+	"person ardwe_vo_selin Ardwe_vo_Selin -": "",
+	"unique kel_varun Kel'varun -": "",
+	"gear berry_pouch Berry_pouch -": "",
+	"species xo Xo_Xa -": REFUSED,
+	"species zo Kiruzzi might": "its id must",
+	"species kiruzzi Kiruzzi growth": REFUSED,
+	"species kirdhuzi Kirdhuzi might": "Kirdhuzi has a land-speech sound",
+	"special ombulumo_bulum_bulum Bulum-bulum ombulumo": REFUSED,
+	"special ombulumo_tizik_tazak Tizik-tazak ombulumo": REFUSED,
+	"passive ombulumo_mulbo_mulbo Mulbo-mulbo ombulumo": REFUSED,
+	"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": REFUSED,
+	"realm zarvaun - -": "Zarvaun has a beast-call's letter",
+	"realm Ardvaun - -": "its id must be lower case",
+	"instance glade - -": REFUSED,
+	"instance amvrel_hoal - -": "Amvrel Hoal has the faction word Amvrel",
+	"region glade_corrupted - glade": REFUSED,
+	"faction amvrel_velmar Amvrel_Velmar -": REFUSED,
+	"person teska_na_selin Teska_na_Selin -": REFUSED,
+	"unique zar_omera Zar'omera -": REFUSED,
+	"gear kel_spikes Kel_spikes -": "Kel spikes has the unique word Kel",
+	"gear bonsai Bonsai -": "Bonsai has a last word in -ai",
+}
 ## A rule set file small (#941), its rules left open.
 const RULE_SET: String = "{\"id\": \"small\", \"features\": [%s]}"
 
@@ -1174,52 +1213,22 @@ func _check_terms() -> String:
 	return _check_name_rules()
 
 
-## Each kind's name rule (#909) on names it allows ("" expected) and names it refuses (the expected
-## start of the problem), as "<kind> <id> <name> <related>", with "-" for no name or no related.
+## Each kind's name rule (#909) on NAME_CASES.
 func _check_name_rules() -> String:
-	var refused: String = "isn't a name its kind allows"
-	var cases: Dictionary[String, String] = {
-		"species ombulumo Ombulumo growth": "",
-		"special ombulumo_bulum_bolom Bulum-bolom ombulumo": "",
-		"passive ombulumo_mulbo_lulbo Mulbo-lulbo ombulumo": "",
-		"passive tikazzir_zirki_kirki Zirki-kirki tikazzir": "",
-		"realm ardvaun - -": "",
-		"instance dhorvone_stolm - -": "",
-		"region lymwen_hoall - lumwen_hoal": "",
-		"region dhyrvone_stolmm - dhorvone_stolm": "",
-		"piece north_hold_of_lumwen_hoal - -": "",
-		"place sealed_passage - -": "",
-		"faction amvrel_velmarai Amvrel_Velmarai -": "",
-		"person teska_na_amvrel Teska_na_Amvrel -": "",
-		"person ardwe_vo_selin Ardwe_vo_Selin -": "",
-		"unique kel_varun Kel'varun -": "",
-		"gear berry_pouch Berry_pouch -": "",
-		"species xo Xo_Xa -": refused,
-		"species zo Kiruzzi might": "its id must",
-		"species kiruzzi Kiruzzi growth": refused,
-		"species kirdhuzi Kirdhuzi might": "Kirdhuzi has a land-speech sound",
-		"special ombulumo_bulum_bulum Bulum-bulum ombulumo": refused,
-		"special ombulumo_tizik_tazak Tizik-tazak ombulumo": refused,
-		"passive ombulumo_mulbo_mulbo Mulbo-mulbo ombulumo": refused,
-		"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": refused,
-		"realm zarvaun - -": "Zarvaun has a beast-call's letter",
-		"instance glade - -": refused,
-		"instance amvrel_hoal - -": "Amvrel Hoal has the faction word Amvrel",
-		"region glade_corrupted - glade": refused,
-		"faction amvrel_velmar Amvrel_Velmar -": refused,
-		"person teska_na_selin Teska_na_Selin -": refused,
-		"unique zar_omera Zar'omera -": refused,
-		"gear kel_spikes Kel_spikes -": "Kel spikes has the unique word Kel",
-		"gear bonsai Bonsai -": "Bonsai has a last word in -ai",
-	}
+	var cases: Dictionary[String, String] = NAME_CASES
 	var named: ContentTerms = ContentTerms.new()
 	for entry: String in cases:
-		var parts: PackedStringArray = entry.replace("_of_", " of ").split(" ")
+		var parts: PackedStringArray = entry.split(" ")
 		var given: String = "" if parts[2] == "-" else parts[2].replace("_", " ")
-		named.add(parts[0], parts[1], given, "" if parts[3] == "-" else parts[3])
+		named.add(
+			parts[0],
+			parts[1].replace("_of_", " of "),
+			given,
+			"" if parts[3] == "-" else parts[3],
+		)
 	for entry: String in cases:
-		var parts: PackedStringArray = entry.replace("_of_", " of ").split(" ")
-		var found: String = named.broken["%s %s" % [parts[0], parts[1]]]
+		var parts: PackedStringArray = entry.split(" ")
+		var found: String = named.broken["%s %s" % [parts[0], parts[1].replace("_of_", " of ")]]
 		var expected: String = cases[entry]
 		if expected.is_empty() != found.is_empty() or not found.contains(expected):
 			return "the name rule on %s gave %s" % [
