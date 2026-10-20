@@ -140,6 +140,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_obtained()
 	result = result if not result.is_empty() else _check_facts()
 	result = result if not result.is_empty() else _check_target()
+	result = result if not result.is_empty() else _check_instances()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -1380,6 +1381,24 @@ func _check_settled() -> String:
 	var settled: Array[String] = ["first_domination", "three_ombulumo"]
 	if not applied.is_empty() or stale.finished != settled:
 		return "saved progress that no longer fits didn't settle at the next fact: " + applied
+	return ""
+
+
+## Every instance a quest's start, step or choice names is an instance blueprint that exists: the
+## quests can't check it as they read, since the blueprints come after them (#851).
+func _check_instances() -> String:
+	var content: QuestContent = QuestContent.load_quests()
+	if not content.problem.is_empty():
+		return "the quests didn't read: " + content.problem
+	for quest: QuestDefinition in content.quests.values():
+		var named: Array[QuestStep] = []
+		if quest.starts_on != null:
+			named.append(quest.starts_on)
+		for step: QuestStep in quest.steps:
+			named.append_array(step.triggers())
+		for step: QuestStep in named:
+			if not step.instance.is_empty() and not InstanceBlueprints.exists(step.instance):
+				return "%s names %s, which isn't an instance blueprint" % [quest.id, step.instance]
 	return ""
 
 
