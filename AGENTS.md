@@ -470,6 +470,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (round, soft-sounding names for round, soft things, like Ombulumo; sharp, spiky-sounding names for
   sharp, quick ones, like Tikazzir), and other linguistic patterns are used alongside it, so no
   single pattern shapes every name.
+- **Locking dialogs stay away from danger** (owner's ground rule, #981): a dialog that holds its
+  player (it locks, or it offers an answer that commits, #912) is never placed at or near an
+  aggressive spawn point or a combat area. Holding the player there makes it unfair in co-op, and
+  the pause makes it cheesy solo.
 - **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
