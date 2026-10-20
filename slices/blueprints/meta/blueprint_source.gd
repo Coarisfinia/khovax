@@ -7,6 +7,13 @@ func exists(instance_name: String) -> bool:
 	return InstanceBlueprints.exists(instance_name)
 
 
+## Whether everything an instance of this name loads from is read (InstanceContent, #816); what
+## isn't is asked of the background fill (ContentFill), so it's read soon, and asking again finds
+## it.
+func cached(instance_name: String) -> bool:
+	return ContentFill.have(InstanceContent.of(instance_name))
+
+
 ## The factions' territory as content data has it (Territory, #637), naming only instances that
 ## exist; factions that don't load are an error, and hold nothing then.
 func starting_flags() -> Array[String]:

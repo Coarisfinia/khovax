@@ -17,7 +17,8 @@ extends RefCounted
 ## dialogs than Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every
 ## text tag (#733) in a dialog, a quest's name or an ability's description names content that
 ## exists, shows its current name, and broken tags are refused. No two things share an id or a
-## name, whatever their kinds, in any case (#909).
+## name, whatever their kinds, in any case (#909). Every content kind is read ahead in the
+## background (#816).
 
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
@@ -118,6 +119,7 @@ func run(_tree: SceneTree) -> String:
 		_check_kits.bind(content),
 		_check_text_tags,
 		_check_terms,
+		_check_prefetched,
 	]
 	for check: Callable in checks:
 		var result: String = check.call()
@@ -1239,4 +1241,23 @@ func _check_name_rules() -> String:
 				entry,
 				found if not found.is_empty() else "nothing",
 			]
+	return ""
+
+
+## Every content kind is read ahead in the background (#816, InstanceContent.kinds): each directory
+## a `<Kind>Content` reads (its constants ending in DIR) is one of the kinds' keys. Region files
+## are read per region (RegionFiles), so they're not a kind.
+func _check_prefetched() -> String:
+	var keys: Array[String] = InstanceContent.kinds().keys()
+	for named: Dictionary in ProjectSettings.get_global_class_list():
+		if named["base"] != &"Content" or named["class"] == &"RegionFiles":
+			continue
+		var path: String = named["path"]
+		var constants: Dictionary = (load(path) as Script).get_script_constant_map()
+		for constant: String in constants:
+			if constant.ends_with("DIR") and not keys.has(constants[constant]):
+				return "%s's %s isn't read ahead (InstanceContent.kinds)" % [
+					named["class"],
+					constant,
+				]
 	return ""

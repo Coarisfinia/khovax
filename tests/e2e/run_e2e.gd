@@ -41,6 +41,10 @@ func _initialize() -> void:
 	# The flows boot the playground, which only the tests play (#712), unless they're given another.
 	if GameDriver.start_instance.is_empty():
 		GameDriver.start_instance = FlowSteps.BASIC
+	# Every flow plays with all the content read (#816), as a player whose background fill is done:
+	# a walk holding at an exit for content would play out by this machine's speed.
+	InstanceContent.prefetch(GameDriver.start_instance)
+	ContentFill.wait()
 	var files: PackedStringArray = DirAccess.get_files_at(TEST_DIR)
 	files.sort()
 	var tests: Array[String] = []
