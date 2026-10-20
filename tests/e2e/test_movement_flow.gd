@@ -673,7 +673,7 @@ func _check_forest_and_water() -> String:
 	var kept: Region = _driver.state.region
 	# A copy (turned by nothing), so the grid redraws the changed tiles in their kinds' colors.
 	var region: Region = kept.turned(0)
-	region.terrain[Vector2i(1, 0)] = TileKinds.number_of("forest")
+	region.terrain[Vector2i(1, 0)] = "forest"
 	region.terrain[Vector2i(2, 0)] = Region.WATER
 	_driver.state.region = region
 	_grid.show_state()

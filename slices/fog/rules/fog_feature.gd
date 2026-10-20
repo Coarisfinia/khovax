@@ -151,7 +151,7 @@ static func sight(
 		region: Region,
 		from: Vector2i,
 		radius: int,
-		next_door: Dictionary[Vector2i, int] = {},
+		next_door: Dictionary[Vector2i, String] = {},
 ) -> Array[Vector2i]:
 	var seen: Array[Vector2i] = []
 	var lines: Array = _lines_within(radius)
@@ -159,7 +159,11 @@ static func sight(
 	for i: int in ends.size():
 		var tile: Vector2i = from + ends[i]
 		var between: Array[Vector2i] = lines[i]
-		if _ground(region, next_door, tile) >= 0 and _clear(region, next_door, from, between):
+		if not _ground(
+			region,
+			next_door,
+			tile,
+		).is_empty() and _clear(region, next_door, from, between):
 			seen.append(tile)
 	return seen
 
@@ -168,22 +172,26 @@ static func sight(
 ## offsets from `from`: no rock, and no gap in the region or next door.
 static func _clear(
 		region: Region,
-		next_door: Dictionary[Vector2i, int],
+		next_door: Dictionary[Vector2i, String],
 		from: Vector2i,
 		between: Array[Vector2i],
 ) -> bool:
 	for offset: Vector2i in between:
-		var ground: int = _ground(region, next_door, from + offset)
-		if ground < 0 or ground == Region.BLOCKED:
+		var ground: String = _ground(region, next_door, from + offset)
+		if ground.is_empty() or ground == Region.BLOCKED:
 			return false
 	return true
 
 
-## The terrain of `tile`, in the region or next door, or -1 where there's no ground.
-static func _ground(region: Region, next_door: Dictionary[Vector2i, int], tile: Vector2i) -> int:
+## The terrain of `tile`, in the region or next door, or "" where there's no ground.
+static func _ground(
+		region: Region,
+		next_door: Dictionary[Vector2i, String],
+		tile: Vector2i,
+) -> String:
 	if region.has_tile(tile):
 		return region.terrain[tile]
-	return next_door.get(tile, -1)
+	return next_door.get(tile, "")
 
 
 ## The tiles between the origin and each tile of Hex.disc(radius), in the disc's order, worked out

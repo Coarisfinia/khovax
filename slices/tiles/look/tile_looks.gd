@@ -1,33 +1,32 @@
 class_name TileLooks
 extends RefCounted
-## Each tile kind's look (#116), by its number in Region.terrain: its tile blueprint, with the
+## Each tile kind's look (#116), by its id in Region.terrain: its tile blueprint, with the
 ## ground color, symbol (#68) and decoration model the views draw. Read from the content data once.
 ## The simulation keeps only a kind's id and traits (TileKinds); the look is the view's alone.
 
 ## How tall a tile's decoration stands, in hundredths of a tile's radius (#232).
 const HEIGHT_UNITS: float = 100.0 / HexLayout.SIZE
 
-## Every tile blueprint, by number; empty until first used.
-static var _by_number: Dictionary[int, TileBlueprint] = {}
-## Each kind's measured height, by number, once measured.
-static var _heights: Dictionary[int, int] = {}
+## Every tile blueprint, by id; empty until first used.
+static var _by_id: Dictionary[String, TileBlueprint] = {}
+## Each kind's measured height, by id, once measured.
+static var _heights: Dictionary[String, int] = {}
 
 
-## The tile blueprint of kind `kind`, or null for a number no kind has.
-static func of(kind: int) -> TileBlueprint:
-	if _by_number.is_empty():
+## The tile blueprint of kind `kind`, or null for an id no kind has.
+static func of(kind: String) -> TileBlueprint:
+	if _by_id.is_empty():
 		var content: Content = Content.load_tiles()
 		if not content.problem.is_empty():
 			push_error("the tile blueprints didn't load: " + content.problem)
-		for tile: TileBlueprint in content.tiles.values():
-			_by_number[tile.number] = tile
-	return _by_number.get(kind)
+		_by_id = content.tiles
+	return _by_id.get(kind)
 
 
 ## How tall a tile of kind `kind` stands (#232): the top of its decoration's model, as drawn (its
 ## scale included), in hundredths of a tile's radius; 0 for a kind without one. Measured from the
 ## model, so it never drifts from what's drawn.
-static func height_of(kind: int) -> int:
+static func height_of(kind: String) -> int:
 	if not _heights.has(kind):
 		_heights[kind] = _measured(of(kind))
 	return _heights[kind]

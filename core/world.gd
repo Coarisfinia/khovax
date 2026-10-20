@@ -147,7 +147,7 @@ func refresh_next_door() -> void:
 ## (#191), shifted into its coordinates as the views place them (`offset`): a loaded one's region as
 ## it is, with its tiles changed in place (#538), or else as it would be arranged.
 func _hand_next_door(instance_name: String, state: GameState) -> void:
-	var next_door: Dictionary[Vector2i, int] = {}
+	var next_door: Dictionary[Vector2i, String] = {}
 	for target: String in state.region.exit_blueprints:
 		var shift: Vector2i = offset(target) - offset(instance_name)
 		var ground: Region = _layout.region_for(self, target)

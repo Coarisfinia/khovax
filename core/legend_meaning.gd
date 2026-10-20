@@ -34,7 +34,7 @@ extends RefCounted
 ## where <side> is one of SIDES. Every symbol but water and rock is ground unless it names a kind.
 
 ## The built-in terrains' meanings.
-const TERRAINS: Dictionary[String, int] = {
+const TERRAINS: Dictionary[String, String] = {
 	"ground": Region.GROUND,
 	"water": Region.WATER,
 	"rock": Region.BLOCKED,
@@ -76,16 +76,16 @@ const NOT_WALKABLE: String = "not walkable"
 const HEIGHT: String = "height "
 
 ## The tile's terrain, before a kind it names.
-var terrain: int = Region.GROUND
+var terrain: String = Region.GROUND
 ## The player slot starting here, or -1.
 var start: int = -1
 var wild_monster: bool = false
 ## The kind of thing a slice places here (#824, PlacementReader), or "", and the meaning it reads.
 var placement: String = ""
 var meaning_said: String = ""
-## The tile kind (TileKinds' number) it names, or -1, with each turn, walkable override and height
+## The tile kind (its id in TileKinds) it names, or "", with each turn, walkable override and height
 ## its clauses say, refused when one is said twice or is out of range.
-var kind: int = -1
+var kind: String = ""
 var turns: Array[int] = []
 var walkable_overrides: Array[bool] = []
 var heights: Array[int] = []
@@ -121,7 +121,7 @@ func lay(region: Region, tile: Vector2i) -> String:
 	region.terrain[tile] = terrain
 	if wild_monster:
 		region.wild_monsters.append(tile)
-	if kind < 0:
+	if kind.is_empty():
 		return ""
 	region.terrain[tile] = kind
 	if turns.size() > 1 or walkable_overrides.size() > 1 or heights.size() > 1:
@@ -268,7 +268,7 @@ func _read_placed(meaning: String) -> bool:
 		exit_side = SIDES.find(exit[0])
 		exit_blueprint = exit[1]
 		return exit_side >= 0
-	var hides_in: int = TileKinds.number_of(meaning.trim_prefix(HIDING))
+	var hides_in: String = meaning.trim_prefix(HIDING)
 	if meaning.begins_with(HIDING) and TileKinds.hides(hides_in):
 		wild_monster = true
 		kind = hides_in
@@ -305,9 +305,9 @@ func _read_kind(meaning: String) -> bool:
 			said_overrides.append(clause == WALKABLE)
 		else:
 			return false
-	if TileKinds.number_of(clauses[0]) < 0:
+	if not TileKinds.has(clauses[0]):
 		return false
-	kind = TileKinds.number_of(clauses[0])
+	kind = clauses[0]
 	turns = said_turns
 	walkable_overrides = said_overrides
 	heights = said_heights

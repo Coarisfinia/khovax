@@ -1,23 +1,23 @@
 class_name Region
 extends RefCounted
-## An instance's region (#36): which tiles exist, each one's kind (a tile blueprint, numbered by
-## TileKinds, #116), and where the players start. Rules ask the region, never the distance from
+## An instance's region (#36): which tiles exist, each one's kind (a tile blueprint, by its id in
+## TileKinds, #116, #802), and where the players start. Rules ask the region, never the distance
+## from
 ## the origin, so a region can have any shape. Regions are hand-made Markdown files (regions/*.md,
 ## read by RegionDocument, #145, #824), or arranged from hand-made region pieces
 ## (regions/<blueprint>/) by RegionArranger (#57). This class holds the region's data and its
 ## geometry (turning, placing, fitting, reachability, hashing). Once loaded,
 ## only a rule changes it, a few tiles' kinds in place (#530, GameState.change_tile).
 
-## The built-in kinds' numbers, as the tile blueprints give them; rock blocks sight
-## (FogFeature).
-const GROUND: int = 0
-const WATER: int = 1
-const BLOCKED: int = 2
+## The built-in kinds' ids, the tile blueprints' file names; rock blocks sight (FogFeature).
+const GROUND: String = "ground"
+const WATER: String = "water"
+const BLOCKED: String = "rock"
 ## The most tiles a region may have: generators and region files stay within it.
 const MAX_TILES: int = 4096
 
-## Every tile's kind, its number in TileKinds, by tile.
-var terrain: Dictionary[Vector2i, int] = {}
+## Every tile's kind, its id in TileKinds, by tile.
+var terrain: Dictionary[Vector2i, String] = {}
 ## How the tiles look where their piece sets it by hand (turned decorations, #231; heights, #232).
 var looks: PieceLooks = PieceLooks.new()
 ## Placed tiles whose piece overrides their kind's walkable trait (#201): whether walkers can stand
@@ -86,8 +86,8 @@ func size() -> int:
 ## Makes `tile` a tile of kind `kind` in place (#530, GameState.change_tile). Its piece's walkable
 ## override goes with its old kind, so the new kind's traits hold. Returns whether it could: not for
 ## a tile off the region or a kind no tile blueprint has.
-func change(tile: Vector2i, kind: int) -> bool:
-	if not terrain.has(tile) or TileKinds.id_of(kind).is_empty():
+func change(tile: Vector2i, kind: String) -> bool:
+	if not terrain.has(tile) or not TileKinds.has(kind):
 		return false
 	terrain[tile] = kind
 	var _overridden: bool = walkable_overrides.erase(tile)
@@ -213,13 +213,14 @@ func place(piece: Region, offset: Vector2i) -> void:
 		piece_of[tile + offset] = piece.piece_of[tile]
 
 
-## Every value of the region, for the state hash, in a fixed order.
+## Every value of the region, for the state hash, in a fixed order: each tile's kind as its id's
+## code (StateHash.name_code, #802).
 func hash_values() -> Array[int]:
 	var values: Array[int] = [terrain.size()]
 	for tile: Vector2i in sorted_tiles():
 		values.append(tile.x)
 		values.append(tile.y)
-		values.append(terrain[tile])
+		values.append(StateHash.name_code(terrain[tile]))
 	values.append(starts.size())
 	for start: Vector2i in starts:
 		values.append(start.x)
