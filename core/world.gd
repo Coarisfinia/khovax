@@ -12,22 +12,13 @@ extends RefCounted
 ## #724), where features keep what the player brings along, like their companions (#338): every
 ## instance the world loads gets a copy, and what the instance the player is in changes in it is
 ## taken back into the world once that instance stepped, and handed to every other. The world keeps
-## a set of flags (#529), a fresh world starting with its source's (#637), which choose each
-## blueprint's variant (`InstanceSource.variant`): setting or clearing one purges every loaded
-## instance whose variant it changes, once nobody is in it, so it comes back from its new variant
-## and no player sees it change. Any rule can raise a named event (EventEmitted, #541), which sets
-## the flag EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story
-## beat does, and the first time it sets its flag the world raises that it changed (WorldChanged,
-## #499). A rule can also replace a kind of flag (FlagReplaced, #638), clearing the others of its
-## kind in
-## the same tick as it sets its own, like a territory changing hands.
+## a set of flags (#529), which choose each blueprint's variant and which named events set and
+## replace (WorldFlags, #541, #638).
 ## Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
 ## ticks, which only pass while the game is played, never while it's closed.
 const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
-## What the flag a named event sets begins with (#541): EVENT_EMITTED_<the event's name>.
-const EVENT_FLAG: String = "EVENT_EMITTED_"
 
 ## The world's seed, which every instance's own seed is drawn from.
 var world_seed: int = 0
@@ -45,7 +36,7 @@ var generations: Dictionary[String, int] = {}
 ## The world tick each loaded instance nobody is in was left behind (or loaded empty), by name.
 var left_at: Dictionary[String, int] = {}
 ## The world's flags (#529), sorted: ids that story beats and rules set, each choosing blueprints'
-## variants.
+## variants (WorldFlags).
 var flags: Array[String] = []
 ## The variant each loaded instance was loaded from, by name ("" for a blueprint's plain one): it
 ## keeps it until it's purged, even after a flag chose another.
@@ -80,8 +71,12 @@ func _init(
 		return
 	# Before the first instance loads: flags choose variants.
 	for flag: String in instance_source.starting_flags():
-		set_flag(flag)
-	var first: GameState = create_instance(start, players, _chosen_variant(start))
+		WorldFlags.set_flag(self, flag)
+	var first: GameState = create_instance(
+		start,
+		players,
+		WorldFlags.chosen_variant(self, start),
+	)
 	if first == null:
 		problem = "the starting instance %s doesn't load" % start
 		return
@@ -109,7 +104,11 @@ func generation(instance_name: String) -> int:
 ## when it can't load.
 func instance(instance_name: String) -> GameState:
 	if not instances.has(instance_name):
-		var loaded: GameState = create_instance(instance_name, 0, _chosen_variant(instance_name))
+		var loaded: GameState = create_instance(
+			instance_name,
+			0,
+			WorldFlags.chosen_variant(self, instance_name),
+		)
 		if loaded == null:
 			return null
 		instances[instance_name] = loaded
@@ -130,41 +129,11 @@ func create_instance(instance_name: String, players: int, variant: String) -> Ga
 	return created
 
 
-## The variant of the blueprint `instance_name` the world's flags choose now (#529).
-func _chosen_variant(instance_name: String) -> String:
-	return source.variant(instance_name, flags)
-
-
-## The variant of the blueprint `instance_name` as it is in the world: the one it was loaded from
-## while it's loaded, else the one the flags choose. Its region is read from it.
-func variant_of(instance_name: String) -> String:
-	if variants.has(instance_name):
-		return variants[instance_name]
-	return _chosen_variant(instance_name)
-
-
-## Sets the flag `flag` (#529), or clears it when `on` is false: for story beats and the rules that
-## change the world. Every loaded instance whose variant that changes is outdated: purged once
-## nobody is in it (`_purge_left_behind`), or as someone walks in or is sent to the spawn. The
-## starting instance too (#727), which is loaded again at once from its new variant.
-func set_flag(flag: String, on: bool = true) -> void:
-	if flags.has(flag) == on:
-		return
-	if on:
-		flags.append(flag)
-		flags.sort()
-	else:
-		flags.erase(flag)
-	# The instances not loaded may now have other regions: the layout is worked out again, and the
-	# loaded ones see their neighbours' new ground.
+## Works the layout out again, and hands the loaded instances their neighbours' new ground: once a
+## flag changed which variant the instances not loaded are arranged from (WorldFlags).
+func lay_out_again() -> void:
 	_layout = WorldLayout.new()
 	refresh_next_door()
-
-
-## Whether the loaded instance `instance_name` was loaded from another variant than the flags
-## choose now.
-func _outdated(instance_name: String) -> bool:
-	return variant_of(instance_name) != _chosen_variant(instance_name)
 
 
 ## Hands every loaded instance the ground next door again (`_hand_next_door`), in name order: once
@@ -284,8 +253,7 @@ func step(commands: Array[Command]) -> void:
 			elif event is FlagReplaced:
 				replaced.append(event as FlagReplaced)
 	_hand_changed_ground(stepping)
-	_set_emitted(emitted)
-	_replace_flags(replaced)
+	WorldFlags.take(self, emitted, replaced)
 	WorldTravel.move(self, leaving)
 	_purge_left_behind()
 
@@ -306,33 +274,6 @@ func _hand_changed_ground(stepped: Array[String]) -> void:
 				break
 
 
-## Sets the flag of every event in `emitted` (#541), raised this tick, once every instance has
-## stepped, so no instance's step sees another's events change the world mid-tick; before anyone
-## walks through an exit, so whoever walks into an instance one outdated finds its new variant.
-## The first time an event sets its flag, the world raises that it changed (WorldChanged, #499).
-func _set_emitted(emitted: Array[EventEmitted]) -> void:
-	for event: EventEmitted in emitted:
-		var flag: String = EVENT_FLAG + event.event_name
-		if not flags.has(flag):
-			set_flag(flag)
-			events.append(_changed_event(event.event_name, flag))
-
-
-## Carries out every flag replacement in `replaced` (#638), raised this tick, in the order raised,
-## like the emitted events' flags: each clears every flag of its kind but its own, then sets it.
-func _replace_flags(replaced: Array[FlagReplaced]) -> void:
-	for event: FlagReplaced in replaced:
-		for held: String in flags.duplicate():
-			if held.begins_with(event.kind) and held != event.flag:
-				set_flag(held, false)
-		set_flag(event.flag)
-
-
-## That the event `event_name` changed the world by setting `flag`.
-static func _changed_event(event_name: String, flag: String) -> WorldChanged:
-	return WorldChanged.new(event_name, flag)
-
-
 ## Notes when each instance was left behind, and purges every one nobody is in that a flag
 ## outdated (#529; the starting instance too, #727), and every one but the starting instance that
 ## nobody has been in for PURGE_TICKS (#212).
@@ -341,7 +282,7 @@ func _purge_left_behind() -> void:
 	for instance_name: String in sorted_names():
 		if has_player(instances[instance_name]):
 			var _entered: bool = left_at.erase(instance_name)
-		elif _outdated(instance_name):
+		elif WorldFlags.outdated(self, instance_name):
 			_purge(instance_name)
 		elif not left_at.has(instance_name):
 			left_at[instance_name] = tick
@@ -388,7 +329,9 @@ func instance_of(slot: int) -> String:
 ## instance is purged at most once a tick.
 func entering(instance_name: String) -> GameState:
 	var loaded_before: GameState = instances.get(instance_name)
-	if loaded_before != null and not has_player(loaded_before) and _outdated(instance_name):
+	if (loaded_before != null
+			and not has_player(loaded_before)
+			and WorldFlags.outdated(self, instance_name)):
 		_purge(instance_name)
 	return instance(instance_name)
 
@@ -404,8 +347,9 @@ func state_hash() -> int:
 		result = StateHash.mix(result, instances[instance_name].state_hash())
 		if left_at.has(instance_name):
 			result = StateHash.mix(result, left_at[instance_name])
-		if not variant_of(instance_name).is_empty():
-			result = StateHash.mix(result, StateHash.name_code(variant_of(instance_name)))
+		var variant: String = WorldFlags.variant_of(self, instance_name)
+		if not variant.is_empty():
+			result = StateHash.mix(result, StateHash.name_code(variant))
 	for purged: String in StateHash.sorted(generations.keys()):
 		result = StateHash.mix(
 			StateHash.mix(result, StateHash.name_code(purged)),

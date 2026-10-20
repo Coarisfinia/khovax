@@ -96,7 +96,7 @@ func _rearranged() -> bool:
 ## The generation and variant the neighbour `target` has in the world now, and whether it's loaded.
 func _version(target: String) -> String:
 	var loaded: bool = _world.instances.has(target)
-	return "%d %s %s" % [_world.generation(target), _world.variant_of(target), loaded]
+	return "%d %s %s" % [_world.generation(target), WorldFlags.variant_of(_world, target), loaded]
 
 
 ## A grid drawing the instance `target` where it lies next to `current`.
@@ -121,7 +121,7 @@ func _grid_for(target: String, current: String) -> HexGrid:
 func _region_now(target: String) -> Region:
 	if _world.instances.has(target):
 		return _world.instances[target].region
-	var variant: String = _world.variant_of(target)
+	var variant: String = WorldFlags.variant_of(_world, target)
 	return InstanceBlueprints.region_of(target, _world.seed_for(target), variant)
 
 

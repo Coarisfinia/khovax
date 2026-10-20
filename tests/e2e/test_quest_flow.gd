@@ -521,7 +521,7 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var forest: String = InstanceBlueprints.FOREST
 	var quest: String = "guild_charts_the_forest"
-	driver.world.set_flag(Territory.flag(forest, "rivals"))
+	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
 	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
 	_emit_in(driver, bus, PieceEntered.new("grove", 1, 0), forest)
@@ -582,8 +582,8 @@ func _check_territory_resent(
 	var applied: Array = driver.world.stored(0, TerritoryFeature.ID).get(OutboxReceipts.APPLIED, [])
 	if not profile.outbox.entries.is_empty() or applied != [request.id]:
 		return "the applied hand-over stayed in the outbox, or wasn't recorded: %s" % [applied]
-	driver.world.set_flag(Territory.flag(forest, GUILD), false)
-	driver.world.set_flag(Territory.flag(forest, "rivals"))
+	WorldFlags.set_flag(driver.world, Territory.flag(forest, GUILD), false)
+	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	var acknowledged: Array = []
 	var heard: Callable = func(event: RequestApplied) -> void: acknowledged.append(event.request)
 	bus.subscribe(RequestApplied, heard)
@@ -606,10 +606,14 @@ func _tick(driver: GameDriver, bus: EventBus) -> void:
 func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	var waiting: QuestDefinition = QuestDefinition.parse("after_purified", AFTER_PURIFIED, {})
 	profile.quests.book[waiting.id] = waiting
-	_emit(driver, bus, WorldChanged.new("glade_corrupted", World.EVENT_FLAG + "glade_corrupted"))
+	_emit(
+		driver,
+		bus,
+		WorldChanged.new("glade_corrupted", WorldFlags.EVENT_FLAG + "glade_corrupted"),
+	)
 	if profile.quests.open_steps().has(waiting.id):
 		return "another world event started the side quest waiting on the glade's purifying"
-	_emit(driver, bus, WorldChanged.new("glade_purified", World.EVENT_FLAG + "glade_purified"))
+	_emit(driver, bus, WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"))
 	if not profile.quests.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
 	return _check_caught_up(driver.holder, profile)
@@ -627,8 +631,8 @@ func _check_caught_up(holder: ProfileHolder, profile: Profile) -> String:
 	profile.quests.book[done.id] = done
 	var purified: QuestProgress = profile.quests.progress["after_purified"]
 	var flags: Array[String] = [
-		World.EVENT_FLAG + "beacon_lit",
-		World.EVENT_FLAG + "glade_purified",
+		WorldFlags.EVENT_FLAG + "beacon_lit",
+		WorldFlags.EVENT_FLAG + "glade_purified",
 		"TERRITORY_after_beacon",
 	]
 	holder.catch_up(flags)

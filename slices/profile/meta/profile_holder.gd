@@ -103,7 +103,8 @@ func _on_event(event: RefCounted) -> void:
 
 
 ## Gains every event that had already changed the world as the session starts in it (#756), from
-## its flags (World.EVENT_FLAG + the event's name): the profile travels between worlds, so one that
+## its flags (WorldFlags.EVENT_FLAG + the event's name): the profile travels between worlds, so one
+## that
 ## wasn't there when an event was raised (a guest, or this player back from another world) meets
 ## the world as it is. Like a live one, each counts only toward the step a quest waits on now, never
 ## past a step the player missed, and starts a side quest waiting on it (owner, #756); a quest
@@ -113,8 +114,8 @@ func catch_up(world_flags: Array[String]) -> void:
 		return
 	var gain: Gain = Gain.new()
 	for flag: String in world_flags:
-		if flag.begins_with(World.EVENT_FLAG):
-			gain.world_events.append(flag.trim_prefix(World.EVENT_FLAG))
+		if flag.begins_with(WorldFlags.EVENT_FLAG):
+			gain.world_events.append(flag.trim_prefix(WorldFlags.EVENT_FLAG))
 	if not gain.world_events.is_empty():
 		_report(keeper.take(gain, Time.get_ticks_msec()))
 		_send_new()
