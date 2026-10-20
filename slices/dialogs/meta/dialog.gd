@@ -87,6 +87,8 @@ func _check(file_id: String, raw_lines: Variant) -> String:
 			return "line %d: %s" % [lines.size(), line.problem]
 		lines.append(line)
 	var link_problem: String = _check_links()
+	if link_problem.is_empty():
+		link_problem = _check_reached()
 	return link_problem if not link_problem.is_empty() else _check_held_end()
 
 
@@ -109,28 +111,47 @@ func _check_links() -> String:
 	return ""
 
 
+## Why a line can't be reached from line 0, by reading on or by an answer, or "": such a line is
+## dead content (#1029).
+func _check_reached() -> String:
+	var reached: Dictionary[int, bool] = _reached_from([0])
+	for index: int in lines.size():
+		if not reached.has(index):
+			return "line %d: nothing leads to it from line 0" % index
+	return ""
+
+
 ## Why a line the dialog holds its player on (it locks, or a committing answer leads there, #912)
 ## ends it without an answer, or "": reading on past a last line closes the card but never reaches
 ## the simulation, so the dialog would hold its player forever (#1014). Once held, it holds on.
 func _check_held_end() -> String:
-	var waiting: Array[int] = []
+	var held: Array[int] = []
 	if lock:
-		waiting.append(0)
+		held.append(0)
 	for line: DialogLine in lines:
 		for answer: DialogAnswer in line.answers:
 			if answer.commits and not answer.next.is_empty():
-				waiting.append(line_index(answer.next))
-	var seen: Dictionary[int, bool] = {}
-	while not waiting.is_empty():
-		var index: int = waiting.pop_back()
-		if seen.has(index):
-			continue
-		seen[index] = true
+				held.append(line_index(answer.next))
+	for index: int in _reached_from(held):
 		if lines[index].answers.is_empty() and index + 1 == lines.size():
 			return "line %d: it holds its player, so it must end on an answer" % index
-		if lines[index].answers.is_empty():
+	return ""
+
+
+## Every line reached from the lines at `starts`, them included: by reading on past a line without
+## answers, or by an answer that leads on.
+func _reached_from(starts: Array[int]) -> Dictionary[int, bool]:
+	var waiting: Array[int] = []
+	waiting.append_array(starts)
+	var reached: Dictionary[int, bool] = {}
+	while not waiting.is_empty():
+		var index: int = waiting.pop_back()
+		if reached.has(index):
+			continue
+		reached[index] = true
+		if lines[index].answers.is_empty() and index + 1 < lines.size():
 			waiting.append(index + 1)
 		for answer: DialogAnswer in lines[index].answers:
 			if not answer.next.is_empty():
 				waiting.append(line_index(answer.next))
-	return ""
+	return reached

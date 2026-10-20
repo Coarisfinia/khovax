@@ -1093,7 +1093,8 @@ func _warn_locking_dialogs() -> String:
 ## two lines or answers sharing an id, or an answer leading to no line are refused (#618), and so
 ## are one that doesn't state whether it locks, or an answer whose commits isn't true or false
 ## (#891), and one that holds its player (it locks, or a committing answer leads on) up to a last
-## line without answers, which would hold them forever (#1014).
+## line without answers, which would hold them forever (#1014), and one with a line nothing leads
+## to from its first (#1029).
 func _check_dialogs_refused() -> String:
 	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lock\": false, \"lines\": [%s]}"
 	var line: String = "{\"id\": \"a\", \"text\": \"T\", \"answers\": [%s]}"
@@ -1124,6 +1125,9 @@ func _check_dialogs_refused() -> String:
 		dialog % ("%s, {\"id\": \"c\", \"text\": \"Farewell\"}" % (line % (
 			answer.replace("\"T\",", "\"T\", \"commits\": true,") % ["b", "c"]
 		))): "line 1: it holds its player",
+		dialog % ("%s, {\"text\": \"Unread\"}" % (line % (answer % ["b", "a"]))): (
+			"line 1: nothing leads to it"
+		),
 	}
 	for text: String in cases:
 		var refusal: String = Dialog.parse("x", text).problem
