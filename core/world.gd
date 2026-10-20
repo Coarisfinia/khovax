@@ -43,7 +43,7 @@ var flags: Array[String] = []
 var variants: Dictionary[String, String] = {}
 ## What the world loads its instances from (#396), handed in, so the core names no blueprint.
 var source: InstanceSource = null
-## Where each instance lies in the world, worked out once (#187, #282).
+## Where each instance lies in the world, worked out as it's asked (#187, #282, #1011).
 var _layout: WorldLayout = WorldLayout.new()
 ## Each player slot's world store (#724), which every loaded instance shares (GameState.stores).
 var stores: Array[PlayerStore] = []
@@ -148,6 +148,7 @@ func refresh_next_door() -> void:
 ## (#191), shifted into its coordinates as the views place them (`offset`): a loaded one's region as
 ## it is, with its tiles changed in place (#538), or else as it would be arranged.
 func _hand_next_door(instance_name: String, state: GameState) -> void:
+	_layout.place_around(self, instance_name)
 	var next_door: Dictionary[Vector2i, String] = {}
 	for target: String in state.region.exit_blueprints:
 		var shift: Vector2i = offset(target) - offset(instance_name)
@@ -175,11 +176,6 @@ func stored(slot: int, feature_id: String) -> Dictionary:
 ## Where tile (0, 0) of the instance `instance_name` lies in the world (#187); see WorldLayout.
 func offset(instance_name: String) -> Vector2i:
 	return _layout.offset(self, instance_name)
-
-
-## Why the web can't be laid out as one world, or "" (#187); see WorldLayout.
-func layout_problem() -> String:
-	return _layout.problem(self)
 
 
 ## The names of the instances a player is in, in name order: the ones that step.

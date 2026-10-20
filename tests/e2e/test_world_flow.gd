@@ -1015,7 +1015,7 @@ func _check_flags() -> String:
 		return "the glade didn't come back from its variant, the arena's region"
 	# The arena's region has no way back to the forest, which only a layout worked out from
 	# the glade's new region notices.
-	if world.layout_problem().is_empty():
+	if _web_problem_of(world).is_empty():
 		return "the world's layout still has the glade's old region"
 	WorldFlags.set_flag(world, RisingSource.RISEN, false)
 	world.step(_still())
@@ -1551,7 +1551,10 @@ func _still() -> Array[Command]:
 
 
 ## The web lies in one world (#187): the forest sits so that walking out of the glade's north exit
-## lands next to it on the forest's way back, and for every seed no two instances overlap.
+## lands next to it on the forest's way back, and for every seed no two instances overlap. A world
+## lays it out lazily (#1011): starting it places and arranges only the starting instance and the
+## ones its exits lead to, and a walk out to every instance, deepest first, places each where the
+## whole web's layout does.
 func _check_layout() -> String:
 	for seed_value: int in SEEDS:
 		var problem: String = _layout_problem(seed_value)
@@ -1576,9 +1579,102 @@ func _check_layout() -> String:
 	return ""
 
 
-## Why seed `seed_value`'s web can't be laid out as one world, or "".
+## Why seed `seed_value`'s web can't be laid out as one world, or its world lays it out otherwise
+## (#1011), or "".
 func _layout_problem(seed_value: int) -> String:
-	return World.new(BlueprintSource.new(), seed_value, FlowSteps.GLADE).layout_problem()
+	var world: World = World.new(BlueprintSource.new(), seed_value, FlowSteps.GLADE)
+	var offsets: Dictionary[String, Vector2i] = {}
+	var problem: String = _web_problem(world, offsets)
+	if problem.is_empty():
+		problem = _lazy_start(world)
+	if problem.is_empty() and seed_value < INSTANCE_SEEDS:
+		problem = _walk_out(world, offsets)
+	return problem
+
+
+## Why `world`'s web can't be laid out as one world, or "" (#187); see `_web_problem`.
+func _web_problem_of(world: World) -> String:
+	var offsets: Dictionary[String, Vector2i] = {}
+	return _web_problem(world, offsets)
+
+
+## Why `world`'s web can't be laid out as one world, or "" (#187): an exit whose target has no way
+## back to it, or more than one it could line up with (so the world, which places each instance
+## from whichever neighbour comes first, #1011, always places it alike), a second way into an
+## instance that doesn't fit where the first placed it, or two
+## instances that would lie on the same tile. Lays out the whole web into `offsets`, breadth first
+## from the starting instance, with the regions of the world's seed and variants.
+func _web_problem(world: World, offsets: Dictionary[String, Vector2i]) -> String:
+	var layout: WorldLayout = WorldLayout.new()
+	offsets[world.start_name] = Vector2i.ZERO
+	var queue: Array[String] = [world.start_name]
+	while not queue.is_empty():
+		var from: String = queue.pop_front()
+		var region: Region = layout.region_for(world, from)
+		for target: String in region.exit_blueprints:
+			var back: Region = layout.region_for(world, target)
+			var placed: Array[Vector2i] = WorldLayout.places(region, from, back, target)
+			if placed.size() != 1:
+				return "%s's exit to %s lines up with %d ways back, not one" % [
+					from,
+					target,
+					placed.size(),
+				]
+			if not offsets.has(target):
+				offsets[target] = offsets[from] + placed[0]
+				queue.append(target)
+			elif offsets[target] != offsets[from] + placed[0]:
+				return "%s doesn't fit where %s's exit leads into it" % [target, from]
+	var taken: Dictionary[Vector2i, String] = {}
+	var names: Array[String] = []
+	names.assign(offsets.keys())
+	names.sort()
+	for instance_name: String in names:
+		for tile: Vector2i in layout.region_for(world, instance_name).sorted_tiles():
+			var at: Vector2i = tile + offsets[instance_name]
+			if taken.has(at):
+				return "%s and %s would overlap on %s" % [taken[at], instance_name, at]
+			taken[at] = instance_name
+	return ""
+
+
+## Why the fresh `world`'s layout holds more than its starting instance and the ones its exits lead
+## to (#1011), or "".
+func _lazy_start(world: World) -> String:
+	var near: Array[String] = [world.start_name]
+	for target: String in world.instances[world.start_name].region.exit_blueprints:
+		if not near.has(target):
+			near.append(target)
+	near.sort()
+	var layout: WorldLayout = world.get("_layout")
+	for held: String in ["_offsets", "_regions"]:
+		var placed: Dictionary = layout.get(held)
+		var names: Array[String] = []
+		names.assign(placed.keys())
+		names.sort()
+		if names != near:
+			return "starting the world laid out %s, not only %s" % [names, near]
+	return ""
+
+
+## Why loading every instance `offsets` places, one next to the last and deepest first as a walk
+## away from the start would, places one elsewhere than the whole web's layout `offsets` does, or
+## "" (#1011).
+func _walk_out(world: World, offsets: Dictionary[String, Vector2i]) -> String:
+	var stack: Array[String] = [world.start_name]
+	var seen: Array[String] = [world.start_name]
+	while not stack.is_empty():
+		var at: String = stack.pop_back()
+		var loaded: GameState = world.instance(at)
+		if loaded == null:
+			return "%s didn't load" % at
+		if world.offset(at) != offsets[at]:
+			return "%s lies at %s, not at %s" % [at, world.offset(at), offsets[at]]
+		for target: String in loaded.region.exit_blueprints:
+			if not seen.has(target):
+				seen.append(target)
+				stack.append(target)
+	return ""
 
 
 ## For every seed the glade's way to the forest is on its start piece's north edge, three tiles wide
