@@ -317,7 +317,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (`GameState.entities`), never in a dictionary's order, and sort ids before hashing.
 - **Regions** (#36): rules ask `state.region` (`is_walkable`, `has_tile`), never a distance from
   the origin, so a region can have any shape. How regions are read, arranged, left through exits
-  and purged is in `Region`, `RegionDocument`, `RegionArranger`, `World` and `WorldTravel`.
+  and purged is in `Region`, `RegionDocument` (in the blueprints slice, reading its grid through
+  the shared `EmojiGrid` slice, #865), `RegionArranger`, `World` and `WorldTravel`.
 - **Instance blueprints** (`InstanceBlueprints`, in their own slice `slices/blueprints/meta/`,
   outside the core and above the features they list, #396, #513, #821): a new mechanic is a new feature that blueprints list, built by its own slice's factory
   (`FeatureFactories` maps its id to it, #823); it never grows the core. The core

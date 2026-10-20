@@ -63,8 +63,9 @@ presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd
 view_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' ':(glob)**/input/**/*.gd')
 # The slices, each after every slice it names (#821).
 SLICE_ORDER=(
-  camera music credits hiding movement entering exits paths loot board fog action_buttons triggers
-  species health players npcs trail wild_monsters tiles outbox controls settings texts factions
+  emoji_grid camera music credits hiding movement entering exits paths loot board fog
+  action_buttons triggers species health players npcs trail wild_monsters tiles outbox controls
+  settings texts factions
   survey menu
   domination enrage domination_loot companions gear chests damage_numbers harvest dialogs
   profile quests revive_items blueprints might
