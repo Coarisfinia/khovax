@@ -8,23 +8,36 @@ extends Node3D
 ## away from where no ring could enclose it (#364) glides to its new tile. A fainted one (#410)
 ## stays where it fell, and its figure lies down on its side, still: a shape that tells it apart
 ## from a standing one without color (#68, #431). One that strikes (#422) lunges toward what it
-## hit and back, eased, so the hit reads without a flash (#426). It only reads the state.
+## hit and back, eased, so the hit reads without a flash (#426). Each figure turns smoothly to face
+## where it last stepped or struck, as the companions do (#993), and plays its model's clips: Walk
+## while it glides, Attack with the lunge, Hit when it loses HP, and Faint before it lies down;
+## Idle otherwise. It only reads the state and the tick's events.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
 ## The placeholder model every wild monster wears until species get their own looks.
 const MODEL: PackedScene = preload("res://assets/kaykit-skeletons/Skeleton_Minion.glb")
+## The clips the view plays, by the names its model gives them: when the model changes, so do they.
 const IDLE: StringName = &"Idle"
+const WALK: StringName = &"Walking_A"
+const ATTACK: StringName = &"1H_Melee_Attack_Chop"
+const HIT: StringName = &"Hit_A"
+const FAINT: StringName = &"Death_A"
 ## Every clip the view plays, which the boot flow checks its model has (#992).
-const CLIPS: Array[StringName] = [IDLE]
+const CLIPS: Array[StringName] = [IDLE, WALK, ATTACK, HIT, FAINT]
+## How long a figure's model takes to blend from one clip into the next.
+const BLEND_SECONDS: float = 0.15
+## How fast a figure turns toward where it steps or strikes, in radians per second.
+const TURN_SPEED: float = 10.0
 ## How high and how long a wild monster hops when it jumps out of hiding.
 const HOP_HEIGHT: float = 0.6
 const HOP_SECONDS: float = 0.35
 ## How long a wild monster's figure takes to glide to the tile it stepped onto: about its step.
 const GLIDE_SECONDS: float = 0.8
-## How long a fainted wild monster's figure takes to lie down, and on which side.
+## How long a fainted wild monster's figure takes to lie down, once its Faint clip has played, and
+## how far it rolls about its length onto its side.
 const FALL_SECONDS: float = 0.5
-const LYING: Vector3 = Vector3(0.0, 0.0, PI / 2.0)
+const LYING_ROLL: float = PI / 2.0
 ## How far toward what it hit a striking wild monster lunges, as a share of the way to that tile,
 ## and how long the lunge and its way back take.
 const LUNGE_SHARE: float = 0.35
@@ -41,6 +54,11 @@ var _shown: GameState
 var fallen: Dictionary[int, bool] = {}
 ## The lunge running on each figure, so a new hit replaces it rather than fighting it.
 var _lunges: Dictionary[HexPiece, Tween] = {}
+## The yaw each figure turns toward, by entity id: where it last stepped or struck. Kept here so
+## tests can read it.
+var facing: Dictionary[int, float] = {}
+## Each figure's wild monster's HP at the last tick, by entity id, so a drop plays Hit.
+var _hp: Dictionary[int, int] = {}
 
 
 func _ready() -> void:
@@ -48,8 +66,12 @@ func _ready() -> void:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	show_state()
+	for entity_id: int in figures:
+		var yaw: float = facing.get(entity_id, 0.0)
+		if not fallen.has(entity_id):
+			_animate(figures[entity_id], yaw, delta)
 
 
 ## Matches the figures to the current state. Called every frame; tests call it after stepping.
@@ -60,6 +82,8 @@ func show_state() -> void:
 		HexPiece.free_all(figures)
 		fallen.clear()
 		_lunges.clear()
+		facing.clear()
+		_hp.clear()
 		_shown = driver.state
 	var feature: WildMonsterFeature = (
 		driver.state.feature(WildMonsterFeature.ID) as WildMonsterFeature
@@ -74,6 +98,8 @@ func show_state() -> void:
 			var _unlunged: bool = _lunges.erase(figures[entity_id])
 			var _dropped: bool = figures.erase(entity_id)
 			_dropped = fallen.erase(entity_id)
+			_dropped = facing.erase(entity_id)
+			_dropped = _hp.erase(entity_id)
 	for entity_id: int in shown:
 		if driver.state.entity(entity_id) == null:
 			continue
@@ -82,6 +108,7 @@ func show_state() -> void:
 			figures[entity_id] = _add_figure()
 			figures[entity_id].tile = spot
 		elif figures[entity_id].tile != spot:
+			_face(entity_id, spot)
 			_glide(figures[entity_id], spot)
 		figures[entity_id].visible = is_shown(driver.state, entity_id)
 		if feature.is_fainted(entity_id) and not fallen.has(entity_id):
@@ -98,7 +125,8 @@ static func is_shown(state: GameState, entity_id: int) -> bool:
 	return monster != null and FogView.ally_sees(state, monster.tile) and not in_hiding
 
 
-## Hops the figure of every wild monster that jumped out of hiding this tick.
+## Hops the figure of every wild monster that jumped out of hiding this tick, lunges and turns the
+## figure of every one that struck, and plays Hit on every one whose HP dropped and still stands.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	show_state()
 	for event: RefCounted in events:
@@ -107,7 +135,71 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 			_hop(figures[jumped.monster_id])
 		var struck: WildMonsterStruck = event as WildMonsterStruck
 		if struck != null and figures.has(struck.monster_id):
+			_face(struck.monster_id, struck.tile)
 			_lunge(figures[struck.monster_id], struck.tile)
+			_play_once(figures[struck.monster_id], ATTACK)
+	_flinch()
+
+
+## Plays Hit on the figure of every standing wild monster that has fewer HP than at the last tick,
+## whatever hurt it: the HP are in the state, so the view needn't know the later slices' strikes.
+func _flinch() -> void:
+	var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+	if health == null:
+		return
+	for entity_id: int in figures:
+		var hp: int = health.hp_of(driver.state, entity_id)
+		if hp < _hp.get(entity_id, hp) and not fallen.has(entity_id):
+			_play_once(figures[entity_id], HIT)
+		_hp[entity_id] = hp
+
+
+## Turns the figure of the wild monster `entity_id` toward `spot`, over the next frames.
+func _face(entity_id: int, spot: Vector2i) -> void:
+	var figure: HexPiece = figures[entity_id]
+	var heading: Vector3 = figure.position_on(spot) - figure.tile_position()
+	if not is_zero_approx(heading.x) or not is_zero_approx(heading.z):
+		facing[entity_id] = atan2(heading.x, heading.z)
+
+
+## Turns `figure`'s model toward `yaw` and keeps its clip going: Walk while it glides and Idle while
+## it stands, once a one-off clip (Attack, Hit) is done.
+func _animate(figure: HexPiece, yaw: float, delta: float) -> void:
+	var model: Node3D = figure.get_child(0) as Node3D
+	model.rotation.y = rotate_toward(model.rotation.y, yaw, TURN_SPEED * delta)
+	var animations: AnimationPlayer = clips_of(model)
+	if animations == null:
+		return
+	var current: StringName = StringName(animations.current_animation)
+	var playing: bool = animations.is_playing()
+	if playing and (current == ATTACK or current == HIT):
+		return
+	var gliding: bool = not figure.position.is_equal_approx(figure.tile_position())
+	var clip: StringName = has_clip(animations, WALK) if gliding else &""
+	if clip.is_empty():
+		clip = has_clip(animations, IDLE)
+	if not clip.is_empty() and (clip != current or not playing):
+		animations.play(clip, BLEND_SECONDS)
+
+
+## Plays `wanted` on `figure`'s model from its start, once; _animate takes over when it's done.
+func _play_once(figure: HexPiece, wanted: StringName) -> void:
+	var animations: AnimationPlayer = clips_of(figure.get_child(0) as Node3D)
+	var clip: StringName = has_clip(animations, wanted)
+	if not clip.is_empty():
+		animations.play(clip, BLEND_SECONDS)
+		animations.seek(0.0)
+
+
+## `clip` when `animations` has it, or empty when it doesn't or there are none: a model without it
+## goes without (the boot flow checks the view's model has every one of CLIPS, #992).
+static func has_clip(animations: AnimationPlayer, clip: StringName) -> StringName:
+	return clip if animations != null and animations.has_animation(clip) else &""
+
+
+## The AnimationPlayer playing `model`'s clips, or null when it has none.
+static func clips_of(model: Node3D) -> AnimationPlayer:
+	return model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 
 
 ## Lifts the figure's model up and lets it land again, easing both ways.
@@ -157,21 +249,26 @@ func _glide(figure: HexPiece, spot: Vector2i) -> void:
 	)
 
 
-## Shrinks a figure away and frees it.
-## Lays `figure` down on its side, eased, and stills it: its wild monster fainted.
+## Plays `figure`'s Faint clip, which holds its last pose, then lays it down on its side, eased,
+## still facing where it did: its wild monster fainted. Without a Faint clip it stills at once.
 func _fall(figure: HexPiece) -> void:
 	var model: Node3D = figure.get_child(0) as Node3D
-	var animations: AnimationPlayer = model.find_child(
-		"AnimationPlayer",
-		true,
-		false,
-	) as AnimationPlayer
-	if animations != null:
+	var animations: AnimationPlayer = clips_of(model)
+	var clip: StringName = has_clip(animations, FAINT)
+	var fainting: float = 0.0
+	if not clip.is_empty():
+		animations.play(clip, BLEND_SECONDS)
+		fainting = animations.get_animation(clip).length
+	elif animations != null:
 		animations.stop()
 	var tween: Tween = figure.create_tween().set_ease(Tween.EASE_IN_OUT).set_trans(Tween.TRANS_SINE)
-	var _lie: PropertyTweener = tween.tween_property(model, "rotation", LYING, FALL_SECONDS)
+	var _faint: IntervalTweener = tween.tween_interval(fainting)
+	var _lie: PropertyTweener = tween.tween_property(
+		model, "rotation:z", LYING_ROLL, FALL_SECONDS
+	)
 
 
+## Shrinks a figure away and frees it.
 func _fade_out(figure: HexPiece) -> void:
 	var tween: Tween = create_tween()
 	var _shrink: PropertyTweener = tween.tween_property(figure, "scale", Vector3.ZERO, FADE_SECONDS)
@@ -198,6 +295,6 @@ static func placeholder_model() -> Node3D:
 
 ## Starts the placeholder model's idle clip, once it's in the tree.
 static func idle(model: Node3D) -> void:
-	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
+	var animations: AnimationPlayer = clips_of(model)
 	if animations != null and animations.has_animation(IDLE):
 		animations.play(IDLE)

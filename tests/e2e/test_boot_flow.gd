@@ -422,7 +422,8 @@ func _check_figure(figure: HexPiece, spot: Vector2i) -> String:
 
 
 ## A wild monster felled by a special (#410) lies down on its side and stops idling (#431): a
-## shape that tells it apart from a standing one, not only a color.
+## shape that tells it apart from a standing one, not only a color. It plays its Faint clip first
+## (#993).
 func _check_fainted_lies(
 	state: GameState,
 	view: WildMonsterView,
@@ -441,14 +442,14 @@ func _check_fainted_lies(
 			false,
 		) as AnimationPlayer if model != null else null
 	)
-	var idling: bool = animations != null and animations.is_playing()
+	var idling: bool = animations != null and animations.current_animation == WildMonsterView.IDLE
 	if not feature.is_fainted(monster_id) or not view.fallen.has(monster_id) or idling:
 		return "a fainted wild monster's figure didn't lie down and stop idling"
 	return ""
 
 
 ## A wild monster's hit (#422) shows (#426): its figure's model lunges toward the struck tile and
-## comes back to stand on its own.
+## comes back to stand on its own, turning to face it and playing its Attack clip (#993).
 func _check_wild_monster_lunges(
 	driver: GameDriver,
 	view: WildMonsterView,
@@ -459,8 +460,13 @@ func _check_wild_monster_lunges(
 	var model: Node3D = view.figures[monster.id].get_child(0) as Node3D
 	var events: Array[RefCounted] = [WildMonsterStruck.new(monster.id, 0, target, 1)]
 	driver.ticked.emit(driver.state.tick, events)
+	var animations: AnimationPlayer = WildMonsterView.clips_of(model)
+	var attacking: bool = animations.current_animation == WildMonsterView.ATTACK
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS / 2)
 	var toward: Vector3 = HexLayout.to_world(target) - HexLayout.to_world(monster.tile)
+	var yaw: float = view.facing.get(monster.id, INF)
+	if not attacking or not is_equal_approx(yaw, atan2(toward.x, toward.z)):
+		return "a wild monster's hit didn't turn its figure toward the struck tile and play Attack"
 	var lunged: bool = model.position.dot(toward) > 0.0
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS)
 	if not lunged or not model.position.is_zero_approx():
