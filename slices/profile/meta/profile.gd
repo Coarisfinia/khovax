@@ -57,10 +57,10 @@ var problem: String = ""
 
 
 ## Takes over what the player just obtained: its dominations and materials, and every quest they
-## advance, one fact at a time, each in the instance it happened in, so one gain can finish a step
-## and count toward the next. Returns why
-## the gain can't be taken over, or "", and changes nothing when it can't: a profile that took over
-## a bad gain couldn't be loaded again. ProfileKeeper saves it.
+## advance, one fact at a time, so one gain can finish a step and count toward the next: its
+## dominations, then its facts, then its loot, each in the instance it happened in. Returns why the
+## gain can't be taken over, or "", and changes nothing when it can't: a profile that took over a
+## bad gain couldn't be loaded again. ProfileKeeper saves it.
 func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
@@ -70,21 +70,9 @@ func apply(result: Gain) -> String:
 		var species: String = result.dominated_species[i]
 		var short_ids: Array[String] = result.dominated_short_ids
 		_dominate(species, short_ids[i] if i < short_ids.size() else "")
-		_count(QuestStep.DOMINATED, species, where)
-	for target: String in result.targets_dominated:
-		_count(QuestStep.TARGET_DOMINATED, target, where)
-	for _chest: int in result.chests_opened:
-		_count(QuestStep.OPENED, "", where)
-	for place: String in result.places_reached:
-		_count(QuestStep.REACHED, place, where)
-	for piece: String in result.pieces_entered:
-		_count(QuestStep.ENTERED, piece, where)
-	for instance_name: String in result.instances_entered:
-		_count(QuestStep.INSTANCE_ENTERED, instance_name, instance_name)
-	for answer: String in result.answers_chosen:
-		_count(QuestStep.ANSWERED, answer, where)
-	for event: String in result.world_events:
-		_count(QuestStep.EMITTED, event, "")
+		_count(_dominated_fact(species, where))
+	for fact: QuestFact in result.facts:
+		_count(fact)
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
 		_count_obtained(material, result.materials[material], where)
@@ -163,10 +151,14 @@ func _dominate(species: String, short_id: String) -> void:
 	next_monster_id += 1
 
 
-## Counts the fact `condition` about `what` in the instance `where` toward the quests
-## (QuestTracker.count) and finishes those it finished.
-func _count(condition: String, what: String, where: String) -> void:
-	_finish_all(quests.count(QuestFact.new(condition, what, where)))
+## The fact of a monster of `species` dominated in the instance `where`.
+static func _dominated_fact(species: String, where: String) -> QuestFact:
+	return QuestFact.new(QuestStep.DOMINATED, species, where)
+
+
+## Counts `fact` toward the quests (QuestTracker.count) and finishes those it finished.
+func _count(fact: QuestFact) -> void:
+	_finish_all(quests.count(fact))
 
 
 ## Gives what finishing each of `finished` gives, in the order finished.
@@ -189,28 +181,20 @@ func _finish(quest: QuestDefinition) -> void:
 		var _posted: OutboxEntry = outbox.post(OutboxEntry.TERRITORY, code)
 
 
-## Why `result` can't be taken over (an empty species, quest target, place, piece, instance,
-## answer or world event, a nameless or negative material or gear, or more than the save can hold),
-## or "".
+## Why `result` can't be taken over (an empty species, a quest fact without a condition or about
+## nothing, a nameless or negative material or gear, or more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
 	var dominated: String = _dominated_problem(result)
 	if not dominated.is_empty():
 		return dominated
-	if result.chests_opened < 0 or result.chests_opened > MAX_NUMBER:
-		return "the opened chests' count is invalid"
-	var named: Dictionary[String, Array] = {
-		"a quest target dominated has no id": result.targets_dominated,
-		"a place reached has no id": result.places_reached,
-		"a region piece entered has no id": result.pieces_entered,
-		"an instance entered has no name": result.instances_entered,
-		"an answer chosen has no id": result.answers_chosen,
-		"a world event has no name": result.world_events,
-	}
-	for why: String in named:
-		if named[why].has(""):
-			return why
+	for fact: QuestFact in result.facts:
+		if fact == null or fact.condition.is_empty():
+			return "a quest fact has no condition"
+		# Only a chest opened is about nothing in particular.
+		if fact.what.is_empty() and fact.condition != QuestStep.OPENED:
+			return "a quest fact %s is about nothing" % fact.condition
 	var counted: String = _count_problem("material", result.materials, materials)
 	return counted if not counted.is_empty() else _count_problem("gear", result.gear, gear.owned)
 

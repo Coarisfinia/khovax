@@ -54,9 +54,8 @@ func _notification(what: int) -> void:
 func _on_event(event: RefCounted) -> void:
 	if holder.keeper == null:
 		return
-	var gain: Gain = _gain_of(event)
-	if gain != null:
-		gain.instance = bus.instance_of(event)
+	var gain: Gain = _gain_of(event, bus.instance_of(event))
+	if not gain.is_empty():
 		holder.take(gain)
 		_send_new()
 
@@ -73,8 +72,8 @@ func catch_up(world_flags: Array[String]) -> void:
 	var gain: Gain = Gain.new()
 	for flag: String in world_flags:
 		if flag.begins_with(WorldFlags.EVENT_FLAG):
-			gain.world_events.append(flag.trim_prefix(WorldFlags.EVENT_FLAG))
-	if not gain.world_events.is_empty():
+			gain.facts.append(_emitted(flag.trim_prefix(WorldFlags.EVENT_FLAG)))
+	if not gain.is_empty():
 		holder.take(gain)
 		_send_new()
 
@@ -106,58 +105,65 @@ func _on_revived(event: RefCounted) -> void:
 		holder.spend(ReviveItem.ID)
 
 
-## What this machine's player gains from `event`, or null when it isn't theirs: their domination, or
-## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
-## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
-## (#203), which is no chest, or from a wild monster felled (#629); a place they stepped into
-## (#339), a region piece or an instance they entered (#350, #370), or an answer they chose in a
-## dialog (#636); or an event that changed the world (#707), which is every player's, wherever they
-## are: the world raises it on every machine.
-func _gain_of(event: RefCounted) -> Gain:
+## What this machine's player gains from `event`, which happened in the instance `where`; empty
+## when it isn't theirs: their domination, or their own roll from an opened chest (every player
+## rolls their own, owner, #124), which counts as a chest they opened for quests even when it rolled
+## nothing, or from loot found on the ground (#203), which is no chest, or from a wild monster
+## felled (#629); a place they stepped into (#339), a region piece or an instance they entered
+## (#350, #370), or an answer they chose in a dialog (#636); or an event that changed the world
+## (#707), which is every player's, wherever they are: the world raises it on every machine.
+func _gain_of(event: RefCounted, where: String) -> Gain:
 	var gain: Gain = Gain.new()
+	gain.instance = where
 	if (event is WildMonsterDominated
 			and (event as WildMonsterDominated).dominator_slot == input.slot):
 		_add_domination(gain, event as WildMonsterDominated)
 	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
-		gain.chests_opened = 1
+		gain.facts.append(QuestFact.new(QuestStep.OPENED, "", where))
 		_add_loot(gain, (event as ChestOpened).loot[input.slot])
 	elif _rolls_of(event).has(input.slot):
 		_add_loot(gain, _rolls_of(event)[input.slot])
 	else:
-		_add_quest_fact(gain, event, input.slot)
-	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
-	empty = empty and gain.materials.is_empty() and gain.gear.is_empty()
-	empty = empty and gain.places_reached.is_empty()
-	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
-	empty = empty and gain.answers_chosen.is_empty()
-	empty = empty and gain.world_events.is_empty()
-	return null if empty else gain
+		var fact: QuestFact = _quest_fact_of(event, input.slot, where)
+		if fact != null:
+			gain.facts.append(fact)
+	return gain
 
 
-## Adds to `gain` the fact only quests count that `event` is for the player in `slot`, if any: a
-## place they reached, a region piece or an instance they entered, an answer they chose, or an event
-## that changed the world, which is every player's.
-static func _add_quest_fact(gain: Gain, event: RefCounted, slot: int) -> void:
+## The fact only quests count that `event`, in the instance `where`, is for the player in `slot`, or
+## null: a place they reached, a region piece or an instance they entered (which happened in that
+## instance), an answer they chose, or an event that changed the world, which is every player's and
+## happened everywhere.
+static func _quest_fact_of(event: RefCounted, slot: int, where: String) -> QuestFact:
 	if event is PlaceReached and (event as PlaceReached).slot == slot:
-		gain.places_reached.append((event as PlaceReached).place)
-	elif event is PieceEntered and (event as PieceEntered).slot == slot:
-		gain.pieces_entered.append((event as PieceEntered).piece)
-	elif event is InstanceEntered and (event as InstanceEntered).slot == slot:
-		gain.instances_entered.append((event as InstanceEntered).instance)
-	elif event is DialogAnswered and (event as DialogAnswered).slot == slot:
+		return QuestFact.new(QuestStep.REACHED, (event as PlaceReached).place, where)
+	if event is PieceEntered and (event as PieceEntered).slot == slot:
+		return QuestFact.new(QuestStep.ENTERED, (event as PieceEntered).piece, where)
+	if event is InstanceEntered and (event as InstanceEntered).slot == slot:
+		var instance_name: String = (event as InstanceEntered).instance
+		return QuestFact.new(QuestStep.INSTANCE_ENTERED, instance_name, instance_name)
+	if event is DialogAnswered and (event as DialogAnswered).slot == slot:
 		var answered: DialogAnswered = event as DialogAnswered
-		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
-	elif event is WorldChanged:
-		gain.world_events.append((event as WorldChanged).event_name)
+		var answer: String = QuestStep.answer_key(answered.dialog, answered.answer)
+		return QuestFact.new(QuestStep.ANSWERED, answer, where)
+	if event is WorldChanged:
+		return _emitted((event as WorldChanged).event_name)
+	return null
+
+
+## The fact of the world's event `event_name`, which happened everywhere.
+static func _emitted(event_name: String) -> QuestFact:
+	return QuestFact.new(QuestStep.EMITTED, event_name)
 
 
 ## Adds `dominated` to `gain`: its species, its short id (#700), and the quest target it was, if
-## any (#625).
+## any (#625), as a fact.
 static func _add_domination(gain: Gain, dominated: WildMonsterDominated) -> void:
 	gain.dominated_species.append(dominated.species)
 	gain.dominated_short_ids.append(dominated.short_id)
 	if not dominated.target.is_empty():
-		gain.targets_dominated.append(dominated.target)
+		var target: String = dominated.target
+		gain.facts.append(QuestFact.new(QuestStep.TARGET_DOMINATED, target, gain.instance))
 
 
 ## Every player's loot from `event`, by slot, when it's loot that counts as no chest: found on the
