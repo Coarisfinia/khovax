@@ -86,8 +86,8 @@ func _check(file_id: String, raw_lines: Variant) -> String:
 		if not line.problem.is_empty():
 			return "line %d: %s" % [lines.size(), line.problem]
 		lines.append(line)
-	var problem: String = _check_links()
-	return problem if not problem.is_empty() else _check_held_end()
+	var link_problem: String = _check_links()
+	return link_problem if not link_problem.is_empty() else _check_held_end()
 
 
 ## Why the lines don't hold together, or "": no two lines share an id, no two answers share one,
