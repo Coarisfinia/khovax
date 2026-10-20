@@ -42,7 +42,7 @@ func _initialize() -> void:
 	# overwrites a saved world, and the main scene boots the same world.
 	WorldKeeper.default_path = ""
 	GameDriver.fixed_seed = 0
-	GameDriver.start_instance = InstanceBlueprints.BASIC
+	GameDriver.start_instance = FlowSteps.BASIC
 	# The main scene needs a running tree (see run_e2e.gd).
 	await process_frame
 	var ok: bool = await _report(out)

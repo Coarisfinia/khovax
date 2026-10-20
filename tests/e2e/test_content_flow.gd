@@ -644,17 +644,17 @@ func _check_wild_species(content: SpeciesContent) -> String:
 ## an unknown field, no species, a weight below 1, a chest table without a loot table, or a variant
 ## without its region is refused.
 func _check_blueprints() -> String:
-	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
+	var glade: Blueprint = InstanceBlueprints.blueprint(FlowSteps.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
 		return "the glade's blueprint didn't load as written"
 	if glade.features[0] != MovementFeature.ID or glade.features.has(ChestFeature.ID):
 		return "the glade's features read %s" % [glade.features]
-	var own: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 0, 0)
+	var own: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 0, 0)
 	var corrupted: GameState = InstanceBlueprints.create(
-		InstanceBlueprints.GLADE,
+		FlowSteps.GLADE,
 		0,
 		0,
-		InstanceBlueprints.CORRUPTED_GLADE,
+		FlowSteps.CORRUPTED_GLADE,
 	)
 	if (
 		own.feature(NpcFeature.ID) == null
@@ -665,7 +665,7 @@ func _check_blueprints() -> String:
 	var first: PackedStringArray = (
 		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
 	)
-	if first != PackedStringArray([WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
+	if first != PackedStringArray([WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED, ""]):
 		return "the glade's variants read %s" % [glade.variants]
 	return _blueprints_refused({
 		BLUEPRINT.replace("\"x\"", "\"y\"") % "": "its id must",
@@ -745,11 +745,11 @@ func _check_realms() -> String:
 				return "realm %s's %s didn't read: %s" % [realm.id, instance_id, problem]
 		if not realm.start.is_empty():
 			starts.append(realm.start)
-	if starts != [InstanceBlueprints.GLADE] or Realms.start() != InstanceBlueprints.GLADE:
+	if starts != [FlowSteps.GLADE] or Realms.start() != FlowSteps.GLADE:
 		return "the realms mark %s as the start" % [starts]
 	var text: String = "# R\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n- `🌲`: the instance %s\n"
 	text += "- `🟦`: no instance\n"
-	var forest: String = InstanceBlueprints.FOREST
+	var forest: String = FlowSteps.FOREST
 	var start: String = forest + RealmDocument.START
 	var cases: Dictionary[String, String] = {
 		text % ["🌲🌲🌲", forest]: "the instance forest is drawn twice",

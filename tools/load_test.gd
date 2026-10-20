@@ -11,6 +11,8 @@ extends SceneTree
 ##   godot --path . -s res://tools/load_test.gd -- rendered seconds=20
 ## The numbers belong in the PR or issue that measured them, never in docs.
 
+## The instance it loads, which only this tool plays (#915).
+const LOAD: String = "load"
 const SEED: int = 101
 const PLAYERS: int = 4
 ## Ticks each scripted walk keeps one direction before turning.
@@ -93,7 +95,7 @@ func _run_headless() -> void:
 
 ## One headless pass, timed when `timed`.
 func _simulate(timed: bool) -> LoadPass:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.LOAD, SEED, PLAYERS)
+	var state: GameState = InstanceBlueprints.create(LOAD, SEED, PLAYERS)
 	var measured: LoadPass = LoadPass.new()
 	measured.entities = state.entities.size()
 	for tick: int in _ticks:
@@ -122,7 +124,7 @@ func _start_rendered() -> void:
 	var path: String = Boot.GAME
 	var main: Node = (load(path) as PackedScene).instantiate()
 	_driver = main.get_node("Driver") as GameDriver
-	_driver.instance = InstanceBlueprints.LOAD
+	_driver.instance = LOAD
 	# Uncapped, so the frame times show the real cost, not the display's refresh rate.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	root.add_child(main)

@@ -207,7 +207,7 @@ func _check_feature_order() -> String:
 		return "a feature appearing twice passed as a valid order"
 	if not GameState.order_problem(valid).is_empty():
 		return "movement then trail was rejected: " + GameState.order_problem(valid)
-	var blueprint: Array[Feature] = InstanceBlueprints.basic(0).features
+	var blueprint: Array[Feature] = FlowSteps.basic(0).features
 	if not GameState.order_problem(blueprint).is_empty():
 		return "the basic blueprint's order was rejected: " + GameState.order_problem(blueprint)
 	# The wild monsters' attacks come before the companions, the type chart after the companions'
@@ -337,7 +337,7 @@ func _check_instance_without_trail() -> String:
 		return "an instance without the trail has one"
 	if _tile(state) != START + Hex.DIRECTIONS[EAST]:
 		return "an instance without the trail didn't walk"
-	if InstanceBlueprints.basic(42, 1).feature(TrailFeature.ID) == null:
+	if FlowSteps.basic(42, 1).feature(TrailFeature.ID) == null:
 		return "the basic instance lost its trail"
 	return ""
 
@@ -346,9 +346,9 @@ func _check_instance_without_trail() -> String:
 ## read it but don't need it still load and step (#884): the basic blueprint's rules on a plain
 ## disc, with a companion, closing a ring and pressing the special and the totem.
 func _check_instance_without_wild_monsters() -> String:
-	var basic: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.BASIC)
+	var basic: Blueprint = InstanceBlueprints.blueprint(FlowSteps.BASIC)
 	var setup: FeatureSetup = FeatureSetup.new()
-	setup.instance = InstanceBlueprints.BASIC
+	setup.instance = FlowSteps.BASIC
 	setup.region = Region.disc(RADIUS)
 	setup.wild_species = basic.wild_species
 	var listed: Array[String] = basic.features.duplicate()
@@ -410,7 +410,7 @@ func _check_switch_within_tick() -> String:
 ## Co-op: every player is moved by the command in its own slot, all in the same tick, each with
 ## its own trail; a slot without a command stands still. Two players replay deterministically.
 func _check_players_move_at_once() -> String:
-	var state: GameState = InstanceBlueprints.basic(42, 2)
+	var state: GameState = FlowSteps.basic(42, 2)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
 	var start_first: Vector2i = first.tile
@@ -436,7 +436,7 @@ func _check_players_move_at_once() -> String:
 
 ## The final state hash of two players replaying the scripted moves, each its own way.
 func _two_player_hash() -> int:
-	var state: GameState = InstanceBlueprints.basic(42, 2)
+	var state: GameState = FlowSteps.basic(42, 2)
 	for direction: int in _moves():
 		var other: int = (direction + 2) % Hex.DIRECTIONS.size()
 		Simulation.step(state, FlowSteps.commands([direction, other]))
@@ -446,7 +446,7 @@ func _two_player_hash() -> int:
 ## Entity ids are stable: removing an entity keeps the others' ids and drops every feature's data
 ## for it, and a new entity never gets a removed one's id.
 func _check_entity_ids_stay() -> String:
-	var state: GameState = InstanceBlueprints.basic(42, 3)
+	var state: GameState = FlowSteps.basic(42, 3)
 	var ids: Array[int] = []
 	for each: Entity in state.entities:
 		ids.append(each.id)
@@ -851,14 +851,14 @@ func _recorded_run() -> Replay:
 	var world: World = World.new(
 		BlueprintSource.new(),
 		42,
-		InstanceBlueprints.BASIC,
+		FlowSteps.BASIC,
 		2,
 	)
 	CompanionParty.bring(
 		world,
 		FlowSteps.parties([["tikazzir"], ["ombulumo"]]),
 	)
-	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
+	var recorded: Replay = Replay.new(FlowSteps.BASIC, 42)
 	recorded.begin(world)
 	for direction: int in _moves():
 		var commands: Array[Command] = FlowSteps.commands([direction, Command.NO_MOVE])
@@ -890,7 +890,7 @@ func _check_basic_monsters(region: Region) -> String:
 ## The basic instance's region file reads as the disc it draws, with the water by its beach
 ## (#321), the players' starts and its wild monster, and a broken region file says what is wrong.
 func _check_region_file() -> String:
-	var region: Region = InstanceBlueprints.basic(42).region
+	var region: Region = FlowSteps.basic(42).region
 	var starts: Array[Vector2i] = [
 		Vector2i(1, -1),
 		Vector2i(-1, 1),
@@ -993,7 +993,7 @@ func _check_connector_fit() -> String:
 ## more than one way, while the arena, one piece the seeds never turn, loads for every seed exactly
 ## as its file is drawn, and takes four players.
 func _check_turning() -> String:
-	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.ARENA + "/"
+	var folder: String = InstanceBlueprints.REGIONS + FlowSteps.ARENA + "/"
 	var drawn: Region = InstanceBlueprints.read_region(
 		FileAccess.get_file_as_string(folder + "start.md"),
 	)
@@ -1002,12 +1002,12 @@ func _check_turning() -> String:
 	for seed_value: int in 12:
 		var glade: Region = RegionArranger.arrange(pieces, seed_value, true)
 		glade_starts[glade.starts[1]] = true
-		var arena: Region = InstanceBlueprints.region_of(InstanceBlueprints.ARENA, seed_value)
+		var arena: Region = InstanceBlueprints.region_of(FlowSteps.ARENA, seed_value)
 		if not arena.problem.is_empty() or arena.hash_values() != drawn.hash_values():
 			return "seed %d loaded the arena unlike its file: %s" % [seed_value, arena.problem]
 	if glade_starts.size() < 2:
 		return "no seed turned the glade"
-	if InstanceBlueprints.create(InstanceBlueprints.ARENA, 3, 4) == null:
+	if InstanceBlueprints.create(FlowSteps.ARENA, 3, 4) == null:
 		return "the arena doesn't take four players"
 	return ""
 
@@ -1017,8 +1017,8 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 	var tiles: int = 0
 	for piece: Region in pieces:
 		tiles += piece.size()
-	var region: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
-	var again: Region = InstanceBlueprints.region_of(InstanceBlueprints.GLADE, seed_value)
+	var region: Region = InstanceBlueprints.region_of(FlowSteps.GLADE, seed_value)
+	var again: Region = InstanceBlueprints.region_of(FlowSteps.GLADE, seed_value)
 	if not region.problem.is_empty() or region.size() != tiles:
 		var found: Array = [seed_value, region.size(), tiles, region.problem]
 		return "seed %d arranged %d of %d tiles: %s" % found
@@ -1032,7 +1032,7 @@ func _check_glade(seed_value: int, pieces: Array[Region]) -> String:
 
 ## The glade's region pieces, read straight from their files, its start piece first.
 func _glade_pieces() -> Array[Region]:
-	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.GLADE + "/"
+	var folder: String = InstanceBlueprints.REGIONS + FlowSteps.GLADE + "/"
 	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
 		if file.ends_with(".md") and file != InstanceBlueprints.START_PIECE:

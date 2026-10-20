@@ -7,26 +7,10 @@ extends RefCounted
 ## naming a rule set and the rules it adds or drops (Blueprint.features, #941), what its region
 ## holds brings the features that run it (RegionFeatures), and they can change during a session;
 ## each slice builds its own feature (FeatureFactories). What tells blueprints apart is content
-## data, one file each (Blueprint, #823).
+## data, one file each (Blueprint, #823). The game names no instance: the realms say where the world
+## starts and where each exit leads (#865), and only the tests and tools name the ones they load
+## (#915).
 
-## The names the tests and tools load blueprints by; the game names none, it reads them from the
-## realms (#865), and the blueprints themselves are the files in BlueprintContent.DIR. The
-## playground (#338), which only the tests play (#712).
-const BASIC: String = "basic"
-## The load test's (#101).
-const LOAD: String = "load"
-## The glade, which the realms mark as where the world starts (#712).
-const GLADE: String = "glade"
-## A boss-style arena (#127).
-const ARENA: String = "arena"
-## Room for the upcoming features (#689).
-const FOREST: String = "forest"
-const OUTPOST: String = "outpost"
-## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses
-## (glade.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
-## (regions/glade_corrupted.md), whose flag purifies it.
-const CORRUPTED_GLADE: String = "glade_corrupted"
-const GLADE_PURIFIED: String = "glade_purified"
 const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
@@ -178,11 +162,6 @@ static func exit_problem(instance_name: String) -> String:
 		if not found:
 			return "%s has no exit back to %s on side %d" % [target, instance_name, side]
 	return ""
-
-
-## The basic instance, as `create` makes it.
-static func basic(seed_value: int, players: int = 1) -> GameState:
-	return create(BASIC, seed_value, players)
 
 
 ## The ids of the features an instance of `named` in `region` has: the rules its blueprint lists,

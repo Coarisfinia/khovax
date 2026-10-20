@@ -155,7 +155,7 @@ func run(tree: SceneTree) -> String:
 ## The glade's wild monster in the shrubs starts hidden, and jumps out on the step that brings the
 ## player next to it, once; a legend can't hide one in plain ground.
 func _check_hiding() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 0)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 0)
 	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	if hiding == null or hiding.hidden.size() != 1:
 		return "the glade's wild monster in the shrubs doesn't start hidden"
@@ -233,7 +233,7 @@ func _check_standing_on(piece: String) -> String:
 
 ## Every ring tile but the last: the walk passes right by the wild monster and dominates nothing.
 func _check_open_ring() -> String:
-	var state: GameState = InstanceBlueprints.basic(42)
+	var state: GameState = FlowSteps.basic(42)
 	var ring: Array[Vector2i] = FlowSteps.BASIC_RING
 	var _events: Array[RefCounted] = FlowSteps.walk(state, ring.slice(0, ring.size() - 1))
 	# Both wild monsters stay: the rolled one and the beach's wounded toad (#448).
@@ -246,7 +246,7 @@ func _check_open_ring() -> String:
 
 ## A closed ring around another tile leaves the wild monster alone, and the trail keeps growing.
 func _check_other_ring() -> String:
-	var state: GameState = InstanceBlueprints.basic(42)
+	var state: GameState = FlowSteps.basic(42)
 	var _events: Array[RefCounted] = FlowSteps.walk(state, OTHER_RING)
 	var trail: Trail = _trails(state).shared
 	# The rolled one and the beach's toad (#448) both stay.
@@ -262,7 +262,7 @@ func _check_other_ring() -> String:
 ## charge and the ring seals, and holding it there spends no more. A player out of charges places
 ## none.
 func _check_waits_for_totem() -> String:
-	var state: GameState = InstanceBlueprints.basic(42)
+	var state: GameState = FlowSteps.basic(42)
 	var monster_id: int = _wild(state).monsters[0]
 	var player: Entity = state.player(0)
 	var domination: DominationFeature = _domination(state)
@@ -292,7 +292,7 @@ func _check_waits_for_totem() -> String:
 
 ## A player whose totem has no charge left places none: the ring goes on waiting.
 func _check_out_of_charges() -> String:
-	var state: GameState = InstanceBlueprints.basic(42)
+	var state: GameState = FlowSteps.basic(42)
 	var player: Entity = state.player(0)
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
 	while _domination(state).totems.spend(player.id):
@@ -308,7 +308,7 @@ func _check_out_of_charges() -> String:
 ## domination announced with who dominated it, the trail started over from the dominator's tile, and
 ## the same walk always ending in the same state.
 func _check_domination() -> String:
-	var state: GameState = InstanceBlueprints.basic(42)
+	var state: GameState = FlowSteps.basic(42)
 	var monster_id: int = _wild(state).monsters[0]
 	_close(state, FlowSteps.BASIC_RING)
 	var closed: int = state.tick
@@ -396,7 +396,7 @@ func _check_after_domination(state: GameState) -> String:
 	expected.sort()
 	if trail.sorted_tiles() != expected:
 		return "the ring didn't come off the trail after dominating: %s" % [trail.sorted_tiles()]
-	var again: GameState = InstanceBlueprints.basic(42)
+	var again: GameState = FlowSteps.basic(42)
 	_close(again, FlowSteps.BASIC_RING)
 	var _events: Array[RefCounted] = _settle(again)
 	if again.state_hash() != state.state_hash():
@@ -412,7 +412,7 @@ func _check_seal_saved() -> String:
 	var world: World = World.new(
 		BlueprintSource.new(),
 		42,
-		InstanceBlueprints.BASIC,
+		FlowSteps.BASIC,
 		2,
 	)
 	CompanionParty.bring(world, FlowSteps.parties([[COMPANION]]))
@@ -432,7 +432,7 @@ func _check_seal_saved() -> String:
 	var struck: String = _check_strikes_in_ring(world, true)
 	if not struck.is_empty():
 		return struck
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var basic: GameState = world.instances[FlowSteps.BASIC]
 	if _domination(basic).seals.is_empty():
 		return "the world's ring wasn't sealing when saved"
 	var refused: String = _check_seal_refused(world)
@@ -447,7 +447,7 @@ func _check_seal_saved() -> String:
 		if resumed.state_hash() != world.state_hash():
 			return "the resumed seal went another way at tick %d" % world.tick
 	# Only the beach's wounded toad (#448) is left.
-	if _wild(resumed.instances[InstanceBlueprints.BASIC]).monsters.size() != 1:
+	if _wild(resumed.instances[FlowSteps.BASIC]).monsters.size() != 1:
 		return "the resumed seal didn't dominate the wild monster"
 	return ""
 
@@ -474,7 +474,7 @@ func _check_wait_saved(world: World) -> String:
 ## ring for a little longer than it waits between strikes: it strikes it while the ring waits for
 ## a totem (#423), and never while it seals (#409).
 func _check_strikes_in_ring(world: World, sealing: bool) -> String:
-	var basic: GameState = world.instances[InstanceBlueprints.BASIC]
+	var basic: GameState = world.instances[FlowSteps.BASIC]
 	var companions: CompanionFeature = basic.feature(CompanionFeature.ID) as CompanionFeature
 	var companion: Entity = basic.entity(companions.companion_of(0))
 	if companion == null:
@@ -529,7 +529,7 @@ func _seals_in(data: Dictionary) -> Array:
 ## The basic instance's saved domination in the world's save `data`, as saved.
 func _domination_values(data: Dictionary) -> Dictionary:
 	for instance: Dictionary in data["instances"]:
-		if instance["name"] != InstanceBlueprints.BASIC:
+		if instance["name"] != FlowSteps.BASIC:
 			continue
 		for feature: Dictionary in instance["state"]["features"]:
 			if feature["id"] == DominationFeature.ID:
@@ -543,7 +543,7 @@ func _domination_values(data: Dictionary) -> Dictionary:
 ## #86). Then the ring is off the trail, but the trail
 ## leading up to it stays, and each player colors the tile they stand on.
 func _check_together() -> String:
-	var state: GameState = InstanceBlueprints.basic(42, 2)
+	var state: GameState = FlowSteps.basic(42, 2)
 	FlowSteps.drop_beach_toad(state)
 	var first: Entity = state.player(0)
 	var second: Entity = state.player(1)
@@ -1835,14 +1835,14 @@ func _dominated_species(events: Array[RefCounted]) -> String:
 func _check_species() -> String:
 	var rolled: Dictionary[String, bool] = {}
 	for seed_value: int in 24:
-		var arena: GameState = InstanceBlueprints.create(InstanceBlueprints.ARENA, seed_value)
+		var arena: GameState = InstanceBlueprints.create(FlowSteps.ARENA, seed_value)
 		if _wild(arena).species_of(_wild(arena).monsters[0]) != "tikazzir":
 			return "seed %d's arena boss isn't the Tikazzir it names" % seed_value
-		var basic: String = _first_species(InstanceBlueprints.basic(seed_value))
-		if basic != _first_species(InstanceBlueprints.basic(seed_value)):
+		var basic: String = _first_species(FlowSteps.basic(seed_value))
+		if basic != _first_species(FlowSteps.basic(seed_value)):
 			return "seed %d placed two different species" % seed_value
 		rolled[basic] = true
-	var listed: Array = InstanceBlueprints.blueprint(InstanceBlueprints.BASIC).wild_species.keys()
+	var listed: Array = InstanceBlueprints.blueprint(FlowSteps.BASIC).wild_species.keys()
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var dominated: String = _check_short_ids()
@@ -1855,18 +1855,18 @@ func _check_species() -> String:
 ## Every wild monster gets a short id (#700), the same for the same seed and apart from the others',
 ## and the domination carries it, with its species.
 func _check_short_ids() -> String:
-	var state: GameState = InstanceBlueprints.basic(1)
+	var state: GameState = FlowSteps.basic(1)
 	var short_ids: Dictionary[String, bool] = {}
 	for monster: int in _wild(state).monsters:
 		short_ids[_wild(state).short_id_of(monster)] = true
 	var first: String = _wild(state).short_id_of(_wild(state).monsters[0])
-	var again: GameState = InstanceBlueprints.basic(1)
+	var again: GameState = FlowSteps.basic(1)
 	var same: bool = _wild(again).short_id_of(_wild(again).monsters[0]) == first
 	if not ShortId.is_valid(first) or short_ids.size() != _wild(state).monsters.size() or not same:
 		return "the wild monsters' short ids aren't valid, apart, and the same for the same seed"
 	var events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
 	events.append_array(_settle(state))
-	if _dominated_species(events) != _first_species(InstanceBlueprints.basic(1)):
+	if _dominated_species(events) != _first_species(FlowSteps.basic(1)):
 		return "the domination didn't carry the dominated monster's species"
 	if _dominated(events)[0].short_id != first:
 		return "the domination didn't carry the dominated monster's short id"

@@ -108,7 +108,7 @@ func _check_reveal() -> String:
 
 ## A player stepping onto the glade's lookout reveals the region within its radius, in a tick, once.
 func _check_lookout() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 7, 1)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 7, 1)
 	if TileTrigger.all_in(state.region).is_empty() or state.feature(TriggerFeature.ID) == null:
 		return "the glade has no lookout"
 	var lookout: TileTrigger = TileTrigger.all_in(state.region)[0]
@@ -131,11 +131,11 @@ func _check_lookout() -> String:
 ## and a player standing on the exit to it sees some of it, and nothing that is neither here nor
 ## there.
 func _check_across_the_seam() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
-	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	if forest.next_door.is_empty() or world.instances.has(InstanceBlueprints.GLADE):
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	if forest.next_door.is_empty() or world.instances.has(FlowSteps.GLADE):
 		return "the forest has no ground next door, or the glade was loaded for it"
-	var way: int = forest.region.exit_blueprints.find(InstanceBlueprints.GLADE)
+	var way: int = forest.region.exit_blueprints.find(FlowSteps.GLADE)
 	var exit: Vector3i = forest.region.exits[way]
 	forest.player(0).tile = Vector2i(exit.x, exit.y)
 	world.step(FlowSteps.command(Command.NO_MOVE))
@@ -156,9 +156,9 @@ func _check_across_the_seam() -> String:
 ## same tick the forest gets the rock as its ground next door, and the player's sight is
 ## worked out again around it at once, so the world goes through its save data and back alike.
 func _check_changed_across_the_seam(world: World) -> String:
-	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var glade: GameState = world.instance(InstanceBlueprints.GLADE)
-	var shift: Vector2i = world.offset(InstanceBlueprints.GLADE) - world.offset(world.start_name)
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	var glade: GameState = world.instance(FlowSteps.GLADE)
+	var shift: Vector2i = world.offset(FlowSteps.GLADE) - world.offset(world.start_name)
 	var seen: Array[Vector2i] = FlowSteps.sight_of(forest)
 	var rock: Vector2i = _blocking_across(forest, forest.player(0).tile)
 	if rock == Vector2i.MAX:

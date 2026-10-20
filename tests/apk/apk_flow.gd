@@ -26,6 +26,10 @@ const LEG_TICKS: Array[int] = [6, 42, 48]
 ## Ticks the finger rests lifted after the last leg.
 const REST_TICKS: int = 20
 const FINGER: int = 0
+## The instances the walk goes through, named here because the device builds leave out the e2e
+## flows' FlowSteps (#915).
+const GLADE: String = "glade"
+const FOREST: String = "forest"
 
 ## The game's state hash when the walk ended, which game/test_mode.gd reports with the result.
 var final_hash: int = 0
@@ -47,7 +51,7 @@ func run(main: Node, tree: SceneTree) -> String:
 	var origin: Vector2 = main.get_viewport().get_visible_rect().size / 2.0
 	driver.set_process(false)
 	# Where the world starts, also under the e2e runner, whose flows start in the playground.
-	driver.instance = InstanceBlueprints.GLADE
+	driver.instance = GLADE
 	driver.start(SEED)
 	_visited.clear()
 	var start: Vector2i = driver.state.player(0).tile
@@ -66,9 +70,9 @@ func _result(
 	start: Vector2i,
 	camera_before: Vector3,
 ) -> String:
-	if not _visited.has(InstanceBlueprints.FOREST):
+	if not _visited.has(FOREST):
 		return "the walk never reached the forest: %s" % [_visited.keys()]
-	if driver.world.instance_of(0) != InstanceBlueprints.GLADE:
+	if driver.world.instance_of(0) != GLADE:
 		return "the walk didn't come back into the glade"
 	var player: Entity = driver.state.player(0)
 	var trails: TrailFeature = driver.state.feature(TrailFeature.ID) as TrailFeature

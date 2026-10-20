@@ -50,11 +50,11 @@ func run(tree: SceneTree) -> String:
 	var carried: String = _carry(COMPANION)
 	# A fresh world the main scene starts starts in the forest too; the runner's comes back after.
 	var given: String = GameDriver.start_instance
-	GameDriver.start_instance = InstanceBlueprints.FOREST
+	GameDriver.start_instance = FlowSteps.FOREST
 	var world: World = World.new(
 		BlueprintSource.new(),
 		SEED,
-		InstanceBlueprints.FOREST,
+		FlowSteps.FOREST,
 		1,
 	)
 	CompanionParty.bring(world, FlowSteps.parties([[COMPANION]]))
@@ -86,7 +86,7 @@ func run(tree: SceneTree) -> String:
 ## totem on it, #423, and waits for it to seal, #219), the exit leads into the glade, and there the
 ## player walks onto the lookout and a chest.
 func _play(world: World) -> String:
-	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var forest: GameState = world.instances[FlowSteps.FOREST]
 	var wild: WildMonsterFeature = forest.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var count: int = wild.monsters.size()
 	var tile: Vector2i = world.player(0).tile
@@ -103,9 +103,9 @@ func _play(world: World) -> String:
 	var out: Array[int] = FlowSteps.shortest_path(forest, tile, FlowSteps.FOREST_EXIT)
 	for direction: int in out + [FlowSteps.INTO_GLADE[-1]]:
 		_walk_in(world, direction)
-	if wild.monsters.size() != count - 1 or world.instance_of(0) != InstanceBlueprints.GLADE:
+	if wild.monsters.size() != count - 1 or world.instance_of(0) != FlowSteps.GLADE:
 		return "the walk didn't dominate the wild monster and go on into the glade"
-	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
+	var glade: GameState = world.instances[FlowSteps.GLADE]
 	var goals: Array[Vector2i] = [TileTrigger.all_in(glade.region)[0].tile]
 	goals.append_array(glade.region.placed(ChestPlacements.CHEST).keys())
 	for goal: Vector2i in goals:
@@ -127,7 +127,7 @@ func _check_round_trip(world: World) -> String:
 		return "the saved world was refused: " + resumed.problem
 	if resumed.state_hash() != world.state_hash() or WorldSave.to_text(resumed) != text:
 		return "the world read back isn't the world saved"
-	if resumed.instance_of(0) != InstanceBlueprints.GLADE or resumed.tick != world.tick:
+	if resumed.instance_of(0) != FlowSteps.GLADE or resumed.tick != world.tick:
 		return "the world read back has the player elsewhere or another tick"
 	var rolls: Rng = Rng.new(SEED, 1)
 	for _tick: int in ONWARD_TICKS:
@@ -160,12 +160,12 @@ func _check_refused(world: World) -> String:
 		# Beyond what a double holds exactly: it would come back rounded.
 		text.replace("\"tick\":%d" % world.tick, "\"tick\":9007199254740993"): "not a world save",
 		# The world's hash doesn't cover where it starts, so only the check for it notices.
-		_changed(_fresh_data(), "start", InstanceBlueprints.GLADE): "the starting instance",
+		_changed(_fresh_data(), "start", FlowSteps.GLADE): "the starting instance",
 		"not a world": "not a world save",
 		"{}": "format isn't",
 		_changed(data, "generations", [{ "name": "nowhere", "generation": 1 }]): "purged instance",
-		_with_left_at(data, InstanceBlueprints.GLADE, 0): "instance glade's left_at",
-		_with_left_at(data, InstanceBlueprints.FOREST, -1): "instance forest's left_at",
+		_with_left_at(data, FlowSteps.GLADE, 0): "instance glade's left_at",
+		_with_left_at(data, FlowSteps.FOREST, -1): "instance forest's left_at",
 		_expired(): "instance glade was left behind long enough",
 	}
 	var source: BlueprintSource = BlueprintSource.new()
@@ -200,7 +200,7 @@ static func _carry(species: String) -> String:
 
 ## A world's data whose glade, left behind, is saved PURGE_TICKS later without being purged.
 func _expired() -> String:
-	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST)
+	var world: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		world.step(FlowSteps.command(direction))
 		for _tick: int in MovementFeature.MOVE_TICKS + 1:
@@ -209,13 +209,13 @@ func _expired() -> String:
 	return _changed(
 		data,
 		"tick",
-		world.left_at.get(InstanceBlueprints.GLADE, 0) + World.PURGE_TICKS,
+		world.left_at.get(FlowSteps.GLADE, 0) + World.PURGE_TICKS,
 	)
 
 
 ## A fresh world's data, with only its starting instance loaded.
 static func _fresh_data() -> Dictionary:
-	return WorldData.of(World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST))
+	return WorldData.of(World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST))
 
 
 ## `data` as text, with `key` set to `value`.
@@ -239,7 +239,7 @@ func _check_resumed(tree: SceneTree, world: World) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != world.state_hash() or driver.state.player(0) == null:
 		result = "the main scene didn't resume the saved world"
-	elif driver.local_instance_name() != InstanceBlueprints.GLADE:
+	elif driver.local_instance_name() != FlowSteps.GLADE:
 		result = "the main scene resumed in %s, not the glade" % driver.local_instance_name()
 	elif driver.state.player(0).tile != world.player(0).tile:
 		result = "the player came back on %s, not where they stood" % driver.state.player(0).tile
@@ -277,12 +277,12 @@ func _check_explored(main: Node) -> String:
 	var view: NeighbourView = main.get_node("Instance/NeighbourView") as NeighbourView
 	fog.show_state(10.0)
 	# On the ring walked around the forest's wild monster.
-	var next_door: Vector2i = RING[7] + view.shifts[InstanceBlueprints.FOREST]
+	var next_door: Vector2i = RING[7] + view.shifts[FlowSteps.FOREST]
 	if fog.cloud.fog_on(next_door) != LIGHT:
 		return "resumed, the forest's explored ground next door isn't under light fog"
 	var glade: GameState = fog.driver.state
 	var out_of_sight: Array[Vector2i] = []
-	for tile: Vector2i in _explored.tiles_in[InstanceBlueprints.GLADE]:
+	for tile: Vector2i in _explored.tiles_in[FlowSteps.GLADE]:
 		if not FogView.ally_sees(glade, tile):
 			out_of_sight.append(tile)
 	if out_of_sight.is_empty():
@@ -419,7 +419,7 @@ func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var halved: Array = last["tiles"]
 	halved.append(1)
 	var fraction: Dictionary = explored.duplicate(true)
-	fraction["instances"] = [{ "name": InstanceBlueprints.FOREST, "tiles": [0.5, 1] }]
+	fraction["instances"] = [{ "name": FlowSteps.FOREST, "tiles": [0.5, 1] }]
 	var newer: Dictionary = explored.duplicate(true)
 	newer["format"] = ExploredSave.FORMAT + 1
 	var result: String = await _resumes_forgetting(tree, world, half)
@@ -457,20 +457,20 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 ## it from next door now (#191) is remembered, at its new generation. What was seen in the forest
 ## is kept.
 func _check_purged_explored(tree: SceneTree) -> String:
-	var world: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST)
+	var world: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		_walk_in(world, direction)
-	var left: int = world.left_at.get(InstanceBlueprints.GLADE, 0)
+	var left: int = world.left_at.get(FlowSteps.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
 	var problem: String = WorldSave.save(world, WORLD_PATH, ExploredSave.beside(_explored))
-	if world.generation(InstanceBlueprints.GLADE) != 1 or not problem.is_empty():
+	if world.generation(FlowSteps.GLADE) != 1 or not problem.is_empty():
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
 	var main: Node = _boot(tree)
 	await tree.process_frame
 	var explored: ExploredGround = (main.get_node("ExploredKeeper") as ExploredKeeper).explored
-	var glade_generation: int = explored.generations.get(InstanceBlueprints.GLADE, 1)
-	var forest: Dictionary = explored.tiles_in.get(InstanceBlueprints.FOREST, {})
+	var glade_generation: int = explored.generations.get(FlowSteps.GLADE, 1)
+	var forest: Dictionary = explored.tiles_in.get(FlowSteps.FOREST, {})
 	main.queue_free()
 	await tree.process_frame
 	if glade_generation != 1 or forest.is_empty():
@@ -490,7 +490,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 		result = await _boots_fresh(tree, _changed(data, "rules", "0000000000000000"), true)
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
-		var pair: World = World.new(BlueprintSource.new(), SEED, InstanceBlueprints.FOREST, 2)
+		var pair: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST, 2)
 		result = await _boots_fresh(
 			tree,
 			WorldSave.to_text(pair, ExploredSave.beside(_explored)),
@@ -503,7 +503,7 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 ## across the seam now: ground of an older world.
 static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
 	var seen_across: Dictionary[Vector2i, bool] = _seen_across(world)
-	for tile: Vector2i in explored.tiles_in.get(InstanceBlueprints.GLADE, {}):
+	for tile: Vector2i in explored.tiles_in.get(FlowSteps.GLADE, {}):
 		if not seen_across.has(tile):
 			return true
 	return false
@@ -512,10 +512,10 @@ static func _kept_old_glade(world: World, explored: ExploredGround) -> bool:
 ## The glade's tiles, in its own coordinates, that a player in the forest of `world` sees across
 ## the seam (#191).
 static func _seen_across(world: World) -> Dictionary[Vector2i, bool]:
-	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
+	var forest: GameState = world.instances[FlowSteps.FOREST]
 	var fog: FogFeature = forest.feature(FogFeature.ID) as FogFeature
-	var glade_at: Vector2i = world.offset(InstanceBlueprints.GLADE)
-	var shift: Vector2i = glade_at - world.offset(InstanceBlueprints.FOREST)
+	var glade_at: Vector2i = world.offset(FlowSteps.GLADE)
+	var shift: Vector2i = glade_at - world.offset(FlowSteps.FOREST)
 	var seen: Dictionary[Vector2i, bool] = {}
 	for slot: int in fog.visible:
 		for tile: Vector2i in fog.visible[slot]:
@@ -542,7 +542,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var fresh: World = World.new(
 		BlueprintSource.new(),
 		0,
-		InstanceBlueprints.FOREST,
+		FlowSteps.FOREST,
 		1,
 	)
 	var result: String = ""

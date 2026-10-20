@@ -739,9 +739,9 @@ func _check_remembered_ground(main: Node) -> String:
 	for direction: int in FlowSteps.INTO_FOREST:
 		_walk_in(driver.world, direction)
 	fog.show_state(10.0)
-	if NeighbourView.name_of(driver.world, driver.state) != InstanceBlueprints.FOREST:
+	if NeighbourView.name_of(driver.world, driver.state) != FlowSteps.FOREST:
 		return "walking north out of the glade didn't lead into the forest"
-	var next_door: Vector2i = far + view.shifts[InstanceBlueprints.GLADE]
+	var next_door: Vector2i = far + view.shifts[FlowSteps.GLADE]
 	if fog.cloud.fog_on(next_door) != light:
 		return "the glade's explored ground next door isn't under light fog"
 	var forest_seen: Array[Vector2i] = _split_by_sight(driver.state, true)
@@ -765,7 +765,7 @@ func _check_forest_next_door(
 		seen: Array[Vector2i],
 		unseen: Array[Vector2i],
 ) -> String:
-	var shift: Vector2i = view.shifts.get(InstanceBlueprints.FOREST, Vector2i.ZERO)
+	var shift: Vector2i = view.shifts.get(FlowSteps.FOREST, Vector2i.ZERO)
 	var explored: Vector2i = _out_of_sight(fog.driver.state, seen, shift) + shift
 	var unexplored: Vector2i = _out_of_sight(fog.driver.state, unseen, shift) + shift
 	if fog.cloud.fog_on(explored) != Vector2(0.0, 1.0):
@@ -780,9 +780,9 @@ func _check_forest_next_door(
 ## color at first and eases into the ground's once the world hands the glade the new ground, never
 ## in one frame; grown back, it eases back into the forest's.
 func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> String:
-	var woods: GameState = driver.world.instances.get(InstanceBlueprints.FOREST)
+	var woods: GameState = driver.world.instances.get(FlowSteps.FOREST)
 	view.show_state()
-	var grid: HexGrid = view.grids.get(InstanceBlueprints.FOREST)
+	var grid: HexGrid = view.grids.get(FlowSteps.FOREST)
 	if woods == null or grid == null or grid.shown_region() != woods.region:
 		return "the forest next door isn't drawn from its loaded region"
 	var forest: String = "forest"
@@ -796,7 +796,7 @@ func _check_neighbour_change_shown(driver: GameDriver, view: NeighbourView) -> S
 		# As the world does once the forest's tick changed it.
 		driver.world.refresh_next_door()
 		view.show_state()
-		var calm: bool = view.grids.get(InstanceBlueprints.FOREST) == grid
+		var calm: bool = view.grids.get(FlowSteps.FOREST) == grid
 		if not calm or not grid.easing.has(tile) or grid.tile_color_of(tile) != before:
 			return "a tile changed in place next door changed its look at once, or not at all"
 		var _stepped: bool = grid.easing[tile].custom_step(HexGrid.CHANGE_SECONDS + 0.1)
@@ -892,7 +892,7 @@ func _check_lookouts(main: Node) -> String:
 	view.show_state()
 	if not view.figures.is_empty():
 		return "a lookout post stands in an instance without lookouts"
-	driver.instance = InstanceBlueprints.GLADE
+	driver.instance = FlowSteps.GLADE
 	driver.start(7)
 	view.show_state()
 	var lookout: TileTrigger = TileTrigger.all_in(driver.state.region)[0]
@@ -1008,14 +1008,14 @@ func _check_neighbour_grids(main: Node) -> String:
 	if view == null:
 		return "the main scene has no NeighbourView"
 	view.show_state()
-	var forest: HexGrid = view.grids.get(InstanceBlueprints.FOREST)
+	var forest: HexGrid = view.grids.get(FlowSteps.FOREST)
 	var region: Region = InstanceBlueprints.region_of(
-		InstanceBlueprints.FOREST,
-		driver.world.seed_for(InstanceBlueprints.FOREST),
+		FlowSteps.FOREST,
+		driver.world.seed_for(FlowSteps.FOREST),
 	)
 	var names: PackedStringArray = PackedStringArray(view.grids.keys())
 	names.sort()
-	var both: String = ", ".join([InstanceBlueprints.FOREST, InstanceBlueprints.OUTPOST])
+	var both: String = ", ".join([FlowSteps.FOREST, FlowSteps.OUTPOST])
 	if ", ".join(names) != both or forest == null or forest.tile_count() != region.size():
 		return "the neighbours drawn aren't the whole forest and the outpost: %s" % [names]
 	var exit: Vector3i = driver.state.region.exits[0]
@@ -1030,7 +1030,7 @@ func _check_neighbour_grids(main: Node) -> String:
 ## Whether `grid`, drawing the forest's `region` next door, draws its way back to the glade on the
 ## world tile `outside`.
 static func _drawn_beside(grid: HexGrid, region: Region, outside: Vector2i) -> bool:
-	var way: Vector3i = region.exits[region.exit_blueprints.find(InstanceBlueprints.GLADE)]
+	var way: Vector3i = region.exits[region.exit_blueprints.find(FlowSteps.GLADE)]
 	var back: Vector2i = Vector2i(way.x, way.y)
 	var drawn: Vector3 = grid.position + grid.tile_transform(back).origin
 	var lifted: Vector3 = HexLayout.to_world(outside) + Vector3(0.0, HexGrid.TILE_HEIGHT / 2.0, 0.0)

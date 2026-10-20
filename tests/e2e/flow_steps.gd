@@ -4,6 +4,21 @@ extends RefCounted
 ## whole step on the grid, and a shortest walk. Not a flow itself: the runner runs only the
 ## `test_*.gd` files.
 
+## The instances the flows load by name (#915): the game names none, it reads them from the
+## realms (#865). The playground (#338), which only the tests play (#712).
+const BASIC: String = "basic"
+## The glade, which the realms mark as where the world starts (#712).
+const GLADE: String = "glade"
+## A boss-style arena (#127).
+const ARENA: String = "arena"
+## Room for the upcoming features (#689).
+const FOREST: String = "forest"
+const OUTPOST: String = "outpost"
+## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses
+## (glade.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
+## (regions/glade_corrupted.md), whose flag purifies it.
+const CORRUPTED_GLADE: String = "glade_corrupted"
+const GLADE_PURIFIED: String = "glade_purified"
 ## The six tiles around the basic instance's wild monster, walked in a ring from the player's start
 ## at (1, -1).
 const BASIC_RING: Array[Vector2i] = [
@@ -35,6 +50,11 @@ const REGION_LEGEND: String = """- `🔴`: where player 1 starts
 - `🟦`: water
 - `⬛`: rock
 """
+
+
+## The basic instance, as InstanceBlueprints.create makes it.
+static func basic(seed_value: int, players: int = 1) -> GameState:
+	return InstanceBlueprints.create(BASIC, seed_value, players)
 
 
 ## The region a region document of the tiles `grid` reads as (#824), its legend REGION_LEGEND and

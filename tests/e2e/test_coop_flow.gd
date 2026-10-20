@@ -267,9 +267,9 @@ func _plain_hash(delay: int) -> int:
 	var state: GameState = World.new(
 		BlueprintSource.new(),
 		0,
-		InstanceBlueprints.BASIC,
+		FlowSteps.BASIC,
 		2,
-	).instances[InstanceBlueprints.BASIC]
+	).instances[FlowSteps.BASIC]
 	var first: Array[int] = _script(1)
 	var second: Array[int] = _script(2)
 	for tick: int in range(1, TICKS + 1):
@@ -295,7 +295,7 @@ func _script(variant: int) -> Array[int]:
 ## their HP. Knocked down again with nobody beside them, they're sent back to the spawn after
 ## DOWN_TICKS. Alone, a player has no ally near.
 func _check_knocked_down() -> String:
-	var state: GameState = InstanceBlueprints.basic(42, 2)
+	var state: GameState = FlowSteps.basic(42, 2)
 	state.set_enabled(WildAttackFeature.ID, false)
 	var down: Entity = state.player(0)
 	var ally: Entity = state.player(1)
@@ -319,7 +319,7 @@ func _check_knocked_down() -> String:
 	for _tick: int in KnockdownFeature.DOWN_TICKS:
 		Simulation.step(state, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 		sent = sent or _raised(state, SentToSpawn)
-	var alone: GameState = InstanceBlueprints.basic(42)
+	var alone: GameState = FlowSteps.basic(42)
 	if (not sent
 			or knockdown.is_down(down.id)
 			or (alone.feature(KnockdownFeature.ID) as KnockdownFeature).has_ally_near(
@@ -341,7 +341,7 @@ static func _raised(state: GameState, kind: Script) -> bool:
 ## A knocked-down player who chooses to go back to the spawn (#495) is sent back on that tick's
 ## command, without waiting out DOWN_TICKS; a respawn press while standing does nothing.
 func _check_gives_up() -> String:
-	var state: GameState = InstanceBlueprints.basic(42, 2)
+	var state: GameState = FlowSteps.basic(42, 2)
 	state.set_enabled(WildAttackFeature.ID, false)
 	var down: Entity = state.player(0)
 	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
