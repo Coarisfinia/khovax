@@ -1601,7 +1601,9 @@ func _web_problem_of(world: World) -> String:
 
 
 ## Why `world`'s web can't be laid out as one world, or "" (#187): an exit whose target has no way
-## back to it, a second way into an instance that doesn't fit where the first placed it, or two
+## back to it, or more than one it could line up with (so the world, which places each instance
+## from whichever neighbour comes first, #1011, always places it alike), a second way into an
+## instance that doesn't fit where the first placed it, or two
 ## instances that would lie on the same tile. Lays out the whole web into `offsets`, breadth first
 ## from the starting instance, with the regions of the world's seed and variants.
 func _web_problem(world: World, offsets: Dictionary[String, Vector2i]) -> String:
@@ -1614,12 +1616,16 @@ func _web_problem(world: World, offsets: Dictionary[String, Vector2i]) -> String
 		for target: String in region.exit_blueprints:
 			var back: Region = layout.region_for(world, target)
 			var placed: Array[Vector2i] = WorldLayout.places(region, from, back, target)
-			if placed.is_empty():
-				return "%s's exit to %s has no way back lined up with it" % [from, target]
+			if placed.size() != 1:
+				return "%s's exit to %s lines up with %d ways back, not one" % [
+					from,
+					target,
+					placed.size(),
+				]
 			if not offsets.has(target):
 				offsets[target] = offsets[from] + placed[0]
 				queue.append(target)
-			elif not placed.has(offsets[target] - offsets[from]):
+			elif offsets[target] != offsets[from] + placed[0]:
 				return "%s doesn't fit where %s's exit leads into it" % [target, from]
 	var taken: Dictionary[Vector2i, String] = {}
 	var names: Array[String] = []
