@@ -146,7 +146,8 @@ func problem(
 		if not broken[thing].is_empty() and not exceptions.has(thing):
 			return "%s: %s" % [thing, broken[thing]]
 	for thing: String in exceptions:
-		if broken.get(thing, "").is_empty():
+		var why: String = broken.get(thing, "")
+		if why.is_empty():
 			return "NAME_EXCEPTIONS' %s keeps its kind's rule or is gone: drop it" % thing
 	return ""
 
@@ -163,7 +164,8 @@ static func collected() -> ContentTerms:
 			species_of[ability] = species.id
 	for ability: Ability in AbilityContent.load_abilities().abilities.values():
 		var kind: String = "special" if ability.kind == Ability.SPECIAL else "passive"
-		terms.add(kind, ability.id, ability.name, species_of.get(ability.id, ""))
+		var owner: String = species_of.get(ability.id, "")
+		terms.add(kind, ability.id, ability.name, owner)
 	var gear: GearContent = GearContent.load_gear()
 	for item: GearItem in gear.items.values():
 		terms.add("unique" if item.rarity == UNIQUE_RARITY else "gear", item.id, item.name)
@@ -214,11 +216,12 @@ static func _keeps_shape(kind: String, shown: String, related: String) -> bool:
 	var lower: String = shown.to_lower()
 	match kind:
 		"species":
+			var sounds: String = TYPE_SOUNDS.get(related, "")
 			return (
 				_matches("^[A-Z][a-z]{4,9}[aeioursxkn]$", shown)
 				and _vowels(lower) >= 3
 				and _matches("([aeiou]).*\\1|([^aeiou])\\2", lower)
-				and _shares(lower, TYPE_SOUNDS.get(related, ""), 1)
+				and _shares(lower, sounds, 1)
 			)
 		"special", "passive":
 			return _keeps_call_shape(kind == "special", shown, related)

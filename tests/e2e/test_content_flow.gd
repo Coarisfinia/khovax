@@ -1230,7 +1230,7 @@ func _check_name_rules() -> String:
 		var parts: PackedStringArray = entry.split(" ")
 		var found: String = named.broken["%s %s" % [parts[0], parts[1].replace("_of_", " of ")]]
 		var expected: String = cases[entry]
-		if expected.is_empty() != found.is_empty() or not found.contains(expected):
+		if not found.is_empty() if expected.is_empty() else not found.contains(expected):
 			return "the name rule on %s gave %s" % [
 				entry,
 				found if not found.is_empty() else "nothing",
