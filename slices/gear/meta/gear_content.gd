@@ -12,12 +12,17 @@ var items: Dictionary[String, GearItem] = {}
 var problem: String = ""
 
 
-## Every gear file in `directory`, read and checked.
+## Every gear file in `directory`, read and checked: a piece's id must have a code a command can
+## carry it by (SpikesFeature.code_of), none other's (#818).
 static func load_gear(directory: String = DIR) -> GearContent:
 	var content: GearContent = GearContent.new()
 	var texts: Dictionary[String, String] = Content.texts_in(directory)
+	var codes: Dictionary[int, String] = {}
 	for file_id: String in texts:
 		var item: GearItem = GearItem.parse(file_id, texts[file_id])
+		if (item.problem.is_empty()
+				and not CommandCodes.file(codes, SpikesFeature.code_of(item.id), item.id)):
+			item.problem = "its code is taken: give it another id"
 		if not item.problem.is_empty():
 			content.problem = file_id + ".jsonc: " + item.problem
 			return content

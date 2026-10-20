@@ -36,7 +36,6 @@ func _code_answers(dialog: Dialog) -> String:
 	for line: DialogLine in dialog.lines:
 		for answer: DialogAnswer in line.answers:
 			var by: int = DialogFeature.code(dialog.id, answer.id)
-			if by == Command.NO_ANSWER or answers.has(by):
+			if not CommandCodes.file(answers, by, PackedStringArray([dialog.id, answer.id])):
 				return "answer %s's code is taken: give it another id" % answer.id
-			answers[by] = PackedStringArray([dialog.id, answer.id])
 	return ""

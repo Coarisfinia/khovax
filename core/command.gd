@@ -13,11 +13,11 @@ const NO_FOCUS: int = 0
 ## No swap of the companion this tick (#55).
 const NO_SWAP: int = 0
 ## No answer chosen in a dialog this tick (#635).
-const NO_ANSWER: int = 0
+const NO_ANSWER: int = CommandCodes.NONE
 ## No territory handed over this tick (#638).
-const NO_HAND_OVER: int = 0
+const NO_HAND_OVER: int = CommandCodes.NONE
 ## No gear in the player's trap slot (#692).
-const NO_TRAP: int = 0
+const NO_TRAP: int = CommandCodes.NONE
 ## No request from the player's profile's outbox this tick (#771).
 const NO_REQUEST: int = 0
 ## No revive item used this tick (#656).
@@ -55,10 +55,10 @@ var hand_over: int = NO_HAND_OVER
 ## simulation checks they carry it and it has fainted, and the player's own machine only sends it
 ## while their profile holds a revive item.
 var revive: int = NO_REVIVE
-## The gear in the player's trap slot (#692), as the code of its id (SpikesFeature.code_of), or
-## NO_TRAP. Not a press but a standing value, like the move: every command carries it while it's
-## equipped, so it changes the game only from the tick it's sent. The simulation checks it names
-## spikes.
+## The gear in the player's trap slot (#692), as the code of its id (SpikesFeature.code_of,
+## CommandCodes), or NO_TRAP. Not a press but a standing value, like the move: every command carries
+## it while it's equipped, so it changes the game only from the tick it's sent. The simulation
+## checks it names spikes.
 var trap: int = NO_TRAP
 ## The id of the request from the player's profile's outbox (#771, Outbox) this command carries, as
 ## its short id's code (ShortId.code, #791), or NO_REQUEST: its data is in its kind's own field
