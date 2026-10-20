@@ -338,19 +338,15 @@ func _polled(source: LocalSource, world: World) -> Command:
 	return schedule.take(world.tick + 1)[0]
 
 
-## Companions (#338): the player who brings one is joined by it on the first tick, beside them; the
-## other player, who brings none, isn't. A weak species' reach is shorter than a strong one's.
+## Companions (#338): the player who brings one is joined by it on the first tick, beside them,
+## whatever the seed (it may take its first roaming step on that tick, which starts where it
+## joined); the other player, who brings none, isn't. A weak species' reach is shorter than a strong
+## one's.
 ## Standing, the player watches it roam within its reach; walking off, they're never more than a
 ## step out of it, and only players color the trail. The player walks through it, and it follows
 ## them out through the exit into the glade, while the one in the forest goes.
 func _check_companions() -> String:
-	# A seed whose companion's first roll keeps it beside its player: it may step on the first tick.
-	var world: World = World.new(
-		BlueprintSource.new(),
-		4,
-		FlowSteps.FOREST,
-		2,
-	)
+	var world: World = World.new(BlueprintSource.new(), 0, FlowSteps.FOREST, 2)
 	CompanionParty.bring(world, FlowSteps.parties([["tikazzir"]]))
 	world.step(_still())
 	var forest: GameState = world.instances[FlowSteps.FOREST]
@@ -358,8 +354,10 @@ func _check_companions() -> String:
 	var companion: Entity = forest.entity(companions.companion_of(0))
 	if companion == null or companions.companion_of(1) != 0:
 		return "only the player bringing a companion should be joined by one"
-	if Hex.distance(companion.tile, world.player(0).tile) != 1:
-		return "the companion joined on %s, not beside its player" % companion.tile
+	var movement: MovementFeature = forest.feature(MovementFeature.ID) as MovementFeature
+	var joined: Vector2i = movement.walk(companion.id).from
+	if Hex.distance(joined, world.player(0).tile) != 1:
+		return "the companion joined on %s, not beside its player" % joined
 	if companions.reaches["ombulumo"] >= companions.reaches["tikazzir"]:
 		return "the weaker Ombulumo doesn't stay closer than the Tikazzir"
 	var reach: int = companions.reach_of_companion(companion.id)
