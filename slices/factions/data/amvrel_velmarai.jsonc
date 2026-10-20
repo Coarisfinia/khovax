@@ -1,0 +1,30 @@
+// The Amvrel Velmarai (#484, named on #909, #976), the starter faction that accompanies the player
+// on the main quest: it strives to chart the world, explore it and raid its dungeons. An Apprentice
+// Charter once they join, rising with the story's quests until the guild writes their name onto its
+// charts. Betrayer when a path turns against it, then struck from its records and marked as a
+// danger on its charts. Its ranks stay in Trade Speech (#484, #909).
+{
+	"id": "amvrel_velmarai",
+	"name": "Amvrel Velmarai",
+	"codex": {
+		"entry": "A guild of mapmakers and wayfinders who walk the wild places and bring back what they saw, and who pay well for anyone who does the same. Its name is Oath-speech: Amvrel, the oath word of a fellowship of a craft, then Velmarai, those who chart.",
+		"gloss": "the guild of those who chart"
+	},
+	"symbol": "+", // a compass's cross, which marks its territory (#68)
+	"ranks_up": [
+		"Apprentice Charter",
+		"Wayfinder",
+		"Pathmaker",
+		"Master Cartographer",
+		"Charted in Legend"
+	],
+	"ranks_down": [
+		"Betrayer",
+		"Struck from the Ledger",
+		"Uncharted",
+		"Marked Hazard",
+		"Edge of the Chart"
+	],
+	// The guild's home, the glade, where the player starts (#637, #712).
+	"territory": ["glade"]
+}

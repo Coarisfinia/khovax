@@ -82,7 +82,6 @@ const NAME_EXCEPTIONS: Dictionary[String, int] = {
 	"instance mountain_pass": 975,
 	"instance outpost": 975,
 	"region glade_corrupted": 975,
-	"faction cartographers_guild": 976,
 	"person guild_scout": 977,
 }
 ## Terms two things share today, each with the issue that gives one of them another (#909). It

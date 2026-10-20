@@ -20,7 +20,7 @@ extends RefCounted
 ## and its marker points at the exit leading there (#370). A side quest stays hidden until this
 ## player enters the area it starts in, and is listed from then on (#473). Finishing a quest moves
 ## the standing with the faction it names, held on the scale (#532): the first domination raises
-## the Cartographer's Guild by one, saved with the profile, and a quest naming a faction that
+## the Amvrel Velmarai by one, saved with the profile, and a quest naming a faction that
 ## doesn't exist is refused; finishing a path-marked quest leans the player toward its path
 ## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
@@ -85,10 +85,10 @@ const AFTER_BEACON: String = (
 	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"beacon_lit\"}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_beacon\"}]}"
 )
-## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
+## A quest whose chest turns the player against the Amvrel Velmarai, further than its scale.
 const BETRAYAL: String = (
 	"{\"id\": \"betrayal\", \"name\": \"Betray the guild\", "
-	+ "\"standing\": {\"faction\": \"cartographers_guild\", \"change\": -10}, "
+	+ "\"standing\": {\"faction\": \"amvrel_velmarai\", \"change\": -10}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"betrayal\"}]}"
 )
 ## A quest asking for feathers twice over (#686): five, then three more.
@@ -101,7 +101,7 @@ const FEATHERS: String = (
 ## A quest's standing with a faction that doesn't exist.
 const STRANGER_STANDING: String = "\"standing\": {\"faction\": \"strangers\", \"change\": 1}"
 ## The faction whose standing the first domination raises (#532).
-const GUILD: String = "cartographers_guild"
+const GUILD: String = "amvrel_velmarai"
 ## A small region with the beach on its east, `🐚`; players 1 and 2 start west of it.
 const BEACH_REGION: String = (
 	"# Beach\n\n## Tiles\n\n```\n 🟫🟫🐚🐚\n🟫🔴🔵🟫🐚\n 🟫🟫🐚🐚\n```\n\n## Legend\n\n"

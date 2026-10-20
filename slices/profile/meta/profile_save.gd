@@ -7,12 +7,17 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 14
+const FORMAT: int = 15
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
 	"storm_finch": "tikazzir",
 }
+## The faction ids before format 15, each to its id since: a faction's id is its name (#909, #976).
+const OLD_FACTIONS: Dictionary[String, String] = { "cartographers_guild": "amvrel_velmarai" }
+## The instances the territory quests of format 14 hand over (#638): a hand-over of one still in the
+## outbox is coded by its faction's old id (Territory.code), so it's coded anew.
+const OLD_TERRITORIES: Array[String] = ["forest", "outpost"]
 
 
 ## The profile as save text, with its `companions`' parts beside it.
@@ -94,6 +99,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_12,
 		_migrate_to_13,
 		_migrate_to_14,
+		_migrate_to_15,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -191,6 +197,30 @@ static func _migrate_to_13(data: Dictionary) -> void:
 static func _migrate_to_14(data: Dictionary) -> void:
 	for fields: Dictionary in _monster_entries(data):
 		fields["species"] = OLD_SPECIES.get(fields.get("species"), fields.get("species"))
+
+
+## Format 14 to 15: a faction's id is its name (#976), so the standings with a faction by its old
+## id move to its new one, and so do the territory hand-overs still in the outbox, whose data codes
+## the faction (Territory.code).
+static func _migrate_to_15(data: Dictionary) -> void:
+	var stored: Variant = data.get("standings")
+	var by_faction: Dictionary = stored if stored is Dictionary else {}
+	var recoded: Dictionary[int, int] = {}
+	for old_id: String in OLD_FACTIONS:
+		var new_id: String = OLD_FACTIONS[old_id]
+		if by_faction.has(old_id):
+			by_faction[new_id] = by_faction[old_id]
+			var _moved: bool = by_faction.erase(old_id)
+		for instance_name: String in OLD_TERRITORIES:
+			recoded[Territory.code(instance_name, old_id)] = Territory.code(instance_name, new_id)
+	var outbox: Variant = data.get("outbox")
+	var requests: Array = outbox if outbox is Array else []
+	for entry: Variant in requests:
+		var fields: Dictionary = entry if entry is Dictionary else {}
+		var kind: int = JsonNumbers.whole(fields.get("kind"), 0, DataReader.MOST, -1)
+		var code: int = JsonNumbers.whole(fields.get("data"), 0, DataReader.MOST, -1)
+		if kind == OutboxEntry.TERRITORY and recoded.has(code):
+			fields["data"] = recoded[code]
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
