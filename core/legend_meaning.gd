@@ -311,11 +311,12 @@ func _read_kind(meaning: String) -> bool:
 	var said_overrides: Array[bool] = []
 	var said_heights: Array[int] = []
 	for clause: String in clauses.slice(1):
-		var number: String = clause.trim_prefix(TURNED).trim_prefix(HEIGHT)
-		if clause.begins_with(TURNED) and number.is_valid_int():
-			said_turns.append(number.to_int())
-		elif clause.begins_with(HEIGHT) and number.is_valid_int():
-			said_heights.append(number.to_int())
+		var turn: String = clause.trim_prefix(TURNED)
+		var height: String = clause.trim_prefix(HEIGHT)
+		if clause.begins_with(TURNED) and turn.is_valid_int():
+			said_turns.append(turn.to_int())
+		elif clause.begins_with(HEIGHT) and height.is_valid_int():
+			said_heights.append(height.to_int())
 		elif clause == WALKABLE or clause == NOT_WALKABLE:
 			said_overrides.append(clause == WALKABLE)
 		else:
