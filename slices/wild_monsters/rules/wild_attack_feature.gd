@@ -1,12 +1,15 @@
 class_name WildAttackFeature
 extends Feature
 ## Wild monsters attack (#422, owner on #421): every wild monster strikes once every STRIKE_TICKS,
-## all on the same tick, for its strength (rage included), its species' own attack (#228).
+## all on the same tick, for its strength (rage included), its species' own attack (#228). Rage
+## makes it strike sooner (#961, WildMonsterFeature.paced): the enraged ones strike on the ticks of
+## their own pace.
 ## Each hit raises WildMonsterStruck. Hidden in its tile (#202), it doesn't attack: it keeps out
 ## of sight.
 ##
 ## Free, it strikes something next to it, in this order: a companion (#338), then a player (not one
-## a dialog holds, whom HealthFeature shields, #981), then a
+## a dialog holds, whom HealthFeature shields, #981), the player first when it's enraged (#220,
+## #961), then a
 ## tile of the allies' trail (#87), the lowest id or the first tile in sorted order among each. A
 ## trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off the trail
 ## (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks open.
@@ -86,7 +89,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	for tile: Vector2i in _wear.keys():
 		if not trail.shared.tiles.has(tile):
 			var _dropped: bool = _wear.erase(tile)
-	if state.tick % STRIKE_TICKS != 0:
+	if not _anyone_strikes(state.tick):
 		return
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null:
@@ -111,11 +114,26 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if dominator_id > 0:
 			_strike_ring(state, monster, dominator_id, damage)
 		elif not domination.is_sealed(monster.id):
-			_strike(state, monster, damage)
+			_strike(state, monster, damage, wild.rage_of(monster.id) > 0)
+
+
+## Whether a wild monster of any rage strikes on `tick`: on most ticks none does.
+static func _anyone_strikes(tick: int) -> bool:
+	for rage: int in WildMonsterFeature.MOST_RAGE + 1:
+		if _strikes_now(tick, rage):
+			return true
+	return false
+
+
+## Whether a wild monster with `rage` stacks of rage strikes on `tick`: once every STRIKE_TICKS,
+## paced by its rage (#961).
+static func _strikes_now(tick: int, rage: int) -> bool:
+	return tick % WildMonsterFeature.paced(STRIKE_TICKS, rage) == 0
 
 
 ## Finds, in one pass over the entities, which companion and which player stands on each tile,
-## the one with the lowest id where several do, and returns the wild monsters, in id order. A
+## the one with the lowest id where several do, and returns the wild monsters that strike this tick
+## by their pace, in id order. A
 ## shielded player isn't a target (#981). Companions aren't required, since an instance may have
 ## none.
 func _find_standing(
@@ -133,7 +151,8 @@ func _find_standing(
 		while next < wild.monsters.size() and wild.monsters[next] < entity.id:
 			next += 1
 		if next < wild.monsters.size() and wild.monsters[next] == entity.id:
-			monsters.append(entity)
+			if _strikes_now(state.tick, wild.rage_of(entity.id)):
+				monsters.append(entity)
 		elif entity.slot != Entity.NO_SLOT:
 			if not _player_at.has(entity.tile) and not health.is_shielded(entity.id):
 				_player_at[entity.tile] = entity.id
@@ -171,16 +190,19 @@ func _strike_ring(state: GameState, monster: Entity, dominator_id: int, damage: 
 
 
 ## The free wild monster strikes the first target next to it, if there is one: the companion with
-## the lowest id, else the player with the lowest id, else a trail tile that's no ring's wall.
-func _strike(state: GameState, monster: Entity, damage: int) -> void:
+## the lowest id, else the player with the lowest id (the other way round when it's `enraged`), else
+## a trail tile that's no ring's wall.
+func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> void:
 	var tile: Vector2i = monster.tile
-	var side: Vector2i = _lowest_beside(_companion_at, tile)
+	var on_companion: bool = not enraged
+	var side: Vector2i = _lowest_beside(_companion_at if on_companion else _player_at, tile)
 	if side == tile:
-		side = _lowest_beside(_player_at, tile)
+		on_companion = not on_companion
+		side = _lowest_beside(_companion_at if on_companion else _player_at, tile)
 	if side != tile:
-		var target_id: int = _companion_at.get(side, _player_at.get(side, 0))
+		var target_id: int = _companion_at[side] if on_companion else _player_at[side]
 		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, damage)
-		if _companion_at.has(side):
+		if on_companion:
 			struck = _on_companion(state, struck)
 		state.events.append(struck)
 		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature

@@ -19,11 +19,12 @@ extends Feature
 ## Bigger rings spread the same ring power over more segments, so their walls are thinner.
 ##
 ## While a ring waits or seals, its dominator gets no other ring, the monsters inside stay where
-## they stand (a wild monster only moves where no ring could enclose it, #364), and a monster in one
-## ring can't be in another. Companions strike an encircled monster, weakening it, but leave a
-## sealing one alone (#418), as its seal was worked out from its HP. Any player standing on a wall
-## segment reinforces it (#227): a reinforced segment takes only a share of the pressure on it,
-## which is strong, but it puts the player right where the monsters push.
+## they stand (outside a ring, a wild monster moves only where no ring could enclose it, #364, or
+## enraged, chasing a player, #961), and a monster in one ring can't be in another. Companions
+## strike an encircled monster, weakening it, but leave a sealing one alone (#418), as its seal was
+## worked out from its HP. Any player standing on a wall segment reinforces it (#227): a reinforced
+## segment takes only a share of the pressure on it, which is strong, but it puts the player right
+## where the monsters push.
 ##
 ## It runs after the trail has grown this tick, reads the trail and the wild monsters, and clears a
 ## ring off the trail through TrailFeature.clear: features later in the order change an earlier one
