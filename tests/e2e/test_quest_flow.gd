@@ -240,7 +240,7 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, profile: Profil
 	var state: GameState = driver.state
 	var from: Vector2i = state.player(0).tile
 	var nearest: int = -1
-	for trigger: TileTrigger in state.region.triggers:
+	for trigger: TileTrigger in TileTrigger.all_in(state.region):
 		var beach: bool = trigger.action == TileTrigger.REACH and trigger.place == "beach"
 		# Sand, or sand with crates on it (#446).
 		var kind: String = state.region.terrain[trigger.tile]
@@ -655,7 +655,7 @@ func _check_caught_up(tie: QuestTie, profile: Profile) -> String:
 ## quest to reach the beach points at the beach tile nearest to player 1. A player arriving on the
 ## beach (through an exit, or starting there) reaches it too (#348).
 func _check_places() -> String:
-	var region: Region = RegionDocument.parse(BEACH_REGION)
+	var region: Region = InstanceBlueprints.read_region(BEACH_REGION)
 	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new(), TriggerFeature.new()]
 	var state: GameState = GameState.new(region, 3, ordered)
 	if not region.problem.is_empty() or not state.problem.is_empty():
@@ -690,7 +690,7 @@ func _check_places() -> String:
 ## A player who appears on the beach, as they do arriving through an exit or starting there,
 ## reaches it on the next tick, once, and not again while they stay.
 func _check_arrival(state: GameState) -> String:
-	var _arrived: Entity = state.add_entity(2, state.region.triggers[0].tile)
+	var _arrived: Entity = state.add_entity(2, TileTrigger.all_in(state.region)[0].tile)
 	var stay: Array[int] = [Command.NO_MOVE, Command.NO_MOVE, Command.NO_MOVE]
 	var still: Array[Command] = FlowSteps.commands(stay)
 	Simulation.step(state, still)
@@ -707,7 +707,7 @@ func _check_arrival(state: GameState) -> String:
 func _check_place_marker(state: GameState, profile: Profile) -> String:
 	var from: Vector2i = state.player(0).tile
 	var beach: Array[Vector2i] = []
-	for trigger: TileTrigger in state.region.triggers:
+	for trigger: TileTrigger in TileTrigger.all_in(state.region):
 		beach.append(trigger.tile)
 	var target: Vector2i = QuestTargets.of(state, profile.quests, 0).get("reach_beach", from)
 	if not beach.has(target) or Hex.distance(target, from) != _nearest(beach, from):
@@ -718,7 +718,7 @@ func _check_place_marker(state: GameState, profile: Profile) -> String:
 ## The region's quest target old_toad (#625) is its marked Ombulumo's, kept through a save, and
 ## not the other's, which is nearer the player.
 func _check_target() -> String:
-	var region: Region = RegionDocument.parse(TARGET_REGION)
+	var region: Region = InstanceBlueprints.read_region(TARGET_REGION)
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		KnockdownFeature.new(),

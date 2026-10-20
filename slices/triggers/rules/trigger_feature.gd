@@ -10,7 +10,9 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "triggers"
 
-## The index of every trigger in `state.region.triggers` that has fired, sorted.
+## The region's triggers (TileTrigger.all_in), read when the instance begins.
+var triggers: Array[TileTrigger] = []
+## The index of every trigger in `triggers` that has fired, sorted.
 var fired: Array[int] = []
 ## The place each player stands in. Coming to stand in another place reaches it.
 var standing: AreaStanding = AreaStanding.new()
@@ -25,8 +27,11 @@ func requires() -> Array[String]:
 	return needed
 
 
+func start(state: GameState) -> void:
+	triggers = TileTrigger.all_in(state.region)
+
+
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var triggers: Array[TileTrigger] = state.region.triggers
 	for i: int in triggers.size():
 		var once: bool = triggers[i].action != TileTrigger.REACH
 		if once and not fired.has(i) and _fires(state, triggers[i]):
@@ -56,14 +61,14 @@ func save_values() -> Dictionary:
 
 
 func load_values(state: GameState, values: DataReader) -> void:
-	var saved: Array[int] = values.wholes("fired", 0, state.region.triggers.size() - 1)
+	var saved: Array[int] = values.wholes("fired", 0, triggers.size() - 1)
 	fired.clear()
 	for index: int in saved:
 		if not fired.has(index):
 			fired.append(index)
 	fired.sort()
 	# A save from before places were remembered has none: everyone stands in no place.
-	var places: Dictionary[Vector2i, String] = _places(state.region)
+	var places: Dictionary[Vector2i, String] = _places()
 	standing.load_flat(state, values, "standing", AreaStanding.ids_of(places).size())
 
 
@@ -88,7 +93,7 @@ static func _act(state: GameState, trigger: TileTrigger) -> void:
 ## Raises PlaceReached for every player, in id order, who now stands in a place other than the one
 ## they stood in: stepping in from outside it, starting there, or arriving there through an exit.
 func _reach_places(state: GameState) -> void:
-	var places: Dictionary[Vector2i, String] = _places(state.region)
+	var places: Dictionary[Vector2i, String] = _places()
 	if places.is_empty():
 		return
 	var reached: Array[PlaceReached] = []
@@ -97,10 +102,10 @@ func _reach_places(state: GameState) -> void:
 	state.events.append_array(reached)
 
 
-## The place each of `region`'s place tiles is part of, by tile.
-static func _places(region: Region) -> Dictionary[Vector2i, String]:
+## The place each of the region's place tiles is part of, by tile.
+func _places() -> Dictionary[Vector2i, String]:
 	var places: Dictionary[Vector2i, String] = {}
-	for trigger: TileTrigger in region.triggers:
+	for trigger: TileTrigger in triggers:
 		if trigger.action == TileTrigger.REACH:
 			places[trigger.tile] = trigger.place
 	return places

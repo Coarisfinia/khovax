@@ -6,25 +6,14 @@ extends RefCounted
 ## - `ground`, `water` or `rock`, `where player <n> starts` (on ground) or `a wild monster, of a
 ##   species rolled from the instance blueprint's list` (on ground)
 ## - what a slice places on ground, as its PlacementReader reads it (#824): a person to talk to
-##   (NpcSpot), a treasure chest or loot on the ground (ChestPlacements)
+##   (NpcSpot), a treasure chest or loot on the ground (ChestPlacements), a tile trigger
+##   (TileTrigger) or a wild monster of a named species (WildSpot); a reader may also name the tile
+##   kind it stands on, which is read like a tile kind's meaning (below)
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
-## - `a wild monster, always <species id>`: a wild monster of a named species (#133); with
-##   `, wounded` after it, it starts at a low share of its HP (#389); with
-##   `, emitting <event name>` next, it emits that event when it faints (#541, EventEmitted); with
-##   `, the quest target <id>` next, it's the one monster a quest's step asks for by that id
-##   (#625, like a place's); with `, on <tile kind's meaning>` last, it stands on a tile of that
-##   kind rather than on ground (#452),
-##   e.g. `a wild monster, always ombulumo, wounded, on sand` or
-##   `a wild monster, always ombulumo, the quest target old_toad`
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
-## - `<what it is>; <when> <action>`: a tile trigger (#183), e.g. `a lookout; stepping here reveals
-##   within 8`, with TileTrigger's whens and actions in words: `stepping here`,
-##   `reveals within <n>`, `reaches the place <place id>` (#339: every tile of a place has it, e.g.
-##   `the beach; stepping here reaches the place beach`). When what it is is a tile kind's meaning
-##   (below), the tile is that kind too (#349), e.g. `forest; stepping here reaches the place grove`
 ## - `<tile blueprint id>`: a tile of that kind (#116), e.g. `forest`. Clauses after the kind, each
 ##   after a ", ", change that tile: `turned <n>` turns its decoration by n sixths of a turn,
 ##   counter-clockwise (#231), so two symbols can stand for the same kind turned apart, and
@@ -50,22 +39,6 @@ const EXIT: String = "exit to the "
 const TO: String = ", to "
 ## A legend meaning placing a wild monster in a tile that hides it (#202), before the tile's kind.
 const HIDING: String = "a wild monster hiding in "
-## How a named wild monster's legend meaning begins, and the clauses that may follow its species,
-## each once: its wounding, the event it emits when it faints (#541), the quest target it is
-## (#625), and, last, the tile kind it stands on (#452).
-const NAMED: String = "a wild monster, always "
-const WOUNDED: String = "wounded"
-const EMITTING: String = "emitting "
-const TARGETED: String = "the quest target "
-const ON: String = "on "
-## What separates what a trigger's tile is from its when and action.
-const TRIGGER: String = "; "
-## A trigger's when and actions in words, each with TileTrigger's own.
-const WHENS: Dictionary[String, String] = { "stepping here ": TileTrigger.STEP }
-const ACTIONS: Dictionary[String, String] = {
-	"reveals within ": TileTrigger.REVEAL,
-	"reaches the place ": TileTrigger.REACH,
-}
 ## The sides of a tile, in Hex.DIRECTIONS' order.
 const SIDES: Array[String] = ["east", "northeast", "northwest", "west", "southwest", "southeast"]
 ## What a tile kind's legend meaning says, after the kind, to turn its decoration (#231), to
@@ -89,29 +62,19 @@ var kind: String = ""
 var turns: Array[int] = []
 var walkable_overrides: Array[bool] = []
 var heights: Array[int] = []
-## What it names about its wild monster (#133), or null.
-var wild_spot: WildSpot = null
 ## The side a connector or exit opens to, or -1, and the blueprint an exit leads to.
 var connector_side: int = -1
 var exit_side: int = -1
 var exit_blueprint: String = ""
-## Its tile trigger (#183), on tile (0, 0), or null.
-var trigger: TileTrigger = null
 
 
 ## What `meaning` stands for, or null when it isn't understood; `readers` read what the slices
 ## place.
 static func read(meaning: String, readers: Array[PlacementReader]) -> LegendMeaning:
 	var read_one: LegendMeaning = LegendMeaning.new()
-	var understood: bool = false
-	if meaning.begins_with(NAMED):
-		understood = read_one._read_named(meaning.trim_prefix(NAMED))
-	elif meaning.contains(TRIGGER):
-		understood = read_one._read_trigger(meaning)
-	else:
-		understood = (read_one._read_placed(meaning)
-				or read_one._read_slices(meaning, readers)
-				or read_one._read_kind(meaning))
+	var understood: bool = (read_one._read_placed(meaning)
+			or read_one._read_slices(meaning, readers)
+			or read_one._read_kind(meaning))
 	return read_one if understood else null
 
 
@@ -141,7 +104,7 @@ func lay(region: Region, tile: Vector2i) -> String:
 
 
 ## Places what stands on `tile` or leads off it, once every tile is laid: a connector or exit,
-## which open from ground to the edge, a named wild monster, a trigger, or what a slice places.
+## which open from ground to the edge, or what a slice places.
 ## Returns why it can't, or "".
 func place(region: Region, tile: Vector2i) -> String:
 	var side: int = maxi(connector_side, exit_side)
@@ -154,19 +117,6 @@ func place(region: Region, tile: Vector2i) -> String:
 		else:
 			region.exits.append(Vector3i(tile.x, tile.y, side))
 			region.exit_blueprints.append(exit_blueprint)
-	if wild_spot != null:
-		for other: WildSpot in region.wild_spots.values():
-			if not wild_spot.target.is_empty() and other.target == wild_spot.target:
-				return "species %s: the quest target %s is one monster, marked once" % [
-					tile,
-					wild_spot.target,
-				]
-		region.wild_spots[tile] = wild_spot
-	if trigger != null:
-		var acts: bool = trigger.amount >= 1 or not trigger.place.is_empty()
-		if not region.is_walkable(tile) or not acts:
-			return "trigger %s isn't on ground or acts on nothing" % tile
-		region.triggers.append(trigger.moved(tile))
 	return _place_on_ground(region, tile)
 
 
@@ -178,75 +128,6 @@ func _place_on_ground(region: Region, tile: Vector2i) -> String:
 		return "%s on %s isn't on ground" % [placement, tile]
 	region.add_placement(placement, tile, meaning_said)
 	return ""
-
-
-## Reads a named wild monster's meaning after NAMED (`ombulumo, wounded, on sand`); returns whether
-## it could.
-func _read_named(named: String) -> bool:
-	var clauses: PackedStringArray = named.split(", ")
-	var species: String = clauses[0]
-	var wounded: bool = false
-	var emits: String = ""
-	var target: String = ""
-	for i: int in range(1, clauses.size()):
-		var clause: String = clauses[i]
-		if clause.begins_with(ON):
-			if not _read_kind(", ".join(clauses.slice(i)).trim_prefix(ON)):
-				return false
-			break
-		var emitted: String = clause.trim_prefix(EMITTING)
-		var targeted: String = clause.trim_prefix(TARGETED)
-		if clause == WOUNDED and not wounded:
-			wounded = true
-		elif (clause.begins_with(EMITTING)
-				and emits.is_empty()
-				and emitted.is_valid_ascii_identifier()):
-			emits = emitted
-		elif (clause.begins_with(TARGETED)
-				and target.is_empty()
-				and TileTrigger.is_place_id(targeted)):
-			target = targeted
-		else:
-			return false
-	if not species.is_valid_ascii_identifier():
-		return false
-	wild_monster = true
-	wild_spot = WildSpot.new(species, wounded, emits, target)
-	return true
-
-
-## Reads a trigger's meaning (`a lookout; stepping here reveals within 8`), whose tile is a kind
-## when what it is names one (#349); returns whether it could.
-func _read_trigger(meaning: String) -> bool:
-	var what: String = meaning.get_slice(TRIGGER, 0)
-	var clause: String = meaning.get_slice(TRIGGER, 1)
-	if what.strip_edges().is_empty():
-		return false
-	for phrase: String in WHENS:
-		var rest: String = clause.trim_prefix(phrase)
-		for action: String in ACTIONS:
-			var amount: String = rest.trim_prefix(action)
-			var reach: bool = ACTIONS[action] == TileTrigger.REACH
-			var known: bool = TileTrigger.is_place_id(amount) if reach else amount.is_valid_int()
-			if clause.begins_with(phrase) and rest.begins_with(action) and known:
-				var _kind_named: bool = _read_kind(what)
-				return _set_trigger(WHENS[phrase], ACTIONS[action], amount)
-	return false
-
-
-## Sets the trigger to fire `when` and do `action` by `amount`: how far, or a REACH trigger's place.
-## Returns true.
-func _set_trigger(when: String, action: String, amount: String) -> bool:
-	var reach: bool = action == TileTrigger.REACH
-	var place_id: String = amount if reach else ""
-	trigger = TileTrigger.new(
-		Vector2i.ZERO,
-		when,
-		action,
-		0 if reach else amount.to_int(),
-		place_id,
-	)
-	return true
 
 
 ## Reads a meaning built in, or one placing something on ground: a connector, an exit or a wild
@@ -276,14 +157,16 @@ func _read_placed(meaning: String) -> bool:
 	return false
 
 
-## Reads a meaning one of `readers` knows, placing something of a slice's on ground (#824); returns
-## whether one did.
+## Reads a meaning one of `readers` knows, placing something of a slice's on ground (#824), on the
+## tile kind the reader says it stands on, if any; returns whether one did.
 func _read_slices(meaning: String, readers: Array[PlacementReader]) -> bool:
 	for reader: PlacementReader in readers:
 		placement = reader.kind_of(meaning)
 		if not placement.is_empty():
 			meaning_said = meaning
-			return true
+			wild_monster = reader.places_wild_monster()
+			var stands_on: String = reader.tile_of(meaning)
+			return stands_on.is_empty() or _read_kind(stands_on)
 	return false
 
 

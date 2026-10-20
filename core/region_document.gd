@@ -47,6 +47,9 @@ static func parse(text: String, readers: Array[PlacementReader] = []) -> Region:
 	for tile: Vector2i in drawn:
 		if region.problem.is_empty():
 			region.problem = drawn[tile].place(region, tile)
+	for reader: PlacementReader in readers:
+		if region.problem.is_empty():
+			region.problem = reader.problem_in(region)
 	return region
 
 

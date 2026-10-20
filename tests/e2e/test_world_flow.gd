@@ -1058,7 +1058,7 @@ func _check_documents() -> String:
 	legend += "- `🌲`: forest\n"
 	legend += "- `💧`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
 	var grid: String = " 🪓🌲\n🔗🔴🚪\n 🐦💧"
-	var region: Region = RegionDocument.parse(tiles % [grid, legend])
+	var region: Region = InstanceBlueprints.read_region(tiles % [grid, legend])
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
@@ -1100,17 +1100,17 @@ func _check_refusals(tiles: String) -> String:
 			"the legend doesn't explain `🐚`"
 		),
 		tiles % ["🔴🪨🟫", base + "- `🪨`: boulder; stepping here reaches the place beach"]: (
-			"trigger (0, 0) isn't on ground"
+			"trigger on (0, 0) isn't on ground"
 		),
 		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always ombulumo, the quest target Old"]: (
 			"the legend doesn't explain `🐸`"
 		),
 		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always ombulumo, the quest target old"]: (
-			"species (1, 0): the quest target old is one monster"
+			"the quest target old is one monster"
 		),
 	}
 	for text: String in refusals:
-		var problem: String = RegionDocument.parse(text).problem
+		var problem: String = InstanceBlueprints.read_region(text).problem
 		if not problem.begins_with(refusals[text]):
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
 	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
@@ -1122,8 +1122,8 @@ func _check_refusals(tiles: String) -> String:
 
 ## The species `region`'s legend names for the wild monster spot `spot`, or "".
 static func _species_on(region: Region, spot: Vector2i) -> String:
-	var named: WildSpot = region.wild_spots.get(spot)
-	return named.species if named != null else ""
+	var meaning: String = region.placed(WildSpotPlacements.KIND).get(spot, "")
+	return WildSpot.read(meaning).species if not meaning.is_empty() else ""
 
 
 ## A legend symbol naming a tile kind and a place at once (#349) makes its tiles that kind and part
@@ -1132,13 +1132,13 @@ func _check_kind_and_place(tiles: String) -> String:
 	var legend: String = "- `🌲`: forest, turned 2; stepping here reaches the place grove\n"
 	legend += "- `🐚`: the beach; stepping here reaches the place beach\n"
 	legend += "- `🔴`: where player 1 starts"
-	var region: Region = RegionDocument.parse(tiles % ["🌲🔴🐚", legend])
+	var region: Region = InstanceBlueprints.read_region(tiles % ["🌲🔴🐚", legend])
 	var grove: Vector2i = Vector2i(-1, 0)
-	var expected: bool = region.problem.is_empty() and region.triggers.size() == 2
+	var expected: bool = region.problem.is_empty() and TileTrigger.all_in(region).size() == 2
 	expected = expected and region.terrain.get(grove, "") == "forest"
 	expected = expected and region.looks.decoration_turns == { grove: 2 }
 	expected = expected and region.terrain.get(Vector2i(1, 0), "") == Region.GROUND
-	for trigger: TileTrigger in region.triggers:
+	for trigger: TileTrigger in TileTrigger.all_in(region):
 		var place: String = "grove" if trigger.tile == grove else "beach"
 		expected = expected and trigger.action == TileTrigger.REACH and trigger.place == place
 	if not expected:
@@ -1167,7 +1167,7 @@ func _turned_and_overridden(region: Region, plain: String) -> bool:
 	var moved: Vector2i = Vector2i(5, -2)
 	expected = expected and not placed.is_walkable(STUMP + moved)
 	expected = expected and placed.is_walkable(WATER + moved)
-	return expected and region.hash_values() != RegionDocument.parse(plain).hash_values()
+	return expected and region.hash_values() != InstanceBlueprints.read_region(plain).hash_values()
 
 
 ## Every blueprint loads as a full instance for every seed, and its first player can walk to every

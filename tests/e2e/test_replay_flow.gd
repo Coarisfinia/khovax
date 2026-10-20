@@ -827,7 +827,8 @@ func _check_basic_monsters(region: Region) -> String:
 		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
 			region.wild_monsters,
 		]
-	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
+	var meaning: String = region.placed(WildSpotPlacements.KIND).get(FlowSteps.BEACH_TOAD, "")
+	var toad: WildSpot = WildSpot.read(meaning)
 	var sand: String = "sand"
 	if toad == null or toad.species != "ombulumo" or not toad.wounded:
 		return "the beach's wild monster isn't a wounded Ombulumo"

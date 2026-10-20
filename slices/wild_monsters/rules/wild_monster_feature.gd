@@ -82,8 +82,9 @@ func start(state: GameState) -> void:
 	var rng: Rng = Rng.new(state.rng_seed, stream())
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	_known = roster.duplicate()
+	var placed: Dictionary[Vector2i, String] = state.region.placed(WildSpotPlacements.KIND)
 	for spot: Vector2i in state.region.wild_monsters:
-		var named: WildSpot = state.region.wild_spots.get(spot)
+		var named: WildSpot = WildSpot.read(placed[spot]) if placed.has(spot) else null
 		var species: String = named.species if named != null else ""
 		if species.is_empty() and not roster.is_empty():
 			species = roster[rng.pick_weighted(weights)]

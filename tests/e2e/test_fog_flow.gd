@@ -109,9 +109,9 @@ func _check_reveal() -> String:
 ## A player stepping onto the glade's lookout reveals the region within its radius, in a tick, once.
 func _check_lookout() -> String:
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 7, 1)
-	if state.region.triggers.is_empty() or state.feature(TriggerFeature.ID) == null:
+	if TileTrigger.all_in(state.region).is_empty() or state.feature(TriggerFeature.ID) == null:
 		return "the glade has no lookout"
-	var lookout: TileTrigger = state.region.triggers[0]
+	var lookout: TileTrigger = TileTrigger.all_in(state.region)[0]
 	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	state.player(0).tile = lookout.tile
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))

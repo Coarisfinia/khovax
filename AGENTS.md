@@ -259,8 +259,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   back-edges are listed there, each with its issue), so a new slice takes its place in it. **The core never depends on
   a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
   or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
-  region's `TileTrigger`) and events it reads (`ExitTaken`, which the `World` moves a player
-  through) stay in the core, and only the rules that run them move. The core is `core/` (#297):
+  region's exits) and events it reads (`ExitTaken`, which the `World` moves a player through) stay
+  in the core, and only the rules that run them move; what a slice places on a region (people,
+  triggers) the core keeps only as its legend meaning, which the slice reads (`PlacementReader`,
+  #824). The core is `core/` (#297):
   the tick, the state, the region, the world, the grid math and the feature list. Scripts reach
   each other by `class_name`; where a path is needed (a scene, a model, a `preload`), it is
   absolute from `res://`, never relative (`./`, `../`), which the same check refuses (#375). It
