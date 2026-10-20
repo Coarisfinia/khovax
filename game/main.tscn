@@ -46,6 +46,7 @@
 [ext_resource type="Script" path="res://slices/harvest/look/harvest_view.gd" id="42_harvest"]
 [ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
 [ext_resource type="Script" path="res://slices/revive_items/ui/revive_button.gd" id="44_revive_button"]
+[ext_resource type="Script" path="res://slices/fog/meta/explored_keeper.gd" id="45_explored"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -75,9 +76,13 @@ script = ExtResource("11_profile")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 
-[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("driver") unique_id=1191191190]
+[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("driver", "companions") unique_id=1191191190]
 script = ExtResource("22_keeper")
 driver = NodePath("../Driver")
+companions = [NodePath("../ExploredKeeper")]
+
+[node name="ExploredKeeper" type="Node" parent="." unique_id=1191191191]
+script = ExtResource("45_explored")
 
 [node name="Instance" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1890189018]
 script = ExtResource("21_instance")
@@ -174,7 +179,7 @@ grid = NodePath("../Instance/HexGrid")
 script = ExtResource("12_fog")
 driver = NodePath("../Driver")
 cloud = NodePath("../Instance/FogCloud")
-keeper = NodePath("../WorldKeeper")
+keeper = NodePath("../ExploredKeeper")
 
 [node name="CanopyCutaway" type="Node" parent="." node_paths=PackedStringArray("driver", "decorations") unique_id=3280328032]
 script = ExtResource("26_cutaway")
@@ -212,7 +217,7 @@ layout_mode = 3
 mouse_filter = 2
 script = ExtResource("26_survey")
 driver = NodePath("../../Driver")
-keeper = NodePath("../../WorldKeeper")
+keeper = NodePath("../../ExploredKeeper")
 holder = NodePath("../../ProfileHolder")
 input = NodePath("../../LocalInput")
 neighbours = NodePath("../../Instance/NeighbourView")

@@ -46,7 +46,7 @@ const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 
 @export var driver: Session
 ## Where the explored ground is kept with the world.
-@export var keeper: WorldKeeper
+@export var keeper: ExploredKeeper
 ## Whose quests are marked: this machine's player's profile.
 @export var holder: ProfileHolder
 ## Which player is in the middle, and whose quests' targets are measured from.

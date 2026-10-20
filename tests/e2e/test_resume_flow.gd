@@ -407,7 +407,7 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 	tree.call("expect_warning", "the explored ground can't be read")
 	var main: Node = _boot(tree)
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
+	var keeper: ExploredKeeper = main.get_node("ExploredKeeper") as ExploredKeeper
 	var result: String = ""
 	if driver.world.state_hash() != world.state_hash():
 		result = "malformed explored ground refused the world: %s" % [bad]
@@ -434,7 +434,7 @@ func _check_purged_explored(tree: SceneTree) -> String:
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
 	var main: Node = _boot(tree)
 	await tree.process_frame
-	var explored: ExploredGround = (main.get_node("WorldKeeper") as WorldKeeper).explored
+	var explored: ExploredGround = (main.get_node("ExploredKeeper") as ExploredKeeper).explored
 	var glade_generation: int = explored.generations.get(InstanceBlueprints.GLADE, 1)
 	var forest: Dictionary = explored.tiles_in.get(InstanceBlueprints.FOREST, {})
 	main.queue_free()
@@ -505,7 +505,7 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	tree.call("expect_warning", "the saved world can't be resumed")
 	var main: Node = _boot(tree)
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
-	var keeper: WorldKeeper = main.get_node("WorldKeeper") as WorldKeeper
+	var keeper: ExploredKeeper = main.get_node("ExploredKeeper") as ExploredKeeper
 	# The player brings the companion their profile carries into the fresh world too.
 	var fresh: World = World.new(
 		BlueprintSource.new(),

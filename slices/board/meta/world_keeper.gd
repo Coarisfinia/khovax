@@ -4,9 +4,9 @@ extends Node
 ## and while the game goes on it saves the driver's world, debounced like the profile (#73): at most
 ## once per ProfileKeeper.SAVE_INTERVAL_MSEC, and at once when the game quits or goes to the
 ## background. A crash loses at most one interval of play. The world file is apart from the
-## profile (WorldSave), so saving one never touches the other. With the world it keeps the ground
-## this machine's player explored in it (#215, FogView remembers it into `explored`), saved in the
-## same file at the same moments, so the two go together: a fresh world starts with none.
+## profile (WorldSave), so saving one never touches the other. What other slices keep beside the
+## world (its `companions`, like the ground explored in it) is saved in the same file at the same
+## moments, so the two go together.
 
 ## Where the main scene's keeper keeps the world unless it's pointed elsewhere; "" keeps none. The
 ## headless flows and the test builds clear it before the main scene comes up, so they never
@@ -15,12 +15,11 @@ static var default_path: String = WorldSave.PATH
 
 ## Whose world is saved.
 @export var driver: Session
+## What other slices keep beside the world in its file.
+@export var companions: Array[WorldCompanion] = []
 
 ## Where this keeper keeps the world, or "" for `default_path`; tests point it elsewhere.
 var save_path: String = ""
-## What this machine's player has explored in `_explored_world` (`explored_in`).
-var explored: ExploredGround = ExploredGround.new()
-var _explored_world: World = null
 ## The world last saved and its tick then, so a world that hasn't moved isn't saved again.
 var _saved_world: World = null
 var _saved_tick: int = -1
@@ -38,11 +37,17 @@ func _notification(what: int) -> void:
 
 
 ## The saved world to resume, or null for a fresh one: when no world is kept, none is saved yet,
-## or the save is refused. A refused save is warned about; the fresh world's saves replace it.
+## or the save is refused. A refused save is warned about; the fresh world's saves replace it. The
+## companions take over what was kept beside it.
 func saved_world() -> World:
-	# Nothing explored is kept unless the saved world is resumed.
-	explored = ExploredGround.new()
-	_explored_world = null
+	var saved: World = _load_saved()
+	for companion: WorldCompanion in companions:
+		companion.resumed(saved, path())
+	return saved
+
+
+## The saved world, or null when there's none to resume (`saved_world`).
+func _load_saved() -> World:
 	if path().is_empty():
 		return null
 	var saved: World = WorldSave.load_from(BlueprintSource.new(), path())
@@ -52,22 +57,7 @@ func saved_world() -> World:
 	if saved != null:
 		_saved_world = saved
 		_saved_tick = saved.tick
-		_explored_world = saved
-		var problem: String = ExploredSave.load_into(path(), explored)
-		if not problem.is_empty():
-			push_warning("the explored ground can't be read, so none is remembered: " + problem)
-		# What was seen in an instance purged since won't fit its ground when it comes back.
-		explored.forget_purged(saved)
 	return saved
-
-
-## The ground explored in `world`, to remember into: what was saved with it when it's the world
-## resumed, and nothing yet in any other (a fresh one, or one started as the saved one was refused).
-func explored_in(world: World) -> ExploredGround:
-	if world != _explored_world:
-		_explored_world = world
-		explored = ExploredGround.new()
-	return explored
 
 
 ## Saves the driver's world if it moved since the last save and that save is at least
@@ -83,11 +73,10 @@ func save_if_due(now_msec: int) -> String:
 func flush(now_msec: int) -> String:
 	if not _moved():
 		return ""
-	var problem: String = WorldSave.save(
-		driver.world,
-		path(),
-		ExploredSave.beside(explored_in(driver.world)),
-	)
+	var beside: Dictionary = {}
+	for companion: WorldCompanion in companions:
+		beside.merge(companion.beside(driver.world))
+	var problem: String = WorldSave.save(driver.world, path(), beside)
 	if problem.is_empty():
 		WebStorage.sync()
 		_last_save_msec = now_msec
