@@ -410,7 +410,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 			return
 		seals[dominator_id] = seal
 	_load_waiting(state, values)
-	var refused: String = totems.load_flat(state, values.wholes("totems", 0, DataReader.MOST))
+	var refused: String = totems.load_flat(state, values.pairs("totems", 0, DataReader.MOST))
 	if not refused.is_empty():
 		values.fail(refused)
 
@@ -470,16 +470,15 @@ static func _progress_problem(state: GameState, seal: RingSeal, entry: DataReade
 	var walls: Array[Vector2i] = entry.tiles("walls", state.region)
 	var damage: Array[int] = entry.wholes("damage", 0, DataReader.MOST)
 	var ticks: int = entry.whole("ticks", 0, DataReader.MOST)
-	var braced: Array[int] = entry.wholes("braced", 0, DataReader.MOST)
+	var braced: Dictionary[int, int] = entry.pairs("braced", 0, DataReader.MOST)
 	var braced_walls: Array[int] = entry.wholes("braced_walls", -DataReader.MOST, DataReader.MOST)
 	if entry.failed() or walls != seal.walls or damage.size() != walls.size():
 		return "its walls aren't the ring's"
-	if braced.size() % 2 != 0 or braced_walls.size() % 3 != 0:
-		return "its braced ticks or segments aren't a player and ticks, or a player and a tile"
+	if braced_walls.size() % 3 != 0:
+		return "its braced segments aren't a player and a tile"
 	seal.damage = damage
 	seal.ticks = ticks
-	for i: int in range(0, braced.size(), 2):
-		seal.braced[braced[i]] = braced[i + 1]
+	seal.braced = braced
 	for i: int in range(0, braced_walls.size(), 3):
 		var wall: Vector2i = Vector2i(braced_walls[i + 1], braced_walls[i + 2])
 		if not seal.walls.has(wall):

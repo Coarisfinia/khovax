@@ -37,30 +37,21 @@ func charges_of(player_id: int) -> int:
 
 ## Every totem as [entity id, charges, ...], in id order: for the save and the hash.
 func flat() -> Array[int]:
-	var ids: Array[int] = []
-	ids.assign(charges.keys())
-	ids.sort()
-	var values: Array[int] = []
-	for each: int in ids:
-		values.append_array([each, charges[each]])
-	return values
+	return DataReader.flat_pairs(charges)
 
 
-## Restores the totems from `values` (as `flat` gives them); returns why they can't be, or "":
-## each must be a player's in `state`, in increasing id order, with 0 to CHARGES charges, and every
+## Restores the totems from `saved` (as `flat` gives them, read by `DataReader.pairs`); returns why
+## they can't be, or "": each must be a player's in `state`, with 0 to CHARGES charges, and every
 ## player there must have one.
-func load_flat(state: GameState, values: Array[int]) -> String:
+func load_flat(state: GameState, saved: Dictionary[int, int]) -> String:
 	charges.clear()
-	if values.size() % 2 != 0:
-		return "a totem's charges are cut off"
-	for i: int in range(0, values.size(), 2):
-		var holder: Entity = state.entity(values[i])
-		var in_order: bool = i == 0 or values[i] > values[i - 2]
-		if holder == null or holder.slot == Entity.NO_SLOT or not in_order:
-			return "totem of %d isn't one player's, or is out of order" % values[i]
-		if values[i + 1] < 0 or values[i + 1] > CHARGES:
-			return "totem of %d has %d charges" % [values[i], values[i + 1]]
-		charges[values[i]] = values[i + 1]
+	for holder_id: int in saved:
+		var holder: Entity = state.entity(holder_id)
+		if holder == null or holder.slot == Entity.NO_SLOT:
+			return "totem of %d isn't one player's" % holder_id
+		if saved[holder_id] < 0 or saved[holder_id] > CHARGES:
+			return "totem of %d has %d charges" % [holder_id, saved[holder_id]]
+		charges[holder_id] = saved[holder_id]
 	for entity: Entity in state.entities:
 		if entity.slot != Entity.NO_SLOT and not charges.has(entity.id):
 			return "player %d has no totem" % entity.id

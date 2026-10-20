@@ -56,7 +56,7 @@ func to_data() -> Dictionary:
 		"damage": damage.duplicate(),
 		"monsters": monsters.duplicate(),
 		"ticks": ticks,
-		"braced": braced_flat(),
+		"braced": DataReader.flat_pairs(braced),
 		"braced_walls": braced_walls_flat(),
 	}
 
@@ -83,17 +83,6 @@ func brace(entity_id: int, wall: Vector2i) -> void:
 	braced_walls[entity_id] = walls_stood_on
 
 
-## The braced ticks as [entity id, ticks, ...], in id order.
-func braced_flat() -> Array[int]:
-	var ids: Array[int] = []
-	ids.assign(braced.keys())
-	ids.sort()
-	var flat: Array[int] = []
-	for each: int in ids:
-		flat.append_array([each, braced[each]])
-	return flat
-
-
 ## Every value of the seal, for the state hash, in a fixed order.
 func hash_values() -> Array[int]:
 	var values: Array[int] = [integrity, ticks, seal_ticks, walls.size()]
@@ -103,7 +92,7 @@ func hash_values() -> Array[int]:
 	for i: int in monsters.size():
 		values.append_array([monsters[i], targets[i]])
 	values.append(braced.size())
-	values.append_array(braced_flat())
+	values.append_array(DataReader.flat_pairs(braced))
 	var walls_flat: Array[int] = braced_walls_flat()
 	values.append(walls_flat.size())
 	values.append_array(walls_flat)

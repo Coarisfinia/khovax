@@ -122,5 +122,34 @@ static func flat(tile_list: Array[Vector2i]) -> Array[int]:
 	return numbers
 
 
+## The pairs under `key`, saved as a key and its value after one another in increasing key order,
+## as `flat_pairs` writes them, keys and values each from `low` to `high`; empty when they aren't.
+func pairs(key: String, low: int, high: int) -> Dictionary[int, int]:
+	var result: Dictionary[int, int] = {}
+	var numbers: Array[int] = wholes(key, low, high)
+	if numbers.size() % 2 != 0:
+		fail("%s holds half a pair" % key)
+		return result
+	for i: int in range(0, numbers.size(), 2):
+		if i > 0 and numbers[i] <= numbers[i - 2]:
+			fail("%s holds %d twice or out of order" % [key, numbers[i]])
+			result.clear()
+			return result
+		result[numbers[i]] = numbers[i + 1]
+	return result
+
+
+## `pairs` flattened into each key and its value after one another, by key, as `pairs` reads them:
+## for a save and a state hash.
+static func flat_pairs(pairs_by_key: Dictionary[int, int]) -> Array[int]:
+	var keys: Array[int] = []
+	keys.assign(pairs_by_key.keys())
+	keys.sort()
+	var numbers: Array[int] = []
+	for each: int in keys:
+		numbers.append_array([each, pairs_by_key[each]])
+	return numbers
+
+
 func _child(value: Variant) -> DataReader:
 	return DataReader.new(value, self)

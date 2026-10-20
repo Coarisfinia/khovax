@@ -92,7 +92,7 @@ func carry_in(_state: GameState, arrived: Entity, carried: Dictionary) -> void:
 
 
 func hash_values() -> Array[int]:
-	var flat: Array[int] = _flat()
+	var flat: Array[int] = DataReader.flat_pairs(_waits)
 	var values: Array[int] = [flat.size()]
 	values.append_array(flat)
 	return values
@@ -100,16 +100,19 @@ func hash_values() -> Array[int]:
 
 ## Each waiting companion's ticks left, by entity id.
 func save_values() -> Dictionary:
-	return { "waits": _flat() }
+	return { "waits": DataReader.flat_pairs(_waits) }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
 	_waits.clear()
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
-	var flat: Array[int] = values.wholes("waits", 0, DataReader.MOST)
-	for i: int in range(0, flat.size() - 1, 2):
-		if companions.owners.has(flat[i]) and flat[i + 1] > 0:
-			_waits[flat[i]] = mini(flat[i + 1], STRIKE_TICKS)
+	var saved: Dictionary[int, int] = values.pairs("waits", 0, DataReader.MOST)
+	for companion_id: int in saved:
+		var wait: int = saved[companion_id]
+		if not companions.owners.has(companion_id) or wait < 1 or wait > STRIKE_TICKS:
+			values.fail("wait of %d isn't one companion's" % companion_id)
+			return
+		_waits[companion_id] = saved[companion_id]
 
 
 ## The wild monster with the lowest id next to `tile` that isn't hiding or sealing in a ring, or 0.
@@ -139,14 +142,3 @@ static func can_strike(
 	var hidden: bool = hiding != null and hiding.is_hidden(monster_id)
 	var sealed: bool = domination != null and domination.is_sealed(monster_id)
 	return not hidden and not sealed and Hex.distance(state.entity(monster_id).tile, tile) == 1
-
-
-## The waits as entity id and ticks left after one another, by id.
-func _flat() -> Array[int]:
-	var ids: Array[int] = []
-	ids.assign(_waits.keys())
-	ids.sort()
-	var flat: Array[int] = []
-	for companion_id: int in ids:
-		flat.append_array([companion_id, _waits[companion_id]])
-	return flat

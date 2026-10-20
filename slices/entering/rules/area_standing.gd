@@ -40,25 +40,22 @@ func forget(entity_id: int) -> void:
 ## Where the players stand, as entity id and area index after one another, by id: for the state
 ## hash and the save.
 func flat() -> Array[int]:
-	var values: Array[int] = []
-	var ids: Array[int] = []
-	ids.assign(areas.keys())
-	ids.sort()
-	for entity_id: int in ids:
-		values.append_array([entity_id, areas[entity_id]])
-	return values
+	return DataReader.flat_pairs(areas)
 
 
-## Restores what `flat` gave, saved under `key` in `values`, for a region with `count` areas. A
-## save without it has nobody standing in an area.
+## Restores what `flat` gave, saved under `key` in `values`, for a region with `count` areas: each
+## an entity in `state` standing in one of them, or the save is refused. A save without it has
+## nobody standing in an area.
 func load_flat(state: GameState, values: DataReader, key: String, count: int) -> void:
 	areas.clear()
 	if not values.data.has(key):
 		return
-	var pairs: Array[int] = values.wholes(key, 0, DataReader.MOST)
-	for i: int in range(0, pairs.size() - 1, 2):
-		if pairs[i + 1] < count and state.entity(pairs[i]) != null:
-			areas[pairs[i]] = pairs[i + 1]
+	var saved: Dictionary[int, int] = values.pairs(key, 0, DataReader.MOST)
+	for entity_id: int in saved:
+		if saved[entity_id] >= count or state.entity(entity_id) == null:
+			values.fail("%s: %d isn't an entity in one of %d areas" % [key, entity_id, count])
+			return
+		areas[entity_id] = saved[entity_id]
 
 
 ## The area ids `area_of` names, sorted, each once.

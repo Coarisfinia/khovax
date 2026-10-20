@@ -145,10 +145,14 @@ func _check_round_trip(world: World) -> String:
 ## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
 ## purging that doesn't add up (#212): a blueprint purged that doesn't exist, an instance left
 ## behind while
-## someone is in it or not left behind while nobody is, or one left long enough to be purged.
+## someone is in it or not left behind while nobody is, or one left long enough to be purged. A
+## feature's id and value pairs (#933) are refused cut off, out of order or naming an entity they
+## can't: the area a stranger stands in, or the wait of a companion that is a player.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
+	var player: int = world.player(0).id
+	var stranger: int = player + 1000
 	var cases: Dictionary[String, String] = {
 		_changed(data, "format", WorldData.FORMAT + 1): "world format",
 		# Another digest of the rule changes (#876).
@@ -167,6 +171,10 @@ func _check_refused(world: World) -> String:
 		_with_left_at(data, FlowSteps.GLADE, 0): "instance %s's left_at" % FlowSteps.GLADE,
 		_with_left_at(data, FlowSteps.FOREST, -1): "instance %s's left_at" % FlowSteps.FOREST,
 		_expired(): "instance %s was left" % FlowSteps.GLADE,
+		_with_values(data, EnteringFeature.ID, "inside", [player]): "inside holds half a pair",
+		_with_values(data, EnteringFeature.ID, "inside", [stranger, 0]): "inside: %d" % stranger,
+		_with_values(data, TriggerFeature.ID, "standing", [player, 0, player, 0]): "standing holds",
+		_with_values(data, CompanionAttackFeature.ID, "waits", [player, 1]): "wait of %d" % player,
 	}
 	var source: BlueprintSource = BlueprintSource.new()
 	for case: String in cases:
@@ -182,6 +190,18 @@ static func _with_left_at(data: Dictionary, instance_name: String, left: int) ->
 	for entry: Dictionary in changed["instances"]:
 		if entry["name"] == instance_name:
 			entry["left_at"] = left
+	return JSON.stringify(changed)
+
+
+## `data` as text, with the glade's feature `feature_id` saving `value` under `key`.
+static func _with_values(data: Dictionary, feature_id: String, key: String, value: Array) -> String:
+	var changed: Dictionary = data.duplicate(true)
+	for entry: Dictionary in changed["instances"]:
+		if entry["name"] != FlowSteps.GLADE:
+			continue
+		for feature: Dictionary in entry["state"]["features"]:
+			if feature["id"] == feature_id:
+				feature["values"][key] = value
 	return JSON.stringify(changed)
 
 
