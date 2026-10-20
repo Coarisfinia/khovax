@@ -99,21 +99,23 @@ static func _region_for(
 ## the others by file name, and turned if the blueprint is. Its `problem` says what's wrong.
 static func region_of(instance_name: String, seed_value: int, variant_name: String = "") -> Region:
 	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
-	var path: String = REGIONS + region_name + ".md"
-	if FileAccess.file_exists(path):
-		return _lead_exits(read_region(FileAccess.get_file_as_string(path)), instance_name)
-	var folder: String = REGIONS + region_name + "/"
-	var files: Array[String] = []
-	for file: String in DirAccess.get_files_at(folder):
-		if file.ends_with(".md") and file != START_PIECE:
-			files.append(file)
-	files.sort()
-	files.push_front(START_PIECE)
+	var files: RegionFiles = RegionFiles.cached(region_name)
+	if files.whole:
+		var whole: String = files.texts.values()[0]
+		return _lead_exits(read_region(whole), instance_name)
+	var start: String = RegionFiles.key(region_name) + "/" + START_PIECE
+	var paths: Array[String] = []
+	for path: String in files.texts:
+		if path != start:
+			paths.append(path)
+	paths.push_front(start)
 	var pieces: Array[Region] = []
-	pieces.assign(files.map(func(file: String) -> Region: return _piece(folder + file)))
-	for piece: Region in pieces:
+	for path: String in paths:
+		var text: String = files.texts.get(path, "")
+		var piece: Region = _piece(path, text)
 		if not piece.problem.is_empty():
 			return piece
+		pieces.append(piece)
 	var named: Blueprint = blueprint(instance_name)
 	var arranged: Region = RegionArranger.arrange(
 		pieces,
@@ -187,9 +189,10 @@ static func _setup(instance_name: String, region: Region) -> FeatureSetup:
 	return setup
 
 
-## The region piece in the file at `path`, every tile of it named after the file (#350).
-static func _piece(path: String) -> Region:
-	var piece: Region = read_region(FileAccess.get_file_as_string(path))
+## The region piece in the file at `path`, whose text is `text`, every tile of it named after the
+## file (#350).
+static func _piece(path: String, text: String) -> Region:
+	var piece: Region = read_region(text)
 	if not piece.problem.is_empty():
 		piece.problem = "%s: %s" % [path, piece.problem]
 	var piece_id: String = path.get_file().get_basename()

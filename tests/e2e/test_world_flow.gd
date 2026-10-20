@@ -27,7 +27,8 @@ extends RefCounted
 ## event sets its own flag, and the corrupted glade's corrupting monster emits one when it falls,
 ## which purifies the glade once nobody is in it (#541). The first time a named event sets its
 ## flag, the world raises a world-changing moment, once (#499). A fresh world starts with the
-## factions' territory as flags, which its save data keeps (#637).
+## factions' territory as flags, which its save data keeps (#637). A walk out through an exit holds
+## while the content next door isn't read on any machine yet, and goes on once it is (#816).
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
@@ -84,6 +85,7 @@ func run(tree: SceneTree) -> String:
 		_check_documents,
 		_check_walk_through,
 		_check_held_at_exit,
+		_check_held_until_read,
 		_check_companions,
 		_check_swaps,
 		_check_carry_requests,
@@ -259,10 +261,8 @@ func _check_walk_through() -> String:
 ## content, the player pressing out through the forest's exit stays on it, in the forest, however
 ## long they press; once no command waits, the same press takes them into the glade.
 func _check_held_at_exit() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	var world: World = _at_forest_exit()
 	var out: int = FlowSteps.INTO_GLADE[-1]
-	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
-		_walk_in(world, direction)
 	var waiting: Command = Command.new()
 	waiting.waiting = true
 	var held: Array[Command] = [Command.new(out), waiting]
@@ -276,6 +276,66 @@ func _check_held_at_exit() -> String:
 	if world.instance_of(0) != FlowSteps.GLADE:
 		return "a player held at an exit didn't walk through once no machine waited"
 	return ""
+
+
+## A fresh world whose player 0 walked from the forest's start onto its exit into the glade.
+func _at_forest_exit() -> World:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
+		_walk_in(world, direction)
+	return world
+
+
+## Holding the walk until the content next door is read (#816): with the glade's region not read
+## on this machine yet, its local player's command says it waits (LocalSource), so the player
+## pressing out of the forest's exit stays on it; the background fill (ContentFill) reads the
+## region meanwhile, and once it has, the command no longer waits and the same press takes them
+## into the glade, which loads from what was read.
+func _check_held_until_read() -> String:
+	var world: World = _at_forest_exit()
+	var out: int = FlowSteps.INTO_GLADE[-1]
+	# A driver kept out of the tree, so it never starts a world of its own: only its world is read.
+	var session: GameDriver = GameDriver.new()
+	session.world = world
+	var input: LocalInput = LocalInput.new()
+	var source: LocalSource = LocalSource.new(input, session)
+	var region: String = RegionFiles.key(FlowSteps.GLADE)
+	ContentCatalog.forget(region)
+	var result: String = _held_until_read(world, source, out)
+	if result.is_empty() and not ContentCatalog.has(region):
+		result = "the background fill didn't read the glade's region"
+	session.free()
+	input.free()
+	return result
+
+
+## Steps `world` with the local command `source` gives while the glade's region isn't read, the
+## player pressing `out`, then once the background fill read it; returns what went wrong, or "".
+func _held_until_read(world: World, source: LocalSource, out: int) -> String:
+	var local: Command = _polled(source, world)
+	if not local.waiting:
+		return "the local command didn't wait for the glade's region, which wasn't read yet"
+	var pressing: Array[Command] = [Command.new(out), local]
+	for _tick: int in MovementFeature.MOVE_TICKS * 3:
+		world.step(pressing)
+	if world.instance_of(0) != FlowSteps.FOREST or world.player(0).tile != FlowSteps.FOREST_EXIT:
+		return "a player walked on while the glade's region wasn't read on this machine"
+	ContentFill.wait()
+	local = _polled(source, world)
+	if local.waiting:
+		return "the local command still waited once the background fill had read the glade"
+	pressing = [Command.new(out), local]
+	world.step(pressing)
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "a player didn't walk into the glade once its region was read"
+	return ""
+
+
+## The command `source` gives for the world's next tick.
+func _polled(source: LocalSource, world: World) -> Command:
+	var schedule: CommandSchedule = CommandSchedule.new(1, 0, world.tick)
+	source.poll(schedule, world.tick + 1, world.instances[world.instance_of(0)])
+	return schedule.take(world.tick + 1)[0]
 
 
 ## Companions (#338): the player who brings one is joined by it on the first tick, beside them; the

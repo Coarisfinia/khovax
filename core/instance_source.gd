@@ -11,8 +11,8 @@ func exists(_instance_name: String) -> bool:
 
 
 ## Whether everything the named instance loads from is already read (#816), so loading it reads no
-## files. Always, until the content cache is filled in the background (part 3 of #816): until then,
-## each reader reads its files the first time it's asked.
+## files: while it isn't, nobody walks into it (Command.waiting). This one knows no content to wait
+## for.
 func cached(_instance_name: String) -> bool:
 	return true
 

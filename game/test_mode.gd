@@ -40,8 +40,13 @@ func _ready() -> void:
 		await boot.tree_exited
 	_cheapest_frames(get_tree().current_scene)
 	# Any error logged during the flow fails it: a script error in it would end it with "", a pass.
+	# Content that fails to load while the flow waits for it counts too.
 	var errors: ErrorCounter = ErrorCounter.new()
 	OS.add_logger(errors)
+	# The flow plays with all the content read (#816), as the headless run does (run_e2e.gd): a walk
+	# holding at an exit while the boot's background fill still runs would play out by this
+	# device's speed and end in another hash.
+	ContentFill.wait()
 	var flow: Object = (load(flow_path) as GDScript).new()
 	var done: Signal = Signal(flow, "finished")
 	flow.call("begin", get_tree().current_scene, get_tree())

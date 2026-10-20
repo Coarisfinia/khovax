@@ -10,7 +10,8 @@ extends Node
 ## lifts calmly, without a flash (the game is made around motion sickness). The engine's own boot
 ## splash is the fog's color too (project.godot), so the first thing on screen already looks like
 ## the game. A caption on the fog says the world is loading (#270), carrying on from the web page's
-## own captions (the web presets' head_include), so the wait never looks like a hang. The test
+## own captions (the web presets' head_include), so the wait never looks like a hang. The game's
+## content starts being read in the background meanwhile (#816). The test
 ## builds log when the fog shows and when the game starts, for the web e2e.
 
 ## Emitted when the game's main scene has loaded and been added, with it.
@@ -59,6 +60,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	_report("fog shown")
+	_prefetch()
 	var scene: PackedScene = load(GAME) as PackedScene
 	if scene == null:
 		push_error("the game's main scene failed to load")
@@ -76,6 +78,14 @@ func _process(_delta: float) -> void:
 ## However the boot scene goes, its fog no longer hides the game.
 func _exit_tree() -> void:
 	FogView.boot_covering = false
+
+
+## Starts reading the game's content in the background (#816), the instance the world starts in
+## and its neighbours first, while the main scene loads: the world then finds it read. Without
+## threads (the web build) it's read here and now instead.
+static func _prefetch() -> void:
+	var start: String = GameDriver.start_instance
+	InstanceContent.prefetch(start if not start.is_empty() else Realms.start())
 
 
 ## Starts the loaded game under the fog: it becomes the current scene.
