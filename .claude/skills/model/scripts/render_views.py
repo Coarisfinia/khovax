@@ -60,12 +60,13 @@ cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
 scene.camera = cam
 
-# glTF's forward is -Y in Blender after import: "front" looks at the model's face.
+# glTF's forward (+Z, the game's model front) is -Y in Blender after import: "front" looks at the
+# model's face. "left" and "right" are the model's own sides, so its left is +X.
 views = {
 	"front": Vector((0, -1, 0)),
 	"back": Vector((0, 1, 0)),
-	"left": Vector((-1, 0, 0)),
-	"right": Vector((1, 0, 0)),
+	"left": Vector((1, 0, 0)),
+	"right": Vector((-1, 0, 0)),
 	"top": Vector((0, -0.001, 1)),
 	"three_quarter": Vector((1, -1, 0.8)),
 }

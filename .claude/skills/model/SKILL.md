@@ -26,8 +26,10 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
   first and the detail second.
-- **Scale and placement:** the origin at the feet, facing Godot's forward (-Z after import), the
-  height matching the model it sits beside in the game (measure the reference .glb).
+- **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
+  Blender's -Y; `Vector3.MODEL_FRONT`), like every model in the game: the views turn a figure with
+  `atan2(heading.x, heading.z)`, so one built facing -Z walks backwards. The height matches the
+  model it sits beside in the game (measure the reference .glb).
 - **Mesh health:** apply transforms, recalculate normals outside, no loose or non-manifold geometry.
 
 ## 2. Rig
