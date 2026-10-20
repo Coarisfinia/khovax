@@ -87,7 +87,6 @@ declare -A SLICE_EXEMPT=(
   [species>menu]=851 [species>profile]=851 [species>texts]=851
   [survey>quests]=851
   [texts>factions]=851 [texts>gear]=851
-  [trail>domination]=851
   [wild_monsters>companions]=851 [wild_monsters>domination]=851
 )
 # Per slice: its own classes, and the later slices' classes and folder names it may not name.

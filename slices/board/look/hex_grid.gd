@@ -1,15 +1,23 @@
+@tool
+class_name HexGrid
+extends Node3D
 ## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
-## draws tiles: features color tiles through `paint` (e.g. TrailView), and know nothing about each
-## other; TileDecorations stands each kind's decoration on them. A tile a rule changes in place
+## draws tiles: features color tiles through `paint`, each on its own layer (e.g. TrailView and
+## SealFillView), and know nothing about each other (#851); TileDecorations stands each kind's
+## decoration on them. A tile a rule changes in place
 ## (#530) eases into its new kind's color when its TileChanged event comes, or, for a neighbour's
 ## grid that hears no events, when it's told to `show_changes` (NeighbourView, #538). A tool script,
 ## so the grid also shows in the editor, as a disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
 ## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.
-@tool
-class_name HexGrid
-extends Node3D
+
+## The layers features paint tiles on, lowest first: a tile painted on several shows the highest
+## one's color, so a sealing ring's fill shows over the trail.
+enum PaintLayer {
+	TRAIL,
+	SEALS,
+}
 
 ## Height of a tile; its top surface is at this y.
 const TILE_HEIGHT: float = 0.1
@@ -37,8 +45,8 @@ var _mesh: CylinderMesh = CylinderMesh.new()
 var _tiles: MultiMeshInstance3D = MultiMeshInstance3D.new()
 ## The region the tiles show.
 var _region: Region
-## The colors last painted onto tiles.
-var _paint: Dictionary[Vector2i, Color] = {}
+## The colors each layer last painted onto tiles, by PaintLayer.
+var _layers: Dictionary[int, Dictionary] = {}
 ## Each tile's color when nothing paints it: its kind's.
 var _base: Dictionary[Vector2i, Color] = {}
 ## Each tile's MultiMesh instance, transform and color, as given to the MultiMesh. Kept here
@@ -86,12 +94,17 @@ func show_state() -> void:
 		_build(_shown_region())
 
 
-## Colors the tiles in `colors` and gives every other tile its kind's color. Only tiles whose
-## color changes are sent to the MultiMesh.
-func paint(colors: Dictionary[Vector2i, Color]) -> void:
-	_paint = colors
-	for tile: Vector2i in _index:
-		_recolor(tile)
+## Colors the tiles in `colors` on `layer`, replacing what that layer painted before; a tile no
+## layer paints has its kind's color. Only tiles whose color changes are sent to the MultiMesh.
+func paint(layer: PaintLayer, colors: Dictionary[Vector2i, Color]) -> void:
+	var before: Dictionary = _layers.get(layer, {})
+	_layers[layer] = colors
+	for tile: Vector2i in before:
+		if _index.has(tile):
+			_recolor(tile)
+	for tile: Vector2i in colors:
+		if _index.has(tile):
+			_recolor(tile)
 
 
 ## Eases every tile whose kind in the region shown is no longer the one it shows (#538): for a
@@ -170,7 +183,10 @@ func _shown_region() -> Region:
 
 ## Gives `tile` the color painted onto it, or its kind's.
 func _recolor(tile: Vector2i) -> void:
-	var color: Color = _paint.get(tile, _base[tile])
+	var color: Color = _base[tile]
+	for layer: int in PaintLayer.values():
+		var colors: Dictionary = _layers.get(layer, {})
+		color = colors.get(tile, color)
 	if _colors.get(tile, Color(0.0, 0.0, 0.0, 0.0)) != color:
 		_colors[tile] = color
 		_tiles.multimesh.set_instance_color(_index[tile], color)
@@ -227,4 +243,5 @@ func _build(region: Region) -> void:
 		_base[tile] = terrain_color(_kinds[tile])
 		_transforms[tile] = Transform3D(Basis.IDENTITY, center)
 		_tiles.multimesh.set_instance_transform(i, _transforms[tile])
-	paint(_paint)
+	for tile: Vector2i in _index:
+		_recolor(tile)
