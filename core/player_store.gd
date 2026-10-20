@@ -3,12 +3,12 @@ extends RefCounted
 ## One player's world store (#724): what features keep for a player across exits, instances and
 ## sessions, one entry per feature, by its id. A feature's own state lives in one instance, and
 ## every instance has its own copy of the feature, so what a player brings from one instance into
-## the next lives here. The world hands every instance a copy of each player's store and takes it
-## back from the instance the player is in once that has stepped (World): a player is in one
-## instance each tick, so no two instances change one store in a tick. The core copies, hashes,
-## saves and reads it back without knowing what an entry means; only the feature it belongs to
-## reads and writes it, inside a tick: the world hands the stores to an instance only once it's
-## loaded, so a feature never reads its entry in `start`. An entry holds ints and ids only: whole
+## the next lives here. Every instance a world loads shares the world's stores, without copying
+## them (World, #828): a player is in one instance each tick, and only the rules there write their
+## store, so no two instances change one store in a tick. The core hashes, saves and reads it back
+## without knowing what an entry means; only the feature it belongs to reads and writes it, inside a
+## tick: the world hands the stores to an instance only once it's loaded, so a feature never reads
+## its entry in `start`. An entry holds ints and ids only: whole
 ## numbers, text, and lists and tables (with text keys) of them.
 
 ## Each feature's entry, by feature id.
@@ -37,15 +37,6 @@ func entry(feature_id: String) -> Dictionary:
 ## The entry of the feature `feature_id` to read, or an empty one, without adding it.
 func stored(feature_id: String) -> Dictionary:
 	return entries.get(feature_id, {})
-
-
-## A deep copy, as the world hands it to an instance: what the instance changes stays there until
-## the world takes it.
-func copied() -> PlayerStore:
-	var copy: PlayerStore = PlayerStore.new()
-	for feature_id: String in entries:
-		copy.entries[feature_id] = entries[feature_id].duplicate(true)
-	return copy
 
 
 ## Whether `other` holds the same entries, an empty one the same as none.

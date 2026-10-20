@@ -45,7 +45,7 @@ var variants: Dictionary[String, String] = {}
 var source: InstanceSource = null
 ## Where each instance lies in the world, worked out once (#187, #282).
 var _layout: WorldLayout = WorldLayout.new()
-## Each player slot's world store (#724), which every instance gets a copy of (GameState.stores).
+## Each player slot's world store (#724), which every loaded instance shares (GameState.stores).
 var stores: Array[PlayerStore] = []
 ## The world's own events of the last tick (#370): players who came into another instance
 ## (InstanceEntered) and world-changing moments (WorldChanged, #499), which no instance's features
@@ -117,14 +117,15 @@ func instance(instance_name: String) -> GameState:
 
 
 ## A fresh instance of the blueprint `instance_name`'s `variant` at its current generation's seed,
-## with `players` players and a copy of every player's world store, not yet among the loaded ones,
-## though its
-## variant is noted; null when it can't load.
+## with `players` players and a view of every player's world store, not yet among the loaded ones,
+## though its variant is noted; null when it can't load.
 func create_instance(instance_name: String, players: int, variant: String) -> GameState:
 	var created: GameState = source.create(instance_name, seed_for(instance_name), players, variant)
 	if created != null:
 		variants[instance_name] = variant
-		created.stores = _copied_stores()
+		# The world's own stores, not copies (#828): a player is in one instance each tick, and only
+		# the rules there write their entries, so every instance sees a change as soon as it's made.
+		created.stores = stores
 		_hand_next_door(instance_name, created)
 	return created
 
@@ -164,40 +165,11 @@ func _hand_next_door(instance_name: String, state: GameState) -> void:
 ## decides, like who the players bring (#53), which the slices set through their own rules.
 func set_entry(slot: int, feature_id: String, values: Dictionary) -> void:
 	stores[slot].entries[feature_id] = values.duplicate(true)
-	_hand_stores()
 
 
 ## The entry of the feature `feature_id` in the world store of the player in `slot`, to read only.
 func stored(slot: int, feature_id: String) -> Dictionary:
 	return stores[slot].stored(feature_id)
-
-
-## Takes the world store of every player in `stepped` back into the world (#724), where its rules
-## changed it this tick, and hands the world's stores to every loaded instance when any changed. A
-## player is in one instance only, so no other instance changed theirs this tick; one who walked out
-## this tick is still in it, since they're moved only once every instance stepped.
-func _take_stores(stepped: GameState) -> void:
-	var taken: bool = false
-	for slot: int in GameState.MAX_PLAYERS:
-		if stepped.player(slot) != null and not stepped.stores[slot].same_as(stores[slot]):
-			stores[slot] = stepped.stores[slot].copied()
-			taken = true
-	if taken:
-		_hand_stores()
-
-
-## Hands every loaded instance a copy of every player's world store.
-func _hand_stores() -> void:
-	for instance_name: String in sorted_names():
-		instances[instance_name].stores = _copied_stores()
-
-
-## A copy of every player's world store, by slot.
-func _copied_stores() -> Array[PlayerStore]:
-	var copies: Array[PlayerStore] = []
-	for each: PlayerStore in stores:
-		copies.append(each.copied())
-	return copies
 
 
 ## Where tile (0, 0) of the instance `instance_name` lies in the world (#187); see WorldLayout.
@@ -220,11 +192,9 @@ func active() -> Array[String]:
 
 
 ## Advances every instance a player is in by one tick, with the tick's commands by slot, then moves
-## every player who walked out through an exit into the instance it leads to (#154). Each instance's
-## players' world stores are taken back as soon as it stepped (#724). Moving players only after
-## every
-## instance has stepped means no one steps twice in a tick. Last, it purges what has been left
-## behind long enough. On a fresh world's first tick, every player enters the
+## every player who walked out through an exit into the instance it leads to (#154). Moving players
+## only after every instance has stepped means no one steps twice in a tick. Last, it purges what
+## has been left behind long enough. On a fresh world's first tick, every player enters the
 ## instance they start in; a resumed world's players were already in theirs.
 func step(commands: Array[Command]) -> void:
 	events.clear()
@@ -244,7 +214,6 @@ func step(commands: Array[Command]) -> void:
 	for instance_name: String in stepping:
 		var state: GameState = instances[instance_name]
 		Simulation.step(state, commands)
-		_take_stores(state)
 		for event: RefCounted in state.events:
 			if event is ExitTaken or event is SentToSpawn:
 				leaving.append([instance_name, event])

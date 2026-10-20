@@ -30,9 +30,9 @@ var features: Array[Feature] = []
 ## though a replay raises the same events.
 var events: Array[RefCounted] = []
 ## Each player slot's world store (#724): what features keep for that player across exits,
-## instances and sessions (PlayerStore). The world hands every instance it loads a copy of each and
-## takes the one of a player back from the instance they're in once it stepped; within an instance,
-## a feature reads and writes its own entry (`store`, `stored`).
+## instances and sessions (PlayerStore). In a world, every instance it loads shares the world's
+## own stores (#828), a view of them, not copies: a feature writes a player's entry (`store`) only
+## where that player is, and reads any (`stored`).
 var stores: Array[PlayerStore] = []
 ## The ground of the instances next door (#191): each tile their regions have that this one doesn't,
 ## with its terrain, in this instance's coordinates. The world hands it over, so sight crosses the
