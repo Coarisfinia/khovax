@@ -165,9 +165,10 @@ a second model could use goes into the library or a generic tool, never into one
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and
-  the game camera shot), put them in the description and post a comment tagging `@Flixbox`. Then
-  render the rest in parallel, as monitored background jobs, update the description again and
-  post a second comment tagging `@Flixbox` once every visual is in.
+  the game camera shot), put them in the description and post a comment tagging the owner
+  (`@$OWNER`, the login looked up as AGENTS.md says, #1060). Then render the rest in parallel, as
+  monitored background jobs, update the description again and post a second comment tagging the
+  owner once every visual is in.
 - **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
   then its clips (visual 3). Each PR shows what it adds.
 - **Numbers:** the budget from step 7, and the `check_glb.gd` result.
