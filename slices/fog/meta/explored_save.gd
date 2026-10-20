@@ -17,10 +17,11 @@ static func beside(explored: ExploredGround) -> Dictionary:
 	return { WorldSave.EXPLORED: explored_data(explored) }
 
 
-## Reads the ground explored in the world saved at `path` into `into`;
-## returns why it's refused, whole, leaving `into` empty, or "". A world saved without the key
-## (before it was kept) has none; a key with anything malformed under it, null too, is refused.
-static func load_into(path: String, into: ExploredGround) -> String:
+## Reads the ground explored in the world saved at `path` into `into`, naming only instances that
+## `source` has (the saved world's, World.source); returns why it's refused, whole, leaving `into`
+## empty, or "". A world saved without the key (before it was kept) has none; a key with anything
+## malformed under it, null too, is refused.
+static func load_into(path: String, into: ExploredGround, source: InstanceSource) -> String:
 	into.clear()
 	if not SaveStore.exists(path):
 		return ""
@@ -32,6 +33,7 @@ static func load_into(path: String, into: ExploredGround) -> String:
 	var problem: String = _read(
 		table[WorldSave.EXPLORED],
 		into,
+		source,
 	) if table.has(WorldSave.EXPLORED) else ""
 	if not problem.is_empty():
 		into.clear()
@@ -59,9 +61,9 @@ static func explored_data(explored: ExploredGround) -> Dictionary:
 	return { "format": FORMAT, "instances": instances }
 
 
-## Reads the explored ground `data` (as `explored_data` wrote it) into `into`; returns the first
-## problem, or "".
-static func _read(data: Variant, into: ExploredGround) -> String:
+## Reads the explored ground `data` (as `explored_data` wrote it) into `into`, naming only
+## instances `source` has; returns the first problem, or "".
+static func _read(data: Variant, into: ExploredGround, source: InstanceSource) -> String:
 	if not data is Dictionary or not JsonNumbers.all_whole(data):
 		return "not explored ground, or it holds a number that isn't whole"
 	var read: DataReader = DataReader.new(JsonNumbers.wholes(data))
@@ -70,7 +72,7 @@ static func _read(data: Variant, into: ExploredGround) -> String:
 		read.fail("explored ground format %d, this build reads %d" % [format, FORMAT])
 	for entry: DataReader in read.entries("instances"):
 		var instance_name: String = entry.text("name")
-		if not InstanceBlueprints.exists(instance_name) or into.tiles_in.has(instance_name):
+		if not source.exists(instance_name) or into.tiles_in.has(instance_name):
 			entry.fail("explored instance %s doesn't exist or is saved twice" % instance_name)
 		var numbers: Array[int] = entry.wholes("tiles", -MOST_COORDINATE, MOST_COORDINATE)
 		if numbers.size() % 2 != 0:

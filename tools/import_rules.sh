@@ -75,7 +75,6 @@ declare -A SLICE_EXEMPT=(
   [board>blueprints]=851 [board>controls]=851 [board>profile]=851
   [controls>profile]=851 [controls>revive_items]=851
   [factions>menu]=851 [factions>profile]=851
-  [fog>blueprints]=851
   [gear>profile]=851
   [hiding>wild_monsters]=851
   [loot>menu]=851 [loot>profile]=851

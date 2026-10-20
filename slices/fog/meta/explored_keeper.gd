@@ -15,7 +15,7 @@ func resumed(saved: World, path: String) -> void:
 	_explored_world = saved
 	if saved == null:
 		return
-	var problem: String = ExploredSave.load_into(path, explored)
+	var problem: String = ExploredSave.load_into(path, explored, saved.source)
 	if not problem.is_empty():
 		push_warning("the explored ground can't be read, so none is remembered: " + problem)
 	# What was seen in an instance purged since won't fit its ground when it comes back.
