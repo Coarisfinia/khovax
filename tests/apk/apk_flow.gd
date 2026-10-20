@@ -28,8 +28,8 @@ const REST_TICKS: int = 20
 const FINGER: int = 0
 ## The instances the walk goes through, named here because the device builds leave out the e2e
 ## flows' FlowSteps (#915).
-const GLADE: String = "glade"
-const FOREST: String = "forest"
+const GLADE: String = "lumwen_hoal"
+const FOREST: String = "morwe_wudhen"
 
 ## The game's state hash when the walk ended, which game/test_mode.gd reports with the result.
 var final_hash: int = 0

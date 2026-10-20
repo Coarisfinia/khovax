@@ -2,7 +2,7 @@ class_name LaunchOptions
 extends RefCounted
 ## Options given on the command line after `--` (#237), read the same way by the game and by the
 ## e2e runner, so a world can be started deterministically by hand, e.g.
-## `godot --path . -- --instance=glade --seed=42`:
+## `godot --path . -- --instance=lumwen_hoal --seed=42`:
 ## - `--seed=<n>`: a fresh world starts from this seed (0 or more) instead of rolling one.
 ## - `--instance=<blueprint>`: the session starts in this instance blueprint, on its start.
 ## - `--invincible`: the player takes no damage. Reserved: nothing hurts players yet (#220, #221).
@@ -36,7 +36,8 @@ var problem: String = ""
 static func parse(args: PackedStringArray) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
 	for arg: String in args:
-		# Everything after the option's name: `--instance=glade=x` names no blueprint `glade`.
+		# Everything after the option's name: `--instance=lumwen_hoal=x` names no blueprint
+		# `lumwen_hoal`.
 		var value: String = arg.trim_prefix(SEED).trim_prefix(INSTANCE).trim_prefix(USER_DIR)
 		if not arg.begins_with("--"):
 			continue

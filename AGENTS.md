@@ -514,8 +514,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   the cross-platform determinism lockstep co-op needs. No hash is committed, so a rule change
   updates nothing here. Everything else stays headless. `apk-e2e` is a required check: it passed
   the first time it ran, and the owner asked to enforce it then.
-- **The playground is test-only** (owner, #712): `regions/basic.md` has no exit, so normal play
-  never reaches it, and the world starts in the glade. The e2e runner starts its flows there; a
+- **The playground is test-only** (owner, #712): `regions/senwel_sael.md` has no exit, so normal
+  play never reaches it, and the world starts in Lumwen Hoal. The e2e runner starts its flows there; a
   flow that walks through an exit starts in an instance that has one.
 - **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
   for now (#61).

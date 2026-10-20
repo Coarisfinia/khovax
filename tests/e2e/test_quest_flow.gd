@@ -351,7 +351,7 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 		quests.book[id] = QuestDefinition.parse(id, entered[id], {})
 	menu.quests_tab().refresh()
 	var expected: Dictionary[String, String] = {
-		"enter_glade": "Now: Enter the glade",
+		"enter_glade": "Now: Enter Lumwen Hoal",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
 		"three_ombulumo": "Now: Dominate an Ombulumo  0/3",
@@ -541,7 +541,7 @@ func _check_territory(
 	quests: QuestTracker,
 ) -> String:
 	var forest: String = FlowSteps.FOREST
-	var quest: String = "guild_charts_the_forest"
+	var quest: String = "guild_charts_morwe_wudhen"
 	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
 	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
@@ -950,23 +950,23 @@ func _check_branching() -> String:
 	var entered: Array[QuestFact] = [QuestFact.new(QuestStep.INSTANCE_ENTERED, glade, glade)]
 	var applied: String = _count(thicket, entered)
 	var choosing: Array[String] = ["Now: Enter the pond or enter the thicket"]
-	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "glade_fork") != choosing:
+	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "lumwen_hoal_fork") != choosing:
 		return "entering the glade didn't open its fork on its choice: %s" % [
-			QuestsTab.quest_lines(thicket, "glade_fork"),
+			QuestsTab.quest_lines(thicket, "lumwen_hoal_fork"),
 		]
 	var result: String = _check_fork_marked(state, thicket)
 	applied = _count(thicket, _entering("thicket"))
 	var way: Array[String] = ["Done: Enter the thicket", "Now: Dominate a monster"]
-	if result.is_empty() and QuestsTab.quest_lines(thicket, "glade_fork") != way:
+	if result.is_empty() and QuestsTab.quest_lines(thicket, "lumwen_hoal_fork") != way:
 		result = "the thicket's way isn't shown taken: %s" % [
-			QuestsTab.quest_lines(thicket, "glade_fork"),
+			QuestsTab.quest_lines(thicket, "lumwen_hoal_fork"),
 		]
 	applied += _count(thicket, _gain([], 1))
-	if result.is_empty() and thicket.finished.has("glade_fork"):
+	if result.is_empty() and thicket.finished.has("lumwen_hoal_fork"):
 		result = "the pond's chest counted on the thicket's way"
 	applied += _count(thicket, _gain(["ombulumo"], 0))
 	if (result.is_empty()
-			and (not applied.is_empty() or not thicket.finished.has("glade_fork"))):
+			and (not applied.is_empty() or not thicket.finished.has("lumwen_hoal_fork"))):
 		result = "a domination didn't end the thicket's way: " + applied
 	return result if not result.is_empty() else _check_pond_way(book, entered)
 
@@ -982,10 +982,10 @@ func _check_fork_marked(state: GameState, quests: QuestTracker) -> String:
 		for tile: Vector2i in state.region.piece_of:
 			if state.region.piece_of[tile] == pieces[index]:
 				tiles.append(tile)
-		var target: Vector2i = targets.get("glade_fork/%d" % index, -Vector2i.ONE)
+		var target: Vector2i = targets.get("lumwen_hoal_fork/%d" % index, -Vector2i.ONE)
 		if not tiles.has(target) or Hex.distance(target, from) != _nearest(tiles, from):
 			return "the glade's fork isn't marked over the nearest tile of the %s" % pieces[index]
-	if targets.has("glade_fork"):
+	if targets.has("lumwen_hoal_fork"):
 		return "the glade's fork is marked as a whole besides its choices"
 	return ""
 
@@ -1002,12 +1002,12 @@ func _check_pond_way(
 	if loaded == null:
 		return "the pond's way couldn't be saved and loaded"
 	var way: Array[String] = ["Done: Enter the pond", "Now: Open a chest"]
-	if not applied.is_empty() or QuestsTab.quest_lines(loaded, "glade_fork") != way:
+	if not applied.is_empty() or QuestsTab.quest_lines(loaded, "lumwen_hoal_fork") != way:
 		return "the pond's way wasn't kept through loading: %s" % [
-			QuestsTab.quest_lines(loaded, "glade_fork"),
+			QuestsTab.quest_lines(loaded, "lumwen_hoal_fork"),
 		]
 	applied = _count(loaded, _gain([], 1))
-	if not applied.is_empty() or not loaded.finished.has("glade_fork"):
+	if not applied.is_empty() or not loaded.finished.has("lumwen_hoal_fork"):
 		return "a chest didn't end the pond's way: " + applied
 	return _check_branch_standing()
 

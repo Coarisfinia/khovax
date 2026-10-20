@@ -1,0 +1,11 @@
+// Brekhal Varn, the mountain pass southwest of Edhra Tewk (#689), with a sealed side passage for a
+// hidden gate (#500).
+{
+	"id": "brekhal_varn",
+	"codex": {
+		"entry": "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass.",
+		"gloss": "the broken pass"
+	},
+	"rules": "standard",
+	"wild_species": { "ombulumo": 1, "tikazzir": 2 }
+}

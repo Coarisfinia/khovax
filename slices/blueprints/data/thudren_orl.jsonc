@@ -1,0 +1,10 @@
+// Thudren Orl, the load test's (#101): a big region full of wild monsters.
+{
+	"id": "thudren_orl",
+	"codex": {
+		"entry": "A wide ring teeming with wild monsters, where the world's testers measure how much it can bear. Its name thuds like many feet; Orl is a ring.",
+		"gloss": "the thronging ring"
+	},
+	"rules": "standard",
+	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
+}

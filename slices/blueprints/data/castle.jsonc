@@ -1,6 +1,0 @@
-// The ruined castle west of the forest (#689), to be corrupted (#574).
-{
-	"id": "castle",
-	"rules": "standard",
-	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
-}

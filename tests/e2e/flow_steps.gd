@@ -5,20 +5,21 @@ extends RefCounted
 ## `test_*.gd` files.
 
 ## The instances the flows load by name (#915): the game names none, it reads them from the
-## realms (#865). The playground (#338), which only the tests play (#712).
-const BASIC: String = "basic"
-## The glade, which the realms mark as where the world starts (#712).
-const GLADE: String = "glade"
-## A boss-style arena (#127).
-const ARENA: String = "arena"
-## Room for the upcoming features (#689).
-const FOREST: String = "forest"
-const OUTPOST: String = "outpost"
-## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses
-## (glade.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
-## (regions/glade_corrupted.md), whose flag purifies it.
-const CORRUPTED_GLADE: String = "glade_corrupted"
-const GLADE_PURIFIED: String = "glade_purified"
+## realms (#865). The playground (#338), Senwel Sael, which only the tests play (#712).
+const BASIC: String = "senwel_sael"
+## The glade, Lumwen Hoal, which the realms mark as where the world starts (#712).
+const GLADE: String = "lumwen_hoal"
+## A boss-style arena, Hrunde Orl (#127).
+const ARENA: String = "hrunde_orl"
+## Room for the upcoming features (#689): the forest, Morwe Wudhen, and the outpost, Edhra Tewk.
+const FOREST: String = "morwe_wudhen"
+const OUTPOST: String = "edhra_tewk"
+## The corrupted glade, Lymwen Hoall (#541): the flag that corrupts the glade, and the variant it
+## chooses (lumwen_hoal.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
+## (regions/lymwen_hoall.md), whose flag purifies it.
+const CORRUPTED_GLADE_FLAG: String = "lumwen_hoal_corrupted"
+const CORRUPTED_GLADE: String = "lymwen_hoall"
+const GLADE_PURIFIED: String = "lumwen_hoal_purified"
 ## The six tiles around the basic instance's wild monster, walked in a ring from the player's start
 ## at (1, -1).
 const BASIC_RING: Array[Vector2i] = [

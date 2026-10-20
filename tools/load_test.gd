@@ -1,7 +1,8 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # The tool reports its measurements on stdout; that is what it is for.
 extends SceneTree
-## The load test (#101): the load instance (regions/load.md, a big region full of wild monsters,
+## The load test (#101): the load instance, Thudren Orl (regions/thudren_orl.md, a big region full
+## of wild monsters,
 ## with the same rules as every instance) under four players walking by script.
 ##
 ## Headless, it times the simulation: every tick (on an untimed pass) and every feature's share (on
@@ -12,7 +13,7 @@ extends SceneTree
 ## The numbers belong in the PR or issue that measured them, never in docs.
 
 ## The instance it loads, which only this tool plays (#915).
-const LOAD: String = "load"
+const LOAD: String = "thudren_orl"
 const SEED: int = 101
 const PLAYERS: int = 4
 ## Ticks each scripted walk keeps one direction before turning.

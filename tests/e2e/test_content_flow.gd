@@ -57,6 +57,8 @@ const NAME_CASES: Dictionary[String, String] = {
 	"passive tikazzir_zirki_kirki Zirki-kirki tikazzir": "",
 	"realm ardvaun - -": "",
 	"instance dhorvone_stolm - -": "",
+	"instance senwel_sael - -": "",
+	"instance thudren_orl - -": "",
 	"region lymwen_hoall - lumwen_hoal": "",
 	"region dhyrvone_stolmm - dhorvone_stolm": "",
 	"piece north_hold_of_lumwen_hoal - -": "",
@@ -76,9 +78,10 @@ const NAME_CASES: Dictionary[String, String] = {
 	"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": REFUSED,
 	"realm zarvaun - -": "Zarvaun has a beast-call's letter",
 	"realm Ardvaun - -": "its id must be lower case",
-	"instance " + FlowSteps.GLADE + " - -": REFUSED,
+	"instance glade - -": REFUSED,
 	"instance amvrel_hoal - -": "Amvrel Hoal has the faction word Amvrel",
-	"region " + FlowSteps.CORRUPTED_GLADE + " - " + FlowSteps.GLADE: REFUSED,
+	"region lumwen_hoal_corrupted - lumwen_hoal": REFUSED,
+	"region lymwen_hoal - lumwen_hoal": REFUSED,
 	"faction amvrel_velmar Amvrel_Velmar -": REFUSED,
 	"person teska_na_selin Teska_na_Selin -": REFUSED,
 	"unique zar_omera Zar'omera -": REFUSED,
@@ -392,11 +395,12 @@ func _check_quest_territories(content: QuestContent) -> String:
 ## place or an area, have a count, or lead nowhere are refused; so are a step with choices that has
 ## a condition or an end, two steps with one id, and an end naming another chain.
 func _check_branches(content: QuestContent) -> String:
-	var fork: QuestDefinition = content.quests.get("glade_fork")
+	var fork_id: String = "lumwen_hoal_fork"
+	var fork: QuestDefinition = content.quests.get(fork_id)
 	if (fork == null or fork.steps[0].choices.size() != 2
 			or fork.steps[0].choices[0].piece != "pond"
 			or fork.next_index(0, QuestStep.ENTERED, "thicket", "") != 2
-			or fork.steps[1].ends != "glade_fork" or fork.steps[2].ends != "glade_fork"):
+			or fork.steps[1].ends != fork_id or fork.steps[2].ends != fork_id):
 		return "the glade's fork didn't read as a choice between two ends"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"
 	var choices: String = "{\"choices\": [%s]}"

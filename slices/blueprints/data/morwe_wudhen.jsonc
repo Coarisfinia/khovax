@@ -1,0 +1,10 @@
+// North of Lumwen Hoal (#689), with trees and rock to harvest later (#696).
+{
+	"id": "morwe_wudhen",
+	"codex": {
+		"entry": "A deep wood north of Lumwen Hoal. The settlers gave it dark, back vowels and the breathy dh of their tongue; Wudhen is their word for a wood.",
+		"gloss": "the dark wood"
+	},
+	"rules": "standard",
+	"wild_species": { "ombulumo": 2, "tikazzir": 1 }
+}

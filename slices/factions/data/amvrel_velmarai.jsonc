@@ -25,6 +25,6 @@
 		"Marked Hazard",
 		"Edge of the Chart"
 	],
-	// The guild's home, the glade, where the player starts (#637, #712).
-	"territory": ["glade"]
+	// The guild's home, Lumwen Hoal, where the player starts (#637, #712).
+	"territory": ["lumwen_hoal"]
 }

@@ -1,7 +1,0 @@
-// The mountain pass southwest of the outpost (#689), with a sealed side passage for a hidden gate
-// (#500).
-{
-	"id": "mountain_pass",
-	"rules": "standard",
-	"wild_species": { "ombulumo": 1, "tikazzir": 2 }
-}

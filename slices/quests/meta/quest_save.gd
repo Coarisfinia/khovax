@@ -10,6 +10,12 @@ const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
 ## The quest ids before format 14 that named a species by its old id, each to its id since (#763).
 const OLD_QUESTS: Dictionary[String, String] = { "three_moss_toads": "three_ombulumo" }
+## The quest ids before format 16 that named an instance by its old id, each to its id since (#975).
+const OLD_INSTANCE_QUESTS: Dictionary[String, String] = {
+	"glade_fork": "lumwen_hoal_fork",
+	"guild_charts_the_forest": "guild_charts_morwe_wudhen",
+	"guild_holds_the_outpost": "guild_holds_edhra_tewk",
+}
 
 
 ## The quests of `tracker` as save data, by key.
@@ -40,6 +46,11 @@ static func migrate(data: Dictionary, format: int) -> void:
 	if format < 14:
 		for old_id: String in OLD_QUESTS:
 			_rename_quest(data, old_id, OLD_QUESTS[old_id])
+	# Format 15 to 16: the instances have Land-speech ids (#975), and so do the quest ids that named
+	# one.
+	if format < 16:
+		for old_id: String in OLD_INSTANCE_QUESTS:
+			_rename_quest(data, old_id, OLD_INSTANCE_QUESTS[old_id])
 
 
 ## Format 8 to 9: a quest's progress keeps the steps done (#573). Quests had no choices before, so
