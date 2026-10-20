@@ -181,20 +181,23 @@ func _finish(quest: QuestDefinition) -> void:
 		var _posted: OutboxEntry = outbox.post(OutboxEntry.TERRITORY, code)
 
 
-## Why `result` can't be taken over (an empty species, a quest fact without a condition or about
-## nothing, a nameless or negative material or gear, or more than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, a quest fact without a condition, about
+## nothing or, for a chest opened, about something, a nameless or negative material or gear, or more
+## than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
 	var dominated: String = _dominated_problem(result)
 	if not dominated.is_empty():
 		return dominated
+	if result.facts.size() > MAX_NUMBER:
+		return "a gain can't hold that many quest facts"
 	for fact: QuestFact in result.facts:
 		if fact == null or fact.condition.is_empty():
 			return "a quest fact has no condition"
-		# Only a chest opened is about nothing in particular.
-		if fact.what.is_empty() and fact.condition != QuestStep.OPENED:
-			return "a quest fact %s is about nothing" % fact.condition
+		# A chest opened is about nothing in particular, and every other fact about something.
+		if fact.what.is_empty() != (fact.condition == QuestStep.OPENED):
+			return "the quest fact %s about '%s' is invalid" % [fact.condition, fact.what]
 	var counted: String = _count_problem("material", result.materials, materials)
 	return counted if not counted.is_empty() else _count_problem("gear", result.gear, gear.owned)
 

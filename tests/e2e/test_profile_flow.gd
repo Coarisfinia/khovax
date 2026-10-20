@@ -102,11 +102,14 @@ func _check_bad_results(profile: Profile) -> String:
 	no_place.facts.append(QuestFact.new(QuestStep.REACHED, ""))
 	var no_condition: Gain = _result(["ombulumo"], {})
 	no_condition.facts.append(QuestFact.new("", "beach"))
+	var chest_of_something: Gain = _result(["ombulumo"], {})
+	chest_of_something.facts.append(QuestFact.new(QuestStep.OPENED, "beach"))
 	var bad_id: Gain = _result(["ombulumo"], {})
 	bad_id.dominated_short_ids.assign(["l1o0ij-"])
 	var bad: Array[Gain] = [
 		no_place,
 		no_condition,
+		chest_of_something,
 		bad_id,
 		_result(["ember_fox", ""], {}),
 		_result([], { "crystal": -1 }),
