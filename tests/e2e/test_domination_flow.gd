@@ -347,9 +347,8 @@ func _check_domination() -> String:
 
 
 ## The domination's loot (#86): each slot earned `rolls` (by slot) for what it did for the ring, and
-## the domination's DominationLoot gives exactly the slots that earned any, when its species has a
-## loot table; a species without one drops nothing. A player who only braced the wall for a second
-## earns nothing.
+## the domination's DominationLoot gives exactly the slots that earned any (every species has a
+## loot table, #943). A player who only braced the wall for a second earns nothing.
 func _check_loot(
 	events: Array[RefCounted],
 	dominated: WildMonsterDominated,
@@ -371,8 +370,7 @@ func _check_loot(
 		if event is DominationLoot and (event as DominationLoot).monster_id == dominated.monster_id:
 			looted = (event as DominationLoot).loot.keys()
 	looted.sort()
-	var tabled: bool = LootContent.load_loot_tables().loot_tables.has(dominated.species)
-	if looted != (earning if tabled else []):
+	if looted != earning:
 		return "the %s's loot went to slots %s, not %s" % [dominated.species, looted, earning]
 	var brief: WildMonsterDominated = WildMonsterDominated.new(
 		1,

@@ -107,6 +107,7 @@ func run(_tree: SceneTree) -> String:
 		_check_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
+		_check_instance_tables,
 		_check_loot_refused,
 		_check_wild_species.bind(content),
 		_check_blueprints,
@@ -891,9 +892,9 @@ func _check_revive_herbs(content: LootContent) -> String:
 	return ""
 
 
-## Every species has its own harvest table (#687), apart from its domination loot table: each loads
-## as a harvest table named after a species, and a felled toad's rolls give what dominating it
-## never does.
+## Every species has its own harvest table (#687) and its own domination loot table (#943), so
+## neither a felled nor a dominated one drops nothing: each loads as a table of its kind named after
+## a species, and a felled toad's rolls give what dominating it never does.
 func _check_harvest_tables() -> String:
 	var content: LootContent = LootContent.load_loot_tables(LootContent.HARVEST_DIR)
 	if not content.problem.is_empty():
@@ -903,12 +904,37 @@ func _check_harvest_tables() -> String:
 		var table: LootTable = content.loot_tables.get(species_id)
 		if table == null or table.kind != LootTable.HARVEST:
 			return "%s has no harvest table" % species_id
+		if LootContent.table_for(species_id, LootTable.SPECIES) == null:
+			return "%s has no domination loot table" % species_id
 	var toad: LootTable = content.loot_tables["ombulumo"]
 	var dominated: LootTable = LootContent.load_loot_tables().loot_tables["ombulumo"]
 	for seed_value: int in 100:
 		for item: String in _roll(toad, null, seed_value):
 			if dominated.items.has(item):
 				return "a felled toad dropped %s, which dominating it gives" % item
+	return ""
+
+
+## Every blueprint whose rules roll a species' table names an instance table that loads (#943), so
+## a blank rolled in it is never nothing (#90), and its instance's rolling features hold that table
+## and every species' table of their kind.
+func _check_instance_tables() -> String:
+	var species: Array[String] = []
+	species.assign(SpeciesContent.load_species().species.keys())
+	var rolling: Array[String] = [DominationLootFeature.ID, HarvestFeature.ID]
+	for instance_name: String in InstanceBlueprints.names():
+		var named: Blueprint = InstanceBlueprints.blueprint(instance_name)
+		var rolls: bool = rolling.any(func(rule: String) -> bool: return named.features.has(rule))
+		if rolls and LootContent.table_for(named.loot_table, LootTable.INSTANCE) == null:
+			return "%s rolls loot but has no instance loot table" % instance_name
+		var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
+		for rule: String in rolling:
+			var feature: SpeciesLootFeature = state.feature(rule) as SpeciesLootFeature
+			if feature == null:
+				continue
+			var tabled: bool = species.all(func(id: String) -> bool: return feature.tables.has(id))
+			if feature.instance_table == null or not tabled:
+				return "%s's %s misses its instance's or a species' table" % [instance_name, rule]
 	return ""
 
 

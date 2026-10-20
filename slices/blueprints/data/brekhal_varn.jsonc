@@ -7,5 +7,6 @@
 		"gloss": "the broken pass"
 	},
 	"rules": "standard",
+	"loot_table": "wild_ground",
 	"wild_species": { "ombulumo": 1, "tikazzir": 2 }
 }
