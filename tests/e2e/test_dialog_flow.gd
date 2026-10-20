@@ -314,7 +314,7 @@ static func _close_on_walk_away() -> String:
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
 	Simulation.step(state, FlowSteps.command(EAST))
 	Simulation.step(state, FlowSteps.command(EAST))
-	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_glade")))
+	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_lumwen_hoal")))
 	if dialogs.dialog_of(0) != GREETING or dialogs.line_of(0) != 2:
 		return "bumping into the scout closed the greeting, or the answer didn't move it on"
 	_walked = FlowSteps.walk(state, [Vector2i(1, 0)])
