@@ -117,7 +117,7 @@ func region_for(world: World, instance_name: String) -> Region:
 		_regions[instance_name] = world.source.region_of(
 			instance_name,
 			world.seed_for(instance_name),
-			world.variant_of(instance_name),
+			WorldFlags.variant_of(world, instance_name),
 		)
 	return _regions[instance_name]
 

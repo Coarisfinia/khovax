@@ -31,7 +31,7 @@ static func of(world: World) -> Dictionary:
 				"name": instance_name,
 				"state": world.instances[instance_name].to_data(),
 				"left_at": world.left_at.get(instance_name, -1),
-				"variant": world.variant_of(instance_name),
+				"variant": WorldFlags.variant_of(world, instance_name),
 			},
 		)
 	var purged: Array[Dictionary] = []
@@ -174,4 +174,4 @@ static func _load_flags(world: World, read: DataReader) -> void:
 		if not flag is String or str(flag).is_empty() or world.flags.has(str(flag)):
 			read.fail("a flag is nameless, not text, or saved twice")
 			return
-		world.set_flag(str(flag))
+		WorldFlags.set_flag(world, str(flag))

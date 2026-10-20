@@ -800,16 +800,20 @@ func _check_flags() -> String:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
 	var before: int = world.state_hash()
-	world.set_flag(RisingSource.RISEN)
-	world.set_flag(RisingSource.RISEN)
+	WorldFlags.set_flag(world, RisingSource.RISEN)
+	WorldFlags.set_flag(world, RisingSource.RISEN)
 	var once: bool = world.flags.size() == 1 and world.flags[0] == RisingSource.RISEN
 	if not once or world.state_hash() == before:
 		return "setting a flag didn't set it once, or isn't hashed"
 	world.step(_still())
-	if world.instances.get(InstanceBlueprints.GLADE) != glade or world.variant_of("glade") != "":
+	if (world.instances.get(InstanceBlueprints.GLADE) != glade
+			or WorldFlags.variant_of(world, "glade") != ""):
 		return "a flag changed the glade while the player was in it"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), RisingSource.new())
-	var kept: bool = reloaded.flags == world.flags and reloaded.variant_of("glade") == ""
+	var kept: bool = reloaded.flags == world.flags and WorldFlags.variant_of(
+		reloaded,
+		"glade",
+	) == ""
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flag: " + reloaded.problem
 	_walk_in(world, FlowSteps.OUT_OF_GLADE)
@@ -818,17 +822,18 @@ func _check_flags() -> String:
 	var risen: GameState = world.instance(InstanceBlueprints.GLADE)
 	var arena: Region = InstanceBlueprints.region_of("glade", world.seed_for("glade"), "arena")
 	var tiles: Array[Vector2i] = risen.region.sorted_tiles()
-	if world.variant_of("glade") != "arena" or tiles != arena.sorted_tiles():
+	if WorldFlags.variant_of(world, "glade") != "arena" or tiles != arena.sorted_tiles():
 		return "the glade didn't come back from its variant, the arena's region"
 	# The arena's region has no way back to the forest, which only a layout worked out from
 	# the glade's new region notices.
 	if world.layout_problem().is_empty():
 		return "the world's layout still has the glade's old region"
-	world.set_flag(RisingSource.RISEN, false)
+	WorldFlags.set_flag(world, RisingSource.RISEN, false)
 	world.step(_still())
 	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 2:
 		return "clearing the flag didn't purge the glade, which nobody is in"
-	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
+	if (world.instance(InstanceBlueprints.GLADE) == null
+			or WorldFlags.variant_of(world, "glade") != ""):
 		return "the glade didn't come back as itself once the flag was cleared"
 	return ""
 
@@ -841,17 +846,17 @@ func _check_flags() -> String:
 ## the plain glade.
 func _check_corruption() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
-	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
+	WorldFlags.set_flag(world, InstanceBlueprints.CORRUPTED_GLADE)
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
-	if glade == null or world.variant_of("glade") != InstanceBlueprints.CORRUPTED_GLADE:
+	if glade == null or WorldFlags.variant_of(world, "glade") != InstanceBlueprints.CORRUPTED_GLADE:
 		return "the player didn't walk into the corrupted glade"
 	var felling: Felling = Felling.new()
 	glade.features.append(felling)
 	world.step(_still())
 	glade.features.erase(felling)
-	var purified_flag: String = World.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED
+	var purified_flag: String = WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED
 	var emitted: bool = felling.felled > 0 and world.flags.has(purified_flag)
 	if not emitted or InstanceBlueprints.variant("glade", world.flags) != "":
 		return "felling the corrupting monster didn't set its event's flag for the plain glade"
@@ -862,13 +867,14 @@ func _check_corruption() -> String:
 	if world.instances.get(InstanceBlueprints.GLADE) != glade:
 		return "the glade was purified with the player in it"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
-	var kept: bool = reloaded.variant_of("glade") == InstanceBlueprints.CORRUPTED_GLADE
+	var kept: bool = WorldFlags.variant_of(reloaded, "glade") == InstanceBlueprints.CORRUPTED_GLADE
 	if not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flags: " + reloaded.problem
 	_walk_in(world, FlowSteps.OUT_OF_GLADE)
 	if world.instances.has(InstanceBlueprints.GLADE) or world.generation("glade") != 1:
 		return "the glade wasn't purged once the player left it"
-	if world.instance(InstanceBlueprints.GLADE) == null or world.variant_of("glade") != "":
+	if (world.instance(InstanceBlueprints.GLADE) == null
+			or WorldFlags.variant_of(world, "glade") != ""):
 		return "the glade didn't come back purified, as the plain glade"
 	return ""
 
@@ -881,7 +887,7 @@ func _check_story_beat() -> String:
 	world.instances[InstanceBlueprints.BASIC].features.append(Beat.new())
 	var flags: Array[String] = world.flags.duplicate()
 	world.step(_still())
-	var flag: String = World.EVENT_FLAG + Beat.BEAT
+	var flag: String = WorldFlags.EVENT_FLAG + Beat.BEAT
 	flags.append(flag)
 	flags.sort()
 	var changes: Array[WorldChanged] = _world_changes(world)
@@ -948,10 +954,10 @@ func _check_start_corrupted() -> String:
 	if world.instance_of(0) != InstanceBlueprints.FOREST:
 		return "the player didn't walk out of the glade into the forest"
 	var plain: GameState = world.instances[InstanceBlueprints.GLADE]
-	world.set_flag(InstanceBlueprints.CORRUPTED_GLADE)
+	WorldFlags.set_flag(world, InstanceBlueprints.CORRUPTED_GLADE)
 	world.step(_still())
 	var glade: GameState = world.instances.get(InstanceBlueprints.GLADE)
-	var variant: String = world.variant_of(InstanceBlueprints.GLADE)
+	var variant: String = WorldFlags.variant_of(world, InstanceBlueprints.GLADE)
 	var corrupted: bool = variant == InstanceBlueprints.CORRUPTED_GLADE
 	if (glade == null
 			or glade == plain

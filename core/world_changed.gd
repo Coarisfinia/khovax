@@ -7,7 +7,7 @@ extends RefCounted
 
 ## The name of the event that changed the world.
 var event_name: String
-## The world flag it set: World.EVENT_FLAG + `event_name`.
+## The world flag it set: WorldFlags.EVENT_FLAG + `event_name`.
 var flag: String
 
 

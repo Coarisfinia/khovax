@@ -261,12 +261,12 @@ func _near_any(ground: Vector2, tiles: Array[Vector2i]) -> bool:
 func _survey_held(driver: GameDriver, survey: SurveyView) -> String:
 	var kept: Array[String] = _holder_flags(driver.world)
 	for flag: String in kept:
-		driver.world.set_flag(flag, false)
+		WorldFlags.set_flag(driver.world, flag, false)
 	var why: String = _held_marks_follow(driver, survey, survey.held_marks())
 	for flag: String in _holder_flags(driver.world):
-		driver.world.set_flag(flag, false)
+		WorldFlags.set_flag(driver.world, flag, false)
 	for flag: String in kept:
-		driver.world.set_flag(flag)
+		WorldFlags.set_flag(driver.world, flag)
 	# Drawn again from the world as it was, so the later steps see what the menu's Survey sees.
 	survey.show_state()
 	survey.held_marks().show_state()
@@ -290,7 +290,7 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 	marks.show_state()
 	if not marks.held_by.is_empty() or marks.here_text() != TerritoryText.NOT_HELD_TEXT:
 		return "with no holder flags, the Survey still marks %s" % [marks.held_by]
-	driver.world.set_flag(Territory.flag(here, guild))
+	WorldFlags.set_flag(driver.world, Territory.flag(here, guild))
 	marks.show_state()
 	if marks.held_by.get(here, "") != guild:
 		return "the Survey doesn't mark the instance here once the guild holds it"
@@ -301,7 +301,7 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 	next_door.sort()
 	if next_door.is_empty():
 		return ""
-	driver.world.set_flag(Territory.flag(next_door[0], guild))
+	WorldFlags.set_flag(driver.world, Territory.flag(next_door[0], guild))
 	survey.show_state()
 	marks.show_state()
 	var shift: Vector2i = survey.neighbours.shifts[next_door[0]]

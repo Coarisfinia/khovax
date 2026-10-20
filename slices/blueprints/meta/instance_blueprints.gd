@@ -64,7 +64,7 @@ const WILD_SPECIES: Dictionary[String, Dictionary] = {
 ## event was emitted, is purified, the glade again.
 const VARIANTS: Dictionary[String, Dictionary] = {
 	GLADE: {
-		World.EVENT_FLAG + GLADE_PURIFIED: "",
+		WorldFlags.EVENT_FLAG + GLADE_PURIFIED: "",
 		CORRUPTED_GLADE: CORRUPTED_GLADE,
 	},
 }
