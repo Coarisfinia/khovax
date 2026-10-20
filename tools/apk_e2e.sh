@@ -2,7 +2,7 @@
 # The APK's e2e flow on a running Android emulator (#61): installs the test APK, starts the game in
 # its test mode and reads the flow's result from the game's own log: it must pass and end in the
 # state hash the headless run of the same commit ended in (#876). Run by CI inside the emulator
-# step.
+# step. A start that never reports is retried once (#957).
 # Usage: tools/apk_e2e.sh <test APK> <the headless run's final hash>
 set -euo pipefail
 apk=$1
@@ -12,29 +12,47 @@ package=io.github.flixbox.khovax
 result_line='KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$'
 
 adb install -r "$apk"
-adb logcat -c
 # The app's launcher activity, as the device resolves it: Godot's activity class itself isn't
 # exported, the launcher entry is. adb ends its lines with carriage returns.
 activity=$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$package" \
   | tail -1 | tr -d '\r')
-echo "launching $activity"
-# The test APK plays its flow on every start (game/test_mode.gd).
-adb shell am start -n "$activity"
-result=""
-deadline=$((SECONDS + 180))
-while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
-  sleep 2
-  # Only the game's log tag, read into a variable first: grep on a pipe under pipefail can fail
-  # the whole test for the wrong reason.
-  log=$(adb logcat -d -s godot:I || true)
-  result=$(grep -oE "$result_line" <<< "$log" | tail -1 || true)
-done
+
+# Starts the game and waits for its result line, into $result: empty when it never reported. Stops
+# early when Godot dies at startup (!_start_success), which the emulator does now and then (#957).
+play() {
+  adb logcat -c
+  echo "launching $activity"
+  # The test APK plays its flow on every start (game/test_mode.gd).
+  adb shell am start -n "$activity"
+  result=""
+  local deadline=$((SECONDS + 180)) log
+  while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
+    sleep 2
+    # Only the game's log tag, read into a variable first: grep on a pipe under pipefail can fail
+    # the whole test for the wrong reason.
+    log=$(adb logcat -d -s godot:I godot:E || true)
+    result=$(grep -oE "$result_line" <<< "$log" | tail -1 || true)
+    [ -n "$result" ] || ! grep -q '!_start_success' <<< "$log" || break
+  done
+}
+
+play
+if [ -z "$result" ]; then
+  # A game that never reported gets one more start (#957): the emulator's flaky startup passes on a
+  # second try, and a real crash fails both. Its device log first, folded, since the retry clears it.
+  echo "no result on the first start: the game never reported; retrying once (#957)"
+  echo "::group::the first start's device log"
+  adb logcat -d || true
+  echo "::endgroup::"
+  adb shell am force-stop "$package"
+  play
+fi
 echo "${result:-no result within 180 s: the game never reported}"
 if [ "$result" != "KHOVAX_E2E: PASS $expected" ]; then
   [[ $result != "KHOVAX_E2E: PASS "* ]] || echo "the headless run ended in state $expected"
-  # The whole device log since the install, every tag (#848): the game's own lines alone don't show
-  # why it never started. Uncapped: logcat's own ring buffer already bounds it, and a cap could cut
-  # the startup lines that matter.
+  # The whole device log since the last start, every tag (#848): the game's own lines alone don't
+  # show why it never started. Uncapped: logcat's own ring buffer already bounds it, and a cap could
+  # cut the startup lines that matter.
   adb logcat -d || true
   exit 1
 fi
