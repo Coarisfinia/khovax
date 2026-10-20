@@ -619,7 +619,7 @@ func _check_blueprints() -> String:
 	var first: PackedStringArray = (
 		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
 	)
-	if first != PackedStringArray([World.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
+	if first != PackedStringArray([WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
 		return "the glade's variants read %s" % [glade.variants]
 	var blueprint: String = "{\"id\": \"x\", \"wild_species\": {\"a\": 1}%s}"
 	var cases: Dictionary[String, String] = {
