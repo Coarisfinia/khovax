@@ -25,7 +25,7 @@ static func held_text(faction_id: String) -> String:
 		return NOT_HELD_TEXT
 	var faction: Faction = _factions().factions.get(faction_id)
 	var shown_name: String = faction.name if faction != null else faction_id.capitalize()
-	return HELD_TEXT % [symbol_of(faction_id), shown_name]
+	return HELD_TEXT % [symbol_of(faction_id), TextTags.shown(shown_name)]
 
 
 ## The factions' content; when it doesn't load, no faction is known.

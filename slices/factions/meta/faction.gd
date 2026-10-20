@@ -11,11 +11,13 @@ const FIELDS: Array[String] = ["id", "name", "symbol", "ranks_up", "ranks_down",
 const SYMBOL_LENGTH: int = 2
 
 var id: String = ""
-## The player-facing name.
+## The player-facing name. It may hold text tags (#733), so whatever shows it shows it through
+## TextTags.shown (#752).
 var name: String = ""
 ## What marks it, one or two characters (#68): its territory on the Survey, beside its name.
 var symbol: String = ""
-## The ranks' names above neutral, from standing 1 up to Standings.HIGHEST.
+## The ranks' names above neutral, from standing 1 up to Standings.HIGHEST. Like the
+## name, every rank's name may hold text tags, shown through TextTags.shown.
 var ranks_up: Array[String] = []
 ## The ranks' names below neutral, from standing -1 down to Standings.LOWEST.
 var ranks_down: Array[String] = []

@@ -13,7 +13,8 @@ const TRAP: String = "trap"
 const RARITIES: Array[String] = ["loose", "knotted", "warded", "sealed", "unbroken", "bound"]
 
 var id: String = ""
-## The player-facing name.
+## The player-facing name. It may hold text tags (#733), so whatever shows it shows it through
+## TextTags.shown (#752).
 var name: String = ""
 ## The slot it goes into, one of GearSlots.SLOTS.
 var slot: String = ""
@@ -48,9 +49,9 @@ static func parse(file_id: String, text: String) -> GearItem:
 	return item
 
 
-## The gear's name and rarity, in words.
+## The gear's name, its text tags showing the names they stand for (#752), and rarity, in words.
 func described() -> String:
-	return "%s (%s)" % [name, rarity.capitalize()]
+	return "%s (%s)" % [TextTags.shown(name), rarity.capitalize()]
 
 
 ## Why the read fields are wrong, or "".
