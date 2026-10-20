@@ -16,14 +16,17 @@ const PAUSE_CHOICES: Array[String] = ["Off", "On"]
 const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
-## The Character tab, laid out in its scene (#437).
-const CHARACTER_TAB: PackedScene = preload("res://slices/menu/ui/character_tab.tscn")
+## The Character tab, laid out in its scene (#437). This tab and the Quests and Settings tabs are
+## loaded when the menu is built, not preloaded: their scripts name `GameMenu` (directly or through
+## a panel), so a preload here makes a load cycle that Godot's script check reports as a scene
+## referencing a non-existent script (#964).
+const CHARACTER_TAB: String = "res://slices/menu/ui/character_tab.tscn"
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
 ## The Quests tab, laid out in its scene (#437).
-const QUESTS_TAB: PackedScene = preload("res://slices/quests/ui/quests_tab.tscn")
+const QUESTS_TAB: String = "res://slices/quests/ui/quests_tab.tscn"
 ## The Settings tab, laid out in its scene (#437).
-const SETTINGS_TAB: PackedScene = preload("res://slices/settings/ui/settings_tab.tscn")
+const SETTINGS_TAB: String = "res://slices/settings/ui/settings_tab.tscn"
 ## The Survey tab, laid out in its scene (#437).
 const SURVEY_TAB: PackedScene = preload("res://slices/survey/ui/survey_tab.tscn")
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
@@ -238,18 +241,18 @@ func _build_sheet() -> void:
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# No panel of its own: the tabs' pages lie on the sheet, so the ink text stays on the fog.
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-	character = CHARACTER_TAB.instantiate() as CharacterTab
+	character = (load(CHARACTER_TAB) as PackedScene).instantiate() as CharacterTab
 	character.driver = driver
 	character.holder = driver.holder
 	tabs.add_child(character)
 	survey_tab = SURVEY_TAB.instantiate() as SurveyTab
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
-	var quests_tab_shown: QuestsTab = QUESTS_TAB.instantiate() as QuestsTab
+	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
 	quests_tab_shown.keeper = quest_keeper
 	tabs.add_child(quests_tab_shown)
 	# The gameplay tabs first, then the system tabs (owner, #465).
-	settings = SETTINGS_TAB.instantiate() as SettingsTab
+	settings = (load(SETTINGS_TAB) as PackedScene).instantiate() as SettingsTab
 	settings.graphics = graphics
 	settings.survey = survey
 	settings.menu = self
