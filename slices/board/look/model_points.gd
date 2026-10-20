@@ -10,7 +10,7 @@ const EYE: String = "eye."
 const ATTACK: String = "attack."
 
 
-## Where each eye of `model` is in the world, in the posed skeleton's bone order.
+## Where each eye of `model` is in the world, by name (`eye.L` before `eye.R`).
 static func eyes(model: Node) -> Array[Vector3]:
 	return places(model, EYE)
 
@@ -33,7 +33,8 @@ static func places(model: Node, prefix: String) -> Array[Vector3]:
 	for bone: int in skeleton.get_bone_count():
 		if skeleton.get_bone_name(bone).begins_with(prefix):
 			names.append(skeleton.get_bone_name(bone))
-	names.sort()
+	# By name with numbers in order, so attack.10 comes after attack.2.
+	names.sort_custom(func(a: String, b: String) -> bool: return a.naturalnocasecmp_to(b) < 0)
 	var space: Transform3D = _space_of(skeleton, model)
 	for point: String in names:
 		var pose: Transform3D = skeleton.get_bone_global_pose(skeleton.find_bone(point))
