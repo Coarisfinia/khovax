@@ -30,7 +30,7 @@ const CAPTION_SIZE: int = 18
 const SETTLE_FRAMES: int = 10
 ## How long the fog takes to lift.
 const LIFT_SECONDS: float = 0.4
-## The export feature only the test builds have (TestMode).
+## The export feature only the test builds' presets set (export_presets.cfg); TestMode reads it.
 const TEST_BUILD: String = "e2e_test"
 
 ## The game, once it has loaded; null until then.

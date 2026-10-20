@@ -3,24 +3,22 @@ extends Node
 ## instead of waiting for a player, prints KHOVAX_E2E: PASS with the game's final state hash, or
 ## FAIL with the reason, for CI to read (from the device log, the browser console or stdout) and
 ## compare with the headless run's hash (#876), and quits with it as the exit code. Only
-## the test builds have it: their export presets in export_presets.cfg add the TEST_BUILD feature
-## and carry the flow. In every other build this does nothing. No launch flag is needed: Android
-## starts the game through a launcher activity that drops intent extras.
+## the test builds have it: their export presets in export_presets.cfg add the Boot.TEST_BUILD
+## feature and carry the flow. In every other build this does nothing. No launch flag is needed:
+## Android starts the game through a launcher activity that drops intent extras.
 ##
 ## Which flow it plays comes from outside the game's code (#551), so no game script names tests/:
 ## the FLOW_VARIABLE environment variable first, so CI can start any flow on a desktop or Linux
 ## test build, and otherwise the FLOW_SETTING project setting, empty in project.godot and filled
-## for the TEST_BUILD feature with the device flow, since Android and the browser pass the game no
-## environment.
+## for the Boot.TEST_BUILD feature with the device flow, since Android and the browser pass the
+## game no environment.
 
-## The export feature only the test builds' presets set.
-const TEST_BUILD: String = "e2e_test"
 const FLOW_VARIABLE: String = "KHOVAX_E2E_FLOW"
 const FLOW_SETTING: String = "khovax/e2e_flow"
 
 
 func _ready() -> void:
-	if not OS.has_feature(TEST_BUILD):
+	if not OS.has_feature(Boot.TEST_BUILD):
 		return
 	# The flow plays a fresh world from a fixed seed: it never resumes or overwrites a saved one.
 	# Autoloads are ready before the main scene, so its keeper never sees the default.
