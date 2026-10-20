@@ -684,6 +684,10 @@ func _check_outcomes() -> String:
 		]
 	var enraged: String = _check_enraged()
 	if enraged.is_empty():
+		enraged = _check_enraged_chase()
+	if enraged.is_empty():
+		enraged = _check_enraged_strikes()
+	if enraged.is_empty():
 		enraged = _check_target_dominated()
 	if enraged.is_empty():
 		enraged = _check_spikes()
@@ -828,6 +832,56 @@ func _check_enraged() -> String:
 			wild.strength_of(monster),
 		]
 	return _enraged_further(state, monster)
+
+
+## Enraged (#961), a wild monster is faster: each stack of rage shortens its pace. It steps toward
+## the nearest of two players once in its pace, ending next to them, and stays there; a calm one
+## where a ring could enclose it stands.
+func _check_enraged_chase() -> String:
+	var spots: Array[Vector2i] = [Vector2i.ZERO, Vector2i(-2, 2)]
+	var state: GameState = _outcome_state(STRONG, spots)
+	var wild: WildMonsterFeature = _wild(state)
+	var chaser: int = wild.monsters[0]
+	wild.enrage(state, chaser, 0)
+	var _near: Entity = state.add_entity(0, Vector2i(3, 0))
+	var _far: Entity = state.add_entity(1, Vector2i(0, -4))
+	var paces: Array[int] = []
+	for rage: int in WildMonsterFeature.MOST_RAGE + 1:
+		paces.append(WildMonsterFeature.paced(WildMonsterFeature.STEP_TICKS, rage))
+	for rage: int in WildMonsterFeature.MOST_RAGE:
+		if paces[rage + 1] >= paces[rage]:
+			return "rage doesn't make a wild monster faster: its paces are %s" % [paces]
+	var still: Array[Command] = FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE])
+	for expected: Vector2i in [Vector2i(1, 0), Vector2i(2, 0), Vector2i(2, 0)]:
+		for _tick: int in paces[1]:
+			Simulation.step(state, still)
+		var calm: Vector2i = state.entity(wild.monsters[1]).tile
+		var tiles: Array[Vector2i] = [state.entity(chaser).tile, calm]
+		if tiles != [expected, spots[1]]:
+			return "the enraged and the calm monster stand on %s, not %s and %s" % [
+				tiles,
+				expected,
+				spots[1],
+			]
+	return ""
+
+
+## Enraged (#961), a free wild monster with a companion and a player next to it strikes the player
+## first, once in its pace.
+func _check_enraged_strikes() -> String:
+	var spots: Array[Vector2i] = [Vector2i.ZERO]
+	var state: GameState = _strike_state(spots)
+	FlowSteps.carry(state, 0, [WEAK])
+	var player: Entity = state.add_entity(0, Vector2i(1, 0))
+	var monster: int = _wild(state).monsters[0]
+	_wild(state).enrage(state, monster, 0)
+	# The companion joins its player first, away from the monster.
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var pace: int = WildMonsterFeature.paced(WildAttackFeature.STRIKE_TICKS, 1)
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, pace, Vector2i(-1, 0))
+	if strikes.size() != 1 or strikes[0].target_id != player.id:
+		return "the enraged monster didn't strike the player first, once in %d ticks" % pace
+	return ""
 
 
 ## A RingBroken event for a ring that had only `monster` inside.

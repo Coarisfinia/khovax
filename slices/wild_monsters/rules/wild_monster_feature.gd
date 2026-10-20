@@ -16,7 +16,9 @@ extends Feature
 ## can fell it (#410): it faints for good, staying where it fell, out of `monsters` and in
 ## `fainted`, so no rule moves, enrages, strikes or dominates it any more, and it
 ## still blocks walkers like anything that doesn't walk. Enraged (#220,
-## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
+## EnrageFeature), it grows stronger with every stack of rage, which it keeps, and faster (#961):
+## its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it chase the
+## nearest player (`chase`), never off ground a ring could enclose it on. Like every feature,
 ## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
@@ -27,6 +29,9 @@ const UNKNOWN_STRENGTH: int = 0
 ## takes. Placeholders to tune (#960).
 const RAGE_STRENGTH: int = 500
 const MOST_RAGE: int = 3
+## How much faster each stack of rage makes a wild monster (thousandths, #961): its steps and its
+## strikes come this much more often. A placeholder to tune (#960).
+const RAGE_SPEED: int = 500
 ## How many ticks a wild monster that can't be ringed where it stands takes for each step away: its
 ## own pace, slower than a player's. A placeholder to tune (#960).
 const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
@@ -57,6 +62,10 @@ var _known: Array[String] = []
 ## changes (#530).
 var _unringable: Dictionary[Vector2i, bool] = {}
 var _unringable_region: Region = null
+## The wild monsters `step` moved this tick, and which tick that was: `chase` leaves them be, so
+## none takes two steps in one tick. Worked out again each tick, so neither hashed nor saved.
+var _stepped: Array[int] = []
+var _stepped_tick: int = -1
 
 
 func _init(
@@ -118,13 +127,15 @@ func start(state: GameState) -> void:
 
 
 ## Every wild monster no ring could enclose where it stands steps toward where one could, each on
-## its own tick of every STEP_TICKS (by its id), in id order.
+## its own tick of every STEP_TICKS, faster with rage (by its id, `_moves_now`), in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
 	var blocked: Dictionary[Vector2i, bool] = {}
+	_stepped.clear()
+	_stepped_tick = state.tick
 	for monster: int in monsters:
 		# Only the monsters due this tick are looked up: finding an entity goes through them all.
-		if (state.tick + monster) % STEP_TICKS != 0 or held.has(monster):
+		if not _moves_now(state, monster):
 			continue
 		var standing: Entity = state.entity(monster)
 		if not stuck.has(standing.tile):
@@ -134,6 +145,46 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var from: Vector2i = standing.tile
 		standing.tile = RingableGround.way_out(state.region, stuck, blocked, from)
 		blocked[standing.tile] = true
+		_stepped.append(monster)
+
+
+## `ticks` (a wild monster's pace between two steps or strikes) made shorter by RAGE_SPEED for
+## every stack of rage in `rage` (#961), never below one tick.
+static func paced(ticks: int, rage: int) -> int:
+	return maxi(Fixed.mul_div(ticks, Fixed.ONE, Fixed.ONE + rage * RAGE_SPEED), 1)
+
+
+## Whether the standing wild monster with this id may step this tick: once every STEP_TICKS, paced
+## by its rage, on its own tick (by its id), and not while it's held.
+func _moves_now(state: GameState, entity_id: int) -> bool:
+	if held.has(entity_id):
+		return false
+	return (state.tick + entity_id) % paced(STEP_TICKS, rage_of(entity_id)) == 0
+
+
+## Steps the wild monster with this id one tile toward `goal` (#961), onto the walkable tile next to
+## it nearest to `goal`, the first in direction order of the equally near, if that's nearer than
+## where it stands. It never steps onto the trail or onto anyone, and only from and onto ground a
+## ring could enclose it on, so it stays catchable; only on its tick to step (`_moves_now`), and
+## not when `step` moved it this tick. Switched off, the feature moves nobody.
+func chase(state: GameState, entity_id: int, goal: Vector2i) -> void:
+	if not enabled or not _moves_now(state, entity_id):
+		return
+	if _stepped_tick == state.tick and _stepped.has(entity_id):
+		return
+	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
+	var standing: Entity = state.entity(entity_id)
+	if stuck.has(standing.tile):
+		return
+	var blocked: Dictionary[Vector2i, bool] = _blocked(state)
+	var best: Vector2i = standing.tile
+	for direction: Vector2i in Hex.DIRECTIONS:
+		var tile: Vector2i = standing.tile + direction
+		if blocked.has(tile) or stuck.has(tile) or not state.region.is_walkable(tile):
+			continue
+		if Hex.distance(tile, goal) < Hex.distance(best, goal):
+			best = tile
+	standing.tile = best
 
 
 ## The tiles a wild monster may not step onto: the trail, so it never walks into a ring, and every
