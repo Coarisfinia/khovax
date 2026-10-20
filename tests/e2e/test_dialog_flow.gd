@@ -194,7 +194,7 @@ func _talk_to_scout(
 	driver: GameDriver,
 	screen: DialogScreen,
 ) -> String:
-	driver.instance = InstanceBlueprints.GLADE
+	driver.instance = FlowSteps.GLADE
 	driver.start(0)
 	_heard.clear()
 	Input.action_press("move_right")
@@ -244,7 +244,7 @@ func _resume_open(driver: GameDriver, screen: DialogScreen) -> String:
 ## A player walking on into the scout talks only once; stopping and walking into them again talks
 ## again.
 static func _talk_once_while_held() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
 	var talks: Array[int] = []
 	for move: int in [EAST, EAST, EAST, Command.NO_MOVE, EAST]:
@@ -316,7 +316,7 @@ static func _held_untouched() -> String:
 ## The glade with `players` players, the first beside the guild scout, whose greeting, made to
 ## lock, holds them once they've walked into the scout.
 static func _held_by_scout(players: int) -> GameState:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, players)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, players)
 	(state.feature(DialogFeature.ID) as DialogFeature).locking[GREETING] = true
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
 	Simulation.step(state, FlowSteps.command(EAST))

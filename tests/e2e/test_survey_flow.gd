@@ -33,7 +33,7 @@ func run(tree: SceneTree) -> String:
 	# The glade: big enough that some of it is still in the fog at the start, for the Survey to
 	# hide. The runner's own starting instance comes back after.
 	var given: String = GameDriver.start_instance
-	GameDriver.start_instance = InstanceBlueprints.GLADE
+	GameDriver.start_instance = FlowSteps.GLADE
 	var main: Node = (load(Boot.GAME) as PackedScene).instantiate()
 	tree.root.add_child(main)
 	await tree.process_frame

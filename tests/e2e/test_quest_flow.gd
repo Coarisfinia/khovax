@@ -481,7 +481,7 @@ func _check_entered(driver: GameDriver, bus: EventBus, quests: QuestTracker) -> 
 func _check_entered_glade(driver: GameDriver, bus: EventBus, quests: QuestTracker) -> String:
 	var glade: QuestDefinition = QuestDefinition.parse("enter_glade", ENTER_GLADE, {})
 	quests.book[glade.id] = glade
-	var forest: GameState = InstanceBlueprints.create(InstanceBlueprints.FOREST, 3, 1)
+	var forest: GameState = InstanceBlueprints.create(FlowSteps.FOREST, 3, 1)
 	var ways: Array[Vector2i] = []
 	for i: int in forest.region.exits.size():
 		if forest.region.exit_blueprints[i] == "glade":
@@ -536,14 +536,14 @@ func _check_territory(
 	profile: Profile,
 	quests: QuestTracker,
 ) -> String:
-	var forest: String = InstanceBlueprints.FOREST
+	var forest: String = FlowSteps.FOREST
 	var quest: String = "guild_charts_the_forest"
 	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
 	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
 	_emit_in(driver, bus, PieceEntered.new("grove", 1, 0), forest)
 	_emit_in(driver, bus, PieceEntered.new("felling", 9, 1), forest)
-	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), InstanceBlueprints.GLADE)
+	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), FlowSteps.GLADE)
 	_emit(driver, bus, PieceEntered.new("felling", 1, 0))
 	if (quests.finished.has(quest)
 			or Territory.holder(driver.world.flags, forest) != "rivals"):
@@ -571,17 +571,17 @@ func _check_territory(
 ## Why the territory quest `quest`, open in `quests`, isn't marked in the glade on an exit leading
 ## to the forest it counts in (#769), or "".
 func _check_territory_marked(quests: QuestTracker, quest: String) -> String:
-	var glade: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var glade: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	var targets: Dictionary[String, Vector2i] = QuestTargets.of(
 		glade,
 		quests,
 		0,
-		InstanceBlueprints.GLADE,
+		FlowSteps.GLADE,
 	)
 	var marked: Vector2i = targets.get(quest, -Vector2i.ONE)
 	for i: int in glade.region.exits.size():
 		if Vector2i(glade.region.exits[i].x, glade.region.exits[i].y) == marked:
-			if glade.region.exit_blueprints[i] == InstanceBlueprints.FOREST:
+			if glade.region.exit_blueprints[i] == FlowSteps.FOREST:
 				return ""
 	return "the forest's territory quest isn't marked on an exit from the glade leading there"
 
@@ -596,7 +596,7 @@ func _check_territory_resent(
 	profile: Profile,
 	request: OutboxEntry,
 ) -> String:
-	var forest: String = InstanceBlueprints.FOREST
+	var forest: String = FlowSteps.FOREST
 	var applied: Array = driver.world.stored(0, TerritoryFeature.ID).get(OutboxReceipts.APPLIED, [])
 	if not profile.outbox.entries.is_empty() or applied != [request.id]:
 		return "the applied hand-over stayed in the outbox, or wasn't recorded: %s" % [applied]
@@ -625,7 +625,7 @@ func _check_receipts_bounded(
 	profile: Profile,
 	request: OutboxEntry,
 ) -> String:
-	var forest: String = InstanceBlueprints.FOREST
+	var forest: String = FlowSteps.FOREST
 	var later: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, request.data)
 	if ShortId.code(later.id) <= ShortId.code(request.id):
 		return "the outbox drew %s after %s, not in order" % [later.id, request.id]
@@ -839,7 +839,7 @@ func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 ## quest to enter the thicket is marked on the thicket's nearest tile, and walking there enters
 ## every piece on the way, once each time the piece changes, ending in the thicket.
 func _check_pieces() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	var still: Array[Command] = FlowSteps.commands([Command.NO_MOVE])
 	Simulation.step(state, still)
 	var entered: Array[String] = _pieces_entered(state.events)
@@ -929,7 +929,7 @@ func _check_side_quest() -> String:
 ## never counts toward it. The pond's way, kept through saving and loading, ends at a chest.
 func _check_branching() -> String:
 	var book: Dictionary[String, QuestDefinition] = QuestContent.load_quests().quests
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	var thicket: QuestTracker = QuestTracker.new()
 	thicket.book = book
 	var entered: Array[QuestFact] = [QuestFact.new(QuestStep.INSTANCE_ENTERED, "glade", "glade")]
@@ -1162,7 +1162,7 @@ func _check_obtained() -> String:
 		return "four more feathers didn't finish five and count on: %s" % [
 			QuestsTab.quest_lines(quests, "feathers"),
 		]
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	if QuestTargets.of(state, quests, 0).has("feathers"):
 		return "a step asking for an item is marked in the world"
 	var stray: String = FEATHERS.replace("\"condition\": \"obtained\"", "\"condition\": \"opened\"")

@@ -40,7 +40,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		if _first_loot() != _first_loot():
 			result = "the same seed opened the chest with different loot"
-	if result.is_empty() and InstanceBlueprints.basic(SEED).feature(ChestFeature.ID) != null:
+	if result.is_empty() and FlowSteps.basic(SEED).feature(ChestFeature.ID) != null:
 		result = "an instance without a chest table has chests"
 	if result.is_empty():
 		result = await _check_saved(tree)
@@ -233,7 +233,7 @@ func _check_saved(tree: SceneTree) -> String:
 func _check_shown(view: ChestView, driver: GameDriver) -> String:
 	if not view.bursts.is_empty():
 		return "a chest the view doesn't show burst into loot"
-	driver.instance = InstanceBlueprints.GLADE
+	driver.instance = FlowSteps.GLADE
 	driver.start(SEED)
 	view.show_state()
 	var chests: ChestFeature = driver.state.feature(ChestFeature.ID) as ChestFeature
@@ -293,7 +293,7 @@ func _check_found_shown(view: ChestView, driver: GameDriver) -> String:
 
 ## Another instance drops the glade's chests and loot at once, sinking or not.
 func _check_cleared(view: ChestView, driver: GameDriver) -> String:
-	driver.instance = InstanceBlueprints.BASIC
+	driver.instance = FlowSteps.BASIC
 	driver.start(SEED)
 	view.show_state()
 	if not view.figures.is_empty() or not view.bursts.is_empty():

@@ -135,7 +135,7 @@ func _check_seamless_crossing() -> String:
 	_main.transform = Transform3D.IDENTITY
 	var driver: GameDriver = _main.get_node("Driver") as GameDriver
 	# The playground the flows start in has no exits (#712).
-	driver.instance = InstanceBlueprints.FOREST
+	driver.instance = FlowSteps.FOREST
 	driver.start(3)
 	var source: CrossingSource = CrossingSource.new()
 	source.forest = driver.state
@@ -148,14 +148,14 @@ func _check_seamless_crossing() -> String:
 			return jumped
 		if driver.local_instance_name() != visited.back():
 			visited.append(driver.local_instance_name())
-		if driver.local_instance_name() == InstanceBlueprints.GLADE:
+		if driver.local_instance_name() == FlowSteps.GLADE:
 			var placed: String = _check_glade_placed(driver)
 			if not placed.is_empty():
 				return placed
 	var expected: Array[String] = [
-		InstanceBlueprints.FOREST,
-		InstanceBlueprints.GLADE,
-		InstanceBlueprints.FOREST,
+		FlowSteps.FOREST,
+		FlowSteps.GLADE,
+		FlowSteps.FOREST,
 	]
 	if visited != expected:
 		return "the walk didn't cross into the glade and back: %s" % [visited]
@@ -215,14 +215,14 @@ func _show_frame_checked(driver: GameDriver) -> String:
 ## not its place in the world, where the fog map would be read off by the glade's place.
 func _check_glade_placed(driver: GameDriver) -> String:
 	var root: Node3D = _main.get_node("Instance") as Node3D
-	var glade: Vector3 = HexLayout.to_world(driver.world.offset(InstanceBlueprints.GLADE))
+	var glade: Vector3 = HexLayout.to_world(driver.world.offset(FlowSteps.GLADE))
 	if not root.global_position.is_equal_approx(glade):
 		return "in the glade, its views lie at %s, not at its place %s" % [
 			root.global_position,
 			glade,
 		]
 	var neighbours: NeighbourView = _main.get_node("Instance/NeighbourView") as NeighbourView
-	var forest: HexGrid = neighbours.grids.get(InstanceBlueprints.FOREST)
+	var forest: HexGrid = neighbours.grids.get(FlowSteps.FOREST)
 	if forest == null or not forest.global_position.is_equal_approx(Vector3.ZERO):
 		return "in the glade, the forest's ground isn't drawn where it lies in the world"
 	var fog: FogView = _main.get_node("FogView") as FogView
