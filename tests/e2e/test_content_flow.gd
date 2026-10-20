@@ -159,8 +159,8 @@ func _check_path_marks(abilities: Dictionary[String, Ability]) -> String:
 	var quests: Dictionary[String, QuestDefinition] = QuestContent.load_quests().quests
 	if (quests["three_ombulumo"].path != PathMark.SUPREMACY
 			or quests["first_domination"].path != PathMark.NONE
-			or abilities["tikazzir_gale_dive"].path != PathMark.SUPREMACY
-			or abilities["ombulumo_damp_hide"].path != PathMark.NONE):
+			or abilities["tikazzir_tizik_tazak"].path != PathMark.SUPREMACY
+			or abilities["ombulumo_bolmu_wolmu"].path != PathMark.NONE):
 		return "the path marks didn't read as written"
 	if quests["three_ombulumo"].shown_name() != "Dominate three Ombulumo (Supremacy)":
 		return "a quest's name doesn't show its path mark in words"

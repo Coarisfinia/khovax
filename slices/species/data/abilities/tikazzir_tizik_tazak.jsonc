@@ -1,9 +1,13 @@
 // A placeholder (#222): its power and cooldown are to tune (#960).
 {
-	"id": "tikazzir_gale_dive",
+	"id": "tikazzir_tizik_tazak",
 	"kind": "special",
-	"name": "Gale Dive",
+	"name": "Tizik-tazak",
 	"description": "The ${MONSTER:tikazzir} folds its wings and drops on its target in a gust.",
+	"codex": {
+		"entry": "The sharp two-note shriek of a diving beast: the high note as it folds its wings, the low one as it strikes. Dominators shouted it to send their beast down.",
+		"gloss": "fold, then strike"
+	},
 	"power": 3000,
 	"cooldown_seconds": 8,
 	"strike_type": "breeze",

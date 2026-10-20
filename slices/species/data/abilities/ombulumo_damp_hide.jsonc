@@ -1,7 +1,0 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
-{
-	"id": "ombulumo_damp_hide",
-	"kind": "self_passive",
-	"name": "Damp Hide",
-	"description": "The ${MONSTER:ombulumo}'s wet skin shrugs off part of every hit."
-}

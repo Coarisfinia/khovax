@@ -1,8 +1,0 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
-{
-	"id": "ombulumo_soft_moss",
-	"kind": "player_passive",
-	"name": "Soft Moss",
-	"description": "While the ${MONSTER:ombulumo} is out, the player's rings hold a little longer.",
-	"path": "harmony"
-}

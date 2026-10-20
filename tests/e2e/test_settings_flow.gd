@@ -484,9 +484,9 @@ func _menu_details(tab: CharacterTab) -> String:
 		"HP: 60",
 		"Strength: 70",
 		"Speed: 90",
-		"Special: Gale Dive (Supremacy)",
-		"Passive for you: Tailwind (Harmony and supremacy)",
-		"Own passive: Light Bones",
+		"Special: Tizik-tazak (Supremacy)",
+		"Passive for you: Kirzi-tirzi (Harmony and supremacy)",
+		"Own passive: Zirki-kirki",
 	]
 	if details.shown != expected:
 		return "clicking a monster didn't show its stats: %s" % [details.shown]

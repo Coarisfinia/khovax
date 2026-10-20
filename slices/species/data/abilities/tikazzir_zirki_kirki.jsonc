@@ -1,0 +1,11 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "tikazzir_zirki_kirki",
+	"kind": "self_passive",
+	"name": "Zirki-kirki",
+	"description": "The ${MONSTER:tikazzir} dodges more often, being so light.",
+	"codex": {
+		"entry": "The flick of wings slipping aside. Dominators called it after a beast that was never where the blow landed.",
+		"gloss": "flit, not here"
+	}
+}

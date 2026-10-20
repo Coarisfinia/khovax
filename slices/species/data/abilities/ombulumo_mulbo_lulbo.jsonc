@@ -1,0 +1,12 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "ombulumo_mulbo_lulbo",
+	"kind": "player_passive",
+	"name": "Mulbo-lulbo",
+	"description": "While the ${MONSTER:ombulumo} is out, the player's rings hold a little longer.",
+	"codex": {
+		"entry": "A low hum the first dominators learned from their beasts, which hum it as their moss settles. Hummed back, it keeps a dominator's rings calm and slow to fade.",
+		"gloss": "hush, soft moss"
+	},
+	"path": "harmony"
+}

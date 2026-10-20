@@ -1,8 +1,0 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
-{
-	"id": "tikazzir_tailwind",
-	"kind": "player_passive",
-	"name": "Tailwind",
-	"description": "While the ${MONSTER:tikazzir} is out, the player walks a little faster.",
-	"path": "both"
-}

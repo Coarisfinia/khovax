@@ -1,7 +1,0 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
-{
-	"id": "tikazzir_light_bones",
-	"kind": "self_passive",
-	"name": "Light Bones",
-	"description": "The ${MONSTER:tikazzir} dodges more often, being so light."
-}

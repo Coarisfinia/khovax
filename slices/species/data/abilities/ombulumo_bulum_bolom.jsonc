@@ -1,9 +1,13 @@
 // A placeholder (#222): its power and cooldown are to tune (#960).
 {
-	"id": "ombulumo_belly_flop",
+	"id": "ombulumo_bulum_bolom",
 	"kind": "special",
-	"name": "Belly Flop",
+	"name": "Bulum-bolom",
 	"description": "The ${MONSTER:ombulumo} leaps and lands on its target with all its soggy weight.",
+	"codex": {
+		"entry": "The call the first dominators shouted to send their beast leaping onto a foe. It mimics the landing: a deep thud, then the wet slap of moss settling.",
+		"gloss": "thud, then splash"
+	},
 	"power": 4000,
 	"cooldown_seconds": 12,
 	"strike_type": "might" // all weight, none of its moss (#626: a strike's type is its own)
