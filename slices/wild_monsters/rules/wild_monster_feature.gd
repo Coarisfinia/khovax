@@ -95,7 +95,8 @@ func start(state: GameState) -> void:
 		# Can't be refused: an entity without a slot is always added.
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
-		var wild: WildMonster = WildMonster.of(species, max_hps.get(species, UNKNOWN_MAX_HP))
+		var full_hp: int = max_hps.get(species, UNKNOWN_MAX_HP)
+		var wild: WildMonster = WildMonster.of(species, full_hp)
 		if named != null:
 			if named.wounded:
 				wild.hp = maxi(Fixed.scale(wild.hp, WOUNDED_HP), 1)
