@@ -6,10 +6,10 @@ extends RefCounted
 ## region piece an entered step names (#350), or the nearest exit leading to the instance it names
 ## (#370), or that the step counts in while the player is elsewhere (#769). A wild monster still
 ## hiding in its tile (#202) isn't pointed at, since that would give it away. The quest markers
-## and the Survey both show these; it only reads the state and the profile.
+## and the Survey both show these; it only reads the state and the player's quests.
 
 
-## The tile each of `profile`'s open quests points at in `state`, by quest id, measured from the
+## The tile each open quest in `quests` points at in `state`, by quest id, measured from the
 ## player in `slot`; a quest with nothing to point at here isn't listed. A step with choices (#573)
 ## points at each of them that's here, by the quest's id, a slash and the choice's index. `here` is
 ## the blueprint name of the instance `state` is (#769), or "" when it isn't known: a step that
@@ -17,7 +17,7 @@ extends RefCounted
 ## leading there.
 static func of(
 	state: GameState,
-	profile: Profile,
+	quests: QuestTracker,
 	slot: int,
 	here: String = "",
 ) -> Dictionary[String, Vector2i]:
@@ -25,7 +25,7 @@ static func of(
 	var player: Entity = state.player(slot)
 	if player == null:
 		return targets
-	var steps: Dictionary[String, QuestStep] = profile.open_steps()
+	var steps: Dictionary[String, QuestStep] = quests.open_steps()
 	for id: String in steps:
 		var triggers: Array[QuestStep] = steps[id].triggers()
 		for index: int in triggers.size():

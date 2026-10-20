@@ -47,7 +47,7 @@ func _enter_tree() -> void:
 		var quests: QuestData = QuestContent.load_quests()
 		if not quests.problem.is_empty():
 			push_warning("the quests can't be read, so none advance: " + quests.problem)
-		profile.quest_book = quest_book_of(quests)
+		profile.quests.book = quest_book_of(quests)
 		var gear: GearContent = GearContent.load_gear()
 		if not gear.problem.is_empty():
 			push_warning("the gear can't be read, so gear found counts as materials: %s" % [
