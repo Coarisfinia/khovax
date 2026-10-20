@@ -2,7 +2,9 @@ class_name TotemButton
 extends ActionButton
 ## The totem's touch button (#429): places this machine's player's totem on a ring waiting for one
 ## (`place_totem`, #423), as the T key does. It shows the totem's icon and its charges left, 0 when
-## it has none, and is drawn faded while the player stands on no ring waiting for a totem.
+## it has none, and is drawn faded while the player can't place it
+## (DominationFeature.can_place_totem):
+## out of charges, or on no ring waiting for a totem, theirs or an ally's.
 
 @export var driver: Session
 
@@ -16,14 +18,14 @@ func corner_text() -> String:
 	return str(_charges())
 
 
+## Asks the rule itself (#931), so the button never disagrees with what a press does.
 func usable() -> bool:
 	var domination: DominationFeature = _domination()
 	var player: Entity = _player()
-	if domination == null or player == null or _charges() == 0:
-		return false
-	if not domination.encircled.has(player.id):
-		return false
-	return domination.ring_waiting(driver.state, player.id).has(player.tile)
+	return domination != null and player != null and domination.can_place_totem(
+		driver.state,
+		player.id,
+	)
 
 
 func _charges() -> int:

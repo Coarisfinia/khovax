@@ -64,7 +64,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 			var _ready: bool = _cooling.erase(slot)
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
-		if command != null and command.special and cooldown_left(slot) == 0:
+		if command != null and command.special and can_fire(state, slot):
 			_fire(state, slot, command.focus)
 
 
@@ -73,23 +73,32 @@ func cooldown_left(slot: int) -> int:
 	return _cooling.get(slot, 0)
 
 
-## Fires the special of the companion of the player in `slot`, if they have one here that has a
-## special and something next to it to strike: the `focus`, if the companion can strike it.
+## Whether a press of the player in `slot` would fire their special now (#931, the special's button
+## asks this too): it's on and ready, and they have a companion here whose species has a special and
+## something next to it to strike. The focus (#436) only picks what it strikes, never whether.
+func can_fire(state: GameState, slot: int) -> bool:
+	if not enabled or cooldown_left(slot) > 0:
+		return false
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var companion_id: int = companions.companion_of(slot) if companions != null else 0
+	if wild == null or companion_id == 0 or not powers.has(companions.species_of(companion_id)):
+		return false
+	var tile: Vector2i = state.entity(companion_id).tile
+	return CompanionAttackFeature.target_next_to(state, wild, tile) != 0
+
+
+## Fires the special of the companion of the player in `slot`, which can_fire allowed: it strikes
+## the `focus`, if the companion can strike it.
 func _fire(state: GameState, slot: int, focus: int) -> void:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	if wild == null:
-		return
 	var companion_id: int = companions.companion_of(slot)
 	var species: String = companions.species_of(companion_id)
-	if companion_id == 0 or not powers.has(species):
-		return
 	var tile: Vector2i = state.entity(companion_id).tile
 	var target: int = CompanionAttackFeature.target_next_to(state, wild, tile)
 	if CompanionAttackFeature.can_strike(state, wild, tile, focus):
 		target = focus
-	if target == 0:
-		return
 	var strength: int = wild.strengths.get(species, 1)
 	var damage: int = Fixed.scale(strength, powers[species])
 	var struck: String = wild.species_of(target)

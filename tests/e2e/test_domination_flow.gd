@@ -556,6 +556,12 @@ func _check_together() -> String:
 		return "the allies' ring waits for %s, not the first player" % [
 			_domination(state).encircled.keys(),
 		]
+	# The second stands on their ally's ring: the rule lets them place their totem, and their
+	# button says so (#931).
+	if not _domination(state).can_place_totem(state, second.id):
+		return "the rule doesn't let the second place their totem on their ally's ring"
+	if not _usable(TotemButton.new(), state, 1):
+		return "the second's totem button is faded on their ally's ring, where their totem works"
 	Simulation.step(state, FlowSteps.totem(1, 2))
 	events.append_array(state.events)
 	var spent: bool = (
@@ -1074,7 +1080,8 @@ func _check_companion_strikes() -> String:
 	(state.feature(HidingFeature.ID) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
-	return _check_special(state, first, spots)
+	var result: String = _check_no_special(spots, hemmed)
+	return result if not result.is_empty() else _check_special(state, first, spots)
 
 
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
@@ -1112,6 +1119,49 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
 	var result: String = _check_harvest(state, first)
 	return result if not result.is_empty() else _check_special_cooldown(state, spots)
+
+
+## A companion whose species has no special, hemmed in on `hemmed` by the wild monsters on `spots`,
+## which it could strike: a press fires nothing, and the special's button agrees, faded (#931); with
+## its special back, the button shows usable.
+func _check_no_special(spots: Array[Vector2i], hemmed: Vector2i) -> String:
+	var state: GameState = _strike_state(spots)
+	FlowSteps.carry(state, 0, [WEAK])
+	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	# The companion joins on the tick after its player arrives.
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	state.entity(companion_id).tile = hemmed
+	var specials: SpecialAttackFeature = (
+		state.feature(SpecialAttackFeature.ID) as SpecialAttackFeature
+	)
+	var power: int = specials.powers[WEAK]
+	var _dropped: bool = specials.powers.erase(WEAK)
+	if _usable(SpecialButton.new(), state, 0) or specials.can_fire(state, 0):
+		return "the special's button or the rule says a species without a special can fire one"
+	var fired: bool = not _specials_in(state, _fire()).is_empty()
+	specials.powers[WEAK] = power
+	if fired:
+		return "a companion whose species has no special fired one"
+	if not _usable(SpecialButton.new(), state, 0):
+		return "the special's button is faded with a wild monster next to the companion to strike"
+	return ""
+
+
+## Whether `button`, on a session showing `state` to the player in `slot`, shows usable; it and the
+## session are freed.
+static func _usable(button: ActionButton, state: GameState, slot: int) -> bool:
+	var session: Session = Session.new()
+	session.world = World.new(BlueprintSource.new(), 0, "")
+	session.world.instances[session.local_instance_name()] = state
+	session.input = LocalInput.new()
+	session.input.slot = slot
+	button.set("driver", session)
+	var usable: bool = button.usable()
+	button.free()
+	session.input.free()
+	session.free()
+	return usable
 
 
 ## The wild monster `first`, felled in `state`'s last tick, dropped its materials where it lies
