@@ -1,8 +1,9 @@
 class_name ReviveButton
 extends ActionButton
 ## The revive item's touch button (#656): uses one (`revive_monster`), as the V key and a
-## controller's d-pad down do, bringing back the first fainted monster this machine's player
-## carries. It shows the item's icon and how many the player holds, 0 when none (#429), and is
+## controller's d-pad down do, on the fainted monster this machine's player carries, or, with
+## several fainted, starts picking one (#780, LocalInput), which a tap on its roster square ends. It
+## shows the item's icon and how many the player holds, 0 when none (#429), and is
 ## drawn faded while they hold none or nothing they carry has fainted.
 
 @export var driver: Session
@@ -26,4 +27,4 @@ func usable() -> bool:
 	var slot: int = driver.input.slot if driver.input != null else 0
 	if driver.state.player(slot) == null:
 		return false
-	return not ReviveItemFeature.revivable(driver.state, slot).is_empty()
+	return not ReviveItemFeature.fainted(driver.state, slot).is_empty()
