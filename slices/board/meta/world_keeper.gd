@@ -1,23 +1,23 @@
 class_name WorldKeeper
 extends Node
 ## Keeps the persistent world on disk (#119): at boot it hands the driver the saved world to resume,
-## and while the game goes on it saves the driver's world, debounced like the profile (#73): at most
-## once per ProfileKeeper.SAVE_INTERVAL_MSEC, and at once when the game quits or goes to the
-## background. A crash loses at most one interval of play. The world file is apart from the
-## profile (WorldSave), so saving one never touches the other. What other slices keep beside the
-## world (its `companions`, like the ground explored in it) is saved in the same file at the same
-## moments, so the two go together.
+## and while the game goes on it saves the world the driver hands it as each session starts (#831),
+## debounced like the profile (#73): at most once per ProfileKeeper.SAVE_INTERVAL_MSEC, and at once
+## when the game quits or goes to the background. A crash loses at most one interval of play. The
+## world file is apart from the profile (WorldSave), so saving one never touches the other. What
+## other slices keep beside the world (its `companions`, like the ground explored in it) is saved in
+## the same file at the same moments, so the two go together.
 
 ## Where the main scene's keeper keeps the world unless it's pointed elsewhere; "" keeps none. The
 ## headless flows and the test builds clear it before the main scene comes up, so they never
 ## resume or overwrite a world on this device's disk.
 static var default_path: String = WorldSave.PATH
 
-## Whose world is saved.
-@export var driver: Session
 ## What other slices keep beside the world in its file.
 @export var companions: Array[WorldCompanion] = []
 
+## The world to save, which the driver hands over as each session starts; null for none.
+var world: World = null
 ## Where this keeper keeps the world, or "" for `default_path`; tests point it elsewhere.
 var save_path: String = ""
 ## The world last saved and its tick then, so a world that hasn't moved isn't saved again.
@@ -60,7 +60,7 @@ func _load_saved() -> World:
 	return saved
 
 
-## Saves the driver's world if it moved since the last save and that save is at least
+## Saves the world if it moved since the last save and that save is at least
 ## SAVE_INTERVAL_MSEC old; returns why it couldn't, or "".
 func save_if_due(now_msec: int) -> String:
 	if now_msec - _last_save_msec < ProfileKeeper.SAVE_INTERVAL_MSEC:
@@ -68,28 +68,28 @@ func save_if_due(now_msec: int) -> String:
 	return flush(now_msec)
 
 
-## Saves the driver's world now, at `now_msec`, if it moved since the last save; returns why it
+## Saves the world now, at `now_msec`, if it moved since the last save; returns why it
 ## couldn't, or "". The next regular save waits a full interval from here.
 func flush(now_msec: int) -> String:
 	if not _moved():
 		return ""
 	var beside: Dictionary = {}
 	for companion: WorldCompanion in companions:
-		beside.merge(companion.beside(driver.world))
-	var problem: String = WorldSave.save(driver.world, path(), beside)
+		beside.merge(companion.beside(world))
+	var problem: String = WorldSave.save(world, path(), beside)
 	if problem.is_empty():
 		WebStorage.sync()
 		_last_save_msec = now_msec
-		_saved_world = driver.world
-		_saved_tick = driver.world.tick
+		_saved_world = world
+		_saved_tick = world.tick
 	return problem
 
 
 ## Whether there's a world to keep that moved since the last save.
 func _moved() -> bool:
-	if path().is_empty() or driver == null or driver.world == null:
+	if path().is_empty() or world == null:
 		return false
-	return driver.world != _saved_world or driver.world.tick != _saved_tick
+	return world != _saved_world or world.tick != _saved_tick
 
 
 ## Where the world is kept, or "" when none is.

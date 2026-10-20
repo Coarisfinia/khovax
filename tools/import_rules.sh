@@ -8,8 +8,8 @@
 #   look/, ui/, input/ or game/ folder, so the simulation never leans on what draws or
 #   drives it.
 # - Lasting data stays apart from what shows and drives the game (#827): no script in a slice's
-#   meta/ names a class or a path of any look/, ui/ or input/ folder. A tie that needs a larger
-#   change waits in META_EXEMPT below, each with the issue that drops it.
+#   meta/ names a class or a path of any look/, ui/ or input/ folder; what ties lasting data to the
+#   running session lives beside what it ties (#831).
 # - The slices form no cycle (#821): SLICE_ORDER below declares their order once, and a slice's
 #   scripts, scenes and resources name only the classes and paths of slices before it. A new slice
 #   takes its place in the order. Today's back-edges wait in SLICE_EXEMPT, each with the issue that
@@ -61,13 +61,6 @@ slice_classes=$(classes_in 'slices/*.gd')
 presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' \
   ':(glob)**/input/**/*.gd' ':(glob)**/game/**/*.gd')
 view_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' ':(glob)**/input/**/*.gd')
-# The meta/ scripts that may still name some of those classes, until the issue named drops them.
-declare -A META_EXEMPT=(
-  # #831: the profile's holder listens to the EventBus and sends through LocalInput, and the
-  # world's keeper reads the world from the Session.
-  [slices/profile/meta/profile_holder.gd]='EventBus|LocalInput'
-  [slices/board/meta/world_keeper.gd]='Session'
-)
 # The slices, each after every slice it names (#821).
 SLICE_ORDER=(
   camera music credits hiding movement entering exits paths loot board fog triggers players npcs
@@ -135,9 +128,7 @@ while IFS= read -r -d '' file; do
   esac
   case $file in
     slices/*/meta/*)
-      exempt=${META_EXEMPT[$file]:-}
-      classes=$(tr '|' '\n' <<< "$view_classes" | grep -vxE "${exempt:-^$}" | paste -sd'|' -)
-      refuse "$file" "$code" "$classes" "${at}(look|ui|input)/" \
+      refuse "$file" "$code" "$view_classes" "${at}(look|ui|input)/" \
         "lasting data never depends on what shows or drives the game"
       ;;
   esac

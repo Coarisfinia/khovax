@@ -266,8 +266,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   absolute from `res://`, never relative (`./`, `../`), which the same check refuses (#375). It
   also keeps the rules pure and the tests and tools apart (owner, #526): `core/` and every
   `rules/` never reach a `look/`, `ui/`, `input/` or `game/` class or path, no `meta/` reaches a
-  `look/`, `ui/` or `input/` class or path (#827; the ties still waiting for a larger change are
-  listed in the check, each with its issue), nothing outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
+  `look/`, `ui/` or `input/` class or path (#827, #831), nothing outside `tests/` reaches the tests, and nothing outside `tools/` and `tests/` reaches the tools.
   **`game/` wires the game together and nothing reaches back into it** (owner, #514): it may name
   any slice, but no script outside `game/`, `tests/` and `tools/` names a `game/` class or path,
   and no scene or resource outside them names a `game/` file. The slices see the driver only as a

@@ -616,13 +616,13 @@ func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> 
 	_emit(driver, bus, WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"))
 	if not profile.quests.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
-	return _check_caught_up(driver.holder, profile)
+	return _check_caught_up(driver.tie, profile)
 
 
 ## As a session starts, the profile gains the events that already changed the world (#756), from
 ## its flags, and no other flag: the beacon lit before starts the side quest waiting on it, while
 ## the side quest the glade's purifying started already keeps its progress and one done stays done.
-func _check_caught_up(holder: ProfileHolder, profile: Profile) -> String:
+func _check_caught_up(tie: ProfileTie, profile: Profile) -> String:
 	var lit: QuestDefinition = QuestDefinition.parse("after_beacon", AFTER_BEACON, {})
 	profile.quests.book[lit.id] = lit
 	profile.quests.finished.append("after_done")
@@ -635,7 +635,7 @@ func _check_caught_up(holder: ProfileHolder, profile: Profile) -> String:
 		WorldFlags.EVENT_FLAG + "glade_purified",
 		"TERRITORY_after_beacon",
 	]
-	holder.catch_up(flags)
+	tie.catch_up(flags)
 	var result: String = ""
 	if not profile.quests.open_steps().has(lit.id):
 		result = "catching up with the world's events didn't start the side quest waiting on one"
