@@ -24,7 +24,7 @@ func id() -> String:
 ## both ids, the same on every machine, and never Command.NO_ANSWER for a real answer (the dialogs'
 ## content refuses one that would be, or two that share a code).
 static func code(dialog_id: String, answer_id: String) -> int:
-	return World.name_code(dialog_id + "/" + answer_id)
+	return StateHash.name_code(dialog_id + "/" + answer_id)
 
 
 ## Raises DialogAnswered for every player, in slot order, whose command answers a dialog.

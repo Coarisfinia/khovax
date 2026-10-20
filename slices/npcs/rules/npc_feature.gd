@@ -88,7 +88,9 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [npcs.size()]
 	for person: int in npcs:
 		var spot: NpcSpot = spots[person]
-		values.append_array([person, World.name_code(spot.id), World.name_code(spot.dialog)])
+		values.append_array(
+			[person, StateHash.name_code(spot.id), StateHash.name_code(spot.dialog)],
+		)
 	var slots: Array[int] = []
 	slots.assign(_walking_into.keys())
 	slots.sort()

@@ -21,7 +21,7 @@ static func flag(instance_name: String, faction_id: String) -> String:
 ## Command.NO_HAND_OVER for a territory a quest hands over (the quests' content refuses one that
 ## would be, or two that share a code).
 static func code(instance_name: String, faction_id: String) -> int:
-	return World.name_code(flag(instance_name, faction_id))
+	return StateHash.name_code(flag(instance_name, faction_id))
 
 
 ## The event that hands the instance `instance_name` to the faction `faction_id` (#638): the world

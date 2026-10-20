@@ -59,7 +59,7 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = []
 	var filled: Dictionary[String, Dictionary] = _filled()
 	for feature_id: String in _sorted_ids(filled):
-		values.append(World.name_code(feature_id))
+		values.append(StateHash.name_code(feature_id))
 		_add_hashed(values, filled[feature_id])
 	return values
 
@@ -110,7 +110,7 @@ static func _add_hashed(values: Array[int], value: Variant) -> void:
 		values.append_array([TYPE_INT, whole])
 	elif value is String:
 		var named: String = value
-		values.append_array([TYPE_STRING, World.name_code(named)])
+		values.append_array([TYPE_STRING, StateHash.name_code(named)])
 	elif value is Array:
 		var items: Array = value
 		values.append_array([TYPE_ARRAY, items.size()])
@@ -123,7 +123,7 @@ static func _add_hashed(values: Array[int], value: Variant) -> void:
 		keys.sort()
 		values.append_array([TYPE_DICTIONARY, keys.size()])
 		for key: String in keys:
-			values.append(World.name_code(key))
+			values.append(StateHash.name_code(key))
 			_add_hashed(values, table[key])
 	else:
 		# Not ints and ids, which no entry may hold (a save of it is refused): its kind alone still

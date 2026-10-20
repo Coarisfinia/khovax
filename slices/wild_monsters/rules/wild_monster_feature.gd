@@ -323,7 +323,8 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [monsters.size()]
 	for monster: int in monsters:
 		values.append(monster)
-		values.append_array([_known.find(_species[monster]), World.name_code(_short_ids[monster])])
+		values.append(_known.find(_species[monster]))
+		values.append(StateHash.name_code(_short_ids[monster]))
 		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
 		values.append(rage_of(monster))
 	values.append(held.size())
@@ -331,7 +332,7 @@ func hash_values() -> Array[int]:
 	values.append(fainted.size())
 	for monster: int in fainted:
 		values.append_array([monster, _known.find(_species[monster])])
-		values.append(World.name_code(_short_ids[monster]))
+		values.append(StateHash.name_code(_short_ids[monster]))
 	var emits: Dictionary[int, String] = {}
 	var targets: Dictionary[int, String] = {}
 	for monster: int in marks:
@@ -361,4 +362,4 @@ static func _hash_names(values: Array[int], names: Dictionary[int, String]) -> v
 	ids.assign(names.keys())
 	ids.sort()
 	for monster: int in ids:
-		values.append_array([monster, World.name_code(names[monster])])
+		values.append_array([monster, StateHash.name_code(names[monster])])

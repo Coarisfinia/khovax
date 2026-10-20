@@ -96,7 +96,7 @@ func _init(
 ## draw after n purges, so generation 0 keeps the first draw, the seed every instance had before
 ## purging.
 func seed_for(instance_name: String) -> int:
-	var stream: Rng = Rng.new(world_seed, name_code(instance_name))
+	var stream: Rng = Rng.new(world_seed, StateHash.name_code(instance_name))
 	var drawn: int = stream.next_u32()
 	for _purged: int in generation(instance_name):
 		drawn = stream.next_u32()
@@ -540,18 +540,21 @@ static func _entered_event(instance_name: String, entering: Entity) -> InstanceE
 ## every purged blueprint's generation, then the flags. What isn't there mixes in nothing, so a
 ## world without variants or flags hashes as it did before them.
 func state_hash() -> int:
-	var result: int = _mix(2_166_136_261, tick)
+	var result: int = StateHash.mix(StateHash.OFFSET, tick)
 	for instance_name: String in sorted_names():
-		result = _mix(result, name_code(instance_name))
-		result = _mix(result, instances[instance_name].state_hash())
+		result = StateHash.mix(result, StateHash.name_code(instance_name))
+		result = StateHash.mix(result, instances[instance_name].state_hash())
 		if left_at.has(instance_name):
-			result = _mix(result, left_at[instance_name])
+			result = StateHash.mix(result, left_at[instance_name])
 		if not variant_of(instance_name).is_empty():
-			result = _mix(result, name_code(variant_of(instance_name)))
-	for purged: String in _sorted(generations.keys()):
-		result = _mix(_mix(result, name_code(purged)), generations[purged])
+			result = StateHash.mix(result, StateHash.name_code(variant_of(instance_name)))
+	for purged: String in StateHash.sorted(generations.keys()):
+		result = StateHash.mix(
+			StateHash.mix(result, StateHash.name_code(purged)),
+			generations[purged],
+		)
 	for flag: String in flags:
-		result = _mix(result, name_code(flag))
+		result = StateHash.mix(result, StateHash.name_code(flag))
 	return result
 
 
@@ -562,24 +565,9 @@ static func refused(why: String) -> World:
 	return empty
 
 
-## A 32-bit number for a blueprint name, the same on every platform: its characters, mixed in.
-static func name_code(instance_name: String) -> int:
-	var code: int = 2_166_136_261
-	for i: int in instance_name.length():
-		code = _mix(code, instance_name.unicode_at(i))
-	return code
-
-
 ## Every loaded instance's name, sorted: the order everything goes through them in.
 func sorted_names() -> Array[String]:
-	return _sorted(instances.keys())
-
-
-static func _sorted(keys: Array) -> Array[String]:
-	var names: Array[String] = []
-	names.assign(keys)
-	names.sort()
-	return names
+	return StateHash.sorted(instances.keys())
 
 
 ## Whether any player is in the instance `state`.
@@ -588,8 +576,3 @@ static func has_player(state: GameState) -> bool:
 		if state.player(slot) != null:
 			return true
 	return false
-
-
-## One step of 32-bit FNV-1a, as GameState.state_hash mixes its values.
-static func _mix(current: int, word: int) -> int:
-	return ((current ^ (word & 0xffff_ffff)) * 16_777_619) & 0xffff_ffff
