@@ -10,6 +10,13 @@ func exists(_instance_name: String) -> bool:
 	return false
 
 
+## Whether everything the named instance loads from is already read (#816), so loading it reads no
+## files. Always, until the content cache is filled in the background (part 3 of #816): until then,
+## each reader reads its files the first time it's asked.
+func cached(_instance_name: String) -> bool:
+	return true
+
+
 ## The flags a fresh world starts with (#637), before it loads any instance: e.g. who holds which
 ## instance.
 func starting_flags() -> Array[String]:

@@ -3,7 +3,9 @@ extends Feature
 ## Walking out through an exit (#120, #154): a player standing on an exit tile, not mid-step, whose
 ## command moves towards the exit's side leaves the instance. Movement can't take them there (the
 ## region ends), so this raises an ExitTaken event instead, and the world moves them into the
-## instance the exit leads to. Instances whose region has exits have it.
+## instance the exit leads to. Instances whose region has exits have it. While any machine still
+## waits for content (#816, Command.waiting), nobody leaves: the player stands at the edge, and
+## walks through once every machine has it.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "exits"
@@ -19,6 +21,8 @@ func requires() -> Array[String]:
 
 
 func step(state: GameState, commands: Array[Command]) -> void:
+	if Command.any_waiting(commands):
+		return
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for player: Entity in state.entities:
 		if player.slot == Entity.NO_SLOT:

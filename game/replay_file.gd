@@ -8,12 +8,12 @@ extends RefCounted
 ## the rules, features and checkpoints a recorded one holds, which this build works out by playing
 ## it (Replay.rehash). The fields a replay leaves out are left out of its text too.
 
-## The file format (20 since every command carries the request id the profile saw acknowledged,
-## #942); a replay in another format is refused, not misread.
+## The file format (21 since every command says whether its machine still waits for content,
+## #816); a replay in another format is refused, not misread.
 ## A replay records the id of the rules it was played by, and Replay refuses one recorded under
 ## other rules, so an older format, which always came with other rules, could never play anyway
 ## (#819): like WorldData, only this format is read.
-const FORMAT: int = 20
+const FORMAT: int = 21
 const REQUIRED: Array[String] = ["format", "instance", "seed", "players", "ticks"]
 
 
