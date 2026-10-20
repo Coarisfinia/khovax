@@ -2,7 +2,8 @@
 # Fails when the export presets' file filters drift apart (#830): every preset in
 # export_presets.cfg has the same include_filter, and presets with the same custom_features (the
 # release builds, the e2e_test builds) have the same exclude_filter. A filter change then touches
-# them all, or CI says which preset was missed.
+# them all, or CI says which preset was missed. Every exclude_filter also names tools/*: the
+# developer tools run from the project, never from a build (#921).
 # Usage: tools/export_filters_check.sh (from the repository's root)
 set -euo pipefail
 
@@ -22,6 +23,10 @@ awk -F= '
         printf "::error file=export_presets.cfg::preset %s lacks an include_filter or an exclude_filter\n", p
         failed = 1
         continue
+      }
+      if (exclude[p] !~ /^"(.*,)?tools\/\*(,.*)?"$/) {
+        printf "::error file=export_presets.cfg::preset %s has exclude_filter=%s without tools/*\n", name[p], exclude[p]
+        failed = 1
       }
       if (ref == "") ref = p
       if (include[p] != include[ref]) {
