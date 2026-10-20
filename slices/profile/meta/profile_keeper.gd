@@ -65,12 +65,24 @@ func move_monster(monster_id: int, place: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
-## Puts the gear `gear_id` into the player's `slot`, or empties it with "" (#690), and saves it like
+## Puts the gear `gear_id` into the player's `slot`, or empties it with "" (#690), and posts the
+## request that tells the world, if it needs to know (GearRequests, #818), in one change, saved like
 ## any choice; returns why it can't, or "".
 func equip(slot: String, gear_id: String, now_msec: int) -> String:
 	var problem: String = profile.gear.equip(slot, gear_id)
 	if not problem.is_empty():
 		return problem
+	var _posted: bool = GearRequests.post_change(profile.gear, profile.outbox, slot)
+	_pending = true
+	return save_if_due(now_msec)
+
+
+## Posts the request that tells a world whose store entry `stored` of the player's trap
+## (SpikesFeature) isn't what's equipped (GearRequests.catch_up, #818), saved like any change;
+## returns why it couldn't be saved, or "".
+func catch_up_gear(stored: Dictionary, now_msec: int) -> String:
+	if not GearRequests.catch_up(profile.gear, profile.outbox, stored):
+		return ""
 	_pending = true
 	return save_if_due(now_msec)
 

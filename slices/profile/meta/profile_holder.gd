@@ -8,7 +8,8 @@ extends Node
 ## kept in it too, saved the same way. A save
 ## that can't be read is reported and left alone, never overwritten.
 
-## Finishing a quest posted a request to the profile's outbox (#771), for the session to send.
+## Finishing a quest or changing gear posted a request to the profile's outbox (#771, #818), for
+## the session to send.
 signal outbox_posted
 
 ## Where the profile is saved; tests point it elsewhere before the holder enters the tree.
@@ -77,8 +78,7 @@ func count_quest_facts(facts: Array[QuestFact]) -> void:
 		return
 	var posted: int = keeper.profile.outbox.entries.size()
 	_report(keeper.count_quest_facts(facts, Time.get_ticks_msec()))
-	if keeper.profile.outbox.entries.size() > posted:
-		outbox_posted.emit()
+	_tell_posted(posted)
 
 
 ## Drops the outbox's request `request` the world acknowledged (#771).
@@ -127,10 +127,30 @@ func move_monster(monster_id: int, place: int) -> void:
 		_report(keeper.move_monster(monster_id, place, Time.get_ticks_msec()))
 
 
-## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690).
+## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690), and tells when
+## that posted a request to the outbox for the world (GearRequests, #818).
 func equip(slot: String, gear_id: String) -> void:
-	if keeper != null:
-		_report(keeper.equip(slot, gear_id, Time.get_ticks_msec()))
+	if keeper == null:
+		return
+	var posted: int = keeper.profile.outbox.entries.size()
+	_report(keeper.equip(slot, gear_id, Time.get_ticks_msec()))
+	_tell_posted(posted)
+
+
+## Catches the world up with this player's gear as a session starts (#818): `stored` is their
+## trap's entry in its store (SpikesFeature), and a request goes to the outbox if it's behind.
+func catch_up_gear(stored: Dictionary) -> void:
+	if keeper == null:
+		return
+	var posted: int = keeper.profile.outbox.entries.size()
+	_report(keeper.catch_up_gear(stored, Time.get_ticks_msec()))
+	_tell_posted(posted)
+
+
+## Tells when the outbox holds more requests than the `posted` it held before.
+func _tell_posted(posted: int) -> void:
+	if keeper.profile.outbox.entries.size() > posted:
+		outbox_posted.emit()
 
 
 ## The quests the profile advances from `content`: none when any quest file couldn't be read, so

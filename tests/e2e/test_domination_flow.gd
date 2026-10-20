@@ -42,9 +42,10 @@ extends RefCounted
 ## With the type chart on (#626), the strikes between monsters follow it by each strike's own type;
 ## switched off, they deal their plain damage.
 ## A companion that faints is swapped for the next monster its player carries (#597).
-## With spikes in their trap slot, sent in their commands (#692), the player's ring hurts the wild
-## monster pushing on it once a second for the spikes' damage, while it waits for a totem and while
-## it seals, never below 1 HP; without, it doesn't.
+## With spikes in their trap slot (#692), put there by a request from their outbox (#818) that the
+## world keeps in their store, the player's ring hurts the wild monster pushing on it once a second
+## for the spikes' damage, while it waits for a totem and while it seals, never below 1 HP; without,
+## it doesn't.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -118,6 +119,8 @@ const NO_HELPER: int = -1
 ## The spikes' damage in the spikes check (#692), and their gear's id.
 const SPIKES_DAMAGE: int = 7
 const SPIKES: String = "test_spikes"
+## No request to change the trap (_spiked_over).
+const NO_TRAP_CHANGE: int = -1
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -703,9 +706,9 @@ func _check_target_dominated() -> String:
 
 
 ## A weak monster in a small ring (#692): while the ring waits for a totem, it isn't hurt as long as
-## the player's commands carry no trap, and with their spikes in them it's hurt once in
-## STRIKE_TICKS for their damage. Worn down to 2 HP, it's hurt once more while the ring seals, and
-## then holds at 1 HP.
+## the player's trap is empty, and from the tick a request puts their spikes into it (#818), kept
+## in their world store, it's hurt once in STRIKE_TICKS for their damage. Worn down to 2 HP, it's
+## hurt once more while the ring seals, and then holds at 1 HP.
 func _check_spikes() -> String:
 	var spikes: Array[Feature] = [
 		SpikesFeature.new({ SpikesFeature.code_of(SPIKES): SPIKES_DAMAGE }),
@@ -717,8 +720,15 @@ func _check_spikes() -> String:
 	var monster: int = _wild(state).monsters[0]
 	if _domination(state).encircled.is_empty():
 		return "the spikes check's ring doesn't wait for a totem"
-	var bare: Array[SpikesStruck] = _spiked_over(state, false, 2 * SpikesFeature.STRIKE_TICKS)
-	var spiked: Array[SpikesStruck] = _spiked_over(state, true, SpikesFeature.STRIKE_TICKS)
+	var bare: Array[SpikesStruck] = _spiked_over(state, 2 * SpikesFeature.STRIKE_TICKS)
+	var spiked: Array[SpikesStruck] = _spiked_over(
+		state,
+		SpikesFeature.STRIKE_TICKS,
+		false,
+		SpikesFeature.code_of(SPIKES),
+	)
+	if SpikesFeature.trap_of(state.stored(0, SpikesFeature.ID)) != SpikesFeature.code_of(SPIKES):
+		return "the request didn't put the spikes into the player's trap in their store"
 	var hp: int = _hp(state, monster)
 	if not bare.is_empty() or spiked.size() != 1 or hp != OUTCOME_HP - SPIKES_DAMAGE:
 		return "spikes hurt %d times without, %d with, to %d HP" % [bare.size(), spiked.size(), hp]
@@ -726,9 +736,9 @@ func _check_spikes() -> String:
 		return "the spikes didn't hurt the ringed monster for their damage"
 	_wild(state).wound(state, monster, hp - 2)
 	# The totem's tick counts too: the ring seals from the domination's step, before the spikes'.
-	var sealing: Array[SpikesStruck] = _spiked_over(state, true, 1, true)
+	var sealing: Array[SpikesStruck] = _spiked_over(state, 1, true)
 	while not _domination(state).seals.is_empty() and sealing.size() < 2:
-		sealing.append_array(_spiked_over(state, true, 1))
+		sealing.append_array(_spiked_over(state, 1))
 	if sealing.size() != 2 or _hp(state, monster) != 1:
 		return "a sealing monster was hurt %d times, to %d HP, not twice to 1" % [
 			sealing.size(),
@@ -737,20 +747,24 @@ func _check_spikes() -> String:
 	return ""
 
 
-## The spikes' hurts over `ticks` ticks of the player in slot 0 standing, with the spikes in their
-## commands or (`spiked` false) no trap, placing their totem with `placing`.
+## The spikes' hurts over `ticks` ticks of the player in slot 0 standing, placing their totem with
+## `placing`, the first tick's command carrying a request (#818) to put the gear with the code
+## `trap` into their trap slot, unless it's NO_TRAP_CHANGE.
 func _spiked_over(
 		state: GameState,
-		spiked: bool,
 		ticks: int,
 		placing: bool = false,
+		trap: int = NO_TRAP_CHANGE,
 ) -> Array[SpikesStruck]:
 	var still: Array[Command] = FlowSteps.totem() if placing else FlowSteps.command(Command.NO_MOVE)
-	if spiked:
-		still[0].trap = SpikesFeature.code_of(SPIKES)
+	var first: Array[Command] = FlowSteps.totem() if placing else FlowSteps.command(Command.NO_MOVE)
+	if trap != NO_TRAP_CHANGE:
+		first[0].request = ShortId.code(ShortId.drawn(Rng.new(1, OutboxEntry.ID_STREAM)))
+		first[0].request_kind = OutboxEntry.TRAP
+		first[0].request_data = trap
 	var hurts: Array[SpikesStruck] = []
-	for _tick: int in ticks:
-		Simulation.step(state, still)
+	for tick: int in ticks:
+		Simulation.step(state, first if tick == 0 else still)
 		for event: RefCounted in state.events:
 			if event is SpikesStruck:
 				hurts.append(event as SpikesStruck)

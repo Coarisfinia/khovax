@@ -10,8 +10,11 @@ const TERRITORY: int = 1
 ## Use a revive item on a fainted carried monster (#656, #818): its data is the monster's short
 ## id's code (ShortId.code).
 const REVIVE: int = 2
+## Put gear into the trap slot, or empty it (#692, #818): its data is the gear's code
+## (SpikesFeature.code_of), or CommandCodes.NONE for an empty slot.
+const TRAP: int = 3
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE]
+const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP]
 ## The stream the profile's outbox draws ids from (Outbox).
 const ID_STREAM: int = 771
 

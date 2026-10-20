@@ -123,7 +123,8 @@ func carried() -> Array[CarriedMonsters]:
 
 ## A new session's schedule, from the world's tick on, with no hashes and no time due yet, its world
 ## handed to the keeper to save, and the player's quests caught up with the events that already
-## changed the world (#756).
+## changed the world (#756), and the world with the player's gear (#818): a new world, or one
+## saved before a change of it, gets a request for what's equipped.
 func _begin_session() -> void:
 	schedule = CommandSchedule.new(players, input_delay, world.tick if world != null else 0)
 	hashes.clear()
@@ -133,6 +134,9 @@ func _begin_session() -> void:
 	# The quests meet the world as it is: events raised before they came still count (#756).
 	if quest_tie != null and world != null:
 		quest_tie.catch_up(world.flags)
+	if holder != null and world != null:
+		var slot: int = input.slot if input != null else 0
+		holder.catch_up_gear(world.stored(slot, SpikesFeature.ID))
 
 
 ## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops
@@ -165,7 +169,6 @@ func advance(delta: float) -> void:
 ## Runs the next tick if every player's command for it is known; returns whether it ran.
 func _step() -> bool:
 	var tick: int = world.tick + 1
-	send_gear()
 	for source: CommandSource in sources:
 		source.poll(schedule, tick, state)
 	if not schedule.is_complete(tick):
@@ -187,15 +190,6 @@ func _step() -> bool:
 	events.append_array(world.events)
 	announce(world.tick, events)
 	return true
-
-
-## Hands the gear in this machine's player's trap slot to their input, which sends it in their
-## commands (#692): their profile changes outside the simulation, so it reaches it this way.
-func send_gear() -> void:
-	if input != null and holder != null and holder.keeper != null:
-		var equipped: Dictionary[String, String] = holder.keeper.profile.gear.equipped
-		var trap_id: String = equipped.get(GearItem.TRAP, "")
-		input.trap = SpikesFeature.code_of(trap_id)
 
 
 ## The blueprint name of the instance this machine's player is in, or of the starting one before

@@ -51,10 +51,6 @@ var _answer: int = Command.NO_ANSWER
 var _requests: Array[OutboxEntry] = []
 ## Which fainted monster the next revive item brings back (#780); views read its `picked`.
 var revive_pick: RevivePick = RevivePick.new()
-## The code of the gear in the player's trap slot (#692, SpikesFeature.code_of), or
-## Command.NO_TRAP: every command carries it, also while the game hears no input. Whoever holds the
-## player's profile keeps it current (GameDriver).
-var trap: int = Command.NO_TRAP
 
 
 func _process(_delta: float) -> void:
@@ -136,7 +132,6 @@ func command(state: GameState) -> Command:
 	given.swap = swap
 	given.answer = answering
 	_send_next(given)
-	given.trap = trap
 	return given
 
 
@@ -146,7 +141,6 @@ func _standing(answering: int) -> Command:
 	var standing: Command = Command.new()
 	standing.answer = answering
 	_send_next(standing)
-	standing.trap = trap
 	return standing
 
 
