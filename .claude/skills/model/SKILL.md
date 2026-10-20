@@ -72,7 +72,13 @@ for look-dev with the owner, but whatever it finds goes back into the script.
    on desktop.
 
 ## 5. PR
-- **Visuals (owner's rule):** the side sheet, the silhouette, the in-game shots and the clip GIFs,
-  published on the `assets` branch per AGENTS.md.
+- **Visuals (owner's rule), in this order:**
+  1. **Every side as built:** the Blender sheet from step 1.
+  2. **Every side in the game:** the same six views rendered in Godot, under the game's cel shading
+     and lighting, plus the shot from the game camera at play distance (step 5).
+  3. **Animations:** a GIF of each clip in the game, the attack at least.
+  Publish them on the `assets` branch per AGENTS.md.
+- **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
+  then its clips (visual 3). Each PR shows what it adds.
 - **Numbers:** the budget from step 7, and the `check_glb.gd` result.
 - **Review:** Codex reviews the build script's diff, never the binary.

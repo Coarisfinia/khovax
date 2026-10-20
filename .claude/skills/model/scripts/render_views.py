@@ -2,6 +2,7 @@
 # Usage: blender --background --factory-startup --python render_views.py -- <model.glb> <out_dir> [clip] [frame]
 # Writes <out_dir>/<view>.png for front, back, left, right, top, three_quarter and sheet.png.
 import math
+import os
 import subprocess
 import sys
 
@@ -12,6 +13,7 @@ args = sys.argv[sys.argv.index("--") + 1:]
 glb, out_dir = args[0], args[1]
 clip = args[2] if len(args) > 2 else ""
 frame = int(args[3]) if len(args) > 3 else 1
+os.makedirs(out_dir, exist_ok=True)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
@@ -73,10 +75,12 @@ for name, direction in views.items():
 	cam.rotation_euler = (center - cam.location).to_track_quat("-Z", "Y").to_euler()
 	scene.render.filepath = f"{out_dir}/{name}.png"
 	bpy.ops.render.render(write_still=True)
+	if not os.path.isfile(scene.render.filepath):
+		sys.exit(f"render failed: {scene.render.filepath}")
 	paths.append(scene.render.filepath)
 
 # Each tile labelled with its view, so a reviewer knows which side they're looking at.
 labelled = [part for path in paths for part in ("-label", path.split("/")[-1][:-4], path)]
 subprocess.run(["montage", *labelled, "-tile", "3x2", "-geometry", "+4+4", "-pointsize", "20",
-	f"{out_dir}/sheet.png"], check=False)
+	f"{out_dir}/sheet.png"], check=True)
 print("VIEWS", out_dir)
