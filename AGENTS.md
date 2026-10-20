@@ -47,7 +47,11 @@ way; add to it when something bites.
 
 - **Read an issue's or pull request's history before acting on it** (owner's rule, #66): newer
   events may have arrived since the alert that brought you there.
-- **Pull requests and comments:** `agent-gh pr create --assignee Flixbox …`, `agent-gh pr comment …`.
+- **The owner's login is looked up, never written down:** the repository's one human admin (the
+  repository's own owner is the organisation, not a person). The lookup fails unless there is
+  exactly one:
+  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end')`.
+- **Pull requests and comments:** `agent-gh pr create --assignee "$OWNER" …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
   Settings changes the owner asks for are made with the owner's `gh` login.
@@ -56,13 +60,17 @@ way; add to it when something bites.
 - **Name other repositories' issues and pull requests only as code text** (`` `owner/repo#123` ``),
   never as a link: GitHub adds a "mentioned this" entry to the other repository for every linked
   mention from this public one.
+- **No individual contributor is named in the repository** (owner's rule, #1060): no hard-coded
+  login, name or ping in code, docs, skills or tools ("ping <login>", `--assignee <login>`). Say
+  "the owner" and look the login up (above). A list a tool generates and keeps up to date, such as
+  an automatic contributor list, is fine.
 
 ## Pull requests
 
 You own a pull request from the moment you open it until it is merged. "Pushed" is not "done".
 
 **One issue, one pull request** (owner's rule). Every pull request says `Closes #n` for its issue and
-is assigned to the owner (`--assignee Flixbox`).
+is assigned to the owner (`--assignee "$OWNER"`, the login looked up as above).
 
 **Every branch is a worktree next to `main/`** (owner's rule, the same layout as the owner's other
 repositories). The container folder `project-khovax/` holds `main/` (the primary checkout, always on
@@ -214,7 +222,8 @@ background; only wait in the foreground for a result the very next step needs.
   `project-watcher` (#142); what each event asks for is in its `babysit-prs` skill
   ([`SKILL.md`](https://github.com/Flixbox/household-brain/blob/main/packages/watcher/skills/babysit-prs/SKILL.md)).
   Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
-  `REPO=Coarisfinia/khovax`, `OWNER=Flixbox` (the owner's login, whose reviews count),
+  `REPO=Coarisfinia/khovax`, `OWNER="$OWNER"` (the owner's login, whose reviews count, looked up
+  as above),
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh` and `SELF='coarisfinia-ai-agent[bot]'` (it has
   no default). On a failing CI run, read the job with
   `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.

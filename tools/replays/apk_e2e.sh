@@ -7,7 +7,7 @@
 set -euo pipefail
 apk=$1
 expected=$2
-package=io.github.flixbox.khovax
+package=io.github.coarisfinia.khovax
 # The result line game/test_mode.gd prints, nothing else.
 result_line='KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$'
 
