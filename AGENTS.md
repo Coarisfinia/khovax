@@ -310,8 +310,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Regions** (#36): rules ask `state.region` (`is_walkable`, `has_tile`), never a distance from
   the origin, so a region can have any shape. How regions are read, arranged, left through exits
   and purged is in `Region`, `RegionDocument`, `RegionArranger` and `World`.
-- **Instance blueprints** (`InstanceBlueprints`, in `slices/board/meta/`, outside the core, #396,
-  #513): a new mechanic is a new feature that blueprints list; it never grows the core. The core
+- **Instance blueprints** (`InstanceBlueprints`, in their own slice `slices/blueprints/meta/`,
+  outside the core and above the features they list, #396, #513, #821): a new mechanic is a new feature that blueprints list; it never grows the core. The core
   gets them only as an `InstanceSource` it's handed (`BlueprintSource`).
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
   these is meant. A `species` is what every monster is, dominated or not; a `dominated_monster` was
