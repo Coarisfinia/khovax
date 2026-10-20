@@ -14,17 +14,19 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   install it on Linux. Run it headless, through `tools/models/blender.sh`:
   `tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
-  only: Mesa's default falls back to the CPU's software rasteriser. Never set it for the shell:
+  only: Mesa's default falls back to the CPU's software rasteriser. (On the owner's laptop,
+  `blender` on the PATH is such a wrapper already; `blender.sh` is for every other machine.)
+  Never set it for the shell:
   Godot would pick it up, and on d3d12 its renderer breaks every skinned mesh. The MESA/ZINK/EGL
   warnings are harmless; EEVEE still renders.
 - **Godot 4.7.2**, the CI's version: every Godot check runs in the game project itself, never in
   a scratch project, so the repo's import settings apply. It renders on the CPU (the software
-  rasteriser), so `render_in_game.gd` runs with `--disable-vsync --max-fps 0` (its header): no
-  waiting for the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
+  rasteriser), so `render_in_game.gd` turns off vsync and the frame cap itself: no waiting for
+  the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
   run side by side; several Godot renders at once only share the CPU's cores.
-- **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs, with a palette pass (faster and
-  smaller than ImageMagick): `ffmpeg -framerate 15 -pattern_type glob -i '<Clip>_*.png' -vf
-  "scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" -loop 0 <Clip>.gif`
+- **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs through
+  `uv run --locked tools/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
+  header), never a hand-typed command.
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).
 
