@@ -630,19 +630,47 @@ func _check_tiles_refused() -> String:
 
 
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint
-## lists or a region piece names is one the species data has (#133).
+## lists or a region piece of its own or of a variant's region names is one the species data has
+## (#133, #953). A variant region naming a species the data lacks is refused.
 func _check_wild_species(content: SpeciesContent) -> String:
 	for instance_name: String in InstanceBlueprints.names():
-		var listed: Dictionary = InstanceBlueprints.blueprint(instance_name).wild_species
-		var named: Array[String] = []
-		var region: Region = InstanceBlueprints.region_of(instance_name, 0)
+		var problem: String = _wild_species_problem(instance_name, content.species)
+		if not problem.is_empty():
+			return problem
+	var lacking: Dictionary[String, Species] = content.species.duplicate()
+	lacking.erase("tikazzir")
+	var refused: String = _wild_species_problem(FlowSteps.GLADE, lacking)
+	var expected: String = "%s places a species that doesn't exist: tikazzir" % (
+		FlowSteps.CORRUPTED_GLADE
+	)
+	if not refused.ends_with(expected):
+		return "the glade's corrupted variant naming an unknown species wasn't refused: " + refused
+	return ""
+
+
+## Why the named blueprint's wild species don't all exist in `species`, or "": the ones it lists
+## and the ones its own region and each variant's region name.
+func _wild_species_problem(instance_name: String, species: Dictionary[String, Species]) -> String:
+	var listed: Dictionary = InstanceBlueprints.blueprint(instance_name).wild_species
+	if listed.is_empty():
+		return "the %s blueprint lists no species for its wild monsters" % instance_name
+	for named: Variant in listed:
+		if not species.has(str(named)):
+			return "%s lists a species that doesn't exist: %s" % [instance_name, named]
+	var regions: Array[String] = [""]
+	for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+		if not chosen_by[1].is_empty():
+			regions.append(chosen_by[1])
+	for variant_name: String in regions:
+		var region: Region = InstanceBlueprints.region_of(instance_name, 0, variant_name)
 		for meaning: String in region.placed(WildSpotPlacements.KIND).values():
-			named.append(WildSpot.read(meaning).species)
-		if listed.is_empty():
-			return "the %s blueprint lists no species for its wild monsters" % instance_name
-		for species: Variant in listed.keys() + named:
-			if not content.species.has(str(species)):
-				return "%s places a species that doesn't exist: %s" % [instance_name, species]
+			var named: String = WildSpot.read(meaning).species
+			if not species.has(named):
+				return "%s's region %s places a species that doesn't exist: %s" % [
+					instance_name,
+					variant_name if not variant_name.is_empty() else instance_name,
+					named,
+				]
 	return ""
 
 
