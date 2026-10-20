@@ -28,5 +28,5 @@ The corrupted glade (#541): the variant the flag glade_corrupted chooses for the
 - `🔵`: where player 2 starts
 - `🟢`: where player 3 starts
 - `🟡`: where player 4 starts
-- `🚪`: exit to the northwest, to forest
-- `🌀`: exit to the southeast, to outpost
+- `🚪`: exit to the northwest
+- `🌀`: exit to the southeast

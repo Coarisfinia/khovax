@@ -23,8 +23,8 @@ The faction outpost's start piece (#689): its gate, a palisade of stumps to the 
 - `🟫`: ground
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the southeast
-- `🚪`: exit to the northwest, to glade
-- `🌀`: exit to the southwest, to mountain_pass
+- `🚪`: exit to the northwest
+- `🌀`: exit to the southwest
 - `🔴`: where player 1 starts
 - `🔵`: where player 2 starts
 - `🟢`: where player 3 starts

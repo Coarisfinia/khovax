@@ -9,12 +9,13 @@ extends RefCounted
 ## own feature (FeatureFactories). What tells blueprints apart is content data, one file each
 ## (Blueprint, #823).
 
-## The names the code and the tests load blueprints by; the blueprints themselves are the files in
-## BlueprintContent.DIR. The playground (#338), which only the tests play (#712).
+## The names the tests and tools load blueprints by; the game names none, it reads them from the
+## realms (#865), and the blueprints themselves are the files in BlueprintContent.DIR. The
+## playground (#338), which only the tests play (#712).
 const BASIC: String = "basic"
 ## The load test's (#101).
 const LOAD: String = "load"
-## The glade, where the world starts (#712).
+## The glade, which the realms mark as where the world starts (#712).
 const GLADE: String = "glade"
 ## A boss-style arena (#127).
 const ARENA: String = "arena"
@@ -119,7 +120,7 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
 	var path: String = REGIONS + region_name + ".md"
 	if FileAccess.file_exists(path):
-		return read_region(FileAccess.get_file_as_string(path))
+		return _lead_exits(read_region(FileAccess.get_file_as_string(path)), instance_name)
 	var folder: String = REGIONS + region_name + "/"
 	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
@@ -133,7 +134,28 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 		if not piece.problem.is_empty():
 			return piece
 	var named: Blueprint = blueprint(instance_name)
-	return RegionArranger.arrange(pieces, seed_value, named != null and named.turned)
+	var arranged: Region = RegionArranger.arrange(
+		pieces,
+		seed_value,
+		named != null and named.turned,
+	)
+	return _lead_exits(arranged, instance_name)
+
+
+## `region`, the named blueprint's, with each exit leading to the instance its realm draws beside
+## the blueprint's on the exit's side (#865); its `problem` says when one leads nowhere.
+static func _lead_exits(region: Region, instance_name: String) -> Region:
+	if region.exits.is_empty() or not region.problem.is_empty():
+		return region
+	var realm: Realm = Realms.holding(instance_name)
+	for i: int in region.exits.size():
+		var side: int = region.exits[i].z
+		region.exit_blueprints[i] = realm.beside(instance_name, side) if realm != null else ""
+		if region.exit_blueprints[i].is_empty():
+			var problem: String = "%s's exit to the %s leads to no instance in its realm"
+			region.problem = problem % [instance_name, LegendMeaning.SIDES[side]]
+			return region
+	return region
 
 
 ## The region a Markdown region document describes (RegionDocument), with what every slice places
