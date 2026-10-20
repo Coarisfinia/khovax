@@ -1092,7 +1092,8 @@ func _warn_locking_dialogs() -> String:
 ## Dialog files with a wrong id, no speaker or lines, a line without text, an answer without an id,
 ## two lines or answers sharing an id, or an answer leading to no line are refused (#618), and so
 ## are one that doesn't state whether it locks, or an answer whose commits isn't true or false
-## (#891).
+## (#891), and one that holds its player (it locks, or a committing answer leads on) up to a last
+## line without answers, which would hold them forever (#1014).
 func _check_dialogs_refused() -> String:
 	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lock\": false, \"lines\": [%s]}"
 	var line: String = "{\"id\": \"a\", \"text\": \"T\", \"answers\": [%s]}"
@@ -1117,6 +1118,12 @@ func _check_dialogs_refused() -> String:
 		dialog % (line % "{\"id\": \"b\", \"text\": \"T\", \"commits\": 1}"): (
 			"line 0: answer b's commits"
 		),
+		dialog.replace("false", "true") % "{\"text\": \"T\"}, {\"text\": \"Farewell\"}": (
+			"line 1: it holds its player"
+		),
+		dialog % ("%s, {\"id\": \"c\", \"text\": \"Farewell\"}" % (line % (
+			answer.replace("\"T\",", "\"T\", \"commits\": true,") % ["b", "c"]
+		))): "line 1: it holds its player",
 	}
 	for text: String in cases:
 		var refusal: String = Dialog.parse("x", text).problem
