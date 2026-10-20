@@ -76,10 +76,10 @@ func apply(result: Gain) -> String:
 
 
 ## Counts `fact` on the player's quests (QuestTracker.advance, #817) and gives what finishing each
-## quest it finished gives.
+## quest it finished gives (QuestRewards), in the same change.
 func count_quest_fact(fact: QuestFact) -> void:
 	for quest: QuestDefinition in quests.advance(fact):
-		_finish(quest)
+		QuestRewards.give(quest, self)
 
 
 ## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
@@ -143,20 +143,6 @@ func _dominate(species: String, short_id: String) -> void:
 	if carried.size() < CARRY_LIMIT:
 		carried.append(next_monster_id)
 	next_monster_id += 1
-
-
-## Gives what finishing `quest` gives, in the same change as the quest is marked done, so a save
-## never has one without the other: leans the player toward its path (#658), moves the standing
-## with the faction it names (#532), held on the scale by Standings, and posts the hand-over of the
-## territory it names to the outbox (#638, #771).
-func _finish(quest: QuestDefinition) -> void:
-	leaning.lean(quest.path)
-	if quest.standing != null:
-		# Its faction's id was checked when the quest was read, so the change can't be refused.
-		var _moved: String = standings.change(quest.standing.faction, quest.standing.change)
-	if quest.territory != null:
-		var code: int = Territory.code(quest.territory.instance, quest.territory.faction)
-		var _posted: OutboxEntry = outbox.post(OutboxEntry.TERRITORY, code)
 
 
 ## Why `result` can't be taken over (an empty species, a nameless or negative material or gear, or
