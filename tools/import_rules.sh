@@ -96,14 +96,17 @@ declare -A SLICE_EXEMPT=(
   [wild_monsters>companions]=851 [wild_monsters>controls]=851 [wild_monsters>domination]=851
 )
 # Per slice: its own classes, and the later slices' classes and folder names it may not name.
-declare -A own_classes later_classes later_slices exemption_used
+declare -A own_classes later_classes later_slices exemption_used back_edge
 for slice in "${SLICE_ORDER[@]}"; do
   own_classes[$slice]=$(classes_in "slices/$slice/*.gd")
 done
 for ((i = 0; i < ${#SLICE_ORDER[@]}; i++)); do
   slice=${SLICE_ORDER[i]}
   for later in "${SLICE_ORDER[@]:i+1}"; do
-    [ -z "${SLICE_EXEMPT[$slice>$later]:-}" ] || continue
+    if [ -n "${SLICE_EXEMPT[$slice>$later]:-}" ]; then
+      back_edge[$slice>$later]=1
+      continue
+    fi
     later_slices[$slice]+="${later_slices[$slice]:+|}$later"
     if [ -n "${own_classes[$later]}" ]; then
       later_classes[$slice]+="${later_classes[$slice]:+|}${own_classes[$later]}"
@@ -201,6 +204,11 @@ while IFS= read -r -d '' file; do
     echo "::error file=${file}::a slice names only the slices before it in SLICE_ORDER: see the lines above"
     failed=1
   fi
+  for exempt in "${!SLICE_EXEMPT[@]}"; do
+    if [ "${exempt%>*}" = "$slice" ] && grep -q "res://slices/${exempt#*>}/" "$file"; then
+      exemption_used[$exempt]=1
+    fi
+  done
 done < <(git ls-files -z 'slices/*.tscn' 'slices/*.tres')
 
 # Every slice has its place in the order, every place a slice, and every exemption is still used.
@@ -219,7 +227,7 @@ for slice in "${SLICE_ORDER[@]}"; do
   fi
 done
 for exempt in "${!SLICE_EXEMPT[@]}"; do
-  if [ -z "${exemption_used[$exempt]:-}" ]; then
+  if [ -z "${exemption_used[$exempt]:-}" ] || [ -z "${back_edge[$exempt]:-}" ]; then
     echo "::error::SLICE_EXEMPT's $exempt is no longer needed: drop it (tools/import_rules.sh)"
     failed=1
   fi
