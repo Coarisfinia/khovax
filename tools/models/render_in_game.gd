@@ -28,12 +28,9 @@ const VIEWS: Dictionary[String, Vector3] = {
 	"top": Vector3(0.0, 1.0, 0.01),
 	"three_quarter": Vector3(0.8, 0.7, 0.8),
 }
-## What the side shots hide, under the main scene: the HUD and the trees and rocks, which would
-## stand between the camera and the model.
-const HIDDEN_IN_SIDES: Array[String] = ["Hud", "Instance/TileDecorations"]
-## How many tiles from the player the model stands for the side shots, so the player isn't in the
-## way either; for the game shot it stands right beside them.
-const SIDES_AWAY: int = 3
+## What the side shots keep of the instance: only the ground. The HUD, the player, the people,
+## the other monsters and the trees would stand between the camera and the model.
+const KEPT_IN_SIDES: String = "HexGrid"
 ## A clip's frames are captured this many times a second of the clip.
 const CLIP_FPS: float = 15.0
 ## Frames to wait after posing a shot before capturing it, so the pose has been drawn.
@@ -123,7 +120,7 @@ func _place() -> void:
 	Toon.apply_to_model(model)
 	_piece.add_child(model)
 	_main.add_child(_piece)
-	_piece.tile = _beside(driver.state, driver.state.player(0).tile, 1)
+	_piece.tile = _beside(driver.state, driver.state.player(0).tile)
 	_animations = model.find_child("AnimationPlayer") as AnimationPlayer
 	_game_camera = _main.get_node("Camera3D") as Camera3D
 	_side_camera = Camera3D.new()
@@ -133,10 +130,10 @@ func _place() -> void:
 		_animations.play(&"Idle")
 		_add_shot("game", _game_camera.make_current)
 		for side: String in VIEWS:
-			_add_shot(side, _pose_side.bind(side, driver.state))
+			_add_shot(side, _pose_side.bind(side))
 		return
 	if VIEWS.has(_from):
-		_pose_side(_from, driver.state)
+		_pose_side(_from)
 	else:
 		_game_camera.make_current()
 	_animations.play(StringName(_clip))
@@ -162,22 +159,24 @@ func _add_shot(file: String, pose: Callable) -> void:
 	_poses.append(pose)
 
 
-## A tile `steps` from `tile` in a straight line that the region has, so the model stands on
-## ground near the player.
-func _beside(state: GameState, tile: Vector2i, steps: int) -> Vector2i:
+## A tile next to `tile` that the region has, so the model stands on ground beside the player.
+func _beside(state: GameState, tile: Vector2i) -> Vector2i:
 	for direction: Vector2i in Hex.DIRECTIONS:
-		if state.region.has_tile(tile + direction * steps):
-			return tile + direction * steps
+		if state.region.has_tile(tile + direction):
+			return tile + direction
 	return tile
 
 
-## Looks at the model's middle from `side` (VIEWS), away from the player and its decorations.
-func _pose_side(side: String, state: GameState) -> void:
-	_piece.tile = _beside(state, state.player(0).tile, SIDES_AWAY)
+## Looks at the model's middle from `side` (VIEWS), on bare ground.
+func _pose_side(side: String) -> void:
 	var middle: Vector3 = _piece.global_position + Vector3.UP * MIDDLE_HEIGHT
-	for path: String in HIDDEN_IN_SIDES:
-		var hidden: Node = _main.get_node(path)
-		hidden.set("visible", false)
+	var hidden: Array[Node] = _main.get_node("Instance").get_children()
+	hidden.append(_main.get_node("Hud"))
+	for node: Node in hidden:
+		if node.name != KEPT_IN_SIDES:
+			# Stopped too, so a view that shows its node each frame doesn't show it again.
+			node.process_mode = Node.PROCESS_MODE_DISABLED
+			node.set("visible", false)
 	_side_camera.make_current()
 	_side_camera.position = middle + VIEWS[side].normalized() * VIEW_DISTANCE
 	_side_camera.look_at(middle, Vector3.FORWARD if side == "top" else Vector3.UP)
