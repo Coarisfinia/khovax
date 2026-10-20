@@ -5,7 +5,8 @@ extends RefCounted
 ## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
 ## loses nothing), never because of a tick itself. Integers and ids only, like everything that
 ## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). The player's quests (#184,
-## QuestTracker) are kept here too, advanced by the same gains, and so are the
+## QuestTracker) are kept here too, advanced by the facts their tie counts (QuestTie, #817), and so
+## are the
 ## player's personal color (#233), which only views read, and their standings with the factions
 ## (#483), which finishing a quest can move (#532), their gear (#690), and their leaning toward
 ## the story's paths (#658), which finishing a path-marked quest moves, and its outbox (#771): what
@@ -56,36 +57,29 @@ var character_name: String = ""
 var problem: String = ""
 
 
-## Takes over what the player just obtained: its dominations and materials, and every quest they
-## advance, one fact at a time, so one gain can finish a step and count toward the next: its
-## dominations, then its facts, then its loot, each in the instance it happened in. Returns why the
-## gain can't be taken over, or "", and changes nothing when it can't: a profile that took over a
-## bad gain couldn't be loaded again. ProfileKeeper saves it.
+## Takes over what the player just obtained: its dominations and its loot. Returns why the gain
+## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
+## gain couldn't be loaded again. ProfileKeeper saves it. What it means to the player's quests is
+## counted apart (`count_quest_fact`, QuestTie).
 func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
 		return refusal
-	var where: String = result.instance
 	for i: int in result.dominated_species.size():
-		var species: String = result.dominated_species[i]
 		var short_ids: Array[String] = result.dominated_short_ids
-		_dominate(species, short_ids[i] if i < short_ids.size() else "")
-		_count(_dominated_fact(species, where))
-	for fact: QuestFact in result.facts:
-		_count(fact)
+		_dominate(result.dominated_species[i], short_ids[i] if i < short_ids.size() else "")
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
-		_count_obtained(material, result.materials[material], where)
 	for gear_id: String in result.gear:
 		gear.owned[gear_id] = gear.owned.get(gear_id, 0) + result.gear[gear_id]
-		_count_obtained(gear_id, result.gear[gear_id], where)
 	return ""
 
 
-## Counts `amount` of the item `item` just obtained (#686) in the instance `where` toward the
-## quests (QuestTracker.count_obtained).
-func _count_obtained(item: String, amount: int, where: String) -> void:
-	_finish_all(quests.count_obtained(QuestFact.new(QuestStep.OBTAINED, item, where), amount))
+## Counts `fact` on the player's quests (QuestTracker.advance, #817) and gives what finishing each
+## quest it finished gives.
+func count_quest_fact(fact: QuestFact) -> void:
+	for quest: QuestDefinition in quests.advance(fact):
+		_finish(quest)
 
 
 ## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
@@ -151,22 +145,6 @@ func _dominate(species: String, short_id: String) -> void:
 	next_monster_id += 1
 
 
-## The fact of a monster of `species` dominated in the instance `where`.
-static func _dominated_fact(species: String, where: String) -> QuestFact:
-	return QuestFact.new(QuestStep.DOMINATED, species, where)
-
-
-## Counts `fact` toward the quests (QuestTracker.count) and finishes those it finished.
-func _count(fact: QuestFact) -> void:
-	_finish_all(quests.count(fact))
-
-
-## Gives what finishing each of `finished` gives, in the order finished.
-func _finish_all(finished: Array[QuestDefinition]) -> void:
-	for quest: QuestDefinition in finished:
-		_finish(quest)
-
-
 ## Gives what finishing `quest` gives, in the same change as the quest is marked done, so a save
 ## never has one without the other: leans the player toward its path (#658), moves the standing
 ## with the faction it names (#532), held on the scale by Standings, and posts the hand-over of the
@@ -181,23 +159,14 @@ func _finish(quest: QuestDefinition) -> void:
 		var _posted: OutboxEntry = outbox.post(OutboxEntry.TERRITORY, code)
 
 
-## Why `result` can't be taken over (an empty species, a quest fact without a condition, about
-## nothing or, for a chest opened, about something, a nameless or negative material or gear, or more
-## than the save can hold), or "".
+## Why `result` can't be taken over (an empty species, a nameless or negative material or gear, or
+## more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
 	var dominated: String = _dominated_problem(result)
 	if not dominated.is_empty():
 		return dominated
-	if result.facts.size() > MAX_NUMBER:
-		return "a gain can't hold that many quest facts"
-	for fact: QuestFact in result.facts:
-		if fact == null or fact.condition.is_empty():
-			return "a quest fact has no condition"
-		# A chest opened is about nothing in particular, and every other fact about something.
-		if fact.what.is_empty() != (fact.condition == QuestStep.OPENED):
-			return "the quest fact %s about '%s' is invalid" % [fact.condition, fact.what]
 	var counted: String = _count_problem("material", result.materials, materials)
 	return counted if not counted.is_empty() else _count_problem("gear", result.gear, gear.owned)
 

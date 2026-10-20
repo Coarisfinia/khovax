@@ -16,6 +16,14 @@ var finished: Array[String] = []
 var book: Dictionary[String, QuestDefinition] = {}
 
 
+## Counts `fact`: an item obtained as many times as obtained (`count_obtained`), any other fact
+## once (`count`). Returns the quests it finished, in the order finished.
+func advance(fact: QuestFact) -> Array[QuestDefinition]:
+	if fact.condition == QuestStep.OBTAINED:
+		return count_obtained(fact, fact.amount)
+	return count(fact)
+
+
 ## Counts `fact`, then every event the quests it advanced emitted (#575), in the order emitted:
 ## each as a fact of its own, which can start side quests waiting on it. Only a side quest's start
 ## waits on an event, and each starts once, so the events always run out. An event happens in the

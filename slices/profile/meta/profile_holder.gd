@@ -2,10 +2,14 @@ class_name ProfileHolder
 extends Node
 ## Holds this machine's player's profile through a session (#37, #132): loaded at boot, what it
 ## gains taken over at once and saved debounced (ProfileKeeper, #73), and whatever is pending saved
-## when the game quits or goes to the background. Its quests advance (#184) and its outbox (#771)
-## and revive items (#656) change through what it's handed (ProfileTie, which ties it to the
-## session, #831). The player's personal color (#391) is kept in it too, saved the same way. A save
+## when the game quits or goes to the background. Its quests advance (#184) through the facts it's
+## handed (QuestTie, #817), and its outbox (#771) and revive items (#656) change through what it's
+## handed (ProfileTie, which ties it to the session, #831). The player's personal color (#391) is
+## kept in it too, saved the same way. A save
 ## that can't be read is reported and left alone, never overwritten.
+
+## Finishing a quest posted a request to the profile's outbox (#771), for the session to send.
+signal outbox_posted
 
 ## Where the profile is saved; tests point it elsewhere before the holder enters the tree.
 var save_path: String = ProfileStore.PATH
@@ -64,6 +68,17 @@ func flush() -> void:
 func take(gain: Gain) -> void:
 	if keeper != null:
 		_report(keeper.take(gain, Time.get_ticks_msec()))
+
+
+## Counts `facts` on this player's quests (QuestTie, #817), in order, and tells when finishing one
+## posted a request to the outbox (#771).
+func count_quest_facts(facts: Array[QuestFact]) -> void:
+	if keeper == null:
+		return
+	var posted: int = keeper.profile.outbox.entries.size()
+	_report(keeper.count_quest_facts(facts, Time.get_ticks_msec()))
+	if keeper.profile.outbox.entries.size() > posted:
+		outbox_posted.emit()
 
 
 ## Drops the outbox's request `request` the world acknowledged (#771).
