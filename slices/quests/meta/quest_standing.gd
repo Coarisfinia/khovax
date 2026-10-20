@@ -31,12 +31,9 @@ static func parse(entry: Variant) -> QuestStanding:
 	if not Content.is_id(standing.faction):
 		standing.problem = "its faction must be an id, lowercase words joined by underscores"
 		return standing
-	var raw: Variant = data.get("change")
-	var number: float = raw if raw is int or raw is float else 0.0
-	# Read through its size, so a fraction, anything but a number, or 0 reads as no change.
-	var size: int = Content.amount(absf(number))
-	standing.change = size if number > 0.0 else -size
-	if size == 0 or size > MAX_CHANGE:
+	# A fraction, anything but a number, or a change past the scale reads as no change.
+	standing.change = JsonNumbers.whole(data.get("change"), -MAX_CHANGE, MAX_CHANGE, 0)
+	if standing.change == 0:
 		standing.problem = "its change is a whole number from -%d to %d, never 0" % [
 			MAX_CHANGE,
 			MAX_CHANGE,
