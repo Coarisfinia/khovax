@@ -9,7 +9,9 @@ extends Node3D
 ## also on coming back to an instance or resuming a save (#945), and never pops in or out. When a
 ## rule changes a tile in place (#530, TileChanged), its old decoration shrinks away and its new
 ## kind's grows in, calmly, over HexGrid.CHANGE_SECONDS. It only reads the state and the tick's
-## events.
+## events. Each instance next door has one of its own (NeighbourDecorations, #1043), on that
+## instance's region (`fixed_region`), whose tiles the fog knows shifted into the local instance's
+## coordinates.
 
 ## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
 ## ours (HexLayout.SIZE), so they shrink to fit inside it.
@@ -21,6 +23,12 @@ const OFF_CENTER: float = 0.15
 ## The fog the decorations rise out of; none shows every decoration.
 @export var fog: FogView
 
+## The region to decorate instead of the local instance's: a neighbour's (#1043), like
+## HexGrid.fixed_region.
+var fixed_region: Region
+## How far `fixed_region`'s tiles are shifted into the local instance's coordinates, where the fog
+## knows them (NeighbourView.shifts).
+var shift: Vector2i = Vector2i.ZERO
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
 ## Decorations of tiles changed in place (#530), shrinking away.
@@ -30,6 +38,9 @@ var shrinking: Array[HexPiece] = []
 var risen: Dictionary[Vector2i, float] = {}
 ## The region the figures stand on: another one clears them.
 var _region: Region
+## The kind each tile showed when its decoration was stood, so a neighbour's tile changed in place
+## is found (show_changes).
+var _kinds: Dictionary[Vector2i, String] = {}
 ## Each model, loaded once, by path.
 var _models: Dictionary[String, PackedScene] = {}
 
@@ -58,12 +69,15 @@ func _draw(tile: Vector2i) -> void:
 ## the fog over its tile has thinned. Called every frame; tests call it with a long `delta` to let
 ## it settle.
 func show_state(delta: float) -> void:
-	if driver == null or driver.state == null:
+	var region: Region = fixed_region
+	if region == null and driver != null and driver.state != null:
+		region = driver.state.region
+	if region == null:
 		return
-	if driver.state.region != _region:
-		_build(driver.state.region)
+	if region != _region:
+		_build(region)
 	for tile: Vector2i in figures:
-		var target: float = fog.thinned(tile) if fog != null else 1.0
+		var target: float = fog.thinned(tile + shift) if fog != null else 1.0
 		var now: float = move_toward(risen[tile], target, delta / HexGrid.CHANGE_SECONDS)
 		if now != risen[tile]:
 			risen[tile] = now
@@ -76,6 +90,7 @@ func _build(region: Region) -> void:
 	figures.clear()
 	shrinking.clear()
 	risen.clear()
+	_kinds.clear()
 	_region = region
 	for tile: Vector2i in region.sorted_tiles():
 		_decorate(tile)
@@ -84,6 +99,7 @@ func _build(region: Region) -> void:
 ## Stands the decoration of `tile`'s kind on it, if the kind has one, still hidden: it rises as the
 ## fog lets it, or grows in calmly where the fog is gone.
 func _decorate(tile: Vector2i) -> void:
+	_kinds[tile] = _region.terrain[tile]
 	var blueprint: TileBlueprint = TileLooks.of(_region.terrain[tile])
 	if blueprint == null or blueprint.model.is_empty():
 		return
@@ -97,11 +113,26 @@ func _decorate(tile: Vector2i) -> void:
 ## one shrinks away and is freed, the new kind's grows in.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	for changed: TileChanged in HexGrid.changes_in(events, _region):
-		if figures.has(changed.tile):
-			_shrink(figures[changed.tile])
-			var _dropped: bool = figures.erase(changed.tile)
-			var _forgotten: bool = risen.erase(changed.tile)
-		_decorate(changed.tile)
+		_swap(changed.tile)
+
+
+## Swaps the decoration of every tile whose kind changed since it was stood: for a neighbour, whose
+## changes come with the world's ground next door, not as this instance's events (#538).
+func show_changes() -> void:
+	if _region == null:
+		return
+	for tile: Vector2i in _region.sorted_tiles():
+		if _region.terrain[tile] != _kinds.get(tile, ""):
+			_swap(tile)
+
+
+## Shrinks away the decoration on `tile`, if any, and stands its kind's now.
+func _swap(tile: Vector2i) -> void:
+	if figures.has(tile):
+		_shrink(figures[tile])
+		var _dropped: bool = figures.erase(tile)
+		var _forgotten: bool = risen.erase(tile)
+	_decorate(tile)
 
 
 func _shrink(figure: HexPiece) -> void:
