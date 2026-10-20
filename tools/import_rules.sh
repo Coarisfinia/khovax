@@ -10,6 +10,10 @@
 # - Lasting data stays apart from what shows and drives the game (#827): no script in a slice's
 #   meta/ names a class or a path of any look/, ui/ or input/ folder. A tie that needs a larger
 #   change waits in META_EXEMPT below, each with the issue that drops it.
+# - The slices form no cycle (#821): SLICE_ORDER below declares their order once, and a slice's
+#   scripts, scenes and resources name only the classes and paths of slices before it. A new slice
+#   takes its place in the order. Today's back-edges wait in SLICE_EXEMPT, each with the issue that
+#   drops it, and an exemption no longer used fails too, so the list only shrinks.
 # - game/ is where the game is wired together, so it may reach any slice, and nothing but the tests
 #   and the tools reaches back into it (owner, #514): no script elsewhere names a game/ class or a
 #   game/ path, and no scene or resource outside game/ names a game/ file. The slices see the
@@ -64,6 +68,52 @@ declare -A META_EXEMPT=(
   [slices/profile/meta/profile_holder.gd]='EventBus|LocalInput'
   [slices/board/meta/world_keeper.gd]='Session'
 )
+# The slices, each after every slice it names (#821).
+SLICE_ORDER=(
+  camera music credits hiding movement entering exits paths loot board fog triggers players npcs
+  trail species wild_monsters tiles outbox controls settings texts factions survey menu
+  domination enrage domination_loot companions gear chests damage_numbers harvest health dialogs
+  profile quests revive_items blueprints might
+)
+# The back-edges still waiting ("slice>later slice" = the issue that drops it).
+declare -A SLICE_EXEMPT=(
+  [board>blueprints]=851 [board>controls]=851 [board>profile]=851 [board>tiles]=851
+  [controls>profile]=851 [controls>revive_items]=851
+  [factions>menu]=851 [factions>profile]=851
+  [fog>blueprints]=851
+  [gear>profile]=851
+  [hiding>wild_monsters]=851
+  [loot>menu]=851 [loot>profile]=851
+  [menu>gear]=851 [menu>might]=851 [menu>profile]=851 [menu>quests]=851
+  [players>health]=851 [players>profile]=851
+  [profile>quests]=851 [profile>revive_items]=851
+  [quests>blueprints]=851
+  [settings>damage_numbers]=851 [settings>menu]=851 [settings>survey]=851
+  [species>menu]=851 [species>profile]=851 [species>texts]=851
+  [survey>profile]=851 [survey>quests]=851
+  [texts>factions]=851 [texts>gear]=851
+  [trail>domination]=851
+  [wild_monsters>companions]=851 [wild_monsters>controls]=851 [wild_monsters>domination]=851
+)
+# Per slice: its own classes, and the later slices' classes and folder names it may not name.
+declare -A own_classes later_classes later_slices exemption_used back_edge
+for slice in "${SLICE_ORDER[@]}"; do
+  own_classes[$slice]=$(classes_in "slices/$slice/*.gd")
+done
+for ((i = 0; i < ${#SLICE_ORDER[@]}; i++)); do
+  slice=${SLICE_ORDER[i]}
+  for later in "${SLICE_ORDER[@]:i+1}"; do
+    if [ -n "${SLICE_EXEMPT[$slice>$later]:-}" ]; then
+      back_edge[$slice>$later]=1
+      continue
+    fi
+    later_slices[$slice]+="${later_slices[$slice]:+|}$later"
+    if [ -n "${own_classes[$later]}" ]; then
+      later_classes[$slice]+="${later_classes[$slice]:+|}${own_classes[$later]}"
+    fi
+  done
+done
+
 game_classes=$(classes_in 'game/*.gd')
 test_classes=$(classes_in 'tests/*.gd')
 tool_classes=$(classes_in 'tools/*.gd')
@@ -89,6 +139,25 @@ while IFS= read -r -d '' file; do
       classes=$(tr '|' '\n' <<< "$view_classes" | grep -vxE "${exempt:-^$}" | paste -sd'|' -)
       refuse "$file" "$code" "$classes" "${at}(look|ui|input)/" \
         "lasting data never depends on what shows or drives the game"
+      ;;
+  esac
+  case $file in
+    slices/*)
+      slice=${file#slices/}
+      slice=${slice%%/*}
+      if [ -n "${own_classes[$slice]+set}" ]; then
+        refuse "$file" "$code" "${later_classes[$slice]:-}" \
+          "${at}slices/(${later_slices[$slice]:-^$})/" \
+          "a slice names only the slices before it in SLICE_ORDER"
+        for exempt in "${!SLICE_EXEMPT[@]}"; do
+          [ "${exempt%>*}" = "$slice" ] || continue
+          later=${exempt#*>}
+          if { [ -n "${own_classes[$later]}" ] && grep -qwE "${own_classes[$later]}" <<< "$code"; } ||
+            grep -qE "${at}slices/$later/" <<< "$code"; then
+            exemption_used[$exempt]=1
+          fi
+        done
+      fi
       ;;
   esac
   case $file in
@@ -126,6 +195,43 @@ if git grep -nE '\bpath="[^"]*"' -- '*.tscn' '*.tres' | grep -vE '\bpath="[a-z]+
   echo "::error::scenes and resources name files absolute from res://: see the lines above"
   failed=1
 fi
+
+while IFS= read -r -d '' file; do
+  slice=${file#slices/}
+  slice=${slice%%/*}
+  if [ -n "${later_slices[$slice]:-}" ] &&
+    grep -nE "res://slices/(${later_slices[$slice]})/" "$file"; then
+    echo "::error file=${file}::a slice names only the slices before it in SLICE_ORDER: see the lines above"
+    failed=1
+  fi
+  for exempt in "${!SLICE_EXEMPT[@]}"; do
+    if [ "${exempt%>*}" = "$slice" ] && grep -q "res://slices/${exempt#*>}/" "$file"; then
+      exemption_used[$exempt]=1
+    fi
+  done
+done < <(git ls-files -z 'slices/*.tscn' 'slices/*.tres')
+
+# Every slice has its place in the order, every place a slice, and every exemption is still used.
+for dir in slices/*/; do
+  slice=${dir#slices/}
+  slice=${slice%/}
+  if [ -z "${own_classes[$slice]+set}" ]; then
+    echo "::error::slices/$slice has no place in SLICE_ORDER (tools/import_rules.sh)"
+    failed=1
+  fi
+done
+for slice in "${SLICE_ORDER[@]}"; do
+  if [ ! -d "slices/$slice" ]; then
+    echo "::error::SLICE_ORDER names slices/$slice, which doesn't exist (tools/import_rules.sh)"
+    failed=1
+  fi
+done
+for exempt in "${!SLICE_EXEMPT[@]}"; do
+  if [ -z "${exemption_used[$exempt]:-}" ] || [ -z "${back_edge[$exempt]:-}" ]; then
+    echo "::error::SLICE_EXEMPT's $exempt is no longer needed: drop it (tools/import_rules.sh)"
+    failed=1
+  fi
+done
 
 if git grep -n 'res://game/' -- '*.tscn' '*.tres' ':!game/' ':!tests/' ':!tools/'; then
   echo "::error::nothing outside game/ reaches game/: see the lines above"
