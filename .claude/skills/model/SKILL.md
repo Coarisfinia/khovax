@@ -24,7 +24,7 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   run side by side; several Godot renders at once only share the CPU's cores.
 - **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs, with a palette pass (faster and
   smaller than ImageMagick): `ffmpeg -framerate 15 -pattern_type glob -i '<Clip>_*.png' -vf
-  "scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" <Clip>.gif`
+  "scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" -loop 0 <Clip>.gif`
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).
 

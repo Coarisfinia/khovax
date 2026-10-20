@@ -6,7 +6,7 @@
 # so its renders come out the same, only faster.
 #   tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>
 set -euo pipefail
-if [[ -e /dev/dxg && -z "${GALLIUM_DRIVER:-}" ]]; then
+if [[ -e /dev/dxg ]]; then
 	export GALLIUM_DRIVER=d3d12
 fi
 exec blender "$@"
