@@ -3,7 +3,8 @@
 extends SceneTree
 ## The outcome report (#876, step 2): how this build plays the reference replays and the APK's e2e
 ## flow, written as JSON for CI to compare with the parent commit's build:
-##   godot --headless --path . -s res://tests/replays/outcomes.gd -- out=<file> [--user-dir=<name>]
+## godot --headless --path . -s res://tests/replays/outcomes.gd -- out=<absolute path>
+## [--user-dir=<name>]
 ## Each replay in tests/replays/ is played twice under this build's rules, ignoring its committed
 ## checkpoints, and the two plays must match: the report holds its state hash at every checkpoint
 ## tick and its final hash. The APK flow (tests/e2e/test_apk_flow.gd) runs as in the headless e2e
@@ -28,8 +29,9 @@ func _initialize() -> void:
 			out = arg.trim_prefix(OUT)
 	var options: LaunchOptions = LaunchOptions.parse(args)
 	var problem: String = options.problem
-	if problem.is_empty() and out.is_empty():
-		problem = "the tool needs an output file, e.g. -- out=outcomes.json"
+	# Godot runs in the project's folder, so a relative path wouldn't land where its caller is.
+	if problem.is_empty() and not out.begins_with("/"):
+		problem = "the tool needs an absolute output path, e.g. -- out=/tmp/outcomes.json"
 	if problem.is_empty():
 		problem = options.apply()
 	if not problem.is_empty():
