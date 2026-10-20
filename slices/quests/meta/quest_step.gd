@@ -225,8 +225,9 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 ## emitted condition an event (#575) and an obtained step an item (#686), each as an id, and no
 ## other step names any; a dominated step's quest target is an id too (#625). Every step but an
 ## emitted condition, which happens in the whole world, may name the instance it counts in (#769).
-## Whether the dialog has the answer is QuestContent's check, which reads the dialogs. The
-## instance must be a blueprint that exists.
+## Whether the dialog has the answer is QuestContent's check, which reads the dialogs. Whether the
+## instance is a blueprint that exists is the quest flow's check (CI), since the blueprints come
+## after the quests (#851).
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	if (step.condition == EMITTED) != data.has("event"):
 		return "its event is what an emitted condition asks for, and only that"
@@ -253,8 +254,6 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	for field: String in named:
 		if data.has(field) and not TileTrigger.is_place_id(named[field]):
 			return "its %s must be an id, lowercase words joined by underscores" % field
-	if data.has("instance") and not InstanceBlueprints.exists(step.instance):
-		return "its instance must be an instance blueprint that exists"
 	return ""
 
 

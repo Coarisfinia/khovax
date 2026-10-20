@@ -140,6 +140,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_obtained()
 	result = result if not result.is_empty() else _check_facts()
 	result = result if not result.is_empty() else _check_target()
+	result = result if not result.is_empty() else _check_instances()
 	if result.is_empty():
 		result = await _check_tracked(tree)
 	SaveStore.remove(SAVE_PATH)
@@ -1380,6 +1381,41 @@ func _check_settled() -> String:
 	var settled: Array[String] = ["first_domination", "three_ombulumo"]
 	if not applied.is_empty() or stale.finished != settled:
 		return "saved progress that no longer fits didn't settle at the next fact: " + applied
+	return ""
+
+
+## Every instance a quest's start, step or choice names is an instance blueprint that exists: the
+## quests can't check it as they read, since the blueprints come after them (#851). A quest naming
+## one that doesn't exist reads, and this check finds it.
+func _check_instances() -> String:
+	var content: QuestContent = QuestContent.load_quests()
+	if not content.problem.is_empty():
+		return "the quests didn't read: " + content.problem
+	for quest: QuestDefinition in content.quests.values():
+		var unknown: String = _unknown_instance(quest)
+		if not unknown.is_empty():
+			return "%s names %s, which isn't an instance blueprint" % [quest.id, unknown]
+	var astray: QuestDefinition = QuestDefinition.parse(
+		"enter_glade",
+		ENTER_GLADE.replace("\"%s\"" % FlowSteps.GLADE, "\"nowhere\""),
+		{},
+	)
+	if not astray.problem.is_empty() or _unknown_instance(astray) != "nowhere":
+		return "a quest naming an instance that doesn't exist wasn't found: " + astray.problem
+	return ""
+
+
+## The first instance a start, step or choice of `quest` names that isn't an instance blueprint, or
+## "".
+static func _unknown_instance(quest: QuestDefinition) -> String:
+	var named: Array[QuestStep] = []
+	if quest.starts_on != null:
+		named.append(quest.starts_on)
+	for step: QuestStep in quest.steps:
+		named.append_array(step.triggers())
+	for step: QuestStep in named:
+		if not step.instance.is_empty() and not InstanceBlueprints.exists(step.instance):
+			return step.instance
 	return ""
 
 
