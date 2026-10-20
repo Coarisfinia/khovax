@@ -82,14 +82,32 @@ func _place_totems(state: GameState, commands: Array[Command]) -> void:
 		var command: Command = Command.of(commands, entity.slot)
 		if command == null or command.totem != Command.PLACE_TOTEM:
 			continue
-		for dominator_id: int in _waiting_players():
-			var placed: bool = ring_waiting(state, dominator_id).has(entity.tile)
-			if placed and totems.spend(entity.id):
-				var inside: Array[int] = []
-				inside.assign(encircled[dominator_id])
-				var _dropped: bool = encircled.erase(dominator_id)
-				seals[dominator_id] = RingSealing.build(state, trail, inside)
-				break
+		if not can_place_totem(state, entity.id):
+			continue
+		var dominator_id: int = _waiting_under(state, entity.tile)
+		var _spent: bool = totems.spend(entity.id)
+		var inside: Array[int] = []
+		inside.assign(encircled[dominator_id])
+		var _dropped: bool = encircled.erase(dominator_id)
+		seals[dominator_id] = RingSealing.build(state, trail, inside)
+
+
+## Whether the player `player_id` placing their totem now would seal a ring (#931, the totem's
+## button asks this too): they have a charge left and stand on a tile of a ring waiting for a totem,
+## theirs or anyone else's.
+func can_place_totem(state: GameState, player_id: int) -> bool:
+	var player: Entity = state.entity(player_id)
+	if player == null or totems.charges_of(player_id) == 0:
+		return false
+	return _waiting_under(state, player.tile) != 0
+
+
+## The dominator, lowest id first, whose ring waiting for a totem has a tile on `tile`, or 0.
+func _waiting_under(state: GameState, tile: Vector2i) -> int:
+	for dominator_id: int in _waiting_players():
+		if ring_waiting(state, dominator_id).has(tile):
+			return dominator_id
+	return 0
 
 
 ## The wall of the ring waiting for a totem of the dominator `dominator_id`: the trail tiles next to
