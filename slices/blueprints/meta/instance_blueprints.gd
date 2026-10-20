@@ -20,9 +20,7 @@ const GLADE: String = "glade"
 const ARENA: String = "arena"
 ## Room for the upcoming features (#689).
 const FOREST: String = "forest"
-const CASTLE: String = "castle"
 const OUTPOST: String = "outpost"
-const MOUNTAIN_PASS: String = "mountain_pass"
 ## The corrupted glade (#541): the flag that corrupts the glade, and the variant it chooses
 ## (glade.jsonc). Its corrupting monster emits GLADE_PURIFIED when it faints
 ## (regions/glade_corrupted.md), whose flag purifies it.
