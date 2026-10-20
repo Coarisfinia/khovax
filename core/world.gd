@@ -6,23 +6,20 @@ extends RefCounted
 ## Every instance's seed comes from the world's seed, its name and its generation, which goes up
 ## with each purge, so the same world loads the same instance the same way however and whenever
 ## it's reached, and a purged one comes back arranged anew. There are no runs (#183): the players
-## roam this one persistent world, saved between sessions (WorldData). A player who walks out
-## through an exit (ExitFeature raises ExitTaken) is moved into the instance it leads to, onto its
-## way back (#154), and the world raises that they entered it (#370). A player sent to the spawn
-## (SentToSpawn, #457) is moved onto their start in the starting instance. Whoever follows a player
-## (Feature.followers_of, #716), like their companion, moves with them, carrying its data along.
-## Each player has a world
-## store (PlayerStore, #724), where features keep what the player brings along, like their
-## companions (#338): every instance the world loads gets a copy, and what the instance the player
-## is in changes in it is taken back into the world once that instance stepped, and handed to every
-## other. The world keeps a set of flags (#529), a fresh world starting with its source's (#637),
-## which choose each blueprint's variant (`InstanceSource.variant`): setting or clearing one purges
-## every loaded instance whose
-## variant it changes, once nobody is in it, so it comes back from its new variant and no player
-## sees it change. Any rule can raise a named event (EventEmitted, #541), which sets the flag
-## EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story beat
-## does, and the first time it sets its flag the world raises that it changed (WorldChanged, #499).
-## A rule can also replace a kind of flag (FlagReplaced, #638), clearing the others of its kind in
+## roam this one persistent world, saved between sessions (WorldData). Players who walk out
+## through an exit or are sent to the spawn are moved once every instance stepped, with whoever
+## follows them (WorldTravel, #154, #457, #716). Each player has a world store (PlayerStore,
+## #724), where features keep what the player brings along, like their companions (#338): every
+## instance the world loads gets a copy, and what the instance the player is in changes in it is
+## taken back into the world once that instance stepped, and handed to every other. The world keeps
+## a set of flags (#529), a fresh world starting with its source's (#637), which choose each
+## blueprint's variant (`InstanceSource.variant`): setting or clearing one purges every loaded
+## instance whose variant it changes, once nobody is in it, so it comes back from its new variant
+## and no player sees it change. Any rule can raise a named event (EventEmitted, #541), which sets
+## the flag EVENT_FLAG + its name, so whatever happens in an instance can change the world: a story
+## beat does, and the first time it sets its flag the world raises that it changed (WorldChanged,
+## #499). A rule can also replace a kind of flag (FlagReplaced, #638), clearing the others of its
+## kind in
 ## the same tick as it sets its own, like a territory changing hands.
 ## Deterministic, like everything in core/.
 
@@ -264,7 +261,7 @@ func step(commands: Array[Command]) -> void:
 	events.clear()
 	if tick == 0:
 		for instance_name: String in active():
-			_raise_entered(instance_name, instances[instance_name].entities)
+			WorldTravel.raise_entered(self, instance_name, instances[instance_name].entities)
 	tick += 1
 	var stepping: Array[String] = active()
 	# An instance nobody is in doesn't step, so it raises nothing this tick: its last tick's events
@@ -289,19 +286,7 @@ func step(commands: Array[Command]) -> void:
 	_hand_changed_ground(stepping)
 	_set_emitted(emitted)
 	_replace_flags(replaced)
-	# A player sent to the spawn in the tick they took an exit goes to the spawn only.
-	var sent: Array[int] = []
-	for move: Array in leaving:
-		var event: RefCounted = move[1]
-		if event is SentToSpawn:
-			sent.append((event as SentToSpawn).entity_id)
-	for move: Array in leaving:
-		var from: String = move[0]
-		var event: RefCounted = move[1]
-		if event is SentToSpawn:
-			_send_to_spawn(from, event as SentToSpawn)
-		elif not sent.has((event as ExitTaken).entity_id):
-			_walk_through(from, event as ExitTaken)
+	WorldTravel.move(self, leaving)
 	_purge_left_behind()
 
 
@@ -397,142 +382,15 @@ func instance_of(slot: int) -> String:
 	return ""
 
 
-## Moves the player who took `taken` in `from` into the instance it leads to, onto the exit there
-## that leads back: an east exit arrives from the west. They stay if that instance can't load or
-## has no way back.
-func _walk_through(from: String, taken: ExitTaken) -> void:
-	var target: GameState = _entering(taken.target)
-	if target == null:
-		return
-	var arrival: Vector2i = _arrival(from, taken, target.region)
-	if not target.region.has_tile(arrival):
-		return
-	# Who follows them is asked while they're still there, so a feature may find them by their
-	# player.
-	var leaders: Dictionary[int, Array] = _followers(instances[from], taken.slot)
-	instances[from].remove_entity(taken.entity_id)
-	var arrived: Array[Entity] = [target.add_entity(taken.slot, arrival)]
-	if arrived[0] != null:
-		_bring_followers(instances[from], leaders, target, arrival)
-		_raise_entered(taken.target, arrived)
-
-
-## Where the player who took `taken` out of `from` lands in `region`, the instance it leads to: on
-## the way back right across from the exit's tile, where the layout puts the two side by side, so
-## an exit many tiles wide (#689) lands each one beside its own; else on its first way back, or off
-## the region when it has none.
-func _arrival(from: String, taken: ExitTaken, region: Region) -> Vector2i:
-	var across: Vector2i = taken.tile + Hex.DIRECTIONS[taken.side] + offset(from)
-	across -= offset(taken.target)
-	var first: Vector2i = Vector2i(Region.MAX_TILES, Region.MAX_TILES)
-	for i: int in range(region.exits.size() - 1, -1, -1):
-		var back: Vector3i = region.exits[i]
-		if region.exit_blueprints[i] != from:
-			continue
-		first = Vector2i(back.x, back.y)
-		if first == across:
-			return across
-	return first
-
-
-## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a
-## new entity, so at full HP: back at the world's spawn.
-func _send_to_spawn(from: String, sent: SentToSpawn) -> void:
-	var spawn: GameState = _entering(start_name)
-	if spawn == null or spawn.region.starts.is_empty():
-		return
-	var starts: Array[Vector2i] = spawn.region.starts
-	var leaders: Dictionary[int, Array] = _followers(instances[from], sent.slot)
-	instances[from].remove_entity(sent.entity_id)
-	var start: Vector2i = starts[mini(sent.slot, starts.size() - 1)]
-	var arrived: Array[Entity] = [spawn.add_entity(sent.slot, start)]
-	if arrived[0] != null:
-		_bring_followers(instances[from], leaders, spawn, start)
-		_raise_entered(start_name, arrived)
-
-
 ## The instance `instance_name`, which a player is about to enter, loading it if need be, or null
 ## when it can't load. One a flag outdated this tick is purged first, so whoever comes in finds its
-## new variant. Only here and in `_purge_left_behind`, inside a step, so an instance is
-## purged at most once a tick.
-func _entering(instance_name: String) -> GameState:
+## new variant. Only here (for WorldTravel) and in `_purge_left_behind`, inside a step, so an
+## instance is purged at most once a tick.
+func entering(instance_name: String) -> GameState:
 	var loaded_before: GameState = instances.get(instance_name)
 	if loaded_before != null and not has_player(loaded_before) and _outdated(instance_name):
 		_purge(instance_name)
 	return instance(instance_name)
-
-
-## Moves the followers `leaders` names (`_followers`, #716) out of `left` into `target` along with
-## their player: each as a new entity on the first walkable tile beside `beside`, in direction order
-## (or on it), and each feature there restores what it kept on it (`carry_out`, `carry_in`).
-## Followers walk through with their player rather than being made anew, so nothing is left behind
-## and what they had (HP, a wait) comes along. Every exit leads to another instance, so `left` is
-## `target` only for one sent to the spawn of the instance they're in: their followers stay, and
-## rejoin them by walking.
-func _bring_followers(
-	left: GameState,
-	leaders: Dictionary[int, Array],
-	target: GameState,
-	beside: Vector2i,
-) -> void:
-	if left == target:
-		return
-	var ids: Array[int] = []
-	ids.assign(leaders.keys())
-	ids.sort()
-	for follower_id: int in ids:
-		var carried: Dictionary[String, Dictionary] = {}
-		for each: Feature in left.features:
-			var values: Dictionary = each.carry_out(left, follower_id)
-			if not values.is_empty():
-				carried[each.id()] = values
-		left.remove_entity(follower_id)
-		# One whose leading feature the instance next door lacks goes, as every companion did before
-		# #716: it would arrive as no one's there, and staying would leave it behind.
-		var welcome: bool = true
-		for feature_id: String in leaders[follower_id]:
-			welcome = welcome and target.feature(feature_id) != null
-		if not welcome:
-			continue
-		# Never refused: an entity without a slot is always added.
-		var arrived: Entity = target.add_entity(Entity.NO_SLOT, _beside(target.region, beside))
-		for each: Feature in target.features:
-			if carried.has(each.id()):
-				each.carry_in(target, arrived, carried[each.id()])
-
-
-## Every entity in `state` that follows the player in `slot`, with the ids of the features that
-## lead it (`Feature.followers_of`).
-static func _followers(state: GameState, slot: int) -> Dictionary[int, Array]:
-	var found: Dictionary[int, Array] = {}
-	for each: Feature in state.features:
-		for follower_id: int in each.followers_of(state, slot):
-			if state.entity(follower_id) == null:
-				continue
-			if not found.has(follower_id):
-				found[follower_id] = []
-			found[follower_id].append(each.id())
-	return found
-
-
-## The first walkable tile next to `tile` in `region`, in direction order, or `tile` itself.
-static func _beside(region: Region, tile: Vector2i) -> Vector2i:
-	for direction: Vector2i in Hex.DIRECTIONS:
-		if region.is_walkable(tile + direction):
-			return tile + direction
-	return tile
-
-
-## Raises that each player among `entities` entered the instance `instance_name`.
-func _raise_entered(instance_name: String, entities: Array[Entity]) -> void:
-	for entering: Entity in entities:
-		if entering.slot != Entity.NO_SLOT:
-			events.append(_entered_event(instance_name, entering))
-
-
-## That `entering` entered the instance `instance_name`.
-static func _entered_event(instance_name: String, entering: Entity) -> InstanceEntered:
-	return InstanceEntered.new(instance_name, entering.id, entering.slot)
 
 
 ## A fingerprint of every loaded instance, in name order, each with its name and, if nobody is in
