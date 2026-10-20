@@ -56,7 +56,7 @@ func show_quests() -> void:
 	var targets: Dictionary[String, Vector2i] = {}
 	if driver != null and driver.state != null and holder != null and holder.keeper != null:
 		var here: String = driver.local_instance_name()
-		targets = QuestTargets.of(driver.state, holder.keeper.profile, input.slot, here)
+		targets = QuestTargets.of(driver.state, holder.keeper.profile.quests, input.slot, here)
 	for id: String in markers.keys():
 		if not targets.has(id):
 			_shrink_away(markers[id])

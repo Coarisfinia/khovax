@@ -7,7 +7,7 @@ extends RefCounted
 ## as its chain's end. A quest without choices is one path from its first step to its last, which
 ## is tagged as the end; in every quest, every path must reach a tagged end (#576, QuestPaths).
 ## Each player's progress through it lives in their profile
-## (Profile.quest_progress), advanced by what they obtain. A side quest (#473) starts only when the
+## (QuestTracker.progress), advanced by what they obtain. A side quest (#473) starts only when the
 ## player enters the area it names, or once a quest emits the event it names (#575); every other
 ## quest is open from the start. Finishing a quest, by whichever end, can move the player's standing
 ## with a faction (#532), and finishing a territory quest hands its instance to its faction (#638);

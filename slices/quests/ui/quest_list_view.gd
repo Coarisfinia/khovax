@@ -1,7 +1,8 @@
 class_name QuestListView
 extends Control
 ## The open quests at the side of the screen (#340): one card per quest of this machine's player
-## that isn't finished (Profile.open_steps), with its name (and its path mark in words, #471) and
+## that isn't finished (QuestTracker.open_steps), with its name (and its path mark in words, #471)
+## and
 ## what its current step asks, and the count where the step counts up ("1/3"). A quest that
 ## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
@@ -59,15 +60,15 @@ func show_quests() -> void:
 	var profile: Profile = null
 	if holder != null and holder.keeper != null:
 		profile = holder.keeper.profile
-		steps = profile.open_steps()
+		steps = profile.quests.open_steps()
 	for id: String in order:
 		if not steps.has(id) and shown[id] != DONE_TEXT:
 			_finish(id)
 	for id: String in steps:
-		var progress: QuestProgress = profile.quest_progress.get(id)
+		var progress: QuestProgress = profile.quests.progress.get(id)
 		var line: String = step_line(steps[id], progress.count if progress != null else 0)
 		if not cards.has(id):
-			_add_card(id, profile.quest_book[id].shown_name())
+			_add_card(id, profile.quests.book[id].shown_name())
 		shown[id] = line
 		_line_label(id).text = line
 		_line_label(id).visible = not line.is_empty()

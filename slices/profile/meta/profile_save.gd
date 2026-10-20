@@ -32,7 +32,7 @@ static func to_text(profile: Profile) -> String:
 		"carried": profile.carried,
 		"materials": _sorted(profile.materials),
 		"quest_progress": _progress_data(profile),
-		"quests_done": profile.quests_done,
+		"quests_done": profile.quests.finished,
 		"personal_color": profile.personal_color,
 		"character_name": profile.character_name,
 		"standings": _sorted(profile.standings.by_faction),
@@ -61,10 +61,10 @@ static func _sorted(by_id: Dictionary) -> Dictionary:
 static func _progress_data(profile: Profile) -> Dictionary:
 	var data: Dictionary = {}
 	var ids: Array[String] = []
-	ids.assign(profile.quest_progress.keys())
+	ids.assign(profile.quests.progress.keys())
 	ids.sort()
 	for id: String in ids:
-		var progress: QuestProgress = profile.quest_progress[id]
+		var progress: QuestProgress = profile.quests.progress[id]
 		data[id] = { "step": progress.step, "count": progress.count, "done": progress.done }
 	return data
 
@@ -358,15 +358,15 @@ static func _read_quests(profile: Profile, data: Dictionary) -> String:
 	var done_list: Array = done
 	for id: Variant in done_list:
 		var text: String = Content.text_of(id)
-		if not Content.is_id(text) or profile.quests_done.has(text):
+		if not Content.is_id(text) or profile.quests.finished.has(text):
 			return "a finished quest in the save has no valid id or is there twice"
-		profile.quests_done.append(text)
+		profile.quests.finished.append(text)
 	var by_id: Dictionary = started
 	for id: Variant in by_id:
 		var progress: QuestProgress = _quest_progress(by_id[id])
-		if progress == null or not Content.is_id(str(id)) or profile.quests_done.has(str(id)):
+		if progress == null or not Content.is_id(str(id)) or profile.quests.finished.has(str(id)):
 			return "quest %s's progress in the save is malformed or it's finished" % id
-		profile.quest_progress[str(id)] = progress
+		profile.quests.progress[str(id)] = progress
 	return ""
 
 

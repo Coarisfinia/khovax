@@ -1,7 +1,8 @@
 class_name QuestsTab
 extends ScrollContainer
 ## The menu's Quests tab (#388): the same open quests as the list at the side of the screen (#340,
-## Profile.open_steps), each with its name and path mark (#471) and its steps on the player's way,
+## QuestTracker.open_steps), each with its name and path mark (#471) and its steps on the player's
+## way,
 ## worded as the list words them (QuestListView.step_line): the steps done, the one it's on with its
 ## count, and the ones still to come up to its next choice (#573). Each step says which it is in
 ## words, never by color alone (#68). It
@@ -43,8 +44,8 @@ func refresh() -> void:
 	var names: Dictionary[String, String] = {}
 	if holder != null and holder.keeper != null:
 		var profile: Profile = holder.keeper.profile
-		for id: String in profile.open_steps():
-			names[id] = profile.quest_book[id].shown_name()
+		for id: String in profile.quests.open_steps():
+			names[id] = profile.quests.book[id].shown_name()
 			lines[id] = "\n".join(quest_lines(profile, id))
 	if lines != shown:
 		_show(names, lines)
@@ -59,8 +60,8 @@ func fit(width: float) -> void:
 ## done, the one it's on with its count, and the ones sure to come later, up to its next choice
 ## (#573), whose way on isn't known yet.
 static func quest_lines(profile: Profile, id: String) -> Array[String]:
-	var progress: QuestProgress = profile.quest_progress.get(id, QuestProgress.new())
-	var quest: QuestDefinition = profile.quest_book[id]
+	var progress: QuestProgress = profile.quests.progress_of(id)
+	var quest: QuestDefinition = profile.quests.book[id]
 	var lines: Array[String] = _done_lines(quest, progress)
 	var current: QuestStep = quest.step_at(progress.step)
 	if current != null:

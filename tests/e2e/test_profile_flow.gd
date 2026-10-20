@@ -182,7 +182,7 @@ func _check_short_ids_read(profile: Profile) -> String:
 func _check_old_species_ids() -> String:
 	var profile: Profile = Profile.new()
 	var _taken: String = profile.apply(_result(["ombulumo", "tikazzir"], {}))
-	profile.quest_progress["three_ombulumo"] = QuestProgress.new(0, 1)
+	profile.quests.progress["three_ombulumo"] = QuestProgress.new(0, 1)
 	var migrated: Profile = ProfileSave.parse(_format_13(profile))
 	var species: Array[String] = []
 	for monster: DominatedMonster in migrated.dominated_monsters:
@@ -190,15 +190,15 @@ func _check_old_species_ids() -> String:
 	var expected: Array[String] = ["ombulumo", "tikazzir"]
 	if (not migrated.problem.is_empty()
 			or species != expected
-			or not migrated.quest_progress.has("three_ombulumo")):
+			or not migrated.quests.progress.has("three_ombulumo")):
 		return "a format 13 save's old species ids weren't renamed: %s %s" % [
 			species,
 			migrated.problem,
 		]
-	profile.quest_progress.clear()
-	profile.quests_done.append("three_ombulumo")
+	profile.quests.progress.clear()
+	profile.quests.finished.append("three_ombulumo")
 	var finished: Profile = ProfileSave.parse(_format_13(profile))
-	if not finished.problem.is_empty() or finished.quests_done != ["three_ombulumo"]:
+	if not finished.problem.is_empty() or finished.quests.finished != ["three_ombulumo"]:
 		return "a format 13 save's finished quest wasn't renamed: " + finished.problem
 	return ""
 
@@ -550,14 +550,14 @@ func _check_migrated_quest() -> String:
 	save["format"] = 4
 	save["quest_progress"] = { "first_catch": { "step": 0, "count": 1 } }
 	var open: Profile = ProfileSave.parse(JSON.stringify(save))
-	var progress: QuestProgress = open.quest_progress.get("first_domination")
+	var progress: QuestProgress = open.quests.progress.get("first_domination")
 	if not open.problem.is_empty() or progress == null or progress.count != 1:
 		return "a format 4 save's open first quest wasn't renamed: %s" % open.problem
 	save["quest_progress"] = {}
 	save["quests_done"] = ["first_catch"]
 	var done: Profile = ProfileSave.parse(JSON.stringify(save))
 	var expected: Array[String] = ["first_domination"]
-	if not done.problem.is_empty() or done.quests_done != expected:
+	if not done.problem.is_empty() or done.quests.finished != expected:
 		return "a format 4 save's finished first quest wasn't renamed: %s" % done.problem
 	return _check_migrated_done()
 
@@ -587,9 +587,9 @@ func _check_migrated_done() -> String:
 	var loaded: Profile = ProfileSave.parse(JSON.stringify(data))
 	var two: Array[int] = [0, 1]
 	var again: Profile = ProfileSave.parse(ProfileSave.to_text(loaded))
-	if (not loaded.problem.is_empty() or loaded.quest_progress["toads"].done != two
-			or not loaded.quest_progress["fresh"].done.is_empty()
-			or again.quest_progress["toads"].done != two):
+	if (not loaded.problem.is_empty() or loaded.quests.progress["toads"].done != two
+			or not loaded.quests.progress["fresh"].done.is_empty()
+			or again.quests.progress["toads"].done != two):
 		return "a format 8 save's quest progress didn't get its steps done: %s" % loaded.problem
 	return ""
 
