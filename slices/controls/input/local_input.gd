@@ -144,8 +144,11 @@ func _standing(answering: int) -> Command:
 	return standing
 
 
-## Puts the next request waiting to be sent into `carrier`, taken off the queue, if there is one.
+## Puts the next request waiting to be sent into `carrier`, taken off the queue, if there is one,
+## and the code up to which the profile saw its requests acknowledged (#942), which every command
+## carries.
 func _send_next(carrier: Command) -> void:
+	carrier.acknowledged = holder.confirmed() if holder != null else Command.NO_REQUEST
 	if not _requests.is_empty():
 		var next: OutboxEntry = _requests.pop_front()
 		next.fill(carrier)

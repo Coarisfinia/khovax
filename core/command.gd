@@ -19,7 +19,7 @@ const NO_REQUEST: int = 0
 ## No kind of request this tick (#818): a command without a request.
 const NO_REQUEST_KIND: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 10
+const VALUE_COUNT: int = 11
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -53,6 +53,11 @@ var request: int = NO_REQUEST
 var request_kind: int = NO_REQUEST_KIND
 ## The request's data, as its kind reads it (OutboxEntry): a whole number from 0.
 var request_data: int = 0
+## The code of the newest request id up to which the player's profile saw every request it sent
+## acknowledged (#942, Outbox.confirmed), or NO_REQUEST: the world forgets its receipts of those
+## and refuses any of them sent again. Every command carries it, so a feature taking a request
+## forgets as it records.
+var acknowledged: int = NO_REQUEST
 
 
 func _init(
@@ -73,7 +78,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, request,
-		request_kind, request_data,
+		request_kind, request_data, acknowledged,
 	]
 	return values
 
@@ -92,12 +97,14 @@ static func from_values(values: Array[int]) -> Command:
 	command.request = values[7]
 	command.request_kind = values[8]
 	command.request_data = values[9]
+	command.acknowledged = values[10]
 	return command
 
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
 ## placed or not, a focus that is an entity id or none, a swap to a place in the carried order or
-## none, an answer's code or none, and a request with both its id and its kind, or none at all.
+## none, an answer's code or none, a request with both its id and its kind, or none at all, and
+## an acknowledged mark of a request's code or none.
 func is_valid() -> bool:
 	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
 	var placed: bool = totem == NO_TOTEM or totem == PLACE_TOTEM
@@ -105,7 +112,7 @@ func is_valid() -> bool:
 	var requests: bool = request > NO_REQUEST and request_kind > NO_REQUEST_KIND
 	var none: bool = request == NO_REQUEST and request_kind == NO_REQUEST_KIND and request_data == 0
 	chosen = chosen and (none or (requests and request_data >= 0))
-	return moves and placed and focus >= NO_FOCUS and chosen
+	return moves and placed and focus >= NO_FOCUS and chosen and acknowledged >= NO_REQUEST
 
 
 ## Whether `values` are a command's, as to_values gives them, of one a player can give.

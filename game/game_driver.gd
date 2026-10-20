@@ -106,7 +106,8 @@ func resume(saved: World) -> String:
 
 
 ## A new session's schedule, from the world's tick on, with no hashes and no time due yet, its world
-## handed to the keeper to save, and the player's quests caught up with the events that already
+## handed to the keeper to save, the player's outbox drawing its next ids above the ones the world
+## holds (#942), and the player's quests caught up with the events that already
 ## changed the world (#756), and the world with the player's gear and party (#818): a new world,
 ## or one saved before a change of them, gets requests for what's equipped and who's carried. A
 ## monster dominated since the save comes along that way; a companion chosen before it (#55) stays
@@ -117,11 +118,14 @@ func _begin_session() -> void:
 	_accumulated = 0.0
 	if keeper != null:
 		keeper.world = world
+	var slot: int = input.slot if input != null else 0
+	# Before anything posts a request: its id goes above every one the world holds (#942).
+	if holder != null and world != null:
+		holder.catch_up_outbox(OutboxReceipts.highest(world.stores[slot]))
 	# The quests meet the world as it is: events raised before they came still count (#756).
 	if quest_tie != null and world != null:
 		quest_tie.catch_up(world.flags)
 	if holder != null and world != null:
-		var slot: int = input.slot if input != null else 0
 		holder.catch_up_gear(world.stored(slot, SpikesFeature.ID))
 		holder.catch_up_party(world.stored(slot, CompanionFeature.ID))
 

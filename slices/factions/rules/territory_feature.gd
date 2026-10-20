@@ -34,7 +34,7 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		var handing: bool = command != null and command.request_kind == OutboxEntry.TERRITORY
 		if not handing or state.player(slot) == null or not handovers.has(command.request_data):
 			continue
-		if not OutboxReceipts.take(state, slot, id(), command.request):
+		if not OutboxReceipts.take(state, slot, id(), command):
 			continue
 		var handed: PackedStringArray = handovers[command.request_data]
 		state.events.append(Territory.handed_over(handed[0], handed[1]))

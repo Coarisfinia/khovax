@@ -588,7 +588,8 @@ func _check_territory_marked(quests: QuestTracker, quest: String) -> String:
 
 ## The territory quest's hand-over `request`, applied and acknowledged, is out of the outbox and
 ## recorded as applied; sent again, it's acknowledged once more but not handed over twice, so the
-## forest stays with the holder it has meanwhile.
+## forest stays with the holder it has meanwhile. The commands meanwhile carry it as acknowledged
+## (#942), so the world forgets its receipt and keeps the mark instead, which still refuses it.
 func _check_territory_resent(
 	driver: GameDriver,
 	bus: EventBus,
@@ -608,6 +609,33 @@ func _check_territory_resent(
 	_tick(driver, bus)
 	if Territory.holder(driver.world.flags, forest) != "rivals" or acknowledged != [request.id]:
 		return "the hand-over sent again was handed over twice, or not acknowledged"
+	var stored: Dictionary = driver.world.stored(0, TerritoryFeature.ID)
+	var mark: int = stored.get(OutboxReceipts.MARK, Command.NO_REQUEST)
+	if stored.has(OutboxReceipts.APPLIED) or mark != ShortId.code(request.id):
+		return "the world kept the acknowledged hand-over's receipt, not its mark: %s" % [stored]
+	return _check_receipts_bounded(driver, bus, profile, request)
+
+
+## A later hand-over, posted after `request` was acknowledged, gets a higher id (#942) and is
+## applied, and the world holds its receipt alone: the receipts stay as few as the requests not
+## yet acknowledged, however many came before.
+func _check_receipts_bounded(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	request: OutboxEntry,
+) -> String:
+	var forest: String = InstanceBlueprints.FOREST
+	var later: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, request.data)
+	if ShortId.code(later.id) <= ShortId.code(request.id):
+		return "the outbox drew %s after %s, not in order" % [later.id, request.id]
+	driver.input.send(later)
+	_tick(driver, bus)
+	var applied: Array = driver.world.stored(0, TerritoryFeature.ID).get(OutboxReceipts.APPLIED, [])
+	if Territory.holder(driver.world.flags, forest) != GUILD or applied != [later.id]:
+		return "the later hand-over wasn't applied, or the world kept more receipts: %s" % [applied]
+	if not profile.outbox.entries.is_empty():
+		return "the later hand-over stayed in the outbox once acknowledged"
 	return ""
 
 
