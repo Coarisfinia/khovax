@@ -71,9 +71,7 @@ const NAME_RULES: Dictionary[String, String] = {
 }
 ## Things whose names break their kind's rule today, each with the issue renaming it (#909). It only
 ## shrinks: a thing that keeps its rule must be dropped from it.
-const NAME_EXCEPTIONS: Dictionary[String, int] = {
-	"realm heartland": 974,
-}
+const NAME_EXCEPTIONS: Dictionary[String, int] = {}
 ## Terms two things share today, each with the issue that gives one of them another (#909). It
 ## only shrinks: a term that no longer clashes must be dropped from it.
 const KNOWN_DUPLICATES: Dictionary[String, int] = {}
