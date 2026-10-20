@@ -52,11 +52,20 @@ var _species: Dictionary[int, String] = {}
 var _short_ids: Dictionary[int, String] = {}
 ## The ticks each companion still rests before its next roaming step, by entity id.
 var _rest: Dictionary[int, int] = {}
+## Each species with a reach, by its code in a carry request (CarryRequest.species_code, #818).
+var _species_by_code: Dictionary[int, String] = {}
 var _rng: Rng
 
 
 func _init(species_reaches: Dictionary[String, int] = {}) -> void:
 	reaches = species_reaches
+	for species_id: String in reaches:
+		if not CommandCodes.file(
+			_species_by_code,
+			CarryRequest.species_code(species_id),
+			species_id,
+		):
+			push_error("species %s's code is no species' or another's" % species_id)
 
 
 func id() -> String:
@@ -78,13 +87,15 @@ func start(state: GameState) -> void:
 	_rng = Rng.new(state.rng_seed, stream())
 
 
-## Sends home the companions that fell this tick (EntityFell, from HealthFeature, which runs
+## Takes every player's request bringing monsters into their party (#818), in slot order, then
+## sends home the companions that fell this tick (EntityFell, from HealthFeature, which runs
 ## earlier), sends off the companions whose player brings another or lost them, or that fainted,
 ## chooses
 ## another for every player whose companion fainted, lets every player who brings one that hasn't
 ## fainted and has none here be joined by it, then lets each companion roam, in id order. One whose
 ## player takes an exit this tick stays: the world moves it with them (`followers_of`).
-func step(state: GameState, _commands: Array[Command]) -> void:
+func step(state: GameState, commands: Array[Command]) -> void:
+	_take_parties(state, commands)
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for event: RefCounted in state.events.duplicate():
 		var fell: EntityFell = event as EntityFell
@@ -108,6 +119,17 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_join(state, movement, player, chosen)
 	for companion_id: int in companions():
 		_roam(state, movement, state.entity(companion_id))
+
+
+## Takes the request each player here sends to bring monsters into their party (CarryRequest),
+## unless it was applied before (OutboxReceipts).
+func _take_parties(state: GameState, commands: Array[Command]) -> void:
+	for slot: int in GameState.MAX_PLAYERS:
+		var command: Command = Command.of(commands, slot)
+		var carrying: bool = command != null and command.request_kind == OutboxEntry.CARRY
+		if carrying and state.player(slot) != null:
+			if OutboxReceipts.take(state, slot, ID, command.request):
+				CompanionParty.take_request(state, slot, command.request_data, _species_by_code)
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance

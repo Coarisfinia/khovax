@@ -6,8 +6,15 @@ extends RefCounted
 ## companions' entry in the player's world store (PlayerStore, #724), so the world carries it across
 ## exits, instances and sessions: `carried` (short ids) with their `species` in the same order,
 ## `companion` and `fainted`. Every monster is kept by its short id (ShortId, #700), so two of one
-## species are two monsters. A session's start decides who the players bring (`bring`); the rules
-## choose, faint and revive inside a tick.
+## species are two monsters. Who a player brings comes from their profile, as a run of requests
+## from its outbox (#818, CarryRequest), which the world takes (`take_request`); a replay starts
+## with who its players bring (`bring`). The rules choose, faint and revive inside a tick.
+
+## The key of the values a run of carry requests brought so far (CarryRequest), while it isn't
+## whole.
+const INCOMING: String = "incoming"
+## The keys of the party itself in the entry.
+const PARTY_KEYS: Array[String] = ["carried", "species", "companion", "fainted"]
 
 
 ## The short ids of the monsters the player in `slot` carries, in their carried order, in `state`.
@@ -65,10 +72,9 @@ static func revive(state: GameState, slot: int, short_id: String) -> void:
 
 
 ## Sets every slot's carried monsters, by slot, in carried order (null or none for none), in
-## `world` and every instance it has loaded: a session's start decides who the players bring. The
-## first they carry is their companion, or, with `keep_chosen` (a resumed world), the one they
-## chose before (#55) while they still carry it; the ones that fainted stay fainted, and one no
-## longer carried is forgotten.
+## `world` and every instance it has loaded, as a replay starts. The first they carry is their
+## companion, or, with `keep_chosen`, the one they chose before (#55) while they still carry it;
+## the ones that fainted stay fainted, and one no longer carried is forgotten.
 static func bring(
 	world: World,
 	parties: Array[CarriedMonsters],
@@ -77,22 +83,70 @@ static func bring(
 	for slot: int in GameState.MAX_PLAYERS:
 		var party: CarriedMonsters = _party_at(parties, slot)
 		var before: Dictionary = world.stored(slot, CompanionFeature.ID)
-		var chosen: String = _companion_of(before) if keep_chosen else ""
-		if not party.short_ids.has(chosen):
-			chosen = party.short_ids[0] if party.size() > 0 else ""
-		var down: Array = []
-		for short_id: String in _fainted_of(before):
-			if party.short_ids.has(short_id):
-				down.append(short_id)
-		var entry: Dictionary = {}
-		if party.size() > 0:
-			entry = {
-				"carried": Array(party.short_ids),
-				"species": Array(party.species),
-				"companion": chosen,
-				"fainted": down,
-			}
-		world.set_entry(slot, CompanionFeature.ID, entry)
+		world.set_entry(slot, CompanionFeature.ID, _entry_of(before, party, keep_chosen))
+
+
+## Takes the request with the data `data` from a run bringing monsters into the party of the player
+## in `slot` (CarryRequest, #818), inside a tick. Once the run is whole, its monsters, of the
+## species `species_by_code` names by their codes, are the party, like `bring`'s with the chosen
+## one kept. A request out of its run's order changes nothing, and a monster of a species no code
+## names, or without a short id, isn't brought.
+static func take_request(
+	state: GameState,
+	slot: int,
+	data: int,
+	species_by_code: Dictionary[int, String],
+) -> void:
+	var entry: Dictionary = state.store(slot, CompanionFeature.ID)
+	var place: int = CarryRequest.place_of(data)
+	var saved: Variant = entry.get(INCOMING, [])
+	var incoming: Array = saved if saved is Array and place > 0 else []
+	if incoming.size() != place:
+		return
+	incoming.append(CarryRequest.value_of(data))
+	entry[INCOMING] = incoming
+	if incoming.size() < 2 * CarryRequest.count_of(data):
+		return
+	var party: CarriedMonsters = CarriedMonsters.new()
+	for at: int in range(0, incoming.size() - 1, 2):
+		var species_code: int = incoming[at] if incoming[at] is int else CommandCodes.NONE
+		var id_code: int = incoming[at + 1] if incoming[at + 1] is int else 0
+		var species_id: String = species_by_code.get(species_code, "")
+		var short_id: String = ShortId.of_code(id_code)
+		if not species_id.is_empty() and not short_id.is_empty():
+			if not party.short_ids.has(short_id):
+				party = party.add(short_id, species_id)
+	var brought: Dictionary = _entry_of(entry, party, true)
+	for key: String in PARTY_KEYS + [INCOMING]:
+		var _dropped: bool = entry.erase(key)
+	entry.merge(brought)
+
+
+## The party entry for `party`, after `before`: its first monster the companion, or, with
+## `keep_chosen`, the one chosen in `before` while it's still carried; the ones fainted in `before`
+## still fainted while carried. None for no monster.
+static func _entry_of(before: Dictionary, party: CarriedMonsters, keep_chosen: bool) -> Dictionary:
+	var chosen: String = _companion_of(before) if keep_chosen else ""
+	if not party.short_ids.has(chosen):
+		chosen = party.short_ids[0] if party.size() > 0 else ""
+	var down: Array = []
+	for short_id: String in _fainted_of(before):
+		if party.short_ids.has(short_id):
+			down.append(short_id)
+	if party.size() == 0:
+		return {}
+	return {
+		"carried": Array(party.short_ids),
+		"species": Array(party.species),
+		"companion": chosen,
+		"fainted": down,
+	}
+
+
+## The monsters the party entry `entry` (the companions' entry in a player's world store) carries,
+## in carried order.
+static func of_entry(entry: Dictionary) -> CarriedMonsters:
+	return _carried_monsters(entry)
 
 
 ## Every slot's carried monsters in `world`, by slot.

@@ -16,6 +16,7 @@ extends RefCounted
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## A player swaps it for another monster they carry (#55), by a tap or a click on the roster at the
 ## top left of the screen, which shows the monsters they carry and which is their companion (#540).
+## Who they carry comes from their profile, as a run of requests from its outbox (#818).
 ## One that faints stays fainted through exits, saves and session starts until revived (#655), as
 ## a revive item does (#656), which the local player uses by its button or its key while their
 ## profile holds one, and which their profile spends.
@@ -84,6 +85,7 @@ func run(tree: SceneTree) -> String:
 		_check_walk_through,
 		_check_companions,
 		_check_swaps,
+		_check_carry_requests,
 		_check_fainted_kept,
 		_check_two_of_one_species,
 		_check_store_kept,
@@ -357,6 +359,67 @@ func _check_swaps() -> String:
 		return "the chosen Ombulumo didn't take the Tikazzir's place beside its player"
 	recorded.finish(world)
 	return _check_swap_kept(world, recorded)
+
+
+## Who a player carries comes from their profile as a run of requests from its outbox (#818): a
+## world with no party gets one, the species and the short id of each monster, and nothing more
+## while it waits. The party is theirs once the run is whole, the first joining them; a run in
+## another order keeps the companion they chose, a request sent again changes nothing, and a run of
+## none empties the party.
+func _check_carry_requests() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
+	var outbox: Outbox = Outbox.new()
+	var party: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])
+	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 4:
+		return "a world with no party wasn't sent the two carried monsters as four requests"
+	if _carry_posted(party, outbox, world):
+		return "a party already on its way was sent again"
+	var companions: CompanionFeature = (
+		world.instances[InstanceBlueprints.FOREST].feature(CompanionFeature.ID) as CompanionFeature
+	)
+	for request: OutboxEntry in outbox.entries:
+		if CompanionParty.companion_in(world, 0) != "":
+			return "the party was taken before its run was whole"
+		_carry_in(world, request)
+	var carried: CarriedMonsters = CompanionParty.carried_in(world)[0]
+	if (not carried.same_as(party)
+			or companions.species_of(companions.companion_of(0)) != "tikazzir"):
+		return "the whole run didn't make the two monsters the party, joined by the first"
+	if _swap_in(world, null, 2) != 1:
+		return "the brought Ombulumo couldn't be swapped to"
+	outbox.entries.clear()
+	var turned: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])
+	turned.short_ids.reverse()
+	turned.species.reverse()
+	var _posted: bool = _carry_posted(turned, outbox, world)
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	# Taken again, the run's first request would start a new run.
+	_carry_in(world, outbox.entries[0])
+	if (not CompanionParty.carried_in(world)[0].same_as(turned)
+			or CompanionParty.companion_in(world, 0) != _second
+			or world.stored(0, CompanionFeature.ID).has(CompanionParty.INCOMING)):
+		return "a run in another order didn't keep the chosen companion, or one sent again counted"
+	outbox.entries.clear()
+	_posted = _carry_posted(CarriedMonsters.new(), outbox, world)
+	_carry_in(world, outbox.entries[0])
+	if outbox.entries.size() != 1 or CompanionParty.carried_in(world)[0].size() != 0:
+		return "a run of none didn't empty the party"
+	return ""
+
+
+## Whether the profile's `outbox` was sent a run of requests bringing `party` to player 0 in
+## `world` (PartyRequests.catch_up).
+static func _carry_posted(party: CarriedMonsters, outbox: Outbox, world: World) -> bool:
+	return PartyRequests.catch_up(party, outbox, world.stored(0, CompanionFeature.ID))
+
+
+## Steps `world` once with player 0 standing and sending `request` from their outbox (#818).
+func _carry_in(world: World, request: OutboxEntry) -> void:
+	var command: Command = Command.new()
+	request.fill(command)
+	var commands: Array[Command] = [command]
+	world.step(commands)
 
 
 ## The swaps `recorded` in `world` play back the same, and the choice is kept: through the save
