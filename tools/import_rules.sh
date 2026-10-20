@@ -7,6 +7,9 @@
 # - The rules stay pure: no script under core/ or a slice's rules/ names a class or a path of any
 #   look/, ui/, input/ or game/ folder, so the simulation never leans on what draws or
 #   drives it.
+# - Lasting data stays apart from what shows and drives the game (#827): no script in a slice's
+#   meta/ names a class or a path of any look/, ui/ or input/ folder. A tie that needs a larger
+#   change waits in META_EXEMPT below, each with the issue that drops it.
 # - game/ is where the game is wired together, so it may reach any slice, and nothing but the tests
 #   and the tools reaches back into it (owner, #514): no script elsewhere names a game/ class or a
 #   game/ path, and no scene or resource outside game/ names a game/ file. The slices see the
@@ -53,6 +56,14 @@ refuse() {
 slice_classes=$(classes_in 'slices/*.gd')
 presentation_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' \
   ':(glob)**/input/**/*.gd' ':(glob)**/game/**/*.gd')
+view_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' ':(glob)**/input/**/*.gd')
+# The meta/ scripts that may still name some of those classes, until the issue named drops them.
+declare -A META_EXEMPT=(
+  # #831: the profile's holder listens to the EventBus and sends through LocalInput, and the
+  # world's keeper reads the world from the Session.
+  [slices/profile/meta/profile_holder.gd]='EventBus|LocalInput'
+  [slices/board/meta/world_keeper.gd]='Session'
+)
 game_classes=$(classes_in 'game/*.gd')
 test_classes=$(classes_in 'tests/*.gd')
 tool_classes=$(classes_in 'tools/*.gd')
@@ -70,6 +81,14 @@ while IFS= read -r -d '' file; do
     core/* | slices/*/rules/*)
       refuse "$file" "$code" "$presentation_classes" "${at}(look|ui|input|game)/" \
         "the rules never depend on what draws or drives them"
+      ;;
+  esac
+  case $file in
+    slices/*/meta/*)
+      exempt=${META_EXEMPT[$file]:-}
+      classes=$(tr '|' '\n' <<< "$view_classes" | grep -vxE "${exempt:-^$}" | paste -sd'|' -)
+      refuse "$file" "$code" "$classes" "${at}(look|ui|input)/" \
+        "lasting data never depends on what shows or drives the game"
       ;;
   esac
   case $file in

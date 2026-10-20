@@ -89,7 +89,7 @@ func _check_survey(main: Node) -> String:
 ## (#68), or its closest zoom draws no symbols, or "".
 func _survey_ground(driver: GameDriver, survey: SurveyView) -> String:
 	var state: GameState = driver.state
-	var keeper: WorldKeeper = survey.keeper
+	var keeper: ExploredKeeper = survey.keeper
 	var instance_name: String = driver.local_instance_name()
 	var seen: Dictionary = keeper.explored_in(driver.world).seen(
 		instance_name,
@@ -166,7 +166,7 @@ func _survey_next_door(driver: GameDriver, survey: SurveyView) -> String:
 ## own tiles here and there, for their chevrons; returns what is explored there.
 func _explore_next_door(
 		driver: GameDriver,
-		keeper: WorldKeeper,
+		keeper: ExploredKeeper,
 		region: Region,
 		target: String,
 ) -> Dictionary[Vector2i, bool]:

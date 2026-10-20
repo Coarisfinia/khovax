@@ -36,7 +36,7 @@ static var boot_covering: bool = false
 @export var cloud: FogCloud
 ## Keeps what was seen with the world, so it lasts beyond the session; none in tests that build a
 ## fog view alone, which then remembers for the session only.
-@export var keeper: WorldKeeper
+@export var keeper: ExploredKeeper
 
 ## Each tile's brightness as drawn now.
 var brightness: Dictionary[Vector2i, float] = {}
