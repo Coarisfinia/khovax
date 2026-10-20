@@ -88,7 +88,7 @@ declare -A SLICE_EXEMPT=(
   [survey>quests]=851
   [texts>factions]=851 [texts>gear]=851
   [trail>domination]=851
-  [wild_monsters>companions]=851 [wild_monsters>controls]=851 [wild_monsters>domination]=851
+  [wild_monsters>companions]=851 [wild_monsters>domination]=851
 )
 # Per slice: its own classes, and the later slices' classes and folder names it may not name.
 declare -A own_classes later_classes later_slices exemption_used back_edge
