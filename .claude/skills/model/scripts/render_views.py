@@ -1,5 +1,6 @@
 # Renders a .glb from every side into one contact sheet, for the visual check (model skill).
-# Usage: blender --background --factory-startup --python render_views.py -- <model.glb> <out_dir> [clip] [frame]
+# Usage: tools/models/blender.sh --background --factory-startup --python \
+#     .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]
 # Writes <out_dir>/<view>.png for front, back, left, right, top, three_quarter and sheet.png.
 import math
 import os

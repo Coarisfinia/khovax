@@ -11,12 +11,20 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 
 ## Tools
 - **Blender 5.2.2**, portable at `~/.local/opt/blender-5.2.2` (`blender` on the PATH). Brew can't
-  install it on Linux. Run it headless:
-  `blender --background --factory-startup --python <script.py> -- <args>`
-  The MESA/ZINK/EGL warnings are harmless; EEVEE still renders.
+  install it on Linux. Run it headless, through `tools/models/blender.sh`:
+  `tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>`
+  The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
+  only: Mesa's default falls back to the CPU's software rasteriser. Never set it for the shell:
+  Godot would pick it up, and on d3d12 its renderer breaks every skinned mesh. The MESA/ZINK/EGL
+  warnings are harmless; EEVEE still renders.
 - **Godot 4.7.2**, the CI's version: every Godot check runs in the game project itself, never in
-  a scratch project, so the repo's import settings apply.
-- **ImageMagick** (`montage`, `convert`) and `ffmpeg` for sheets and GIFs.
+  a scratch project, so the repo's import settings apply. It renders on the CPU (the software
+  rasteriser), so `render_in_game.gd` runs with `--disable-vsync --max-fps 0` (its header): no
+  waiting for the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
+  run side by side; several Godot renders at once only share the CPU's cores.
+- **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs, with a palette pass (faster and
+  smaller than ImageMagick): `ffmpeg -framerate 15 -pattern_type glob -i '<Clip>_*.png' -vf
+  "scale=640:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse" <Clip>.gif`
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).
 
@@ -104,7 +112,7 @@ a second model could use goes into the library or a generic tool, never into one
   there (as `Rogue.glb.import` does).
 
 ## 4. Verify (every item gives an image or a number for the PR)
-1. **Every side:** `blender --background --factory-startup --python
+1. **Every side:** `tools/models/blender.sh --background --factory-startup --python
    .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]`. It
    writes front, back, left, right, top and a three-quarter view, and `sheet.png`. **Look at it.**
    Check the proportions, gaps, stretched textures and anything floating or clipping.
@@ -131,7 +139,7 @@ a second model could use goes into the library or a generic tool, never into one
    means a few thousand triangles for a monster; justify anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
-9. **Ground contact:** `blender --background --factory-startup --python
+9. **Ground contact:** `tools/models/blender.sh --background --factory-startup --python
    tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.

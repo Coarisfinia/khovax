@@ -1,7 +1,7 @@
 """Checks that no clip of a model sinks into the ground (model skill): every frame of every clip,
 the lowest point of the deformed mesh and of each paw or foot bone, against z = 0.
 
-    blender --background --factory-startup --python tools/models/check_ground.py -- \
+    tools/models/blender.sh --background --factory-startup --python tools/models/check_ground.py -- \
         <model.glb> [tolerance=0.005]
 
 It prints a line per clip and `GROUND CHECK: PASS` or `FAIL` (and exits 1 on a fail)."""
