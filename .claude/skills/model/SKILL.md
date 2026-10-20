@@ -62,7 +62,9 @@ for look-dev with the owner, but whatever it finds goes back into the script.
    `godot --headless --path . -s res://.claude/skills/model/scripts/check_glb.gd --
    res://assets/<name>/<name>.glb <Clip> ...`. It goes through the repo's own import settings
    (looping clips included) and must print `MODEL CHECK: PASS`: a skeleton with bones, every
-   skinned mesh bound to it, and every clip the game plays.
+   skinned mesh bound to it, and every clip the game plays. CI checks the same for every model a
+   view uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view
+   that plays a new clip adds it there.
 5. **In game:** use AGENTS.md's screenshot recipe to put the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and

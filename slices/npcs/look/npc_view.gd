@@ -8,6 +8,8 @@ extends Node3D
 ## The placeholder person until the game's own people exist: the players' character, unarmed.
 const MODEL: PackedScene = preload("res://assets/kaykit-adventurers/Rogue.glb")
 const IDLE: StringName = &"Idle"
+## Every clip the view plays, which the boot flow checks its model has (#992).
+const CLIPS: Array[StringName] = [IDLE]
 ## The speech mark over a person's head, and how high above their tile's top it floats.
 const MARK: String = "..."
 const MARK_HEIGHT: float = 2.3

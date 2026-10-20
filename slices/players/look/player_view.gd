@@ -17,6 +17,8 @@ const IDLE: StringName = &"Idle"
 const MOVE: StringName = &"Running_A"
 ## The clip a knocked-down player plays (#479, #488): down on the ground until revived.
 const DOWN: StringName = &"Sit_Floor_Idle"
+## Every clip the view plays, which the boot flow checks its model has (#992).
+const CLIPS: Array[StringName] = [IDLE, MOVE, DOWN]
 ## Parts of the placeholder model the player doesn't carry: its weapons.
 const HIDDEN_PARTS: Array[String] = [
 	"Knife",
