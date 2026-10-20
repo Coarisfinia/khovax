@@ -22,9 +22,9 @@ var players: int = 1
 ## the players brought, part of the start. The first a slot carries is its companion when the
 ## session starts.
 var carried: Array[CarriedMonsters] = []
-## The rules version and the instance's feature ids when it was recorded: a replay of other rules
-## would play out differently, so playback refuses it with a clear message.
-var rules: int = RulesChanges.version()
+## The rules' id (RulesChanges) and the instance's feature ids when it was recorded: a replay of
+## other rules would play out differently, so playback refuses it with a clear message.
+var rules: String = RulesChanges.id()
 var features: Array[String] = []
 var ticks: int = 0
 ## Every change of a slot's command, STRIDE integers each, in tick and slot order. A slot keeps its
@@ -84,10 +84,10 @@ func finish(world: World) -> void:
 ## Plays the replay from its start, as fast as possible, and checks every checkpoint. Returns why
 ## it doesn't match, or "" when it does; `played` holds the final state.
 func play() -> String:
-	if problem.is_empty() and rules != RulesChanges.version():
+	if problem.is_empty() and rules != RulesChanges.id():
 		problem = (
-			"recorded with rules version %d, this build has %d; if the rules changed on purpose, "
-			% [rules, RulesChanges.version()]
+			"recorded with rules %s, this build has %s; if the rules changed on purpose, "
+			% [rules, RulesChanges.id()]
 			+ "rehash the golden replays (tests/replays/rehash.gd)"
 		)
 	if problem.is_empty():
@@ -112,7 +112,7 @@ func rehash() -> String:
 	if problem.is_empty() and (played == null or not checkpoints.has(ticks)):
 		problem = "the replay couldn't be played under the current rules"
 	if problem.is_empty():
-		rules = RulesChanges.version()
+		rules = RulesChanges.id()
 		features = _feature_ids(played.instances[instance])
 	return problem
 

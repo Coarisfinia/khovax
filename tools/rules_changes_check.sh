@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Fails when a golden replay changed without a new rule change file (#736): a changed replay means
-# the game plays out differently, and the rules version (RulesChanges, the number of files in
-# core/rules_changes/) has to move with it. Also checks each file's name and frontmatter.
+# the game plays out differently, and the rules id (RulesChanges, a digest of the names of the
+# files in core/rules_changes/) has to move with it. Also checks each file's name and frontmatter,
+# and that the folder is append-only (#876): a file deleted or renamed would give the rules an id
+# that older rules may already have had.
 # Usage: tools/rules_changes_check.sh <base> (from the repository's root; <base> is the commit the
 # change is compared with, e.g. HEAD^1 of a pull request's merge commit)
 set -euo pipefail
@@ -28,6 +30,13 @@ for file in "$folder"/*; do
     failed=1
   fi
 done
+
+# Without rename detection, a renamed file shows as deleted (and another added).
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  echo "::error file=${path}::a rule change file is never deleted or renamed: the folder is append-only"
+  failed=1
+done <<< "$(git diff --no-renames --name-only --diff-filter=D "$base" HEAD -- "$folder")"
 
 changed=$(git diff --name-only --diff-filter=M "$base" HEAD -- 'tests/replays/*.replay')
 added=$(git diff --name-only --diff-filter=A "$base" HEAD -- "$folder")

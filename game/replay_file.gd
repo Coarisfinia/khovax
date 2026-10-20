@@ -5,13 +5,12 @@ extends RefCounted
 ## numbers can't hold every 64-bit integer exactly. Every field is checked for its shape as it's
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
 
-## The file format (17 since every request from a profile's outbox, the revive item's included,
-## rides in a command's fixed request kind and data, #818); a replay in another format is refused,
-## not misread. A replay records the rules
-## version it was played by, and Replay refuses one recorded under other rules, so an older format,
+## The file format (18 since the rules are recorded as their id, not as a count, #876); a replay
+## in another format is refused, not misread. A replay records the id of the rules it was played
+## by, and Replay refuses one recorded under other rules, so an older format,
 ## which always came with other rules, could never play anyway (#819): like WorldData, only this
 ## format is read.
-const FORMAT: int = 17
+const FORMAT: int = 18
 const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
 
 
@@ -68,11 +67,15 @@ static func parse(text: String) -> Replay:
 			% [format, build, FORMAT]
 		)
 		return replay
+	# Checked after the format: an older format recorded the rules as a number (#876).
+	if not data["rules"] is String:
+		replay.problem = "not a replay: its rules aren't an id"
+		return replay
 	replay.start_world = _start_world(data.get("world", {}))
 	if data.has("world") and replay.start_world.is_empty():
 		replay.problem = "not a replay: its starting world isn't a world's data"
 		return replay
-	replay.rules = _int(data["rules"])
+	replay.rules = str(data["rules"])
 	replay.instance = str(data["instance"])
 	replay.seed_value = str(data["seed"]).to_int()
 	replay.players = _int(data["players"])
@@ -125,7 +128,7 @@ static func _start_world(saved: Variant) -> Dictionary:
 static func _shape_problem(data: Dictionary) -> String:
 	if not data.has_all(REQUIRED):
 		return "not a replay: it lacks one of %s" % [REQUIRED]
-	for key: String in ["format", "rules", "players", "ticks"]:
+	for key: String in ["format", "players", "ticks"]:
 		if not _is_number(data[key]):
 			return "not a replay: its %s isn't a number" % key
 	if not data["seed"] is String or not str(data["seed"]).is_valid_int():
