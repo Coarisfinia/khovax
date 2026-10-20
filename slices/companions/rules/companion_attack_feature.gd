@@ -23,14 +23,15 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID, CompanionFeature.ID]
+	var needed: Array[String] = [CompanionFeature.ID]
 	return needed
 
 
-## What spares a wild monster from a strike (hiding, a sealing ring) and the type chart, where the
-## instance has them.
+## The wild monsters it strikes, what spares one from a strike (hiding, a sealing ring) and the type
+## chart, where the instance has them: without wild monster spots (#884), nothing is struck.
 func after() -> Array[String]:
 	var earlier: Array[String] = [
+		WildMonsterFeature.ID,
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
@@ -48,6 +49,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_waits[companion_id] = wait - 1
 			continue
 		var _ready: bool = _waits.erase(companion_id)
+		# Without wild monsters, the waits still run out, so a companion that walks on is ready.
+		if wild == null:
+			continue
 		var target: int = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
 			continue

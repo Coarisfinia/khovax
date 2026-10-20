@@ -48,11 +48,17 @@ func id() -> String:
 func requires() -> Array[String]:
 	var needed: Array[String] = [
 		TrailFeature.ID,
-		WildMonsterFeature.ID,
 		HealthFeature.ID,
 		DominationFeature.ID,
 	]
 	return needed
+
+
+## The wild monsters that strike, which an instance without wild monster spots lacks (#884): nothing
+## strikes there.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 ## Hiding, the companions and the type chart, which an instance may lack, step later: a wild
@@ -82,6 +88,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	if state.tick % STRIKE_TICKS != 0:
 		return
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	var monsters: Array[Entity] = _find_standing(state, wild)
 	var near: Dictionary[Vector2i, bool] = _near_targets(trail)
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature

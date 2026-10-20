@@ -50,8 +50,15 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID, HealthFeature.ID]
+	var needed: Array[String] = [TrailFeature.ID, HealthFeature.ID]
 	return needed
+
+
+## The wild monsters it encircles, which an instance without wild monster spots lacks (#884): no
+## ring closes there.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 func step(state: GameState, commands: Array[Command]) -> void:
@@ -101,7 +108,7 @@ func _close_rings(state: GameState) -> void:
 	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for grew: TrailGrew in _grown(state):
-		if wild.monsters.is_empty() or not RingShape.may_close(trail, grew):
+		if wild == null or wild.monsters.is_empty() or not RingShape.may_close(trail, grew):
 			continue
 		# One flood per move, for every monster at once (#104).
 		var edge: Array[Vector2i] = _edge_of(state.region)
@@ -422,7 +429,7 @@ func _load_waiting(state: GameState, values: DataReader) -> void:
 func _monsters_problem(state: GameState, monsters: Array[int]) -> String:
 	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	if monsters.is_empty():
+	if monsters.is_empty() or wild == null:
 		return "it has no wild monsters"
 	var edge: Array[Vector2i] = _edge_of(state.region)
 	var reachable: Dictionary[Vector2i, bool] = RingShape.outside(state.region, trail, edge)
