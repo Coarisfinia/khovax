@@ -296,11 +296,11 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 		return "the Survey doesn't mark the instance here once the guild holds it"
 	if marks.here_text() != TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]:
 		return "the Survey says %s about the instance the guild holds" % marks.here_text()
-	var next_door: Array[String] = []
-	next_door.assign(survey.neighbours.shifts.keys())
-	next_door.sort()
-	if next_door.is_empty():
-		return ""
+	# The forest north of the glade's start shows on the Survey there; the outpost to the southeast
+	# may not, and a neighbour that doesn't show isn't marked.
+	var next_door: Array[String] = [FlowSteps.FOREST]
+	if not survey.neighbours.shifts.has(FlowSteps.FOREST):
+		return "the Survey doesn't show %s next door" % FlowSteps.FOREST
 	WorldFlags.set_flag(driver.world, Territory.flag(next_door[0], guild))
 	survey.show_state()
 	marks.show_state()

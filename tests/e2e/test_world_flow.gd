@@ -287,7 +287,7 @@ func _check_companions() -> String:
 	# A seed whose companion's first roll keeps it beside its player: it may step on the first tick.
 	var world: World = World.new(
 		BlueprintSource.new(),
-		0,
+		4,
 		FlowSteps.FOREST,
 		2,
 	)
