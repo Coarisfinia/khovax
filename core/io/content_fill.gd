@@ -51,27 +51,40 @@ static func then(asking: Callable) -> void:
 
 ## Waits until everything queued is read: for tests, whose walks must never hold for content.
 static func wait() -> void:
-	if _task != NO_TASK:
-		var _waited: Error = WorkerThreadPool.wait_for_task_completion(_task)
-		_task = NO_TASK
 	_run()
+	while true:
+		_lock.lock()
+		var task: int = _task
+		_task = NO_TASK
+		_lock.unlock()
+		if task == NO_TASK:
+			return
+		var _waited: Error = WorkerThreadPool.wait_for_task_completion(task)
+		# Loads queued while it ran, but after it took its last one, start a task of their own.
+		_run()
 
 
 ## Starts the worker task if loads wait and none runs, after waiting for a finished one (Godot's
-## pool frees a task only once it's waited for). Only the main thread starts it: a load asking for
-## more runs while it's running.
+## pool frees a task only once it's waited for). Only the main thread starts and waits for tasks:
+## a load asking for more runs on the worker while `_running`, so it never starts one.
 static func _run() -> void:
 	_lock.lock()
+	var finished: int = NO_TASK
+	if not _running:
+		finished = _task
+		_task = NO_TASK
 	var start: bool = not _running and not _queue.is_empty()
-	var finished: int = _task if not _running else NO_TASK
 	if start:
 		_running = true
 	_lock.unlock()
 	if finished != NO_TASK:
 		var _waited: Error = WorkerThreadPool.wait_for_task_completion(finished)
-		_task = NO_TASK
 	if start:
-		_task = WorkerThreadPool.add_task(_drain, false, "content fill")
+		# Outside the lock: without threads, the pool runs the task right here.
+		var task: int = WorkerThreadPool.add_task(_drain, false, "content fill")
+		_lock.lock()
+		_task = task
+		_lock.unlock()
 
 
 ## The worker task: runs the queued loads until none is left.
