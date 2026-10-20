@@ -5,17 +5,27 @@
 	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, regions/<id>.md or the region pieces in regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "features", "wild_species"],
+	"required": ["id", "rules", "wild_species"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores, the name of its region too.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
-		"features": {
-			"description": "The ids of the rules (features) its instances have, each once: a rule is on in an instance only when its blueprint lists it (#30, #823). What its region holds brings the features that run it, which are never listed here: exits, triggers, region pieces to enter, wild monsters and their hiding, people, and treasure chests, which a chest_table brings too (#879). They step in the order the blueprints slice's FeatureFactories gives them, which also lists the ids there are.",
+		"rules": {
+			"description": "The id of its rule set (data/rule_sets/, #941): the rules (features) its instances have, unless add_rules or drop_rules change them. A rule is on in an instance only when its blueprint has it (#30, #823). What its region holds brings the features that run it, which are never named here: exits, triggers, region pieces to enter, wild monsters and their hiding, people, and treasure chests, which a chest_table brings too (#879). They step in the order the blueprints slice's FeatureFactories gives them, which also lists the ids there are.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"add_rules": {
+			"description": "The ids of rules its rule set lacks that its instances have too, each once (#941).",
 			"type": "array",
-			"minItems": 1,
+			"uniqueItems": true,
+			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+		},
+		"drop_rules": {
+			"description": "The ids of rules in its rule set that its instances don't have, each once (#941). At least one rule must be left.",
+			"type": "array",
 			"uniqueItems": true,
 			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
 		},

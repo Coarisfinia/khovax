@@ -1,7 +1,8 @@
 class_name Blueprint
 extends RefCounted
 ## An instance blueprint's content data (#823), read from the blueprints slice's data/ (#72, #412):
-## the rules its instances have, whether the seed turns its region pieces, its loot tables, the
+## the rules its instances have (its rule set's, #941, with the ones it adds or drops), whether the
+## seed turns its region pieces, its loot tables, the
 ## species its wild monsters roll from and the variants the world's flags choose. InstanceBlueprints
 ## builds instances from it.
 
@@ -9,8 +10,11 @@ extends RefCounted
 const SCHEMA: String = "res://slices/blueprints/data/blueprints.schema.json"
 
 var id: String = ""
-## The ids of the rules its instances have (FeatureFactories), in the order written; they step in
-## FeatureFactories' order. What its region holds brings the rest (RegionFeatures, #879).
+## Its rule set's id (RuleSet, #941).
+var rules: String = ""
+## The ids of the rules its instances have (FeatureFactories): its rule set's in the order written,
+## less the ones it drops, then the ones it adds; they step in FeatureFactories' order. What its
+## region holds brings the rest (RegionFeatures, #879).
 var features: Array[String] = []
 ## Whether the seed turns its region pieces (#57, #127).
 var turned: bool = false
@@ -28,8 +32,13 @@ var variants: Array[PackedStringArray] = []
 var problem: String = ""
 
 
-## A blueprint read from a blueprint file's text, named `file_id`; its `problem` says what's wrong.
-static func parse(file_id: String, text: String) -> Blueprint:
+## A blueprint read from a blueprint file's text, named `file_id`, its rules from one of
+## `rule_sets` (by id); its `problem` says what's wrong.
+static func parse(
+	file_id: String,
+	text: String,
+	rule_sets: Dictionary[String, RuleSet],
+) -> Blueprint:
 	var read: Blueprint = Blueprint.new()
 	var json: JSON = JSON.new()
 	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
@@ -39,13 +48,16 @@ static func parse(file_id: String, text: String) -> Blueprint:
 	read.id = Content.text_of(data.get("id"))
 	read.loot_table = Content.text_of(data.get("loot_table"))
 	read.chest_table = Content.text_of(data.get("chest_table"))
+	read.rules = Content.text_of(data.get("rules"))
 	read.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if read.problem.is_empty():
 		read.problem = read._check(file_id, data)
+	if read.problem.is_empty():
+		read.problem = read._read_rules(data, rule_sets)
 	return read
 
 
-## Why the fields in `data` are wrong, or "", and its turn, features, species and variants read when
+## Why the fields in `data` are wrong, or "", and its turn, species and variants read when
 ## they aren't.
 func _check(file_id: String, data: Dictionary) -> String:
 	if id != file_id or not Content.is_id(id):
@@ -59,8 +71,6 @@ func _check(file_id: String, data: Dictionary) -> String:
 			return "its %s must be a loot table's id" % table
 	if not chest_table.is_empty() and loot_table.is_empty():
 		return "a blueprint with a chest table needs a loot table, for the loot on its ground"
-	if not _read_features(data.get("features")):
-		return "its features must be one or more rules' feature ids, each once"
 	if not _read_species(data.get("wild_species")):
 		return "its wild_species must give one or more species ids a whole weight of 1 or more"
 	if not _read_variants(data.get("variants", [])):
@@ -68,19 +78,26 @@ func _check(file_id: String, data: Dictionary) -> String:
 	return ""
 
 
-## Whether `raw` lists one or more features' ids, each once, none of which its region brings
-## (RegionFeatures); reads them into `features`.
-func _read_features(raw: Variant) -> bool:
-	if not raw is Array:
-		return false
-	var entries: Array = raw
-	for entry: Variant in entries:
-		var feature_id: String = Content.text_of(entry)
-		var from_region: bool = RegionFeatures.implies(feature_id)
-		if not FeatureFactories.has(feature_id) or from_region or features.has(feature_id):
-			return false
-		features.append(feature_id)
-	return not features.is_empty()
+## Why its rules in `data` are wrong, or "": its rule set must be one of `rule_sets`, each rule it
+## drops one the set has, each it adds one the set lacks (RuleSet.read_rules), and at least one
+## must be left. Reads them into `features` when they aren't.
+func _read_rules(data: Dictionary, rule_sets: Dictionary[String, RuleSet]) -> String:
+	if not rule_sets.has(rules):
+		return "its rules must be a rule set's id, %s isn't" % rules
+	var in_set: Array[String] = rule_sets[rules].features
+	var drops: Array[String] = []
+	var adds: Array[String] = []
+	var dropped: bool = RuleSet.read_rules(data.get("drop_rules", []), drops)
+	if not dropped or drops.any(func(rule: String) -> bool: return not in_set.has(rule)):
+		return "its drop_rules must each be a rule its rule set has, once"
+	var added: bool = RuleSet.read_rules(data.get("add_rules", []), adds)
+	if not added or adds.any(func(rule: String) -> bool: return in_set.has(rule)):
+		return "its add_rules must each be a rule's feature id its rule set lacks, once"
+	features.assign(in_set.filter(func(kept: String) -> bool: return not drops.has(kept)))
+	features.append_array(adds)
+	if features.is_empty():
+		return "its rules must leave at least one rule"
+	return ""
 
 
 ## Whether `raw` gives one or more species ids a weight; reads them into `wild_species`.

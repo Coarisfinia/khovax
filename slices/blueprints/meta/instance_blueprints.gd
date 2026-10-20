@@ -4,9 +4,10 @@ extends RefCounted
 ## the features an instance has. The region is a fixed region file, regions/<name>.md, or region
 ## pieces in regions/<name>/ that the seed arranges and, if the blueprint is turned, turns (#57,
 ## #127). The players start on the region's starts. A blueprint switches game rules on and off by
-## listing them (Blueprint.features), what its region holds brings the features that run it
-## (RegionFeatures), and they can change during a session; each slice builds its
-## own feature (FeatureFactories). What tells blueprints apart is content data, one file each
+## naming a rule set and the rules it adds or drops (Blueprint.features, #941), what its region
+## holds brings the features that run it (RegionFeatures), and they can change during a session;
+## each slice builds its own feature (FeatureFactories). What tells blueprints apart is content
+## data, one file each
 ## (Blueprint, #823).
 
 ## The names the tests and tools load blueprints by; the game names none, it reads them from the

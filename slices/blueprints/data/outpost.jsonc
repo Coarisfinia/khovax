@@ -1,10 +1,6 @@
 // A faction outpost southeast of the glade (#689), with holds for control points (#643).
 {
 	"id": "outpost",
-	"features": [
-		"movement", "knockdown", "trail", "health", "domination", "wild_attacks", "spikes",
-		"domination_loot", "enrage", "fog", "companions", "companion_swaps", "revive_items",
-		"type_effectiveness", "companion_attacks", "specials", "harvest", "dialogs", "territory"
-	],
+	"rules": "standard",
 	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
 }
