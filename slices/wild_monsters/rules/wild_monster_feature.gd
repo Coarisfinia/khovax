@@ -45,19 +45,9 @@ var weights: Array[int] = []
 ## reads it).
 var max_hps: Dictionary[String, int] = {}
 var strengths: Dictionary[String, int] = {}
-## Each wild monster's species id, by entity id.
-var _species: Dictionary[int, String] = {}
-## Each wild monster's short id (#700), by entity id: a dominated one keeps it.
-var _short_ids: Dictionary[int, String] = {}
-## Each wild monster's HP left, by entity id.
-var _hp: Dictionary[int, int] = {}
-## Each wild monster's stacks of rage (#220), by entity id; none for one never enraged.
-var _rage: Dictionary[int, int] = {}
-## What the region's legend says of a wild monster beyond its species, by entity id, for each it
-## names an event or a quest target for: the event it emits when it faints (#541), dropped once
-## emitted, so it's emitted once, and the quest target it is (#625), the content id a quest's step
-## names it by, kept after it faints. Rules read it; only this feature writes it.
-var marks: Dictionary[int, WildSpot] = {}
+## Each wild monster's own data (#820), standing or fainted, by entity id: one record, so its
+## parts never drift apart.
+var _wild: Dictionary[int, WildMonster] = {}
 ## The wild monsters held where they stand whatever the ground, in id order: HidingFeature holds
 ## the hidden ones (#202) and lets them go when they jump out, and restores them on loading, so
 ## they aren't saved here.
@@ -105,19 +95,21 @@ func start(state: GameState) -> void:
 		# Can't be refused: an entity without a slot is always added.
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
-		_species[monster.id] = species
-		_hp[monster.id] = max_hps.get(species, UNKNOWN_MAX_HP)
-		if named != null and named.wounded:
-			_hp[monster.id] = maxi(Fixed.scale(_hp[monster.id], WOUNDED_HP), 1)
-		if named != null and not (named.emits + named.target).is_empty():
-			marks[monster.id] = WildSpot.mark(named.emits, named.target)
+		var full_hp: int = max_hps.get(species, UNKNOWN_MAX_HP)
+		var wild: WildMonster = WildMonster.of(species, full_hp)
+		if named != null:
+			if named.wounded:
+				wild.hp = maxi(Fixed.scale(wild.hp, WOUNDED_HP), 1)
+			wild.emits = named.emits
+			wild.target = named.target
+		_wild[monster.id] = wild
 	# Drawn after every species, so the species roll as they did before short ids; one already
 	# taken here is drawn again, so no two share one.
 	for monster: int in monsters:
-		var short_id: String = ShortId.drawn(rng)
-		while _short_ids.values().has(short_id):
-			short_id = ShortId.drawn(rng)
-		_short_ids[monster] = short_id
+		var drawn: String = ShortId.drawn(rng)
+		while _short_id_taken(drawn):
+			drawn = ShortId.drawn(rng)
+		_wild[monster].short_id = drawn
 	_known.sort()
 
 
@@ -166,39 +158,39 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
 	fainted.erase(removed_id)
 	held.erase(removed_id)
-	var _dropped: bool = _species.erase(removed_id)
-	_dropped = _short_ids.erase(removed_id)
-	_dropped = _hp.erase(removed_id)
-	_dropped = _rage.erase(removed_id)
-	_dropped = marks.erase(removed_id)
+	var _dropped: bool = _wild.erase(removed_id)
 
 
 ## Holds the wild monster with this entity id where it stands, or lets it go again.
 func hold(entity_id: int, holding: bool) -> void:
 	held.erase(entity_id)
-	if holding and is_wild_monster(entity_id):
+	if holding and monsters.has(entity_id):
 		held.append(entity_id)
 		held.sort()
 
 
-## Whether the entity with this id is a wild monster.
-func is_wild_monster(entity_id: int) -> bool:
-	return monsters.has(entity_id)
-
-
 ## The species id of the wild monster with this entity id, or "" when it has none.
 func species_of(entity_id: int) -> String:
-	return _species.get(entity_id, "")
+	var wild: WildMonster = _wild.get(entity_id)
+	return wild.species if wild != null else ""
 
 
 ## The short id of the wild monster with this entity id (#700), or "" when it has none.
 func short_id_of(entity_id: int) -> String:
-	return _short_ids.get(entity_id, "")
+	var wild: WildMonster = _wild.get(entity_id)
+	return wild.short_id if wild != null else ""
+
+
+## The quest target the wild monster with this entity id is (#625), or "" when it's none.
+func target_of(entity_id: int) -> String:
+	var wild: WildMonster = _wild.get(entity_id)
+	return wild.target if wild != null else ""
 
 
 ## The wild monster's HP left, its species' full HP, and its species' strength.
 func hp_of(entity_id: int) -> int:
-	return _hp.get(entity_id, 0)
+	var wild: WildMonster = _wild.get(entity_id)
+	return wild.hp if wild != null else 0
 
 
 func max_hp_of(entity_id: int) -> int:
@@ -213,7 +205,8 @@ func strength_of(entity_id: int) -> int:
 
 ## The wild monster's stacks of rage.
 func rage_of(entity_id: int) -> int:
-	return _rage.get(entity_id, 0)
+	var wild: WildMonster = _wild.get(entity_id)
+	return wild.rage if wild != null else 0
 
 
 ## Whether the entity with this id is a fainted one (#410).
@@ -225,28 +218,30 @@ func is_fainted(entity_id: int) -> bool:
 ## weakens it for a domination; a `lethal` one (#410) can take it to 0, and then it faints,
 ## emitting in `state` the event its region names for it, if any (#541).
 func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) -> void:
-	if not is_wild_monster(entity_id):
+	if not monsters.has(entity_id):
 		return
-	_hp[entity_id] = maxi(hp_of(entity_id) - damage, 0 if lethal else 1)
-	if _hp[entity_id] == 0:
+	var wild: WildMonster = _wild[entity_id]
+	wild.hp = maxi(wild.hp - damage, 0 if lethal else 1)
+	if wild.hp == 0:
 		monsters.erase(entity_id)
 		held.erase(entity_id)
-		var _calmed: bool = _rage.erase(entity_id)
+		wild.rage = 0
 		fainted.append(entity_id)
 		fainted.sort()
-		if not _emits_of(entity_id).is_empty():
-			state.events.append(EventEmitted.new(_emits_of(entity_id)))
-			marks[entity_id].emits = ""
+		if not wild.emits.is_empty():
+			state.events.append(EventEmitted.new(wild.emits))
+			wild.emits = ""
 
 
 ## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
 ## `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
 func enrage(entity_id: int, heal: int) -> void:
-	if not is_wild_monster(entity_id):
+	if not monsters.has(entity_id):
 		return
-	_rage[entity_id] = mini(rage_of(entity_id) + 1, MOST_RAGE)
+	var wild: WildMonster = _wild[entity_id]
+	wild.rage = mini(wild.rage + 1, MOST_RAGE)
 	var full: int = max_hp_of(entity_id)
-	_hp[entity_id] = mini(hp_of(entity_id) + Fixed.scale(full, heal), full)
+	wild.hp = mini(wild.hp + Fixed.scale(full, heal), full)
 
 
 ## Each wild monster still in the instance as its entity's id, its species, its short id and its HP
@@ -260,17 +255,18 @@ func save_values() -> Dictionary:
 	standing.append_array(fainted)
 	standing.sort()
 	for monster: int in standing:
+		var wild: WildMonster = _wild[monster]
 		var entry: Dictionary = {
 			"entity": monster,
-			"species": _species[monster],
-			"short_id": _short_ids[monster],
-			"hp": _hp[monster],
+			"species": wild.species,
+			"short_id": wild.short_id,
+			"hp": wild.hp,
 		}
-		entry["rage"] = rage_of(monster)
-		if not _emits_of(monster).is_empty():
-			entry["emits"] = _emits_of(monster)
-		if not WildSpot.target_in(marks, monster).is_empty():
-			entry["target"] = WildSpot.target_in(marks, monster)
+		entry["rage"] = wild.rage
+		if not wild.emits.is_empty():
+			entry["emits"] = wild.emits
+		if not wild.target.is_empty():
+			entry["target"] = wild.target
 		saved.append(entry)
 	return { "wild_monsters": saved }
 
@@ -279,16 +275,12 @@ func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
 	fainted.clear()
 	held.clear()
-	_species.clear()
-	_short_ids.clear()
-	_hp.clear()
-	_rage.clear()
-	marks.clear()
+	_wild.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
 		var species: String = entry.text("species")
 		var standing: Entity = state.entity(monster)
-		if standing == null or standing.slot != Entity.NO_SLOT or _species.has(monster):
+		if standing == null or standing.slot != Entity.NO_SLOT or _wild.has(monster):
 			values.fail("wild monster %d isn't one entity without a player" % monster)
 			return
 		if not _known.has(species):
@@ -298,23 +290,22 @@ func load_values(state: GameState, values: DataReader) -> void:
 			])
 			return
 		var short_id: String = entry.text("short_id")
-		if not ShortId.is_valid(short_id) or _short_ids.values().has(short_id):
+		if not ShortId.is_valid(short_id) or _short_id_taken(short_id):
 			values.fail("wild monster %d has no valid short id of its own" % monster)
 			return
-		_species[monster] = species
-		_short_ids[monster] = short_id
-		_hp[monster] = entry.whole("hp", 0, max_hp_of(monster))
+		var wild: WildMonster = WildMonster.of(species, 0)
+		wild.short_id = short_id
+		_wild[monster] = wild
+		wild.hp = entry.whole("hp", 0, max_hp_of(monster))
 		if (entry.data as Dictionary).has("target"):
-			marks[monster] = WildSpot.mark("", entry.text("target"))
-		if _hp[monster] == 0:
+			wild.target = entry.text("target")
+		if wild.hp == 0:
 			fainted.append(monster)
 			continue
 		monsters.append(monster)
-		var rage: int = entry.whole("rage", 0, MOST_RAGE)
-		if rage > 0:
-			_rage[monster] = rage
+		wild.rage = entry.whole("rage", 0, MOST_RAGE)
 		if (entry.data as Dictionary).has("emits"):
-			marks[monster] = WildSpot.mark(entry.text("emits"), WildSpot.target_in(marks, monster))
+			wild.emits = entry.text("emits")
 	monsters.sort()
 	fainted.sort()
 
@@ -323,32 +314,34 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [monsters.size()]
 	for monster: int in monsters:
 		values.append(monster)
-		values.append(_known.find(_species[monster]))
-		values.append(StateHash.name_code(_short_ids[monster]))
-		values.append_array([_hp[monster], max_hp_of(monster), strength_of(monster)])
-		values.append(rage_of(monster))
+		var wild: WildMonster = _wild[monster]
+		values.append_array([_known.find(wild.species), StateHash.name_code(wild.short_id)])
+		values.append_array([wild.hp, max_hp_of(monster), strength_of(monster)])
+		values.append(wild.rage)
 	values.append(held.size())
 	values.append_array(held)
 	values.append(fainted.size())
 	for monster: int in fainted:
-		values.append_array([monster, _known.find(_species[monster])])
-		values.append(StateHash.name_code(_short_ids[monster]))
+		values.append_array([monster, _known.find(_wild[monster].species)])
+		values.append(StateHash.name_code(_wild[monster].short_id))
 	var emits: Dictionary[int, String] = {}
 	var targets: Dictionary[int, String] = {}
-	for monster: int in marks:
-		if not _emits_of(monster).is_empty():
-			emits[monster] = _emits_of(monster)
-		if not WildSpot.target_in(marks, monster).is_empty():
-			targets[monster] = WildSpot.target_in(marks, monster)
+	for monster: int in _wild:
+		if not _wild[monster].emits.is_empty():
+			emits[monster] = _wild[monster].emits
+		if not _wild[monster].target.is_empty():
+			targets[monster] = _wild[monster].target
 	_hash_names(values, emits)
 	_hash_names(values, targets)
 	return values
 
 
-## The event the wild monster with this entity id still emits when it faints (#541), or "".
-func _emits_of(entity_id: int) -> String:
-	var mark: WildSpot = marks.get(entity_id)
-	return mark.emits if mark != null else ""
+## Whether a wild monster here already has this short id (#700).
+func _short_id_taken(short_id: String) -> bool:
+	for monster: int in _wild:
+		if _wild[monster].short_id == short_id:
+			return true
+	return false
 
 
 ## Adds `names`, each by its monster's entity id, to `values`, in id order after how many there

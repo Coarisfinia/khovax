@@ -67,7 +67,7 @@ static func _candidates(state: GameState, step: QuestStep, here: String) -> Arra
 	for entity_id: int in ids:
 		var entity: Entity = state.entity(entity_id)
 		var hidden: bool = hiding != null and hiding.is_hidden(entity_id)
-		var target: String = WildSpot.target_in(wild.marks, entity_id)
+		var target: String = wild.target_of(entity_id)
 		var fits: bool = step.quarry.fits(wild.species_of(entity_id), target)
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)

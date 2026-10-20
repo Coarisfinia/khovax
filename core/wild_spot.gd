@@ -22,16 +22,3 @@ func _init(
 	wounded = is_wounded
 	emits = emitted
 	target = quest_target
-
-
-## What a legend marks a wild monster with beyond its species and wounding: the event it emits when
-## it faints, and the quest target it is.
-static func mark(emitted: String, quest_target: String) -> WildSpot:
-	return WildSpot.new("", false, emitted, quest_target)
-
-
-## The quest target the wild monster with entity id `entity_id` is in `marks` (WildMonsterFeature's,
-## by entity id, #625), or "" when it's none.
-static func target_in(marks: Dictionary[int, WildSpot], entity_id: int) -> String:
-	var marked: WildSpot = marks.get(entity_id)
-	return marked.target if marked != null else ""
