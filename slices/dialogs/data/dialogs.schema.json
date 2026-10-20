@@ -5,7 +5,7 @@
 	"description": "A dialog (#618): who speaks it, always a person (monsters never talk), and the lines they say, read in the file's order. A line can offer the player answers instead of reading on: each ends the dialog, or leads to the line it names. Choosing an answer raises an event naming the dialog's id and the answer's id, which quests count and branch on (#573, #624), so neither id is ever reused or changed once shipped. One file per dialog, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "speaker", "lines"],
+	"required": ["id", "speaker", "lock", "lines"],
 	"$defs": {
 		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"text": { "type": "string", "pattern": "\\S" }
@@ -16,6 +16,10 @@
 			"$ref": "#/$defs/id"
 		},
 		"speaker": { "description": "The player-facing name of who says the lines.", "$ref": "#/$defs/text" },
+		"lock": {
+			"description": "Whether the dialog holds its player until they finish it (#891): only for rare story beats and scripted events, never an average quest giver. Every dialog states it.",
+			"type": "boolean"
+		},
 		"lines": {
 			"description": "The lines, in the order they're read where no answer leads elsewhere; the dialog ends after the last.",
 			"type": "array",
@@ -47,6 +51,10 @@
 								"next": {
 									"description": "The id of the line it leads to; left out, the dialog ends with it.",
 									"$ref": "#/$defs/id"
+								},
+								"commits": {
+									"description": "Whether choosing it has effects (#891), like a step a quest counts: from it on, the dialog holds its player until they finish it. An answer with effects must be marked; left out, it has none.",
+									"type": "boolean"
 								}
 							}
 						}

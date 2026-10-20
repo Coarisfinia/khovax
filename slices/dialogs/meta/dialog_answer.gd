@@ -13,6 +13,9 @@ var id: String = ""
 var text: String = ""
 ## The id of the line it leads to, or "" when the dialog ends with it.
 var next: String = ""
+## Whether choosing it has effects (#891), which every answer with effects is marked with: from it
+## on, the dialog holds its player until they finish it.
+var commits: bool = false
 ## Why the answer couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -36,4 +39,7 @@ static func read(raw: Variant) -> DialogAnswer:
 		answer.problem = "answer %s needs a text" % answer.id
 	elif data.has("next") and not Content.is_id(answer.next):
 		answer.problem = "answer %s must lead to a line's id" % answer.id
+	elif data.has("commits") and not data.get("commits") is bool:
+		answer.problem = "answer %s's commits must be true or false" % answer.id
+	answer.commits = data.get("commits") is bool and data.get("commits")
 	return answer

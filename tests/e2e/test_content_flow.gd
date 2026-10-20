@@ -12,7 +12,9 @@ extends RefCounted
 ## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
 ## standing, their symbols and the instances they hold (#637), and broken ones are refused. Quests
 ## and abilities carry path marks (#471). Dialogs
-## (#618) load and read on line by line and answer by answer, and broken ones are refused. Every
+## (#618) load and read on line by line and answer by answer, state whether they lock and which
+## answers commit (#891), and broken ones are refused; a region placing more people with locking
+## dialogs than Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every
 ## text tag (#733) in a dialog, a quest's name or an ability's description names content that
 ## exists, shows its current name, and broken tags are refused.
 
@@ -66,6 +68,7 @@ func run(_tree: SceneTree) -> String:
 		_check_factions,
 		_check_dialogs,
 		_check_dialogs_refused,
+		_warn_locking_dialogs,
 		_check_command_codes,
 		_check_kits.bind(content),
 		_check_text_tags,
@@ -941,7 +944,8 @@ func _pair_problem(text_x: String, text_y: String) -> String:
 
 ## The dialogs load (#618): the guild scout's greeting reads on from its first line to its second,
 ## where asking about the glade leads to the line about it and the farewell ends it, as the glade
-## line's only answer does too. An answer the line doesn't offer leads nowhere.
+## line's only answer does too. An answer the line doesn't offer leads nowhere. The greeting doesn't
+## lock, and only the promise, which a quest may count, commits (#891).
 func _check_dialogs() -> String:
 	var content: DialogContent = DialogContent.load_dialogs()
 	if not content.problem.is_empty() or not content.dialogs.has("guild_scout_greeting"):
@@ -957,13 +961,42 @@ func _check_dialogs() -> String:
 	]
 	if greeting.speaker != "Guild Scout" or walked != [1, 2, -1, -1, -1, -1]:
 		return "the guild scout's greeting reads %s, by %s" % [walked, greeting.speaker]
+	var commits: Array[bool] = []
+	for answer_id: String in ["ask_about_glade", "leave_scout", "promise_to_look"]:
+		commits.append(greeting.answer_of(answer_id).commits)
+	if greeting.lock or commits != [false, false, true]:
+		return "the greeting's lock reads %s and its answers commit %s" % [greeting.lock, commits]
+	return ""
+
+
+## Prints a CI warning (#891), without failing, for every instance whose region places more people
+## with locking dialogs than Dialog.MOST_LOCKING_PER_REGION: locking dialogs are for rare story
+## beats.
+func _warn_locking_dialogs() -> String:
+	var dialogs: Dictionary[String, Dialog] = DialogContent.load_dialogs().dialogs
+	for instance_name: String in InstanceBlueprints.names():
+		var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
+		var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
+		var locking: int = 0
+		if people != null:
+			for spot: NpcSpot in people.spots.values():
+				var dialog: Dialog = dialogs.get(spot.dialog)
+				locking += 1 if dialog != null and dialog.lock else 0
+		if locking > Dialog.MOST_LOCKING_PER_REGION:
+			# A CI warning annotation on stdout, which GitHub shows without failing the run.
+			# gdstyle:ignore=quality/no-debug-print
+			print("::warning::%s places %d people with locking dialogs, more than %d (#891)" % [
+				instance_name, locking, Dialog.MOST_LOCKING_PER_REGION,
+			])
 	return ""
 
 
 ## Dialog files with a wrong id, no speaker or lines, a line without text, an answer without an id,
-## two lines or answers sharing an id, or an answer leading to no line are refused (#618).
+## two lines or answers sharing an id, or an answer leading to no line are refused (#618), and so
+## are one that doesn't state whether it locks, or an answer whose commits isn't true or false
+## (#891).
 func _check_dialogs_refused() -> String:
-	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lines\": [%s]}"
+	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lock\": false, \"lines\": [%s]}"
 	var line: String = "{\"id\": \"a\", \"text\": \"T\", \"answers\": [%s]}"
 	var answer: String = "{\"id\": \"%s\", \"text\": \"T\", \"next\": \"%s\"}"
 	var cases: Dictionary[String, String] = {
@@ -981,6 +1014,11 @@ func _check_dialogs_refused() -> String:
 			"line 0: another answer"
 		),
 		dialog % "{\"text\": \"T\", \"z\": 1}": "line 0: field z",
+		dialog.replace("\"lock\": false, ", "") % "{\"text\": \"T\"}": "it must state lock",
+		dialog.replace("false", "1") % "{\"text\": \"T\"}": "it must state lock",
+		dialog % (line % "{\"id\": \"b\", \"text\": \"T\", \"commits\": 1}"): (
+			"line 0: answer b's commits"
+		),
 	}
 	for text: String in cases:
 		var refusal: String = Dialog.parse("x", text).problem

@@ -95,7 +95,8 @@ func add(file_id: String, text: String) -> String:
 
 
 ## Why an answered step or choice of `quest` names a dialog or an answer that no file in `dialogs`
-## has, or "". The ones that exist get who speaks the dialog and what the answer says, to word them.
+## has, or one that isn't marked as committing (#891): a quest counting it gives it effects. The
+## ones that exist get who speaks the dialog and what the answer says, to word them.
 static func _answers_problem(quest: QuestDefinition, dialogs: DialogContent) -> String:
 	for index: int in quest.steps.size():
 		for trigger: QuestStep in quest.steps[index].triggers():
@@ -107,6 +108,10 @@ static func _answers_problem(quest: QuestDefinition, dialogs: DialogContent) -> 
 			if answer == null:
 				return "step %d: the dialog %s has no answer %s" % [
 					index, asked.dialog, asked.id,
+				]
+			if not answer.commits:
+				return "step %d: the answer %s of the dialog %s has effects, so it must commit" % [
+					index, asked.id, asked.dialog,
 				]
 			asked.speaker = dialog.speaker
 			asked.text = answer.text

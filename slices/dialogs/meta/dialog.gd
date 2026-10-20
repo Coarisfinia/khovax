@@ -8,10 +8,15 @@ extends RefCounted
 ## Its schema, which says the fields a dialog file, its lines and their answers may have
 ## (SchemaFields, #825).
 const SCHEMA: String = "res://slices/dialogs/data/dialogs.schema.json"
+## How many people with locking dialogs one instance's region places before the content check warns
+## (#891): locking dialogs are for rare story beats.
+const MOST_LOCKING_PER_REGION: int = 1
 
 var id: String = ""
 ## The player-facing name of who says the lines.
 var speaker: String = ""
+## Whether the dialog holds its player until they finish it (#891): rare story beats only.
+var lock: bool = false
 ## The lines, in the order they're read where no answer leads elsewhere.
 var lines: Array[DialogLine] = []
 ## Why the dialog couldn't be read, or "" when it could.
@@ -29,6 +34,9 @@ static func parse(file_id: String, text: String) -> Dialog:
 	dialog.id = Content.text_of(data.get("id"))
 	dialog.speaker = Content.text_of(data.get("speaker"))
 	dialog.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	if dialog.problem.is_empty() and not data.get("lock") is bool:
+		dialog.problem = "it must state lock, true or false"
+	dialog.lock = data.get("lock") is bool and data.get("lock")
 	if dialog.problem.is_empty():
 		dialog.problem = dialog._check(file_id, data.get("lines"))
 	return dialog

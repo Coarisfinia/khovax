@@ -1334,8 +1334,9 @@ func _check_broken_data() -> String:
 	return _check_dialog_ids()
 
 
-## A quest naming a dialog or an answer that no dialog file has is refused (#636), and one naming
-## the scout's promise reads, worded as the scout's dialog has it.
+## A quest naming a dialog or an answer that no dialog file has is refused (#636), and so is one
+## counting an answer that isn't marked as committing (#891); one naming the scout's promise, which
+## commits, reads, worded as the scout's dialog has it.
 func _check_dialog_ids() -> String:
 	var unknown: Dictionary[String, String] = {
 		"no_dialog": PROMISE % ["no_such_dialog", "promise_to_look"],
@@ -1345,6 +1346,10 @@ func _check_dialog_ids() -> String:
 		var refused: QuestContent = _load_written({ "promise": unknown[case] })
 		if not refused.problem.contains("step 0: the dialog"):
 			return "a quest naming %s wasn't refused: %s" % [case, refused.problem]
+	var uncommitted: QuestContent = _load_written({ "promise": PROMISE % [SCOUT, "leave_scout"] })
+	var refusal: String = "leave_scout of the dialog %s has effects, so it must commit" % SCOUT
+	if not uncommitted.problem.ends_with(refusal):
+		return "a quest counting an uncommitted answer wasn't refused: " + uncommitted.problem
 	var content: QuestContent = _load_written({ "promise": PROMISE % [SCOUT, "promise_to_look"] })
 	var line: String = ""
 	if content.problem.is_empty():
