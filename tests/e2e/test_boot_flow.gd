@@ -4,13 +4,16 @@ extends RefCounted
 ## rising from silence, and, in the glade, the instances next door drawn beyond its exits under the
 ## cloud. The ground
 ## explored in an instance stays under light fog, also when it lies next door. A tile a rule changes
-## in place eases into its new look, also next door. The Survey has its own flow
+## in place eases into its new look, also next door. Every model a view uses loads, and one it
+## animates has a rig and every clip the view plays (#992). The Survey has its own flow
 ## (test_survey_flow.gd).
+
+## Where the views live: every slice's look/ folder.
+const SLICES: String = "res://slices/"
 
 
 func run(tree: SceneTree) -> String:
-	var path: String = Boot.GAME
-	var scene: PackedScene = load(path) as PackedScene
+	var scene: PackedScene = load(Boot.GAME) as PackedScene
 	if scene == null:
 		return "main scene failed to load"
 	var main: Node = scene.instantiate()
@@ -27,6 +30,7 @@ func run(tree: SceneTree) -> String:
 		_check_grid_colors,
 		_check_player_placement,
 		_check_player_model,
+		_check_view_models,
 		_check_player_in_view,
 		_check_state_drives_view,
 		_check_wild_monster,
@@ -284,6 +288,58 @@ func _check_player_model(main: Node) -> String:
 			return "the model's %s is missing or shown" % part
 	if player.current_clip() != PlayerView.IDLE:
 		return "the standing player plays %s, not %s" % [player.current_clip(), PlayerView.IDLE]
+	return ""
+
+
+## Every model a view uses (#992): the one it preloads (its MODEL), or the player's, which the main
+## scene places. A view that plays clips (its CLIPS) needs a model with a skeleton that has bones,
+## every skinned mesh bound to it, and each of those clips: a model swap that drops a clip or
+## breaks the rig fails here instead of showing a T-pose in the game. A prop that plays none (the
+## chest) only has to load.
+func _check_view_models(main: Node) -> String:
+	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
+	for slice: String in DirAccess.get_directories_at(SLICES):
+		var folder: String = SLICES + slice + "/look/"
+		if not DirAccess.dir_exists_absolute(folder):
+			continue
+		for file: String in DirAccess.get_files_at(folder):
+			if not file.ends_with(".gd"):
+				continue
+			var view: Script = load(folder + file) as Script
+			var constants: Dictionary = view.get_script_constant_map()
+			var clips: Array = constants.get("CLIPS", [])
+			var result: String = ""
+			if view == PlayerView:
+				result = _check_rig(player.model, clips)
+			elif constants.get("MODEL") is PackedScene:
+				var scene: PackedScene = constants["MODEL"]
+				var shown: Node = scene.instantiate()
+				result = _check_rig(shown, clips) if not clips.is_empty() else ""
+				shown.free()
+			elif not clips.is_empty():
+				result = "it plays clips but names no model"
+			if not result.is_empty():
+				return "%s's model: %s" % [file, result]
+	return ""
+
+
+## Whether `model` has skinned meshes, each bound to a skeleton with bones, and each of `clips`.
+func _check_rig(model: Node, clips: Array) -> String:
+	var skinned: int = 0
+	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mesh.skin == null:
+			continue
+		skinned += 1
+		var skeleton: Skeleton3D = mesh.get_node_or_null(mesh.skeleton) as Skeleton3D
+		if skeleton == null or skeleton.get_bone_count() == 0:
+			return "the skinned mesh %s isn't bound to a skeleton with bones" % mesh.name
+	if skinned == 0:
+		return "no skinned mesh on a skeleton"
+	# Found the way the views find it.
+	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
+	for clip: StringName in clips:
+		if animations == null or not animations.has_animation(clip):
+			return "no clip %s" % clip
 	return ""
 
 

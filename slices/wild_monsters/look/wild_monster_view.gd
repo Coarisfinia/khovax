@@ -15,6 +15,8 @@ const FADE_SECONDS: float = 0.4
 ## The placeholder model every wild monster wears until species get their own looks.
 const MODEL: PackedScene = preload("res://assets/kaykit-skeletons/Skeleton_Minion.glb")
 const IDLE: StringName = &"Idle"
+## Every clip the view plays, which the boot flow checks its model has (#992).
+const CLIPS: Array[StringName] = [IDLE]
 ## How high and how long a wild monster hops when it jumps out of hiding.
 const HOP_HEIGHT: float = 0.6
 const HOP_SECONDS: float = 0.35
