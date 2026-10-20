@@ -40,9 +40,10 @@ def part(kind, name, location, scale, rotation=(0.0, 0.0, 0.0), mat=None, bone=N
     return obj
 
 
-def crystal(name, base, direction, height, mat, bone=None, width=0.22, sides=6):
+def crystal(name, base, direction, height, mat, bone=None, width=0.22, sides=6, curl=0.0):
     """A faceted crystal: a prism that narrows to a point, growing from `base` toward
-    `direction`, flat shaded so its facets catch the light."""
+    `direction`, flat shaded so its facets catch the light. `curl` bends it toward its underside
+    by that many radians along its length (a claw)."""
     shoulder = 0.65
     verts = []
     for radius, z in ((width, 0.0), (width * 1.15, shoulder)):
@@ -59,6 +60,13 @@ def crystal(name, base, direction, height, mat, bone=None, width=0.22, sides=6):
     mesh.from_pydata(verts, [], faces)
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
+    if curl:
+        _bake(obj)
+        bend = obj.modifiers.new("Curl", "SIMPLE_DEFORM")
+        bend.deform_method = "BEND"
+        bend.deform_axis = "X"
+        bend.angle = -curl
+        bpy.ops.object.modifier_apply(modifier=bend.name)
     obj.matrix_world = Matrix.Translation(base) @ pointing(direction).to_matrix().to_4x4()
     _bake(obj)
     obj.data.materials.append(mat)
@@ -97,15 +105,24 @@ def _bake(obj):
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
 
-def claws(name, toe_line, forward, count, spread, size, mat, bone=None):
-    """`count` small claws along a paw's front, `spread` wide, centred on `toe_line`, each a
-    short crystal pointing `forward` and down so it reads as a claw, not a spike."""
+def claws(name, toe_line, forward, count, spread, size, mat, bone=None, fan=0.42, curl=0.5):
+    """`count` small claws fanned out from a paw's front, as toes are: each on its own toe along
+    an arc `spread` wide centred on `toe_line`, pointing along its toe, the outer ones turned out
+    by up to `fan` radians and the middle ones a little longer, each curving down to its tip by
+    `curl`. Ordered from the inside out, so a left paw's claws mirror a right paw's."""
     forward = Vector(forward).normalized()
-    across = forward.cross(Vector((0.0, 0.0, 1.0))).normalized()
+    up = Vector((0.0, 0.0, 1.0))
+    across = forward.cross(up).normalized()
+    if across.x * toe_line[0] < 0.0:
+        across = -across
+    # Turning `forward` by a positive angle about Z leans it toward up x forward.
+    lean = 1.0 if across.dot(up.cross(forward)) > 0.0 else -1.0
     made = []
     for index in range(count):
         share = index / (count - 1) - 0.5 if count > 1 else 0.0
-        base = Vector(toe_line) + across * share * spread
-        made.append(crystal("%s.%d" % (name, index), base, forward - Vector((0.0, 0.0, 0.55)), size, mat,
-                            bone, width=0.16, sides=5))
+        base = Vector(toe_line) + across * share * spread - forward * abs(share) * spread * 0.35
+        toe = Matrix.Rotation(lean * share * 2.0 * fan, 3, "Z") @ forward
+        length = size * (1.1 - 0.5 * abs(share))
+        made.append(crystal("%s.%d" % (name, index), base, toe - up * 0.45, length, mat, bone,
+                            width=0.16, sides=5, curl=curl))
     return made

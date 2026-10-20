@@ -31,7 +31,8 @@ a second model could use goes into the library or a generic tool, never into one
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`),
     converted and reduced to a triangle budget.
-  - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s, curling fur `tuft`s.
+  - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s (with an optional
+    `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s and `rune`s (`GLYPHS`).
   - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid).
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
@@ -41,7 +42,10 @@ a second model could use goes into the library or a generic tool, never into one
     (`idle`, `attack`, `hit`, `faint`) and `animate` (keys and stashes every clip, and with
     `ground_meshes` lifts the root wherever a pose sinks into the ground).
   - `ground`: ground contact (`lowest`, `settle`, `report`).
-  - `parts.claws`: small claws along a paw's front, their count and size as parameters.
+  - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
+    mirrored across X; a model script runs it on its parts before they're joined.
+  - `parts.claws`: claws fanned out along a paw's front like toes, the middle ones longer, curving
+    down; count, spread, size, fan and curl as parameters.
 - **The ground check:** `tools/models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
@@ -52,6 +56,11 @@ a second model could use goes into the library or a generic tool, never into one
   body, its own parts and its palette, then `quadruped.armature`, `weights.bind`,
   `clips.animate` and `scene.export_glb`. A body plan the library lacks (a bird, a serpent)
   becomes a new library module first, then the model.
+
+- **Running the tools** (owner's rule, #995): long-running work (Blender builds, renders, Godot
+  render scripts, GIF assembly) runs in the background (`run_in_background`) and is monitored,
+  never in the agent's foreground: keep working and answering messages, check the output files,
+  and react when it finishes. Run renders one at a time on a slow machine, not in parallel.
 
 ## 1. Build (Blender script)
 - **Where:** `tools/models/<name>.py` builds the model, and `assets/<name>/<name>.glb` is its output,

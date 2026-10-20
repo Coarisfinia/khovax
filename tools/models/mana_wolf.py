@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import body, clips, eyes, parts, quadruped, scene, surface, weights  # noqa: E402
+from lib import body, clips, eyes, parts, quadruped, scene, surface, symmetry, weights  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -137,7 +137,7 @@ def paws(mats):
     for sign, side in ((1, "L"), (-1, "R")):
         for bone, toe_y in (("front_paw", -0.625), ("hind_paw", 0.375)):
             made += parts.claws("Claw.%s.%s" % (bone, side), (0.23 * sign, toe_y, 0.035), (0.0, -1.0, 0.0), 4,
-                                0.1, 0.05, mats["glow"], "%s.%s" % (bone, side))
+                                0.11, 0.05, mats["glow"], "%s.%s" % (bone, side))
     return made
 
 
@@ -183,7 +183,8 @@ def magic(skin, mats):
                                   0.26 - 0.08 * abs(sign), glow, "tail_04"))
     for sign in (1, -1):
         side = "L" if sign == 1 else "R"
-        right = (0.0, 1.0 * sign, 0.0)
+        # The same axes on both sides: the right flank shows the left one's runes mirrored.
+        right = (0.0, 1.0, 0.0)
         for glyph, center, size in (("eye", (0.27, -0.33, 0.95), 0.2), ("chevrons", (0.26, 0.06, 0.99), 0.18),
                                     ("fork", (0.29, 0.52, 0.86), 0.2)):
             made += surface.rune(skin, "Rune.%s.%s" % (glyph, side), glyph, mirror(center, sign), right,
@@ -210,6 +211,7 @@ def build(out):
     skin = wolf_body()
     skin.data.materials.append(mats["fur"])
     pieces = head_parts(skin, mats) + fur(mats) + paws(mats) + magic(skin, mats)
+    symmetry.check(pieces)
     rig = quadruped.armature("ManaWolfRig", WOLF)
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R"))
