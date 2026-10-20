@@ -41,7 +41,7 @@ static func drop_beach_toad(state: GameState) -> void:
 
 
 ## The monsters of `species` a player carries, in order, each with the stand-in short id of its
-## place from 1 (ShortId.stand_in), as an old replay's are.
+## place from 1 (ShortId.stand_in).
 static func party(species: Array[String]) -> CarriedMonsters:
 	var carried: CarriedMonsters = CarriedMonsters.new()
 	for place: int in species.size():
