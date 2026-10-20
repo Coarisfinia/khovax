@@ -212,13 +212,15 @@ func _check_old_faction_ids() -> String:
 	var new_id: String = "amvrel_velmarai"
 	var profile: Profile = Profile.new()
 	var _raised: String = profile.standings.change(new_id, 2)
-	var new_code: int = Territory.code("forest", new_id)
-	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, new_code)
+	# The forest's hand-over by its id then: format 16 recodes it to its Land-speech id (#975).
+	var new_code: int = Territory.code(FlowSteps.FOREST, new_id)
+	var then_code: int = Territory.code("forest", new_id)
+	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, then_code)
 	var text: String = _text(profile).replace(_format(ProfileSave.FORMAT), _format(14))
 	text = text.replace(
 		new_id,
 		old_id,
-	).replace(str(new_code), str(Territory.code("forest", old_id)))
+	).replace(str(then_code), str(Territory.code("forest", old_id)))
 	var migrated: Profile = _parse(text)
 	var expected: Dictionary[String, int] = { new_id: 2 }
 	if (not migrated.problem.is_empty()
@@ -229,6 +231,36 @@ func _check_old_faction_ids() -> String:
 			migrated.standings.by_faction,
 			migrated.problem,
 		]
+	return _check_old_instance_ids()
+
+
+## A save from before the instances' Land-speech ids (format 15, #975) names its quests and the
+## territory it hands over in its outbox by the old ids, which load renamed.
+func _check_old_instance_ids() -> String:
+	var profile: Profile = Profile.new()
+	var faction: String = "amvrel_velmarai"
+	var _posted: OutboxEntry = profile.outbox.post(
+		OutboxEntry.TERRITORY,
+		Territory.code(FlowSteps.FOREST, faction),
+	)
+	var quests: QuestTracker = QuestTracker.new()
+	quests.progress["guild_charts_morwe_wudhen"] = QuestProgress.new(1, 0)
+	quests.finished.append("lumwen_hoal_fork")
+	var text: String = _text(profile, quests).replace(_format(ProfileSave.FORMAT), _format(15))
+	text = text.replace("guild_charts_morwe_wudhen", "guild_charts_the_forest")
+	text = text.replace("lumwen_hoal_fork", "glade_fork")
+	text = text.replace(
+		str(Territory.code(FlowSteps.FOREST, faction)),
+		str(Territory.code("forest", faction)),
+	)
+	var migrated: Profile = _parse(text)
+	var entries: Array[OutboxEntry] = migrated.outbox.entries
+	var handed: int = entries[0].data if not entries.is_empty() else 0
+	if (not migrated.problem.is_empty()
+			or handed != Territory.code(FlowSteps.FOREST, faction)
+			or not _parsed_quests.progress.has("guild_charts_morwe_wudhen")
+			or _parsed_quests.finished != ["lumwen_hoal_fork"]):
+		return "a format 15 save's old instance ids weren't renamed: " + migrated.problem
 	return ""
 
 

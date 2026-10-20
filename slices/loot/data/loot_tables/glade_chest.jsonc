@@ -1,4 +1,4 @@
-// What the glade's chests hold (#694): mostly crafting supplies, sometimes a piece of basic gear,
+// What Lumwen Hoal's chests hold (#694): mostly crafting supplies, sometimes a piece of basic gear,
 // one per slot (slices/gear/data/). Basic gear only drops: better gear is crafted from recipes
 // that are found (#294), and now and then a revive herb (#656). Always something, never nothing.
 {

@@ -1,7 +1,0 @@
-// The playground (#338): the hand-made region regions/basic.md. Only the tests play it (#712): no
-// exit leads to it, so they load it directly.
-{
-	"id": "basic",
-	"rules": "standard",
-	"wild_species": { "ombulumo": 3, "tikazzir": 1 }
-}

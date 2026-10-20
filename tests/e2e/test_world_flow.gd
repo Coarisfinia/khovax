@@ -287,7 +287,7 @@ func _check_companions() -> String:
 	# A seed whose companion's first roll keeps it beside its player: it may step on the first tick.
 	var world: World = World.new(
 		BlueprintSource.new(),
-		0,
+		4,
 		FlowSteps.FOREST,
 		2,
 	)
@@ -977,7 +977,7 @@ func _check_flags() -> String:
 ## the plain glade.
 func _check_corruption() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
-	WorldFlags.set_flag(world, FlowSteps.CORRUPTED_GLADE)
+	WorldFlags.set_flag(world, FlowSteps.CORRUPTED_GLADE_FLAG)
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(FlowSteps.GLADE)
@@ -1085,7 +1085,7 @@ func _check_start_corrupted() -> String:
 	if world.instance_of(0) != FlowSteps.FOREST:
 		return "the player didn't walk out of the glade into the forest"
 	var plain: GameState = world.instances[FlowSteps.GLADE]
-	WorldFlags.set_flag(world, FlowSteps.CORRUPTED_GLADE)
+	WorldFlags.set_flag(world, FlowSteps.CORRUPTED_GLADE_FLAG)
 	world.step(_still())
 	var glade: GameState = world.instances.get(FlowSteps.GLADE)
 	var variant: String = WorldFlags.variant_of(world, FlowSteps.GLADE)

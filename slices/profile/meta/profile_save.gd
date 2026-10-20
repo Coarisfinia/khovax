@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 15
+const FORMAT: int = 16
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -18,6 +18,17 @@ const OLD_FACTIONS: Dictionary[String, String] = { "cartographers_guild": "amvre
 ## The instances the territory quests of format 14 hand over (#638): a hand-over of one still in the
 ## outbox is coded by its faction's old id (Territory.code), so it's coded anew.
 const OLD_TERRITORIES: Array[String] = ["forest", "outpost"]
+## The instance ids before format 16, each to its Land-speech id since (#909, #975).
+const OLD_INSTANCES: Dictionary[String, String] = {
+	"glade": "lumwen_hoal",
+	"forest": "morwe_wudhen",
+	"castle": "dhorvone_stolm",
+	"outpost": "edhra_tewk",
+	"mountain_pass": "brekhal_varn",
+	"arena": "hrunde_orl",
+}
+## The factions of format 15, whose hand-overs of an old instance a save's outbox may still hold.
+const FACTIONS_AT_15: Array[String] = ["amvrel_velmarai"]
 
 
 ## The profile as save text, with its `companions`' parts beside it.
@@ -100,6 +111,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_13,
 		_migrate_to_14,
 		_migrate_to_15,
+		_migrate_to_16,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -213,6 +225,24 @@ static func _migrate_to_15(data: Dictionary) -> void:
 			var _moved: bool = by_faction.erase(old_id)
 		for instance_name: String in OLD_TERRITORIES:
 			recoded[Territory.code(instance_name, old_id)] = Territory.code(instance_name, new_id)
+	_recode_territories(data, recoded)
+
+
+## Format 15 to 16: the instances have Land-speech ids (#975), so a territory hand-over still in the
+## outbox carries the code of the old id's flag, and gets the new one's (the quest ids that named an
+## instance are QuestSave's).
+static func _migrate_to_16(data: Dictionary) -> void:
+	var renamed: Dictionary[int, int] = {}
+	for old_id: String in OLD_INSTANCES:
+		for faction_id: String in FACTIONS_AT_15:
+			var new_code: int = Territory.code(OLD_INSTANCES[old_id], faction_id)
+			renamed[Territory.code(old_id, faction_id)] = new_code
+	_recode_territories(data, renamed)
+
+
+## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
+## code it maps to.
+static func _recode_territories(data: Dictionary, recoded: Dictionary[int, int]) -> void:
 	var outbox: Variant = data.get("outbox")
 	var requests: Array = outbox if outbox is Array else []
 	for entry: Variant in requests:

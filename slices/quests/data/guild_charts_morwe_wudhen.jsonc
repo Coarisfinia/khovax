@@ -1,0 +1,15 @@
+// A territory quest (#638): the Amvrel Velmarai chart Morwe Wudhen, north of Lumwen Hoal. It
+// starts once the player first enters Morwe Wudhen, and asks them to walk its three deep places,
+// the stream, the grove and the felling, for the guild's charts; finishing it hands Morwe Wudhen to
+// the guild.
+{
+	"id": "guild_charts_morwe_wudhen",
+	"name": "Chart Morwe Wudhen for the ${FACTION:amvrel_velmarai}",
+	"starts_on": { "condition": "entered", "instance": "morwe_wudhen" },
+	"territory": { "instance": "morwe_wudhen", "faction": "amvrel_velmarai" },
+	"steps": [
+		{ "condition": "entered", "piece": "stream", "instance": "morwe_wudhen" },
+		{ "condition": "entered", "piece": "grove", "instance": "morwe_wudhen" },
+		{ "condition": "entered", "piece": "felling", "instance": "morwe_wudhen", "ends": "guild_charts_morwe_wudhen" }
+	]
+}

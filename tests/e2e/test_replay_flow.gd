@@ -877,7 +877,7 @@ func _recorded_run() -> Replay:
 func _check_basic_monsters(region: Region) -> String:
 	var spots: Array[Vector2i] = [Vector2i(-2, 0), FlowSteps.BEACH_TOAD]
 	if region.wild_monsters != spots:
-		return "regions/basic.md's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
+		return "the playground's wild monsters aren't on (-2, 0) and the beach's (-3, 2): %s" % [
 			region.wild_monsters,
 		]
 	var meaning: String = region.placed(WildSpotPlacements.KIND).get(FlowSteps.BEACH_TOAD, "")
@@ -906,7 +906,7 @@ func _check_region_file() -> String:
 		drawn.terrain[water] = Region.WATER
 		all_water = all_water and region.terrain.get(water) == Region.WATER
 	if region.sorted_tiles() != drawn.sorted_tiles() or region.starts != starts or not all_water:
-		return "regions/basic.md isn't the disc of radius 3 and the water, with its four starts"
+		return "the playground isn't the disc of radius 3 and the water, with its four starts"
 	var monsters: String = _check_basic_monsters(region)
 	if not monsters.is_empty():
 		return monsters

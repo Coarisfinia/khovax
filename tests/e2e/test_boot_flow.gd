@@ -118,7 +118,7 @@ func _check_launch_options() -> String:
 		"--seed=-3": "not an option, or not a seed",
 		"--seed=x": "not an option, or not a seed",
 		"--instance=nowhere": (
-			"no instance blueprint nowhere; there are %s, %s" % [FlowSteps.ARENA, FlowSteps.BASIC]
+			"no instance blueprint nowhere; there are %s" % ", ".join(InstanceBlueprints.names())
 		),
 		"--instance=%s=x" % FlowSteps.GLADE: "no instance blueprint %s=x" % FlowSteps.GLADE,
 		"--seed=4=2": "not an option, or not a seed",
@@ -134,7 +134,8 @@ func _check_launch_options() -> String:
 	return ""
 
 
-## Launched with `--instance=glade --seed=42`, the main scene starts a fresh world from that seed in
+## Launched with `--instance=lumwen_hoal --seed=42`, the main scene starts a fresh world from that
+## seed in
 ## the glade, the player on its start, and keeps no world on disk: the save the player's own world
 ## would go to is let go of when the options are applied.
 func _check_launched(tree: SceneTree) -> String:
@@ -231,7 +232,8 @@ func _check_grid(main: Node) -> String:
 	var grid: HexGrid = main.get_node_or_null("Instance/HexGrid") as HexGrid
 	if grid == null:
 		return "no HexGrid"
-	# The basic instance's region, regions/basic.md: a disc of 3 rings and the water by its beach.
+	# The basic instance's region, regions/senwel_sael.md: a disc of 3 rings and the water by its
+	# beach.
 	if grid.tile_count() != 42:
 		return "the grid has %d tiles, expected the basic region's 42" % grid.tile_count()
 	var mesh: CylinderMesh = grid.tile_mesh()
@@ -1083,7 +1085,9 @@ func _check_neighbour_grids(main: Node) -> String:
 	)
 	var names: PackedStringArray = PackedStringArray(view.grids.keys())
 	names.sort()
-	var both: String = ", ".join([FlowSteps.FOREST, FlowSteps.OUTPOST])
+	var expected: PackedStringArray = PackedStringArray([FlowSteps.FOREST, FlowSteps.OUTPOST])
+	expected.sort()
+	var both: String = ", ".join(expected)
 	if ", ".join(names) != both or forest == null or forest.tile_count() != region.size():
 		return "the neighbours drawn aren't the whole forest and the outpost: %s" % [names]
 	var exit: Vector3i = driver.state.region.exits[0]

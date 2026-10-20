@@ -1,5 +1,5 @@
 // Teska na Amvrel, a scout of the Amvrel Velmarai (#484, #976, #977), greets the player (#618),
-// who talks to them east of the glade's start (#557). Asking about Lumwen Hoal leads on; either
+// who talks to them east of Lumwen Hoal's start (#557). Asking about Lumwen Hoal leads on; either
 // farewell ends it.
 {
 	"id": "teska_na_amvrel_greeting",

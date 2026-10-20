@@ -5,12 +5,22 @@
 	"description": "An instance blueprint (#117, #823): what an instance is loaded from besides its region, regions/<id>.md or the region pieces in regions/<id>/. One file per blueprint, named after its id. Saved worlds and quests name an instance by its id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "rules", "wild_species"],
+	"required": ["id", "rules", "wild_species", "codex"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores, the name of its region too.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"codex": {
+			"description": "Its codex entry (#959): what the player reads on its codex page.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entry", "gloss"],
+			"properties": {
+				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
+				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the soft clearing\".", "type": "string", "minLength": 1 }
+			}
 		},
 		"rules": {
 			"description": "The id of its rule set (data/rule_sets/, #941): the rules (features) its instances have, unless add_rules or drop_rules change them. A rule is on in an instance only when its blueprint has it (#30, #823). What its region holds brings the features that run it, which are never named here: exits, triggers, region pieces to enter, wild monsters and their hiding, people, and treasure chests, which a chest_table brings too (#879). They step in the order the blueprints slice's FeatureFactories gives them, which also lists the ids there are.",
@@ -61,11 +71,24 @@
 				"properties": {
 					"flag": { "description": "The world flag that chooses it.", "type": "string", "pattern": "\\S" },
 					"region": {
-						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own.",
+						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A region of its own is named, its name its id in words (#909).",
 						"type": "string",
 						"pattern": "^([a-z][a-z0-9_]*)?$"
+					},
+					"codex": {
+						"description": "The codex entry (#959) of the region it loads, which a variant with a region of its own has.",
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["entry", "gloss"],
+						"properties": {
+							"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
+							"gloss": { "description": "What its name means, hand-written (#959).", "type": "string", "minLength": 1 }
+						}
 					}
-				}
+				},
+				"if": { "properties": { "region": { "minLength": 1 } } },
+				"then": { "required": ["codex"] },
+				"else": { "not": { "required": ["codex"] } }
 			}
 		}
 	}

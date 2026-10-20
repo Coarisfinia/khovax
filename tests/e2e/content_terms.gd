@@ -73,22 +73,10 @@ const NAME_RULES: Dictionary[String, String] = {
 ## shrinks: a thing that keeps its rule must be dropped from it.
 const NAME_EXCEPTIONS: Dictionary[String, int] = {
 	"realm heartland": 974,
-	"instance arena": 975,
-	"instance basic": 975,
-	"instance castle": 975,
-	"instance forest": 975,
-	"instance glade": 975,
-	"instance load": 975,
-	"instance mountain_pass": 975,
-	"instance outpost": 975,
-	"region glade_corrupted": 975,
 }
 ## Terms two things share today, each with the issue that gives one of them another (#909). It
 ## only shrinks: a term that no longer clashes must be dropped from it.
-const KNOWN_DUPLICATES: Dictionary[String, int] = {
-	"forest": 975, # a tile kind and an instance, which gives it up when it's renamed
-	"glade": 975, # an instance and its loot table, which keeps it when the instance is renamed
-}
+const KNOWN_DUPLICATES: Dictionary[String, int] = {}
 
 ## Each term, in lower case, with every thing using it ("<kind> <id>").
 var owners: Dictionary[String, PackedStringArray] = {}

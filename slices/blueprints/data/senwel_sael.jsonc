@@ -1,0 +1,11 @@
+// The playground (#338), Senwel Sael: the hand-made region regions/senwel_sael.md. Only the tests
+// play it (#712): no exit leads to it, so they load it directly.
+{
+	"id": "senwel_sael",
+	"codex": {
+		"entry": "A small, quiet ground by a still pool, where only the world's testers walk. Soft sounds for a calm place; Sael is still water.",
+		"gloss": "the quiet pool"
+	},
+	"rules": "standard",
+	"wild_species": { "ombulumo": 3, "tikazzir": 1 }
+}

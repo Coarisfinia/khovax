@@ -164,9 +164,9 @@ func _check_refused(world: World) -> String:
 		"not a world": "not a world save",
 		"{}": "format isn't",
 		_changed(data, "generations", [{ "name": "nowhere", "generation": 1 }]): "purged instance",
-		_with_left_at(data, FlowSteps.GLADE, 0): "instance glade's left_at",
-		_with_left_at(data, FlowSteps.FOREST, -1): "instance forest's left_at",
-		_expired(): "instance glade was left behind long enough",
+		_with_left_at(data, FlowSteps.GLADE, 0): "instance %s's left_at" % FlowSteps.GLADE,
+		_with_left_at(data, FlowSteps.FOREST, -1): "instance %s's left_at" % FlowSteps.FOREST,
+		_expired(): "instance %s was left" % FlowSteps.GLADE,
 	}
 	var source: BlueprintSource = BlueprintSource.new()
 	for case: String in cases:

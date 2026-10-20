@@ -97,7 +97,10 @@ static func step_line(step: QuestStep, count: int) -> String:
 		QuestStep.REACHED:
 			asks = "Go to the " + _words(step.place)
 		QuestStep.ENTERED:
-			asks = "Enter the " + _words(step.instance if step.enters_instance() else step.piece)
+			if step.enters_instance():
+				asks = "Enter " + _instance_name(step.instance)
+			else:
+				asks = "Enter the " + _words(step.piece)
 		QuestStep.ANSWERED:
 			asks = _answer_line(step)
 		QuestStep.OBTAINED:
@@ -116,10 +119,16 @@ static func _answer_line(step: QuestStep) -> String:
 	return "Tell %s: \"%s\"" % [step.answer.speaker, step.answer.text]
 
 
-## An id (a place, a region piece, an instance, an item or a quest target) as words: they have no
+## An id (a place, a region piece, an item or a quest target) as words: they have no
 ## player-facing names yet.
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
+
+
+## An instance's player-facing name (#909, #975): its id in words, each capitalised, a proper noun
+## needing no article ("Lumwen Hoal").
+static func _instance_name(id: String) -> String:
+	return id.replace("_", " ").capitalize()
 
 
 ## A species' player-facing name (#351), after "a" or "an" by its first letter.

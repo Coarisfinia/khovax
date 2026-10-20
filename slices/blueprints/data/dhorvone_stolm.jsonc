@@ -1,0 +1,10 @@
+// Dhorvone Stolm west of Morwe Wudhen (#689), to be corrupted into Dhyrvone Stolmm (#574).
+{
+	"id": "dhorvone_stolm",
+	"codex": {
+		"entry": "A ruined castle west of Morwe Wudhen, named in Land-speech with a harsh dh, r and v. Stolm is a stronghold. Once corruption takes it, the beast-tongue seeps into its name: Dhyrvone Stolmm.",
+		"gloss": "the fallen stronghold"
+	},
+	"rules": "standard",
+	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
+}

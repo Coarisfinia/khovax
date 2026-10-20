@@ -1,6 +1,0 @@
-// A boss-style arena (#127): one region piece, played as it is drawn.
-{
-	"id": "arena",
-	"rules": "standard",
-	"wild_species": { "ombulumo": 1 }
-}

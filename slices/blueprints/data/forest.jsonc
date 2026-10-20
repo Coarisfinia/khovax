@@ -1,6 +1,0 @@
-// North of the glade (#689), with trees and rock to harvest later (#696).
-{
-	"id": "forest",
-	"rules": "standard",
-	"wild_species": { "ombulumo": 2, "tikazzir": 1 }
-}
