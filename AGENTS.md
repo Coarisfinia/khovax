@@ -293,8 +293,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   (in its slice's `rules/`, extends `Feature`) has a stable string id, its own `ID` constant (a
   name, never a hand-kept number, so parallel pull requests never claim the same one, #784; never
   reused or renamed once shipped), its own state,
-  a `step` called in order each tick (the order is the list in `InstanceBlueprints`, reviewed like
-  code), the features it `requires` earlier in the order (and those it reads that an instance may
+  a `step` called in order each tick (the order is `FeatureFactories`' list in the blueprints slice,
+  reviewed like code; each blueprint's data file lists which features its instances have, #823), the features it `requires` earlier in the order (and those it reads that an instance may
   lack: `after` when they step earlier, `before` when they step later, #822; the replay flow
   checks that every feature it reads is declared), and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
@@ -314,7 +314,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   the origin, so a region can have any shape. How regions are read, arranged, left through exits
   and purged is in `Region`, `RegionDocument`, `RegionArranger`, `World` and `WorldTravel`.
 - **Instance blueprints** (`InstanceBlueprints`, in their own slice `slices/blueprints/meta/`,
-  outside the core and above the features they list, #396, #513, #821): a new mechanic is a new feature that blueprints list; it never grows the core. The core
+  outside the core and above the features they list, #396, #513, #821): a new mechanic is a new feature that blueprints list, built by its own slice's factory
+  (`FeatureFactories` maps its id to it, #823); it never grows the core. The core
   gets them only as an `InstanceSource` it's handed (`BlueprintSource`).
 - **Names in code** (owner's rule, #45): clear differentiators, never a bare `monster` where one of
   these is meant. A `species` is what every monster is, dominated or not; a `dominated_monster` was

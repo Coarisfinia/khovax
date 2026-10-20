@@ -587,25 +587,33 @@ func _check_wild_species(content: SpeciesData) -> String:
 	return ""
 
 
-## The glade's blueprint reads as written (#823): its loot tables and its variants in their order.
-## A blueprint file with a wrong id, an unknown field, no species, a weight below 1, a chest table
-## without a loot table, or a variant without its region is refused.
+## The glade's blueprint reads as written (#823): its features, loot tables and variants in their
+## order. A blueprint file with a wrong id, an unknown field, an unknown or repeated feature, no
+## species, a weight below 1, a chest table without a loot table, chests without a chest table, or a
+## variant without its region is refused.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
 		return "the glade's blueprint didn't load as written"
+	if glade.features[0] != MovementFeature.ID or not glade.features.has(ChestFeature.ID):
+		return "the glade's features read %s" % [glade.features]
 	var first: PackedStringArray = (
 		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
 	)
 	if first != PackedStringArray([WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
 		return "the glade's variants read %s" % [glade.variants]
-	var blueprint: String = "{\"id\": \"x\", \"wild_species\": {\"a\": 1}%s}"
+	var blueprint: String = (
+		"{\"id\": \"x\", \"features\": [\"movement\"], \"wild_species\": {\"a\": 1}%s}"
+	)
 	var cases: Dictionary[String, String] = {
 		blueprint.replace("\"x\"", "\"y\"") % "": "its id must",
 		blueprint % ", \"z\": 1": "field z",
 		blueprint.replace("\"a\": 1", "") % "": "its wild_species",
 		blueprint.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
 		blueprint % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
+		blueprint.replace("\"movement\"", "\"flying\"") % "": "its features",
+		blueprint.replace("\"movement\"", "\"fog\", \"fog\"") % "": "its features",
+		blueprint.replace("\"movement\"", "\"chests\"") % "": "a blueprint has chests",
 		blueprint % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
 		blueprint % ", \"turned\": 1": "turned must",
 	}

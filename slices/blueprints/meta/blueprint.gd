@@ -1,13 +1,17 @@
 class_name Blueprint
 extends RefCounted
 ## An instance blueprint's content data (#823), read from the blueprints slice's data/ (#72, #412):
-## whether the seed turns its region pieces, its loot tables, the species its wild monsters roll
-## from and the variants the world's flags choose. InstanceBlueprints builds instances from it.
+## the features its instances have, whether the seed turns its region pieces, its loot tables, the
+## species its wild monsters roll from and the variants the world's flags choose. InstanceBlueprints
+## builds instances from it.
 
 ## Its schema, which says the fields a blueprint file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/blueprints/data/blueprints.schema.json"
 
 var id: String = ""
+## The ids of the features its instances have (FeatureFactories), in the order written; they step
+## in FeatureFactories' order.
+var features: Array[String] = []
 ## Whether the seed turns its region pieces (#57, #127).
 var turned: bool = false
 ## Its instance loot table's id, what a blank and the loot on its ground give, or "".
@@ -41,8 +45,8 @@ static func parse(file_id: String, text: String) -> Blueprint:
 	return read
 
 
-## Why the fields in `data` are wrong, or "", and its turn, species and variants read when they
-## aren't.
+## Why the fields in `data` are wrong, or "", and its turn, features, species and variants read when
+## they aren't.
 func _check(file_id: String, data: Dictionary) -> String:
 	if id != file_id or not Content.is_id(id):
 		return "its id must match the file name and be lowercase words with underscores"
@@ -55,11 +59,28 @@ func _check(file_id: String, data: Dictionary) -> String:
 			return "its %s must be a loot table's id" % table
 	if not chest_table.is_empty() and loot_table.is_empty():
 		return "a blueprint with a chest table needs a loot table, for the loot on its ground"
+	if not _read_features(data.get("features")):
+		return "its features must be one or more features' ids, each once"
+	if features.has(ChestFeature.ID) == chest_table.is_empty():
+		return "a blueprint has chests exactly when it has a chest table"
 	if not _read_species(data.get("wild_species")):
 		return "its wild_species must give one or more species ids a whole weight of 1 or more"
 	if not _read_variants(data.get("variants", [])):
 		return "its variants must each be a flag and a region id, or \"\" for its own"
 	return ""
+
+
+## Whether `raw` lists one or more features' ids, each once; reads them into `features`.
+func _read_features(raw: Variant) -> bool:
+	if not raw is Array:
+		return false
+	var entries: Array = raw
+	for entry: Variant in entries:
+		var feature_id: String = Content.text_of(entry)
+		if not FeatureFactories.has(feature_id) or features.has(feature_id):
+			return false
+		features.append(feature_id)
+	return not features.is_empty()
 
 
 ## Whether `raw` gives one or more species ids a weight; reads them into `wild_species`.

@@ -1,5 +1,11 @@
 // A boss-style arena (#127): one region piece, played as it is drawn.
 {
 	"id": "arena",
+	"features": [
+		"movement", "knockdown", "trail", "health", "wild_monsters", "domination", "wild_attacks",
+		"spikes", "domination_loot", "enrage", "fog", "entering", "companions", "companion_swaps",
+		"revive_items", "type_effectiveness", "companion_attacks", "specials", "harvest",
+		"dialogs", "territory"
+	],
 	"wild_species": { "ombulumo": 1 }
 }

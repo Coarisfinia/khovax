@@ -110,7 +110,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 
 ## The wild monster with the lowest id next to `tile` that isn't hiding or sealing in a ring, or 0.
 ## WildMonsterFeature keeps its monsters in id order. Hiding and domination aren't required, since
-## an instance may have neither; where an instance has them, InstanceBlueprints lists them before
+## an instance may have neither; where an instance has them, FeatureFactories orders them before
 ## the companions, so they have stepped already. The special attack (#410) strikes the same one.
 static func target_next_to(state: GameState, wild: WildMonsterFeature, tile: Vector2i) -> int:
 	for monster: int in wild.monsters:
