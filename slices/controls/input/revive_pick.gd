@@ -52,11 +52,11 @@ func drop() -> void:
 	_settled()
 
 
-## The revive item the next command uses (Command.revive): the code of the monster it brings back,
-## or Command.NO_REVIVE. `fainted` are the short ids of the fainted monsters the player carries, in
-## carried order, and `holds` whether their profile holds a revive item; without one, or once
-## nothing picked has fainted anymore, nothing is used and the pick ends.
-func chosen(fainted: PackedStringArray, holds: bool) -> int:
+## The fainted monster the next revive item brings back (ProfileTie): its short id, or ""
+## for none. `fainted` are the short ids of the fainted monsters the player carries, in carried
+## order, and `holds` whether their profile holds a revive item; without one, or once nothing picked
+## has fainted anymore, nothing is used and the pick ends.
+func chosen(fainted: PackedStringArray, holds: bool) -> String:
 	var presses: int = _presses
 	var tapped: String = _tapped
 	var steps: int = _steps
@@ -67,27 +67,27 @@ func chosen(fainted: PackedStringArray, holds: bool) -> int:
 	_settled()
 	if not holds or fainted.is_empty():
 		picked = ""
-		return Command.NO_REVIVE
+		return ""
 	if fainted.has(tapped):
-		return ShortId.code(tapped)
+		return tapped
 	if picked.is_empty():
 		if presses == 0:
-			return Command.NO_REVIVE
+			return ""
 		if fainted.size() == 1:
-			return ShortId.code(fainted[0])
+			return fainted[0]
 		# Further presses before this command already move the pick on.
 		picked = fainted[0]
 		steps = presses - 1
 	var place: int = fainted.find(picked)
 	if cancelled or place < 0:
 		picked = ""
-		return Command.NO_REVIVE
+		return ""
 	picked = fainted[posmod(place + steps, fainted.size())]
 	if not confirmed:
-		return Command.NO_REVIVE
-	var code: int = ShortId.code(picked)
+		return ""
+	var chosen_id: String = picked
 	picked = ""
-	return code
+	return chosen_id
 
 
 ## Forgets the moves, the confirmation and the cancel heard since the last command.

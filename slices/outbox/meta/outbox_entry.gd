@@ -2,13 +2,16 @@ class_name OutboxEntry
 extends RefCounted
 ## One request in a profile's outbox (Outbox, #771): something the profile asks the world to do,
 ## with its kind, its data and its id. It rides in one of the player's commands: its id in
-## Command.request, and its data in its kind's own field of the command.
+## Command.request, its kind and data in Command.request_kind and Command.request_data, the same
+## fields for every kind (#818).
 
-## Hand a territory over to a faction (#638): its data is the territory's code (Territory.code),
-## and it rides in Command.hand_over.
+## Hand a territory over to a faction (#638): its data is the territory's code (Territory.code).
 const TERRITORY: int = 1
+## Use a revive item on a fainted carried monster (#656, #818): its data is the monster's short
+## id's code (ShortId.code).
+const REVIVE: int = 2
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY]
+const KINDS: Array[int] = [TERRITORY, REVIVE]
 ## The stream the profile's outbox draws ids from (Outbox).
 const ID_STREAM: int = 771
 
@@ -27,13 +30,11 @@ func _init(entry_id: String = "", entry_kind: int = TERRITORY, entry_data: int =
 	data = entry_data
 
 
-## Puts this request into `command`: its id, as its code (ShortId.code), and its data into the field
-## its kind rides in.
+## Puts this request into `command`: its id, as its code (ShortId.code), its kind and its data.
 func fill(command: Command) -> void:
 	command.request = ShortId.code(id)
-	match kind:
-		TERRITORY:
-			command.hand_over = data
+	command.request_kind = kind
+	command.request_data = data
 
 
 ## The request as save data.

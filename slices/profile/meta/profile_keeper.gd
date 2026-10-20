@@ -66,16 +66,6 @@ func equip(slot: String, gear_id: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
-## Spends one of the item `item` the player holds (#656), saved like a gain; returns why it can't,
-## or "".
-func spend(item: String, now_msec: int) -> String:
-	var problem: String = profile.spend(item)
-	if not problem.is_empty():
-		return problem
-	_pending = true
-	return save_if_due(now_msec)
-
-
 ## Names the player's character `typed` (#399), its spaces at either end dropped, and saves it like
 ## any choice; returns why it can't, in words, or "".
 func choose_name(typed: String, now_msec: int) -> String:
@@ -83,6 +73,18 @@ func choose_name(typed: String, now_msec: int) -> String:
 	if not problem.is_empty():
 		return problem
 	profile.character_name = typed.strip_edges()
+	_pending = true
+	return save_if_due(now_msec)
+
+
+## Spends one of the item `item` the player holds and posts a request of `kind` (OutboxEntry.KINDS)
+## with its `data` to the outbox (#771, #818), in one change, so a save never has one without the
+## other, and saves it like any change; returns why it can't, or "".
+func spend_on(item: String, kind: int, data: int, now_msec: int) -> String:
+	var problem: String = profile.spend(item)
+	if not problem.is_empty():
+		return problem
+	var _posted: OutboxEntry = profile.outbox.post(kind, data)
 	_pending = true
 	return save_if_due(now_msec)
 
