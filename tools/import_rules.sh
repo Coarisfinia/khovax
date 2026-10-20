@@ -68,7 +68,7 @@ SLICE_ORDER=(
   settings texts factions
   survey menu
   domination enrage domination_loot companions gear chests damage_numbers harvest dialogs
-  profile quests revive_items blueprints might
+  profile quests revive_items blueprints might realms
 )
 # The back-edges still waiting ("slice>later slice" = the issue that drops it).
 declare -A SLICE_EXEMPT=(
