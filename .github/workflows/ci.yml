@@ -525,9 +525,24 @@ jobs:
     # with the touch stick from a fixed seed and must end in the state the headless run of the same
     # commit ended in (rules-compare's outcome report, #876).
     needs: [export, rules-compare]
+    # rules-compare isn't a required check (owner, #894), and a job skipped because a job it needs
+    # failed counts as passed for a required check. So this required one runs anyway, unless the
+    # whole run was cancelled, and fails first when a job it needs didn't succeed: a failing
+    # rules-compare then keeps the merge queue from merging.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
+      - name: "🔗 Check the jobs it needs succeeded"
+        env:
+          EXPORT: ${{ needs.export.result }}
+          RULES_COMPARE: ${{ needs.rules-compare.result }}
+        run: |
+          if [ "$EXPORT" != success ] || [ "$RULES_COMPARE" != success ]; then
+            echo "::error::export ${EXPORT}, rules-compare ${RULES_COMPARE}: both must succeed"
+            exit 1
+          fi
+
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 

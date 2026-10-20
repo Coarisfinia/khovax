@@ -557,8 +557,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
   changing the ruleset in the same PR (owner's `gh`). `rules-compare` runs on every pull request
   and in the merge queue but isn't a required check (owner, #894: an agent working around it is
-  an accepted risk), so the ruleset doesn't stop a merge when it fails: never queue a pull request
-  whose `rules-compare` fails. **`rules-compare` can't compare** a removed
+  an accepted risk). A failing `rules-compare` fails the required `apk-e2e` (its first step), so
+  the queue won't merge it. **`rules-compare` can't compare** a removed
   golden replay, one whose inputs changed, a changed APK flow or a changed outcome report
   (`tests/replays/outcomes.gd`), and fails on them unless the pull request carries the label
   `outcomes-change` (#889). **The agent applies that label itself** (owner's baseline rule, #899,
