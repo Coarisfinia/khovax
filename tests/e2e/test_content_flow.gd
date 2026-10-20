@@ -740,7 +740,8 @@ func _small_rule_set() -> Dictionary[String, RuleSet]:
 ## Every realm file (#865) reads, found by listing its folder, and draws instances that exist,
 ## each once, whose regions read, so every exit leads to the instance drawn beside it on that side.
 ## The realms mark one start, the glade (#712). A realm file drawing an instance twice, with a
-## symbol its legend doesn't explain, or marking two starts or one it doesn't draw is refused.
+## symbol its legend doesn't explain, marking two starts or one it doesn't draw, or without its
+## codex entry and gloss (#959) is refused.
 func _check_realms() -> String:
 	var starts: Array[String] = []
 	for realm: Realm in Realms.all():
@@ -769,6 +770,9 @@ func _check_realms() -> String:
 		),
 		text % ["🟦🌲🟦", forest] + glade_start: (
 			"the players start in %s, which isn't drawn" % FlowSteps.GLADE
+		),
+		text % ["🟦🌲🟦", forest] + "\n## Codex\n\n- Gloss: g\n": (
+			"its codex entry and gloss are missing under %s (#959)" % RealmDocument.CODEX
 		),
 	}
 	for case: String in cases:

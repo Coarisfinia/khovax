@@ -12,6 +12,10 @@ var id: String = ""
 var instances: Dictionary[Vector2i, String] = {}
 ## The instance the players start in, if this realm is where the world starts, or "".
 var start: String = ""
+## Its codex entry (#959): a short text about it and where its name comes from.
+var codex_entry: String = ""
+## What its name means, hand-written (#959), e.g. "high land, heart land".
+var codex_gloss: String = ""
 ## Why the realm's file can't be read, or "".
 var problem: String = ""
 
