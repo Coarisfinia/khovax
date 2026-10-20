@@ -32,3 +32,8 @@ static func held_driver(main: Node) -> GameDriver:
 ## The main scene's profile holder.
 static func holder(main: Node) -> ProfileHolder:
 	return main.get_node("ProfileHolder") as ProfileHolder
+
+
+## The main scene's quest keeper (#855), which keeps the player's quests in the profile's file.
+static func quests(main: Node) -> QuestKeeper:
+	return main.get_node("QuestKeeper") as QuestKeeper

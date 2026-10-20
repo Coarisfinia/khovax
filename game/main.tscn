@@ -49,6 +49,7 @@
 [ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
 [ext_resource type="Script" path="res://slices/revive_items/ui/revive_button.gd" id="44_revive_button"]
 [ext_resource type="Script" path="res://slices/fog/meta/explored_keeper.gd" id="45_explored"]
+[ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -74,8 +75,13 @@ wild_view = NodePath("../Instance/WildMonsterView")
 script = ExtResource("18_bus")
 driver = NodePath("../Driver")
 
-[node name="ProfileHolder" type="Node" parent="." unique_id=2066135784]
+[node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=2066135784]
 script = ExtResource("11_profile")
+companions = [NodePath("../QuestKeeper")]
+
+[node name="QuestKeeper" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=2066135787]
+script = ExtResource("48_quest_keeper")
+holder = NodePath("../ProfileHolder")
 
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")
@@ -83,11 +89,11 @@ bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 holder = NodePath("../ProfileHolder")
 
-[node name="QuestTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135786]
+[node name="QuestTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "quests") unique_id=2066135786]
 script = ExtResource("47_quest_tie")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
-holder = NodePath("../ProfileHolder")
+quests = NodePath("../QuestKeeper")
 
 [node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=1191191190]
 script = ExtResource("22_keeper")
@@ -167,10 +173,10 @@ driver = NodePath("../../Driver")
 script = ExtResource("24_marks")
 driver = NodePath("../../Driver")
 
-[node name="QuestMarkerView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "holder", "input") unique_id=3000300030]
+[node name="QuestMarkerView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "keeper", "input") unique_id=3000300030]
 script = ExtResource("25_quests")
 driver = NodePath("../../Driver")
-holder = NodePath("../../ProfileHolder")
+keeper = NodePath("../../QuestKeeper")
 input = NodePath("../../LocalInput")
 
 [node name="Player" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "model") unique_id=1715359208]
@@ -224,21 +230,21 @@ script = ExtResource("10_music")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
 
-[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "holder", "input", "neighbours") unique_id=3010301030]
+[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "quest_keeper", "input", "neighbours") unique_id=3010301030]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("26_survey")
 driver = NodePath("../../Driver")
 keeper = NodePath("../../ExploredKeeper")
-holder = NodePath("../../ProfileHolder")
+quest_keeper = NodePath("../../QuestKeeper")
 input = NodePath("../../LocalInput")
 neighbours = NodePath("../../Instance/NeighbourView")
 
-[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("holder", "survey", "roster") unique_id=3403403400]
+[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("keeper", "survey", "roster") unique_id=3403403400]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("28_quest_list")
-holder = NodePath("../../ProfileHolder")
+keeper = NodePath("../../QuestKeeper")
 survey = NodePath("../../SurveyChoice")
 roster = NodePath("../RosterHud")
 
@@ -299,7 +305,7 @@ survey = NodePath("../../SurveyChoice")
 input = NodePath("../../LocalInput")
 bus = NodePath("../../EventBus")
 
-[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "holder") unique_id=3550355035]
+[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_keeper") unique_id=3550355035]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -314,4 +320,4 @@ graphics = NodePath("../../Graphics")
 survey = NodePath("../../SurveyChoice")
 stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
-holder = NodePath("../../ProfileHolder")
+quest_keeper = NodePath("../../QuestKeeper")

@@ -47,8 +47,8 @@ const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 @export var driver: Session
 ## Where the explored ground is kept with the world.
 @export var keeper: ExploredKeeper
-## Whose quests are marked: this machine's player's profile.
-@export var holder: ProfileHolder
+## Whose quests are marked: this machine's player's.
+@export var quest_keeper: QuestKeeper
 ## Which player is in the middle, and whose quests' targets are measured from.
 @export var input: LocalInput
 ## The instances next door, read as it draws them: never loaded for the Survey either.
@@ -159,9 +159,9 @@ func show_state() -> void:
 		var player: Entity = state.player(slot)
 		if player != null:
 			circles[slot] = _walked_ground(state, player)
-	if holder != null and holder.keeper != null:
+	if quest_keeper != null and quest_keeper.quests() != null:
 		var here: String = driver.local_instance_name()
-		quest_targets = QuestTargets.of(state, holder.keeper.profile.quests, _slot(), here)
+		quest_targets = QuestTargets.of(state, quest_keeper.quests(), _slot(), here)
 
 
 ## The chevrons drawn for `exits`: one per exit, in its middle (#790).

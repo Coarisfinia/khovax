@@ -4,13 +4,12 @@ extends RefCounted
 ## The player's profile (#37): what lasts between sessions, outside the simulation. It changes when
 ## the player obtains something in the world (a Gain, saved at once by ProfileKeeper so a crash
 ## loses nothing), never because of a tick itself. Integers and ids only, like everything that
-## feeds a simulation. Saved as versioned JSON by ProfileSave (#276). The player's quests (#184,
-## QuestTracker) are kept here too, advanced by the facts their tie counts (QuestTie, #817), and so
-## are the
-## player's personal color (#233), which only views read, and their standings with the factions
-## (#483), which finishing a quest can move (#532), their gear (#690), and their leaning toward
-## the story's paths (#658), which finishing a path-marked quest moves, and its outbox (#771): what
-## it asks the world to do, like the hand-over of a territory quest it finished (#638).
+## feeds a simulation. Saved as versioned JSON by ProfileSave (#276), with what later slices keep
+## in its file beside it, like the player's quests (ProfileCompanion, #855). The player's personal
+## color (#233), which only views read, is kept here too, and so are their standings with the
+## factions (#483), which finishing a quest can move (#532), their gear (#690), and their leaning
+## toward the story's paths (#658), which finishing a path-marked quest moves, and its outbox
+## (#771): what it asks the world to do, like the hand-over of a territory quest it finished (#638).
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
@@ -37,8 +36,6 @@ var carried: Array[int] = []
 var next_monster_id: int = 1
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
-## The player's quests: their progress, the ones finished and the book gains advance them against.
-var quests: QuestTracker = QuestTracker.new()
 ## The player's standing with each faction (#483).
 var standings: Standings = Standings.new()
 ## The gear the player owns and what's in their gear slots (#690).
@@ -60,7 +57,7 @@ var problem: String = ""
 ## Takes over what the player just obtained: its dominations and its loot. Returns why the gain
 ## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
 ## gain couldn't be loaded again. ProfileKeeper saves it. What it means to the player's quests is
-## counted apart (`count_quest_fact`, QuestTie).
+## counted apart (QuestKeeper).
 func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
@@ -73,13 +70,6 @@ func apply(result: Gain) -> String:
 	for gear_id: String in result.gear:
 		gear.owned[gear_id] = gear.owned.get(gear_id, 0) + result.gear[gear_id]
 	return ""
-
-
-## Counts `fact` on the player's quests (QuestTracker.advance, #817) and gives what finishing each
-## quest it finished gives (QuestRewards), in the same change.
-func count_quest_fact(fact: QuestFact) -> void:
-	for quest: QuestDefinition in quests.advance(fact):
-		QuestRewards.give(quest, self)
 
 
 ## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why

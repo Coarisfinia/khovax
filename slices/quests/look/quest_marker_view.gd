@@ -4,7 +4,7 @@ extends Node3D
 ## over what this machine's player's quest asks for next (QuestTargets). It shows through the fog,
 ## so it leads the player into it. The arrow's shape, not its color, says what it is (#68). It
 ## glides after a moving target, eases in and out, and bobs gently; it only reads the state and
-## the profile. The Survey marks the same targets (#301).
+## the quests. The Survey marks the same targets (#301).
 
 ## How high over the tile's top the arrow floats, and how far and how slowly it bobs.
 const HEIGHT: float = 2.6
@@ -22,8 +22,8 @@ const LENGTH: float = 0.66
 const INK_WIDTH: float = 0.08
 
 @export var driver: Session
-## Whose quests are marked: this machine's player's profile.
-@export var holder: ProfileHolder
+## Whose quests are marked: this machine's player's.
+@export var keeper: QuestKeeper
 ## Which player the nearest target is measured from.
 @export var input: LocalInput
 
@@ -54,9 +54,10 @@ func _process(delta: float) -> void:
 ## Matches the arrows to the open quests' targets. Called every frame; tests call it directly.
 func show_quests() -> void:
 	var targets: Dictionary[String, Vector2i] = {}
-	if driver != null and driver.state != null and holder != null and holder.keeper != null:
+	var quests: QuestTracker = keeper.quests() if keeper != null else null
+	if driver != null and driver.state != null and quests != null:
 		var here: String = driver.local_instance_name()
-		targets = QuestTargets.of(driver.state, holder.keeper.profile.quests, input.slot, here)
+		targets = QuestTargets.of(driver.state, quests, input.slot, here)
 	for id: String in markers.keys():
 		if not targets.has(id):
 			_shrink_away(markers[id])

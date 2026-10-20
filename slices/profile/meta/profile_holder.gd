@@ -2,15 +2,18 @@ class_name ProfileHolder
 extends Node
 ## Holds this machine's player's profile through a session (#37, #132): loaded at boot, what it
 ## gains taken over at once and saved debounced (ProfileKeeper, #73), and whatever is pending saved
-## when the game quits or goes to the background. Its quests advance (#184) through the facts it's
-## handed (QuestTie, #817), and its outbox (#771) and revive items (#656) change through what it's
-## handed (ProfileTie, which ties it to the session, #831). The player's personal color (#391) is
-## kept in it too, saved the same way. A save
-## that can't be read is reported and left alone, never overwritten.
+## when the game quits or goes to the background. Its outbox (#771) and revive items (#656) change
+## through what it's handed (ProfileTie, which ties it to the session, #831). The player's personal
+## color (#391) is kept in it too, saved the same way. What later slices keep in the profile's file,
+## like the player's quests, its `companions` read and write with it (#855). A save that can't be
+## read is reported and left alone, never overwritten.
 
-## Finishing a quest or changing gear posted a request to the profile's outbox (#771, #818), for
-## the session to send.
+## A change (`change`), like finishing a quest, or changing gear posted a request to the profile's
+## outbox (#771, #818), for the session to send.
 signal outbox_posted
+
+## What later slices keep in the profile's file, beside it.
+@export var companions: Array[ProfileCompanion] = []
 
 ## Where the profile is saved; tests point it elsewhere before the holder enters the tree.
 var save_path: String = ProfileStore.PATH
@@ -26,16 +29,12 @@ func _enter_tree() -> void:
 	if keeper != null:
 		return
 	WebStorage.keep()
-	var profile: Profile = ProfileStore.load_from(save_path)
+	var profile: Profile = ProfileStore.load_from(save_path, companions)
 	if ProfileStore.loaded_generation > 0:
 		push_warning("the newest profile saves were damaged; loaded the one %d back" % [
 			ProfileStore.loaded_generation,
 		])
 	if profile.problem.is_empty():
-		var quests: QuestData = QuestContent.load_quests()
-		if not quests.problem.is_empty():
-			push_warning("the quests can't be read, so none advance: " + quests.problem)
-		profile.quests.book = quest_book_of(quests)
 		var gear: GearContent = GearContent.load_gear()
 		if not gear.problem.is_empty():
 			push_warning("the gear can't be read, so gear found counts as materials: %s" % [
@@ -43,7 +42,7 @@ func _enter_tree() -> void:
 			])
 		else:
 			_gear_ids.assign(gear.items.keys())
-		keeper = ProfileKeeper.new(profile, save_path)
+		keeper = ProfileKeeper.new(profile, save_path, companions)
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
 
@@ -71,13 +70,14 @@ func take(gain: Gain) -> void:
 		_report(keeper.take(gain, Time.get_ticks_msec()))
 
 
-## Counts `facts` on this player's quests (QuestTie, #817), in order, and tells when finishing one
-## posted a request to the outbox (#771).
-func count_quest_facts(facts: Array[QuestFact]) -> void:
+## Runs `changing` on this player's profile, a companion's part changing with it (like a quest
+## finished, QuestKeeper, #855), saves it like a gain, and tells when it posted a request to the
+## outbox (#771).
+func change(changing: Callable) -> void:
 	if keeper == null:
 		return
 	var posted: int = keeper.profile.outbox.entries.size()
-	_report(keeper.count_quest_facts(facts, Time.get_ticks_msec()))
+	_report(keeper.change(changing, Time.get_ticks_msec()))
 	_tell_posted(posted)
 
 
@@ -151,13 +151,6 @@ func catch_up_gear(stored: Dictionary) -> void:
 func _tell_posted(posted: int) -> void:
 	if keeper.profile.outbox.entries.size() > posted:
 		outbox_posted.emit()
-
-
-## The quests the profile advances from `content`: none when any quest file couldn't be read, so
-## progress waits for whole, sound data rather than advancing on part of it.
-static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinition]:
-	var none: Dictionary[String, QuestDefinition] = {}
-	return content.quests if content.problem.is_empty() else none
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.

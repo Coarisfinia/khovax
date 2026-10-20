@@ -32,7 +32,7 @@ func _ready() -> void:
 		var shown: SurveyView = survey.view
 		view.driver = shown.driver
 		view.keeper = shown.keeper
-		view.holder = shown.holder
+		view.quest_keeper = shown.quest_keeper
 		view.input = shown.input
 		view.neighbours = shown.neighbours
 	var _farther: int = ($Row/ZoomOut as Button).pressed.connect(zoom_by.bind(-1))

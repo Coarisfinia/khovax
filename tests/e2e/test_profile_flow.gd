@@ -31,6 +31,10 @@ const PROGRESS_DONE: String = (
 	"\"quest_progress\": {\"a\": {\"step\": 0, \"count\": 0, \"done\": %s}}"
 )
 
+## The quests the last `_parse` read, as the game's QuestKeeper keeps them beside the profile
+## (#855).
+var _parsed_quests: QuestTracker = null
+
 
 func run(_tree: SceneTree) -> String:
 	var profile: Profile = Profile.new()
@@ -97,7 +101,7 @@ func _monsters_on_disk() -> int:
 
 ## A gain the profile couldn't save is refused whole, and the profile stays as it was.
 func _check_bad_results(profile: Profile) -> String:
-	var before: String = ProfileSave.to_text(profile)
+	var before: String = _text(profile)
 	var bad_id: Gain = _result(["ombulumo"], {})
 	bad_id.dominated_short_ids.assign(["l1o0ij-"])
 	var bad: Array[Gain] = [
@@ -113,7 +117,7 @@ func _check_bad_results(profile: Profile) -> String:
 				result.dominated_species,
 				result.materials,
 			]
-	if ProfileSave.to_text(profile) != before:
+	if _text(profile) != before:
 		return "a refused gain still changed the profile"
 	return ""
 
@@ -126,7 +130,7 @@ func _check_save(profile: Profile) -> String:
 		return problem
 	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
-	if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(profile):
+	if not loaded.problem.is_empty() or _text(loaded) != _text(profile):
 		return "the loaded profile differs from the saved one: " + loaded.problem
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
 		return "saving left its temporary file behind"
@@ -147,7 +151,7 @@ func _check_short_ids() -> String:
 	var gain: Gain = _result(["ombulumo", "ombulumo"], {})
 	gain.dominated_short_ids.assign(["abc2345"])
 	var _taken: String = profile.apply(gain)
-	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var loaded: Profile = _parse(_text(profile))
 	var kept: Array[String] = []
 	for monster: DominatedMonster in loaded.dominated_monsters:
 		kept.append(monster.short_id)
@@ -160,16 +164,16 @@ func _check_short_ids() -> String:
 ## `profile`'s save from before short ids (format 11) gives each monster the stand-in for its id,
 ## and one with a short id that isn't one is refused.
 func _check_short_ids_read(profile: Profile) -> String:
-	var data: Dictionary = JSON.parse_string(ProfileSave.to_text(profile))
+	var data: Dictionary = JSON.parse_string(_text(profile))
 	data["format"] = 11
 	var monsters: Array = data["dominated_monsters"]
 	for entry: Dictionary in monsters:
 		var _dropped: bool = entry.erase("short_id")
-	var migrated: Profile = ProfileSave.parse(JSON.stringify(data))
+	var migrated: Profile = _parse(JSON.stringify(data))
 	if migrated.problem != "" or migrated.dominated_monsters[0].short_id != ShortId.stand_in(1):
 		return "a format 11 save's monsters didn't get stand-in short ids: " + migrated.problem
-	var bad: String = ProfileSave.to_text(profile).replace("abc2345", "abl2345")
-	if not ProfileSave.parse(bad).problem.begins_with("a dominated monster"):
+	var bad: String = _text(profile).replace("abc2345", "abl2345")
+	if not _parse(bad).problem.begins_with("a dominated monster"):
 		return "a save with a short id that isn't one wasn't refused"
 	return _check_old_species_ids()
 
@@ -179,37 +183,39 @@ func _check_short_ids_read(profile: Profile) -> String:
 func _check_old_species_ids() -> String:
 	var profile: Profile = Profile.new()
 	var _taken: String = profile.apply(_result(["ombulumo", "tikazzir"], {}))
-	profile.quests.progress["three_ombulumo"] = QuestProgress.new(0, 1)
-	var migrated: Profile = ProfileSave.parse(_format_13(profile))
+	var quests: QuestTracker = QuestTracker.new()
+	quests.progress["three_ombulumo"] = QuestProgress.new(0, 1)
+	var migrated: Profile = _parse(_format_13(profile, quests))
 	var species: Array[String] = []
 	for monster: DominatedMonster in migrated.dominated_monsters:
 		species.append(monster.species)
 	var expected: Array[String] = ["ombulumo", "tikazzir"]
 	if (not migrated.problem.is_empty()
 			or species != expected
-			or not migrated.quests.progress.has("three_ombulumo")):
+			or not _parsed_quests.progress.has("three_ombulumo")):
 		return "a format 13 save's old species ids weren't renamed: %s %s" % [
 			species,
 			migrated.problem,
 		]
-	profile.quests.progress.clear()
-	profile.quests.finished.append("three_ombulumo")
-	var finished: Profile = ProfileSave.parse(_format_13(profile))
-	if not finished.problem.is_empty() or finished.quests.finished != ["three_ombulumo"]:
+	quests.progress.clear()
+	quests.finished.append("three_ombulumo")
+	var finished: Profile = _parse(_format_13(profile, quests))
+	if not finished.problem.is_empty() or _parsed_quests.finished != ["three_ombulumo"]:
 		return "a format 13 save's finished quest wasn't renamed: " + finished.problem
 	return ""
 
 
-## `profile`'s save as format 13 wrote it, with the species and quest ids from before #763.
-func _format_13(profile: Profile) -> String:
-	var text: String = ProfileSave.to_text(profile).replace("\"format\": 14", "\"format\": 13")
+## `profile`'s save with `quests` as format 13 wrote it, with the species and quest ids from before
+## #763.
+func _format_13(profile: Profile, quests: QuestTracker) -> String:
+	var text: String = _text(profile, quests).replace("\"format\": 14", "\"format\": 13")
 	text = text.replace("three_ombulumo", "three_moss_toads")
 	return text.replace("ombulumo", "moss_toad").replace("tikazzir", "storm_finch")
 
 
 ## A save that isn't one, comes from a newer build, or contradicts itself is refused, not misread.
 func _check_refused() -> String:
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var format: String = "\"format\": %d" % ProfileSave.FORMAT
 	var done: String = "\"quests_done\": []"
 	var progress: String = "\"quest_progress\": {}"
@@ -259,7 +265,7 @@ func _check_refused() -> String:
 ## Why one of the saves in `cases` wasn't refused with the reason it maps to, or "".
 func _unrefused(cases: Dictionary[String, String]) -> String:
 	for case: String in cases:
-		var problem: String = ProfileSave.parse(case).problem
+		var problem: String = _parse(case).problem
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
@@ -329,7 +335,7 @@ func _check_standings() -> String:
 		return "a faction without a valid id was taken, or a valid one refused: %s" % changed
 	if standings.by_faction.has("Bad id"):
 		return "a faction without a valid id still got a standing"
-	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var loaded: Profile = _parse(_text(profile))
 	var expected: Dictionary[String, int] = { "rivals": -1, guild: Standings.HIGHEST }
 	if not loaded.problem.is_empty() or loaded.standings.by_faction != expected:
 		return "the standings didn't survive saving: %s %s" % [
@@ -342,7 +348,7 @@ func _check_standings() -> String:
 ## A save with standings that aren't a dictionary, a faction without a valid id, or a standing that
 ## isn't a whole number off neutral on the scale is refused.
 func _check_standings_refused() -> String:
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var neutral: String = "\"standings\": {}"
 	var faction_a: String = "the standing with faction a"
 	var cases: Dictionary[String, String] = {
@@ -375,10 +381,10 @@ func _check_gear() -> String:
 	var expected: Dictionary[String, String] = { "trap": "charm" }
 	if not taken.is_empty() or refused.is_empty() or gear.equipped != expected:
 		return "gear went into the wrong slots: %s, %s" % [taken, gear.equipped]
-	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
-	if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(profile):
+	var loaded: Profile = _parse(_text(profile))
+	if not loaded.problem.is_empty() or _text(loaded) != _text(profile):
 		return "the gear didn't survive saving: " + loaded.problem
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var none: String = "\"gear\": {}"
 	var empty: String = "\"equipped\": {}"
 	var cases: Dictionary[String, String] = {
@@ -403,10 +409,10 @@ func _check_leaning() -> String:
 		profile.leaning.lean(mark)
 	if profile.leaning.harmony != 3 or profile.leaning.supremacy != 1:
 		return "the choices leaned %d, %d" % [profile.leaning.harmony, profile.leaning.supremacy]
-	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var loaded: Profile = _parse(_text(profile))
 	if not loaded.problem.is_empty() or loaded.leaning.toward() != PathMark.HARMONY:
 		return "the leaning toward harmony didn't survive saving: " + loaded.problem
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var even: String = "\"supremacy\": 0"
 	var invalid: String = "the save's path leaning"
 	var cases: Dictionary[String, String] = {
@@ -430,7 +436,7 @@ func _check_outbox() -> String:
 	var _second: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 42)
 	var dropped: bool = profile.outbox.drop(first.id) and not profile.outbox.drop(first.id)
 	var _third: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 43)
-	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
+	var loaded: Profile = _parse(_text(profile))
 	var kept: Array[int] = []
 	var ids: Array[String] = []
 	for entry: OutboxEntry in loaded.outbox.entries:
@@ -443,7 +449,7 @@ func _check_outbox() -> String:
 	for id: String in ids:
 		if not ShortId.is_valid(id) or ShortId.of_code(ShortId.code(id)) != id:
 			return "the outbox's id %s isn't a short id a command can carry" % id
-	return _check_outbox_refused(ProfileSave.to_text(profile), loaded.outbox.entries[0].to_data())
+	return _check_outbox_refused(_text(profile), loaded.outbox.entries[0].to_data())
 
 
 ## A save `text` whose outbox has `request` twice, has it with an id that isn't a short id, of a
@@ -474,7 +480,7 @@ func _check_outbox_refused(text: String, request: Dictionary) -> String:
 ## toward the paths (#658), which starts even; and formats before 13 had no outbox (#771), which
 ## starts empty.
 func _check_migrated() -> String:
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var current: Dictionary = _as_captured(text)
 	# What older formats lacked.
 	for key: String in ADDED_KEYS:
@@ -482,8 +488,8 @@ func _check_migrated() -> String:
 	for old: Dictionary in _old_saves():
 		var save: Dictionary = current.duplicate()
 		save.merge(old, true)
-		var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
-		if not loaded.problem.is_empty() or ProfileSave.to_text(loaded) != text:
+		var loaded: Profile = _parse(JSON.stringify(save))
+		if not loaded.problem.is_empty() or _text(loaded) != text:
 			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
 	var problem: String = _check_migrated_quest()
 	return problem if not problem.is_empty() else _check_migrated_carried()
@@ -543,18 +549,18 @@ func _old_saves() -> Array[Dictionary]:
 
 ## A format 4 save's first quest, open or finished, is the renamed first quest (#317).
 func _check_migrated_quest() -> String:
-	var save: Dictionary = _as_captured(ProfileSave.to_text(Profile.new()))
+	var save: Dictionary = _as_captured(_text(Profile.new()))
 	save["format"] = 4
 	save["quest_progress"] = { "first_catch": { "step": 0, "count": 1 } }
-	var open: Profile = ProfileSave.parse(JSON.stringify(save))
-	var progress: QuestProgress = open.quests.progress.get("first_domination")
+	var open: Profile = _parse(JSON.stringify(save))
+	var progress: QuestProgress = _parsed_quests.progress.get("first_domination")
 	if not open.problem.is_empty() or progress == null or progress.count != 1:
 		return "a format 4 save's open first quest wasn't renamed: %s" % open.problem
 	save["quest_progress"] = {}
 	save["quests_done"] = ["first_catch"]
-	var done: Profile = ProfileSave.parse(JSON.stringify(save))
+	var done: Profile = _parse(JSON.stringify(save))
 	var expected: Array[String] = ["first_domination"]
-	if not done.problem.is_empty() or done.quests.finished != expected:
+	if not done.problem.is_empty() or _parsed_quests.finished != expected:
 		return "a format 4 save's finished first quest wasn't renamed: %s" % done.problem
 	return _check_migrated_done()
 
@@ -563,7 +569,7 @@ func _check_migrated_quest() -> String:
 ## the one it's on done, in order, and keeps them through saving. A current save's progress without
 ## its steps done, or with steps done that aren't a list of whole numbers from 0, is refused.
 func _check_migrated_done() -> String:
-	var text: String = ProfileSave.to_text(Profile.new())
+	var text: String = _text(Profile.new())
 	var progress: String = "\"quest_progress\": {}"
 	var cases: Dictionary[String, String] = {
 		text.replace(progress, PROGRESS_DONE.replace(", \"done\": %s", "")): "quest a's",
@@ -574,19 +580,21 @@ func _check_migrated_done() -> String:
 	var refused: String = _unrefused(cases)
 	if not refused.is_empty():
 		return refused
-	var save: Variant = JSON.parse_string(ProfileSave.to_text(Profile.new()))
+	var save: Variant = JSON.parse_string(_text(Profile.new()))
 	var data: Dictionary = save
 	data["format"] = 8
 	data["quest_progress"] = {
 		"toads": { "step": 2, "count": 1 },
 		"fresh": { "step": 0, "count": 0 },
 	}
-	var loaded: Profile = ProfileSave.parse(JSON.stringify(data))
+	var loaded: Profile = _parse(JSON.stringify(data))
+	var loaded_quests: QuestTracker = _parsed_quests
 	var two: Array[int] = [0, 1]
-	var again: Profile = ProfileSave.parse(ProfileSave.to_text(loaded))
-	if (not loaded.problem.is_empty() or loaded.quests.progress["toads"].done != two
-			or not loaded.quests.progress["fresh"].done.is_empty()
-			or again.quests.progress["toads"].done != two):
+	var again: Profile = _parse(_text(loaded, loaded_quests))
+	if (not loaded.problem.is_empty() or not again.problem.is_empty()
+			or loaded_quests.progress["toads"].done != two
+			or not loaded_quests.progress["fresh"].done.is_empty()
+			or _parsed_quests.progress["toads"].done != two):
 		return "a format 8 save's quest progress didn't get its steps done: %s" % loaded.problem
 	return ""
 
@@ -606,17 +614,17 @@ func _check_migrated_carried() -> String:
 	var profile: Profile = Profile.new()
 	var four: Array = ["ember_fox", "ombulumo", "ember_fox", "ombulumo"]
 	var _dominated: String = profile.apply(_result(four, {}))
-	var save: Dictionary = _as_captured(ProfileSave.to_text(profile))
+	var save: Dictionary = _as_captured(_text(profile))
 	save["format"] = 4
 	for bad: Array in [[1, 1], [1, 2, 3, 4]]:
 		var wrong: Dictionary = save.duplicate()
 		wrong["carried"] = bad
-		var problem: String = ProfileSave.parse(JSON.stringify(wrong)).problem
+		var problem: String = _parse(JSON.stringify(wrong)).problem
 		if not problem.begins_with("a carried monster"):
 			return "a save carrying %s wasn't refused: %s" % [bad, problem]
 	var _dropped: bool = save.erase("carried")
 	save["format"] = 3
-	var loaded: Profile = ProfileSave.parse(JSON.stringify(save))
+	var loaded: Profile = _parse(JSON.stringify(save))
 	var three: Array[int] = [1, 2, 3]
 	if not loaded.problem.is_empty() or loaded.carried != three:
 		return "a format 3 save didn't carry its first three monsters: %s" % loaded.problem
@@ -652,15 +660,15 @@ func _check_recovered() -> String:
 		var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 		if not problem.is_empty() or ProfileStore.loaded_generation != 1:
 			return "a damaged newest save didn't fall back a generation: " + problem
-		if ProfileSave.to_text(loaded) != ProfileSave.to_text(older):
+		if _text(loaded) != _text(older):
 			return "the fallback isn't the save before the damaged one"
 	for file: String in [SAVE_PATH, SAVE_PATH + ".1"]:
 		_write(file, "{}")
 	if ProfileStore.load_from(SAVE_PATH).problem.is_empty():
 		return "a save with every generation damaged was read"
 	SaveStore.remove(SAVE_PATH)
-	_write(SAVE_PATH, ProfileSave.to_text(newer))
-	if ProfileSave.to_text(ProfileStore.load_from(SAVE_PATH)) != ProfileSave.to_text(newer):
+	_write(SAVE_PATH, _text(newer))
+	if _text(ProfileStore.load_from(SAVE_PATH)) != _text(newer):
 		return "a plain save from before checksums didn't load"
 	return ""
 
@@ -669,3 +677,24 @@ func _write(path: String, text: String) -> void:
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
 	var _stored: bool = file.store_string(text)
 	file.close()
+
+
+## `profile`'s save text with `quests`, or none, beside it, as the game writes it (QuestKeeper,
+## #855).
+static func _text(profile: Profile, quests: QuestTracker = null) -> String:
+	var keeper: QuestKeeper = QuestKeeper.new()
+	if quests != null:
+		keeper.tracker = quests
+	var text: String = ProfileSave.to_text(profile, [keeper])
+	keeper.free()
+	return text
+
+
+## The profile read from the save `text`, its quests read beside it into `_parsed_quests`, as the
+## game reads them (QuestKeeper, #855).
+func _parse(text: String) -> Profile:
+	var keeper: QuestKeeper = QuestKeeper.new()
+	var profile: Profile = ProfileSave.parse(text, [keeper])
+	_parsed_quests = keeper.tracker
+	keeper.free()
+	return profile

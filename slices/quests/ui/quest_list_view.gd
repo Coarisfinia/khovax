@@ -7,7 +7,7 @@ extends Control
 ## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
 ## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
-## with the screen, so it stays readable on a phone. It only reads the profile.
+## with the screen, so it stays readable on a phone. It only reads the quests.
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn;
 ## this script keeps only what it does.
 
@@ -32,8 +32,8 @@ const WIDTH_FONTS: float = 15.0
 const MAX_WIDTH_SHARE: float = 0.42
 const DONE_TEXT: String = "Done"
 
-## Whose quests are listed: this machine's player's profile.
-@export var holder: ProfileHolder
+## Whose quests are listed: this machine's player's.
+@export var keeper: QuestKeeper
 ## Where the Survey shows, so the list keeps out of its corner.
 @export var survey: SurveyChoice
 ## The roster in the top left corner (#540), which the list starts below when it's on that side.
@@ -57,18 +57,17 @@ func _process(delta: float) -> void:
 ## Matches the cards to the open quests. Called every frame; tests call it directly.
 func show_quests() -> void:
 	var steps: Dictionary[String, QuestStep] = {}
-	var profile: Profile = null
-	if holder != null and holder.keeper != null:
-		profile = holder.keeper.profile
-		steps = profile.quests.open_steps()
+	var quests: QuestTracker = keeper.quests() if keeper != null else null
+	if quests != null:
+		steps = quests.open_steps()
 	for id: String in order:
 		if not steps.has(id) and shown[id] != DONE_TEXT:
 			_finish(id)
 	for id: String in steps:
-		var progress: QuestProgress = profile.quests.progress.get(id)
+		var progress: QuestProgress = quests.progress.get(id)
 		var line: String = step_line(steps[id], progress.count if progress != null else 0)
 		if not cards.has(id):
-			_add_card(id, profile.quests.book[id].shown_name())
+			_add_card(id, quests.book[id].shown_name())
 		shown[id] = line
 		_line_label(id).text = line
 		_line_label(id).visible = not line.is_empty()
