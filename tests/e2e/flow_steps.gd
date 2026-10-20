@@ -63,10 +63,11 @@ static func party(species: Array[String]) -> CarriedMonsters:
 
 
 ## Gives the player in `slot` in `state` the party of `species` (FlowSteps.party), the first their
-## companion, straight in their world store, as a session's start would through the world.
+## companion, straight in their world store, as a session's start would through the world: from
+## outside the rules, so even before the player is added (GameState.store refuses that, #871).
 static func carry(state: GameState, slot: int, species: Array[String]) -> void:
 	var carried: CarriedMonsters = party(species)
-	state.store(slot, CompanionFeature.ID).merge(
+	state.stores[slot].entry(CompanionFeature.ID).merge(
 		{
 			"carried": Array(carried.short_ids),
 			"species": Array(carried.species),

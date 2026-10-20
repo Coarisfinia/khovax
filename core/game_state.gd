@@ -108,8 +108,14 @@ func remove_entity(id: int) -> void:
 
 
 ## The entry of the feature `feature_id` in the world store of the player in `slot` (#724), to read
-## and write in place: only that feature's rules write it.
+## and write in place: only that feature's rules write it, and only while that player is in this
+## instance (#871). Every instance of a world shares its stores (#828), so a write from elsewhere
+## would change the world's store, depending on which instance steps first: it's refused with an
+## error, and gets a throwaway entry.
 func store(slot: int, feature_id: String) -> Dictionary:
+	if player(slot) == null:
+		push_error("no player %d here to write %s's store entry for" % [slot, feature_id])
+		return {}
 	return stores[slot].entry(feature_id)
 
 

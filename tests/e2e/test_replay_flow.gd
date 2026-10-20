@@ -133,7 +133,7 @@ func _check_hash_covers_fields() -> String:
 		"rng_seed": func(state: GameState) -> void: state.rng_seed += 1,
 		"rng_seed above bit 31": func(state: GameState) -> void: state.rng_seed += 1 << 40,
 		"store entry": func(state: GameState) -> void: state.store(0, CompanionFeature.ID)["a"] = 1,
-		"store text": func(state: GameState) -> void: state.store(1, HealthFeature.ID)["a"] = "x",
+		"store text": func(state: GameState) -> void: state.stores[1].entries["h"] = { "a": "x" },
 		"terrain": func(state: GameState) -> void: state.region.terrain[START] = Region.WATER,
 		"added tile": func(state: GameState) -> void: state.region.terrain[Vector2i(9, 9)] = "rock",
 		"region start": func(state: GameState) -> void: state.region.starts[0] += Vector2i.ONE,
