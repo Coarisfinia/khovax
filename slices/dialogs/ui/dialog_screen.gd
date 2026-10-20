@@ -104,15 +104,18 @@ func follow_state(refresh: bool = false) -> void:
 	var _opened: bool = open(dialog_id, index)
 
 
-## Follows the state after every tick; this machine's player talking to a person refreshes it even
-## when it looks the same, so talking again shows the dialog's first line again.
+## Follows the state after every tick; this machine's player talking to a person or answering
+## refreshes it even when it looks the same: talking again shows the dialog's first line again, and
+## an answer that leads back to the line the state held moves the card there from where it read to.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
-	var talked: bool = false
+	var refresh: bool = false
 	for event: RefCounted in events:
 		var talk: NpcTalkedTo = event as NpcTalkedTo
-		if talk != null and input != null and talk.slot == input.slot:
-			talked = true
-	follow_state(talked)
+		var answer: DialogAnswered = event as DialogAnswered
+		var slot: int = talk.slot if talk != null else (answer.slot if answer != null else -1)
+		if input != null and slot == input.slot:
+			refresh = true
+	follow_state(refresh)
 
 
 ## Whether a dialog is open.
