@@ -36,7 +36,7 @@ func requires() -> Array[String]:
 
 ## The code a command carries for the gear `gear_id` in the trap slot: Command.NO_TRAP for none.
 static func code_of(gear_id: String) -> int:
-	return World.name_code(gear_id) if not gear_id.is_empty() else Command.NO_TRAP
+	return StateHash.name_code(gear_id) if not gear_id.is_empty() else Command.NO_TRAP
 
 
 ## Lets every ring's spikes, in its dominator's id order, hurt the wild monsters pushing on it, on

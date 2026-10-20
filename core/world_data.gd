@@ -35,7 +35,7 @@ static func of(world: World) -> Dictionary:
 			},
 		)
 	var purged: Array[Dictionary] = []
-	for instance_name: String in _sorted(world.generations.keys()):
+	for instance_name: String in StateHash.sorted(world.generations.keys()):
 		purged.append({ "name": instance_name, "generation": world.generations[instance_name] })
 	var stores: Array[Dictionary] = []
 	for slot: int in GameState.MAX_PLAYERS:
@@ -175,10 +175,3 @@ static func _load_flags(world: World, read: DataReader) -> void:
 			read.fail("a flag is nameless, not text, or saved twice")
 			return
 		world.set_flag(str(flag))
-
-
-static func _sorted(keys: Array) -> Array[String]:
-	var names: Array[String] = []
-	names.assign(keys)
-	names.sort()
-	return names

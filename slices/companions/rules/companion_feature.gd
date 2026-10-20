@@ -281,8 +281,8 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [owners.size()]
 	for companion_id: int in companions():
 		values.append_array([companion_id, owners[companion_id], _rest[companion_id]])
-		values.append(World.name_code(_species[companion_id]))
-		values.append(World.name_code(_short_ids[companion_id]))
+		values.append(StateHash.name_code(_species[companion_id]))
+		values.append(StateHash.name_code(_short_ids[companion_id]))
 	values.append_array(_rng.hash_values())
 	return values
 

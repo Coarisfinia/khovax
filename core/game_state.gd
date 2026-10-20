@@ -265,9 +265,9 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 
 
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
-## with the same commands must end with the same hash. A 32-bit FNV-1a over both 32-bit halves of
-## every core value, every slot's world store (#724), the region, every entity in id order and, in
-## order, every feature's id (as its code, World.name_code), on/off and state.
+## with the same commands must end with the same hash. A 32-bit FNV-1a (StateHash) over both 32-bit
+## halves of every core value, every slot's world store (#724), the region, every entity in id order
+## and, in order, every feature's id (as its code, StateHash.name_code), on/off and state.
 func state_hash() -> int:
 	var values: Array[int] = [tick, rng_seed]
 	for each: PlayerStore in stores:
@@ -283,15 +283,7 @@ func state_hash() -> int:
 		values.append(each.tile.x)
 		values.append(each.tile.y)
 	for each: Feature in features:
-		values.append(World.name_code(each.id()))
+		values.append(StateHash.name_code(each.id()))
 		values.append(1 if each.enabled else 0)
 		values.append_array(each.hash_values())
-	var result: int = 2_166_136_261
-	for value: int in values:
-		result = _mix(result, value & 0xffff_ffff)
-		result = _mix(result, (value >> 32) & 0xffff_ffff)
-	return result
-
-
-static func _mix(current: int, word: int) -> int:
-	return ((current ^ word) * 16_777_619) & 0xffff_ffff
+	return StateHash.of_values(values)
