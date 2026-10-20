@@ -26,19 +26,19 @@ var problem: String = ""
 
 ## A blueprint read from a blueprint file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> Blueprint:
-	var blueprint: Blueprint = Blueprint.new()
+	var read: Blueprint = Blueprint.new()
 	var json: JSON = JSON.new()
 	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		blueprint.problem = "not a JSON object"
-		return blueprint
+		read.problem = "not a JSON object"
+		return read
 	var data: Dictionary = json.data
-	blueprint.id = Content.text_of(data.get("id"))
-	blueprint.loot_table = Content.text_of(data.get("loot_table"))
-	blueprint.chest_table = Content.text_of(data.get("chest_table"))
-	blueprint.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
-	if blueprint.problem.is_empty():
-		blueprint.problem = blueprint._check(file_id, data)
-	return blueprint
+	read.id = Content.text_of(data.get("id"))
+	read.loot_table = Content.text_of(data.get("loot_table"))
+	read.chest_table = Content.text_of(data.get("chest_table"))
+	read.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	if read.problem.is_empty():
+		read.problem = read._check(file_id, data)
+	return read
 
 
 ## Why the fields in `data` are wrong, or "", and its turn, species and variants read when they
