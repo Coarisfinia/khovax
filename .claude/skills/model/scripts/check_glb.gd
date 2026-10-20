@@ -1,6 +1,8 @@
 # gdstyle:ignore-file=quality/no-debug-print
 # Checks a model in the game project itself (model skill), through the repo's own import
-# settings: it loads, has a skinned mesh on a skeleton, and has every clip the game plays. From
+# settings: it loads, has a skinned mesh on a skeleton, and has every clip the game plays. It lists
+# the attachment points (ModelPoints, #1007) where they stand at rest, and fails a model that
+# plays an Attack clip without a centre of attack. From
 # the repository, after `godot --headless --path . --import`:
 # godot --headless --path . -s res://.claude/skills/model/scripts/check_glb.gd -- \
 #   res://assets/<name>/<name>.glb [Clip ...]
@@ -33,6 +35,11 @@ func _init() -> void:
 			if not clip in clips:
 				print("MISSING CLIP ", clip)
 				failed = true
+		print("EYES ", ModelPoints.eyes(model))
+		print("ATTACK CENTRES ", ModelPoints.attack_centres(model))
+		if "Attack" in args.slice(1) and ModelPoints.attack_centres(model).is_empty():
+			print("NO CENTRE OF ATTACK")
+			failed = true
 	print("MODEL CHECK: ", "FAIL" if failed else "PASS")
 	model.free()
 	quit(1 if failed else 0)

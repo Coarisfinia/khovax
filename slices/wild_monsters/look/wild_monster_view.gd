@@ -23,7 +23,8 @@ const WALK: StringName = &"Walk"
 const ATTACK: StringName = &"Attack"
 const HIT: StringName = &"Hit"
 const FAINT: StringName = &"Faint"
-## Every clip the view plays, which the boot flow checks its model has (#992).
+## Every clip the view plays, which the boot flow checks its model has (#992); as ATTACK is among
+## them, it checks the model has a centre of attack too (ModelPoints, #1007).
 const CLIPS: Array[StringName] = [IDLE, WALK, ATTACK, HIT, FAINT]
 ## How long a figure's model takes to blend from one clip into the next.
 const BLEND_SECONDS: float = 0.15

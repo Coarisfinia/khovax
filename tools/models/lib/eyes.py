@@ -47,3 +47,9 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
                    minor_segments=4)
     )
     return made
+
+
+def spot(pieces):
+    """Where an eye built by `eye` looks out from: its iris's centre, for its attachment point
+    (attachments.add)."""
+    return next(piece for piece in pieces if piece.name.endswith(".iris")).location.copy()
