@@ -260,11 +260,8 @@ static func _talk_once_while_held() -> String:
 ## frees them, and the wild monsters go on. Made not to lock, it holds nobody until the answer
 ## asking about the glade, made to commit, is chosen.
 static func _hold_while_locked() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = _held_by_scout(1)
 	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
-	dialogs.locking[GREETING] = true
-	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
-	Simulation.step(state, FlowSteps.command(EAST))
 	var west: int = Hex.DIRECTIONS.find(Vector2i(-1, 0))
 	for _tick: int in MovementFeature.MOVE_TICKS * 2:
 		Simulation.step(state, FlowSteps.command(west))
@@ -289,11 +286,8 @@ static func _hold_while_locked() -> String:
 ## beside them, and a wild monster beside both: it strikes only the free player, and the held one's
 ## health doesn't change. Once leaving the scout frees the first player, it strikes them again.
 static func _held_untouched() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 2)
+	var state: GameState = _held_by_scout(2)
 	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
-	dialogs.locking[GREETING] = true
-	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
-	Simulation.step(state, FlowSteps.command(EAST))
 	var held: Entity = state.player(0)
 	var free: Entity = state.player(1)
 	var monster: Entity = state.entity(
@@ -317,6 +311,16 @@ static func _held_untouched() -> String:
 	if not struck.has(held.id):
 		return "the player the greeting let go wasn't struck again: %s" % [struck]
 	return ""
+
+
+## The glade with `players` players, the first beside the guild scout, whose greeting, made to
+## lock, holds them once they've walked into the scout.
+static func _held_by_scout(players: int) -> GameState:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, players)
+	(state.feature(DialogFeature.ID) as DialogFeature).locking[GREETING] = true
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
+	Simulation.step(state, FlowSteps.command(EAST))
+	return state
 
 
 ## Two tiles beside `tile` that are beside each other, walkable and free, or none.
