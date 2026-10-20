@@ -35,6 +35,15 @@ func take(gain: Gain, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Counts `facts` on the player's quests (#817) at time `now_msec`, in order, and saves like a
+## gain; returns why it couldn't be saved, or "".
+func count_quest_facts(facts: Array[QuestFact], now_msec: int) -> String:
+	for fact: QuestFact in facts:
+		profile.count_quest_fact(fact)
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Takes over the player's choice of personal color (#391), `color` as 0xRRGGBB or
 ## Profile.AUTO_COLOR, at time `now_msec`, saved debounced like a gain; returns why it couldn't be
 ## taken or saved, or "". A color the save can't hold changes nothing.

@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://slices/music/look/music.gd" id="10_music"]
 [ext_resource type="Script" path="res://slices/profile/meta/profile_holder.gd" id="11_profile"]
 [ext_resource type="Script" path="res://slices/profile/look/profile_tie.gd" id="46_profile_tie"]
+[ext_resource type="Script" path="res://slices/quests/look/quest_tie.gd" id="47_quest_tie"]
 [ext_resource type="Script" path="res://slices/fog/look/fog_view.gd" id="12_fog"]
 [ext_resource type="Script" path="res://slices/board/look/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://slices/settings/look/graphics.gd" id="14_graphics"]
@@ -51,12 +52,12 @@
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
-[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper", "tie", "holder") unique_id=520417396]
+[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper", "quest_tie", "holder") unique_id=520417396]
 process_priority = -100
 script = ExtResource("1_driver")
 input = NodePath("../LocalInput")
 keeper = NodePath("../WorldKeeper")
-tie = NodePath("../ProfileTie")
+quest_tie = NodePath("../QuestTie")
 holder = NodePath("../ProfileHolder")
 
 [node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=1290447713]
@@ -78,6 +79,12 @@ script = ExtResource("11_profile")
 
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")
+bus = NodePath("../EventBus")
+input = NodePath("../LocalInput")
+holder = NodePath("../ProfileHolder")
+
+[node name="QuestTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135786]
+script = ExtResource("47_quest_tie")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 holder = NodePath("../ProfileHolder")

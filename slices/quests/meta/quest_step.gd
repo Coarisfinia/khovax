@@ -3,7 +3,8 @@ extends RefCounted
 ## One step of a quest (#184): a single condition, met `count` times, or a choice between ways on
 ## (#573), each a place to reach or an area to enter, which the Survey marks, or an answer to give
 ## in a dialog (#636), leading to a step of its own. It's checked only against what the player
-## obtains (a Gain), never inside the simulation. A step naming an instance counts only there
+## obtains (its QuestFacts), never inside the simulation. A step naming an instance counts only
+## there
 ## (#769), as every step of a territory quest does.
 ## A step, a choice or a step that ends the chain can emit an event once it's done or taken (#575),
 ## which can start a side quest (`QuestDefinition.starts_on`).
@@ -27,7 +28,8 @@ const CONDITION_FIELDS: Array[String] = [
 	"event",
 	"count",
 ]
-## The conditions of a step, each counted from facts a Gain carries (CONDITIONS says what each
+## The conditions of a step, each counted from the facts QuestFacts makes of events (CONDITIONS says
+## what each
 ## asks for).
 const DOMINATED: String = "dominated"
 const OPENED: String = "opened"
@@ -46,7 +48,8 @@ const CHOICE_CONDITIONS: Array[String] = [REACHED, ENTERED, ANSWERED]
 const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
 const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED]
-## The conditions a step can have, each counted from facts a Gain carries: `dominated`, a wild
+## The conditions a step can have, each counted from the facts QuestFacts makes of events:
+## `dominated`, a wild
 ## monster this player dominated (the `quarry`: of `species`, or any, or the one quest target
 ## `target` a region's legend marks, #625); `opened`, a treasure chest this player got loot from;
 ## `reached`, the place `place` this player stepped into (#339); `entered`, the region

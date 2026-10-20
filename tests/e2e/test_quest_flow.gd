@@ -134,6 +134,7 @@ func run(tree: SceneTree) -> String:
 		result = _check_branching()
 	if result.is_empty():
 		result = _check_obtained()
+	result = result if not result.is_empty() else _check_facts()
 	result = result if not result.is_empty() else _check_target()
 	if result.is_empty():
 		result = await _check_tracked(tree)
@@ -616,13 +617,13 @@ func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> 
 	_emit(driver, bus, WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"))
 	if not profile.quests.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
-	return _check_caught_up(driver.tie, profile)
+	return _check_caught_up(driver.quest_tie, profile)
 
 
-## As a session starts, the profile gains the events that already changed the world (#756), from
+## As a session starts, the quests count the events that already changed the world (#756), from
 ## its flags, and no other flag: the beacon lit before starts the side quest waiting on it, while
 ## the side quest the glade's purifying started already keeps its progress and one done stays done.
-func _check_caught_up(tie: ProfileTie, profile: Profile) -> String:
+func _check_caught_up(tie: QuestTie, profile: Profile) -> String:
 	var lit: QuestDefinition = QuestDefinition.parse("after_beacon", AFTER_BEACON, {})
 	profile.quests.book[lit.id] = lit
 	profile.quests.finished.append("after_done")
@@ -753,12 +754,12 @@ func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 		return "the quest asking for old_toad isn't marked over it"
 	if QuestListView.step_line(step, 0) != "Dominate the old toad":
 		return "the quest asking for old_toad reads %s" % QuestListView.step_line(step, 0)
-	var applied: String = profile.apply(_gain(["ombulumo"], 0))
+	var applied: String = _count(profile, _gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests.finished.has("old_toad"):
 		return "dominating another Ombulumo counted toward old_toad: " + applied
-	var targeted: Gain = _gain(["ombulumo"], 0)
-	targeted.facts.append(QuestFact.new(QuestStep.TARGET_DOMINATED, "old_toad"))
-	applied = profile.apply(targeted)
+	var targeted: Array[QuestFact] = _gain(["ombulumo"], 0)
+	targeted.append(QuestFact.new(QuestStep.TARGET_DOMINATED, "old_toad"))
+	applied = _count(profile, targeted)
 	var done: Array[String] = ["old_toad"]
 	if not applied.is_empty() or profile.quests.finished != done:
 		return "dominating old_toad didn't finish the quest asking for it: " + applied
@@ -825,20 +826,20 @@ func _check_walk_into_thicket(state: GameState) -> String:
 func _check_side_quest() -> String:
 	var profile: Profile = Profile.new()
 	profile.quests.book = QuestContent.load_quests().quests
-	var applied: String = profile.apply(_gain([], 1))
-	applied += profile.apply(_entering("thicket"))
+	var applied: String = _count(profile, _gain([], 1))
+	applied += _count(profile, _entering("thicket"))
 	if not applied.is_empty() or profile.quests.open_steps().has("pond_chest"):
 		return "the pond's side quest started before the pond was entered: " + applied
 	if profile.quests.finished.has("pond_chest") or profile.quests.progress.has("pond_chest"):
 		return "a chest counted toward the pond's side quest before it started"
-	applied = profile.apply(_entering("pond"))
+	applied = _count(profile, _entering("pond"))
 	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(profile))
 	loaded.quests.book = profile.quests.book
 	var step: QuestStep = loaded.quests.open_steps().get("pond_chest")
 	if (not applied.is_empty() or step == null
 			or QuestsTab.quest_lines(loaded, "pond_chest") != ["Now: Open a chest"]):
 		return "entering the pond didn't open its side quest, kept through loading: " + applied
-	applied = loaded.apply(_gain([], 1))
+	applied = _count(loaded, _gain([], 1))
 	if not applied.is_empty() or not loaded.quests.finished.has("pond_chest"):
 		return "a chest didn't finish the started pond side quest: " + applied
 	var text: String = "{\"id\": \"in_one\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
@@ -846,7 +847,7 @@ func _check_side_quest() -> String:
 	var at_once: Profile = Profile.new()
 	var ending: String = enter.replace("}", ", \"ends\": \"in_one\"}")
 	at_once.quests.book["in_one"] = QuestDefinition.parse("in_one", text % [enter, ending], {})
-	applied = at_once.apply(_entering("pond"))
+	applied = _count(at_once, _entering("pond"))
 	if not applied.is_empty() or at_once.quests.finished != ["in_one"]:
 		return "entering the pond didn't both start and finish a side quest asking for it"
 	return ""
@@ -861,25 +862,24 @@ func _check_branching() -> String:
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
 	var thicket: Profile = Profile.new()
 	thicket.quests.book = book
-	var entered: Gain = Gain.new()
-	entered.facts.append(QuestFact.new(QuestStep.INSTANCE_ENTERED, "glade", "glade"))
-	var applied: String = thicket.apply(entered)
+	var entered: Array[QuestFact] = [QuestFact.new(QuestStep.INSTANCE_ENTERED, "glade", "glade")]
+	var applied: String = _count(thicket, entered)
 	var choosing: Array[String] = ["Now: Enter the pond or enter the thicket"]
 	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "glade_fork") != choosing:
 		return "entering the glade didn't open its fork on its choice: %s" % [
 			QuestsTab.quest_lines(thicket, "glade_fork"),
 		]
 	var result: String = _check_fork_marked(state, thicket)
-	applied = thicket.apply(_entering("thicket"))
+	applied = _count(thicket, _entering("thicket"))
 	var way: Array[String] = ["Done: Enter the thicket", "Now: Dominate a monster"]
 	if result.is_empty() and QuestsTab.quest_lines(thicket, "glade_fork") != way:
 		result = "the thicket's way isn't shown taken: %s" % [
 			QuestsTab.quest_lines(thicket, "glade_fork"),
 		]
-	applied += thicket.apply(_gain([], 1))
+	applied += _count(thicket, _gain([], 1))
 	if result.is_empty() and thicket.quests.finished.has("glade_fork"):
 		result = "the pond's chest counted on the thicket's way"
-	applied += thicket.apply(_gain(["ombulumo"], 0))
+	applied += _count(thicket, _gain(["ombulumo"], 0))
 	if (result.is_empty()
 			and (not applied.is_empty() or not thicket.quests.finished.has("glade_fork"))):
 		result = "a domination didn't end the thicket's way: " + applied
@@ -906,10 +906,13 @@ func _check_fork_marked(state: GameState, profile: Profile) -> String:
 
 
 ## Entering the pond takes the pond's way, kept through saving and loading, and a chest ends it.
-func _check_pond_way(book: Dictionary[String, QuestDefinition], entered: Gain) -> String:
+func _check_pond_way(
+	book: Dictionary[String, QuestDefinition],
+	entered: Array[QuestFact],
+) -> String:
 	var pond: Profile = Profile.new()
 	pond.quests.book = book
-	var applied: String = pond.apply(entered) + pond.apply(_entering("pond"))
+	var applied: String = _count(pond, entered) + _count(pond, _entering("pond"))
 	var loaded: Profile = ProfileSave.parse(ProfileSave.to_text(pond))
 	loaded.quests.book = book
 	var way: Array[String] = ["Done: Enter the pond", "Now: Open a chest"]
@@ -917,7 +920,7 @@ func _check_pond_way(book: Dictionary[String, QuestDefinition], entered: Gain) -
 		return "the pond's way wasn't kept through loading: %s" % [
 			QuestsTab.quest_lines(loaded, "glade_fork"),
 		]
-	applied = loaded.apply(_gain([], 1))
+	applied = _count(loaded, _gain([], 1))
 	if not applied.is_empty() or not loaded.quests.finished.has("glade_fork"):
 		return "a chest didn't end the pond's way: " + applied
 	return _check_branch_standing()
@@ -935,7 +938,7 @@ func _check_branch_standing() -> String:
 	var standing: String = STRANGER_STANDING.replace("strangers", GUILD)
 	profile.quests.book["fork"] = QuestDefinition.parse("fork", text % standing, {})
 	var applied: String = profile.quests.book["fork"].problem
-	applied += profile.apply(_entering("pond")) + profile.apply(_gain([], 1))
+	applied += _count(profile, _entering("pond")) + _count(profile, _gain([], 1))
 	if (not applied.is_empty() or profile.quests.finished != ["fork"]
 			or profile.standings.of(GUILD) != 1):
 		return "a chain ending on its chosen way didn't move its standing: " + applied
@@ -969,13 +972,13 @@ func _check_emitted() -> String:
 	var applied: String = ""
 	for id: String in profile.quests.book:
 		applied += profile.quests.book[id].problem
-	applied += profile.apply(_entering("thicket"))
+	applied += _count(profile, _entering("thicket"))
 	if not applied.is_empty() or profile.quests.open_steps().keys() != ["after_thicket", "fork"]:
 		return "taking the thicket's way didn't start just its side quest: " + applied
-	applied = profile.apply(_gain([], 1))
+	applied = _count(profile, _gain([], 1))
 	if not applied.is_empty() or profile.quests.open_steps().keys() != ["after_won"]:
 		return "the chain's end didn't start the side quest waiting on it: " + applied
-	applied = profile.apply(_gain(["ombulumo"], 0))
+	applied = _count(profile, _gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests.finished != ["after_thicket", "fork", "after_won"]:
 		return "the side quests an event started didn't go on: %s" % profile.quests.finished
 	var step_waits: String = text.replace("\"condition\": \"opened\"", "\"condition\": \"emitted\"")
@@ -1006,15 +1009,62 @@ func _check_answered_choice() -> String:
 			applied,
 			QuestsTab.quest_lines(profile, "fork"),
 		]
-	var left: Gain = Gain.new()
-	left.facts.append(QuestFact.new(QuestStep.ANSWERED, QuestStep.answer_key(SCOUT, "leave_scout")))
-	applied = profile.apply(left) + profile.apply(_gain([], 1))
+	var left: Array[QuestFact] = [
+		QuestFact.new(QuestStep.ANSWERED, QuestStep.answer_key(SCOUT, "leave_scout")),
+	]
+	applied = _count(profile, left) + _count(profile, _gain([], 1))
 	if not applied.is_empty() or not profile.quests.finished.is_empty():
 		return "leaving the scout didn't take the way to a domination: " + applied
-	applied = profile.apply(_gain(["ombulumo"], 0))
+	applied = _count(profile, _gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests.finished != ["fork"]:
 		return "a domination didn't end the way leaving the scout took: " + applied
 	return ""
+
+
+## The facts quests make of events (#817), for this player in slot 0 only: a domination is its
+## species, then its quest target; a chest is opened even when it rolled nothing, then each item
+## obtained with its amount; an instance entered happened in it, and a world event everywhere; and
+## a world's flags give only its events.
+func _check_facts() -> String:
+	var targeted: WildMonsterDominated = _dominated("ombulumo")
+	targeted.target = "old_toad"
+	var loot: Dictionary[int, Dictionary] = { 0: { "feather": 2 }, 1: { "bone": 1 } }
+	var empty: Dictionary[int, Dictionary] = { 0: {} }
+	var events: Array[RefCounted] = [
+		targeted,
+		WildMonsterDominated.new(2, 2, 1, Vector2i.ZERO, "tikazzir"),
+		ChestOpened.new(Vector2i.ZERO, 1, empty),
+		ChestOpened.new(Vector2i.ZERO, 1, loot),
+		InstanceEntered.new("forest", 1, 0),
+		PlaceReached.new("beach", 2, 1),
+		WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"),
+	]
+	var seen: Array[String] = []
+	for event: RefCounted in events:
+		seen.append_array(_described(QuestFacts.of(event, 0, "glade")))
+	var flags: Array[String] = [WorldFlags.EVENT_FLAG + "beacon_lit", "TERRITORY_glade"]
+	seen.append_array(_described(QuestFacts.of_world_flags(flags)))
+	var expected: Array[String] = [
+		"dominated ombulumo glade 1",
+		"dominated_target old_toad glade 1",
+		"opened  glade 1",
+		"opened  glade 1",
+		"obtained feather glade 2",
+		"entered_instance forest forest 1",
+		"emitted glade_purified  1",
+		"emitted beacon_lit  1",
+	]
+	if seen != expected:
+		return "the facts made of events are %s" % [seen]
+	return ""
+
+
+## Each of `facts` in words: its condition, what, where and amount.
+static func _described(facts: Array[QuestFact]) -> Array[String]:
+	var words: Array[String] = []
+	for fact: QuestFact in facts:
+		words.append("%s %s %s %d" % [fact.condition, fact.what, fact.where, fact.amount])
+	return words
 
 
 ## A step asking for feathers (#686) counts each feather obtained, not a bone, nor a chest opened
@@ -1025,7 +1075,8 @@ func _check_obtained() -> String:
 	var profile: Profile = Profile.new()
 	profile.quests.book["feathers"] = QuestDefinition.parse("feathers", FEATHERS, {})
 	var applied: String = profile.quests.book["feathers"].problem
-	applied += profile.apply(_gain([], 1)) + profile.apply(_obtaining({ "feather": 3, "bone": 1 }))
+	applied += _count(profile, _gain([], 1))
+	applied += _count(profile, _obtaining({ "feather": 3, "bone": 1 }))
 	if not applied.is_empty() or QuestsTab.quest_lines(profile, "feathers")[0] != (
 		"Now: Collect feather  3/5"
 	):
@@ -1033,14 +1084,12 @@ func _check_obtained() -> String:
 			applied,
 			QuestsTab.quest_lines(profile, "feathers"),
 		]
-	applied = profile.apply(_obtaining({ "feather": 4 }))
+	applied = _count(profile, _obtaining({ "feather": 4 }))
 	var lines: Array[String] = ["Done: Collect feather  5/5", "Now: Collect feather  2/3"]
 	if not applied.is_empty() or QuestsTab.quest_lines(profile, "feathers") != lines:
 		return "four more feathers didn't finish five and count on: %s" % [
 			QuestsTab.quest_lines(profile, "feathers"),
 		]
-	if profile.materials.get("feather", 0) != 7:
-		return "the feathers obtained weren't all kept: %s" % profile.materials
 	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
 	if QuestTargets.of(state, profile.quests, 0).has("feathers"):
 		return "a step asking for an item is marked in the world"
@@ -1057,18 +1106,23 @@ func _check_obtained() -> String:
 	return ""
 
 
-## A gain of this player obtaining `items`, {item id: amount}.
-static func _obtaining(items: Dictionary[String, int]) -> Gain:
-	var gain: Gain = Gain.new()
-	gain.materials = items
-	return gain
+## The facts of this player obtaining `items`, {item id: amount}, from a felled wild monster.
+static func _obtaining(items: Dictionary[String, int]) -> Array[QuestFact]:
+	var loot: Dictionary[int, Dictionary] = { 0: items }
+	return QuestFacts.of(Harvested.new(1, "ombulumo", Vector2i.ZERO, loot), 0, "")
 
 
-## A gain of this player entering the region piece `piece`.
-static func _entering(piece: String) -> Gain:
-	var gain: Gain = Gain.new()
-	gain.facts.append(QuestFact.new(QuestStep.ENTERED, piece))
-	return gain
+## The fact of this player entering the region piece `piece`.
+static func _entering(piece: String) -> Array[QuestFact]:
+	return [QuestFact.new(QuestStep.ENTERED, piece)]
+
+
+## Counts `facts` on `profile`'s quests, in order, as the quests' tie does; returns "", as taking a
+## gain did.
+static func _count(profile: Profile, facts: Array[QuestFact]) -> String:
+	for fact: QuestFact in facts:
+		profile.count_quest_fact(fact)
+	return ""
 
 
 ## How far the nearest of `tiles` is from `from`.
@@ -1120,9 +1174,9 @@ func _check_counted() -> String:
 	profile.quests.book = content.quests
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
 	profile.quests.book[two.id] = two
-	var at_beach: Gain = _gain(["tikazzir", "ombulumo"], 0)
-	at_beach.facts.append(QuestFact.new(QuestStep.REACHED, "beach"))
-	var applied: String = profile.apply(at_beach)
+	var at_beach: Array[QuestFact] = _gain(["tikazzir", "ombulumo"], 0)
+	at_beach.append(QuestFact.new(QuestStep.REACHED, "beach"))
+	var applied: String = _count(profile, at_beach)
 	var progress: QuestProgress = profile.quests.progress.get(two.id)
 	var first: QuestProgress = profile.quests.progress.get("first_domination")
 	var toads: QuestProgress = profile.quests.progress.get("three_ombulumo")
@@ -1132,7 +1186,7 @@ func _check_counted() -> String:
 		return "the toads' quest didn't count up, or the beach didn't hand over to dominating"
 	if not profile.quests.finished.is_empty() or profile.standings.of(GUILD) != 0:
 		return "a domination before the beach finished the first domination"
-	applied = profile.apply(_gain(["ombulumo", "ombulumo"], 1))
+	applied = _count(profile, _gain(["ombulumo", "ombulumo"], 1))
 	if (not applied.is_empty()
 			or profile.quests.finished != ["first_domination", "three_ombulumo", two.id]):
 		return "a gain didn't hand a full step to the next one: %s" % profile.quests.finished
@@ -1151,7 +1205,7 @@ func _check_standing(profile: Profile) -> String:
 		return "finishing the first domination didn't raise the guild by one"
 	var betrayal: QuestDefinition = QuestDefinition.parse("betrayal", BETRAYAL, {})
 	profile.quests.book[betrayal.id] = betrayal
-	var applied: String = betrayal.problem + profile.apply(_gain([], 1))
+	var applied: String = betrayal.problem + _count(profile, _gain([], 1))
 	var _unbooked: bool = profile.quests.book.erase(betrayal.id)
 	if not applied.is_empty() or profile.standings.of(GUILD) != Standings.LOWEST:
 		return "a quest lowering the guild past its scale didn't hold it at the lowest: " + applied
@@ -1168,14 +1222,14 @@ func _check_standing(profile: Profile) -> String:
 func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	var fresh: Profile = Profile.new()
 	fresh.quests.book = book
-	var applied: String = fresh.apply(_gain(["ombulumo"], 0))
+	var applied: String = _count(fresh, _gain(["ombulumo"], 0))
 	applied += ProfileStore.save(fresh, SAVE_PATH)
 	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not applied.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(fresh):
 		return "quest progress didn't survive saving and loading: " + applied + loaded.problem
 	loaded.quests.book = book
-	applied = loaded.apply(_gain(["ombulumo", "ombulumo"], 0))
+	applied = _count(loaded, _gain(["ombulumo", "ombulumo"], 0))
 	if not applied.is_empty() or not loaded.quests.finished.has("three_ombulumo"):
 		return "loaded progress didn't count on to the toads' quest's end"
 	return ""
@@ -1190,7 +1244,7 @@ func _check_settled() -> String:
 	var profile: Profile = Profile.new()
 	for id: String in ["zz_last", "aa_first"]:
 		profile.quests.book[id] = QuestDefinition.parse(id, any_domination % [id, id], {})
-	var applied: String = profile.apply(_gain(["ombulumo"], 0))
+	var applied: String = _count(profile, _gain(["ombulumo"], 0))
 	var sorted: Array[String] = ["aa_first", "zz_last"]
 	if not applied.is_empty() or profile.quests.finished != sorted:
 		return "quests finished together weren't listed in id order: %s" % profile.quests.finished
@@ -1199,7 +1253,7 @@ func _check_settled() -> String:
 	save.quests.progress["first_domination"] = QuestProgress.new(4, 0)
 	var stale: Profile = ProfileSave.parse(ProfileSave.to_text(save))
 	stale.quests.book = QuestContent.load_quests().quests
-	applied = stale.problem + stale.apply(_gain([], 1))
+	applied = stale.problem + _count(stale, _gain([], 1))
 	var settled: Array[String] = ["first_domination", "three_ombulumo"]
 	if not applied.is_empty() or stale.quests.finished != settled:
 		return "saved progress that no longer fits didn't settle at the next fact: " + applied
@@ -1269,10 +1323,17 @@ static func _load_written(files: Dictionary[String, String]) -> QuestData:
 	return content
 
 
-func _gain(species: Array[String], chests: int) -> Gain:
-	var gain: Gain = Gain.new()
-	gain.dominated_species = species
+## The facts of this player dominating a monster of each of `species`, then opening `chests` chests.
+func _gain(species: Array[String], chests: int) -> Array[QuestFact]:
+	var facts: Array[QuestFact] = []
+	for one: String in species:
+		facts.append_array(QuestFacts.of(_dominated(one), 0, ""))
 	var opened: QuestFact = QuestFact.new(QuestStep.OPENED)
 	for _chest: int in chests:
-		gain.facts.append(opened)
-	return gain
+		facts.append(opened)
+	return facts
+
+
+## This player's domination of a wild monster of `species`.
+static func _dominated(species: String) -> WildMonsterDominated:
+	return WildMonsterDominated.new(1, 1, 0, Vector2i.ZERO, species)
