@@ -1,14 +1,15 @@
 # gdstyle:ignore-file=quality/no-debug-print
-# Checks an exported model in Godot itself (model skill): it imports, has a skinned mesh on a
-# skeleton, and plays every clip it should. Copy the .glb to the root of a scratch Godot project,
-# then run:
-# godot --headless --path <project> -s check_glb.gd -- <model.glb> [Clip ...]
+# Checks a model in the game project itself (model skill), through the repo's own import
+# settings: it loads, has a skinned mesh on a skeleton, and has every clip the game plays. From
+# the repository, after `godot --headless --path . --import`:
+# godot --headless --path . -s res://.claude/skills/model/scripts/check_glb.gd -- \
+#   res://assets/<name>/<name>.glb [Clip ...]
 extends SceneTree
 
 
 func _init() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
-	var scene: PackedScene = load("res://" + args[0].get_file())
+	var scene: PackedScene = load(args[0])
 	var model: Node = scene.instantiate()
 	var skeletons: Array[Node] = model.find_children("*", "Skeleton3D", true, false)
 	var meshes: Array[Node] = model.find_children("*", "MeshInstance3D", true, false)

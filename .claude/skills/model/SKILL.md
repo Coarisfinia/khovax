@@ -14,7 +14,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   install it on Linux. Run it headless:
   `blender --background --factory-startup --python <script.py> -- <args>`
   The MESA/ZINK/EGL warnings are harmless; EEVEE still renders.
-- **Godot 4.7.2**, the CI's version, for the import and in-game checks.
+- **Godot 4.7.2**, the CI's version: every Godot check runs in the game project itself, never in
+  a scratch project, so the repo's import settings apply.
 - **ImageMagick** (`montage`, `convert`) and `ffmpeg` for sheets and GIFs.
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).
@@ -57,9 +58,11 @@ for look-dev with the owner, but whatever it finds goes back into the script.
    bone bent ±45°. Joints must not collapse or tear.
 3. **Silhouette:** a flat black render from the game camera's angle. Is it readable as what it
    is, at the size it has on screen?
-4. **Godot import:** copy the `.glb` into a scratch project and run
-   `godot --headless --path <project> -s check_glb.gd -- <model.glb> <Clip> ...`. It must print
-   `MODEL CHECK: PASS`: a skeleton, a skinned mesh and every clip the game plays.
+4. **Godot import, in the game project:** after `godot --headless --path . --import`, run
+   `godot --headless --path . -s res://.claude/skills/model/scripts/check_glb.gd --
+   res://assets/<name>/<name>.glb <Clip> ...`. It goes through the repo's own import settings
+   (looping clips included) and must print `MODEL CHECK: PASS`: a skeleton with bones, every
+   skinned mesh bound to it, and every clip the game plays.
 5. **In game:** use AGENTS.md's screenshot recipe to put the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and
