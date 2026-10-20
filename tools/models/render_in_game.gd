@@ -8,13 +8,15 @@ extends SceneTree
 ## on a bare background as its codex page shows it full-screen (#995): the whole model
 ## ("portrait") and its front end, the face ("face"). Given a clip, it writes that clip's frames
 ## for a GIF instead, from the game camera or from any of those views. Any model works: the
-## cameras frame it by its bounds.
+## cameras frame it by its bounds. With `points`, it marks the model's attachment points
+## (PointMarks, #1007).
 ##
 ## Render it hidden and silent, as AGENTS.md's screenshot recipe says (the temporary one-pixel
 ## `override.cfg`, `--audio-driver Dummy`, and `--display-driver wayland` under WSLg):
 ##   godot --path . --audio-driver Dummy --disable-vsync --max-fps 0 \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] [clip=<Clip> [from=<view>]] \
+##     [points] \
 ##     --seed=0 --user-dir=<branch>
 ## The launch options after it (LaunchOptions) start the world as the game would.
 
@@ -143,6 +145,8 @@ func _place() -> void:
 	_main.add_child(_side_camera)
 	_side_camera.fov = FOV
 	_bounds = _bounds_of(model)
+	if OS.get_cmdline_user_args().has("points"):
+		_piece.add_child(PointMarks.new(model, _bounds.size.y))
 	if not _clip.is_empty():
 		# The bounds are the resting pose's: room for a clip to lunge or stretch out of them.
 		_bounds = _bounds.grow(_bounds.size.length() * CLIP_ROOM)

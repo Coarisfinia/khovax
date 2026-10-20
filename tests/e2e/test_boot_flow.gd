@@ -296,8 +296,9 @@ func _check_player_model(main: Node) -> String:
 ## Every model a view uses (#992): the one it preloads (its MODEL), or the player's, which the main
 ## scene places. A view that plays clips (its CLIPS) needs a model with a skeleton that has bones,
 ## every skinned mesh bound to it, and each of those clips: a model swap that drops a clip or
-## breaks the rig fails here instead of showing a T-pose in the game. A prop that plays none (the
-## chest) only has to load.
+## breaks the rig fails here instead of showing a T-pose in the game. One that plays an attack (its
+## ATTACK among its CLIPS) needs a centre of attack too (ModelPoints, #1007), where the attack's
+## effects play. A prop that plays none (the chest) only has to load.
 func _check_view_models(main: Node) -> String:
 	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
 	for slice: String in DirAccess.get_directories_at(SLICES):
@@ -310,13 +311,14 @@ func _check_view_models(main: Node) -> String:
 			var view: Script = load(folder + file) as Script
 			var constants: Dictionary = view.get_script_constant_map()
 			var clips: Array = constants.get("CLIPS", [])
+			var attacks: bool = constants.has("ATTACK") and clips.has(constants["ATTACK"])
 			var result: String = ""
 			if view == PlayerView:
-				result = _check_rig(player.model, clips)
+				result = _check_rig(player.model, clips, attacks)
 			elif constants.get("MODEL") is PackedScene:
 				var scene: PackedScene = constants["MODEL"]
 				var shown: Node = scene.instantiate()
-				result = _check_rig(shown, clips) if not clips.is_empty() else ""
+				result = _check_rig(shown, clips, attacks) if not clips.is_empty() else ""
 				shown.free()
 			elif not clips.is_empty():
 				result = "it plays clips but names no model"
@@ -325,8 +327,9 @@ func _check_view_models(main: Node) -> String:
 	return ""
 
 
-## Whether `model` has skinned meshes, each bound to a skeleton with bones, and each of `clips`.
-func _check_rig(model: Node, clips: Array) -> String:
+## Whether `model` has skinned meshes, each bound to a skeleton with bones, each of `clips`, and,
+## when it `attacks`, a centre of attack.
+func _check_rig(model: Node, clips: Array, attacks: bool) -> String:
 	var skinned: int = 0
 	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if mesh.skin == null:
@@ -342,6 +345,8 @@ func _check_rig(model: Node, clips: Array) -> String:
 	for clip: StringName in clips:
 		if animations == null or not animations.has_animation(clip):
 			return "no clip %s" % clip
+	if attacks and ModelPoints.attack_centres(model).is_empty():
+		return "it attacks but has no centre of attack (attack.0)"
 	return ""
 
 

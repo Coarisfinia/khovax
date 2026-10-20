@@ -54,6 +54,8 @@ a second model could use goes into the library or a generic tool, never into one
     mirrored across X; a model script runs it on its parts before they're joined.
   - `parts.claws`: claws fanned out along a paw's front like toes, the middle ones longer, curving
     down; count, spread, size, fan and curl as parameters.
+  - `attachments`: `add` gives the rig its attachment points (below), each a small bone that
+    deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out.
 - **The ground check:** `tools/models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
@@ -61,8 +63,8 @@ a second model could use goes into the library or a generic tool, never into one
   `tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides, the game
   camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
 - **A new model:** copy the shape of `tools/models/mana_wolf.py`: its proportions, its `Blob`
-  body, its own parts and its palette, then `quadruped.armature`, `weights.bind`,
-  `clips.animate` and `scene.export_glb`. A body plan the library lacks (a bird, a serpent)
+  body, its own parts and its palette, then `quadruped.armature`, `attachments.add`,
+  `weights.bind`, `clips.animate` and `scene.export_glb`. A body plan the library lacks (a bird, a serpent)
   becomes a new library module first, then the model.
 
 - **Running the tools** (owner's rule, #995): long-running work (Blender builds, renders, Godot
@@ -102,6 +104,13 @@ a second model could use goes into the library or a generic tool, never into one
   Looping clips start and end on the same pose, and the walk speed matches how fast the game
   moves the entity (no foot sliding).
 
+- **Attachment points (required, owner, #1007):** every model names its eyes and its centres of
+  attack, so the game can place effects there (an eye's glow, an attack's flash) and they follow
+  every clip: one point per eye, `eye.L`, `eye.R` or `eye.<name>` (any number, none for a model
+  without eyes), and one per thing it attacks with, `attack.0`, `attack.1`, … (at least one: a
+  mouth, each striking arm). Add them with `attachments.add` before binding; the game reads them
+  with `ModelPoints`, and `check_glb.gd` and the boot flow fail a model that attacks without one.
+
 ## 3. Textures and materials
 - **Few materials:** at most about four per model, and one texture atlas where possible
   (≤ 1024², power of two) so it stays cheap on mobile and web.
@@ -124,15 +133,18 @@ a second model could use goes into the library or a generic tool, never into one
    `godot --headless --path . -s res://.claude/skills/model/scripts/check_glb.gd --
    res://assets/<name>/<name>.glb <Clip> ...`. It goes through the repo's own import settings
    (looping clips included) and must print `MODEL CHECK: PASS`: a skeleton with bones, every
-   skinned mesh bound to it, and every clip the game plays. CI checks the same for every model a
-   view uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view
-   that plays a new clip adds it there.
+   skinned mesh bound to it, every clip the game plays, and a centre of attack when it plays
+   Attack; it lists the eyes and centres of attack. CI checks the same for every model a view
+   uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
+   plays a new clip adds it there.
 5. **In game:** with `tools/models/render_in_game.gd` and AGENTS.md's hidden-window recipe, put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and
    from the other monsters (colour and value contrast), including in corrupted areas. Look at the
-   close-ups too: up close is how its codex page shows it.
+   close-ups too: up close is how its codex page shows it. With `points`, the renders mark the
+   attachment points: check each eye mark sits on its eye and the attack mark on what attacks,
+   through the attack clip too.
 6. **Clips in game:** a GIF of each clip playing in Godot. Check that loops don't jump, steps don't
    slide, and the attack and hit read at game zoom.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly

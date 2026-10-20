@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import body, clips, eyes, parts, quadruped, scene, surface, symmetry, weights  # noqa: E402
+from lib import attachments, body, clips, eyes, parts, quadruped, scene, surface, symmetry, weights  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -131,6 +131,14 @@ def head_parts(skin, mats):
     return made
 
 
+def points(rig, pieces):
+    """The attachment points (#1007): the eyes, and its one centre of attack, the mouth between
+    the fangs, which moves with the head."""
+    sides = {side: [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)] for side in ("L", "R")}
+    attachments.add(rig, {side: (eyes.spot(eye), "head") for side, eye in sides.items()},
+                    [((0.0, -1.14, 1.32), "head")])
+
+
 def paws(mats):
     """Small mana-blue claws along the front of each paw."""
     made = []
@@ -213,6 +221,7 @@ def build(out):
     pieces = head_parts(skin, mats) + fur(mats) + paws(mats) + magic(skin, mats)
     symmetry.check(pieces)
     rig = quadruped.armature("ManaWolfRig", WOLF)
+    points(rig, pieces)
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R"))
     clips.animate(rig, {
