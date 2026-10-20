@@ -7,7 +7,10 @@ extends Feature
 ## opens their dialog at its first line, and an answer moves it on to the line it leads to, or
 ## closes it. Reading on through lines without answers changes nothing in the game, so the line kept
 ## is the one the last answer led to, and the card reads on from it. A dialog that locks, or one a
-## committing answer moved on, holds its player until it closes (#912, DialogHoldFeature).
+## committing answer moved on, holds its player until it closes (#912, DialogHoldFeature). Any
+## other dialog closes when its player walks away or does something else (#970): they start a step,
+## or their command fires, places their totem, swaps or respawns. Talking to the person again opens
+## it at its first line.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "dialogs"
@@ -87,12 +90,15 @@ func any_open() -> bool:
 	return not _open.is_empty()
 
 
-## Closes the dialogs of players who left, opens the dialogs players talked to someone for, then,
-## in slot order, raises DialogAnswered for every player whose command answers a dialog and moves
-## their dialog to where the answer leads.
+## Closes the dialogs of players who left, and those that don't hold players who walked away or
+## acted, opens the dialogs players talked to someone for, then, in slot order, raises
+## DialogAnswered for every player whose command answers a dialog and moves their dialog to where
+## the answer leads.
 func step(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in _open.keys():
 		if state.player(slot) == null:
+			_close(slot)
+		elif not holds(slot) and _walks_away(state, slot, Command.of(commands, slot)):
 			_close(slot)
 	for event: RefCounted in state.events:
 		var talked: NpcTalkedTo = event as NpcTalkedTo
@@ -167,6 +173,21 @@ func _close(slot: int) -> void:
 	var _closed: bool = _open.erase(slot)
 	var _cleared: bool = _lines.erase(slot)
 	var _released: bool = _holding.erase(slot)
+
+
+## Whether the player in `slot` walks away or does something else this tick (#970): they started a
+## step (EntityMoved, raised earlier in the tick), or `command` fires, places their totem, swaps or
+## respawns. Bumping into the person they talk to starts no step, so it doesn't walk away.
+static func _walks_away(state: GameState, slot: int, command: Command) -> bool:
+	var player_id: int = state.player(slot).id
+	for event: RefCounted in state.events:
+		var moved: EntityMoved = event as EntityMoved
+		if moved != null and moved.entity_id == player_id:
+			return true
+	if command == null:
+		return false
+	var placing: bool = command.totem == Command.PLACE_TOTEM
+	return command.special or placing or command.respawn or command.swap != Command.NO_SWAP
 
 
 ## The slots with an open dialog, in order.

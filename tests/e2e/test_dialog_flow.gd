@@ -16,7 +16,10 @@ extends RefCounted
 ## stand whatever they send, and with every player held the wild monsters pause, until an answer
 ## closes it; a committing answer holds the player from it on. With a second player free, a held
 ## player can't be targeted or hurt (#981): a wild monster beside both strikes only the free one,
-## and the held one again from the tick after the dialog lets go.
+## and the held one again from the tick after the dialog lets go. A dialog that doesn't hold its
+## player can be left (#970): a controller's B or the leave button closes the card, and the player
+## walks again; walking away or acting closes the dialog in the state, while bumping into the person
+## doesn't, and talking to them again opens it at its first line.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "teska_na_amvrel_greeting"
@@ -222,7 +225,10 @@ func _talk_to_scout(
 		]
 	if not screen.is_open() or screen.shown_speaker() != "Teska na Amvrel":
 		return "talking to the scout didn't open their greeting"
-	return _resume_open(driver, screen)
+	var resumed: String = _resume_open(driver, screen)
+	if not resumed.is_empty():
+		return resumed
+	return await _leave_and_walk_away(tree, main, driver, screen)
 
 
 ## The scout's greeting is open in the state at its first line, and saved with the world: leaving
@@ -246,6 +252,45 @@ func _resume_open(driver: GameDriver, screen: DialogScreen) -> String:
 	return ""
 
 
+## The scout's greeting, open on the card and not holding the player: a controller's B closes the
+## card, though the state keeps the greeting open; the player walks west with the keys, which closes
+## it; walking back into the scout opens it at its first line again, and the leave button closes the
+## card too.
+func _leave_and_walk_away(
+	tree: SceneTree,
+	main: Node,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
+	_press_pad(screen, JOY_BUTTON_B)
+	if screen.is_open() or driver.input.in_dialog or dialogs.dialog_of(0) != GREETING:
+		return "B didn't leave the card with the greeting still open in the state"
+	_hold_key(driver, &"move_left", MovementFeature.MOVE_TICKS * 2)
+	if not dialogs.dialog_of(0).is_empty() or driver.state.player(0).tile == BESIDE_SCOUT:
+		return "walking away left the greeting open, or didn't walk"
+	_hold_key(driver, &"move_right", MovementFeature.MOVE_TICKS * 6)
+	(main.get_node("EventBus") as EventBus).flush()
+	await tree.process_frame
+	if not screen.is_open() or screen.line_index != 0 or dialogs.line_of(0) != 0:
+		return "talking to the scout again didn't open the greeting at its first line"
+	var leave: Button = screen.get_node("Card/Rows/Header/Leave") as Button
+	if not leave.visible:
+		return "the greeting, which doesn't hold the player, showed no leave button"
+	leave.pressed.emit()
+	if screen.is_open() or driver.input.in_dialog:
+		return "the leave button didn't close the card"
+	return ""
+
+
+## Holds the action `action` down for `ticks` of the driver's ticks, then lets go.
+static func _hold_key(driver: GameDriver, action: StringName, ticks: int) -> void:
+	Input.action_press(action)
+	for _tick: int in ticks:
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	Input.action_release(action)
+
+
 ## A player walking on into the scout talks only once; stopping and walking into them again talks
 ## again.
 static func _talk_once_while_held() -> String:
@@ -257,6 +302,33 @@ static func _talk_once_while_held() -> String:
 		talks.append(_talked(state.events).size())
 	if talks != [1, 0, 0, 0, 1] or state.player(0).tile != BESIDE_SCOUT:
 		return "walking on into the scout talked %s, standing on %s" % [talks, state.player(0).tile]
+	return _close_on_walk_away()
+
+
+## A greeting that doesn't hold the player stays open while they bump into the scout, and moves on
+## by an answer; stepping west closes it, from any line. Talking to the scout again opens it at its
+## first line, and firing closes it too.
+static func _close_on_walk_away() -> String:
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
+	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
+	Simulation.step(state, FlowSteps.command(EAST))
+	Simulation.step(state, FlowSteps.command(EAST))
+	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_glade")))
+	if dialogs.dialog_of(0) != GREETING or dialogs.line_of(0) != 2:
+		return "bumping into the scout closed the greeting, or the answer didn't move it on"
+	_walked = FlowSteps.walk(state, [Vector2i(1, 0)])
+	if not dialogs.dialog_of(0).is_empty():
+		return "walking away didn't close the greeting"
+	_walked = FlowSteps.walk(state, [BESIDE_SCOUT])
+	Simulation.step(state, FlowSteps.command(EAST))
+	if dialogs.dialog_of(0) != GREETING or dialogs.line_of(0) != 0:
+		return "talking to the scout again didn't open the greeting at its first line"
+	var firing: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	firing[0].special = true
+	Simulation.step(state, firing)
+	if not dialogs.dialog_of(0).is_empty():
+		return "firing didn't close the greeting"
 	return ""
 
 
@@ -417,10 +489,10 @@ static func _works(button: Button) -> bool:
 	return not button.disabled
 
 
-## The dialog card's buttons, in order.
+## The dialog card's buttons, in order: its answers or its read-on button, not the leave button.
 static func _buttons(screen: DialogScreen) -> Array[Button]:
 	var found: Array[Button] = []
-	for child: Node in screen.find_children("*", "Button", true, false):
+	for child: Node in screen.get_node("Card/Rows/Choices").get_children():
 		found.append(child as Button)
 	return found
 

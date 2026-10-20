@@ -10,7 +10,11 @@ extends Control
 ## command (LocalInput.choose_answer). Reading on changes nothing in the game, so it stays on the
 ## card, from the line the state holds. Controller, touch and keyboard all work: the buttons take
 ## the focus, so the d-pad or the stick moves it and A (or Enter) confirms. While a dialog is open
-## the player stands. Its text tags show the names they stand for (#733).
+## the player stands. A dialog that doesn't hold its player (#970) can be left: the leave button
+## at the card's top right (a click or a tap), or `ui_cancel` (Escape, or a controller's B) closes
+## the card and lets the player walk; walking away or acting then closes the dialog in the state too
+## (DialogFeature). One that holds them shows no leave button, and Escape opens the menu as ever.
+## Its text tags show the names they stand for (#733).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
@@ -28,6 +32,8 @@ const WIDTH_FONTS: float = 26.0
 const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest height, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
+## The leave button's words on hover: it shows only the menu's close icon.
+const LEAVE_TIP: String = "Leave (Escape, or B on a controller)"
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
@@ -45,7 +51,8 @@ var _fade: Tween
 var _font_size: int = 0
 
 @onready var _card: PanelContainer = $Card
-@onready var _speaker: Label = $Card/Rows/Speaker
+@onready var _speaker: Label = $Card/Rows/Header/Speaker
+@onready var _leave: Button = $Card/Rows/Header/Leave
 @onready var _line: Label = $Card/Rows/Line
 @onready var _choices: VBoxContainer = $Card/Rows/Choices
 
@@ -54,6 +61,9 @@ func _ready() -> void:
 	# A copy of the UI's theme: the screen scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
+	_leave.icon = GameMenu.CLOSE_ICON
+	_leave.tooltip_text = LEAVE_TIP
+	var _left: int = _leave.pressed.connect(leave)
 	if driver != null:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 
@@ -61,6 +71,28 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	lay_out(get_viewport_rect().size)
 	_follow_menu()
+
+
+## Escape or a controller's B leaves a dialog that doesn't hold the player, before the menu hears
+## Escape; under the menu, or for a dialog that holds them, the menu keeps it.
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and can_leave():
+		leave()
+		get_viewport().set_input_as_handled()
+
+
+## Whether the open dialog can be left now: it doesn't hold this machine's player (#970), and the
+## menu isn't open over it.
+func can_leave() -> bool:
+	var resting: bool = input != null and input.blocked
+	return is_open() and not resting and not _holds()
+
+
+## Closes the card of a dialog that doesn't hold the player, who can walk again; the state keeps it
+## open until they walk away or act (DialogFeature), and talking to the person again opens it anew.
+func leave() -> void:
+	if can_leave():
+		_go_to(DialogFeature.NO_LINE)
 
 
 ## Opens the dialog with the id `dialog_id` at the line `index`, its first by default, or moves the
@@ -83,11 +115,8 @@ func open(dialog_id: String, index: int = 0) -> bool:
 ## none is open, if that changed since the card last looked, or always with `refresh`. Reading on
 ## or closing on the card leaves the state as it is, so the card stays where it read to.
 func follow_state(refresh: bool = false) -> void:
-	var slot: int = input.slot if input != null else 0
-	var state: GameState = driver.state if driver != null else null
-	var feature: DialogFeature = null
-	if state != null:
-		feature = state.feature(DialogFeature.ID) as DialogFeature
+	var slot: int = _slot()
+	var feature: DialogFeature = _dialogs()
 	var dialog_id: String = feature.dialog_of(slot) if feature != null else ""
 	var index: int = feature.line_of(slot) if feature != null else DialogFeature.NO_LINE
 	if not refresh and dialog_id == _followed_dialog and index == _followed_line:
@@ -99,6 +128,24 @@ func follow_state(refresh: bool = false) -> void:
 			_go_to(DialogFeature.NO_LINE)
 		return
 	var _opened: bool = open(dialog_id, index)
+
+
+## The slot of this machine's player.
+func _slot() -> int:
+	return input.slot if input != null else 0
+
+
+## The dialogs of the state the session plays, or null.
+func _dialogs() -> DialogFeature:
+	if driver == null or driver.state == null:
+		return null
+	return driver.state.feature(DialogFeature.ID) as DialogFeature
+
+
+## Whether this machine's player's open dialog holds them (#912): it can't be left then.
+func _holds() -> bool:
+	var feature: DialogFeature = _dialogs()
+	return feature != null and feature.holds(_slot())
 
 
 ## Follows the state after every tick; this machine's player talking to a person or answering
@@ -231,6 +278,8 @@ func _follow_menu() -> void:
 	var live: Array[Button] = _buttons()
 	for button: Button in live:
 		button.disabled = input.blocked
+	_leave.visible = not _holds()
+	_leave.disabled = input.blocked
 	var focused: Control = get_viewport().gui_get_focus_owner()
 	if not input.blocked and not live.is_empty() and not live.has(focused):
 		live[0].grab_focus()
@@ -248,3 +297,6 @@ func _buttons() -> Array[Button]:
 func _size_buttons() -> void:
 	for button: Button in _buttons():
 		button.custom_minimum_size.y = _font_size * BUTTON_FONTS
+	var side: float = _font_size * BUTTON_FONTS
+	_leave.custom_minimum_size = Vector2(side, side)
+	_leave.add_theme_constant_override("icon_max_width", roundi(_font_size * GameMenu.ICON_FONTS))
