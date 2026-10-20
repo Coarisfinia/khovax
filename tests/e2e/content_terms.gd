@@ -16,7 +16,7 @@ const NAME_RULES: Dictionary[String, String] = {
 	"realm": "",
 	"instance": "",
 	"region": "",
-	"piece": "",
+	"piece": "", # a place inside its instance, named after it ("the pond of <instance>", #909)
 	"place": "",
 	"person": "",
 	"faction": "",
@@ -26,8 +26,8 @@ const NAME_RULES: Dictionary[String, String] = {
 ## Terms two things share today, each with the issue that gives one of them another (#909). It
 ## only shrinks: a term that no longer clashes must be dropped from it.
 const KNOWN_DUPLICATES: Dictionary[String, int] = {
-	"forest": 909, # a tile kind and an instance
-	"glade": 909, # an instance and its loot table
+	"forest": 909, # a tile kind and an instance, which gives it up when it's renamed
+	"glade": 909, # an instance and its loot table, which keeps it when the instance is renamed
 }
 
 ## Each term, in lower case, with every thing using it ("<kind> <id>").
@@ -37,10 +37,9 @@ var broken: Dictionary[String, String] = {}
 
 
 ## Notes the thing of `kind` with `id` and its `name` ("" for none): its terms, and its name against
-## its kind's rule. `within` tells apart things of one kind and id found in different places, like
-## region pieces in two instances, which then clash: quests name a piece by its id alone.
-func add(kind: String, id: String, name: String = "", within: String = "") -> void:
-	var thing: String = "%s %s%s" % [kind, within, id]
+## its kind's rule.
+func add(kind: String, id: String, name: String = "") -> void:
+	var thing: String = "%s %s" % [kind, id]
 	for term: String in [id.to_lower(), name.to_lower()]:
 		if term.is_empty():
 			continue
@@ -125,7 +124,9 @@ static func _add_loot(terms: ContentTerms, gear: GearContent) -> void:
 
 
 ## The instances, the regions their variants load, their region pieces but the start piece every
-## instance has, the places their legends name, and the people standing there by the speakers of
+## instance has (a piece is a place inside its instance and takes its name from it, the pond of an
+## instance, so two instances may each have a pond, #909), the places their legends name, and the
+## people standing there by the speakers of
 ## the dialogs they open; a dialog nobody opens keeps its speaker.
 static func _add_instances(terms: ContentTerms, dialogs: Dictionary[String, Dialog]) -> void:
 	var start_piece: String = InstanceBlueprints.START_PIECE.get_basename()
@@ -141,7 +142,7 @@ static func _add_instances(terms: ContentTerms, dialogs: Dictionary[String, Dial
 			var region: Region = InstanceBlueprints.region_of(instance_name, 0, region_name)
 			for piece: String in region.piece_of.values():
 				if piece != start_piece:
-					terms.add("piece", piece, "", instance_name + "/")
+					terms.add("piece", "%s of %s" % [piece, instance_name])
 			for trigger: TileTrigger in TileTrigger.all_in(region):
 				if trigger.action == TileTrigger.REACH:
 					terms.add("place", trigger.place)

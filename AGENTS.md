@@ -455,8 +455,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Every id and name is unique across all content** (owner's ground rule, #909): no two things
   share one, whatever their kinds (a tile, an instance, a region piece, a place, a person, a
   species, an ability, an item, a faction, a quest), in any case; a thing's own id and name may
-  match. The content flow refuses a duplicate (`ContentTerms`); the ones today's content still has
-  wait in its list, each with its issue, and the list only shrinks.
+  match. A region piece is a place inside its instance and is named after it ("the pond of
+  <instance>", owner, #909), so two instances may each have a pond. The content flow refuses a
+  duplicate (`ContentTerms`); the ones today's content still has wait in its list, each with its
+  issue, and the list only shrinks.
 - **Proper nouns get invented names, each kind under its own rules** (owner, #909): species,
   instances, regions, places, people and unique items are named, and each kind has its own
   linguistic rules, so the world reads as one coherent whole; vocabulary (tile kinds, slots,
