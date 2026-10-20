@@ -5,12 +5,15 @@ extends Feature
 ## sight, and the rock itself is seen. Visibility is simulation state (owner, #65): it's in the
 ## state hash, the same on every machine. An instance's scripted event can reveal an area (#177):
 ## its tiles count as seen before for every player, also in the state hash. How it is drawn
-## (remembered tiles, allies' sight, monsters in fog) is FogView's.
+## (remembered tiles, allies' sight, monsters in fog) is FogView's. Sight traits from a player's
+## carried monsters see further (#962): a later rule widens their sight (`widen`).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "fog"
-## How far every player sees, in steps, until sight traits from carried monsters change it (#962).
+## How far every player sees, in steps, unless sight traits widen it (#962).
 const SIGHT_RADIUS: int = 5
+## The most steps a sight trait widens a player's sight by.
+const MOST_WIDER: int = 5
 
 ## Each radius's lines, as _lines_within works them out, shared by every instance.
 static var _lines: Dictionary[int, Array] = {}
@@ -21,6 +24,8 @@ var visible: Dictionary[int, Array] = {}
 var revealed: Array[Vector2i] = []
 ## Where each player stood when their sight was last worked out, by slot.
 var _seen_from: Dictionary[int, Vector2i] = {}
+## How many steps beyond SIGHT_RADIUS each player sees, by slot, for those who see further (#962).
+var _wider: Dictionary[int, int] = {}
 
 
 func id() -> String:
@@ -78,6 +83,27 @@ func reveal(state: GameState, tiles: Array[Vector2i]) -> void:
 	revealed.sort()
 
 
+## Widens the sight of the player in `slot` to `steps` beyond SIGHT_RADIUS (0 for none, #962).
+## Only rules call it, inside a tick (#30): their sight is worked out again at once when it changes,
+## and the fog's view eases it open or closed like any other change.
+func widen(state: GameState, slot: int, steps: int) -> void:
+	var wider: int = clampi(steps, 0, MOST_WIDER)
+	if state.player(slot) == null or wider == radius_of(slot) - SIGHT_RADIUS:
+		return
+	if wider == 0:
+		var _narrowed: bool = _wider.erase(slot)
+	else:
+		_wider[slot] = wider
+	var _forgot: bool = _seen_from.erase(slot)
+	_update(state)
+
+
+## How far the player in `slot` sees, in steps.
+func radius_of(slot: int) -> int:
+	var wider: int = _wider.get(slot, 0)
+	return SIGHT_RADIUS + wider
+
+
 ## Whether the player in `slot` sees `tile`.
 func sees(slot: int, tile: Vector2i) -> bool:
 	return visible.has(slot) and visible[slot].has(tile)
@@ -97,22 +123,43 @@ func hash_values() -> Array[int]:
 		for tile: Vector2i in revealed:
 			values.append(tile.x)
 			values.append(tile.y)
+	# Only for a player who sees further, so the hash of every session without one is unchanged.
+	if not _wider.is_empty():
+		values.append(_wider.size())
+		for slot: int in GameState.MAX_PLAYERS:
+			if _wider.has(slot):
+				values.append_array([slot, _wider[slot]])
 	return values
 
 
-## Where each player's sight was worked out from, by slot, and the revealed tiles. The visible
-## tiles follow from where they were seen from, so they're worked out again on loading.
+## Where each player's sight was worked out from and how much further they see, by slot, and the
+## revealed tiles. The visible tiles follow from those, so they're worked out again on loading.
 func save_values() -> Dictionary:
 	var seen: Array[int] = []
+	var wider: Array[int] = []
 	for slot: int in GameState.MAX_PLAYERS:
 		if _seen_from.has(slot):
 			seen.append_array([slot, _seen_from[slot].x, _seen_from[slot].y])
-	return { "seen_from": seen, "revealed": DataReader.flat(revealed) }
+		if _wider.has(slot):
+			wider.append_array([slot, _wider[slot]])
+	return { "seen_from": seen, "wider": wider, "revealed": DataReader.flat(revealed) }
 
 
 func load_values(state: GameState, values: DataReader) -> void:
 	visible.clear()
 	_seen_from.clear()
+	_wider.clear()
+	var wider: Array[int] = values.wholes("wider", 0, DataReader.MOST)
+	if wider.size() % 2 != 0:
+		values.fail("a player's wider sight is cut off")
+		return
+	for i: int in range(0, wider.size(), 2):
+		var slot: int = wider[i]
+		if state.player(slot) == null or _wider.has(slot) or wider[i + 1] > MOST_WIDER:
+			values.fail("slot %d's wider sight isn't one player's, up to %d" % [slot, MOST_WIDER])
+			return
+		if wider[i + 1] > 0:
+			_wider[slot] = wider[i + 1]
 	var seen: Array[int] = values.wholes("seen_from", -DataReader.MOST, DataReader.MOST)
 	if seen.size() % 3 != 0:
 		values.fail("a player's sight is cut off")
@@ -124,7 +171,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("the sight of slot %d isn't of one player in the region" % slot)
 			return
 		_seen_from[slot] = from
-		visible[slot] = sight(state.region, from, SIGHT_RADIUS, state.next_door)
+		visible[slot] = sight(state.region, from, radius_of(slot), state.next_door)
 	revealed = values.tiles("revealed", state.region)
 	revealed.sort()
 
@@ -136,9 +183,10 @@ func _update(state: GameState) -> void:
 		if player == null:
 			var _lost: bool = visible.erase(slot)
 			var _forgot: bool = _seen_from.erase(slot)
+			var _narrowed: bool = _wider.erase(slot)
 		elif not _seen_from.has(slot) or _seen_from[slot] != player.tile:
 			_seen_from[slot] = player.tile
-			visible[slot] = sight(state.region, player.tile, SIGHT_RADIUS, state.next_door)
+			visible[slot] = sight(state.region, player.tile, radius_of(slot), state.next_door)
 
 
 ## The tiles of `region`, or of the ground next door (#191), within `radius` of `from` that a
