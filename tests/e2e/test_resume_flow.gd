@@ -10,7 +10,8 @@ extends RefCounted
 ## starts with none, and what was seen in an instance purged since (#212) isn't restored. The
 ## player brings a companion all along (#338), the first monster their profile carries: it goes
 ## through the save and back, and the main scene resumes with it; a fresh world gets it as requests
-## from the profile's outbox (#818).
+## from the profile's outbox (#818). While a player's dialog is open the world isn't saved, not even
+## on quitting, and it's saved half a second after the dialog closes (#913).
 
 const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
@@ -359,7 +360,7 @@ func _explored_saved() -> bool:
 
 
 ## Quitting or going to the background saves at once (`flush`), and the next regular save waits
-## a full interval from then.
+## a full interval from then. Then an open dialog holds the saves (`_check_dialog_waits`).
 func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 	var interval: int = ProfileKeeper.SAVE_INTERVAL_MSEC
 	driver.advance(STEP)
@@ -372,6 +373,31 @@ func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 	problem = keeper.save_if_due(interval * 3 + 10)
 	if not problem.is_empty() or _saved_tick() != driver.world.tick:
 		return "the world wasn't saved an interval after a flush: " + problem
+	return _check_dialog_waits(driver, keeper)
+
+
+## With the guild scout's greeting open for the player, neither a due save nor quitting saves the
+## world; once its last answer closes it, the world is saved WorldKeeper.AFTER_HOLD_MSEC later, not
+## before.
+func _check_dialog_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
+	var greeting: String = "guild_scout_greeting"
+	var later: int = ProfileKeeper.SAVE_INTERVAL_MSEC * 10
+	driver.input.choose_answer(DialogFeature.code(greeting, "ask_about_glade"))
+	driver.advance(STEP)
+	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
+	var before: int = _saved_tick()
+	var problem: String = keeper.save_if_due(later) + keeper.flush(later + 1)
+	if not problem.is_empty() or not dialogs.any_open() or _saved_tick() != before:
+		return "the world was saved with a dialog open: " + problem
+	driver.input.choose_answer(DialogFeature.code(greeting, "promise_to_look"))
+	driver.advance(STEP)
+	problem = keeper.save_if_due(later + 2)
+	problem += keeper.save_if_due(later + 1 + WorldKeeper.AFTER_HOLD_MSEC)
+	if not problem.is_empty() or dialogs.any_open() or _saved_tick() != before:
+		return "the world was saved before the dialog had been closed a moment: " + problem
+	problem = keeper.save_if_due(later + 2 + WorldKeeper.AFTER_HOLD_MSEC)
+	if not problem.is_empty() or _saved_tick() != driver.world.tick:
+		return "the world wasn't saved a moment after the dialog closed: " + problem
 	return ""
 
 

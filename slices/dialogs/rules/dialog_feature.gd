@@ -82,6 +82,11 @@ func answer_holds(answer_code: int) -> bool:
 	return commits or locks
 
 
+## Whether any player's dialog is open here: the world isn't saved then (#913, DialogSaveHold).
+func any_open() -> bool:
+	return not _open.is_empty()
+
+
 ## Closes the dialogs of players who left, opens the dialogs players talked to someone for, then,
 ## in slot order, raises DialogAnswered for every player whose command answers a dialog and moves
 ## their dialog to where the answer leads.

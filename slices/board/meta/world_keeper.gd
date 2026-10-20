@@ -6,7 +6,14 @@ extends Node
 ## when the game quits or goes to the background. A crash loses at most one interval of play. The
 ## world file is apart from the profile (WorldSave), so saving one never touches the other. What
 ## other slices keep beside the world (its `companions`, like the ground explored in it) is saved in
-## the same file at the same moments, so the two go together.
+## the same file at the same moments, so the two go together. While any of its `holds` holds the
+## world (an open dialog, #913), it isn't saved at all, not even on quitting, and once the last one
+## lets go it's saved AFTER_HOLD_MSEC later, without waiting for the interval.
+
+## How long after the last hold lets go the world is saved (#913).
+const AFTER_HOLD_MSEC: int = 500
+## No hold let go with its save still waiting.
+const NOT_FREED: int = -1
 
 ## Where the main scene's keeper keeps the world unless it's pointed elsewhere; "" keeps none. The
 ## headless flows and the test builds clear it before the main scene comes up, so they never
@@ -15,6 +22,8 @@ static var default_path: String = WorldSave.PATH
 
 ## What other slices keep beside the world in its file.
 @export var companions: Array[WorldCompanion] = []
+## What other slices say the world mustn't be saved through (#913).
+@export var holds: Array[WorldSaveHold] = []
 
 ## The world to save, which the driver hands over as each session starts; null for none.
 var world: World = null
@@ -24,6 +33,10 @@ var save_path: String = ""
 var _saved_world: World = null
 var _saved_tick: int = -1
 var _last_save_msec: int = -ProfileKeeper.SAVE_INTERVAL_MSEC
+## Whether a hold held the world when the keeper last looked, and when the last one let go, while
+## its save waits, or NOT_FREED.
+var _was_held: bool = false
+var _freed_msec: int = NOT_FREED
 
 
 func _process(_delta: float) -> void:
@@ -61,17 +74,30 @@ func _load_saved() -> World:
 
 
 ## Saves the world if it moved since the last save and that save is at least
-## SAVE_INTERVAL_MSEC old; returns why it couldn't, or "".
+## SAVE_INTERVAL_MSEC old, or AFTER_HOLD_MSEC after the last hold let go; never while one holds it.
+## Returns why it couldn't, or "".
 func save_if_due(now_msec: int) -> String:
+	if _held():
+		_was_held = true
+		_freed_msec = NOT_FREED
+		return ""
+	if _was_held:
+		_was_held = false
+		_freed_msec = now_msec
+	if _freed_msec != NOT_FREED:
+		if now_msec - _freed_msec < AFTER_HOLD_MSEC:
+			return ""
+		_freed_msec = NOT_FREED
+		return flush(now_msec)
 	if now_msec - _last_save_msec < ProfileKeeper.SAVE_INTERVAL_MSEC:
 		return ""
 	return flush(now_msec)
 
 
-## Saves the world now, at `now_msec`, if it moved since the last save; returns why it
-## couldn't, or "". The next regular save waits a full interval from here.
+## Saves the world now, at `now_msec`, if it moved since the last save and nothing holds it;
+## returns why it couldn't, or "". The next regular save waits a full interval from here.
 func flush(now_msec: int) -> String:
-	if not _moved():
+	if not _moved() or _held():
 		return ""
 	var beside: Dictionary = {}
 	for companion: WorldCompanion in companions:
@@ -83,6 +109,14 @@ func flush(now_msec: int) -> String:
 		_saved_world = world
 		_saved_tick = world.tick
 	return problem
+
+
+## Whether any of the holds holds the world now.
+func _held() -> bool:
+	for hold: WorldSaveHold in holds:
+		if hold.holds(world):
+			return true
+	return false
 
 
 ## Whether there's a world to keep that moved since the last save.
