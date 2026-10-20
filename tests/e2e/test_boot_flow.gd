@@ -294,6 +294,8 @@ func _check_view_models(main: Node) -> String:
 	var player: PlayerView = main.get_node("Instance/Player") as PlayerView
 	for slice: String in DirAccess.get_directories_at(SLICES):
 		var folder: String = SLICES + slice + "/look/"
+		if not DirAccess.dir_exists_absolute(folder):
+			continue
 		for file: String in DirAccess.get_files_at(folder):
 			if not file.ends_with(".gd"):
 				continue
