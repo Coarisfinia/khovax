@@ -600,50 +600,7 @@ func _check_replay_round_trip() -> String:
 		kept = kept and loaded.carried[slot].same_as(recorded.carried[slot])
 	if not kept or swapped.play().is_empty():
 		return "the replay didn't keep its companions, or played with others all the same"
-	return _check_older_formats(recorded, loaded)
-
-
-## Replays from before commands had a special attack (#410, format 3), a totem (#423, format 4), a
-## swap (#55, format 7), a dialog answer (#635, format 8), a territory handed over (#638, format
-## 9), a revive item (#656, format 11), a trap (#692, format 12) or an outbox request's id (#771,
-## format 13) read with none fired, placed, swapped, answered, handed over, used, equipped or
-## requested, as `recorded` has none, and play back the same. Before format 8 they name each slot's
-## companion alone, which becomes all the slot carries, and before format 11 the species alone,
-## which get the stand-in short ids of their places (#700), as `recorded`'s are. Before format 15
-## they name the features by their old numbers (#784).
-func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
-	var counts: Dictionary[int, int] = {
-		3: 1, 4: 2, 7: 5, 8: 6, 9: 7, 10: 8, 11: 8, 12: 9, 13: 10, 14: 11,
-	}
-	for older_format: int in counts:
-		var older: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
-		var kept: Array[int] = []
-		for i: int in range(0, older.changes.size(), Replay.STRIDE):
-			kept.append_array(older.changes.slice(i, i + 2 + counts[older_format]))
-		older.changes = kept
-		var data: Dictionary = JSON.parse_string(ReplayFile.to_text(older))
-		data["format"] = older_format
-		var named: Array = data["features"]
-		data["features"] = _numbered(named)
-		# Before short ids, a slot's carried monsters were its species alone.
-		if older_format < ReplayFile.SHORT_ID_FORMAT:
-			data["carried"] = [["tikazzir"], ["ombulumo"]]
-		if older_format < ReplayFile.CARRIED_FORMAT:
-			var _erased: bool = data.erase("carried")
-			data["companions"] = ["tikazzir", "ombulumo"]
-		var migrated: Replay = ReplayFile.parse(JSON.stringify(data))
-		if migrated.changes != loaded.changes or not migrated.play().is_empty():
-			return "a replay in format %d didn't read with nothing fired or placed" % older_format
 	return ""
-
-
-## Feature ids as the numbers a replay from before format 15 names them by (#784).
-static func _numbered(ids: Array) -> Array[int]:
-	var numbers: Array[int] = []
-	for id: Variant in ids:
-		var number: int = ReplayFile.NUMBERED_FEATURES.find_key(id)
-		numbers.append(number)
-	return numbers
 
 
 ## Playback refuses, with a clear message, what this build can't play as recorded.
@@ -653,6 +610,11 @@ func _check_replay_refusals() -> String:
 		"not json": "not a replay",
 		"{}": "not a replay",
 		text.replace("\"format\": %d" % ReplayFile.FORMAT, "\"format\": 99"): "replay format 99",
+		# An older format came with older rules, so it's refused rather than read (#819).
+		text.replace(
+			"\"format\": %d" % ReplayFile.FORMAT,
+			"\"format\": %d" % (ReplayFile.FORMAT - 1),
+		): "replay format %d was recorded by an older build" % (ReplayFile.FORMAT - 1),
 		text.replace(
 			"\"rules\": %d" % RulesChanges.version(),
 			"\"rules\": 0",
