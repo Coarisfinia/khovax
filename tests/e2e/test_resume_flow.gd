@@ -102,13 +102,13 @@ func _play(world: World) -> String:
 		return "the walk didn't dominate the wild monster and go on into the glade"
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var goals: Array[Vector2i] = [glade.region.triggers[0].tile]
-	goals.append_array(glade.region.chests)
+	goals.append_array(glade.region.placed(ChestPlacements.CHEST).keys())
 	for goal: Vector2i in goals:
 		for direction: int in FlowSteps.shortest_path(glade, world.player(0).tile, goal):
 			_walk_in(world, direction)
 	var triggers: TriggerFeature = glade.feature(TriggerFeature.ID) as TriggerFeature
 	var chests: ChestFeature = glade.feature(ChestFeature.ID) as ChestFeature
-	if triggers.fired.is_empty() or chests.chests.size() == glade.region.chests.size():
+	if triggers.fired.is_empty() or chests.chests.size() == goals.size() - 1:
 		return "the walk in the glade didn't reach its lookout and a chest"
 	return ""
 

@@ -1,6 +1,7 @@
 class_name ChestFeature
 extends Feature
-## Treasure chests (#124): placed by hand in region pieces (`c`), opened by the first player who
+## Treasure chests (#124): placed by hand in region pieces (ChestPlacements), opened by the first
+## player who
 ## walks onto one. An opened chest bursts into loot and **every player in the instance gets their
 ## own roll** on the instance's chest table (owner, #124), not only the one who opened it: crafting
 ## supplies and basic gear (#694). The rolls come from the feature's own random stream (#32), so a
@@ -40,8 +41,8 @@ func requires() -> Array[String]:
 
 
 func start(state: GameState) -> void:
-	chests = state.region.chests.duplicate()
-	loot_spots = state.region.loot_spots.duplicate()
+	chests.assign(state.region.placed(ChestPlacements.CHEST).keys())
+	loot_spots.assign(state.region.placed(ChestPlacements.LOOT).keys())
 	_rng = Rng.new(state.rng_seed, stream())
 
 
@@ -86,13 +87,13 @@ func save_values() -> Dictionary:
 func load_values(state: GameState, values: DataReader) -> void:
 	var closed: Array[Vector2i] = values.tiles("chests", state.region)
 	for chest: Vector2i in closed:
-		if not state.region.chests.has(chest) or closed.count(chest) > 1:
+		if not state.region.placed(ChestPlacements.CHEST).has(chest) or closed.count(chest) > 1:
 			values.fail("a saved chest on %s isn't one of the region's" % chest)
 			return
 	chests = closed
 	var lying: Array[Vector2i] = values.tiles("loot", state.region)
 	for spot: Vector2i in lying:
-		if not state.region.loot_spots.has(spot) or lying.count(spot) > 1:
+		if not state.region.placed(ChestPlacements.LOOT).has(spot) or lying.count(spot) > 1:
 			values.fail("saved loot on %s isn't the region's" % spot)
 			return
 	loot_spots = lying

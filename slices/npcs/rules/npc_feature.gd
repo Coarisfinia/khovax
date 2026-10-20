@@ -31,14 +31,15 @@ func requires() -> Array[String]:
 
 func start(state: GameState) -> void:
 	var tiles: Array[Vector2i] = []
-	tiles.assign(state.region.npcs.keys())
+	var placed: Dictionary[Vector2i, String] = state.region.placed(NpcPlacements.KIND)
+	tiles.assign(placed.keys())
 	# Sorted, so their entity ids never depend on how the region was arranged.
 	tiles.sort()
 	for tile: Vector2i in tiles:
 		# Can't be refused: an entity without a slot is always added.
 		var person: Entity = state.add_entity(Entity.NO_SLOT, tile)
 		npcs.append(person.id)
-		spots[person.id] = state.region.npcs[tile]
+		spots[person.id] = NpcSpot.read(placed[tile])
 
 
 ## Every player, in slot order, who stands and walks into a person talks to them, unless they walked

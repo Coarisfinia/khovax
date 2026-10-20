@@ -943,7 +943,9 @@ func _check_connector_fit() -> String:
 ## as its file is drawn, and takes four players.
 func _check_turning() -> String:
 	var folder: String = InstanceBlueprints.REGIONS + InstanceBlueprints.ARENA + "/"
-	var drawn: Region = RegionDocument.parse(FileAccess.get_file_as_string(folder + "start.md"))
+	var drawn: Region = InstanceBlueprints.read_region(
+		FileAccess.get_file_as_string(folder + "start.md"),
+	)
 	var pieces: Array[Region] = _glade_pieces()
 	var glade_starts: Dictionary[Vector2i, bool] = {}
 	for seed_value: int in 12:
@@ -989,7 +991,7 @@ func _glade_pieces() -> Array[Region]:
 	files.push_front(InstanceBlueprints.START_PIECE)
 	var pieces: Array[Region] = []
 	for file: String in files:
-		pieces.append(RegionDocument.parse(FileAccess.get_file_as_string(folder + file)))
+		pieces.append(InstanceBlueprints.read_region(FileAccess.get_file_as_string(folder + file)))
 	return pieces
 
 

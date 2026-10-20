@@ -183,7 +183,7 @@ static func _for_region(region: Region) -> Array[Feature]:
 		features.append(EnteringFeature.new())
 	if HidingFeature.has_hiding(region):
 		features.append(HidingFeature.new())
-	if not region.npcs.is_empty():
+	if not region.placed(NpcPlacements.KIND).is_empty():
 		features.append(NpcFeature.new())
 	return features
 
@@ -196,7 +196,7 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	var region_name: String = variant_name if not variant_name.is_empty() else instance_name
 	var path: String = REGIONS + region_name + ".md"
 	if FileAccess.file_exists(path):
-		return RegionDocument.parse(FileAccess.get_file_as_string(path))
+		return read_region(FileAccess.get_file_as_string(path))
 	var folder: String = REGIONS + region_name + "/"
 	var files: Array[String] = []
 	for file: String in DirAccess.get_files_at(folder):
@@ -210,6 +210,13 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 		if not piece.problem.is_empty():
 			return piece
 	return RegionArranger.arrange(pieces, seed_value, not UNTURNED.has(instance_name))
+
+
+## The region a Markdown region document describes (RegionDocument), with what every slice places
+## on its ground read by that slice (#824).
+static func read_region(text: String) -> Region:
+	var readers: Array[PlacementReader] = [NpcPlacements.new(), ChestPlacements.new()]
+	return RegionDocument.parse(text, readers)
 
 
 ## Why the named blueprint's exits don't hold together, or "" (#140): each leads to a blueprint that
@@ -395,7 +402,7 @@ static func _loot_table(table_id: String, kind: String) -> LootTable:
 
 ## The region piece in the file at `path`, every tile of it named after the file (#350).
 static func _piece(path: String) -> Region:
-	var piece: Region = RegionDocument.parse(FileAccess.get_file_as_string(path))
+	var piece: Region = read_region(FileAccess.get_file_as_string(path))
 	if not piece.problem.is_empty():
 		piece.problem = "%s: %s" % [path, piece.problem]
 	var piece_id: String = path.get_file().get_basename()
