@@ -58,6 +58,10 @@ static func _collect(schema: Dictionary, node: Variant, fields: Array[String]) -
 	var target: String = Content.text_of(object.get("$ref"))
 	if target.begins_with("#"):
 		_collect(schema, _resolve(schema, target.substr(1)), fields)
+	elif not target.is_empty():
+		# Reading another file's schema isn't needed yet, so one that's referred to fails loudly
+		# instead of leaving its fields out.
+		push_error("a schema refers to another file (%s), which SchemaFields doesn't read" % target)
 	for combined: String in ["allOf", "anyOf", "oneOf"]:
 		var branches: Variant = object.get(combined, [])
 		if branches is Array:

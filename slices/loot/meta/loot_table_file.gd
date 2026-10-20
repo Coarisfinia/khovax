@@ -9,8 +9,8 @@ extends RefCounted
 ## #825); a harvest table's schema (harvest_tables.schema.json beside it) allows the same.
 const SCHEMA: String = "res://slices/loot/data/loot_tables.schema.json"
 ## Where an item's entry and the blank's are in the schema.
-const ITEM_POINTER: String = "/properties/entries/items/oneOf/0"
-const BLANK_POINTER: String = "/properties/entries/items/oneOf/1"
+const ITEM_POINTER: String = "/$defs/item_entry"
+const BLANK_POINTER: String = "/$defs/blank_entry"
 
 
 ## A table read from a loot table file's text, named `file_id`; its `problem` says what's wrong.

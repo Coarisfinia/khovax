@@ -6,6 +6,30 @@
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "kind", "entries"],
+	"$defs": {
+		"item_entry": {
+			"description": "An item, in an amount rolled from min to max.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["item", "chance", "min", "max"],
+			"properties": {
+				"item": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+				"chance": { "description": "In thousandths.", "type": "integer", "minimum": 1, "maximum": 1000 },
+				"min": { "type": "integer", "minimum": 1, "maximum": 1000000000 },
+				"max": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
+			}
+		},
+		"blank_entry": {
+			"description": "The blank: a roll on the instance's table instead.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["blank", "chance"],
+			"properties": {
+				"blank": { "const": true },
+				"chance": { "description": "In thousandths.", "type": "integer", "minimum": 1, "maximum": 1000 }
+			}
+		}
+	},
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
@@ -21,28 +45,8 @@
 			"minItems": 1,
 			"items": {
 				"oneOf": [
-					{
-						"description": "An item, in an amount rolled from min to max.",
-						"type": "object",
-						"additionalProperties": false,
-						"required": ["item", "chance", "min", "max"],
-						"properties": {
-							"item": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-							"chance": { "description": "In thousandths.", "type": "integer", "minimum": 1, "maximum": 1000 },
-							"min": { "type": "integer", "minimum": 1, "maximum": 1000000000 },
-							"max": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
-						}
-					},
-					{
-						"description": "The blank: a roll on the instance's table instead.",
-						"type": "object",
-						"additionalProperties": false,
-						"required": ["blank", "chance"],
-						"properties": {
-							"blank": { "const": true },
-							"chance": { "description": "In thousandths.", "type": "integer", "minimum": 1, "maximum": 1000 }
-						}
-					}
+					{ "$ref": "#/$defs/item_entry" },
+					{ "$ref": "#/$defs/blank_entry" }
 				]
 			}
 		}
