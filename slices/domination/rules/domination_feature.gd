@@ -305,7 +305,7 @@ func _dominate(state: GameState, monster_id: int, dominator_id: int, seal: RingS
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var species: String = wild.species_of(monster_id)
 	var short_id: String = wild.short_id_of(monster_id)
-	var target: String = WildSpot.target_in(wild.marks, monster_id)
+	var target: String = wild.target_of(monster_id)
 	var slot: int = state.entity(dominator_id).slot
 	state.remove_entity(monster_id)
 	var dominated: WildMonsterDominated = WildMonsterDominated.new(
@@ -430,7 +430,7 @@ func _monsters_problem(state: GameState, monsters: Array[int]) -> String:
 		var monster_id: int = monsters[i]
 		if i > 0 and monster_id <= monsters[i - 1]:
 			return "its monsters are out of order or there twice"
-		if not wild.is_wild_monster(monster_id) or _in_ring(monster_id):
+		if not wild.monsters.has(monster_id) or _in_ring(monster_id):
 			return "%d isn't a wild monster, or is in another seal" % monster_id
 		var spot: Vector2i = state.entity(monster_id).tile
 		if trail.tiles.has(spot) or reachable.has(spot):

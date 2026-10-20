@@ -87,7 +87,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var saved: Array[int] = values.wholes("hidden", 1, DataReader.MOST)
 	hidden.clear()
 	for monster: int in saved:
-		if not wild.is_wild_monster(monster) or hidden.has(monster):
+		if not wild.monsters.has(monster) or hidden.has(monster):
 			values.fail("hidden %d isn't one wild monster" % monster)
 			return
 		hidden.append(monster)

@@ -726,9 +726,9 @@ func _check_target() -> String:
 	var marked: Vector2i = Vector2i.ZERO
 	var unmarked: int = 0
 	for monster: int in wild.monsters:
-		if WildSpot.target_in(wild.marks, monster) == "old_toad":
+		if wild.target_of(monster) == "old_toad":
 			marked = state.entity(monster).tile
-		elif WildSpot.target_in(wild.marks, monster).is_empty():
+		elif wild.target_of(monster).is_empty():
 			unmarked += 1
 	if marked != Vector2i(2, 0) or unmarked != 1:
 		return "the legend's quest target isn't the one Ombulumo it marks, after a save"

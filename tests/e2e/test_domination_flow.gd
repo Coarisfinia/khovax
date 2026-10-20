@@ -1018,7 +1018,7 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
 	if felled.size() != 1 or felled[0].monster_id != first or felled[0].damage != damage:
 		return "the special didn't strike the first wild monster for its power"
-	if not felled[0].felled or not wild.is_fainted(first) or wild.is_wild_monster(first):
+	if not felled[0].felled or not wild.is_fainted(first) or wild.monsters.has(first):
 		return "the special didn't fell the wild monster"
 	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
 	var shown: String = DamageNumbersView.text_of(felled[0])
