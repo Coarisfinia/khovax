@@ -30,7 +30,10 @@ static func take(state: GameState, slot: int, feature_id: String, command: Comma
 	state.events.append(RequestApplied.new(slot, id))
 	var entry: Dictionary = state.store(slot, feature_id)
 	var marked: int = entry.get(MARK, Command.NO_REQUEST)
-	var mark: int = maxi(marked, command.acknowledged)
+	var mark: int = marked
+	# A mark that's no short id's code (ShortId.of_code) never comes from an outbox.
+	if not ShortId.of_code(command.acknowledged).is_empty():
+		mark = maxi(marked, command.acknowledged)
 	var applied: Array = []
 	for applied_id: Variant in entry.get(APPLIED, []):
 		if ShortId.code(str(applied_id)) > mark:
