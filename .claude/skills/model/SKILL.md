@@ -25,7 +25,7 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
   run side by side; several Godot renders at once only share the CPU's cores.
 - **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs through
-  `uv run tools/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
+  `uv run --locked tools/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
   header), never a hand-typed command.
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).

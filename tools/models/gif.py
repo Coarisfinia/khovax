@@ -2,12 +2,11 @@
 for a clip (`<Clip>_000.png`, `<Clip>_001.png`, ...), through ffmpeg's palette pass, which is
 faster and smaller than ImageMagick, looping forever.
 
-    uv run tools/models/gif.py <frame_dir> <Clip> [--fps 15] [--width 640] [--out <file.gif>]
+    uv run --locked tools/models/gif.py <frame_dir> <Clip> [--fps 15] [--width 640] [--out <file.gif>]
 
 It writes `<frame_dir>/<Clip>.gif` unless `--out` says otherwise, and prints its path."""
 
 import argparse
-import glob
 import subprocess
 import sys
 from pathlib import Path
@@ -22,16 +21,19 @@ def main() -> int:
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
-    pattern = str(args.frame_dir / f"{glob.escape(args.clip)}_*.png")
-    if not glob.glob(pattern):
-        print(f"no frames match {pattern}", file=sys.stderr)
+    # Only the numbered frames, in order from the first: ffmpeg reads the sequence until a gap, so
+    # another image named like the clip never ends up in it.
+    first = args.frame_dir / f"{args.clip}_000.png"
+    if not first.is_file():
+        print(f"no frames: {first} is missing", file=sys.stderr)
         return 1
+    frames = str(args.frame_dir / f"{args.clip.replace('%', '%%')}_%03d.png")
     out = args.out or args.frame_dir / f"{args.clip}.gif"
     # One pass makes the GIF's palette from all frames, the second maps every frame onto it.
     palette = f"scale={args.width}:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse"
     made = subprocess.run(
         ["ffmpeg", "-loglevel", "error", "-y", "-framerate", str(args.fps),
-         "-pattern_type", "glob", "-i", pattern, "-vf", palette, "-loop", "0", str(out)],
+         "-start_number", "0", "-i", frames, "-vf", palette, "-loop", "0", str(out)],
         check=False,
     )
     if made.returncode != 0:
