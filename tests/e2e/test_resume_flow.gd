@@ -350,7 +350,7 @@ func _check_debounced(driver: GameDriver, keeper: WorldKeeper) -> String:
 ## Whether the explored ground saved in the flow's file holds every tile the walk explored.
 func _explored_saved() -> bool:
 	var saved: ExploredGround = ExploredGround.new()
-	if not ExploredSave.load_into(WORLD_PATH, saved).is_empty():
+	if not ExploredSave.load_into(WORLD_PATH, saved, BlueprintSource.new()).is_empty():
 		return false
 	for instance_name: String in _explored.tiles_in:
 		var tiles: Dictionary = saved.tiles_in.get(instance_name, {})
