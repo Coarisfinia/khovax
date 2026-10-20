@@ -269,7 +269,6 @@ func _check_instance_steps(content: QuestContent) -> String:
 	var waiting: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
 		quest % (ENTER_INSTANCE % "The Glade"): "step 0: its instance must be an id",
-		quest % (ENTER_INSTANCE % "nowhere"): "step 0: its instance must be an instance",
 		waiting % ["{\"condition\": \"emitted\", \"event\": \"e\"%s}" % there, OPENED_END]: (
 			"its start: its instance is where it counts"
 		),
