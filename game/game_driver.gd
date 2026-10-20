@@ -29,6 +29,9 @@ static var start_instance: String = ""
 ## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
 ## build a driver alone.
 @export var keeper: WorldKeeper
+## Ties the profile to the session (#831), which catches it up with the world as a session starts;
+## none in tests that build a driver alone.
+@export var tie: ProfileTie
 ## Players in the session, in slots 0 and up. Each slot needs a command source, or ticks wait.
 @export_range(1, GameState.MAX_PLAYERS) var players: int = 1
 ## Ticks between sampling a command and the tick it applies to: time for a network to deliver it.
@@ -118,15 +121,18 @@ func carried() -> Array[CarriedMonsters]:
 	return parties
 
 
-## A new session's schedule, from the world's tick on, with no hashes and no time due yet, and the
-## profile caught up with the events that already changed the world (#756).
+## A new session's schedule, from the world's tick on, with no hashes and no time due yet, its world
+## handed to the keeper to save, and the profile caught up with the events that already changed the
+## world (#756).
 func _begin_session() -> void:
 	schedule = CommandSchedule.new(players, input_delay, world.tick if world != null else 0)
 	hashes.clear()
 	_accumulated = 0.0
+	if keeper != null:
+		keeper.world = world
 	# The profile meets the world as it is: events raised before it came still count (#756).
-	if holder != null and world != null:
-		holder.catch_up(world.flags)
+	if tie != null and world != null:
+		tie.catch_up(world.flags)
 
 
 ## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops

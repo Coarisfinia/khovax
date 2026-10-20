@@ -1,26 +1,11 @@
 class_name ProfileHolder
 extends Node
-## Holds this machine's player's profile through a session (#37, #132): loaded at boot, every
-## domination of that player and their loot from every chest opened (#124) and every wild monster
-## felled (#629) taken over at once and saved debounced (ProfileKeeper, #73), and whatever is
-## pending saved when the game quits or goes to the background. The same dominations and chests
-## advance the player's quests (#184), in the profile, each in the instance it happened in (#769),
-## and so do the places they step into (#339), the region pieces and instances they enter (#350,
-## #370), the answers they choose in dialogs (#636) and the events that change the world (#707),
-## which every player gains, those the world already had when the session started too (#756). What
-## the profile asks the world to do, like handing over the territory of a territory quest it
-## finished (#638), waits in its outbox (#771) and goes in this player's next commands, so the world
-## changes in a tick, the same on every machine and in the replay; it's sent again at the start of
-## every session until the world acknowledges it (RequestApplied). A revive item they used (#656) is
-## spent from
-## it. The player's personal color (#391) is kept in it too, saved the same way.
-## Other players' dominations go into their own profiles on their own machines (#74). A save that
-## can't be read is reported and left alone, never overwritten.
-
-## Where this machine's player's dominations and finds come from (#184).
-@export var bus: EventBus
-## Whose dominations are this machine's player's.
-@export var input: LocalInput
+## Holds this machine's player's profile through a session (#37, #132): loaded at boot, what it
+## gains taken over at once and saved debounced (ProfileKeeper, #73), and whatever is pending saved
+## when the game quits or goes to the background. Its quests advance (#184) and its outbox (#771)
+## and revive items (#656) change through what it's handed (ProfileTie, which ties it to the
+## session, #831). The player's personal color (#391) is kept in it too, saved the same way. A save
+## that can't be read is reported and left alone, never overwritten.
 
 ## Where the profile is saved; tests point it elsewhere before the holder enters the tree.
 var save_path: String = ProfileStore.PATH
@@ -28,8 +13,6 @@ var save_path: String = ProfileStore.PATH
 var keeper: ProfileKeeper
 ## Every piece of gear's id (#694): loot with one of these ids is gear, the rest materials.
 var _gear_ids: Array[String] = []
-## The ids of the outbox's requests sent this session (#771).
-var _sent: Array[String] = []
 
 
 ## Loads the profile on entering the tree, before any node's _ready: the driver starts the session
@@ -60,24 +43,6 @@ func _enter_tree() -> void:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
 
 
-func _ready() -> void:
-	bus.subscribe(WildMonsterDominated, _on_event)
-	bus.subscribe(ChestOpened, _on_event)
-	bus.subscribe(LootFound, _on_event)
-	bus.subscribe(DominationLoot, _on_event)
-	bus.subscribe(Harvested, _on_event)
-	bus.subscribe(PlaceReached, _on_event)
-	bus.subscribe(PieceEntered, _on_event)
-	bus.subscribe(InstanceEntered, _on_event)
-	bus.subscribe(DialogAnswered, _on_event)
-	bus.subscribe(WorldChanged, _on_event)
-	bus.subscribe(MonsterRevived, _on_revived)
-	bus.subscribe(RequestApplied, _on_applied)
-	if keeper != null:
-		# What the world hasn't acknowledged yet goes again, from the start of every session.
-		_send_new()
-
-
 func _process(_delta: float) -> void:
 	if keeper != null:
 		_report(keeper.save_if_due(Time.get_ticks_msec()))
@@ -85,65 +50,37 @@ func _process(_delta: float) -> void:
 
 func _notification(what: int) -> void:
 	var leaving: bool = what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE
-	var backgrounded: bool = what == NOTIFICATION_APPLICATION_PAUSED
-	if keeper != null and (leaving or backgrounded):
-		# Events still queued would otherwise be lost with the game.
-		bus.flush()
+	if leaving or what == NOTIFICATION_APPLICATION_PAUSED:
+		flush()
+
+
+## Saves whatever is pending now.
+func flush() -> void:
+	if keeper != null:
 		_report(keeper.flush())
 
 
-func _on_event(event: RefCounted) -> void:
-	if keeper == null:
-		return
-	var gain: Gain = _gain_of(event)
-	if gain != null:
-		gain.instance = bus.instance_of(event)
+## Takes `gain` into the profile (#73).
+func take(gain: Gain) -> void:
+	if keeper != null:
 		_report(keeper.take(gain, Time.get_ticks_msec()))
-		_send_new()
 
 
-## Gains every event that had already changed the world as the session starts in it (#756), from
-## its flags (WorldFlags.EVENT_FLAG + the event's name): the profile travels between worlds, so one
-## that
-## wasn't there when an event was raised (a guest, or this player back from another world) meets
-## the world as it is. Like a live one, each counts only toward the step a quest waits on now, never
-## past a step the player missed, and starts a side quest waiting on it (owner, #756); a quest
-## already started or done isn't started again.
-func catch_up(world_flags: Array[String]) -> void:
-	if keeper == null:
-		return
-	var gain: Gain = Gain.new()
-	for flag: String in world_flags:
-		if flag.begins_with(WorldFlags.EVENT_FLAG):
-			gain.world_events.append(flag.trim_prefix(WorldFlags.EVENT_FLAG))
-	if not gain.world_events.is_empty():
-		_report(keeper.take(gain, Time.get_ticks_msec()))
-		_send_new()
+## Drops the outbox's request `request` the world acknowledged (#771).
+func acknowledge(request: String) -> void:
+	if keeper != null:
+		_report(keeper.acknowledge(request, Time.get_ticks_msec()))
 
 
-## Sends every request in the outbox not sent this session yet (#771), in the order posted, in
-## this player's next commands.
-func _send_new() -> void:
-	for request: OutboxEntry in keeper.profile.outbox.entries:
-		if not _sent.has(request.id):
-			input.send(request)
-			_sent.append(request.id)
+## Spends one `item` the player used, like a revive item (#656).
+func spend(item: String) -> void:
+	if keeper != null:
+		_report(keeper.spend(item, Time.get_ticks_msec()))
 
 
-## Drops a request of this player's the world acknowledged from the outbox (#771).
-func _on_applied(event: RefCounted) -> void:
-	var applied: RequestApplied = event as RequestApplied
-	if keeper != null and applied.slot == input.slot:
-		# A request drawn later may get the same id.
-		_sent.erase(applied.request)
-		_report(keeper.acknowledge(applied.request, Time.get_ticks_msec()))
-
-
-## Spends the revive item this machine's player used (#656).
-func _on_revived(event: RefCounted) -> void:
-	var revived: MonsterRevived = event as MonsterRevived
-	if keeper != null and revived.slot == input.slot:
-		_report(keeper.spend(ReviveItem.ID, Time.get_ticks_msec()))
+## Whether loot with the id `item` is gear (#694) rather than a material.
+func is_gear(item: String) -> bool:
+	return _gear_ids.has(item)
 
 
 ## This machine's player's chosen personal color (#391), as 0xRRGGBB, or Profile.AUTO_COLOR, also
@@ -185,83 +122,6 @@ func equip(slot: String, gear_id: String) -> void:
 static func quest_book_of(content: QuestData) -> Dictionary[String, QuestDefinition]:
 	var none: Dictionary[String, QuestDefinition] = {}
 	return content.quests if content.problem.is_empty() else none
-
-
-## What this machine's player gains from `event`, or null when it isn't theirs: their domination, or
-## their own roll from an opened chest (every player rolls their own, owner, #124), which counts
-## as a chest they opened for quests even when it rolled nothing, or from loot found on the ground
-## (#203), which is no chest, or from a wild monster felled (#629); a place they stepped into
-## (#339), a region piece or an instance they entered (#350, #370), or an answer they chose in a
-## dialog (#636); or an event that changed the world (#707), which is every player's, wherever they
-## are: the world raises it on every machine.
-func _gain_of(event: RefCounted) -> Gain:
-	var gain: Gain = Gain.new()
-	if (event is WildMonsterDominated
-			and (event as WildMonsterDominated).dominator_slot == input.slot):
-		_add_domination(gain, event as WildMonsterDominated)
-	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
-		gain.chests_opened = 1
-		_add_loot(gain, (event as ChestOpened).loot[input.slot])
-	elif _rolls_of(event).has(input.slot):
-		_add_loot(gain, _rolls_of(event)[input.slot])
-	else:
-		_add_quest_fact(gain, event, input.slot)
-	var empty: bool = gain.dominated_species.is_empty() and gain.chests_opened == 0
-	empty = empty and gain.materials.is_empty() and gain.gear.is_empty()
-	empty = empty and gain.places_reached.is_empty()
-	empty = empty and gain.pieces_entered.is_empty() and gain.instances_entered.is_empty()
-	empty = empty and gain.answers_chosen.is_empty()
-	empty = empty and gain.world_events.is_empty()
-	return null if empty else gain
-
-
-## Adds to `gain` the fact only quests count that `event` is for the player in `slot`, if any: a
-## place they reached, a region piece or an instance they entered, an answer they chose, or an event
-## that changed the world, which is every player's.
-static func _add_quest_fact(gain: Gain, event: RefCounted, slot: int) -> void:
-	if event is PlaceReached and (event as PlaceReached).slot == slot:
-		gain.places_reached.append((event as PlaceReached).place)
-	elif event is PieceEntered and (event as PieceEntered).slot == slot:
-		gain.pieces_entered.append((event as PieceEntered).piece)
-	elif event is InstanceEntered and (event as InstanceEntered).slot == slot:
-		gain.instances_entered.append((event as InstanceEntered).instance)
-	elif event is DialogAnswered and (event as DialogAnswered).slot == slot:
-		var answered: DialogAnswered = event as DialogAnswered
-		gain.answers_chosen.append(QuestStep.answer_key(answered.dialog, answered.answer))
-	elif event is WorldChanged:
-		gain.world_events.append((event as WorldChanged).event_name)
-
-
-## Adds `dominated` to `gain`: its species, its short id (#700), and the quest target it was, if
-## any (#625).
-static func _add_domination(gain: Gain, dominated: WildMonsterDominated) -> void:
-	gain.dominated_species.append(dominated.species)
-	gain.dominated_short_ids.append(dominated.short_id)
-	if not dominated.target.is_empty():
-		gain.targets_dominated.append(dominated.target)
-
-
-## Every player's loot from `event`, by slot, when it's loot that counts as no chest: found on the
-## ground (#203), from a domination (#86) or from a felled wild monster (#629). None otherwise.
-static func _rolls_of(event: RefCounted) -> Dictionary[int, Dictionary]:
-	var none: Dictionary[int, Dictionary] = {}
-	if event is LootFound:
-		return (event as LootFound).loot
-	if event is DominationLoot:
-		return (event as DominationLoot).loot
-	if event is Harvested:
-		return (event as Harvested).loot
-	return none
-
-
-## Adds a roll of loot, {item id: amount}, to `gain`: its gear (#694), and the rest as materials.
-func _add_loot(gain: Gain, loot: Dictionary) -> void:
-	for item: Variant in loot:
-		var amount: int = loot[item]
-		if _gear_ids.has(str(item)):
-			gain.gear[str(item)] = amount
-		else:
-			gain.materials[str(item)] = amount
 
 
 ## A save that failed is a warning, not an error: the game goes on, and the next save tries again.

@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" path="res://assets/kaykit-adventurers/Rogue.glb" id="9_rogue"]
 [ext_resource type="Script" path="res://slices/music/look/music.gd" id="10_music"]
 [ext_resource type="Script" path="res://slices/profile/meta/profile_holder.gd" id="11_profile"]
+[ext_resource type="Script" path="res://slices/profile/look/profile_tie.gd" id="46_profile_tie"]
 [ext_resource type="Script" path="res://slices/fog/look/fog_view.gd" id="12_fog"]
 [ext_resource type="Script" path="res://slices/board/look/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://slices/settings/look/graphics.gd" id="14_graphics"]
@@ -50,11 +51,12 @@
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
-[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper", "holder") unique_id=520417396]
+[node name="Driver" type="Node" parent="." node_paths=PackedStringArray("input", "keeper", "tie", "holder") unique_id=520417396]
 process_priority = -100
 script = ExtResource("1_driver")
 input = NodePath("../LocalInput")
 keeper = NodePath("../WorldKeeper")
+tie = NodePath("../ProfileTie")
 holder = NodePath("../ProfileHolder")
 
 [node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=1290447713]
@@ -71,14 +73,17 @@ wild_view = NodePath("../Instance/WildMonsterView")
 script = ExtResource("18_bus")
 driver = NodePath("../Driver")
 
-[node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("bus", "input") unique_id=2066135784]
+[node name="ProfileHolder" type="Node" parent="." unique_id=2066135784]
 script = ExtResource("11_profile")
+
+[node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
+script = ExtResource("46_profile_tie")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
+holder = NodePath("../ProfileHolder")
 
-[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("driver", "companions") unique_id=1191191190]
+[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=1191191190]
 script = ExtResource("22_keeper")
-driver = NodePath("../Driver")
 companions = [NodePath("../ExploredKeeper")]
 
 [node name="ExploredKeeper" type="Node" parent="." unique_id=1191191191]

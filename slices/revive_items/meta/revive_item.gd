@@ -5,7 +5,7 @@ extends RefCounted
 ## player rolling their own into their own profile (#74, #124), where it's counted with their
 ## materials; crafting it at the base is #657. Using one is a press (Command.revive) that the
 ## player's own machine sends only while their profile holds one; the simulation revives
-## (ReviveItemFeature), and the profile spends one on the MonsterRevived it raises (ProfileHolder).
+## (ReviveItemFeature), and the profile spends one on the MonsterRevived it raises (ProfileTie).
 
 ## The item's id, in the loot tables and the profile.
 const ID: String = "revive_herb"
