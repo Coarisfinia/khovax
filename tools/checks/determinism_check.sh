@@ -4,7 +4,7 @@
 # Feature) without nodes, input, time, engine or OS state, global randomness, frame delta, floats
 # (float-backed engine types such as Vector2 or Color too; Vector2i and Rect2i stay allowed),
 # or file and JSON access (#572: reading happens before a tick, never inside one).
-# Comments are stripped first (a # outside strings, as tools/checks/import_rules.sh does), so the rules
+# Comments are stripped first (a # outside strings, as tools/checks/gdscript_code.py does), so the rules
 # can be explained in them.
 # A whole file is exempt while its top comment lines carry the marker below with a reason in
 # parentheses (owner, #515). It marks a workaround to fix later; a marker without a reason fails:

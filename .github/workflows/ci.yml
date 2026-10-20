@@ -112,7 +112,7 @@ jobs:
         run: bash tools/checks/unused_code.sh
 
       - name: "🧭 Check the core never depends on a slice and paths are absolute"
-        run: bash tools/checks/import_rules.sh
+        run: uv run --locked tools/checks/import_rules.py
 
       - name: "📁 Check no path repeats a folder name"
         run: bash tools/checks/repeated_folders.sh

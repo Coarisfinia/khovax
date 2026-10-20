@@ -258,9 +258,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   commands, only in `slices/controls/`, #514) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them: **a slice names only the
-  slices before it** in the order `tools/checks/import_rules.sh` declares once (CI, #821; today's
+  slices before it** in the order `tools/checks/import_rules.py` declares once (CI, #821; today's
   back-edges are listed there, each with its issue), so a new slice takes its place in it. **The core never depends on
-  a slice** (CI, `tools/checks/import_rules.sh`: no script in `core/` names a class declared in `slices/`
+  a slice** (CI, `tools/checks/import_rules.py`: no script in `core/` names a class declared in `slices/`
   or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
   region's exits) and events it reads (`ExitTaken`, which the `World` moves a player through) stay
   in the core, and only the rules that run them move; what a slice places on a region (people,

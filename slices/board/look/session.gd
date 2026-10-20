@@ -2,7 +2,7 @@ class_name Session
 extends Node
 ## What the slices see of the running session (#514): the world, the instance this machine's player
 ## is in, and its ticks. The driver (GameDriver) is one; the slices only ever name this class, so
-## they never reach game/, which wires them together (tools/checks/import_rules.sh).
+## they never reach game/, which wires them together (tools/checks/import_rules.py).
 
 ## After every tick, with the tick's number and the events the features and the world raised in it,
 ## in order: how views learn about one-shot moments (a domination, a ring breaking) to play an
