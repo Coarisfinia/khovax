@@ -486,6 +486,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
+- **Models follow the model skill** (owner): every 3D model is built, rigged, textured and checked
+  from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender 5.2.2
+  headless from a committed script in `tools/models/`, then Godot).
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
