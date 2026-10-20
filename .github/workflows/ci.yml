@@ -95,6 +95,9 @@ jobs:
       - name: "📁 Check no path repeats a folder name"
         run: bash tools/repeated_folders.sh
 
+      - name: "🗃️ Check the export presets share their file filters"
+        run: bash tools/export_filters_check.sh
+
       - name: "🎲 Check the simulation stays deterministic"
         # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
         # forbidden list and the exemption marker (#515) are in the script.
