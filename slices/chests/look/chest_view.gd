@@ -20,6 +20,10 @@ const MODEL_SCALE: float = 0.5
 const GEM_COLOR: Color = Color(0.95, 0.78, 0.3)
 const GEM_SIZE: float = 0.22
 
+## Every piece of gear's data, read once on the first burst, so loot names gear by its name (#773).
+## Gear the data can't read shows its id in words, like a material.
+static var _gear: GearContent = null
+
 @export var driver: Session
 ## Whose loot is this machine's player's.
 @export var input: LocalInput
@@ -65,14 +69,17 @@ func show_state() -> void:
 		figures[tile].visible = FogView.ally_sees(driver.state, tile)
 
 
-## The loot as a burst shows it: one line per item, "+2 moss", in item order.
+## The loot as a burst shows it: one line per item, "+2 Moss" or "+1 Warding charm" (#773), in
+## item order.
 static func loot_text(loot: Dictionary) -> String:
+	if _gear == null:
+		_gear = GearContent.load_gear()
 	var items: Array = loot.keys()
 	items.sort()
 	var lines: PackedStringArray = []
 	for item: Variant in items:
 		var amount: int = loot[item]
-		var _added: bool = lines.append("+%d %s" % [amount, item])
+		var _added: bool = lines.append("+%d %s" % [amount, _gear.name_of(str(item))])
 	return "\n".join(lines)
 
 

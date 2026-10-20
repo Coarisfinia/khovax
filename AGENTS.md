@@ -153,6 +153,9 @@ is usually away from the PC, so a question asked only in the chat goes unseen. O
 an existing issue is a comment there, and that issue gets the label too. Once the owner has answered
 every question in an issue, remove its `question` label (owner's rule, #737).
 
+**Obvious choices aren't asked** (owner's ground rule, #806): if the choice is obvious, don't ask;
+file the task as a plain issue (no `question` label) and queue it.
+
 **A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
 issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
 
@@ -434,6 +437,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   everywhere: its file, its abilities, harvest and loot tables, legends, quests, text tags and
   saves. Renaming a species renames its id with it, and lasting data naming the old id migrates
   forward. The content flow refuses a species whose id isn't its name.
+- **Invented names use sound symbolism** (owner's rule): the bouba/kiki pattern is one tool
+  (round, soft-sounding names for round, soft things, like Ombulumo; sharp, spiky-sounding names for
+  sharp, quick ones, like Tikazzir), and other linguistic patterns are used alongside it, so no
+  single pattern shapes every name.
 - **Every feature is designed for co-op** (owner's rule, #74), though the game is played solo
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
