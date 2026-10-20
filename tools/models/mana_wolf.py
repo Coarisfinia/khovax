@@ -75,13 +75,17 @@ def wolf_body():
     blob.ellipsoid((0.0, 0.58, 1.03), (0.21, 0.22, 0.22))
     blob.capsule((0.0, -0.40, 1.16), (0.0, -0.66, 1.38), 0.19)
     blob.ellipsoid((0.0, -0.52, 1.08), (0.15, 0.15, 0.17))
-    blob.ellipsoid((0.0, -0.78, 1.46), (0.19, 0.21, 0.17))
-    blob.capsule((0.0, -0.92, 1.42), (0.0, -1.20, 1.37), 0.085)
-    blob.ellipsoid((0.0, -1.02, 1.44), (0.07, 0.18, 0.06))
-    blob.ellipsoid((0.0, -1.02, 1.33), (0.075, 0.16, 0.05))
+    # A wedge of a head: a flat skull, a brow that steps down to the muzzle, and a muzzle that
+    # narrows to the nose under a straight bridge.
+    blob.ellipsoid((0.0, -0.78, 1.47), (0.17, 0.22, 0.14))
+    blob.ellipsoid((0.0, -0.86, 1.52), (0.12, 0.08, 0.06))
+    blob.capsule((0.0, -0.90, 1.42), (0.0, -1.08, 1.40), 0.075)
+    blob.capsule((0.0, -1.08, 1.40), (0.0, -1.22, 1.37), 0.05)
+    blob.capsule((0.0, -0.92, 1.47), (0.0, -1.20, 1.41), 0.03)
+    blob.ellipsoid((0.0, -1.00, 1.35), (0.055, 0.15, 0.04))
     blob.limb(list(reversed(WOLF.tail)), [0.10, 0.15, 0.13, 0.06])
     for sign in (1, -1):
-        blob.ellipsoid((0.1 * sign, -0.86, 1.40), (0.10, 0.12, 0.09))
+        blob.ellipsoid((0.1 * sign, -0.84, 1.41), (0.08, 0.11, 0.075))
         front = [mirror(p, sign) for p in WOLF.front_leg]
         blob.limb([front[0], front[1], front[2], (0.23 * sign, -0.50, 0.07)], [0.13, 0.085, 0.06, 0.065])
         blob.ellipsoid(mirror((0.2, -0.36, 0.84), sign), (0.2, 0.1, 0.13), (0.03 * sign, 0.04, -0.4))
@@ -100,13 +104,14 @@ def wolf_body():
 def head_parts(skin, mats):
     """Jaw, nose, fangs, ears with pale insides, and the eyes."""
     made = [
-        parts.part("uv_sphere", "Jaw", (0.0, -1.0, 1.30), (0.07, 0.17, 0.04), (0.1, 0, 0),
-                   mats["fur"], "jaw", segments=12, ring_count=6),
-        parts.part("uv_sphere", "Nose", (0.0, -1.27, 1.37), (0.045, 0.035, 0.032), (0, 0, 0), mats["dark"], "head",
-                   segments=10, ring_count=5),
+        # A lean lower jaw narrowing to the chin, and an angled nose pad on the muzzle's tip.
+        parts.part("cone", "Jaw", (0.0, -1.0, 1.33), (0.052, 0.028, 0.34), parts.pointing((0.0, -1.0, -0.12)),
+                   mats["fur"], "jaw", vertices=12, radius1=1.0, radius2=0.35, depth=1.0),
+        parts.part("uv_sphere", "Nose", (0.0, -1.245, 1.395), (0.042, 0.03, 0.026), (0.45, 0, 0), mats["dark"],
+                   "head", segments=12, ring_count=6),
     ]
     for sign in (1, -1):
-        for name, base, bone in (("Fang", (0.04, -1.15, 1.32), "head"), ("LowFang", (0.035, -1.10, 1.30), "jaw")):
+        for name, base, bone in (("Fang", (0.035, -1.15, 1.345), "head"), ("LowFang", (0.03, -1.10, 1.325), "jaw")):
             direction = (0.0, 0.0, -1.0) if bone == "head" else (0.0, 0.0, 1.0)
             made.append(parts.crystal("%s.%d" % (name, sign), mirror(base, sign), direction, 0.04,
                                       mats["light"], bone, width=0.25, sides=5))
@@ -120,33 +125,32 @@ def head_parts(skin, mats):
         inner = (center[0], center[1] - 0.02, center[2] - 0.01)
         made.append(parts.part("cone", "InnerEar." + side, inner, (0.065, 0.02, 0.18), rotation,
                                mats["light"], "ear." + side, vertices=10, radius1=1.0, radius2=0.0, depth=1.0))
-        made += eyes.eye(skin, "Eye." + side, (0.11 * sign, -0.92, 1.50), (0.2 * sign, -1.0, 0.05), 0.058,
+        made += eyes.eye(skin, "Eye." + side, (0.10 * sign, -0.93, 1.49), (0.2 * sign, -1.0, 0.05), 0.055,
                          {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
-                         "head")
+                         "head", almond=0.5, tilt=math.radians(14), brow=math.radians(18))
     return made
 
 
-def mane(skin, mats):
-    """A pale mane of curling tufts lying back along the neck and shoulders, a ruff under the
-    throat, cheek tufts."""
+def paws(mats):
+    """Small mana-blue claws along the front of each paw."""
     made = []
-    for ring, (center, count, length) in enumerate(
-        (((0.0, -0.52, 1.24), 9, 0.38), ((0.0, -0.36, 1.20), 8, 0.34), ((0.0, -0.20, 1.18), 7, 0.28))
-    ):
-        for index in range(count):
-            angle = math.radians(-80 + 160 * index / (count - 1))
-            out = (math.sin(angle), 0.0, math.cos(angle))
-            base = surface.onto(skin, tuple(c + o * 0.4 for c, o in zip(center, out)), -0.01)
-            direction = (out[0] * 0.5, 1.0, out[2] * 0.5 + 0.15)
-            made.append(parts.tuft("Mane.%d.%d" % (ring, index), base, direction, length, 0.12, -0.6,
-                                   mats["light"], ("neck", "spine_02", "spine_02")[ring], up=out))
+    for sign, side in ((1, "L"), (-1, "R")):
+        for bone, toe_y in (("front_paw", -0.625), ("hind_paw", 0.375)):
+            made += parts.claws("Claw.%s.%s" % (bone, side), (0.23 * sign, toe_y, 0.035), (0.0, -1.0, 0.0), 4,
+                                0.1, 0.05, mats["glow"], "%s.%s" % (bone, side))
+    return made
+
+
+def fur(mats):
+    """A pale ruff under the throat and tufts on the cheeks."""
+    made = []
     for index, x in enumerate((-0.1, -0.04, 0.04, 0.1)):
         made.append(parts.tuft("Ruff.%d" % index, (x, -0.55, 0.95), (x, 0.35, -1.0), 0.2, 0.08, 0.5,
                                mats["light"], "neck", up=(0.0, -1.0, 0.0)))
     for sign in (1, -1):
         for index, z in enumerate((1.42, 1.36)):
-            made.append(parts.tuft("Cheek.%d.%d" % (sign, index), (0.17 * sign, -0.82, z),
-                                   (0.8 * sign, 0.7, -0.1 - 0.2 * index), 0.13, 0.06, 0.4, mats["fur"], "head"))
+            made.append(parts.tuft("Cheek.%d.%d" % (sign, index), (0.15 * sign, -0.80, z),
+                                   (0.6 * sign, 1.0, -0.2 - 0.2 * index), 0.1, 0.06, 0.5, mats["fur"], "head"))
     return made
 
 
@@ -205,7 +209,7 @@ def build(out):
     mats = palette(COLORS)
     skin = wolf_body()
     skin.data.materials.append(mats["fur"])
-    pieces = head_parts(skin, mats) + mane(skin, mats) + magic(skin, mats)
+    pieces = head_parts(skin, mats) + fur(mats) + paws(mats) + magic(skin, mats)
     rig = quadruped.armature("ManaWolfRig", WOLF)
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R"))
@@ -216,7 +220,7 @@ def build(out):
         "Attack": clips.attack(),
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
-    }, SCALE)
+    }, SCALE, ground_meshes=[skin])  # the body, with every part joined into it by weights.bind
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))

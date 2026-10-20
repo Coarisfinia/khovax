@@ -8,7 +8,7 @@ import math
 
 import bpy
 
-from . import scene
+from . import ground, scene
 
 
 def cycle_frames(speed, stride, fps):
@@ -103,24 +103,26 @@ def hit():
 
 
 def faint(body_height):
-    """The legs give way and it sinks onto its belly, `body_height` down, head on the ground,
-    and stays there."""
+    """The legs give way and it sinks onto its belly, `body_height` down, head on the ground and
+    tail lying out behind (a hanging tail would hold the body off the ground once
+    animate grounds the clip), and stays there."""
     sinking = {"root_loc": (0, -body_height * 0.45, 0), "neck": (0.2, 0, 0), "head": (0.1, 0, 0.1)}
     for bone, angle in (("upper_arm", 0.4), ("forearm", -0.7), ("thigh", -0.5), ("shin", 1.0), ("ear", 0.5)):
         _both(sinking, bone, (angle, 0, 0))
     lying = {"root_loc": (0, -body_height * 0.9, 0), "neck": (0.45, 0, 0), "head": (0.25, 0, 0.25),
              "jaw": (0.1, 0, 0), "thigh.L": (-1.0, 0, 0.15), "thigh.R": (-1.0, 0, -0.15),
-             "ear.L": (0.7, 0, 0.2), "ear.R": (0.7, 0, -0.2), "tail_01": (-0.6, 0, 0.3),
-             "tail_02": (-0.2, 0, 0.3)}
+             "ear.L": (0.7, 0, 0.2), "ear.R": (0.7, 0, -0.2), "tail_01": (0.45, 0, 0.3),
+             "tail_02": (0.1, 0, 0.3)}
     for bone, angle in (("upper_arm", -1.1), ("forearm", -0.4), ("front_paw", 0.9), ("shin", 1.9), ("hock", -1.2)):
         _both(lying, bone, (angle, 0, 0))
     return [(1, {}), (14, sinking), (30, lying), (40, lying)]
 
 
-def animate(rig, clips, scale):
+def animate(rig, clips, scale, ground_meshes=()):
     """Keys every clip as its own action on every bone, so each clip sets the whole pose, and
     stashes it on an NLA track the glTF export turns into a named animation. `scale` is the
-    model's (scene.apply_scale), which the root's shifts are scaled by."""
+    model's (scene.apply_scale), which the root's shifts are scaled by. With `ground_meshes`
+    (the bound body), every frame where they sink below the ground lifts the root onto it."""
     rig.animation_data_create()
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="POSE")
@@ -137,6 +139,10 @@ def animate(rig, clips, scale):
                     shift = pose.get("root_loc", (0.0, 0.0, 0.0))
                     bone.location = tuple(scale * value for value in shift)
                     bone.keyframe_insert("location", frame=frame)
+        if ground_meshes:
+            root = next(bone.name for bone in rig.pose.bones if bone.parent is None)
+            last = max(frame for frame, _pose in poses)
+            ground.settle(rig, ground_meshes, root, range(1, last + 1))
         track = rig.animation_data.nla_tracks.new()
         track.name = name
         strip = track.strips.new(name, 1, action)

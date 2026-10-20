@@ -95,3 +95,17 @@ def _bake(obj):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+
+def claws(name, toe_line, forward, count, spread, size, mat, bone=None):
+    """`count` small claws along a paw's front, `spread` wide, centred on `toe_line`, each a
+    short crystal pointing `forward` and down so it reads as a claw, not a spike."""
+    forward = Vector(forward).normalized()
+    across = forward.cross(Vector((0.0, 0.0, 1.0))).normalized()
+    made = []
+    for index in range(count):
+        share = index / (count - 1) - 0.5 if count > 1 else 0.0
+        base = Vector(toe_line) + across * share * spread
+        made.append(crystal("%s.%d" % (name, index), base, forward - Vector((0.0, 0.0, 0.55)), size, mat,
+                            bone, width=0.16, sides=5))
+    return made

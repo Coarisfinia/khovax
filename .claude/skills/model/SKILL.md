@@ -38,7 +38,13 @@ a second model could use goes into the library or a generic tool, never into one
     four-bone legs, `.L`/`.R`).
   - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
   - `clips`: `cycle_frames` (gait timing from the game's speed), `gait`, the quadruped set
-    (`idle`, `attack`, `hit`, `faint`) and `animate` (keys and stashes every clip).
+    (`idle`, `attack`, `hit`, `faint`) and `animate` (keys and stashes every clip, and with
+    `ground_meshes` lifts the root wherever a pose sinks into the ground).
+  - `ground`: ground contact (`lowest`, `settle`, `report`).
+  - `parts.claws`: small claws along a paw's front, their count and size as parameters.
+- **The ground check:** `tools/models/check_ground.py -- <model.glb> [tolerance]` samples every
+  frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
+  paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
 - **The renders:** `scripts/render_views.py` (every side in Blender) and
   `tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides, the game
   camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
@@ -54,6 +60,11 @@ a second model could use goes into the library or a generic tool, never into one
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
   first and the detail second. It must also look good **up close**, since its codex page shows
   it full-screen (owner, #995): soft forms, and detailed eyes, snout, ears and paws.
+- **Variety:** monsters may be, and are encouraged to be, obscure, barely alive, mystical or
+  warped (a swirling vortex with glowing rocks for eyes); not every monster has four legs and
+  barks (owner, #990). The library mustn't assume quadrupeds: `quadruped` is one body plan, and a
+  body without legs (a vortex, floating rocks, a blob) must be buildable from it too, from `body`,
+  `parts`, `surface`, `eyes` and its own rig module.
 - **Baseline:** the mana wolf (#995) is the baseline for the level of detail: every new model
   matches or exceeds it up close (owner). Its build script, `tools/models/mana_wolf.py`, and its
   renders on the `assets` branch (`pr-995-v2-*`, the close-ups `pr-995-v2-portrait.png` and
@@ -111,6 +122,10 @@ a second model could use goes into the library or a generic tool, never into one
    means a few thousand triangles for a monster; justify anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
+9. **Ground contact:** `blender --background --factory-startup --python
+   tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
+   any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
+   into the PR.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
