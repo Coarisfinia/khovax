@@ -80,7 +80,6 @@ declare -A SLICE_EXEMPT=(
   [hiding>wild_monsters]=851
   [loot>menu]=851 [loot>profile]=851
   [menu>gear]=851 [menu>might]=851 [menu>profile]=851 [menu>quests]=851
-  [players>profile]=851
   [quests>blueprints]=851
   [settings>damage_numbers]=851 [settings>menu]=851 [settings>survey]=851
   [species>menu]=851 [species>profile]=851 [species>texts]=851

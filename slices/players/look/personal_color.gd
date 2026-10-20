@@ -26,15 +26,13 @@ static func of(world_seed: int, slot: int) -> Color:
 
 ## The personal color of the player in `slot` as this machine shows it: this machine's player's
 ## choice from their profile (#391), else the default of `driver`'s world. Other players show their
-## defaults until co-op hands their choices over.
+## defaults until co-op hands their choices over. The choice comes through the session's holder.
 static func shown(driver: Session, slot: int) -> Color:
 	if driver == null or driver.world == null:
 		return of(0, slot)
 	var local: int = driver.input.slot if driver.input != null else 0
-	var holder: ProfileHolder = driver.holder
-	var chosen: int = holder.personal_color() if holder != null else Profile.AUTO_COLOR
-	if slot == local and chosen != Profile.AUTO_COLOR:
-		return of_number(chosen)
+	if slot == local and driver.holder != null and driver.holder.chose_personal_color():
+		return of_number(driver.holder.personal_color())
 	return of(driver.world.world_seed, slot)
 
 
