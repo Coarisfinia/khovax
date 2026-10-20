@@ -262,9 +262,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      # The pull request's labels and who added them (#889).
+      # The pull request's labels (#889).
       pull-requests: read
-      issues: read
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -303,7 +302,7 @@ jobs:
           name: khovax-outcomes
           path: /tmp/outcomes/outcomes.json
           if-no-files-found: error
-          # A rerun (after the owner's outcomes-change label) uploads it again.
+          # A rerun (after the outcomes-change label is added) uploads it again.
           overwrite: true
 
       - name: "🎲 Play its parent"
@@ -316,41 +315,23 @@ jobs:
           timeout 300 ~/godot/godot --headless --path /tmp/parent -s res://tests/replays/outcomes.gd \
             -- out=/tmp/outcomes-parent.json
 
-      - name: "🏷️ Read whether the owner labelled the pull request outcomes-change"
+      - name: "🏷️ Read whether the pull request is labelled outcomes-change"
         # Read when the job runs, so a rerun sees a label added since. In the merge queue, the
-        # entry's branch names its pull request: gh-readonly-queue/<base>/pr-<number>-<sha>. Anyone
-        # with write access (the agent's bot too) can add a label, so it counts only when the owner
-        # added it last: the latest "labeled" event in the pull request's timeline.
+        # entry's branch names its pull request: gh-readonly-queue/<base>/pr-<number>-<sha>. The
+        # agent adds the label and says why in the pull request; the owner's approval is the gate
+        # (owner, #899).
         if: github.event_name != 'push'
         id: label
         env:
           GH_TOKEN: ${{ github.token }}
-          LABEL_OWNER: Flixbox
           NUMBER: ${{ github.event.pull_request.number }}
           QUEUE_BRANCH: ${{ github.event.merge_group.head_ref }}
         run: |
           number=${NUMBER:-$(sed -n 's|.*/pr-\([0-9][0-9]*\)-[0-9a-f]*$|\1|p' <<< "$QUEUE_BRANCH")}
           test -n "$number"
-          has_label=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${number}" \
+          labelled=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${number}" \
             --jq '[.labels[].name] | index("outcomes-change") != null')
-          labelled=false
-          note="the pull request isn't labelled outcomes-change"
-          if [ "$has_label" = true ]; then
-            # Sorted by time here rather than trusting the API's order.
-            events=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${number}/timeline" \
-              --jq '.[] | select(.event == "labeled" and .label.name == "outcomes-change")
-                | "\(.created_at) \(.actor.login)"')
-            actor=$(sort <<< "$events" | tail -n 1 | cut -d ' ' -f 2)
-            if [ "$actor" = "$LABEL_OWNER" ]; then
-              labelled=true
-              note="the owner (${LABEL_OWNER}) labelled the pull request outcomes-change"
-            else
-              note="the label outcomes-change was added by ${actor:-someone unknown}, not by the owner (${LABEL_OWNER}), so it doesn't count"
-            fi
-          fi
-          echo "$note"
           echo "labelled=${labelled}" >> "$GITHUB_OUTPUT"
-          echo "note=${note}" >> "$GITHUB_OUTPUT"
 
       - name: "🔖 Check a different outcome comes with a rules change"
         # The comparison runs from the parent's checkout, so a pull request can't weaken its own
@@ -358,7 +339,6 @@ jobs:
         if: github.event_name != 'push'
         env:
           OUTCOMES_CHANGE: ${{ steps.label.outputs.labelled }}
-          OUTCOMES_CHANGE_NOTE: ${{ steps.label.outputs.note }}
         run: |
           set -o pipefail
           compare=/tmp/parent/tools/rules_compare.sh
