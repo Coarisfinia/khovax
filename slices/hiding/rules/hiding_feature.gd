@@ -41,6 +41,8 @@ func start(state: GameState) -> void:
 
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	var still: Array[int] = []
 	for monster: int in hidden:
 		var tile: Vector2i = state.entity(monster).tile
