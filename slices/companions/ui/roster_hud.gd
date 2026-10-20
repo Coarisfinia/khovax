@@ -5,9 +5,11 @@ extends Control
 ## that swaps to it (1 to 3; the d-pad's left, up and right on a controller). The companion's square
 ## is drawn bold, with a pointer under it, and the reserve's thin and faded, so which is which shows
 ## by a shape too, never by color alone (#68). One that fainted here (#597) is crossed out and
-## faded further, and can't be swapped to.
+## faded further, and can't be swapped to. The fainted one being picked for a revive item (#780,
+## RevivePick) gets a second frame around its square.
 ## A tap or a click on a square swaps to that monster for the next tick (LocalInput.choose_swap,
-## #55). It moves below the Survey when that shows in the top left corner. It only reads the state.
+## #55), and on a fainted one uses a revive item on it (LocalInput.choose_revive, #780). It moves
+## below the Survey when that shows in the top left corner. It only reads the state.
 ## It runs before the rest of the Hud (process_priority in main.tscn), so the quest list below it
 ## lays out under where it is this frame.
 
@@ -37,6 +39,10 @@ var shown: PackedStringArray = PackedStringArray()
 var companion_place: int = -1
 ## Whether each square's monster fainted here (#597), in carried order.
 var fainted: Array[bool] = []
+## The place among `shown`, from 0, of the fainted monster picked for a revive item (#780), or -1.
+var picked_place: int = -1
+## The short ids of the squares' monsters, in carried order.
+var _short_ids: PackedStringArray = PackedStringArray()
 ## The initials shown for each species, by id; a species missing from the data shows its id's.
 var _initials: Dictionary[String, String] = {}
 var _side: float = 0.0
@@ -55,7 +61,8 @@ func _process(_delta: float) -> void:
 	lay_out_in(get_viewport_rect().size)
 
 
-## A tap or a left click on a square swaps to its monster and is taken, so the touch stick doesn't
+## A tap or a left click on a square swaps to its monster, or revives a fainted one, and is taken,
+## so the touch stick doesn't
 ## start under it. Godot hands `_input` to later nodes first, so this node comes after the stick in
 ## the Hud. While the game hears no input (the menu is open) it takes nothing.
 func _input(event: InputEvent) -> void:
@@ -71,7 +78,12 @@ func _input(event: InputEvent) -> void:
 		at = click.position if click.device != InputEvent.DEVICE_ID_EMULATION else at
 	for place: int in shown.size():
 		if rect_of(place).has_point(at):
-			driver.input.choose_swap(place + 1)
+			if has_fainted(place):
+				driver.input.choose_revive(_short_ids[place])
+			else:
+				# Swapping ends a pick for a revive item.
+				driver.input.revive_pick.drop()
+				driver.input.choose_swap(place + 1)
 			get_viewport().set_input_as_handled()
 			return
 
@@ -90,16 +102,21 @@ func show_state() -> void:
 	var party_species: PackedStringArray = PackedStringArray()
 	var companion: String = ""
 	var down: Array[bool] = []
+	var picked: String = ""
 	if driver != null and driver.state != null and driver.input != null:
 		var slot: int = driver.input.slot
 		party = CompanionParty.carried(driver.state, slot)
 		party_species = CompanionParty.carried_species(driver.state, slot)
 		companion = CompanionParty.companion(driver.state, slot)
 		down = _fainted_in(driver.state, slot, party)
-	if party_species != shown or party.find(companion) != companion_place or down != fainted:
+		picked = driver.input.revive_pick.picked
+	var changed: bool = party != _short_ids or party_species != shown or down != fainted
+	if changed or party.find(companion) != companion_place or party.find(picked) != picked_place:
+		_short_ids = party
 		shown = party_species
 		companion_place = party.find(companion)
 		fainted = down
+		picked_place = party.find(picked)
 		queue_redraw()
 
 
@@ -143,7 +160,8 @@ static func initials_of(species_name: String) -> String:
 
 
 ## The square of the monster at `place`: its initials, its place's number in the corner, for the
-## companion a bold frame and a pointer under it, and for a fainted one a cross over it.
+## companion a bold frame and a pointer under it, for a fainted one a cross over it, and for the one
+## picked for a revive item a second frame around it.
 func _draw_square(place: int) -> void:
 	var area: Rect2 = rect_of(place)
 	var chosen: bool = place == companion_place
@@ -163,6 +181,8 @@ func _draw_square(place: int) -> void:
 		_draw_pointer(area, ink)
 	if has_fainted(place):
 		_draw_cross(area, ink)
+	if place == picked_place:
+		draw_rect(area.grow(GAP * 0.5), Color(Toon.INK), false, COMPANION_INK_PIXELS)
 
 
 ## Whether the monster at `place` (from 0) fainted here (#597).

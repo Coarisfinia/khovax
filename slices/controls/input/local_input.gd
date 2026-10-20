@@ -8,8 +8,9 @@ extends Node
 ## shoulder buttons) step the focus through the wild monsters near the player (#436). swap_1 to
 ## swap_3 (keys 1 to 3, the d-pad's left, up and right, or a tap on the roster, RosterHud) make the
 ## monster at that place in the carried order the companion (#540): one press swaps once.
-## revive_monster (V, or the d-pad's down) uses a revive item (#656) in the next command, only while
-## this player's profile holds one: the items are in the profile, outside the simulation.
+## revive_monster (V, or the d-pad's down) uses a revive item (#656) in the next command, on the
+## fainted monster the player picks (#780, RevivePick), only while this player's profile holds one:
+## the items are in the profile, outside the simulation. While picking, the player stands.
 
 ## The swap actions, in the carried order's places from 1.
 const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
@@ -43,8 +44,8 @@ var _answer: int = Command.NO_ANSWER
 ## The requests from this player's profile's outbox (#771), waiting for the next commands, one
 ## each.
 var _requests: Array[OutboxEntry] = []
-## Whether revive_monster was pressed since the last command (#656).
-var _revive_pressed: bool = false
+## Which fainted monster the next revive item brings back (#780); views read its `picked`.
+var revive_pick: RevivePick = RevivePick.new()
 ## The code of the gear in the player's trap slot (#692, SpikesFeature.code_of), or
 ## Command.NO_TRAP: every command carries it, also while the game hears no input. Whoever holds the
 ## player's profile keeps it current (GameDriver).
@@ -65,14 +66,19 @@ func _process(_delta: float) -> void:
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
-	if Input.is_action_just_pressed("revive_monster"):
-		_revive_pressed = true
+	revive_pick.hear()
 
 
 ## Swaps to the monster at `place` in the carried order, from 1, in the next command, as a tap on
 ## the roster does.
 func choose_swap(place: int) -> void:
 	_swap_to = place
+
+
+## Uses a revive item on the fainted monster `short_id` in the next command, as a tap on its roster
+## square does (#780).
+func choose_revive(short_id: String) -> void:
+	revive_pick.tap(short_id)
 
 
 ## Sends the answer with the code `code` (DialogFeature.code) in the next command, as choosing it on
@@ -101,13 +107,14 @@ func command(state: GameState) -> Command:
 	if blocked or in_dialog:
 		# Presses while the game hears no input don't move the focus or use an item afterwards.
 		_focus_steps = 0
-		_revive_pressed = false
-		var standing: Command = Command.new()
-		# The dialog screen's answers are the one input a dialog lets through.
-		standing.answer = answering
-		_send_next(standing)
-		standing.trap = trap
-		return standing
+		revive_pick.drop()
+		return _standing(answering)
+	var reviving: int = _reviving(state)
+	# While picking a fainted monster to revive (#780), the arrows move the pick, not the player,
+	# and other presses are dropped.
+	if not revive_pick.picked.is_empty():
+		_focus_steps = 0
+		return _standing(answering)
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
 	# Only the tie between two directions depends on the tile; without a player nothing walks.
@@ -124,9 +131,19 @@ func command(state: GameState) -> Command:
 	given.swap = swap
 	given.answer = answering
 	_send_next(given)
-	given.revive = _reviving()
+	given.revive = reviving
 	given.trap = trap
 	return given
+
+
+## A command that stands still, with the dialog `answering` chosen: the dialog screen's answers are
+## the one input a dialog lets through.
+func _standing(answering: int) -> Command:
+	var standing: Command = Command.new()
+	standing.answer = answering
+	_send_next(standing)
+	standing.trap = trap
+	return standing
 
 
 ## Puts the next request waiting to be sent into `carrier`, taken off the queue, if there is one.
@@ -136,9 +153,8 @@ func _send_next(carrier: Command) -> void:
 		next.fill(carrier)
 
 
-## Whether the next command uses a revive item: one was pressed since the last command, and this
-## player's profile holds one (#656).
-func _reviving() -> bool:
-	var pressed: bool = _revive_pressed
-	_revive_pressed = false
-	return pressed and ReviveItem.held(holder) > 0
+## The revive item the next command uses (Command.revive), only while this player's profile holds
+## one (#656): on the fainted monster they picked (#780).
+func _reviving(state: GameState) -> int:
+	var holds: bool = ReviveItem.held(holder) > 0 and state.player(slot) != null
+	return revive_pick.chosen(ReviveItemFeature.fainted(state, slot), holds)

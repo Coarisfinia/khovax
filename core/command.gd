@@ -20,6 +20,8 @@ const NO_HAND_OVER: int = 0
 const NO_TRAP: int = 0
 ## No request from the player's profile's outbox this tick (#771).
 const NO_REQUEST: int = 0
+## No revive item used this tick (#656).
+const NO_REVIVE: int = 0
 ## How many integers a command is in a replay (to_values).
 const VALUE_COUNT: int = 11
 
@@ -48,10 +50,11 @@ var answer: int = NO_ANSWER
 ## NO_HAND_OVER. A request from the player's profile's outbox (#771), with its id in `request`; the
 ## simulation checks a territory quest names it.
 var hand_over: int = NO_HAND_OVER
-## Whether the player uses a revive item this tick (#656), bringing back one of their fainted
-## carried monsters. A press, like the special; the simulation checks one has fainted, and the
-## player's own machine only sends it while their profile holds a revive item.
-var revive: bool = false
+## The carried monster the player uses a revive item on this tick (#656), the one they picked
+## (#780), as its short id's code (ShortId.code), or NO_REVIVE. A press, like the special; the
+## simulation checks they carry it and it has fainted, and the player's own machine only sends it
+## while their profile holds a revive item.
+var revive: int = NO_REVIVE
 ## The gear in the player's trap slot (#692), as the code of its id (SpikesFeature.code_of), or
 ## NO_TRAP. Not a press but a standing value, like the move: every command carries it while it's
 ## equipped, so it changes the game only from the tick it's sent. The simulation checks it names
@@ -83,7 +86,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, hand_over,
-		1 if revive else 0, trap,
+		revive, trap,
 		request,
 	]
 	return values
@@ -101,7 +104,7 @@ static func from_values(values: Array[int]) -> Command:
 	command.swap = values[5]
 	command.answer = values[6]
 	command.hand_over = values[7]
-	command.revive = values[8] == 1
+	command.revive = values[8]
 	command.trap = values[9]
 	command.request = values[10]
 	return command
@@ -109,13 +112,13 @@ static func from_values(values: Array[int]) -> Command:
 
 ## Whether the command is one a player can give: no move or one of the six directions, a totem
 ## placed or not, a focus that is an entity id or none, a swap to a place in the carried order or
-## none, an answer's code or none, a territory's code or none, a trap's code or none, and a
-## request's id or none.
+## none, an answer's code or none, a territory's code or none, a revived monster's code or none, a
+## trap's code or none, and a request's id or none.
 func is_valid() -> bool:
 	var moves: bool = move == NO_MOVE or (move >= 0 and move < Hex.DIRECTIONS.size())
 	var placed: bool = totem == NO_TOTEM or totem == PLACE_TOTEM
 	var chosen: bool = swap >= NO_SWAP and answer >= NO_ANSWER and hand_over >= NO_HAND_OVER
-	chosen = chosen and trap >= NO_TRAP
+	chosen = chosen and revive >= NO_REVIVE and trap >= NO_TRAP
 	chosen = chosen and request >= NO_REQUEST
 	return moves and placed and focus >= NO_FOCUS and chosen
 
@@ -124,8 +127,8 @@ func is_valid() -> bool:
 static func is_valid_values(values: Array[int]) -> bool:
 	if values.size() != VALUE_COUNT:
 		return false
-	# The presses: the special, going back to the spawn and the revive item.
-	var presses: Array[int] = [values[1], values[4], values[8]]
+	# The presses: the special and going back to the spawn.
+	var presses: Array[int] = [values[1], values[4]]
 	for press: int in presses:
 		if press != 0 and press != 1:
 			return false
