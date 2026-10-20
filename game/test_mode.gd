@@ -1,7 +1,8 @@
 extends Node
 ## The test builds' mode (#61, #102, #113): in a test build, the game plays the device e2e flow
-## instead of waiting for a player, prints KHOVAX_E2E: PASS or FAIL with the reason for CI to read
-## (from the device log, the browser console or stdout), and quits with it as the exit code. Only
+## instead of waiting for a player, prints KHOVAX_E2E: PASS with the game's final state hash, or
+## FAIL with the reason, for CI to read (from the device log, the browser console or stdout) and
+## compare with the headless run's hash (#876), and quits with it as the exit code. Only
 ## the test builds have it: their export presets in export_presets.cfg add the TEST_BUILD feature
 ## and carry the flow. In every other build this does nothing. No launch flag is needed: Android
 ## starts the game through a launcher activity that drops intent extras.
@@ -48,7 +49,7 @@ func _ready() -> void:
 	OS.remove_logger(errors)
 	if result.is_empty() and errors.count > 0:
 		result = "%d error(s) logged during the flow" % errors.count
-	_report(result)
+	_report(result, str(flow.get("final_hash")))
 
 
 ## The flow to play: the environment's, or else the one the project setting names.
@@ -70,8 +71,9 @@ static func _cheapest_frames(main: Node) -> void:
 		graphics.apply()
 
 
-func _report(result: String) -> void:
+## Prints the result, with the flow's final state hash on a pass.
+func _report(result: String, final_hash: String = "") -> void:
 	# CI reads the result from the log, which is where print goes on Android and on the web.
 	# gdstyle:ignore=quality/no-debug-print
-	print("KHOVAX_E2E: " + ("PASS" if result.is_empty() else "FAIL " + result))
+	print("KHOVAX_E2E: " + ("PASS " + final_hash if result.is_empty() else "FAIL " + result))
 	get_tree().quit(0 if result.is_empty() else 1)

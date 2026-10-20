@@ -3,12 +3,11 @@ extends RefCounted
 ## walking the player, tick by tick, so the game is exactly the same everywhere: from the glade's
 ## start, where the world starts (#712), out through its north exit into the forest, a few steps in,
 ## and back (#139, #152). It checks that the player walked into the forest and back, the trail grew
-## and the camera follows, and that the game ended in exactly the expected state. It runs on an
-## Android emulator and in headless Chrome
-## in CI (started by
-## game/test_mode.gd in the test APK and the test web build), and headless in the required check
-## (tests/e2e/test_apk_flow.gd), which also pins EXPECTED_HASH: a pass on a device means it plays
-## the very same game.
+## and the camera follows, and keeps the game's final state hash. It runs on an Android emulator,
+## in headless Chrome and on the Linux build in CI (started by game/test_mode.gd in the test
+## builds), and headless (tests/e2e/test_apk_flow.gd). CI compares each device's final hash with
+## the headless one for the same commit (#876): a pass on a device means it plays the very same
+## game.
 
 ## With the flow's result: "" when it passed, or why it failed.
 signal finished(result: String)
@@ -27,10 +26,9 @@ const LEG_TICKS: Array[int] = [6, 42, 48]
 ## Ticks the finger rests lifted after the last leg.
 const REST_TICKS: int = 20
 const FINGER: int = 0
-## The state hash after the scripted walk; when a rule change alters it on purpose, update it with
-## the golden replays (see AGENTS.md).
-const EXPECTED_HASH: int = 1_854_515_365
 
+## The game's state hash when the walk ended, which game/test_mode.gd reports with the result.
+var final_hash: int = 0
 ## Every instance the player stood in during the walk.
 var _visited: Dictionary[String, bool] = {}
 
@@ -58,6 +56,7 @@ func run(main: Node, tree: SceneTree) -> String:
 	await _play(driver, tree, origin, 0, 0)
 	# Frames pass in real time here, so the views and the camera catch up with the state.
 	await tree.create_timer(1.5).timeout
+	final_hash = driver.state.state_hash()
 	return _result(driver, camera, start, camera_before)
 
 
@@ -77,11 +76,6 @@ func _result(
 		return "the touch stick didn't walk the player (on %s, from %s)" % [player.tile, start]
 	if camera.global_position.is_equal_approx(camera_before):
 		return "the camera didn't follow the player"
-	if driver.state.state_hash() != EXPECTED_HASH:
-		return "the game ended in state %d, expected %d" % [
-			driver.state.state_hash(),
-			EXPECTED_HASH,
-		]
 	return ""
 
 

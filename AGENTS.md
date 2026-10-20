@@ -204,6 +204,8 @@ background; only wait in the foreground for a result the very next step needs.
   changes how something plays shows it in its description as an animated GIF of that flow,
   rendered the same hidden, silent way (a PNG every few frames, assembled into the GIF) and
   published on the `assets` branch like a screenshot.
+- **If a pull request has something to see, its description shows it, test replays included**
+  (owner's ground rule, #887).
 
 ### After every push
 
@@ -479,10 +481,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `tests/apk/apk_flow.gd`, on an Android emulator (`apk-e2e`), in headless Chrome (`web-e2e`,
   `tests/web/web_e2e.ts`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
   started by `game/test_mode.gd` in the test builds only (the `e2e_test` export feature). It
-  starts from a fixed seed, scripts its touches per tick, and must end in `EXPECTED_HASH`, which
-  the same flow pins headless (`tests/e2e/test_apk_flow.gd`). A rule change that moves it updates
-  it on purpose, like the golden replays. Everything else stays headless. `apk-e2e` is a required
-  check: it passed the first time it ran, and the owner asked to enforce it then.
+  starts from a fixed seed, scripts its touches per tick, and must end in the same state hash as
+  the same flow played headless for the same commit (`tests/e2e/test_apk_flow.gd`, in the
+  `rules-compare` job's outcome report, #876): each device job fails on another hash, which is
+  the cross-platform determinism lockstep co-op needs. No hash is committed, so a rule change
+  updates nothing here. Everything else stays headless. `apk-e2e` is a required check: it passed
+  the first time it ran, and the owner asked to enforce it then.
 - **The playground is test-only** (owner, #712): `regions/basic.md` has no exit, so normal play
   never reaches it, and the world starts in the glade. The e2e runner starts its flows there; a
   flow that walks through an exit starts in an instance that has one.
@@ -548,10 +552,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 ### Repository and accounts
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
-  checks from GitHub Actions green, merged through the merge queue (#329; CI runs on its
+  approval (later pushes don't dismiss it), review threads resolved, the `headless`, `apk-e2e` and
+  `rules-compare` checks from GitHub Actions green, merged through the merge queue (#329; CI runs on its
   `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
-  changing the ruleset in the same PR (owner's `gh`).
+  changing the ruleset in the same PR (owner's `gh`). **`rules-compare` can't compare** a removed
+  golden replay, one whose inputs changed, a changed APK flow or a changed outcome report
+  (`tests/replays/outcomes.gd`), and fails on them unless the pull request carries the label
+  `outcomes-change` (#889), which only the owner sets; rerun the job after it's set.
 - **Release tags are immutable:** the tag ruleset "immutable release tags" (`refs/tags/v*`, owner,
   #91) blocks deleting, moving and force-updating them, with no bypass; creating one is allowed.
   A wrong release gets a new version, never a moved tag.

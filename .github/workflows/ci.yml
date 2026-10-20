@@ -256,10 +256,14 @@ jobs:
     # Compares how this commit plays with how its parent plays (#876): both are built, each plays
     # the reference replays and the APK flow (tests/replays/outcomes.gd), and a difference needs a
     # new file in core/rules_changes/. The parent is the base on a pull request's merge commit and
-    # the queue's previous commit in the merge queue; main itself was checked in the queue.
-    if: github.event_name != 'push'
+    # the queue's previous commit in the merge queue; main itself was checked in the queue, so a
+    # push only plays it, for the device jobs, which compare their flow's hash with this one's.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # The pull request's labels (#889).
+      pull-requests: read
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -284,22 +288,52 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
 
-      - name: "🎲 Play this commit and its parent"
+      - name: "🎲 Play this commit"
+        # The import's script errors are the headless job's to report.
+        run: |
+          timeout 120 ~/godot/godot --headless --path . --import > /dev/null
+          timeout 300 ~/godot/godot --headless --path . -s res://tests/replays/outcomes.gd \
+            -- out=/tmp/outcomes/outcomes.json
+
+      - name: "⬆️ 🎲 Outcome report: upload (khovax-outcomes)"
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: khovax-outcomes
+          path: /tmp/outcomes/outcomes.json
+          if-no-files-found: error
+
+      - name: "🎲 Play its parent"
         # A parent that can't be built or played fails the check: it's main or a queue entry, which
-        # would be dropped anyway. The import's script errors are the headless job's to report.
+        # would be dropped anyway.
+        if: github.event_name != 'push'
         run: |
           git worktree add -q /tmp/parent HEAD^1
-          for tree in . /tmp/parent; do
-            timeout 120 ~/godot/godot --headless --path "$tree" --import > /dev/null
-          done
-          timeout 300 ~/godot/godot --headless --path . -s res://tests/replays/outcomes.gd \
-            -- out=/tmp/outcomes-head.json
+          timeout 120 ~/godot/godot --headless --path /tmp/parent --import > /dev/null
           timeout 300 ~/godot/godot --headless --path /tmp/parent -s res://tests/replays/outcomes.gd \
             -- out=/tmp/outcomes-parent.json
+
+      - name: "🏷️ Read whether the pull request is labelled outcomes-change"
+        # Read when the job runs, so a rerun sees a label added since. In the merge queue, the
+        # entry's branch names its pull request: gh-readonly-queue/<base>/pr-<number>-<sha>.
+        if: github.event_name != 'push'
+        id: label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          QUEUE_BRANCH: ${{ github.event.merge_group.head_ref }}
+        run: |
+          number=${NUMBER:-$(sed -n 's|.*/pr-\([0-9][0-9]*\)-[0-9a-f]*$|\1|p' <<< "$QUEUE_BRANCH")}
+          test -n "$number"
+          labelled=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${number}" \
+            --jq '[.labels[].name] | index("outcomes-change") != null')
+          echo "labelled=${labelled}" >> "$GITHUB_OUTPUT"
 
       - name: "🔖 Check a different outcome comes with a rules change"
         # The comparison runs from the parent's checkout, so a pull request can't weaken its own
         # check. Only the pull request that adds the script (#876) runs its own.
+        if: github.event_name != 'push'
+        env:
+          OUTCOMES_CHANGE: ${{ steps.label.outputs.labelled }}
         run: |
           set -o pipefail
           compare=/tmp/parent/tools/rules_compare.sh
@@ -307,7 +341,7 @@ jobs:
             echo "::notice::The parent has no tools/rules_compare.sh yet, so this commit's own runs."
             compare=tools/rules_compare.sh
           fi
-          bash "$compare" /tmp/outcomes-parent.json /tmp/outcomes-head.json HEAD^1 \
+          bash "$compare" /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 \
             | tee -a "$GITHUB_STEP_SUMMARY"
 
   export:
@@ -483,8 +517,9 @@ jobs:
 
   apk-e2e:
     # The one e2e flow on the APK (#61), on an Android emulator: the test APK's flow walks the player
-    # with the touch stick from a fixed seed and must end in the state the headless run pins.
-    needs: export
+    # with the touch stick from a fixed seed and must end in the state the headless run of the same
+    # commit ended in (rules-compare's outcome report, #876).
+    needs: [export, rules-compare]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
@@ -496,6 +531,17 @@ jobs:
         with:
           name: khovax-test-apk
           path: build
+
+      - name: "⬇️ 🎲 Outcome report: download (khovax-outcomes)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: khovax-outcomes
+          path: outcomes
+
+      - name: "🎲 Read the headless run's final hash of the flow"
+        run: |
+          hash=$(jq -er .apk_flow.final outcomes/outcomes.json)
+          echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
       - name: "⚙️ Emulator: enable KVM"
         run: |
@@ -557,13 +603,14 @@ jobs:
           # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
           emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk
+          script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
 
   linux-e2e:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual
     # display with Mesa's software OpenGL, so the renderer really draws. The test build quits with
-    # the flow's result as its exit code (game/test_mode.gd).
-    needs: export
+    # the flow's result as its exit code (game/test_mode.gd), and must end in the state the headless
+    # run of the same commit ended in (rules-compare's outcome report, #876).
+    needs: [export, rules-compare]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -573,6 +620,17 @@ jobs:
           name: khovax-linux-test
           path: build
 
+      - name: "⬇️ 🎲 Outcome report: download (khovax-outcomes)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: khovax-outcomes
+          path: outcomes
+
+      - name: "🎲 Read the headless run's final hash of the flow"
+        run: |
+          hash=$(jq -er .apk_flow.final outcomes/outcomes.json)
+          echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
+
       - name: "🐧 Linux test build: run the e2e flow under a virtual display"
         # The game's exit code and its result line both have to say pass.
         env:
@@ -581,12 +639,14 @@ jobs:
           set -o pipefail
           chmod +x build/khovax-test.x86_64
           timeout 300 xvfb-run -a -s "-screen 0 1280x720x24" build/khovax-test.x86_64 | tee linux-e2e.log
-          grep -qx "KHOVAX_E2E: PASS" linux-e2e.log
+          grep -qx "KHOVAX_E2E: PASS ${EXPECTED_HASH}" linux-e2e.log \
+            || { echo "::error::the flow didn't pass in the headless run's state ${EXPECTED_HASH}"; exit 1; }
 
   web-e2e:
     # The same device flow on the web build (#102), in headless Chrome: it must end in the state the
-    # headless run pins, with nothing on the browser's console marked as an error.
-    needs: export
+    # headless run of the same commit ended in (rules-compare's outcome report, #876), with nothing
+    # on the browser's console marked as an error.
+    needs: [export, rules-compare]
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
@@ -598,6 +658,17 @@ jobs:
         with:
           name: khovax-web-test
           path: build/web-test
+
+      - name: "⬇️ 🎲 Outcome report: download (khovax-outcomes)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: khovax-outcomes
+          path: outcomes
+
+      - name: "🎲 Read the headless run's final hash of the flow"
+        run: |
+          hash=$(jq -er .apk_flow.final outcomes/outcomes.json)
+          echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
       - name: "⬇️ Download Bun, Chrome (headless shell) and Playwright's ffmpeg"
         run: |

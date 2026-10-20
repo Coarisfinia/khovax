@@ -4,14 +4,16 @@
 // can't finish says why and ends at once (#252): the page crashing, the browser going away, WebGL
 // losing its context, or the page no longer answering at all. It films the run into <export>-video/web-e2e.webm (owner,
 // #115). Run by CI; the browser comes from the CHROME variable, and Playwright's ffmpeg, which the
-// video needs, from PLAYWRIGHT_BROWSERS_PATH.
-// Usage: CHROME=<chrome-headless-shell> bun tests/web/web_e2e.ts [build/web-test]
+// video needs, from PLAYWRIGHT_BROWSERS_PATH. The flow must end in the state hash the headless run of
+// the same commit ended in (#876), from the EXPECTED_HASH variable.
+// Usage: CHROME=<chrome-headless-shell> EXPECTED_HASH=<hash> bun tests/web/web_e2e.ts [build/web-test]
 import { resolve, sep } from "node:path";
 import { chromium } from "playwright-core";
 
 const root = resolve(process.argv[2] ?? "build/web-test");
 const chrome = process.env.CHROME;
-const RESULT = /^KHOVAX_E2E: (PASS|FAIL .*)$/;
+const expectedHash = process.env.EXPECTED_HASH;
+const RESULT = /^KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$/;
 const TIMEOUT_MS = 180_000;
 // How often the page is asked whether it still answers, how long it may take, and how many
 // answers in a row it may miss before it counts as frozen: the game loads in one blocking step,
@@ -26,6 +28,10 @@ const video = `${root}-video`;
 
 if (!chrome) {
   console.error("CHROME isn't set: point it at chrome-headless-shell");
+  process.exit(2);
+}
+if (!expectedHash) {
+  console.error("EXPECTED_HASH isn't set: the headless run's final state hash");
   process.exit(2);
 }
 
@@ -224,4 +230,8 @@ try {
 const timedOut = `no result within ${TIMEOUT_MS / 1000} s: the game never reported`;
 console.log(result || (stopReason ? `the run stopped early: ${stopReason}` : timedOut));
 for (const error of errors) console.log(`console error: ${error}`);
-process.exit(result === "KHOVAX_E2E: PASS" && errors.length === 0 ? 0 : 1);
+const passed = `KHOVAX_E2E: PASS ${expectedHash}`;
+if (result.startsWith("KHOVAX_E2E: PASS ") && result !== passed) {
+  console.log(`the headless run ended in state ${expectedHash}`);
+}
+process.exit(result === passed && errors.length === 0 ? 0 : 1);
