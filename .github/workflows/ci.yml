@@ -336,10 +336,11 @@ jobs:
           labelled=false
           note="the pull request isn't labelled outcomes-change"
           if [ "$has_label" = true ]; then
+            # Sorted by time here rather than trusting the API's order.
             events=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/issues/${number}/timeline" \
               --jq '.[] | select(.event == "labeled" and .label.name == "outcomes-change")
-                | .actor.login')
-            actor=$(tail -n 1 <<< "$events")
+                | "\(.created_at) \(.actor.login)"')
+            actor=$(sort <<< "$events" | tail -n 1 | cut -d ' ' -f 2)
             if [ "$actor" = "$LABEL_OWNER" ]; then
               labelled=true
               note="the owner (${LABEL_OWNER}) labelled the pull request outcomes-change"
