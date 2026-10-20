@@ -30,6 +30,8 @@ static func build(listed: Array[String], setup: FeatureSetup) -> Array[Feature]:
 static func _all() -> Dictionary[String, Callable]:
 	if _factories.is_empty():
 		_factories = {
+			# First, so every rule after it sees a player a locking dialog holds as standing (#912).
+			DialogHoldFeature.ID: _plain(DialogHoldFeature),
 			MovementFeature.ID: _plain(MovementFeature),
 			KnockdownFeature.ID: _plain(KnockdownFeature),
 			TrailFeature.ID: _plain(TrailFeature),

@@ -11,7 +11,9 @@ extends RefCounted
 ## guild scout stands east of the start (#557): walking into them talks to them, raised as
 ## NpcTalkedTo, which opens their greeting in the state, saved with the world: a world resumed with
 ## it open shows the card again. The scout never steps aside, and a held direction talks once,
-## until the player stops and walks into them again.
+## until the player stops and walks into them again. A locking dialog holds its player (#912): they
+## stand whatever they send, and with every player held the wild monsters pause, until an answer
+## closes it; a committing answer holds the player from it on.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "guild_scout_greeting"
@@ -54,6 +56,8 @@ func run(tree: SceneTree) -> String:
 		result = await _talk_to_scout(tree, main, driver, screen)
 	if result.is_empty():
 		result = _talk_once_while_held()
+	if result.is_empty():
+		result = _hold_while_locked()
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(PROFILE)
@@ -247,6 +251,43 @@ static func _talk_once_while_held() -> String:
 	if talks != [1, 0, 0, 0, 1] or state.player(0).tile != BESIDE_SCOUT:
 		return "walking on into the scout talked %s, standing on %s" % [talks, state.player(0).tile]
 	return ""
+
+
+## The scout's greeting, made to lock, holds the player once talked to: walking west leaves them
+## beside the scout, and the wild monsters pause, with them alone in the glade. Leaving the scout
+## frees them, and the wild monsters go on. Made not to lock, it holds nobody until the answer
+## asking about the glade, made to commit, is chosen.
+static func _hold_while_locked() -> String:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
+	dialogs.locking[GREETING] = true
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
+	Simulation.step(state, FlowSteps.command(EAST))
+	var west: int = Hex.DIRECTIONS.find(Vector2i(-1, 0))
+	for _tick: int in MovementFeature.MOVE_TICKS * 2:
+		Simulation.step(state, FlowSteps.command(west))
+	var wild: Feature = state.feature(WildMonsterFeature.ID)
+	if not dialogs.holds(0) or state.player(0).tile != BESIDE_SCOUT or wild.enabled:
+		return "the locking greeting didn't hold the player still with the wild monsters paused"
+	Simulation.step(state, _answering(DialogFeature.code(GREETING, "leave_scout")))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if dialogs.holds(0) or not dialogs.dialog_of(0).is_empty() or not wild.enabled:
+		return "leaving the scout didn't free the player and the wild monsters"
+	dialogs.locking[GREETING] = false
+	dialogs.committing[DialogFeature.code(GREETING, "ask_about_glade")] = true
+	Simulation.step(state, FlowSteps.command(EAST))
+	var talked: bool = dialogs.dialog_of(0) == GREETING and not dialogs.holds(0)
+	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_glade")))
+	if not talked or not dialogs.holds(0) or dialogs.line_of(0) != 2:
+		return "the committing answer didn't hold the player from it on"
+	return ""
+
+
+## One tick's commands with only the player in slot 0, standing and choosing the answer `code`.
+static func _answering(code: int) -> Array[Command]:
+	var commands: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	commands[0].answer = code
+	return commands
 
 
 ## The NpcTalkedTo events among `events`.
