@@ -24,7 +24,6 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_attacks"
-
 ## The ticks between two strikes of one wild monster, and how much a trail tile takes before it
 ## gives way. Placeholders to tune (#422).
 const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
