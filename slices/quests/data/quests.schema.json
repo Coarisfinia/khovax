@@ -51,7 +51,7 @@
 			"description": "Stable, never reused: lowercase words joined by underscores.",
 			"$ref": "#/$defs/id"
 		},
-		"name": { "description": "The player-facing name; it may name content with text tags, like ${MONSTER:moss_toad} (#733, TextTags).", "type": "string", "minLength": 1 },
+		"name": { "description": "The player-facing name; it may name content with text tags, like ${MONSTER:ombulumo} (#733, TextTags).", "type": "string", "minLength": 1 },
 		"path": {
 			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
 			"enum": ["none", "harmony", "supremacy", "both"],

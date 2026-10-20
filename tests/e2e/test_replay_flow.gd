@@ -622,10 +622,10 @@ func _check_older_formats(recorded: Replay, loaded: Replay) -> String:
 		data["format"] = older_format
 		# Before short ids, a slot's carried monsters were its species alone.
 		if older_format < ReplayFile.SHORT_ID_FORMAT:
-			data["carried"] = [["storm_finch"], ["moss_toad"]]
+			data["carried"] = [["tikazzir"], ["ombulumo"]]
 		if older_format < ReplayFile.CARRIED_FORMAT:
 			var _erased: bool = data.erase("carried")
-			data["companions"] = ["storm_finch", "moss_toad"]
+			data["companions"] = ["tikazzir", "ombulumo"]
 		var migrated: Replay = ReplayFile.parse(JSON.stringify(data))
 		if migrated.changes != loaded.changes or not migrated.play().is_empty():
 			return "a replay in format %d didn't read with nothing fired or placed" % older_format
@@ -674,7 +674,7 @@ func _check_replay_validation() -> String:
 		text.replace("\"seed\": \"42\"", "\"seed\": \"x\""): "not a replay: its seed",
 		text.replace("\"changes\": [", "\"changes\": [\"bad\","): "not a replay: its changes",
 		text.replace("\"carried\": [", "\"carried\": [1,"): "not a replay: its carried monsters",
-		text.replace("\"storm_finch\"", "\"\""): "not a replay: its carried monsters",
+		text.replace("\"tikazzir\"", "\"\""): "not a replay: its carried monsters",
 		text.replace("\"short_id\": \"", "\"short_id\": \"l"): "not a replay: its carried monsters",
 		text.replace("\"ticks\": ", "\"ticks\": \"many\", \"was\": "): "not a replay: its ticks",
 		text.replace(
@@ -734,7 +734,7 @@ func _recorded_run() -> Replay:
 	)
 	CompanionParty.bring(
 		world,
-		FlowSteps.parties([["storm_finch"], ["moss_toad"]]),
+		FlowSteps.parties([["tikazzir"], ["ombulumo"]]),
 	)
 	var recorded: Replay = Replay.new(InstanceBlueprints.BASIC, 42)
 	recorded.begin(world)
@@ -747,7 +747,7 @@ func _recorded_run() -> Replay:
 	return recorded
 
 
-## The basic region's wild monsters: the rolled one on (-2, 0), and the beach's wounded moss toad
+## The basic region's wild monsters: the rolled one on (-2, 0), and the beach's wounded Ombulumo
 ## (#448).
 func _check_basic_monsters(region: Region) -> String:
 	var spots: Array[Vector2i] = [Vector2i(-2, 0), FlowSteps.BEACH_TOAD]
@@ -757,10 +757,10 @@ func _check_basic_monsters(region: Region) -> String:
 		]
 	var toad: WildSpot = region.wild_spots.get(FlowSteps.BEACH_TOAD)
 	var sand: int = TileKinds.number_of("sand")
-	if toad == null or toad.species != "moss_toad" or not toad.wounded:
-		return "the beach's wild monster isn't a wounded moss toad"
+	if toad == null or toad.species != "ombulumo" or not toad.wounded:
+		return "the beach's wild monster isn't a wounded Ombulumo"
 	if region.terrain.get(FlowSteps.BEACH_TOAD) != sand:
-		return "the beach's wounded moss toad doesn't stand on sand (#452)"
+		return "the beach's wounded Ombulumo doesn't stand on sand (#452)"
 	return ""
 
 

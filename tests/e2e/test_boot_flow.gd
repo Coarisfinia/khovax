@@ -321,7 +321,7 @@ func _check_wild_monster(main: Node) -> String:
 	var feature: WildMonsterFeature = (
 		driver.state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	)
-	# The rolled one, and the beach's wounded moss toad (#448).
+	# The rolled one, and the beach's wounded Ombulumo (#448).
 	if view == null or feature == null or feature.monsters.size() != 2:
 		return "the main scene needs a WildMonsterView, and the basic region two wild monsters"
 	var monster: Entity = driver.state.entity(feature.monsters[0])

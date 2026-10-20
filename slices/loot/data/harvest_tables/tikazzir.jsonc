@@ -1,7 +1,7 @@
-// A placeholder harvest table (#687): what a felled storm finch drops. Mostly feathers, sometimes a
+// A placeholder harvest table (#687): what a felled Tikazzir drops. Mostly feathers, sometimes a
 // bone, else a blank, which rolls on the instance's table instead.
 {
-	"id": "storm_finch",
+	"id": "tikazzir",
 	"kind": "harvest",
 	"entries": [
 		{ "item": "feather", "chance": 600, "min": 2, "max": 4 }, // 60 %

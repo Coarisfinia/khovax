@@ -1,0 +1,9 @@
+// A placeholder quest with a step that counts up, until real quests exist.
+{
+	"id": "three_ombulumo",
+	"name": "Dominate three ${MONSTER:ombulumo}",
+	"path": "supremacy",
+	"steps": [
+		{ "condition": "dominated", "species": "ombulumo", "count": 3, "ends": "three_ombulumo" }
+	]
+}

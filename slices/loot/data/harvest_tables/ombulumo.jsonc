@@ -1,7 +1,7 @@
-// A placeholder harvest table (#687): what a felled moss toad drops, apart from what dominating it
+// A placeholder harvest table (#687): what a felled Ombulumo drops, apart from what dominating it
 // gives. Mostly hide, sometimes a bone, else a blank, which rolls on the instance's table instead.
 {
-	"id": "moss_toad",
+	"id": "ombulumo",
 	"kind": "harvest",
 	"entries": [
 		{ "item": "hide", "chance": 600, "min": 1, "max": 2 }, // 60 %

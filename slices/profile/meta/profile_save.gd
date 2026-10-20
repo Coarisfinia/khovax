@@ -6,10 +6,17 @@ extends RefCounted
 ## Profile's.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 13
+const FORMAT: int = 14
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
+## The species ids before format 14, each to its id since: a species' id is its name (#763).
+const OLD_SPECIES: Dictionary[String, String] = {
+	"moss_toad": "ombulumo",
+	"storm_finch": "tikazzir",
+}
+## The quest ids before format 14 that named a species by its old id, each to its id since (#763).
+const OLD_QUESTS: Dictionary[String, String] = { "three_moss_toads": "three_ombulumo" }
 
 
 ## The profile as save text.
@@ -96,6 +103,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_11,
 		_migrate_to_12,
 		_migrate_to_13,
+		_migrate_to_14,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -130,17 +138,7 @@ static func _migrate_to_5(data: Dictionary) -> void:
 	if data.has("captured_monsters"):
 		data["dominated_monsters"] = data["captured_monsters"]
 		var _renamed: bool = data.erase("captured_monsters")
-	var progress: Variant = data.get("quest_progress")
-	var by_id: Dictionary = progress if progress is Dictionary else {}
-	if by_id.has(OLD_FIRST_QUEST):
-		by_id[NEW_FIRST_QUEST] = by_id[OLD_FIRST_QUEST]
-		var _moved: bool = by_id.erase(OLD_FIRST_QUEST)
-	var done: Variant = data.get("quests_done")
-	if done is Array:
-		var done_list: Array = done
-		var at: int = done_list.find(OLD_FIRST_QUEST)
-		if at >= 0:
-			done_list[at] = NEW_FIRST_QUEST
+	_rename_quest(data, OLD_FIRST_QUEST, NEW_FIRST_QUEST)
 
 
 ## Format 5 to 6: the personal color (#391) starts on Auto.
@@ -186,18 +184,50 @@ static func _migrate_to_11(data: Dictionary) -> void:
 ## Format 11 to 12: every dominated monster gets a short id (#700): a stand-in drawn from its id,
 ## since the one it had in the wild wasn't kept.
 static func _migrate_to_12(data: Dictionary) -> void:
+	for fields: Dictionary in _monster_entries(data):
+		fields["short_id"] = ShortId.stand_in(_int(fields.get("id")))
+
+
+## The save `data`'s dominated monsters that are tables, for a migration to change in place.
+static func _monster_entries(data: Dictionary) -> Array[Dictionary]:
+	var entries: Array[Dictionary] = []
 	var monsters: Variant = data.get("dominated_monsters")
 	var monster_list: Array = monsters if monsters is Array else []
 	for entry: Variant in monster_list:
 		if entry is Dictionary:
 			var fields: Dictionary = entry
-			fields["short_id"] = ShortId.stand_in(_int(fields.get("id")))
+			entries.append(fields)
+	return entries
+
+
+## Renames the quest `old_id` to `new_id` in the save `data`'s progress and finished quests.
+static func _rename_quest(data: Dictionary, old_id: String, new_id: String) -> void:
+	var progress: Variant = data.get("quest_progress")
+	var by_id: Dictionary = progress if progress is Dictionary else {}
+	if by_id.has(old_id):
+		by_id[new_id] = by_id[old_id]
+		var _moved: bool = by_id.erase(old_id)
+	var done: Variant = data.get("quests_done")
+	if done is Array:
+		var done_list: Array = done
+		var at: int = done_list.find(old_id)
+		if at >= 0:
+			done_list[at] = new_id
 
 
 ## Format 12 to 13: the outbox is empty (#771). A territory quest finished before had its hand-over
 ## sent then.
 static func _migrate_to_13(data: Dictionary) -> void:
 	data["outbox"] = []
+
+
+## Format 13 to 14: a species' id is its name (#763), so every dominated monster's old species id
+## and every quest id that named one are renamed.
+static func _migrate_to_14(data: Dictionary) -> void:
+	for fields: Dictionary in _monster_entries(data):
+		fields["species"] = OLD_SPECIES.get(fields.get("species"), fields.get("species"))
+	for old_id: String in OLD_QUESTS:
+		_rename_quest(data, old_id, OLD_QUESTS[old_id])
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".

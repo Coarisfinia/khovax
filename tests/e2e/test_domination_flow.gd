@@ -79,7 +79,7 @@ const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 ## Ticks a seal may take at most in this flow, before it counts as stuck.
 const MOST_SEAL_TICKS: int = 400
 ## The companion the first player brings into the saved world.
-const COMPANION: String = "moss_toad"
+const COMPANION: String = "ombulumo"
 ## The outcome tests' species, in a disc region of radius OUTCOME_RADIUS: a weak and a strong one,
 ## both at full HP.
 const OUTCOME_RADIUS: int = 4
@@ -212,13 +212,13 @@ func _check_hiding_legend() -> String:
 ## A named wild monster can stand on a tile kind (#452): the spot is that kind, and a legend naming
 ## no species or no kind is refused.
 func _check_standing_on(piece: String) -> String:
-	var sand: Region = RegionDocument.parse(piece + "a wild monster, always moss_toad, on sand\n")
+	var sand: Region = RegionDocument.parse(piece + "a wild monster, always ombulumo, on sand\n")
 	var on_sand: bool = sand.terrain.get(Vector2i.ZERO) == TileKinds.number_of("sand")
 	if not sand.problem.is_empty() or sand.wild_spots.size() != 1 or not on_sand:
 		return "a wild monster standing on sand doesn't read: " + sand.problem
 	var broken_meanings: Array[String] = [
 		"a wild monster, always, on sand",
-		"a wild monster, always moss_toad, on nowhere",
+		"a wild monster, always ombulumo, on nowhere",
 	]
 	for broken: String in broken_meanings:
 		if RegionDocument.parse(piece + broken + "\n").problem.is_empty():
@@ -1755,7 +1755,7 @@ func _dominated_species(events: Array[RefCounted]) -> String:
 
 
 ## Species (#133): a spot its region piece names always has that species (the arena's boss is a
-## storm finch); the others roll from their blueprint's list, the same way for the same seed, every
+## Tikazzir); the others roll from their blueprint's list, the same way for the same seed, every
 ## species on the list turning up over enough seeds, and the domination carries it. Every wild
 ## monster gets a short id (#700), the same for the same seed and apart from the others', and the
 ## domination carries it too.
@@ -1763,8 +1763,8 @@ func _check_species() -> String:
 	var rolled: Dictionary[String, bool] = {}
 	for seed_value: int in 24:
 		var arena: GameState = InstanceBlueprints.create(InstanceBlueprints.ARENA, seed_value)
-		if _wild(arena).species_of(_wild(arena).monsters[0]) != "storm_finch":
-			return "seed %d's arena boss isn't the storm finch it names" % seed_value
+		if _wild(arena).species_of(_wild(arena).monsters[0]) != "tikazzir":
+			return "seed %d's arena boss isn't the Tikazzir it names" % seed_value
 		var basic: String = _first_species(InstanceBlueprints.basic(seed_value))
 		if basic != _first_species(InstanceBlueprints.basic(seed_value)):
 			return "seed %d placed two different species" % seed_value
@@ -1804,8 +1804,8 @@ func _check_short_ids() -> String:
 ## below 1, while the one beside it starts at full.
 func _check_wounded() -> String:
 	var tiles: String = "# W\n\n## Tiles\n\n```\n🤕🔴🐸\n```\n\n## Legend\n\n"
-	tiles += "- `🤕`: a wild monster, always moss_toad, wounded\n"
-	tiles += "- `🐸`: a wild monster, always moss_toad\n"
+	tiles += "- `🤕`: a wild monster, always ombulumo, wounded\n"
+	tiles += "- `🐸`: a wild monster, always ombulumo\n"
 	tiles += "- `🔴`: where player 1 starts\n"
 	var region: Region = RegionDocument.parse(tiles)
 	var marked: int = 0
@@ -1813,11 +1813,11 @@ func _check_wounded() -> String:
 		marked += 1 if spot.wounded else 0
 	if not region.problem.is_empty() or marked != 1:
 		return "a legend didn't mark its wild monster wounded: " + region.problem
-	var hp: Dictionary[String, int] = { "moss_toad": OUTCOME_HP }
+	var hp: Dictionary[String, int] = { "ombulumo": OUTCOME_HP }
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		TrailFeature.new(),
-		WildMonsterFeature.new([], [], hp, { "moss_toad": WEAK_STRENGTH }),
+		WildMonsterFeature.new([], [], hp, { "ombulumo": WEAK_STRENGTH }),
 	]
 	var state: GameState = GameState.new(region, 1, ordered)
 	var wild: WildMonsterFeature = _wild(state)

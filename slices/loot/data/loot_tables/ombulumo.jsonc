@@ -1,7 +1,7 @@
 // A placeholder species table until real loot exists (#86, #90): mostly berries, else a blank,
 // which rolls on the instance's table instead.
 {
-	"id": "moss_toad",
+	"id": "ombulumo",
 	"kind": "species",
 	"entries": [
 		{ "item": "berry", "chance": 800, "min": 2, "max": 4 }, // 80 %

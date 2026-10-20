@@ -27,4 +27,4 @@ The saddle at the top of the pass (#689): a wide hollow between the peaks, with 
 - `🧷`: joins another piece to the east
 - `🌳`: shrubs
 - `🪨`: boulder
-- `🐸`: a wild monster, always moss_toad
+- `🐸`: a wild monster, always ombulumo

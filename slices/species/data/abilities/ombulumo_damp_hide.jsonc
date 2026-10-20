@@ -1,8 +1,8 @@
 // A placeholder until the abilities do something (#222): its effect comes with the system that
 // uses it.
 {
-	"id": "moss_toad_damp_hide",
+	"id": "ombulumo_damp_hide",
 	"kind": "self_passive",
 	"name": "Damp Hide",
-	"description": "The ${MONSTER:moss_toad}'s wet skin shrugs off part of every hit."
+	"description": "The ${MONSTER:ombulumo}'s wet skin shrugs off part of every hit."
 }

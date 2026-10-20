@@ -1,6 +1,6 @@
 class_name TextTags
 extends RefCounted
-## Typed placeholder tags in player-facing text (#733): `${MONSTER:moss_toad}` names a species by
+## Typed placeholder tags in player-facing text (#733): `${MONSTER:ombulumo}` names a species by
 ## its id and shows its current name ("Ombulumo"), so renaming one changes every text at once. A
 ## tag has a kind (MONSTER, FACTION, GEAR) and an id of that kind; the content flow refuses a text
 ## whose tag has an unknown kind or an id that doesn't exist. Tags are resolved when a text is

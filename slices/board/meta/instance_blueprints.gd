@@ -47,14 +47,14 @@ const CHEST_TABLES: Dictionary[String, String] = { GLADE: "glade_chest" }
 ## Which species live in each blueprint, and how likely each is, for the wild monster spots its
 ## region doesn't name (#133): species id to weight.
 const WILD_SPECIES: Dictionary[String, Dictionary] = {
-	BASIC: { "moss_toad": 3, "storm_finch": 1 },
-	LOAD: { "moss_toad": 1, "storm_finch": 1 },
-	GLADE: { "moss_toad": 1 },
-	ARENA: { "moss_toad": 1 },
-	FOREST: { "moss_toad": 2, "storm_finch": 1 },
-	CASTLE: { "moss_toad": 1, "storm_finch": 1 },
-	OUTPOST: { "moss_toad": 1, "storm_finch": 1 },
-	MOUNTAIN_PASS: { "moss_toad": 1, "storm_finch": 2 },
+	BASIC: { "ombulumo": 3, "tikazzir": 1 },
+	LOAD: { "ombulumo": 1, "tikazzir": 1 },
+	GLADE: { "ombulumo": 1 },
+	ARENA: { "ombulumo": 1 },
+	FOREST: { "ombulumo": 2, "tikazzir": 1 },
+	CASTLE: { "ombulumo": 1, "tikazzir": 1 },
+	OUTPOST: { "ombulumo": 1, "tikazzir": 1 },
+	MOUNTAIN_PASS: { "ombulumo": 1, "tikazzir": 2 },
 }
 ## Each blueprint's variants (#529), by blueprint: world flag to the variant it chooses, the first
 ## of its flags in the order listed that the world has set choosing (#541), so a later story beat

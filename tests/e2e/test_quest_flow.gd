@@ -38,10 +38,10 @@ extends RefCounted
 ## dominating it counts.
 
 const SAVE_PATH: String = "user://test_quest_profile.json"
-## A quest with two steps, for the counting: two moss toads, then a chest.
+## A quest with two steps, for the counting: two Ombulumo, then a chest.
 const TWO_STEPS: String = (
 	"{\"id\": \"toads_then_chest\", \"name\": \"Two toads, then a chest\", \"steps\": ["
-	+ "{\"condition\": \"dominated\", \"species\": \"moss_toad\", \"count\": 2}, "
+	+ "{\"condition\": \"dominated\", \"species\": \"ombulumo\", \"count\": 2}, "
 	+ "{\"condition\": \"opened\", \"ends\": \"toads_then_chest\"}]}"
 )
 ## A quest that asks to enter the glade's thicket.
@@ -96,12 +96,12 @@ const BEACH_REGION: String = (
 	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🔵`: where player 2 starts\n"
 	+ "- `🐚`: the beach; stepping here reaches the place beach\n"
 )
-## A region whose legend marks one moss toad, wounded on sand, as the quest target old_toad (#625),
-## east of player 1, and another moss toad, next to player 1, as none.
+## A region whose legend marks one Ombulumo, wounded on sand, as the quest target old_toad (#625),
+## east of player 1, and another Ombulumo, next to player 1, as none.
 const TARGET_REGION: String = (
 	"# Pond\n\n## Tiles\n\n```\n 🟫🟫🟫🟫\n🔴🐸🟫🟫🎯\n 🟫🟫🟫🟫\n```\n\n## Legend\n\n"
-	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🐸`: a wild monster, always moss_toad\n"
-	+ "- `🎯`: a wild monster, always moss_toad, wounded, the quest target old_toad, on sand\n"
+	+ "- `🟫`: ground\n- `🔴`: where player 1 starts\n- `🐸`: a wild monster, always ombulumo\n"
+	+ "- `🎯`: a wild monster, always ombulumo, wounded, the quest target old_toad, on sand\n"
 )
 ## A quest that asks to dominate the quest target old_toad.
 const OLD_TOAD: String = (
@@ -149,10 +149,10 @@ func _check_tracked(tree: SceneTree) -> String:
 	var list: QuestListView = main.get_node("Hud/QuestList") as QuestListView
 	if result.is_empty():
 		result = _check_beach_first(driver, bus, profile, markers, list)
-	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "moss_toad"))
+	_emit(driver, bus, WildMonsterDominated.new(90, 9, 1, Vector2i.ZERO, "ombulumo"))
 	if result.is_empty() and not profile.quests_done.is_empty():
 		result = "another slot's domination finished this player's quest"
-	_emit(driver, bus, WildMonsterDominated.new(91, 1, 0, Vector2i.ZERO, "storm_finch"))
+	_emit(driver, bus, WildMonsterDominated.new(91, 1, 0, Vector2i.ZERO, "tikazzir"))
 	# Reaching the beach was the gain saved at once; the domination right after it waits for the
 	# debounce (ProfileKeeper.SAVE_INTERVAL_MSEC), so it's flushed as ending the session would.
 	result += holder.keeper.flush()
@@ -184,7 +184,7 @@ func _check_target_tracked(driver: GameDriver, bus: EventBus, profile: Profile) 
 		1,
 		0,
 		Vector2i.ZERO,
-		"moss_toad",
+		"ombulumo",
 	)
 	dominated.target = "old_toad"
 	_emit(driver, bus, dominated)
@@ -206,7 +206,7 @@ func _check_beach_first(
 	if result.is_empty():
 		result = _check_listed(list, {
 			"first_domination": "Go to the beach",
-			"three_moss_toads": "Dominate an Ombulumo  0/3",
+			"three_ombulumo": "Dominate an Ombulumo  0/3",
 		})
 	if result.is_empty():
 		result = _check_card_scene(list, profile.quest_book["first_domination"].shown_name())
@@ -277,13 +277,13 @@ func _check_marked_monster(
 ## A quest asking for a species is marked only when one of that species is here.
 func _check_unmarked(state: GameState, wild: WildMonsterFeature, profile: Profile) -> String:
 	var text: String = "{\"id\": \"absent\", \"name\": \"Absent\", \"steps\": "
-	text += "[{\"condition\": \"dominated\", \"species\": \"storm_finch\", \"ends\": \"absent\"}]}"
+	text += "[{\"condition\": \"dominated\", \"species\": \"tikazzir\", \"ends\": \"absent\"}]}"
 	var known: Dictionary[String, Species] = SpeciesContent.load_species().species
 	var absent: QuestDefinition = QuestDefinition.parse("absent", text, known)
 	profile.quest_book[absent.id] = absent
 	var any_finch: bool = false
 	for entity_id: int in wild.monsters:
-		any_finch = any_finch or wild.species_of(entity_id) == "storm_finch"
+		any_finch = any_finch or wild.species_of(entity_id) == "tikazzir"
 	var marked: bool = QuestMarkerView.targets_of(state, profile, 0).has("absent")
 	var _dropped: bool = profile.quest_book.erase("absent")
 	if marked != any_finch:
@@ -330,7 +330,7 @@ func _check_quests_tab(menu: GameMenu, profile: Profile, first: String) -> Strin
 		"enter_glade": "Now: Enter the glade",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
-		"three_moss_toads": "Now: Dominate an Ombulumo  0/3",
+		"three_ombulumo": "Now: Dominate an Ombulumo  0/3",
 	}
 	var shown: Dictionary[String, String] = menu.quests_tab().shown
 	# Laid out in its scene (#437): it scrolls only up and down.
@@ -350,12 +350,12 @@ func _check_dropped(tree: SceneTree, list: QuestListView) -> String:
 	list.show_quests()
 	if list.cards.has("first_domination") or list.order.has("first_domination"):
 		return "the finished first domination stayed on the quest list"
-	if not list.cards.has("three_moss_toads"):
+	if not list.cards.has("three_ombulumo"):
 		return "an open quest left the quest list"
 	return ""
 
 
-## The list follows: another moss toad counts the toads' quest up, the finished first domination
+## The list follows: another Ombulumo counts the toads' quest up, the finished first domination
 ## shows done and then drops out.
 func _check_list_follows(
 	tree: SceneTree,
@@ -363,10 +363,10 @@ func _check_list_follows(
 	bus: EventBus,
 	list: QuestListView,
 ) -> String:
-	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "moss_toad"))
+	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "ombulumo"))
 	var result: String = _check_listed(list, {
 		"first_domination": QuestListView.DONE_TEXT,
-		"three_moss_toads": "Dominate an Ombulumo  1/3",
+		"three_ombulumo": "Dominate an Ombulumo  1/3",
 	})
 	if result.is_empty():
 		result = await _check_dropped(tree, list)
@@ -645,7 +645,7 @@ func _check_place_marker(state: GameState, profile: Profile) -> String:
 	return ""
 
 
-## The region's quest target old_toad (#625) is its marked moss toad's, kept through a save, and
+## The region's quest target old_toad (#625) is its marked Ombulumo's, kept through a save, and
 ## not the other's, which is nearer the player.
 func _check_target() -> String:
 	var region: Region = RegionDocument.parse(TARGET_REGION)
@@ -668,12 +668,12 @@ func _check_target() -> String:
 		elif WildSpot.target_in(wild.marks, monster).is_empty():
 			unmarked += 1
 	if marked != Vector2i(2, 0) or unmarked != 1:
-		return "the legend's quest target isn't the one moss toad it marks, after a save"
+		return "the legend's quest target isn't the one Ombulumo it marks, after a save"
 	return _check_target_quest(state, marked)
 
 
 ## The quest asking for old_toad is marked over it on `state`'s `marked` tile and listed as
-## dominating it; dominating a moss toad leaves it open, and dominating the target finishes it.
+## dominating it; dominating an Ombulumo leaves it open, and dominating the target finishes it.
 func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 	var profile: Profile = Profile.new()
 	profile.quest_book["old_toad"] = QuestDefinition.parse("old_toad", OLD_TOAD, {})
@@ -682,10 +682,10 @@ func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 		return "the quest asking for old_toad isn't marked over it"
 	if QuestListView.step_line(step, 0) != "Dominate the old toad":
 		return "the quest asking for old_toad reads %s" % QuestListView.step_line(step, 0)
-	var applied: String = profile.apply(_gain(["moss_toad"], 0))
+	var applied: String = profile.apply(_gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests_done.has("old_toad"):
-		return "dominating another moss toad counted toward old_toad: " + applied
-	var targeted: Gain = _gain(["moss_toad"], 0)
+		return "dominating another Ombulumo counted toward old_toad: " + applied
+	var targeted: Gain = _gain(["ombulumo"], 0)
 	targeted.targets_dominated.append("old_toad")
 	applied = profile.apply(targeted)
 	var done: Array[String] = ["old_toad"]
@@ -808,7 +808,7 @@ func _check_branching() -> String:
 	applied += thicket.apply(_gain([], 1))
 	if result.is_empty() and thicket.quests_done.has("glade_fork"):
 		result = "the pond's chest counted on the thicket's way"
-	applied += thicket.apply(_gain(["moss_toad"], 0))
+	applied += thicket.apply(_gain(["ombulumo"], 0))
 	if result.is_empty() and (not applied.is_empty() or not thicket.quests_done.has("glade_fork")):
 		result = "a domination didn't end the thicket's way: " + applied
 	return result if not result.is_empty() else _check_pond_way(book, entered)
@@ -902,7 +902,7 @@ func _check_emitted() -> String:
 	applied = profile.apply(_gain([], 1))
 	if not applied.is_empty() or profile.open_steps().keys() != ["after_won"]:
 		return "the chain's end didn't start the side quest waiting on it: " + applied
-	applied = profile.apply(_gain(["moss_toad"], 0))
+	applied = profile.apply(_gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests_done != ["after_thicket", "fork", "after_won"]:
 		return "the side quests an event started didn't go on: %s" % profile.quests_done
 	var step_waits: String = text.replace("\"condition\": \"opened\"", "\"condition\": \"emitted\"")
@@ -938,7 +938,7 @@ func _check_answered_choice() -> String:
 	applied = profile.apply(left) + profile.apply(_gain([], 1))
 	if not applied.is_empty() or not profile.quests_done.is_empty():
 		return "leaving the scout didn't take the way to a domination: " + applied
-	applied = profile.apply(_gain(["moss_toad"], 0))
+	applied = profile.apply(_gain(["ombulumo"], 0))
 	if not applied.is_empty() or profile.quests_done != ["fork"]:
 		return "a domination didn't end the way leaving the scout took: " + applied
 	return ""
@@ -1041,21 +1041,21 @@ func _check_counted() -> String:
 	profile.quest_book = content.quests
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
 	profile.quest_book[two.id] = two
-	var at_beach: Gain = _gain(["storm_finch", "moss_toad"], 0)
+	var at_beach: Gain = _gain(["tikazzir", "ombulumo"], 0)
 	at_beach.places_reached = ["beach"]
 	var applied: String = profile.apply(at_beach)
 	var progress: QuestProgress = profile.quest_progress.get(two.id)
 	var first: QuestProgress = profile.quest_progress.get("first_domination")
-	var toads: QuestProgress = profile.quest_progress.get("three_moss_toads")
+	var toads: QuestProgress = profile.quest_progress.get("three_ombulumo")
 	if not applied.is_empty() or progress == null or progress.step != 0 or progress.count != 1:
-		return "one moss toad didn't count one toward its step: " + applied
+		return "one Ombulumo didn't count one toward its step: " + applied
 	if toads == null or toads.count != 1 or first == null or first.step != 1:
 		return "the toads' quest didn't count up, or the beach didn't hand over to dominating"
 	if not profile.quests_done.is_empty() or profile.standings.of(GUILD) != 0:
 		return "a domination before the beach finished the first domination"
-	applied = profile.apply(_gain(["moss_toad", "moss_toad"], 1))
+	applied = profile.apply(_gain(["ombulumo", "ombulumo"], 1))
 	if (not applied.is_empty()
-			or profile.quests_done != ["first_domination", "three_moss_toads", two.id]):
+			or profile.quests_done != ["first_domination", "three_ombulumo", two.id]):
 		return "a gain didn't hand a full step to the next one: %s" % profile.quests_done
 	if not profile.quest_progress.is_empty():
 		return "finished quests kept their progress"
@@ -1089,15 +1089,15 @@ func _check_standing(profile: Profile) -> String:
 func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	var fresh: Profile = Profile.new()
 	fresh.quest_book = book
-	var applied: String = fresh.apply(_gain(["moss_toad"], 0))
+	var applied: String = fresh.apply(_gain(["ombulumo"], 0))
 	applied += ProfileStore.save(fresh, SAVE_PATH)
 	var loaded: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not applied.is_empty() or ProfileSave.to_text(loaded) != ProfileSave.to_text(fresh):
 		return "quest progress didn't survive saving and loading: " + applied + loaded.problem
 	loaded.quest_book = book
-	applied = loaded.apply(_gain(["moss_toad", "moss_toad"], 0))
-	if not applied.is_empty() or not loaded.quests_done.has("three_moss_toads"):
+	applied = loaded.apply(_gain(["ombulumo", "ombulumo"], 0))
+	if not applied.is_empty() or not loaded.quests_done.has("three_ombulumo"):
 		return "loaded progress didn't count on to the toads' quest's end"
 	return ""
 
@@ -1111,17 +1111,17 @@ func _check_settled() -> String:
 	var profile: Profile = Profile.new()
 	for id: String in ["zz_last", "aa_first"]:
 		profile.quest_book[id] = QuestDefinition.parse(id, any_domination % [id, id], {})
-	var applied: String = profile.apply(_gain(["moss_toad"], 0))
+	var applied: String = profile.apply(_gain(["ombulumo"], 0))
 	var sorted: Array[String] = ["aa_first", "zz_last"]
 	if not applied.is_empty() or profile.quests_done != sorted:
 		return "quests finished together weren't listed in id order: %s" % profile.quests_done
 	var save: Profile = Profile.new()
-	save.quest_progress["three_moss_toads"] = QuestProgress.new(0, 3)
+	save.quest_progress["three_ombulumo"] = QuestProgress.new(0, 3)
 	save.quest_progress["first_domination"] = QuestProgress.new(4, 0)
 	var stale: Profile = ProfileSave.parse(ProfileSave.to_text(save))
 	stale.quest_book = QuestContent.load_quests().quests
 	applied = stale.problem + stale.apply(_gain([], 1))
-	var settled: Array[String] = ["first_domination", "three_moss_toads"]
+	var settled: Array[String] = ["first_domination", "three_ombulumo"]
 	if not applied.is_empty() or stale.quests_done != settled:
 		return "saved progress that no longer fits didn't settle at the next fact: " + applied
 	return ""

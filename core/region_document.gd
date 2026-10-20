@@ -21,8 +21,8 @@ extends RefCounted
 ##   `, the quest target <id>` next, it's the one monster a quest's step asks for by that id
 ##   (#625, like a place's); with `, on <tile blueprint id>` last, it stands on a tile of that kind
 ##   rather than on ground (#452),
-##   e.g. `a wild monster, always moss_toad, wounded, on sand` or
-##   `a wild monster, always moss_toad, the quest target old_toad`
+##   e.g. `a wild monster, always ombulumo, wounded, on sand` or
+##   `a wild monster, always ombulumo, the quest target old_toad`
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`

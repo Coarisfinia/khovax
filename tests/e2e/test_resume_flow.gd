@@ -16,7 +16,7 @@ const SEED: int = 5
 const WORLD_PATH: String = "user://test_resume_world.json"
 const PROFILE_PATH: String = "user://test_resume_profile.json"
 ## The species the flow's profile carries first: the player's companion.
-const COMPANION: String = "storm_finch"
+const COMPANION: String = "tikazzir"
 ## The world starts in the forest (#712: the playground has no exits): from its start on (-2, 3) up
 ## to its wild monster on (0, -3), around it in a ring, and on to its exit into the glade.
 const RING: Array[Vector2i] = [

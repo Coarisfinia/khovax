@@ -257,7 +257,7 @@ func _check_companions() -> String:
 		InstanceBlueprints.FOREST,
 		2,
 	)
-	CompanionParty.bring(world, FlowSteps.parties([["storm_finch"]]))
+	CompanionParty.bring(world, FlowSteps.parties([["tikazzir"]]))
 	world.step(_still())
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
@@ -266,8 +266,8 @@ func _check_companions() -> String:
 		return "only the player bringing a companion should be joined by one"
 	if Hex.distance(companion.tile, world.player(0).tile) != 1:
 		return "the companion joined on %s, not beside its player" % companion.tile
-	if companions.reaches["moss_toad"] >= companions.reaches["storm_finch"]:
-		return "the weaker moss toad doesn't stay closer than the storm finch"
+	if companions.reaches["ombulumo"] >= companions.reaches["tikazzir"]:
+		return "the weaker Ombulumo doesn't stay closer than the Tikazzir"
 	var reach: int = companions.reach_of_companion(companion.id)
 	var roamed: Dictionary[Vector2i, bool] = {}
 	for _tick: int in 400:
@@ -322,7 +322,7 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 	return ""
 
 
-## Manual swaps (#55): a player carrying a storm finch and a moss toad is joined by the finch.
+## Manual swaps (#55): a player carrying a Tikazzir and an Ombulumo is joined by the finch.
 ## Swapping to the companion they have or to a place they carry nothing in does nothing; swapping
 ## to the toad raises that they chose it, and the next tick the toad has taken the finch's place.
 ## A recorded session with the swaps plays back the same, and the choice goes through the world's
@@ -330,13 +330,13 @@ func _check_companion_passed(world: World, companion: Entity) -> String:
 ## into the glade.
 func _check_swaps() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
-	CompanionParty.bring(world, FlowSteps.parties([["storm_finch", "moss_toad"]]))
+	CompanionParty.bring(world, FlowSteps.parties([["tikazzir", "ombulumo"]]))
 	var recorded: Replay = Replay.new(InstanceBlueprints.FOREST, 3)
 	recorded.begin(world)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	var joined: bool = _swap_in(world, recorded, Command.NO_SWAP) == 0
-	if not joined or companions.species_of(companions.companion_of(0)) != "storm_finch":
+	if not joined or companions.species_of(companions.companion_of(0)) != "tikazzir":
 		return "a player carrying two monsters wasn't joined by the first"
 	if _swap_in(world, recorded, 1) + _swap_in(world, recorded, 3) != 0:
 		return "swapping to the companion they have, or to an empty place, raised a swap"
@@ -345,8 +345,8 @@ func _check_swaps() -> String:
 	var finch: int = companions.companion_of(0)
 	var _settled: int = _swap_in(world, recorded, Command.NO_SWAP)
 	var toad: int = companions.companion_of(0)
-	if companions.species_of(toad) != "moss_toad" or forest.entity(finch) != null:
-		return "the chosen moss toad didn't take the storm finch's place beside its player"
+	if companions.species_of(toad) != "ombulumo" or forest.entity(finch) != null:
+		return "the chosen Ombulumo didn't take the Tikazzir's place beside its player"
 	recorded.finish(world)
 	return _check_swap_kept(world, recorded)
 
@@ -370,7 +370,7 @@ func _check_swap_kept(world: World, recorded: Replay) -> String:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var followed: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	if followed.species_of(followed.companion_of(0)) != "moss_toad":
+	if followed.species_of(followed.companion_of(0)) != "ombulumo":
 		return "the chosen companion didn't follow its player into the glade"
 	return ""
 
@@ -413,7 +413,7 @@ func _check_store_kept() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
 	var kept: Dictionary = {
 		"count": 3,
-		"ids": ["storm_finch", "moss_toad"],
+		"ids": ["tikazzir", "ombulumo"],
 		"table": { "k": [1] },
 	}
 	world.set_entry(0, STORE_FEATURE, kept)
@@ -442,7 +442,7 @@ func _check_store_kept() -> String:
 	return ""
 
 
-## A fainted monster stays fainted (#655): the storm finch faints beside its player in the forest,
+## A fainted monster stays fainted (#655): the Tikazzir faints beside its player in the forest,
 ## the toad is chosen in its place, and the world keeps the finch fainted. Through the exit into the
 ## glade, the toad joins its player there and a swap back to the finch does nothing;
 ## the finch stays fainted through the world's save data and back, and through a session's start
@@ -451,7 +451,7 @@ func _check_store_kept() -> String:
 ## it into the forest too. A fainted one its player no longer carries is forgotten.
 func _check_fainted_kept() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
-	var party: Array[CarriedMonsters] = FlowSteps.parties([["storm_finch", "moss_toad"]])
+	var party: Array[CarriedMonsters] = FlowSteps.parties([["tikazzir", "ombulumo"]])
 	CompanionParty.bring(world, party)
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
@@ -468,7 +468,7 @@ func _check_fainted_kept() -> String:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
-	var toad_joined: bool = there.species_of(there.companion_of(0)) == "moss_toad"
+	var toad_joined: bool = there.species_of(there.companion_of(0)) == "ombulumo"
 	if not toad_joined or not CompanionParty.has_fainted(
 		glade,
 		0,
@@ -508,36 +508,36 @@ func _check_revived(world: World) -> String:
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var there: CompanionFeature = glade.feature(Features.COMPANIONS) as CompanionFeature
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
-	var finch_joined: bool = there.species_of(there.companion_of(0)) == "storm_finch"
+	var finch_joined: bool = there.species_of(there.companion_of(0)) == "tikazzir"
 	if not finch_joined or CompanionParty.has_fainted(forest, 0, _first):
 		return "the revived finch didn't join its player, or stayed fainted in the forest"
 	var toad_down: Dictionary = world.stored(0, Features.COMPANIONS).duplicate(true)
 	toad_down["fainted"] = [_second]
 	world.set_entry(0, Features.COMPANIONS, toad_down)
-	CompanionParty.bring(world, FlowSteps.parties([["storm_finch"]]))
+	CompanionParty.bring(world, FlowSteps.parties([["tikazzir"]]))
 	if not CompanionParty.fainted_in(world, 0).is_empty():
 		return "a fainted monster no longer carried wasn't forgotten"
 	return ""
 
 
-## Two carried monsters of one species are two monsters (#700): a player carrying two storm finches
+## Two carried monsters of one species are two monsters (#700): a player carrying two Tikazzir
 ## is joined by the first; once it faints, only it is fainted, and the second is chosen in its place
 ## and joins them. Swapping back to the first does nothing, and the world's save data keeps them
 ## apart.
 func _check_two_of_one_species() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
-	CompanionParty.bring(world, FlowSteps.parties([["storm_finch", "storm_finch"]]))
+	CompanionParty.bring(world, FlowSteps.parties([["tikazzir", "tikazzir"]]))
 	var _joined: int = _swap_in(world, null, Command.NO_SWAP)
 	var forest: GameState = world.instances[InstanceBlueprints.FOREST]
 	var companions: CompanionFeature = forest.feature(Features.COMPANIONS) as CompanionFeature
 	if companions.short_id_of(companions.companion_of(0)) != _first:
-		return "a player carrying two storm finches wasn't joined by the first"
+		return "a player carrying two Tikazzir wasn't joined by the first"
 	companions.send_home(forest, companions.companion_of(0))
 	var _relieved: int = _swap_in(world, null, Command.NO_SWAP)
 	var second: int = companions.companion_of(0)
 	if CompanionParty.fainted_in(world, 0) != PackedStringArray([_first]) or second == 0:
 		return "the first finch fainting didn't leave the second standing and beside its player"
-	var same_kind: bool = companions.species_of(second) == "storm_finch"
+	var same_kind: bool = companions.species_of(second) == "tikazzir"
 	if not same_kind or companions.short_id_of(second) != _second or _swap_in(world, null, 1) != 0:
 		return "the second finch didn't take the first's place, or the fainted one was swapped to"
 	var restored: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
@@ -546,7 +546,7 @@ func _check_two_of_one_species() -> String:
 	return ""
 
 
-## The roster (#540) in the main scene: carrying a storm finch and a moss toad, it shows both at
+## The roster (#540) in the main scene: carrying a Tikazzir and an Ombulumo, it shows both at
 ## the top left, apart, in that order, the finch as the companion, and the quest list starts below
 ## it. A tap on the toad's square swaps to it in the local player's next command without starting
 ## the touch stick, and a left click on the finch's swaps to the finch; while the game hears no
@@ -555,7 +555,7 @@ func _check_two_of_one_species() -> String:
 func _check_roster(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, ROSTER_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
-	CompanionParty.bring(driver.world, FlowSteps.parties([["storm_finch", "moss_toad"]]))
+	CompanionParty.bring(driver.world, FlowSteps.parties([["tikazzir", "ombulumo"]]))
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
 	roster.show_state()
 	# Laid out for a desktop screen: the headless one is tiny. The flow steps it by hand from here.
@@ -575,7 +575,7 @@ func _check_roster(tree: SceneTree) -> String:
 ## The roster shows the finch and the toad at the top left, apart, the finch as the companion, and
 ## the quest list starts below it.
 func _roster_shown(main: Node, roster: RosterHud) -> String:
-	var carried: PackedStringArray = ["storm_finch", "moss_toad"]
+	var carried: PackedStringArray = ["tikazzir", "ombulumo"]
 	if roster.shown != carried or roster.companion_place != 0:
 		return "the roster doesn't show the carried monsters in order, the first as the companion"
 	var corner: Rect2 = Rect2(Vector2.ZERO, ROSTER_SCREEN / 3.0)
@@ -963,7 +963,7 @@ func _moving(direction: int) -> Array[Command]:
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = BASE_LEGEND + "- `🔗`: joins another piece to the west\n"
-	legend += "- `🚪`: exit to the east, to glade\n- `🐦`: a wild monster, always storm_finch\n"
+	legend += "- `🚪`: exit to the east, to glade\n- `🐦`: a wild monster, always tikazzir\n"
 	legend += "- `🌲`: forest\n"
 	legend += "- `💧`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
 	var grid: String = " 🪓🌲\n🔗🔴🚪\n 🐦💧"
@@ -971,7 +971,7 @@ func _check_documents() -> String:
 	var expected: bool = region.starts.size() == 1 and region.starts[0] == Vector2i.ZERO
 	expected = expected and region.connectors == [Vector3i(-1, 0, 3)]
 	expected = expected and region.exits.size() == 1 and region.exits[0] == Vector3i(1, 0, 0)
-	expected = expected and _species_on(region, Vector2i(-1, 1)) == "storm_finch"
+	expected = expected and _species_on(region, Vector2i(-1, 1)) == "tikazzir"
 	var forest: int = TileKinds.number_of("forest")
 	expected = expected and region.terrain[Vector2i(1, -1)] == forest
 	expected = expected and region.terrain[Vector2i(0, 1)] == Region.WATER
@@ -1011,10 +1011,10 @@ func _check_refusals(tiles: String) -> String:
 		tiles % ["🔴🪨🟫", base + "- `🪨`: boulder; stepping here reaches the place beach"]: (
 			"trigger (0, 0) isn't on ground"
 		),
-		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always moss_toad, the quest target Old"]: (
+		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always ombulumo, the quest target Old"]: (
 			"a species line reads"
 		),
-		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always moss_toad, the quest target old"]: (
+		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always ombulumo, the quest target old"]: (
 			"species (1, 0): the quest target old is one monster"
 		),
 	}
@@ -1430,7 +1430,7 @@ class Beat:
 		state.events.append(EventEmitted.new(BEAT))
 
 
-## A rule that fells every standing storm finch in its instance inside the tick, as a special would
+## A rule that fells every standing Tikazzir in its instance inside the tick, as a special would
 ## (#541), counting them in `felled`.
 class Felling:
 	extends Feature
@@ -1440,7 +1440,7 @@ class Felling:
 	func step(state: GameState, _commands: Array[Command]) -> void:
 		var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 		for monster: int in wild.monsters.duplicate():
-			if wild.species_of(monster) == "storm_finch":
+			if wild.species_of(monster) == "tikazzir":
 				wild.wound(state, monster, wild.hp_of(monster), true)
 				felled += 1
 
