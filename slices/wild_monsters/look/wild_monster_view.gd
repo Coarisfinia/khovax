@@ -15,14 +15,14 @@ extends Node3D
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
-## The placeholder model every wild monster wears until species get their own looks.
-const MODEL: PackedScene = preload("res://assets/kaykit-skeletons/Skeleton_Minion.glb")
+## The model every wild monster wears until species get their own looks: the mana wolf (#990).
+const MODEL: PackedScene = preload("res://assets/mana-wolf/mana_wolf.glb")
 ## The clips the view plays, by the names its model gives them: when the model changes, so do they.
 const IDLE: StringName = &"Idle"
-const WALK: StringName = &"Walking_A"
-const ATTACK: StringName = &"1H_Melee_Attack_Chop"
-const HIT: StringName = &"Hit_A"
-const FAINT: StringName = &"Death_A"
+const WALK: StringName = &"Walk"
+const ATTACK: StringName = &"Attack"
+const HIT: StringName = &"Hit"
+const FAINT: StringName = &"Faint"
 ## Every clip the view plays, which the boot flow checks its model has (#992).
 const CLIPS: Array[StringName] = [IDLE, WALK, ATTACK, HIT, FAINT]
 ## How long a figure's model takes to blend from one clip into the next.

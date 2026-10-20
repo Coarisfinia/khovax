@@ -51,10 +51,10 @@ The assets this game uses, with their authors and licenses. Generated from each 
   (`addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/`)
 - **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
 
-## KayKit Character Pack: Skeletons 1.0
+## Mana wolf
 
-- **Files:** `assets/kaykit-skeletons/`
-- **Author:** Kay Lousberg (www.kaylousberg.com)
-- **Source:** https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
-  (`addons/kaykit_character_pack_skeletons/Characters/gltf/Skeleton_Minion.glb`)
-- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
+- **Files:** `assets/mana-wolf/`
+- **Author:** the khovax contributors (built in this repository)
+- **Source:** `tools/models/mana_wolf.py` on the shared model library `tools/models/lib/`, Blender
+  scripts that build, rig, animate and export `mana_wolf.glb` (#990, #995)
+- **License:** The Unlicense, the repository's own license, see `LICENSE.txt` next to this file.
