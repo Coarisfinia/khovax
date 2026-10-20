@@ -123,7 +123,12 @@ func personal_color() -> int:
 	return keeper.profile.personal_color if keeper != null else Profile.AUTO_COLOR
 
 
-## Keeps `color` (0xRRGGBB, or Profile.AUTO_COLOR) as this machine's player's personal color.
+## Whether this machine's player chose a personal color (#391) rather than Auto: the players slice
+## asks this, so it needn't name the profile's Auto (#851).
+func chose_personal_color() -> bool:
+	return personal_color() != Profile.AUTO_COLOR
+
+
 ## Names this player's character (#399); returns why the name was refused, in words, or "".
 func choose_name(typed: String) -> String:
 	if keeper == null:
@@ -134,6 +139,7 @@ func choose_name(typed: String) -> String:
 	return problem
 
 
+## Keeps `color` (0xRRGGBB, or Profile.AUTO_COLOR) as this machine's player's personal color.
 func choose_color(color: int) -> void:
 	if keeper != null:
 		_report(keeper.choose_color(color, Time.get_ticks_msec()))
