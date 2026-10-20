@@ -223,17 +223,9 @@ jobs:
 
       - name: "🔎 Check every script (warnings as errors)"
         # Also catches scripts that no test loads. An ERROR: line fails the step too, even when
-        # Godot exits with 0 (such as a load cycle through a preloaded scene, #964).
-        run: |
-          git ls-files '*.gd' | while read -r script; do
-            output=$(timeout 60 ~/godot/godot --headless --path . --check-only -s "res://${script}" 2>&1) \
-              || { echo "${output}"; echo "::error file=${script}::fails Godot's script check"; exit 1; }
-            echo "${output}"
-            if grep -q '^ERROR:' <<< "${output}"; then
-              echo "::error file=${script}::Godot's script check logs an error"
-              exit 1
-            fi
-          done
+        # Godot exits with 0 (such as a load cycle through a preloaded scene, #964). The scripts are
+        # checked in parallel and every failing one is named (#923).
+        run: GODOT=~/godot/godot bash tools/script_check.sh
 
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever
