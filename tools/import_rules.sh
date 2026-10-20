@@ -81,11 +81,11 @@ declare -A SLICE_EXEMPT=(
   [loot>menu]=851 [loot>profile]=851
   [menu>gear]=851 [menu>might]=851 [menu>profile]=851 [menu>quests]=851
   [players>profile]=851
-  [profile>quests]=851 [profile>revive_items]=851
+  [profile>revive_items]=851
   [quests>blueprints]=851
   [settings>damage_numbers]=851 [settings>menu]=851 [settings>survey]=851
   [species>menu]=851 [species>profile]=851 [species>texts]=851
-  [survey>profile]=851 [survey>quests]=851
+  [survey>quests]=851
   [texts>factions]=851 [texts>gear]=851
   [trail>domination]=851
   [wild_monsters>companions]=851 [wild_monsters>controls]=851 [wild_monsters>domination]=851

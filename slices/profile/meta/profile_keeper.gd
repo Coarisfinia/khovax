@@ -15,14 +15,21 @@ const SAVE_INTERVAL_MSEC: int = 30_000
 
 var profile: Profile
 var path: String = ProfileStore.PATH
+## What later slices keep in the profile's file, saved with it (#855).
+var companions: Array[ProfileCompanion] = []
 ## Whether the profile has changes the save doesn't have yet.
 var _pending: bool = false
 var _last_save_msec: int = -SAVE_INTERVAL_MSEC
 
 
-func _init(kept: Profile, save_path: String = ProfileStore.PATH) -> void:
+func _init(
+		kept: Profile,
+		save_path: String = ProfileStore.PATH,
+		kept_beside: Array[ProfileCompanion] = [],
+) -> void:
 	profile = kept
 	path = save_path
+	companions = kept_beside
 
 
 ## Takes over `gain` at time `now_msec` and saves if one is due; returns why it couldn't, or "". A
@@ -35,11 +42,10 @@ func take(gain: Gain, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
-## Counts `facts` on the player's quests (#817) at time `now_msec`, in order, and saves like a
-## gain; returns why it couldn't be saved, or "".
-func count_quest_facts(facts: Array[QuestFact], now_msec: int) -> String:
-	for fact: QuestFact in facts:
-		profile.count_quest_fact(fact)
+## Runs `changing` on the profile at time `now_msec`, a companion's part changing with it (#855),
+## and saves like a gain; returns why it couldn't be saved, or "".
+func change(changing: Callable, now_msec: int) -> String:
+	changing.call(profile)
 	_pending = true
 	return save_if_due(now_msec)
 
@@ -133,7 +139,7 @@ func save_if_due(now_msec: int) -> String:
 func flush() -> String:
 	if not _pending:
 		return ""
-	var problem: String = ProfileStore.save(profile, path)
+	var problem: String = ProfileStore.save(profile, path, companions)
 	_pending = not problem.is_empty()
 	return problem
 

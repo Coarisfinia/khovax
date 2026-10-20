@@ -338,8 +338,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   technical and never shown to the player.
 - **Commands** (`Command`): the only way into the simulation, one per player per tick, integers
   only. The starting state plus every tick's commands is a replay.
-- **Lasting data, above the simulation** (#37): what lasts between sessions (the `Profile` with its
-  quest progress in `slices/profile/`, the saved `World`, the player's `Settings`), each in its own
+- **Lasting data, above the simulation** (#37): what lasts between sessions (the `Profile` in `slices/profile/`,
+  with what later slices keep in its file, like the quest progress, #855; the saved `World`, the player's `Settings`), each in its own
   file, never inside the simulation. Saves are versioned JSON of integers and ids only, kept by
   `SaveStore`; gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`,
   `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,

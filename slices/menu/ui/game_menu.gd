@@ -56,9 +56,9 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## Whose profile keeps the personal color the Character tab shows, and the quests the Quests tab
-## shows.
-@export var holder: ProfileHolder
+## Who keeps the quests the Quests tab shows. The Character tab shows the profile the driver
+## holds.
+@export var quest_keeper: QuestKeeper
 
 ## The Character tab.
 var character: CharacterTab
@@ -240,14 +240,14 @@ func _build_sheet() -> void:
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	character = CHARACTER_TAB.instantiate() as CharacterTab
 	character.driver = driver
-	character.holder = holder
+	character.holder = driver.holder
 	tabs.add_child(character)
 	survey_tab = SURVEY_TAB.instantiate() as SurveyTab
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
-	var quests: QuestsTab = QUESTS_TAB.instantiate() as QuestsTab
-	quests.holder = holder
-	tabs.add_child(quests)
+	var quests_tab_shown: QuestsTab = QUESTS_TAB.instantiate() as QuestsTab
+	quests_tab_shown.keeper = quest_keeper
+	tabs.add_child(quests_tab_shown)
 	# The gameplay tabs first, then the system tabs (owner, #465).
 	settings = SETTINGS_TAB.instantiate() as SettingsTab
 	settings.graphics = graphics

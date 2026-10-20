@@ -3,24 +3,20 @@ extends RefCounted
 ## A profile's save format (#37, #276): versioned JSON, integers and ids only. A save in a newer
 ## format is refused, and an older one is brought up to date in `parse`, one step at a time, before
 ## it's read, every value checked as it's read. What the profile holds and how it changes is
-## Profile's.
+## Profile's. What later slices keep in the profile's file, like the player's quests, their
+## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
 const FORMAT: int = 14
-## The first quest's id before format 5, and since (#317).
-const OLD_FIRST_QUEST: String = "first_catch"
-const NEW_FIRST_QUEST: String = "first_domination"
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
 	"storm_finch": "tikazzir",
 }
-## The quest ids before format 14 that named a species by its old id, each to its id since (#763).
-const OLD_QUESTS: Dictionary[String, String] = { "three_moss_toads": "three_ombulumo" }
 
 
-## The profile as save text.
-static func to_text(profile: Profile) -> String:
+## The profile as save text, with its `companions`' parts beside it.
+static func to_text(profile: Profile, companions: Array[ProfileCompanion] = []) -> String:
 	var monsters: Array = []
 	for monster: DominatedMonster in profile.dominated_monsters:
 		monsters.append(monster.to_data())
@@ -31,8 +27,6 @@ static func to_text(profile: Profile) -> String:
 		"dominated_monsters": monsters,
 		"carried": profile.carried,
 		"materials": _sorted(profile.materials),
-		"quest_progress": _progress_data(profile),
-		"quests_done": profile.quests.finished,
 		"personal_color": profile.personal_color,
 		"character_name": profile.character_name,
 		"standings": _sorted(profile.standings.by_faction),
@@ -44,6 +38,8 @@ static func to_text(profile: Profile) -> String:
 		},
 		"outbox": profile.outbox.to_data(),
 	}
+	for companion: ProfileCompanion in companions:
+		data.merge(companion.beside())
 	return JSON.stringify(data, "\t", false)
 
 
@@ -57,20 +53,9 @@ static func _sorted(by_id: Dictionary) -> Dictionary:
 	return sorted
 
 
-## The quest progress as save data, by quest id in order.
-static func _progress_data(profile: Profile) -> Dictionary:
-	var data: Dictionary = {}
-	var ids: Array[String] = []
-	ids.assign(profile.quests.progress.keys())
-	ids.sort()
-	for id: String in ids:
-		var progress: QuestProgress = profile.quests.progress[id]
-		data[id] = { "step": progress.step, "count": progress.count, "done": progress.done }
-	return data
-
-
-## A profile read from a save's text; its `problem` says why when the text isn't a valid save.
-static func parse(text: String) -> Profile:
+## A profile read from a save's text, its `companions` taking over their parts once the profile's
+## own are sound; its `problem` says why when the text isn't a valid save.
+static func parse(text: String, companions: Array[ProfileCompanion] = []) -> Profile:
 	var profile: Profile = Profile.new()
 	var json: JSON = JSON.new()
 	var parsed: Variant = json.data if json.parse(text) == OK else null
@@ -83,7 +68,12 @@ static func parse(text: String) -> Profile:
 		profile.problem = "save format %d, this build reads up to format %d" % [format, FORMAT]
 		return profile
 	_migrate(data, format)
+	for companion: ProfileCompanion in companions:
+		companion.migrate(data, format)
 	profile.problem = _read(profile, data)
+	for companion: ProfileCompanion in companions:
+		if profile.problem.is_empty():
+			profile.problem = companion.read(data)
 	return profile
 
 
@@ -114,10 +104,9 @@ static func _migrate_to_2(data: Dictionary) -> void:
 	var _dropped: bool = data.erase("runs_finished")
 
 
-## Format 2 to 3: quests (#184) start with no progress.
-static func _migrate_to_3(data: Dictionary) -> void:
-	data["quest_progress"] = {}
-	data["quests_done"] = []
+## Format 2 to 3: quests (#184) start, which keep their own keys (QuestSave).
+static func _migrate_to_3(_data: Dictionary) -> void:
+	return
 
 
 ## Format 3 to 4: a player carries three monsters (#53), the first three they dominated until their
@@ -132,13 +121,11 @@ static func _migrate_to_4(data: Dictionary) -> void:
 	data["carried"] = carried
 
 
-## Format 4 to 5: monsters are dominated, not captured (#317), so their key and the first quest's
-## id are renamed.
+## Format 4 to 5: monsters are dominated, not captured (#317), so their key is renamed.
 static func _migrate_to_5(data: Dictionary) -> void:
 	if data.has("captured_monsters"):
 		data["dominated_monsters"] = data["captured_monsters"]
 		var _renamed: bool = data.erase("captured_monsters")
-	_rename_quest(data, OLD_FIRST_QUEST, NEW_FIRST_QUEST)
 
 
 ## Format 5 to 6: the personal color (#391) starts on Auto.
@@ -156,17 +143,10 @@ static func _migrate_to_8(data: Dictionary) -> void:
 	data["standings"] = {}
 
 
-## Format 8 to 9: a quest's progress keeps the steps done (#573). Quests had no choices before, so
-## every step before the one it's on was done, in order: at most QuestProgress.MAX_DONE of them,
-## the latest.
-static func _migrate_to_9(data: Dictionary) -> void:
-	var progress: Variant = data.get("quest_progress")
-	var by_id: Dictionary = progress if progress is Dictionary else {}
-	for id: Variant in by_id:
-		if by_id[id] is Dictionary:
-			var entry: Dictionary = by_id[id]
-			var at: int = _int(entry.get("step"))
-			entry["done"] = range(maxi(0, at - QuestProgress.MAX_DONE), maxi(0, at))
+## Format 8 to 9: a quest's progress keeps the steps done (#573), which the quests' own keys hold
+## (QuestSave).
+static func _migrate_to_9(_data: Dictionary) -> void:
+	return
 
 
 ## Format 9 to 10: the player owns no gear, and their gear slots are empty (#690).
@@ -200,21 +180,6 @@ static func _monster_entries(data: Dictionary) -> Array[Dictionary]:
 	return entries
 
 
-## Renames the quest `old_id` to `new_id` in the save `data`'s progress and finished quests.
-static func _rename_quest(data: Dictionary, old_id: String, new_id: String) -> void:
-	var progress: Variant = data.get("quest_progress")
-	var by_id: Dictionary = progress if progress is Dictionary else {}
-	if by_id.has(old_id):
-		by_id[new_id] = by_id[old_id]
-		var _moved: bool = by_id.erase(old_id)
-	var done: Variant = data.get("quests_done")
-	if done is Array:
-		var done_list: Array = done
-		var at: int = done_list.find(old_id)
-		if at >= 0:
-			done_list[at] = new_id
-
-
 ## Format 12 to 13: the outbox is empty (#771). A territory quest finished before had its hand-over
 ## sent then.
 static func _migrate_to_13(data: Dictionary) -> void:
@@ -222,12 +187,10 @@ static func _migrate_to_13(data: Dictionary) -> void:
 
 
 ## Format 13 to 14: a species' id is its name (#763), so every dominated monster's old species id
-## and every quest id that named one are renamed.
+## is renamed (the quest ids that named one are QuestSave's).
 static func _migrate_to_14(data: Dictionary) -> void:
 	for fields: Dictionary in _monster_entries(data):
 		fields["species"] = OLD_SPECIES.get(fields.get("species"), fields.get("species"))
-	for old_id: String in OLD_QUESTS:
-		_rename_quest(data, old_id, OLD_QUESTS[old_id])
 
 
 ## Reads current-format data into this profile; returns why it can't, or "".
@@ -270,7 +233,6 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 		_read_standings,
 		_read_leaning,
 		_read_gear,
-		_read_quests,
 		_read_outbox,
 	]:
 		if problem.is_empty():
@@ -349,51 +311,9 @@ static func _read_carried(profile: Profile, data: Dictionary) -> String:
 	return ""
 
 
-## Reads the save's quest progress into this profile; returns why it can't, or "".
-static func _read_quests(profile: Profile, data: Dictionary) -> String:
-	var started: Variant = data.get("quest_progress")
-	var done: Variant = data.get("quests_done")
-	if not started is Dictionary or not done is Array:
-		return "the save lacks its quest progress"
-	var done_list: Array = done
-	for id: Variant in done_list:
-		var text: String = Content.text_of(id)
-		if not Content.is_id(text) or profile.quests.finished.has(text):
-			return "a finished quest in the save has no valid id or is there twice"
-		profile.quests.finished.append(text)
-	var by_id: Dictionary = started
-	for id: Variant in by_id:
-		var progress: QuestProgress = _quest_progress(by_id[id])
-		if progress == null or not Content.is_id(str(id)) or profile.quests.finished.has(str(id)):
-			return "quest %s's progress in the save is malformed or it's finished" % id
-		profile.quests.progress[str(id)] = progress
-	return ""
-
-
 ## Reads the save's outbox (#771) into this profile; returns why it can't, or "".
 static func _read_outbox(profile: Profile, data: Dictionary) -> String:
 	return profile.outbox.load_data(data.get("outbox"))
-
-
-## A quest's progress from save data, or null when it's malformed: a step and a count, each a
-## whole number from 0 to Profile.MAX_NUMBER, and the steps done (#573), at most
-## QuestProgress.MAX_DONE of them, each such a number too.
-static func _quest_progress(entry: Variant) -> QuestProgress:
-	if not entry is Dictionary:
-		return null
-	var data: Dictionary = entry
-	var progress: QuestProgress = QuestProgress.new(_int(data.get("step")), _int(data.get("count")))
-	var done: Variant = data.get("done")
-	if progress.step < 0 or progress.count < 0 or data.size() != 3 or not done is Array:
-		return null
-	var done_list: Array = done
-	if done_list.size() > QuestProgress.MAX_DONE:
-		return null
-	for index: Variant in done_list:
-		if _int(index) < 0:
-			return null
-		progress.done.append(_int(index))
-	return progress
 
 
 ## A dominated monster from save data, or null when it's malformed.

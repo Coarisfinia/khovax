@@ -66,7 +66,7 @@ func _check_survey(main: Node) -> String:
 	if result.is_empty():
 		result = _survey_next_door(driver, survey)
 	if result.is_empty():
-		result = _survey_marks(driver, survey, FlowGame.holder(main).keeper.profile)
+		result = _survey_marks(driver, survey, FlowGame.quests(main).tracker)
 	if result.is_empty():
 		result = _survey_choice(choice, survey, path)
 	if result.is_empty():
@@ -319,14 +319,14 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 
 
 ## Why the Survey doesn't mark every player and the open quests' targets, or "".
-func _survey_marks(driver: GameDriver, survey: SurveyView, profile: Profile) -> String:
+func _survey_marks(driver: GameDriver, survey: SurveyView, quests: QuestTracker) -> String:
 	var text: String = "{\"id\": \"survey_any\", \"name\": \"Any\", "
 	text += "\"steps\": [{\"condition\": \"dominated\", \"ends\": \"survey_any\"}]}"
-	profile.quests.book["survey_any"] = QuestDefinition.parse("survey_any", text, {})
+	quests.book["survey_any"] = QuestDefinition.parse("survey_any", text, {})
 	survey.show_state()
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(driver.state, profile.quests, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(driver.state, quests, 0)
 	var marked: Dictionary[String, Vector2i] = survey.quest_targets.duplicate()
-	var _dropped: bool = profile.quests.book.erase("survey_any")
+	var _dropped: bool = quests.book.erase("survey_any")
 	if not marked.has("survey_any") or marked != targets:
 		return "the Survey doesn't mark the open quests' targets: %s" % [marked]
 	var own: Entity = driver.state.player(0)

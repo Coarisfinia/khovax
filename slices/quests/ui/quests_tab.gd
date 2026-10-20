@@ -6,7 +6,7 @@ extends ScrollContainer
 ## worded as the list words them (QuestListView.step_line): the steps done, the one it's on with its
 ## count, and the ones still to come up to its next choice (#573). Each step says which it is in
 ## words, never by color alone (#68). It
-## only reads the profile, keeps up with it while shown, and scrolls when the screen is too short
+## only reads the quests, keeps up with them while shown, and scrolls when the screen is too short
 ## for every quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only
 ## what it does.
 
@@ -19,8 +19,8 @@ const CURRENT_STEP: String = "Now: "
 const LATER_STEP: String = "Later: "
 const NONE_TEXT: String = "No open quests"
 
-## Whose quests are shown: this machine's player's profile.
-var holder: ProfileHolder
+## Whose quests are shown: this machine's player's.
+var keeper: QuestKeeper
 ## What the tab shows for each open quest, by quest id: its steps' lines, one per line. Kept here
 ## so tests can read it.
 var shown: Dictionary[String, String] = {}
@@ -42,11 +42,11 @@ func _process(_delta: float) -> void:
 func refresh() -> void:
 	var lines: Dictionary[String, String] = {}
 	var names: Dictionary[String, String] = {}
-	if holder != null and holder.keeper != null:
-		var profile: Profile = holder.keeper.profile
-		for id: String in profile.quests.open_steps():
-			names[id] = profile.quests.book[id].shown_name()
-			lines[id] = "\n".join(quest_lines(profile, id))
+	var quests: QuestTracker = keeper.quests() if keeper != null else null
+	if quests != null:
+		for id: String in quests.open_steps():
+			names[id] = quests.book[id].shown_name()
+			lines[id] = "\n".join(quest_lines(quests, id))
 	if lines != shown:
 		_show(names, lines)
 
@@ -56,12 +56,13 @@ func fit(width: float) -> void:
 	_rows.custom_minimum_size.x = width
 
 
-## The steps of `profile`'s open quest `id` on the player's way, worded: the ones done, in the order
+## The steps of the open quest `id` of `quests` on the player's way, worded: the ones done, in the
+## order
 ## done, the one it's on with its count, and the ones sure to come later, up to its next choice
 ## (#573), whose way on isn't known yet.
-static func quest_lines(profile: Profile, id: String) -> Array[String]:
-	var progress: QuestProgress = profile.quests.progress_of(id)
-	var quest: QuestDefinition = profile.quests.book[id]
+static func quest_lines(quests: QuestTracker, id: String) -> Array[String]:
+	var progress: QuestProgress = quests.progress_of(id)
+	var quest: QuestDefinition = quests.book[id]
 	var lines: Array[String] = _done_lines(quest, progress)
 	var current: QuestStep = quest.step_at(progress.step)
 	if current != null:
