@@ -201,8 +201,12 @@ func _check_instance_steps(content: QuestData) -> String:
 	var piece: QuestStep = tied.steps[1] if tied.steps.size() == 2 else QuestStep.new()
 	if (not tied.problem.is_empty() or tied.steps[0].instance != "glade"
 			or piece.instance != "glade" or piece.piece != "start" or piece.enters_instance()
-			or not piece.counts("entered", "start", "glade") or piece.counts("entered", "start", "")
-			or tied.steps[0].counts("opened", "", "forest")):
+			or not piece.counts(
+				QuestStep.ENTERED,
+				"start",
+				"glade",
+			) or piece.counts(QuestStep.ENTERED, "start", "")
+			or tied.steps[0].counts(QuestStep.OPENED, "", "forest")):
 		return "steps counting only in the glade didn't read, or counted elsewhere: " + tied.problem
 	var waiting: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
@@ -235,7 +239,7 @@ func _check_answered_steps(content: QuestData) -> String:
 func _check_side_quests(content: QuestData) -> String:
 	var pond: QuestDefinition = content.quests.get("pond_chest")
 	var first: QuestDefinition = content.quests["first_domination"]
-	if (pond == null or pond.starts_on == null or pond.starts_on.condition != "entered"
+	if (pond == null or pond.starts_on == null or pond.starts_on.condition != QuestStep.ENTERED
 			or pond.starts_on.piece != "pond" or first.starts_on != null):
 		return "the pond's chest doesn't start on entering the pond, or another quest has a start"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
@@ -300,7 +304,9 @@ func _check_quest_territories(content: QuestData) -> String:
 		if not InstanceBlueprints.exists(territory.instance) or not content.handovers.has(by):
 			return "%s hands over %s, which doesn't exist or isn't filed" % [id, territory.instance]
 		var start: QuestStep = content.quests[id].starts_on
-		if start == null or start.condition != "entered" or start.instance != territory.instance:
+		if (start == null
+				or start.condition != QuestStep.ENTERED
+				or start.instance != territory.instance):
 			return "%s doesn't start once the player enters %s" % [id, territory.instance]
 		for step: QuestStep in content.quests[id].steps:
 			if step.instance != territory.instance:
@@ -334,7 +340,7 @@ func _check_branches(content: QuestData) -> String:
 	var fork: QuestDefinition = content.quests.get("glade_fork")
 	if (fork == null or fork.steps[0].choices.size() != 2
 			or fork.steps[0].choices[0].piece != "pond"
-			or fork.next_index(0, "entered", "thicket", "") != 2
+			or fork.next_index(0, QuestStep.ENTERED, "thicket", "") != 2
 			or fork.steps[1].ends != "glade_fork" or fork.steps[2].ends != "glade_fork"):
 		return "the glade's fork didn't read as a choice between two ends"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"
@@ -412,11 +418,11 @@ func _check_quests() -> String:
 	var toads: QuestDefinition = content.quests.get("three_ombulumo")
 	if first == null or first.name.is_empty() or first.steps.size() != 2 or toads == null:
 		return "the quests didn't load as written"
-	if first.steps[0].condition != "reached" or first.steps[0].place != "beach":
+	if first.steps[0].condition != QuestStep.REACHED or first.steps[0].place != "beach":
 		return "the first domination doesn't lead to the beach first"
 	var any_domination: QuestStep = first.steps[1]
 	var toad_step: QuestStep = toads.steps[0]
-	if (any_domination.condition != "dominated"
+	if (any_domination.condition != QuestStep.DOMINATED
 			or any_domination.quarry.species != null
 			or any_domination.count != 1):
 		return "the first domination isn't one domination of any species"

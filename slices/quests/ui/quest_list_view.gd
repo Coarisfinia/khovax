@@ -85,22 +85,22 @@ static func step_line(step: QuestStep, count: int) -> String:
 		return " or ".join(ways)
 	var asks: String = ""
 	match step.condition:
-		"dominated":
+		QuestStep.DOMINATED:
 			var what: String = "a monster"
 			if step.quarry.species != null:
 				what = _with_article(step.quarry.species.name)
 			elif not step.quarry.target.is_empty():
 				what = "the " + _words(step.quarry.target)
 			asks = "Dominate " + what
-		"opened":
+		QuestStep.OPENED:
 			asks = "Open a chest"
-		"reached":
+		QuestStep.REACHED:
 			asks = "Go to the " + _words(step.place)
-		"entered":
+		QuestStep.ENTERED:
 			asks = "Enter the " + _words(step.instance if step.enters_instance() else step.piece)
 		QuestStep.ANSWERED:
 			asks = _answer_line(step)
-		"obtained":
+		QuestStep.OBTAINED:
 			asks = "Collect " + _words(step.item)
 	if step.count > 1:
 		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]

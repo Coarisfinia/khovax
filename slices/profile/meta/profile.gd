@@ -78,15 +78,15 @@ func apply(result: Gain) -> String:
 		var species: String = result.dominated_species[i]
 		var short_ids: Array[String] = result.dominated_short_ids
 		_dominate(species, short_ids[i] if i < short_ids.size() else "")
-		_count_fact("dominated", species, where)
+		_count_fact(QuestStep.DOMINATED, species, where)
 	for target: String in result.targets_dominated:
 		_count_fact(QuestStep.TARGET_DOMINATED, target, where)
 	for _chest: int in result.chests_opened:
-		_count_fact("opened", "", where)
+		_count_fact(QuestStep.OPENED, "", where)
 	for place: String in result.places_reached:
-		_count_fact("reached", place, where)
+		_count_fact(QuestStep.REACHED, place, where)
 	for piece: String in result.pieces_entered:
-		_count_fact("entered", piece, where)
+		_count_fact(QuestStep.ENTERED, piece, where)
 	for instance_name: String in result.instances_entered:
 		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name, instance_name)
 	for answer: String in result.answers_chosen:
@@ -110,10 +110,10 @@ func _count_obtained(item: String, amount: int, where: String) -> void:
 	for _counted: int in amount:
 		var asked: bool = false
 		for step: QuestStep in open_steps().values():
-			asked = asked or step.counts("obtained", item, where)
+			asked = asked or step.counts(QuestStep.OBTAINED, item, where)
 		if not asked:
 			return
-		_count_fact("obtained", item, where)
+		_count_fact(QuestStep.OBTAINED, item, where)
 
 
 ## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
