@@ -291,6 +291,7 @@ jobs:
       - name: "🎲 Play this commit"
         # The import's script errors are the headless job's to report.
         run: |
+          mkdir -p /tmp/outcomes
           timeout 120 ~/godot/godot --headless --path . --import > /dev/null
           timeout 300 ~/godot/godot --headless --path . -s res://tests/replays/outcomes.gd \
             -- out=/tmp/outcomes/outcomes.json
