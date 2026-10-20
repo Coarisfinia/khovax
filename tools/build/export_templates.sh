@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prints the export template files (as named in Godot's templates archive) that the presets in
 # export_presets.cfg need, one per line, so CI and the release unpack exactly those and nothing
-# names the platforms twice. Usage: bash tools/export_templates.sh [export_presets.cfg]
+# names the platforms twice. Usage: bash tools/build/export_templates.sh [export_presets.cfg]
 set -euo pipefail
 presets="${1:-export_presets.cfg}"
 

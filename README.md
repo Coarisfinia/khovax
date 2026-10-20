@@ -16,9 +16,13 @@ Install the tools with [scoop](https://scoop.sh) (Windows). The project targets 
 
 ```sh
 scoop bucket add extras
-scoop install godot gh git
+scoop install godot gh git uv
 scoop install "$(cygpath -w "$PWD/tools/scoop/gdstyle.json")"
 ```
+
+On macOS and Linux, install uv with [Homebrew](https://brew.sh): `brew install uv`. uv runs the Python
+tooling in `tools/` (`uv run tools/<folder>/<script>.py`) with the Python version `pyproject.toml`
+pins, which it downloads itself.
 
 `gdstyle` (the GDScript linter and formatter) isn't in a scoop bucket, so the repository carries its
 manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash).
@@ -93,8 +97,8 @@ rules) under four players walking by script. Headless it times every tick and ea
 two passes end in the same state; rendered it times frames, uncapped:
 
 ```sh
-godot --headless --path . -s res://tools/load_test.gd -- ticks=2000
-godot --path . -s res://tools/load_test.gd -- rendered seconds=20
+godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000
+godot --path . -s res://tools/godot/load_test.gd -- rendered seconds=20
 ```
 
 Measurements go into the pull request or issue that made them, not into docs.

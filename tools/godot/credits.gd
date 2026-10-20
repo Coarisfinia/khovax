@@ -4,7 +4,7 @@ extends SceneTree
 ## Writes CREDITS.md from the source note every asset pack keeps next to its files
 ## (assets/<pack>/SOURCE.md): its title and its author, source and license lines (#70). CI runs it
 ## and fails when the committed CREDITS.md differs, so the credits can't drift from the assets:
-## godot --headless --path . -s res://tools/credits.gd
+## godot --headless --path . -s res://tools/godot/credits.gd
 
 const ASSETS: String = "res://assets/"
 const TARGET: String = "res://CREDITS.md"
@@ -14,7 +14,7 @@ const FIELDS: Array[String] = ["- **Author:**", "- **Source:**", "- **License:**
 const HEADER: String = """# Credits
 
 The assets this game uses, with their authors and licenses. Generated from each pack's
-`assets/<pack>/SOURCE.md` by `tools/credits.gd`; don't edit it by hand.
+`assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
 """
 
 

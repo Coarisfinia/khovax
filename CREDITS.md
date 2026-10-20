@@ -1,7 +1,7 @@
 # Credits
 
 The assets this game uses, with their authors and licenses. Generated from each pack's
-`assets/<pack>/SOURCE.md` by `tools/credits.gd`; don't edit it by hand.
+`assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
 
 ## Exploration Theme
 

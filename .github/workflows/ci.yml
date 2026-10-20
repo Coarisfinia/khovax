@@ -34,6 +34,11 @@ env:
   JSCPD_SHA256: f2017a17de2a8d5708f8354c6e7223f82da3dc6489675bce543ba00d9d529468
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
+  # uv runs the Python tooling (#1036) and installs the Python pyproject.toml pins, which it checks
+  # against the checksums built into this release; the checksum is of its Linux release archive,
+  # from the release's .sha256 file. Locally it comes from scoop or Homebrew.
+  UV_VERSION: 0.13.4
+  UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
   # The web e2e flow's runtime and browser (#102); the checksums are of their Linux archives (Bun's
   # from the release's SHASUMS256.txt). playwright-core is locked in tests/web/bun.lock.
   BUN_VERSION: 1.4.3
@@ -86,30 +91,45 @@ jobs:
         # into one place (AGENTS.md, "Single responsibility").
         run: jscpd --format gdscript --exit-code 1 --reporters console --no-colors .
 
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "🐍 Check the uv project is locked and runs"
+        # uv.lock matches pyproject.toml, and the pinned Python runs from it: the ported tools
+        # (#1036) run the same way, with `uv run --locked`.
+        run: |
+          uv lock --check
+          uv run --locked python -c 'import sys; print(f"Python {sys.version}")'
+
       - name: "🧹 Check every declared function, variable, constant and class is used"
         # Godot's script check already fails on unused locals, parameters and signals; this finds
         # what nothing in the whole project names (#315).
-        run: bash tools/unused_code.sh
+        run: bash tools/checks/unused_code.sh
 
       - name: "🧭 Check the core never depends on a slice and paths are absolute"
-        run: bash tools/import_rules.sh
+        run: bash tools/checks/import_rules.sh
 
       - name: "📁 Check no path repeats a folder name"
-        run: bash tools/repeated_folders.sh
+        run: bash tools/checks/repeated_folders.sh
 
       - name: "🗃️ Check the export presets share their file filters"
-        run: bash tools/export_filters_check.sh
+        run: bash tools/checks/export_filters_check.sh
 
       - name: "🎲 Check the simulation stays deterministic"
         # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
         # forbidden list and the exemption marker (#515) are in the script.
         timeout-minutes: 5
-        run: bash tools/determinism_check.sh
+        run: bash tools/checks/determinism_check.sh
 
       - name: "🔖 Check the rule change files"
         # The parent is the base on a pull request's merge commit, the queue's previous commit in
         # the merge queue, and the previous commit on main (squash merges only).
-        run: bash tools/rules_changes_check.sh HEAD^1
+        run: bash tools/checks/rules_changes_check.sh HEAD^1
 
       - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot
@@ -139,25 +159,25 @@ jobs:
           fi
 
       - name: "📜 Check CREDITS.md matches the assets"
-        # tools/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
+        # tools/godot/credits.gd writes it from every assets/<pack>/SOURCE.md; a difference means an asset
         # was added or changed without regenerating the credits.
         run: |
           # Godot exits 0 on a script error, which would leave an old CREDITS.md looking current.
-          timeout 60 ~/godot/godot --headless --path . -s res://tools/credits.gd 2>&1 | tee /tmp/credits.log
+          timeout 60 ~/godot/godot --headless --path . -s res://tools/godot/credits.gd 2>&1 | tee /tmp/credits.log
           test "${PIPESTATUS[0]}" -eq 0
           if grep -q "SCRIPT ERROR" /tmp/credits.log; then
-            echo "::error file=tools/credits.gd::the credits tool hit a script error"
+            echo "::error file=tools/godot/credits.gd::the credits tool hit a script error"
             exit 1
           fi
           if ! git diff --exit-code CREDITS.md || [ -n "$(git status --porcelain CREDITS.md)" ]; then
-            echo "::error file=CREDITS.md::out of date: run tools/credits.gd and commit the result"
+            echo "::error file=CREDITS.md::out of date: run tools/godot/credits.gd and commit the result"
             exit 1
           fi
 
       - name: "📦 Check every asset is used"
         # Commit only what the game uses (AGENTS.md, #69): every file under assets/ is named by a
         # scene, script, content file or setting, or by a glTF that is (#320).
-        run: bash tools/unused_assets.sh
+        run: bash tools/checks/unused_assets.sh
 
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
@@ -206,7 +226,7 @@ jobs:
           echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
           mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv
           jv=$(find /tmp/jv -type f -name jv | head -1)
-          timeout 60 ~/godot/godot --headless --path . -s res://tools/data_to_json.gd
+          timeout 60 ~/godot/godot --headless --path . -s res://tools/godot/data_to_json.gd
           # Godot exits 0 even when a script fails to compile, so check every file was converted.
           sources=$(find core/data slices/*/data -name '*.jsonc' 2>/dev/null | wc -l)
           test "$sources" -eq "$(find build/data-json -name '*.json' | wc -l)"
@@ -225,32 +245,32 @@ jobs:
         # Also catches scripts that no test loads. An ERROR: line fails the step too, even when
         # Godot exits with 0 (such as a load cycle through a preloaded scene, #964). The scripts are
         # checked in parallel and every failing one is named (#923).
-        run: GODOT=~/godot/godot bash tools/script_check.sh
+        run: GODOT=~/godot/godot bash tools/checks/script_check.sh
 
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 
       - name: "⏱️ Load test: the simulation isn't slower than the base's"
-        # The load test (tools/load_test.gd, #101) times every tick and every feature headless. On a
+        # The load test (tools/godot/load_test.gd, #101) times every tick and every feature headless. On a
         # pull request it runs on the base branch too, in this job on this runner, so the two
         # compare fairly (#303); the numbers go into the job's summary either way.
         run: |
           set -o pipefail
-          timeout 120 ~/godot/godot --headless --path . -s res://tools/load_test.gd -- ticks=2000             | tee /tmp/load-head.txt
+          timeout 120 ~/godot/godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000             | tee /tmp/load-head.txt
           if [ "${{ github.event_name }}" = pull_request ]; then
             git fetch -q --depth=1 origin "${{ github.base_ref }}"
             git worktree add -q /tmp/base FETCH_HEAD
             # A base that fails its own load test is the base's problem: this branch is then
             # reported without a comparison, and nothing of the failed run is compared.
-            if timeout 120 ~/godot/godot --headless --path /tmp/base --import > /dev/null 2>&1               && timeout 120 ~/godot/godot --headless --path /tmp/base -s res://tools/load_test.gd                 -- ticks=2000 > /tmp/load-base.txt 2>&1; then
+            if timeout 120 ~/godot/godot --headless --path /tmp/base --import > /dev/null 2>&1               && timeout 120 ~/godot/godot --headless --path /tmp/base -s res://tools/godot/load_test.gd                 -- ticks=2000 > /tmp/load-base.txt 2>&1; then
               cat /tmp/load-base.txt
             else
               echo "::warning::The base's load test failed, so there's nothing to compare against."
               rm -f /tmp/load-base.txt
             fi
           fi
-          bash tools/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          bash tools/replays/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
 
   rules-compare:
     # Compares how this commit plays with how its parent plays (#876): both are built, each plays
@@ -337,16 +357,16 @@ jobs:
 
       - name: "🔖 Check a different outcome comes with a rules change"
         # The comparison runs from the parent's checkout, so a pull request can't weaken its own
-        # check. Only the pull request that adds the script (#876) runs its own.
+        # check. Only the pull requests that add the script (#876) and move it (#1037) run their own.
         if: github.event_name != 'push'
         env:
           OUTCOMES_CHANGE: ${{ steps.label.outputs.labelled }}
         run: |
           set -o pipefail
-          compare=/tmp/parent/tools/rules_compare.sh
+          compare=/tmp/parent/tools/replays/rules_compare.sh
           if [ ! -f "$compare" ]; then
-            echo "::notice::The parent has no tools/rules_compare.sh yet, so this commit's own runs."
-            compare=tools/rules_compare.sh
+            echo "::notice::The parent has no tools/replays/rules_compare.sh yet (it moved there in #1037), so this commit's own runs."
+            compare=tools/replays/rules_compare.sh
           fi
           bash "$compare" /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 \
             | tee -a "$GITHUB_STEP_SUMMARY"
@@ -391,7 +411,7 @@ jobs:
 
       - name: "⬇️ Download the export templates"
         # The archive holds every platform's templates; only those export_presets.cfg needs are kept
-        # (tools/export_templates.sh reads them from it), so the cache stays small.
+        # (tools/build/export_templates.sh reads them from it), so the cache stays small.
         if: steps.cache-templates.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/templates.tpz \
@@ -399,7 +419,7 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
+          mapfile -t needed < <(bash tools/build/export_templates.sh | sed 's#^#templates/#')
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: "🤖 Android: point Godot at the SDK and Java"
@@ -631,7 +651,7 @@ jobs:
           # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
           emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: timeout 480 bash tools/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
+          script: timeout 480 bash tools/replays/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
 
   linux-e2e:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual

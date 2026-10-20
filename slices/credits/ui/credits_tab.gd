@@ -1,10 +1,10 @@
 class_name CreditsTab
 extends RichTextLabel
 ## The menu's Credits tab (#462): every asset pack the game uses, with its author, source and
-## license, read from CREDITS.md as tools/credits.gd generates it (so it can't drift), and shown
-## where players can see it, as CC BY asks (#461). It shows each pack's heading and fields, but not
-## the file's own note on how it's made nor the repository paths. It scrolls itself, with touch, a
-## wheel, the keys or a controller once focused. Its look and layout live in its scene,
+## license, read from CREDITS.md as tools/godot/credits.gd generates it (so it can't drift), and
+## shown where players can see it, as CC BY asks (#461). It shows each pack's heading and fields,
+## but not the file's own note on how it's made nor the repository paths. It scrolls itself, with
+## touch, a wheel, the keys or a controller once focused. Its look and layout live in its scene,
 ## credits_tab.tscn (#437): this script keeps only what it does.
 
 const PATH: String = "res://CREDITS.md"

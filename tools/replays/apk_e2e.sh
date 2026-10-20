@@ -3,7 +3,7 @@
 # its test mode and reads the flow's result from the game's own log: it must pass and end in the
 # state hash the headless run of the same commit ended in (#876). Run by CI inside the emulator
 # step. A start that never reports is retried once (#957).
-# Usage: tools/apk_e2e.sh <test APK> <the headless run's final hash>
+# Usage: tools/replays/apk_e2e.sh <test APK> <the headless run's final hash>
 set -euo pipefail
 apk=$1
 expected=$2
