@@ -8,7 +8,7 @@
 	"strength": 40,
 	"speed": 40,
 	"archetype": "pusher",
-	"special": "ombulumo_belly_flop",
-	"player_passive": "ombulumo_soft_moss",
-	"self_passive": "ombulumo_damp_hide"
+	"special": "ombulumo_bulum_bolom",
+	"player_passive": "ombulumo_mulbo_lulbo",
+	"self_passive": "ombulumo_bolmu_wolmu"
 }

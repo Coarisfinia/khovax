@@ -9,7 +9,7 @@
 	"strength": 70,
 	"speed": 90,
 	"archetype": "flyer",
-	"special": "tikazzir_gale_dive",
-	"player_passive": "tikazzir_tailwind",
-	"self_passive": "tikazzir_light_bones"
+	"special": "tikazzir_tizik_tazak",
+	"player_passive": "tikazzir_kirzi_tirzi",
+	"self_passive": "tikazzir_zirki_kirki"
 }

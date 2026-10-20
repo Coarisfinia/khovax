@@ -1,0 +1,11 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "ombulumo_bolmu_wolmu",
+	"kind": "self_passive",
+	"name": "Bolmu-wolmu",
+	"description": "The ${MONSTER:ombulumo}'s wet skin shrugs off part of every hit.",
+	"codex": {
+		"entry": "The gurgle of a wet hide rolling off a blow. Dominators said it of anything that shrugs off harm and stays damp and whole.",
+		"gloss": "slick, it slides off"
+	}
+}

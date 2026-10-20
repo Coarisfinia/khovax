@@ -1,0 +1,12 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "tikazzir_kirzi_tirzi",
+	"kind": "player_passive",
+	"name": "Kirzi-tirzi",
+	"description": "While the ${MONSTER:tikazzir} is out, the player walks a little faster.",
+	"codex": {
+		"entry": "The chirp a beast gives when it rides the wind at its dominator's back, and the dominators' word for a light step that walks faster than it should.",
+		"gloss": "quick, quick, onward"
+	},
+	"path": "both"
+}

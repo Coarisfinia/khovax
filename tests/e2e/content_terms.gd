@@ -72,12 +72,6 @@ const NAME_RULES: Dictionary[String, String] = {
 ## Things whose names break their kind's rule today, each with the issue renaming it (#909). It only
 ## shrinks: a thing that keeps its rule must be dropped from it.
 const NAME_EXCEPTIONS: Dictionary[String, int] = {
-	"special ombulumo_belly_flop": 973,
-	"passive ombulumo_soft_moss": 973,
-	"passive ombulumo_damp_hide": 973,
-	"special tikazzir_gale_dive": 973,
-	"passive tikazzir_tailwind": 973,
-	"passive tikazzir_light_bones": 973,
 	"realm heartland": 974,
 	"instance arena": 975,
 	"instance basic": 975,
