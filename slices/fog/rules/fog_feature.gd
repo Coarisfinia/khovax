@@ -9,7 +9,7 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "fog"
-## How far every player sees, in steps, until traits from dominated monsters change it (#65).
+## How far every player sees, in steps, until sight traits from carried monsters change it (#962).
 const SIGHT_RADIUS: int = 5
 
 ## Each radius's lines, as _lines_within works them out, shared by every instance.

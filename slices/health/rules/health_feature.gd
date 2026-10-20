@@ -13,7 +13,7 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
-## A player's HP. A placeholder to tune: a few wild hits' worth (#455).
+## A player's HP. A placeholder to tune (#960): a few wild hits' worth (#455).
 const PLAYER_HP: int = 500
 ## The HP of an entity of a species the feature wasn't given one for.
 const UNKNOWN_HP: int = 100

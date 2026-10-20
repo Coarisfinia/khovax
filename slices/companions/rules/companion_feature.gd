@@ -33,7 +33,7 @@ const ID: String = "companions"
 const LEAST_REACH: int = 1
 const MOST_REACH: int = 5
 ## How much of a species' stats (its HP plus twice its strength and its speed) widens its reach by
-## a tile. A placeholder to tune (#221).
+## a tile. A placeholder to tune (#960).
 const STATS_PER_TILE: int = 120
 ## How far from its player a companion counts as lost, in tiles.
 const LOST_DISTANCE: int = 2 * MOST_REACH
