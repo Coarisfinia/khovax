@@ -1524,7 +1524,8 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 ## The place_totem key places the player's totem on the ring they closed (#423), and while the ring
 ## seals, its tiles fill round the ring with the seal's progress, and the wall
 ## segment its player stands on wears a brace, reinforced (#234); then the wild monster doesn't
-## blink out: it shrinks away calmly, and then it's gone, and so is the brace.
+## blink out: it shrinks away calmly, and then it's gone, and so is the brace. Before the totem,
+## a spikes hit flashes thorns on the wall segment the monster pushes on, which then go (#777).
 func _check_view(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -1537,7 +1538,9 @@ func _check_view(tree: SceneTree) -> String:
 		return "the main scene doesn't show the wild monster's figure"
 	var figure: HexPiece = view.figures.values()[0]
 	var _walked: Array[RefCounted] = FlowSteps.walk(driver.state, FlowSteps.BASIC_RING)
-	var result: String = _check_totem_button(main)
+	var result: String = _check_spikes_hit(main, driver)
+	if result.is_empty():
+		result = _check_totem_button(main)
 	if result.is_empty():
 		result = _check_totem_key(main, driver.state)
 	if result.is_empty():
@@ -1556,11 +1559,34 @@ func _check_view(tree: SceneTree) -> String:
 	):
 		result = "the dominated figure didn't stay to shrink away"
 	await tree.create_timer(WildMonsterView.FADE_SECONDS + 0.2).timeout
-	if result.is_empty() and is_instance_valid(figure):
-		result = "the dominated figure was still there after shrinking away"
+	var hits: SpikesHitView = main.get_node("Instance/SpikesHitView") as SpikesHitView
+	if result.is_empty() and (is_instance_valid(figure) or not hits.flashes.is_empty()):
+		result = "the dominated figure or the spikes' thorns were still there after going"
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## The ring around the wild monster waits for a totem: a spikes hit on it flashes thorns, a shape,
+## on the wall segment nearest to it, the one it strikes (#777).
+func _check_spikes_hit(main: Node, driver: GameDriver) -> String:
+	var hits: SpikesHitView = main.get_node("Instance/SpikesHitView") as SpikesHitView
+	var player: Entity = driver.state.player(0)
+	var monster: Entity = driver.state.entity(_wild(driver.state).monsters[0])
+	var walls: Array[Vector2i] = _domination(driver.state).ring_waiting(driver.state, player.id)
+	var wall: Vector2i = walls[RingShape.nearest(walls, monster.tile)]
+	var struck: Array[RefCounted] = [SpikesStruck.new(monster.id, player.id, SPIKES_DAMAGE)]
+	driver.ticked.emit(driver.state.tick, struck)
+	if hits.flashes.size() != 1 or hits.flashes[0].tile != wall:
+		return "a spikes hit flashed %d times, not once on the wall segment %s" % [
+			hits.flashes.size(),
+			wall,
+		]
+	var thorn: MeshInstance3D = hits.flashes[0].get_child(0).get_child(0) as MeshInstance3D
+	var cone: CylinderMesh = thorn.mesh as CylinderMesh if thorn != null else null
+	if cone == null or cone.top_radius != 0.0:
+		return "the spikes' flash shows no thorns"
+	return ""
 
 
 ## On a touch screen, standing on a ring that waits for a totem, the totem's button shows its
