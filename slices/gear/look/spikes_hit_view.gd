@@ -31,7 +31,7 @@ func _ready() -> void:
 ## seals, else the waiting ring's segment nearest to it, as it strikes that one (#422).
 static func wall_of(state: GameState, struck: SpikesStruck) -> Vector2i:
 	var monster: Entity = state.entity(struck.monster_id)
-	var domination: DominationFeature = state.feature(Features.DOMINATION) as DominationFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var seal: RingSeal = domination.seals.get(struck.dominator_id)
 	var index: int = seal.monsters.find(struck.monster_id) if seal != null else -1
 	if index >= 0:
