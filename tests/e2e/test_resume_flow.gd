@@ -9,7 +9,8 @@ extends RefCounted
 ## resumed, it lies under light fog, next door too; bad memory is dropped whole, a fresh world
 ## starts with none, and what was seen in an instance purged since (#212) isn't restored. The
 ## player brings a companion all along (#338), the first monster their profile carries: it goes
-## through the save and back, and the main scene resumes with it.
+## through the save and back, and the main scene resumes with it; a fresh world gets it as requests
+## from the profile's outbox (#818).
 
 const SEED: int = 5
 ## Where the flow keeps its world and its profile, apart from the player's own.
@@ -69,7 +70,10 @@ func run(tree: SceneTree) -> String:
 		result = await _check_purged_explored(tree)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
-	if result.is_empty() and ProfileSave.to_text(ProfileStore.load_from(PROFILE_PATH)) != carried:
+	# Its outbox aside, where a fresh world's session posts the party for the world (#818).
+	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
+	kept.outbox.entries.clear()
+	if result.is_empty() and ProfileSave.to_text(kept) != carried:
 		result = "saving the world changed the profile"
 	GameDriver.start_instance = given
 	SaveStore.remove(WORLD_PATH)
@@ -509,17 +513,20 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var main: Node = _boot(tree)
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var keeper: ExploredKeeper = main.get_node("ExploredKeeper") as ExploredKeeper
-	# The player brings the companion their profile carries into the fresh world too.
 	var fresh: World = World.new(
 		BlueprintSource.new(),
 		0,
 		InstanceBlueprints.FOREST,
 		1,
 	)
-	CompanionParty.bring(fresh, FlowSteps.parties([[COMPANION]]))
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content
+	# The player brings the companion their profile carries into the fresh world too: its species
+	# and its short id, as requests from their profile's outbox (#818), for the first ticks.
+	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
+	if result.is_empty() and _carry_requests(holder) != 2:
+		result = "the fresh world wasn't sent the profile's companion: " + content
 	# A frame for the fog view to remember the fresh world's sight: of the glade, only what the
 	# player sees of it from the start, across the seam (#191), none of the refused world's.
 	await tree.process_frame
@@ -528,6 +535,16 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	main.queue_free()
 	await tree.process_frame
 	return result
+
+
+## How many requests bringing monsters into the player's party (#818) wait in the outbox of the
+## profile `holder` holds.
+static func _carry_requests(holder: ProfileHolder) -> int:
+	var count: int = 0
+	for request: OutboxEntry in holder.keeper.profile.outbox.entries:
+		if request.kind == OutboxEntry.CARRY:
+			count += 1
+	return count
 
 
 ## The main scene, keeping its world and profile in the flow's files, with nothing running on its

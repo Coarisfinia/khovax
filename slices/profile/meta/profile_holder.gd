@@ -8,8 +8,8 @@ extends Node
 ## like the player's quests, its `companions` read and write with it (#855). A save that can't be
 ## read is reported and left alone, never overwritten.
 
-## A change (`change`), like finishing a quest, or changing gear posted a request to the profile's
-## outbox (#771, #818), for the session to send.
+## A change (`change`), like finishing a quest, changing gear or a session's start posted a
+## request to the profile's outbox (#771, #818), for the session to send.
 signal outbox_posted
 
 ## What later slices keep in the profile's file, beside it.
@@ -144,6 +144,17 @@ func catch_up_gear(stored: Dictionary) -> void:
 		return
 	var posted: int = keeper.profile.outbox.entries.size()
 	_report(keeper.catch_up_gear(stored, Time.get_ticks_msec()))
+	_tell_posted(posted)
+
+
+## Catches the world up with who this player carries as a session starts (#818): `stored` is their
+## party's entry in its store (CompanionFeature), and a run of requests goes to the outbox if it's
+## behind.
+func catch_up_party(stored: Dictionary) -> void:
+	if keeper == null:
+		return
+	var posted: int = keeper.profile.outbox.entries.size()
+	_report(keeper.catch_up_party(stored, Time.get_ticks_msec()))
 	_tell_posted(posted)
 
 

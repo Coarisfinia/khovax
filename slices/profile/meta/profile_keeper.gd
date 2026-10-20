@@ -104,6 +104,19 @@ func choose_name(typed: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Posts the run of requests that tells a world whose party entry `stored` (CompanionFeature) isn't
+## who the player carries (PartyRequests.catch_up, #818), saved like any change; returns why it
+## couldn't be saved, or "".
+func catch_up_party(stored: Dictionary, now_msec: int) -> String:
+	var party: CarriedMonsters = CarriedMonsters.new()
+	for monster: DominatedMonster in profile.carried_monsters():
+		party = party.add(monster.short_id, monster.species)
+	if not PartyRequests.catch_up(party, profile.outbox, stored):
+		return ""
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Spends one of the item `item` the player holds and posts a request of `kind` (OutboxEntry.KINDS)
 ## with its `data` to the outbox (#771, #818), in one change, so a save never has one without the
 ## other, and saves it like any change; returns why it can't, or "".

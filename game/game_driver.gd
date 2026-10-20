@@ -82,7 +82,6 @@ func start(seed_value: int) -> void:
 	if not world.problem.is_empty():
 		world = null
 	if world != null:
-		CompanionParty.bring(world, carried())
 		recording = Replay.new(instance, seed_value)
 		recording.begin(world)
 	_begin_session()
@@ -96,9 +95,6 @@ func resume(saved: World) -> String:
 		if (saved.player(slot) != null) != (slot < players):
 			return "the saved world's players aren't the session's %d" % players
 	world = saved
-	# Who the players bring is the session's, so a monster dominated since the save comes along; a
-	# companion chosen before the save (#55) stays theirs while they still carry it.
-	CompanionParty.bring(world, carried(), true)
 	recording = Replay.new(saved.start_name, saved.world_seed)
 	recording.start_world = WorldData.of(saved)
 	recording.begin(saved)
@@ -106,25 +102,12 @@ func resume(saved: World) -> String:
 	return ""
 
 
-## Each slot's carried monsters for a session starting now (#338, #53, #700): this machine's player
-## brings the monsters they carry, the first their companion; other players bring none until co-op
-## peers send theirs (#75).
-func carried() -> Array[CarriedMonsters]:
-	var parties: Array[CarriedMonsters] = []
-	var _sized: int = parties.resize(GameState.MAX_PLAYERS)
-	var slot: int = input.slot if input != null else 0
-	if holder != null and holder.keeper != null:
-		var party: CarriedMonsters = CarriedMonsters.new()
-		for monster: DominatedMonster in holder.keeper.profile.carried_monsters():
-			party = party.add(monster.short_id, monster.species)
-		parties[slot] = party
-	return parties
-
-
 ## A new session's schedule, from the world's tick on, with no hashes and no time due yet, its world
 ## handed to the keeper to save, and the player's quests caught up with the events that already
-## changed the world (#756), and the world with the player's gear (#818): a new world, or one
-## saved before a change of it, gets a request for what's equipped.
+## changed the world (#756), and the world with the player's gear and party (#818): a new world,
+## or one saved before a change of them, gets requests for what's equipped and who's carried. A
+## monster dominated since the save comes along that way; a companion chosen before it (#55) stays
+## theirs while they still carry it.
 func _begin_session() -> void:
 	schedule = CommandSchedule.new(players, input_delay, world.tick if world != null else 0)
 	hashes.clear()
@@ -137,6 +120,7 @@ func _begin_session() -> void:
 	if holder != null and world != null:
 		var slot: int = input.slot if input != null else 0
 		holder.catch_up_gear(world.stored(slot, SpikesFeature.ID))
+		holder.catch_up_party(world.stored(slot, CompanionFeature.ID))
 
 
 ## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops

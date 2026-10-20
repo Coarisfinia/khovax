@@ -13,8 +13,11 @@ const REVIVE: int = 2
 ## Put gear into the trap slot, or empty it (#692, #818): its data is the gear's code
 ## (SpikesFeature.code_of), or CommandCodes.NONE for an empty slot.
 const TRAP: int = 3
+## Bring monsters into the player's party (#53, #818): a run of these, its data a place in the run,
+## how many monsters it brings and one value of them (CarryRequest).
+const CARRY: int = 4
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP]
+const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY]
 ## The stream the profile's outbox draws ids from (Outbox).
 const ID_STREAM: int = 771
 
