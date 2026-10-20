@@ -7,11 +7,12 @@ extends Node
 ## advance the player's quests (#184), in the profile, each in the instance it happened in (#769),
 ## and so do the places they step into (#339), the region pieces and instances they enter (#350,
 ## #370), the answers they choose in dialogs (#636) and the events that change the world (#707),
-## which every player gains. What the profile
-## asks the world to do, like handing over the territory of a territory quest it finished (#638),
-## waits in its outbox (#771) and goes in this player's next commands, so the world changes in a
-## tick, the same on every machine and in the replay; it's sent again at the start of every session
-## until the world acknowledges it (RequestApplied). A revive item they used (#656) is spent from
+## which every player gains, those the world already had when the session started too (#756). What
+## the profile asks the world to do, like handing over the territory of a territory quest it
+## finished (#638), waits in its outbox (#771) and goes in this player's next commands, so the world
+## changes in a tick, the same on every machine and in the replay; it's sent again at the start of
+## every session until the world acknowledges it (RequestApplied). A revive item they used (#656) is
+## spent from
 ## it. The player's personal color (#391) is kept in it too, saved the same way.
 ## Other players' dominations go into their own profiles on their own machines (#74). A save that
 ## can't be read is reported and left alone, never overwritten.
@@ -97,6 +98,24 @@ func _on_event(event: RefCounted) -> void:
 	var gain: Gain = _gain_of(event)
 	if gain != null:
 		gain.instance = bus.instance_of(event)
+		_report(keeper.take(gain, Time.get_ticks_msec()))
+		_send_new()
+
+
+## Gains every event that had already changed the world as the session starts in it (#756), from
+## its flags (World.EVENT_FLAG + the event's name): the profile travels between worlds, so one that
+## wasn't there when an event was raised (a guest, or this player back from another world) meets
+## the world as it is. Like a live one, each counts only toward the step a quest waits on now, never
+## past a step the player missed, and starts a side quest waiting on it (owner, #756); a quest
+## already started or done isn't started again.
+func catch_up(world_flags: Array[String]) -> void:
+	if keeper == null:
+		return
+	var gain: Gain = Gain.new()
+	for flag: String in world_flags:
+		if flag.begins_with(World.EVENT_FLAG):
+			gain.world_events.append(flag.trim_prefix(World.EVENT_FLAG))
+	if not gain.world_events.is_empty():
 		_report(keeper.take(gain, Time.get_ticks_msec()))
 		_send_new()
 

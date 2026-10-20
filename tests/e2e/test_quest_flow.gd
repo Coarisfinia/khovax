@@ -25,7 +25,9 @@ extends RefCounted
 ## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
 ## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
-## starting the side quests waiting on it, and so does an event that changed the world (#707).
+## starting the side quests waiting on it, and so does an event that changed the world (#707),
+## also one the world already had as the session started (#756): it starts the side quest waiting
+## on it, but none already started or done again.
 ## Choosing an answer in a dialog finishes this player's quest asking for it, not another player's
 ## choice nor another answer, and takes the way on of a choice asking for it (#636); a quest naming
 ## a dialog or an answer that no dialog file has is refused, and one that names an existing answer
@@ -72,6 +74,12 @@ const AFTER_PURIFIED: String = (
 	"{\"id\": \"after_purified\", \"name\": \"After the glade\", "
 	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"glade_purified\"}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_purified\"}]}"
+)
+## A side quest that starts once the beacon is lit (#756).
+const AFTER_BEACON: String = (
+	"{\"id\": \"after_beacon\", \"name\": \"After the beacon\", "
+	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"beacon_lit\"}, "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_beacon\"}]}"
 )
 ## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
 const BETRAYAL: String = (
@@ -602,7 +610,37 @@ func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> 
 	_emit(driver, bus, WorldChanged.new("glade_purified", World.EVENT_FLAG + "glade_purified"))
 	if not profile.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
-	return ""
+	return _check_caught_up(driver.holder, profile)
+
+
+## As a session starts, the profile gains the events that already changed the world (#756), from
+## its flags, and no other flag: the beacon lit before starts the side quest waiting on it, while
+## the side quest the glade's purifying started already keeps its progress and one done stays done.
+func _check_caught_up(holder: ProfileHolder, profile: Profile) -> String:
+	var lit: QuestDefinition = QuestDefinition.parse("after_beacon", AFTER_BEACON, {})
+	profile.quest_book[lit.id] = lit
+	profile.quests_done.append("after_done")
+	var done: QuestDefinition = QuestDefinition.parse("after_beacon", AFTER_BEACON, {})
+	done.id = "after_done"
+	profile.quest_book[done.id] = done
+	var purified: QuestProgress = profile.quest_progress["after_purified"]
+	var flags: Array[String] = [
+		World.EVENT_FLAG + "beacon_lit",
+		World.EVENT_FLAG + "glade_purified",
+		"TERRITORY_after_beacon",
+	]
+	holder.catch_up(flags)
+	var result: String = ""
+	if not profile.open_steps().has(lit.id):
+		result = "catching up with the world's events didn't start the side quest waiting on one"
+	elif profile.quest_progress.has(done.id):
+		result = "catching up with the world's events started a side quest already done again"
+	elif profile.quest_progress["after_purified"] != purified:
+		result = "catching up with the world's events started a side quest again"
+	for id: String in [lit.id, done.id]:
+		var _unbooked: bool = profile.quest_book.erase(id)
+	profile.quests_done.erase(done.id)
+	return result
 
 
 ## On a region with a beach: player 1 walking onto it from outside raises that they reached it,
