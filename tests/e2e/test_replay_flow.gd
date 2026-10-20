@@ -738,6 +738,10 @@ func _check_replay_validation() -> String:
 	var text: String = ReplayFile.to_text(recorded)
 	var unchecked: Replay = ReplayFile.parse(text)
 	var _erased: bool = unchecked.checkpoints.erase(unchecked.ticks)
+	var inputs_only: Replay = ReplayFile.parse(text)
+	inputs_only.rules = ""
+	inputs_only.features.clear()
+	inputs_only.checkpoints.clear()
 	var invalid_move: Replay = ReplayFile.parse(text)
 	invalid_move.changes[2] = Hex.DIRECTIONS.size() + 3
 	var invalid_special: Replay = ReplayFile.parse(text)
@@ -746,6 +750,7 @@ func _check_replay_validation() -> String:
 	invalid_totem.changes[4] = Command.PLACE_TOTEM + 1
 	var cases: Dictionary[String, String] = {
 		ReplayFile.to_text(unchecked): "the replay has no checkpoint at its last tick",
+		ReplayFile.to_text(inputs_only): "the replay holds only its inputs",
 		ReplayFile.to_text(invalid_move): "a recorded command at tick 1 is invalid",
 		ReplayFile.to_text(invalid_special): "a recorded command at tick 1 is invalid",
 		ReplayFile.to_text(invalid_totem): "a recorded command at tick 1 is invalid",
@@ -767,8 +772,8 @@ func _check_replay_validation() -> String:
 	return ""
 
 
-## Rehashing, as tests/replays/rehash.gd does for golden replays, fills in the checkpoints of a
-## replay that has only its start and commands; under unchanged rules they are the recorded ones.
+## Rehashing fills in the checkpoints of a replay that has only its start and commands, as the
+## reference replays do; under unchanged rules they are the recorded ones.
 func _check_rehash() -> String:
 	var recorded: Replay = _recorded_run()
 	var bare: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
@@ -783,16 +788,24 @@ func _check_rehash() -> String:
 	return ""
 
 
-## Every golden replay in tests/replays/ plays back to its recorded checkpoints. One that fails
-## means the rules changed what it does: on purpose, add a file to core/rules_changes/ and rehash
-## (tests/replays/rehash.gd), and say why in the pull request.
+## Every golden replay in tests/replays/ holds only its inputs (#876), and plays under this
+## build's rules; playing it twice gives the same game. Whether it plays as on the parent commit is
+## the rules-compare job's (tools/rules_compare.sh).
 func _check_golden_replays() -> String:
 	var folder: String = "res://tests/replays/"
 	var played: int = 0
 	for file_name: String in DirAccess.get_files_at(folder):
 		if file_name.ends_with(".replay"):
 			var text: String = FileAccess.get_file_as_string(folder + file_name)
-			var problem: String = ReplayFile.parse(text).play()
+			var first: Replay = ReplayFile.parse(text)
+			if not first.rules.is_empty() or not first.checkpoints.is_empty():
+				return "golden replay %s: it holds more than its inputs" % file_name
+			var second: Replay = ReplayFile.parse(text)
+			var problem: String = first.rehash()
+			if problem.is_empty():
+				problem = second.rehash()
+			if problem.is_empty() and first.checkpoints != second.checkpoints:
+				problem = "two plays of it differ"
 			if not problem.is_empty():
 				return "golden replay %s: %s" % [file_name, problem]
 			played += 1

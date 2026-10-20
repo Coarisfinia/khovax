@@ -1,6 +1,5 @@
 {
 	"format": 18,
-	"rules": "46395df3dbf5195d",
 	"instance": "basic",
 	"seed": "7",
 	"players": 2,
@@ -17,29 +16,6 @@
 				"species": "ombulumo"
 			}
 		]
-	],
-	"features": [
-		"movement",
-		"knockdown",
-		"trail",
-		"health",
-		"wild_monsters",
-		"domination",
-		"wild_attacks",
-		"spikes",
-		"domination_loot",
-		"enrage",
-		"fog",
-		"triggers",
-		"companions",
-		"companion_swaps",
-		"revive_items",
-		"type_effectiveness",
-		"companion_attacks",
-		"specials",
-		"harvest",
-		"dialogs",
-		"territory"
 	],
 	"ticks": 600,
 	"changes": [
@@ -14343,13 +14319,5 @@
 		0,
 		0,
 		0
-	],
-	"checkpoints": {
-		"100": "2430831641",
-		"200": "2944146890",
-		"300": "285418786",
-		"400": "3302355914",
-		"500": "1451768337",
-		"600": "1135094053"
-	}
+	]
 }

@@ -78,8 +78,9 @@ branched from `main` and independent of the others: never stack pull requests, s
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
 and the ones queued before it, so a pull request needs no rebase just because `main` moved; rebase
-it (`git rebase origin/main`) only when it conflicts, fixing what collides (e.g. two rule changes
-that each rehashed the golden replays: rehash again on top), and push.
+it (`git rebase origin/main`) only when it conflicts, fixing what collides, and push. Two rule
+changes don't collide (#876): each adds its own file, and nothing that a build computes is
+committed.
 
 **Build the next pull requests while the open ones wait for review** (owner, #217): each in its own
 worktree, fully built and reviewed by Codex locally before it's pushed and opened.
@@ -525,17 +526,18 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   **The one exception** (owner, #252): the web e2e's Mesa packages come unpinned from the runner
   image's signed Ubuntu archive. They must match the image's own Mesa, and the archive drops a
   superseded version, so an exact pin would break CI on the next security update.
-- **Golden replays** (`tests/replays/*.replay`) are played by the replay flow in CI. One that stops
-  matching means a change altered what the game does. If that is on purpose, add the rule change's
-  file to `core/rules_changes/` (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then
-  one line on what plays differently linking the issue; no `pr`, which CI refuses: the squash
-  commit that added the file names it, `git log --diff-filter=A -- core/rules_changes/<file>`,
-  #758; the rules id, `RulesChanges`, is a digest of their names, #876, so the folder is
-  append-only: CI refuses a file deleted or renamed), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
-  in the pull request why the game plays out differently. CI fails a changed golden replay that
-  comes without a new file. Never rehash to make a surprise go away. CI's `rules-compare` job also
-  plays them and the APK flow on the commit and on its parent (`tools/rules_compare.sh`, run from
-  the parent's checkout, #876) and fails a difference that comes without a new file.
+- **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
+  commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
+  `rules-compare` job plays them and the APK flow on the commit and on its parent
+  (`tools/rules_compare.sh`, run from the parent's checkout) and fails a difference that comes
+  without a new rule change file. If the change is on purpose, add its file to `core/rules_changes/`
+  (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then one line on what plays
+  differently linking the issue; no `pr`, which CI refuses: the squash commit that added the file
+  names it, `git log --diff-filter=A -- core/rules_changes/<file>`, #758; the rules id,
+  `RulesChanges`, is a digest of their names, so the folder is append-only: CI refuses a file
+  deleted or renamed), and say in the pull request why the game plays out differently; the job's
+  summary shows where each replay diverges first. Never declare a change to make a surprise go
+  away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/export_templates.sh`

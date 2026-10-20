@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Fails when a golden replay changed without a new rule change file (#736): a changed replay means
-# the game plays out differently, and the rules id (RulesChanges, a digest of the names of the
-# files in core/rules_changes/) has to move with it. Also checks each file's name and frontmatter,
-# and that the folder is append-only (#876): a file deleted or renamed would give the rules an id
-# that older rules may already have had.
+# Checks the rule change files (#736): each file's name and frontmatter, and that the folder is
+# append-only (#876): a file deleted or renamed would give the rules (RulesChanges, a digest of the
+# names of the files in core/rules_changes/) an id that older rules may already have had. Whether
+# a change needs a new file is the rules-compare job's (tools/rules_compare.sh).
 # Usage: tools/rules_changes_check.sh <base> (from the repository's root; <base> is the commit the
 # change is compared with, e.g. HEAD^1 of a pull request's merge commit)
 set -euo pipefail
@@ -37,14 +36,5 @@ while IFS= read -r path; do
   echo "::error file=${path}::a rule change file is never deleted or renamed: the folder is append-only"
   failed=1
 done <<< "$(git diff --no-renames --name-only --diff-filter=D "$base" HEAD -- "$folder")"
-
-changed=$(git diff --name-only --diff-filter=M "$base" HEAD -- 'tests/replays/*.replay')
-added=$(git diff --name-only --diff-filter=A "$base" HEAD -- "$folder")
-if [ -n "$changed" ] && [ -z "$added" ]; then
-  while IFS= read -r path; do
-    echo "::error file=${path}::the rules changed: add a file to ${folder}/ (see RulesChanges)"
-  done <<< "$changed"
-  failed=1
-fi
 
 exit "$failed"
