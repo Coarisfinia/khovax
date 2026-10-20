@@ -22,12 +22,21 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID, DominationFeature.ID]
+	var needed: Array[String] = [DominationFeature.ID]
 	return needed
+
+
+## The wild monsters it enrages, which an instance without wild monster spots lacks (#884): no ring
+## breaks there.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	for event: RefCounted in state.events:
 		var broken: RingBroken = event as RingBroken
 		if broken == null:

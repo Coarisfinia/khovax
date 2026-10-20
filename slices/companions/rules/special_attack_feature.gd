@@ -38,14 +38,16 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID, CompanionFeature.ID]
+	var needed: Array[String] = [CompanionFeature.ID]
 	return needed
 
 
-## What spares a wild monster from the auto attack (CompanionAttackFeature.can_strike), whose
-## targets it strikes, and the type chart, where the instance has them.
+## The wild monsters it strikes, what spares one from the auto attack
+## (CompanionAttackFeature.can_strike), whose targets it strikes, and the type chart, where the
+## instance has them: without wild monster spots (#884), a special finds nothing to strike.
 func after() -> Array[String]:
 	var earlier: Array[String] = [
+		WildMonsterFeature.ID,
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
@@ -76,6 +78,8 @@ func cooldown_left(slot: int) -> int:
 func _fire(state: GameState, slot: int, focus: int) -> void:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	var companion_id: int = companions.companion_of(slot)
 	var species: String = companions.species_of(companion_id)
 	if companion_id == 0 or not powers.has(species):

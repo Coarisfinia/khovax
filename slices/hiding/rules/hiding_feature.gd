@@ -21,14 +21,18 @@ func id() -> String:
 	return ID
 
 
-func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID]
-	return needed
+## The wild monsters it hides, which an instance without wild monster spots lacks (#884): nothing
+## hides there, so nothing is held or jumps out.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 ## Hides every wild monster that starts on a tile that hides.
 func start(state: GameState) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	for monster: int in wild.monsters:
 		if hides_at(state.region, state.entity(monster).tile):
 			hidden.append(monster)
@@ -37,6 +41,8 @@ func start(state: GameState) -> void:
 
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	var still: Array[int] = []
 	for monster: int in hidden:
 		var tile: Vector2i = state.entity(monster).tile
@@ -87,7 +93,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var saved: Array[int] = values.wholes("hidden", 1, DataReader.MOST)
 	hidden.clear()
 	for monster: int in saved:
-		if not wild.monsters.has(monster) or hidden.has(monster):
+		if wild == null or not wild.monsters.has(monster) or hidden.has(monster):
 			values.fail("hidden %d isn't one wild monster" % monster)
 			return
 		hidden.append(monster)

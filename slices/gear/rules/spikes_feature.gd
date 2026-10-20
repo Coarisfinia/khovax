@@ -29,10 +29,17 @@ func id() -> String:
 	return ID
 
 
-## The wild monsters it wounds, whose HP the health feature keeps (#835), and the rings.
+## The wild monsters' HP, which the health feature keeps (#835), and the rings.
 func requires() -> Array[String]:
-	var needed: Array[String] = [HealthFeature.ID, WildMonsterFeature.ID, DominationFeature.ID]
+	var needed: Array[String] = [HealthFeature.ID, DominationFeature.ID]
 	return needed
+
+
+## The wild monsters it wounds, which an instance without wild monster spots lacks (#884): no ring
+## holds any there.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 ## The code a command carries for the gear `gear_id` in the trap slot (CommandCodes):
@@ -49,6 +56,8 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		return
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	var rings: Dictionary[int, Array] = {}
 	for dominator_id: int in domination.seals:
 		rings[dominator_id] = domination.seals[dominator_id].monsters

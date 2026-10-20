@@ -18,13 +18,22 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID, SpecialAttackFeature.ID]
+	var needed: Array[String] = [SpecialAttackFeature.ID]
 	return needed
+
+
+## The wild monsters it harvests, which an instance without wild monster spots lacks (#884): none
+## falls there.
+func after() -> Array[String]:
+	var earlier: Array[String] = [WildMonsterFeature.ID]
+	return earlier
 
 
 ## Rolls the materials of every wild monster felled this tick, in the order they fell.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return
 	# Copied, as the loop adds Harvested events to the same list.
 	for event: RefCounted in state.events.duplicate():
 		var struck: SpecialStruck = event as SpecialStruck

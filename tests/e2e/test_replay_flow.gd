@@ -34,6 +34,7 @@ func run(_tree: SceneTree) -> String:
 		_check_feature_reads,
 		_check_switching_features,
 		_check_instance_without_trail,
+		_check_instance_without_wild_monsters,
 		_check_invalid_order_state,
 		_check_switch_within_tick,
 		_check_players_move_at_once,
@@ -338,6 +339,35 @@ func _check_instance_without_trail() -> String:
 		return "an instance without the trail didn't walk"
 	if InstanceBlueprints.basic(42, 1).feature(TrailFeature.ID) == null:
 		return "the basic instance lost its trail"
+	return ""
+
+
+## A region without wild monster spots brings no wild monster feature (#879), and the rules that
+## read it but don't need it still load and step (#884): the basic blueprint's rules on a plain
+## disc, with a companion, closing a ring and pressing the special and the totem.
+func _check_instance_without_wild_monsters() -> String:
+	var basic: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.BASIC)
+	var setup: FeatureSetup = FeatureSetup.new()
+	setup.instance = InstanceBlueprints.BASIC
+	setup.region = Region.disc(RADIUS)
+	setup.wild_species = basic.wild_species
+	var listed: Array[String] = basic.features.duplicate()
+	listed.append_array(RegionFeatures.of(setup.region))
+	if listed.has(WildMonsterFeature.ID):
+		return "a region without wild monster spots brought the wild monsters"
+	var state: GameState = GameState.new(setup.region, 42, FeatureFactories.build(listed, setup))
+	if not state.problem.is_empty():
+		return "an instance without wild monsters doesn't load: " + state.problem
+	FlowSteps.carry(state, 0, ["ombulumo"])
+	var _player: Entity = state.add_entity(0, START)
+	var _events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
+	var pressing: Array[Command] = [Command.new(Command.NO_MOVE, true, Command.PLACE_TOTEM)]
+	for _tick: int in 2 * WildAttackFeature.STRIKE_TICKS:
+		Simulation.step(state, pressing)
+	if _tile(state) != FlowSteps.BASIC_RING[-1]:
+		return "the player didn't walk in an instance without wild monsters"
+	if _trail(state).tiles.is_empty():
+		return "an instance without wild monsters drew no trail"
 	return ""
 
 
