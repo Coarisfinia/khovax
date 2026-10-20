@@ -101,10 +101,14 @@ func catch_up_outbox(highest: int) -> void:
 
 
 ## Spends one `item` the player uses, like a revive item (#656), and posts the request of `kind`
-## (OutboxEntry.KINDS) with its `data` that uses it to the outbox, in one change (#818).
+## (OutboxEntry.KINDS) with its `data` that uses it to the outbox, in one change (#818), and tells
+## when it posted it.
 func spend_on(item: String, kind: int, data: int) -> void:
-	if keeper != null:
-		_report(keeper.spend_on(item, kind, data, Time.get_ticks_msec()))
+	if keeper == null:
+		return
+	var posted: int = keeper.profile.outbox.entries.size()
+	_report(keeper.spend_on(item, kind, data, Time.get_ticks_msec()))
+	_tell_posted(posted)
 
 
 ## Whether loot with the id `item` is gear (#694) rather than a material.

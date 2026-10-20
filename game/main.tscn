@@ -52,6 +52,7 @@
 [ext_resource type="Script" path="res://slices/dialogs/meta/dialog_save_hold.gd" id="50_dialog_save_hold"]
 [ext_resource type="Script" path="res://slices/domination/look/seal_fill_view.gd" id="49_seal_fill"]
 [ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
+[ext_resource type="Script" path="res://slices/revive_items/look/revive_tie.gd" id="51_revive_tie"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -88,6 +89,11 @@ holder = NodePath("../ProfileHolder")
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")
 bus = NodePath("../EventBus")
+input = NodePath("../LocalInput")
+holder = NodePath("../ProfileHolder")
+
+[node name="ReviveTie" type="Node" parent="." node_paths=PackedStringArray("input", "holder") unique_id=2066135790]
+script = ExtResource("51_revive_tie")
 input = NodePath("../LocalInput")
 holder = NodePath("../ProfileHolder")
 
