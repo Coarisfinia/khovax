@@ -49,6 +49,7 @@
 [ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
 [ext_resource type="Script" path="res://slices/revive_items/ui/revive_button.gd" id="44_revive_button"]
 [ext_resource type="Script" path="res://slices/fog/meta/explored_keeper.gd" id="45_explored"]
+[ext_resource type="Script" path="res://slices/dialogs/meta/dialog_save_hold.gd" id="50_dialog_save_hold"]
 [ext_resource type="Script" path="res://slices/domination/look/seal_fill_view.gd" id="49_seal_fill"]
 [ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
 
@@ -96,12 +97,16 @@ bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 quests = NodePath("../QuestKeeper")
 
-[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=1191191190]
+[node name="WorldKeeper" type="Node" parent="." node_paths=PackedStringArray("companions", "holds") unique_id=1191191190]
 script = ExtResource("22_keeper")
 companions = [NodePath("../ExploredKeeper")]
+holds = [NodePath("../DialogSaveHold")]
 
 [node name="ExploredKeeper" type="Node" parent="." unique_id=1191191191]
 script = ExtResource("45_explored")
+
+[node name="DialogSaveHold" type="Node" parent="." unique_id=1191191192]
+script = ExtResource("50_dialog_save_hold")
 
 [node name="Instance" type="Node3D" parent="." node_paths=PackedStringArray("driver") unique_id=1890189018]
 script = ExtResource("21_instance")
