@@ -850,7 +850,9 @@ func _check_side_quest() -> String:
 		return "a chest counted toward the pond's side quest before it started"
 	applied = _count(quests, _entering("pond"))
 	var loaded: QuestTracker = _reloaded(quests)
-	var step: QuestStep = loaded.open_steps().get("pond_chest") if loaded != null else null
+	if loaded == null:
+		return "the started pond side quest couldn't be saved and loaded"
+	var step: QuestStep = loaded.open_steps().get("pond_chest")
 	if (not applied.is_empty() or step == null
 			or QuestsTab.quest_lines(loaded, "pond_chest") != ["Now: Open a chest"]):
 		return "entering the pond didn't open its side quest, kept through loading: " + applied
@@ -929,12 +931,12 @@ func _check_pond_way(
 	pond.book = book
 	var applied: String = _count(pond, entered) + _count(pond, _entering("pond"))
 	var loaded: QuestTracker = _reloaded(pond)
+	if loaded == null:
+		return "the pond's way couldn't be saved and loaded"
 	var way: Array[String] = ["Done: Enter the pond", "Now: Open a chest"]
-	if (loaded == null
-			or not applied.is_empty()
-			or QuestsTab.quest_lines(loaded, "glade_fork") != way):
+	if not applied.is_empty() or QuestsTab.quest_lines(loaded, "glade_fork") != way:
 		return "the pond's way wasn't kept through loading: %s" % [
-			QuestsTab.quest_lines(loaded, "glade_fork") if loaded != null else [],
+			QuestsTab.quest_lines(loaded, "glade_fork"),
 		]
 	applied = _count(loaded, _gain([], 1))
 	if not applied.is_empty() or not loaded.finished.has("glade_fork"):
@@ -1259,9 +1261,19 @@ func _check_kept(book: Dictionary[String, QuestDefinition]) -> String:
 	var fresh: QuestTracker = QuestTracker.new()
 	fresh.book = book
 	var applied: String = _count(fresh, _gain(["ombulumo"], 0))
-	var loaded: QuestTracker = _reloaded(fresh)
-	var kept: String = JSON.stringify(QuestSave.beside(loaded)) if loaded != null else ""
-	if not applied.is_empty() or kept != JSON.stringify(QuestSave.beside(fresh)):
+	# Through the store, as the holder saves and loads it, its quests beside it (QuestKeeper, #855).
+	var saving: QuestKeeper = QuestKeeper.new()
+	saving.tracker = fresh
+	applied += ProfileStore.save(Profile.new(), SAVE_PATH, [saving])
+	var loading: QuestKeeper = QuestKeeper.new()
+	loading.tracker.book = book
+	applied += ProfileStore.load_from(SAVE_PATH, [loading]).problem
+	var loaded: QuestTracker = loading.tracker
+	saving.free()
+	loading.free()
+	SaveStore.remove(SAVE_PATH)
+	if (not applied.is_empty()
+			or JSON.stringify(QuestSave.beside(loaded)) != JSON.stringify(QuestSave.beside(fresh))):
 		return "quest progress didn't survive saving and loading: " + applied
 	applied = _count(loaded, _gain(["ombulumo", "ombulumo"], 0))
 	if not applied.is_empty() or not loaded.finished.has("three_ombulumo"):
