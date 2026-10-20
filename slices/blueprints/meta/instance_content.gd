@@ -32,7 +32,8 @@ static func of(instance_name: String) -> Dictionary[String, Callable]:
 	return loads
 
 
-## The regions of the blueprint `instance_name` and of its variants, by their keys.
+## The regions of the blueprint `instance_name` and of its variants that this build has, by their
+## keys.
 static func regions(instance_name: String) -> Dictionary[String, Callable]:
 	var loads: Dictionary[String, Callable] = {}
 	var region_names: Array[String] = [instance_name]
@@ -41,8 +42,10 @@ static func regions(instance_name: String) -> Dictionary[String, Callable]:
 		for chosen_by: PackedStringArray in named.variants:
 			if not chosen_by[1].is_empty():
 				region_names.append(chosen_by[1])
+	# A region this build leaves out (a test-only one) can't be read, so nothing waits for it.
 	for region_name: String in region_names:
-		loads[RegionFiles.key(region_name)] = RegionFiles.cached.bind(region_name)
+		if RegionFiles.exists(region_name):
+			loads[RegionFiles.key(region_name)] = RegionFiles.cached.bind(region_name)
 	return loads
 
 

@@ -261,10 +261,8 @@ func _check_walk_through() -> String:
 ## content, the player pressing out through the forest's exit stays on it, in the forest, however
 ## long they press; once no command waits, the same press takes them into the glade.
 func _check_held_at_exit() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	var world: World = _at_forest_exit()
 	var out: int = FlowSteps.INTO_GLADE[-1]
-	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
-		_walk_in(world, direction)
 	var waiting: Command = Command.new()
 	waiting.waiting = true
 	var held: Array[Command] = [Command.new(out), waiting]
@@ -280,16 +278,22 @@ func _check_held_at_exit() -> String:
 	return ""
 
 
+## A fresh world whose player 0 walked from the forest's start onto its exit into the glade.
+func _at_forest_exit() -> World:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
+		_walk_in(world, direction)
+	return world
+
+
 ## Holding the walk until the content next door is read (#816): with the glade's region not read
 ## on this machine yet, its local player's command says it waits (LocalSource), so the player
 ## pressing out of the forest's exit stays on it; the background fill (ContentFill) reads the
 ## region meanwhile, and once it has, the command no longer waits and the same press takes them
 ## into the glade, which loads from what was read.
 func _check_held_until_read() -> String:
-	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
+	var world: World = _at_forest_exit()
 	var out: int = FlowSteps.INTO_GLADE[-1]
-	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
-		_walk_in(world, direction)
 	var session: Session = Session.new()
 	session.world = world
 	var input: LocalInput = LocalInput.new()

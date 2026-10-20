@@ -20,6 +20,15 @@ static func key(region_name: String) -> String:
 	return InstanceBlueprints.REGIONS + region_name
 
 
+## Whether the region `region_name` is in this build: a region file or a folder of pieces. The
+## device builds leave the test-only regions out (export_presets.cfg).
+static func exists(region_name: String) -> bool:
+	return (
+		FileAccess.file_exists(key(region_name) + ".md")
+		or DirAccess.dir_exists_absolute(key(region_name))
+	)
+
+
 ## The files of the region `region_name`, read: none when there's neither a region file nor a
 ## folder of pieces.
 static func load_region(region_name: String) -> RegionFiles:
