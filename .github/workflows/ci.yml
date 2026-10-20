@@ -252,6 +252,64 @@ jobs:
           fi
           bash tools/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
 
+  rules-compare:
+    # Compares how this commit plays with how its parent plays (#876): both are built, each plays
+    # the reference replays and the APK flow (tests/replays/outcomes.gd), and a difference needs a
+    # new file in core/rules_changes/. The parent is the base on a pull request's merge commit and
+    # the queue's previous commit in the merge queue; main itself was checked in the queue.
+    if: github.event_name != 'push'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    steps:
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The parent too: it's built and played beside this commit.
+          fetch-depth: 2
+
+      - name: "💾 Cache Godot (Linux editor)"
+        id: cache-godot
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
+
+      - name: "⬇️ Download Godot (Linux editor)"
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+
+      - name: "🎲 Play this commit and its parent"
+        # A parent that can't be built or played fails the check: it's main or a queue entry, which
+        # would be dropped anyway. The import's script errors are the headless job's to report.
+        run: |
+          git worktree add -q /tmp/parent HEAD^1
+          for tree in . /tmp/parent; do
+            timeout 120 ~/godot/godot --headless --path "$tree" --import > /dev/null
+          done
+          timeout 300 ~/godot/godot --headless --path . -s res://tests/replays/outcomes.gd \
+            -- out=/tmp/outcomes-head.json
+          timeout 300 ~/godot/godot --headless --path /tmp/parent -s res://tests/replays/outcomes.gd \
+            -- out=/tmp/outcomes-parent.json
+
+      - name: "🔖 Check a different outcome comes with a rules change"
+        # The comparison runs from the parent's checkout, so a pull request can't weaken its own
+        # check. Only the pull request that adds the script (#876) runs its own.
+        run: |
+          set -o pipefail
+          compare=/tmp/parent/tools/rules_compare.sh
+          if [ ! -f "$compare" ]; then
+            echo "::notice::The parent has no tools/rules_compare.sh yet, so this commit's own runs."
+            compare=tools/rules_compare.sh
+          fi
+          bash "$compare" /tmp/outcomes-parent.json /tmp/outcomes-head.json HEAD^1 \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
   export:
     # Every platform's build, from one Godot and export templates download (#168): the debug APK
     # to install on a phone (#59, with the Android SDK and Java already on the runner and a

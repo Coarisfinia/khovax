@@ -533,7 +533,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   #758; the rules id, `RulesChanges`, is a digest of their names, #876, so the folder is
   append-only: CI refuses a file deleted or renamed), rehash them (`godot --headless --path . -s res://tests/replays/rehash.gd`) and say
   in the pull request why the game plays out differently. CI fails a changed golden replay that
-  comes without a new file. Never rehash to make a surprise go away.
+  comes without a new file. Never rehash to make a surprise go away. CI's `rules-compare` job also
+  plays them and the APK flow on the commit and on its parent (`tools/rules_compare.sh`, run from
+  the parent's checkout, #876) and fails a difference that comes without a new file.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/export_templates.sh`
