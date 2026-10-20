@@ -5,12 +5,15 @@ extends Node
 ## publish/subscribe. The simulation doesn't know who listens, and no subscriber holds up a tick. A
 ## topic is the event's class name (`&"WildMonsterDominated"`). Events only flow out: a subscriber
 ## never changes the world, since anything that matters inside it is a rule in the simulation
-## (#26). Views keep the driver's `ticked` signal, since their effects play in step with the ticks.
+## (#26). Each event is known by the instance that raised it (#769) until it's handed out. Views
+## keep the driver's `ticked` signal, since their effects play in step with the ticks.
 
 @export var driver: Session
 
 ## The events not yet handed out, in the order the ticks raised them.
 var queued: Array[RefCounted] = []
+## The instance each queued event was raised in, by blueprint name; the world's own have none.
+var _instances: Dictionary[RefCounted, String] = {}
 ## Each topic's subscribers, in the order they subscribed.
 var _subscribers: Dictionary[StringName, Array] = {}
 ## Whether a flush is under way.
@@ -46,7 +49,14 @@ func flush() -> void:
 		for subscriber: Callable in subscribed.duplicate():
 			if subscriber.is_valid():
 				subscriber.call(event)
+		var _handed: bool = _instances.erase(event)
 	_flushing = false
+
+
+## The blueprint name of the instance a queued event, or the one being handed out, was raised in,
+## or "" for the world's own events (InstanceEntered, WorldChanged), which no instance raised.
+func instance_of(event: RefCounted) -> String:
+	return _instances.get(event, "")
 
 
 ## The topic an event is published on: its class name.
@@ -55,5 +65,13 @@ static func topic_of(event: RefCounted) -> StringName:
 	return script.get_global_name() if script != null else &""
 
 
+## Queues a tick's events, each known by the instance whose events it is: a stepped instance keeps
+## them until its next tick.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	queued.append_array(events)
+	if driver.world == null:
+		return
+	for instance_name: String in driver.world.sorted_names():
+		for event: RefCounted in driver.world.instances[instance_name].events:
+			if events.has(event):
+				_instances[event] = instance_name

@@ -97,7 +97,7 @@ static func step_line(step: QuestStep, count: int) -> String:
 		"reached":
 			asks = "Go to the " + _words(step.place)
 		"entered":
-			asks = "Enter the " + _words(step.piece if step.instance.is_empty() else step.instance)
+			asks = "Enter the " + _words(step.instance if step.enters_instance() else step.piece)
 		QuestStep.ANSWERED:
 			asks = _answer_line(step)
 		"obtained":

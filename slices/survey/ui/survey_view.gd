@@ -160,7 +160,8 @@ func show_state() -> void:
 		if player != null:
 			circles[slot] = _walked_ground(state, player)
 	if holder != null and holder.keeper != null:
-		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot())
+		var here: String = driver.local_instance_name()
+		quest_targets = QuestMarkerView.targets_of(state, holder.keeper.profile, _slot(), here)
 
 
 ## The chevrons drawn for `exits`: one per exit, in its middle (#790).

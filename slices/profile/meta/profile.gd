@@ -65,52 +65,55 @@ var problem: String = ""
 
 
 ## Takes over what the player just obtained: its dominations and materials, and every quest they
-## advance, one fact at a time, so one gain can finish a step and count toward the next. Returns why
+## advance, one fact at a time, each in the instance it happened in, so one gain can finish a step
+## and count toward the next. Returns why
 ## the gain can't be taken over, or "", and changes nothing when it can't: a profile that took over
 ## a bad gain couldn't be loaded again. ProfileKeeper saves it.
 func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
 		return refusal
+	var where: String = result.instance
 	for i: int in result.dominated_species.size():
 		var species: String = result.dominated_species[i]
 		var short_ids: Array[String] = result.dominated_short_ids
 		_dominate(species, short_ids[i] if i < short_ids.size() else "")
-		_count_fact("dominated", species)
+		_count_fact("dominated", species, where)
 	for target: String in result.targets_dominated:
-		_count_fact(QuestStep.TARGET_DOMINATED, target)
+		_count_fact(QuestStep.TARGET_DOMINATED, target, where)
 	for _chest: int in result.chests_opened:
-		_count_fact("opened", "")
+		_count_fact("opened", "", where)
 	for place: String in result.places_reached:
-		_count_fact("reached", place)
+		_count_fact("reached", place, where)
 	for piece: String in result.pieces_entered:
-		_count_fact("entered", piece)
+		_count_fact("entered", piece, where)
 	for instance_name: String in result.instances_entered:
-		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name)
+		_count_fact(QuestStep.INSTANCE_ENTERED, instance_name, instance_name)
 	for answer: String in result.answers_chosen:
-		_count_fact(QuestStep.ANSWERED, answer)
+		_count_fact(QuestStep.ANSWERED, answer, where)
 	for event: String in result.world_events:
-		_count_fact(QuestStep.EMITTED, event)
+		_count_fact(QuestStep.EMITTED, event, "")
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
-		_count_obtained(material, result.materials[material])
+		_count_obtained(material, result.materials[material], where)
 	for gear_id: String in result.gear:
 		gear.owned[gear_id] = gear.owned.get(gear_id, 0) + result.gear[gear_id]
-		_count_obtained(gear_id, result.gear[gear_id])
+		_count_obtained(gear_id, result.gear[gear_id], where)
 	return ""
 
 
-## Counts `amount` of the item `item` just obtained (#686) toward the quests, one at a time, so one
+## Counts `amount` of the item `item` just obtained (#686) in the instance `where` toward the
+## quests, one at a time, so one
 ## gain can finish a step and count toward the next; it stops once no open step asks for the item,
 ## so a large amount costs no more than the steps asking for it.
-func _count_obtained(item: String, amount: int) -> void:
+func _count_obtained(item: String, amount: int, where: String) -> void:
 	for _counted: int in amount:
 		var asked: bool = false
 		for step: QuestStep in open_steps().values():
-			asked = asked or step.counts("obtained", item)
+			asked = asked or step.counts("obtained", item, where)
 		if not asked:
 			return
-		_count_fact("obtained", item)
+		_count_fact("obtained", item, where)
 
 
 ## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
@@ -176,18 +179,21 @@ func _dominate(species: String, short_id: String) -> void:
 	next_monster_id += 1
 
 
-## Counts one fact, then every event the quests it advanced emitted (#575), in the order emitted:
+## Counts one fact, in the instance `where`, then every event the quests it advanced emitted (#575),
+## in the order emitted:
 ## each as a fact of its own, which can start side quests waiting on it. Only a side quest's start
 ## waits on an event, and each starts once, so the events always run out.
-func _count_fact(condition: String, what: String) -> void:
-	var pending: Array[String] = _advance_quests(condition, what)
+## An event happens in the whole world, so it counts nowhere in particular.
+func _count_fact(condition: String, what: String, where: String) -> void:
+	var pending: Array[String] = _advance_quests(condition, what, where)
 	while not pending.is_empty():
 		var event: String = pending.pop_front()
-		pending.append_array(_advance_quests(QuestStep.EMITTED, event))
+		pending.append_array(_advance_quests(QuestStep.EMITTED, event, ""))
 
 
 ## Counts one fact (a `condition`, with the species of a domination, the place reached, the piece or
-## instance entered, the answer chosen, or the event emitted) toward every quest in the book whose
+## instance entered, the answer chosen, or the event emitted, in the instance `where`, #769) toward
+## every quest in the book whose
 ## current step asks for it, in id order, so quests finished together are listed in the same order
 ## on every machine. A step that reaches its count hands over to the next one (on a step with
 ## choices, #573, the one the choice the fact took leads to), and a step that ends the chain, or
@@ -198,37 +204,43 @@ func _count_fact(condition: String, what: String) -> void:
 ## A side quest the fact starts (#473) is started first, so the same fact can count toward its first
 ## step; a side quest not started yet counts nothing. Returns the events the steps done and the
 ## choices taken emit, in that order.
-func _advance_quests(condition: String, what: String) -> Array[String]:
+func _advance_quests(condition: String, what: String, where: String) -> Array[String]:
 	var ids: Array[String] = []
 	ids.assign(quest_book.keys())
 	ids.sort()
 	var emitted: Array[String] = []
 	for id: String in ids:
-		if not _started(id) and quest_book[id].starts_on.counts(condition, what):
+		if not _started(id) and quest_book[id].starts_on.counts(condition, what, where):
 			quest_progress[id] = _progress_of(id)
 	for id: String in ids:
 		var quest: QuestDefinition = quest_book[id]
 		var progress: QuestProgress = _progress_of(id)
 		var step: QuestStep = quest.step_at(progress.step)
 		var open: bool = step != null and progress.count < step.count
-		var waits: bool = open and not step.counts(condition, what)
+		var waits: bool = open and not step.counts(condition, what, where)
 		if quests_done.has(id) or not _started(id) or waits:
 			continue
 		progress.count += 1 if open else 0
 		if step != null and progress.count >= step.count:
-			emitted.append_array(_emits(step, condition, what))
-			progress.move_to(quest.next_index(progress.step, condition, what))
+			emitted.append_array(_emits(step, condition, what, where))
+			progress.move_to(quest.next_index(progress.step, condition, what, where))
 		quest_progress[id] = progress
 		if progress.step >= quest.steps.size():
 			_finish(quest)
 	return emitted
 
 
-## The events `step`, now done by a fact (`condition`, `what`), emits (#575): its own, then that of
+## The events `step`, now done by a fact (`condition`, `what`, `where`), emits (#575): its own, then
+## that of
 ## the choice the fact took, the first one for saved progress settling on a fact that takes none,
 ## as QuestDefinition.next_index goes on.
-static func _emits(step: QuestStep, condition: String, what: String) -> Array[String]:
-	var choice: QuestStep = step.choice_for(condition, what)
+static func _emits(
+	step: QuestStep,
+	condition: String,
+	what: String,
+	where: String,
+) -> Array[String]:
+	var choice: QuestStep = step.choice_for(condition, what, where)
 	if choice == null and not step.choices.is_empty():
 		choice = step.choices[0]
 	var events: Array[String] = []

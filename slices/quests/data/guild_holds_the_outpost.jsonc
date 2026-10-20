@@ -8,8 +8,8 @@
 	"starts_on": { "condition": "entered", "instance": "outpost" },
 	"territory": { "instance": "outpost", "faction": "cartographers_guild" },
 	"steps": [
-		{ "condition": "reached", "place": "outpost_north_hold" },
-		{ "condition": "reached", "place": "outpost_south_hold" },
-		{ "condition": "entered", "piece": "watch", "ends": "guild_holds_the_outpost" }
+		{ "condition": "reached", "place": "outpost_north_hold", "instance": "outpost" },
+		{ "condition": "reached", "place": "outpost_south_hold", "instance": "outpost" },
+		{ "condition": "entered", "piece": "watch", "instance": "outpost", "ends": "guild_holds_the_outpost" }
 	]
 }

@@ -13,19 +13,19 @@
 			"$ref": "#/$defs/id"
 		},
 		"somewhere": {
-			"description": "Being somewhere, met once, which a marker points at: reaching a place, or entering a region piece or an instance.",
+			"description": "Being somewhere, met once, which a marker points at: reaching a place, or entering a region piece or an instance. A place or piece may name the instance it counts in (#769).",
 			"type": "object",
 			"required": ["condition"],
 			"oneOf": [
 				{
 					"properties": { "condition": { "const": "reached" } },
 					"required": ["place"],
-					"not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] }
+					"not": { "required": ["piece"] }
 				},
 				{
 					"properties": { "condition": { "const": "entered" } },
 					"not": { "required": ["place"] },
-					"oneOf": [{ "required": ["piece"] }, { "required": ["instance"] }]
+					"anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }]
 				}
 			],
 			"properties": {
@@ -42,7 +42,8 @@
 			"properties": {
 				"condition": { "const": "answered" },
 				"dialog": { "$ref": "#/$defs/id" },
-				"answer": { "$ref": "#/$defs/id" }
+				"answer": { "$ref": "#/$defs/id" },
+				"instance": { "description": "The instance it counts in only (#769).", "$ref": "#/$defs/id" }
 			}
 		}
 	},
@@ -108,8 +109,8 @@
 					},
 					{
 						"if": { "required": ["condition"], "properties": { "condition": { "const": "entered" } } },
-						"then": { "oneOf": [{ "required": ["piece"] }, { "required": ["instance"] }] },
-						"else": { "not": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] } }
+						"then": { "anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }] },
+						"else": { "not": { "required": ["piece"] } }
 					},
 					{
 						"if": { "required": ["condition"], "properties": { "condition": { "const": "answered" } } },
@@ -158,11 +159,11 @@
 						"$ref": "#/$defs/id"
 					},
 					"piece": {
-						"description": "On an entered step, and only there unless it names an instance, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
+						"description": "On an entered step, and only there, the id of the region piece it asks for: its file name in its instance blueprint's folder.",
 						"$ref": "#/$defs/id"
 					},
 					"instance": {
-						"description": "On an entered step, and only there unless it names a piece, the name of the instance blueprint it asks for.",
+						"description": "On an entered step without a piece, the name of the instance blueprint it asks for; on any other step, the instance it counts in only (#769), which every step of a territory quest names: its territory.",
 						"$ref": "#/$defs/id"
 					},
 					"dialog": {

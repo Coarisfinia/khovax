@@ -501,7 +501,9 @@ func _check_answered(driver: GameDriver, bus: EventBus, profile: Profile) -> Str
 
 
 ## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
-## player walked its stream, grove and felling, not when another player entered the last one. The
+## player walked its stream, grove and felling, not when another player entered the last one, nor
+## when this player entered a felling in another instance, since its steps count only in the
+## forest (#769); meanwhile its marker in the glade points at an exit leading there. The
 ## hand-over waits in the profile's outbox (#771) and goes in this player's next command, which the
 ## replay records, and the world clears the forest's old holder in the same tick as it hands the
 ## forest to the guild. The world records the request applied and acknowledges it, and the outbox
@@ -512,12 +514,17 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 	var quest: String = "guild_charts_the_forest"
 	driver.world.set_flag(Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
-	_emit(driver, bus, PieceEntered.new("stream", 1, 0))
-	_emit(driver, bus, PieceEntered.new("grove", 1, 0))
-	_emit(driver, bus, PieceEntered.new("felling", 9, 1))
-	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
-		return "another player entering the felling finished the forest's territory quest"
+	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
+	_emit_in(driver, bus, PieceEntered.new("grove", 1, 0), forest)
+	_emit_in(driver, bus, PieceEntered.new("felling", 9, 1), forest)
+	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), InstanceBlueprints.GLADE)
 	_emit(driver, bus, PieceEntered.new("felling", 1, 0))
+	if profile.quests_done.has(quest) or Territory.holder(driver.world.flags, forest) != "rivals":
+		return "another player, or this one outside the forest, finished its territory quest"
+	var marked: String = _check_territory_marked(profile, quest)
+	if not marked.is_empty():
+		return marked
+	_emit_in(driver, bus, PieceEntered.new("felling", 1, 0), forest)
 	if profile.outbox.entries.size() != 1:
 		return "finishing the forest's territory quest didn't post its hand-over to the outbox"
 	var request: OutboxEntry = profile.outbox.entries[0]
@@ -532,6 +539,24 @@ func _check_territory(driver: GameDriver, bus: EventBus, profile: Profile) -> St
 	if not driver.recording.changes.has(Territory.code(forest, GUILD)):
 		return "the replay didn't record the forest handed over"
 	return _check_territory_resent(driver, bus, profile, request)
+
+
+## Why the territory quest `quest`, open in `profile`, isn't marked in the glade on an exit leading
+## to the forest it counts in (#769), or "".
+func _check_territory_marked(profile: Profile, quest: String) -> String:
+	var glade: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var targets: Dictionary[String, Vector2i] = QuestMarkerView.targets_of(
+		glade,
+		profile,
+		0,
+		InstanceBlueprints.GLADE,
+	)
+	var marked: Vector2i = targets.get(quest, -Vector2i.ONE)
+	for i: int in glade.region.exits.size():
+		if Vector2i(glade.region.exits[i].x, glade.region.exits[i].y) == marked:
+			if glade.region.exit_blueprints[i] == InstanceBlueprints.FOREST:
+				return ""
+	return "the forest's territory quest isn't marked on an exit from the glade leading there"
 
 
 ## The territory quest's hand-over `request`, applied and acknowledged, is out of the outbox and
@@ -1031,6 +1056,12 @@ func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
 	bus.flush()
 
 
+## Hands `event` to the bus as one the instance `instance_name` raised (#769), then flushes it.
+func _emit_in(driver: GameDriver, bus: EventBus, event: RefCounted, instance_name: String) -> void:
+	driver.world.instance(instance_name).events.append(event)
+	_emit(driver, bus, event)
+
+
 ## Steps count up one fact at a time: only the species a step asks for counts, a step at its count
 ## hands over to the next even within one gain, and the last one finishes the quest. The toads'
 ## quest counts to three. The first domination asks for the beach first (#321): dominations before
@@ -1144,7 +1175,9 @@ func _check_broken_data() -> String:
 	if not content.problem.ends_with("its standing's faction must be one that exists"):
 		return "a quest moving the standing with no faction that exists wasn't refused"
 	var astray: String = "\"territory\": {\"instance\": \"forest\", \"faction\": \"strangers\"}"
-	content = _load_written({ "a_good": good.replace("\"steps\"", astray + ", \"steps\"") })
+	# Its step counts in its territory, as every territory quest's does (#769).
+	var in_forest: String = good.replace("\"opened\"", "\"opened\", \"instance\": \"forest\"")
+	content = _load_written({ "a_good": in_forest.replace("\"steps\"", astray + ", \"steps\"") })
 	if not content.problem.ends_with("its territory's faction must be one that exists"):
 		return "a quest handing its territory to no faction that exists wasn't refused (#638)"
 	return _check_dialog_ids()

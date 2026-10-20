@@ -7,8 +7,8 @@
 	"starts_on": { "condition": "entered", "instance": "forest" },
 	"territory": { "instance": "forest", "faction": "cartographers_guild" },
 	"steps": [
-		{ "condition": "entered", "piece": "stream" },
-		{ "condition": "entered", "piece": "grove" },
-		{ "condition": "entered", "piece": "felling", "ends": "guild_charts_the_forest" }
+		{ "condition": "entered", "piece": "stream", "instance": "forest" },
+		{ "condition": "entered", "piece": "grove", "instance": "forest" },
+		{ "condition": "entered", "piece": "felling", "instance": "forest", "ends": "guild_charts_the_forest" }
 	]
 }
