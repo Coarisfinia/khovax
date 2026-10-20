@@ -27,9 +27,9 @@ const FIELDS: Array[String] = [
 
 var id: String = ""
 var kind: String = ""
-## What the player reads: its name and what it does.
+## What the player reads: its name and what it does. Both may hold text tags (#733), so whatever
+## shows one shows it through TextTags.shown (#752).
 var name: String = ""
-## It may hold text tags (#733), so whatever shows it shows it through TextTags.shown (#752).
 var description: String = ""
 ## A special's: how much of its species' strength one strike deals, in thousandths (Fixed), and the
 ## seconds before it can fire again; 0 for a passive.

@@ -42,7 +42,7 @@ func _ready() -> void:
 	var abilities: SpeciesData = SpeciesContent.load_abilities()
 	for id: String in abilities.abilities:
 		var ability: Ability = abilities.abilities[id]
-		_abilities[id] = PathMark.tagged(ability.name, ability.path)
+		_abilities[id] = PathMark.tagged(TextTags.shown(ability.name), ability.path)
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)

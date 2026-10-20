@@ -917,7 +917,8 @@ func _check_dialogs_refused() -> String:
 
 
 ## Every text tag (#733) in the texts that show them (a dialog's speaker, lines and answers, a
-## quest's name, an ability's description) names content that exists, and shows its current name;
+## quest's name, an ability's name and description, a faction's name and ranks, a piece of gear's
+## name, #752) names content that exists, and shows its current name;
 ## a tag of an unknown kind, with an id that doesn't exist, or written wrong is refused.
 func _check_text_tags() -> String:
 	var tags: TextTags = TextTags.load_tags()
@@ -933,7 +934,12 @@ func _check_text_tags() -> String:
 	for quest: QuestDefinition in QuestContent.load_quests().quests.values():
 		texts.append(quest.name)
 	for ability: Ability in SpeciesContent.load_abilities().abilities.values():
-		texts.append(ability.description)
+		texts.append_array([ability.name, ability.description])
+	for faction: Faction in FactionContent.load_factions().factions.values():
+		texts.append(faction.name)
+		texts.append_array(faction.ranks_up + faction.ranks_down)
+	for item: GearItem in GearContent.load_gear().items.values():
+		texts.append(item.name)
 	for text: String in texts:
 		if not tags.problem_in(text).is_empty():
 			return "the text \"%s\" has a broken tag: %s" % [text, tags.problem_in(text)]
@@ -943,6 +949,11 @@ func _check_text_tags() -> String:
 	var shown: String = tags.resolve("${FACTION:cartographers_guild} sells ${GEAR:berry_pouch}")
 	if shown != "Cartographer's Guild sells Berry pouch":
 		return "faction and gear tags show %s" % shown
+	var fang: GearItem = GearItem.new()
+	fang.name = "${MONSTER:ombulumo} fang"
+	fang.rarity = "loose"
+	if fang.described() != "Ombulumo fang (Loose)":
+		return "a gear name's tag shows as %s" % fang.described()
 	var cases: Dictionary[String, String] = {
 		"${BEAST:ombulumo}": "its kind must be one of",
 		"${MONSTER:no_such_toad}": "no MONSTER has the id no_such_toad",

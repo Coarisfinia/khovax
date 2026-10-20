@@ -25,8 +25,9 @@ static func load_gear(directory: String = DIR) -> GearContent:
 	return content
 
 
-## The item `item_id` in words, as the player reads it (#773): a piece of gear by its name, anything
-## else (a material) by its id in words, as the Character tab shows them.
+## The item `item_id` in words, as the player reads it (#773): a piece of gear by its name, its text
+## tags showing the names they stand for (#752), anything else (a material) by its id in words, as
+## the Character tab shows them.
 func name_of(item_id: String) -> String:
 	var item: GearItem = items.get(item_id)
-	return item.name if item != null else item_id.capitalize()
+	return TextTags.shown(item.name) if item != null else item_id.capitalize()
