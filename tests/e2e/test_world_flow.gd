@@ -272,9 +272,36 @@ func _check_held_at_exit() -> String:
 		return "a player walked out through an exit while another machine waited for content"
 	if world.player(0).tile != FlowSteps.FOREST_EXIT:
 		return "a player held at an exit stood on %s, not the exit" % world.player(0).tile
+	var hinted: String = _check_hold_hint(world, held)
+	if not hinted.is_empty():
+		return hinted
 	_walk_in(world, out)
 	if world.instance_of(0) != FlowSteps.GLADE:
 		return "a player held at an exit didn't walk through once no machine waited"
+	return ""
+
+
+## The loading hint at the exit (#1010): over the player held there by `held`, which the last tick
+## ran on, the hint shows; once no command waits, it goes, though the player still presses out.
+func _check_hold_hint(world: World, held: Array[Command]) -> String:
+	# A driver kept out of the tree, so it never starts a world of its own: only its world is read.
+	var session: GameDriver = GameDriver.new()
+	session.world = world
+	session.last_commands = held
+	var hint: ExitHoldHint = ExitHoldHint.new()
+	hint.driver = session
+	hint.show_state()
+	var shown: bool = hint.hints.has(world.player(0).id)
+	var pressing: Array[Command] = [held[0]]
+	session.last_commands = pressing
+	hint.show_state()
+	var gone: bool = hint.hints.is_empty()
+	hint.free()
+	session.free()
+	if not shown:
+		return "no loading hint showed over a player held at an exit"
+	if not gone:
+		return "the loading hint at an exit stayed once no command waited"
 	return ""
 
 

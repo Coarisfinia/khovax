@@ -23,17 +23,25 @@ func requires() -> Array[String]:
 func step(state: GameState, commands: Array[Command]) -> void:
 	if Command.any_waiting(commands):
 		return
-	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for player: Entity in state.entities:
-		if player.slot == Entity.NO_SLOT:
-			continue
-		var command: Command = Command.of(commands, player.slot)
-		var walk: Walk = movement.walk(player.id)
-		if command == null or walk == null or walk.is_moving():
-			continue
-		var target: String = _exit_towards(state.region, player.tile, command.move)
+		var target: String = pressed_out(state, player, commands)
 		if not target.is_empty():
-			state.events.append(_taken(player, target, command.move))
+			var side: int = Command.of(commands, player.slot).move
+			state.events.append(_taken(player, target, side))
+
+
+## The blueprint `player` presses out towards with their command among `commands`: a player
+## standing on an exit tile, not mid-step, moving towards the exit's side; "" otherwise. Views read
+## it too (ExitHoldHint, #1010), so they show the hold exactly where the rule holds.
+static func pressed_out(state: GameState, player: Entity, commands: Array[Command]) -> String:
+	if player.slot == Entity.NO_SLOT:
+		return ""
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	var command: Command = Command.of(commands, player.slot)
+	var walk: Walk = movement.walk(player.id) if movement != null else null
+	if command == null or walk == null or walk.is_moving():
+		return ""
+	return _exit_towards(state.region, player.tile, command.move)
 
 
 ## The event of `player` leaving through an exit to `target` on side `side`.

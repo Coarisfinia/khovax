@@ -15,16 +15,6 @@ const MARK: Vector3 = Vector3(0.12, 0.06, 0.24)
 ## The ring shown for each knocked-down player, by entity id: a piece on their tile holding the
 ## marks.
 var rings: Dictionary[int, HexPiece] = {}
-var _ink: StandardMaterial3D
-var _box: BoxMesh
-
-
-func _ready() -> void:
-	_ink = StandardMaterial3D.new()
-	_ink.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_ink.albedo_color = Toon.INK
-	_box = BoxMesh.new()
-	_box.size = MARK
 
 
 func _process(_delta: float) -> void:
@@ -69,17 +59,6 @@ func filled_marks(entity_id: int) -> int:
 func _add_ring() -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.05
-	for i: int in SEGMENTS:
-		piece.add_child(_mark(TAU * i / SEGMENTS))
+	InkRing.add_marks(piece, SEGMENTS, SEGMENTS, RADIUS, MARK)
 	add_child(piece)
 	return piece
-
-
-## One of a ring's marks, `angle` round it, facing along the ring.
-func _mark(angle: float) -> MeshInstance3D:
-	var mark: MeshInstance3D = MeshInstance3D.new()
-	mark.mesh = _box
-	mark.material_override = _ink
-	mark.position = Vector3(sin(angle), 0.0, cos(angle)) * RADIUS
-	mark.rotation.y = angle
-	return mark

@@ -167,6 +167,7 @@ func _step() -> bool:
 	var commands: Array[Command] = schedule.take(tick)
 	var before: GameState = state
 	world.step(commands)
+	last_commands = commands
 	recording.record(world, commands)
 	hashes[tick] = world.state_hash()
 	var _forgot: bool = hashes.erase(tick - HASH_HISTORY)
