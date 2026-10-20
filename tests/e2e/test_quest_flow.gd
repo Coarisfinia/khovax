@@ -64,7 +64,7 @@ const REACH_BEACH: String = (
 	+ "{\"condition\": \"reached\", \"place\": \"beach\", \"ends\": \"reach_beach\"}]}"
 )
 ## The dialog the answered steps ask about (#636).
-const SCOUT: String = "guild_scout_greeting"
+const SCOUT: String = "teska_na_amvrel_greeting"
 ## A quest that asks to promise the scout to look at the glade, in the scout's dialog; its dialog
 ## and answer are left open.
 const PROMISE: String = (
@@ -1076,20 +1076,20 @@ func _check_emitted() -> String:
 
 
 ## A choice taken by an answer (#636): leaving the scout takes the way to a domination, past the
-## chest that asking about the glade leads to, and the tab shows both ways as answers.
+## chest that asking about Lumwen Hoal leads to, and the tab shows both ways as answers.
 func _check_answered_choice() -> String:
 	var choice: String = "{\"condition\": \"answered\", \"dialog\": \"%s\", " % SCOUT
 	choice += "\"answer\": \"%s\", \"next\": \"%s\"}"
 	var text: String = "{\"id\": \"fork\", \"name\": \"N\", \"steps\": [{\"choices\": "
 	text += "[%s, %s]}, " % [
-		choice % ["ask_about_glade", "won"],
+		choice % ["ask_about_lumwen_hoal", "won"],
 		choice % ["leave_scout", "lost"],
 	]
 	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\"}, "
 	text += "{\"id\": \"lost\", \"condition\": \"dominated\", \"ends\": \"fork\"}]}"
 	var quests: QuestTracker = QuestTracker.new()
 	quests.book["fork"] = QuestDefinition.parse("fork", text, {})
-	var choosing: Array[String] = ["Now: Answer ask about glade or answer leave scout"]
+	var choosing: Array[String] = ["Now: Answer ask about lumwen hoal or answer leave scout"]
 	var applied: String = quests.book["fork"].problem
 	if not applied.is_empty() or QuestsTab.quest_lines(quests, "fork") != choosing:
 		return "a choice between answers isn't shown as one: %s %s" % [
@@ -1433,7 +1433,7 @@ func _check_dialog_ids() -> String:
 	var line: String = ""
 	if content.problem.is_empty():
 		line = QuestListView.step_line(content.quests["promise"].steps[0], 0)
-	if line != "Tell the Guild Scout: \"I'll take a look.\"":
+	if line != "Tell Teska na Amvrel: \"I'll take a look.\"":
 		return "the scout's promise didn't read as the dialog words it: %s %s" % [
 			content.problem,
 			line,

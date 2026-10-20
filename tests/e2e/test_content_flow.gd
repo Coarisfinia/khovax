@@ -1031,27 +1031,27 @@ func _pair_problem(text_x: String, text_y: String) -> String:
 	return problem
 
 
-## The dialogs load (#618): the guild scout's greeting reads on from its first line to its second,
-## where asking about the glade leads to the line about it and the farewell ends it, as the glade
+## The dialogs load (#618): Teska na Amvrel's greeting reads on from its first line to its second,
+## where asking about Lumwen Hoal leads to the line about it and the farewell ends it, as that
 ## line's only answer does too. An answer the line doesn't offer leads nowhere. The greeting doesn't
 ## lock, and only the promise, which a quest may count, commits (#891).
 func _check_dialogs() -> String:
 	var content: DialogContent = DialogContent.load_dialogs()
-	if not content.problem.is_empty() or not content.dialogs.has("guild_scout_greeting"):
+	if not content.problem.is_empty() or not content.dialogs.has("teska_na_amvrel_greeting"):
 		return "the dialogs didn't load: " + content.problem
-	var greeting: Dialog = content.dialogs["guild_scout_greeting"]
+	var greeting: Dialog = content.dialogs["teska_na_amvrel_greeting"]
 	var walked: Array[int] = [
 		greeting.after(0),
-		greeting.after(1, "ask_about_glade"),
+		greeting.after(1, "ask_about_lumwen_hoal"),
 		greeting.after(1, "leave_scout"),
 		greeting.after(2, "promise_to_look"),
 		greeting.after(1, "no_such_answer"),
-		greeting.after(0, "ask_about_glade"),
+		greeting.after(0, "ask_about_lumwen_hoal"),
 	]
-	if greeting.speaker != "Guild Scout" or walked != [1, 2, -1, -1, -1, -1]:
-		return "the guild scout's greeting reads %s, by %s" % [walked, greeting.speaker]
+	if greeting.speaker != "Teska na Amvrel" or walked != [1, 2, -1, -1, -1, -1]:
+		return "Teska na Amvrel's greeting reads %s, by %s" % [walked, greeting.speaker]
 	var commits: Array[bool] = []
-	for answer_id: String in ["ask_about_glade", "leave_scout", "promise_to_look"]:
+	for answer_id: String in ["ask_about_lumwen_hoal", "leave_scout", "promise_to_look"]:
 		commits.append(greeting.answer_of(answer_id).commits)
 	if greeting.lock or commits != [false, false, true]:
 		return "the greeting's lock reads %s and its answers commit %s" % [greeting.lock, commits]
@@ -1160,9 +1160,10 @@ func _check_text_tags() -> String:
 	for text: String in texts:
 		if not tags.problem_in(text).is_empty():
 			return "the text \"%s\" has a broken tag: %s" % [text, tags.problem_in(text)]
-	var glade: String = DialogContent.load_dialogs().dialogs["guild_scout_greeting"].lines[2].text
-	if not TextTags.shown(glade).begins_with("A glade, thick with Ombulumo. Something"):
-		return "the scout's glade line shows %s" % TextTags.shown(glade)
+	var greeting: Dialog = DialogContent.load_dialogs().dialogs["teska_na_amvrel_greeting"]
+	var ahead: String = greeting.lines[2].text
+	if not TextTags.shown(ahead).begins_with("Lumwen Hoal, thick with Ombulumo. Something"):
+		return "the scout's Lumwen Hoal line shows %s" % TextTags.shown(ahead)
 	var shown: String = tags.resolve("${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}")
 	if shown != "Amvrel Velmarai sells Berry pouch":
 		return "faction and gear tags show %s" % shown

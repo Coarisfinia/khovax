@@ -4,7 +4,7 @@ extends RefCounted
 ## who never fights (owner's worldbuilding rules): their id, which quests and the profile name them
 ## by, and the dialog talking to them opens ("" for none, #635). The legend says
 ## `a person to talk to, <npc id>`, with `, saying <dialog id>` after it for a dialog, e.g.
-## `a person to talk to, guild_scout, saying guild_scout_greeting`.
+## `a person to talk to, teska_na_amvrel, saying teska_na_amvrel_greeting`.
 
 ## How a person's legend meaning begins, and what it says before the dialog they open.
 const NPC: String = "a person to talk to, "

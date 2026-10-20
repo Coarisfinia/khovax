@@ -376,13 +376,13 @@ func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 	return _check_dialog_waits(driver, keeper)
 
 
-## With the guild scout's greeting open for the player, neither a due save nor quitting saves the
+## With Teska na Amvrel's greeting open for the player, neither a due save nor quitting saves the
 ## world; once its last answer closes it, the world is saved WorldKeeper.AFTER_HOLD_MSEC later, not
 ## before.
 func _check_dialog_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
-	var greeting: String = "guild_scout_greeting"
+	var greeting: String = "teska_na_amvrel_greeting"
 	var later: int = ProfileKeeper.SAVE_INTERVAL_MSEC * 10
-	driver.input.choose_answer(DialogFeature.code(greeting, "ask_about_glade"))
+	driver.input.choose_answer(DialogFeature.code(greeting, "ask_about_lumwen_hoal"))
 	driver.advance(STEP)
 	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
 	var before: int = _saved_tick()

@@ -1,0 +1,27 @@
+// Teska na Amvrel, a scout of the Amvrel Velmarai (#484, #976, #977), greets the player (#618),
+// who talks to them east of the glade's start (#557). Asking about Lumwen Hoal leads on; either
+// farewell ends it.
+{
+	"id": "teska_na_amvrel_greeting",
+	"speaker": "Teska na Amvrel",
+	"speaker_codex": {
+		"entry": "A scout of the Amvrel Velmarai who walks the uncharted wilds ahead of their charts and greets the newcomers at the edge of Lumwen Hoal. The name is Hearth-speech, the everyday tongue: the given name Teska, then na Amvrel, sworn to the guild by its oath word.",
+		"gloss": "Teska, sworn to the guild"
+	},
+	"lock": false,
+	"lines": [
+		{ "text": "Careful where you step. The ground here hasn't been charted yet." },
+		{
+			"text": "The ${FACTION:amvrel_velmarai} pay well for anyone who walks the wild places and comes back to tell of them.",
+			"answers": [
+				{ "id": "ask_about_lumwen_hoal", "text": "What lies ahead?", "next": "lumwen_hoal" },
+				{ "id": "leave_scout", "text": "I'll find my own way." }
+			]
+		},
+		{
+			"id": "lumwen_hoal",
+			"text": "Lumwen Hoal, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still.",
+			"answers": [{ "id": "promise_to_look", "text": "I'll take a look.", "commits": true }]
+		}
+	]
+}

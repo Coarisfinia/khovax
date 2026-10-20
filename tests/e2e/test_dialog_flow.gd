@@ -7,8 +7,9 @@ extends RefCounted
 ## nothing, nor does an answer no dialog has. The card follows the simulation's state (#890, #898):
 ## it moves on or closes once the answer reaches it, also for an answer that came only through the
 ## commands, as in a replay, even from a line before the one that offers it. While the menu is open
-## over a dialog, its buttons rest. A dialog that doesn't exist doesn't open. In the glade, the
-## guild scout stands east of the start (#557): walking into them talks to them, raised as
+## over a dialog, its buttons rest. A dialog that doesn't exist doesn't open. In the glade, Teska
+## na Amvrel, the guild's scout, stands east of the start (#557): walking into them talks to them,
+## raised as
 ## NpcTalkedTo, which opens their greeting in the state, saved with the world: a world resumed with
 ## it open shows the card again. The scout never steps aside, and a held direction talks once,
 ## until the player stops and walks into them again. A locking dialog holds its player (#912): they
@@ -18,9 +19,9 @@ extends RefCounted
 ## and the held one again from the tick after the dialog lets go.
 
 const PROFILE: String = "user://test_dialog_profile.json"
-const GREETING: String = "guild_scout_greeting"
+const GREETING: String = "teska_na_amvrel_greeting"
 const SCREEN: Vector2i = Vector2i(1152, 648)
-## Where the guild scout stands in the glade, east of the start, and the tile west of them.
+## Where Teska na Amvrel stands in the glade, east of the start, and the tile west of them.
 const SCOUT: Vector2i = Vector2i(3, 0)
 const BESIDE_SCOUT: Vector2i = Vector2i(2, 0)
 const EAST: int = 0
@@ -67,14 +68,15 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## The greeting opens at its first line, by the guild scout, with one button to read on, which has
+## The greeting opens at its first line, by Teska na Amvrel, with one button to read on, which has
 ## the focus; the player stands while it's open; A reads on to the line with two answers, raising
 ## nothing.
 func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
 	if not screen.open(GREETING) or not driver.input.in_dialog:
-		return "the guild scout's greeting didn't open"
+		return "Teska na Amvrel's greeting didn't open"
 	await tree.process_frame
-	if screen.shown_speaker() != "Guild Scout" or not screen.shown_line().begins_with("Careful"):
+	if (screen.shown_speaker() != "Teska na Amvrel"
+			or not screen.shown_line().begins_with("Careful")):
 		return "the greeting showed %s saying %s" % [screen.shown_speaker(), screen.shown_line()]
 	if screen.choices() != [DialogScreen.READ_ON_TEXT] or _focused(screen) != 0:
 		return "the first line offered %s, focused %d" % [screen.choices(), _focused(screen)]
@@ -92,7 +94,7 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 
 
 ## The d-pad moves the focus down to the second answer and back up; A chooses the first, which
-## leads to the line about the glade and is raised for the player as DialogAnswered, also into the
+## leads to the line about Lumwen Hoal and is raised for the player as DialogAnswered, also into the
 ## replay. An answer no dialog has raises nothing.
 func _choose_with_controller(
 	tree: SceneTree,
@@ -108,10 +110,12 @@ func _choose_with_controller(
 	_press_pad(screen, JOY_BUTTON_A)
 	var answered: Array[DialogAnswered] = _answered(driver)
 	if screen.line_index != 2 or screen.choices() != ["I'll take a look."]:
-		return "asking about the glade showed %s" % [screen.choices()]
-	var code: int = DialogFeature.code(GREETING, "ask_about_glade")
-	if answered.size() != 1 or answered[0].answer != "ask_about_glade" or answered[0].slot != 0:
-		return "asking about the glade raised %d answers" % answered.size()
+		return "asking about Lumwen Hoal showed %s" % [screen.choices()]
+	var code: int = DialogFeature.code(GREETING, "ask_about_lumwen_hoal")
+	if (answered.size() != 1
+			or answered[0].answer != "ask_about_lumwen_hoal"
+			or answered[0].slot != 0):
+		return "asking about Lumwen Hoal raised %d answers" % answered.size()
 	if answered[0].dialog != GREETING or answered[0].entity_id != driver.state.player(0).id:
 		return "the answer named %s for entity %d" % [answered[0].dialog, answered[0].entity_id]
 	if not driver.recording.changes.has(code):
@@ -144,7 +148,8 @@ func _rest_under_menu(
 	return ""
 
 
-## A click on the glade line's one answer chooses it, which ends the dialog: the card closes, the
+## A click on the Lumwen Hoal line's one answer chooses it, which ends the dialog: the card closes,
+## the
 ## player can walk again, and the answer is raised.
 func _choose_with_click(
 	tree: SceneTree,
@@ -175,7 +180,7 @@ func _choose_with_click(
 ## the card still shows the first line skips to where it leads, and the last one closes the card.
 func _follow_commands(driver: GameDriver, screen: DialogScreen) -> String:
 	var _opened: bool = screen.open(GREETING)
-	driver.input.choose_answer(DialogFeature.code(GREETING, "ask_about_glade"))
+	driver.input.choose_answer(DialogFeature.code(GREETING, "ask_about_lumwen_hoal"))
 	var _asked: Array[DialogAnswered] = _answered(driver)
 	if screen.line_index != 2:
 		return "an answer through the commands moved the card to line %d" % screen.line_index
@@ -186,7 +191,7 @@ func _follow_commands(driver: GameDriver, screen: DialogScreen) -> String:
 	return ""
 
 
-## In the glade, the player walks east with the keys into the guild scout, who stops them: that
+## In the glade, the player walks east with the keys into Teska na Amvrel, who stops them: that
 ## talks to the scout once, for the player, and opens the scout's greeting.
 func _talk_to_scout(
 	tree: SceneTree,
@@ -209,13 +214,13 @@ func _talk_to_scout(
 			driver.state.player(0).tile,
 			talked.size(),
 		]
-	if talked[0].npc != "guild_scout" or talked[0].slot != 0 or talked[0].dialog != GREETING:
+	if talked[0].npc != "teska_na_amvrel" or talked[0].slot != 0 or talked[0].dialog != GREETING:
 		return "talking named %s and %s for slot %d" % [
 			talked[0].npc,
 			talked[0].dialog,
 			talked[0].slot,
 		]
-	if not screen.is_open() or screen.shown_speaker() != "Guild Scout":
+	if not screen.is_open() or screen.shown_speaker() != "Teska na Amvrel":
 		return "talking to the scout didn't open their greeting"
 	return _resume_open(driver, screen)
 
@@ -258,7 +263,7 @@ static func _talk_once_while_held() -> String:
 ## The scout's greeting, made to lock, holds the player once talked to: walking west leaves them
 ## beside the scout, and the wild monsters pause, with them alone in the glade. Leaving the scout
 ## frees them, and the wild monsters go on. Made not to lock, it holds nobody until the answer
-## asking about the glade, made to commit, is chosen.
+## asking about Lumwen Hoal, made to commit, is chosen.
 static func _hold_while_locked() -> String:
 	var state: GameState = _held_by_scout(1)
 	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
@@ -273,10 +278,10 @@ static func _hold_while_locked() -> String:
 	if dialogs.holds(0) or not dialogs.dialog_of(0).is_empty() or not wild.enabled:
 		return "leaving the scout didn't free the player and the wild monsters"
 	dialogs.locking[GREETING] = false
-	dialogs.committing[DialogFeature.code(GREETING, "ask_about_glade")] = true
+	dialogs.committing[DialogFeature.code(GREETING, "ask_about_lumwen_hoal")] = true
 	Simulation.step(state, FlowSteps.command(EAST))
 	var talked: bool = dialogs.dialog_of(0) == GREETING and not dialogs.holds(0)
-	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_glade")))
+	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_lumwen_hoal")))
 	if not talked or not dialogs.holds(0) or dialogs.line_of(0) != 2:
 		return "the committing answer didn't hold the player from it on"
 	return _held_untouched()
@@ -313,7 +318,7 @@ static func _held_untouched() -> String:
 	return ""
 
 
-## The glade with `players` players, the first beside the guild scout, whose greeting, made to
+## The glade with `players` players, the first beside Teska na Amvrel, whose greeting, made to
 ## lock, holds them once they've walked into the scout.
 static func _held_by_scout(players: int) -> GameState:
 	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, players)
