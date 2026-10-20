@@ -21,16 +21,17 @@ activity=$(adb shell cmd package resolve-activity --brief -c android.intent.cate
 # early when Godot dies at startup (!_start_success), which the emulator does now and then (#957).
 play() {
   adb logcat -c
-  echo "launching $activity"
-  # The test APK plays its flow on every start (game/test_mode.gd).
-  adb shell am start -n "$activity"
   result=""
+  echo "launching $activity"
+  # The test APK plays its flow on every start (game/test_mode.gd). A launch adb itself fails counts
+  # as a start that never reported, so it gets the retry too.
+  adb shell am start -n "$activity" || { echo "the launch itself failed"; return 0; }
   local deadline=$((SECONDS + 180)) log
   while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
     sleep 2
     # Only the game's log tag, read into a variable first: grep on a pipe under pipefail can fail
     # the whole test for the wrong reason.
-    log=$(adb logcat -d -s godot:I godot:E || true)
+    log=$(adb logcat -d -s godot:I || true)
     result=$(grep -oE "$result_line" <<< "$log" | tail -1 || true)
     [ -n "$result" ] || ! grep -q '!_start_success' <<< "$log" || break
   done
