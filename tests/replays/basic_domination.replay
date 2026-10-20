@@ -1,6 +1,5 @@
 {
 	"format": 18,
-	"rules": "46395df3dbf5195d",
 	"instance": "basic",
 	"seed": "42",
 	"players": 1,
@@ -14,29 +13,6 @@
 		[],
 		[],
 		[]
-	],
-	"features": [
-		"movement",
-		"knockdown",
-		"trail",
-		"health",
-		"wild_monsters",
-		"domination",
-		"wild_attacks",
-		"spikes",
-		"domination_loot",
-		"enrage",
-		"fog",
-		"triggers",
-		"companions",
-		"companion_swaps",
-		"revive_items",
-		"type_effectiveness",
-		"companion_attacks",
-		"specials",
-		"harvest",
-		"dialogs",
-		"territory"
 	],
 	"ticks": 375,
 	"changes": [
@@ -300,11 +276,5 @@
 		0,
 		0,
 		0
-	],
-	"checkpoints": {
-		"100": "937303366",
-		"200": "1642471378",
-		"300": "1847032565",
-		"375": "175021940"
-	}
+	]
 }

@@ -1,11 +1,13 @@
 # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (lists the rule change files, #736)
 class_name RulesChanges
 extends RefCounted
-## The id of the rules (#736, #876), recorded in every replay and world save: a digest of the rule
-## changes, one file each in core/rules_changes/. A change that makes existing replays play out
+## The id of the rules (#736, #876), held by every world save and every replay the game records (a
+## golden replay holds only its inputs): a digest of the rule changes, one file each in
+## core/rules_changes/. A change that makes existing replays play out
 ## differently adds its file there, `<issue>-<slug>.md` with the issue in its frontmatter and one
-## line on what plays differently, and rehashes the golden replays in the same change
-## (tests/replays/rehash.gd): an old replay then fails with a clear message, not a mismatch.
+## line on what plays differently: CI fails a change that plays the reference replays differently
+## from its parent without one (tools/rules_compare.sh), and a replay recorded under older rules
+## then fails with a clear message, not a mismatch.
 ## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
 ## the folder is append-only (tools/rules_changes_check.sh): a file is never deleted or renamed.
 ## Git keeps when each arrived and its pull request

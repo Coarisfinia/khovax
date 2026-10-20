@@ -1,6 +1,5 @@
 {
 	"format": 18,
-	"rules": "46395df3dbf5195d",
 	"instance": "glade",
 	"seed": "7",
 	"players": 1,
@@ -14,34 +13,6 @@
 		[],
 		[],
 		[]
-	],
-	"features": [
-		"movement",
-		"knockdown",
-		"trail",
-		"health",
-		"wild_monsters",
-		"domination",
-		"wild_attacks",
-		"spikes",
-		"domination_loot",
-		"enrage",
-		"fog",
-		"exits",
-		"triggers",
-		"entering",
-		"hiding",
-		"npcs",
-		"chests",
-		"companions",
-		"companion_swaps",
-		"revive_items",
-		"type_effectiveness",
-		"companion_attacks",
-		"specials",
-		"harvest",
-		"dialogs",
-		"territory"
 	],
 	"ticks": 627,
 	"changes": [
@@ -2671,14 +2642,5 @@
 		0,
 		0,
 		0
-	],
-	"checkpoints": {
-		"100": "217161172",
-		"200": "3374588043",
-		"300": "1703752353",
-		"400": "3993750446",
-		"500": "3620513920",
-		"600": "1710889377",
-		"627": "3990181885"
-	}
+	]
 }

@@ -18,7 +18,8 @@ folder=core/rules_changes
 flow_scripts=(tests/apk/apk_flow.gd tests/e2e/test_apk_flow.gd)
 flow_output='^const EXPECTED_HASH'
 
-# A replay's inputs: everything but what a rehash writes (Replay.rehash), as canonical JSON.
+# A replay's inputs: everything but what a rehash writes (Replay.rehash), which a reference replay
+# no longer holds (#876), as canonical JSON.
 inputs() { git show "$1:$replays/$2" | jq -S 'del(.rules, .checkpoints, .features)'; }
 
 # Where two reports first differ for one replay: its first differing checkpoint, else its final

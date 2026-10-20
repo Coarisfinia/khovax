@@ -104,7 +104,7 @@ jobs:
         timeout-minutes: 5
         run: bash tools/determinism_check.sh
 
-      - name: "🔖 Check a changed golden replay comes with a rules change"
+      - name: "🔖 Check the rule change files"
         # The parent is the base on a pull request's merge commit, the queue's previous commit in
         # the merge queue, and the previous commit on main (squash merges only).
         run: bash tools/rules_changes_check.sh HEAD^1

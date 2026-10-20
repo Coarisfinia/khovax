@@ -3,7 +3,8 @@ extends RefCounted
 ## A recorded session: how it started and every tick's commands for every player, enough to play it
 ## again and end in exactly the same state (#35). A session plays one world (#158): it starts in one
 ## instance and steps every instance a player walks into. The driver records every session; golden
-## replays in tests/replays/ are played by CI. Saved as JSON text by ReplayFile (#281). A session
+## replays in tests/replays/ hold only their inputs, which CI plays on each commit and its parent
+## (tests/replays/outcomes.gd, #876). Saved as JSON text by ReplayFile (#281). A session
 ## that resumed a saved world (#119) starts from that world, which the replay holds as its starting
 ## world.
 
@@ -23,7 +24,8 @@ var players: int = 1
 ## session starts.
 var carried: Array[CarriedMonsters] = []
 ## The rules' id (RulesChanges) and the instance's feature ids when it was recorded: a replay of
-## other rules would play out differently, so playback refuses it with a clear message.
+## other rules would play out differently, so playback refuses it with a clear message. Both are
+## empty in a replay of inputs only.
 var rules: String = RulesChanges.id()
 var features: Array[String] = []
 var ticks: int = 0
@@ -84,12 +86,10 @@ func finish(world: World) -> void:
 ## Plays the replay from its start, as fast as possible, and checks every checkpoint. Returns why
 ## it doesn't match, or "" when it does; `played` holds the final state.
 func play() -> String:
+	if problem.is_empty() and rules.is_empty():
+		problem = "the replay holds only its inputs, with nothing recorded to check"
 	if problem.is_empty() and rules != RulesChanges.id():
-		problem = (
-			"recorded with rules %s, this build has %s; if the rules changed on purpose, "
-			% [rules, RulesChanges.id()]
-			+ "rehash the golden replays (tests/replays/rehash.gd)"
-		)
+		problem = "recorded with rules %s, this build has %s" % [rules, RulesChanges.id()]
 	if problem.is_empty():
 		problem = _setup_problem()
 	# Without a final checkpoint, a cut-off replay would pass without any state being compared.
@@ -100,8 +100,8 @@ func play() -> String:
 	return problem
 
 
-## Plays the replay under the current rules and takes them over, with fresh checkpoints: for golden
-## replays after a rules change made on purpose. Returns why it can't, or "".
+## Plays the replay under the current rules and takes them over, with fresh checkpoints: what a
+## replay of inputs only plays out to in this build. Returns why it can't, or "".
 func rehash() -> String:
 	if problem.is_empty():
 		problem = _setup_problem()

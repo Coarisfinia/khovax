@@ -4,6 +4,9 @@ extends RefCounted
 ## JSON
 ## numbers can't hold every 64-bit integer exactly. Every field is checked for its shape as it's
 ## read, rather than silently read as 0. Recording and playing a replay is Replay's.
+## A reference replay (tests/replays/, #876) holds only its inputs: its start and commands, without
+## the rules, features and checkpoints a recorded one holds, which this build works out by playing
+## it (Replay.rehash). The fields a replay leaves out are left out of its text too.
 
 ## The file format (18 since the rules are recorded as their id, not as a count, #876); a replay
 ## in another format is refused, not misread. A replay records the id of the rules it was played
@@ -11,7 +14,7 @@ extends RefCounted
 ## which always came with other rules, could never play anyway (#819): like WorldData, only this
 ## format is read.
 const FORMAT: int = 18
-const REQUIRED: Array[String] = ["format", "rules", "instance", "seed", "players", "ticks"]
+const REQUIRED: Array[String] = ["format", "instance", "seed", "players", "ticks"]
 
 
 ## The replay as file text.
@@ -37,6 +40,13 @@ static func to_text(replay: Replay) -> String:
 		"changes": replay.changes,
 		"checkpoints": hashes,
 	}
+	# A replay of inputs only (#876) leaves out what this build works out by playing it.
+	if replay.rules.is_empty():
+		var _no_rules: bool = data.erase("rules")
+	if replay.features.is_empty():
+		var _no_features: bool = data.erase("features")
+	if hashes.is_empty():
+		var _no_checkpoints: bool = data.erase("checkpoints")
 	if not replay.start_world.is_empty():
 		data["world"] = replay.start_world
 	return JSON.stringify(data, "\t", false)
@@ -68,14 +78,14 @@ static func parse(text: String) -> Replay:
 		)
 		return replay
 	# Checked after the format: an older format recorded the rules as a number (#876).
-	if not data["rules"] is String:
+	if not data.get("rules", "") is String:
 		replay.problem = "not a replay: its rules aren't an id"
 		return replay
 	replay.start_world = _start_world(data.get("world", {}))
 	if data.has("world") and replay.start_world.is_empty():
 		replay.problem = "not a replay: its starting world isn't a world's data"
 		return replay
-	replay.rules = str(data["rules"])
+	replay.rules = str(data.get("rules", ""))
 	replay.instance = str(data["instance"])
 	replay.seed_value = str(data["seed"]).to_int()
 	replay.players = _int(data["players"])
@@ -84,7 +94,7 @@ static func parse(text: String) -> Replay:
 		replay.problem = "not a replay: its carried monsters aren't short ids with species"
 		return replay
 	replay.ticks = _int(data["ticks"])
-	var listed: Array = data["features"]
+	var listed: Array = data.get("features", [])
 	replay.features.assign(listed)
 	replay.changes = _ints(data.get("changes"))
 	var by_tick: Dictionary = data.get("checkpoints", {})
@@ -135,7 +145,7 @@ static func _shape_problem(data: Dictionary) -> String:
 		return "not a replay: its seed isn't a whole number"
 	if not _all_numbers(data.get("changes")):
 		return "not a replay: its changes aren't a list of numbers"
-	if not _all_texts(data.get("features")):
+	if not _all_texts(data.get("features", [])):
 		return "not a replay: its features aren't a list of ids"
 	if not _all_lists(data.get("carried", [])):
 		return "not a replay: its carried monsters aren't lists"
