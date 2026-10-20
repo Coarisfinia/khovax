@@ -99,7 +99,8 @@ static func _rolls_of(event: RefCounted) -> Dictionary[int, Dictionary]:
 static func _obtained(loot: Dictionary, where: String) -> Array[QuestFact]:
 	var facts: Array[QuestFact] = []
 	for item: Variant in loot:
-		facts.append(_items(str(item), loot[item], where))
+		var amount: int = loot[item]
+		facts.append(_items(str(item), amount, where))
 	return facts
 
 
