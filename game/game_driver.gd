@@ -61,7 +61,7 @@ func _ready() -> void:
 	if saved == null or not problem.is_empty():
 		start(new_seed())
 	if input != null:
-		sources.append(LocalSource.new(input))
+		sources.append(LocalSource.new(input, self))
 
 
 func _process(delta: float) -> void:

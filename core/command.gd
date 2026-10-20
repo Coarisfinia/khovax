@@ -19,7 +19,7 @@ const NO_REQUEST: int = 0
 ## No kind of request this tick (#818): a command without a request.
 const NO_REQUEST_KIND: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 11
+const VALUE_COUNT: int = 12
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -58,6 +58,11 @@ var request_data: int = 0
 ## and refuses any of them sent again. Every command carries it, so a feature taking a request
 ## forgets as it records.
 var acknowledged: int = NO_REQUEST
+## Whether the machine that sent the command still lacks content an instance next to a player's
+## loads from (#816, InstanceSource.cached). Every machine plays every instance, so while any
+## command of a tick says so, nobody walks through an exit (ExitFeature): the walk holds at the
+## edge for every player alike, and no instance ever loads content that isn't there yet.
+var waiting: bool = false
 
 
 func _init(
@@ -78,7 +83,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, request,
-		request_kind, request_data, acknowledged,
+		request_kind, request_data, acknowledged, 1 if waiting else 0,
 	]
 	return values
 
@@ -98,6 +103,7 @@ static func from_values(values: Array[int]) -> Command:
 	command.request_kind = values[8]
 	command.request_data = values[9]
 	command.acknowledged = values[10]
+	command.waiting = values[11] == 1
 	return command
 
 
@@ -119,12 +125,20 @@ func is_valid() -> bool:
 static func is_valid_values(values: Array[int]) -> bool:
 	if values.size() != VALUE_COUNT:
 		return false
-	# The presses: the special and going back to the spawn.
-	var presses: Array[int] = [values[1], values[4]]
+	# The presses (the special and going back to the spawn) and the wait for content.
+	var presses: Array[int] = [values[1], values[4], values[11]]
 	for press: int in presses:
 		if press != 0 and press != 1:
 			return false
 	return from_values(values).is_valid()
+
+
+## Whether any of a tick's `commands` says its machine is still waiting for content (#816).
+static func any_waiting(commands: Array[Command]) -> bool:
+	for command: Command in commands:
+		if command != null and command.waiting:
+			return true
+	return false
 
 
 ## The command of the player in `slot` this tick, or null: a slot without a command (no player

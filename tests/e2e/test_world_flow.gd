@@ -83,6 +83,7 @@ func run(tree: SceneTree) -> String:
 		_check_world,
 		_check_documents,
 		_check_walk_through,
+		_check_held_at_exit,
 		_check_companions,
 		_check_swaps,
 		_check_carry_requests,
@@ -251,6 +252,29 @@ func _check_walk_through() -> String:
 	]
 	if _entered != expected:
 		return "walking there and back entered %s, not %s" % [_entered, expected]
+	return ""
+
+
+## Holding the walk at an exit (#816): while another machine's command says it still waits for
+## content, the player pressing out through the forest's exit stays on it, in the forest, however
+## long they press; once no command waits, the same press takes them into the glade.
+func _check_held_at_exit() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, InstanceBlueprints.FOREST)
+	var out: int = FlowSteps.INTO_GLADE[-1]
+	for direction: int in FlowSteps.INTO_GLADE.slice(0, -1):
+		_walk_in(world, direction)
+	var waiting: Command = Command.new()
+	waiting.waiting = true
+	var held: Array[Command] = [Command.new(out), waiting]
+	for _tick: int in MovementFeature.MOVE_TICKS * 3:
+		world.step(held)
+	if world.instance_of(0) != InstanceBlueprints.FOREST:
+		return "a player walked out through an exit while another machine waited for content"
+	if world.player(0).tile != FlowSteps.FOREST_EXIT:
+		return "a player held at an exit stood on %s, not the exit" % world.player(0).tile
+	_walk_in(world, out)
+	if world.instance_of(0) != InstanceBlueprints.GLADE:
+		return "a player held at an exit didn't walk through once no machine waited"
 	return ""
 
 
