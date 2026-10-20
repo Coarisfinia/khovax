@@ -68,7 +68,7 @@ a second model could use goes into the library or a generic tool, never into one
 - **Running the tools** (owner's rule, #995): long-running work (Blender builds, renders, Godot
   render scripts, GIF assembly) runs in the background (`run_in_background`) and is monitored,
   never in the agent's foreground: keep working and answering messages, check the output files,
-  and react when it finishes. Run renders one at a time on a slow machine, not in parallel.
+  and react when it finishes. Independent renders run in parallel (owner, #1047).
 
 ## 1. Build (Blender script)
 - **Where:** `tools/models/<name>.py` builds the model, and `assets/<name>/<name>.glb` is its output,
@@ -152,6 +152,10 @@ a second model could use goes into the library or a generic tool, never into one
   3. **Animations:** a GIF of each clip in the game, the attack at least.
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
+- **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and
+  the game camera shot), put them in the description and post a comment tagging `@Flixbox`. Then
+  render the rest in parallel, as monitored background jobs, update the description again and
+  post a second comment tagging `@Flixbox` once every visual is in.
 - **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
   then its clips (visual 3). Each PR shows what it adds.
 - **Numbers:** the budget from step 7, and the `check_glb.gd` result.
