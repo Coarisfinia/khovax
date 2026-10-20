@@ -7,7 +7,7 @@
 # strings do (a method called by name, a scene's property), and so does a scene naming a script's
 # path for a class. A name shared with something else counts as used, so it never fails wrongly.
 # Engine callbacks are used by the engine, so they're left out.
-# Usage: tools/unused_code.sh (from the repository's root)
+# Usage: tools/checks/unused_code.sh (from the repository's root)
 set -euo pipefail
 
 # Methods the engine calls itself.

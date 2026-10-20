@@ -7,9 +7,9 @@ extends SceneTree
 ##
 ## Headless, it times the simulation: every tick (on an untimed pass) and every feature's share (on
 ## a timed one), leaving out a warm-up, and checks both passes end in the same state hash:
-##   godot --headless --path . -s res://tools/load_test.gd -- ticks=2000
+##   godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000
 ## Rendered, it runs the real main scene on the load instance and times frames:
-##   godot --path . -s res://tools/load_test.gd -- rendered seconds=20
+##   godot --path . -s res://tools/godot/load_test.gd -- rendered seconds=20
 ## The numbers belong in the PR or issue that measured them, never in docs.
 
 ## The instance it loads, which only this tool plays (#915).

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails when a tracked path repeats a folder name (#442): slices/tiles/data/tiles/ is refused,
 # slices/tiles/data/foo/ is fine. Only folders count, not the file's own name.
-# Usage: tools/repeated_folders.sh (from the repository's root)
+# Usage: tools/checks/repeated_folders.sh (from the repository's root)
 set -euo pipefail
 
 repeated=$(git ls-files | awk -F/ '{

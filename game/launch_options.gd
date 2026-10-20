@@ -32,7 +32,8 @@ var problem: String = ""
 
 
 ## The options in `args` (the user arguments, after `--`); `problem` says what's wrong. Arguments
-## that don't start with `--` are a script's own (tools/load_test.gd's `ticks=2000`), not options.
+## that don't start with `--` are a script's own (tools/godot/load_test.gd's `ticks=2000`), not
+## options.
 static func parse(args: PackedStringArray) -> LaunchOptions:
 	var options: LaunchOptions = LaunchOptions.new()
 	for arg: String in args:

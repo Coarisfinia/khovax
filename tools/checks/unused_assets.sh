@@ -6,7 +6,7 @@
 # parameters). Each pack's own notes (SOURCE.md, its license) and Godot's .import files are left
 # out: they come with the files they describe. Asset paths keep to letters, digits and `._/-`, so
 # a path is always matched whole.
-# Usage: tools/unused_assets.sh (from the repository's root)
+# Usage: tools/checks/unused_assets.sh (from the repository's root)
 set -euo pipefail
 
 named=$(mktemp)

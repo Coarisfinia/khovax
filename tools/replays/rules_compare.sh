@@ -8,7 +8,7 @@
 # flow's scripts changed, or the outcome report itself changed. The label `outcomes-change` on the
 # pull request allows that (#899: the agent adds it and says why, the owner's approval is the
 # gate), which CI passes on as OUTCOMES_CHANGE=true.
-# Usage: [OUTCOMES_CHANGE=true] tools/rules_compare.sh <parent's report> <this commit's report>
+# Usage: [OUTCOMES_CHANGE=true] tools/replays/rules_compare.sh <parent's report> <this commit's report>
 # <parent> (from this commit's repository root; <parent> is the commit the parent's report was made
 # from)
 set -euo pipefail
@@ -39,10 +39,10 @@ first_divergence() {
 }
 
 # CI runs the parent's copy of this script, and falls back to the commit's own only while the
-# parent has none (the pull request that added it). So no commit may remove it, or the next one
-# could bring its own.
-if ! git cat-file -e "HEAD:tools/rules_compare.sh" 2> /dev/null; then
-  echo "::error::tools/rules_compare.sh is removed: the comparison with the parent can't go" >&2
+# parent has none (the pull requests that added it and moved it here, #1037). So no commit may
+# remove it, or the next one could bring its own.
+if ! git cat-file -e "HEAD:tools/replays/rules_compare.sh" 2> /dev/null; then
+  echo "::error::tools/replays/rules_compare.sh is removed: the comparison with the parent can't go" >&2
   exit 1
 fi
 

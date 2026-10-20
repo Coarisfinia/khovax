@@ -5,7 +5,7 @@ extends SceneTree
 ## #412, the slice's own kind's files directly, named for the slice so no folder repeats it, #442,
 ## and any other kind it owns in <kind>/) as plain JSON into build/data-json/<kind>/,
 ## with the comments stripped by the game's own stripper (Jsonc), so CI can check each one against
-## its schema: godot --headless --path . -s res://tools/data_to_json.gd
+## its schema: godot --headless --path . -s res://tools/godot/data_to_json.gd
 
 const TARGET: String = "res://build/data-json/"
 const SLICES: String = "res://slices/"

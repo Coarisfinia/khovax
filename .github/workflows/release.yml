@@ -52,7 +52,7 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          mapfile -t needed < <(bash tools/export_templates.sh | sed 's#^#templates/#')
+          mapfile -t needed < <(bash tools/build/export_templates.sh | sed 's#^#templates/#')
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: "📦 Import the project"

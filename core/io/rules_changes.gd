@@ -6,11 +6,11 @@ extends RefCounted
 ## core/rules_changes/. A change that makes existing replays play out
 ## differently adds its file there, `<issue>-<slug>.md` with the issue in its frontmatter and one
 ## line on what plays differently: CI fails a change that plays the reference replays differently
-## from its parent without one (tools/rules_compare.sh), and a replay recorded under older rules
-## then fails with a clear message, not a mismatch.
+## from its parent without one (tools/replays/rules_compare.sh), and a replay recorded under older
+## rules then fails with a clear message, not a mismatch.
 ## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
-## the folder is append-only (tools/rules_changes_check.sh): a file is never deleted or renamed.
-## Git keeps when each arrived and its pull request
+## the folder is append-only (tools/checks/rules_changes_check.sh): a file is never deleted or
+## renamed. Git keeps when each arrived and its pull request
 ## (`git log --diff-filter=A -- core/rules_changes/`, #758).
 
 const FOLDER: String = "res://core/rules_changes/"

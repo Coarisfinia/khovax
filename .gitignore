@@ -19,5 +19,8 @@ node_modules/
 
 # A local render's window settings (AGENTS.md, "Before you push"); never committed.
 /override.cfg
+
+# uv's environment for the Python tooling (pyproject.toml)
+.venv/
 # Python bytecode from the Blender model scripts (tools/models/lib/).
 __pycache__/

@@ -258,9 +258,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   commands, only in `slices/controls/`, #514) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them: **a slice names only the
-  slices before it** in the order `tools/import_rules.sh` declares once (CI, #821; today's
+  slices before it** in the order `tools/checks/import_rules.sh` declares once (CI, #821; today's
   back-edges are listed there, each with its issue), so a new slice takes its place in it. **The core never depends on
-  a slice** (CI, `tools/import_rules.sh`: no script in `core/` names a class declared in `slices/`
+  a slice** (CI, `tools/checks/import_rules.sh`: no script in `core/` names a class declared in `slices/`
   or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
   region's exits) and events it reads (`ExitTaken`, which the `World` moves a player through) stay
   in the core, and only the rules that run them move; what a slice places on a region (people,
@@ -281,7 +281,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
   `Engine`, `OS`, global randomness, frame `delta`, `float` or float-backed types (`Vector2`, `Color`,
   `Rect2` and the like; `Vector2i` and `Rect2i` are fine), `FileAccess`, `DirAccess` or `JSON`:
-  CI greps for them (`tools/determinism_check.sh`, #572). A file that can't pass yet is exempt only
+  CI greps for them (`tools/checks/determinism_check.sh`, #572). A file that can't pass yet is exempt only
   with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
   `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
@@ -497,7 +497,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
   here (CC0, CC BY with credit), kept next to it. **Each pack lives in `assets/<pack>/`** with its
   license file and a `SOURCE.md` (title, then `- **Author:**`, `- **Source:**`, `- **License:**`);
-  `CREDITS.md` is generated from those by `tools/credits.gd`, and CI fails when it's out of date
+  `CREDITS.md` is generated from those by `tools/godot/credits.gd`, and CI fails when it's out of date
   (owner, #69/#70). Commit only what the game uses, not whole packs.
 
 ### Testing and CI
@@ -553,7 +553,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Never use the `pull_request_target` or `workflow_run` triggers**, and never add self-hosted
   runners to this public repository.
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
-  comment), and Godot, its export templates and gdstyle by checksum, with cache keys that include
+  comment), and Godot, its export templates, gdstyle and uv by checksum, with cache keys that include
   the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both. The
   runner image is named explicitly (`ubuntu-26.04`, not `ubuntu-latest`), so a new image arrives on
   purpose, with the APK build checked, not on GitHub's date.
@@ -563,7 +563,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
   commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
   `rules-compare` job plays them and the APK flow on the commit and on its parent
-  (`tools/rules_compare.sh`, run from the parent's checkout) and fails a difference that comes
+  (`tools/replays/rules_compare.sh`, run from the parent's checkout) and fails a difference that comes
   without a new rule change file. If the change is on purpose, add its file to `core/rules_changes/`
   (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then one line on what plays
   differently linking the issue; no `pr`, which CI refuses: the squash commit that added the file
@@ -574,7 +574,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
-  doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/export_templates.sh`
+  doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/build/export_templates.sh`
   reads from `export_presets.cfg`, and `CREDITS.md` is generated from the assets.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
@@ -603,6 +603,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 
 ### Toolchain
 
+- **The tools live in `tools/`, one subfolder per job** (#1036): `checks/` (CI's checks),
+  `replays/` (comparing replays, load tests and the APK flow), `build/` (export helpers), `godot/`
+  (scripts Godot runs), `models/` (the Blender model scripts) and `scoop/` (pinned manifests). New
+  tooling is Python, run with uv from the root's `pyproject.toml` (`uv run --locked tools/...`).
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't
   available.
 - **`git push` hung on a Windows credential prompt.** In this repository the repo-local credential

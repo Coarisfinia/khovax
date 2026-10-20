@@ -4,7 +4,7 @@
 # release builds, the e2e_test builds) have the same exclude_filter. A filter change then touches
 # them all, or CI says which preset was missed. Every exclude_filter also names tools/*: the
 # developer tools run from the project, never from a build (#921).
-# Usage: tools/export_filters_check.sh (from the repository's root)
+# Usage: tools/checks/export_filters_check.sh (from the repository's root)
 set -euo pipefail
 
 awk -F= '

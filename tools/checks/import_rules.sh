@@ -27,7 +27,7 @@
 #   of a path without its scheme, and no scene or resource names a file by a relative path.
 # Comments don't count (a # outside strings, as the determinism check strips them), so the rules
 # can be explained in them.
-# Usage: tools/import_rules.sh (from the repository's root)
+# Usage: tools/checks/import_rules.sh (from the repository's root)
 set -euo pipefail
 
 failed=0
@@ -204,19 +204,19 @@ for dir in slices/*/; do
   slice=${dir#slices/}
   slice=${slice%/}
   if [ -z "${own_classes[$slice]+set}" ]; then
-    echo "::error::slices/$slice has no place in SLICE_ORDER (tools/import_rules.sh)"
+    echo "::error::slices/$slice has no place in SLICE_ORDER (tools/checks/import_rules.sh)"
     failed=1
   fi
 done
 for slice in "${SLICE_ORDER[@]}"; do
   if [ ! -d "slices/$slice" ]; then
-    echo "::error::SLICE_ORDER names slices/$slice, which doesn't exist (tools/import_rules.sh)"
+    echo "::error::SLICE_ORDER names slices/$slice, which doesn't exist (tools/checks/import_rules.sh)"
     failed=1
   fi
 done
 for exempt in "${!SLICE_EXEMPT[@]}"; do
   if [ -z "${exemption_used[$exempt]:-}" ] || [ -z "${back_edge[$exempt]:-}" ]; then
-    echo "::error::SLICE_EXEMPT's $exempt is no longer needed: drop it (tools/import_rules.sh)"
+    echo "::error::SLICE_EXEMPT's $exempt is no longer needed: drop it (tools/checks/import_rules.sh)"
     failed=1
   fi
 done

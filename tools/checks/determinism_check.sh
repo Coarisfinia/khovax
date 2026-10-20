@@ -4,12 +4,12 @@
 # Feature) without nodes, input, time, engine or OS state, global randomness, frame delta, floats
 # (float-backed engine types such as Vector2 or Color too; Vector2i and Rect2i stay allowed),
 # or file and JSON access (#572: reading happens before a tick, never inside one).
-# Comments are stripped first (a # outside strings, as tools/import_rules.sh does), so the rules
+# Comments are stripped first (a # outside strings, as tools/checks/import_rules.sh does), so the rules
 # can be explained in them.
 # A whole file is exempt while its top comment lines carry the marker below with a reason in
 # parentheses (owner, #515). It marks a workaround to fix later; a marker without a reason fails:
 #   # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (why this file can't pass yet)
-# Usage: tools/determinism_check.sh (from the repository's root)
+# Usage: tools/checks/determinism_check.sh (from the repository's root)
 set -euo pipefail
 
 # What the rules never use, one alternation per kind; add a kind as its own line.

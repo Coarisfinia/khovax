@@ -3,7 +3,7 @@
 # script as before but as many at once as the machine has cores (#923). Every failing script is
 # named, not only the first. A script fails when Godot exits non-zero or when its output has an
 # ERROR: line, even with exit 0 (such as a load cycle through a preloaded scene, #964).
-# Usage: [GODOT=<binary>] tools/script_check.sh (from the repository root; GODOT defaults to godot)
+# Usage: [GODOT=<binary>] tools/checks/script_check.sh (from the repository root; GODOT defaults to godot)
 set -euo pipefail
 
 export GODOT=${GODOT:-godot}

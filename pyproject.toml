@@ -1,0 +1,12 @@
+# The repository's tooling in Python, run with uv (#1036): `uv run tools/<folder>/<script>.py`.
+# Not a package: uv only keeps the Python version and the locked dependencies (uv.lock). The game
+# itself is GDScript; the model scripts run in Blender's own Python, not this one.
+[project]
+name = "khovax-tools"
+version = "0.0.0"
+# The exact Python every machine and CI runs; uv downloads it when it's missing.
+requires-python = "==3.14.8"
+dependencies = []
+
+[tool.uv]
+package = false

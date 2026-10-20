@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Compares two headless load test reports (tools/load_test.gd, #101) for CI (#303): this branch's
+# Compares two headless load test reports (tools/godot/load_test.gd, #101) for CI (#303): this branch's
 # and, on a pull request, its base's, both measured in the same job on the same runner. Prints a
 # Markdown table for the job summary, and fails when this branch's mean tick is more than SLOWER
 # times the base's (plus a small floor, since a tick is microseconds and runners jitter).
-# Usage: tools/load_test_compare.sh <this branch's report> [<base's report>]
+# Usage: tools/replays/load_test_compare.sh <this branch's report> [<base's report>]
 set -euo pipefail
 
 SLOWER=1.5
