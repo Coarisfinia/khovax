@@ -2,9 +2,11 @@ class_name SurveyChoice
 extends Node
 ## Where the Survey (#301) shows and how close, as this machine's player chooses: off, in one of
 ## the screen's corners, see-through over the whole game, or opaque over it; and one of the zoom
-## steps. The `survey` action cycles where it shows, `survey_zoom_in` and `survey_zoom_out` step
-## the zoom. Both start at Auto (#161) and a choice is kept in the player's Settings, the ones
-## Graphics loads and saves, so the file has one owner.
+## steps. The `survey` action (Tab, a controller's Back, #779) cycles where it shows,
+## `survey_zoom_in` and `survey_zoom_out` step the zoom; the controller's triggers zoom only the
+## menu's Survey (SurveyTab), since in the game the right one fires the special attack. Both start
+## at Auto (#161) and a choice is kept in the player's Settings, the ones Graphics loads and saves,
+## so the file has one owner.
 
 ## Where the Survey shows. Saved by number: append new ones, never reorder.
 enum Place {
@@ -40,6 +42,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventJoypadMotion:
+		return
 	var problem: String = ""
 	if event.is_action_pressed("survey"):
 		problem = cycle()

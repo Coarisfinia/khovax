@@ -1,10 +1,10 @@
 class_name SpecialButton
 extends ActionButton
 ## The special attack's touch button (#431): fires this machine's player's companion's special
-## (`special_attack`, #410), as the E key does. It shows an explosion icon for the special and,
-## while it cools
-## down, a circle with the seconds left; it never vanishes (#429), and it's drawn faded while the
-## special can't fire: cooling down, or no wild monster next to the companion to strike.
+## (`special_attack`, #410), as the E key and a controller's right trigger (#779) do. It shows an
+## explosion icon for the special and, while it cools down, a circle with the seconds left; it never
+## vanishes (#429), and it's drawn faded while the special can't fire: cooling down, or no wild
+## monster next to the companion to strike.
 
 @export var driver: Session
 

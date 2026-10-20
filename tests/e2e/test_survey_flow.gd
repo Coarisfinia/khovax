@@ -684,7 +684,8 @@ func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32
 
 ## Why the menu's Survey tab (#392) doesn't show what the Survey shows, over the tab, with a line
 ## saying the Cartographer's Guild holds the glade, where the player starts (#637, #712), or its
-## zoom key, its buttons or a pinch on it don't step the one zoom it follows, or "".
+## zoom key, its buttons, a controller's triggers or a pinch on it don't step the one zoom it
+## follows, or a trigger zooms the Survey once the menu is closed, or "".
 func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var tab: SurveyTab = menu.survey_tab
@@ -709,15 +710,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Cartographer's Guild"])
 	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
 		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
-	var key: InputEventAction = InputEventAction.new()
-	key.action = &"survey_zoom_in"
-	key.pressed = true
-	tab.get_viewport().push_input(key)
-	problem += _survey_zoomed_to(choice, "key", SurveyChoice.AUTO_ZOOM + 1)
-	(tab.find_child("ZoomIn", true, false) as Button).pressed.emit()
-	problem += _survey_zoomed_to(choice, "Zoom in button", SurveyChoice.AUTO_ZOOM + 2)
-	(tab.find_child("ZoomOut", true, false) as Button).pressed.emit()
-	problem += _survey_zoomed_to(choice, "Zoom out button", SurveyChoice.AUTO_ZOOM + 1)
+	problem += _survey_tab_zooms(tab, choice)
 	var place: int = choice.place_shown()
 	tab.place_button.pressed.emit()
 	if problem.is_empty() and choice.place_shown() != posmod(place + 1, SurveyChoice.Place.size()):
@@ -733,7 +726,49 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 		problem = "the menu's Survey doesn't follow the zoom"
 	menu.toggle()
 	window.size = kept_size
-	return problem
+	return problem if not problem.is_empty() else _survey_triggers_in_game(choice)
+
+
+## Why the menu's Survey tab's zoom key, its buttons or a controller's triggers (#779) don't step
+## the zoom from AUTO_ZOOM, a trigger one step per pull however long it's held, or "".
+func _survey_tab_zooms(tab: SurveyTab, choice: SurveyChoice) -> String:
+	var key: InputEventAction = InputEventAction.new()
+	key.action = &"survey_zoom_in"
+	key.pressed = true
+	tab.get_viewport().push_input(key)
+	var problem: String = _survey_zoomed_to(choice, "key", SurveyChoice.AUTO_ZOOM + 1)
+	(tab.find_child("ZoomIn", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom in button", SurveyChoice.AUTO_ZOOM + 2)
+	(tab.find_child("ZoomOut", true, false) as Button).pressed.emit()
+	problem += _survey_zoomed_to(choice, "Zoom out button", SurveyChoice.AUTO_ZOOM + 1)
+	_pull_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	problem += _survey_zoomed_to(choice, "right trigger", SurveyChoice.AUTO_ZOOM + 2)
+	_pull_trigger(JOY_AXIS_TRIGGER_LEFT)
+	return problem + _survey_zoomed_to(choice, "left trigger", SurveyChoice.AUTO_ZOOM + 1)
+
+
+## Why a controller's trigger zooms the Survey while the menu is closed, or "": in the game, the
+## right one fires the special attack (#779).
+func _survey_triggers_in_game(choice: SurveyChoice) -> String:
+	var step: int = choice.zoom_step()
+	_pull_trigger(JOY_AXIS_TRIGGER_LEFT)
+	_pull_trigger(JOY_AXIS_TRIGGER_RIGHT)
+	if choice.zoom_step() != step:
+		return "a controller's trigger zoomed the Survey while the menu was closed"
+	return ""
+
+
+## Pulls a controller's trigger, as a real one does: past the dead zone, a little back while it's
+## still held, and let go, each a motion event of its own.
+func _pull_trigger(axis: JoyAxis) -> void:
+	var pull: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	pull.axis = axis
+	for value: float in [1.0, 0.8, 0.0]:
+		# A fresh event each: Godot refuses to parse the same event object twice in one frame.
+		var motion: InputEventJoypadMotion = pull.duplicate() as InputEventJoypadMotion
+		motion.axis_value = value
+		Input.parse_input_event(motion)
+		Input.flush_buffered_events()
 
 
 ## Why the menu's Survey `how` didn't step the zoom to `step`, or "".

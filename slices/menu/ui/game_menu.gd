@@ -1,9 +1,10 @@
 class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it: Character
-## (#391), Settings, the Survey (#392) and Quests (#388). The `menu` action (Escape)
-## opens and closes it, and on touch screens a small button does; the close button at its top right
-## and `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
+## (#391), Settings, the Survey (#392) and Quests (#388). The `menu` action (Escape, a
+## controller's Start, #779) opens and closes it, and on touch screens a small button does; the
+## close button at its top right and `ui_cancel` (a controller's B) close it (#554). It eases in and
+## out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
 ## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows
@@ -40,7 +41,7 @@ const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
 ## How wide their icons are, in font sizes: a little larger than the text, so they read as clearly.
 const ICON_FONTS: float = 1.3
 ## The close button's words on hover: it shows only its icon.
-const CLOSE_TIP: String = "Close the menu (Escape, or B on a controller)"
+const CLOSE_TIP: String = "Close the menu (Escape, or B or Start on a controller)"
 const CLOSE_NAME: String = "Close"
 
 ## The driver, which holds its ticks while the menu pauses the game.
