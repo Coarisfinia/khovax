@@ -6,7 +6,8 @@ extends RefCounted
 ## tiles without jumps.
 ## Real key and touch events reach the actions too. The special attack's key (#410) fires it in the
 ## local player's next command, once per press, and so do the swap keys and the d-pad (#540), which
-## moves nothing. Time is stepped by hand, so the flow is deterministic.
+## moves nothing. Every action has a controller binding (#779). Time is stepped by hand, so the flow
+## is deterministic.
 
 const STEP: float = 1.0 / 60.0
 ## Seconds to walk from one tile to the next.
@@ -42,6 +43,17 @@ const SWAP_PADS: Dictionary[StringName, JoyButton] = {
 	&"swap_1": JOY_BUTTON_DPAD_LEFT,
 	&"swap_2": JOY_BUTTON_DPAD_UP,
 	&"swap_3": JOY_BUTTON_DPAD_RIGHT,
+}
+## The free buttons the special attack, the menu and the Survey took (#779). The triggers zoom the
+## Survey too, which only the menu's Survey hears (the survey flow).
+const PADS: Dictionary[StringName, JoyButton] = {
+	&"menu": JOY_BUTTON_START,
+	&"survey": JOY_BUTTON_BACK,
+}
+const TRIGGERS: Dictionary[StringName, JoyAxis] = {
+	&"special_attack": JOY_AXIS_TRIGGER_RIGHT,
+	&"survey_zoom_in": JOY_AXIS_TRIGGER_RIGHT,
+	&"survey_zoom_out": JOY_AXIS_TRIGGER_LEFT,
 }
 const ARROW_KEYS: Dictionary[String, Key] = {
 	"move_up": KEY_UP,
@@ -178,8 +190,8 @@ func _press_reaches(physical: Key, logical: Key, action: String) -> bool:
 	return pressed
 
 
-## Every action also has its left-stick direction (#11), and no controller button: the d-pad swaps
-## the companion instead (#540).
+## Every movement action also has its left-stick direction (#11), and no controller button: the
+## d-pad swaps the companion instead (#540).
 func _check_gamepad_bindings() -> String:
 	for i: int in ACTIONS.size():
 		var action: String = ACTIONS[i]
@@ -200,7 +212,35 @@ func _check_gamepad_bindings() -> String:
 			has_button = has_button or event is InputEventJoypadButton
 		if not has_stick or has_button:
 			return "%s isn't bound to its stick direction alone among the controller's" % action
-	return _check_swap_bindings()
+	var problem: String = _check_every_action_on_controller()
+	return problem if not problem.is_empty() else _check_swap_bindings()
+
+
+## Every part of the game can be played with a controller (#438): every action but Godot's own
+## `ui_` ones has a controller binding (#779), so a new action can't miss one, and the special
+## attack, the menu and the Survey have theirs.
+func _check_every_action_on_controller() -> String:
+	for action: StringName in InputMap.get_actions():
+		if String(action).begins_with("ui_"):
+			continue
+		var bound: bool = false
+		for event: InputEvent in InputMap.action_get_events(action):
+			bound = bound or event is InputEventJoypadButton or event is InputEventJoypadMotion
+		if not bound:
+			return "%s has no controller binding" % action
+	var press: InputEventJoypadButton = InputEventJoypadButton.new()
+	press.pressed = true
+	for action: StringName in PADS:
+		press.button_index = PADS[action]
+		if not InputMap.event_is_action(press, action):
+			return "%s isn't on its controller button" % action
+	var pull: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	pull.axis_value = 1.0
+	for action: StringName in TRIGGERS:
+		pull.axis = TRIGGERS[action]
+		if not InputMap.event_is_action(pull, action):
+			return "%s isn't on its controller trigger" % action
+	return ""
 
 
 ## Swapping (#540): keys 1 to 3, by their physical position, and the d-pad's left, up and right
