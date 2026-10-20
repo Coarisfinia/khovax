@@ -85,10 +85,8 @@ func _thorn(material: StandardMaterial3D, heading: float) -> Node3D:
 	return pivot
 
 
-## Only for a wild monster in the instance shown: the driver also passes on the events of one the
-## player just left.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
-	for event: RefCounted in events:
+	for event: RefCounted in driver.local_events(events):
 		var struck: SpikesStruck = event as SpikesStruck
 		var monster: Entity = driver.state.entity(struck.monster_id) if struck != null else null
 		if monster != null and FogView.ally_sees(driver.state, monster.tile):

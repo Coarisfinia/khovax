@@ -129,7 +129,7 @@ static func is_shown(state: GameState, entity_id: int) -> bool:
 ## figure of every one that struck, and plays Hit on every one whose HP dropped and still stands.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	show_state()
-	for event: RefCounted in events:
+	for event: RefCounted in driver.local_events(events):
 		var jumped: MonsterJumpedOut = event as MonsterJumpedOut
 		if jumped != null and figures.has(jumped.monster_id):
 			_hop(figures[jumped.monster_id])
