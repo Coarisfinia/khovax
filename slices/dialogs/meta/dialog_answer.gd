@@ -4,8 +4,8 @@ extends RefCounted
 ## to. Choosing one is to raise an event naming the dialog's id and the answer's id, which quests
 ## count and branch on (#573, #624), so an answer's id is never reused or changed once shipped.
 
-## An answer's fields, as the dialogs' schema (slices/dialogs/data/dialogs.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "text", "next"]
+## Where an answer is in the dialogs' schema (Dialog.SCHEMA), which says the fields it may have.
+const POINTER: String = DialogLine.POINTER + "/properties/answers/items"
 
 ## Unique within its dialog.
 var id: String = ""
@@ -27,7 +27,7 @@ static func read(raw: Variant) -> DialogAnswer:
 	answer.id = Content.text_of(data.get("id"))
 	answer.text = Content.text_of(data.get("text"))
 	answer.next = Content.text_of(data.get("next"))
-	answer.problem = Content.unknown_field(data, FIELDS)
+	answer.problem = Content.unknown_field(data, SchemaFields.at(Dialog.SCHEMA, POINTER))
 	if not answer.problem.is_empty():
 		return answer
 	if not Content.is_id(answer.id):

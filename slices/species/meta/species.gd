@@ -5,20 +5,8 @@ extends RefCounted
 ## here is integers and ids, ready for the simulation.
 
 const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pusher"]
-## A species file's fields, as its schema (slices/species/data/species.schema.json) allows them.
-const FIELDS: Array[String] = [
-	"id",
-	"name",
-	"types",
-	"strike_type",
-	"hp",
-	"strength",
-	"speed",
-	"archetype",
-	"special",
-	"player_passive",
-	"self_passive",
-]
+## Its schema, which says the fields a species file may have (SchemaFields, #825).
+const SCHEMA: String = "res://slices/species/data/species.schema.json"
 ## A species' name is one invented word (owner, #717), never a description like "Moss Toad": a
 ## capital, then small letters. Its schema has the same pattern.
 const NAME_PATTERN: String = "^[A-Z][a-z]+$"
@@ -82,8 +70,9 @@ static func parse(file_id: String, text: String) -> Species:
 
 ## Reads `data` into `entry`; returns why it can't, or "".
 static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
+	var fields: Array[String] = SchemaFields.at(SCHEMA)
 	for key: Variant in data:
-		if not FIELDS.has(str(key)):
+		if not fields.has(str(key)):
 			return "field %s isn't a species field" % key
 	var given_id: Variant = data.get("id")
 	var text_id: String = given_id if given_id is String else ""

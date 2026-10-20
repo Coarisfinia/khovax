@@ -13,17 +13,8 @@ const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"
 const SELF_PASSIVE: String = "self_passive"
 const KINDS: Array[String] = [SPECIAL, PLAYER_PASSIVE, SELF_PASSIVE]
-## An ability file's fields, as its schema (slices/species/data/abilities.schema.json) allows them.
-const FIELDS: Array[String] = [
-	"id",
-	"kind",
-	"name",
-	"description",
-	"power",
-	"cooldown_seconds",
-	"strike_type",
-	PathMark.FIELD,
-]
+## Its schema, which says the fields an ability file may have (SchemaFields, #825).
+const SCHEMA: String = "res://slices/species/data/abilities.schema.json"
 
 var id: String = ""
 var kind: String = ""
@@ -59,7 +50,7 @@ static func parse(file_id: String, text: String) -> Ability:
 	ability.cooldown_seconds = Content.amount(data.get("cooldown_seconds"))
 	ability.strike_type = Content.text_of(data.get("strike_type"))
 	ability.path = PathMark.read(data)
-	ability.problem = Content.unknown_field(data, FIELDS)
+	ability.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if ability.problem.is_empty() and (ability.id != file_id or not Content.is_id(ability.id)):
 		ability.problem = "its id must match the file name and be lowercase words with underscores"
 	if ability.problem.is_empty() and not KINDS.has(ability.kind):

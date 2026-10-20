@@ -3,9 +3,9 @@ extends RefCounted
 ## How finishing a quest moves the player's standing with a faction (#532): the faction and the
 ## change, up or down, applied to their profile's Standings when the quest finishes.
 
-## A standing entry's fields, as the quest schema (slices/quests/data/quests.schema.json) allows
-## them.
-const FIELDS: Array[String] = ["faction", "change"]
+## Where a standing entry is in the quest schema (QuestDefinition.SCHEMA), which says the fields it
+## may have.
+const POINTER: String = "/properties/standing"
 ## The largest change either way: the whole scale, from one end to the other.
 const MAX_CHANGE: int = Standings.HIGHEST - Standings.LOWEST
 
@@ -25,7 +25,7 @@ static func parse(entry: Variant) -> QuestStanding:
 		return standing
 	var data: Dictionary = entry
 	standing.faction = Content.text_of(data.get("faction"))
-	standing.problem = Content.unknown_field(data, FIELDS)
+	standing.problem = Content.unknown_field(data, SchemaFields.at(QuestDefinition.SCHEMA, POINTER))
 	if not standing.problem.is_empty():
 		return standing
 	if not Content.is_id(standing.faction):

@@ -5,8 +5,9 @@ extends RefCounted
 ## which ends the dialog or leads to the line it names. Only people speak: monsters never talk
 ## (the owner's worldbuilding rules).
 
-## A dialog file's fields, as its schema (slices/dialogs/data/dialogs.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "speaker", "lines"]
+## Its schema, which says the fields a dialog file, its lines and their answers may have
+## (SchemaFields, #825).
+const SCHEMA: String = "res://slices/dialogs/data/dialogs.schema.json"
 
 var id: String = ""
 ## The player-facing name of who says the lines.
@@ -27,7 +28,7 @@ static func parse(file_id: String, text: String) -> Dialog:
 	var data: Dictionary = json.data
 	dialog.id = Content.text_of(data.get("id"))
 	dialog.speaker = Content.text_of(data.get("speaker"))
-	dialog.problem = Content.unknown_field(data, FIELDS)
+	dialog.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if dialog.problem.is_empty():
 		dialog.problem = dialog._check(file_id, data.get("lines"))
 	return dialog

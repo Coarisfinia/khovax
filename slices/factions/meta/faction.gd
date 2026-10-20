@@ -5,8 +5,8 @@ extends RefCounted
 ## player's standing with it (Standings), five each way from neutral, which has none, and the
 ## instances it holds when a world starts (its territory, #637; Territory).
 
-## A faction file's fields, as its schema (slices/factions/data/factions.schema.json) allows them.
-const FIELDS: Array[String] = ["id", "name", "symbol", "ranks_up", "ranks_down", "territory"]
+## Its schema, which says the fields a faction file may have (SchemaFields, #825).
+const SCHEMA: String = "res://slices/factions/data/factions.schema.json"
 ## The most characters a symbol has, so it fits in its mark.
 const SYMBOL_LENGTH: int = 2
 
@@ -38,7 +38,7 @@ static func parse(file_id: String, text: String) -> Faction:
 	faction.id = Content.text_of(data.get("id"))
 	faction.name = Content.text_of(data.get("name"))
 	faction.symbol = Content.text_of(data.get("symbol"))
-	faction.problem = Content.unknown_field(data, FIELDS)
+	faction.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if faction.problem.is_empty():
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
 	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):

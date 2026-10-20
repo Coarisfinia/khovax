@@ -6,19 +6,9 @@ extends RefCounted
 ## legend places it by its id. Its number is permanent (TileKinds); the rules see only its id,
 ## number and traits.
 
-## A tile blueprint file's fields, as its schema (core/data/schemas/tiles.schema.json) allows them.
-const FIELDS: Array[String] = [
-	"id",
-	"number",
-	"color",
-	"symbol",
-	"model",
-	"scale",
-	"reach",
-	"clearance",
-	"traits",
-]
-const TRAITS: Array[String] = ["walkable", "hides"]
+## Its schema, which says the fields a tile blueprint file and its traits may have (SchemaFields,
+## #825).
+const SCHEMA: String = "res://core/data/schemas/tiles.schema.json"
 ## The largest number a kind may have, so a typo can't make the kind list huge.
 const MAX_NUMBER: int = 255
 ## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
@@ -78,7 +68,10 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
 	blueprint.walkable = walks is bool and walks
 	blueprint.hides = hiding is bool and hiding
-	blueprint.problem = Content.unknown_field(data, FIELDS) + Content.unknown_field(traits, TRAITS)
+	blueprint.problem = (
+		Content.unknown_field(data, SchemaFields.at(SCHEMA))
+		+ Content.unknown_field(traits, SchemaFields.at(SCHEMA, "/properties/traits"))
+	)
 	if blueprint.problem.is_empty():
 		blueprint.problem = blueprint._check(file_id, data, walks)
 	if blueprint.problem.is_empty():
