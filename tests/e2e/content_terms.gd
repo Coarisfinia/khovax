@@ -92,8 +92,8 @@ static func collected() -> ContentTerms:
 		terms.add("faction", faction.id, faction.name)
 	for quest: QuestDefinition in QuestContent.load_quests().quests.values():
 		terms.add("quest", quest.id, quest.name)
-	for realm: String in RealmDocument.ids():
-		terms.add("realm", realm)
+	for realm: Realm in Realms.all():
+		terms.add("realm", realm.id)
 	_add_loot(terms, gear)
 	_add_instances(terms, DialogContent.load_dialogs().dialogs)
 	return terms
