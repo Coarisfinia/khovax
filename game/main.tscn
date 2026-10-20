@@ -53,6 +53,7 @@
 [ext_resource type="Script" path="res://slices/domination/look/seal_fill_view.gd" id="49_seal_fill"]
 [ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
 [ext_resource type="Script" path="res://slices/revive_items/look/revive_tie.gd" id="51_revive_tie"]
+[ext_resource type="Script" path="res://slices/exits/look/exit_hold_hint.gd" id="52_exit_hold_hint"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -144,6 +145,10 @@ driver = NodePath("../../Driver")
 
 [node name="ReviveRing" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
 script = ExtResource("37_revive_ring")
+driver = NodePath("../../Driver")
+
+[node name="ExitHoldHint" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
+script = ExtResource("52_exit_hold_hint")
 driver = NodePath("../../Driver")
 
 [node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]
