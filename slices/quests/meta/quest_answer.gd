@@ -13,6 +13,6 @@ var speaker: String = ""
 var text: String = ""
 
 
-## The answer as one fact, as Gain.answers_chosen holds it (QuestStep.answer_key).
+## The answer as one fact, as an answered QuestFact names it (QuestStep.answer_key).
 func key() -> String:
 	return QuestStep.answer_key(dialog, id)

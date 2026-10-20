@@ -755,7 +755,7 @@ func _check_target_quest(state: GameState, marked: Vector2i) -> String:
 	if not applied.is_empty() or profile.quests.finished.has("old_toad"):
 		return "dominating another Ombulumo counted toward old_toad: " + applied
 	var targeted: Gain = _gain(["ombulumo"], 0)
-	targeted.targets_dominated.append("old_toad")
+	targeted.facts.append(QuestFact.new(QuestStep.TARGET_DOMINATED, "old_toad"))
 	applied = profile.apply(targeted)
 	var done: Array[String] = ["old_toad"]
 	if not applied.is_empty() or profile.quests.finished != done:
@@ -860,7 +860,7 @@ func _check_branching() -> String:
 	var thicket: Profile = Profile.new()
 	thicket.quests.book = book
 	var entered: Gain = Gain.new()
-	entered.instances_entered = ["glade"]
+	entered.facts.append(QuestFact.new(QuestStep.INSTANCE_ENTERED, "glade", "glade"))
 	var applied: String = thicket.apply(entered)
 	var choosing: Array[String] = ["Now: Enter the pond or enter the thicket"]
 	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "glade_fork") != choosing:
@@ -1005,7 +1005,7 @@ func _check_answered_choice() -> String:
 			QuestsTab.quest_lines(profile, "fork"),
 		]
 	var left: Gain = Gain.new()
-	left.answers_chosen = [QuestStep.answer_key(SCOUT, "leave_scout")]
+	left.facts.append(QuestFact.new(QuestStep.ANSWERED, QuestStep.answer_key(SCOUT, "leave_scout")))
 	applied = profile.apply(left) + profile.apply(_gain([], 1))
 	if not applied.is_empty() or not profile.quests.finished.is_empty():
 		return "leaving the scout didn't take the way to a domination: " + applied
@@ -1065,7 +1065,7 @@ static func _obtaining(items: Dictionary[String, int]) -> Gain:
 ## A gain of this player entering the region piece `piece`.
 static func _entering(piece: String) -> Gain:
 	var gain: Gain = Gain.new()
-	gain.pieces_entered = [piece]
+	gain.facts.append(QuestFact.new(QuestStep.ENTERED, piece))
 	return gain
 
 
@@ -1119,7 +1119,7 @@ func _check_counted() -> String:
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
 	profile.quests.book[two.id] = two
 	var at_beach: Gain = _gain(["tikazzir", "ombulumo"], 0)
-	at_beach.places_reached = ["beach"]
+	at_beach.facts.append(QuestFact.new(QuestStep.REACHED, "beach"))
 	var applied: String = profile.apply(at_beach)
 	var progress: QuestProgress = profile.quests.progress.get(two.id)
 	var first: QuestProgress = profile.quests.progress.get("first_domination")
@@ -1270,5 +1270,7 @@ static func _load_written(files: Dictionary[String, String]) -> QuestData:
 func _gain(species: Array[String], chests: int) -> Gain:
 	var gain: Gain = Gain.new()
 	gain.dominated_species = species
-	gain.chests_opened = chests
+	var opened: QuestFact = QuestFact.new(QuestStep.OPENED)
+	for _chest: int in chests:
+		gain.facts.append(opened)
 	return gain
