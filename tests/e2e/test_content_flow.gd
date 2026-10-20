@@ -1141,35 +1141,89 @@ func _check_text_tags() -> String:
 
 
 ## No two things in the content share an id or a name (#909), but those ContentTerms lists, and each
-## keeps to its kind's name rule. Two things sharing one in another case are refused, a thing whose
-## id is its name isn't, a listed term that no longer clashes must be dropped, and a species of two
-## words or whose id isn't its name is refused. A known duplicate holds for its two things only.
+## keeps to its kind's name rule but those it lists. Two things sharing one in another case are
+## refused, a thing whose id is its name isn't, a listed term that no longer clashes must be
+## dropped, and a known duplicate holds for its two things only. The adopted names keep their kinds'
+## rules, and names breaking one, or with another kind's mark, are refused.
 func _check_terms() -> String:
 	var problem: String = ContentTerms.collected().problem()
 	if not problem.is_empty():
 		return "the content's terms don't hold together: " + problem
 	var none: Dictionary[String, int] = {}
 	var terms: ContentTerms = ContentTerms.new()
-	terms.add("species", "xo", "Xo")
-	terms.add("place", "zim_zara", "Zim Zara")
-	if not terms.problem(none).is_empty():
-		return "a species and a place whose ids are their names were refused"
-	terms.add("gear", "xo_pouch", "XO")
-	if not terms.problem(none).begins_with("xo names species xo and gear xo_pouch"):
+	terms.add("species", "kiruzzi", "Kiruzzi", "might")
+	terms.add("faction", "odun_selai", "Odun Selai")
+	if not terms.problem(none, none).is_empty():
+		return "a species and a faction whose ids are their names were refused"
+	terms.add("gear", "kiruzzi_pouch", "KIRUZZI")
+	if not terms.problem(
+		none,
+		none,
+	).begins_with("kiruzzi names species kiruzzi and gear kiruzzi_pouch"):
 		return "a gear's name that's a species' id in capitals wasn't refused"
-	var gone: Dictionary[String, int] = { "xo": 909, "zo": 909 }
-	if not terms.problem(gone).begins_with("KNOWN_DUPLICATES' zo"):
+	var gone: Dictionary[String, int] = { "kiruzzi": 909, "zo": 909 }
+	if not terms.problem(gone, none).begins_with("KNOWN_DUPLICATES' zo"):
 		return "a known duplicate that no longer clashes wasn't refused"
-	var known: Dictionary[String, int] = { "xo": 909 }
-	terms.add("item", "xo")
-	if not terms.problem(known).begins_with("xo names species xo and gear xo_pouch and item xo"):
+	var known: Dictionary[String, int] = { "kiruzzi": 909 }
+	terms.add("item", "kiruzzi")
+	if not terms.problem(
+		known,
+		none,
+	).begins_with("kiruzzi names species kiruzzi and gear kiruzzi_pouch and item kiruzzi"):
 		return "a third thing sharing a known duplicate wasn't refused"
+	return _check_name_rules()
+
+
+## Each kind's name rule (#909) on names it allows ("" expected) and names it refuses (the expected
+## start of the problem), as "<kind> <id> <name> <related>", with "-" for no name or no related.
+func _check_name_rules() -> String:
+	var refused: String = "isn't a name its kind allows"
+	var cases: Dictionary[String, String] = {
+		"species ombulumo Ombulumo growth": "",
+		"special ombulumo_bulum_bolom Bulum-bolom ombulumo": "",
+		"passive ombulumo_mulbo_lulbo Mulbo-lulbo ombulumo": "",
+		"passive tikazzir_zirki_kirki Zirki-kirki tikazzir": "",
+		"realm ardvaun - -": "",
+		"instance dhorvone_stolm - -": "",
+		"region lymwen_hoall - lumwen_hoal": "",
+		"region dhyrvone_stolmm - dhorvone_stolm": "",
+		"piece north_hold_of_lumwen_hoal - -": "",
+		"place sealed_passage - -": "",
+		"faction amvrel_velmarai Amvrel_Velmarai -": "",
+		"person teska_na_amvrel Teska_na_Amvrel -": "",
+		"person ardwe_vo_selin Ardwe_vo_Selin -": "",
+		"unique kel_varun Kel'varun -": "",
+		"gear berry_pouch Berry_pouch -": "",
+		"species xo Xo_Xa -": refused,
+		"species zo Kiruzzi might": "its id must",
+		"species kiruzzi Kiruzzi growth": refused,
+		"species kirdhuzi Kirdhuzi might": "Kirdhuzi has a land-speech sound",
+		"special ombulumo_bulum_bulum Bulum-bulum ombulumo": refused,
+		"special ombulumo_tizik_tazak Tizik-tazak ombulumo": refused,
+		"passive ombulumo_mulbo_mulbo Mulbo-mulbo ombulumo": refused,
+		"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": refused,
+		"realm zarvaun - -": "Zarvaun has a beast-call's letter",
+		"instance glade - -": refused,
+		"instance amvrel_hoal - -": "Amvrel Hoal has the faction word Amvrel",
+		"region glade_corrupted - glade": refused,
+		"faction amvrel_velmar Amvrel_Velmar -": refused,
+		"person teska_na_selin Teska_na_Selin -": refused,
+		"unique zar_omera Zar'omera -": refused,
+		"gear kel_spikes Kel_spikes -": "Kel spikes has the unique word Kel",
+		"gear bonsai Bonsai -": "Bonsai has a last word in -ai",
+	}
 	var named: ContentTerms = ContentTerms.new()
-	named.add("species", "xo", "Xo Xa")
-	if not named.problem(none).begins_with("species xo: Xo Xa isn't a name"):
-		return "a species of two words wasn't refused"
-	named = ContentTerms.new()
-	named.add("species", "zo", "Xo")
-	if not named.problem(none).begins_with("species zo: its id must"):
-		return "a species whose id isn't its name wasn't refused"
+	for entry: String in cases:
+		var parts: PackedStringArray = entry.replace("_of_", " of ").split(" ")
+		var given: String = "" if parts[2] == "-" else parts[2].replace("_", " ")
+		named.add(parts[0], parts[1], given, "" if parts[3] == "-" else parts[3])
+	for entry: String in cases:
+		var parts: PackedStringArray = entry.replace("_of_", " of ").split(" ")
+		var found: String = named.broken["%s %s" % [parts[0], parts[1]]]
+		var expected: String = cases[entry]
+		if expected.is_empty() != found.is_empty() or not found.contains(expected):
+			return "the name rule on %s gave %s" % [
+				entry,
+				found if not found.is_empty() else "nothing",
+			]
 	return ""

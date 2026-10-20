@@ -445,9 +445,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Every species has a fantasy name** (owner's rule, #717): one invented word ("Degaea",
   "Zylopakas"), never a description ("Moss toad", "dark skeleton wolf"); the content flow refuses
   anything but one capitalised word. Its sound matches the monster (bouba/kiki): round, soft sounds
-  (b, m, l, o, u) for round, gentle monsters, sharp ones (k, t, z, i) for spiky, fast ones. Every
-  name is first searched as an exact phrase ("name" in quotes) in a browser, and any real hit
-  rules it out; the search results go onto the species' issue.
+  (b, m, l, o, u) for round, gentle monsters, sharp ones (k, t, z, i) for spiky, fast ones.
 - **A species' id is its name, in lower case** (owner's rule, #763): `ombulumo` for Ombulumo,
   everywhere: its file, its abilities, harvest and loot tables, legends, quests, text tags and
   saves. Renaming a species renames its id with it, and lasting data naming the old id migrates
@@ -460,11 +458,18 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   duplicate (`ContentTerms`); the ones today's content still has wait in its list, each with its
   issue, and the list only shrinks.
 - **Proper nouns get invented names, each kind under its own rules** (owner, #909): species,
-  instances, regions, places, people and unique items are named, and each kind has its own
-  linguistic rules, so the world reads as one coherent whole; vocabulary (tile kinds, slots,
-  stats, conditions, categories) stays descriptive. `ContentTerms.NAME_RULES` holds each kind's
-  rule for the content flow; only the species' is set until the other kinds' are signed off on
-  #909.
+  abilities, realms, instances and their places, factions, people and unique items are named, and
+  each kind has its own tongue, so a name alone shows its kind and the world reads as one coherent
+  whole; vocabulary (tile kinds, slots, stats, conditions, categories) stays descriptive, and gear
+  is named in plain words. The six tongues adopted on #909 set each kind's shape, its closed
+  lexicons (landform, oath and rune words) and the marks only one kind may use (beast-call letters,
+  dh/gh/hr/wh, the hyphen, the apostrophe, vo/na, -ai, -vaun). `ContentTerms.NAME_RULES` holds
+  each kind's rule for the content flow; a name breaking one today waits in `NAME_EXCEPTIONS` with
+  its rename issue, and that list only shrinks.
+- **Every new name is searched as an exact phrase before it's used** (owner's rule, #717, #909):
+  in Claude in Chrome on Google, the name in quotes with `nfpr=1` so Google doesn't swap in its own
+  spelling, never with a web-search tool, which is unreliable for exact matches. Any real hit rules
+  it out; the results go onto its issue.
 - **Invented names use sound symbolism** (owner's rule): the bouba/kiki pattern is one tool
   (round, soft-sounding names for round, soft things, like Ombulumo; sharp, spiky-sounding names for
   sharp, quick ones, like Tikazzir), and other linguistic patterns are used alongside it, so no
