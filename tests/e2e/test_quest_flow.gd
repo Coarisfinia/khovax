@@ -720,7 +720,9 @@ func _check_target() -> String:
 	var region: Region = RegionDocument.parse(TARGET_REGION)
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
+		KnockdownFeature.new(),
 		TrailFeature.new(),
+		HealthFeature.new(),
 		WildMonsterFeature.new(),
 	]
 	var state: GameState = GameState.new(region, 3, ordered)

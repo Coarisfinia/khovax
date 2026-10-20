@@ -27,15 +27,24 @@ static func ring_power(level: int) -> int:
 
 
 ## How hard the wild monster pushes on a wall each tick, in thousandths: its strength, scaled by
-## the HP it has left, so weakening it first makes the ring easier to hold.
-static func pressure(wild: WildMonsterFeature, monster_id: int) -> int:
-	var left: int = Fixed.ratio(wild.hp_of(monster_id), wild.max_hp_of(monster_id))
+## the HP it has left (HealthFeature), so weakening it first makes the ring easier to hold.
+static func pressure(
+		state: GameState,
+		wild: WildMonsterFeature,
+		health: HealthFeature,
+		monster_id: int,
+) -> int:
+	var left: int = Fixed.ratio(
+		health.hp_of(state, monster_id),
+		health.max_hp_of(state, monster_id),
+	)
 	return wild.strength_of(monster_id) * left
 
 
 ## A new seal of the ring `trail` closed around the wild monsters `inside`.
 static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var seal: RingSeal = RingSeal.new()
 	var spots: Array[Vector2i] = []
 	for monster_id: int in inside:
@@ -48,7 +57,7 @@ static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSea
 	var total: int = 0
 	for i: int in inside.size():
 		seal.targets.append(RingShape.nearest(seal.walls, spots[i]))
-		total += pressure(wild, inside[i])
+		total += pressure(state, wild, health, inside[i])
 	seal.seal_ticks = SEAL_BASE_TICKS + Fixed.div_floor(total, SEAL_PRESSURE_PER_TICK)
 	return seal
 
@@ -58,13 +67,14 @@ static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSea
 ## stands on it.
 static func push(state: GameState, seal: RingSeal) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var braced: Array[Vector2i] = reinforced(state, seal)
 	seal.ticks += 1
 	for entity: Entity in state.entities:
 		if entity.slot != Entity.NO_SLOT and seal.walls.has(entity.tile):
 			seal.brace(entity.id, entity.tile)
 	for i: int in seal.monsters.size():
-		var pushed: int = pressure(wild, seal.monsters[i])
+		var pushed: int = pressure(state, wild, health, seal.monsters[i])
 		if braced.has(seal.walls[seal.targets[i]]):
 			pushed = Fixed.scale(pushed, REINFORCED_SHARE)
 		seal.damage[seal.targets[i]] += pushed

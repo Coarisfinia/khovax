@@ -50,7 +50,7 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID]
+	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID, HealthFeature.ID]
 	return needed
 
 
