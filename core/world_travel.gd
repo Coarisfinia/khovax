@@ -34,9 +34,9 @@ static func _walk_through(world: World, from: String, taken: ExitTaken) -> void:
 	var target: GameState = world.entering(taken.target)
 	if target == null:
 		return
-	var arrival: Vector2i = _arrival(world, from, taken, target.region)
-	if not target.region.has_tile(arrival):
+	if not target.region.exit_blueprints.has(from):
 		return
+	var arrival: Vector2i = _arrival(world, from, taken, target.region)
 	var left: GameState = world.instances[from]
 	# Who follows them is asked while they're still there, so a feature may find them by their
 	# player.
@@ -48,22 +48,19 @@ static func _walk_through(world: World, from: String, taken: ExitTaken) -> void:
 		raise_entered(world, taken.target, arrived)
 
 
-## Where the player who took `taken` out of `from` lands in `region`, the instance it leads to: on
-## the way back right across from the exit's tile, where the layout puts the two side by side, so
-## an exit many tiles wide (#689) lands each one beside its own; else on its first way back, or off
-## the region when it has none.
+## Where the player who took `taken` out of `from` lands in `region`, the instance it leads to,
+## which has a way back to `from` (#930): on the way back right across from the exit's tile, where
+## the layout puts the two side by side, so an exit many tiles wide (#689) lands each one beside its
+## own; else on its first way back.
 static func _arrival(world: World, from: String, taken: ExitTaken, region: Region) -> Vector2i:
 	var across: Vector2i = taken.tile + Hex.DIRECTIONS[taken.side] + world.offset(from)
 	across -= world.offset(taken.target)
-	var first: Vector2i = Vector2i(Region.MAX_TILES, Region.MAX_TILES)
-	for i: int in range(region.exits.size() - 1, -1, -1):
+	for i: int in region.exits.size():
 		var back: Vector3i = region.exits[i]
-		if region.exit_blueprints[i] != from:
-			continue
-		first = Vector2i(back.x, back.y)
-		if first == across:
+		if region.exit_blueprints[i] == from and Vector2i(back.x, back.y) == across:
 			return across
-	return first
+	var first: Vector3i = region.exits[region.exit_blueprints.find(from)]
+	return Vector2i(first.x, first.y)
 
 
 ## Moves the player `sent` names from `from` onto their start in the starting instance (#457), as a

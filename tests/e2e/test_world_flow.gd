@@ -1003,8 +1003,9 @@ func _check_left_again(world: World, purged: int) -> String:
 ## save data and back the world keeps the flag and the glade's old variant. The tick after the
 ## player
 ## walks out, the glade is purged, and it comes back at generation 1 from the arena's region, for
-## the world and its layout alike. Clearing the flag purges it again once nobody is in it, and
-## setting a flag that is already set changes nothing.
+## the world and its layout alike. The arena has no way back to the forest, so walking out of the
+## forest's exit toward it leaves the player there (#930). Clearing the flag purges it again once
+## nobody is in it, and setting a flag that is already set changes nothing.
 func _check_flags() -> String:
 	var world: World = World.new(RisingSource.new(), 3, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE:
@@ -1040,10 +1041,8 @@ func _check_flags() -> String:
 	var variant: String = WorldFlags.variant_of(world, FlowSteps.GLADE)
 	if variant != FlowSteps.ARENA or tiles != arena.sorted_tiles():
 		return "the glade didn't come back from its variant, the arena's region"
-	# The arena's region has no way back to the forest, which only a layout worked out from
-	# the glade's new region notices.
-	if _web_problem_of(world).is_empty():
-		return "the world's layout still has the glade's old region"
+	if not _without_way_back(world):
+		return "the world's layout or travel still has the glade's old region and its way back"
 	WorldFlags.set_flag(world, RisingSource.RISEN, false)
 	world.step(_still())
 	if world.instances.has(FlowSteps.GLADE) or world.generation(FlowSteps.GLADE) != 2:
@@ -1052,6 +1051,18 @@ func _check_flags() -> String:
 			or WorldFlags.variant_of(world, FlowSteps.GLADE) != ""):
 		return "the glade didn't come back as itself once the flag was cleared"
 	return ""
+
+
+## Whether `world`'s glade, now the arena's region, has no way back to the forest: its layout,
+## worked out from the glade's new region, notices, and walking out of the forest's exit toward it
+## leaves the player there, entering nothing (#930).
+func _without_way_back(world: World) -> bool:
+	if _web_problem_of(world).is_empty():
+		return false
+	_entered.clear()
+	_walk_in(world, FlowSteps.INTO_GLADE[0])
+	var stayed: bool = world.instance_of(0) == FlowSteps.FOREST and _entered.is_empty()
+	return stayed and world.player(0).tile == FlowSteps.FOREST_EXIT
 
 
 ## A corrupted instance (#541): with the glade's corrupting flag set, the player walks into the
