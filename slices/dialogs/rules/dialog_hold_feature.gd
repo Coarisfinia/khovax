@@ -14,8 +14,11 @@ const ID: String = "dialog_hold"
 ## The features that pause while every player in the instance is held.
 const PAUSED: Array[String] = [WildMonsterFeature.ID, WildAttackFeature.ID, HidingFeature.ID]
 
-## Whether this switched the wild monsters' features off, until a player is free again.
+## Whether the wild monsters pause, until a player is free again, and which of their features this
+## switched off for it: only those that were on, so a feature switched off for another reason stays
+## off when they go on.
 var paused: bool = false
+var switched: Array[String] = []
 
 
 func id() -> String:
@@ -42,29 +45,52 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		if state.player(slot) == null:
 			continue
 		players += 1
-		if not dialogs.holds(slot):
+		var given: Command = Command.of(commands, slot)
+		var answering: bool = given != null and dialogs.answer_holds(given.answer)
+		if not dialogs.holds(slot) and not answering:
 			continue
 		held += 1
-		var given: Command = Command.of(commands, slot)
 		if given != null:
 			commands[slot] = _answer_only(given)
 	var pausing: bool = players > 0 and held == players
-	if pausing != paused:
-		paused = pausing
+	if pausing == paused:
+		return
+	paused = pausing
+	if pausing:
 		for paused_id: String in PAUSED:
-			state.set_enabled(paused_id, not pausing)
+			var paused_feature: Feature = state.feature(paused_id)
+			if paused_feature != null and paused_feature.enabled:
+				switched.append(paused_id)
+				state.set_enabled(paused_id, false)
+	else:
+		for paused_id: String in switched:
+			state.set_enabled(paused_id, true)
+		switched.clear()
 
 
 func hash_values() -> Array[int]:
-	return [1 if paused else 0]
+	var values: Array[int] = [1 if paused else 0, switched.size()]
+	for paused_id: String in switched:
+		values.append(StateHash.name_code(paused_id))
+	return values
 
 
 func save_values() -> Dictionary:
-	return { "paused": 1 if paused else 0 }
+	return { "paused": 1 if paused else 0, "switched": switched.duplicate() }
 
 
 func load_values(_state: GameState, values: DataReader) -> void:
 	paused = values.whole("paused", 0, 1) == 1
+	switched.clear()
+	var saved: Variant = values.data.get("switched")
+	if not saved is Array:
+		values.fail("switched isn't a list")
+		return
+	for paused_id: Variant in saved:
+		if not paused_id is String or not PAUSED.has(paused_id) or switched.has(paused_id):
+			values.fail("a paused feature %s isn't one this pauses" % [paused_id])
+			return
+		switched.append(paused_id)
 
 
 ## A command that only answers and carries the request `given` does: the held player stands.

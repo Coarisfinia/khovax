@@ -72,6 +72,16 @@ func holds(slot: int) -> bool:
 	return _holding.has(slot)
 
 
+## Whether choosing the answer `answer_code` holds its player: it commits, or its dialog locks. A
+## command carrying it is held from that tick on, so nothing else in it acts (DialogHoldFeature).
+func answer_holds(answer_code: int) -> bool:
+	if not answers.has(answer_code):
+		return false
+	var commits: bool = committing.get(answer_code, false)
+	var locks: bool = locking.get(answers[answer_code][0], false)
+	return commits or locks
+
+
 ## Closes the dialogs of players who left, opens the dialogs players talked to someone for, then,
 ## in slot order, raises DialogAnswered for every player whose command answers a dialog and moves
 ## their dialog to where the answer leads.
