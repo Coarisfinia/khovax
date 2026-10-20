@@ -638,7 +638,7 @@ func _check_wild_species(content: SpeciesContent) -> String:
 		if not problem.is_empty():
 			return problem
 	var lacking: Dictionary[String, Species] = content.species.duplicate()
-	lacking.erase("tikazzir")
+	var _gone: bool = lacking.erase("tikazzir")
 	var refused: String = _wild_species_problem(FlowSteps.GLADE, lacking)
 	var expected: String = "%s places a species that doesn't exist: tikazzir" % (
 		FlowSteps.CORRUPTED_GLADE
