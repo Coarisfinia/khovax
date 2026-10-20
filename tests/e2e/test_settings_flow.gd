@@ -330,7 +330,8 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 
 
 ## Pressing the slots puts the player's gear in, and the gear is kept in their profile on disk; the
-## spikes in the trap slot go into the player's commands (#692).
+## spikes in the trap slot (#692) post one request to the outbox in the same save (#818), which the
+## next tick carries into the world's store of the player's trap.
 func _gear_changes(panel: GearPanel, main: Node) -> String:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	keeper.profile.gear.owned.assign({ "warding_charm": 1, "thorn_spikes": 1 })
@@ -348,11 +349,19 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 	]
 	if panel.shown != lines or kept.gear.equipped != expected:
 		return "pressing the slots put in %s, kept %s" % [panel.shown, kept.gear.equipped]
+	var code: int = SpikesFeature.code_of("thorn_spikes")
+	var traps: Array[int] = []
+	for request: OutboxEntry in kept.outbox.entries:
+		if request.kind == OutboxEntry.TRAP:
+			traps.append(request.data)
+	if traps != [code]:
+		return "changing the gear posted the trap requests %s, not one for the spikes" % [traps]
 	var driver: GameDriver = FlowGame.driver(main)
-	driver.send_gear()
-	var trap: int = driver.input.command(driver.state).trap
-	if trap != SpikesFeature.code_of("thorn_spikes"):
-		return "the spikes in the trap slot aren't in the player's command: %d" % trap
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	var entry: Dictionary = driver.world.stored(driver.input.slot, SpikesFeature.ID)
+	var stored: int = SpikesFeature.trap_of(entry)
+	if stored != code:
+		return "the spikes in the trap slot didn't reach the world's store: %d" % stored
 	return ""
 
 
