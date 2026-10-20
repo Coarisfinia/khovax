@@ -54,6 +54,10 @@ a second model could use goes into the library or a generic tool, never into one
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
   first and the detail second. It must also look good **up close**, since its codex page shows
   it full-screen (owner, #995): soft forms, and detailed eyes, snout, ears and paws.
+- **Baseline:** the mana wolf (#995) is the baseline for the level of detail: every new model
+  matches or exceeds it up close (owner). Its build script, `tools/models/mana_wolf.py`, and its
+  renders on the `assets` branch (`pr-995-v2-*`, the close-ups `pr-995-v2-portrait.png` and
+  `pr-995-v2-face.png` first) are the reference.
 - **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
   Blender's -Y; `Vector3.MODEL_FRONT`), like every model in the game: the views turn a figure with
   `atan2(heading.x, heading.z)`, so one built facing -Z walks backwards. The height matches the
