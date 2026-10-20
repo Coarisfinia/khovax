@@ -107,12 +107,13 @@ static func step_line(step: QuestStep, count: int) -> String:
 	return asks
 
 
-## What an answered `step` asks (#636): the answer's text to its dialog's speaker, or its id in
-## words when the dialogs weren't read with it.
+## What an answered `step` asks (#636): the answer's text to its dialog's speaker, named without an
+## article, since a speaker is a person's name (#977), or its id in words when the dialogs weren't
+## read with it.
 static func _answer_line(step: QuestStep) -> String:
 	if step.answer.text.is_empty():
 		return "Answer " + _words(step.answer.id)
-	return "Tell the %s: \"%s\"" % [step.answer.speaker, step.answer.text]
+	return "Tell %s: \"%s\"" % [step.answer.speaker, step.answer.text]
 
 
 ## An id (a place, a region piece, an instance, an item or a quest target) as words: they have no
