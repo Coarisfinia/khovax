@@ -293,9 +293,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   name, never a hand-kept number, so parallel pull requests never claim the same one, #784; never
   reused or renamed once shipped), its own state,
   a `step` called in order each tick (the order is the list in `InstanceBlueprints`, reviewed like
-  code), the features it `requires` earlier in the order, and its
+  code), the features it `requires` earlier in the order (and those it reads that an instance may
+  lack: `after` when they step earlier, `before` when they step later, #822; the replay flow
+  checks that every feature it reads is declared), and its
   `hash_values`. Features talk through the tick's `events` (e.g. `EntityMoved`), not by reaching
-  into each other: a feature may read the features it `requires` and change them only through
+  into each other: a feature may read the features it declares and change them only through
   their public methods (e.g. `DominationFeature` clears a ring off the trail with `TrailFeature.clear`), never
   their fields. Whether a feature is on is state: only rules switch it, inside a tick
   (`GameState.set_enabled`); a disabled feature keeps its state and doesn't step.

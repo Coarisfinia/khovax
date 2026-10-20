@@ -22,8 +22,23 @@ func stream() -> int:
 	return StateHash.name_code(id())
 
 
-## The features that must come earlier in the instance's order, by id.
+## The features that must come earlier in the instance's order, by id. A feature reads only the
+## features it declares (#822): here, in `after` or in `before`.
 func requires() -> Array[String]:
+	var none: Array[String] = []
+	return none
+
+
+## The features this one reads that the instance may lack, by id: when it has one, it comes earlier
+## in the order.
+func after() -> Array[String]:
+	var none: Array[String] = []
+	return none
+
+
+## The features this one reads that step later in the order when the instance has them, by id: it
+## sees their state as the last tick left it.
+func before() -> Array[String]:
 	var none: Array[String] = []
 	return none
 

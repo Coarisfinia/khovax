@@ -1436,7 +1436,8 @@ func _wild_strikes_over(
 
 
 ## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
-## specials, and the wild monsters' attacks, then the `extra` features.
+## specials, and the wild monsters' attacks, with the `extra` features (a type chart) before the
+## companions' attacks, which read them (#822).
 func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
@@ -1449,12 +1450,14 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 		HidingFeature.new(),
 		CompanionFeature.new(),
 		CompanionSwapFeature.new(),
+	]
+	ordered.append_array(extra)
+	ordered.append_array([
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
 		HarvestFeature.new({ WEAK: _hide_table() }),
 		HealthFeature.new({ WEAK: COMPANION_HP }),
-	]
-	ordered.append_array(extra)
+	])
 	return GameState.new(region, 1, ordered)
 
 

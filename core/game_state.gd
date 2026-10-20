@@ -58,9 +58,12 @@ func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> vo
 		each.start(self)
 
 
-## Why `ordered` isn't a valid feature order (a feature twice, or one before a feature it
-## requires), or "" when it is.
+## Why `ordered` isn't a valid feature order (a feature twice, one before a feature it requires
+## or comes after, or one after a feature it comes before), or "" when it is.
 static func order_problem(ordered: Array[Feature]) -> String:
+	var all: Array[String] = []
+	for each: Feature in ordered:
+		all.append(each.id())
 	var seen: Array[String] = []
 	for each: Feature in ordered:
 		if seen.has(each.id()):
@@ -68,6 +71,12 @@ static func order_problem(ordered: Array[Feature]) -> String:
 		for needed: String in each.requires():
 			if not seen.has(needed):
 				return "feature %s needs feature %s before it" % [each.id(), needed]
+		for earlier: String in each.after():
+			if all.has(earlier) and not seen.has(earlier):
+				return "feature %s must come after feature %s" % [each.id(), earlier]
+		for later: String in each.before():
+			if seen.has(later):
+				return "feature %s must come before feature %s" % [each.id(), later]
 		seen.append(each.id())
 	return ""
 

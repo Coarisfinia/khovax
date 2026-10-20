@@ -27,6 +27,17 @@ func requires() -> Array[String]:
 	return needed
 
 
+## What spares a wild monster from a strike (hiding, a sealing ring) and the type chart, where the
+## instance has them.
+func after() -> Array[String]:
+	var earlier: Array[String] = [
+		HidingFeature.ID,
+		DominationFeature.ID,
+		TypeEffectivenessFeature.ID,
+	]
+	return earlier
+
+
 ## Lets every companion, in id order, strike a wild monster next to it once its wait is over.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
