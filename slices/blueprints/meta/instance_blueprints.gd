@@ -4,7 +4,8 @@ extends RefCounted
 ## the features an instance has. The region is a fixed region file, regions/<name>.md, or region
 ## pieces in regions/<name>/ that the seed arranges and, if the blueprint is turned, turns (#57,
 ## #127). The players start on the region's starts. A blueprint switches game rules on and off by
-## listing them (Blueprint.features), and they can change during a session; each slice builds its
+## listing them (Blueprint.features), what its region holds brings the features that run it
+## (RegionFeatures), and they can change during a session; each slice builds its
 ## own feature (FeatureFactories). What tells blueprints apart is content data, one file each
 ## (Blueprint, #823).
 
@@ -75,7 +76,7 @@ static func create(
 	if region == null:
 		return null
 	var ordered: Array[Feature] = FeatureFactories.build(
-		blueprint(instance_name).features,
+		_features(blueprint(instance_name), region),
 		_setup(instance_name, region),
 	)
 	var state: GameState = GameState.new(region, seed_value, ordered)
@@ -138,13 +139,7 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 ## The region a Markdown region document describes (RegionDocument), with what every slice places
 ## on its ground read by that slice (#824).
 static func read_region(text: String) -> Region:
-	var readers: Array[PlacementReader] = [
-		TriggerPlacements.new(),
-		NpcPlacements.new(),
-		WildSpotPlacements.new(),
-		ChestPlacements.new(),
-	]
-	return RegionDocument.parse(text, readers)
+	return RegionDocument.parse(text, RegionFeatures.readers())
 
 
 ## Why the named blueprint's exits don't hold together, or "" (#140): each leads to a blueprint that
@@ -169,6 +164,17 @@ static func exit_problem(instance_name: String) -> String:
 ## The basic instance, as `create` makes it.
 static func basic(seed_value: int, players: int = 1) -> GameState:
 	return create(BASIC, seed_value, players)
+
+
+## The ids of the features an instance of `named` in `region` has: the rules its blueprint lists,
+## what its region holds (RegionFeatures, #879), and treasure chests when it has a chest table, so
+## a variant whose region has none keeps them.
+static func _features(named: Blueprint, region: Region) -> Array[String]:
+	var listed: Array[String] = named.features.duplicate()
+	listed.append_array(RegionFeatures.of(region))
+	if not named.chest_table.is_empty():
+		listed.append(ChestFeature.ID)
+	return listed
 
 
 ## What the named blueprint's features are built from (FeatureSetup) for an instance in `region`.

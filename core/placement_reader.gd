@@ -14,6 +14,17 @@ func kind_of(_meaning: String) -> String:
 	return ""
 
 
+## The kinds this reader places, every one `kind_of` can give.
+func kinds() -> Array[String]:
+	return []
+
+
+## The id of the feature that runs what this reader places (#879): an instance whose region holds
+## any of its kinds has that feature, so its blueprint never lists it.
+func feature() -> String:
+	return ""
+
+
 ## The part of `meaning` that names the kind of tile its thing stands on, which the core reads like
 ## a tile kind's meaning (`sand`, `forest, turned 2`), or "" for ground.
 func tile_of(_meaning: String) -> String:

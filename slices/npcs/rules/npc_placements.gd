@@ -6,5 +6,13 @@ extends PlacementReader
 const KIND: String = "npc"
 
 
+func kinds() -> Array[String]:
+	return [KIND]
+
+
+func feature() -> String:
+	return NpcFeature.ID
+
+
 func kind_of(meaning: String) -> String:
 	return KIND if NpcSpot.read(meaning) != null else ""

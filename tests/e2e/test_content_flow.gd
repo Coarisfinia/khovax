@@ -588,16 +588,30 @@ func _check_wild_species(content: SpeciesData) -> String:
 	return ""
 
 
-## The glade's blueprint reads as written (#823): its features, loot tables and variants in their
-## order. A blueprint file with a wrong id, an unknown field, an unknown or repeated feature, no
-## species, a weight below 1, a chest table without a loot table, chests without a chest table, or a
-## variant without its region is refused.
+## The glade's blueprint reads as written (#823): its rules, loot tables and variants in their
+## order. What its region holds brings the rest (#879): its people only to the glade itself, its
+## chests to its corrupted variant too, through its chest table. A blueprint file with a wrong id,
+## an unknown field, an unknown or repeated feature or one its region brings, no species, a weight
+## below 1, a chest table without a loot table, or a variant without its region is refused.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
 		return "the glade's blueprint didn't load as written"
-	if glade.features[0] != MovementFeature.ID or not glade.features.has(ChestFeature.ID):
+	if glade.features[0] != MovementFeature.ID or glade.features.has(ChestFeature.ID):
 		return "the glade's features read %s" % [glade.features]
+	var own: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 0, 0)
+	var corrupted: GameState = InstanceBlueprints.create(
+		InstanceBlueprints.GLADE,
+		0,
+		0,
+		InstanceBlueprints.CORRUPTED_GLADE,
+	)
+	if (
+		own.feature(NpcFeature.ID) == null
+		or corrupted.feature(NpcFeature.ID) != null
+		or corrupted.feature(ChestFeature.ID) == null
+	):
+		return "the glade's region didn't bring its people and chests"
 	var first: PackedStringArray = (
 		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
 	)
@@ -614,7 +628,7 @@ func _check_blueprints() -> String:
 		blueprint % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
 		blueprint.replace("\"movement\"", "\"flying\"") % "": "its features",
 		blueprint.replace("\"movement\"", "\"fog\", \"fog\"") % "": "its features",
-		blueprint.replace("\"movement\"", "\"chests\"") % "": "a blueprint has chests",
+		blueprint.replace("\"movement\"", "\"exits\"") % "": "its features",
 		blueprint % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
 		blueprint % ", \"turned\": 1": "turned must",
 	}
