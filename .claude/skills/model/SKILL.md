@@ -20,12 +20,40 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 - The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
   `scripts/check_glb.gd` (the Godot import check).
 
+## Shared library and tools (owner's rule, #995)
+**Tools are built reusable; a model script holds only that model's parameters and parts.** Anything
+a second model could use goes into the library or a generic tool, never into one model's script.
+
+- **The Blender library, `tools/models/lib/`** (a model script imports it after
+  `sys.path.insert(0, <tools/models>)`):
+  - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
+    export settings the game takes: GLB, skins, one animation per NLA track, Y up).
+  - `materials`: cel-friendly flat colours and emissive glows (`palette`).
+  - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`),
+    converted and reduced to a triangle budget.
+  - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s, curling fur `tuft`s.
+  - `surface`: patterns laid on a body and bending with it: glowing `vein`s and `rune`s (`GLYPHS`).
+  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid).
+  - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
+    four-bone legs, `.L`/`.R`).
+  - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
+  - `clips`: `cycle_frames` (gait timing from the game's speed), `gait`, the quadruped set
+    (`idle`, `attack`, `hit`, `faint`) and `animate` (keys and stashes every clip).
+- **The renders:** `scripts/render_views.py` (every side in Blender) and
+  `tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides, the game
+  camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
+- **A new model:** copy the shape of `tools/models/mana_wolf.py`: its proportions, its `Blob`
+  body, its own parts and its palette, then `quadruped.armature`, `weights.bind`,
+  `clips.animate` and `scene.export_glb`. A body plan the library lacks (a bird, a serpent)
+  becomes a new library module first, then the model.
+
 ## 1. Build (Blender script)
 - **Where:** `tools/models/<name>.py` builds the model, and `assets/<name>/<name>.glb` is its output,
   with `SOURCE.md`, a license and a `CREDITS.md` entry, as AGENTS.md's asset rules say.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
   #69). It must read from the game's top-down camera, so the shape comes from the silhouette
-  first and the detail second.
+  first and the detail second. It must also look good **up close**, since its codex page shows
+  it full-screen (owner, #995): soft forms, and detailed eyes, snout, ears and paws.
 - **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
   Blender's -Y; `Vector3.MODEL_FRONT`), like every model in the game: the views turn a figure with
   `atan2(heading.x, heading.z)`, so one built facing -Z walks backwards. The height matches the
@@ -67,10 +95,12 @@ for look-dev with the owner, but whatever it finds goes back into the script.
    skinned mesh bound to it, and every clip the game plays. CI checks the same for every model a
    view uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view
    that plays a new clip adds it there.
-5. **In game:** use AGENTS.md's screenshot recipe to put the model in the game, under the game's
+5. **In game:** with `tools/models/render_in_game.gd` and AGENTS.md's hidden-window recipe, put
+   the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and
-   from the other monsters (colour and value contrast), including in corrupted areas.
+   from the other monsters (colour and value contrast), including in corrupted areas. Look at the
+   close-ups too: up close is how its codex page shows it.
 6. **Clips in game:** a GIF of each clip playing in Godot. Check that loops don't jump, steps don't
    slide, and the attack and hit read at game zoom.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
@@ -84,6 +114,7 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   2. **Every side in the game:** the same six views rendered in Godot, under the game's cel shading
      and lighting, plus the shot from the game camera at play distance (step 5).
   3. **Animations:** a GIF of each clip in the game, the attack at least.
+  4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
   then its clips (visual 3). Each PR shows what it adds.

@@ -4,8 +4,11 @@ extends SceneTree
 ## Renders a model inside the real game (the model skill's in-game check, #990): the main scene
 ## runs in a SubViewport, under the game's cel shading, ink outline and sun, and the model stands
 ## on the tile beside the player, idling. It writes the model from six sides (front, back, left,
-## right, top, three-quarter) and the shot from the game camera at play distance; or, given a
-## clip, that clip's frames for a GIF, from the game camera or from one of the six sides.
+## right, top, three-quarter), the shot from the game camera at play distance, and two close-ups
+## on a bare background as its codex page shows it full-screen (#995): the whole model
+## ("portrait") and its front end, the face ("face"). Given a clip, it writes that clip's frames
+## for a GIF instead, from the game camera or from any of those views. Any model works: the
+## cameras frame it by its bounds.
 ##
 ## Render it hidden and silent, as AGENTS.md's screenshot recipe says (the temporary one-pixel
 ## `override.cfg`, `--audio-driver Dummy`, and `--display-driver wayland` under WSLg):
@@ -16,10 +19,10 @@ extends SceneTree
 
 ## Frames the game draws before the first capture: shaders compile and the fog eases open.
 const SETTLE_FRAMES: int = 90
-## How far the side cameras stand from the model's middle, and how high that middle is.
-const VIEW_DISTANCE: float = 3.2
-const MIDDLE_HEIGHT: float = 0.6
-## Where each side camera stands, seen from the model, which faces +Z like every model in the game.
+## The cameras' field of view, and how much room they leave around what they frame.
+const FOV: float = 35.0
+const MARGIN: float = 1.08
+## Where each camera stands, seen from the model, which faces +Z like every model in the game.
 const VIEWS: Dictionary[String, Vector3] = {
 	"front": Vector3(0.0, 0.25, 1.0),
 	"back": Vector3(0.0, 0.25, -1.0),
@@ -27,10 +30,21 @@ const VIEWS: Dictionary[String, Vector3] = {
 	"right": Vector3(-1.0, 0.25, 0.0),
 	"top": Vector3(0.0, 1.0, 0.01),
 	"three_quarter": Vector3(0.8, 0.7, 0.8),
+	"portrait": Vector3(0.75, 0.35, 1.0),
+	"face": Vector3(0.6, 0.25, 1.0),
 }
+## The close-ups, on a bare background: no ground under them.
+const CLOSE_UPS: Array[String] = ["portrait", "face"]
+## What close-ups keep of the main scene: the game's sun, ink outline and graphics settings.
+const KEPT_IN_CLOSE_UPS: Array[String] = ["Driver", "Sun", "InkOutline", "Graphics"]
+## The face close-up frames this share of the model's length at its front end, and of its height
+## at the top.
+const FACE_SHARE: float = 0.4
 ## What the side shots keep of the instance: only the ground. The HUD, the player, the people,
 ## the other monsters and the trees would stand between the camera and the model.
 const KEPT_IN_SIDES: String = "HexGrid"
+## How much a clip's framing grows the resting bounds, as a share of their size.
+const CLIP_ROOM: float = 0.1
 ## A clip's frames are captured this many times a second of the clip.
 const CLIP_FPS: float = 15.0
 ## Frames to wait after posing a shot before capturing it, so the pose has been drawn.
@@ -50,9 +64,10 @@ var _names: Array[String] = []
 var _poses: Array[Callable] = []
 var _current: int = -1
 var _piece: HexPiece
-var _animations: AnimationPlayer
 var _side_camera: Camera3D
 var _game_camera: Camera3D
+## The model's bounds in the world, standing at rest.
+var _bounds: AABB
 
 
 ## One step a frame: settle, place the model, then pose, draw and capture each shot in turn.
@@ -121,13 +136,17 @@ func _place() -> void:
 	_piece.add_child(model)
 	_main.add_child(_piece)
 	_piece.tile = _beside(driver.state, driver.state.player(0).tile)
-	_animations = model.find_child("AnimationPlayer") as AnimationPlayer
+	var animations: AnimationPlayer = model.find_child("AnimationPlayer") as AnimationPlayer
 	_game_camera = _main.get_node("Camera3D") as Camera3D
 	_side_camera = Camera3D.new()
-	_side_camera.fov = 40.0
 	_main.add_child(_side_camera)
+	_side_camera.fov = FOV
+	_bounds = _bounds_of(model)
+	if not _clip.is_empty():
+		# The bounds are the resting pose's: room for a clip to lunge or stretch out of them.
+		_bounds = _bounds.grow(_bounds.size.length() * CLIP_ROOM)
 	if _clip.is_empty():
-		_animations.play(&"Idle")
+		animations.play(&"Idle")
 		_add_shot("game", _game_camera.make_current)
 		for side: String in VIEWS:
 			_add_shot(side, _pose_side.bind(side))
@@ -136,13 +155,13 @@ func _place() -> void:
 		_pose_side(_from)
 	else:
 		_game_camera.make_current()
-	_animations.play(StringName(_clip))
-	_animations.pause()
-	var length: float = _animations.get_animation(StringName(_clip)).length
+	animations.play(StringName(_clip))
+	animations.pause()
+	var length: float = animations.get_animation(StringName(_clip)).length
 	for frame: int in ceili(length * CLIP_FPS) + 1:
 		_add_shot(
 			"%s_%03d" % [_clip, frame],
-			_animations.seek.bind(minf(frame / CLIP_FPS, length), true),
+			animations.seek.bind(minf(frame / CLIP_FPS, length), true),
 		)
 
 
@@ -167,16 +186,55 @@ func _beside(state: GameState, tile: Vector2i) -> Vector2i:
 	return tile
 
 
-## Looks at the model's middle from `side` (VIEWS), on bare ground.
+## Looks at the model from `side` (VIEWS), framing all of it (or its face), alone on bare
+## ground, or on nothing at all for a close-up.
 func _pose_side(side: String) -> void:
-	var middle: Vector3 = _piece.global_position + Vector3.UP * MIDDLE_HEIGHT
 	var hidden: Array[Node] = _main.get_node("Instance").get_children()
+	if CLOSE_UPS.has(side):
+		hidden = _main.get_children().filter(_hidden_in_close_ups)
 	hidden.append(_main.get_node("Hud"))
 	for node: Node in hidden:
-		if node.name != KEPT_IN_SIDES:
-			# Stopped too, so a view that shows its node each frame doesn't show it again.
-			node.process_mode = Node.PROCESS_MODE_DISABLED
-			node.set("visible", false)
+		var kept: bool = node.name == KEPT_IN_SIDES and not CLOSE_UPS.has(side)
+		# Stopped too, so a view that shows its node each frame doesn't show it again.
+		node.process_mode = Node.PROCESS_MODE_INHERIT if kept else Node.PROCESS_MODE_DISABLED
+		node.set("visible", kept)
+	var framed: AABB = _bounds
+	if side == "face":
+		var front: Vector3 = Vector3(_bounds.size.x, _bounds.size.y, _bounds.size.z) * FACE_SHARE
+		framed = AABB(_bounds.end - front, front)
+		framed.size.x = _bounds.size.x
+		framed.position.x = _bounds.position.x
+	var middle: Vector3 = framed.get_center()
+	var reach: float = framed.size.length() / 2.0 / sin(deg_to_rad(FOV) / 2.0)
 	_side_camera.make_current()
-	_side_camera.position = middle + VIEWS[side].normalized() * VIEW_DISTANCE
-	_side_camera.look_at(middle, Vector3.FORWARD if side == "top" else Vector3.UP)
+	# Twice: place the camera, see how much of the frame the bounds fill, and move it so they fill
+	# it but for the margin (the fill shrinks about as the distance grows).
+	for _pass: int in 2:
+		_side_camera.position = middle + VIEWS[side].normalized() * reach
+		_side_camera.look_at(middle, Vector3.FORWARD if side == "top" else Vector3.UP)
+		reach *= _fill(framed) * MARGIN
+
+
+## Whether a close-up hides `node`, a child of the main scene: everything but the game's light
+## and ink outline (and the model and the camera), so the model stands on a bare background.
+func _hidden_in_close_ups(node: Node) -> bool:
+	return not (node == _piece or node == _side_camera or KEPT_IN_CLOSE_UPS.has(node.name))
+
+
+## How much of the frame `box` fills seen from the side camera: 1 when it just touches an edge.
+func _fill(box: AABB) -> float:
+	var half: Vector2 = Vector2(_viewport.size) / 2.0
+	var fill: float = 0.0
+	for corner: int in 8:
+		var spot: Vector2 = _side_camera.unproject_position(box.get_endpoint(corner)) - half
+		fill = maxf(fill, maxf(absf(spot.x) / half.x, absf(spot.y) / half.y))
+	return fill
+
+
+## The bounds of every mesh under `model`, in the world.
+func _bounds_of(model: Node3D) -> AABB:
+	var bounds: AABB = AABB(model.global_position, Vector3.ZERO)
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: MeshInstance3D = node as MeshInstance3D
+		bounds = bounds.merge(mesh.global_transform * mesh.get_aabb())
+	return bounds
