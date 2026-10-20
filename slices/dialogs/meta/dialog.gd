@@ -86,7 +86,8 @@ func _check(file_id: String, raw_lines: Variant) -> String:
 		if not line.problem.is_empty():
 			return "line %d: %s" % [lines.size(), line.problem]
 		lines.append(line)
-	return _check_links()
+	var link_problem: String = _check_links()
+	return link_problem if not link_problem.is_empty() else _check_held_end()
 
 
 ## Why the lines don't hold together, or "": no two lines share an id, no two answers share one,
@@ -105,4 +106,31 @@ func _check_links() -> String:
 				return "line %d: answer %s leads to %s, which no line is" % [
 					index, answer.id, answer.next,
 				]
+	return ""
+
+
+## Why a line the dialog holds its player on (it locks, or a committing answer leads there, #912)
+## ends it without an answer, or "": reading on past a last line closes the card but never reaches
+## the simulation, so the dialog would hold its player forever (#1014). Once held, it holds on.
+func _check_held_end() -> String:
+	var waiting: Array[int] = []
+	if lock:
+		waiting.append(0)
+	for line: DialogLine in lines:
+		for answer: DialogAnswer in line.answers:
+			if answer.commits and not answer.next.is_empty():
+				waiting.append(line_index(answer.next))
+	var seen: Dictionary[int, bool] = {}
+	while not waiting.is_empty():
+		var index: int = waiting.pop_back()
+		if seen.has(index):
+			continue
+		seen[index] = true
+		if lines[index].answers.is_empty() and index + 1 == lines.size():
+			return "line %d: it holds its player, so it must end on an answer" % index
+		if lines[index].answers.is_empty():
+			waiting.append(index + 1)
+		for answer: DialogAnswer in lines[index].answers:
+			if not answer.next.is_empty():
+				waiting.append(line_index(answer.next))
 	return ""
