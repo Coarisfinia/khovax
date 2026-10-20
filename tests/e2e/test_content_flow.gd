@@ -76,9 +76,9 @@ const NAME_CASES: Dictionary[String, String] = {
 	"passive tikazzir_tizik_tazak Tizik-tazak tikazzir": REFUSED,
 	"realm zarvaun - -": "Zarvaun has a beast-call's letter",
 	"realm Ardvaun - -": "its id must be lower case",
-	"instance glade - -": REFUSED,
+	"instance " + FlowSteps.GLADE + " - -": REFUSED,
 	"instance amvrel_hoal - -": "Amvrel Hoal has the faction word Amvrel",
-	"region glade_corrupted - glade": REFUSED,
+	"region " + FlowSteps.CORRUPTED_GLADE + " - " + FlowSteps.GLADE: REFUSED,
 	"faction amvrel_velmar Amvrel_Velmar -": REFUSED,
 	"person teska_na_selin Teska_na_Selin -": REFUSED,
 	"unique zar_omera Zar'omera -": REFUSED,
@@ -223,14 +223,14 @@ func _check_named_steps(content: QuestContent) -> String:
 		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s, %s]}" % [
 			REACH % "beach",
 			ENTER % "thicket",
-			ENTER_INSTANCE % "glade\", \"ends\": \"x",
+			ENTER_INSTANCE % (FlowSteps.GLADE + "\", \"ends\": \"x"),
 		],
 		content.species,
 	)
 	if (not named.problem.is_empty()
 			or named.steps[0].place != "beach"
 			or named.steps[1].piece != "thicket"
-			or named.steps[2].instance != "glade"
+			or named.steps[2].instance != FlowSteps.GLADE
 			or not named.steps[2].piece.is_empty()):
 		return "a step to reach or enter something didn't read: " + named.problem
 	return ""
@@ -242,7 +242,7 @@ func _check_named_steps(content: QuestContent) -> String:
 ## happens everywhere. Then the answered steps.
 func _check_instance_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
-	var there: String = ", \"instance\": \"glade\""
+	var there: String = ", \"instance\": \"%s\"" % FlowSteps.GLADE
 	var opened: String = "{\"condition\": \"opened\"%s}" % there
 	var entered: String = ENTER % ("start\"" + there + ", \"ends\": \"x")
 	var tied: QuestDefinition = QuestDefinition.parse(
@@ -251,14 +251,15 @@ func _check_instance_steps(content: QuestContent) -> String:
 		content.species,
 	)
 	var piece: QuestStep = tied.steps[1] if tied.steps.size() == 2 else QuestStep.new()
-	if (not tied.problem.is_empty() or tied.steps[0].instance != "glade"
-			or piece.instance != "glade" or piece.piece != "start" or piece.enters_instance()
+	if (not tied.problem.is_empty() or tied.steps[0].instance != FlowSteps.GLADE
+			or piece.instance != FlowSteps.GLADE or piece.piece != "start"
+			or piece.enters_instance()
 			or not piece.counts(
 				QuestStep.ENTERED,
 				"start",
-				"glade",
+				FlowSteps.GLADE,
 			) or piece.counts(QuestStep.ENTERED, "start", "")
-			or tied.steps[0].counts(QuestStep.OPENED, "", "forest")):
+			or tied.steps[0].counts(QuestStep.OPENED, "", FlowSteps.FOREST)):
 		return "steps counting only in the glade didn't read, or counted elsewhere: " + tied.problem
 	var waiting: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
@@ -367,16 +368,18 @@ func _check_quest_territories(content: QuestContent) -> String:
 	if handed == 0 or content.quests["first_domination"].territory != null:
 		return "no quest hands a territory over, or the first domination does"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"territory\": %s, \"steps\": [%s]}"
-	var forest: String = "{\"instance\": \"forest\", \"faction\": \"a\"}"
+	var forest_name: String = FlowSteps.FOREST
+	var forest: String = "{\"instance\": \"%s\", \"faction\": \"a\"}" % forest_name
+	var unnamed: String = "step 0: a territory quest's steps name its instance " + forest_name
 	var cases: Dictionary[String, String] = {
-		quest % ["\"forest\"", OPENED_END]: "its territory: it isn't",
-		quest % ["{\"instance\": \"forest\", \"faction\": \"a\", \"by\": 1}", OPENED_END]:
+		quest % ["\"%s\"" % forest_name, OPENED_END]: "its territory: it isn't",
+		quest % [forest.replace("}", ", \"by\": 1}"), OPENED_END]:
 		"its territory: field by",
-		quest % ["{\"instance\": \"Forest\", \"faction\": \"a\"}", OPENED_END]:
+		quest % [forest.replace(forest_name, forest_name.capitalize()), OPENED_END]:
 		"its territory: it names",
-		quest % ["{\"instance\": \"forest\"}", OPENED_END]: "its territory: it names",
-		quest % [forest, OPENED_END]: "step 0: a territory quest's steps name its instance forest",
-		quest % [forest, OPENED_END.replace("{", "{\"instance\": \"glade\", ")]: (
+		quest % ["{\"instance\": \"%s\"}" % forest_name, OPENED_END]: "its territory: it names",
+		quest % [forest, OPENED_END]: unnamed,
+		quest % [forest, OPENED_END.replace("{", "{\"instance\": \"%s\", " % FlowSteps.GLADE)]: (
 			"step 0: a territory quest's steps name"
 		),
 	}
@@ -751,14 +754,15 @@ func _check_realms() -> String:
 	text += "- `🟦`: no instance\n"
 	var forest: String = FlowSteps.FOREST
 	var start: String = forest + RealmDocument.START
+	var glade_start: String = "- `🌳`: the instance %s, where the players start\n" % FlowSteps.GLADE
 	var cases: Dictionary[String, String] = {
-		text % ["🌲🌲🌲", forest]: "the instance forest is drawn twice",
+		text % ["🌲🌲🌲", forest]: "the instance %s is drawn twice" % forest,
 		text % ["⬜🌲⬜", forest]: "the legend doesn't explain `⬜`",
-		text % ["🟦🌲🌳", start] + "- `🌳`: the instance glade, where the players start\n": (
-			"the players start in forest and glade"
+		text % ["🟦🌲🌳", start] + glade_start: (
+			"the players start in %s and %s" % [forest, FlowSteps.GLADE]
 		),
-		text % ["🟦🌲🟦", forest] + "- `🌳`: the instance glade, where the players start\n": (
-			"the players start in glade, which isn't drawn"
+		text % ["🟦🌲🟦", forest] + glade_start: (
+			"the players start in %s, which isn't drawn" % FlowSteps.GLADE
 		),
 	}
 	for case: String in cases:
@@ -980,7 +984,7 @@ func _factions_refused(cases: Dictionary[String, String]) -> String:
 ## symbol.
 func _check_faction_territory(content: FactionContent) -> String:
 	var guild: Faction = content.factions["cartographers_guild"]
-	if guild.symbol != "+" or " ".join(guild.territory) != "glade":
+	if guild.symbol != "+" or " ".join(guild.territory) != FlowSteps.GLADE:
 		return "the guild isn't marked + or doesn't hold the glade: %s %s" % [
 			guild.symbol,
 			guild.territory,
@@ -995,17 +999,17 @@ func _check_faction_territory(content: FactionContent) -> String:
 	var refused: String = _factions_refused({
 		faction.replace(symbol, ""): "it needs a symbol",
 		faction.replace(symbol, "\"symbol\": \"+++\", "): "it needs a symbol",
-		territory % "\"basic\"": "its territory must",
-		territory % "[\"Basic\"]": "its territory must",
-		territory % "[\"basic\", \"basic\"]": "its territory must",
+		territory % ("\"%s\"" % FlowSteps.BASIC): "its territory must",
+		territory % ("[\"%s\"]" % FlowSteps.BASIC.capitalize()): "its territory must",
+		territory % ("[\"%s\", \"%s\"]" % [FlowSteps.BASIC, FlowSteps.BASIC]): "its territory must",
 	})
 	if not refused.is_empty():
 		return refused
-	var held: String = territory % "[\"basic\"]"
+	var held: String = territory % ("[\"%s\"]" % FlowSteps.BASIC)
 	var twice: String = _pair_problem(held, held)
-	if not twice.contains("basic is x's territory already"):
+	if not twice.contains(FlowSteps.BASIC + " is x's territory already"):
 		return "two factions holding one instance gave %s" % twice
-	var shared: String = _pair_problem(held, territory % "[\"glade\"]")
+	var shared: String = _pair_problem(held, territory % ("[\"%s\"]" % FlowSteps.GLADE))
 	if not shared.contains("its symbol + is x's already"):
 		return "two factions sharing a symbol gave %s" % shared
 	return ""

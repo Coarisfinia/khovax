@@ -99,12 +99,13 @@ func _check_launch_options() -> String:
 	var args: PackedStringArray = [
 		"--seed=42",
 		"ticks=9",
-		"--instance=glade",
+		"--instance=" + FlowSteps.GLADE,
 		"--invincible",
 		"--user-dir=786-branch",
 	]
 	var options: LaunchOptions = LaunchOptions.parse(args)
-	var read: bool = options.seed_value == 42 and options.instance == "glade" and options.invincible
+	var read: bool = options.seed_value == 42 and options.instance == FlowSteps.GLADE
+	read = read and options.invincible
 	read = read and options.user_dir == "786-branch"
 	if not options.problem.is_empty() or not read or not options.is_test_world():
 		return "launch options didn't read as given: %s" % options.problem
@@ -112,8 +113,10 @@ func _check_launch_options() -> String:
 		"--speed=2": "not an option",
 		"--seed=-3": "not an option, or not a seed",
 		"--seed=x": "not an option, or not a seed",
-		"--instance=nowhere": "no instance blueprint nowhere; there are arena, basic",
-		"--instance=glade=x": "no instance blueprint glade=x",
+		"--instance=nowhere": (
+			"no instance blueprint nowhere; there are %s, %s" % [FlowSteps.ARENA, FlowSteps.BASIC]
+		),
+		"--instance=%s=x" % FlowSteps.GLADE: "no instance blueprint %s=x" % FlowSteps.GLADE,
 		"--seed=4=2": "not an option, or not a seed",
 		"--user-dir=": "not a folder name",
 		"--user-dir=a/b": "not a folder name: a/b",
@@ -135,7 +138,8 @@ func _check_launched(tree: SceneTree) -> String:
 	var given_instance: String = GameDriver.start_instance
 	WorldKeeper.default_path = WorldSave.PATH
 	# Without a user folder there's nothing that can fail to apply.
-	var _applied: String = LaunchOptions.parse(["--instance=glade", "--seed=42"]).apply()
+	var launch: PackedStringArray = ["--instance=" + FlowSteps.GLADE, "--seed=42"]
+	var _applied: String = LaunchOptions.parse(launch).apply()
 	if not WorldKeeper.default_path.is_empty():
 		WorldKeeper.default_path = ""
 		return "a launched test world would resume or overwrite the player's own"
@@ -144,7 +148,9 @@ func _check_launched(tree: SceneTree) -> String:
 	var result: String = ""
 	var on_start: bool = driver.state != null
 	on_start = on_start and driver.state.player(0).tile == driver.state.region.starts[0]
-	if driver.local_instance_name() != "glade" or driver.world.world_seed != 42 or not on_start:
+	if (driver.local_instance_name() != FlowSteps.GLADE
+			or driver.world.world_seed != 42
+			or not on_start):
 		result = "launched into the glade on seed 42, the game started in %s on %d" % [
 			driver.local_instance_name(),
 			driver.world.world_seed,

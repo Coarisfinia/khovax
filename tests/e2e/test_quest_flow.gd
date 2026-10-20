@@ -54,7 +54,9 @@ const ENTER_THICKET: String = (
 ## A quest that asks to enter the glade.
 const ENTER_GLADE: String = (
 	"{\"id\": \"enter_glade\", \"name\": \"Into the glade\", \"steps\": ["
-	+ "{\"condition\": \"entered\", \"instance\": \"glade\", \"ends\": \"enter_glade\"}]}"
+	+ "{\"condition\": \"entered\", \"instance\": \""
+	+ FlowSteps.GLADE
+	+ "\", \"ends\": \"enter_glade\"}]}"
 )
 ## A quest that asks to reach the beach.
 const REACH_BEACH: String = (
@@ -72,7 +74,9 @@ const PROMISE: String = (
 ## A side quest that starts once the glade is purified (#707), a world event, not a quest's.
 const AFTER_PURIFIED: String = (
 	"{\"id\": \"after_purified\", \"name\": \"After the glade\", "
-	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"glade_purified\"}, "
+	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \""
+	+ FlowSteps.GLADE_PURIFIED
+	+ "\"}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_purified\"}]}"
 )
 ## A side quest that starts once the beacon is lit (#756).
@@ -484,19 +488,19 @@ func _check_entered_glade(driver: GameDriver, bus: EventBus, quests: QuestTracke
 	var forest: GameState = InstanceBlueprints.create(FlowSteps.FOREST, 3, 1)
 	var ways: Array[Vector2i] = []
 	for i: int in forest.region.exits.size():
-		if forest.region.exit_blueprints[i] == "glade":
+		if forest.region.exit_blueprints[i] == FlowSteps.GLADE:
 			ways.append(Vector2i(forest.region.exits[i].x, forest.region.exits[i].y))
 	var from: Vector2i = forest.player(0).tile
 	var targets: Dictionary[String, Vector2i] = QuestTargets.of(forest, quests, 0)
 	var target: Vector2i = targets.get("enter_glade", -Vector2i.ONE)
 	if not ways.has(target) or Hex.distance(target, from) != _nearest(ways, from):
 		return "the quest to enter the glade isn't marked on the nearest exit leading there"
-	_emit(driver, bus, InstanceEntered.new("glade", 9, 1))
-	_emit(driver, bus, InstanceEntered.new("basic", 1, 0))
-	_emit(driver, bus, PieceEntered.new("glade", 1, 0))
+	_emit(driver, bus, InstanceEntered.new(FlowSteps.GLADE, 9, 1))
+	_emit(driver, bus, InstanceEntered.new(FlowSteps.BASIC, 1, 0))
+	_emit(driver, bus, PieceEntered.new(FlowSteps.GLADE, 1, 0))
 	if quests.finished.has("enter_glade"):
 		return "another player entering, another instance or a piece counted as entering the glade"
-	_emit(driver, bus, InstanceEntered.new("glade", 1, 0))
+	_emit(driver, bus, InstanceEntered.new(FlowSteps.GLADE, 1, 0))
 	if not quests.finished.has("enter_glade"):
 		return "this player entering the glade didn't finish the quest to enter it"
 	return ""
@@ -679,11 +683,21 @@ func _check_world_event(driver: GameDriver, bus: EventBus, quests: QuestTracker)
 	_emit(
 		driver,
 		bus,
-		WorldChanged.new("glade_corrupted", WorldFlags.EVENT_FLAG + "glade_corrupted"),
+		WorldChanged.new(
+			FlowSteps.CORRUPTED_GLADE,
+			WorldFlags.EVENT_FLAG + FlowSteps.CORRUPTED_GLADE,
+		),
 	)
 	if quests.open_steps().has(waiting.id):
 		return "another world event started the side quest waiting on the glade's purifying"
-	_emit(driver, bus, WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"))
+	_emit(
+		driver,
+		bus,
+		WorldChanged.new(
+			FlowSteps.GLADE_PURIFIED,
+			WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED,
+		),
+	)
 	if not quests.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
 	return _check_caught_up(driver.quest_tie, quests)
@@ -702,7 +716,7 @@ func _check_caught_up(tie: QuestTie, quests: QuestTracker) -> String:
 	var purified: QuestProgress = quests.progress["after_purified"]
 	var flags: Array[String] = [
 		WorldFlags.EVENT_FLAG + "beacon_lit",
-		WorldFlags.EVENT_FLAG + "glade_purified",
+		WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED,
 		"TERRITORY_after_beacon",
 	]
 	tie.catch_up(flags)
@@ -932,7 +946,8 @@ func _check_branching() -> String:
 	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 3, 1)
 	var thicket: QuestTracker = QuestTracker.new()
 	thicket.book = book
-	var entered: Array[QuestFact] = [QuestFact.new(QuestStep.INSTANCE_ENTERED, "glade", "glade")]
+	var glade: String = FlowSteps.GLADE
+	var entered: Array[QuestFact] = [QuestFact.new(QuestStep.INSTANCE_ENTERED, glade, glade)]
 	var applied: String = _count(thicket, entered)
 	var choosing: Array[String] = ["Now: Enter the pond or enter the thicket"]
 	if not applied.is_empty() or QuestsTab.quest_lines(thicket, "glade_fork") != choosing:
@@ -1107,23 +1122,29 @@ func _check_facts() -> String:
 		WildMonsterDominated.new(2, 2, 1, Vector2i.ZERO, "tikazzir"),
 		ChestOpened.new(Vector2i.ZERO, 1, empty),
 		ChestOpened.new(Vector2i.ZERO, 1, loot),
-		InstanceEntered.new("forest", 1, 0),
+		InstanceEntered.new(FlowSteps.FOREST, 1, 0),
 		PlaceReached.new("beach", 2, 1),
-		WorldChanged.new("glade_purified", WorldFlags.EVENT_FLAG + "glade_purified"),
+		WorldChanged.new(
+			FlowSteps.GLADE_PURIFIED,
+			WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED,
+		),
 	]
 	var seen: Array[String] = []
 	for event: RefCounted in events:
-		seen.append_array(_described(QuestFacts.of(event, 0, "glade")))
-	var flags: Array[String] = [WorldFlags.EVENT_FLAG + "beacon_lit", "TERRITORY_glade"]
+		seen.append_array(_described(QuestFacts.of(event, 0, FlowSteps.GLADE)))
+	var flags: Array[String] = [
+		WorldFlags.EVENT_FLAG + "beacon_lit",
+		"TERRITORY_" + FlowSteps.GLADE,
+	]
 	seen.append_array(_described(QuestFacts.of_world_flags(flags)))
 	var expected: Array[String] = [
-		"dominated ombulumo glade 1",
-		"dominated_target old_toad glade 1",
-		"opened  glade 1",
-		"opened  glade 1",
-		"obtained feather glade 2",
-		"entered_instance forest forest 1",
-		"emitted glade_purified  1",
+		"dominated ombulumo %s 1" % FlowSteps.GLADE,
+		"dominated_target old_toad %s 1" % FlowSteps.GLADE,
+		"opened  %s 1" % FlowSteps.GLADE,
+		"opened  %s 1" % FlowSteps.GLADE,
+		"obtained feather %s 2" % FlowSteps.GLADE,
+		"entered_instance %s %s 1" % [FlowSteps.FOREST, FlowSteps.FOREST],
+		"emitted %s  1" % FlowSteps.GLADE_PURIFIED,
 		"emitted beacon_lit  1",
 	]
 	if seen != expected:
@@ -1378,9 +1399,14 @@ func _check_broken_data() -> String:
 	content = _load_written({ "a_good": stranger })
 	if not content.problem.ends_with("its standing's faction must be one that exists"):
 		return "a quest moving the standing with no faction that exists wasn't refused"
-	var astray: String = "\"territory\": {\"instance\": \"forest\", \"faction\": \"strangers\"}"
+	var astray: String = "\"territory\": {\"instance\": \"%s\", \"faction\": \"strangers\"}" % [
+		FlowSteps.FOREST,
+	]
 	# Its step counts in its territory, as every territory quest's does (#769).
-	var in_forest: String = good.replace("\"opened\"", "\"opened\", \"instance\": \"forest\"")
+	var in_forest: String = good.replace(
+		"\"opened\"",
+		"\"opened\", \"instance\": \"%s\"" % FlowSteps.FOREST,
+	)
 	content = _load_written({ "a_good": in_forest.replace("\"steps\"", astray + ", \"steps\"") })
 	if not content.problem.ends_with("its territory's faction must be one that exists"):
 		return "a quest handing its territory to no faction that exists wasn't refused (#638)"
