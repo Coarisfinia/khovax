@@ -81,8 +81,8 @@ static func what_it_is(meaning: String) -> String:
 static func all_in(region: Region) -> Array[TileTrigger]:
 	var triggers: Array[TileTrigger] = []
 	var placed: Dictionary[Vector2i, String] = region.placed(TriggerPlacements.KIND)
-	for tile: Vector2i in placed:
-		triggers.append(read(placed[tile], tile))
+	for spot: Vector2i in placed:
+		triggers.append(read(placed[spot], spot))
 	return triggers
 
 
