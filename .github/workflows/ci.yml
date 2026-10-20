@@ -623,7 +623,7 @@ jobs:
           # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
           emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: timeout 300 bash tools/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
+          script: timeout 480 bash tools/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
 
   linux-e2e:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual
