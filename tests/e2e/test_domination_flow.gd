@@ -1128,6 +1128,8 @@ func _check_no_special(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	var state: GameState = _strike_state(spots)
 	FlowSteps.carry(state, 0, [WEAK])
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	# The companion joins on the tick after its player arrives.
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
 	state.entity(companion_id).tile = hemmed
 	var specials: SpecialAttackFeature = (
