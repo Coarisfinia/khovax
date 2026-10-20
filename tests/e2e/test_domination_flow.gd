@@ -1708,17 +1708,19 @@ func _check_totem_key(main: Node, state: GameState) -> String:
 ## Halfway through the seal, about half the ring's tiles have the seal color, and the rest the
 ## trail's: the fill shows as a shape, not only a color.
 func _check_filling(main: Node, state: GameState) -> String:
-	var trails: TrailView = main.get_node("TrailView") as TrailView
+	var fill: SealFillView = main.get_node("SealFillView") as SealFillView
 	var grid: HexGrid = main.get_node("Instance/HexGrid") as HexGrid
 	var seal: RingSeal = _domination(state).seals.get(state.player(0).id)
 	for _tick: int in Fixed.div_floor(seal.seal_ticks, 2):
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
-	trails.show_state()
+	fill.show_state()
 	var sealed: int = 0
 	for tile: Vector2i in seal.walls:
-		if grid.tile_color_of(tile) == trails.seal_color:
+		if grid.tile_color_of(tile) == fill.seal_color:
 			sealed += 1
-	if sealed != TrailView.sealed_tiles(seal).size() or sealed == 0 or sealed == seal.walls.size():
+	if (sealed != SealFillView.sealed_tiles(seal).size()
+			or sealed == 0
+			or sealed == seal.walls.size()):
 		return "halfway through the seal, %d of the ring's %d tiles were filled" % [
 			sealed,
 			seal.walls.size(),

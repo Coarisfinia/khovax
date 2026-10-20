@@ -49,6 +49,7 @@
 [ext_resource type="PackedScene" path="res://slices/dialogs/ui/dialog_screen.tscn" id="43_dialog"]
 [ext_resource type="Script" path="res://slices/revive_items/ui/revive_button.gd" id="44_revive_button"]
 [ext_resource type="Script" path="res://slices/fog/meta/explored_keeper.gd" id="45_explored"]
+[ext_resource type="Script" path="res://slices/domination/look/seal_fill_view.gd" id="49_seal_fill"]
 [ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
@@ -190,6 +191,11 @@ tile = Vector2i(1, -1)
 
 [node name="TrailView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid") unique_id=1735204871]
 script = ExtResource("7_trail")
+driver = NodePath("../Driver")
+grid = NodePath("../Instance/HexGrid")
+
+[node name="SealFillView" type="Node" parent="." node_paths=PackedStringArray("driver", "grid")]
+script = ExtResource("49_seal_fill")
 driver = NodePath("../Driver")
 grid = NodePath("../Instance/HexGrid")
 
