@@ -798,7 +798,8 @@ func _check_golden_replays() -> String:
 		if file_name.ends_with(".replay"):
 			var text: String = FileAccess.get_file_as_string(folder + file_name)
 			var first: Replay = ReplayFile.parse(text)
-			if not first.rules.is_empty() or not first.checkpoints.is_empty():
+			var recorded: bool = not first.rules.is_empty() or not first.features.is_empty()
+			if recorded or not first.checkpoints.is_empty():
 				return "golden replay %s: it holds more than its inputs" % file_name
 			var second: Replay = ReplayFile.parse(text)
 			var problem: String = first.rehash()

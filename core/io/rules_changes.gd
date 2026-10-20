@@ -1,7 +1,8 @@
 # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (lists the rule change files, #736)
 class_name RulesChanges
 extends RefCounted
-## The id of the rules (#736, #876), recorded in every replay and world save: a digest of the rule
+## The id of the rules (#736, #876), recorded in every recorded replay and world save: a digest of
+## the rule
 ## changes, one file each in core/rules_changes/. A change that makes existing replays play out
 ## differently adds its file there, `<issue>-<slug>.md` with the issue in its frontmatter and one
 ## line on what plays differently: CI fails a change that plays the reference replays differently
