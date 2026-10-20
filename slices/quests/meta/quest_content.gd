@@ -101,8 +101,6 @@ static func _code_territory(
 		return "its territory's faction must be one that exists"
 	var handed: PackedStringArray = PackedStringArray([territory.instance, territory.faction])
 	var by: int = Territory.code(territory.instance, territory.faction)
-	if (by == Command.NO_HAND_OVER
-			or (content.handovers.has(by) and content.handovers[by] != handed)):
+	if not CommandCodes.file(content.handovers, by, handed):
 		return "its territory's code is taken: hand over another instance or faction"
-	content.handovers[by] = handed
 	return ""

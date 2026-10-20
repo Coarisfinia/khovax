@@ -20,11 +20,10 @@ func id() -> String:
 	return ID
 
 
-## The code a command gives the answer `answer_id` of the dialog `dialog_id` by: a whole number from
-## both ids, the same on every machine, and never Command.NO_ANSWER for a real answer (the dialogs'
-## content refuses one that would be, or two that share a code).
+## The code a command gives the answer `answer_id` of the dialog `dialog_id` by (CommandCodes),
+## never Command.NO_ANSWER for a real answer (the dialogs' content files it with CommandCodes.file).
 static func code(dialog_id: String, answer_id: String) -> int:
-	return StateHash.name_code(dialog_id + "/" + answer_id)
+	return CommandCodes.of(dialog_id + "/" + answer_id)
 
 
 ## Raises DialogAnswered for every player, in slot order, whose command answers a dialog.

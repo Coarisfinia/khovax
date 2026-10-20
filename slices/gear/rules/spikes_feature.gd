@@ -34,9 +34,11 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The code a command carries for the gear `gear_id` in the trap slot: Command.NO_TRAP for none.
+## The code a command carries for the gear `gear_id` in the trap slot (CommandCodes):
+## Command.NO_TRAP for none, never for a piece of gear (the gear's content files it with
+## CommandCodes.file).
 static func code_of(gear_id: String) -> int:
-	return StateHash.name_code(gear_id) if not gear_id.is_empty() else Command.NO_TRAP
+	return CommandCodes.of(gear_id)
 
 
 ## Lets every ring's spikes, in its dominator's id order, hurt the wild monsters pushing on it, on

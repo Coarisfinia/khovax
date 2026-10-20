@@ -64,6 +64,7 @@ func run(_tree: SceneTree) -> String:
 		_check_factions,
 		_check_dialogs,
 		_check_dialogs_refused,
+		_check_command_codes,
 		_check_kits.bind(content),
 		_check_text_tags,
 	]
@@ -913,6 +914,23 @@ func _check_dialogs_refused() -> String:
 		var refusal: String = Dialog.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken dialog gave %s, not %s" % [refusal, cases[text]]
+	return ""
+
+
+## Command codes (#818): no id's code is CommandCodes.NONE, and filing one refuses NONE and a code
+## another value holds, while the same value filed again is kept.
+func _check_command_codes() -> String:
+	var by_code: Dictionary[int, String] = {}
+	var filed: Array[bool] = [
+		CommandCodes.file(by_code, CommandCodes.of("a"), "a"),
+		CommandCodes.file(by_code, CommandCodes.of("a"), "a"),
+		CommandCodes.file(by_code, CommandCodes.of("a"), "b"),
+		CommandCodes.file(by_code, CommandCodes.of(""), ""),
+	]
+	if filed != [true, true, false, false] or by_code.size() != 1:
+		return "filing command codes gave %s, kept %s" % [filed, by_code]
+	if CommandCodes.of("") != CommandCodes.NONE or CommandCodes.of("a") == CommandCodes.NONE:
+		return "an id's command code is NONE, or no id's isn't"
 	return ""
 
 
