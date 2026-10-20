@@ -255,7 +255,7 @@ func _near_any(ground: Vector2, tiles: Array[Vector2i]) -> bool:
 
 ## Why the Survey's held marks (#637) don't follow the holder flags, or "". With every holder flag
 ## cleared, nothing is marked and it says nobody holds the instance the player is in. Once a flag
-## says the Cartographer's Guild holds it, it's marked and said in words, by symbol and name. Once
+## says the Amvrel Velmarai holds it, it's marked and said in words, by symbol and name. Once
 ## the guild holds the first instance next door too, if there is one, that one is marked in the
 ## middle of what shows of it. The world's holder flags are put back after, whichever start it had.
 func _survey_held(driver: GameDriver, survey: SurveyView) -> String:
@@ -284,7 +284,7 @@ func _holder_flags(world: World) -> Array[String]:
 
 ## Why the marks don't follow the flags `_survey_held` sets, or "".
 func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHeldMarks) -> String:
-	var guild: String = "cartographers_guild"
+	var guild: String = "amvrel_velmarai"
 	var here: String = driver.local_instance_name()
 	survey.show_state()
 	marks.show_state()
@@ -294,7 +294,7 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 	marks.show_state()
 	if marks.held_by.get(here, "") != guild:
 		return "the Survey doesn't mark the instance here once the guild holds it"
-	if marks.here_text() != TerritoryText.HELD_TEXT % ["+", "Cartographer's Guild"]:
+	if marks.here_text() != TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]:
 		return "the Survey says %s about the instance the guild holds" % marks.here_text()
 	var next_door: Array[String] = []
 	next_door.assign(survey.neighbours.shifts.keys())
@@ -683,7 +683,7 @@ func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32
 
 
 ## Why the menu's Survey tab (#392) doesn't show what the Survey shows, over the tab, with a line
-## saying the Cartographer's Guild holds the glade, where the player starts (#637, #712), or its
+## saying the Amvrel Velmarai holds the glade, where the player starts (#637, #712), or its
 ## zoom key, its buttons, a controller's triggers or a pinch on it don't step the one zoom it
 ## follows, or a trigger zooms the Survey once the menu is closed, or "".
 func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
@@ -707,7 +707,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var same: bool = (tab.view.tiles.keys() == survey.tiles.keys()
 			and tab.view.circles.keys() == survey.circles.keys()
 			and tab.view.quest_targets == survey.quest_targets
-			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Cartographer's Guild"])
+			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"])
 	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
 		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
 	problem += _survey_tab_zooms(tab, choice)

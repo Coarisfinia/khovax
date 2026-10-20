@@ -1,10 +1,10 @@
 // The first quest a new player has (#321): go to the beach in the first instance, then dominate a
 // monster there, encircling it, the first domination. A placeholder until the story's quests exist
-// (#532): finishing it makes the player a New Face with the Cartographer's Guild.
+// (#532): finishing it makes the player an Apprentice Charter with the Amvrel Velmarai.
 {
 	"id": "first_domination",
 	"name": "Dominate your first monster",
-	"standing": { "faction": "cartographers_guild", "change": 1 },
+	"standing": { "faction": "amvrel_velmarai", "change": 1 },
 	"steps": [
 		{ "condition": "reached", "place": "beach" },
 		{ "condition": "dominated", "ends": "first_domination" }

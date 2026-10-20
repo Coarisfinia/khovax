@@ -1032,12 +1032,12 @@ func _check_story_beat() -> String:
 
 
 ## Faction territory (#637): a fresh world starts with the factions' territory as flags, so the
-## Cartographer's Guild holds the glade, where the player starts (#712), and nobody the forest;
+## Amvrel Velmarai holds the glade, where the player starts (#712), and nobody the forest;
 ## a world loading from a source without territory (RisingSource) starts with no flags; through its
 ## save data and back the world keeps who holds what.
 func _check_territory() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.GLADE)
-	var guild: String = "cartographers_guild"
+	var guild: String = "amvrel_velmarai"
 	var flag: String = Territory.flag(FlowSteps.GLADE, guild)
 	if (" ".join(world.flags) != flag
 			or Territory.holder(world.flags, FlowSteps.GLADE) != guild):

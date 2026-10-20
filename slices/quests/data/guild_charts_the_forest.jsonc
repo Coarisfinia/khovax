@@ -1,11 +1,11 @@
-// A territory quest (#638): the Cartographer's Guild charts the forest north of its glade. It starts
+// A territory quest (#638): the Amvrel Velmarai chart the forest north of their glade. It starts
 // once the player first enters the forest, and asks them to walk its three deep places, the stream,
 // the grove and the felling, for the guild's charts; finishing it hands the forest to the guild.
 {
 	"id": "guild_charts_the_forest",
-	"name": "Chart the forest for the Guild",
+	"name": "Chart the forest for the ${FACTION:amvrel_velmarai}",
 	"starts_on": { "condition": "entered", "instance": "forest" },
-	"territory": { "instance": "forest", "faction": "cartographers_guild" },
+	"territory": { "instance": "forest", "faction": "amvrel_velmarai" },
 	"steps": [
 		{ "condition": "entered", "piece": "stream", "instance": "forest" },
 		{ "condition": "entered", "piece": "grove", "instance": "forest" },

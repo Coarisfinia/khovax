@@ -202,13 +202,45 @@ func _check_old_species_ids() -> String:
 	var finished: Profile = _parse(_format_13(profile, quests))
 	if not finished.problem.is_empty() or _parsed_quests.finished != ["three_ombulumo"]:
 		return "a format 13 save's finished quest wasn't renamed: " + finished.problem
+	return _check_old_faction_ids()
+
+
+## A save from before a faction's id was its name (format 14, #976) names the faction by its old
+## id, in its standings and in a territory hand-over still in its outbox, which load renamed.
+func _check_old_faction_ids() -> String:
+	var old_id: String = "cartographers_guild"
+	var new_id: String = "amvrel_velmarai"
+	var profile: Profile = Profile.new()
+	var _raised: String = profile.standings.change(new_id, 2)
+	var new_code: int = Territory.code("forest", new_id)
+	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, new_code)
+	var text: String = _text(profile).replace(_format(ProfileSave.FORMAT), _format(14))
+	text = text.replace(
+		new_id,
+		old_id,
+	).replace(str(new_code), str(Territory.code("forest", old_id)))
+	var migrated: Profile = _parse(text)
+	var expected: Dictionary[String, int] = { new_id: 2 }
+	if (not migrated.problem.is_empty()
+			or migrated.standings.by_faction != expected
+			or migrated.outbox.entries.size() != 1
+			or migrated.outbox.entries[0].data != new_code):
+		return "a format 14 save's old faction id wasn't renamed: %s %s" % [
+			migrated.standings.by_faction,
+			migrated.problem,
+		]
 	return ""
+
+
+## The save text's format field for `format`.
+static func _format(format: int) -> String:
+	return "\"format\": %d" % format
 
 
 ## `profile`'s save with `quests` as format 13 wrote it, with the species and quest ids from before
 ## #763.
 func _format_13(profile: Profile, quests: QuestTracker) -> String:
-	var text: String = _text(profile, quests).replace("\"format\": 14", "\"format\": 13")
+	var text: String = _text(profile, quests).replace(_format(ProfileSave.FORMAT), _format(13))
 	text = text.replace("three_ombulumo", "three_moss_toads")
 	return text.replace("ombulumo", "moss_toad").replace("tikazzir", "storm_finch")
 
@@ -318,7 +350,7 @@ func _check_named() -> String:
 func _check_standings() -> String:
 	var profile: Profile = Profile.new()
 	var standings: Standings = profile.standings
-	var guild: String = "cartographers_guild"
+	var guild: String = "amvrel_velmarai"
 	if standings.of(guild) != 0:
 		return "a new profile isn't neutral with a faction"
 	var changed: String = standings.change(guild, 3) + standings.change(guild, 4)

@@ -308,12 +308,12 @@ func _check_side_quests(content: QuestContent) -> String:
 
 
 ## Why the standings quests move (#532) don't read, or "": the first domination raises the
-## Cartographer's Guild by one, the toads' quest moves none, and a standing that isn't an object,
+## Amvrel Velmarai by one, the toads' quest moves none, and a standing that isn't an object,
 ## has another field, names no faction id, or changes by nothing, a fraction, text or more than the
 ## whole scale is refused.
 func _check_quest_standings(content: QuestContent) -> String:
 	var raised: QuestStanding = content.quests["first_domination"].standing
-	if (raised == null or raised.faction != "cartographers_guild" or raised.change != 1
+	if (raised == null or raised.faction != "amvrel_velmarai" or raised.change != 1
 			or content.quests["three_ombulumo"].standing != null):
 		return "the first domination doesn't raise the guild by one, or another quest moves one"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"standing\": %s, \"steps\": [%s]}"
@@ -935,15 +935,15 @@ func _check_loot_refused() -> String:
 	return ""
 
 
-## The factions load, each with its own name for every rank but neutral (#483): the Cartographer's
-## Guild's (#484) run from Apprentice Charter up to Charted in Legend and from Betrayer down. A
+## The factions load, each with its own name for every rank but neutral (#483): the Amvrel
+## Velmarai's (#484) run from Apprentice Charter up to Charted in Legend and from Betrayer down. A
 ## faction file with a wrong id, no name, an unknown field, or not five rank names with more than
 ## spaces each way is refused.
 func _check_factions() -> String:
 	var content: FactionContent = FactionContent.load_factions()
-	if not content.problem.is_empty() or not content.factions.has("cartographers_guild"):
+	if not content.problem.is_empty() or not content.factions.has("amvrel_velmarai"):
 		return "the factions didn't load: " + content.problem
-	var guild: Faction = content.factions["cartographers_guild"]
+	var guild: Faction = content.factions["amvrel_velmarai"]
 	var names: Array[String] = []
 	for standing: int in [Standings.LOWEST, -1, 0, 1, Standings.HIGHEST]:
 		names.append(guild.rank_name(standing))
@@ -951,7 +951,7 @@ func _check_factions() -> String:
 		"Edge of the Chart", "Betrayer", "", "Apprentice Charter", "Charted in Legend",
 	]
 	if names != expected:
-		return "the Cartographer's Guild's ranks read %s" % [names]
+		return "the Amvrel Velmarai's ranks read %s" % [names]
 	var five: String = FIVE_RANKS
 	var faction: String = FACTION_TEXT
 	var cases: Dictionary[String, String] = {
@@ -977,13 +977,13 @@ func _factions_refused(cases: Dictionary[String, String]) -> String:
 	return ""
 
 
-## The Cartographer's Guild is marked by its symbol and holds the glade, where the player starts
+## The Amvrel Velmarai is marked by its symbol and holds the glade, where the player starts
 ## (#637, #712), when a world starts, and every faction's territory names instance blueprints that
 ## exist. A faction file without a symbol, with a longer one, or with a territory that isn't a list
 ## of instance ids, each once, is refused, and so are two factions holding one instance or sharing a
 ## symbol.
 func _check_faction_territory(content: FactionContent) -> String:
-	var guild: Faction = content.factions["cartographers_guild"]
+	var guild: Faction = content.factions["amvrel_velmarai"]
 	if guild.symbol != "+" or " ".join(guild.territory) != FlowSteps.GLADE:
 		return "the guild isn't marked + or doesn't hold the glade: %s %s" % [
 			guild.symbol,
@@ -1163,8 +1163,8 @@ func _check_text_tags() -> String:
 	var glade: String = DialogContent.load_dialogs().dialogs["guild_scout_greeting"].lines[2].text
 	if not TextTags.shown(glade).begins_with("A glade, thick with Ombulumo. Something"):
 		return "the scout's glade line shows %s" % TextTags.shown(glade)
-	var shown: String = tags.resolve("${FACTION:cartographers_guild} sells ${GEAR:berry_pouch}")
-	if shown != "Cartographer's Guild sells Berry pouch":
+	var shown: String = tags.resolve("${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}")
+	if shown != "Amvrel Velmarai sells Berry pouch":
 		return "faction and gear tags show %s" % shown
 	var fang: GearItem = GearItem.new()
 	fang.name = "${MONSTER:ombulumo} fang"
