@@ -22,13 +22,13 @@ const OFF_CENTER: float = 0.15
 @export var driver: Session
 ## The fog the decorations rise out of; none shows every decoration.
 @export var fog: FogView
+
 ## The region to decorate instead of the local instance's: a neighbour's (#1043), like
 ## HexGrid.fixed_region.
 var fixed_region: Region
 ## How far `fixed_region`'s tiles are shifted into the local instance's coordinates, where the fog
 ## knows them (NeighbourView.shifts).
 var shift: Vector2i = Vector2i.ZERO
-
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
 ## Decorations of tiles changed in place (#530), shrinking away.
