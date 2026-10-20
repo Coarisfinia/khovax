@@ -68,8 +68,9 @@ func _process(_delta: float) -> bool:
 	if _wait > 0:
 		_wait -= 1
 		return false
-	if _current >= 0:
-		_save(_names[_current])
+	if _current >= 0 and not _saved(_names[_current]):
+		quit(1)
+		return true
 	_current += 1
 	if _current >= _names.size():
 		var spot: Vector2 = _game_camera.unproject_position(_piece.global_position)
@@ -83,12 +84,6 @@ func _process(_delta: float) -> bool:
 func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	var problem: String = LaunchOptions.parse(args).apply()
-	if args.size() < 2 or not problem.is_empty():
-		printerr("usage: -- res://<model>.glb <out_dir> [size=WxH] [clip=<Clip>]; ", problem)
-		quit(1)
-		return
-	_model_path = args[0]
-	_out_dir = args[1]
 	var size: Vector2i = Vector2i(1280, 720)
 	for arg: String in args.slice(2):
 		if arg.begins_with("size="):
@@ -98,6 +93,18 @@ func _initialize() -> void:
 			_clip = arg.trim_prefix("clip=")
 		elif arg.begins_with("from="):
 			_from = arg.trim_prefix("from=")
+	if problem.is_empty() and not (_from == "game" or VIEWS.has(_from)):
+		problem = "no view " + _from
+	if problem.is_empty() and args.size() >= 2:
+		_model_path = args[0]
+		_out_dir = args[1]
+		var made: Error = DirAccess.make_dir_recursive_absolute(_out_dir)
+		if made != OK:
+			problem = "can't make %s: %s" % [_out_dir, error_string(made)]
+	if args.size() < 2 or not problem.is_empty():
+		printerr("usage: -- res://<model>.glb <out_dir> [size=WxH] [clip=<Clip>]; ", problem)
+		quit(1)
+		return
 	_viewport = SubViewport.new()
 	_viewport.size = size
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
@@ -130,6 +137,8 @@ func _place() -> void:
 		return
 	if VIEWS.has(_from):
 		_pose_side(_from, driver.state)
+	else:
+		_game_camera.make_current()
 	_animations.play(StringName(_clip))
 	_animations.pause()
 	var length: float = _animations.get_animation(StringName(_clip)).length
@@ -140,10 +149,12 @@ func _place() -> void:
 		)
 
 
-func _save(file: String) -> void:
+## Saves what the viewport shows as `file`, and whether that worked.
+func _saved(file: String) -> bool:
 	var path: String = _out_dir.path_join(file + ".png")
 	var error: Error = _viewport.get_texture().get_image().save_png(path)
-	print("WROTE ", path, "" if error == OK else " FAILED")
+	print("WROTE " if error == OK else "COULDN'T WRITE ", path)
+	return error == OK
 
 
 func _add_shot(file: String, pose: Callable) -> void:
