@@ -3,6 +3,7 @@
 {
 	"id": "guild_scout_greeting",
 	"speaker": "Guild Scout",
+	"lock": false,
 	"lines": [
 		{ "text": "Careful where you step. The ground here hasn't been charted yet." },
 		{
@@ -15,7 +16,7 @@
 		{
 			"id": "glade",
 			"text": "A glade, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still.",
-			"answers": [{ "id": "promise_to_look", "text": "I'll take a look." }]
+			"answers": [{ "id": "promise_to_look", "text": "I'll take a look.", "commits": true }]
 		}
 	]
 }
