@@ -5,7 +5,8 @@ extends Feature
 ## Each hit raises WildMonsterStruck. Hidden in its tile (#202), it doesn't attack: it keeps out
 ## of sight.
 ##
-## Free, it strikes something next to it, in this order: a companion (#338), then a player, then a
+## Free, it strikes something next to it, in this order: a companion (#338), then a player (not one
+## a dialog holds, whom HealthFeature shields, #981), then a
 ## tile of the allies' trail (#87), the lowest id or the first tile in sorted order among each. A
 ## trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off the trail
 ## (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks open.
@@ -90,7 +91,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null:
 		return
-	var monsters: Array[Entity] = _find_standing(state, wild)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var monsters: Array[Entity] = _find_standing(state, wild, health)
 	var near: Dictionary[Vector2i, bool] = _near_targets(trail)
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
 	# Hiding steps later (`before`), so a wild monster that jumps out this tick strikes from the
@@ -113,9 +115,14 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 
 
 ## Finds, in one pass over the entities, which companion and which player stands on each tile,
-## the one with the lowest id where several do, and returns the wild monsters, in id order.
-## Companions aren't required, since an instance may have none.
-func _find_standing(state: GameState, wild: WildMonsterFeature) -> Array[Entity]:
+## the one with the lowest id where several do, and returns the wild monsters, in id order. A
+## shielded player isn't a target (#981). Companions aren't required, since an instance may have
+## none.
+func _find_standing(
+	state: GameState,
+	wild: WildMonsterFeature,
+	health: HealthFeature,
+) -> Array[Entity]:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	_companion_at.clear()
 	_player_at.clear()
@@ -128,7 +135,7 @@ func _find_standing(state: GameState, wild: WildMonsterFeature) -> Array[Entity]
 		if next < wild.monsters.size() and wild.monsters[next] == entity.id:
 			monsters.append(entity)
 		elif entity.slot != Entity.NO_SLOT:
-			if not _player_at.has(entity.tile):
+			if not _player_at.has(entity.tile) and not health.is_shielded(entity.id):
 				_player_at[entity.tile] = entity.id
 		elif companions != null and companions.owners.has(entity.id):
 			if not _companion_at.has(entity.tile):
