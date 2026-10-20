@@ -465,6 +465,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   flow that walks through an exit starts in an instance that has one.
 - **The test runner is our own** (`tests/e2e/run_e2e.gd`). The owner kept it over a framework
   for now (#61).
+- **Local Godot runs pass `--user-dir=<branch>`** (owner, #786): the e2e runner, the load test, the
+  game and screenshot scripts, e.g. `-s res://tests/e2e/run_e2e.gd -- --seed=0
+  --user-dir=786-user-dir-flag`. Every worktree shares one `user://` folder otherwise, and parallel
+  runs overwrite each other's saves. No temporary `override.cfg` for it. CI runs without it.
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs, and so
   does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
   flows fail to load or log errors that have nothing to do with the change.

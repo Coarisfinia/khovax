@@ -68,6 +68,11 @@ godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
 pull request and every push to `main`.
 
+Every checkout of the project shares one `user://` folder, so runs in parallel worktrees overwrite
+each other's files. Give each its own with `--user-dir=<name>` (the folder `khovax_<name>` in the
+system's data folder), e.g. the branch name: `-- --seed=0 --user-dir=my-branch`. The game, the load
+test and the other tools take it too.
+
 ### On the web build
 
 CI also plays the device flow on the web test build in headless Chrome (`web-e2e`). To run it
