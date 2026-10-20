@@ -384,7 +384,7 @@ func _menu_gear_fight(panel: GearPanel, main: Node, nearby: Array[int]) -> Strin
 	if not sealing.is_empty():
 		return sealing
 	# Back where it stood but enraged (owner, 1+3 on #690): still a fight, wherever it is.
-	wild.enrage(fighter.id, 0)
+	wild.enrage(state, fighter.id, 0)
 	panel.refresh()
 	if not panel.buttons["ward"].disabled:
 		return "an enraged wild monster in the instance isn't a fight"

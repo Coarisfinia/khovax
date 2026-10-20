@@ -367,7 +367,8 @@ func _check_fainted_lies(
 	feature: WildMonsterFeature,
 	monster_id: int,
 ) -> String:
-	feature.wound(state, monster_id, feature.hp_of(monster_id), true)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	feature.wound(state, monster_id, health.hp_of(state, monster_id), true)
 	view.show_state()
 	var figure: HexPiece = view.figures.get(monster_id)
 	var model: Node3D = figure.get_child(0) as Node3D if figure != null else null

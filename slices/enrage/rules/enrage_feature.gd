@@ -33,4 +33,4 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if broken == null:
 			continue
 		for monster_id: int in broken.monster_ids:
-			wild.enrage(monster_id, HEAL)
+			wild.enrage(state, monster_id, HEAL)

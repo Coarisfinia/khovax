@@ -29,8 +29,9 @@ func id() -> String:
 	return ID
 
 
+## The wild monsters it wounds, whose HP the health feature keeps (#835), and the rings.
 func requires() -> Array[String]:
-	var needed: Array[String] = [WildMonsterFeature.ID, DominationFeature.ID]
+	var needed: Array[String] = [HealthFeature.ID, WildMonsterFeature.ID, DominationFeature.ID]
 	return needed
 
 

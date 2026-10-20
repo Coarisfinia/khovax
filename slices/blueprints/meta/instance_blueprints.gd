@@ -82,6 +82,7 @@ static func create(
 		MovementFeature.new(),
 		KnockdownFeature.new(),
 		TrailFeature.new(),
+		_health(species),
 		_wild_monsters(instance_name, species),
 		DominationFeature.new(),
 		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
@@ -109,9 +110,8 @@ static func create(
 	# After the companions too, whose fainted ones a revive item brings back (#656).
 	ordered.append(ReviveItemFeature.new())
 	ordered.append_array(_attacks(species))
-	# After the specials, whose strikes fell the wild monsters it drops materials for.
-	ordered.append(_harvest(instance_name))
-	ordered.append_array([_health(species), _dialogs(), _territory()])
+	# The harvest after the specials, whose strikes fell the wild monsters it drops materials for.
+	ordered.append_array([_harvest(instance_name), _dialogs(), _territory()])
 	var state: GameState = GameState.new(region, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -226,7 +226,8 @@ static func _companions(content: SpeciesData) -> CompanionFeature:
 	return CompanionFeature.new(reaches)
 
 
-## The health feature (#455) with every species' HP, from the species `content`, for companions.
+## The health feature (#455) with every species' HP, from the species `content`, for companions and
+## wild monsters (#835). It steps before the wild monsters and every feature that hurts or heals.
 static func _health(content: SpeciesData) -> HealthFeature:
 	return HealthFeature.new(_max_hps(content))
 
@@ -324,7 +325,7 @@ static func _wild_monsters(instance_name: String, content: SpeciesData) -> WildM
 	var strengths: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		strengths[species_id] = content.species[species_id].strength
-	return WildMonsterFeature.new(roster, weights, _max_hps(content), strengths)
+	return WildMonsterFeature.new(roster, weights, strengths)
 
 
 ## The domination loot feature (#86) with every species loot table there is, and the harvest of

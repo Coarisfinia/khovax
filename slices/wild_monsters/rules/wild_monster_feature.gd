@@ -11,17 +11,17 @@ extends Feature
 ## one could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
 ## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates
 ## it (DominationFeature). Each has its species'
-## strength and HP, and starts at full HP (#219). Companions' strikes wound it (#221), and a
-## special attack can fell it (#410): it faints for good, staying where it fell, out of `monsters`
-## and in `fainted`, so no rule moves, enrages, strikes or dominates it any more, and it still
-## blocks walkers like anything that doesn't walk. Enraged (#220,
+## strength (#219); its HP is HealthFeature's (#835), at its species' HP, or WOUNDED_HP of it where
+## the region marks it wounded (#389). Companions' strikes wound it (#221), and a special attack
+## can fell it (#410): it faints for good, staying where it fell, out of `monsters` and in
+## `fainted`, so no rule moves, enrages, strikes or dominates it any more, and it
+## still blocks walkers like anything that doesn't walk. Enraged (#220,
 ## EnrageFeature), it grows stronger with every stack of rage, which it keeps. Like every feature,
 ## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_monsters"
-## The stats of a species the feature wasn't given any for: it pushes on nothing.
-const UNKNOWN_MAX_HP: int = 1
+## The strength of a species the feature wasn't given one for: it pushes on nothing.
 const UNKNOWN_STRENGTH: int = 0
 ## How much stronger each stack of rage makes a wild monster (thousandths), and the most stacks it
 ## takes. Placeholders to tune (#220).
@@ -41,9 +41,7 @@ var fainted: Array[int] = []
 ## The blueprint's species ids for spots the region doesn't name, and how likely each one is.
 var roster: Array[String] = []
 var weights: Array[int] = []
-## Each species' base HP and strength, by species id, from the content data (the species slice
-## reads it).
-var max_hps: Dictionary[String, int] = {}
+## Each species' base strength, by species id, from the content data (the species slice reads it).
 var strengths: Dictionary[String, int] = {}
 ## Each wild monster's own data (#820), standing or fainted, by entity id: one record, so its
 ## parts never drift apart.
@@ -64,12 +62,10 @@ var _unringable_region: Region = null
 func _init(
 	roster_ids: Array[String] = [],
 	roster_weights: Array[int] = [],
-	species_max_hps: Dictionary[String, int] = {},
 	species_strengths: Dictionary[String, int] = {},
 ) -> void:
 	roster = roster_ids
 	weights = roster_weights
-	max_hps = species_max_hps
 	strengths = species_strengths
 
 
@@ -78,12 +74,13 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [TrailFeature.ID]
+	var needed: Array[String] = [TrailFeature.ID, HealthFeature.ID]
 	return needed
 
 
 func start(state: GameState) -> void:
 	var rng: Rng = Rng.new(state.rng_seed, stream())
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	_known = roster.duplicate()
 	for spot: Vector2i in state.region.wild_monsters:
 		var named: WildSpot = state.region.wild_spots.get(spot)
@@ -95,13 +92,19 @@ func start(state: GameState) -> void:
 		# Can't be refused: an entity without a slot is always added.
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
-		var full_hp: int = max_hps.get(species, UNKNOWN_MAX_HP)
-		var wild: WildMonster = WildMonster.of(species, full_hp)
+		var wild: WildMonster = WildMonster.of(species)
+		health.track(monster.id, species)
 		if named != null:
-			if named.wounded:
-				wild.hp = maxi(Fixed.scale(wild.hp, WOUNDED_HP), 1)
 			wild.emits = named.emits
 			wild.target = named.target
+			if named.wounded:
+				var full: int = health.max_hp_of(state, monster.id)
+				var _fell: bool = health.hurt(
+					state,
+					monster.id,
+					full - maxi(Fixed.scale(full, WOUNDED_HP), 1),
+					false,
+				)
 		_wild[monster.id] = wild
 	# Drawn after every species, so the species roll as they did before short ids; one already
 	# taken here is drawn again, so no two share one.
@@ -187,16 +190,6 @@ func target_of(entity_id: int) -> String:
 	return wild.target if wild != null else ""
 
 
-## The wild monster's HP left, its species' full HP, and its species' strength.
-func hp_of(entity_id: int) -> int:
-	var wild: WildMonster = _wild.get(entity_id)
-	return wild.hp if wild != null else 0
-
-
-func max_hp_of(entity_id: int) -> int:
-	return max_hps.get(species_of(entity_id), UNKNOWN_MAX_HP)
-
-
 ## Its species' strength, raised by RAGE_STRENGTH for every stack of rage it has (#220).
 func strength_of(entity_id: int) -> int:
 	var base: int = strengths.get(species_of(entity_id), UNKNOWN_STRENGTH)
@@ -214,38 +207,37 @@ func is_fainted(entity_id: int) -> bool:
 	return fainted.has(entity_id)
 
 
-## Takes `damage` off the wild monster's HP. A non-lethal hit (#221) never takes it below 1, so it
-## weakens it for a domination; a `lethal` one (#410) can take it to 0, and then it faints,
-## emitting in `state` the event its region names for it, if any (#541).
+## Takes `damage` off the standing wild monster's HP (HealthFeature, #835). A non-lethal hit (#221)
+## never takes it below 1, so it weakens it for a domination; a `lethal` one (#410) can take it to
+## 0, and then it faints: it loses its rage and emits in `state` the event its region names for it,
+## if any (#541).
 func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) -> void:
-	if not monsters.has(entity_id):
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	if not monsters.has(entity_id) or not health.hurt(state, entity_id, damage, lethal):
 		return
 	var wild: WildMonster = _wild[entity_id]
-	wild.hp = maxi(wild.hp - damage, 0 if lethal else 1)
-	if wild.hp == 0:
-		monsters.erase(entity_id)
-		held.erase(entity_id)
-		wild.rage = 0
-		fainted.append(entity_id)
-		fainted.sort()
-		if not wild.emits.is_empty():
-			state.events.append(EventEmitted.new(wild.emits))
-			wild.emits = ""
+	monsters.erase(entity_id)
+	held.erase(entity_id)
+	wild.rage = 0
+	fainted.append(entity_id)
+	fainted.sort()
+	if not wild.emits.is_empty():
+		state.events.append(EventEmitted.new(wild.emits))
+		wild.emits = ""
 
 
-## Enrages the wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and heals
-## `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
-func enrage(entity_id: int, heal: int) -> void:
+## Enrages the standing wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and
+## heals `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
+func enrage(state: GameState, entity_id: int, heal: int) -> void:
 	if not monsters.has(entity_id):
 		return
-	var wild: WildMonster = _wild[entity_id]
-	wild.rage = mini(wild.rage + 1, MOST_RAGE)
-	var full: int = max_hp_of(entity_id)
-	wild.hp = mini(wild.hp + Fixed.scale(full, heal), full)
+	_wild[entity_id].rage = mini(_wild[entity_id].rage + 1, MOST_RAGE)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	health.heal(state, entity_id, Fixed.scale(health.max_hp_of(state, entity_id), heal))
 
 
-## Each wild monster still in the instance as its entity's id, its species, its short id and its HP
-## left, in id order, the fainted ones among them at 0 HP, the event a standing one emits when it
+## Each wild monster still in the instance as its entity's id, its species, its short id and
+## whether it fainted, in id order, its rage, the event a standing one emits when it
 ## faints, if any (#541), and the quest target it is, if any (#625). The roster, the species this
 ## instance can place and their stats follow from the
 ## blueprint, the region and the content.
@@ -260,7 +252,7 @@ func save_values() -> Dictionary:
 			"entity": monster,
 			"species": wild.species,
 			"short_id": wild.short_id,
-			"hp": wild.hp,
+			"fainted": 1 if fainted.has(monster) else 0,
 		}
 		entry["rage"] = wild.rage
 		if not wild.emits.is_empty():
@@ -293,13 +285,12 @@ func load_values(state: GameState, values: DataReader) -> void:
 		if not ShortId.is_valid(short_id) or _short_id_taken(short_id):
 			values.fail("wild monster %d has no valid short id of its own" % monster)
 			return
-		var wild: WildMonster = WildMonster.of(species, 0)
+		var wild: WildMonster = WildMonster.of(species)
 		wild.short_id = short_id
 		_wild[monster] = wild
-		wild.hp = entry.whole("hp", 0, max_hp_of(monster))
 		if (entry.data as Dictionary).has("target"):
 			wild.target = entry.text("target")
-		if wild.hp == 0:
+		if entry.whole("fainted", 0, 1) == 1:
 			fainted.append(monster)
 			continue
 		monsters.append(monster)
@@ -308,6 +299,19 @@ func load_values(state: GameState, values: DataReader) -> void:
 			wild.emits = entry.text("emits")
 	monsters.sort()
 	fainted.sort()
+	_track_loaded(state, values)
+
+
+## Tracks every restored wild monster's species with the health feature, restored before it, and
+## checks its HP: none left exactly for a fainted one.
+func _track_loaded(state: GameState, values: DataReader) -> void:
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	for monster: int in _wild:
+		health.track(monster, _wild[monster].species)
+		var down: bool = health.hp_of(state, monster) == 0
+		if not health.fits(state, monster) or down != fainted.has(monster):
+			values.fail("wild monster %d's HP doesn't match whether it fainted" % monster)
+			return
 
 
 func hash_values() -> Array[int]:
@@ -316,8 +320,7 @@ func hash_values() -> Array[int]:
 		values.append(monster)
 		var wild: WildMonster = _wild[monster]
 		values.append_array([_known.find(wild.species), StateHash.name_code(wild.short_id)])
-		values.append_array([wild.hp, max_hp_of(monster), strength_of(monster)])
-		values.append(wild.rage)
+		values.append_array([strength_of(monster), wild.rage])
 	values.append(held.size())
 	values.append_array(held)
 	values.append(fainted.size())

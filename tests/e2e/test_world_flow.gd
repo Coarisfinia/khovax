@@ -1493,7 +1493,8 @@ class Felling:
 		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 		for monster: int in wild.monsters.duplicate():
 			if wild.species_of(monster) == "tikazzir":
-				wild.wound(state, monster, wild.hp_of(monster), true)
+				var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+				wild.wound(state, monster, health.hp_of(state, monster), true)
 				felled += 1
 
 

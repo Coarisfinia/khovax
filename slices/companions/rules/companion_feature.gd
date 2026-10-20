@@ -68,16 +68,28 @@ func requires() -> Array[String]:
 	return needed
 
 
+## The health feature, which a companion's HP is kept in (#835), where the instance has it.
+func after() -> Array[String]:
+	var earlier: Array[String] = [HealthFeature.ID]
+	return earlier
+
+
 func start(state: GameState) -> void:
 	_rng = Rng.new(state.rng_seed, stream())
 
 
-## Sends off the companions whose player brings another or lost them, or that fainted, chooses
+## Sends home the companions that fell this tick (EntityFell, from HealthFeature, which runs
+## earlier), sends off the companions whose player brings another or lost them, or that fainted,
+## chooses
 ## another for every player whose companion fainted, lets every player who brings one that hasn't
 ## fainted and has none here be joined by it, then lets each companion roam, in id order. One whose
 ## player takes an exit this tick stays: the world moves it with them (`followers_of`).
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	for event: RefCounted in state.events.duplicate():
+		var fell: EntityFell = event as EntityFell
+		if fell != null and owners.has(fell.entity_id):
+			send_home(state, fell.entity_id)
 	for companion_id: int in companions():
 		var player: Entity = state.player(owners[companion_id])
 		var tile: Vector2i = state.entity(companion_id).tile
@@ -173,6 +185,17 @@ func carry_in(state: GameState, arrived: Entity, carried: Dictionary) -> void:
 	_short_ids[arrived.id] = carried["short_id"]
 	_rest[arrived.id] = carried["rest"]
 	(state.feature(MovementFeature.ID) as MovementFeature).add_walk(arrived)
+	var _fits: bool = _track(state, arrived.id)
+
+
+## Tells the health feature, where the instance has it, the species of `companion_id`, whose HP it
+## keeps (#835); whether the companion took no more damage than that HP.
+func _track(state: GameState, companion_id: int) -> bool:
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	if health == null:
+		return true
+	health.track(companion_id, _species[companion_id])
+	return health.fits(state, companion_id)
 
 
 ## Every companion's entity id, in id order.
@@ -228,6 +251,7 @@ func _join(state: GameState, movement: MovementFeature, player: Entity, short_id
 	_short_ids[companion.id] = short_id
 	_rest[companion.id] = 0
 	movement.add_walk(companion)
+	var _fits: bool = _track(state, companion.id)
 
 
 ## Lets the companion take its next step, once its last one has arrived: back toward its player
@@ -338,6 +362,9 @@ func load_values(state: GameState, values: DataReader) -> void:
 		_species[companion_id] = species
 		_short_ids[companion_id] = short_id
 		_rest[companion_id] = entry.whole("rest", 0, MOST_REST)
+		if not _track(state, companion_id):
+			values.fail("companion %d took more damage than its HP" % companion_id)
+			return
 	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if restored == null:
 		values.fail("the companions' random stream isn't four 32-bit words, not all zero")

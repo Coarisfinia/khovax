@@ -9,8 +9,8 @@ extends Feature
 ## tile of the allies' trail (#87), the lowest id or the first tile in sorted order among each. A
 ## trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off the trail
 ## (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks open.
-## A hit on a companion or a player comes off their HP (HealthFeature, #455); one on a companion
-## follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
+## A hit on a companion or a player comes off their HP at once (HealthFeature.hurt, #455); one on
+## a companion follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -46,7 +46,12 @@ func id() -> String:
 
 
 func requires() -> Array[String]:
-	var needed: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID, DominationFeature.ID]
+	var needed: Array[String] = [
+		TrailFeature.ID,
+		WildMonsterFeature.ID,
+		HealthFeature.ID,
+		DominationFeature.ID,
+	]
 	return needed
 
 
@@ -163,6 +168,8 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 		if _companion_at.has(side):
 			struck = _on_companion(state, struck)
 		state.events.append(struck)
+		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+		var _fell: bool = health.hurt(state, target_id, struck.damage)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:

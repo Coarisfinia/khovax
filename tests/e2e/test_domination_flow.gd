@@ -312,7 +312,7 @@ func _check_domination() -> String:
 	if seal == null or state.entity(monster_id) == null or seal.monsters != [monster_id]:
 		return "the totem on the closed ring didn't start sealing the wild monster in"
 	var expected_ticks: int = RingSealing.SEAL_BASE_TICKS + Fixed.div_floor(
-		RingSealing.pressure(_wild(state), monster_id),
+		RingSealing.pressure(state, _wild(state), _health(state), monster_id),
 		RingSealing.SEAL_PRESSURE_PER_TICK,
 	)
 	if seal.seal_ticks != expected_ticks or seal.walls.size() != Hex.ring(1).size():
@@ -717,7 +717,7 @@ func _check_spikes() -> String:
 		return "the spikes check's ring doesn't wait for a totem"
 	var bare: Array[SpikesStruck] = _spiked_over(state, false, 2 * SpikesFeature.STRIKE_TICKS)
 	var spiked: Array[SpikesStruck] = _spiked_over(state, true, SpikesFeature.STRIKE_TICKS)
-	var hp: int = _wild(state).hp_of(monster)
+	var hp: int = _hp(state, monster)
 	if not bare.is_empty() or spiked.size() != 1 or hp != OUTCOME_HP - SPIKES_DAMAGE:
 		return "spikes hurt %d times without, %d with, to %d HP" % [bare.size(), spiked.size(), hp]
 	if spiked[0].monster_id != monster or spiked[0].damage != SPIKES_DAMAGE:
@@ -727,10 +727,10 @@ func _check_spikes() -> String:
 	var sealing: Array[SpikesStruck] = _spiked_over(state, true, 1, true)
 	while not _domination(state).seals.is_empty() and sealing.size() < 2:
 		sealing.append_array(_spiked_over(state, true, 1))
-	if sealing.size() != 2 or _wild(state).hp_of(monster) != 1:
+	if sealing.size() != 2 or _hp(state, monster) != 1:
 		return "a sealing monster was hurt %d times, to %d HP, not twice to 1" % [
 			sealing.size(),
-			_wild(state).hp_of(monster),
+			_hp(state, monster),
 		]
 	return ""
 
@@ -820,17 +820,23 @@ func _broken_around(monster: int) -> RingBroken:
 	return RingBroken.new(0, 0, Vector2i.ZERO, walls, inside)
 
 
-## Saves the wild monsters with `monster` at WORN HP and loads them back: its rage must survive.
+## Saves the HP with `monster` at WORN HP and loads it and the wild monsters back: its rage must
+## survive.
 func _wear_down(state: GameState, monster: int) -> String:
+	var saved: Dictionary = _health(state).save_values()
+	var hurt: Array[int] = [monster]
+	var damage: Array[int] = [OUTCOME_HP - WORN]
+	saved["hurt"] = hurt
+	saved["damage"] = damage
+	var healths: DataReader = DataReader.new(saved)
+	_health(state).load_values(state, healths)
 	var wild: WildMonsterFeature = _wild(state)
-	var saved: Dictionary = wild.save_values()
-	var entries: Array = saved["wild_monsters"]
-	var entry: Dictionary = entries[0]
-	entry["hp"] = WORN
-	var restored: DataReader = DataReader.new(saved)
+	var restored: DataReader = DataReader.new(wild.save_values())
 	wild.load_values(state, restored)
-	if restored.failed() or wild.rage_of(monster) != 1 or wild.hp_of(monster) != WORN:
-		return "the monster's rage or HP didn't survive a save: %s" % restored.problem
+	if healths.failed() or restored.failed():
+		return "the HP or the wild monsters didn't load: %s" % (healths.problem + restored.problem)
+	if wild.rage_of(monster) != 1 or _hp(state, monster) != WORN:
+		return "the monster's rage or HP didn't survive a save"
 	return ""
 
 
@@ -856,12 +862,12 @@ func _enraged_further(state: GameState, monster: int) -> String:
 			WORN + (stack - 1) * Fixed.scale(OUTCOME_HP, EnrageFeature.HEAL),
 			OUTCOME_HP,
 		)
-		if wild.rage_of(monster) != rage or not stronger or wild.hp_of(monster) != healed:
+		if wild.rage_of(monster) != rage or not stronger or _hp(state, monster) != healed:
 			return "broken ring %d left rage %d, strength %d, HP %d" % [
 				stack,
 				wild.rage_of(monster),
 				wild.strength_of(monster),
-				wild.hp_of(monster),
+				_hp(state, monster),
 			]
 	return ""
 
@@ -953,8 +959,10 @@ func _outcome_state(
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH, STRONG: STRONG_STRENGTH }
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
+		KnockdownFeature.new(),
 		TrailFeature.new(),
-		WildMonsterFeature.new([], [], hp, strength),
+		HealthFeature.new(hp),
+		WildMonsterFeature.new([], [], strength),
 		DominationFeature.new(),
 		EnrageFeature.new(),
 	]
@@ -987,9 +995,9 @@ func _check_companion_strikes() -> String:
 		return "the companion's strikes on the first wild monster were %s, not 4, once a second" % [
 			damages,
 		]
-	if _wild(state).hp_of(first) != 1:
+	if _hp(state, first) != 1:
 		return "the companion's hits left the wild monster at %d HP, not 1" % [
-			_wild(state).hp_of(first),
+			_hp(state, first),
 		]
 	(state.feature(HidingFeature.ID) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
@@ -1062,6 +1070,16 @@ func _check_special_cooldown(state: GameState, spots: Array[Vector2i]) -> String
 		state.feature(SpecialAttackFeature.ID) as SpecialAttackFeature
 	)
 	var reloaded_state: GameState = _strike_state(spots)
+	# The wild monsters' HP first: they check theirs against it as they load (#835).
+	var hurt: Array[int] = []
+	var damage: Array[int] = []
+	for monster: int in _wild(state).monsters + _wild(state).fainted:
+		hurt.append(monster)
+		damage.append(_health(state).max_hp_of(state, monster) - _hp(state, monster))
+	var healths: DataReader = DataReader.new({ "hurt": hurt, "damage": damage })
+	_health(reloaded_state).load_values(reloaded_state, healths)
+	if healths.failed():
+		return "the wild monsters' HP didn't load back: " + healths.problem
 	if not _reloads(state, reloaded_state, WildMonsterFeature.ID):
 		return "the fainted wild monster didn't load back as saved"
 	if not _reloads(state, reloaded_state, SpecialAttackFeature.ID):
@@ -1207,7 +1225,7 @@ func _typed_strikes(on: bool) -> String:
 	var struck: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(1, 0))
 	var monster: int = _wild(state).monsters[0]
 	if (struck.size() != 1 or struck[0].damage != hit
-			or _wild(state).hp_of(monster) != OUTCOME_HP - hit):
+			or _hp(state, monster) != OUTCOME_HP - hit):
 		return "with the chart %s, the strikes weren't for %d" % [on, hit]
 	# The wild monster's auto attack carries the chart's marks for its damage number (#764).
 	var marks: Array[bool] = []
@@ -1437,14 +1455,16 @@ func _wild_strikes_over(
 
 ## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
 ## specials, and the wild monsters' attacks, with the `extra` features (a type chart) before the
-## companions' attacks, which read them (#822).
+## companions' attacks, which read them (#822). A species has one HP (#835), a companion's here: the
+## wild monsters are worn down to OUTCOME_HP first, so their companion outlasts them.
 func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		KnockdownFeature.new(),
 		TrailFeature.new(),
-		WildMonsterFeature.new([], [], { WEAK: OUTCOME_HP }, { WEAK: WEAK_STRENGTH }),
+		HealthFeature.new({ WEAK: COMPANION_HP }),
+		WildMonsterFeature.new([], [], { WEAK: WEAK_STRENGTH }),
 		DominationFeature.new(),
 		WildAttackFeature.new(),
 		HidingFeature.new(),
@@ -1456,9 +1476,11 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 		CompanionAttackFeature.new(),
 		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
 		HarvestFeature.new({ WEAK: _hide_table() }),
-		HealthFeature.new({ WEAK: COMPANION_HP }),
 	])
-	return GameState.new(region, 1, ordered)
+	var state: GameState = GameState.new(region, 1, ordered)
+	for monster: int in _wild(state).monsters:
+		_wild(state).wound(state, monster, COMPANION_HP - OUTCOME_HP)
+	return state
 
 
 ## The weak species' harvest table in the strike checks: it always rolls HIDE_LOOT.
@@ -1757,7 +1779,7 @@ func _check_harvest_taken(main: Node) -> String:
 	var monster: Entity = driver.state.entity(_wild(driver.state).monsters[0])
 	monster.tile = FlowSteps.sight_of(driver.state)[0]
 	var wild: WildMonsterFeature = _wild(driver.state)
-	wild.wound(driver.state, monster.id, wild.hp_of(monster.id), true)
+	wild.wound(driver.state, monster.id, _hp(driver.state, monster.id), true)
 	var had: int = holder.keeper.profile.materials.get("hide", 0)
 	var others: Dictionary[int, Dictionary] = { 1: HIDE_LOOT }
 	var dropped: Array[RefCounted] = [Harvested.new(monster.id, WEAK, monster.tile, others)]
@@ -1847,8 +1869,10 @@ func _check_wounded() -> String:
 	var hp: Dictionary[String, int] = { "ombulumo": OUTCOME_HP }
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
+		KnockdownFeature.new(),
 		TrailFeature.new(),
-		WildMonsterFeature.new([], [], hp, { "ombulumo": WEAK_STRENGTH }),
+		HealthFeature.new(hp),
+		WildMonsterFeature.new([], [], { "ombulumo": WEAK_STRENGTH }),
 	]
 	var state: GameState = GameState.new(region, 1, ordered)
 	var wild: WildMonsterFeature = _wild(state)
@@ -1856,7 +1880,7 @@ func _check_wounded() -> String:
 	var expected: Array[int] = [weak, OUTCOME_HP]
 	var started: Array[int] = []
 	for monster: int in wild.monsters:
-		started.append(wild.hp_of(monster))
+		started.append(_hp(state, monster))
 	if started != expected:
 		return "the wounded and the whole wild monster started at %s HP, not %s" % [
 			started,
@@ -1872,6 +1896,15 @@ func _first_species(state: GameState) -> String:
 
 func _wild(state: GameState) -> WildMonsterFeature:
 	return state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+
+
+func _health(state: GameState) -> HealthFeature:
+	return state.feature(HealthFeature.ID) as HealthFeature
+
+
+## The HP `entity_id` has left in `state` (HealthFeature's, wild monsters' too since #835).
+func _hp(state: GameState, entity_id: int) -> int:
+	return _health(state).hp_of(state, entity_id)
 
 
 func _trails(state: GameState) -> TrailFeature:

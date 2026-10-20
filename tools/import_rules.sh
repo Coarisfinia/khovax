@@ -64,8 +64,8 @@ view_classes=$(classes_in ':(glob)**/look/**/*.gd' ':(glob)**/ui/**/*.gd' ':(glo
 # The slices, each after every slice it names (#821).
 SLICE_ORDER=(
   camera music credits hiding movement entering exits paths loot board fog triggers players npcs
-  trail species wild_monsters tiles outbox controls settings texts factions survey menu
-  domination enrage domination_loot companions gear chests damage_numbers harvest health dialogs
+  trail species health wild_monsters tiles outbox controls settings texts factions survey menu
+  domination enrage domination_loot companions gear chests damage_numbers harvest dialogs
   profile quests revive_items blueprints might
 )
 # The back-edges still waiting ("slice>later slice" = the issue that drops it).
@@ -75,6 +75,7 @@ declare -A SLICE_EXEMPT=(
   [factions>menu]=851 [factions>profile]=851
   [fog>blueprints]=851
   [gear>profile]=851
+  [health>menu]=851
   [hiding>wild_monsters]=851
   [loot>menu]=851 [loot>profile]=851
   [menu>gear]=851 [menu>might]=851 [menu>profile]=851 [menu>quests]=851
