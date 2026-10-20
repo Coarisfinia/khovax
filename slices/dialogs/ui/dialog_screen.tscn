@@ -20,9 +20,19 @@ layout_mode = 0
 [node name="Rows" type="VBoxContainer" parent="Card"]
 layout_mode = 2
 
-[node name="Speaker" type="Label" parent="Card/Rows"]
+[node name="Header" type="HBoxContainer" parent="Card/Rows"]
 layout_mode = 2
+
+[node name="Speaker" type="Label" parent="Card/Rows/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
 autowrap_mode = 3
+
+[node name="Leave" type="Button" parent="Card/Rows/Header"]
+layout_mode = 2
+size_flags_vertical = 0
+focus_mode = 0
+icon_alignment = 1
 
 [node name="Line" type="Label" parent="Card/Rows"]
 layout_mode = 2
