@@ -3,10 +3,12 @@ extends Node
 ## The world's events, out of the simulation to whoever listens (#184): after each tick, the
 ## driver's events are queued and, once a frame, handed to the subscribers of their topic,
 ## publish/subscribe. The simulation doesn't know who listens, and no subscriber holds up a tick. A
-## topic is the event's class name (`&"WildMonsterDominated"`). Events only flow out: a subscriber
-## never changes the world, since anything that matters inside it is a rule in the simulation
-## (#26). Each event is known by the instance that raised it (#769) until it's handed out. Views
-## keep the driver's `ticked` signal, since their effects play in step with the ticks.
+## topic is the event's class, subscribed to by the class itself (`WildMonsterDominated`), so a
+## renamed event class fails where it's subscribed to instead of going quiet (#829). Events only
+## flow out: a subscriber never changes the world, since anything that matters inside it is a rule
+## in the simulation (#26). Each event is known by the instance that raised it (#769) until it's
+## handed out. Views keep the driver's `ticked` signal, since their effects play in step with the
+## ticks.
 
 @export var driver: Session
 
@@ -28,8 +30,13 @@ func _process(_delta: float) -> void:
 	flush()
 
 
-## Hands every event on `topic` to `subscriber`, which takes the event.
-func subscribe(topic: StringName, subscriber: Callable) -> void:
+## Hands every event of `event_class` (a `class_name` script, named by the class itself) to
+## `subscriber`, which takes the event. A script without a class name has no topic and is refused.
+func subscribe(event_class: Script, subscriber: Callable) -> void:
+	var topic: StringName = event_class.get_global_name()
+	if topic.is_empty():
+		push_error("an event bus topic needs a class_name: %s" % [event_class.resource_path])
+		return
 	if not _subscribers.has(topic):
 		_subscribers[topic] = []
 	_subscribers[topic].append(subscriber)

@@ -51,7 +51,7 @@ func _ready() -> void:
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
 	if bus != null:
-		bus.subscribe(&"NpcTalkedTo", _on_talked)
+		bus.subscribe(NpcTalkedTo, _on_talked)
 
 
 func _process(_delta: float) -> void:

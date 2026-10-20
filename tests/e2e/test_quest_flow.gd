@@ -576,7 +576,7 @@ func _check_territory_resent(
 	driver.world.set_flag(Territory.flag(forest, "rivals"))
 	var acknowledged: Array = []
 	var heard: Callable = func(event: RequestApplied) -> void: acknowledged.append(event.request)
-	bus.subscribe(&"RequestApplied", heard)
+	bus.subscribe(RequestApplied, heard)
 	driver.input.send(request)
 	_tick(driver, bus)
 	if Territory.holder(driver.world.flags, forest) != "rivals" or acknowledged != [request.id]:

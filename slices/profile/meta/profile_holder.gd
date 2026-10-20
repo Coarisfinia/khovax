@@ -60,18 +60,18 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
-	bus.subscribe(&"WildMonsterDominated", _on_event)
-	bus.subscribe(&"ChestOpened", _on_event)
-	bus.subscribe(&"LootFound", _on_event)
-	bus.subscribe(&"DominationLoot", _on_event)
-	bus.subscribe(&"Harvested", _on_event)
-	bus.subscribe(&"PlaceReached", _on_event)
-	bus.subscribe(&"PieceEntered", _on_event)
-	bus.subscribe(&"InstanceEntered", _on_event)
-	bus.subscribe(&"DialogAnswered", _on_event)
-	bus.subscribe(&"WorldChanged", _on_event)
-	bus.subscribe(&"MonsterRevived", _on_revived)
-	bus.subscribe(&"RequestApplied", _on_applied)
+	bus.subscribe(WildMonsterDominated, _on_event)
+	bus.subscribe(ChestOpened, _on_event)
+	bus.subscribe(LootFound, _on_event)
+	bus.subscribe(DominationLoot, _on_event)
+	bus.subscribe(Harvested, _on_event)
+	bus.subscribe(PlaceReached, _on_event)
+	bus.subscribe(PieceEntered, _on_event)
+	bus.subscribe(InstanceEntered, _on_event)
+	bus.subscribe(DialogAnswered, _on_event)
+	bus.subscribe(WorldChanged, _on_event)
+	bus.subscribe(MonsterRevived, _on_revived)
+	bus.subscribe(RequestApplied, _on_applied)
 	if keeper != null:
 		# What the world hasn't acknowledged yet goes again, from the start of every session.
 		_send_new()
