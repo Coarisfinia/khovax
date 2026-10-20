@@ -20,6 +20,11 @@ static func load_gear(directory: String = DIR) -> GearContent:
 	return content
 
 
+## The gear, read once per session (ContentCatalog).
+static func cached() -> GearContent:
+	return ContentCatalog.kept(DIR, load_gear)
+
+
 func add(file_id: String, text: String) -> String:
 	var item: GearItem = GearItem.parse(file_id, text)
 	if (item.problem.is_empty()

@@ -17,6 +17,19 @@ static func load_tiles(directory: String = DIR) -> TileContent:
 	return content
 
 
+## The tile blueprints, read once per session (ContentCatalog); blueprints that don't load are an
+## error, reported once (#940).
+static func cached() -> TileContent:
+	return ContentCatalog.kept(DIR, _checked)
+
+
+static func _checked() -> TileContent:
+	var content: TileContent = load_tiles()
+	if not content.problem.is_empty():
+		push_error("the tile blueprints didn't load: " + content.problem)
+	return content
+
+
 func add(file_id: String, text: String) -> String:
 	var tile: TileBlueprint = TileBlueprint.parse(file_id, text)
 	if tile.problem.is_empty():

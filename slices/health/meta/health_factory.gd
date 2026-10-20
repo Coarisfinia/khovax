@@ -4,8 +4,8 @@ extends RefCounted
 ## wild monsters (#835).
 
 
-static func build(setup: FeatureSetup) -> HealthFeature:
-	var content: SpeciesContent = SpeciesContent.species_for(setup)
+static func build(_setup: FeatureSetup) -> HealthFeature:
+	var content: SpeciesContent = SpeciesContent.cached()
 	var max_hps: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		max_hps[species_id] = content.species[species_id].hp

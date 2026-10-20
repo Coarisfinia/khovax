@@ -6,7 +6,6 @@ extends RefCounted
 
 static func build(setup: FeatureSetup) -> DominationLootFeature:
 	var tables: Dictionary[String, LootTable] = LootContent.species_tables_for(
-		setup,
 		LootContent.DIR,
 		LootTable.SPECIES,
 	)

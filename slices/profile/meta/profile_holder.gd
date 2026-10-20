@@ -35,7 +35,7 @@ func _enter_tree() -> void:
 			ProfileStore.loaded_generation,
 		])
 	if profile.problem.is_empty():
-		var gear: GearContent = GearContent.load_gear()
+		var gear: GearContent = GearContent.cached()
 		if not gear.problem.is_empty():
 			push_warning("the gear can't be read, so gear found counts as materials: %s" % [
 				gear.problem,

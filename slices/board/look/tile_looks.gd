@@ -7,20 +7,13 @@ extends RefCounted
 ## How tall a tile's decoration stands, in hundredths of a tile's radius (#232).
 const HEIGHT_UNITS: float = 100.0 / HexLayout.SIZE
 
-## Every tile blueprint, by id; empty until first used.
-static var _by_id: Dictionary[String, TileBlueprint] = {}
 ## Each kind's measured height, by id, once measured.
 static var _heights: Dictionary[String, int] = {}
 
 
 ## The tile blueprint of kind `kind`, or null for an id no kind has.
 static func of(kind: String) -> TileBlueprint:
-	if _by_id.is_empty():
-		var content: TileContent = TileContent.load_tiles()
-		if not content.problem.is_empty():
-			push_error("the tile blueprints didn't load: " + content.problem)
-		_by_id = content.tiles
-	return _by_id.get(kind)
+	return TileContent.cached().tiles.get(kind)
 
 
 ## How tall a tile of kind `kind` stands (#232): the top of its decoration's model, as drawn (its

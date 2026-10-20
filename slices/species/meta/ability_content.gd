@@ -17,6 +17,11 @@ static func load_abilities(directory: String = DIR) -> AbilityContent:
 	return content
 
 
+## The abilities, read once per session (ContentCatalog).
+static func cached() -> AbilityContent:
+	return ContentCatalog.kept(DIR, load_abilities)
+
+
 func add(file_id: String, text: String) -> String:
 	var ability: Ability = Ability.parse(file_id, text)
 	if ability.problem.is_empty():

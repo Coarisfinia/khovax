@@ -7,7 +7,7 @@ extends RefCounted
 
 
 static func build(setup: FeatureSetup) -> ChestFeature:
-	var chest_table: LootTable = LootContent.table_for(setup, setup.chest_table, LootTable.CHEST)
+	var chest_table: LootTable = LootContent.table_for(setup.chest_table, LootTable.CHEST)
 	var ground_table: LootTable = LootContent.instance_table_for(setup)
 	if chest_table == null or ground_table == null:
 		push_error("instance %s's chest or instance loot table doesn't load" % setup.instance)

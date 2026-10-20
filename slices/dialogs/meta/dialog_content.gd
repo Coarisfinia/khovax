@@ -25,6 +25,11 @@ static func load_dialogs(directory: String = DIR) -> DialogContent:
 	return content
 
 
+## The dialogs, read once per session (ContentCatalog).
+static func cached() -> DialogContent:
+	return ContentCatalog.kept(DIR, load_dialogs)
+
+
 func add(file_id: String, text: String) -> String:
 	var dialog: Dialog = Dialog.parse(file_id, text)
 	if dialog.problem.is_empty():

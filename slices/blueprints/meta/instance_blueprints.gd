@@ -30,25 +30,22 @@ const REGIONS: String = "res://regions/"
 ## The region piece an arranged region starts from, holding the players' starts.
 const START_PIECE: String = "start.md"
 
-## The blueprints' content data, read on first use and kept: it doesn't change while the game runs.
-static var _content: BlueprintContent = null
-
 
 ## The name of every blueprint there is, in file name order.
 static func names() -> Array[String]:
 	var all: Array[String] = []
-	all.assign(_loaded().blueprints.keys())
+	all.assign(BlueprintContent.cached().blueprints.keys())
 	return all
 
 
 ## The named blueprint's content data, or null when there's none.
 static func blueprint(instance_name: String) -> Blueprint:
-	return _loaded().blueprints.get(instance_name)
+	return BlueprintContent.cached().blueprints.get(instance_name)
 
 
 ## Whether a blueprint of this name exists.
 static func exists(instance_name: String) -> bool:
-	return _loaded().blueprints.has(instance_name)
+	return BlueprintContent.cached().blueprints.has(instance_name)
 
 
 ## The variant of the named blueprint that the world's `flags` choose (Blueprint.variants), or "".
@@ -198,14 +195,3 @@ static func _piece(path: String) -> Region:
 	for tile: Vector2i in piece.terrain:
 		piece.piece_of[tile] = piece_id
 	return piece
-
-
-## The blueprints' content data, read on first use; blueprints that don't load are an error, and
-## there are none then.
-static func _loaded() -> BlueprintContent:
-	if _content == null:
-		_content = BlueprintContent.load_blueprints()
-		if not _content.problem.is_empty():
-			push_error("the instance blueprints don't load: " + _content.problem)
-			_content.blueprints.clear()
-	return _content

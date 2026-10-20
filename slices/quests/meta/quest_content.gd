@@ -31,18 +31,49 @@ static func load_quests(
 	faction_directory: String = FactionContent.DIR,
 	dialog_directory: String = DialogContent.DIR,
 ) -> QuestContent:
-	var known: SpeciesContent = SpeciesContent.load_species(species_directory)
+	return _checked_against(
+		directory,
+		SpeciesContent.load_species(species_directory),
+		FactionContent.load_factions(faction_directory),
+		DialogContent.load_dialogs(dialog_directory),
+		[LootContent.load_loot_tables(), LootContent.load_loot_tables(LootContent.HARVEST_DIR)],
+	)
+
+
+## The quests, read once per session (ContentCatalog), checked against the other kinds' cached
+## content, so every reader sees the same species, factions, dialogs and loot.
+static func cached() -> QuestContent:
+	return ContentCatalog.kept(DIR, _from_cache)
+
+
+static func _from_cache() -> QuestContent:
+	return _checked_against(
+		DIR,
+		SpeciesContent.cached(),
+		FactionContent.cached(),
+		DialogContent.cached(),
+		[LootContent.cached(), LootContent.cached(LootContent.HARVEST_DIR)],
+	)
+
+
+## Every quest file in `directory`, read and checked against `known` species, `factions`,
+## `dialogs` and `tables` (the loot tables, chests' included, and the harvest tables); none when
+## one of those didn't load.
+static func _checked_against(
+	directory: String,
+	known: SpeciesContent,
+	factions: FactionContent,
+	dialogs: DialogContent,
+	tables: Array[LootContent],
+) -> QuestContent:
 	var content: QuestContent = QuestContent.new()
 	content.species = known.species
-	content._factions = FactionContent.load_factions(faction_directory)
-	content._dialogs = DialogContent.load_dialogs(dialog_directory)
-	content._tables = [
-		LootContent.load_loot_tables(),
-		LootContent.load_loot_tables(LootContent.HARVEST_DIR),
-	]
-	content.problem = known.problem + content._factions.problem + content._dialogs.problem
-	for tables: LootContent in content._tables:
-		content.problem += tables.problem
+	content._factions = factions
+	content._dialogs = dialogs
+	content._tables = tables
+	content.problem = known.problem + factions.problem + dialogs.problem
+	for loot: LootContent in tables:
+		content.problem += loot.problem
 	if content.problem.is_empty():
 		content.read(directory)
 	return content

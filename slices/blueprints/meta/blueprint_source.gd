@@ -10,7 +10,7 @@ func exists(instance_name: String) -> bool:
 ## The factions' territory as content data has it (Territory, #637), naming only instances that
 ## exist; factions that don't load are an error, and hold nothing then.
 func starting_flags() -> Array[String]:
-	var content: FactionContent = FactionContent.load_factions()
+	var content: FactionContent = FactionContent.cached()
 	if not content.problem.is_empty():
 		push_error("the factions don't load: " + content.problem)
 		return []

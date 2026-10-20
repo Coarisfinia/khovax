@@ -9,6 +9,8 @@ const DIR: String = "res://slices/species/data/"
 
 ## Every species, by id.
 var species: Dictionary[String, Species] = {}
+var _specials: Dictionary[String, Ability] = {}
+var _specials_read: bool = false
 
 
 ## Every species file in `directory`, read and checked.
@@ -18,41 +20,34 @@ static func load_species(directory: String = DIR) -> SpeciesContent:
 	return content
 
 
-## The species, read once per instance `setup` (FeatureSetup); species that don't load are an
-## error, and there are none then.
-static func species_for(setup: FeatureSetup) -> SpeciesContent:
-	return setup.shared("species", _checked_species)
+## The species, read once per session (ContentCatalog); species that don't load are an error.
+static func cached() -> SpeciesContent:
+	return ContentCatalog.kept(DIR, _checked)
 
 
-## Every species' special (#410), by species id, read once per instance `setup`. A special that
-## doesn't load is an error, and its species has none.
-static func specials_for(setup: FeatureSetup) -> Dictionary[String, Ability]:
-	var known: SpeciesContent = species_for(setup)
-	return setup.shared(
-		"specials",
-		func() -> Dictionary[String, Ability]: return _specials(known),
-	)
-
-
-static func _checked_species() -> SpeciesContent:
+static func _checked() -> SpeciesContent:
 	var content: SpeciesContent = load_species()
 	if not content.problem.is_empty():
 		push_error("the species don't load: " + content.problem)
 	return content
 
 
-static func _specials(content: SpeciesContent) -> Dictionary[String, Ability]:
-	var abilities: AbilityContent = AbilityContent.load_abilities()
+## Every species' special (#410), by species id, from the abilities (AbilityContent), worked out
+## the first time it's asked for. A special that doesn't load is an error, and its species has none.
+func specials() -> Dictionary[String, Ability]:
+	if _specials_read:
+		return _specials
+	_specials_read = true
+	var abilities: AbilityContent = AbilityContent.cached()
 	if not abilities.problem.is_empty():
 		push_error("the abilities don't load: " + abilities.problem)
-	var specials: Dictionary[String, Ability] = {}
-	for species_id: String in content.species:
-		var special: Ability = abilities.abilities.get(content.species[species_id].special)
+	for species_id: String in species:
+		var special: Ability = abilities.abilities.get(species[species_id].special)
 		if special == null or special.kind != Ability.SPECIAL:
 			push_error("%s's special doesn't load" % species_id)
 			continue
-		specials[species_id] = special
-	return specials
+		_specials[species_id] = special
+	return _specials
 
 
 ## Its id must be one no species read before has.

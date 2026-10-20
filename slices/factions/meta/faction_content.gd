@@ -22,6 +22,11 @@ static func load_factions(directory: String = DIR) -> FactionContent:
 	return content
 
 
+## The factions, read once per session (ContentCatalog).
+static func cached() -> FactionContent:
+	return ContentCatalog.kept(DIR, load_factions)
+
+
 func add(file_id: String, text: String) -> String:
 	var faction: Faction = Faction.parse(file_id, text)
 	if faction.problem.is_empty():

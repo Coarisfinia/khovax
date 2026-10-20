@@ -6,7 +6,7 @@ extends RefCounted
 
 
 static func build(_setup: FeatureSetup) -> SpikesFeature:
-	var content: GearContent = GearContent.load_gear()
+	var content: GearContent = GearContent.cached()
 	if not content.problem.is_empty():
 		push_error("the gear doesn't load: " + content.problem)
 	var damages: Dictionary[int, int] = {}
