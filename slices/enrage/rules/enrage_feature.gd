@@ -4,7 +4,7 @@ extends Feature
 ## were inside. Each gains a stack of rage, up to WildMonsterFeature.MOST_RAGE, which makes it
 ## stronger (so it pushes harder on the next ring) and heals part of its HP. Stacks add up with
 ## every further ring that fails. The camera stays still: the rage shows on the monsters. Speed and
-## going for the player come when wild monsters move and fight (#221).
+## going for the player come later (#961).
 ##
 ## It reads the tick's RingBroken events, so it runs after the domination feature, and changes the
 ## wild monsters only through WildMonsterFeature.enrage. A seal never feels the rage it causes: the
@@ -13,7 +13,7 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "enrage"
-## How much of a wild monster's full HP each enraging heals (thousandths). A placeholder to tune.
+## What each enraging heals, in thousandths of full HP. A placeholder to tune (#960).
 const HEAL: int = 250
 
 

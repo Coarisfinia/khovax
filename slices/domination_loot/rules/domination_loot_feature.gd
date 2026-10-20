@@ -6,7 +6,7 @@ extends SpeciesLootFeature
 ## WALL_POINTS for each tile of the ring's wall they colored, and one for every TICKS_PER_POINT
 ## ticks they stood on the wall while it sealed (#227). Every POINTS_PER_ROLL points is a roll, up
 ## to FULL_ROLLS, so a player who barely helped gets nothing (owner, #86). The numbers are
-## placeholders, to tune.
+## placeholders to tune (#960).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "domination_loot"

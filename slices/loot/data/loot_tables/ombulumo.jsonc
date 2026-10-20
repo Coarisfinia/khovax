@@ -1,4 +1,4 @@
-// A placeholder species table until real loot exists (#86, #90): mostly berries, else a blank,
+// A placeholder species table, to tune (#960): mostly berries, else a blank,
 // which rolls on the instance's table instead.
 {
 	"id": "ombulumo",

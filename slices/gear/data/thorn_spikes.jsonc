@@ -4,5 +4,5 @@
 	"name": "Thorn spikes",
 	"slot": "trap",
 	"rarity": "loose",
-	"damage": 5 // a placeholder to tune: a nudge next to a companion's strike
+	"damage": 5 // a placeholder to tune (#960): a nudge next to a companion's strike
 }

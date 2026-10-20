@@ -5,7 +5,7 @@ extends RefCounted
 ## standing on a segment reinforces it (#227). DominationFeature closes the rings and decides what a
 ## held or broken one gives; the numbers live here.
 
-## The ring rules' constants (#219). Every one is a placeholder, to tune (#219).
+## The ring rules' constants (#219). Every one is a placeholder to tune (#960).
 ## Players have no level yet: every player draws rings at this level until they do.
 const PLAYER_LEVEL: int = 1
 ## Ring power is BASE + level × PER_LEVEL (+ companion passives, none yet): the issue's 100 + 20 ×
