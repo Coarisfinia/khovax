@@ -87,10 +87,11 @@ func acknowledge(request: String) -> void:
 		_report(keeper.acknowledge(request, Time.get_ticks_msec()))
 
 
-## The code up to which this player's profile saw every request it sent acknowledged
-## (Outbox.confirmed, #942), for every command to carry, or Command.NO_REQUEST without a profile.
-func confirmed() -> int:
-	return keeper.profile.outbox.confirmed() if keeper != null else Command.NO_REQUEST
+## The code up to which this player's profile saw every request of `kind` it sent acknowledged
+## (Outbox.confirmed, #942, #968), for a command carrying one of that kind, or Command.NO_REQUEST
+## without a profile.
+func confirmed(kind: int) -> int:
+	return keeper.profile.outbox.confirmed(kind) if keeper != null else Command.NO_REQUEST
 
 
 ## Draws the outbox's next ids above the request code `highest` the world holds for this player as

@@ -145,13 +145,12 @@ func _standing(answering: int) -> Command:
 
 
 ## Puts the next request waiting to be sent into `carrier`, taken off the queue, if there is one,
-## and the code up to which the profile saw its requests acknowledged (#942), which every command
-## carries.
+## with the code up to which the profile saw its requests of that kind acknowledged (#942, #968).
 func _send_next(carrier: Command) -> void:
-	carrier.acknowledged = holder.confirmed() if holder != null else Command.NO_REQUEST
 	if not _requests.is_empty():
 		var next: OutboxEntry = _requests.pop_front()
 		next.fill(carrier)
+		carrier.acknowledged = holder.confirmed(next.kind) if holder != null else Command.NO_REQUEST
 
 
 ## Uses a revive item on the fainted monster the player picked (#780), only while this player's

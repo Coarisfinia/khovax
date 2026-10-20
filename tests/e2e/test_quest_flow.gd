@@ -636,6 +636,31 @@ func _check_receipts_bounded(
 		return "the later hand-over wasn't applied, or the world kept more receipts: %s" % [applied]
 	if not profile.outbox.entries.is_empty():
 		return "the later hand-over stayed in the outbox once acknowledged"
+	return _check_receipts_past_stuck(driver, bus, profile)
+
+
+## A hand-over of a territory no quest of this build hands over stays in the outbox, neither
+## applied nor acknowledged (TerritoryFeature.step); it holds back only the hand-overs' mark (#968):
+## of two later trap changes, the second still makes the world forget the first one's receipt.
+func _check_receipts_past_stuck(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	# 1 is no territory's code (Territory.code), so no quest here hands it over.
+	var stuck: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 1)
+	driver.input.send(stuck)
+	_tick(driver, bus)
+	if profile.outbox.entries.size() != 1:
+		return "the hand-over of a territory no quest hands over left the outbox"
+	var first: OutboxEntry = profile.outbox.post(OutboxEntry.TRAP, CommandCodes.NONE)
+	driver.input.send(first)
+	_tick(driver, bus)
+	var second: OutboxEntry = profile.outbox.post(OutboxEntry.TRAP, CommandCodes.NONE)
+	driver.input.send(second)
+	_tick(driver, bus)
+	var applied: Array = driver.world.stored(0, SpikesFeature.ID).get(OutboxReceipts.APPLIED, [])
+	var _dropped: bool = profile.outbox.drop(stuck.id)
+	if applied != [second.id]:
+		return "a stuck hand-over kept the trap changes' receipts: %s" % [applied]
+	if not profile.outbox.entries.is_empty():
+		return "the trap changes stayed in the outbox once acknowledged"
 	return ""
 
 

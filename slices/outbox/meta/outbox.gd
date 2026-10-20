@@ -11,8 +11,9 @@ extends RefCounted
 ## the next code (ShortId.code) above every id drawn before, every request here and every id the
 ## world holds for the player (catch_up), so a profile starting over, or one whose save lost its
 ## newest requests, never gives an id the world already applied. Drawn in order, the ids up to
-## the one just below the oldest request here have all been acknowledged (`confirmed`), which
-## every command tells the world, so it can forget its receipts of them.
+## the one just below the oldest request of a kind here have all been acknowledged (`confirmed`),
+## which every command carrying one of that kind tells the world, so the feature carrying out that
+## kind can forget its receipts of them.
 
 ## The requests not acknowledged yet, in the order posted.
 var entries: Array[OutboxEntry] = []
@@ -36,16 +37,20 @@ func catch_up(highest: int) -> void:
 	_newest = maxi(_newest, highest)
 
 
-## The code up to which every request this outbox sent was acknowledged (#942), for every command
-## to carry (Command.acknowledged): just below its oldest request, or the newest id drawn while
-## it's empty. A request dropped only once acknowledged, every id below the oldest one here was.
-func confirmed() -> int:
-	if entries.is_empty():
-		return _newest
-	var oldest: int = ShortId.code(entries[0].id)
+## The code up to which every request of `kind` (OutboxEntry.KINDS) this outbox sent was
+## acknowledged (#942, #968), for a command carrying one of that kind (Command.acknowledged): just
+## below its oldest request of that kind, or the newest id drawn while it holds none. A request
+## dropped only once acknowledged, every id of that kind below the oldest one here was; a request
+## of another kind stuck here holds no mark back but its own kind's.
+func confirmed(kind: int) -> int:
+	var newest: int = _newest
+	var oldest: int = Command.NO_REQUEST
 	for request: OutboxEntry in entries:
-		oldest = mini(oldest, ShortId.code(request.id))
-	return oldest - 1
+		var code: int = ShortId.code(request.id)
+		newest = maxi(newest, code)
+		if request.kind == kind and (oldest == Command.NO_REQUEST or code < oldest):
+			oldest = code
+	return oldest - 1 if oldest != Command.NO_REQUEST else newest
 
 
 ## Drops the request `request` the world acknowledged; returns whether it was here.
