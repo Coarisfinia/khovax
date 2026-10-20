@@ -18,7 +18,7 @@ var _lines: VBoxContainer
 
 
 func _ready() -> void:
-	var species: SpeciesData = SpeciesContent.load_species()
+	var species: SpeciesContent = SpeciesContent.load_species()
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so Might counts no monsters: " + species.problem)
 	_species = species.species

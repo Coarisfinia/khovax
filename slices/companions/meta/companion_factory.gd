@@ -4,7 +4,7 @@ extends RefCounted
 
 
 static func build(setup: FeatureSetup) -> CompanionFeature:
-	var content: SpeciesData = SpeciesContent.species_for(setup)
+	var content: SpeciesContent = SpeciesContent.species_for(setup)
 	var reaches: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		var stats: Species = content.species[species_id]

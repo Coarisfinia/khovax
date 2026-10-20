@@ -5,7 +5,7 @@ extends RefCounted
 
 
 static func build(setup: FeatureSetup) -> TypeEffectivenessFeature:
-	var content: SpeciesData = SpeciesContent.species_for(setup)
+	var content: SpeciesContent = SpeciesContent.species_for(setup)
 	var types: Dictionary[String, PackedStringArray] = {}
 	var auto_types: Dictionary[String, String] = {}
 	for species_id: String in content.species:

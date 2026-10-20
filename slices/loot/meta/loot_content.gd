@@ -1,5 +1,5 @@
 class_name LootContent
-extends RefCounted
+extends Content
 ## The loot tables' content data (#90), which the loot slice owns (#412): one JSONC file per table
 ## in its data/loot_tables/, and one harvest table per species in data/harvest_tables/ (#687), each
 ## checked against the schema beside it in CI. Everything else reads them through this.
@@ -7,18 +7,15 @@ extends RefCounted
 const DIR: String = "res://slices/loot/data/loot_tables/"
 const HARVEST_DIR: String = "res://slices/loot/data/harvest_tables/"
 
+## Every loot table, by id.
+var loot_tables: Dictionary[String, LootTable] = {}
+
 
 ## Every loot table file in `directory` (DIR, or HARVEST_DIR for the harvest tables), read and
 ## checked.
-static func load_loot_tables(directory: String = DIR) -> LootData:
-	var content: LootData = LootData.new()
-	var texts: Dictionary[String, String] = Content.texts_in(directory)
-	for file_id: String in texts:
-		var table: LootTable = LootTableFile.parse(file_id, texts[file_id])
-		if not table.problem.is_empty():
-			content.problem = file_id + ".jsonc: " + table.problem
-			return content
-		content.loot_tables[table.id] = table
+static func load_loot_tables(directory: String = DIR) -> LootContent:
+	var content: LootContent = LootContent.new()
+	content.read(directory)
 	return content
 
 
@@ -30,7 +27,7 @@ static func species_tables_for(
 	directory: String,
 	kind: String,
 ) -> Dictionary[String, LootTable]:
-	var content: LootData = tables_for(setup, directory)
+	var content: LootContent = tables_for(setup, directory)
 	var species_tables: Dictionary[String, LootTable] = {}
 	for table: LootTable in content.loot_tables.values():
 		if table.kind == kind:
@@ -55,13 +52,20 @@ static func table_for(setup: FeatureSetup, table_id: String, kind: String) -> Lo
 
 ## Every loot table file in `directory`, read once per instance `setup`; tables that don't load
 ## are an error, and there are none then.
-static func tables_for(setup: FeatureSetup, directory: String) -> LootData:
-	return setup.shared(directory, func() -> LootData: return _checked(directory))
+static func tables_for(setup: FeatureSetup, directory: String) -> LootContent:
+	return setup.shared(directory, func() -> LootContent: return _checked(directory))
 
 
-static func _checked(directory: String) -> LootData:
-	var content: LootData = load_loot_tables(directory)
+static func _checked(directory: String) -> LootContent:
+	var content: LootContent = load_loot_tables(directory)
 	if not content.problem.is_empty():
 		push_error("the loot tables don't load: " + content.problem)
 		content.loot_tables.clear()
 	return content
+
+
+func add(file_id: String, text: String) -> String:
+	var table: LootTable = LootTableFile.parse(file_id, text)
+	if table.problem.is_empty():
+		loot_tables[table.id] = table
+	return table.problem

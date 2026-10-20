@@ -352,7 +352,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   #412): `slices/<slice>/data/<kind>/`, with its JSON Schema beside it (`<kind>.schema.json`), read
   only through that slice's accessor; the core gets plain integers and ids. The one exception: the
   tile blueprints, which the core's `TileKinds` needs, live in the core (owner, #506):
-  `core/data/tiles/`, with their schema in `core/data/schemas/`, read by `Content` in `core/io/`. Not Godot resources
+  `core/data/tiles/`, with their schema in `core/data/schemas/`, read by `TileContent` in `core/io/`. Not Godot resources
   (owner, #72: no engine lock-in). A tile kind is named by its blueprint's file, never a hand-kept
   number (#802, like features, #784). **Tile traits are
   rules** (`TileKinds`): changing one (e.g. `walkable`) is a rule change, like any other (see the

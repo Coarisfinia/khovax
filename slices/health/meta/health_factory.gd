@@ -5,7 +5,7 @@ extends RefCounted
 
 
 static func build(setup: FeatureSetup) -> HealthFeature:
-	var content: SpeciesData = SpeciesContent.species_for(setup)
+	var content: SpeciesContent = SpeciesContent.species_for(setup)
 	var max_hps: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		max_hps[species_id] = content.species[species_id].hp

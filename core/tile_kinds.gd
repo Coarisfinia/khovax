@@ -41,7 +41,7 @@ static func hides(kind: String) -> bool:
 static func _read_once() -> void:
 	if not _walkable.is_empty():
 		return
-	var content: Content = Content.load_tiles()
+	var content: TileContent = TileContent.load_tiles()
 	if not content.problem.is_empty():
 		push_error("the tile blueprints didn't load: " + content.problem)
 	for tile: TileBlueprint in content.tiles.values():

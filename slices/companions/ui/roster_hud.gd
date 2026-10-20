@@ -51,7 +51,7 @@ var _top: float = MARGIN
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var species: SpeciesData = SpeciesContent.load_species()
+	var species: SpeciesContent = SpeciesContent.load_species()
 	for id: String in species.species:
 		_initials[id] = initials_of(species.species[id].name)
 
