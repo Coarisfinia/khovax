@@ -10,7 +10,7 @@ extends RefCounted
 var progress: Dictionary[String, QuestProgress] = {}
 ## The ids of the quests finished, in the order finished.
 var finished: Array[String] = []
-## The quests facts advance, by id (QuestContent.load_quests): content, not saved. Progress for a
+## The quests facts advance, by id (QuestContent.cached): content, not saved. Progress for a
 ## quest that isn't here is kept untouched, on purpose: a quest missing from one build's data
 ## (dropped by mistake, or not shipped yet) picks up where the player left it once it's back.
 var book: Dictionary[String, QuestDefinition] = {}

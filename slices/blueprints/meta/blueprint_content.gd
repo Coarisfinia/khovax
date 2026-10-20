@@ -18,6 +18,20 @@ static func load_blueprints(directory: String = DIR) -> BlueprintContent:
 	return content
 
 
+## The blueprints, read once per session (ContentCatalog); blueprints that don't load are an error,
+## and there are none then.
+static func cached() -> BlueprintContent:
+	return ContentCatalog.kept(DIR, _checked)
+
+
+static func _checked() -> BlueprintContent:
+	var content: BlueprintContent = load_blueprints()
+	if not content.problem.is_empty():
+		push_error("the instance blueprints don't load: " + content.problem)
+		content.blueprints.clear()
+	return content
+
+
 func add(file_id: String, text: String) -> String:
 	var blueprint: Blueprint = Blueprint.parse(file_id, text)
 	if blueprint.problem.is_empty():

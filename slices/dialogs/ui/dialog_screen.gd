@@ -41,8 +41,6 @@ var line_index: int = -1
 ## The open dialog and line the card last took from the state.
 var _followed_dialog: String = ""
 var _followed_line: int = DialogFeature.NO_LINE
-## The dialogs, read when the first one opens.
-var _content: DialogContent
 var _fade: Tween
 var _font_size: int = 0
 
@@ -71,11 +69,10 @@ func open(dialog_id: String, index: int = 0) -> bool:
 	if is_open() and dialog.id == dialog_id:
 		_show_line(index)
 		return true
-	if _content == null:
-		_content = DialogContent.load_dialogs()
-	dialog = _content.dialogs.get(dialog_id)
+	var content: DialogContent = DialogContent.cached()
+	dialog = content.dialogs.get(dialog_id)
 	if dialog == null:
-		push_warning("no dialog %s to open: %s" % [dialog_id, _content.problem])
+		push_warning("no dialog %s to open: %s" % [dialog_id, content.problem])
 		return false
 	_show_line(index)
 	_ease(true)

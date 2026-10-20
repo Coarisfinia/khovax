@@ -35,7 +35,7 @@ var _note: Label
 
 
 func _ready() -> void:
-	var content: GearContent = GearContent.load_gear()
+	var content: GearContent = GearContent.cached()
 	if not content.problem.is_empty():
 		push_warning("the gear can't be read, so gear shows its ids: " + content.problem)
 	_items = content.items

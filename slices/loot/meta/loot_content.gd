@@ -19,17 +19,16 @@ static func load_loot_tables(directory: String = DIR) -> LootContent:
 	return content
 
 
-## Every table of `kind` in `directory` (DIR or HARVEST_DIR), by its id, which is its species' id,
-## read once per instance `setup` (FeatureSetup). Tables that don't load are an error, and there are
-## none then.
-static func species_tables_for(
-	setup: FeatureSetup,
-	directory: String,
-	kind: String,
-) -> Dictionary[String, LootTable]:
-	var content: LootContent = tables_for(setup, directory)
+## Every loot table file in `directory` (DIR or HARVEST_DIR), read once per session
+## (ContentCatalog); tables that don't load are an error, and there are none then.
+static func cached(directory: String = DIR) -> LootContent:
+	return ContentCatalog.kept(directory, _checked.bind(directory))
+
+
+## Every table of `kind` in `directory` (DIR or HARVEST_DIR), by its id, which is its species' id.
+static func species_tables_for(directory: String, kind: String) -> Dictionary[String, LootTable]:
 	var species_tables: Dictionary[String, LootTable] = {}
-	for table: LootTable in content.loot_tables.values():
+	for table: LootTable in cached(directory).loot_tables.values():
 		if table.kind == kind:
 			species_tables[table.id] = table
 	return species_tables
@@ -38,22 +37,15 @@ static func species_tables_for(
 ## The instance's loot table (FeatureSetup.loot_table), which a blank and the loot on its ground
 ## roll on, or null when it has none or it doesn't load.
 static func instance_table_for(setup: FeatureSetup) -> LootTable:
-	return table_for(setup, setup.loot_table, LootTable.INSTANCE)
+	return table_for(setup.loot_table, LootTable.INSTANCE)
 
 
-## The loot table with this id and `kind`, read once per instance `setup`, or null when the tables
-## don't load or it isn't one.
-static func table_for(setup: FeatureSetup, table_id: String, kind: String) -> LootTable:
-	var table: LootTable = tables_for(setup, DIR).loot_tables.get(table_id)
+## The loot table with this id and `kind`, or null when the tables don't load or it isn't one.
+static func table_for(table_id: String, kind: String) -> LootTable:
+	var table: LootTable = cached().loot_tables.get(table_id)
 	if table == null or table.kind != kind:
 		return null
 	return table
-
-
-## Every loot table file in `directory`, read once per instance `setup`; tables that don't load
-## are an error, and there are none then.
-static func tables_for(setup: FeatureSetup, directory: String) -> LootContent:
-	return setup.shared(directory, func() -> LootContent: return _checked(directory))
 
 
 static func _checked(directory: String) -> LootContent:

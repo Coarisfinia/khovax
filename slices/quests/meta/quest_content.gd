@@ -48,6 +48,11 @@ static func load_quests(
 	return content
 
 
+## The quests, read once per session (ContentCatalog).
+static func cached() -> QuestContent:
+	return ContentCatalog.kept(DIR, load_quests)
+
+
 func add(file_id: String, text: String) -> String:
 	var quest: QuestDefinition = QuestDefinition.parse(file_id, text, species)
 	if quest.standing != null and not _factions.factions.has(quest.standing.faction):

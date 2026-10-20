@@ -31,7 +31,7 @@ static func held_text(faction_id: String) -> String:
 ## The factions' content; when it doesn't load, no faction is known.
 static func _factions() -> FactionContent:
 	if _content == null:
-		_content = FactionContent.load_factions()
+		_content = FactionContent.cached()
 		if not _content.problem.is_empty():
 			push_warning("the factions can't be read for their territory: " + _content.problem)
 	return _content

@@ -3,8 +3,8 @@ extends RefCounted
 ## Builds an instance's companion feature (#338, #823) with every species' reach, from its stats.
 
 
-static func build(setup: FeatureSetup) -> CompanionFeature:
-	var content: SpeciesContent = SpeciesContent.species_for(setup)
+static func build(_setup: FeatureSetup) -> CompanionFeature:
+	var content: SpeciesContent = SpeciesContent.cached()
 	var reaches: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		var stats: Species = content.species[species_id]

@@ -5,7 +5,7 @@ extends RefCounted
 
 
 static func build(_setup: FeatureSetup) -> DialogFeature:
-	var content: DialogContent = DialogContent.load_dialogs()
+	var content: DialogContent = DialogContent.cached()
 	if not content.problem.is_empty():
 		push_error("the dialogs don't load: " + content.problem)
 	return DialogFeature.new(content.answers, content.leads, content.line_counts)

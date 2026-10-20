@@ -24,7 +24,7 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	var content: FactionContent = FactionContent.load_factions()
+	var content: FactionContent = FactionContent.cached()
 	if not content.problem.is_empty():
 		push_warning("the factions can't be read, so their ranks aren't named: " + content.problem)
 	_factions = content.factions

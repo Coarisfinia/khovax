@@ -9,7 +9,7 @@ static func build(setup: FeatureSetup) -> WildMonsterFeature:
 	roster.assign(setup.wild_species.keys())
 	var weights: Array[int] = []
 	weights.assign(setup.wild_species.values())
-	var content: SpeciesContent = SpeciesContent.species_for(setup)
+	var content: SpeciesContent = SpeciesContent.cached()
 	var strengths: Dictionary[String, int] = {}
 	for species_id: String in content.species:
 		strengths[species_id] = content.species[species_id].strength

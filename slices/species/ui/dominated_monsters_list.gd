@@ -35,11 +35,11 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	var species: SpeciesContent = SpeciesContent.load_species()
+	var species: SpeciesContent = SpeciesContent.cached()
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	_species = species.species
-	var abilities: AbilityContent = AbilityContent.load_abilities()
+	var abilities: AbilityContent = AbilityContent.cached()
 	for id: String in abilities.abilities:
 		var ability: Ability = abilities.abilities[id]
 		_abilities[id] = PathMark.tagged(TextTags.shown(ability.name), ability.path)
