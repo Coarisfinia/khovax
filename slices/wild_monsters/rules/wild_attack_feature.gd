@@ -50,6 +50,17 @@ func requires() -> Array[String]:
 	return needed
 
 
+## Hiding, the companions and the type chart, which an instance may lack, step later: a wild
+## monster strikes from where they stood at the end of the last tick.
+func before() -> Array[String]:
+	var later: Array[String] = [
+		HidingFeature.ID,
+		CompanionFeature.ID,
+		TypeEffectivenessFeature.ID,
+	]
+	return later
+
+
 func start(state: GameState) -> void:
 	_trail = state.feature(TrailFeature.ID) as TrailFeature
 
@@ -69,8 +80,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	var monsters: Array[Entity] = _find_standing(state, wild)
 	var near: Dictionary[Vector2i, bool] = _near_targets(trail)
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
-	# Hiding isn't required, since an instance may have none. It steps later, so a wild monster
-	# that jumps out this tick strikes from the next strike on.
+	# Hiding steps later (`before`), so a wild monster that jumps out this tick strikes from the
+	# next strike on.
 	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	_ring_walls_found = false
 	for monster: Entity in monsters:

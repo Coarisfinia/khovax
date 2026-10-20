@@ -42,6 +42,17 @@ func requires() -> Array[String]:
 	return needed
 
 
+## What spares a wild monster from the auto attack (CompanionAttackFeature.can_strike), whose
+## targets it strikes, and the type chart, where the instance has them.
+func after() -> Array[String]:
+	var earlier: Array[String] = [
+		HidingFeature.ID,
+		DominationFeature.ID,
+		TypeEffectivenessFeature.ID,
+	]
+	return earlier
+
+
 ## Cools every player's special down by a tick, then fires the special of each player whose command
 ## fires one, in slot order.
 func step(state: GameState, commands: Array[Command]) -> void:

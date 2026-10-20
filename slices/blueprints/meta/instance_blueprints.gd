@@ -127,7 +127,8 @@ static func create(
 			push_error("instance %s's chest or instance loot table doesn't load" % instance_name)
 			return null
 		ordered.append(ChestFeature.new(chest_table, ground_table))
-	# Last, so a companion whose player walks out through an exit this tick goes with them.
+	# The companions and the features built on them. A companion whose player walks out through an
+	# exit goes with them whatever the order: the world moves it after the tick (#716).
 	ordered.append(_companions(species))
 	# After the companions, so a swap can't pick a monster that fainted (#597).
 	ordered.append(CompanionSwapFeature.new())

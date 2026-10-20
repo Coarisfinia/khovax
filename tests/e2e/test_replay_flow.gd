@@ -18,6 +18,8 @@ const EAST: int = 0
 const WEST: int = 3
 ## Long enough for the scripted commands to walk around the grid several times.
 const REPLAY_TICKS: int = 600
+## The script every feature extends.
+const FEATURE_SCRIPT: String = "res://core/feature.gd"
 
 
 func run(_tree: SceneTree) -> String:
@@ -29,6 +31,7 @@ func run(_tree: SceneTree) -> String:
 		_check_hash_covers_fields,
 		_check_trail,
 		_check_feature_order,
+		_check_feature_reads,
 		_check_switching_features,
 		_check_instance_without_trail,
 		_check_invalid_order_state,
@@ -203,7 +206,100 @@ func _check_feature_order() -> String:
 		return "a feature appearing twice passed as a valid order"
 	if not GameState.order_problem(valid).is_empty():
 		return "movement then trail was rejected: " + GameState.order_problem(valid)
+	var blueprint: Array[Feature] = InstanceBlueprints.basic(0).features
+	if not GameState.order_problem(blueprint).is_empty():
+		return "the basic blueprint's order was rejected: " + GameState.order_problem(blueprint)
+	# The wild monsters' attacks come before the companions, the type chart after the companions'
+	# auto attacks.
+	var early: Array[Feature] = _moved(blueprint, CompanionFeature.ID, WildAttackFeature.ID)
+	if GameState.order_problem(early).is_empty():
+		return "the companions before the wild monsters' attacks passed as a valid order"
+	var late: Array[Feature] = _moved(blueprint, TypeEffectivenessFeature.ID, HealthFeature.ID)
+	if GameState.order_problem(late).is_empty():
+		return "the type chart after the companions' attacks passed as a valid order"
 	return ""
+
+
+## `ordered` with the feature `moving_id` moved to just before the feature `before_id`.
+static func _moved(ordered: Array[Feature], moving_id: String, before_id: String) -> Array[Feature]:
+	var moved: Array[Feature] = ordered.duplicate()
+	var moving: Feature = null
+	for each: Feature in moved:
+		if each.id() == moving_id:
+			moving = each
+	moved.erase(moving)
+	for i: int in moved.size():
+		if moved[i].id() == before_id:
+			var _inserted: int = moved.insert(i, moving)
+			break
+	return moved
+
+
+## Every feature declares the features it reads (#822): each one named with `feature(<Class>.ID)`
+## in its scripts (its own and those it extends), in the rules helpers it names, and in the features
+## whose static methods it hands the state, which count as read themselves when they look themselves
+## up, is in its `requires`, `after` or `before`. One level deep; checked on every blueprint's
+## features.
+func _check_feature_reads() -> String:
+	var classes: Dictionary[String, String] = {}
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		classes[str(entry["class"])] = str(entry["path"])
+	var checked: Dictionary[String, bool] = {}
+	for blueprint: String in InstanceBlueprints.NAMES:
+		for each: Feature in InstanceBlueprints.create(blueprint, 0).features:
+			if checked.has(each.id()):
+				continue
+			checked[each.id()] = true
+			var declared: Array[String] = each.requires() + each.after() + each.before()
+			for read: String in _feature_reads(each, classes):
+				if read != each.id() and not declared.has(read):
+					return "feature %s reads feature %s without declaring it" % [each.id(), read]
+	return ""
+
+
+## The ids of the features `feature`'s scripts read, as `_check_feature_reads` counts them;
+## `classes` holds every global class's script path, by name.
+static func _feature_reads(feature: Feature, classes: Dictionary[String, String]) -> Array[String]:
+	var source: String = ""
+	var own: Array[String] = []
+	var script: Script = feature.get_script()
+	while script.resource_path != FEATURE_SCRIPT:
+		own.append(script.resource_path)
+		source += FileAccess.get_file_as_string(script.resource_path)
+		script = script.get_base_script()
+	var reads: Array[String] = _named_reads(source, classes)
+	# A class name followed by a static call that's handed the state, or by anything else.
+	var named: RegEx = RegEx.create_from_string("\\b([A-Z]\\w*)\\.(\\w+\\(state\\b)?")
+	for found: RegExMatch in named.search_all(source):
+		var path: String = classes.get(found.get_string(1), "")
+		if path.is_empty() or own.has(path) or not path.contains("/rules/"):
+			continue
+		var used: String = FileAccess.get_file_as_string(path)
+		var is_feature: bool = _is_feature(load(path) as Script)
+		if not is_feature or not found.get_string(2).is_empty():
+			reads.append_array(_named_reads(used, classes))
+		if is_feature and not found.get_string(2).is_empty() and used.contains("feature(ID)"):
+			reads.append(str((load(path) as Script).get_script_constant_map()["ID"]))
+	return reads
+
+
+## The ids of the features `source` names with `feature(<Class>.ID)`.
+static func _named_reads(source: String, classes: Dictionary[String, String]) -> Array[String]:
+	var reads: Array[String] = []
+	var named: RegEx = RegEx.create_from_string("feature\\((\\w+)\\.ID\\)")
+	for found: RegExMatch in named.search_all(source):
+		var script: Script = load(classes[found.get_string(1)]) as Script
+		reads.append(str(script.get_script_constant_map()["ID"]))
+	return reads
+
+
+## Whether `script` is a feature's.
+static func _is_feature(script: Script) -> bool:
+	while script != null:
+		if script.resource_path == FEATURE_SCRIPT:
+			return true
+		script = script.get_base_script()
+	return false
 
 
 ## Rules can switch features during a session (e.g. a boss phase): off, a feature doesn't step and
