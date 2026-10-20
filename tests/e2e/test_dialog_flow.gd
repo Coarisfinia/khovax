@@ -4,7 +4,10 @@ extends RefCounted
 ## d-pad and chooses one with A; a click (as a tap) chooses the last answer, which ends the dialog.
 ## Every chosen answer reaches the simulation in the player's command, is raised as DialogAnswered
 ## naming the dialog and the answer, and is recorded in the session's replay; reading on raises
-## nothing, nor does an answer no dialog has. While the menu is open over a dialog, its buttons
+## nothing, nor does an answer no dialog has. The card follows the simulation (#890): it moves on
+## or closes once the answer is raised, also for an answer that came only through the commands, as
+## in a replay, even from a line before the one that offers it. While the menu is open over a
+## dialog, its buttons
 ## rest. A dialog that doesn't exist doesn't open. In the glade, the guild scout stands east of the
 ## start (#557): walking into them talks to them, raised as NpcTalkedTo, which opens their greeting;
 ## they never step aside, and a held direction talks once, until the player stops and walks into
@@ -20,6 +23,8 @@ const EAST: int = 0
 
 ## Every event the session announced since the flow last looked.
 var _heard: Array[RefCounted] = []
+## The world's events, handed to the dialog screen.
+var _bus: EventBus
 
 
 func run(tree: SceneTree) -> String:
@@ -31,6 +36,7 @@ func run(tree: SceneTree) -> String:
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var screen: DialogScreen = main.get_node("Hud/DialogScreen") as DialogScreen
 	var _connected: int = driver.ticked.connect(_hear)
+	_bus = main.get_node("EventBus") as EventBus
 	tree.call("expect_warning", "no dialog no_such_dialog")
 	var opened: bool = screen.open("no_such_dialog")
 	var result: String = "a dialog that doesn't exist opened" if opened else ""
@@ -42,6 +48,8 @@ func run(tree: SceneTree) -> String:
 		result = await _rest_under_menu(tree, main, driver, screen)
 	if result.is_empty():
 		result = await _choose_with_click(tree, driver, screen)
+	if result.is_empty():
+		result = _follow_commands(driver, screen)
 	if result.is_empty():
 		result = await _talk_to_scout(tree, main, driver, screen)
 	if result.is_empty():
@@ -92,9 +100,9 @@ func _choose_with_controller(
 	if down != 1 or _focused(screen) != 0:
 		return "the d-pad moved the focus to %d and back to %d" % [down, _focused(screen)]
 	_press_pad(screen, JOY_BUTTON_A)
+	var answered: Array[DialogAnswered] = _answered(driver)
 	if screen.line_index != 2 or screen.choices() != ["I'll take a look."]:
 		return "asking about the glade showed %s" % [screen.choices()]
-	var answered: Array[DialogAnswered] = _answered(driver)
 	var code: int = DialogFeature.code(GREETING, "ask_about_glade")
 	if answered.size() != 1 or answered[0].answer != "ask_about_glade" or answered[0].slot != 0:
 		return "asking about the glade raised %d answers" % answered.size()
@@ -147,11 +155,28 @@ func _choose_with_click(
 	var lift: InputEventMouseButton = click.duplicate() as InputEventMouseButton
 	lift.pressed = false
 	screen.get_viewport().push_input(lift)
+	if not screen.is_open():
+		return "the click closed the card before the simulation had the answer"
+	var answered: Array[DialogAnswered] = _answered(driver)
 	if screen.is_open() or driver.input.in_dialog:
 		return "the last answer didn't end the dialog"
-	var answered: Array[DialogAnswered] = _answered(driver)
 	if answered.size() != 1 or answered[0].answer != "promise_to_look":
 		return "the click raised %d answers" % answered.size()
+	return ""
+
+
+## Answers that come only through the commands, as in a replay, move the card too: one sent while
+## the card still shows the first line skips to where it leads, and the last one closes the card.
+func _follow_commands(driver: GameDriver, screen: DialogScreen) -> String:
+	var _opened: bool = screen.open(GREETING)
+	driver.input.choose_answer(DialogFeature.code(GREETING, "ask_about_glade"))
+	var _asked: Array[DialogAnswered] = _answered(driver)
+	if screen.line_index != 2:
+		return "an answer through the commands moved the card to line %d" % screen.line_index
+	driver.input.choose_answer(DialogFeature.code(GREETING, "promise_to_look"))
+	var _promised: Array[DialogAnswered] = _answered(driver)
+	if screen.is_open() or driver.input.in_dialog:
+		return "the last answer through the commands didn't close the card"
 	return ""
 
 
@@ -227,11 +252,12 @@ func _hear(_tick: int, events: Array[RefCounted]) -> void:
 	_heard.append_array(events)
 
 
-## Runs a few ticks and returns the DialogAnswered events raised in them.
+## Runs a few ticks, hands their events out, and returns the DialogAnswered events raised in them.
 func _answered(driver: GameDriver) -> Array[DialogAnswered]:
 	_heard.clear()
 	for _tick: int in 3:
 		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	_bus.flush()
 	var answered: Array[DialogAnswered] = []
 	for event: RefCounted in _heard:
 		if event is DialogAnswered:

@@ -2,12 +2,15 @@ class_name DialogScreen
 extends Control
 ## A dialog on screen (#635): a card at the bottom with the speaker's name and the line they say.
 ## A line without answers reads on with one button; a line with answers lists them as buttons, and
-## the chosen one leads on (Dialog.after) or ends the dialog. Choosing an answer sends it to the
-## simulation in this machine's player's next command (LocalInput.choose_answer), which raises it
-## as DialogAnswered; reading on changes nothing in the game. Controller, touch and keyboard all
-## work: the buttons take the focus, so the d-pad or the stick moves it and A (or Enter) confirms.
-## While a dialog is open the player stands. Talking to a person (NpcTalkedTo, #557) opens their
-## dialog for the player who talked. Its text tags show the names they stand for (#733).
+## the chosen one leads on (Dialog.after) or ends the dialog. The card follows the simulation
+## (#890): an answer button only sends the answer in this machine's player's next command
+## (LocalInput.choose_answer), and the card moves on or closes once the simulation raises it as
+## DialogAnswered for this player, whatever sent it (the buttons, a replay or a co-op peer's
+## commands). Reading on changes nothing in the game, so it stays on the card. Controller, touch
+## and keyboard all work: the buttons take the focus, so the d-pad or the stick moves it and A (or
+## Enter) confirms. While a dialog is open the player stands. Talking to a person (NpcTalkedTo,
+## #557) opens their dialog for the player who talked. Its text tags show the names they stand for
+## (#733).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
@@ -28,7 +31,7 @@ const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
-## The world's events, which say when this machine's player talks to a person.
+## The world's events, which say when this machine's player talks to a person or answers.
 @export var bus: EventBus
 
 ## The dialog open now, or null.
@@ -52,6 +55,7 @@ func _ready() -> void:
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
 	if bus != null:
 		bus.subscribe(NpcTalkedTo, _on_talked)
+		bus.subscribe(DialogAnswered, _on_answered)
 
 
 func _process(_delta: float) -> void:
@@ -76,6 +80,16 @@ func open(dialog_id: String) -> bool:
 func _on_talked(event: NpcTalkedTo) -> void:
 	if input != null and event.slot == input.slot and not event.dialog.is_empty() and not is_open():
 		var _opened: bool = open(event.dialog)
+
+
+## Moves the open dialog on to where the answer this machine's player chose leads, or closes it,
+## once the simulation has it: the line shown may be an earlier one, which the answer skips.
+func _on_answered(event: DialogAnswered) -> void:
+	if input == null or event.slot != input.slot or dialog == null or event.dialog != dialog.id:
+		return
+	var chosen: DialogAnswer = dialog.answer_of(event.answer)
+	if chosen != null:
+		_go_to(dialog.line_index(chosen.next))
 
 
 ## Whether a dialog is open.
@@ -147,11 +161,11 @@ func _read_on() -> void:
 	_go_to(dialog.after(line_index))
 
 
-## Sends the answer `answer_id` of the line shown to the simulation and goes where it leads.
+## Sends the answer `answer_id` of the line shown to the simulation; the card moves on once the
+## simulation raises it (_on_answered).
 func _answer(answer_id: String) -> void:
 	if input != null:
 		input.choose_answer(DialogFeature.code(dialog.id, answer_id))
-	_go_to(dialog.after(line_index, answer_id))
 
 
 ## Shows the line at `index`, or closes the dialog for -1.
