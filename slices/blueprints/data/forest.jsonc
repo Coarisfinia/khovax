@@ -1,5 +1,11 @@
 // North of the glade (#689), with trees and rock to harvest later (#675).
 {
 	"id": "forest",
+	"features": [
+		"movement", "knockdown", "trail", "health", "wild_monsters", "domination", "wild_attacks",
+		"spikes", "domination_loot", "enrage", "fog", "exits", "entering", "hiding", "companions",
+		"companion_swaps", "revive_items", "type_effectiveness", "companion_attacks", "specials",
+		"harvest", "dialogs", "territory"
+	],
 	"wild_species": { "ombulumo": 2, "tikazzir": 1 }
 }

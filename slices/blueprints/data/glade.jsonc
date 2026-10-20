@@ -2,6 +2,12 @@
 // world starts (#712).
 {
 	"id": "glade",
+	"features": [
+		"movement", "knockdown", "trail", "health", "wild_monsters", "domination", "wild_attacks",
+		"spikes", "domination_loot", "enrage", "fog", "exits", "triggers", "entering", "hiding",
+		"npcs", "chests", "companions", "companion_swaps", "revive_items", "type_effectiveness",
+		"companion_attacks", "specials", "harvest", "dialogs", "territory"
+	],
 	"loot_table": "glade",
 	"chest_table": "glade_chest",
 	"wild_species": { "ombulumo": 1 },
