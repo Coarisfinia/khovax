@@ -138,9 +138,6 @@ fixes, then performance (e.g. the web build loading in under 2 s, #265), then ar
 cleanup, then gameplay features (rules and mechanics), then UI, then visuals, then assets and
 models.
 
-**An obvious choice isn't asked** (owner's ground rule, #806): when the choice is obvious, file the
-task as an issue and queue it; only a real choice gets a `question`.
-
 **Never ask whether to continue** (owner's rule): work. Ask only for decisions that belong to the
 owner.
 
