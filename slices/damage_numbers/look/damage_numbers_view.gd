@@ -61,10 +61,8 @@ static func text_of(struck: SpecialStruck, numbers: bool = true) -> String:
 	return text
 
 
-## Only for what's in the instance shown: the driver also passes on the events of one the player
-## just left.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
-	for event: RefCounted in events:
+	for event: RefCounted in driver.local_events(events):
 		if event is SpecialStruck:
 			var special: SpecialStruck = event as SpecialStruck
 			var monster: Entity = driver.state.entity(special.monster_id)
@@ -77,7 +75,7 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 				show_auto(struck.tile, auto.damage, auto.strong)
 		elif event is WildMonsterStruck:
 			var wild: WildMonsterStruck = event as WildMonsterStruck
-			if wild.target_id != 0 and driver.state.entity(wild.target_id) != null:
+			if wild.target_id != 0:
 				show_auto(wild.tile, wild.damage, wild.strong)
 
 

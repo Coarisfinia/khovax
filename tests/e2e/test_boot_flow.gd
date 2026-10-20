@@ -451,7 +451,8 @@ func _check_fainted_lies(
 
 
 ## A wild monster's hit (#422) shows (#426): its figure's model lunges toward the struck tile and
-## comes back to stand on its own, turning to face it and playing its Attack clip (#993).
+## comes back to stand on its own, turning to face it and playing its Attack clip (#993). One raised
+## in another instance doesn't (_check_struck_elsewhere).
 func _check_wild_monster_lunges(
 	driver: GameDriver,
 	view: WildMonsterView,
@@ -460,8 +461,11 @@ func _check_wild_monster_lunges(
 	var monster: Entity = driver.state.entity(feature.monsters[0])
 	var target: Vector2i = monster.tile + Hex.DIRECTIONS[0]
 	var model: Node3D = view.figures[monster.id].get_child(0) as Node3D
+	var elsewhere: String = _check_struck_elsewhere(driver, view, monster)
+	if not elsewhere.is_empty():
+		return elsewhere
 	var events: Array[RefCounted] = [WildMonsterStruck.new(monster.id, 0, target, 1)]
-	driver.ticked.emit(driver.state.tick, events)
+	FlowSteps.raise(driver, events)
 	var animations: AnimationPlayer = WildMonsterView.clips_of(model)
 	var attacking: bool = animations.current_animation == WildMonsterView.ATTACK
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS / 2)
@@ -473,6 +477,32 @@ func _check_wild_monster_lunges(
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS)
 	if not lunged or not model.position.is_zero_approx():
 		return "a wild monster's hit didn't lunge its figure toward the struck tile and back"
+	return ""
+
+
+## A wild monster's hit on the player raised in another instance (#932), as the driver passes on
+## the events of one the player just left: every instance counts its entity ids from 1, so the
+## glade has an entity with the same id as the wild monster here. Its figure here doesn't turn
+## or play Attack, and no damage rises.
+func _check_struck_elsewhere(driver: GameDriver, view: WildMonsterView, monster: Entity) -> String:
+	var other: GameState = InstanceBlueprints.create(FlowSteps.GLADE, driver.state.rng_seed)
+	if other.entity(monster.id) == null:
+		return "the glade has no entity %d, the id of the wild monster here" % monster.id
+	var player: Entity = driver.state.player(0)
+	var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, player.id, player.tile, 1)
+	other.events.append(struck)
+	var numbers: DamageNumbersView = (
+		view.get_parent().get_node("DamageNumbersView") as DamageNumbersView
+	)
+	var shown: int = numbers.strikes.size()
+	var facing: float = view.facing.get(monster.id, INF)
+	var events: Array[RefCounted] = [struck]
+	driver.ticked.emit(driver.state.tick, events)
+	var model: Node3D = view.figures[monster.id].get_child(0) as Node3D
+	var played: String = WildMonsterView.clips_of(model).current_animation
+	var turned: bool = view.facing.get(monster.id, INF) != facing
+	if played == WildMonsterView.ATTACK or turned or numbers.strikes.size() != shown:
+		return "a hit in another instance played on the figure with its id here, or showed damage"
 	return ""
 
 

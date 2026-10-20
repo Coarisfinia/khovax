@@ -79,12 +79,11 @@ static func loot_text(loot: Dictionary) -> String:
 	return "\n".join(lines)
 
 
-## Bursts only for a chest this view shows, in the instance it shows and in sight: the driver also
-## passes on the events of an instance the player just left, and loot mustn't show through fog.
+## Bursts only for a chest this view shows, in sight: loot mustn't show through fog.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if input == null or driver.state != _shown:
 		return
-	for event: RefCounted in events:
+	for event: RefCounted in driver.local_events(events):
 		var tile: Vector2i = Vector2i.MAX
 		var rolled: Dictionary[int, Dictionary] = {}
 		if event is ChestOpened:

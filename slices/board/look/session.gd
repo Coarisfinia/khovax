@@ -7,7 +7,8 @@ extends Node
 ## After every tick, with the tick's number and the events the features and the world raised in it,
 ## in order: how views learn about one-shot moments (a domination, a ring breaking) to play an
 ## effect. Every tick is announced exactly once, however many ticks a frame runs. `events` is the
-## view's own copy, and the events themselves must only be read.
+## view's own copy, and the events themselves must only be read. They include those of an instance
+## this machine's player just left: a view of the instance they're in takes `local_events`.
 signal ticked(tick: int, events: Array[RefCounted])
 
 @export var input: LocalInput
@@ -28,6 +29,20 @@ var state: GameState:
 ## Announces a tick that ran, with its events (`ticked`).
 func announce(tick: int, events: Array[RefCounted]) -> void:
 	ticked.emit(tick, events)
+
+
+## The events of `events` that the instance this machine's player is in raised (#932), as the
+## event bus knows them: the driver also passes on those of an instance they just left, and every
+## instance counts its entity ids from 1, so an id in one names another entity here.
+func local_events(events: Array[RefCounted]) -> Array[RefCounted]:
+	var local: Array[RefCounted] = []
+	var shown: GameState = state
+	if shown == null:
+		return local
+	for event: RefCounted in events:
+		if shown.events.has(event):
+			local.append(event)
+	return local
 
 
 ## The blueprint name of the instance this machine's player is in; "" without a world.

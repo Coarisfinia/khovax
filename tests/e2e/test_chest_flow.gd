@@ -249,12 +249,12 @@ func _check_shown(view: ChestView, driver: GameDriver) -> String:
 		]
 	var chest: Vector2i = chests.chests[0]
 	if not view.figures[chest].visible:
-		driver.ticked.emit(driver.state.tick, _chest_opened(chest))
+		FlowSteps.raise(driver, _chest_opened(chest))
 		if not view.bursts.is_empty():
 			return "a chest in the fog burst into loot"
 	_stand_next_to(driver, chest)
 	view.show_state()
-	driver.ticked.emit(driver.state.tick, _chest_opened(chest))
+	FlowSteps.raise(driver, _chest_opened(chest))
 	var texts: Array[String] = []
 	for burst: Label3D in view.bursts:
 		texts.append(burst.text)
@@ -280,7 +280,7 @@ func _check_found_shown(view: ChestView, driver: GameDriver) -> String:
 	_stand_next_to(driver, spot)
 	view.show_state()
 	var bursts: int = view.bursts.size()
-	driver.ticked.emit(driver.state.tick, _loot_found(spot))
+	FlowSteps.raise(driver, _loot_found(spot))
 	var text: String = ChestView.loot_text(FOUND_LOOT)
 	if view.bursts.size() != bursts + 1 or view.bursts[-1].text != text:
 		return "the found loot didn't burst into this player's %s" % FOUND_LOOT

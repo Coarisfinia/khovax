@@ -1673,7 +1673,7 @@ func _check_spikes_hit(main: Node, driver: GameDriver) -> String:
 	var walls: Array[Vector2i] = _domination(driver.state).ring_waiting(driver.state, player.id)
 	var wall: Vector2i = walls[RingShape.nearest(walls, monster.tile)]
 	var struck: Array[RefCounted] = [SpikesStruck.new(monster.id, player.id, SPIKES_DAMAGE)]
-	driver.ticked.emit(driver.state.tick, struck)
+	FlowSteps.raise(driver, struck)
 	if hits.flashes.size() != 1 or hits.flashes[0].tile != wall:
 		return "a spikes hit flashed %d times, not once on the wall segment %s" % [
 			hits.flashes.size(),
@@ -1857,12 +1857,12 @@ func _check_harvest_taken(main: Node) -> String:
 	var had: int = holder.keeper.profile.materials.get("hide", 0)
 	var others: Dictionary[int, Dictionary] = { 1: HIDE_LOOT }
 	var dropped: Array[RefCounted] = [Harvested.new(monster.id, WEAK, monster.tile, others)]
-	driver.ticked.emit(driver.state.tick, dropped)
+	FlowSteps.raise(driver, dropped)
 	if not view.bursts.is_empty():
 		return "another player's materials burst for this one"
 	var mine: Dictionary[int, Dictionary] = { 0: HIDE_LOOT, 1: { "moss": 1 } }
 	dropped = [Harvested.new(monster.id, WEAK, monster.tile, mine)]
-	driver.ticked.emit(driver.state.tick, dropped)
+	FlowSteps.raise(driver, dropped)
 	(main.get_node("EventBus") as EventBus).flush()
 	var gained: int = holder.keeper.profile.materials.get("hide", 0) - had
 	if view.bursts.size() != 1 or view.bursts[0].text != ChestView.loot_text(HIDE_LOOT):
