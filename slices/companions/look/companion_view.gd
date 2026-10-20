@@ -71,9 +71,13 @@ func show_state() -> void:
 
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
-## shrinks it into them, and notes whose player chose another, so it grows out of them.
+## shrinks it into them, and notes whose player chose another, so it grows out of them. Only the
+## shown instance's events (#1025), and only once the figures are its: entity ids repeat across
+## instances, so another's would name a figure here.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
-	for event: RefCounted in events:
+	if driver.state != _shown:
+		return
+	for event: RefCounted in driver.local_events(events):
 		var chosen: CompanionChosen = event as CompanionChosen
 		if chosen != null and not _chosen.has(chosen.slot):
 			_chosen.append(chosen.slot)

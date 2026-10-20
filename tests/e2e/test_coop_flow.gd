@@ -100,7 +100,9 @@ func _check_circles() -> String:
 
 
 ## When both players bring a companion, each is joined by theirs, drawn in a circle of their own
-## color with their own marks, so the two are told apart by more than color too.
+## color with their own marks, so the two are told apart by more than color too. A companion going
+## back to its player in another instance, whose entity ids repeat these (#1025), takes no figure
+## here, nor does one going back where the players arrive before the view has shown it.
 func _check_companions_shown() -> String:
 	CompanionParty.bring(_driver.world, FlowSteps.parties([["tikazzir"], ["ombulumo"]]))
 	_driver.world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
@@ -115,6 +117,23 @@ func _check_companions_shown() -> String:
 				slot + 1,
 				slot + 1,
 			]
+	var companion_id: int = feature.companion_of(0)
+	var other: GameState = InstanceBlueprints.create(FlowSteps.GLADE, _driver.state.rng_seed, 2)
+	var returned: CompanionReturned = CompanionReturned.new(companion_id, 0)
+	other.events.append(returned)
+	var events: Array[RefCounted] = [returned]
+	_driver.ticked.emit(_driver.state.tick, events)
+	if not view.figures.has(companion_id):
+		return "a companion going back in another instance took the figure with its id here"
+	# The tick the players arrive in the glade, before the view has shown it: the figures are still
+	# the instance left's, so one going back in the glade takes none of them.
+	var here: String = _driver.local_instance_name()
+	var left: GameState = _driver.state
+	_driver.world.instances[here] = other
+	FlowSteps.raise(_driver, events)
+	_driver.world.instances[here] = left
+	if not view.figures.has(companion_id):
+		return "a companion going back on arrival took a figure of the instance left"
 	return _check_trail_marks()
 
 
