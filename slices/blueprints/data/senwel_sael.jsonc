@@ -7,5 +7,6 @@
 		"gloss": "the quiet pool"
 	},
 	"rules": "standard",
+	"loot_table": "wild_ground",
 	"wild_species": { "ombulumo": 3, "tikazzir": 1 }
 }

@@ -347,9 +347,8 @@ func _check_domination() -> String:
 
 
 ## The domination's loot (#86): each slot earned `rolls` (by slot) for what it did for the ring, and
-## the domination's DominationLoot gives exactly the slots that earned any, when its species has a
-## loot table; a species without one drops nothing. A player who only braced the wall for a second
-## earns nothing.
+## the domination's DominationLoot gives exactly the slots that earned any (every species has a
+## loot table, #943). A player who only braced the wall for a second earns nothing.
 func _check_loot(
 	events: Array[RefCounted],
 	dominated: WildMonsterDominated,
@@ -371,8 +370,7 @@ func _check_loot(
 		if event is DominationLoot and (event as DominationLoot).monster_id == dominated.monster_id:
 			looted = (event as DominationLoot).loot.keys()
 	looted.sort()
-	var tabled: bool = LootContent.load_loot_tables().loot_tables.has(dominated.species)
-	if looted != (earning if tabled else []):
+	if looted != earning:
 		return "the %s's loot went to slots %s, not %s" % [dominated.species, looted, earning]
 	var brief: WildMonsterDominated = WildMonsterDominated.new(
 		1,
@@ -1904,7 +1902,9 @@ func _check_harvest_taken(main: Node) -> String:
 	monster.tile = FlowSteps.sight_of(driver.state)[0]
 	var wild: WildMonsterFeature = _wild(driver.state)
 	wild.wound(driver.state, monster.id, _hp(driver.state, monster.id), true)
-	var had: int = holder.keeper.profile.materials.get("hide", 0)
+	# Earlier rolls in this session may have given moss already (a blank's instance table, #943):
+	# only what this drop adds counts.
+	var had: Dictionary[String, int] = holder.keeper.profile.materials.duplicate()
 	var others: Dictionary[int, Dictionary] = { 1: HIDE_LOOT }
 	var dropped: Array[RefCounted] = [Harvested.new(monster.id, WEAK, monster.tile, others)]
 	FlowSteps.raise(driver, dropped)
@@ -1914,10 +1914,13 @@ func _check_harvest_taken(main: Node) -> String:
 	dropped = [Harvested.new(monster.id, WEAK, monster.tile, mine)]
 	FlowSteps.raise(driver, dropped)
 	(main.get_node("EventBus") as EventBus).flush()
-	var gained: int = holder.keeper.profile.materials.get("hide", 0) - had
+	var gained: int = holder.keeper.profile.materials.get("hide", 0) - had.get("hide", 0)
 	if view.bursts.size() != 1 or view.bursts[0].text != ChestView.loot_text(HIDE_LOOT):
 		return "the felled wild monster's materials didn't burst into this player's own"
-	if gained != HIDE_LOOT["hide"] or holder.keeper.profile.materials.has("moss"):
+	if gained != HIDE_LOOT["hide"] or holder.keeper.profile.materials.get("moss", 0) != had.get(
+		"moss",
+		0,
+	):
 		return "the profile took %d hide from the felled wild monster, not this player's %s" % [
 			gained,
 			HIDE_LOOT,

@@ -6,5 +6,6 @@
 		"gloss": "the drumming ring"
 	},
 	"rules": "standard",
+	"loot_table": "wild_ground",
 	"wild_species": { "ombulumo": 1 }
 }

@@ -6,5 +6,6 @@
 		"gloss": "the dark wood"
 	},
 	"rules": "standard",
+	"loot_table": "wild_ground",
 	"wild_species": { "ombulumo": 2, "tikazzir": 1 }
 }
