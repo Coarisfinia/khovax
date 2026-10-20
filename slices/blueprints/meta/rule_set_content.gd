@@ -17,11 +17,6 @@ static func load_rule_sets(directory: String = DIR) -> RuleSetContent:
 	return content
 
 
-## The rule sets, read once per session (ContentCatalog).
-static func cached() -> RuleSetContent:
-	return ContentCatalog.kept(DIR, load_rule_sets)
-
-
 func add(file_id: String, text: String) -> String:
 	var rule_set: RuleSet = RuleSet.parse(file_id, text)
 	if rule_set.problem.is_empty():

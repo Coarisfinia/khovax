@@ -7,7 +7,8 @@ extends RefCounted
 ## naming a rule set and the rules it adds or drops (Blueprint.features, #941), what its region
 ## holds brings the features that run it (RegionFeatures), and they can change during a session;
 ## each slice builds its own feature (FeatureFactories). What tells blueprints apart is content
-## data, one file each (Blueprint, #823).
+## data, one file each
+## (Blueprint, #823).
 
 ## The names the tests and tools load blueprints by; the game names none, it reads them from the
 ## realms (#865), and the blueprints themselves are the files in BlueprintContent.DIR. The

@@ -13,15 +13,10 @@ var blueprints: Dictionary[String, Blueprint] = {}
 var rule_sets: Dictionary[String, RuleSet] = {}
 
 
-## Every blueprint file in `directory`, read and checked against the rule sets in its rule_sets/:
-## the game's own, kept by ContentCatalog, for the game's blueprints.
+## Every blueprint file in `directory`, read and checked against the rule sets in its rule_sets/.
 static func load_blueprints(directory: String = DIR) -> BlueprintContent:
 	var content: BlueprintContent = BlueprintContent.new()
-	var sets: RuleSetContent = (
-		RuleSetContent.cached()
-		if directory == DIR
-		else RuleSetContent.load_rule_sets(directory.path_join("rule_sets") + "/")
-	)
+	var sets: RuleSetContent = RuleSetContent.load_rule_sets(directory.path_join("rule_sets") + "/")
 	if not sets.problem.is_empty():
 		content.problem = "rule_sets/" + sets.problem
 		return content
