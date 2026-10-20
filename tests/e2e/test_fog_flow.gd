@@ -45,13 +45,12 @@ func _check_hex_lines() -> String:
 
 ## Sight (#65): rock blocks it and is seen itself, water doesn't, and it ends at the radius.
 func _check_sight() -> String:
-	var rock: Region = RegionFormat.parse("origin 0 0
-1 . ^ . .")
+	# The player's start is the middle tile, (0, 0), with rock two tiles east.
+	var rock: Region = FlowSteps.region("🟫🟫🟫🟫🔴🟫⬛🟫🟫")
 	var seen: Array[Vector2i] = FogFeature.sight(rock, Vector2i.ZERO, FogFeature.SIGHT_RADIUS)
 	if not seen.has(Vector2i(2, 0)) or seen.has(Vector2i(3, 0)) or seen.has(Vector2i(4, 0)):
 		return "rock didn't block sight, or wasn't seen itself: %s" % [seen]
-	var water: Region = RegionFormat.parse("origin 0 0
-1 . ~ . .")
+	var water: Region = FlowSteps.region("🟫🟫🟫🟫🔴🟫🟦🟫🟫")
 	if not FogFeature.sight(water, Vector2i.ZERO, FogFeature.SIGHT_RADIUS).has(Vector2i(4, 0)):
 		return "water blocked sight"
 	var wide: Region = Region.disc(FogFeature.SIGHT_RADIUS + 1)

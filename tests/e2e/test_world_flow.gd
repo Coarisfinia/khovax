@@ -1058,7 +1058,7 @@ func _check_refusals(tiles: String) -> String:
 			"trigger (0, 0) isn't on ground"
 		),
 		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always ombulumo, the quest target Old"]: (
-			"a species line reads"
+			"the legend doesn't explain `🐸`"
 		),
 		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always ombulumo, the quest target old"]: (
 			"species (1, 0): the quest target old is one monster"
@@ -1447,20 +1447,14 @@ static func _narrow_seam(region: Region) -> String:
 	return ""
 
 
-## Exit lines that don't read right or don't lead off the edge are refused, and no piece may cover
-## the tile outside an exit.
+## An exit that doesn't lead off the edge is refused, and no piece may cover the tile outside an
+## exit.
 func _check_refused() -> String:
-	var cases: Dictionary[String, String] = {
-		"origin 0 0\n.\nexit 0 0 0": "an exit line reads",
-		"origin 0 0\n.\nexit 0 0 9 basic": "exit side 9",
-		"origin 0 0\n. .\nexit 0 0 0 basic": "exit (0, 0) doesn't open",
-	}
-	for text: String in cases:
-		var problem: String = RegionFormat.parse(text).problem
-		if not problem.begins_with(cases[text]):
-			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	var with_exit: Region = RegionFormat.parse("origin 0 0\n.\nexit 0 0 0 basic")
-	if with_exit.fits(RegionFormat.parse("origin 0 0\n."), Vector2i(1, 0)):
+	var exit: String = "- `🚪`: exit to the east, to basic\n"
+	var problem: String = FlowSteps.region("🟫🚪🟫", exit).problem
+	if not problem.begins_with("exit (0, 0) doesn't open"):
+		return "an exit into a tile wasn't refused for it: " + problem
+	if FlowSteps.region("🚪", exit).fits(FlowSteps.region("🟫"), Vector2i(1, 0)):
 		return "a piece fit onto the tile outside an exit"
 	return ""
 

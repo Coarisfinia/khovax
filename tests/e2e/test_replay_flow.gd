@@ -856,30 +856,20 @@ func _check_region_file() -> String:
 	var monsters: String = _check_basic_monsters(region)
 	if not monsters.is_empty():
 		return monsters
-	var broken: Dictionary[String, String] = {
-		". . .": "a region file starts with",
-		"origin 0 0\n. .. .": "'.' in row 0 sits between two tiles",
-		"origin 0 0\n. ? .": "'?' in row 0 isn't a region symbol",
-		"origin 0 0\n. 2 .": "the player starts aren't numbered",
-		"origin nope 3\n. .": "a region file starts with",
-		"origin 0 0\n1 . 1": "player 1's start is marked twice",
-		"origin 0 0\n. .\nconnector 0 0": "a connector line reads",
-		"origin 0 0\n. .\nconnector 0 0 6": "connector side 6 isn't 0 to 5",
-		"origin 0 0\n. .\nconnector 0 0 0": "connector (0, 0) doesn't open",
-	}
-	for text: String in broken:
-		if not RegionFormat.parse(text).problem.begins_with(broken[text]):
-			return "region file %s gave: %s" % [text.c_escape(), RegionFormat.parse(text).problem]
+	var broken: String = _check_broken_grids()
+	if not broken.is_empty():
+		return broken
 	# Tiles left of the origin and rows above it have negative coordinates.
-	var left: Region = RegionFormat.parse("origin 4 1\n ~ ^\n1 . .")
+	var left: Region = FlowSteps.region(" 🟦⬛\n🔴🟫🟫\n 🟫")
 	var expected: Dictionary[Vector2i, int] = {
-		Vector2i(-1, -1): Region.WATER,
-		Vector2i(0, -1): Region.BLOCKED,
-		Vector2i(-2, 0): Region.GROUND,
+		Vector2i(0, -1): Region.WATER,
+		Vector2i(1, -1): Region.BLOCKED,
 		Vector2i(-1, 0): Region.GROUND,
 		Vector2i(0, 0): Region.GROUND,
+		Vector2i(1, 0): Region.GROUND,
+		Vector2i(-1, 1): Region.GROUND,
 	}
-	var start: Array[Vector2i] = [Vector2i(-2, 0)]
+	var start: Array[Vector2i] = [Vector2i(-1, 0)]
 	if left.terrain != expected or left.starts != start:
 		return "negative coordinates read as %s, starts %s" % [left.terrain, left.starts]
 	return ""
@@ -908,6 +898,23 @@ func _check_arranged_regions() -> String:
 	return ""
 
 
+## A grid with a tile between two, a start numbered past a gap or drawn twice, or a connector
+## that doesn't open to the edge is refused, saying so.
+func _check_broken_grids() -> String:
+	var broken: Dictionary[String, String] = {
+		"🟫\n🟫\n🟫": "'🟫' in row -1 sits between two tiles",
+		"🟫🔵🟫": "the player starts aren't numbered",
+		"🔴🟫🔴": "player 1's start is marked twice",
+		"🟫🔗🟫": "connector (0, 0) doesn't open",
+	}
+	var legend: String = "- `🔵`: where player 2 starts\n- `🔗`: joins another piece to the east\n"
+	for grid: String in broken:
+		var problem: String = FlowSteps.region(grid, legend).problem
+		if not problem.begins_with(broken[grid]):
+			return "region grid %s gave: %s" % [grid.c_escape(), problem]
+	return ""
+
+
 ## Hex.turn goes round DIRECTIONS. Two one-tile pieces, each with one connector: the second lands
 ## right next to the first, on the side the first opens to, whichever way its own connector faces
 ## before it's turned (sides 3 and 0 need no turn and three turns). The first piece's player start
@@ -916,10 +923,13 @@ func _check_connector_fit() -> String:
 	for turns: int in 6:
 		if Hex.turn(Hex.DIRECTIONS[0], turns) != Hex.DIRECTIONS[turns]:
 			return "Hex.turn doesn't follow DIRECTIONS round: %d turns" % turns
-	var first: Region = RegionFormat.parse("origin 0 0\n1\nconnector 0 0 0")
+	# A symbol is a start or a connector, never both, so the first piece's start is set by hand.
+	var first: Region = FlowSteps.region("🔗", "- `🔗`: joins another piece to the east\n")
+	first.starts.append(Vector2i.ZERO)
 	var expected: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0)]
 	for side: int in [3, 0]:
-		var second: Region = RegionFormat.parse("origin 0 0\n.\nconnector 0 0 %d" % side)
+		var joins: String = "- `🔗`: joins another piece to the %s\n" % LegendMeaning.SIDES[side]
+		var second: Region = FlowSteps.region("🔗", joins)
 		var pair: Array[Region] = [first, second]
 		var region: Region = RegionArranger.arrange(pair, 1, false)
 		var placed: bool = region.sorted_tiles() == expected and region.starts == first.starts

@@ -4,6 +4,9 @@ extends RefCounted
 ## so not hashed, and only the views and the content checks read them. Region keeps them apart from
 ## its rules' data, and turns and places them with the region.
 
+## The tallest a tile may be set by hand, so a typo can't make one tile block every crown.
+const MAX_HEIGHT: int = 1000
+
 ## How far a tile's decoration is turned, in sixths of a turn counter-clockwise like Hex.turn, for
 ## the tiles whose piece turns it by hand (#231); it turns with the region.
 var decoration_turns: Dictionary[Vector2i, int] = {}

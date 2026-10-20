@@ -196,7 +196,7 @@ func _check_hiding_legend() -> String:
 ## Legend
 
 - `🦔`: "
-	piece += RegionDocument.HIDING
+	piece += LegendMeaning.HIDING
 	var shrubs: Region = RegionDocument.parse(piece + "shrubs
 ")
 	if not shrubs.problem.is_empty() or shrubs.wild_monsters != [Vector2i.ZERO]:
@@ -206,7 +206,7 @@ func _check_hiding_legend() -> String:
 	if RegionDocument.parse(piece + "ground
 ").problem.is_empty():
 		return "a legend hid a wild monster in plain ground"
-	return _check_standing_on(piece.trim_suffix(RegionDocument.HIDING))
+	return _check_standing_on(piece.trim_suffix(LegendMeaning.HIDING))
 
 
 ## A named wild monster can stand on a tile kind (#452): the spot is that kind, and a legend naming
