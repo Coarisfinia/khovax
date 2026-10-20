@@ -566,7 +566,7 @@ func _check_roster(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _roster_swaps(main, roster, driver)
 	if result.is_empty():
-		result = _check_revive_item(main, driver)
+		result = await _check_revive_item(main, driver)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(ROSTER_PROFILE)
@@ -649,15 +649,17 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 	var holder: ProfileHolder = FlowGame.holder(main)
 	if button.icon == null or button.corner_text() != "0" or button.usable():
 		return "the revive item's button doesn't show its icon and 0, faded, with none held"
-	if _pressed(driver, &"revive_monster").revive != Command.NO_REVIVE:
+	var unheld: Command = await _pressed(driver, &"revive_monster")
+	if unheld.revive != Command.NO_REVIVE:
 		return "the revive key used a revive item the profile doesn't hold"
 	holder.keeper.profile.materials[ReviveItem.ID] = 1
 	if button.corner_text() != "1" or not button.usable():
 		return "the revive item's button doesn't show 1, usable, with one held and the toad fainted"
-	var picked: String = _check_revive_pick(main, driver)
+	var picked: String = await _check_revive_pick(main, driver)
 	if not picked.is_empty():
 		return picked
-	var commands: Array[Command] = [_pressed(driver, &"revive_monster")]
+	var single: Command = await _pressed(driver, &"revive_monster")
+	var commands: Array[Command] = [single]
 	if commands[0].revive != ShortId.code(_second):
 		return "the revive key didn't use the item on the toad, the only one fainted, at once"
 	driver.world.step(commands)
@@ -682,21 +684,22 @@ func _check_revive_item(main: Node, driver: GameDriver) -> String:
 func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud
 	CompanionParty.faint(driver.state, 0, _first)
-	var picking: Command = _pressed(driver, &"revive_monster")
+	var picking: Command = await _pressed(driver, &"revive_monster")
 	roster.show_state()
 	var standing: bool = picking.move == Command.NO_MOVE and picking.revive == Command.NO_REVIVE
 	if not standing or driver.input.revive_pick.picked != _first or roster.picked_place != 0:
 		return "the revive key didn't pick the finch, shown on the roster, with the player standing"
-	var _right: Command = _pressed(driver, &"ui_right")
+	var _right: Command = await _pressed(driver, &"ui_right")
 	var on: bool = driver.input.revive_pick.picked == _second
-	var _left: Command = _pressed(driver, &"ui_left")
+	var _left: Command = await _pressed(driver, &"ui_left")
 	var back: bool = driver.input.revive_pick.picked == _first
-	var _cancel: Command = _pressed(driver, &"ui_cancel")
+	var _cancel: Command = await _pressed(driver, &"ui_cancel")
 	if not on or not back or not driver.input.revive_pick.picked.is_empty():
 		return "the arrows didn't move the pick between the fainted ones, or Escape kept it"
-	var _again: Command = _pressed(driver, &"revive_monster")
-	var _second_press: Command = _pressed(driver, &"revive_monster")
-	if _pressed(driver, &"ui_accept").revive != ShortId.code(_second):
+	var again: Command = await _pressed(driver, &"revive_monster")
+	var _second_press: Command = await _pressed(driver, &"revive_monster")
+	again = await _pressed(driver, &"ui_accept")
+	if again.revive != ShortId.code(_second):
 		return "Enter didn't use the item on the toad the pick moved on to"
 	_tap_roster(roster, roster.rect_of(0).get_center(), false)
 	if driver.input.command(driver.state).revive != ShortId.code(_first):
@@ -705,8 +708,12 @@ func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	return ""
 
 
-## The local player's next command after a press of the InputMap action `action`.
+## The local player's next command after a press of the InputMap action `action`, in a frame of its
+## own: a press stays just pressed for the rest of its frame, even once let go. The input hears it
+## only here, not again on its own in that frame.
 static func _pressed(driver: GameDriver, action: StringName) -> Command:
+	driver.input.set_process(false)
+	await driver.get_tree().process_frame
 	Input.action_press(action)
 	driver.input._process(0.0)
 	Input.action_release(action)
