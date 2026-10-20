@@ -11,6 +11,9 @@ const PROFILE_PATH: String = "user://test_apk_profile.json"
 ## where the finger touches down, and take the touch instead of the stick (#750).
 const SCREEN: Vector2i = Vector2i(1152, 648)
 
+## The game's state hash when the flow ended, for tests/replays/outcomes.gd's report.
+var final_hash: int = 0
+
 
 func run(tree: SceneTree) -> String:
 	var window_size: Vector2i = tree.root.size
@@ -20,6 +23,7 @@ func run(tree: SceneTree) -> String:
 	var done: Signal = Signal(flow, "finished")
 	flow.call("begin", main, tree)
 	var result: String = await done
+	final_hash = FlowGame.driver(main).state.state_hash()
 	main.queue_free()
 	# The holder saves what is pending as it leaves the tree, so the file goes after that.
 	await tree.process_frame
