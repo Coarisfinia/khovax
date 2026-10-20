@@ -553,14 +553,19 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 ### Repository and accounts
 
 - **`main` is protected by the ruleset "protect main"**, with no bypass: pull requests only, one
-  approval (later pushes don't dismiss it), review threads resolved, the `headless`, `apk-e2e` and
-  `rules-compare` checks from GitHub Actions green, merged through the merge queue (#329; CI runs on its
+  approval (later pushes don't dismiss it), review threads resolved, the `headless` and `apk-e2e`
+  checks from GitHub Actions green, merged through the merge queue (#329; CI runs on its
   `merge_group` events), squash merges only, no force-push or deletion. The required checks are named after the CI jobs: renaming a job means
-  changing the ruleset in the same PR (owner's `gh`). **`rules-compare` can't compare** a removed
+  changing the ruleset in the same PR (owner's `gh`). `rules-compare` runs on every pull request
+  and in the merge queue but isn't a required check (owner, #894: an agent working around it is
+  an accepted risk). A failing `rules-compare` fails the required `apk-e2e` (its first step), so
+  the queue won't merge it. **`rules-compare` can't compare** a removed
   golden replay, one whose inputs changed, a changed APK flow or a changed outcome report
   (`tests/replays/outcomes.gd`), and fails on them unless the pull request carries the label
-  `outcomes-change` (#889), which counts only when the owner added it (the job reads who did from
-  the pull request's timeline); rerun the job after it's set.
+  `outcomes-change` (#889). **The agent applies that label itself** (owner's baseline rule, #899,
+  [comment](https://github.com/Coarisfinia/khovax/issues/899#issuecomment-6291010157)) when a pull
+  request changes one of those on purpose, and says why in the pull request; the owner's approval
+  is the explicit OK. Rerun the job after it's set.
 - **Release tags are immutable:** the tag ruleset "immutable release tags" (`refs/tags/v*`, owner,
   #91) blocks deleting, moving and force-updating them, with no bypass; creating one is allowed.
   A wrong release gets a new version, never a moved tag.
