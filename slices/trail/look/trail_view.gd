@@ -2,7 +2,7 @@ class_name TrailView
 extends Node
 ## The trail feature's look: paints the allies' shared trail (#87) on the grid's trail layer. It
 ## reads the trail feature's state and never writes it; an instance without the trail paints
-## nothing. A sealing ring's fill shows over it (SealFillView, #851).
+## nothing. Another view paints the sealing rings' fill over it, on a higher layer (#851).
 
 @export var driver: Session
 @export var grid: HexGrid
