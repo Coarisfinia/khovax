@@ -25,7 +25,9 @@ extends RefCounted
 ## (#658). A quest chain with a choice (#573) marks every way on, goes on by the
 ## one this player takes, keeps the way taken through saving and loading, and ends where that way
 ## ends, moving its standing there too. The way taken and the chain's end emit events (#575), each
-## starting the side quests waiting on it, and so does an event that changed the world (#707).
+## starting the side quests waiting on it, and so does an event that changed the world (#707),
+## also one the world already had as the session started (#756): it starts the side quest waiting
+## on it and counts toward a step waiting on it now, never past a step before it.
 ## Choosing an answer in a dialog finishes this player's quest asking for it, not another player's
 ## choice nor another answer, and takes the way on of a choice asking for it (#636); a quest naming
 ## a dialog or an answer that no dialog file has is refused, and one that names an existing answer
@@ -72,6 +74,24 @@ const AFTER_PURIFIED: String = (
 	"{\"id\": \"after_purified\", \"name\": \"After the glade\", "
 	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"glade_purified\"}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_purified\"}]}"
+)
+## A side quest that starts once the beacon is lit (#756).
+const AFTER_BEACON: String = (
+	"{\"id\": \"after_beacon\", \"name\": \"After the beacon\", "
+	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"beacon_lit\"}, "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_beacon\"}]}"
+)
+## A quest waiting on the beacon now, then a chest (#756).
+const AWAITS_BEACON: String = (
+	"{\"id\": \"awaits_beacon\", \"name\": \"Wait for the beacon\", \"steps\": ["
+	+ "{\"condition\": \"emitted\", \"event\": \"beacon_lit\"}, "
+	+ "{\"condition\": \"opened\", \"ends\": \"awaits_beacon\"}]}"
+)
+## A quest asking for a chest before the beacon (#756): the beacon lit already skips no step.
+const BEACON_LATER: String = (
+	"{\"id\": \"beacon_later\", \"name\": \"A chest, then the beacon\", \"steps\": ["
+	+ "{\"condition\": \"opened\"}, "
+	+ "{\"condition\": \"emitted\", \"event\": \"beacon_lit\", \"ends\": \"beacon_later\"}]}"
 )
 ## A quest whose chest turns the player against the Cartographer's Guild, further than its scale.
 const BETRAYAL: String = (
@@ -602,6 +622,38 @@ func _check_world_event(driver: GameDriver, bus: EventBus, profile: Profile) -> 
 	_emit(driver, bus, WorldChanged.new("glade_purified", World.EVENT_FLAG + "glade_purified"))
 	if not profile.open_steps().has(waiting.id):
 		return "the glade's purifying didn't start the side quest waiting on it"
+	return _check_caught_up(driver.holder, profile)
+
+
+## As a session starts, the profile gains the events that already changed the world (#756), from
+## its flags, and no other flag: the beacon lit before starts the side quest waiting on it and
+## counts toward the step waiting on it now, not toward a quest that asks for a chest first.
+func _check_caught_up(holder: ProfileHolder, profile: Profile) -> String:
+	var quests: Dictionary[String, String] = {
+		"after_beacon": AFTER_BEACON,
+		"awaits_beacon": AWAITS_BEACON,
+		"beacon_later": BEACON_LATER,
+	}
+	for id: String in quests:
+		profile.quest_book[id] = QuestDefinition.parse(id, quests[id], {})
+	var flags: Array[String] = [World.EVENT_FLAG + "beacon_lit", "TERRITORY_after_beacon"]
+	holder.catch_up(flags)
+	var steps: Dictionary[String, int] = {}
+	for id: String in quests:
+		steps[id] = profile.quest_progress[id].step if profile.quest_progress.has(id) else -1
+	for id: String in quests:
+		var _unbooked: bool = profile.quest_book.erase(id)
+	var expected: Dictionary[String, int] = {
+		"after_beacon": 0,
+		"awaits_beacon": 1,
+		# Still on its chest, so no progress of its own yet.
+		"beacon_later": -1,
+	}
+	if steps != expected:
+		return "catching up with the world's events left the quests at steps %s, not %s" % [
+			steps,
+			expected,
+		]
 	return ""
 
 
