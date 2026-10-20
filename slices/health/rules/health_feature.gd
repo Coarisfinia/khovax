@@ -9,7 +9,9 @@ extends Feature
 ## PLAYER_HP; a wild monster or a companion has its species' HP from the content data, once its
 ## feature told this one its species (`track`). Only the damage taken is kept, so an entity nothing
 ## hit is at full HP without an entry. It steps before the wild monsters and the companions, so
-## every feature that hurts or heals can require it, and it names neither (#821).
+## every feature that hurts or heals can require it, and it names neither (#821). A later rule can
+## shield an entity (`shield`, a player a dialog holds, #981): no hit hurts it, and a wild monster
+## doesn't pick it as a target.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -28,6 +30,9 @@ var _damage: Dictionary[int, int] = {}
 ## follows from their state, which they hash and save, and they track it again on loading, so it's
 ## neither hashed nor saved here.
 var _species: Dictionary[int, String] = {}
+## The entities a later rule shields, by entity id. The rule shields them again at the start of
+## every tick from its own state, so this is neither hashed nor saved.
+var _shielded: Dictionary[int, bool] = {}
 
 
 func _init(species_max_hps: Dictionary[String, int] = {}) -> void:
@@ -57,9 +62,25 @@ func track(entity_id: int, species: String) -> void:
 	_species[entity_id] = species
 
 
-## Takes `damage` off the HP of `entity_id`, one still standing: never below 0, or 1 unless the hit
-## is `lethal`. Whether this hit made it fall.
+## Shields `entity_id` from every hit, or lets hits hurt it again: a later rule's (a player a
+## locking dialog holds, #981), which shields it again each tick while it should be.
+func shield(entity_id: int, on: bool) -> void:
+	if on:
+		_shielded[entity_id] = true
+	else:
+		var _dropped: bool = _shielded.erase(entity_id)
+
+
+## Whether `entity_id` is shielded from hits now (`shield`).
+func is_shielded(entity_id: int) -> bool:
+	return _shielded.has(entity_id)
+
+
+## Takes `damage` off the HP of `entity_id`, one still standing and not shielded: never below 0, or
+## 1 unless the hit is `lethal`. Whether this hit made it fall.
 func hurt(state: GameState, entity_id: int, damage: int, lethal: bool = true) -> bool:
+	if _shielded.has(entity_id):
+		return false
 	var full: int = max_hp_of(state, entity_id)
 	var taken: int = _damage.get(entity_id, 0)
 	var most: int = full if lethal else full - 1
@@ -101,6 +122,7 @@ func _fall(state: GameState, entity_id: int) -> void:
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _damage.erase(removed_id)
 	_dropped = _species.erase(removed_id)
+	_dropped = _shielded.erase(removed_id)
 
 
 ## The damage a follower has taken (#716), so it arrives next door as hurt as it left.

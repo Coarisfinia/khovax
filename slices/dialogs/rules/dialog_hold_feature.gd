@@ -6,8 +6,10 @@ extends Feature
 ## outbox (Outbox, #771), which is sent only once a session and would otherwise be lost. It
 ## steps first, so every rule after it sees the held command. While every player in the instance is
 ## held, its wild monsters pause too (they don't move, strike or jump out of hiding): in
-## single-player the world stands still for the dialog, while in co-op the others go on. The views
-## keep animating, since they run on real time.
+## single-player the world stands still for the dialog, while in co-op the others go on. A held
+## player can't be targeted or hurt either (#981): HealthFeature shields them while they're held,
+## from the tick after the dialog holds them to the tick after it lets go. The views keep
+## animating, since they run on real time.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "dialog_hold"
@@ -25,29 +27,35 @@ func id() -> String:
 	return ID
 
 
-## The dialogs it reads, and the features it pauses, all stepping after it.
+## The dialogs it reads, the health it shields held players with, and the features it pauses, all
+## stepping after it.
 func before() -> Array[String]:
-	var later: Array[String] = [DialogFeature.ID]
+	var later: Array[String] = [DialogFeature.ID, HealthFeature.ID]
 	later.append_array(PAUSED)
 	return later
 
 
-## Keeps only the answer and the request of every held player's command, then pauses the wild
-## monsters
-## while every player here is held, or lets them go on.
+## Keeps only the answer and the request of every held player's command and shields them, lets
+## every other player be hurt, then pauses the wild monsters while every player here is held, or
+## lets them go on.
 func step(state: GameState, commands: Array[Command]) -> void:
 	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
 	if dialogs == null:
 		return
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var players: int = 0
 	var held: int = 0
 	for slot: int in GameState.MAX_PLAYERS:
-		if state.player(slot) == null:
+		var player: Entity = state.player(slot)
+		if player == null:
 			continue
 		players += 1
 		var given: Command = Command.of(commands, slot)
 		var answering: bool = given != null and dialogs.answer_holds(given.answer)
-		if not dialogs.holds(slot) and not answering:
+		var holding: bool = dialogs.holds(slot) or answering
+		if health != null:
+			health.shield(player.id, holding)
+		if not holding:
 			continue
 		held += 1
 		if given != null:

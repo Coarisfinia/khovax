@@ -13,7 +13,9 @@ extends RefCounted
 ## it open shows the card again. The scout never steps aside, and a held direction talks once,
 ## until the player stops and walks into them again. A locking dialog holds its player (#912): they
 ## stand whatever they send, and with every player held the wild monsters pause, until an answer
-## closes it; a committing answer holds the player from it on.
+## closes it; a committing answer holds the player from it on. With a second player free, a held
+## player can't be targeted or hurt (#981): a wild monster beside both strikes only the free one,
+## and the held one again from the tick after the dialog lets go.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "guild_scout_greeting"
@@ -258,11 +260,8 @@ static func _talk_once_while_held() -> String:
 ## frees them, and the wild monsters go on. Made not to lock, it holds nobody until the answer
 ## asking about the glade, made to commit, is chosen.
 static func _hold_while_locked() -> String:
-	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, 1)
+	var state: GameState = _held_by_scout(1)
 	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
-	dialogs.locking[GREETING] = true
-	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
-	Simulation.step(state, FlowSteps.command(EAST))
 	var west: int = Hex.DIRECTIONS.find(Vector2i(-1, 0))
 	for _tick: int in MovementFeature.MOVE_TICKS * 2:
 		Simulation.step(state, FlowSteps.command(west))
@@ -280,7 +279,81 @@ static func _hold_while_locked() -> String:
 	Simulation.step(state, _answering(DialogFeature.code(GREETING, "ask_about_glade")))
 	if not talked or not dialogs.holds(0) or dialogs.line_of(0) != 2:
 		return "the committing answer didn't hold the player from it on"
+	return _held_untouched()
+
+
+## Two players in the glade, the first held by the scout's greeting made to lock, the second free
+## beside them, and a wild monster beside both: it strikes only the free player, and the held one's
+## health doesn't change. Once leaving the scout frees the first player, it strikes them again.
+static func _held_untouched() -> String:
+	var state: GameState = _held_by_scout(2)
+	var dialogs: DialogFeature = state.feature(DialogFeature.ID) as DialogFeature
+	var held: Entity = state.player(0)
+	var free: Entity = state.player(1)
+	var monster: Entity = state.entity(
+		(state.feature(WildMonsterFeature.ID) as WildMonsterFeature).monsters[0],
+	)
+	var beside: Array[Vector2i] = _beside_both(state, held.tile)
+	if not dialogs.holds(0) or beside.is_empty():
+		return "the locking greeting didn't hold the first player, or no tile lies beside them"
+	free.tile = beside[0]
+	(state.feature(MovementFeature.ID) as MovementFeature).add_walk(free)
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	var hp: int = health.hp_of(state, held.id)
+	var struck: Array[int] = _strikes(state, monster, beside[1], Command.NO_ANSWER)
+	if struck.has(held.id) or not struck.has(free.id) or health.hp_of(state, held.id) != hp:
+		return "a wild monster struck %s, with the held player at %d HP of %d" % [
+			struck,
+			health.hp_of(state, held.id),
+			hp,
+		]
+	struck = _strikes(state, monster, beside[1], DialogFeature.code(GREETING, "leave_scout"))
+	if not struck.has(held.id):
+		return "the player the greeting let go wasn't struck again: %s" % [struck]
 	return ""
+
+
+## The glade with `players` players, the first beside the guild scout, whose greeting, made to
+## lock, holds them once they've walked into the scout.
+static func _held_by_scout(players: int) -> GameState:
+	var state: GameState = InstanceBlueprints.create(InstanceBlueprints.GLADE, 3, players)
+	(state.feature(DialogFeature.ID) as DialogFeature).locking[GREETING] = true
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, [Vector2i(1, 0), BESIDE_SCOUT])
+	Simulation.step(state, FlowSteps.command(EAST))
+	return state
+
+
+## Two tiles beside `tile` that are beside each other, walkable and free, or none.
+static func _beside_both(state: GameState, tile: Vector2i) -> Array[Vector2i]:
+	var open: Array[Vector2i] = []
+	for direction: Vector2i in Hex.DIRECTIONS:
+		if FlowSteps.walkable_for_players(state, tile + direction):
+			open.append(tile + direction)
+	for first: Vector2i in open:
+		for second: Vector2i in open:
+			if Hex.distance(first, second) == 1:
+				return [first, second]
+	var none: Array[Vector2i] = []
+	return none
+
+
+## Who `monster` strikes over two strikes' ticks, kept on `tile` and with both players standing, the
+## first choosing the answer `code` on the first tick, by target entity id.
+static func _strikes(state: GameState, monster: Entity, tile: Vector2i, code: int) -> Array[int]:
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	var targets: Array[int] = []
+	for tick: int in WildAttackFeature.STRIKE_TICKS * 2:
+		monster.tile = tile
+		movement.add_walk(monster)
+		var commands: Array[Command] = FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE])
+		if tick == 0:
+			commands[0].answer = code
+		Simulation.step(state, commands)
+		for event: RefCounted in state.events:
+			var hit: WildMonsterStruck = event as WildMonsterStruck
+			if hit != null and hit.monster_id == monster.id:
+				targets.append(hit.target_id)
+	return targets
 
 
 ## One tick's commands with only the player in slot 0, standing and choosing the answer `code`.
