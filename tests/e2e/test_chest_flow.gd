@@ -258,9 +258,13 @@ func _check_shown(view: ChestView, driver: GameDriver) -> String:
 	var texts: Array[String] = []
 	for burst: Label3D in view.bursts:
 		texts.append(burst.text)
-	var expected: Array[String] = ["+2 moss"]
+	var expected: Array[String] = ["+2 Moss"]
 	if texts != expected or ChestView.loot_text(OWN_LOOT) != expected[0]:
 		return "the opened chest burst into %s, not this player's %s" % [texts, expected]
+	# Gear shows by its name from the gear data, materials by their id in words (#773).
+	var named: String = ChestView.loot_text({ "warding_charm": 1, "moss": 2 })
+	if named != "+2 Moss\n+1 Warding charm":
+		return "loot of gear and a material burst into %s, not their names" % named.c_escape()
 	chests.chests.erase(chest)
 	view.show_state()
 	if view.figures.has(chest):
