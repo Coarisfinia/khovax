@@ -20,7 +20,7 @@ func _enter_tree() -> void:
 	if _book_loaded:
 		return
 	_book_loaded = true
-	var content: QuestData = QuestContent.load_quests()
+	var content: QuestContent = QuestContent.load_quests()
 	if not content.problem.is_empty():
 		push_warning("the quests can't be read, so none advance: " + content.problem)
 	tracker.book = book_of(content)
@@ -49,7 +49,7 @@ static func advance(profile: Profile, kept: QuestTracker, facts: Array[QuestFact
 
 ## The quests the player advances from `content`: none when any quest file couldn't be read, so
 ## progress waits for whole, sound data rather than advancing on part of it.
-static func book_of(content: QuestData) -> Dictionary[String, QuestDefinition]:
+static func book_of(content: QuestContent) -> Dictionary[String, QuestDefinition]:
 	var none: Dictionary[String, QuestDefinition] = {}
 	return content.quests if content.problem.is_empty() else none
 

@@ -1,5 +1,5 @@
 class_name DialogContent
-extends RefCounted
+extends Content
 ## The dialogs' content data (#618), which the dialogs slice owns (#412): one JSONC file per dialog
 ## directly in its data/ (its own kind, so no folder repeats the slice's name, #442), checked
 ## against dialogs.schema.json beside them in CI. Everything else reads the dialogs through this.
@@ -16,24 +16,23 @@ var answers: Dictionary[int, PackedStringArray] = {}
 var leads: Dictionary[int, int] = {}
 ## How many lines each dialog has, by its id.
 var line_counts: Dictionary[String, int] = {}
-## Why the data couldn't be read, or "" when it could.
-var problem: String = ""
 
 
 ## Every dialog file in `directory`, read and checked.
 static func load_dialogs(directory: String = DIR) -> DialogContent:
 	var content: DialogContent = DialogContent.new()
-	var texts: Dictionary[String, String] = Content.texts_in(directory)
-	for file_id: String in texts:
-		var dialog: Dialog = Dialog.parse(file_id, texts[file_id])
-		if dialog.problem.is_empty():
-			dialog.problem = content._code_answers(dialog)
-		if not dialog.problem.is_empty():
-			content.problem = file_id + ".jsonc: " + dialog.problem
-			return content
-		content.dialogs[dialog.id] = dialog
-		content.line_counts[dialog.id] = dialog.lines.size()
+	content.read(directory)
 	return content
+
+
+func add(file_id: String, text: String) -> String:
+	var dialog: Dialog = Dialog.parse(file_id, text)
+	if dialog.problem.is_empty():
+		dialog.problem = _code_answers(dialog)
+	if dialog.problem.is_empty():
+		dialogs[dialog.id] = dialog
+		line_counts[dialog.id] = dialog.lines.size()
+	return dialog.problem
 
 
 ## Files `dialog`'s answers by their codes; why one can't be, or "": a command couldn't tell it from

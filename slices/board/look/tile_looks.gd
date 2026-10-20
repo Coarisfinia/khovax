@@ -16,7 +16,7 @@ static var _heights: Dictionary[String, int] = {}
 ## The tile blueprint of kind `kind`, or null for an id no kind has.
 static func of(kind: String) -> TileBlueprint:
 	if _by_id.is_empty():
-		var content: Content = Content.load_tiles()
+		var content: TileContent = TileContent.load_tiles()
 		if not content.problem.is_empty():
 			push_error("the tile blueprints didn't load: " + content.problem)
 		_by_id = content.tiles

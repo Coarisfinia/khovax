@@ -44,7 +44,7 @@ const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
 
 
 func run(_tree: SceneTree) -> String:
-	var content: SpeciesData = SpeciesContent.load_species()
+	var content: SpeciesContent = SpeciesContent.load_species()
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
 	if (not content.species.has("ombulumo")
@@ -82,8 +82,8 @@ func run(_tree: SceneTree) -> String:
 ## wrong kind, or one that doesn't exist is refused, and so is an ability file with a wrong id,
 ## kind, name or description, a special without its power and cooldown (#410) or a strike type on
 ## the chart (#626), or a passive with any of them.
-func _check_kits(content: SpeciesData) -> String:
-	var loaded: SpeciesData = SpeciesContent.load_abilities()
+func _check_kits(content: SpeciesContent) -> String:
+	var loaded: AbilityContent = AbilityContent.load_abilities()
 	if not loaded.problem.is_empty():
 		return "the abilities didn't load: " + loaded.problem
 	var problem: String = SpeciesKit.problem(content.species, loaded.abilities)
@@ -168,7 +168,7 @@ func _check_abilities_refused() -> String:
 
 ## Why a step to reach the beach, one to enter the thicket and one to enter the glade don't read,
 ## naming them, or "".
-func _check_named_steps(content: QuestData) -> String:
+func _check_named_steps(content: QuestContent) -> String:
 	var named: QuestDefinition = QuestDefinition.parse(
 		"x",
 		"{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, %s, %s]}" % [
@@ -191,7 +191,7 @@ func _check_named_steps(content: QuestData) -> String:
 ## counting only there (#769), and a step to enter it (#370). An instance that isn't an id or isn't
 ## a blueprint is refused, with a reason, and so is one on a start waiting on an event, which
 ## happens everywhere. Then the answered steps.
-func _check_instance_steps(content: QuestData) -> String:
+func _check_instance_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
 	var there: String = ", \"instance\": \"glade\""
 	var opened: String = "{\"condition\": \"opened\"%s}" % there
@@ -225,7 +225,7 @@ func _check_instance_steps(content: QuestData) -> String:
 
 ## Why broken answered steps (#636) aren't refused, with a reason, or "": an answered step names a
 ## dialog and its answer, both, each an id, and no other step names either.
-func _check_answered_steps(content: QuestData) -> String:
+func _check_answered_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s]}"
 	var cases: Dictionary[String, String] = {
 		quest % "{\"condition\": \"answered\", \"dialog\": \"a\"}": "step 0: its dialog and answer",
@@ -239,7 +239,7 @@ func _check_answered_steps(content: QuestData) -> String:
 ## Why the side quests (#473) don't read, or "": the pond's chest starts on entering the pond, a
 ## quest without a start has none, and a start that isn't reaching a place or entering a piece or
 ## an instance, or that has a count, is refused. Then the standings quests move.
-func _check_side_quests(content: QuestData) -> String:
+func _check_side_quests(content: QuestContent) -> String:
 	var pond: QuestDefinition = content.quests.get("pond_chest")
 	var first: QuestDefinition = content.quests["first_domination"]
 	if (pond == null or pond.starts_on == null or pond.starts_on.condition != QuestStep.ENTERED
@@ -261,7 +261,7 @@ func _check_side_quests(content: QuestData) -> String:
 ## Cartographer's Guild by one, the toads' quest moves none, and a standing that isn't an object,
 ## has another field, names no faction id, or changes by nothing, a fraction, text or more than the
 ## whole scale is refused.
-func _check_quest_standings(content: QuestData) -> String:
+func _check_quest_standings(content: QuestContent) -> String:
 	var raised: QuestStanding = content.quests["first_domination"].standing
 	if (raised == null or raised.faction != "cartographers_guild" or raised.change != 1
 			or content.quests["three_ombulumo"].standing != null):
@@ -297,7 +297,7 @@ func _check_quest_standings(content: QuestData) -> String:
 ## quests that aren't territory quests name none; a territory that isn't an object, has another
 ## field, or doesn't name an instance and a faction by their ids is refused, and so is a territory
 ## quest with a step that doesn't name its instance, or names another.
-func _check_quest_territories(content: QuestData) -> String:
+func _check_quest_territories(content: QuestContent) -> String:
 	var handed: int = 0
 	for id: String in content.quests:
 		var territory: QuestTerritory = content.quests[id].territory
@@ -339,7 +339,7 @@ func _check_quest_territories(content: QuestData) -> String:
 ## each leading to its own step, and both end its chain. Choices that aren't two or more, aren't a
 ## place or an area, have a count, or lead nowhere are refused; so are a step with choices that has
 ## a condition or an end, two steps with one id, and an end naming another chain.
-func _check_branches(content: QuestData) -> String:
+func _check_branches(content: QuestContent) -> String:
 	var fork: QuestDefinition = content.quests.get("glade_fork")
 	if (fork == null or fork.steps[0].choices.size() != 2
 			or fork.steps[0].choices[0].piece != "pond"
@@ -376,7 +376,7 @@ func _check_branches(content: QuestData) -> String:
 ## Why quests whose paths don't all reach an end (#576) aren't refused, or "": a path stopping at
 ## an untagged last step, in a branching quest or a linear one, and a loop without a way out are; a
 ## loop with a way out reads.
-func _check_paths(content: QuestData, quest: String, to: String) -> String:
+func _check_paths(content: QuestContent, quest: String, to: String) -> String:
 	var looping: String = "{\"id\": \"c\", \"choices\": [%s, %s]}"
 	var way_out: String = quest % (looping % [to % "c", to % "b"])
 	var parsed: QuestDefinition = QuestDefinition.parse("x", way_out, content.species)
@@ -397,7 +397,7 @@ func _check_paths(content: QuestData, quest: String, to: String) -> String:
 
 
 ## Why one of the quests in `cases` isn't refused with the reason it maps to, or "".
-static func _unrefused(cases: Dictionary[String, String], content: QuestData) -> String:
+static func _unrefused(cases: Dictionary[String, String], content: QuestContent) -> String:
 	for text: String in cases:
 		var problem: String = QuestDefinition.parse("x", text, content.species).problem
 		if not problem.begins_with(cases[text]):
@@ -414,7 +414,7 @@ static func _unrefused(cases: Dictionary[String, String], content: QuestData) ->
 ## one of, never both, and the same for an answered step and its dialog and answer (#636), and a
 ## quest target (#625).
 func _check_quests() -> String:
-	var content: QuestData = QuestContent.load_quests()
+	var content: QuestContent = QuestContent.load_quests()
 	if not content.problem.is_empty():
 		return "the quests didn't load: " + content.problem
 	var first: QuestDefinition = content.quests.get("first_domination")
@@ -466,7 +466,7 @@ func _check_quests() -> String:
 
 ## Why a step asking for a quest target (#625) isn't read, or isn't refused when it's no id, sits
 ## on a step other than a domination, comes with a species or counts more than once, or "".
-func _check_target_steps(content: QuestData) -> String:
+func _check_target_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [{\"condition\": \"%s\"%s}]}"
 	var target: String = ", \"target\": \"%s\""
 	var asked: String = quest % ["dominated", target % "old_toad" + ", \"ends\": \"x\""]
@@ -492,7 +492,7 @@ func _check_target_steps(content: QuestData) -> String:
 ## hundredths of its size (#588), every other kind at 100, the default; no two kinds share a symbol
 ## (#68). Broken blueprints are refused.
 func _check_tiles() -> String:
-	var content: Content = Content.load_tiles()
+	var content: TileContent = TileContent.load_tiles()
 	if not content.problem.is_empty():
 		return "the tile blueprints didn't load: " + content.problem
 	var walkable: Dictionary[String, bool] = {
@@ -574,7 +574,7 @@ func _check_tiles_refused() -> String:
 
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint
 ## lists or a region piece names is one the species data has (#133).
-func _check_wild_species(content: SpeciesData) -> String:
+func _check_wild_species(content: SpeciesContent) -> String:
 	for instance_name: String in InstanceBlueprints.names():
 		var listed: Dictionary = InstanceBlueprints.blueprint(instance_name).wild_species
 		var named: Array[String] = []
@@ -708,7 +708,7 @@ func _check_strip() -> String:
 
 ## Why a species file named xo with this text is refused in otherwise empty content, or "".
 func _add_to_empty(text: String) -> String:
-	return SpeciesData.new().add_species("xo", text)
+	return SpeciesContent.new().add("xo", text)
 
 
 ## Entries a schema might let through or that clash with others are refused, with a reason.
@@ -748,11 +748,11 @@ func _check_refused() -> String:
 		var problem: String = _add_to_empty(text)
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
-	var twice: SpeciesData = SpeciesData.new()
+	var twice: SpeciesContent = SpeciesContent.new()
 	var valid: String = "{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 	valid += KIT + "}"
-	var first: String = twice.add_species("xo", valid)
-	if not first.is_empty() or not twice.add_species("xo", valid).begins_with("its id"):
+	var first: String = twice.add("xo", valid)
+	if not first.is_empty() or not twice.add("xo", valid).begins_with("its id"):
 		return "a second species with the same id was accepted"
 	return ""
 
@@ -761,7 +761,7 @@ func _check_refused() -> String:
 ## what the glade's table gives (1 to 2 moss, a single berry or a single revive herb, #656), and the
 ## same stream rolls the same loot.
 func _check_loot_rolls() -> String:
-	var content: LootData = LootContent.load_loot_tables()
+	var content: LootContent = LootContent.load_loot_tables()
 	if not content.problem.is_empty():
 		return "the loot tables didn't load: " + content.problem
 	var toad: LootTable = content.loot_tables["ombulumo"]
@@ -783,7 +783,7 @@ func _check_loot_rolls() -> String:
 
 
 ## The glade's own rolls and its chests' give a revive herb (#656) now and then.
-func _check_revive_herbs(content: LootData) -> String:
+func _check_revive_herbs(content: LootContent) -> String:
 	var herb_tables: Array[String] = ["glade", "glade_chest"]
 	for table_id: String in herb_tables:
 		var herbs: int = 0
@@ -802,10 +802,10 @@ func _check_revive_herbs(content: LootData) -> String:
 ## as a harvest table named after a species, and a felled toad's rolls give what dominating it
 ## never does.
 func _check_harvest_tables() -> String:
-	var content: LootData = LootContent.load_loot_tables(LootContent.HARVEST_DIR)
+	var content: LootContent = LootContent.load_loot_tables(LootContent.HARVEST_DIR)
 	if not content.problem.is_empty():
 		return "the harvest tables didn't load: " + content.problem
-	var species: SpeciesData = SpeciesContent.load_species()
+	var species: SpeciesContent = SpeciesContent.load_species()
 	for species_id: String in species.species:
 		var table: LootTable = content.loot_tables.get(species_id)
 		if table == null or table.kind != LootTable.HARVEST:
@@ -1031,7 +1031,7 @@ func _check_text_tags() -> String:
 				texts.append(answer.text)
 	for quest: QuestDefinition in QuestContent.load_quests().quests.values():
 		texts.append(quest.name)
-	for ability: Ability in SpeciesContent.load_abilities().abilities.values():
+	for ability: Ability in AbilityContent.load_abilities().abilities.values():
 		texts.append_array([ability.name, ability.description])
 	for faction: Faction in FactionContent.load_factions().factions.values():
 		texts.append(faction.name)

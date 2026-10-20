@@ -1115,8 +1115,9 @@ func _check_obtained() -> String:
 	var stray: String = FEATHERS.replace("\"condition\": \"obtained\"", "\"condition\": \"opened\"")
 	if QuestDefinition.parse("feathers", stray, {}).problem.is_empty():
 		return "a step naming an item without asking for it wasn't refused"
-	var dropped: QuestData = _load_written({ "feathers": FEATHERS })
-	var typo: QuestData = _load_written({ "feathers": FEATHERS.replace("feather\"", "feathre\"") })
+	var dropped: QuestContent = _load_written({ "feathers": FEATHERS })
+	var misspelt: String = FEATHERS.replace("feather\"", "feathre\"")
+	var typo: QuestContent = _load_written({ "feathers": misspelt })
 	if not dropped.problem.is_empty() or not typo.problem.contains("drops the item feathre"):
 		return "only an item no table drops should be refused: %s / %s" % [
 			dropped.problem,
@@ -1206,7 +1207,7 @@ func _emit_in(driver: GameDriver, bus: EventBus, event: RefCounted, instance_nam
 ## quest counts to three. The first domination asks for the beach first (#321): dominations before
 ## it don't count, and reaching it hands over to dominating.
 func _check_counted() -> String:
-	var content: QuestData = QuestContent.load_quests()
+	var content: QuestContent = QuestContent.load_quests()
 	var profile: Profile = Profile.new()
 	var quests: QuestTracker = QuestTracker.new()
 	quests.book = content.quests
@@ -1314,7 +1315,7 @@ func _check_settled() -> String:
 func _check_broken_data() -> String:
 	var good: String = "{\"id\": \"a_good\", \"name\": \"N\", "
 	good += "\"steps\": [{\"condition\": \"opened\", \"ends\": \"a_good\"}]}"
-	var content: QuestData = _load_written({
+	var content: QuestContent = _load_written({
 		"a_good": good,
 		"b_broken": "{\"id\": \"b_broken\", \"name\": \"N\", \"steps\": []}",
 	})
@@ -1341,10 +1342,10 @@ func _check_dialog_ids() -> String:
 		"no_answer": PROMISE % [SCOUT, "no_such_answer"],
 	}
 	for case: String in unknown:
-		var refused: QuestData = _load_written({ "promise": unknown[case] })
+		var refused: QuestContent = _load_written({ "promise": unknown[case] })
 		if not refused.problem.contains("step 0: the dialog"):
 			return "a quest naming %s wasn't refused: %s" % [case, refused.problem]
-	var content: QuestData = _load_written({ "promise": PROMISE % [SCOUT, "promise_to_look"] })
+	var content: QuestContent = _load_written({ "promise": PROMISE % [SCOUT, "promise_to_look"] })
 	var line: String = ""
 	if content.problem.is_empty():
 		line = QuestListView.step_line(content.quests["promise"].steps[0], 0)
@@ -1357,14 +1358,14 @@ func _check_dialog_ids() -> String:
 
 
 ## The quests read from a directory holding `files`, quest text by id; the directory is gone after.
-static func _load_written(files: Dictionary[String, String]) -> QuestData:
+static func _load_written(files: Dictionary[String, String]) -> QuestContent:
 	var directory: String = "user://written_quests_test/"
 	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
 	for id: String in files:
 		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
 		var _stored: bool = file.store_string(files[id])
 		file.close()
-	var content: QuestData = QuestContent.load_quests(directory)
+	var content: QuestContent = QuestContent.load_quests(directory)
 	for id: String in files:
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
 	var _gone: Error = DirAccess.remove_absolute(directory)

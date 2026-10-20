@@ -4,31 +4,32 @@ extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
 ## (#412: the slice's own kind directly in slices/<slice>/data/, so no folder repeats the slice's
 ## name, #442, and any other kind in slices/<slice>/data/<kind>/), checked against its schema there
-## in CI and here for what a schema can't check: ids unique and matching their file. The slices
-## read their kinds through their own accessors into their own data (SpeciesContent into
-## SpeciesData, and so on, #506), so this never names them; the tile blueprints (#116), which the
-## core's TileKinds reads first, live in the core and are read here, from core/data/tiles/ (#506).
-## Here too: the field helpers they all use.
+## in CI and here for what a schema can't check: ids unique and matching their file. Every kind is
+## read by its own `<Kind>Content` (#816), which extends this: it reads its kind's files through
+## `read`, adds each entry in its own `add`, and holds the entries, so this never names a slice's
+## kind (#506). The tile blueprints, which the core's TileKinds reads first, live in the core and
+## are read by TileContent. Here too: the field helpers they all use.
 
-const TILES_DIR: String = "res://core/data/tiles/"
-
-## Every tile blueprint, by id.
-var tiles: Dictionary[String, TileBlueprint] = {}
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
 
-## Every tile blueprint file in `directory`, read and checked.
-static func load_tiles(directory: String = TILES_DIR) -> Content:
-	var content: Content = Content.new()
+## Reads every JSONC file in `directory` into this through `add`, in file name order, and stops at
+## the first one that can't be: `problem` then names that file and why.
+func read(directory: String) -> void:
 	var texts: Dictionary[String, String] = texts_in(directory)
 	for file_id: String in texts:
-		var tile: TileBlueprint = TileBlueprint.parse(file_id, texts[file_id])
-		if not tile.problem.is_empty():
-			content.problem = file_id + ".jsonc: " + tile.problem
-			return content
-		content.tiles[tile.id] = tile
-	return content
+		var why: String = add(file_id, texts[file_id])
+		if not why.is_empty():
+			problem = file_id + ".jsonc: " + why
+			return
+
+
+## Reads one file's text, named `file_id`, and adds its entry; returns why it can't, or "". Each
+## `<Kind>Content` gives its own.
+func add(file_id: String, _text: String) -> String:
+	push_error("%s's content kind doesn't read its files" % file_id)
+	return "its kind can't be read"
 
 
 ## The text of every JSONC file in `directory`, by its file name without the extension, in file

@@ -29,12 +29,12 @@ var _pattern: RegEx = RegEx.create_from_string(TAG_PATTERN)
 
 ## The names every kind of tag shows, read from the content in the given directories.
 static func load_tags(
-	species_directory: String = SpeciesContent.SPECIES_DIR,
+	species_directory: String = SpeciesContent.DIR,
 	faction_directory: String = FactionContent.DIR,
 	gear_directory: String = GearContent.DIR,
 ) -> TextTags:
 	var tags: TextTags = TextTags.new()
-	var species: SpeciesData = SpeciesContent.load_species(species_directory)
+	var species: SpeciesContent = SpeciesContent.load_species(species_directory)
 	var factions: FactionContent = FactionContent.load_factions(faction_directory)
 	var gear: GearContent = GearContent.load_gear(gear_directory)
 	tags.problem = species.problem + factions.problem + gear.problem
