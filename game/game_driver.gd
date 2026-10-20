@@ -24,8 +24,9 @@ static var fixed_seed: int = ROLLED_SEED
 ## launch option (#237).
 static var start_instance: String = ""
 
-## The instance the session starts in, by name from InstanceBlueprints: the glade (#712).
-@export var instance: String = InstanceBlueprints.GLADE
+## The instance the session starts in, by its blueprint's name: the one the realms mark as the
+## start (#865) unless set.
+@export var instance: String = ""
 ## Hands over the saved world to resume at boot, and saves this one (#119); none in tests that
 ## build a driver alone.
 @export var keeper: WorldKeeper
@@ -51,6 +52,8 @@ var _accumulated: float = 0.0
 func _ready() -> void:
 	if not start_instance.is_empty():
 		instance = start_instance
+	if instance.is_empty():
+		instance = Realms.start()
 	var saved: World = keeper.saved_world() if keeper != null else null
 	var problem: String = resume(saved) if saved != null else ""
 	if not problem.is_empty():

@@ -37,8 +37,9 @@ var placements: Dictionary[String, Dictionary] = {}
 ## arranging uses them up, so a region in a state has none and they aren't hashed.
 var connectors: Array[Vector3i] = []
 ## Ways out into another instance (#120, #140): like a connector, (q, r) is a ground tile on the
-## edge and z the side it leads out of, and `exit_blueprints` holds the blueprint each leads to.
-## Unlike connectors they stay after arranging. Not hashed: they come from the blueprint's files and
+## edge and z the side it leads out of, and `exit_blueprints` holds the blueprint each leads to,
+## which the instance's realm says (#865): "" until the blueprints fill it in. Unlike connectors
+## they stay after arranging. Not hashed: they come from the blueprint's files and
 ## never change during a session.
 var exits: Array[Vector3i] = []
 var exit_blueprints: Array[String] = []

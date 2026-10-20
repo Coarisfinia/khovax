@@ -641,50 +641,42 @@ func _check_blueprints() -> String:
 
 
 ## Every realm file (#865) reads, found by listing its folder, and draws instances that exist,
-## each once, with every exit leading to the instance drawn next to it on that side. A realm file
-## naming an instance that doesn't exist, drawn or not, drawing one twice or with a symbol its
-## legend doesn't explain is refused.
+## each once, whose regions read, so every exit leads to the instance drawn beside it on that side.
+## The realms mark one start, the glade (#712). A realm file drawing an instance twice, with a
+## symbol its legend doesn't explain, or marking two starts or one it doesn't draw is refused.
 func _check_realms() -> String:
-	var ids: Array[String] = RealmDocument.ids()
-	if ids.is_empty():
-		return "no realm file was found"
-	for realm_id: String in ids:
-		var realm: Realm = RealmDocument.read(realm_id)
+	var starts: Array[String] = []
+	for realm: Realm in Realms.all():
 		if not realm.problem.is_empty() or realm.instances.is_empty():
-			return "realm %s didn't read: %s" % [realm_id, realm.problem]
-		var misdrawn: String = _realm_exits_drawn(realm)
-		if not misdrawn.is_empty():
-			return misdrawn
+			return "realm %s didn't read: %s" % [realm.id, realm.problem]
+		for instance_id: String in realm.instances.values():
+			if not InstanceBlueprints.exists(instance_id):
+				return "realm %s draws %s, which doesn't exist" % [realm.id, instance_id]
+			var problem: String = InstanceBlueprints.region_of(instance_id, 0).problem
+			if not problem.is_empty():
+				return "realm %s's %s didn't read: %s" % [realm.id, instance_id, problem]
+		if not realm.start.is_empty():
+			starts.append(realm.start)
+	if starts != [InstanceBlueprints.GLADE] or Realms.start() != InstanceBlueprints.GLADE:
+		return "the realms mark %s as the start" % [starts]
 	var text: String = "# R\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n- `🌲`: the instance %s\n"
+	text += "- `🟦`: no instance\n"
 	var forest: String = InstanceBlueprints.FOREST
-	var undrawn: String = text % ["🌲", forest] + "- `🌳`: the instance nowhere\n"
+	var start: String = forest + RealmDocument.START
 	var cases: Dictionary[String, String] = {
-		text % ["🌲", "nowhere"]: "the instance nowhere doesn't exist",
 		text % ["🌲🌲🌲", forest]: "the instance forest is drawn twice",
 		text % ["⬜🌲⬜", forest]: "the legend doesn't explain `⬜`",
-		undrawn: "the instance nowhere doesn't exist",
+		text % ["🟦🌲🌳", start] + "- `🌳`: the instance glade, where the players start\n": (
+			"the players start in forest and glade"
+		),
+		text % ["🟦🌲🟦", forest] + "- `🌳`: the instance glade, where the players start\n": (
+			"the players start in glade, which isn't drawn"
+		),
 	}
 	for case: String in cases:
 		var refusal: String = RealmDocument.parse(case).problem
 		if refusal != cases[case]:
 			return "a broken realm gave %s, not %s" % [refusal, cases[case]]
-	return ""
-
-
-## Why an exit of an instance in `realm` doesn't lead to the instance drawn next to it on the
-## exit's side, or "": the picture shows where the instances lie.
-func _realm_exits_drawn(realm: Realm) -> String:
-	for tile: Vector2i in realm.instances:
-		var region: Region = InstanceBlueprints.region_of(realm.instances[tile], 0)
-		for i: int in region.exits.size():
-			var beside: String = realm.instances.get(tile + Hex.DIRECTIONS[region.exits[i].z], "")
-			if beside != region.exit_blueprints[i]:
-				return "realm %s draws %s beside %s's exit to %s" % [
-					realm.id,
-					beside,
-					realm.instances[tile],
-					region.exit_blueprints[i],
-				]
 	return ""
 
 

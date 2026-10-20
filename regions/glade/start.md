@@ -32,7 +32,7 @@ The glade's start piece (#57), where the world starts (#712): a disc of radius 5
 - `🟢`: where player 3 starts
 - `🟡`: where player 4 starts
 - `🔗`: joins another piece to the east
-- `🚪`: exit to the northwest, to forest
-- `🌀`: exit to the southeast, to outpost
+- `🚪`: exit to the northwest
+- `🌀`: exit to the southeast
 - `🔭`: a lookout; stepping here reveals within 8
 - `🧑`: a person to talk to, guild_scout, saying guild_scout_greeting

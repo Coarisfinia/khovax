@@ -10,7 +10,8 @@ extends RefCounted
 ##   (TileTrigger) or a wild monster of a named species (WildSpot); a reader may also name the tile
 ##   kind it stands on, which is read like a tile kind's meaning (below)
 ## - `joins another piece to the <side>`: a connector (#57)
-## - `exit to the <side>, to <blueprint>`: an exit to another instance (#140)
+## - `exit to the <side>`: an exit to another instance (#140), the one its realm draws beside this
+##   one on that side (#865), which the blueprints fill in (Region.exit_blueprints)
 ## - `a wild monster hiding in <tile blueprint id>`: a wild monster, of a species rolled from the
 ##   instance blueprint's list, on a tile of that kind, which must hide (#202), e.g. `a wild monster
 ##   hiding in shrubs`
@@ -34,9 +35,8 @@ const START: String = "where player %d starts"
 ## #19).
 const ROLLED: String = "a wild monster, of a species rolled from the instance blueprint's list"
 const CONNECTOR: String = "joins another piece to the "
-## An exit's meaning, before its side and, after TO, its blueprint.
+## An exit's meaning, before its side.
 const EXIT: String = "exit to the "
-const TO: String = ", to "
 ## A legend meaning placing a wild monster in a tile that hides it (#202), before the tile's kind.
 const HIDING: String = "a wild monster hiding in "
 ## The sides of a tile, in Hex.DIRECTIONS' order.
@@ -62,10 +62,9 @@ var kind: String = ""
 var turns: Array[int] = []
 var walkable_overrides: Array[bool] = []
 var heights: Array[int] = []
-## The side a connector or exit opens to, or -1, and the blueprint an exit leads to.
+## The side a connector or exit opens to, or -1.
 var connector_side: int = -1
 var exit_side: int = -1
-var exit_blueprint: String = ""
 
 
 ## What `meaning` stands for, or null when it isn't understood; `readers` read what the slices
@@ -116,7 +115,7 @@ func place(region: Region, tile: Vector2i) -> String:
 			region.connectors.append(Vector3i(tile.x, tile.y, side))
 		else:
 			region.exits.append(Vector3i(tile.x, tile.y, side))
-			region.exit_blueprints.append(exit_blueprint)
+			region.exit_blueprints.append("")
 	return _place_on_ground(region, tile)
 
 
@@ -143,11 +142,7 @@ func _read_placed(meaning: String) -> bool:
 		connector_side = SIDES.find(meaning.trim_prefix(CONNECTOR))
 		return connector_side >= 0
 	if meaning.begins_with(EXIT):
-		var exit: PackedStringArray = meaning.trim_prefix(EXIT).split(TO)
-		if exit.size() != 2 or not exit[1].is_valid_ascii_identifier():
-			return false
-		exit_side = SIDES.find(exit[0])
-		exit_blueprint = exit[1]
+		exit_side = SIDES.find(meaning.trim_prefix(EXIT))
 		return exit_side >= 0
 	var hides_in: String = meaning.trim_prefix(HIDING)
 	if meaning.begins_with(HIDING) and TileKinds.hides(hides_in):

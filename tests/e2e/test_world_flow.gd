@@ -1117,7 +1117,7 @@ func _moving(direction: int) -> Array[Command]:
 func _check_documents() -> String:
 	var tiles: String = "# T\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s\n"
 	var legend: String = BASE_LEGEND + "- `🔗`: joins another piece to the west\n"
-	legend += "- `🚪`: exit to the east, to glade\n- `🐦`: a wild monster, always tikazzir\n"
+	legend += "- `🚪`: exit to the east\n- `🐦`: a wild monster, always tikazzir\n"
 	legend += "- `🌲`: forest\n"
 	legend += "- `💧`: water, walkable\n- `🪓`: stump, turned 3, not walkable, height 30"
 	var grid: String = " 🪓🌲\n🔗🔴🚪\n 🐦💧"
@@ -1558,7 +1558,7 @@ static func _narrow_seam(region: Region) -> String:
 ## An exit that doesn't lead off the edge is refused, and no piece may cover the tile outside an
 ## exit.
 func _check_refused() -> String:
-	var exit: String = "- `🚪`: exit to the east, to basic\n"
+	var exit: String = "- `🚪`: exit to the east\n"
 	var problem: String = FlowSteps.region("🟫🚪🟫", exit).problem
 	if not problem.begins_with("exit (0, 0) doesn't open"):
 		return "an exit into a tile wasn't refused for it: " + problem

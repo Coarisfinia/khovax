@@ -24,7 +24,7 @@ The mountain pass's start piece (#689): the foot of the pass, a valley between r
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the west
-- `🚪`: exit to the northeast, to outpost
+- `🚪`: exit to the northeast
 - `🔴`: where player 1 starts
 - `🔵`: where player 2 starts
 - `🟢`: where player 3 starts

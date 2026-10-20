@@ -24,7 +24,7 @@ The ruined castle's start piece (#689): the corrupted castle of #574, not corrup
 - `⬛`: rock
 - `👾`: a wild monster, of a species rolled from the instance blueprint's list
 - `🔗`: joins another piece to the northwest
-- `🚪`: exit to the east, to forest
+- `🚪`: exit to the east
 - `🔴`: where player 1 starts
 - `🔵`: where player 2 starts
 - `🟢`: where player 3 starts
