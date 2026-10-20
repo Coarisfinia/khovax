@@ -7,19 +7,25 @@
 set -euo pipefail
 
 awk -F= '
-  /^\[preset\.[0-9]+\]$/ { preset = $0; next }
+  /^\[preset\.[0-9]+\]$/ { preset = $0; order[++count] = preset; next }
   /^\[/ { preset = ""; next }
   preset == "" { next }
   $1 == "name" { name[preset] = $2 }
   $1 == "custom_features" { features[preset] = substr($0, length($1) + 2) }
   $1 == "include_filter" { include[preset] = substr($0, length($1) + 2) }
-  $1 == "exclude_filter" { exclude[preset] = substr($0, length($1) + 2); order[++count] = preset }
+  $1 == "exclude_filter" { exclude[preset] = substr($0, length($1) + 2) }
   END {
     failed = 0
     for (i = 1; i <= count; i++) {
       p = order[i]
-      if (include[p] != include[order[1]]) {
-        printf "::error file=export_presets.cfg::preset %s has include_filter=%s, preset %s has %s\n", name[p], include[p], name[order[1]], include[order[1]]
+      if (!(p in include) || !(p in exclude)) {
+        printf "::error file=export_presets.cfg::preset %s lacks an include_filter or an exclude_filter\n", p
+        failed = 1
+        continue
+      }
+      if (ref == "") ref = p
+      if (include[p] != include[ref]) {
+        printf "::error file=export_presets.cfg::preset %s has include_filter=%s, preset %s has %s\n", name[p], include[p], name[ref], include[ref]
         failed = 1
       }
       f = features[p]
@@ -30,7 +36,7 @@ awk -F= '
         failed = 1
       }
     }
-    if (count == 0) { print "::error file=export_presets.cfg::no preset has an exclude_filter"; failed = 1 }
+    if (count == 0) { print "::error file=export_presets.cfg::it has no preset"; failed = 1 }
     exit failed
   }
 ' export_presets.cfg
