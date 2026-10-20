@@ -6,7 +6,8 @@ extends RefCounted
 ## the `menu` action opens the menu, easing in; while it's open the player's keys don't walk and,
 ## by default, single player pauses (#302): no tick runs. The tab lists every setting, each on Auto
 ## at first; a step changes one and keeps it, its Auto button hands it back; turning the pause off
-## lets the ticks run on behind the menu; the rows fit a phone's screen; and the close button at its
+## lets the ticks run on behind the menu; turning the damage numbers off hides them and a text size
+## sizes them (#764); the rows fit a phone's screen; and the close button at its
 ## top right, the cancel action (a controller's B) and the menu action each close the menu, easing
 ## out, and the game goes on. Its Character tab (#391) shows the player's personal
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
@@ -163,6 +164,8 @@ func _open_menu(menu: GameMenu) -> String:
 		Graphics.ANTI_ALIASING,
 		SurveyChoice.PLACE_SETTING,
 		SurveyChoice.ZOOM_SETTING,
+		DamageNumbersChoice.SHOWN_SETTING,
+		DamageNumbersChoice.SIZE_SETTING,
 		GameMenu.PAUSE_SETTING,
 	]
 	if listed != settings:
@@ -536,7 +539,7 @@ func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> 
 	if problem.is_empty() and (kept.chosen.has(Graphics.ANTI_ALIASING)
 			or not tab.shown[Graphics.ANTI_ALIASING].begins_with("Auto (")):
 		problem = "the menu's Auto doesn't hand anti-aliasing back: %s" % [kept.chosen]
-	return problem
+	return problem if not problem.is_empty() else _menu_damage_numbers(menu)
 
 
 ## Turning the pause off lets the ticks run on behind the open menu, and keeps that; its Auto
@@ -553,6 +556,41 @@ func _menu_pause_choice(menu: GameMenu, driver: GameDriver) -> String:
 	if await _ticks_run(driver) or not menu.pauses():
 		return "the pause's Auto doesn't pause the game again"
 	return ""
+
+
+## Turning the damage numbers off (#764) keeps an auto attack's number from showing and a special's
+## to its fainting's words, and is kept; a larger text size makes them larger and is kept; Auto
+## hands both back: shown, at their usual size.
+func _menu_damage_numbers(menu: GameMenu) -> String:
+	var tab: SettingsTab = menu.settings
+	var view: Node = menu.owner.get_node("Instance/DamageNumbersView")
+	var numbers: DamageNumbersView = view as DamageNumbersView
+	var felled: SpecialStruck = SpecialStruck.new(0, 0, 7, true)
+	tab.button(DamageNumbersChoice.SHOWN_SETTING, "Next").pressed.emit()
+	numbers.show_auto(Vector2i.ZERO, 3, [])
+	numbers.show_strike(Vector2i.ZERO, felled)
+	var kept: Settings = Settings.load_from(SETTINGS_PATH)
+	if (tab.shown[DamageNumbersChoice.SHOWN_SETTING] != "Off"
+			or kept.chosen.get(DamageNumbersChoice.SHOWN_SETTING) != 0
+			or numbers.strikes.size() != 1
+			or numbers.strikes[0].text != DamageNumbersView.FAINTED_TEXT):
+		return "turned off, the damage numbers show %s, kept as %s" % [
+			numbers.strikes.map(func(label: Label3D) -> String: return label.text),
+			kept.chosen,
+		]
+	tab.button(DamageNumbersChoice.SHOWN_SETTING, "Auto").pressed.emit()
+	tab.button(DamageNumbersChoice.SIZE_SETTING, "Next").pressed.emit()
+	numbers.show_auto(Vector2i.ZERO, 3, [])
+	var size: float = RisingText.PIXEL_SIZE * DamageNumbersView.AUTO_SHARE * 1.25
+	kept = Settings.load_from(SETTINGS_PATH)
+	if (tab.shown[DamageNumbersChoice.SHOWN_SETTING] != "Auto (On)"
+			or tab.shown[DamageNumbersChoice.SIZE_SETTING] != "125%"
+			or kept.chosen.get(DamageNumbersChoice.SIZE_SETTING) != 3
+			or not is_equal_approx(numbers.strikes[-1].pixel_size, size)):
+		return "a larger damage number size isn't followed or kept: %s" % [kept.chosen]
+	tab.button(DamageNumbersChoice.SIZE_SETTING, "Auto").pressed.emit()
+	var sized: String = tab.shown[DamageNumbersChoice.SIZE_SETTING]
+	return "" if sized == "Auto (100%)" else "the damage number size's Auto shows %s" % sized
 
 
 ## The settings' rows fit a phone held either way and a desktop screen.

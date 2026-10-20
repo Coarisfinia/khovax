@@ -1021,9 +1021,12 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	if not felled[0].felled or not wild.is_fainted(first) or wild.is_wild_monster(first):
 		return "the special didn't fell the wild monster"
 	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
-	var shown: String = SpecialStrikeView.text_of(felled[0])
-	if shown != "-%d\n%s" % [damage, SpecialStrikeView.FAINTED_TEXT]:
+	var shown: String = DamageNumbersView.text_of(felled[0])
+	if shown != "-%d\n%s" % [damage, DamageNumbersView.FAINTED_TEXT]:
 		return "the special's strike shows %s, not its damage and that it fainted" % shown
+	# With the damage numbers off (#764), only that it fainted.
+	if DamageNumbersView.text_of(felled[0], false) != DamageNumbersView.FAINTED_TEXT:
+		return "with the damage numbers off, the special's strike still shows its damage"
 	var movement: MovementFeature = state.feature(Features.MOVEMENT) as MovementFeature
 	if state.entity(first) == null or not movement.is_occupied(state, state.entity(first).tile):
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
@@ -1204,6 +1207,12 @@ func _typed_strikes(on: bool) -> String:
 	if (struck.size() != 1 or struck[0].damage != hit
 			or _wild(state).hp_of(monster) != OUTCOME_HP - hit):
 		return "with the chart %s, the strikes weren't for %d" % [on, hit]
+	# The wild monster's auto attack carries the chart's marks for its damage number (#764).
+	var marks: Array[bool] = []
+	if on:
+		marks.append(true)
+	if struck[0].strong != marks:
+		return "with the chart %s, the wild monster's hit was strong %s" % [on, struck[0].strong]
 	var special: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
 	special = Fixed.scale(special, 2000 if on else Fixed.ONE)
 	var felled: Array[SpecialStruck] = _specials_in(state, _fire())
@@ -1225,7 +1234,7 @@ static func _special_marks(struck: SpecialStruck, on: bool) -> String:
 			struck.strong,
 			strong,
 		]
-	var label: Label3D = RisingText.make(Vector2i.ZERO, SpecialStrikeView.text_of(struck))
+	var label: Label3D = RisingText.make(Vector2i.ZERO, DamageNumbersView.text_of(struck))
 	TypeMarks.add_to(label, struck.strong)
 	var marks: int = label.get_child_count()
 	var tint: Color = label.modulate

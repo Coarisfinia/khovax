@@ -146,10 +146,10 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 		side = _lowest_beside(_player_at, tile)
 	if side != tile:
 		var target_id: int = _companion_at.get(side, _player_at.get(side, 0))
-		var hit: int = damage
+		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, damage)
 		if _companion_at.has(side):
-			hit = _on_companion(state, monster.id, target_id, damage)
-		state.events.append(WildMonsterStruck.new(monster.id, target_id, side, hit))
+			struck = _on_companion(state, struck)
+		state.events.append(struck)
 		return
 	side = _trail_target(state, tile)
 	if side == tile:
@@ -159,15 +159,21 @@ func _strike(state: GameState, monster: Entity, damage: int) -> void:
 		_clear(state, side)
 
 
-## The damage of the wild monster `monster_id`'s strike of `damage` on the companion
-## `companion_id`, after the type chart where the instance has it (#626). Companions are present,
-## since one stands there.
-static func _on_companion(state: GameState, monster_id: int, companion_id: int, damage: int) -> int:
+## The wild monster's strike `struck` on a companion, after the type chart where the instance has
+## it (#626): its damage scaled, and which of the companion's types it was strong against (#764).
+## Companions are present, since one stands there.
+static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMonsterStruck:
 	var wild: WildMonsterFeature = state.feature(Features.WILD_MONSTERS) as WildMonsterFeature
 	var companions: CompanionFeature = state.feature(Features.COMPANIONS) as CompanionFeature
-	var attacker: String = wild.species_of(monster_id)
-	var defender: String = companions.species_of(companion_id)
-	return TypeEffectivenessFeature.scaled(state, damage, attacker, false, defender)
+	var attacker: String = wild.species_of(struck.monster_id)
+	var defender: String = companions.species_of(struck.target_id)
+	return WildMonsterStruck.new(
+		struck.monster_id,
+		struck.target_id,
+		struck.tile,
+		TypeEffectivenessFeature.scaled(state, struck.damage, attacker, false, defender),
+		TypeEffectivenessFeature.strong_against(state, attacker, false, defender),
+	)
 
 
 ## Adds `damage` to the wear on the trail tile `tile`; whether it's worn through now.

@@ -2,7 +2,7 @@ class_name HarvestView
 extends Node3D
 ## A felled wild monster's materials (#629) bursting from where it lies, the way a chest's loot does
 ## (ChestView): this machine's player's own roll only (#74), each item as its name and amount, so it
-## never relies on color (#68), rising calmly and fading. The special's damage (SpecialStrikeView)
+## never relies on color (#68), rising calmly and fading. The special's damage (DamageNumbersView)
 ## rises from the same tile in the same tick, so the materials wait until it has faded rather than
 ## rise over it: first the blow, then what it dropped. Only for a wild monster in the instance
 ## shown, and never through the fog. It only reads the tick's events and the state.
@@ -48,7 +48,7 @@ func _burst(tile: Vector2i, text: String) -> void:
 	add_child(label)
 	bursts.append(label)
 	var wait: Tween = label.create_tween()
-	var _waited: IntervalTweener = wait.tween_interval(SpecialStrikeView.SECONDS)
+	var _waited: IntervalTweener = wait.tween_interval(DamageNumbersView.SECONDS)
 	var _risen: CallbackTweener = wait.tween_callback(_rise.bind(label))
 
 

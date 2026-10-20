@@ -31,7 +31,7 @@
 [ext_resource type="Script" path="res://slices/tiles/look/canopy_cutaway.gd" id="26_cutaway"]
 [ext_resource type="Script" path="res://slices/quests/ui/quest_list_view.gd" id="28_quest_list"]
 [ext_resource type="Script" path="res://slices/companions/look/companion_view.gd" id="29_companions"]
-[ext_resource type="Script" uid="uid://bwigbhgtb8any" path="res://slices/companions/look/special_strike_view.gd" id="40_special_strike"]
+[ext_resource type="Script" uid="uid://bwigbhgtb8any" path="res://slices/damage_numbers/look/damage_numbers_view.gd" id="40_damage_numbers"]
 [ext_resource type="Script" path="res://slices/menu/ui/game_menu.gd" id="30_game_menu"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_buttons.gd" id="31_survey_buttons"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_pinch.gd" id="32_survey_pinch"]
@@ -114,9 +114,10 @@ driver = NodePath("../../Driver")
 script = ExtResource("29_companions")
 driver = NodePath("../../Driver")
 
-[node name="SpecialStrikeView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
-script = ExtResource("40_special_strike")
+[node name="DamageNumbersView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "graphics")]
+script = ExtResource("40_damage_numbers")
 driver = NodePath("../../Driver")
+graphics = NodePath("../../Graphics")
 
 [node name="HarvestView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "input")]
 script = ExtResource("42_harvest")
