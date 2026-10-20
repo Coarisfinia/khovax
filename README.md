@@ -92,9 +92,10 @@ CHROME=<path to chrome-headless-shell> bun tests/web/web_e2e.ts build/web-test
 
 ### Load test
 
-On demand, not in CI: the `thudren_orl` instance (a big region full of wild monsters, the game's own
-rules) under four players walking by script. Headless it times every tick and each rule's share, and checks
-two passes end in the same state; rendered it times frames, uncapped:
+The `thudren_orl` instance (a big region full of wild monsters, the game's own rules) under four
+players walking by script. Headless it times every tick and each rule's share, and checks two passes
+end in the same state; CI runs that on every push (2000 ticks) and compares the times with the base
+branch's. Rendered, on demand, it times frames, uncapped:
 
 ```sh
 godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000
