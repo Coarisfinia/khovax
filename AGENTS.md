@@ -452,6 +452,17 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   everywhere: its file, its abilities, harvest and loot tables, legends, quests, text tags and
   saves. Renaming a species renames its id with it, and lasting data naming the old id migrates
   forward. The content flow refuses a species whose id isn't its name.
+- **Every id and name is unique across all content** (owner's ground rule, #909): no two things
+  share one, whatever their kinds (a tile, an instance, a region piece, a place, a person, a
+  species, an ability, an item, a faction, a quest), in any case; a thing's own id and name may
+  match. The content flow refuses a duplicate (`ContentTerms`); the ones today's content still has
+  wait in its list, each with its issue, and the list only shrinks.
+- **Proper nouns get invented names, each kind under its own rules** (owner, #909): species,
+  instances, regions, places, people and unique items are named, and each kind has its own
+  linguistic rules, so the world reads as one coherent whole; vocabulary (tile kinds, slots,
+  stats, conditions, categories) stays descriptive. `ContentTerms.NAME_RULES` holds each kind's
+  rule for the content flow; only the species' is set until the other kinds' are signed off on
+  #909.
 - **Invented names use sound symbolism** (owner's rule): the bouba/kiki pattern is one tool
   (round, soft-sounding names for round, soft things, like Ombulumo; sharp, spiky-sounding names for
   sharp, quick ones, like Tikazzir), and other linguistic patterns are used alongside it, so no

@@ -14,7 +14,8 @@ extends RefCounted
 ## and abilities carry path marks (#471). Dialogs
 ## (#618) load and read on line by line and answer by answer, and broken ones are refused. Every
 ## text tag (#733) in a dialog, a quest's name or an ability's description names content that
-## exists, shows its current name, and broken tags are refused.
+## exists, shows its current name, and broken tags are refused. No two things share an id or a
+## name, whatever their kinds, in any case (#909).
 
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
@@ -69,6 +70,7 @@ func run(_tree: SceneTree) -> String:
 		_check_command_codes,
 		_check_kits.bind(content),
 		_check_text_tags,
+		_check_terms,
 	]
 	for check: Callable in checks:
 		var result: String = check.call()
@@ -1053,4 +1055,39 @@ func _check_text_tags() -> String:
 	for text: String in cases:
 		if not tags.problem_in(text).contains(cases[text]):
 			return "the broken tag %s wasn't refused: %s" % [text, tags.problem_in(text)]
+	return ""
+
+
+## No two things in the content share an id or a name (#909), but those ContentTerms lists, and each
+## keeps to its kind's name rule. Two things sharing one in another case are refused, a thing whose
+## id is its name isn't, a listed term that no longer clashes must be dropped, and a species of two
+## words or whose id isn't its name is refused. A known duplicate holds for its two things only.
+func _check_terms() -> String:
+	var problem: String = ContentTerms.collected().problem()
+	if not problem.is_empty():
+		return "the content's terms don't hold together: " + problem
+	var none: Dictionary[String, int] = {}
+	var terms: ContentTerms = ContentTerms.new()
+	terms.add("species", "xo", "Xo")
+	terms.add("place", "zim_zara", "Zim Zara")
+	if not terms.problem(none).is_empty():
+		return "a species and a place whose ids are their names were refused"
+	terms.add("gear", "xo_pouch", "XO")
+	if not terms.problem(none).begins_with("xo names species xo and gear xo_pouch"):
+		return "a gear's name that's a species' id in capitals wasn't refused"
+	var gone: Dictionary[String, int] = { "xo": 909, "zo": 909 }
+	if not terms.problem(gone).begins_with("KNOWN_DUPLICATES' zo"):
+		return "a known duplicate that no longer clashes wasn't refused"
+	var known: Dictionary[String, int] = { "xo": 909 }
+	terms.add("item", "xo")
+	if not terms.problem(known).begins_with("xo names species xo and gear xo_pouch and item xo"):
+		return "a third thing sharing a known duplicate wasn't refused"
+	var named: ContentTerms = ContentTerms.new()
+	named.add("species", "xo", "Xo Xa")
+	if not named.problem(none).begins_with("species xo: Xo Xa isn't a name"):
+		return "a species of two words wasn't refused"
+	named = ContentTerms.new()
+	named.add("species", "zo", "Xo")
+	if not named.problem(none).begins_with("species zo: its id must"):
+		return "a species whose id isn't its name wasn't refused"
 	return ""
