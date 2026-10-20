@@ -50,7 +50,7 @@ func run(tree: SceneTree) -> String:
 ## Every chest the pieces mark is in the region, on ground, for every seed.
 func _check_placed() -> String:
 	for seed_value: int in 12:
-		var state: GameState = InstanceBlueprints.create("glade", seed_value, 1)
+		var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, seed_value, 1)
 		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
 		if chests == null or chests.chests.is_empty():
 			return "seed %d's glade has no chests" % seed_value
@@ -68,7 +68,7 @@ func _check_placed() -> String:
 ## The glade's chests hold crafting supplies and a loose piece of gear for every slot (#694); the
 ## loot on its ground holds no gear.
 func _check_tables() -> String:
-	var chests: ChestFeature = InstanceBlueprints.create("glade", SEED, 1).feature(
+	var chests: ChestFeature = InstanceBlueprints.create(FlowSteps.GLADE, SEED, 1).feature(
 		ChestFeature.ID,
 	) as ChestFeature
 	var gear: GearContent = GearContent.load_gear()
@@ -87,7 +87,7 @@ func _check_tables() -> String:
 
 ## Two players: the first walks onto a chest and opens it, and both get their roll.
 func _check_opened() -> String:
-	var state: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, SEED, 2)
 	var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
 	var closed: int = chests.chests.size()
 	var opened: ChestOpened = _open_first_chest(state)
@@ -110,7 +110,7 @@ func _check_opened() -> String:
 ## Two players: the first steps onto the loot on the ground and finds it, both get their roll,
 ## no chest opens, and it's gone after.
 func _check_found() -> String:
-	var state: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, SEED, 2)
 	var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
 	var lying: int = chests.loot_spots.size()
 	var events: Array[RefCounted] = _step_onto(state, chests.loot_spots[0])
@@ -130,7 +130,7 @@ func _check_found() -> String:
 ## lies the same and rolls on the same stream.
 func _check_found_kept(state: GameState) -> String:
 	var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
-	var fresh: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var fresh: GameState = InstanceBlueprints.create(FlowSteps.GLADE, SEED, 2)
 	var restored: ChestFeature = fresh.feature(ChestFeature.ID) as ChestFeature
 	var values: DataReader = DataReader.new(chests.save_values())
 	restored.load_values(fresh, values)
@@ -180,7 +180,7 @@ func _walk(state: GameState, direction: int) -> Array[RefCounted]:
 
 ## The rolls of the first loot found on the ground in a fresh two-player glade from SEED, as text.
 func _first_found() -> String:
-	var state: GameState = InstanceBlueprints.create("glade", SEED, 2)
+	var state: GameState = InstanceBlueprints.create(FlowSteps.GLADE, SEED, 2)
 	var spot: Vector2i = (state.feature(ChestFeature.ID) as ChestFeature).loot_spots[0]
 	var events: Array[RefCounted] = _step_onto(state, spot)
 	return "none" if events.is_empty() else str((events[0] as LootFound).loot)
@@ -188,7 +188,7 @@ func _first_found() -> String:
 
 ## The loot of the first chest opened in a fresh two-player glade from SEED, as text.
 func _first_loot() -> String:
-	var opened: ChestOpened = _open_first_chest(InstanceBlueprints.create("glade", SEED, 2))
+	var opened: ChestOpened = _open_first_chest(InstanceBlueprints.create(FlowSteps.GLADE, SEED, 2))
 	return "none" if opened == null else str(opened.loot)
 
 

@@ -890,12 +890,12 @@ func _check_purge() -> String:
 	if not world.instances.has(FlowSteps.GLADE):
 		return "the glade was purged before an hour had passed"
 	world.step(_still())
-	if world.instances.has(FlowSteps.GLADE) or world.generation("glade") != 1:
+	if world.instances.has(FlowSteps.GLADE) or world.generation(FlowSteps.GLADE) != 1:
 		return "the glade wasn't purged an hour after it was left behind"
 	_walk_in(world, FlowSteps.INTO_GLADE[-1])
 	var glade: GameState = world.instances.get(FlowSteps.GLADE)
-	var reseeded: bool = glade != null and glade.rng_seed == world.seed_for("glade")
-	if not reseeded or glade.rng_seed == first_seed or world.left_at.has("glade"):
+	var reseeded: bool = glade != null and glade.rng_seed == world.seed_for(FlowSteps.GLADE)
+	if not reseeded or glade.rng_seed == first_seed or world.left_at.has(FlowSteps.GLADE):
 		return "the glade didn't come back at generation 1 from a new seed, or kept its count"
 	return _check_left_again(world, left + World.PURGE_TICKS)
 
@@ -933,22 +933,27 @@ func _check_flags() -> String:
 		return "setting a flag didn't set it once, or isn't hashed"
 	world.step(_still())
 	if (world.instances.get(FlowSteps.GLADE) != glade
-			or WorldFlags.variant_of(world, "glade") != ""):
+			or WorldFlags.variant_of(world, FlowSteps.GLADE) != ""):
 		return "a flag changed the glade while the player was in it"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), RisingSource.new())
 	var kept: bool = reloaded.flags == world.flags and WorldFlags.variant_of(
 		reloaded,
-		"glade",
+		FlowSteps.GLADE,
 	) == ""
 	if not reloaded.problem.is_empty() or not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flag: " + reloaded.problem
 	_walk_in(world, FlowSteps.OUT_OF_GLADE)
-	if world.instances.has(FlowSteps.GLADE) or world.generation("glade") != 1:
+	if world.instances.has(FlowSteps.GLADE) or world.generation(FlowSteps.GLADE) != 1:
 		return "the glade wasn't purged once the player left it after the flag"
 	var risen: GameState = world.instance(FlowSteps.GLADE)
-	var arena: Region = InstanceBlueprints.region_of("glade", world.seed_for("glade"), "arena")
+	var arena: Region = InstanceBlueprints.region_of(
+		FlowSteps.GLADE,
+		world.seed_for(FlowSteps.GLADE),
+		FlowSteps.ARENA,
+	)
 	var tiles: Array[Vector2i] = risen.region.sorted_tiles()
-	if WorldFlags.variant_of(world, "glade") != "arena" or tiles != arena.sorted_tiles():
+	var variant: String = WorldFlags.variant_of(world, FlowSteps.GLADE)
+	if variant != FlowSteps.ARENA or tiles != arena.sorted_tiles():
 		return "the glade didn't come back from its variant, the arena's region"
 	# The arena's region has no way back to the forest, which only a layout worked out from
 	# the glade's new region notices.
@@ -956,10 +961,10 @@ func _check_flags() -> String:
 		return "the world's layout still has the glade's old region"
 	WorldFlags.set_flag(world, RisingSource.RISEN, false)
 	world.step(_still())
-	if world.instances.has(FlowSteps.GLADE) or world.generation("glade") != 2:
+	if world.instances.has(FlowSteps.GLADE) or world.generation(FlowSteps.GLADE) != 2:
 		return "clearing the flag didn't purge the glade, which nobody is in"
 	if (world.instance(FlowSteps.GLADE) == null
-			or WorldFlags.variant_of(world, "glade") != ""):
+			or WorldFlags.variant_of(world, FlowSteps.GLADE) != ""):
 		return "the glade didn't come back as itself once the flag was cleared"
 	return ""
 
@@ -976,7 +981,7 @@ func _check_corruption() -> String:
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	var glade: GameState = world.instances.get(FlowSteps.GLADE)
-	if glade == null or WorldFlags.variant_of(world, "glade") != FlowSteps.CORRUPTED_GLADE:
+	if glade == null or WorldFlags.variant_of(world, FlowSteps.GLADE) != FlowSteps.CORRUPTED_GLADE:
 		return "the player didn't walk into the corrupted glade"
 	var felling: Felling = Felling.new()
 	glade.features.append(felling)
@@ -984,7 +989,7 @@ func _check_corruption() -> String:
 	glade.features.erase(felling)
 	var purified_flag: String = WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED
 	var emitted: bool = felling.felled > 0 and world.flags.has(purified_flag)
-	if not emitted or InstanceBlueprints.variant("glade", world.flags) != "":
+	if not emitted or InstanceBlueprints.variant(FlowSteps.GLADE, world.flags) != "":
 		return "felling the corrupting monster didn't set its event's flag for the plain glade"
 	var changes: Array[WorldChanged] = _world_changes(world)
 	if changes.size() != 1 or changes[0].event_name != FlowSteps.GLADE_PURIFIED:
@@ -993,14 +998,14 @@ func _check_corruption() -> String:
 	if world.instances.get(FlowSteps.GLADE) != glade:
 		return "the glade was purified with the player in it"
 	var reloaded: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
-	var kept: bool = WorldFlags.variant_of(reloaded, "glade") == FlowSteps.CORRUPTED_GLADE
+	var kept: bool = WorldFlags.variant_of(reloaded, FlowSteps.GLADE) == FlowSteps.CORRUPTED_GLADE
 	if not kept or reloaded.state_hash() != world.state_hash():
 		return "the world didn't go through its save data with its flags: " + reloaded.problem
 	_walk_in(world, FlowSteps.OUT_OF_GLADE)
-	if world.instances.has(FlowSteps.GLADE) or world.generation("glade") != 1:
+	if world.instances.has(FlowSteps.GLADE) or world.generation(FlowSteps.GLADE) != 1:
 		return "the glade wasn't purged once the player left it"
 	if (world.instance(FlowSteps.GLADE) == null
-			or WorldFlags.variant_of(world, "glade") != ""):
+			or WorldFlags.variant_of(world, FlowSteps.GLADE) != ""):
 		return "the glade didn't come back purified, as the plain glade"
 	return ""
 
@@ -1063,7 +1068,7 @@ func _check_start_kept() -> String:
 	for direction: int in FlowSteps.INTO_GLADE:
 		_walk_in(world, direction)
 	_idle_until(world, world.tick + World.PURGE_TICKS + 1)
-	if not world.instances.has(FlowSteps.FOREST) or world.generation("forest") != 0:
+	if not world.instances.has(FlowSteps.FOREST) or world.generation(FlowSteps.FOREST) != 0:
 		return "the starting instance was purged"
 	return ""
 
@@ -1200,7 +1205,9 @@ func _check_refusals(tiles: String) -> String:
 		var problem: String = InstanceBlueprints.read_region(text).problem
 		if not problem.begins_with(refusals[text]):
 			return "expected a refusal starting %s, got: %s" % [refusals[text], problem]
-	var thicket: String = FileAccess.get_file_as_string("res://regions/glade/thicket.md")
+	var thicket: String = FileAccess.get_file_as_string(
+		"res://regions/%s/thicket.md" % FlowSteps.GLADE,
+	)
 	var forest: String = "forest"
 	if not InstanceBlueprints.read_region(thicket).terrain.values().has(forest):
 		return "the glade's thicket has no forest"
@@ -1462,7 +1469,7 @@ func _check_world() -> String:
 		return "the world didn't start, or the forest didn't load empty: " + world.problem
 	var seeds: Array[int] = [world.seed_for(FlowSteps.GLADE), forest.rng_seed]
 	var again: World = World.new(BlueprintSource.new(), 7, FlowSteps.GLADE)
-	if seeds[0] == seeds[1] or again.seed_for("forest") != seeds[1]:
+	if seeds[0] == seeds[1] or again.seed_for(FlowSteps.FOREST) != seeds[1]:
 		return "the instances' seeds aren't their own, or differ between sessions: %s" % [seeds]
 	var hashed: int = world.state_hash()
 	for _tick: int in 10:

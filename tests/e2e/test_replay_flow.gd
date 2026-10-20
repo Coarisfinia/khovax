@@ -751,8 +751,11 @@ func _check_replay_refusals() -> String:
 			"\"rules\": \"%s\"" % RulesChanges.id(),
 			"\"rules\": 67",
 		): "not a replay: its rules aren't an id",
-		text.replace("\"basic\"", "\"nowhere\""): "instance nowhere",
-		text.replace("\"players\": 2", "\"players\": 9"): "instance basic with 9 players",
+		text.replace("\"%s\"" % FlowSteps.BASIC, "\"nowhere\""): "instance nowhere",
+		text.replace(
+			"\"players\": 2",
+			"\"players\": 9",
+		): "instance %s with 9 players" % FlowSteps.BASIC,
 	}
 	for case: String in cases:
 		var problem: String = ReplayFile.parse(case).play()
