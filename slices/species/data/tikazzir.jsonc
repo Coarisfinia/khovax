@@ -11,5 +11,6 @@
 	"archetype": "flyer",
 	"special": "tikazzir_tizik_tazak",
 	"player_passive": "tikazzir_kirzi_tirzi",
-	"self_passive": "tikazzir_zirki_kirki"
+	"self_passive": "tikazzir_zirki_kirki",
+	"sight": 2 // a flyer's keen eyes: its player sees further (#962)
 }

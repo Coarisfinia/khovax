@@ -6,7 +6,8 @@ extends RefCounted
 ## lookout (#181) reveals the area around it the first time a player steps onto it, once. Sight
 ## crosses the seam (#191): standing on an exit, a player sees the ground of the instance it leads
 ## to, which the world hands over without loading it; a tile changed in place in the loaded instance
-## next door is seen there at once (#538).
+## next door is seen there at once (#538). A player carrying a monster with a sight trait sees
+## further (#962).
 
 const START: Vector2i = Vector2i(1, -1)
 const WEST: int = 3
@@ -18,6 +19,8 @@ func run(_tree: SceneTree) -> String:
 		result = _check_sight()
 	if result.is_empty():
 		result = _check_fog_follows()
+	if result.is_empty():
+		result = _check_sight_trait()
 	if result.is_empty():
 		result = _check_reveal()
 	if result.is_empty():
@@ -82,6 +85,36 @@ func _check_fog_follows() -> String:
 	state.remove_entity(state.player(0).id)
 	if fog.visible.has(0):
 		return "a player who left kept their sight"
+	return ""
+
+
+## Sight traits (#962): a player carrying a tikazzir sees as far as its trait lets them from the
+## moment they join, in the state hash; once they no longer carry it, their sight narrows back in
+## the
+## next tick, and a player who leaves loses what widened it.
+func _check_sight_trait() -> String:
+	var tikazzir: Species = SpeciesContent.cached().species["tikazzir"]
+	var traits: SightTraitFeature = SightTraitFactory.build(null)
+	var ordered: Array[Feature] = [MovementFeature.new(), FogFeature.new(), traits]
+	var state: GameState = GameState.new(Region.disc(2 * FogFeature.SIGHT_RADIUS), 1, ordered)
+	FlowSteps.carry(state, 0, ["ombulumo", "tikazzir"])
+	var player: Entity = state.add_entity(0, START)
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
+	var far: Vector2i = START + Hex.DIRECTIONS[WEST] * (FogFeature.SIGHT_RADIUS + tikazzir.sight)
+	if tikazzir.sight < 1 or traits.sight_of(state, 0) != tikazzir.sight or not fog.sees(0, far):
+		return "carrying a tikazzir didn't widen the player's sight as they joined"
+	var hashed: int = state.state_hash()
+	FlowSteps.carry(state, 0, ["ombulumo"])
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if fog.radius_of(0) != FogFeature.SIGHT_RADIUS or fog.sees(0, far):
+		return "the player's sight didn't narrow back without the tikazzir"
+	if state.state_hash() == hashed:
+		return "the state hash doesn't see a widened sight"
+	FlowSteps.carry(state, 0, ["tikazzir"])
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	state.remove_entity(player.id)
+	if fog.radius_of(0) != FogFeature.SIGHT_RADIUS:
+		return "a player who left kept their wider sight"
 	return ""
 
 

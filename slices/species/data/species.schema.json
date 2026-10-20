@@ -56,6 +56,7 @@
 		},
 		"special": { "description": "Its special attack, an ability of kind special that no other species has (#222, #228).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"player_passive": { "description": "Its passive that helps the player while it's out, an ability of kind player_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-		"self_passive": { "description": "Its passive that helps itself, an ability of kind self_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+		"self_passive": { "description": "Its passive that helps itself, an ability of kind self_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+		"sight": { "description": "Its sight trait (#962): how many steps further a player who carries it sees. None when left out.", "type": "integer", "minimum": 1, "maximum": 5 }
 	}
 }

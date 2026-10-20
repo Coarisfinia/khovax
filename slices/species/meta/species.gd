@@ -30,11 +30,14 @@ var archetype: String = ""
 var special: String = ""
 var player_passive: String = ""
 var self_passive: String = ""
+## Its sight trait (#962): how many steps further a player who carries it sees, 0 for none.
+var sight: int = 0
 ## Why the species couldn't be read, or "" when it could.
 var problem: String = ""
 
 
-## Reads its speed, archetype, strike type and abilities from a species file's `data`; returns why
+## Reads its speed, archetype, strike type, abilities and sight trait from a species file's `data`;
+## returns why
 ## it can't, or "". Whether the abilities exist is checked against the ability data (Content).
 func read_kit(data: Dictionary) -> String:
 	speed = Content.amount(data.get("speed"))
@@ -43,6 +46,10 @@ func read_kit(data: Dictionary) -> String:
 	special = Content.text_of(data.get("special"))
 	player_passive = Content.text_of(data.get("player_passive"))
 	self_passive = Content.text_of(data.get("self_passive"))
+	if data.has("sight"):
+		sight = JsonNumbers.whole(data.get("sight"), 1, FogFeature.MOST_WIDER, 0)
+		if sight == 0:
+			return "its sight is a whole number of steps from 1 to %d" % FogFeature.MOST_WIDER
 	if speed < 1:
 		return "speed is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 	if not ARCHETYPES.has(archetype):

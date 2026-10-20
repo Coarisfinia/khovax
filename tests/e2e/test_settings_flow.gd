@@ -487,6 +487,7 @@ func _menu_details(tab: CharacterTab) -> String:
 		"Special: Tizik-tazak (Supremacy)",
 		"Passive for you: Kirzi-tirzi (Harmony and supremacy)",
 		"Own passive: Zirki-kirki",
+		"Sight: you see 2 steps further while you carry it",
 	]
 	if details.shown != expected:
 		return "clicking a monster didn't show its stats: %s" % [details.shown]

@@ -46,6 +46,9 @@ func show_monster(
 			"Passive for you: " + ability_names.get(species.player_passive, species.player_passive),
 			"Own passive: " + ability_names.get(species.self_passive, species.self_passive),
 		]
+		# Its sight trait (#962), only for a species that has one.
+		if species.sight > 0:
+			lines.append("Sight: you see %d steps further while you carry it" % species.sight)
 	if lines == shown:
 		return
 	shown = lines

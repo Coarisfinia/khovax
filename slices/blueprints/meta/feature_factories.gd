@@ -55,10 +55,12 @@ static func _all() -> Dictionary[String, Callable]:
 			HidingFeature.ID: _plain(HidingFeature),
 			NpcFeature.ID: _plain(NpcFeature),
 			ChestFeature.ID: ChestFactory.build,
-			# The companions and the features built on them. A companion whose player walks out
+			# The companions and the features built on them. A companion
+			# whose player walks out
 			# through an exit goes with them whatever the order: the world moves it after the tick
 			# (#716).
 			CompanionFeature.ID: CompanionFactory.build,
+			SightTraitFeature.ID: SightTraitFactory.build,
 			# After the companions, so a swap can't pick a monster that fainted (#597).
 			CompanionSwapFeature.ID: _plain(CompanionSwapFeature),
 			# After the companions too, whose fainted ones a revive item brings back (#656).
@@ -68,9 +70,7 @@ static func _all() -> Dictionary[String, Callable]:
 			TypeEffectivenessFeature.ID: TypeChartFactory.build,
 			CompanionAttackFeature.ID: _plain(CompanionAttackFeature),
 			SpecialAttackFeature.ID: SpecialAttackFactory.build,
-			# The harvest after the specials, whose strikes fell the wild monsters it drops
-			# materials
-			# for.
+			# The harvest after the specials, whose strikes fell what it drops materials for.
 			HarvestFeature.ID: HarvestFactory.build,
 			DialogFeature.ID: DialogFactory.build,
 			TerritoryFeature.ID: TerritoryFactory.build,
