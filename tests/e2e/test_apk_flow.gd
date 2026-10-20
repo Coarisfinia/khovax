@@ -1,6 +1,6 @@
 extends RefCounted
-## The APK's e2e flow (tests/apk/apk_flow.gd), run headless as well: it pins the flow's expected end
-## state here, so the Android emulator's job checks the same game.
+## The APK's e2e flow (tests/apk/apk_flow.gd), run headless as well: its final state hash is the one
+## the device jobs compare theirs with (tests/replays/outcomes.gd's report, #876).
 
 const FLOW: String = "res://tests/apk/apk_flow.gd"
 ## The flow's own profile, empty at the start (#570): the session starts from the player's profile
@@ -23,7 +23,7 @@ func run(tree: SceneTree) -> String:
 	var done: Signal = Signal(flow, "finished")
 	flow.call("begin", main, tree)
 	var result: String = await done
-	final_hash = FlowGame.driver(main).state.state_hash()
+	final_hash = flow.get("final_hash")
 	main.queue_free()
 	# The holder saves what is pending as it leaves the tree, so the file goes after that.
 	await tree.process_frame

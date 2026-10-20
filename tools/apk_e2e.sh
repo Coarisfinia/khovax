@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # The APK's e2e flow on a running Android emulator (#61): installs the test APK, starts the game in
-# its test mode and reads the flow's result from the game's own log. Run by CI inside the emulator
+# its test mode and reads the flow's result from the game's own log: it must pass and end in the
+# state hash the headless run of the same commit ended in (#876). Run by CI inside the emulator
 # step.
+# Usage: tools/apk_e2e.sh <test APK> <the headless run's final hash>
 set -euo pipefail
-apk=${1:-build/khovax-test.apk}
+apk=$1
+expected=$2
 package=io.github.flixbox.khovax
 # The result line game/test_mode.gd prints, nothing else.
-result_line='KHOVAX_E2E: (PASS|FAIL .*)$'
+result_line='KHOVAX_E2E: (PASS -?[0-9]+|FAIL .*)$'
 
 adb install -r "$apk"
 adb logcat -c
@@ -27,7 +30,8 @@ while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
   result=$(grep -oE "$result_line" <<< "$log" | tail -1 || true)
 done
 echo "${result:-no result within 180 s: the game never reported}"
-if [ "$result" != "KHOVAX_E2E: PASS" ]; then
+if [ "$result" != "KHOVAX_E2E: PASS $expected" ]; then
+  [[ $result != "KHOVAX_E2E: PASS "* ]] || echo "the headless run ended in state $expected"
   # The whole device log since the install, every tag (#848): the game's own lines alone don't show
   # why it never started. Uncapped: logcat's own ring buffer already bounds it, and a cap could cut
   # the startup lines that matter.

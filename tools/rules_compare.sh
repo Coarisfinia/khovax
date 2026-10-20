@@ -4,19 +4,24 @@
 # a rule change file to core/rules_changes/, or the check fails. Prints a Markdown summary for the
 # job: which replay, and which checkpoint in it, diverges first.
 # CI runs this script from the parent's checkout, so a pull request can't weaken its own check.
-# Usage: tools/rules_compare.sh <parent's report> <this commit's report> <parent>
-# (from this commit's repository root; <parent> is the commit the parent's report was made from)
+# What it can't compare fails too (#889): a reference replay removed or its inputs changed, the APK
+# flow's scripts changed, or the outcome report itself changed. The owner allows that by labelling
+# the pull request `outcomes-change`, which CI passes on as OUTCOMES_CHANGE=true only when the owner
+# added it, with OUTCOMES_CHANGE_NOTE saying who did.
+# Usage: [OUTCOMES_CHANGE=true] [OUTCOMES_CHANGE_NOTE=<who labelled it>] tools/rules_compare.sh
+# <parent's report> <this commit's report> <parent> (from this commit's repository root; <parent>
+# is the commit the parent's report was made from)
 set -euo pipefail
 
 parent_report=$1
 head_report=$2
 parent=$3
+labelled=${OUTCOMES_CHANGE:-false}
+label_note=${OUTCOMES_CHANGE_NOTE:-}
 replays=tests/replays
 folder=core/rules_changes
-# The APK's flow and its headless runner. A changed EXPECTED_HASH alone isn't a changed flow: the
-# rules changes check (tools/rules_changes_check.sh) owns it until it goes (#876, step 5).
+# The APK's flow and its headless runner.
 flow_scripts=(tests/apk/apk_flow.gd tests/e2e/test_apk_flow.gd)
-flow_output='^const EXPECTED_HASH'
 
 # A replay's inputs: everything but what a rehash writes (Replay.rehash), which a reference replay
 # no longer holds (#876), as canonical JSON.
@@ -47,6 +52,7 @@ echo
 echo "| Played | Compared with the parent |"
 echo "| --- | --- |"
 diverged=()
+unchecked=()
 names=$(jq -rn --slurpfile p "$parent_report" --slurpfile h "$head_report" \
   '[$p[0].replays, $h[0].replays | keys[]] | unique[]')
 while IFS= read -r name; do
@@ -55,10 +61,12 @@ while IFS= read -r name; do
   in_head=$(jq -r --arg r "$name" '.replays | has($r)' "$head_report")
   if [ "$in_head" != true ]; then
     verdict="removed: nothing to compare"
+    unchecked+=("\`$name\` is removed")
   elif [ "$in_parent" != true ]; then
     verdict="new: nothing to compare"
   elif [ "$(inputs "$parent" "$name")" != "$(inputs HEAD "$name")" ]; then
     verdict="its inputs changed: not compared"
+    unchecked+=("\`$name\`'s inputs changed")
   else
     where=$(first_divergence "$name")
     if [ -z "$where" ]; then
@@ -74,8 +82,9 @@ while IFS= read -r name; do
   fi
 done <<< "$names"
 
-if ! git diff --quiet -I "$flow_output" "$parent" HEAD -- "${flow_scripts[@]}"; then
+if ! git diff --quiet "$parent" HEAD -- "${flow_scripts[@]}"; then
   verdict="its script changed: not compared"
+  unchecked+=("the APK flow's scripts changed")
   echo "::warning::the APK flow: $verdict" >&2
 elif [ "$(jq -r .apk_flow.final "$parent_report")" = "$(jq -r .apk_flow.final "$head_report")" ]; then
   verdict="plays the same"
@@ -87,8 +96,25 @@ echo "| the APK flow | $verdict |"
 echo
 
 if ! git diff --quiet "$parent" HEAD -- "$replays/outcomes.gd"; then
+  unchecked+=("the outcome report (\`$replays/outcomes.gd\`) changed")
   echo "::warning::$replays/outcomes.gd changed: check that it still reports what the game does" >&2
-  echo "The outcome report itself (\`$replays/outcomes.gd\`) changed: check in the diff that it still reports what the game does."
+fi
+
+failed=0
+if [ ${#unchecked[@]} -gt 0 ]; then
+  echo "Not everything could be compared with the parent:"
+  for what in "${unchecked[@]}"; do
+    echo "- $what"
+  done
+  echo
+  if [ "$labelled" = true ]; then
+    echo "The owner labelled the pull request \`outcomes-change\`, so that's allowed."
+  else
+    echo "That needs the owner's label \`outcomes-change\` on the pull request (#889)."
+    [ -z "$label_note" ] || echo "Here, $label_note."
+    echo "::error::not everything could be compared with the parent, and the pull request isn't labelled outcomes-change" >&2
+    failed=1
+  fi
   echo
 fi
 
@@ -98,7 +124,7 @@ added=$(git diff --no-renames --name-only --diff-filter=A "$parent" HEAD -- "$fo
 deleted=$(git diff --no-renames --name-only --diff-filter=D "$parent" HEAD -- "$folder")
 if [ ${#diverged[@]} -eq 0 ]; then
   echo "This commit plays like its parent."
-  exit 0
+  exit "$failed"
 fi
 echo "This commit plays differently from its parent. It diverges first in:"
 for where in "${diverged[@]}"; do
@@ -114,7 +140,7 @@ else
   while IFS= read -r path; do
     echo "- \`$path\`"
   done <<< "$added"
-  exit 0
+  exit "$failed"
 fi
 echo "::error::this commit plays differently from its parent without a new file in ${folder}/" >&2
 exit 1
