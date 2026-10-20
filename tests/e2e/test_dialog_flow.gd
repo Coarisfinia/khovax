@@ -4,14 +4,14 @@ extends RefCounted
 ## d-pad and chooses one with A; a click (as a tap) chooses the last answer, which ends the dialog.
 ## Every chosen answer reaches the simulation in the player's command, is raised as DialogAnswered
 ## naming the dialog and the answer, and is recorded in the session's replay; reading on raises
-## nothing, nor does an answer no dialog has. The card follows the simulation (#890): it moves on
-## or closes once the answer is raised, also for an answer that came only through the commands, as
-## in a replay, even from a line before the one that offers it. While the menu is open over a
-## dialog, its buttons
-## rest. A dialog that doesn't exist doesn't open. In the glade, the guild scout stands east of the
-## start (#557): walking into them talks to them, raised as NpcTalkedTo, which opens their greeting;
-## they never step aside, and a held direction talks once, until the player stops and walks into
-## them again.
+## nothing, nor does an answer no dialog has. The card follows the simulation's state (#890, #898):
+## it moves on or closes once the answer reaches it, also for an answer that came only through the
+## commands, as in a replay, even from a line before the one that offers it. While the menu is open
+## over a dialog, its buttons rest. A dialog that doesn't exist doesn't open. In the glade, the
+## guild scout stands east of the start (#557): walking into them talks to them, raised as
+## NpcTalkedTo, which opens their greeting in the state, saved with the world: a world resumed with
+## it open shows the card again. The scout never steps aside, and a held direction talks once,
+## until the player stops and walks into them again.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "guild_scout_greeting"
@@ -211,6 +211,27 @@ func _talk_to_scout(
 		]
 	if not screen.is_open() or screen.shown_speaker() != "Guild Scout":
 		return "talking to the scout didn't open their greeting"
+	return _resume_open(driver, screen)
+
+
+## The scout's greeting is open in the state at its first line, and saved with the world: leaving
+## it closes the card, and resuming the saved world opens it again at the first line.
+func _resume_open(driver: GameDriver, screen: DialogScreen) -> String:
+	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
+	if dialogs.dialog_of(0) != GREETING or dialogs.line_of(0) != 0:
+		return "the state holds %s at line %d" % [dialogs.dialog_of(0), dialogs.line_of(0)]
+	var saved: Dictionary = WorldData.of(driver.world)
+	driver.input.choose_answer(DialogFeature.code(GREETING, "leave_scout"))
+	var _left: Array[DialogAnswered] = _answered(driver)
+	if screen.is_open() or not dialogs.dialog_of(0).is_empty():
+		return "leaving the scout didn't close their greeting"
+	var restored: World = WorldData.to_world(saved, BlueprintSource.new())
+	var problem: String = restored.problem
+	if problem.is_empty():
+		problem = driver.resume(restored)
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	if not problem.is_empty() or not screen.is_open() or screen.line_index != 0:
+		return "the resumed world didn't show its open greeting: %s" % problem
 	return ""
 
 

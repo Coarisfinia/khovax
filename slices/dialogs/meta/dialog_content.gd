@@ -11,6 +11,11 @@ var dialogs: Dictionary[String, Dialog] = {}
 ## Every answer of every dialog, by the code a command gives it by (DialogFeature.code, #635): its
 ## dialog's id and its own.
 var answers: Dictionary[int, PackedStringArray] = {}
+## The index of the line each answer leads to, by its code, or DialogFeature.NO_LINE when it ends
+## its dialog (#898).
+var leads: Dictionary[int, int] = {}
+## How many lines each dialog has, by its id.
+var line_counts: Dictionary[String, int] = {}
 ## Why the data couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -27,6 +32,7 @@ static func load_dialogs(directory: String = DIR) -> DialogContent:
 			content.problem = file_id + ".jsonc: " + dialog.problem
 			return content
 		content.dialogs[dialog.id] = dialog
+		content.line_counts[dialog.id] = dialog.lines.size()
 	return content
 
 
@@ -38,4 +44,5 @@ func _code_answers(dialog: Dialog) -> String:
 			var by: int = DialogFeature.code(dialog.id, answer.id)
 			if not CommandCodes.file(answers, by, PackedStringArray([dialog.id, answer.id])):
 				return "answer %s's code is taken: give it another id" % answer.id
+			leads[by] = dialog.line_index(answer.next)
 	return ""

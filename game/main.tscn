@@ -301,9 +301,9 @@ script = ExtResource("41_roster")
 driver = NodePath("../../Driver")
 survey = NodePath("../../SurveyChoice")
 
-[node name="DialogScreen" parent="Hud" node_paths=PackedStringArray("input", "bus") instance=ExtResource("43_dialog")]
+[node name="DialogScreen" parent="Hud" node_paths=PackedStringArray("input", "driver") instance=ExtResource("43_dialog")]
 input = NodePath("../../LocalInput")
-bus = NodePath("../../EventBus")
+driver = NodePath("../../Driver")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_keeper") unique_id=3550355035]
 layout_mode = 3

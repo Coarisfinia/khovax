@@ -2,15 +2,15 @@ class_name DialogScreen
 extends Control
 ## A dialog on screen (#635): a card at the bottom with the speaker's name and the line they say.
 ## A line without answers reads on with one button; a line with answers lists them as buttons, and
-## the chosen one leads on (Dialog.after) or ends the dialog. The card follows the simulation
-## (#890): an answer button only sends the answer in this machine's player's next command
-## (LocalInput.choose_answer), and the card moves on or closes once the simulation raises it as
-## DialogAnswered for this player, whatever sent it (the buttons, a replay or a co-op peer's
-## commands). Reading on changes nothing in the game, so it stays on the card. Controller, touch
-## and keyboard all work: the buttons take the focus, so the d-pad or the stick moves it and A (or
-## Enter) confirms. While a dialog is open the player stands. Talking to a person (NpcTalkedTo,
-## #557) opens their dialog for the player who talked. Its text tags show the names they stand for
-## (#733).
+## the chosen one leads on (Dialog.after) or ends the dialog. The card follows the simulation's
+## state (#890, #898): after every tick it reads this machine's player's open dialog and line
+## (DialogFeature), which talking to a person opens (NpcTalkedTo, #557) and answers move on or
+## close, whatever sent them (the buttons, a replay or a co-op peer's commands), so it's right
+## after a resume too. An answer button only sends the answer in this machine's player's next
+## command (LocalInput.choose_answer). Reading on changes nothing in the game, so it stays on the
+## card, from the line the state holds. Controller, touch and keyboard all work: the buttons take
+## the focus, so the d-pad or the stick moves it and A (or Enter) confirms. While a dialog is open
+## the player stands. Its text tags show the names they stand for (#733).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
@@ -31,13 +31,16 @@ const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
-## The world's events, which say when this machine's player talks to a person or answers.
-@export var bus: EventBus
+## The session, whose state holds this machine's player's open dialog, read after every tick.
+@export var driver: Session
 
 ## The dialog open now, or null.
 var dialog: Dialog
 ## The index of the line shown in `dialog`.
 var line_index: int = -1
+## The open dialog and line the card last took from the state.
+var _followed_dialog: String = ""
+var _followed_line: int = DialogFeature.NO_LINE
 ## The dialogs, read when the first one opens.
 var _content: DialogContent
 var _fade: Tween
@@ -53,9 +56,8 @@ func _ready() -> void:
 	# A copy of the UI's theme: the screen scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
-	if bus != null:
-		bus.subscribe(NpcTalkedTo, _on_talked)
-		bus.subscribe(DialogAnswered, _on_answered)
+	if driver != null:
+		var _connected: int = driver.ticked.connect(_on_ticked)
 
 
 func _process(_delta: float) -> void:
@@ -63,33 +65,57 @@ func _process(_delta: float) -> void:
 	_follow_menu()
 
 
-## Opens the dialog with the id `dialog_id` at its first line; whether there is one to open.
-func open(dialog_id: String) -> bool:
+## Opens the dialog with the id `dialog_id` at the line `index`, its first by default, or moves the
+## open one there; whether there is one to open.
+func open(dialog_id: String, index: int = 0) -> bool:
+	if is_open() and dialog.id == dialog_id:
+		_show_line(index)
+		return true
 	if _content == null:
 		_content = DialogContent.load_dialogs()
 	dialog = _content.dialogs.get(dialog_id)
 	if dialog == null:
 		push_warning("no dialog %s to open: %s" % [dialog_id, _content.problem])
 		return false
-	_show_line(0)
+	_show_line(index)
 	_ease(true)
 	return true
 
 
-## Opens the dialog of the person this machine's player talked to, unless one is open already.
-func _on_talked(event: NpcTalkedTo) -> void:
-	if input != null and event.slot == input.slot and not event.dialog.is_empty() and not is_open():
-		var _opened: bool = open(event.dialog)
-
-
-## Moves the open dialog on to where the answer this machine's player chose leads, or closes it,
-## once the simulation has it: the line shown may be an earlier one, which the answer skips.
-func _on_answered(event: DialogAnswered) -> void:
-	if input == null or event.slot != input.slot or dialog == null or event.dialog != dialog.id:
+## Shows this machine's player's open dialog at the line the state holds, or closes the card when
+## none is open, if that changed since the card last looked, or always with `refresh`. Reading on
+## or closing on the card leaves the state as it is, so the card stays where it read to.
+func follow_state(refresh: bool = false) -> void:
+	var slot: int = input.slot if input != null else 0
+	var state: GameState = driver.state if driver != null else null
+	var feature: DialogFeature = null
+	if state != null:
+		feature = state.feature(DialogFeature.ID) as DialogFeature
+	var dialog_id: String = feature.dialog_of(slot) if feature != null else ""
+	var index: int = feature.line_of(slot) if feature != null else DialogFeature.NO_LINE
+	if not refresh and dialog_id == _followed_dialog and index == _followed_line:
 		return
-	var chosen: DialogAnswer = dialog.answer_of(event.answer)
-	if chosen != null:
-		_go_to(dialog.line_index(chosen.next))
+	_followed_dialog = dialog_id
+	_followed_line = index
+	if dialog_id.is_empty():
+		if is_open():
+			_go_to(DialogFeature.NO_LINE)
+		return
+	var _opened: bool = open(dialog_id, index)
+
+
+## Follows the state after every tick; this machine's player talking to a person or answering
+## refreshes it even when it looks the same: talking again shows the dialog's first line again, and
+## an answer that leads back to the line the state held moves the card there from where it read to.
+func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
+	var refresh: bool = false
+	for event: RefCounted in events:
+		var talk: NpcTalkedTo = event as NpcTalkedTo
+		var answer: DialogAnswered = event as DialogAnswered
+		var slot: int = talk.slot if talk != null else (answer.slot if answer != null else -1)
+		if input != null and slot == input.slot:
+			refresh = true
+	follow_state(refresh)
 
 
 ## Whether a dialog is open.
