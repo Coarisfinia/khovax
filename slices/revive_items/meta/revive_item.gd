@@ -4,7 +4,7 @@ extends RefCounted
 ## from chests and loot tables like any other item (the loot slice's data/loot_tables/), each
 ## player rolling their own into their own profile (#74, #124), where it's counted with their
 ## materials; crafting it at the base is #657. Using one is a request from the player's profile's
-## outbox (#818, ProfileTie), posted while their profile holds one, in the same change as it's
+## outbox (#818, ReviveTie), posted while their profile holds one, in the same change as it's
 ## spent from it; the simulation revives (ReviveItemFeature).
 
 ## The item's id, in the loot tables and the profile.

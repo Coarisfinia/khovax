@@ -7,9 +7,10 @@ extends Node
 ## territory of a territory quest it finished (#638), waits in its outbox (#771) and goes in this
 ## player's next commands, so the world changes in a tick, the same on every machine and in the
 ## replay; it's sent again at the start of every session until the world acknowledges it
-## (RequestApplied). Using a revive item (#656) is such a request too (#818), posted as the item is
-## spent from the profile. Other players' dominations go into their own profiles on their own
-## machines (#74). The holder keeps the profile and saves it; this only listens and sends.
+## (RequestApplied). Using a revive item (#656) is such a request too (#818), posted by its own tie
+## (ReviveTie) as the item is spent from the profile. Other players' dominations go into their own
+## profiles on their own machines (#74). The holder keeps the profile and saves it; this only
+## listens and sends.
 
 ## Where this machine's player's dominations and finds come from (#184).
 @export var bus: EventBus
@@ -29,7 +30,6 @@ func _ready() -> void:
 	bus.subscribe(DominationLoot, _on_event)
 	bus.subscribe(Harvested, _on_event)
 	bus.subscribe(RequestApplied, _on_applied)
-	var _connected: int = input.revive_chosen.connect(_revive)
 	var _posted: int = holder.outbox_posted.connect(_send_new)
 	# What the world hasn't acknowledged yet goes again, from the start of every session.
 	_send_new()
@@ -70,14 +70,6 @@ func _on_applied(event: RefCounted) -> void:
 		# A request drawn later may get the same id.
 		_sent.erase(applied.request)
 		holder.acknowledge(applied.request)
-
-
-## Uses a revive item on the fainted monster `short_id` (#656): spends it and posts the request to
-## the outbox (#818) in one change, and sends it in this player's next command.
-func _revive(short_id: String) -> void:
-	if holder.keeper != null:
-		holder.spend_on(ReviveItem.ID, OutboxEntry.REVIVE, ShortId.code(short_id))
-		_send_new()
 
 
 ## What this machine's player gains from `event`: their domination, or their own roll from an
