@@ -166,9 +166,9 @@ func _moves_now(state: GameState, entity_id: int) -> bool:
 ## it nearest to `goal`, the first in direction order of the equally near, if that's nearer than
 ## where it stands. It never steps onto the trail or onto anyone, and only from and onto ground a
 ## ring could enclose it on, so it stays catchable; only on its tick to step (`_moves_now`), and
-## not when `step` moved it this tick.
+## not when `step` moved it this tick. Switched off, the feature moves nobody.
 func chase(state: GameState, entity_id: int, goal: Vector2i) -> void:
-	if not _moves_now(state, entity_id):
+	if not enabled or not _moves_now(state, entity_id):
 		return
 	if _stepped_tick == state.tick and _stepped.has(entity_id):
 		return
