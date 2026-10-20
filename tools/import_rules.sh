@@ -71,7 +71,7 @@ SLICE_ORDER=(
 )
 # The back-edges still waiting ("slice>later slice" = the issue that drops it).
 declare -A SLICE_EXEMPT=(
-  [board>blueprints]=851 [board>controls]=851 [board>profile]=851 [board>tiles]=851
+  [board>blueprints]=851 [board>controls]=851 [board>profile]=851
   [controls>profile]=851 [controls>revive_items]=851
   [factions>menu]=851 [factions>profile]=851
   [fog>blueprints]=851
