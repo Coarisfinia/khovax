@@ -51,6 +51,9 @@ func _initialize() -> void:
 		printerr("no tests found in ", TEST_DIR)
 		quit(1)
 		return
+	# `_initialize` runs before the root enters the tree, so nodes the first flow added before its
+	# first await would never get `_ready` (#750). Wait until the tree runs.
+	await process_frame
 	var failed: int = await _run_from(tests, 0)
 	print("%d passed, %d failed" % [tests.size() - failed, failed])
 	quit(1 if failed > 0 else 0)
