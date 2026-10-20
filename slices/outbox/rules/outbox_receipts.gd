@@ -1,16 +1,15 @@
 class_name OutboxReceipts
 extends RefCounted
 ## The world's record of the requests it applied from players' outboxes (#771, Outbox): the short
-## ids
-## of the ones the feature carrying out their kind applied, kept in that feature's entry in the
+## ids of the ones the feature carrying out their kind applied, kept in that feature's entry in the
 ## player's world store (#724), so they last between sessions and a request sent again is never
 ## applied twice. A feature carrying out a kind of request takes each one through `take`.
 ##
-## The record stays small (#942): every command carries the newest request id up to which the
-## player's profile saw every request acknowledged (Command.acknowledged), and the feature keeps
-## the highest such mark instead of the receipts at or below it, refusing any id at or below it
-## that's sent again. A profile draws its ids in order (Outbox), so a mark covers exactly the
-## requests it will never need applied again.
+## The record stays small (#942): every command carrying a request carries the newest id up to
+## which the player's profile saw every request of its kind acknowledged (Command.acknowledged,
+## #968), and the feature keeps the highest such mark instead of the receipts at or below it,
+## refusing any id at or below it that's sent again. A profile draws its ids in order (Outbox), so
+## a mark covers exactly the requests of its kind it will never need applied again.
 
 ## The key of the applied ids in a feature's store entry.
 const APPLIED: String = "applied"

@@ -53,10 +53,11 @@ var request: int = NO_REQUEST
 var request_kind: int = NO_REQUEST_KIND
 ## The request's data, as its kind reads it (OutboxEntry): a whole number from 0.
 var request_data: int = 0
-## The code of the newest request id up to which the player's profile saw every request it sent
-## acknowledged (#942, Outbox.confirmed), or NO_REQUEST: the world forgets its receipts of those
-## and refuses any of them sent again. Every command carries it, so a feature taking a request
-## forgets as it records.
+## The code of the newest request id up to which the player's profile saw every request of the
+## kind this command carries acknowledged (#942, #968, Outbox.confirmed), or NO_REQUEST: the
+## feature carrying out that kind forgets its receipts of those and refuses any of them sent again,
+## so it forgets as it records. Per kind, a request of another kind stuck in the outbox doesn't
+## hold it back.
 var acknowledged: int = NO_REQUEST
 
 
