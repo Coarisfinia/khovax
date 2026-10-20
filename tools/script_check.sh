@@ -25,8 +25,10 @@ check() {
 export -f check
 
 mapfile -t scripts < <(git ls-files '*.gd')
+# A check that dies makes xargs fail; the loop below still runs and names its script.
 for n in "${!scripts[@]}"; do printf '%s\0%s\0' "$n" "${scripts[$n]}"; done \
-  | xargs -0 -n 2 -P "$(nproc)" bash -c 'check "$1" "$2"' _
+  | xargs -0 -n 2 -P "$(nproc)" bash -c 'check "$1" "$2"' _ \
+  || true
 
 # The logs in the scripts' order, so the output doesn't interleave.
 failed=0
