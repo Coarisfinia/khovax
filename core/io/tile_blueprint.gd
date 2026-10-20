@@ -23,7 +23,7 @@ const TRAITS: Array[String] = ["walkable", "hides"]
 const MAX_NUMBER: int = 255
 ## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
 ## a typo can't make one tile overshadow the region.
-const MAX_HEIGHT: int = RegionFormat.MAX_HEIGHT
+const MAX_HEIGHT: int = PieceLooks.MAX_HEIGHT
 const MAX_REACH: int = 3
 ## A model's scale as the pack made it, in hundredths (#588: whole numbers, like the clearance).
 const FULL_SCALE: int = 100

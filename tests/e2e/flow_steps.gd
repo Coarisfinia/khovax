@@ -29,6 +29,19 @@ const OUT_OF_GLADE: int = 2
 ## northeast, then northwest onto the exit on (1, -5) and through it. Southeast leads back.
 const INTO_FOREST: Array[int] = [1, 2, 2, 2, 2, 2]
 const OUT_OF_FOREST: int = 5
+## The legend every region `region` draws knows, before its own lines.
+const REGION_LEGEND: String = """- `🔴`: where player 1 starts
+- `🟫`: ground
+- `🟦`: water
+- `⬛`: rock
+"""
+
+
+## The region a region document of the tiles `grid` reads as (#824), its legend REGION_LEGEND and
+## `legend`'s lines.
+static func region(grid: String, legend: String = "") -> Region:
+	var document: String = "# Test\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s%s\n"
+	return RegionDocument.parse(document % [grid, REGION_LEGEND, legend])
 
 
 ## Takes the beach's wounded toad out of `state`, for flows whose walks cross the beach and aren't
