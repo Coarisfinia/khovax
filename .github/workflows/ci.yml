@@ -302,6 +302,8 @@ jobs:
           name: khovax-outcomes
           path: /tmp/outcomes/outcomes.json
           if-no-files-found: error
+          # A rerun (after the owner's outcomes-change label) uploads it again.
+          overwrite: true
 
       - name: "🎲 Play its parent"
         # A parent that can't be built or played fails the check: it's main or a queue entry, which
