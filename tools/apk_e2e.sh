@@ -28,6 +28,9 @@ while [ -z "$result" ] && [ "$SECONDS" -lt "$deadline" ]; do
 done
 echo "${result:-no result within 180 s: the game never reported}"
 if [ "$result" != "KHOVAX_E2E: PASS" ]; then
-  adb logcat -d -s godot:V | tail -100
+  # The whole device log since the install, every tag (#848): the game's own lines alone don't show
+  # why it never started. Uncapped: logcat's own ring buffer already bounds it, and a cap could cut
+  # the startup lines that matter.
+  adb logcat -d || true
   exit 1
 fi
