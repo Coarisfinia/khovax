@@ -6,16 +6,18 @@
 # CI runs this script from the parent's checkout, so a pull request can't weaken its own check.
 # What it can't compare fails too (#889): a reference replay removed or its inputs changed, the APK
 # flow's scripts changed, or the outcome report itself changed. The owner allows that by labelling
-# the pull request `outcomes-change`, which CI passes on as OUTCOMES_CHANGE=true.
-# Usage: [OUTCOMES_CHANGE=true] tools/rules_compare.sh <parent's report> <this commit's report>
-# <parent> (from this commit's repository root; <parent> is the commit the parent's report was made
-# from)
+# the pull request `outcomes-change`, which CI passes on as OUTCOMES_CHANGE=true only when the owner
+# added it, with OUTCOMES_CHANGE_NOTE saying who did.
+# Usage: [OUTCOMES_CHANGE=true] [OUTCOMES_CHANGE_NOTE=<who labelled it>] tools/rules_compare.sh
+# <parent's report> <this commit's report> <parent> (from this commit's repository root; <parent>
+# is the commit the parent's report was made from)
 set -euo pipefail
 
 parent_report=$1
 head_report=$2
 parent=$3
 labelled=${OUTCOMES_CHANGE:-false}
+label_note=${OUTCOMES_CHANGE_NOTE:-}
 replays=tests/replays
 folder=core/rules_changes
 # The APK's flow and its headless runner.
@@ -106,9 +108,10 @@ if [ ${#unchecked[@]} -gt 0 ]; then
   done
   echo
   if [ "$labelled" = true ]; then
-    echo "The pull request is labelled \`outcomes-change\`, so that's allowed."
+    echo "The owner labelled the pull request \`outcomes-change\`, so that's allowed."
   else
     echo "That needs the owner's label \`outcomes-change\` on the pull request (#889)."
+    [ -z "$label_note" ] || echo "Here, $label_note."
     echo "::error::not everything could be compared with the parent, and the pull request isn't labelled outcomes-change" >&2
     failed=1
   fi

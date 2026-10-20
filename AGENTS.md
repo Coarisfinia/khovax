@@ -558,7 +558,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   changing the ruleset in the same PR (owner's `gh`). **`rules-compare` can't compare** a removed
   golden replay, one whose inputs changed, a changed APK flow or a changed outcome report
   (`tests/replays/outcomes.gd`), and fails on them unless the pull request carries the label
-  `outcomes-change` (#889), which only the owner sets; rerun the job after it's set.
+  `outcomes-change` (#889), which counts only when the owner added it (the job reads who did from
+  the pull request's timeline); rerun the job after it's set.
 - **Release tags are immutable:** the tag ruleset "immutable release tags" (`refs/tags/v*`, owner,
   #91) blocks deleting, moving and force-updating them, with no bypass; creating one is allowed.
   A wrong release gets a new version, never a moved tag.
