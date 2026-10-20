@@ -112,7 +112,7 @@ func _check_launch_options() -> String:
 		"--speed=2": "not an option",
 		"--seed=-3": "not an option, or not a seed",
 		"--seed=x": "not an option, or not a seed",
-		"--instance=nowhere": "no instance blueprint nowhere; there are basic",
+		"--instance=nowhere": "no instance blueprint nowhere; there are arena, basic",
 		"--instance=glade=x": "no instance blueprint glade=x",
 		"--seed=4=2": "not an option, or not a seed",
 		"--user-dir=": "not a folder name",

@@ -42,7 +42,7 @@ static func parse(args: PackedStringArray) -> LaunchOptions:
 			continue
 		if arg.begins_with(SEED) and value.is_valid_int() and value.to_int() >= 0:
 			options.seed_value = value.to_int()
-		elif arg.begins_with(INSTANCE) and InstanceBlueprints.NAMES.has(value):
+		elif arg.begins_with(INSTANCE) and InstanceBlueprints.names().has(value):
 			options.instance = value
 		elif arg == INVINCIBLE:
 			options.invincible = true
@@ -53,7 +53,7 @@ static func parse(args: PackedStringArray) -> LaunchOptions:
 		elif arg.begins_with(INSTANCE):
 			options.problem = "no instance blueprint %s; there are %s" % [
 				value,
-				", ".join(InstanceBlueprints.NAMES),
+				", ".join(InstanceBlueprints.names()),
 			]
 		else:
 			options.problem = "not an option, or not a seed of 0 or more: " + arg

@@ -61,7 +61,7 @@ var _entered: Array[String] = []
 
 
 func run(tree: SceneTree) -> String:
-	for instance_name: String in InstanceBlueprints.NAMES:
+	for instance_name: String in InstanceBlueprints.names():
 		var problem: String = InstanceBlueprints.exit_problem(instance_name)
 		if not problem.is_empty():
 			return problem
@@ -1134,7 +1134,7 @@ func _turned_and_overridden(region: Region, plain: String) -> bool:
 ## Every blueprint loads as a full instance for every seed, and its first player can walk to every
 ## exit. Tiles a scripted event opens later will count as open here once they exist (#143).
 func _check_exits_reachable() -> String:
-	for instance_name: String in InstanceBlueprints.NAMES:
+	for instance_name: String in InstanceBlueprints.names():
 		for seed_value: int in INSTANCE_SEEDS:
 			var state: GameState = InstanceBlueprints.create(instance_name, seed_value)
 			if state == null:
@@ -1154,10 +1154,10 @@ func _check_exits_reachable() -> String:
 ## again at once (#727), with nothing to fall back on if it can't load.
 func _check_start_variants() -> String:
 	var variants: Array[String] = [""]
-	var chosen: Dictionary = InstanceBlueprints.VARIANTS.get(InstanceBlueprints.GLADE, { })
-	for flag: Variant in chosen:
-		if not variants.has(str(chosen[flag])):
-			variants.append(str(chosen[flag]))
+	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
+	for chosen_by: PackedStringArray in glade.variants:
+		if not variants.has(chosen_by[1]):
+			variants.append(chosen_by[1])
 	for variant: String in variants:
 		for seed_value: int in INSTANCE_SEEDS:
 			var state: GameState = InstanceBlueprints.create(
@@ -1209,7 +1209,7 @@ func _check_room() -> String:
 		)
 		if not problem.is_empty():
 			return "%s: %s" % [path, problem]
-	for instance_name: String in InstanceBlueprints.NAMES:
+	for instance_name: String in InstanceBlueprints.names():
 		for seed_value: int in INSTANCE_SEEDS:
 			var region: Region = InstanceBlueprints.region_of(instance_name, seed_value)
 			var problem: String = _room_problem(region, look)
@@ -1319,7 +1319,7 @@ func _check_web_connected() -> String:
 			if not reached.has(target):
 				reached.append(target)
 		next += 1
-	for instance_name: String in InstanceBlueprints.NAMES:
+	for instance_name: String in InstanceBlueprints.names():
 		var has_exits: bool = not InstanceBlueprints.region_of(instance_name, 0).exits.is_empty()
 		if has_exits and not reached.has(instance_name):
 			return "%s has exits but can't be reached from the starting instance" % instance_name
@@ -1416,7 +1416,7 @@ func _check_glade_exit() -> String:
 ## that meet touch along at least SEAM_WIDTH walkable tiles of each, and every exit to another
 ## instance is at least SEAM_WIDTH tiles wide.
 func _check_wide_seams() -> String:
-	for instance_name: String in InstanceBlueprints.NAMES:
+	for instance_name: String in InstanceBlueprints.names():
 		var exits: Region = InstanceBlueprints.region_of(instance_name, 0)
 		for target: String in exits.exit_blueprints:
 			if exits.exit_blueprints.count(target) < SEAM_WIDTH:

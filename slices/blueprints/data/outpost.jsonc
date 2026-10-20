@@ -1,0 +1,5 @@
+// A faction outpost southeast of the glade (#689), with holds for control points (#643).
+{
+	"id": "outpost",
+	"wild_species": { "ombulumo": 1, "tikazzir": 1 }
+}

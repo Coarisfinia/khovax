@@ -59,6 +59,7 @@ func run(_tree: SceneTree) -> String:
 		_check_harvest_tables,
 		_check_loot_refused,
 		_check_wild_species.bind(content),
+		_check_blueprints,
 		_check_tiles,
 		_check_quests,
 		_check_factions,
@@ -595,8 +596,8 @@ func _check_tile_numbers_unique() -> String:
 ## Every blueprint lists the species its unnamed spots roll from, and every species a blueprint
 ## lists or a region piece names is one the species data has (#133).
 func _check_wild_species(content: SpeciesData) -> String:
-	for instance_name: String in InstanceBlueprints.NAMES:
-		var listed: Dictionary = InstanceBlueprints.WILD_SPECIES.get(instance_name, { })
+	for instance_name: String in InstanceBlueprints.names():
+		var listed: Dictionary = InstanceBlueprints.blueprint(instance_name).wild_species
 		var named: Array[String] = []
 		for spot: WildSpot in InstanceBlueprints.region_of(instance_name, 0).wild_spots.values():
 			named.append(spot.species)
@@ -605,6 +606,35 @@ func _check_wild_species(content: SpeciesData) -> String:
 		for species: Variant in listed.keys() + named:
 			if not content.species.has(str(species)):
 				return "%s places a species that doesn't exist: %s" % [instance_name, species]
+	return ""
+
+
+## The glade's blueprint reads as written (#823): its loot tables and its variants in their order.
+## A blueprint file with a wrong id, an unknown field, no species, a weight below 1, a chest table
+## without a loot table, or a variant without its region is refused.
+func _check_blueprints() -> String:
+	var glade: Blueprint = InstanceBlueprints.blueprint(InstanceBlueprints.GLADE)
+	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
+		return "the glade's blueprint didn't load as written"
+	var first: PackedStringArray = (
+		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
+	)
+	if first != PackedStringArray([WorldFlags.EVENT_FLAG + InstanceBlueprints.GLADE_PURIFIED, ""]):
+		return "the glade's variants read %s" % [glade.variants]
+	var blueprint: String = "{\"id\": \"x\", \"wild_species\": {\"a\": 1}%s}"
+	var cases: Dictionary[String, String] = {
+		blueprint.replace("\"x\"", "\"y\"") % "": "its id must",
+		blueprint % ", \"z\": 1": "field z",
+		blueprint.replace("\"a\": 1", "") % "": "its wild_species",
+		blueprint.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
+		blueprint % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
+		blueprint % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
+		blueprint % ", \"turned\": 1": "turned must",
+	}
+	for text: String in cases:
+		var refusal: String = Blueprint.parse("x", text).problem
+		if not refusal.begins_with(cases[text]):
+			return "a broken blueprint gave %s, not %s" % [refusal, cases[text]]
 	return ""
 
 

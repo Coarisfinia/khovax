@@ -245,7 +245,7 @@ func _check_feature_reads() -> String:
 	for entry: Dictionary in ProjectSettings.get_global_class_list():
 		classes[str(entry["class"])] = str(entry["path"])
 	var checked: Dictionary[String, bool] = {}
-	for blueprint: String in InstanceBlueprints.NAMES:
+	for blueprint: String in InstanceBlueprints.names():
 		for each: Feature in InstanceBlueprints.create(blueprint, 0).features:
 			if checked.has(each.id()):
 				continue

@@ -1800,7 +1800,7 @@ func _check_species() -> String:
 		if basic != _first_species(InstanceBlueprints.basic(seed_value)):
 			return "seed %d placed two different species" % seed_value
 		rolled[basic] = true
-	var listed: Array = InstanceBlueprints.WILD_SPECIES[InstanceBlueprints.BASIC].keys()
+	var listed: Array = InstanceBlueprints.blueprint(InstanceBlueprints.BASIC).wild_species.keys()
 	if rolled.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var dominated: String = _check_short_ids()
