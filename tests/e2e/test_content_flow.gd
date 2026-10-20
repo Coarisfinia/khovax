@@ -577,8 +577,9 @@ func _check_wild_species(content: SpeciesData) -> String:
 	for instance_name: String in InstanceBlueprints.names():
 		var listed: Dictionary = InstanceBlueprints.blueprint(instance_name).wild_species
 		var named: Array[String] = []
-		for spot: WildSpot in InstanceBlueprints.region_of(instance_name, 0).wild_spots.values():
-			named.append(spot.species)
+		var region: Region = InstanceBlueprints.region_of(instance_name, 0)
+		for meaning: String in region.placed(WildSpotPlacements.KIND).values():
+			named.append(WildSpot.read(meaning).species)
 		if listed.is_empty():
 			return "the %s blueprint lists no species for its wild monsters" % instance_name
 		for species: Variant in listed.keys() + named:

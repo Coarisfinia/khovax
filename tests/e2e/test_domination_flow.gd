@@ -197,13 +197,13 @@ func _check_hiding_legend() -> String:
 
 - `🦔`: "
 	piece += LegendMeaning.HIDING
-	var shrubs: Region = RegionDocument.parse(piece + "shrubs
+	var shrubs: Region = InstanceBlueprints.read_region(piece + "shrubs
 ")
 	if not shrubs.problem.is_empty() or shrubs.wild_monsters != [Vector2i.ZERO]:
 		return "a wild monster hiding in shrubs doesn't read: " + shrubs.problem
 	if not HidingFeature.hides_at(shrubs, Vector2i.ZERO):
 		return "the wild monster said to hide in shrubs isn't on shrubs"
-	if RegionDocument.parse(piece + "ground
+	if InstanceBlueprints.read_region(piece + "ground
 ").problem.is_empty():
 		return "a legend hid a wild monster in plain ground"
 	return _check_standing_on(piece.trim_suffix(LegendMeaning.HIDING))
@@ -212,16 +212,18 @@ func _check_hiding_legend() -> String:
 ## A named wild monster can stand on a tile kind (#452): the spot is that kind, and a legend naming
 ## no species or no kind is refused.
 func _check_standing_on(piece: String) -> String:
-	var sand: Region = RegionDocument.parse(piece + "a wild monster, always ombulumo, on sand\n")
+	var named: String = "a wild monster, always ombulumo, on sand\n"
+	var sand: Region = InstanceBlueprints.read_region(piece + named)
 	var on_sand: bool = sand.terrain.get(Vector2i.ZERO) == "sand"
-	if not sand.problem.is_empty() or sand.wild_spots.size() != 1 or not on_sand:
+	var spots: int = sand.placed(WildSpotPlacements.KIND).size()
+	if not sand.problem.is_empty() or spots != 1 or not on_sand:
 		return "a wild monster standing on sand doesn't read: " + sand.problem
 	var broken_meanings: Array[String] = [
 		"a wild monster, always, on sand",
 		"a wild monster, always ombulumo, on nowhere",
 	]
 	for broken: String in broken_meanings:
-		if RegionDocument.parse(piece + broken + "\n").problem.is_empty():
+		if InstanceBlueprints.read_region(piece + broken + "\n").problem.is_empty():
 			return "a legend read a wild monster without its species or its tile kind: " + broken
 	return _check_companion_strikes()
 
@@ -951,10 +953,11 @@ func _outcome_state(
 ) -> GameState:
 	var region: Region = Region.disc(OUTCOME_RADIUS)
 	region.wild_monsters = spots
-	# One shared spot: the regions only read it.
-	var named: WildSpot = WildSpot.new(species, false, "", target)
+	var named: String = WildSpot.NAMED + species
+	if not target.is_empty():
+		named += ", " + WildSpot.TARGETED + target
 	for spot: Vector2i in spots:
-		region.wild_spots[spot] = named
+		region.add_placement(WildSpotPlacements.KIND, spot, named)
 	var hp: Dictionary[String, int] = { WEAK: OUTCOME_HP, STRONG: OUTCOME_HP }
 	var strength: Dictionary[String, int] = { WEAK: WEAK_STRENGTH, STRONG: STRONG_STRENGTH }
 	var ordered: Array[Feature] = [
@@ -1860,10 +1863,10 @@ func _check_wounded() -> String:
 	tiles += "- `🤕`: a wild monster, always ombulumo, wounded\n"
 	tiles += "- `🐸`: a wild monster, always ombulumo\n"
 	tiles += "- `🔴`: where player 1 starts\n"
-	var region: Region = RegionDocument.parse(tiles)
+	var region: Region = InstanceBlueprints.read_region(tiles)
 	var marked: int = 0
-	for spot: WildSpot in region.wild_spots.values():
-		marked += 1 if spot.wounded else 0
+	for meaning: String in region.placed(WildSpotPlacements.KIND).values():
+		marked += 1 if WildSpot.read(meaning).wounded else 0
 	if not region.problem.is_empty() or marked != 1:
 		return "a legend didn't mark its wild monster wounded: " + region.problem
 	var hp: Dictionary[String, int] = { "ombulumo": OUTCOME_HP }

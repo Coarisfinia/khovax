@@ -101,7 +101,7 @@ func _play(world: World) -> String:
 	if wild.monsters.size() != count - 1 or world.instance_of(0) != InstanceBlueprints.GLADE:
 		return "the walk didn't dominate the wild monster and go on into the glade"
 	var glade: GameState = world.instances[InstanceBlueprints.GLADE]
-	var goals: Array[Vector2i] = [glade.region.triggers[0].tile]
+	var goals: Array[Vector2i] = [TileTrigger.all_in(glade.region)[0].tile]
 	goals.append_array(glade.region.placed(ChestPlacements.CHEST).keys())
 	for goal: Vector2i in goals:
 		for direction: int in FlowSteps.shortest_path(glade, world.player(0).tile, goal):

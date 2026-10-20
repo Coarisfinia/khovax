@@ -138,7 +138,12 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 ## The region a Markdown region document describes (RegionDocument), with what every slice places
 ## on its ground read by that slice (#824).
 static func read_region(text: String) -> Region:
-	var readers: Array[PlacementReader] = [NpcPlacements.new(), ChestPlacements.new()]
+	var readers: Array[PlacementReader] = [
+		TriggerPlacements.new(),
+		NpcPlacements.new(),
+		WildSpotPlacements.new(),
+		ChestPlacements.new(),
+	]
 	return RegionDocument.parse(text, readers)
 
 

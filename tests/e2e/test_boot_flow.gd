@@ -895,7 +895,7 @@ func _check_lookouts(main: Node) -> String:
 	driver.instance = InstanceBlueprints.GLADE
 	driver.start(7)
 	view.show_state()
-	var lookout: TileTrigger = driver.state.region.triggers[0]
+	var lookout: TileTrigger = TileTrigger.all_in(driver.state.region)[0]
 	if view.figures.keys() != [lookout.tile]:
 		return "the glade's lookout has no post: %s" % [view.figures.keys()]
 	var problem: String = _check_decorations(main)

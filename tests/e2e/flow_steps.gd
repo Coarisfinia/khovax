@@ -41,7 +41,7 @@ const REGION_LEGEND: String = """- `🔴`: where player 1 starts
 ## `legend`'s lines.
 static func region(grid: String, legend: String = "") -> Region:
 	var document: String = "# Test\n\n## Tiles\n\n```\n%s\n```\n\n## Legend\n\n%s%s\n"
-	return RegionDocument.parse(document % [grid, REGION_LEGEND, legend])
+	return InstanceBlueprints.read_region(document % [grid, REGION_LEGEND, legend])
 
 
 ## Takes the beach's wounded toad out of `state`, for flows whose walks cross the beach and aren't

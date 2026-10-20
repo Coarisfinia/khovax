@@ -27,14 +27,10 @@ var walkable_overrides: Dictionary[Vector2i, bool] = {}
 var starts: Array[Vector2i] = []
 ## Where wild monsters stand when the instance loads, in the region file's reading order.
 var wild_monsters: Array[Vector2i] = []
-## What the legend says about some of the wild monster spots (WildSpot), by spot: a named species
-## (#133; every other spot rolls one from its blueprint's list) or a wounded start (#389). Not
-## hashed here: the wild monster feature hashes each wild monster's species and HP.
-var wild_spots: Dictionary[Vector2i, WildSpot] = {}
-## What the legend places on the region's ground for the slices to run (#824), people, chests and
-## loot among them: by kind, each such tile in the region file's reading order, with the legend's
-## meaning there. The core never reads those meanings: each kind's slice does (PlacementReader).
-## Not hashed here: the features that run them hash what they change.
+## What the legend places on the region's ground for the slices to run (#824), people, chests, loot,
+## tile triggers and named wild monsters among them: by kind, each such tile in the region file's
+## reading order, with the legend's meaning there. The core never reads those meanings: each kind's
+## slice does (PlacementReader). Not hashed here: the features that run them hash what they change.
 var placements: Dictionary[String, Dictionary] = {}
 ## A region piece's connectors (#57), its entry and exit points: (q, r) is a ground tile on the
 ## piece's edge and z the side (an index into Hex.DIRECTIONS) it opens to. Only pieces have them:
@@ -46,10 +42,6 @@ var connectors: Array[Vector3i] = []
 ## never change during a session.
 var exits: Array[Vector3i] = []
 var exit_blueprints: Array[String] = []
-## Tile triggers (#183), each written in its piece's legend, in the region file's reading order:
-## when something happens on a tile, an action runs (TriggerFeature). Not hashed: they come from the
-## blueprint's files; the trigger feature hashes the ones that fired.
-var triggers: Array[TileTrigger] = []
 ## The region piece each tile was arranged from (#350), by the piece's file name in its blueprint's
 ## folder, which entering it raises (EnteringFeature); empty for a region from one file. Not hashed:
 ## it comes from the blueprint's files.
@@ -132,10 +124,6 @@ func turned(turns: int) -> Region:
 	region.connectors.assign(connectors.map(_turned_connector.bind(turns)))
 	region.exits.assign(exits.map(_turned_connector.bind(turns)))
 	region.exit_blueprints = exit_blueprints.duplicate()
-	for trigger: TileTrigger in triggers:
-		region.triggers.append(trigger.moved(Vector2i.ZERO, turns))
-	for spot: Vector2i in wild_spots:
-		region.wild_spots[Hex.turn(spot, turns)] = wild_spots[spot]
 	for kind: String in placements:
 		var tiles: Dictionary[Vector2i, String] = placed(kind)
 		for tile: Vector2i in tiles:
@@ -185,16 +173,14 @@ func outside_exits() -> Array[Vector2i]:
 	return outside
 
 
-## Adds `piece`, moved by `offset`, with its wild monsters, placements, connectors, exits,
-## triggers and which piece each tile came from. The players' starts stay this region's own. Callers
+## Adds `piece`, moved by `offset`, with its wild monsters, placements, connectors, exits and
+## which piece each tile came from. The players' starts stay this region's own. Callers
 ## check `fits` first.
 func place(piece: Region, offset: Vector2i) -> void:
 	for tile: Vector2i in piece.sorted_tiles():
 		terrain[tile + offset] = piece.terrain[tile]
 	for spot: Vector2i in piece.wild_monsters:
 		wild_monsters.append(spot + offset)
-	for spot: Vector2i in piece.wild_spots:
-		wild_spots[spot + offset] = piece.wild_spots[spot]
 	for kind: String in piece.placements:
 		var tiles: Dictionary[Vector2i, String] = piece.placed(kind)
 		for tile: Vector2i in tiles:
@@ -207,8 +193,6 @@ func place(piece: Region, offset: Vector2i) -> void:
 	for exit: Vector3i in piece.exits:
 		exits.append(exit + Vector3i(offset.x, offset.y, 0))
 	exit_blueprints.append_array(piece.exit_blueprints)
-	for trigger: TileTrigger in piece.triggers:
-		triggers.append(trigger.moved(offset))
 	for tile: Vector2i in piece.piece_of:
 		piece_of[tile + offset] = piece.piece_of[tile]
 

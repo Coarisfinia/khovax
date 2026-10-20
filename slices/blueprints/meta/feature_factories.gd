@@ -87,7 +87,7 @@ static func _exits(setup: FeatureSetup) -> ExitFeature:
 
 
 static func _triggers(setup: FeatureSetup) -> TriggerFeature:
-	if setup.region.triggers.is_empty():
+	if setup.region.placed(TriggerPlacements.KIND).is_empty():
 		return null
 	return TriggerFeature.new()
 

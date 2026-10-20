@@ -49,10 +49,7 @@ static func _candidates(state: GameState, step: QuestStep, here: String) -> Arra
 		return _piece_tiles(state, step.piece)
 	var tiles: Array[Vector2i] = []
 	if step.condition == QuestStep.REACHED:
-		for trigger: TileTrigger in state.region.triggers:
-			if trigger.action == TileTrigger.REACH and trigger.place == step.place:
-				tiles.append(trigger.tile)
-		return tiles
+		return _place_tiles(state, step.place)
 	if step.condition == QuestStep.OPENED:
 		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
 		if chests != null:
@@ -71,6 +68,18 @@ static func _candidates(state: GameState, step: QuestStep, here: String) -> Arra
 		var fits: bool = step.quarry.fits(wild.species_of(entity_id), target)
 		if entity != null and fits and not hidden:
 			tiles.append(entity.tile)
+	return tiles
+
+
+## The tiles of the place `place` in `state`, in the legend's order.
+static func _place_tiles(state: GameState, place: String) -> Array[Vector2i]:
+	var tiles: Array[Vector2i] = []
+	var triggers: TriggerFeature = state.feature(TriggerFeature.ID) as TriggerFeature
+	if triggers == null:
+		return tiles
+	for trigger: TileTrigger in triggers.triggers:
+		if trigger.action == TileTrigger.REACH and trigger.place == place:
+			tiles.append(trigger.tile)
 	return tiles
 
 

@@ -28,7 +28,10 @@ func show_state() -> void:
 	if driver.state != _shown:
 		HexPiece.free_all(figures)
 		_shown = driver.state
-	for trigger: TileTrigger in driver.state.region.triggers:
+	var feature: TriggerFeature = driver.state.feature(TriggerFeature.ID) as TriggerFeature
+	if feature == null:
+		return
+	for trigger: TileTrigger in feature.triggers:
 		var tile: Vector2i = trigger.tile
 		if trigger.action == TileTrigger.REVEAL and not figures.has(tile):
 			figures[tile] = _add_figure(tile)
