@@ -504,7 +504,7 @@ func _check_seal_refused(world: World) -> String:
 	var two_seals: Dictionary = data.duplicate(true)
 	var first: Dictionary = _seals_in(two_seals)[0]
 	var other: Dictionary = first.duplicate(true)
-	other["catcher"] = world.player(1).id
+	other["dominator"] = world.player(1).id
 	_seals_in(two_seals).append(other)
 	var cases: Dictionary[String, Dictionary] = {
 		"there twice": twice,

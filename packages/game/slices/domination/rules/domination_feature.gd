@@ -384,13 +384,12 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 			_dropped = encircled.erase(waiting_id)
 
 
-## Every sealing ring as its player's entity id and its seal, in id order. The id's key keeps its
-## name from before domination (#317), "catcher", so saved worlds keep loading.
+## Every sealing ring as its player's entity id and its seal, in id order.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	for dominator_id: int in _sealing_players():
 		var entry: Dictionary = seals[dominator_id].to_data()
-		entry["catcher"] = dominator_id
+		entry["dominator"] = dominator_id
 		saved.append(entry)
 	var waiting: Array[Dictionary] = []
 	for dominator_id: int in _waiting_players():
@@ -406,7 +405,7 @@ func save_values() -> Dictionary:
 func load_values(state: GameState, values: DataReader) -> void:
 	seals.clear()
 	for entry: DataReader in values.entries("seals"):
-		var dominator_id: int = entry.whole("catcher", 1, DataReader.MOST)
+		var dominator_id: int = entry.whole("dominator", 1, DataReader.MOST)
 		var dominator: Entity = state.entity(dominator_id)
 		if dominator == null or dominator.slot == Entity.NO_SLOT or seals.has(dominator_id):
 			values.fail("sealing ring of %d isn't one player's" % dominator_id)
