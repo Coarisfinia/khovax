@@ -155,9 +155,3 @@ func flush() -> String:
 	var problem: String = ProfileStore.save(profile, path, companions)
 	_pending = not problem.is_empty()
 	return problem
-
-
-## Saves everything pending when a session ends.
-func end_session() -> String:
-	_pending = true
-	return flush()
