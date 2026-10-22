@@ -206,6 +206,10 @@ def hit():
     return Clip([(1, {}), (5, recoil), (18, {})])
 
 
+# How far (radians) a lying foreleg's forearm turns its wrist forward beyond the leg's own swing.
+FOREARM_FLAT = 0.8
+
+
 def faint(body_height):
     """The legs give way and it sinks onto its belly, `body_height` down, the hind legs folding
     under it where they stood and the forepaws stepping out in front, head on the ground and tail
@@ -216,10 +220,12 @@ def faint(body_height):
     lying = {"root_loc": (0, -body_height * 0.9, 0), "neck": (0.45, 0, 0), "head": (0.25, 0, 0.25),
              "jaw": (0.1, 0, 0), "ear.L": (0.7, 0, 0.2), "ear.R": (0.7, 0, -0.2), "tail_01": (0.45, 0, 0.3),
              "tail_02": (0.1, 0, 0.3)}
+    # The forearms lie along the ground, the elbows down on it, as a canine lies on its front.
+    _both(lying, "forearm", (-FOREARM_FLAT, 0, 0))
     # One after the other, so it lies on its forearms rather than propped up on folded forelegs.
     steps = []
     for side, sign, late in (("L", 1.0, 0), ("R", -1.0, 2)):
-        steps.append(legs.Step("front_paw." + side, 10 + late, 24 + late, (0.0, 0.0, 0.6), 0.1))
+        steps.append(legs.Step("front_paw." + side, 10 + late, 24 + late, (0.0, 0.0, 0.45), 0.1))
         # The hind paws splay out and back, so the knees fold beside the belly, not under it.
         steps.append(legs.Step("hind_paw." + side, 14 + late, 28 + late, (0.12 * sign, 0.0, -0.12), 0.06))
     return Clip([(1, {}), (14, sinking), (30, lying), (40, lying)], steps=steps)
@@ -320,19 +326,18 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS):
         rig.animation_data.action = action
         _key(rig, poses, scale)
         frames = [frame for frame, _pose in poses]
-        for _round in range(SETTLE_ROUNDS if ground_meshes else 0):
+        # Each round lifts the body where it sinks; a planted clip's legs then reach down to their
+        # paws again, and the next round checks the new legs don't sink.
+        for round_ in range(SETTLE_ROUNDS + 1 if ground_meshes else 0):
             planted = [leg.paw for leg in limbs] if clip.planted else []
             lifts = ground.settle(rig, ground_meshes, root, frames, loop=clip.loop, ignore=planted)
             if not clip.planted or max(lifts) < SETTLED:
                 break
-            # The lift raised the planted paws with the body: the legs reach down to them again,
-            # and the next round checks the new legs don't sink.
+            if round_ == SETTLE_ROUNDS:
+                raise RuntimeError("%s: still sinking into the ground after %d rounds" % (name, SETTLE_ROUNDS))
             _lift(planned, lifts, scale)
             poses, short, _sinks = legs.plant(shape, planned, limbs, scale, rises)
             _key(rig, poses, scale)
-        else:
-            if ground_meshes and clip.planted:
-                raise RuntimeError("%s: still sinking into the ground after %d rounds" % (name, SETTLE_ROUNDS))
         if clip.loop:
             for curve in _curves(action):
                 curve.modifiers.new("CYCLES")
