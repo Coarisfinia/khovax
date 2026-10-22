@@ -4,6 +4,9 @@ clip's pose sinks, eased, and `report` samples every frame of every clip, for ch
 
 import bpy
 
+# How far above the ground (metres) a pose's lowest point is lifted to: room for the export's
+# resampling.
+CLEARANCE = 0.005
 # The words that name a foot bone in any rig: paws, feet, hooves.
 FOOT_WORDS = ("paw", "foot", "hoof")
 
@@ -30,26 +33,27 @@ def owned(obj, bones):
     return found
 
 
-def lowest(rig, meshes, bones):
-    """The lowest point of the deformed `meshes`, and of the part of them each bone in `bones`
-    moves most (a paw), in world z."""
+def lowest(rig, meshes, bones, ignore=()):
+    """The lowest point of the deformed `meshes` (but for the parts the bones in `ignore` move
+    most), and of the part of them each bone in `bones` moves most (a paw), in world z."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     low = float("inf")
     feet = {name: float("inf") for name in bones}
     for obj in meshes:
         parts = owned(obj, bones)
+        skipped = {index for indices in owned(obj, ignore).values() for index in indices}
         evaluated = obj.evaluated_get(depsgraph)
         mesh = evaluated.to_mesh()
         world = evaluated.matrix_world
         heights = [(world @ vertex.co).z for vertex in mesh.vertices]
-        low = min([low] + heights)
+        low = min([low] + [height for index, height in enumerate(heights) if index not in skipped])
         for name, indices in parts.items():
             feet[name] = min([feet[name]] + [heights[index] for index in indices])
         evaluated.to_mesh_clear()
     return low, feet
 
 
-def _envelope(needs, spread, loop):
+def envelope(needs, spread, loop):
     """A smooth curve never below `needs`: each value raised to the largest within `spread`
     frames, then averaged over as many, so a lift eases in and out instead of kinking. A loop
     wraps around its seam (its last frame is its first)."""
@@ -66,23 +70,28 @@ def _envelope(needs, spread, loop):
     return smooth + smooth[:1] if loop else smooth
 
 
-def settle(rig, meshes, root, frames, loop=False, up=1, clearance=0.005, spread=2):
+def settle(rig, meshes, root, frames, loop=False, up=1, clearance=None, spread=2, ignore=()):
     """Lifts `root` (its location's `up` axis, keyed on every one of `frames` of the active action)
     wherever the mesh would sink below the ground, so its lowest point rests `clearance` above it
     (room for the export's resampling). The lift eases in and out over `spread` frames either
-    side, so the body doesn't jerk up; the root only moves the whole body, so one pass does it."""
+    side, so the body doesn't jerk up; the root only moves the whole body, so one pass does it.
+    The parts the bones in `ignore` move most don't count (planted paws, which the root doesn't
+    move). Returns the lift on each frame."""
     scene = bpy.context.scene
+    clearance = CLEARANCE if clearance is None else clearance
     needs = []
     for frame in frames:
         scene.frame_set(frame)
-        low, _feet = lowest(rig, meshes, [])
+        low, _feet = lowest(rig, meshes, [], ignore)
         needs.append(max(0.0, clearance - low))
     bone = rig.pose.bones[root]
-    for frame, lift in zip(frames, _envelope(needs, spread, loop)):
+    lifts = envelope(needs, spread, loop)
+    for frame, lift in zip(frames, lifts):
         if lift > 0.0:
             scene.frame_set(frame)
             bone.location[up] += lift
             bone.keyframe_insert("location", frame=frame)
+    return lifts
 
 
 def report(rig, meshes, tolerance):

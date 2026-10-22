@@ -8,8 +8,7 @@ seam and jitter, as numbers with limits that fail the build.
 - **Foot sliding:** how fast a paw moves over the ground while it stands on it (its lowest point
   within CONTACT of the ground), in metres a second. The ground runs back under the model at the
   speed the game moves it while it plays the clip (`Walk=2.17`, metres a second; none given is
-  standing still). The limit holds for looping clips; a one-shot clip's lunge still drags its
-  paws until the legs plant their feet (#1073), so it is only reported.
+  standing still). The limit holds for every clip: the legs plant their paws (#1073).
 - **Loop seam** (the clips the model's .import loops): how far the last frame's pose is from the
   first's (degrees, and the root's shift in millimetres), and how rough the curves run through
   it (below). A loop that eases to a stop at its ends shows here.
@@ -36,10 +35,10 @@ from lib import ground, imported  # noqa: E402
 
 # A paw this close to the ground (metres) stands on it.
 CONTACT = 0.02
-# The limits: paw speed over the ground (m/s) on a loop, the seam's pose (degrees) and root shift
+# The limits: paw speed over the ground (m/s), the seam's pose (degrees) and root shift
 # (metres), and how rough a curve may run anywhere, the seam included (degrees a frame per frame,
 # see roughness).
-SLIDE_LIMIT = 0.6
+SLIDE_LIMIT = 0.2
 SEAM_POSE_LIMIT = 0.5
 SEAM_ROOT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
@@ -153,12 +152,12 @@ def check(rig, meshes, fps, loops, speeds):
         slide, mean, fastest = sliding(frames, feet, fps, speeds.get(action.name, 0.0))
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
-        fails = late or shake > JITTER_LIMIT
+        fails = late or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
         text = "slide %.2f m/s (mean %.2f; %s)" % (
             slide, mean, ", ".join("%s %.2f" % (name, value) for name, value in sorted(fastest.items())))
         if loop:
             pose, root, speed, jumping = seam(frames, rough)
-            fails = fails or slide > SLIDE_LIMIT or pose > SEAM_POSE_LIMIT or root > SEAM_ROOT_LIMIT
+            fails = fails or pose > SEAM_POSE_LIMIT or root > SEAM_ROOT_LIMIT
             text += "; seam %.2f deg, root %.1f mm, rough %.2f deg/frame^2 (%s)" % (
                 pose, root * 1000, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
