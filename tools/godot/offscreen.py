@@ -7,8 +7,11 @@ takes focus from the owner's session, even a one-pixel one, so every Godot run t
 
 Everything after the first `--` goes to Godot, which also gets `--display-driver x11`,
 `--rendering-driver opengl3` (the Compatibility renderer, on the CPU's llvmpipe) and
-`--audio-driver Dummy`, so the music stays silent. The display matches no screen of the owner's,
-so no `override.cfg` is needed. It exits with Godot's exit code."""
+`--audio-driver Dummy`, so the music stays silent, and `--fixed-fps 60`: every frame advances the
+game by a sixtieth of a second however fast it draws, so a script that waits a number of frames
+(the fog easing open, a camera settling) gets the same game time on any machine, and a render is
+the same each time. The display matches no screen of the owner's, so no `override.cfg` is needed.
+It exits with Godot's exit code."""
 
 import os
 import shutil
@@ -17,11 +20,12 @@ import sys
 # Godot's window, inside the virtual screen: the size of the game's own viewport.
 SCREEN = "1280x720x24"
 # The options offscreen.py sets and a caller may not override.
-FORCED = ("--display-driver", "--rendering-driver", "--audio-driver")
+FORCED = ("--display-driver", "--rendering-driver", "--audio-driver", "--fixed-fps")
 GODOT_FLAGS = [
     "--display-driver", "x11",
     "--rendering-driver", "opengl3",
     "--audio-driver", "Dummy",
+    "--fixed-fps", "60",
 ]
 
 
