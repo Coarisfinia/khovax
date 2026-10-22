@@ -48,8 +48,7 @@ func run(tree: SceneTree) -> String:
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	var carried: String = _carry(COMPANION)
-	# A fresh world the main scene starts starts in the forest too; the runner's comes back after.
-	var given: String = GameDriver.start_instance
+	# A fresh world the main scene starts starts in the forest too; the runner puts its own back.
 	GameDriver.start_instance = FlowSteps.FOREST
 	var world: World = World.new(
 		BlueprintSource.new(),
@@ -76,7 +75,6 @@ func run(tree: SceneTree) -> String:
 	kept.outbox.entries.clear()
 	if result.is_empty() and ProfileSave.to_text(kept) != carried:
 		result = "saving the world changed the profile"
-	GameDriver.start_instance = given
 	SaveStore.remove(WORLD_PATH)
 	SaveStore.remove(PROFILE_PATH)
 	return result

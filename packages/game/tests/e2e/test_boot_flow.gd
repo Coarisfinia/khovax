@@ -57,9 +57,9 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_launch_options()
 	if result.is_empty():
-		result = await _check_launched(tree)
-	if result.is_empty():
 		result = await _check_boot(tree)
+	if result.is_empty():
+		result = await _check_launched(tree)
 	return result
 
 
@@ -137,16 +137,14 @@ func _check_launch_options() -> String:
 ## Launched with `--instance=lumwen_hoal --seed=42`, the main scene starts a fresh world from that
 ## seed in
 ## the glade, the player on its start, and keeps no world on disk: the save the player's own world
-## would go to is let go of when the options are applied.
+## would go to is let go of when the options are applied. It runs last: it leaves the game launched
+## on its own options, which the runner puts back after the flow (#927).
 func _check_launched(tree: SceneTree) -> String:
-	var given: int = GameDriver.fixed_seed
-	var given_instance: String = GameDriver.start_instance
 	WorldKeeper.default_path = WorldSave.PATH
 	# Without a user folder there's nothing that can fail to apply.
 	var launch: PackedStringArray = ["--instance=" + FlowSteps.GLADE, "--seed=42"]
 	var _applied: String = LaunchOptions.parse(launch).apply()
 	if not WorldKeeper.default_path.is_empty():
-		WorldKeeper.default_path = ""
 		return "a launched test world would resume or overwrite the player's own"
 	var main: Node = await FlowGame.start(tree)
 	var driver: GameDriver = FlowGame.driver(main)
@@ -160,8 +158,6 @@ func _check_launched(tree: SceneTree) -> String:
 			driver.local_instance_name(),
 			driver.world.world_seed,
 		]
-	GameDriver.start_instance = given_instance
-	GameDriver.fixed_seed = given
 	main.queue_free()
 	await tree.process_frame
 	return result
