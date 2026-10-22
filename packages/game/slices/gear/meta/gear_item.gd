@@ -30,11 +30,11 @@ var problem: String = ""
 ## A piece of gear read from a gear file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> GearItem:
 	var item: GearItem = GearItem.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		item.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		item.problem = Content.NOT_AN_OBJECT
 		return item
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	item.id = Content.text_of(data.get("id"))
 	item.name = Content.text_of(data.get("name"))
 	item.slot = Content.text_of(data.get("slot"))
@@ -56,8 +56,9 @@ func described() -> String:
 
 ## Why the read fields are wrong, or "".
 func _check(file_id: String) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	if name.strip_edges().is_empty():
 		return "it needs a name"
 	if not GearSlots.SLOTS.has(slot):

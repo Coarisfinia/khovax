@@ -16,16 +16,16 @@ const BLANK_POINTER: String = "/$defs/blank_entry"
 ## A table read from a loot table file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> LootTable:
 	var table: LootTable = LootTable.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		table.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		table.problem = Content.NOT_AN_OBJECT
 		return table
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	table.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	table.id = Content.text_of(data.get("id"))
 	table.kind = Content.text_of(data.get("kind"))
-	if table.problem.is_empty() and (table.id != file_id or not Content.is_id(table.id)):
-		table.problem = "its id must match the file name and be lowercase words with underscores"
+	if table.problem.is_empty():
+		table.problem = Content.id_problem(table.id, file_id)
 	if table.problem.is_empty() and not LootTable.KINDS.has(table.kind):
 		table.problem = "its kind is one of %s" % [LootTable.KINDS]
 	var raw: Variant = data.get("entries")
