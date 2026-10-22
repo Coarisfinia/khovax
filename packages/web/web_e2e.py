@@ -178,8 +178,10 @@ async def heartbeat(page: Page, run: Run) -> None:
     """Asks the page every HEARTBEAT_S whether it still answers, and stops the run once it missed
     MISSES answers in a row."""
     missed = 0
+    beat = time.monotonic()
     while True:
-        asked = time.monotonic()
+        beat += HEARTBEAT_S
+        await asyncio.sleep(max(0.0, beat - time.monotonic()))
         try:
             await asyncio.wait_for(page.evaluate("() => true"), ANSWER_S)
             missed = 0
@@ -187,7 +189,6 @@ async def heartbeat(page: Page, run: Run) -> None:
             missed += 1
         if missed >= MISSES:
             run.stop(f"the page stopped answering ({MISSES} heartbeats in a row)")
-        await asyncio.sleep(max(0.0, HEARTBEAT_S - (time.monotonic() - asked)))
 
 
 async def first(*waits: asyncio.Future, timeout: float | None = None) -> None:
