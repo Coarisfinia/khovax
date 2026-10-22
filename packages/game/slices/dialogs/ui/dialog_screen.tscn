@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://slices/dialogs/ui/dialog_screen.gd" id="1_screen"]
+[ext_resource type="Script" path="res://slices/texts/ui/name_links.gd" id="2_links"]
 
 [node name="DialogScreen" type="Control"]
 layout_mode = 3
@@ -34,9 +35,9 @@ size_flags_vertical = 0
 focus_mode = 0
 icon_alignment = 1
 
-[node name="Line" type="Label" parent="Card/Rows"]
+[node name="Line" type="RichTextLabel" parent="Card/Rows"]
 layout_mode = 2
-autowrap_mode = 3
+script = ExtResource("2_links")
 
 [node name="Choices" type="VBoxContainer" parent="Card/Rows"]
 layout_mode = 2

@@ -14,9 +14,15 @@ extends Control
 ## at the card's top right (a click or a tap), or `ui_cancel` (Escape, or a controller's B) closes
 ## the card and lets the player walk; walking away or acting then closes the dialog in the state too
 ## (DialogFeature). One that holds them shows no leave button, and Escape opens the menu as ever.
-## Its text tags show the names they stand for (#733).
+## Its text tags show the names they stand for (#733), and the names that have a codex page can be
+## selected in its line (NameLinks, #959), which raises `name_selected`: a click, a long press on
+## touch, or a controller's d-pad up from the buttons to the line, left and right to the name and A.
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
+
+## A name in the line was selected (NameLinks): the kind of its tag and its id, whose codex page
+## opens.
+signal name_selected(kind: String, id: String)
 
 ## The read-on button's words: on to the next line, or the end of the dialog.
 const READ_ON_TEXT: String = "Continue"
@@ -53,7 +59,7 @@ var _font_size: int = 0
 @onready var _card: PanelContainer = $Card
 @onready var _speaker: Label = $Card/Rows/Header/Speaker
 @onready var _leave: Button = $Card/Rows/Header/Leave
-@onready var _line: Label = $Card/Rows/Line
+@onready var _line: NameLinks = $Card/Rows/Line
 @onready var _choices: VBoxContainer = $Card/Rows/Choices
 
 
@@ -64,6 +70,7 @@ func _ready() -> void:
 	_leave.icon = GameMenu.CLOSE_ICON
 	_leave.tooltip_text = LEAVE_TIP
 	var _left: int = _leave.pressed.connect(leave)
+	var _selected: int = _line.name_selected.connect(name_selected.emit)
 	if driver != null:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 
@@ -181,7 +188,12 @@ func shown_speaker() -> String:
 
 
 func shown_line() -> String:
-	return _line.text
+	return _line.get_parsed_text()
+
+
+## The line's names that have a codex page, each as its link's meta ("FACTION:amvrel_velmarai").
+func line_links() -> Array[String]:
+	return _line.links
 
 
 ## Sizes the text to a screen of `screen` pixels and keeps the card at its bottom's middle (tests
@@ -204,7 +216,7 @@ func _show_line(index: int) -> void:
 	line_index = index
 	var line: DialogLine = dialog.lines[index]
 	_speaker.text = TextTags.shown(dialog.speaker)
-	_line.text = TextTags.shown(line.text)
+	_line.show_tagged(line.text)
 	# The old buttons leave at once, so the card never shows both lines' buttons.
 	for old: Button in _buttons():
 		_choices.remove_child(old)
@@ -271,7 +283,8 @@ func _ease(opening: bool) -> void:
 
 
 ## While the menu is open over the dialog its buttons rest, so A or Enter in the menu can't answer
-## behind it; once it closes, the first button takes the focus back if none of them has it.
+## behind it; once it closes, the first button takes the focus back if neither they nor the line
+## have it.
 func _follow_menu() -> void:
 	if dialog == null or input == null:
 		return
@@ -281,7 +294,8 @@ func _follow_menu() -> void:
 	_leave.visible = not _holds()
 	_leave.disabled = input.blocked
 	var focused: Control = get_viewport().gui_get_focus_owner()
-	if not input.blocked and not live.is_empty() and not live.has(focused):
+	var on_card: bool = focused == _line or (focused is Button and live.has(focused as Button))
+	if not input.blocked and not live.is_empty() and not on_card:
 		live[0].grab_focus()
 
 
