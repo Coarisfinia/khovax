@@ -84,14 +84,17 @@ test and the other tools take it too.
 ### On the web build
 
 CI also plays the device flow on the web test build in headless Chrome (`web-e2e`). To run it
-yourself, with Bun (`scoop install bun`) and a
+yourself, with uv and a
 [chrome-headless-shell](https://googlechromelabs.github.io/chrome-for-testing/) download (the
-version CI pins in `.github/workflows/ci.yml`):
+version CI pins in `.github/workflows/ci.yml`), from the repository's root. The run films itself
+with Playwright's ffmpeg, which `playwright install ffmpeg` fetches once; `EXPECTED_HASH` is the
+state hash the headless run of the same flow ends in:
 
 ```sh
 godot --headless --path packages/game --export-release "Web Test" build/web-test/index.html
-bun install --cwd packages/game/tests/web
-CHROME=<path to chrome-headless-shell> bun packages/game/tests/web/web_e2e.ts packages/game/build/web-test
+uv run --locked --package khovax-web playwright install ffmpeg
+CHROME=<path to chrome-headless-shell> EXPECTED_HASH=<hash> \
+  uv run --locked --package khovax-web packages/web/web_e2e.py packages/game/build/web-test
 ```
 
 ### Load test

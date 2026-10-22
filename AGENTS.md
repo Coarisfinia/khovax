@@ -516,7 +516,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   and no separate unit tests while the flows already check the same things (owner, #61).
 - **Exactly one e2e flow runs on the devices** (owner's rule, #61, #102, #113):
   `tests/apk/apk_flow.gd`, on an Android emulator (`apk-e2e`), in headless Chrome (`web-e2e`,
-  `tests/web/web_e2e.ts`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
+  the repository's `packages/web/web_e2e.py`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
   started by `game/test_mode.gd` in the test builds only (the `e2e_test` export feature). It
   starts from a fixed seed, scripts its touches per tick, and must end in the same state hash as
   the same flow played headless for the same commit (`tests/e2e/test_apk_flow.gd`, in the
@@ -616,7 +616,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
   tooling, one workspace member per job: `checks/` (CI's checks of the game), `replays/` (comparing
   replays, load tests and the APK flow), `build/` (export helpers), `models/` (the Blender model
-  scripts) and `offscreen/` (Godot on a private display). The GDScript tools Godot runs stay in the
+  scripts), `offscreen/` (Godot on a private display) and `web/` (the web e2e in headless Chrome,
+  #1041). A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
   game, in `packages/game/tools/` (`godot/`, and `models/` for the model checks and renders),
   since Godot only runs scripts under `res://`. `tools/scoop/` holds the pinned scoop manifests.
   New tooling is Python, run with uv from the repository's root (`uv run --locked
