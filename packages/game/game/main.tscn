@@ -59,6 +59,8 @@
 [ext_resource type="Script" path="res://slices/input_prompts/ui/device_in_use.gd" id="54_device_in_use"]
 [ext_resource type="Script" path="res://slices/codex/meta/bestiary_keeper.gd" id="bestiary_keeper"]
 [ext_resource type="Script" path="res://slices/codex/look/bestiary_tie.gd" id="bestiary_tie"]
+[ext_resource type="Script" path="res://slices/codex/meta/codex_keeper.gd" id="55_codex_keeper"]
+[ext_resource type="PackedScene" path="res://slices/codex/ui/codex_book.tscn" id="56_codex_book"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -86,7 +88,7 @@ driver = NodePath("../Driver")
 
 [node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=2066135784]
 script = ExtResource("11_profile")
-companions = [NodePath("../QuestKeeper"), NodePath("../BestiaryKeeper")]
+companions = [NodePath("../QuestKeeper"), NodePath("../BestiaryKeeper"), NodePath("../CodexKeeper")]
 
 [node name="QuestKeeper" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=2066135787]
 script = ExtResource("48_quest_keeper")
@@ -102,6 +104,10 @@ driver = NodePath("../Driver")
 bus = NodePath("../EventBus")
 input = NodePath("../LocalInput")
 keeper = NodePath("../BestiaryKeeper")
+
+[node name="CodexKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
+script = ExtResource("55_codex_keeper")
+holder = NodePath("../ProfileHolder")
 
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")
@@ -366,6 +372,10 @@ stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
 quest_keeper = NodePath("../../QuestKeeper")
 
+[node name="Codex" parent="Hud/GameMenu" node_paths=PackedStringArray("keeper", "page") instance=ExtResource("56_codex_book")]
+keeper = NodePath("../../../CodexKeeper")
+page = NodePath("../../CodexPage")
+
 [node name="CodexPage" type="Control" parent="Hud" node_paths=PackedStringArray("input", "driver")]
 layout_mode = 3
 anchors_preset = 15
@@ -382,3 +392,4 @@ driver = NodePath("../../Driver")
 script = ExtResource("54_device_in_use")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
+[connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]

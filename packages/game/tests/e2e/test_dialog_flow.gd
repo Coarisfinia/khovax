@@ -95,7 +95,7 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 	Input.action_release("move_right")
 	if standing.move != Command.NO_MOVE:
 		return "the player walked while the dialog was open"
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	if screen.line_index != 1 or screen.choices().size() != 2:
 		return "A didn't read on to the line with answers: %s" % [screen.choices()]
 	if _answered(driver).size() > 0:
@@ -132,14 +132,14 @@ static func _codex_by_controller(
 	screen: DialogScreen,
 ) -> String:
 	var line: Control = screen.get_node("Card/Rows/Line") as Control
-	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_UP)
 	if screen.get_viewport().gui_get_focus_owner() != line:
 		return "the d-pad up didn't reach the line's names"
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	var shown: String = _page_problem(page, driver)
 	if not shown.is_empty():
 		return "A on the name: " + shown
-	_press_pad(screen, JOY_BUTTON_B)
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
 	if page.is_open() or driver.input.blocked or screen.line_index != 1:
 		return "B didn't close the page back to the dialog's line"
 	if screen.get_viewport().gui_get_focus_owner() != line:
@@ -147,7 +147,7 @@ static func _codex_by_controller(
 	var speaker: String = _speaker_by_controller(page, driver, screen)
 	if not speaker.is_empty():
 		return speaker
-	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	return "" if _focused(screen) == 0 else "the d-pad down from the line didn't reach the answers"
 
 
@@ -162,10 +162,10 @@ static func _speaker_by_controller(
 	var speaker: NameLinks = screen.get_node("Card/Rows/Header/Speaker") as NameLinks
 	if speaker.links != ["PERSON:teska_na_amvrel"]:
 		return "the speaker's name links %s" % [speaker.links]
-	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_UP)
 	if screen.get_viewport().gui_get_focus_owner() != speaker:
 		return "the d-pad up from the line didn't reach the speaker's name"
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	var gloss: String = page.gloss.get_parsed_text()
 	if (not page.is_open()
 			or not driver.input.blocked
@@ -179,10 +179,10 @@ static func _speaker_by_controller(
 			page.title.text,
 			gloss,
 		]
-	_press_pad(screen, JOY_BUTTON_B)
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
 	if page.is_open() or screen.get_viewport().gui_get_focus_owner() != speaker:
 		return "B didn't close the speaker's page back to their name"
-	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	if screen.get_viewport().gui_get_focus_owner() != screen.get_node("Card/Rows/Line"):
 		return "the d-pad down from the speaker's name didn't reach the line"
 	return ""
@@ -201,7 +201,7 @@ func _codex_by_pointer(
 	await tree.process_frame
 	await tree.process_frame
 	var spot: Vector2 = _name_spot(screen.get_node("Card/Rows/Line") as NameLinks)
-	_tap(screen, spot, InputEvent.DEVICE_ID_MOUSE)
+	FlowInput.tap(screen, spot, InputEvent.DEVICE_ID_MOUSE)
 	var shown: String = _page_problem(page, driver)
 	if not shown.is_empty():
 		return "a click on the name: " + shown
@@ -212,17 +212,17 @@ func _codex_by_pointer(
 	if page.is_open() or not screen.is_open():
 		return "Escape didn't close the page back to the dialog"
 	await tree.process_frame
-	_tap(screen, spot, InputEvent.DEVICE_ID_EMULATION)
+	FlowInput.tap(screen, spot, InputEvent.DEVICE_ID_EMULATION)
 	if page.is_open():
 		return "a tap on the name opened its page"
 	await _hold(tree, screen, spot)
 	shown = _page_problem(page, driver)
 	if not shown.is_empty():
 		return "a long press on the name: " + shown
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	if page.is_open():
 		return "A on the page's close button didn't close it"
-	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	return "" if _focused(screen) == 0 else "the d-pad down didn't go back to the answers"
 
 
@@ -307,34 +307,14 @@ static func _name_spot(line: NameLinks) -> Vector2:
 	return line.get_global_rect().position + middle
 
 
-## Presses the left button at `at` and lets go at once, from `device`: the mouse, or a touch as
-## Godot emulates a mouse from it.
-static func _tap(screen: DialogScreen, at: Vector2, device: int) -> void:
-	var press: InputEventMouseButton = _left_button(at, device)
-	screen.get_viewport().push_input(press)
-	var lift: InputEventMouseButton = press.duplicate() as InputEventMouseButton
-	lift.pressed = false
-	screen.get_viewport().push_input(lift)
-
-
 ## Rests a touch on `at` for longer than a long press takes, then lifts it.
 static func _hold(tree: SceneTree, screen: DialogScreen, at: Vector2) -> void:
-	var press: InputEventMouseButton = _left_button(at, InputEvent.DEVICE_ID_EMULATION)
+	var press: InputEventMouseButton = FlowInput.left_button(at, InputEvent.DEVICE_ID_EMULATION)
 	screen.get_viewport().push_input(press)
 	await tree.create_timer(NameLinks.LONG_PRESS_MS / 1000.0 + 0.2).timeout
 	var lift: InputEventMouseButton = press.duplicate() as InputEventMouseButton
 	lift.pressed = false
 	screen.get_viewport().push_input(lift)
-
-
-## The left button pressed at `at`, from `device`.
-static func _left_button(at: Vector2, device: int) -> InputEventMouseButton:
-	var press: InputEventMouseButton = InputEventMouseButton.new()
-	press.device = device
-	press.button_index = MOUSE_BUTTON_LEFT
-	press.position = at
-	press.pressed = true
-	return press
 
 
 ## The d-pad moves the focus down to the second answer and back up; A chooses the first, which
@@ -346,12 +326,12 @@ func _choose_with_controller(
 	screen: DialogScreen,
 ) -> String:
 	await tree.process_frame
-	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	var down: int = _focused(screen)
-	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_UP)
 	if down != 1 or _focused(screen) != 0:
 		return "the d-pad moved the focus to %d and back to %d" % [down, _focused(screen)]
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	var answered: Array[DialogAnswered] = _answered(driver)
 	if screen.line_index != 2 or screen.choices() != ["I'll take a look."]:
 		return "asking about Lumwen Hoal showed %s" % [screen.choices()]
@@ -381,8 +361,8 @@ static func _bestiary_by_controller(
 ) -> String:
 	if screen.line_links() != ["MONSTER:ombulumo"]:
 		return "the line about Lumwen Hoal had the links %s" % [screen.line_links()]
-	_press_pad(screen, JOY_BUTTON_DPAD_UP)
-	_press_pad(screen, JOY_BUTTON_A)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_UP)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	if not page.is_open() or not driver.input.blocked:
 		return "A on the Ombulumo's name didn't open its page"
 	var gloss: String = page.gloss.get_parsed_text()
@@ -394,10 +374,10 @@ static func _bestiary_by_controller(
 			or not page.beast.visible
 			or page.beast.shown.back() != BestiaryEntry.NOT_KNOWN_TEXT):
 		return "the Ombulumo's page showed %s, %s, %s" % [page.title.text, gloss, page.beast.shown]
-	_press_pad(screen, JOY_BUTTON_B)
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
 	if page.is_open():
 		return "B didn't close the Ombulumo's page"
-	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	return "" if _focused(screen) == 0 else "the d-pad down didn't go back to the answer"
 
 
@@ -534,7 +514,7 @@ func _leave_and_walk_away(
 	screen: DialogScreen,
 ) -> String:
 	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
-	_press_pad(screen, JOY_BUTTON_B)
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
 	if screen.is_open() or driver.input.in_dialog or dialogs.dialog_of(0) != GREETING:
 		return "B didn't leave the card with the greeting still open in the state"
 	_hold_key(driver, &"move_left", MovementFeature.MOVE_TICKS * 2)
@@ -718,17 +698,6 @@ static func _talked(events: Array[RefCounted]) -> Array[NpcTalkedTo]:
 		if event is NpcTalkedTo:
 			talked.append(event as NpcTalkedTo)
 	return talked
-
-
-## Presses and lets go of a controller's `button`, as the screen's viewport hears it.
-static func _press_pad(screen: DialogScreen, button: JoyButton) -> void:
-	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
-	pad.button_index = button
-	pad.pressed = true
-	screen.get_viewport().push_input(pad)
-	var lift: InputEventJoypadButton = pad.duplicate() as InputEventJoypadButton
-	lift.pressed = false
-	screen.get_viewport().push_input(lift)
 
 
 func _hear(_tick: int, events: Array[RefCounted]) -> void:
