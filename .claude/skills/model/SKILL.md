@@ -193,8 +193,11 @@ a second model could use goes into the library or a generic tool, never into one
    > as its creature at 128 px; (9) cute or fierce as intended, versus uncanny. Then name
    > anything that looks broken in either one, with where it is.
 
-   Unblind its answers, fix every item where the candidate loses (unless the owner asked for
-   that change), and put the table in the PR. A reviewer that only praises has failed: rerun it
+   Unblind its answers and put the table in the PR. Fix every item where the candidate loses,
+   and treat every item where the two **measure** differently as a change to justify, whatever
+   the reviewer preferred: a fresh eye measures reliably but can talk itself into liking a derp
+   (on #1072 it measured close-set eyes correctly and still called them more focused). Only a
+   change the owner asked for stays unfixed. A reviewer that only praises has failed: rerun it
    with a fresh subagent.
 
 ## 5. PR

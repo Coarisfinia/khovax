@@ -107,14 +107,15 @@ def figure(pixels):
 		return pixels[..., 3] > 0.5
 	corners = numpy.concatenate([pixels[:8, :8], pixels[:8, -8:], pixels[-8:, :8], pixels[-8:, -8:]])
 	background = corners[..., :3].reshape(-1, 3).mean(axis=0)
-	return numpy.abs(pixels[..., :3] - background).max(axis=2) > 0.15
+	return numpy.abs(pixels[..., :3] - background).max(axis=2) > 0.05
 
 
 def box(mask):
 	"""The rows and columns the figure spans."""
 	rows, columns = numpy.nonzero(mask)
 	if rows.size == 0:
-		sys.exit("an empty silhouette: nothing was rendered")
+		print("COMPARE CHECK: FAIL (an empty silhouette: nothing was rendered, or the image has no figure)")
+		sys.exit(1)
 	return slice(rows.min(), rows.max() + 1), slice(columns.min(), columns.max() + 1)
 
 
@@ -258,7 +259,8 @@ for view in views:
 		their_tile, their_game = over_grey(theirs), game_size(theirs)
 	else:
 		theirs = read(reference_path)
-		their_tile, their_game = fit(theirs), None
+		their_tile = fit(theirs)
+		their_game = game_size(their_tile)
 	results[view] = measure(figure(theirs), figure(ours))
 	rows.append((view, their_tile, over_grey(ours), overlay(figure(theirs), figure(ours)), their_game,
 				 game_size(ours)))
@@ -282,8 +284,7 @@ for index, (view, their_tile, our_tile, mix, their_game, our_game) in enumerate(
 	left = GAP + 3 * (SIZE + GAP)
 	labels.append((left, top - 20, "%d px" % GAME))
 	for slot, small in enumerate((their_game, our_game)):
-		if small is not None:
-			pixels[top + slot * (GAME + GAP):top + slot * (GAME + GAP) + GAME, left:left + GAME] = small
+		pixels[top + slot * (GAME + GAP):top + slot * (GAME + GAP) + GAME, left:left + GAME] = small
 	result = results[view]
 	labels.append((GAP, top + SIZE + 4, "match %.3f   width bands, ours minus reference: %s" % (
 		result["match"], " ".join("%+.2f" % d for d in result["band_diff"]))))

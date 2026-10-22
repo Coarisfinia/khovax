@@ -20,19 +20,24 @@ TOLERANCE = 0.05
 SYMMETRY_TOLERANCE = 0.02
 
 
+# Everything is measured in the rig's own space, so where the rig stands doesn't matter: its X = 0
+# is the plane the left and right sides mirror across, and its Z = 0 the ground under the feet.
+
+
 def _joint(rig, name):
     bone = rig.data.bones.get(name)
-    return None if bone is None else rig.matrix_world @ bone.head_local
+    return None if bone is None else bone.head_local.copy()
 
 
-def _owned(meshes, bones):
-    """The rest positions of the vertices each bone in `bones` moves most, in world space."""
+def _owned(rig, meshes, bones):
+    """The rest positions of the vertices each bone in `bones` moves most."""
+    to_rig = rig.matrix_world.inverted()
     points = []
     for obj in meshes:
         groups = {group.index for group in obj.vertex_groups if group.name in bones}
         for vertex in obj.data.vertices:
             if vertex.groups and max(vertex.groups, key=lambda g: g.weight).group in groups:
-                points.append(obj.matrix_world @ vertex.co)
+                points.append(to_rig @ obj.matrix_world @ vertex.co)
     return points
 
 
@@ -46,7 +51,7 @@ class Body:
 
     def __init__(self, rig, meshes):
         hips, chest = _joint(rig, "hips"), _joint(rig, "neck")
-        head = _owned(meshes, {"head"})
+        head = _owned(rig, meshes, {"head"})
         # The torso, along the spine: the hips to the base of the neck.
         self.body = abs(hips.y - chest.y) if hips is not None and chest is not None else None
         # The head's skin (jaw and ears are their own bones): long along the facing axis (Y),
@@ -54,8 +59,10 @@ class Body:
         self.head_length = _extent(head, 1)
         self.head_height = _extent(head, 2)
         self.head_width = _extent(head, 0)
+        # The front leg's height: the shoulder above the bottom of its paw.
         shoulder = _joint(rig, "upper_arm.L")
-        self.leg = shoulder.z if shoulder is not None else None
+        paw = _owned(rig, meshes, {"front_paw.L"})
+        self.leg = shoulder.z - min(point.z for point in paw) if shoulder is not None and paw else None
         self.ear = self._reach(rig, meshes, "ear.L", {"ear.L"})
         tail_bones = {bone.name for bone in rig.data.bones if bone.name.startswith("tail_")}
         self.tail = self._reach(rig, meshes, "tail_01", tail_bones)
@@ -66,7 +73,7 @@ class Body:
     def _reach(rig, meshes, root, bones):
         """How far the mesh `bones` move reaches from `root`'s joint: an ear's or a tail's length."""
         start = _joint(rig, root)
-        points = _owned(meshes, bones)
+        points = _owned(rig, meshes, bones)
         return max((point - start).length for point in points) if start is not None and points else None
 
 
@@ -101,10 +108,9 @@ SYMMETRY = {
 
 
 def measure(rig, meshes):
-    """Every measure the rig allows, by name (a measure it lacks bones for is left out)."""
+    """Every measure by name, None where the rig lacks its bones."""
     body = Body(rig, meshes)
-    found = {name: rule(body) for name, rule in (RATIOS | SYMMETRY).items()}
-    return {name: value for name, value in found.items() if value is not None}
+    return {name: rule(body) for name, rule in (RATIOS | SYMMETRY).items()}
 
 
 def check(rig, meshes, reference):
@@ -117,7 +123,8 @@ def check(rig, meshes, reference):
     for name in sorted(found.keys() | reference.keys()):
         value, wanted = found.get(name), reference.get(name)
         if wanted is None:
-            lines.append("note %s: %.3f (not in REFERENCE)" % (name, value))
+            taken = "can't be measured on this rig" if value is None else "%.3f" % value
+            lines.append("note %s: %s (not in REFERENCE)" % (name, taken))
             continue
         if value is None:
             lines.append("FAIL %s: can't be measured on this rig" % name)

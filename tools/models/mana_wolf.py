@@ -56,7 +56,7 @@ REFERENCE = {
     "head/body": 0.866,
     "head height/length": 0.742,
     "head width/length": 0.558,
-    "leg/body": 1.167,
+    "leg/body": 1.177,
     "ear/head": 0.318,
     "tail/body": 1.512,
     "eye spacing/head width": 0.566,
