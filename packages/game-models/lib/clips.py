@@ -1,5 +1,5 @@
-"""Clips: poses keyed into one action per clip, and a quadruped's standard set (Idle, Walk, Run,
-Attack, Hit, Faint) that any model built on quadruped.armature can use or adjust. A pose is
+"""Clips: poses keyed into one action per clip, and a quadruped's standard set (every creature
+clip, clip_set) that any model built on quadruped.armature can use or adjust. A pose is
 {bone: (rx, ry, rz)} in radians about the bone's own axes (quadruped: X bends, Z sways), plus
 "root_loc" for the root's (sideways, up, forward) shift in the model's unscaled metres: the root
 bone points up, so its own Y axis is up and its Z axis forward. The legs aren't posed by angle:
@@ -10,7 +10,7 @@ import math
 
 import bpy
 
-from . import ground, legs, motion, scene
+from . import clip_set, ground, legs, motion, scene
 
 
 def cycle_frames(speed, stride, fps):
@@ -309,7 +309,11 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS, over
     root onto it, and the legs reach down again to their planted paws. Prints how far any leg
     fell short of its planted paw per clip, and fails past legs.REACH_TOLERANCE. `overlays` are
     functions that add channels of their own to every clip once it's filled in (its name, its
-    poses, every frame, and whether it loops), before the chains trail, like wisps.Wisps.drift."""
+    poses, every frame, and whether it loops), before the chains trail, like wisps.Wisps.drift.
+    It refuses a set of `clips` without every creature clip (clip_set, #1157)."""
+    lacking = clip_set.missing(clips)
+    if lacking:
+        raise ValueError("a creature needs every clip of lib/clip_set.py; missing: " + ", ".join(lacking))
     rig.animation_data_create()
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="POSE")
