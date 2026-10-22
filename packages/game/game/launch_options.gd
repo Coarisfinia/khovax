@@ -5,7 +5,6 @@ extends RefCounted
 ## `godot --path packages/game -- --instance=lumwen_hoal --seed=42`:
 ## - `--seed=<n>`: a fresh world starts from this seed (0 or more) instead of rolling one.
 ## - `--instance=<blueprint>`: the session starts in this instance blueprint, on its start.
-## - `--invincible`: the player takes no damage. Reserved: nothing hurts players yet (#220, #221).
 ## - `--user-dir=<name>`: `user://` (saves, settings, the tests' files) is the folder
 ## `khovax_<name>`
 ##   in the system's data folder instead of the project's own (#786), so local runs in parallel
@@ -15,7 +14,6 @@ extends RefCounted
 
 const SEED: String = "--seed="
 const INSTANCE: String = "--instance="
-const INVINCIBLE: String = "--invincible"
 const USER_DIR: String = "--user-dir="
 ## The renderer's shader cache, inside the user folder.
 const SHADER_CACHE: String = "shader_cache"
@@ -26,7 +24,6 @@ const USER_DIR_PREFIX: String = "khovax_"
 var seed_value: int = GameDriver.ROLLED_SEED
 ## The instance blueprint to start in, or "" for the main scene's own.
 var instance: String = ""
-var invincible: bool = false
 ## The name `user://` is redirected to, or "" for the default folder.
 var user_dir: String = ""
 ## Why the options can't be used, or "" when they can.
@@ -48,8 +45,6 @@ static func parse(args: PackedStringArray) -> LaunchOptions:
 			options.seed_value = value.to_int()
 		elif arg.begins_with(INSTANCE) and InstanceBlueprints.names().has(value):
 			options.instance = value
-		elif arg == INVINCIBLE:
-			options.invincible = true
 		elif arg.begins_with(USER_DIR) and value.is_valid_filename():
 			options.user_dir = value
 		elif arg.begins_with(USER_DIR):
