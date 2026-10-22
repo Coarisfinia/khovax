@@ -44,9 +44,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 func hash_values() -> Array[int]:
 	var values: Array[int] = [fired.size()]
 	values.append_array(fired)
-	# Only where someone stands in a place, so regions without places hash as before.
-	if not standing.areas.is_empty():
-		values.append_array(standing.flat())
+	values.append(standing.areas.size())
+	values.append_array(standing.flat())
 	return values
 
 
@@ -64,10 +63,11 @@ func load_values(state: GameState, values: DataReader) -> void:
 	var saved: Array[int] = values.wholes("fired", 0, triggers.size() - 1)
 	fired.clear()
 	for index: int in saved:
-		if not fired.has(index):
-			fired.append(index)
+		if fired.has(index):
+			values.fail("fired holds %d twice" % index)
+			return
+		fired.append(index)
 	fired.sort()
-	# A save from before places were remembered has none: everyone stands in no place.
 	var places: Dictionary[Vector2i, String] = _places()
 	standing.load_flat(state, values, "standing", AreaStanding.ids_of(places).size())
 
