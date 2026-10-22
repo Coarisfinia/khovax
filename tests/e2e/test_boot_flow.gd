@@ -471,7 +471,11 @@ func _check_wild_monster_lunges(
 	var monster: Entity = driver.state.entity(feature.monsters[0])
 	var target: Vector2i = monster.tile + Hex.DIRECTIONS[0]
 	var model: Node3D = view.figures[monster.id].get_child(0) as Node3D
-	var elsewhere: String = _check_struck_elsewhere(driver, view, monster)
+	# Its eyes glow in its type's colour, with no leaning, as no player's (#1063).
+	var elsewhere: String = _check_wild_glow(model, feature.species_of(monster.id))
+	if not elsewhere.is_empty():
+		return elsewhere
+	elsewhere = _check_struck_elsewhere(driver, view, monster)
 	if not elsewhere.is_empty():
 		return elsewhere
 	var events: Array[RefCounted] = [WildMonsterStruck.new(monster.id, 0, target, 1)]
@@ -489,6 +493,15 @@ func _check_wild_monster_lunges(
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS)
 	if not lunged or not model.position.is_zero_approx():
 		return "a wild monster's hit didn't lunge its figure toward the struck tile and back"
+	return ""
+
+
+## The eyes of a wild monster of `species_id`, wearing `model`, glow in its type's colour, with no
+## leaning, as no player's (#1063).
+func _check_wild_glow(model: Node3D, species_id: String) -> String:
+	var glow: EyeGlow = EyeGlow.of(model)
+	if glow.color != TypeGlow.of(species_id) or glow.leaning != PathMark.NONE:
+		return "a wild monster's eyes don't glow in its type's colour, with no leaning"
 	return ""
 
 

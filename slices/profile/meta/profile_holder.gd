@@ -129,6 +129,12 @@ func chose_personal_color() -> bool:
 	return personal_color() != Profile.AUTO_COLOR
 
 
+## The path this machine's player leans toward (PathLeaning.toward), PathMark.NONE also while the
+## save can't be read: their companion's eyes show it (#1063).
+func leaning() -> String:
+	return keeper.profile.leaning.toward() if keeper != null else PathMark.NONE
+
+
 ## Names this player's character (#399); returns why the name was refused, in words, or "".
 func choose_name(typed: String) -> String:
 	if keeper == null:
