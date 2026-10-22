@@ -277,7 +277,10 @@ a second model could use goes into the library or a generic tool, never into one
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
    point to a face order, values off by a hair to float noise. Run it after the last build, before
    committing the `.glb`. CI runs it with `--all` (every script named like a `.glb` under the
-   game's `assets/`) whenever a model, its script or the library changes (#1161).
+   game's `assets/`) whenever a model, its script or the library changes (#1161), with Blender in
+   an Ubuntu 24.04 container: the C library's maths differs between releases in the last bit, and
+   the decimation and face order turn that into a different file. So build committed models on
+   Ubuntu 24.04 (this machine's WSL); moving to another release moves CI's container with it.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
