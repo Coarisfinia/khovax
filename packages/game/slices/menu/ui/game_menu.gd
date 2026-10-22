@@ -43,8 +43,8 @@ const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
 ## How wide the menu's icons are, in font sizes: a little larger than the text, so they read as
 ## clearly.
 const ICON_FONTS: float = 1.3
-## The close button's words on hover: it shows only its icon.
-const CLOSE_TIP: String = "Close the menu (Escape, or B or Start on a controller)"
+## The close button's words on hover: it shows only its icon, and its glyph the key (#583).
+const CLOSE_TIP: String = "Close the menu"
 const CLOSE_NAME: String = "Close"
 
 ## The driver, which holds its ticks while the menu pauses the game.
@@ -268,6 +268,7 @@ func _build_sheet() -> void:
 	row.add_child(tabs)
 	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
 	close.name = CLOSE_NAME
+	var _glyph: ActionGlyph = ActionGlyph.badge(close, &"ui_cancel")
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(close)
 	_sheet.add_child(row)

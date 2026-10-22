@@ -21,7 +21,10 @@ extends RefCounted
 ## and the held one again from the tick after the dialog lets go. A dialog that doesn't hold its
 ## player can be left (#970): a controller's B or the leave button closes the card, and the player
 ## walks again; walking away or acting closes the dialog in the state, while bumping into the person
-## doesn't, and talking to them again opens it at its first line.
+## doesn't, and talking to them again opens it at its first line. The focused answer and the
+## leave button show the key or controller button that presses them, for the device used last
+## (#583): Enter and Escape after a key, A and B after a controller's button, none after a touch;
+## a stick barely moved and Godot's mouse stand-in for a touch change nothing.
 
 const PROFILE: String = "user://test_dialog_profile.json"
 const GREETING: String = "teska_na_amvrel_greeting"
@@ -75,7 +78,8 @@ func run(tree: SceneTree) -> String:
 
 ## The greeting opens at its first line, by Teska na Amvrel, with one button to read on, which has
 ## the focus; the player stands while it's open; A reads on to the line with two answers, raising
-## nothing, whose faction's name opens its codex page (_open_codex).
+## nothing, where the glyphs follow the device used last, and whose faction's name opens its
+## codex page (_open_codex).
 func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
 	if not screen.open(GREETING) or not driver.input.in_dialog:
 		return "Teska na Amvrel's greeting didn't open"
@@ -95,6 +99,9 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 		return "A didn't read on to the line with answers: %s" % [screen.choices()]
 	if _answered(driver).size() > 0:
 		return "reading on raised an answer"
+	var glyphs: String = _glyphs_follow_device(screen)
+	if not glyphs.is_empty():
+		return glyphs
 	return await _open_codex(tree, driver, screen)
 
 
@@ -190,6 +197,60 @@ static func _page_problem(page: CodexPage, driver: GameDriver) -> String:
 			or page.standing.text != CodexPage.NEUTRAL_TEXT):
 		return "the page showed %s, %s, %s" % [page.title.text, gloss, page.standing.text]
 	return ""
+
+
+## On the line with two answers, the first focused: the glyphs follow the device used last, and only
+## the focused answer shows one.
+static func _glyphs_follow_device(screen: DialogScreen) -> String:
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	var leave: Button = screen.get_node("Card/Rows/Header/Leave") as Button
+	var shown: Array[ActionGlyph] = [_glyph(_buttons(screen)[0]), _glyph(_buttons(screen)[1])]
+	shown.append(_glyph(leave))
+	var result: String = ""
+	for step: Array in _device_steps():
+		for event: InputEvent in step[1]:
+			screen.get_viewport().push_input(event)
+		var glyphs: Array[Texture2D] = []
+		for glyph: ActionGlyph in shown:
+			glyph.follow()
+			glyphs.append(glyph.texture)
+		if result.is_empty() and glyphs != step[2]:
+			result = "after %s the answers and the leave button showed %s" % [step[0], glyphs]
+	DeviceInUse.device = kept
+	return result
+
+
+## Each step of _glyphs_follow_device: what it does, its events, and the glyphs the focused
+## answer, the other answer and the leave button then show.
+static func _device_steps() -> Array[Array]:
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_SHIFT
+	var stick: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	stick.axis_value = DeviceInUse.DEADZONE / 2.0
+	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
+	pad.button_index = JOY_BUTTON_MISC1
+	var stand_in: InputEventMouseButton = InputEventMouseButton.new()
+	stand_in.device = InputEvent.DEVICE_ID_EMULATION
+	var keys: Array[Texture2D] = [InputGlyphs.KEYS[KEY_ENTER], null, InputGlyphs.KEYS[KEY_ESCAPE]]
+	var none: Array[Texture2D] = [null, null, null]
+	return [
+		["a key", [key], keys],
+		[
+			"a controller's button after a barely moved stick",
+			[stick, pad],
+			[InputGlyphs.BUTTONS[JOY_BUTTON_A], null, InputGlyphs.BUTTONS[JOY_BUTTON_B]],
+		],
+		["a touch and its mouse stand-in", [InputEventScreenTouch.new(), stand_in], none],
+		["a key again", [key], keys],
+	]
+
+
+## The glyph badge on `button`.
+static func _glyph(button: Button) -> ActionGlyph:
+	for child: Node in button.get_children():
+		if child is ActionGlyph:
+			return child as ActionGlyph
+	return null
 
 
 ## Where the line shows the middle of "Amvrel", the first word of its link, in the viewport.

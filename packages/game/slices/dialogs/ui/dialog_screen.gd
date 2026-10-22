@@ -17,6 +17,8 @@ extends Control
 ## Its text tags show the names they stand for (#733), and the names that have a codex page can be
 ## selected in its line (NameLinks, #959), which raises `name_selected`: a click, a long press on
 ## touch, or a controller's d-pad up from the buttons to the line, left and right to the name and A.
+## The focused button and the leave button show the key or controller button that presses them,
+## for the device in use (#583, ActionGlyph).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
@@ -38,8 +40,8 @@ const WIDTH_FONTS: float = 26.0
 const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest height, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
-## The leave button's words on hover: it shows only the menu's close icon.
-const LEAVE_TIP: String = "Leave (Escape, or B on a controller)"
+## The leave button's words on hover: it shows only the menu's close icon, and its glyph the key.
+const LEAVE_TIP: String = "Leave"
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
@@ -69,6 +71,7 @@ func _ready() -> void:
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
 	_leave.icon = GameMenu.CLOSE_ICON
 	_leave.tooltip_text = LEAVE_TIP
+	var _glyph: ActionGlyph = ActionGlyph.badge(_leave, &"ui_cancel")
 	var _left: int = _leave.pressed.connect(leave)
 	var _selected: int = _line.name_selected.connect(name_selected.emit)
 	if driver != null:
@@ -235,6 +238,8 @@ func _add_button(text: String, pressed: Callable) -> void:
 	made.text = text
 	made.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var _connected: int = made.pressed.connect(pressed)
+	# A confirm presses the focused button only.
+	var _glyph: ActionGlyph = ActionGlyph.badge(made, &"ui_accept", true)
 	_choices.add_child(made)
 
 
