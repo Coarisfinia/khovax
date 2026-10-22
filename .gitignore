@@ -4,9 +4,9 @@
 export_presets.cfg.local
 *.translation
 
-# Builds
-/build/
-/export/
+# Builds (Godot's relative export paths are the project's, #1101)
+/packages/game/build/
+/packages/game/export/
 
 # OS / editor
 .DS_Store
@@ -14,13 +14,13 @@ Thumbs.db
 .vscode/
 *.tmp
 
-# The web e2e runner's dependencies (tests/web/)
+# The web e2e runner's dependencies (packages/game/tests/web/)
 node_modules/
 
 # A local render's window settings (AGENTS.md, "Before you push"); never committed.
-/override.cfg
+/packages/game/override.cfg
 
 # uv's environment for the Python tooling (pyproject.toml)
 .venv/
-# Python bytecode from the Blender model scripts (tools/models/lib/).
+# Python bytecode from the Blender model scripts (packages/models/lib/).
 __pycache__/
