@@ -3,7 +3,8 @@ script but as many at once as the machine has cores (#923). Every failing script
 only the first. A script fails when Godot exits non-zero or when its output has an ERROR: line,
 even with exit 0 (such as a load cycle through a preloaded scene, #964).
 
-    [GODOT=<binary>] uv run --locked packages/game-checks/script_check.py
+    [GODOT=<binary>] uv run --locked --package khovax-game-checks \\
+        packages/game-checks/script_check.py
 
 GODOT defaults to `godot`.
 """
@@ -14,8 +15,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from annotations import error
-from git_files import git_files
+from game_shared import log
+from game_shared.git_files import git_files
 
 # A script error can leave Godot running forever, so every check has a time limit.
 TIMEOUT_SECONDS = 60
@@ -61,7 +62,7 @@ def main() -> int:
     for script, (output, failure) in zip(scripts, results, strict=True):
         print(output)
         if failure:
-            print(error(script, failure))
+            log.error(failure, script)
             failed += 1
     print(f"{len(scripts)} scripts checked, {failed} failed.")
     return 1 if failed else 0

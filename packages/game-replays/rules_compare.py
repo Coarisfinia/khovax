@@ -8,7 +8,8 @@ flow's scripts changed, or the outcome report itself changed. The label `outcome
 pull request allows that (#899: the agent adds it and says why, the owner's approval is the gate),
 which CI passes on as OUTCOMES_CHANGE=true.
 
-    [OUTCOMES_CHANGE=true] uv run --locked packages/game-replays/rules_compare.py \\
+    [OUTCOMES_CHANGE=true] uv run --locked --package khovax-game-replays \\
+        packages/game-replays/rules_compare.py \\
         <parent's report> <this commit's report> <parent>
 
 Run from this commit's repository root; <parent> is the commit the parent's report was made from.
@@ -21,6 +22,8 @@ import os
 import subprocess
 import sys
 from typing import Any
+
+from game_shared import log
 
 # The game's folder (#1101); the paths below are inside it.
 GAME = "packages/game"
@@ -102,7 +105,7 @@ def first_divergence(before: dict[str, Any], after: dict[str, Any]) -> str:
 
 
 def warn(message: str) -> None:
-    print(f"::warning::{message}", file=sys.stderr)
+    print(log.text("warning", message), file=sys.stderr)
 
 
 def main(parent_path: str, head_path: str, parent: str) -> int:
@@ -112,7 +115,10 @@ def main(parent_path: str, head_path: str, parent: str) -> int:
     # and ported it to Python, #1039). So no commit may remove it, or the next one could bring its
     # own.
     if git("cat-file", "-e", f"HEAD:{SELF}").returncode != 0:
-        print(f"::error::{SELF} is removed: the comparison with the parent can't go", file=sys.stderr)
+        print(
+            log.text("error", f"{SELF} is removed: the comparison with the parent can't go"),
+            file=sys.stderr,
+        )
         return 1
     with open(parent_path, encoding="utf-8") as file:
         parent_report = json.load(file)
@@ -183,8 +189,11 @@ def main(parent_path: str, head_path: str, parent: str) -> int:
                 " (#889, #899)."
             )
             print(
-                "::error::not everything could be compared with the parent, and the pull request"
-                " isn't labelled outcomes-change",
+                log.text(
+                    "error",
+                    "not everything could be compared with the parent, and the pull request isn't"
+                    " labelled outcomes-change",
+                ),
                 file=sys.stderr,
             )
             failed = 1
@@ -229,7 +238,10 @@ def main(parent_path: str, head_path: str, parent: str) -> int:
             print(f"- `{path}`")
         return failed
     print(
-        f"::error::this commit plays differently from its parent without a new file in {FOLDER}/",
+        log.text(
+            "error",
+            f"this commit plays differently from its parent without a new file in {FOLDER}/",
+        ),
         file=sys.stderr,
     )
     return 1

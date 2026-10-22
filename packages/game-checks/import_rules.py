@@ -25,7 +25,7 @@ builds' mode takes its flow's path from the environment or a project setting (#5
   of a path without its scheme, and no scene or resource names a file by a relative path.
 Comments don't count (gdscript_code.py strips them), so the rules can be explained in them.
 
-    uv run --locked packages/game-checks/import_rules.py
+    uv run --locked --package khovax-game-checks packages/game-checks/import_rules.py
 """
 
 import os
@@ -35,9 +35,9 @@ from collections.abc import Iterable
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from annotations import error
-from gdscript_code import without_comments
-from git_files import git_files
+from game_shared import log
+from game_shared.gdscript_code import without_comments
+from game_shared.git_files import git_files
 
 # The slices, each after every slice it names (#821).
 SLICE_ORDER: tuple[str, ...] = (
@@ -122,7 +122,7 @@ class Check:
         """Fails a file whose code names one of the classes or matches the path pattern."""
         hits = matching(lines, classes) + matching(lines, path)
         if hits:
-            self.fail(hits, error(file, f"{rule}: see the lines above"))
+            self.fail(hits, log.text("error", f"{rule}: see the lines above", file))
 
 
 def main() -> int:
@@ -267,7 +267,7 @@ def main() -> int:
         if relative:
             check.fail(
                 relative,
-                error(file, "paths are absolute from res://: see the lines above"),
+                log.text("error", "paths are absolute from res://: see the lines above", file),
             )
 
     scenes = {
@@ -283,7 +283,9 @@ def main() -> int:
     if relative:
         check.fail(
             relative,
-            "::error::scenes and resources name files absolute from res://: see the lines above",
+            log.text(
+                "error", "scenes and resources name files absolute from res://: see the lines above"
+            ),
         )
 
     for file, lines in scenes.items():
@@ -294,7 +296,7 @@ def main() -> int:
         if hits:
             check.fail(
                 hits,
-                error(file, f"{LATER_SLICE}: see the lines above"),
+                log.text("error", f"{LATER_SLICE}: see the lines above", file),
             )
         for exempt, later in exemptions_of(slice_):
             if any(f"res://slices/{later}/" in line for line in lines):
@@ -308,16 +310,22 @@ def main() -> int:
     )
     for slice_ in slice_folders:
         if slice_ not in own_classes:
-            check.fail([], f"::error::slices/{slice_} has no place in SLICE_ORDER ({THIS})")
+            check.fail(
+                [], log.text("error", f"slices/{slice_} has no place in SLICE_ORDER ({THIS})")
+            )
     for slice_ in SLICE_ORDER:
         if not Path("slices", slice_).is_dir():
             check.fail(
-                [], f"::error::SLICE_ORDER names slices/{slice_}, which doesn't exist ({THIS})"
+                [],
+                log.text(
+                    "error", f"SLICE_ORDER names slices/{slice_}, which doesn't exist ({THIS})"
+                ),
             )
     for exempt in SLICE_EXEMPT:
         if exempt not in exemption_used or exempt not in back_edges:
             check.fail(
-                [], f"::error::SLICE_EXEMPT's {exempt} is no longer needed: drop it ({THIS})"
+                [],
+                log.text("error", f"SLICE_EXEMPT's {exempt} is no longer needed: drop it ({THIS})"),
             )
 
     reaching_game = [
@@ -329,7 +337,8 @@ def main() -> int:
     ]
     if reaching_game:
         check.fail(
-            reaching_game, "::error::nothing outside game/ reaches game/: see the lines above"
+            reaching_game,
+            log.text("error", "nothing outside game/ reaches game/: see the lines above"),
         )
 
     return 1 if check.failed else 0

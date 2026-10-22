@@ -107,31 +107,31 @@ jobs:
       - name: "🧹 Check every declared function, variable, constant and class is used"
         # Godot's script check already fails on unused locals, parameters and signals; this finds
         # what nothing in the whole project names (#315).
-        run: uv run --locked ../game-checks/unused_code.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/unused_code.py
 
       - name: "🧭 Check the core never depends on a slice and paths are absolute"
-        run: uv run --locked ../game-checks/import_rules.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/import_rules.py
 
       - name: "📁 Check no path repeats a folder name"
-        run: uv run --locked ../game-checks/repeated_folders.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/repeated_folders.py
 
       - name: "📄 Check every file's ending is allowed"
         # Today's endings without .sh and .bat (owner, #1095); a new one needs the owner's sign-off.
-        run: uv run --locked ../game-checks/file_endings.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/file_endings.py
 
       - name: "🗃️ Check the export presets share their file filters and web loading page"
-        run: uv run --locked ../game-checks/export_filters_check.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 
       - name: "🎲 Check the simulation stays deterministic"
         # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
         # forbidden list and the exemption marker (#515) are in the script.
         timeout-minutes: 5
-        run: uv run --locked ../game-checks/determinism_check.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/determinism_check.py
 
       - name: "🔖 Check the rule change files"
         # The parent is the base on a pull request's merge commit, the queue's previous commit in
         # the merge queue, and the previous commit on main (squash merges only).
-        run: uv run --locked ../game-checks/rules_changes_check.py HEAD^1
+        run: uv run --locked --package khovax-game-checks ../game-checks/rules_changes_check.py HEAD^1
 
       - name: "🤖 Set up Godot and import the project"
         uses: ./.github/actions/setup-godot
@@ -155,7 +155,7 @@ jobs:
       - name: "📦 Check every asset is used"
         # Commit only what the game uses (AGENTS.md, #69): every file under assets/ is named by a
         # scene, script, content file or setting, or by a glTF that is (#320).
-        run: uv run --locked ../game-checks/unused_assets.py
+        run: uv run --locked --package khovax-game-checks ../game-checks/unused_assets.py
 
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
@@ -224,7 +224,7 @@ jobs:
         # Also catches scripts that no test loads. An ERROR: line fails the step too, even when
         # Godot exits with 0 (such as a load cycle through a preloaded scene, #964). The scripts are
         # checked in parallel and every failing one is named (#923).
-        run: GODOT=~/godot/godot uv run --locked ../game-checks/script_check.py
+        run: GODOT=~/godot/godot uv run --locked --package khovax-game-checks ../game-checks/script_check.py
 
       - name: "🧪 Run the headless e2e tests"
         # timeout guards against a script error in the runner leaving the SceneTree running forever
@@ -361,7 +361,8 @@ jobs:
             echo "::notice::The parent has no packages/game-replays/rules_compare.py yet (it moved there in #1114), so this commit's own runs."
             project=.
           fi
-          uv run --locked --project "$project" "$project/packages/game-replays/rules_compare.py" \
+          uv run --locked --project "$project" --package khovax-game-replays \
+            "$project/packages/game-replays/rules_compare.py" \
             /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 | tee -a "$GITHUB_STEP_SUMMARY"
 
   export:

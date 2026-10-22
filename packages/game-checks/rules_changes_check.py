@@ -4,7 +4,7 @@ names of the files in core/rules_changes/) an id that older rules may already ha
 change needs a new file is the rules-compare job's (packages/game-replays/rules_compare.py).
 <base> is the commit the change is compared with, e.g. HEAD^1 of a pull request's merge commit.
 
-    uv run --locked packages/game-checks/rules_changes_check.py <base>
+    uv run --locked --package khovax-game-checks packages/game-checks/rules_changes_check.py <base>
 """
 
 import os
@@ -13,7 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from annotations import error
+from game_shared import log
 
 FOLDER = "core/rules_changes"
 NAME = re.compile(r"([0-9]+)-[a-z0-9-]+\.md")
@@ -58,7 +58,7 @@ def main() -> int:
         file = f"{FOLDER}/{entry}"
         name = NAME.fullmatch(entry)
         if not name:
-            print(error(file, "a rule change file is named <issue>-<slug>.md"))
+            log.error("a rule change file is named <issue>-<slug>.md", file)
             failed = True
             continue
         # newline="": a carriage return stays, so a CRLF frontmatter fails as it did in the shell.
@@ -66,26 +66,22 @@ def main() -> int:
         lines = text.split("\n")
         # No pr (#758): the squash commit that added the file names it (git log --diff-filter=A).
         if lines[0:3:2] != ["---", "---"] or lines[1:2] != [f"issue: {name[1]}"]:
-            print(
-                error(
-                    file,
-                    "its frontmatter is its issue (the file's number), nothing else (no pr: git"
-                    " log finds it)",
-                )
+            log.error(
+                "its frontmatter is its issue (the file's number), nothing else (no pr: git log"
+                " finds it)",
+                file,
             )
             failed = True
         if re.search(r"/pull/[0-9]", text):
-            print(error(file, "it links its issue, not its pull request (git log finds that)"))
+            log.error("it links its issue, not its pull request (git log finds that)", file)
             failed = True
 
     deleted = deleted_since(base)
     if deleted is None:
-        print(f"::error::git can't compare {FOLDER} with {base}")
+        log.error(f"git can't compare {FOLDER} with {base}")
         return 1
     for path in deleted:
-        print(
-            error(path, "a rule change file is never deleted or renamed: the folder is append-only")
-        )
+        log.error("a rule change file is never deleted or renamed: the folder is append-only", path)
         failed = True
 
     return 1 if failed else 0

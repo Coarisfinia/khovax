@@ -6,7 +6,7 @@ parameters). Each pack's own notes (SOURCE.md, its license) and Godot's .import 
 out: they come with the files they describe. Asset paths keep to letters, digits and `._/-`, so
 a path is always matched whole.
 
-    uv run --locked packages/game-checks/unused_assets.py
+    uv run --locked --package khovax-game-checks packages/game-checks/unused_assets.py
 """
 
 import glob
@@ -16,8 +16,8 @@ import re
 import sys
 from pathlib import Path
 
-from annotations import error
-from git_files import git_files
+from game_shared import log
+from game_shared.git_files import git_files
 
 NOTES = re.compile(r".*\.import|.*/SOURCE\.md|.*/LICENSE[^/]*")
 PLAIN = re.compile(r"[A-Za-z0-9._/-]*")
@@ -64,7 +64,7 @@ def main() -> int:
     assets = [path for path in git_files("assets") if not NOTES.fullmatch(path)]
     odd = [path for path in assets if not PLAIN.fullmatch(path)]
     if odd:
-        print(f"::error::asset paths keep to letters, digits and ._/-: {', '.join(odd)}")
+        log.error(f"asset paths keep to letters, digits and ._/-: {', '.join(odd)}")
         return 1
 
     # Every asset named by its path.
@@ -76,7 +76,7 @@ def main() -> int:
     models = sorted(path for path in named if path.endswith((".glb", ".gltf")))
     for model in models:
         if model.endswith(".gltf") and not os.path.isfile(model):
-            print(f"::error::{model} is named, but there is no such file to read its files from")
+            log.error(f"{model} is named, but there is no such file to read its files from")
             return 1
         if model.endswith(".gltf"):
             named |= gltf_files(model)
@@ -84,7 +84,7 @@ def main() -> int:
 
     unused = [path for path in assets if path not in named]
     for path in unused:
-        print(error(path, f"{path} is in the repository but nothing uses it"))
+        log.error(f"{path} is in the repository but nothing uses it", path)
     return 1 if unused else 0
 
 

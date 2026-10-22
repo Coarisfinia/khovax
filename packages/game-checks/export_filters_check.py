@@ -5,7 +5,7 @@ them all, or CI says which preset was missed. Every exclude_filter also names to
 developer tools run from the project, never from a build (#921). The web presets share their
 html/head_include, the loading page (#925): the web e2e checks it on the Web Test build only.
 
-    uv run --locked packages/game-checks/export_filters_check.py
+    uv run --locked --package khovax-game-checks packages/game-checks/export_filters_check.py
 """
 
 import os
@@ -13,7 +13,7 @@ import re
 import sys
 from pathlib import Path
 
-from annotations import error
+from game_shared import log
 
 # A preset's keys are in [preset.N] and its options in [preset.N.options]; both count as preset N.
 PRESET = re.compile(r"\[preset\.([0-9]+)(\.options)?\]")
@@ -83,7 +83,7 @@ def main() -> int:
     if not found:
         errors.append("it has no preset")
     for message in errors:
-        print(error("export_presets.cfg", message))
+        log.error(message, "export_presets.cfg")
     return 1 if errors else 0
 
 
