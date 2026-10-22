@@ -316,8 +316,7 @@ func _walked_ground(state: GameState, walker: Entity) -> Vector2:
 	var standing: Vector2 = ground_of(walker.tile)
 	if walk == null or not walk.is_moving():
 		return standing
-	var left: float = walk.ticks_left - driver.tick_fraction()
-	return standing.lerp(ground_of(walk.from), clampf(left / MovementFeature.MOVE_TICKS, 0.0, 1.0))
+	return ground_of(walk.from).lerp(standing, driver.walk_progress(state, walker.id))
 
 
 ## A tile's middle on the ground, as the survey lays it out: north up.

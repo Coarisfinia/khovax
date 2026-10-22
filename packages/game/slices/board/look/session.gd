@@ -58,6 +58,18 @@ func tick_fraction() -> float:
 	return 0.0
 
 
+## How far `entity_id` in `instance` (an instance's state) is through its step, from 0 (on the
+## tile it walks from) to 1 (arrived), by tick and by how far real time is into the next one: views
+## glide walkers with it. 1 when it stands, or the instance has no movement.
+func walk_progress(instance: GameState, entity_id: int) -> float:
+	var movement: MovementFeature = instance.feature(MovementFeature.ID) as MovementFeature
+	var walk: Walk = movement.walk(entity_id) if movement != null else null
+	if walk == null or not walk.is_moving():
+		return 1.0
+	var ticks_done: float = MovementFeature.MOVE_TICKS - walk.ticks_left + tick_fraction()
+	return clampf(ticks_done / MovementFeature.MOVE_TICKS, 0.0, 1.0)
+
+
 ## Holds the ticks while a menu is open (`on`), or lets them run again: real time stops reaching
 ## the session. The driver refines it for co-op.
 func pause(on: bool) -> void:

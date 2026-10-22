@@ -111,9 +111,7 @@ func show_state() -> void:
 	var walk: Walk = movement.walk(player.id) if movement != null else null
 	var moving: bool = walk != null and walk.is_moving()
 	if moving:
-		var whole_ticks: int = MovementFeature.MOVE_TICKS - walk.ticks_left
-		var ticks_done: float = whole_ticks + driver.tick_fraction()
-		var done: float = clampf(ticks_done / MovementFeature.MOVE_TICKS, 0.0, 1.0)
+		var done: float = driver.walk_progress(driver.state, player.id)
 		position = position_on(walk.from).lerp(tile_position(), done)
 		# The yaw that turns the model's front (+Z, Vector3.MODEL_FRONT, as glTF models face)
 		# toward the walk.
