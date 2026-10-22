@@ -5,21 +5,20 @@ extends Feature
 ## its species gets that one (a boss arena pins its boss); every other spot rolls one from the
 ## blueprint's weighted list, from the feature's own random stream, so a replay places the same
 ## species. Each gets its short id (#700) from the same stream once every spot has its species. Each
-## stands where it is (its look is a placeholder, #85), unless no ring could enclose
-## it
-## there (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where
-## one could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
-## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates
-## it (DominationFeature). Each has its species'
-## strength (#219); its HP is HealthFeature's (#835), at its species' HP, or WOUNDED_HP of it where
-## the region marks it wounded (#389). Companions' strikes wound it (#221), and a special attack
-## can fell it (#410): it faints for good, staying where it fell, out of `monsters` and in
-## `fainted`, so no rule moves, enrages, strikes or dominates it any more, and it
-## still blocks walkers like anything that doesn't walk. Enraged (#220,
-## EnrageFeature), it grows stronger with every stack of rage, which it keeps, and faster (#961):
-## its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it chase the
-## nearest player (`chase`), never off ground a ring could enclose it on. Like every feature,
-## switched off it keeps its state: the monsters stay where they are, and only its own rules stop.
+## stands where it is (its look is a placeholder, #85), unless no ring could enclose it there
+## (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where one
+## could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
+## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates it
+## (DominationFeature). Each has its species' strength (#219); its HP is HealthFeature's (#835), at
+## its species' HP, or WOUNDED_HP of it where the region marks it wounded (#389). Companions'
+## strikes wound it (#221), and a special attack can fell it (#410): it faints for good, staying
+## where it fell, out of `monsters` and in `fainted`, so no rule moves, enrages, strikes or
+## dominates it any more, and it still blocks walkers like anything that doesn't walk. Enraged
+## (#220, EnrageFeature), it grows stronger with every stack of rage, which it keeps, and faster
+## (#961): its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it
+## chase the nearest player (`chase`), never off ground a ring could enclose it on. Like every
+## feature, switched off it keeps its state: the monsters stay where they are, and only its own
+## rules stop.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_monsters"

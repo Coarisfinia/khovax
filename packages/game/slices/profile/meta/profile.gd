@@ -10,7 +10,8 @@ extends RefCounted
 ## factions (#483), which finishing a quest can move (#532), their gear (#690), and their leaning
 ## toward the story's paths (#658), which finishing a path-marked quest moves, and its outbox
 ## (#771): what it asks the world to do, like the hand-over of a territory quest it finished (#638).
-## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
+## The active slots a player starts with, and the most they can have. Unlocking the others (a lore
+## quest, then a Might threshold and another lore quest) is #654.
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
 ## How many dominated monsters a player carries (#53), which their carry requests make room for.
@@ -115,8 +116,7 @@ func move_monster(monster_id: int, place: int) -> String:
 
 
 ## Why `typed` can't be a character's name, in words, or "": it has to have something besides
-## spaces,
-## and at most NAME_LIMIT characters.
+## spaces, and at most NAME_LIMIT characters.
 static func name_problem(typed: String) -> String:
 	if typed.strip_edges().is_empty():
 		return "A name needs at least one character besides spaces."
