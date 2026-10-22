@@ -610,6 +610,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `replays/` (comparing replays, load tests and the APK flow), `build/` (export helpers), `godot/`
   (scripts Godot runs), `models/` (the Blender model scripts) and `scoop/` (pinned manifests). New
   tooling is Python, run with uv from the root's `pyproject.toml` (`uv run --locked tools/...`).
+- **Only the file endings on the list** (owner, #1095: *"I would like all currently used file
+  endings to be allowed, except for .sh and .bat. A new entry requires signoff."*): CI refuses a
+  tracked file whose ending isn't in `ENDINGS` in `tools/checks/file_endings.py`. **An agent never
+  adds an ending without the owner's approval on its issue.** The shell scripts still tracked wait
+  in its exception list, each with the issue that ports it, and that list only shrinks.
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't
   available.
 - **`git push` hung on a Windows credential prompt.** In this repository the repo-local credential
