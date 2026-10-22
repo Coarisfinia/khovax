@@ -5,13 +5,14 @@ extends RefCounted
 ## `godot --path packages/game -- --instance=lumwen_hoal --seed=42`:
 ## - `--seed=<n>`: a fresh world starts from this seed (0 or more) instead of rolling one.
 ## - `--instance=<blueprint>`: the session starts in this instance blueprint, on its start.
-## - `--invincible`: the player takes no damage. Reserved: nothing hurts players yet (#220, #221).
+## - `--invincible`: this machine's player takes no damage from any hit, so they're never knocked
+##   down or sent back to the spawn, while wild monsters still fight them (#1142).
 ## - `--user-dir=<name>`: `user://` (saves, settings, the tests' files) is the folder
 ## `khovax_<name>`
 ##   in the system's data folder instead of the project's own (#786), so local runs in parallel
 ##   worktrees, each given its branch name, keep apart. Without it, the default folder is used.
-## A world started with a seed or an instance is a test world: it never resumes or overwrites the
-## player's saved one. The game reads them in every build (LaunchMode).
+## A world started with a seed, an instance or invincibility is a test world: it never resumes or
+## overwrites the player's saved one. The game reads them in every build (LaunchMode).
 
 const SEED: String = "--seed="
 const INSTANCE: String = "--instance="
@@ -26,6 +27,7 @@ const USER_DIR_PREFIX: String = "khovax_"
 var seed_value: int = GameDriver.ROLLED_SEED
 ## The instance blueprint to start in, or "" for the main scene's own.
 var instance: String = ""
+## Whether this machine's player is invincible.
 var invincible: bool = false
 ## The name `user://` is redirected to, or "" for the default folder.
 var user_dir: String = ""
@@ -68,13 +70,14 @@ static func parse(args: PackedStringArray) -> LaunchOptions:
 
 ## Whether these options start a test world rather than the player's own.
 func is_test_world() -> bool:
-	return seed_value != GameDriver.ROLLED_SEED or not instance.is_empty()
+	return seed_value != GameDriver.ROLLED_SEED or not instance.is_empty() or invincible
 
 
 ## Sets the options given up for the main scene, before it loads: its driver starts from the seed,
-## in the instance, and a test world keeps no save; `user://` moves to the folder given. Options
-## not given change nothing. Returns why they couldn't be applied, or "": a user folder that can't
-## be created must stop the run before anything is saved.
+## in the instance, with this machine's player invincible, and a test world keeps no save;
+## `user://` moves to the folder given. Options not given change nothing. Returns why they
+## couldn't be applied, or "": a user folder that can't be created must stop the run before
+## anything is saved.
 func apply() -> String:
 	if not user_dir.is_empty():
 		var not_redirected: String = _redirect_user_dir()
@@ -84,6 +87,8 @@ func apply() -> String:
 		GameDriver.fixed_seed = seed_value
 	if not instance.is_empty():
 		GameDriver.start_instance = instance
+	if invincible:
+		GameDriver.invincible = true
 	if is_test_world():
 		WorldKeeper.default_path = ""
 	return ""

@@ -11,7 +11,8 @@ extends Feature
 ## hit is at full HP without an entry. It steps before the wild monsters and the companions, so
 ## every feature that hurts or heals can require it, and it names neither (#821). A later rule can
 ## shield an entity (`shield`, a player a dialog holds, #981): no hit hurts it, and a wild monster
-## doesn't pick it as a target.
+## doesn't pick it as a target. A player can be invincible (`make_invincible`, the `--invincible`
+## launch option, #1142): no hit hurts them either, but wild monsters still fight them.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
@@ -21,6 +22,8 @@ const PLAYER_HP: int = 500
 const UNKNOWN_HP: int = 100
 ## How much of their HP a revived player gets back, in thousandths (Fixed): half (#479).
 const REVIVED_HP: int = 500
+## What an invincible player's entry in their world store (#724) holds (`make_invincible`).
+const INVINCIBLE: String = "invincible"
 
 ## Each species' HP, by species id, from the content data (the species slice reads them).
 var max_hps: Dictionary[String, int] = {}
@@ -76,10 +79,29 @@ func is_shielded(entity_id: int) -> bool:
 	return _shielded.has(entity_id)
 
 
-## Takes `damage` off the HP of `entity_id`, one still standing and not shielded: never below 0, or
-## 1 unless the hit is `lethal`. Whether this hit made it fall.
+## Makes the player in `slot` of `world` invincible (#1142): no hit hurts them, so they're never
+## knocked down or sent to the spawn, while wild monsters still pick them as a target, unlike a
+## shielded one. A session's start decides it (the `--invincible` launch option), and their world
+## store keeps it, so it holds in every instance.
+static func make_invincible(world: World, slot: int) -> void:
+	world.set_entry(slot, ID, { INVINCIBLE: 1 })
+
+
+## Whether `entity_id` is an invincible player (`make_invincible`). A tracked one is a wild monster
+## or a companion, never a player: a ring hurts them every tick, so they skip the lookup.
+func is_invincible(state: GameState, entity_id: int) -> bool:
+	if _species.has(entity_id):
+		return false
+	var entity: Entity = state.entity(entity_id)
+	if entity == null or entity.slot == Entity.NO_SLOT:
+		return false
+	return state.stored(entity.slot, ID).has(INVINCIBLE)
+
+
+## Takes `damage` off the HP of `entity_id`, one still standing, not shielded and not invincible:
+## never below 0, or 1 unless the hit is `lethal`. Whether this hit made it fall.
 func hurt(state: GameState, entity_id: int, damage: int, lethal: bool = true) -> bool:
-	if _shielded.has(entity_id):
+	if _shielded.has(entity_id) or is_invincible(state, entity_id):
 		return false
 	var full: int = max_hp_of(state, entity_id)
 	var taken: int = _damage.get(entity_id, 0)

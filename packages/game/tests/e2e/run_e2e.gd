@@ -135,9 +135,11 @@ func _on_timeout(file: String) -> void:
 class Launched:
 	var fixed_seed: int = GameDriver.fixed_seed
 	var start_instance: String = GameDriver.start_instance
+	var invincible: bool = GameDriver.invincible
 	var world_path: String = WorldKeeper.default_path
 
 	func restore() -> void:
 		GameDriver.fixed_seed = fixed_seed
 		GameDriver.start_instance = start_instance
+		GameDriver.invincible = invincible
 		WorldKeeper.default_path = world_path
