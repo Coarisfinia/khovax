@@ -1,10 +1,9 @@
 class_name Species
 extends RefCounted
 ## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
-## its auto attack's type, base stats, wild archetype and its three abilities (#222). Everything
+## its auto attack's type, base stats and its three abilities (#222). Everything
 ## here is integers and ids, ready for the simulation.
 
-const ARCHETYPES: Array[String] = ["charger", "burrower", "flyer", "swarm", "pusher"]
 ## Its schema, which says the fields a species file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/species/data/species.schema.json"
 ## A species' name is one invented word (owner, #717), never a description like "Moss Toad": a
@@ -23,9 +22,6 @@ var hp: int = 0
 var strength: int = 0
 ## Higher is faster (#222).
 var speed: int = 0
-## How it behaves as a wild monster against rings: one of ARCHETYPES (#222). Nothing reads it yet:
-## whether to build that behaviour, drop the field or make it optional is #1116.
-var archetype: String = ""
 ## Its abilities' ids (the species slice's data/abilities/): its special attack and its two passives
 ## (#222).
 var special: String = ""
@@ -37,13 +33,11 @@ var sight: int = 0
 var problem: String = ""
 
 
-## Reads its speed, archetype, strike type, abilities and sight trait from a species file's `data`;
-## returns why
+## Reads its speed, strike type, abilities and sight trait from a species file's `data`; returns why
 ## it can't, or "". Whether the abilities exist is checked against the ability data (Content).
 func read_kit(data: Dictionary) -> String:
 	speed = Content.amount(data.get("speed"))
 	strike_type = Content.text_of(data.get("strike_type"))
-	archetype = Content.text_of(data.get("archetype"))
 	special = Content.text_of(data.get("special"))
 	player_passive = Content.text_of(data.get("player_passive"))
 	self_passive = Content.text_of(data.get("self_passive"))
@@ -53,8 +47,6 @@ func read_kit(data: Dictionary) -> String:
 			return "its sight is a whole number of steps from 1 to %d" % FogFeature.MOST_WIDER
 	if speed < 1:
 		return "speed is a whole number from 1 to %d" % Fixed.MAX_AMOUNT
-	if not ARCHETYPES.has(archetype):
-		return "its archetype is one of %s" % [ARCHETYPES]
 	if TypeChart.family_of(strike_type) < 0:
 		return "its strike type is a type on the chart"
 	for ability: String in [special, player_passive, self_passive]:
