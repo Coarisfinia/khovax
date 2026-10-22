@@ -42,11 +42,11 @@ static func parse(
 	known_species: Dictionary[String, Species],
 ) -> QuestDefinition:
 	var quest: QuestDefinition = QuestDefinition.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		quest.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		quest.problem = Content.NOT_AN_OBJECT
 		return quest
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	quest.id = Content.text_of(data.get("id"))
 	quest.name = Content.text_of(data.get("name"))
 	quest.path = PathMark.read(data)
@@ -104,8 +104,9 @@ func _check(
 	raw_steps: Variant,
 	known_species: Dictionary[String, Species],
 ) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	if name.strip_edges().is_empty():
 		return "it needs a name"
 	if path.is_empty():

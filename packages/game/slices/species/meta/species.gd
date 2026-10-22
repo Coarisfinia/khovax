@@ -67,11 +67,11 @@ func read_kit(data: Dictionary) -> String:
 ## (#279); its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> Species:
 	var entry: Species = Species.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		entry.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		entry.problem = Content.NOT_AN_OBJECT
 		return entry
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	entry.problem = _read(entry, file_id, data)
 	return entry
 
@@ -82,11 +82,11 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	for key: Variant in data:
 		if not fields.has(str(key)):
 			return "field %s isn't a species field" % key
-	var given_id: Variant = data.get("id")
-	var text_id: String = given_id if given_id is String else ""
-	if not Content.is_id(text_id):
-		return "its id must be lowercase words joined by underscores"
-	entry.id = text_id
+	# Set even when it's wrong, so SpeciesContent refuses a repeated id as that first.
+	entry.id = Content.text_of(data.get("id"))
+	var wrong_id: String = Content.id_problem(entry.id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	entry.hp = Content.amount(data.get("hp"))
 	entry.strength = Content.amount(data.get("strength"))
 	var given_types: Variant = data.get("types")
@@ -94,8 +94,6 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 		var type_list: Array = given_types
 		for type: Variant in type_list:
 			entry.types.append(str(type))
-	if entry.id != file_id:
-		return "its id must match the file name and be unique"
 	if entry.hp < 1 or entry.strength < 1:
 		return "hp and strength are whole numbers from 1 to %d" % Fixed.MAX_AMOUNT
 	var wrong: String = entry._types_problem()

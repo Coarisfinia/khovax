@@ -37,11 +37,11 @@ var problem: String = ""
 ## An ability read from an ability file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> Ability:
 	var ability: Ability = Ability.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		ability.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		ability.problem = Content.NOT_AN_OBJECT
 		return ability
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	ability.id = Content.text_of(data.get("id"))
 	ability.kind = Content.text_of(data.get("kind"))
 	ability.name = Content.text_of(data.get("name"))
@@ -51,8 +51,8 @@ static func parse(file_id: String, text: String) -> Ability:
 	ability.strike_type = Content.text_of(data.get("strike_type"))
 	ability.path = PathMark.read(data)
 	ability.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
-	if ability.problem.is_empty() and (ability.id != file_id or not Content.is_id(ability.id)):
-		ability.problem = "its id must match the file name and be lowercase words with underscores"
+	if ability.problem.is_empty():
+		ability.problem = Content.id_problem(ability.id, file_id)
 	if ability.problem.is_empty() and not KINDS.has(ability.kind):
 		ability.problem = "its kind is one of %s" % [KINDS]
 	if ability.problem.is_empty() and (ability.name.is_empty() or ability.description.is_empty()):

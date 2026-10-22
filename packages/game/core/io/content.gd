@@ -10,6 +10,9 @@ extends RefCounted
 ## kind (#506). The tile blueprints, which the core's TileKinds reads first, live in the core and
 ## are read by TileContent. Here too: the field helpers they all use.
 
+## What a content file's reader says when object_of finds no JSON object in it.
+const NOT_AN_OBJECT: String = "not a JSON object"
+
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -44,6 +47,23 @@ static func texts_in(directory: String) -> Dictionary[String, String]:
 		if file_name.ends_with(".jsonc"):
 			texts[file_name.get_basename()] = FileAccess.get_file_as_string(directory + file_name)
 	return texts
+
+
+## The JSON object a content file's JSONC `text` holds, or null when it holds anything else: every
+## content file's reader starts here, and says NOT_AN_OBJECT for null.
+static func object_of(text: String) -> Variant:
+	var json: JSON = JSON.new()
+	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
+		return null
+	return json.data
+
+
+## Why `id` can't be the id of the entry in the file named `file_id`, or "": every content
+## file's id is its file's name, and an id as Ids says.
+static func id_problem(id: String, file_id: String) -> String:
+	if id != file_id or not is_id(id):
+		return "its id must match the file name and be lowercase words with underscores"
+	return ""
 
 
 ## Whether `text` is an id, as Ids says.

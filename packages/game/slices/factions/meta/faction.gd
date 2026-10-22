@@ -30,11 +30,11 @@ var problem: String = ""
 ## A faction read from a faction file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> Faction:
 	var faction: Faction = Faction.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		faction.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		faction.problem = Content.NOT_AN_OBJECT
 		return faction
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	faction.id = Content.text_of(data.get("id"))
 	faction.name = Content.text_of(data.get("name"))
 	faction.symbol = Content.text_of(data.get("symbol"))
@@ -58,8 +58,9 @@ func rank_name(standing: int) -> String:
 ## Why the read fields are wrong, or "", and the ranks read from `raw_up` and `raw_down` when they
 ## aren't.
 func _check(file_id: String, raw_up: Variant, raw_down: Variant) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	if name.strip_edges().is_empty():
 		return "it needs a name"
 	if symbol.strip_edges().is_empty() or symbol.length() > SYMBOL_LENGTH:

@@ -26,11 +26,11 @@ var problem: String = ""
 ## A dialog read from a dialog file's text, named `file_id`; its `problem` says what's wrong.
 static func parse(file_id: String, text: String) -> Dialog:
 	var dialog: Dialog = Dialog.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		dialog.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		dialog.problem = Content.NOT_AN_OBJECT
 		return dialog
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	dialog.id = Content.text_of(data.get("id"))
 	dialog.speaker = Content.text_of(data.get("speaker"))
 	dialog.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
@@ -74,8 +74,9 @@ func after(index: int, answer_id: String = "") -> int:
 
 ## Why the read fields are wrong, or "", and the lines read from `raw_lines` when they aren't.
 func _check(file_id: String, raw_lines: Variant) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	if speaker.strip_edges().is_empty():
 		return "it needs a speaker"
 	var entries: Array = raw_lines if raw_lines is Array else []

@@ -46,11 +46,11 @@ var problem: String = ""
 ## wrong.
 static func parse(file_id: String, text: String) -> TileBlueprint:
 	var blueprint: TileBlueprint = TileBlueprint.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		blueprint.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		blueprint.problem = Content.NOT_AN_OBJECT
 		return blueprint
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	var raw_traits: Variant = data.get("traits")
 	var traits: Dictionary = raw_traits if raw_traits is Dictionary else {}
 	var walks: Variant = traits.get("walkable")
@@ -77,8 +77,9 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 
 ## Why the read fields are wrong, or "", and the color read from `data` when they aren't.
 func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	var html: String = Content.text_of(data.get("color"))
 	if RegEx.create_from_string("^#[0-9a-f]{6}$").search(html) == null:
 		return "its color is #rrggbb"

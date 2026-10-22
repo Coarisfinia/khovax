@@ -40,11 +40,11 @@ static func parse(
 	rule_sets: Dictionary[String, RuleSet],
 ) -> Blueprint:
 	var read: Blueprint = Blueprint.new()
-	var json: JSON = JSON.new()
-	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
-		read.problem = "not a JSON object"
+	var parsed: Variant = Content.object_of(text)
+	if parsed == null:
+		read.problem = Content.NOT_AN_OBJECT
 		return read
-	var data: Dictionary = json.data
+	var data: Dictionary = parsed
 	read.id = Content.text_of(data.get("id"))
 	read.loot_table = Content.text_of(data.get("loot_table"))
 	read.chest_table = Content.text_of(data.get("chest_table"))
@@ -60,8 +60,9 @@ static func parse(
 ## Why the fields in `data` are wrong, or "", and its turn, species and variants read when
 ## they aren't.
 func _check(file_id: String, data: Dictionary) -> String:
-	if id != file_id or not Content.is_id(id):
-		return "its id must match the file name and be lowercase words with underscores"
+	var wrong_id: String = Content.id_problem(id, file_id)
+	if not wrong_id.is_empty():
+		return wrong_id
 	var raw_turned: Variant = data.get("turned", false)
 	if not raw_turned is bool:
 		return "turned must be true or false"
