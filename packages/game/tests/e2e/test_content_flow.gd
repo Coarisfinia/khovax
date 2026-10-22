@@ -16,9 +16,9 @@ extends RefCounted
 ## answers commit (#891), and broken ones are refused; a region placing more people with locking
 ## dialogs than Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every
 ## text tag (#733) in a dialog, a quest's name or an ability's description names content that
-## exists, shows its current name, and broken tags are refused. No two things share an id or a
-## name, whatever their kinds, in any case (#909). Every content kind is read ahead in the
-## background (#816).
+## exists, shows its current name, and broken tags are refused; tags whose content can't be read
+## are warned about (#949). No two things share an id or a name, whatever their kinds, in any case
+## (#909). Every content kind is read ahead in the background (#816).
 
 ## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
@@ -93,7 +93,7 @@ const NAME_CASES: Dictionary[String, String] = {
 const RULE_SET: String = "{\"id\": \"small\", \"features\": [%s]}"
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	var content: SpeciesContent = SpeciesContent.load_species()
 	if not content.problem.is_empty():
 		return "the species data didn't load: " + content.problem
@@ -122,6 +122,7 @@ func run(_tree: SceneTree) -> String:
 		_check_command_codes,
 		_check_kits.bind(content),
 		_check_text_tags,
+		_check_text_tags_unread.bind(tree),
 		_check_terms,
 		_check_prefetched,
 	]
@@ -1255,6 +1256,18 @@ func _check_text_tags() -> String:
 	for text: String in cases:
 		if not tags.problem_in(text).contains(cases[text]):
 			return "the broken tag %s wasn't refused: %s" % [text, tags.problem_in(text)]
+	return ""
+
+
+## Text tags whose content can't be read are warned about, and show as written (#949).
+func _check_text_tags_unread(tree: SceneTree) -> String:
+	# The factions' files, read as species, are a species directory that can't be read.
+	TextTags.read_species_from(FactionContent.DIR)
+	tree.call("expect_warning", "the text tags' names can't be read")
+	var unread: String = TextTags.shown("${MONSTER:ombulumo}")
+	TextTags.read_species_from(SpeciesContent.DIR)
+	if unread != "${MONSTER:ombulumo}":
+		return "a tag shows %s when its content can't be read" % unread
 	return ""
 
 
