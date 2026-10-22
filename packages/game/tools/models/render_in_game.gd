@@ -226,7 +226,8 @@ func _clip_fps() -> float:
 	var import: ConfigFile = ConfigFile.new()
 	if import.load(OS.get_cmdline_user_args()[0] + ".import") != OK:
 		return DEFAULT_FPS
-	return float(import.get_value("params", "animation/fps", DEFAULT_FPS))
+	var fps: float = import.get_value("params", "animation/fps", DEFAULT_FPS)
+	return fps
 
 
 ## When in `animation` each of its frames is captured, `fps` a second. A looping clip ends on its
@@ -418,12 +419,9 @@ func _points_of(model: Node3D) -> PackedVector3Array:
 			var arrays: Array = mesh.mesh.surface_get_arrays(surface)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			if not bones.is_empty() and arrays[Mesh.ARRAY_BONES] != null:
-				vertices = _skinned(
-					vertices,
-					arrays[Mesh.ARRAY_BONES],
-					arrays[Mesh.ARRAY_WEIGHTS],
-					bones,
-				)
+				var binds: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+				var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+				vertices = _skinned(vertices, binds, weights, bones)
 			points.append_array(mesh.global_transform * vertices)
 	return points
 
