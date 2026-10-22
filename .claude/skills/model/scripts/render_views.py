@@ -4,10 +4,12 @@
 # Writes <out_dir>/<view>.png for front, back, left, right, top, three_quarter and sheet.png.
 import math
 import os
-import subprocess
 import sys
 
+import blf
 import bpy
+import imbuf
+import numpy
 from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
@@ -81,8 +83,41 @@ for name, direction in views.items():
 		sys.exit(f"render failed: {scene.render.filepath}")
 	paths.append(scene.render.filepath)
 
-# Each tile labelled with its view, so a reviewer knows which side they're looking at.
-labelled = [part for path in paths for part in ("-label", path.split("/")[-1][:-4], path)]
-subprocess.run(["montage", *labelled, "-tile", "3x2", "-geometry", "+4+4", "-pointsize", "20",
-	f"{out_dir}/sheet.png"], check=True)
+# The sheet: tiles in a 3x2 grid, each labelled with its view, so a reviewer knows which side they
+# are looking at. Composed here with numpy and Blender's own font (blf), so it needs no ImageMagick
+# and no system font (#1052).
+COLUMNS, GAP, STRIP = 3, 8, 32
+tiles = [bpy.data.images.load(path) for path in paths]  # their real size, whatever the scale
+tile_w = max(tile.size[0] for tile in tiles)
+tile_h = max(tile.size[1] for tile in tiles)
+rows = math.ceil(len(paths) / COLUMNS)
+width = COLUMNS * (tile_w + GAP) + GAP
+height = rows * (tile_h + STRIP + GAP) + GAP
+pixels = numpy.ones((height, width, 4), dtype=numpy.float32)  # white, rows bottom-up like Blender's
+spots = []
+for index, tile in enumerate(tiles):
+	w, h = tile.size
+	tile_pixels = numpy.empty(w * h * 4, dtype=numpy.float32)
+	tile.pixels.foreach_get(tile_pixels)
+	bpy.data.images.remove(tile)
+	x = GAP + (index % COLUMNS) * (tile_w + GAP)
+	y = height - (index // COLUMNS + 1) * (tile_h + STRIP + GAP)  # the label strip lies under the tile
+	pixels[y + STRIP:y + STRIP + h, x:x + w] = tile_pixels.reshape(h, w, 4)
+	spots.append((x, y))
+sheet_path = f"{out_dir}/sheet.png"
+sheet = bpy.data.images.new("sheet", width, height)
+sheet.pixels.foreach_set(pixels.ravel())
+sheet.filepath_raw = sheet_path
+sheet.file_format = "PNG"
+sheet.save()
+sheet_buffer = imbuf.load(sheet_path)
+with blf.bind_imbuf(0, sheet_buffer):
+	blf.size(0, 20)
+	blf.color(0, 0, 0, 0, 1)
+	for path, (x, y) in zip(paths, spots):
+		label = os.path.basename(path)[:-4]
+		label_width, _ = blf.dimensions(0, label)
+		blf.position(0, x + (tile_w - label_width) / 2, y + 9, 0)
+		blf.draw_buffer(0, label)
+imbuf.write(sheet_buffer, filepath=sheet_path)
 print("VIEWS", out_dir)
