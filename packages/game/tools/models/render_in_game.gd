@@ -140,6 +140,10 @@ func _initialize() -> void:
 	_viewport.msaa_3d = Viewport.MSAA_4X
 	root.add_child(_viewport)
 	_main = (load(Boot.GAME) as PackedScene).instantiate() as Node3D
+	# No music: a render is silent, and a track still playing when the run quits can outlive the
+	# tree, since the audio server frees a stopped track only on a later mix (#1093). Godot then
+	# sometimes reports it as resources still in use at exit.
+	_main.get_node("Music").free()
 	_viewport.add_child(_main)
 
 
