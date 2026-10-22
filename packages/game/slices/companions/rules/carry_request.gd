@@ -10,8 +10,11 @@ extends RefCounted
 
 ## How many bits a value takes in a request's data: a short id's code, or a species' code.
 const VALUE_BITS: int = 35
-## How many bits a request's place in its run takes: enough for twice the most monsters a player
-## carries.
+## How many dominated monsters a player carries (#53): always three, never more. The profile's
+## limit (Profile.CARRY_LIMIT) and the swap keys (LocalInput.SWAP_ACTIONS) follow it.
+const MOST_CARRIED: int = 3
+## How many bits a request's place in its run takes: enough for a run of MOST_CARRIED monsters,
+## two requests each, so a place never wraps to 0 and restarts the run (the world flow checks it).
 const PLACE_BITS: int = 3
 
 
