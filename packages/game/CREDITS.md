@@ -19,10 +19,12 @@ The assets this game uses, with their authors and licenses. Generated from each 
   `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
   `sprout.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
   `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `resize.svg`,
-  `totem.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
+  `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
+  `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white
-  shape is left, which the game tints with its ink
+  shape is left, which the game tints with its ink; the four `plain-arrow-*.svg` are Delapouite's
+  `plain-arrow.svg`, which points down, turned to point each way
 - **License:** CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), see `LICENSE.md` next to
   this file (the pack's own notice naming its contributors)
 

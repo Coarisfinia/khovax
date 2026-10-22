@@ -12,9 +12,12 @@ const NONE_TEXT: String = "No dominated monsters yet"
 const COMPANION_TEXT: String = "Carried 1, companion: "
 const CARRIED_TEXT: String = "Carried %d: "
 const RESTING_TEXT: String = "Not carried: "
-## The buttons that move a monster one place up or down in the order.
-const UP_TEXT: String = "▲"
-const DOWN_TEXT: String = "▼"
+## The buttons that move a monster one place up or down in the order: their icons (#584) and
+## their words on hover.
+const UP_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-up.svg")
+const DOWN_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-down.svg")
+const UP_TIP: String = "Move up"
+const DOWN_TIP: String = "Move down"
 
 ## Whose monsters are shown: this machine's player's profile.
 var holder: ProfileHolder
@@ -154,8 +157,8 @@ func _row(line: String, monster_id: int, place: int) -> Control:
 	)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_child(text)
-	row.add_child(GameMenu.button(UP_TEXT, move.bind(monster_id, place - 1)))
-	row.add_child(GameMenu.button(DOWN_TEXT, move.bind(monster_id, place + 1)))
+	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(monster_id, place - 1)))
+	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(monster_id, place + 1)))
 	return row
 
 

@@ -434,9 +434,13 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var reordered: Array[int] = [ids[3], ids[0], ids[1], ids[2]]
 	if tab.monsters.shown != moved or tab.monsters.shown_ids != reordered:
 		return "moving a monster first didn't make it the companion: %s" % [tab.monsters.shown]
-	# The second row's up button: its line, then up, then down.
+	# The second row's up button: its line, then up, then down, each showing its arrow (#584).
 	var second: HBoxContainer = tab.monsters.get_child(1).get_child(1) as HBoxContainer
-	(second.get_child(1) as Button).pressed.emit()
+	var up: Button = second.get_child(1) as Button
+	var down: Button = second.get_child(2) as Button
+	if up.icon != DominatedMonstersList.UP_ICON or down.icon != DominatedMonstersList.DOWN_ICON:
+		return "a row's up and down buttons don't show their arrows"
+	up.pressed.emit()
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	var _flushed: String = keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
@@ -526,9 +530,12 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 
 
 ## Stepping anti-aliasing on and the Survey's place back takes effect and keeps them;
-## anti-aliasing's Auto button hands it back.
+## anti-aliasing's Auto button hands it back. The step buttons show their arrows (#584).
 func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> String:
 	var tab: SettingsTab = menu.settings
+	if (tab.button(Graphics.ANTI_ALIASING, "Previous").icon != SettingsTab.PREVIOUS_ICON
+			or tab.button(Graphics.ANTI_ALIASING, "Next").icon != SettingsTab.NEXT_ICON):
+		return "a setting's step buttons don't show their arrows"
 	var choices: Array[int] = Graphics.ANTI_ALIASING_CHOICES
 	var next: int = choices[posmod(choices.find(Graphics.auto_anti_aliasing()) + 1, choices.size())]
 	tab.button(Graphics.ANTI_ALIASING, "Next").pressed.emit()

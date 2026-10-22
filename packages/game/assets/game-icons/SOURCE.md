@@ -4,10 +4,12 @@
   `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
   `sprout.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
   `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `resize.svg`,
-  `totem.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
+  `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
+  `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white
-  shape is left, which the game tints with its ink
+  shape is left, which the game tints with its ink; the four `plain-arrow-*.svg` are Delapouite's
+  `plain-arrow.svg`, which points down, turned to point each way
 - **License:** CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), see `LICENSE.md` next to
   this file (the pack's own notice naming its contributors)
 - **Used for:** placeholder icons (owner, #459): the special attack's button (`spiky-explosion.svg`),
@@ -17,4 +19,6 @@
   (`hamburger-menu.svg`) and close it (`cancel.svg`), the gear slots (#690): ward
   (`magic-shield.svg`), trap (`wolf-trap.svg`) and throw (`berries-bowl.svg`), the type families'
   badges (#627): `magic-swirl.svg`, `evil-moon.svg`, `fist.svg`, `sprout.svg` and `tornado.svg`,
-  and the revive item's button (#656): `herbs-bundle.svg`
+  the revive item's button (#656): `herbs-bundle.svg`, and the menu's arrow buttons (#584): the
+  Settings tab's steps back and on (`plain-arrow-left.svg`, `plain-arrow-right.svg`) and the
+  monsters' order (`plain-arrow-up.svg`, `plain-arrow-down.svg`)
