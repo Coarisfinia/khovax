@@ -78,10 +78,11 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
-**Having 5 pull requests open is the mandatory goal** (owner's rule), so the owner can go through
-them fast: whenever fewer than 5 are open, building the next one comes before anything but the
-owner's comments, right up to the usage budget's stop line. A pull
-request in the merge queue counts as done (owner's rule): it doesn't count toward the 5. Each is
+**Having 5 pull requests waiting for the owner's review at all times is the mandatory goal**
+(owner's rule, #1088), so the owner can go through them fast: whenever fewer than 5 wait, building
+the next one comes before anything but the owner's comments, right up to the usage budget's stop
+line. One the owner has approved, or one in the merge queue, no longer counts toward the 5 (owner,
+#1088). Each is
 branched from `main` and independent of the others: never stack pull requests, since they're
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
@@ -610,6 +611,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `replays/` (comparing replays, load tests and the APK flow), `build/` (export helpers), `godot/`
   (scripts Godot runs), `models/` (the Blender model scripts) and `scoop/` (pinned manifests). New
   tooling is Python, run with uv from the root's `pyproject.toml` (`uv run --locked tools/...`).
+- **Only the file endings on the list** (owner, #1095: *"I would like all currently used file
+  endings to be allowed, except for .sh and .bat. A new entry requires signoff."*): CI refuses a
+  tracked file whose ending isn't in `ENDINGS` in `tools/checks/file_endings.py`. **An agent never
+  adds an ending without the owner's approval on its issue.** The shell scripts still tracked wait
+  in its exception list, each with the issue that ports it, and that list only shrinks.
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't
   available.
 - **`git push` hung on a Windows credential prompt.** In this repository the repo-local credential

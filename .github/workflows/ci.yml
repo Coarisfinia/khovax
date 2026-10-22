@@ -117,6 +117,10 @@ jobs:
       - name: "📁 Check no path repeats a folder name"
         run: uv run --locked tools/checks/repeated_folders.py
 
+      - name: "📄 Check every file's ending is allowed"
+        # Today's endings without .sh and .bat (owner, #1095); a new one needs the owner's sign-off.
+        run: uv run --locked tools/checks/file_endings.py
+
       - name: "🗃️ Check the export presets share their file filters"
         run: uv run --locked tools/checks/export_filters_check.py
 
