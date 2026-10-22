@@ -351,9 +351,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   file, never inside the simulation. Saves are versioned JSON of integers and ids only, kept by
   `SaveStore`; gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`,
   `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
-  the content reader, JSONC): the core's edge, which reads files and JSON's numbers, so its files
-  that can't pass the determinism check yet carry its exemption marker (#515), while the
-  core-never-depends-on-a-slice check still covers them. A reader takes JSON's numbers as whole
+  the content reader, JSONC): the core's edge, which reads files and JSON's numbers. Only
+  `Content` (reading files and JSON), `SaveStore` (writing them), through which every other reader
+  and writer there goes (#591, #1177), and `JsonNumbers`, the one place JSON's floats become whole
+  numbers (#589), carry the determinism check's exemption marker (#515); `TileBlueprint` too until
+  its color is a whole number (#1179). The core-never-depends-on-a-slice check covers them all. A
+  reader takes JSON's numbers as whole
   numbers through `JsonNumbers` (#589), never by checking floats itself.
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC
   files, one per entry and named after its id. **Each kind lives in exactly one slice** (owner,

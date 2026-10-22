@@ -43,7 +43,7 @@ static func write_save(path: String, text: String) -> String:
 	}
 	var temporary: String = path + ".tmp"
 	var file: FileAccess = FileAccess.open(temporary, FileAccess.WRITE)
-	if file == null or not file.store_string(JSON.stringify(envelope, "\t") + "\n"):
+	if file == null or not file.store_string(json_text(envelope, "\t") + "\n"):
 		return "couldn't write %s" % temporary
 	file.close()
 	var folder: DirAccess = DirAccess.open(path.get_base_dir())
@@ -59,6 +59,12 @@ static func write_save(path: String, text: String) -> String:
 	if folder.rename(temporary.get_file(), path.get_file()) != OK:
 		return "couldn't put the new save in place at %s" % path
 	return ""
+
+
+## `value` as JSON text, indented by `indent` ("" for one line): every save's text is written
+## through this.
+static func json_text(value: Variant, indent: String = "") -> String:
+	return JSON.stringify(value, indent)
 
 
 ## Whether any generation of the save at `path` exists. Not only the newest: a crash between

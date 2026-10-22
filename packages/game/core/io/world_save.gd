@@ -1,4 +1,3 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads and writes JSON text, #591)
 class_name WorldSave
 extends RefCounted
 ## The world's file (#119): the persistent world, saved next to the profile and apart from it, so
@@ -38,13 +37,13 @@ static func save(world: World, path: String = PATH, beside: Dictionary = {}) -> 
 static func to_text(world: World, beside: Dictionary = {}) -> String:
 	var data: Dictionary = WorldData.of(world)
 	data.merge(beside)
-	return JSON.stringify(data)
+	return SaveStore.json_text(data)
 
 
 ## The world in `text`, its instances loaded from `source` (the game's blueprints, which the core
 ## can't name), or an empty one whose `problem` says why it's refused.
 static func parse(text: String, source: InstanceSource) -> World:
-	var parsed: Variant = json_of(text)
+	var parsed: Variant = Content.json_of(text)
 	if parsed is Dictionary:
 		# What lies beside is read apart by its owner: bad memory doesn't refuse the world.
 		var table: Dictionary = parsed
@@ -54,10 +53,3 @@ static func parse(text: String, source: InstanceSource) -> World:
 		return World.refused("not a world save, or it holds a number that isn't whole")
 	var data: Dictionary = JsonNumbers.wholes(parsed)
 	return WorldData.to_world(data, source)
-
-
-## The value in the JSON `text`, or null when it isn't JSON.
-static func json_of(text: String) -> Variant:
-	# A JSON object reports a parse error through its result instead of logging it.
-	var json: JSON = JSON.new()
-	return json.data if json.parse(text) == OK else null
