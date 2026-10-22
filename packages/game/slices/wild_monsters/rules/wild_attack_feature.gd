@@ -180,7 +180,7 @@ func _near_targets(trail: TrailFeature) -> Dictionary[Vector2i, bool]:
 ## through, the segment breaks the ring and comes off the trail.
 func _strike_ring(state: GameState, monster: Entity, dominator_id: int, damage: int) -> void:
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
-	var wall: Vector2i = domination.wall_pushed_by(state, monster.id)
+	var wall: Vector2i = domination.wall_pushed_by(state, monster.id, dominator_id)
 	state.events.append(WildMonsterStruck.new(monster.id, 0, wall, damage))
 	if _worn_through(wall, damage):
 		# The ring comes off the trail, but a wall another ring needs stays, so it's left to it.

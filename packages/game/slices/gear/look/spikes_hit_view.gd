@@ -30,7 +30,7 @@ func _ready() -> void:
 ## The wall segment the wild monster `struck` hurt pushes on, by the rings' own rule (#937).
 static func wall_of(state: GameState, struck: SpikesStruck) -> Vector2i:
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
-	return domination.wall_pushed_by(state, struck.monster_id)
+	return domination.wall_pushed_by(state, struck.monster_id, struck.dominator_id)
 
 
 ## Flashes thorns on `wall`, leaning toward `toward`.
