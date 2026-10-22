@@ -71,6 +71,9 @@ func _ready() -> void:
 	standing = GameMenu.label("")
 	for shown: Control in [heading, title, gloss, entry, standing]:
 		_column.add_child(shown)
+	# Only the sheet takes clicks, and only while open: fading out, the page lets them through.
+	for passive: Control in [row, middle, _column, gloss]:
+		passive.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	middle.add_child(_column)
 	row.add_child(middle)
 	close_button = GameMenu.button("", close)
