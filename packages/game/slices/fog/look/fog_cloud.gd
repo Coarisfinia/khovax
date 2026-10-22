@@ -18,7 +18,7 @@ const HEIGHT: float = HexGrid.TILE_HEIGHT + 0.02
 ## The fog per tile as the shader reads it: red the thick cloud (1 never seen), green the light fog
 ## (1 seen before). Under thick cloud the light fog is 0, so it never bleeds into tiles in sight
 ## next to unexplored ground.
-var fog_map: Image
+var fog_image: Image
 var _texture: ImageTexture
 var _offset: Vector2i = Vector2i.ZERO
 var _region: Region
@@ -54,24 +54,24 @@ func show_fog(region: Region, brightness: Dictionary[Vector2i, float]) -> void:
 	for tile: Vector2i in brightness:
 		var fog: Color = _fog_of(brightness[tile])
 		var texel: Vector2i = tile + _offset
-		if not fog_map.get_pixel(texel.x, texel.y).is_equal_approx(fog):
-			fog_map.set_pixel(texel.x, texel.y, fog)
+		if not fog_image.get_pixel(texel.x, texel.y).is_equal_approx(fog):
+			fog_image.set_pixel(texel.x, texel.y, fog)
 			changed = true
 	if changed:
-		_texture.update(fog_map)
+		_texture.update(fog_image)
 
 
 ## The fog the shader reads on `tile`: x the thick cloud, y the light fog, each 0 to 1. Tests
-## check the map with it.
+## check the fog image with it.
 func fog_on(tile: Vector2i) -> Vector2:
 	var texel: Vector2i = tile + _offset
-	var fog: Color = fog_map.get_pixel(texel.x, texel.y)
+	var fog: Color = fog_image.get_pixel(texel.x, texel.y)
 	return Vector2(fog.r, fog.g)
 
 
-## A tile's fog from its brightness, quantized as the map stores it, so an unchanged tile compares
-## equal: thick cloud from seen before (0) to never seen (1), light fog from seen now (0) to seen
-## before (1) and back to 0 under the thick cloud.
+## A tile's fog from its brightness, quantized as the fog image stores it, so an unchanged tile
+## compares equal: thick cloud from seen before (0) to never seen (1), light fog from seen now (0)
+## to seen before (1) and back to 0 under the thick cloud.
 static func _fog_of(bright: float) -> Color:
 	var thick: float = clampf(inverse_lerp(FogView.REMEMBERED, FogView.UNSEEN, bright), 0.0, 1.0)
 	var seen: float = clampf(inverse_lerp(FogView.VISIBLE, FogView.REMEMBERED, bright), 0.0, 1.0)
@@ -79,7 +79,8 @@ static func _fog_of(bright: float) -> Color:
 	return Color(roundf(thick * 255.0) / 255.0, roundf(light * 255.0) / 255.0, 0.0)
 
 
-## Sizes the map and the cloud to `region`, its neighbours and a margin, all cloud to start with.
+## Sizes the fog image and the cloud to `region`, its neighbours and a margin, all cloud to start
+## with.
 func _fit(region: Region) -> void:
 	_region = region
 	var low: Vector2i = Vector2i.MAX
@@ -89,14 +90,14 @@ func _fit(region: Region) -> void:
 		high = high.max(tile)
 	_offset = Vector2i(MARGIN, MARGIN) - low
 	var size: Vector2i = high - low + Vector2i(MARGIN, MARGIN) * 2 + Vector2i.ONE
-	fog_map = Image.create_empty(size.x, size.y, false, Image.FORMAT_RG8)
-	fog_map.fill(Color.RED)
-	_texture = ImageTexture.create_from_image(fog_map)
+	fog_image = Image.create_empty(size.x, size.y, false, Image.FORMAT_RG8)
+	fog_image.fill(Color.RED)
+	_texture = ImageTexture.create_from_image(fog_image)
 	var cloud: ShaderMaterial = material_override as ShaderMaterial
-	cloud.set_shader_parameter("fog_map", _texture)
-	cloud.set_shader_parameter("map_offset", Vector2(_offset))
-	cloud.set_shader_parameter("map_size", Vector2(size))
-	# A plane over the map's whole parallelogram, centered on it.
+	cloud.set_shader_parameter("fog_texture", _texture)
+	cloud.set_shader_parameter("texel_offset", Vector2(_offset))
+	cloud.set_shader_parameter("texture_size", Vector2(size))
+	# A plane over the fog image's whole parallelogram, centered on it.
 	var corners: Array[Vector3] = [
 		HexLayout.to_world(low - Vector2i(MARGIN, MARGIN)),
 		HexLayout.to_world(high + Vector2i(MARGIN, MARGIN)),

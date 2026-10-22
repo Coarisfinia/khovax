@@ -212,7 +212,7 @@ func _show_frame_checked(driver: GameDriver) -> String:
 ## In the glade, its views lie at its place in the world, and the forest's ground beside it at
 ## the world's origin, where it was drawn before the crossing. The cloud reads its fog in the
 ## glade's own coordinates (#209): its shader is handed the cloud's transform within the instance,
-## not its place in the world, where the fog map would be read off by the glade's place.
+## not its place in the world, where the fog texture would be read off by the glade's place.
 func _check_glade_placed(driver: GameDriver) -> String:
 	var root: Node3D = _main.get_node("Instance") as Node3D
 	var glade: Vector3 = HexLayout.to_world(driver.world.offset(FlowSteps.GLADE))
