@@ -18,10 +18,6 @@ import sys
 
 
 def main() -> int:
-    args = sys.argv[1:]
-    if not args:
-        print(__doc__, file=sys.stderr)
-        return 2
     if shutil.which("blender") is None:
         print("blender.py: blender is not on the PATH", file=sys.stderr)
         return 2
@@ -29,7 +25,7 @@ def main() -> int:
     # WSL's GPU device: only there does Mesa need to be pointed at d3d12.
     if os.path.exists("/dev/dxg"):
         env["GALLIUM_DRIVER"] = "d3d12"
-    command = ["blender", "--python-exit-code", "1", *args]
+    command = ["blender", "--python-exit-code", "1", *sys.argv[1:]]
     os.execvpe(command[0], command, env)
 
 
