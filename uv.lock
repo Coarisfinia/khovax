@@ -61,6 +61,12 @@ requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared
 name = "khovax-game-models"
 version = "0.0.0"
 source = { virtual = "packages/game-models" }
+dependencies = [
+    { name = "khovax-game-shared" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
 
 [[package]]
 name = "khovax-game-offscreen"
