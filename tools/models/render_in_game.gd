@@ -9,13 +9,14 @@ extends SceneTree
 ## ("portrait") and its front end, the face ("face"). Given a clip, it writes that clip's frames
 ## for a GIF instead, from the game camera or from any of those views. Any model works: the
 ## cameras frame it by its bounds. With `points`, it marks the model's attachment points
-## (PointMarks, #1007).
+## (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with
+## `agitated`; an Attack clip's frames flare the glow as the game does when it strikes.
 ##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked tools/godot/offscreen.py -- --path . \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] [clip=<Clip> [from=<view>]] \
-##     [points] \
+##     [points] [agitated] \
 ##     --seed=0 --user-dir=<branch>
 ## The launch options after it (LaunchOptions) start the world as the game would.
 
@@ -146,6 +147,10 @@ func _place() -> void:
 	_piece.base_offset = 0.0
 	var model: Node3D = (load(_model_path) as PackedScene).instantiate() as Node3D
 	Toon.apply_to_model(model)
+	var glow: EyeGlow = EyeGlow.add_to(model)
+	if OS.get_cmdline_user_args().has("agitated"):
+		glow.agitated = true
+		glow.brightness = EyeGlow.AGITATED
 	_piece.add_child(model)
 	_main.add_child(_piece)
 	_piece.tile = _beside(driver.state, driver.state.player(0).tile)
@@ -172,12 +177,23 @@ func _place() -> void:
 		_game_camera.make_current()
 	animations.play(StringName(_clip))
 	animations.pause()
+	# The glow moves on with the clip's frames, not with how long the frames take to draw.
+	glow.process_mode = Node.PROCESS_MODE_DISABLED
+	if _clip == "Attack":
+		glow.flare()
 	var length: float = animations.get_animation(StringName(_clip)).length
 	for frame: int in ceili(length * CLIP_FPS) + 1:
 		_add_shot(
 			"%s_%03d" % [_clip, frame],
-			animations.seek.bind(minf(frame / CLIP_FPS, length), true),
+			_pose_clip.bind(animations, glow, minf(frame / CLIP_FPS, length)),
 		)
+
+
+## Poses the clip `animations` plays at `time`, and the `glow` in the model's eyes with it.
+func _pose_clip(animations: AnimationPlayer, glow: EyeGlow, time: float) -> void:
+	animations.seek(time, true)
+	glow.advance(0.0 if is_zero_approx(time) else 1.0 / CLIP_FPS)
+	glow.place()
 
 
 ## Saves what the viewport shows as `file`, and whether that worked.
