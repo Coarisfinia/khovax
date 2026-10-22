@@ -2,8 +2,8 @@
 runes, rigged and animated. Only its parameters and its own parts live here; the building blocks
 are the shared library in tools/models/lib/ (model skill).
 
-    tools/models/blender.sh --background --factory-startup --python tools/models/mana_wolf.py -- \
-        assets/mana-wolf/mana_wolf.glb
+    uv run --locked tools/models/blender.py --background --factory-startup \
+        --python tools/models/mana_wolf.py -- assets/mana-wolf/mana_wolf.glb
 
 Blender is Z-up and the wolf faces -Y (the game's +Z). Sizes are a large wolf's, in metres,
 shrunk by SCALE at the end to stand on one hex tile.

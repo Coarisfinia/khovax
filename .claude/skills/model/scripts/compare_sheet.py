@@ -1,6 +1,6 @@
 # Compares a model with its reference as numbers and one sheet (model skill, #1072), so a derpy
 # shape shows as a measurement instead of slipping past the eye.
-# Usage: tools/models/blender.sh --background --factory-startup --python \
+# Usage: uv run --locked tools/models/blender.py --background --factory-startup --python \
 #     .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir> [views]
 # The reference is the last approved version of the model (a .glb, e.g. from
 # `git show <commit>:assets/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
