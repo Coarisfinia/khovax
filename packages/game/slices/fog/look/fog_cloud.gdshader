@@ -2,18 +2,18 @@
 // looked lies thick cloud, hiding the ground. Over ground seen before lies light fog (#175): low,
 // thin wisps drifting along, through which the ground stays readable. It's told apart from the
 // cloud by its shape, not only its brightness (#68). Clear where an ally sees now. How much of each
-// lies on a tile comes from `fog_map`, one texel per tile in axial coordinates (FogCloud), sampled
-// at each pixel's fractional tile so the edges fade between tiles instead of stepping. Not
+// lies on a tile comes from `fog_texture`, one texel per tile in axial coordinates (FogCloud),
+// sampled at each pixel's fractional tile so the edges fade between tiles instead of stepping. Not
 // cel-shaded (owner, #156): banded fog with ink edges was too busy. Cheap enough for mobile and the
 // web: one plane, one material, four texture reads.
 shader_type spatial;
 render_mode unshaded, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
 
 // Fog per tile, red the thick cloud and green the light fog, each 0 to 1; texel (q, r) is tile
-// (q, r) + `map_offset`.
-uniform sampler2D fog_map : filter_linear, repeat_disable;
-uniform vec2 map_offset;
-uniform vec2 map_size;
+// (q, r) + `texel_offset`.
+uniform sampler2D fog_texture : filter_linear, repeat_disable;
+uniform vec2 texel_offset;
+uniform vec2 texture_size;
 // Hex size in world units (HexLayout.SIZE).
 uniform float hex_size = 1.0;
 uniform sampler2D cloud_noise : filter_linear, repeat_enable;
@@ -32,8 +32,9 @@ uniform float wisp_thin = 0.3;
 uniform float wisp_thick = 0.6;
 
 varying vec3 world;
-// The position within the instance, whose coordinates the fog map is in: the views of the current
-// instance stand at its place in the world (#189), so the world position is off by that place.
+// The position within the instance, whose coordinates the fog texture is in: the views of the
+// current instance stand at its place in the world (#189), so the world position is off by that
+// place.
 varying vec3 in_instance;
 // The cloud's own transform within the instance.
 uniform mat4 to_instance;
@@ -47,8 +48,8 @@ void vertex() {
 vec2 fog_at(vec2 xz) {
 	float r = xz.y / (1.5 * hex_size);
 	float q = xz.x / (sqrt(3.0) * hex_size) - r * 0.5;
-	vec2 uv = (vec2(q, r) + map_offset + 0.5) / map_size;
-	return texture(fog_map, uv).rg;
+	vec2 uv = (vec2(q, r) + texel_offset + 0.5) / texture_size;
+	return texture(fog_texture, uv).rg;
 }
 
 void fragment() {
