@@ -7,8 +7,21 @@ extends Node3D
 ## One that goes back to its player at 0 HP (#456) shrinks into them, turning their personal color
 ## as it goes, eased; the one chosen in its place (#597), or by a swap (#55), grows out of them as
 ## it joins. Its eyes glow (EyeGlow) in its type's colour (TypeGlow, #1063), shaped by its
-## player's leaning. It only reads the state.
+## player's leaning. A companion whose special lasts (#1163) holds it: its figure winds up
+## (ChannelStart), holds the middle (Channel, looping) until the hold the special's SpecialStruck
+## gave ends, and releases it (ChannelEnd), then idles again. It only reads the state and the
+## tick's events.
 
+## The model every companion wears: the wild monsters' placeholder (#338).
+const MODEL: PackedScene = WildMonsterView.MODEL
+## The clips the view plays, by the names its model gives them: Idle, and a held special's wind-up,
+## held middle and release.
+const IDLE: StringName = WildMonsterView.IDLE
+const CHANNEL_START: StringName = &"ChannelStart"
+const CHANNEL: StringName = &"Channel"
+const CHANNEL_END: StringName = &"ChannelEnd"
+## Every clip the view plays, which the boot flow checks its model has (#992).
+const CLIPS: Array[StringName] = [IDLE, CHANNEL_START, CHANNEL, CHANNEL_END]
 ## How big the figure is next to a wild monster's, and its circle next to a player's.
 const FIGURE_SCALE: float = 0.6
 const CIRCLE_SCALE: float = 0.75
@@ -24,6 +37,9 @@ const RETURN_SECONDS: float = 0.6
 var figures: Dictionary[int, HexPiece] = {}
 ## The yaw each figure turns toward, by entity id: where it last walked.
 var _facing: Dictionary[int, float] = {}
+## The tick each companion's held special ends on, by entity id (#1163): until then its figure holds
+## it. Kept here so tests can read it.
+var channels: Dictionary[int, int] = {}
 ## The instance the figures belong to: another instance drops them at once (#189).
 var _shown: GameState
 ## The slots whose player chose another companion, whose next figure grows out of them.
@@ -41,6 +57,9 @@ func _process(delta: float) -> void:
 		var model: Node3D = figures[companion_id].get_child(0) as Node3D
 		var yaw: float = _facing.get(companion_id, 0.0)
 		model.rotation.y = rotate_toward(model.rotation.y, yaw, TURN_SPEED * delta)
+	for companion_id: int in channels.keys():
+		if driver.state.tick >= channels[companion_id]:
+			_release(companion_id)
 
 
 ## Matches the figures to the current state. Called every frame; tests call it after stepping.
@@ -51,6 +70,7 @@ func show_state() -> void:
 		HexPiece.free_all(figures)
 		_facing.clear()
 		_chosen.clear()
+		channels.clear()
 		_shown = driver.state
 	var feature: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
 	var shown: Array[int] = feature.companions() if feature != null else []
@@ -59,6 +79,7 @@ func show_state() -> void:
 			figures[companion_id].queue_free()
 			var _dropped: bool = figures.erase(companion_id)
 			_dropped = _facing.erase(companion_id)
+			_dropped = channels.erase(companion_id)
 	for companion_id: int in shown:
 		var slot: int = feature.owners[companion_id]
 		if not figures.has(companion_id):
@@ -86,9 +107,10 @@ func leaning_of(slot: int) -> String:
 
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
-## shrinks it into them, notes whose player chose another, so it grows out of them, and flares the
-## eyes of every one that struck. Only the shown instance's events (#1025), and only once the
-## figures are its: entity ids repeat across instances, so another's would name a figure here.
+## shrinks it into them, notes whose player chose another, so it grows out of them, flares the
+## eyes of every one that struck, and starts the hold of every one whose special lasts. Only the
+## shown instance's events (#1025), and only once the figures are its: entity ids repeat across
+## instances, so another's would name a figure here.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if driver.state != _shown:
 		return
@@ -97,11 +119,13 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		if chosen != null and not _chosen.has(chosen.slot):
 			_chosen.append(chosen.slot)
 		_flare(event)
+		_channel(event)
 		var returned: CompanionReturned = event as CompanionReturned
 		if returned != null and figures.has(returned.companion_id):
 			var figure: HexPiece = figures[returned.companion_id]
 			var _dropped: bool = figures.erase(returned.companion_id)
 			_dropped = _facing.erase(returned.companion_id)
+			_dropped = channels.erase(returned.companion_id)
 			_return(figure, returned.slot)
 
 
@@ -114,6 +138,36 @@ func _flare(event: RefCounted) -> void:
 		striker = (event as SpecialStruck).companion_id
 	if figures.has(striker):
 		EyeGlow.of(figures[striker].get_child(0) as Node3D).flare()
+
+
+## Starts the hold of the companion whose special lasts, if `event` is one (#1163): its figure winds
+## up, then holds the middle, looping, until the hold ends (_release). A model without the clips
+## goes without.
+func _channel(event: RefCounted) -> void:
+	var struck: SpecialStruck = event as SpecialStruck
+	if struck == null or struck.channel_ticks <= 0 or not figures.has(struck.companion_id):
+		return
+	channels[struck.companion_id] = driver.state.tick + struck.channel_ticks
+	var animations: AnimationPlayer = _clips(struck.companion_id)
+	if not WildMonsterView.has_clip(animations, CHANNEL_START).is_empty():
+		animations.clear_queue()
+		animations.play(CHANNEL_START, WildMonsterView.BLEND_SECONDS)
+		animations.queue(CHANNEL)
+
+
+## Ends the hold of the companion `companion_id`: its figure releases it, then idles again.
+func _release(companion_id: int) -> void:
+	var _ended: bool = channels.erase(companion_id)
+	var animations: AnimationPlayer = _clips(companion_id)
+	if not WildMonsterView.has_clip(animations, CHANNEL_END).is_empty():
+		animations.clear_queue()
+		animations.play(CHANNEL_END, WildMonsterView.BLEND_SECONDS)
+		animations.queue(IDLE)
+
+
+## The AnimationPlayer playing the clips of the companion `companion_id`'s figure, or null.
+func _clips(companion_id: int) -> AnimationPlayer:
+	return WildMonsterView.clips_of(figures[companion_id].get_child(0) as Node3D)
 
 
 ## Glides `figure` into the player in `slot` while it shrinks away and takes on their color, then

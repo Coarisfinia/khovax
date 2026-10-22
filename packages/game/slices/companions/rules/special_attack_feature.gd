@@ -11,7 +11,9 @@ extends Feature
 ## nothing. The cooldown is the player's, by slot, in this instance: a companion that joins anew
 ## here doesn't reset it.
 ## The focused wild monster (`Command.focus`, #436) is struck first, when the companion could strike
-## it; otherwise the one the auto attack would. Each strike raises SpecialStruck.
+## it; otherwise the one the auto attack would. Each strike raises SpecialStruck, which says how
+## long
+## a held special (#1163) lasts, for its companion's look.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "specials"
@@ -21,6 +23,9 @@ const ID: String = "specials"
 ## special here has none.
 var powers: Dictionary[String, int] = {}
 var cooldowns: Dictionary[String, int] = {}
+## How long each species' special is held once it fires, in ticks, by species id (#1163): an attack
+## that lasts. A species not here has a special that strikes and is over.
+var channels: Dictionary[String, int] = {}
 ## The ticks each player's special still cools down, by slot; one that's ready isn't here.
 var _cooling: Dictionary[int, int] = {}
 
@@ -28,9 +33,11 @@ var _cooling: Dictionary[int, int] = {}
 func _init(
 	special_powers: Dictionary[String, int] = {},
 	special_cooldowns: Dictionary[String, int] = {},
+	special_channels: Dictionary[String, int] = {},
 ) -> void:
 	powers = special_powers
 	cooldowns = special_cooldowns
+	channels = special_channels
 
 
 func id() -> String:
@@ -107,7 +114,9 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 	_cooling[slot] = cooldowns.get(species, 1)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
 	state.events.append(
-		SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target), strong),
+		SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target), strong).held(
+			channels[species] if channels.has(species) else 0,
+		),
 	)
 
 

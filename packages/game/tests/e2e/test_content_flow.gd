@@ -209,6 +209,12 @@ func _check_abilities_refused() -> String:
 		special.replace(", \"power\": 3000", "") % ["x", "special", "N"]: "a special has a power",
 		special % ["x", "self_passive", "N"]: "a special has a power, a cooldown and a strike",
 		special.replace("titan", "fire") % ["x", "special", "N"]: "a special has a strike type",
+		ability.replace("}", ", \"channel_seconds\": 2}") % ["x", "self_passive", "N"]: (
+			"a special has a power, a cooldown and a strike"
+		),
+		special.replace("}", ", \"channel_seconds\": 0}") % ["x", "special", "N"]: (
+			"a special's hold"
+		),
 	}
 	for text: String in cases:
 		var problem: String = Ability.parse("x", text).problem
@@ -218,6 +224,12 @@ func _check_abilities_refused() -> String:
 	if (not read.problem.is_empty() or read.power != 3000 or read.cooldown_seconds != 8
 			or read.strike_type != "titan"):
 		return "a special's power, cooldown and strike type didn't read: " + read.problem
+	var held: Ability = Ability.parse(
+		"x",
+		special.replace("}", ", \"channel_seconds\": 3}") % ["x", "special", "N"],
+	)
+	if not held.problem.is_empty() or held.channel_seconds != 3 or read.channel_seconds != 0:
+		return "a special's hold didn't read (#1163): " + held.problem
 	return ""
 
 

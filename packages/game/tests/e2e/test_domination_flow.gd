@@ -96,6 +96,9 @@ const STRONG_STRENGTH: int = 400
 ## cooldown.
 const SPECIAL_POWER: int = 3000
 const SPECIAL_TICKS: int = 50
+## How long the weak species' special is held once it fires (#1163), and the hold the look check's
+## companion is given.
+const CHANNEL_TICKS: int = 40
 ## What a felled weak monster drops (#629): its loot table always rolls this.
 const HIDE_LOOT: Dictionary[String, int] = { "hide": 2 }
 ## The type checks' strikes, by the strike's type and the struck species (_type_chart), and how
@@ -1101,6 +1104,11 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
 	if felled.size() != 1 or felled[0].monster_id != first or felled[0].damage != damage:
 		return "the special didn't strike the first wild monster for its power"
+	if felled[0].channel_ticks != CHANNEL_TICKS:
+		return "the special held %d ticks, not its species' %d (#1163)" % [
+			felled[0].channel_ticks,
+			CHANNEL_TICKS,
+		]
 	if not felled[0].felled or not wild.is_fainted(first) or wild.monsters.has(first):
 		return "the special didn't fell the wild monster"
 	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
@@ -1592,7 +1600,11 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 	ordered.append_array(extra)
 	ordered.append_array([
 		CompanionAttackFeature.new(),
-		SpecialAttackFeature.new({ WEAK: SPECIAL_POWER }, { WEAK: SPECIAL_TICKS }),
+		SpecialAttackFeature.new(
+			{ WEAK: SPECIAL_POWER },
+			{ WEAK: SPECIAL_TICKS },
+			{ WEAK: CHANNEL_TICKS },
+		),
 		HarvestFeature.new({ WEAK: _hide_table() }),
 	])
 	var state: GameState = GameState.new(region, 1, ordered)
@@ -1707,7 +1719,64 @@ func _check_view(tree: SceneTree) -> String:
 		result = "the dominated figure or the spikes' thorns were still there after going"
 	main.queue_free()
 	await tree.process_frame
+	return result if not result.is_empty() else await _check_channel(tree)
+
+
+## A companion whose special lasts holds it (#1163): its figure winds up (ChannelStart), holds the
+## middle (Channel), looping, for as long as the hold its SpecialStruck gives, not a tick less, then
+## releases it (ChannelEnd) and idles again.
+func _check_channel(tree: SceneTree) -> String:
+	var main: Node = await FlowGame.start(tree)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	CompanionParty.bring(driver.world, FlowSteps.parties([[COMPANION]]))
+	driver.world.step(FlowSteps.command(Command.NO_MOVE))
+	var view: CompanionView = main.get_node("Instance/CompanionView") as CompanionView
+	view.show_state()
+	var feature: CompanionFeature = driver.state.feature(CompanionFeature.ID) as CompanionFeature
+	var companion_id: int = feature.companion_of(0)
+	var result: String = ""
+	if not view.figures.has(companion_id):
+		result = "the companion whose special lasts isn't shown"
+	else:
+		var model: Node3D = view.figures[companion_id].get_child(0) as Node3D
+		var clips: AnimationPlayer = WildMonsterView.clips_of(model)
+		var events: Array[RefCounted] = [
+			SpecialStruck.new(companion_id, 0, 1, false).held(CHANNEL_TICKS),
+		]
+		FlowSteps.raise(driver, events)
+		result = _held(driver, view, clips)
+	main.queue_free()
+	await tree.process_frame
 	return result
+
+
+## Whether the companion's figure, whose `clips` play, winds up, holds and releases its special as
+## the hold just raised says; the reason if not.
+func _held(driver: GameDriver, view: CompanionView, clips: AnimationPlayer) -> String:
+	if clips.current_animation != CompanionView.CHANNEL_START:
+		return "a held special played %s, not its wind-up" % clips.current_animation
+	clips.advance(clips.get_animation(CompanionView.CHANNEL_START).length + 0.01)
+	var loop: float = clips.get_animation(CompanionView.CHANNEL).length
+	clips.advance(2.0 * loop)
+	if clips.current_animation != CompanionView.CHANNEL:
+		return "after its wind-up, a held special played %s, not its middle, looping" % [
+			clips.current_animation,
+		]
+	for _tick: int in CHANNEL_TICKS - 1:
+		driver.world.step(FlowSteps.command(Command.NO_MOVE))
+	view._process(0.0)
+	if clips.current_animation != CompanionView.CHANNEL:
+		return "a held special was released a tick before its hold ended"
+	driver.world.step(FlowSteps.command(Command.NO_MOVE))
+	view._process(0.0)
+	if clips.current_animation != CompanionView.CHANNEL_END or not view.channels.is_empty():
+		return "a held special played %s, not its release, once its hold ended" % [
+			clips.current_animation,
+		]
+	clips.advance(clips.get_animation(CompanionView.CHANNEL_END).length + 0.01)
+	if clips.current_animation != CompanionView.IDLE:
+		return "after its release, the companion played %s, not Idle" % clips.current_animation
+	return ""
 
 
 ## The ring around the wild monster waits for a totem: a spikes hit on it flashes thorns, a shape,

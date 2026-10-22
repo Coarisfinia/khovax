@@ -27,6 +27,7 @@
 		},
 		"power": { "description": "A special's: how much of its species' strength one strike deals, in thousandths (#33, #410): 3000 is three times it.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"cooldown_seconds": { "description": "A special's: the seconds before it can fire again (#410).", "type": "integer", "minimum": 1, "maximum": 3600 },
+		"channel_seconds": { "description": "A special's, optional: the seconds it is held once it fires, an attack that lasts (#1163), which its companion plays as a wind-up, a held middle and a release. Without it, the special strikes and is over.", "type": "integer", "minimum": 1, "maximum": 3600 },
 		"strike_type": {
 			"description": "A special's: its type from the type chart (#626), whatever fits it, not necessarily one of its species'.",
 			"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
@@ -39,5 +40,5 @@
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
 	"then": { "required": ["power", "cooldown_seconds", "strike_type"] },
-	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }] } }
+	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] } }
 }
