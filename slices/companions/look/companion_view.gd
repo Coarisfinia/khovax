@@ -112,7 +112,12 @@ func _return(figure: HexPiece, slot: int) -> void:
 	tint.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	tint.albedo_color = Color(PersonalColor.shown(driver, slot), 0.0)
 	for mesh: Node in figure.find_children("*", "MeshInstance3D", true, false):
-		(mesh as MeshInstance3D).material_overlay = tint
+		# Not the eyes' halos, which keep their own glow and go out with it.
+		if not mesh.get_parent() is EyeGlow:
+			(mesh as MeshInstance3D).material_overlay = tint
+	var glow: EyeGlow = EyeGlow.of(figure.get_child(0) as Node3D)
+	if glow != null:
+		glow.out = true
 	var tween: Tween = create_tween().set_parallel().set_trans(Tween.TRANS_SINE).set_ease(
 		Tween.EASE_IN_OUT
 	)
