@@ -816,7 +816,6 @@ jobs:
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
           export CHROME_GL=mesa
-          export EXPECTED_HASH=1  # DELIBERATE FAILURE (#1041 proof), reverted next
           timeout 300 uv run --locked --package khovax-web packages/web/web_e2e.py build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
