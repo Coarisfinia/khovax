@@ -110,9 +110,10 @@ def run(apk: str, expected: str) -> int:
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
+    # Like the shell script it replaces: extra arguments are ignored, missing ones fail with 1.
+    if len(sys.argv) < 3:
         print(__doc__.strip().splitlines()[-1].strip(), file=sys.stderr)
-        return 2
+        return 1
     try:
         return run(sys.argv[1], sys.argv[2])
     except AdbFailed as failed:
