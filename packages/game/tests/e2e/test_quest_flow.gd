@@ -1479,17 +1479,7 @@ func _check_dialog_ids() -> String:
 
 ## The quests read from a directory holding `files`, quest text by id; the directory is gone after.
 static func _load_written(files: Dictionary[String, String]) -> QuestContent:
-	var directory: String = "user://written_quests_test/"
-	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
-	for id: String in files:
-		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(files[id])
-		file.close()
-	var content: QuestContent = QuestContent.load_quests(directory)
-	for id: String in files:
-		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
-	var _gone: Error = DirAccess.remove_absolute(directory)
-	return content
+	return FlowSteps.written_content(QuestContent.load_quests, files) as QuestContent
 
 
 ## The facts of this player dominating a monster of each of `species`, then opening `chests` chests.

@@ -1115,7 +1115,7 @@ func _check_faction_territory(content: FactionContent) -> String:
 ## are refused together, or "".
 func _pair_problem(text_x: String, text_y: String) -> String:
 	var texts: Dictionary[String, String] = { "x": text_x, "y": text_y.replace("\"x\"", "\"y\"") }
-	return _written_problem(FactionContent.load_factions, texts)
+	return FlowSteps.written_content(FactionContent.load_factions, texts).problem
 
 
 ## The dialogs load (#618): Teska na Amvrel's greeting reads on from its first line to its second,
@@ -1151,13 +1151,10 @@ func _check_dialogs() -> String:
 func _warn_locking_dialogs() -> String:
 	var dialogs: Dictionary[String, Dialog] = DialogContent.load_dialogs().dialogs
 	for instance_name: String in InstanceBlueprints.names():
-		var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
-		var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
 		var locking: int = 0
-		if people != null:
-			for spot: NpcSpot in people.spots.values():
-				var dialog: Dialog = dialogs.get(spot.dialog)
-				locking += 1 if dialog != null and dialog.lock else 0
+		for spot: NpcSpot in _placed_spots(instance_name):
+			var dialog: Dialog = dialogs.get(spot.dialog)
+			locking += 1 if dialog != null and dialog.lock else 0
 		if locking > Dialog.MOST_LOCKING_PER_REGION:
 			# A CI warning annotation on stdout, which GitHub shows without failing the run.
 			# gdstyle:ignore=quality/no-debug-print
@@ -1213,10 +1210,10 @@ func _check_dialogs_refused() -> String:
 		var refusal: String = Dialog.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken dialog gave %s, not %s" % [refusal, cases[text]]
-	var nobody: String = _written_problem(
+	var nobody: String = FlowSteps.written_content(
 		DialogContent.load_dialogs,
 		{ "x": dialog % "{\"text\": \"T\"}" },
-	)
+	).problem
 	if not nobody.contains("its speaker s is no person"):
 		return "a dialog spoken by no person gave %s" % nobody
 	return ""
@@ -1258,11 +1255,7 @@ func _check_people() -> String:
 func _placed_people_problem(content: PeopleContent) -> String:
 	var dialogs: Dictionary[String, Dialog] = DialogContent.load_dialogs().dialogs
 	for instance_name: String in InstanceBlueprints.names():
-		var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
-		var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
-		if people == null:
-			continue
-		for spot: NpcSpot in people.spots.values():
+		for spot: NpcSpot in _placed_spots(instance_name):
 			if not content.people.has(spot.id):
 				return "%s places %s, who is no person (#1005)" % [instance_name, spot.id]
 			var said: Dialog = dialogs.get(spot.dialog)
@@ -1275,19 +1268,14 @@ func _placed_people_problem(content: PeopleContent) -> String:
 	return ""
 
 
-## What `loader` (a `<Kind>Content`'s, taking a directory) says about a directory holding `files`,
-## text by file id; the directory is gone after.
-static func _written_problem(loader: Callable, files: Dictionary[String, String]) -> String:
-	var directory: String = "user://test_written_content/"
-	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
-	for id: String in files:
-		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(files[id])
-		file.close()
-	var content: Content = loader.call(directory)
-	for id: String in files:
-		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
-	return content.problem
+## The people a new instance of `instance_name` places, as its legend says.
+static func _placed_spots(instance_name: String) -> Array[NpcSpot]:
+	var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
+	var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
+	var spots: Array[NpcSpot] = []
+	if people != null:
+		spots.assign(people.spots.values())
+	return spots
 
 
 ## Command codes (#818): no id's code is CommandCodes.NONE, and filing one refuses NONE and a code

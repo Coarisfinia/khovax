@@ -1,8 +1,9 @@
 class_name FlowSteps
 extends RefCounted
 ## Helpers several e2e flows use (#246, AGENTS.md: shared, never copied): one tick's commands, a
-## whole step on the grid, a shortest walk, and events raised in the instance a driver shows. Not
-## a flow itself: the runner runs only the `test_*.gd` files.
+## whole step on the grid, a shortest walk, events raised in the instance a driver shows, and
+## content read from files a flow writes. Not a flow itself: the runner runs only the `test_*.gd`
+## files.
 
 ## The instances the flows load by name (#915): the game names none, it reads them from the
 ## realms (#865). The playground (#338), Senwel Sael, which only the tests play (#712).
@@ -193,3 +194,19 @@ static func shortest_path(state: GameState, from: Vector2i, goal: Vector2i) -> A
 static func walkable_for_players(state: GameState, tile: Vector2i) -> bool:
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	return state.region.is_walkable(tile) and not movement.is_occupied(state, tile)
+
+
+## What `loader` (a `<Kind>Content`'s, taking a directory) reads from a directory holding `files`,
+## each file's text by its id; the directory is gone after.
+static func written_content(loader: Callable, files: Dictionary[String, String]) -> Content:
+	var directory: String = "user://written_content_test/"
+	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
+	for id: String in files:
+		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
+		var _stored: bool = file.store_string(files[id])
+		file.close()
+	var content: Content = loader.call(directory)
+	for id: String in files:
+		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
+	var _gone: Error = DirAccess.remove_absolute(directory)
+	return content
