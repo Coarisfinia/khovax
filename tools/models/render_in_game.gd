@@ -178,9 +178,21 @@ func _place() -> void:
 		_game_camera.make_current()
 	# The glow moves on with the clips' frames, not with how long the frames take to draw.
 	glow.process_mode = Node.PROCESS_MODE_DISABLED
-	# Several clips in one run (#1050): the game starts once for all of them, which is most of
-	# what a run costs.
-	for clip: String in _clip.split(","):
+	_add_clip_shots(animations, glow)
+
+
+## Lists every frame of every clip `_clip` names, or ends the run when the model lacks one.
+## Several clips in one run (#1050): the game starts once for all of them, which is most of what a
+## run costs.
+func _add_clip_shots(animations: AnimationPlayer, glow: EyeGlow) -> void:
+	var clips: PackedStringArray = _clip.split(",")
+	for clip: String in clips:
+		if not animations.has_animation(StringName(clip)):
+			var known: PackedStringArray = animations.get_animation_list()
+			printerr("the model has no clip %s: it has %s" % [clip, known])
+			quit(1)
+			return
+	for clip: String in clips:
 		var length: float = animations.get_animation(StringName(clip)).length
 		for frame: int in ceili(length * CLIP_FPS) + 1:
 			_add_shot(
