@@ -59,7 +59,12 @@ def sort_faces(obj):
     operators (a UV sphere's primitive, for one) lay out the same faces in a different order on
     every run, and the glTF exporter writes the triangles in face order, so without this two builds
     of one script differ in their index buffers (#1085). Vertices keep their order: no operator
-    the models use varies it, and the exporter orders the glTF's vertices by their data anyway."""
+    the models use varies it, and the exporter orders the glTF's vertices by their data anyway.
+    The faces are sorted through BMesh, which carries the skin weights, UVs, materials and smooth
+    shading across; shape keys and custom normals no model has yet, so a mesh with them is refused
+    rather than trusted to come back unchanged."""
+    if obj.data.shape_keys is not None or obj.data.has_custom_normals:
+        raise RuntimeError("%s: sort_faces doesn't keep shape keys or custom normals yet" % obj.name)
     mesh = bmesh.new()
     mesh.from_mesh(obj.data)
     mesh.verts.index_update()
@@ -75,3 +80,4 @@ def sort_faces(obj):
     mesh.faces.sort(key=lambda face: rank[face.index])
     mesh.to_mesh(obj.data)
     mesh.free()
+    obj.data.update()

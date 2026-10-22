@@ -95,8 +95,16 @@ def main() -> int:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
         logs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
         runs = [build(script, out, log) for out, log in zip(outs, logs)]
-        for run, log, out in zip(runs, logs, outs):
-            if run.wait() != 0 or not out.is_file():
+        try:
+            codes = [run.wait() for run in runs]
+        finally:
+            # Neither build outlives the scratch folder, also when this is interrupted.
+            for run in runs:
+                if run.poll() is None:
+                    run.kill()
+                    run.wait()
+        for code, log, out in zip(codes, logs, outs):
+            if code != 0 or not out.is_file():
                 print(log.read_text(), end="")
                 print(f"REBUILD CHECK: FAIL ({script.name} didn't build)")
                 return 1
