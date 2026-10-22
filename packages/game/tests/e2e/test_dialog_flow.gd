@@ -101,7 +101,7 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 ## The second line names the Amvrel Velmarai (#959) as a link to its lexicon page, which a
 ## controller, a click and a long press on touch open.
 func _open_codex(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
-	var page: CodexPage = screen.get_node("../CodexPage") as CodexPage
+	var page: CodexPage = screen.get_parent().get_node("CodexPage") as CodexPage
 	if (screen.line_links() != ["FACTION:amvrel_velmarai"]
 			or not screen.shown_line().begins_with("The Amvrel Velmarai pay")):
 		return "the second line showed %s with links %s" % [
