@@ -6,7 +6,6 @@ extends ActionButton
 ## shows the item's icon and how many the player holds, 0 when none (#429), and is
 ## drawn faded while they hold none or nothing they carry has fainted.
 
-@export var driver: Session
 ## Whose revive items are counted: this machine's player's profile.
 @export var holder: ProfileHolder
 
@@ -22,9 +21,6 @@ func corner_text() -> String:
 
 
 func usable() -> bool:
-	if ReviveItem.held(holder) == 0 or driver == null or driver.state == null:
+	if ReviveItem.held(holder) == 0 or player() == null:
 		return false
-	var slot: int = driver.input.slot if driver.input != null else 0
-	if driver.state.player(slot) == null:
-		return false
-	return not ReviveItemFeature.fainted(driver.state, slot).is_empty()
+	return not ReviveItemFeature.fainted(state(), slot()).is_empty()

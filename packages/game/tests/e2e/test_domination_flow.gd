@@ -1154,7 +1154,7 @@ static func _usable(button: ActionButton, state: GameState, slot: int) -> bool:
 	session.world.instances[session.local_instance_name()] = state
 	session.input = LocalInput.new()
 	session.input.slot = slot
-	button.set("driver", session)
+	button.driver = session
 	var usable: bool = button.usable()
 	button.free()
 	session.input.free()

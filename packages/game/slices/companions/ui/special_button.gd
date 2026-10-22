@@ -7,8 +7,6 @@ extends ActionButton
 ## (SpecialAttackFeature.can_fire):
 ## cooling down, no companion whose species has a special, or no wild monster next to it to strike.
 
-@export var driver: Session
-
 
 func _init() -> void:
 	icon = preload("res://assets/game-icons/spiky-explosion.svg")
@@ -25,10 +23,10 @@ func corner_text() -> String:
 
 func cooldown_share() -> float:
 	var special: SpecialAttackFeature = _special()
-	var companions: CompanionFeature = _companions()
+	var companions: CompanionFeature = feature(CompanionFeature.ID) as CompanionFeature
 	if special == null or companions == null:
 		return 0.0
-	var companion_id: int = companions.companion_of(_slot())
+	var companion_id: int = companions.companion_of(slot())
 	if companion_id == 0:
 		return 0.0
 	var full: int = special.cooldowns.get(companions.species_of(companion_id), 0)
@@ -38,27 +36,13 @@ func cooldown_share() -> float:
 ## Asks the rule itself (#931), so the button never disagrees with what a press does.
 func usable() -> bool:
 	var special: SpecialAttackFeature = _special()
-	return special != null and special.can_fire(driver.state, _slot())
+	return special != null and special.can_fire(state(), slot())
 
 
 func _cooldown_left() -> int:
 	var special: SpecialAttackFeature = _special()
-	return special.cooldown_left(_slot()) if special != null else 0
+	return special.cooldown_left(slot()) if special != null else 0
 
 
 func _special() -> SpecialAttackFeature:
-	return _feature(SpecialAttackFeature.ID) as SpecialAttackFeature
-
-
-func _companions() -> CompanionFeature:
-	return _feature(CompanionFeature.ID) as CompanionFeature
-
-
-func _feature(feature_id: String) -> Feature:
-	if driver == null or driver.state == null:
-		return null
-	return driver.state.feature(feature_id)
-
-
-func _slot() -> int:
-	return driver.input.slot if driver != null and driver.input != null else 0
+	return feature(SpecialAttackFeature.ID) as SpecialAttackFeature

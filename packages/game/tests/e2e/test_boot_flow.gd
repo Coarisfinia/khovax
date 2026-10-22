@@ -629,6 +629,28 @@ func _check_knocked_down_look(main: Node, driver: GameDriver) -> String:
 			or view.current_clip() == PlayerView.DOWN
 			or ring.filled_marks(player.id) != -1):
 		return "a knocked-down player didn't sit inside the revive ring, or kept it once up again"
+	return _check_respawn_button(main, driver)
+
+
+## On a touch screen the respawn button (#495) shows only while this machine's player is knocked
+## down (#479, #934).
+func _check_respawn_button(main: Node, driver: GameDriver) -> String:
+	var knockdown: KnockdownFeature = driver.state.feature(KnockdownFeature.ID) as KnockdownFeature
+	var player: Entity = driver.state.player(0)
+	var respawn: RespawnButton = main.get_node("Hud/RespawnButton") as RespawnButton
+	var screen: Vector2 = respawn.get_viewport_rect().size
+	respawn.touch = true
+	respawn.lay_out_in(screen)
+	var hidden_standing: bool = not respawn.visible
+	knockdown.knock_down(player.id)
+	respawn.lay_out_in(screen)
+	var shown_down: bool = respawn.visible
+	(driver.state.feature(MovementFeature.ID) as MovementFeature).hold(player.id, false)
+	knockdown.entity_removed(driver.state, player.id)
+	respawn.lay_out_in(screen)
+	respawn.touch = false
+	if not hidden_standing or not shown_down or respawn.visible:
+		return "the respawn button didn't show only while the player was knocked down"
 	return ""
 
 
