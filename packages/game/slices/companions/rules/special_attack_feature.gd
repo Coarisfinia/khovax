@@ -115,7 +115,7 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
 	state.events.append(
 		SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target), strong).held(
-			channels.get(species, 0),
+			channels[species] if channels.has(species) else 0,
 		),
 	)
 
