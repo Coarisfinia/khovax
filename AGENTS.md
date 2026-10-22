@@ -577,7 +577,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   away.
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
-  doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/build/export_templates.sh`
+  doc or a comment, where it would drift. E.g. CI unpacks the templates `tools/build/export_templates.py`
   reads from `export_presets.cfg`, and `CREDITS.md` is generated from the assets.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
