@@ -47,9 +47,7 @@ ENDINGS: dict[str, str] = {
     ".gitattributes": "how git treats files",
 }
 # The shell scripts still waiting for their port (path: the issue that ports it).
-SH_EXEMPT: dict[str, int] = {
-    "packages/checks/script_check.sh": 1096,
-}
+SH_EXEMPT: dict[str, int] = {}
 
 THIS = "packages/checks/file_endings.py"
 
