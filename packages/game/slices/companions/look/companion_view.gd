@@ -37,13 +37,13 @@ const RETURN_SECONDS: float = 0.6
 var figures: Dictionary[int, HexPiece] = {}
 ## The yaw each figure turns toward, by entity id: where it last walked.
 var _facing: Dictionary[int, float] = {}
+## The tick each companion's held special ends on, by entity id (#1163): until then its figure holds
+## it. Kept here so tests can read it.
+var channels: Dictionary[int, int] = {}
 ## The instance the figures belong to: another instance drops them at once (#189).
 var _shown: GameState
 ## The slots whose player chose another companion, whose next figure grows out of them.
 var _chosen: Array[int] = []
-## The tick each companion's held special ends on, by entity id (#1163): until then its figure holds
-## it. Kept here so tests can read it.
-var channels: Dictionary[int, int] = {}
 
 
 func _ready() -> void:
