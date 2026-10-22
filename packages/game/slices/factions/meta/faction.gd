@@ -104,7 +104,9 @@ func _read_territory(raw: Variant) -> bool:
 
 ## Whether `raw` holds a codex entry and gloss, each with more than spaces; reads them.
 func _read_codex(raw: Variant) -> bool:
-	var codex: Dictionary = raw if raw is Dictionary else {}
-	codex_entry = Content.text_of(codex.get("entry"))
-	codex_gloss = Content.text_of(codex.get("gloss"))
-	return not codex_entry.strip_edges().is_empty() and not codex_gloss.strip_edges().is_empty()
+	var codex: Array[String] = Content.codex_of(raw)
+	if codex.is_empty():
+		return false
+	codex_entry = codex[0]
+	codex_gloss = codex[1]
+	return true

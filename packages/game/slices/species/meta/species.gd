@@ -1,8 +1,8 @@
 class_name Species
 extends RefCounted
 ## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
-## its auto attack's type, base stats and its three abilities (#222). Everything
-## here is integers and ids, ready for the simulation.
+## its auto attack's type, base stats and its three abilities (#222), and its bestiary entry
+## (#1173), which its codex page shows. Everything the simulation reads is integers and ids.
 
 ## Its schema, which says the fields a species file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/species/data/species.schema.json"
@@ -29,6 +29,10 @@ var player_passive: String = ""
 var self_passive: String = ""
 ## Its sight trait (#962): how many steps further a player who carries it sees, 0 for none.
 var sight: int = 0
+## Its bestiary entry (#1173): its lore, a short text about it and where its name comes from, and
+## what its name means, hand-written (#959), e.g. "the low boom from the shallows".
+var codex_entry: String = ""
+var codex_gloss: String = ""
 ## Why the species couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -97,6 +101,8 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	# Code, data and saves name a species by its id, which is its name (owner, #763).
 	if wrong.is_empty() and entry.id != entry.name.to_lower():
 		wrong = "its id must be its name in lower case (#763)"
+	if wrong.is_empty() and not entry._read_codex(data.get("codex")):
+		wrong = "it needs a codex entry and gloss (#1173)"
 	return wrong
 
 
@@ -111,3 +117,13 @@ func _types_problem() -> String:
 			return "type %s isn't on the chart, or two types share a family" % type
 		families.append(family)
 	return ""
+
+
+## Whether `raw` holds a codex entry and gloss, each with more than spaces; reads them.
+func _read_codex(raw: Variant) -> bool:
+	var codex: Array[String] = Content.codex_of(raw)
+	if codex.is_empty():
+		return false
+	codex_entry = codex[0]
+	codex_gloss = codex[1]
+	return true

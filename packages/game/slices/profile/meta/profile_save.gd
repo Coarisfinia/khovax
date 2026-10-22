@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 16
+const FORMAT: int = 17
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -112,6 +112,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_14,
 		_migrate_to_15,
 		_migrate_to_16,
+		_migrate_to_17,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -238,6 +239,11 @@ static func _migrate_to_16(data: Dictionary) -> void:
 			var new_code: int = Territory.code(OLD_INSTANCES[old_id], faction_id)
 			renamed[Territory.code(old_id, faction_id)] = new_code
 	_recode_territories(data, renamed)
+
+
+## Format 16 to 17: the bestiary (#1173) starts, which keeps its own key (BestiarySave).
+static func _migrate_to_17(_data: Dictionary) -> void:
+	return
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the

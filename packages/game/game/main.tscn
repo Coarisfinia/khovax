@@ -57,6 +57,8 @@
 [ext_resource type="Script" path="res://slices/exits/look/exit_hold_hint.gd" id="52_exit_hold_hint"]
 [ext_resource type="Script" path="res://slices/codex/ui/codex_page.gd" id="53_codex_page"]
 [ext_resource type="Script" path="res://slices/input_prompts/ui/device_in_use.gd" id="54_device_in_use"]
+[ext_resource type="Script" path="res://slices/codex/meta/bestiary_keeper.gd" id="bestiary_keeper"]
+[ext_resource type="Script" path="res://slices/codex/look/bestiary_tie.gd" id="bestiary_tie"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -84,11 +86,22 @@ driver = NodePath("../Driver")
 
 [node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=2066135784]
 script = ExtResource("11_profile")
-companions = [NodePath("../QuestKeeper")]
+companions = [NodePath("../QuestKeeper"), NodePath("../BestiaryKeeper")]
 
 [node name="QuestKeeper" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=2066135787]
 script = ExtResource("48_quest_keeper")
 holder = NodePath("../ProfileHolder")
+
+[node name="BestiaryKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
+script = ExtResource("bestiary_keeper")
+holder = NodePath("../ProfileHolder")
+
+[node name="BestiaryTie" type="Node" parent="." node_paths=PackedStringArray("driver", "bus", "input", "keeper")]
+script = ExtResource("bestiary_tie")
+driver = NodePath("../Driver")
+bus = NodePath("../EventBus")
+input = NodePath("../LocalInput")
+keeper = NodePath("../BestiaryKeeper")
 
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")

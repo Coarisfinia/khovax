@@ -14,6 +14,7 @@
 	"required": [
 		"id",
 		"name",
+		"codex",
 		"types",
 		"strike_type",
 		"hp",
@@ -33,6 +34,16 @@
 			"description": "What the player reads (#351); code and saves use the id. One invented word, never a description (#717).",
 			"type": "string",
 			"pattern": "^[A-Z][a-z]+$"
+		},
+		"codex": {
+			"description": "Its bestiary entry (#959, #1173): what the player reads on its codex page once they've learned it.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entry", "gloss"],
+			"properties": {
+				"entry": { "description": "Its lore: a short text about it and where its name comes from, shown once the player has dominated one.", "type": "string", "minLength": 1 },
+				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the low boom from the shallows\".", "type": "string", "minLength": 1 }
+			}
 		},
 		"types": {
 			"description": "One or two types from the type chart (#68), never two of the same family.",
