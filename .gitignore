@@ -14,9 +14,6 @@ Thumbs.db
 .vscode/
 *.tmp
 
-# The web e2e runner's dependencies (packages/game/tests/web/)
-node_modules/
-
 # A local render's window settings (AGENTS.md, "Before you push"); never committed.
 /packages/game/override.cfg
 

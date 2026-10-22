@@ -39,15 +39,12 @@ env:
   # from the release's .sha256 file. Locally it comes from scoop or Homebrew.
   UV_VERSION: 0.13.4
   UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
-  # The web e2e flow's runtime and browser (#102); the checksums are of their Linux archives (Bun's
-  # from the release's SHASUMS256.txt). playwright-core is locked in
-  # packages/game/tests/web/bun.lock.
-  BUN_VERSION: 1.4.3
-  BUN_SHA256: 3e730528d89775f03f87f05c06787c4df4099d0a37f3f252e7b829cb23816e18
+  # The web e2e flow's browser (#102); the checksum is of its Linux archive. Playwright, which
+  # drives it, is locked in uv.lock (packages/web, #1041).
   CHROME_VERSION: 156.0.8078.12
   CHROME_SHA256: f56185000c18aa2471911e2b8fbd96c3175bcc7553e78c002371bb18a9fa69e9
-  # Playwright's own ffmpeg build, which records the run's video; the revision is the one
-  # playwright-core's browsers.json names.
+  # Playwright's own ffmpeg build, which records the run's video; the revision is the one the
+  # locked Playwright's driver names in its browsers.json.
   PLAYWRIGHT_FFMPEG_REVISION: 1013
   PLAYWRIGHT_FFMPEG_SHA256: ee986434d158f74fb5d9c5ff1092026ceedb63f324fe90b5be89460926b7b679
 
@@ -783,24 +780,28 @@ jobs:
           hash=$(jq -er .apk_flow.final outcomes/outcomes.json)
           echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
-      - name: "⬇️ Download Bun, Chrome (headless shell) and Playwright's ffmpeg"
+      - name: "🧰 Install uv (the Python tooling's runner)"
         run: |
-          curl -fsSL -o bun.zip \
-            "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip"
-          echo "${BUN_SHA256}  bun.zip" | sha256sum -c -
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "⬇️ Download Chrome (headless shell) and Playwright's ffmpeg"
+        run: |
           curl -fsSL -o chrome.zip \
             "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-headless-shell-linux64.zip"
           echo "${CHROME_SHA256}  chrome.zip" | sha256sum -c -
           curl -fsSL -o ffmpeg.zip \
             "https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/${PLAYWRIGHT_FFMPEG_REVISION}/ffmpeg-linux.zip"
           echo "${PLAYWRIGHT_FFMPEG_SHA256}  ffmpeg.zip" | sha256sum -c -
-          unzip -q bun.zip -d ~/tools && unzip -q chrome.zip -d ~/tools
+          unzip -q chrome.zip -d ~/tools
           mkdir -p ~/tools/playwright
           unzip -q ffmpeg.zip -d ~/tools/playwright/ffmpeg-${PLAYWRIGHT_FFMPEG_REVISION}
-          echo ~/tools/bun-linux-x64 >> "$GITHUB_PATH"
 
       - name: "📦 Install the runner's dependencies (locked)"
-        run: bun install --frozen-lockfile --cwd packages/game/tests/web
+        run: uv sync --locked --package khovax-web
 
       - name: "📦 Install Mesa's software renderer"
         # WebGL 2 comes from Mesa's llvmpipe (#252): on Chrome's own SwiftShader the page sometimes
@@ -815,7 +816,7 @@ jobs:
           export CHROME="$HOME/tools/chrome-headless-shell-linux64/chrome-headless-shell"
           export PLAYWRIGHT_BROWSERS_PATH="$HOME/tools/playwright"
           export CHROME_GL=mesa
-          timeout 300 bun packages/game/tests/web/web_e2e.ts build/web-test
+          timeout 300 uv run --locked --package khovax-web packages/web/web_e2e.py build/web-test
 
       - name: "⬆️ 🎬 Web e2e video: upload (web-e2e-video)"
         # The run on film (owner, #115), also when it failed.
