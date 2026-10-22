@@ -86,15 +86,15 @@ func apply() -> void:
 		ink.set_smoothed(msaa != Viewport.MSAA_DISABLED)
 
 
-## The anti-aliasing setting. It's kept by its index in ANTI_ALIASING_CHOICES, which are Viewport's
-## MSAA numbers in order, so a saved index is that MSAA's number too: append new choices, never
-## reorder. Auto picks the project's MSAA, which may be none of the choices.
+## The anti-aliasing setting, saved as its MSAA's number. Auto picks the project's MSAA, which may
+## be none of the choices.
 func _anti_aliasing() -> SettingChoice:
 	return SettingChoice.new(
 		settings,
 		ANTI_ALIASING,
 		ANTI_ALIASING_CHOICES.size(),
 		ANTI_ALIASING_CHOICES.find(auto_anti_aliasing()),
+		ANTI_ALIASING_CHOICES,
 	)
 
 

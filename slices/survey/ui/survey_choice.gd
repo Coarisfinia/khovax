@@ -139,7 +139,9 @@ func _zoom() -> SettingChoice:
 
 
 func _settings() -> Settings:
-	return graphics.settings if graphics != null else null
+	if graphics == null:
+		return null
+	return graphics.settings
 
 
 ## Puts the Survey where the choices say and keeps them; returns why they couldn't be saved, or "".

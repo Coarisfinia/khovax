@@ -70,7 +70,9 @@ func _size() -> SettingChoice:
 
 
 func _settings() -> Settings:
-	return graphics.settings if graphics != null else null
+	if graphics == null:
+		return null
+	return graphics.settings
 
 
 ## Keeps the player's choices; returns why they couldn't be saved, or "".

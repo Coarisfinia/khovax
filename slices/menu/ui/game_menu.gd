@@ -269,7 +269,9 @@ func _build_sheet() -> void:
 
 ## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.
 func _pause() -> SettingChoice:
-	var kept_in: Settings = graphics.settings if graphics != null else null
+	var kept_in: Settings = null
+	if graphics != null:
+		kept_in = graphics.settings
 	return SettingChoice.new(kept_in, PAUSE_SETTING, PAUSE_CHOICES.size(), AUTO_PAUSE)
 
 
