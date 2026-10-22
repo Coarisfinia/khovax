@@ -12,7 +12,8 @@ extends SceneTree
 ## (PointMarks, #1007).
 ##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
-##   uv run --locked tools/godot/offscreen.py -- --path . -s res://tools/models/render_in_game.gd -- \
+##   uv run --locked tools/godot/offscreen.py -- --path . \
+##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] [clip=<Clip> [from=<view>]] \
 ##     [points] \
 ##     --seed=0 --user-dir=<branch>
