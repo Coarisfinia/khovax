@@ -18,8 +18,8 @@ concurrency:
 
 env:
   # Godot's version and checksums are pinned once, in .github/actions/setup-godot (#924).
-  # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
-  GDSTYLE_VERSION: 0.3.3
+  # gdstyle's version is pinned once, in tools/scoop/gdstyle.json (#1124), which the install step
+  # reads; this checksum is of that version's Linux release archive, so bump it with the manifest.
   GDSTYLE_SHA256: afc3c7a1b9fba219a2eeb2b3896470babffe010b6cf9f3a8c9526a2f6155d64c
   # jscpd, the duplicate-code check (#247); the checksum is of its Linux release archive, from the
   # release's checksums.txt.
@@ -63,8 +63,9 @@ jobs:
 
       - name: "🧰 Install gdstyle (the linter)"
         run: |
+          version=$(jq -er .version ../../tools/scoop/gdstyle.json)
           curl -fsSL -o /tmp/gdstyle.tar.gz \
-            "https://github.com/atelico/gdstyle/releases/download/v${GDSTYLE_VERSION}/gdstyle-x86_64-unknown-linux-gnu.tar.gz"
+            "https://github.com/atelico/gdstyle/releases/download/v${version}/gdstyle-x86_64-unknown-linux-gnu.tar.gz"
           echo "${GDSTYLE_SHA256}  /tmp/gdstyle.tar.gz" | sha256sum --check
           sudo tar xzf /tmp/gdstyle.tar.gz -C /usr/local/bin gdstyle
 
