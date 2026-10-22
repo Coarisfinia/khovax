@@ -561,9 +561,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   runners to this public repository.
 - **Everything CI downloads is pinned and verified:** actions by full commit SHA (with the tag in a
   comment), and Godot, its export templates, gdstyle and uv by checksum, with cache keys that include
-  the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both. The
-  runner image is named explicitly (`ubuntu-26.04`, not `ubuntu-latest`), so a new image arrives on
-  purpose, with the APK build checked, not on GitHub's date.
+  the checksum. Bump a version and its checksum together, in `ci.yml` and `release.yml` both.
+  Godot's are pinned once, in `.github/actions/setup-godot/action.yml`, the setup every job that
+  needs Godot uses (#924). The runner image is named explicitly (`ubuntu-26.04`, not
+  `ubuntu-latest`), so a new image arrives on purpose, with the APK build checked, not on GitHub's
+  date.
   **The one exception** (owner, #252): the web e2e's Mesa packages come unpinned from the runner
   image's signed Ubuntu archive. They must match the image's own Mesa, and the archive drops a
   superseded version, so an exact pin would break CI on the next security update.

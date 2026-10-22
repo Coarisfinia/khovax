@@ -1,0 +1,117 @@
+name: Set up Godot
+description: >-
+  Godot's Linux editor at ~/godot/godot, optionally its export templates, and the imported project.
+  The one place Godot's version and checksums are pinned (#924): ci.yml and release.yml both use it.
+
+inputs:
+  project:
+    description: The Godot project, relative to the workspace.
+    default: packages/game
+  cache:
+    description: >-
+      "true" restores and saves the downloads with actions/cache; "false" always downloads them
+      (release.yml: a release is built from verified downloads only).
+    default: "true"
+  templates:
+    description: >-
+      "true" also installs the export templates export_presets.cfg needs. Downloading them needs uv,
+      pinned by the job's UV_VERSION and UV_SHA256.
+    default: "false"
+  import:
+    description: >-
+      "true" imports the project and fails on a script error during the import.
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: "📌 Godot: pin the version and checksums"
+      # Bump the version and both checksums together: the checksums are from the release's
+      # SHA512-SUMS.txt. The cache keys include them, so a cache only ever holds what was verified
+      # against them. They're exported to the job too, as GODOT_VERSION, GODOT_SHA512 and
+      # GODOT_TEMPLATES_SHA512.
+      shell: bash
+      run: |
+        {
+          echo "GODOT_VERSION=4.7.2"
+          echo "GODOT_SHA512=9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65"
+          echo "GODOT_TEMPLATES_SHA512=ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079"
+        } >> "$GITHUB_ENV"
+
+    - name: "💾 Cache Godot (Linux editor)"
+      id: cache-godot
+      if: inputs.cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/godot
+        key: godot-${{ env.GODOT_VERSION }}-linux-${{ env.GODOT_SHA512 }}
+
+    - name: "⬇️ Download Godot (Linux editor)"
+      # Without the cache, cache-hit is empty, so this always runs.
+      if: steps.cache-godot.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/godot
+        curl -fsSL -o /tmp/godot.zip \
+          "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+        echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
+        unzip -q /tmp/godot.zip -d ~/godot
+        mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+
+    - name: "💾 Cache the export templates"
+      id: cache-templates
+      if: inputs.templates == 'true' && inputs.cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.local/share/godot/export_templates
+        # A preset added or changed makes a new cache, with the templates it needs.
+        key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles(format('{0}/export_presets.cfg', inputs.project)) }}
+
+    - name: "🧰 Install uv (the Python tooling's runner)"
+      # Only when the templates are downloaded, and not again when the job installed it already.
+      # An unpinned uv the runner image might bring doesn't count.
+      if: inputs.templates == 'true' && steps.cache-templates.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        if [ -z "${UV_VERSION:-}" ] || [ -z "${UV_SHA256:-}" ]; then
+          echo "::error::the export templates need uv: set UV_VERSION and UV_SHA256 in the job's env"
+          exit 1
+        fi
+        if [ "$(uv --version 2> /dev/null | cut -d' ' -f2)" = "${UV_VERSION}" ]; then
+          exit 0
+        fi
+        curl -fsSL -o /tmp/uv.tar.gz \
+          "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+        echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+        sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+          uv-x86_64-unknown-linux-gnu/uv
+
+    - name: "⬇️ Download the export templates"
+      # The archive holds every platform's templates; only those export_presets.cfg needs are kept
+      # (packages/build/export_templates.py reads them from it), so the cache stays small.
+      if: inputs.templates == 'true' && steps.cache-templates.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.project }}
+      run: |
+        curl -fsSL -o /tmp/templates.tpz \
+          "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+        echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
+        target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+        mkdir -p "$target"
+        # Listed into a file first: a failure inside mapfile's process substitution would pass.
+        uv run --locked ../build/export_templates.py > /tmp/templates.txt
+        mapfile -t needed < <(sed 's#^#templates/#' /tmp/templates.txt)
+        unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
+
+    - name: "📦 Import the project"
+      # Tool scripts run during the import too; a script error there passes silently otherwise.
+      if: inputs.import == 'true'
+      shell: bash
+      working-directory: ${{ inputs.project }}
+      run: |
+        timeout 120 ~/godot/godot --headless --path . --import 2>&1 | tee /tmp/import.log
+        test "${PIPESTATUS[0]}" -eq 0
+        if grep -q "SCRIPT ERROR" /tmp/import.log; then
+          echo "::error::a script failed during the import"
+          exit 1
+        fi
