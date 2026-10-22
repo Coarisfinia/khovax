@@ -6,7 +6,8 @@ extends Control
 ## charges or its cooldown, and never vanishes when empty or cooling down; it shows 0, or a
 ## cooldown circle with the seconds left. One it can't be used on right now is drawn faded, never
 ## hidden. It shows only where touch input exists, and a touch that lands on it is taken, so the
-## touch stick doesn't start under it. Subclasses set its icon and say the numbers.
+## touch stick doesn't start under it. Subclasses set its icon and say the numbers, reading the
+## game through the lookups below (#934).
 
 ## How far the icon sits in from the button's edges, as a share of its side.
 const ICON_INSET: float = 0.2
@@ -25,6 +26,8 @@ const INK_PIXELS: float = 3.0
 @export var action: StringName = &""
 ## Its place in the column at the bottom right, counted from the bottom.
 @export var column_index: int = 0
+## The running session the button reads its numbers from.
+@export var driver: Session
 
 ## The item's or attack's icon (#459): a white shape, drawn in ink.
 var icon: Texture2D
@@ -115,6 +118,28 @@ func cooldown_share() -> float:
 ## Whether the action would do anything right now; the button is drawn faded when not.
 func usable() -> bool:
 	return true
+
+
+## This machine's player's slot; the first while there is no input.
+func slot() -> int:
+	return driver.input.slot if driver != null and driver.input != null else 0
+
+
+## The instance this machine's player is in; null without a session or a world.
+func state() -> GameState:
+	return driver.state if driver != null else null
+
+
+## The feature `feature_id` of that instance; null when it has none.
+func feature(feature_id: String) -> Feature:
+	var game: GameState = state()
+	return game.feature(feature_id) if game != null else null
+
+
+## This machine's player's entity in that instance; null when there is none.
+func player() -> Entity:
+	var game: GameState = state()
+	return game.player(slot()) if game != null else null
 
 
 ## Keeps the touch that pressed the button from reaching the touch stick. Godot hands `_input` to
