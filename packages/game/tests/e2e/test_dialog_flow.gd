@@ -231,6 +231,8 @@ static func _device_steps() -> Array[Array]:
 	pad.button_index = JOY_BUTTON_MISC1
 	var stand_in: InputEventMouseButton = InputEventMouseButton.new()
 	stand_in.device = InputEvent.DEVICE_ID_EMULATION
+	# A release with no press before it: Godot needs its button, and it clicks nothing.
+	stand_in.button_index = MOUSE_BUTTON_LEFT
 	var keys: Array[Texture2D] = [InputGlyphs.KEYS[KEY_ENTER], null, InputGlyphs.KEYS[KEY_ESCAPE]]
 	var none: Array[Texture2D] = [null, null, null]
 	return [
