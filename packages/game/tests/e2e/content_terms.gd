@@ -43,12 +43,11 @@ const BEAST_LETTERS: String = "[zxqy]|([b-df-hj-np-tv-z])\\1"
 ## The land-speech's sounds: only realms and places have them (#909).
 const LAND_SOUNDS: String = "dh|gh|hr|wh"
 ## The name rule of each kind of thing, from the six tongues the owner adopted on #909: its name
-## (its
-## id in words for a thing with no name of its own) keeps its kind's rule and no other kind's marks
-## (a hyphen, an apostrophe, vo or na, a last word in -ai, a word in -vaun, a lexicon word), and its
-## id is its name in lower case, spaces, hyphens and apostrophes made `_`, after its species' id
-## for an ability. Trade Speech (gear, pieces, places) is plain words, so letters aren't held
-## against it. Kinds left out (tiles, items, loot tables, quests, dialogs) are vocabulary.
+## (its id in words for a thing with no name of its own) keeps its kind's rule and no other kind's
+## marks (a hyphen, an apostrophe, vo or na, a last word in -ai, a word in -vaun, a lexicon word),
+## and its id is its name in lower case, spaces, hyphens and apostrophes made `_`, after its
+## species' id for an ability. Trade Speech (gear, pieces, places) is plain words, so letters aren't
+## held against it. Kinds left out (tiles, items, loot tables, quests, dialogs) are vocabulary.
 const NAME_RULES: Dictionary[String, String] = {
 	"species": "one beast-call of 6 to 11 letters and at least 3 vowels, echoing itself (a vowel "
 	+ "recurring or a consonant doubled), ending in a vowel, r, s, x, k or n, with a sound of its "
@@ -361,8 +360,8 @@ static func _add_loot(terms: ContentTerms, gear: GearContent) -> void:
 ## The instances, the regions their variants load, their region pieces but the start piece every
 ## instance has (a piece is a place inside its instance and takes its name from it, the pond of an
 ## instance, so two instances may each have a pond, #909), the places their legends name, and the
-## people standing there by the speakers of
-## the dialogs they open; a dialog nobody opens keeps its speaker.
+## people standing there by the speakers of the dialogs they open; a dialog nobody opens keeps its
+## speaker.
 static func _add_instances(terms: ContentTerms, dialogs: Dictionary[String, Dialog]) -> void:
 	var start_piece: String = InstanceBlueprints.START_PIECE.get_basename()
 	var spoken: Dictionary[String, bool] = {}

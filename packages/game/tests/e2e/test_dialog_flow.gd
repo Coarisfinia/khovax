@@ -152,8 +152,7 @@ func _rest_under_menu(
 
 
 ## A click on the Lumwen Hoal line's one answer chooses it, which ends the dialog: the card closes,
-## the
-## player can walk again, and the answer is raised.
+## the player can walk again, and the answer is raised.
 func _choose_with_click(
 	tree: SceneTree,
 	driver: GameDriver,

@@ -142,11 +142,10 @@ func _check_round_trip(world: World) -> String:
 ## Save data the build can't go on from is refused whole: another format, other rules, a seed or
 ## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
 ## purging that doesn't add up (#212): a blueprint purged that doesn't exist, an instance left
-## behind while
-## someone is in it or not left behind while nobody is, or one left long enough to be purged. A
-## feature's id and value pairs (#933) are refused cut off, out of order or naming an entity they
-## can't: the area a stranger stands in, or the wait of a companion that is a player. A trigger
-## saved as fired twice is refused too.
+## behind while someone is in it or not left behind while nobody is, or one left long enough to be
+## purged. A feature's id and value pairs (#933) are refused cut off, out of order or naming an
+## entity they can't: the area a stranger stands in, or the wait of a companion that is a player. A
+## trigger saved as fired twice is refused too.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
@@ -428,8 +427,7 @@ static func _saved_tick() -> int:
 
 ## A world file whose explored ground is malformed (half a tile after a good instance, a number
 ## that isn't whole, another format, null) resumes the world all the same, but with nothing
-## explored: the
-## memory is warned about and dropped whole.
+## explored: the memory is warned about and dropped whole.
 func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var explored: Dictionary = ExploredSave.explored_data(_explored)
 	var half: Dictionary = explored.duplicate(true)

@@ -2,9 +2,8 @@ class_name Blueprint
 extends RefCounted
 ## An instance blueprint's content data (#823), read from the blueprints slice's data/ (#72, #412):
 ## the rules its instances have (its rule set's, #941, with the ones it adds or drops), whether the
-## seed turns its region pieces, its loot tables, the
-## species its wild monsters roll from and the variants the world's flags choose. InstanceBlueprints
-## builds instances from it.
+## seed turns its region pieces, its loot tables, the species its wild monsters roll from and the
+## variants the world's flags choose. InstanceBlueprints builds instances from it.
 
 ## Its schema, which says the fields a blueprint file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/blueprints/data/blueprints.schema.json"

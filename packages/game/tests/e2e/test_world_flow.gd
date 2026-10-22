@@ -3,16 +3,15 @@ extends RefCounted
 ## Every exit leads to a blueprint that exists and has the way back on the opposite side; the
 ## playground has no exits, so no way leads to it (#712); the glade keeps its layout, so its ways
 ## out stay on its start piece for every seed, and arranging its pieces never covers the tile
-## outside them. Broken exit lines are
-## refused. Pieces join and exits lead out across several tiles, never one (#689). The web is
-## validated as a whole (#143): every blueprint loads as a full instance, every variant of the
-## starting one with a start for every player (#742), every
-## exit can be walked to from the players' starts for every seed, and every blueprint with exits
-## can be reached from the starting instance. In every region file and region piece, the walkable
-## tiles hang together, so a blocking tile never cuts a part off, and every tile under a crown
-## (a decoration reaching over its neighbours, #232) fits beneath it. The world holds several loaded
-## instances and
-## steps the ones a player is in (#148), and purges one left behind for an hour of play (#212).
+## outside them. Broken exit lines are refused. Pieces join and exits lead out across several tiles,
+## never one (#689). The web is validated as a whole (#143): every blueprint loads as a full
+## instance, every variant of the starting one with a start for every player (#742), every exit can
+## be walked to from the players' starts for every seed, and every blueprint with exits can be
+## reached from the starting instance. In every region file and region piece, the walkable tiles
+## hang together, so a blocking tile never cuts a part off, and every tile under a crown (a
+## decoration reaching over its neighbours, #232) fits beneath it. The world holds several loaded
+## instances and steps the ones a player is in (#148), and purges one left behind for an hour of
+## play (#212).
 ## Each player's companion (#338) joins them, roams within its reach and follows them through exits.
 ## A player swaps it for another monster they carry (#55), by a tap or a click on the roster at the
 ## top left of the screen, which shows the monsters they carry and which is their companion (#540).
@@ -1051,11 +1050,10 @@ func _check_left_again(world: World, purged: int) -> String:
 ## World flags (#529): with RisingSource, setting RISEN chooses the arena's region as the glade's
 ## variant. Set while the player is in the glade, it changes the hash but not the glade; through its
 ## save data and back the world keeps the flag and the glade's old variant. The tick after the
-## player
-## walks out, the glade is purged, and it comes back at generation 1 from the arena's region, for
-## the world and its layout alike. The arena has no way back to the forest, so walking out of the
-## forest's exit toward it leaves the player there (#930). Clearing the flag purges it again once
-## nobody is in it, and setting a flag that is already set changes nothing.
+## player walks out, the glade is purged, and it comes back at generation 1 from the arena's region,
+## for the world and its layout alike. The arena has no way back to the forest, so walking out of
+## the forest's exit toward it leaves the player there (#930). Clearing the flag purges it again
+## once nobody is in it, and setting a flag that is already set changes nothing.
 func _check_flags() -> String:
 	var world: World = World.new(RisingSource.new(), 3, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE:

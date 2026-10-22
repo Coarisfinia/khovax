@@ -634,9 +634,8 @@ func _menu_credits(menu: GameMenu) -> String:
 
 
 ## The close button sits at the menu's top right (#554), showing its icon (#459). It closes the
-## menu, easing out, and so do
-## the cancel action (a controller's B) and the `menu` action, each after opening it again; while
-## the menu is closed, cancel leaves it closed.
+## menu, easing out, and so do the cancel action (a controller's B) and the `menu` action, each
+## after opening it again; while the menu is closed, cancel leaves it closed.
 func _close_menu(menu: GameMenu) -> String:
 	# The menu lays itself out for the real screen again, after the tests' other screens.
 	await _tree.process_frame

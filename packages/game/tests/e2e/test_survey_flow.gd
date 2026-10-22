@@ -5,18 +5,16 @@ extends RefCounted
 ## door it shows exactly what was explored there, at its place in the world, and the exits on the
 ## tiles it shows, one chevron per exit in its middle (#790), loading nothing; it marks each
 ## instance shown that a faction holds with its holder's symbol, and its menu tab says who holds the
-## glade (#637); it marks every player by slot
-## and every open quest's target;
-## its action cycles it through the corners, over the game, opaque and off, its zoom steps within
-## their range, and both choices are kept. In every place, on desktop screens and phones held
-## either way, it sits against its own corner or covers the whole screen; every zoom step is
-## followed, and zooming stops at both ends. Its buttons hide behind a cogwheel on its top right
-## corner, which hides while a controller is used (#438); a tap or a click on the cogwheel turns it
-## and shows them beside it, on every screen, and a press or a click on each presses its action and
-## moves the Survey like the key, without starting the touch stick (#352). A pinch on a corner
-## Survey zooms it a step at a time, spreading the fingers closer and pinching them farther, and
-## never starts the touch stick, which still starts anywhere else (#358). In the menu's Survey tab
-## (#392) it shows the same ground,
+## glade (#637); it marks every player by slot and every open quest's target; its action cycles it
+## through the corners, over the game, opaque and off, its zoom steps within their range, and both
+## choices are kept. In every place, on desktop screens and phones held either way, it sits against
+## its own corner or covers the whole screen; every zoom step is followed, and zooming stops at both
+## ends. Its buttons hide behind a cogwheel on its top right corner, which hides while a controller
+## is used (#438); a tap or a click on the cogwheel turns it and shows them beside it, on every
+## screen, and a press or a click on each presses its action and moves the Survey like the key,
+## without starting the touch stick (#352). A pinch on a corner Survey zooms it a step at a time,
+## spreading the fingers closer and pinching them farther, and never starts the touch stick, which
+## still starts anywhere else (#358). In the menu's Survey tab (#392) it shows the same ground,
 ## players and quest targets over the tab, and its zoom key, its buttons there and a pinch on it
 ## step the one zoom, which it follows; its place button there cycles where the Survey shows.
 

@@ -3,8 +3,8 @@ extends ActionButton
 ## The totem's touch button (#429): places this machine's player's totem on a ring waiting for one
 ## (`place_totem`, #423), as the T key does. It shows the totem's icon and its charges left, 0 when
 ## it has none, and is drawn faded while the player can't place it
-## (DominationFeature.can_place_totem):
-## out of charges, or on no ring waiting for a totem, theirs or an ally's.
+## (DominationFeature.can_place_totem): out of charges, or on no ring waiting for a totem, theirs or
+## an ally's.
 
 
 func _init() -> void:

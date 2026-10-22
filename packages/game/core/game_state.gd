@@ -186,9 +186,8 @@ func hand_next_door(ground: Dictionary[Vector2i, String]) -> void:
 
 ## The instance's state as save data (#119): its tick, its entities as id, slot, q and r in id
 ## order, the next entity id, the tiles changed in place (#530), each its q, r and kind's id (#802),
-## in tile order, and
-## each feature's id, on/off and state, in order. The seed and the rest of the region follow from
-## the world's seed and the blueprint, so they aren't saved.
+## in tile order, and each feature's id, on/off and state, in order. The seed and the rest of the
+## region follow from the world's seed and the blueprint, so they aren't saved.
 func to_data() -> Dictionary:
 	var flat: Array[int] = []
 	for each: Entity in entities:

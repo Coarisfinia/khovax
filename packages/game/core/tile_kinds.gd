@@ -2,10 +2,9 @@ class_name TileKinds
 extends RefCounted
 ## The kinds of tile a region is made of (#116), as the rules see them: Region.terrain holds one
 ## kind per tile, as its id. Each kind is a tile blueprint (content data, read by TileContent),
-## named
-## by its file (#802), never by a hand-kept number, so parallel pull requests adding kinds never
-## claim the same one; an id is never reused or renamed once shipped. Only what rules need is read
-## here: each kind's traits; its color and model are the view's, read from the blueprints in
+## named by its file (#802), never by a hand-kept number, so parallel pull requests adding kinds
+## never claim the same one; an id is never reused or renamed once shipped. Only what rules need is
+## read here: each kind's traits; its color and model are the view's, read from the blueprints in
 ## core/io/ (TileContent).
 ##
 ## Tile rules are rules: changing a blueprint's traits (e.g. walkable) changes what the game does,

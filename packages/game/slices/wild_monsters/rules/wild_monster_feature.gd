@@ -290,8 +290,7 @@ func enrage(state: GameState, entity_id: int, heal: int) -> void:
 ## Each wild monster still in the instance as its entity's id, its species, its short id and
 ## whether it fainted, in id order, its rage, the event a standing one emits when it
 ## faints, if any (#541), and the quest target it is, if any (#625). The roster, the species this
-## instance can place and their stats follow from the
-## blueprint, the region and the content.
+## instance can place and their stats follow from the blueprint, the region and the content.
 func save_values() -> Dictionary:
 	var saved: Array[Dictionary] = []
 	var standing: Array[int] = monsters.duplicate()

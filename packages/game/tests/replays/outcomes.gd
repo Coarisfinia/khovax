@@ -5,10 +5,10 @@ extends SceneTree
 ## flow, written as JSON for CI to compare with the parent commit's build:
 ## godot --headless --path . -s res://tests/replays/outcomes.gd -- out=<absolute path>
 ## [--user-dir=<name>]
-## Each replay in tests/replays/ is played twice under this build's rules, ignoring its committed
-## checkpoints, and the two plays must match: the report holds its state hash at every checkpoint
-## tick and its final hash. The APK flow (tests/e2e/test_apk_flow.gd) runs as in the headless e2e
-## tests, and the report holds the game's final state hash.
+## Each replay in tests/replays/ holds only its inputs (#876) and is played twice under this build's
+## rules, recording its checkpoints, and the two plays must match: the report holds its state hash
+## at every checkpoint tick and its final hash. The APK flow (tests/e2e/test_apk_flow.gd) runs as in
+## the headless e2e tests, and the report holds the game's final state hash.
 ## Exits non-zero and writes no report when a play differs, a replay or the flow fails, or any
 ## error is logged (a script that doesn't compile logs one), so a broken build never reports
 ## success.
@@ -89,7 +89,7 @@ func _play_twice(path: String) -> Dictionary:
 	var plays: Array[Dictionary] = []
 	for _play: int in 2:
 		var replay: Replay = ReplayFile.parse(FileAccess.get_file_as_string(path))
-		# Records fresh checkpoints under this build's rules, without the committed ones.
+		# Plays its inputs under this build's rules, recording the checkpoints as it goes.
 		var problem: String = replay.rehash()
 		if not problem.is_empty():
 			printerr("%s: %s" % [path, problem])

@@ -8,17 +8,16 @@ extends RefCounted
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
 ## their quest and ends close its own chain (#573), every path reaches an end (#576), and broken
-## ones are refused; a quest can move
-## the standing with a faction (#532). Factions (#483) load with their own names for the ranks of a
-## standing, their symbols and the instances they hold (#637), and broken ones are refused. Quests
-## and abilities carry path marks (#471). Dialogs
-## (#618) load and read on line by line and answer by answer, state whether they lock and which
-## answers commit (#891), and broken ones are refused; a region placing more people with locking
-## dialogs than Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every
-## text tag (#733) in a dialog, a quest's name or an ability's description names content that
-## exists, shows its current name, and broken tags are refused; tags whose content can't be read
-## are warned about (#949). No two things share an id or a name, whatever their kinds, in any case
-## (#909). Every content kind is read ahead in the background (#816).
+## ones are refused; a quest can move the standing with a faction (#532). Factions (#483) load with
+## their own names for the ranks of a standing, their symbols and the instances they hold (#637),
+## and broken ones are refused. Quests and abilities carry path marks (#471). Dialogs (#618) load
+## and read on line by line and answer by answer, state whether they lock and which answers commit
+## (#891), and broken ones are refused; a region placing more people with locking dialogs than
+## Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every text tag (#733) in a
+## dialog, a quest's name or an ability's description names content that exists, shows its current
+## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
+## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
+## read ahead in the background (#816).
 
 ## A species file's speed, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
@@ -546,10 +545,9 @@ func _check_target_steps(content: QuestContent) -> String:
 
 
 ## Every tile blueprint file reads, its id matching its file; ground, water and rock are the
-## built-in
-## kinds and keep their walkability; the rules know every kind by its file's name (#802); forest,
-## shrubs and a stump are walkable and a boulder isn't (#205), each with its model, and sand is
-## plain and walkable (#321); every model a blueprint names exists; the stump is drawn at 400
+## built-in kinds and keep their walkability; the rules know every kind by its file's name (#802);
+## forest, shrubs and a stump are walkable and a boulder isn't (#205), each with its model, and sand
+## is plain and walkable (#321); every model a blueprint names exists; the stump is drawn at 400
 ## hundredths of its size (#588), every other kind at 100, the default; no two kinds share a symbol
 ## (#68). Broken blueprints are refused.
 func _check_tiles() -> String:

@@ -90,8 +90,7 @@ func _check_fog_follows() -> String:
 
 ## Sight traits (#962): a player carrying a tikazzir sees as far as its trait lets them from the
 ## moment they join, in the state hash; once they no longer carry it, their sight narrows back in
-## the
-## next tick, and a player who leaves loses what widened it.
+## the next tick, and a player who leaves loses what widened it.
 func _check_sight_trait() -> String:
 	var tikazzir: Species = SpeciesContent.cached().species["tikazzir"]
 	var traits: SightTraitFeature = SightTraitFactory.build(null)

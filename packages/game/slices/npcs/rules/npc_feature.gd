@@ -84,7 +84,6 @@ func _walked_into(
 
 ## The people's entity ids and the codes of their ids and dialogs, then each player walking into
 ## one, in slot order.
-## one, in slot order.
 func hash_values() -> Array[int]:
 	var values: Array[int] = [npcs.size()]
 	for person: int in npcs:

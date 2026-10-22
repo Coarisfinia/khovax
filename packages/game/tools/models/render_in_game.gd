@@ -9,12 +9,11 @@ extends SceneTree
 ## ("portrait") and its head and chest ("face"). Given clips, it writes each clip's frames
 ## for a GIF instead, at the clip's own rate, from the game camera or from any of those views. Any
 ## model works: the cameras frame it by its bounds, the close-ups by its outline, and a clip's by
-## where it moves over the clip. With `points`, it marks the model's
-## attachment points
-## (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with
-## `agitated`; an Attack clip's frames flare the glow as the game does when it strikes. With
-## `type=<type>` they glow in that type's colour (TypeGlow), and with `leaning=<path>` in the shape
-## of a player's leaning toward that path (#1063).
+## where it moves over the clip. With `points`, it marks the model's attachment points (PointMarks,
+## #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with `agitated`; an
+## Attack clip's frames flare the glow as the game does when it strikes. With `type=<type>` they
+## glow in that type's colour (TypeGlow), and with `leaning=<path>` in the shape of a player's
+## leaning toward that path (#1063).
 ##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
