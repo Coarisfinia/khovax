@@ -45,29 +45,32 @@ runs:
 
     - name: "🐳 Blender's container: Ubuntu 24.04 with the libraries Blender loads"
       # The image has no CA certificates, so the runner's are lent to apt for the snapshot's HTTPS.
+      # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
       shell: bash
       run: |
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
           rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
           printf "%s\n" "Types: deb" "URIs: https://snapshot.ubuntu.com/ubuntu/$0" \
             "Suites: noble noble-updates noble-security" "Components: main" \
-            "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" > /etc/apt/sources.list.d/snapshot.sources
+            "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: no" \
+            > /etc/apt/sources.list.d/snapshot.sources
           apt-get update -qq
           DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
             libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
-        docker commit -q blender-setup blender > /dev/null
+        docker commit blender-setup blender > /dev/null
         docker rm -f blender-setup > /dev/null
 
     - name: "🧊 Put Blender on the PATH"
       # `blender` runs Blender in the container, as the runner's user, with the workspace and /tmp
-      # at the same paths, so the model tools pass it their paths as they are.
+      # at the same paths, so the model tools pass it their paths as they are; without a network,
+      # so a build can only use what's committed.
       shell: bash
       run: |
         mkdir -p ~/blender-bin
         cat > ~/blender-bin/blender <<WRAPPER
         #!/usr/bin/env bash
-        exec docker run --rm -u "\$(id -u):\$(id -g)" -e HOME=/tmp -v "$HOME/blender:$HOME/blender:ro" \
+        exec docker run --rm --network none -u "\$(id -u):\$(id -g)" -e HOME=/tmp -v "$HOME/blender:$HOME/blender:ro" \
           -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v /tmp:/tmp -w "\$PWD" blender "$HOME/blender/blender" "\$@"
         WRAPPER
         chmod +x ~/blender-bin/blender
