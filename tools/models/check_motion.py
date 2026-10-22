@@ -60,19 +60,27 @@ def sample(rig, meshes, feet, start, end):
         scene.frame_set(frame)
         turns = {bone.name: bone.matrix_basis.to_quaternion() for bone in rig.pose.bones}
         root = next(bone for bone in rig.pose.bones if bone.parent is None).location.copy()
-        spots = {}
+        points = {name: [] for name in feet}
         for obj in meshes:
             evaluated = obj.evaluated_get(depsgraph)
             mesh = evaluated.to_mesh()
             world = evaluated.matrix_world
             for name, indices in parts[obj.name].items():
-                if indices:
-                    points = [world @ mesh.vertices[index].co for index in indices]
-                    centre = sum(points, points[0] * 0.0) / len(points)
-                    spots[name] = (min(point.z for point in points), centre.x, centre.y)
+                points[name] += [world @ mesh.vertices[index].co for index in indices]
             evaluated.to_mesh_clear()
+        # A foot may be split over several meshes: all of its parts count.
+        spots = {}
+        for name, found in points.items():
+            if found:
+                centre = sum(found, found[0] * 0.0) / len(found)
+                spots[name] = (min(point.z for point in found), centre.x, centre.y)
         frames.append((turns, root, spots))
     return frames
+
+
+def standing(height):
+    """On the ground: within CONTACT of it (a paw sunk deeper is the ground check's failure)."""
+    return -CONTACT < height < CONTACT
 
 
 def sliding(frames, feet, fps, speed):
@@ -82,7 +90,7 @@ def sliding(frames, feet, fps, speed):
     speeds = []
     for (_t0, _r0, now), (_t1, _r1, after) in zip(frames, frames[1:]):
         for name in feet:
-            if name in now and name in after and now[name][0] < CONTACT and after[name][0] < CONTACT:
+            if name in now and name in after and standing(now[name][0]) and standing(after[name][0]):
                 dx = (after[name][1] - now[name][1]) * fps
                 dy = (after[name][2] - now[name][2]) * fps - speed
                 slide = math.hypot(dx, dy)

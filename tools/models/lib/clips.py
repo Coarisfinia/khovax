@@ -132,8 +132,10 @@ def _both(pose, bone, rotation):
 
 
 def idle(frames=60):
+    """Breathing, a swaying head and tail, and a flick of one ear, posed on every frame (sparse
+    keys on a wave would flatten each crest into a hold)."""
     poses = []
-    for step in range(0, frames + 1, frames // 6):
+    for step in range(frames + 1):
         t = step / frames
         wave = math.sin(2 * math.pi * t)
         pose = {
@@ -146,8 +148,8 @@ def idle(frames=60):
             "jaw": (0.05 + 0.05 * wave, 0, 0),
             "root_loc": (0, -0.01 + 0.01 * wave, 0),
         }
-        if frames // 2 <= step < frames * 3 // 4:
-            pose["ear.L"] = (0, 0, -0.3)
+        if 0.5 <= t < 0.75:
+            pose["ear.L"] = (0, 0, -0.3 * math.sin(4 * math.pi * (t - 0.5)) ** 2)
         poses.append((step + 1, pose))
     return Clip(poses, loop=True)
 

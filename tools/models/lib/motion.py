@@ -50,7 +50,14 @@ def _tangents(times, values, loop):
             before, after = index - 1, index + 1
             t_before, t_after = times[before], times[after]
         rise, fall = values[after] - values[index], values[index] - values[before]
-        out.append(0.0 if rise * fall <= 0.0 else (values[after] - values[before]) / (t_after - t_before))
+        if rise * fall <= 0.0:
+            out.append(0.0)
+            continue
+        # No steeper than three times the gentler side's slope: the curve then stays between its
+        # keys however unevenly they are spaced (monotone cubic, Fritsch and Carlson).
+        slope = (values[after] - values[before]) / (t_after - t_before)
+        limit = 3.0 * min(abs(rise / (t_after - times[index])), abs(fall / (times[index] - t_before)))
+        out.append(max(-limit, min(limit, slope)))
     return out
 
 
