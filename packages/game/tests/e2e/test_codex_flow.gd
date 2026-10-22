@@ -1,16 +1,19 @@
 extends RefCounted
 ## Codex flow (#1174): the menu's Codex tab, after its gameplay tabs and before its system tabs, is
-## the codex book, which lists every name the player has met, under its kind's heading. A new
-## player's book says it's empty; once Teska na Amvrel's greeting shows the Amvrel Velmarai's name,
-## the book lists the guild under "Lexicon", kept in the profile's file beside the profile, so a
-## new session finds it there. Its entry opens the guild's lexicon page over the menu, with a
-## controller's A, a click or a tap, and B, Escape or the page's close button close it back to the
-## book: the menu stays open and the game still hears no input, and the focus goes back to the
-## entry. A save whose names met are malformed is refused, and an older save starts with none.
+## the codex book, which lists every entry the player has unlocked, each kind under its heading. A
+## new player's book says it's empty. Teska na Amvrel's greeting shows the speaker's name, which
+## lists them under "People" (#1005), and its second line the Amvrel Velmarai's, which lists the
+## guild under "Lexicon"; a species seen is listed under "Bestiary" (#1173). The names met are kept
+## in the profile's file beside the profile, so a new session finds them there. The guild's entry
+## opens its lexicon page over the menu, with a controller's A, a click or a tap, and B, Escape or
+## the page's close button close it back to the book: the menu stays open, the game still hears no
+## input, and the focus goes back to the entry. A save whose names met are malformed is refused,
+## and an older save starts with none.
 
 const PROFILE: String = "user://test_codex_profile.json"
 const GREETING: String = "teska_na_amvrel_greeting"
 const GUILD: String = "amvrel_velmarai"
+const SCOUT: String = "teska_na_amvrel"
 const SCREEN: Vector2i = Vector2i(1152, 648)
 
 
@@ -68,6 +71,8 @@ static func _meet_the_guild(tree: SceneTree, main: Node, book: CodexBook) -> Str
 	await tree.process_frame
 	if keeper.has_met(TextTags.FACTION, GUILD):
 		return "the guild was met before its name was shown"
+	if not keeper.has_met(TextTags.PERSON, SCOUT):
+		return "the greeting's speaker wasn't met"
 	FlowInput.press_pad(book, JOY_BUTTON_A)
 	if screen.line_index != 1 or not keeper.has_met(TextTags.FACTION, GUILD):
 		return "reading on to the guild's name didn't meet it"
@@ -82,7 +87,7 @@ static func _meet_the_guild(tree: SceneTree, main: Node, book: CodexBook) -> Str
 
 
 ## A species the player has seen (the bestiary, #1173) is listed under the bestiary's heading,
-## after the lexicon.
+## after the lexicon, and the greeting's speaker under the people's, after it (#1005).
 static func _see_a_species(main: Node, book: CodexBook) -> String:
 	var bestiary: BestiaryKeeper = main.get_node("BestiaryKeeper") as BestiaryKeeper
 	bestiary.learn("ombulumo", Bestiary.SEEN, "lumwen_hoal")
@@ -97,6 +102,8 @@ static func _see_a_species(main: Node, book: CodexBook) -> String:
 		"Amvrel Velmarai",
 		CodexPage.BESTIARY_TEXT,
 		"Ombulumo",
+		CodexPage.PEOPLE_TEXT,
+		"Teska na Amvrel",
 	]
 	return "" if rows == expected else "the book showed %s" % [rows]
 

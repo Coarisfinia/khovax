@@ -68,6 +68,8 @@ func _ready() -> void:
 	_sheet.add_theme_stylebox_override("panel", UiTheme.sheet(MARGIN))
 	_sheet.visible = false
 	_sheet.modulate.a = 0.0
+	# Closed: it takes no clicks, which is also how is_open tells.
+	_sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var row: HBoxContainer = HBoxContainer.new()
 	var middle: CenterContainer = CenterContainer.new()
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -3,8 +3,9 @@ extends ScrollContainer
 ## The codex book (#1174): the menu's Codex tab, listing every entry the player has unlocked, a
 ## section for each kind of name under its own heading (SECTIONS), each entry's name a button that
 ## opens its page (CodexPage) over the menu, by a click, a tap, or a controller's A on it. A
-## faction is unlocked once the player has met its name (CodexKeeper) or has a standing with it, a
-## species once they have seen it (BestiaryKeeper). The book only reads them, keeps up with them
+## faction or a person is unlocked once the player has met their name (CodexKeeper), a faction
+## also once they have a standing with it, and a species once they have seen it (BestiaryKeeper).
+## The book only reads them, keeps up with them
 ## while shown, and scrolls when the screen is too short for every entry. Its layout lives in its
 ## scene, codex_book.tscn (#437); the menu shows it among its gameplay tabs, as game/ hands it over
 ## (a child of the menu's node).
@@ -14,6 +15,7 @@ extends ScrollContainer
 const SECTIONS: Dictionary[String, String] = {
 	TextTags.FACTION: CodexPage.LEXICON_TEXT,
 	TextTags.MONSTER: CodexPage.BESTIARY_TEXT,
+	TextTags.PERSON: CodexPage.PEOPLE_TEXT,
 }
 const NONE_TEXT: String = "No names met yet"
 
@@ -59,8 +61,9 @@ func entry_button(kind: String, id: String) -> Button:
 	return _rows.find_child("%s_%s" % [kind, id], false, false) as Button
 
 
-## The ids of the kind `kind` unlocked, in the order of their names: a faction's once met or once
-## the player has a standing with it, a species' once seen (the bestiary, #1173). A name that
+## The ids of the kind `kind` unlocked, in the order of their names: a faction's or a person's
+## once met, a faction's also once the player has a standing with it, a species' once seen (the
+## bestiary, #1173). A name that
 ## stands for nothing (its content is gone) is left out.
 func _unlocked(kind: String) -> Array[String]:
 	var ids: Array[String] = []
