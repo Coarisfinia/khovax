@@ -6,7 +6,7 @@ extends SceneTree
 ## on the tile beside the player, idling. It writes the model from six sides (front, back, left,
 ## right, top, three-quarter), the shot from the game camera at play distance, and two close-ups
 ## on a bare background as its codex page shows it full-screen (#995): the whole model
-## ("portrait") and its front end, the face ("face"). Given a clip, it writes that clip's frames
+## ("portrait") and its front end, the face ("face"). Given clips, it writes each clip's frames
 ## for a GIF instead, from the game camera or from any of those views. Any model works: the
 ## cameras frame it by its bounds. With `points`, it marks the model's attachment points
 ## (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with
@@ -17,8 +17,9 @@ extends SceneTree
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
 ##   uv run --locked tools/godot/offscreen.py -- --path . \
 ##     -s res://tools/models/render_in_game.gd -- \
-##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] [clip=<Clip> [from=<view>]] \
-##     [points] [agitated] [type=<type>] [leaning=harmony|supremacy] \
+##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
+##     [clip=<Clip>[,<Clip>...] [from=<view>]] [points] [agitated] [type=<type>] \
+##     [leaning=harmony|supremacy] \
 ##     --seed=0 --user-dir=<branch>
 ## The launch options after it (LaunchOptions) start the world as the game would.
 
@@ -175,18 +176,17 @@ func _place() -> void:
 		_pose_side(_from)
 	else:
 		_game_camera.make_current()
-	animations.play(StringName(_clip))
-	animations.pause()
-	# The glow moves on with the clip's frames, not with how long the frames take to draw.
+	# The glow moves on with the clips' frames, not with how long the frames take to draw.
 	glow.process_mode = Node.PROCESS_MODE_DISABLED
-	if _clip == "Attack":
-		glow.flare()
-	var length: float = animations.get_animation(StringName(_clip)).length
-	for frame: int in ceili(length * CLIP_FPS) + 1:
-		_add_shot(
-			"%s_%03d" % [_clip, frame],
-			_pose_clip.bind(animations, glow, minf(frame / CLIP_FPS, length)),
-		)
+	# Several clips in one run (#1050): the game starts once for all of them, which is most of
+	# what a run costs.
+	for clip: String in _clip.split(","):
+		var length: float = animations.get_animation(StringName(clip)).length
+		for frame: int in ceili(length * CLIP_FPS) + 1:
+			_add_shot(
+				"%s_%03d" % [clip, frame],
+				_pose_clip.bind(animations, glow, clip, minf(frame / CLIP_FPS, length)),
+			)
 
 
 ## Makes `glow` agitated, in a type's colour or in a leaning's shape as the command line asks.
@@ -202,8 +202,15 @@ func _glow_as_asked(glow: EyeGlow) -> void:
 			glow.leaning = arg.trim_prefix("leaning=")
 
 
-## Poses the clip `animations` plays at `time`, and the `glow` in the model's eyes with it.
-func _pose_clip(animations: AnimationPlayer, glow: EyeGlow, time: float) -> void:
+## Poses `clip` at `time`, and the `glow` in the model's eyes with it. Its first frame starts the
+## clip, and an Attack's flares the glow, as the game does when the monster strikes.
+func _pose_clip(animations: AnimationPlayer, glow: EyeGlow, clip: String, time: float) -> void:
+	if is_zero_approx(time):
+		animations.play(StringName(clip))
+		animations.pause()
+		glow.flare_left = 0.0
+		if clip == "Attack":
+			glow.flare()
 	animations.seek(time, true)
 	glow.advance(0.0 if is_zero_approx(time) else 1.0 / CLIP_FPS)
 	glow.place()

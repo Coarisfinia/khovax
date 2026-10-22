@@ -156,8 +156,10 @@ a second model could use goes into the library or a generic tool, never into one
    close-ups too: up close is how its codex page shows it. With `points`, the renders mark the
    attachment points: check each eye mark sits on its eye and the attack mark on what attacks,
    through the attack clip too.
-6. **Clips in game:** a GIF of each clip playing in Godot. Check that loops don't jump, steps don't
-   slide, and the attack and hit read at game zoom.
+6. **Clips in game:** a GIF of each clip playing in Godot, all of them from one run
+   (`clip=Idle,Walk,Attack,...` per view: the game starts once, which is most of a run's cost),
+   each made with `tools/models/gif.py`. Check that loops don't jump, steps don't slide, and the
+   attack and hit read at game zoom.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
    means a few thousand triangles for a monster; justify anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
