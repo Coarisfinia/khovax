@@ -1,14 +1,11 @@
 """Ground contact: nothing a clip poses may sink into the ground (z = 0 at the origin, where the
 game stands the model on its tile). `lowest` measures a pose, `settle` lifts the root wherever a
-clip's pose sinks, and `report` samples every frame of every clip, for check_ground.py."""
+clip's pose sinks, eased, and `report` samples every frame of every clip, for check_ground.py."""
 
 import bpy
 
 # The words that name a foot bone in any rig: paws, feet, hooves.
 FOOT_WORDS = ("paw", "foot", "hoof")
-# How often settle may go over a clip before it gives up: each pass only adds keys where a frame
-# still sinks, so it settles in one or two.
-MAX_PASSES = 8
 
 
 def foot_bones(rig, words=FOOT_WORDS):
@@ -20,17 +17,17 @@ def skinned(objects):
     return [obj for obj in objects if obj.type == "MESH" and any(m.type == "ARMATURE" for m in obj.modifiers)]
 
 
-def _owned(obj, bones):
+def owned(obj, bones):
     """Per bone, the vertices of `obj` it moves most: its part of the mesh (a paw and its claws)."""
     names = {group.index: group.name for group in obj.vertex_groups}
-    owned = {name: [] for name in bones}
+    found = {name: [] for name in bones}
     for vertex in obj.data.vertices:
         if vertex.groups:
             top = max(vertex.groups, key=lambda g: g.weight)
             name = names.get(top.group)
-            if name in owned:
-                owned[name].append(vertex.index)
-    return owned
+            if name in found:
+                found[name].append(vertex.index)
+    return found
 
 
 def lowest(rig, meshes, bones):
@@ -40,37 +37,52 @@ def lowest(rig, meshes, bones):
     low = float("inf")
     feet = {name: float("inf") for name in bones}
     for obj in meshes:
-        owned = _owned(obj, bones)
+        parts = owned(obj, bones)
         evaluated = obj.evaluated_get(depsgraph)
         mesh = evaluated.to_mesh()
         world = evaluated.matrix_world
         heights = [(world @ vertex.co).z for vertex in mesh.vertices]
         low = min([low] + heights)
-        for name, indices in owned.items():
+        for name, indices in parts.items():
             feet[name] = min([feet[name]] + [heights[index] for index in indices])
         evaluated.to_mesh_clear()
     return low, feet
 
 
-def settle(rig, meshes, root, frames, up=1, clearance=0.005):
-    """Lifts `root` (its location's `up` axis) and keys it at every frame of the active action
-    where the mesh sinks below the ground, so the lowest point rests `clearance` above it (room for
-    the export's resampling, which can dip a few millimetres between keys). A new key reshapes
-    the curve between its neighbours, so it repeats until no frame sinks."""
+def _envelope(needs, spread, loop):
+    """A smooth curve never below `needs`: each value raised to the largest within `spread`
+    frames, then averaged over as many, so a lift eases in and out instead of kinking. A loop
+    wraps around its seam (its last frame is its first)."""
+    count = len(needs) - 1 if loop else len(needs)
+
+    def at(values, index):
+        if loop:
+            return values[index % count]
+        return values[min(max(index, 0), count - 1)]
+
+    widest = [max(at(needs, index + shift) for shift in range(-spread, spread + 1)) for index in range(count)]
+    smooth = [sum(at(widest, index + shift) for shift in range(-spread, spread + 1)) / (2 * spread + 1)
+              for index in range(count)]
+    return smooth + smooth[:1] if loop else smooth
+
+
+def settle(rig, meshes, root, frames, loop=False, up=1, clearance=0.005, spread=2):
+    """Lifts `root` (its location's `up` axis, keyed on every one of `frames` of the active action)
+    wherever the mesh would sink below the ground, so its lowest point rests `clearance` above it
+    (room for the export's resampling). The lift eases in and out over `spread` frames either
+    side, so the body doesn't jerk up; the root only moves the whole body, so one pass does it."""
     scene = bpy.context.scene
-    for _pass in range(MAX_PASSES):
-        lifted = False
-        for frame in frames:
+    needs = []
+    for frame in frames:
+        scene.frame_set(frame)
+        low, _feet = lowest(rig, meshes, [])
+        needs.append(max(0.0, clearance - low))
+    bone = rig.pose.bones[root]
+    for frame, lift in zip(frames, _envelope(needs, spread, loop)):
+        if lift > 0.0:
             scene.frame_set(frame)
-            low, _feet = lowest(rig, meshes, [])
-            if low < 0.0:
-                lifted = True
-                bone = rig.pose.bones[root]
-                bone.location[up] += clearance - low
-                bone.keyframe_insert("location", frame=frame)
-        if not lifted:
-            return
-    raise RuntimeError("%s still sinks after %d passes" % (rig.animation_data.action.name, MAX_PASSES))
+            bone.location[up] += lift
+            bone.keyframe_insert("location", frame=frame)
 
 
 def report(rig, meshes, tolerance):
