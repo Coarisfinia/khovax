@@ -51,7 +51,6 @@ var beast: BestiaryEntry
 var close_button: Button
 var _sheet: PanelContainer
 var _column: VBoxContainer
-var _open: bool = false
 var _fade: Tween
 var _font_size: int = 0
 ## What had the focus before the page opened, which gets it back when it closes.
@@ -104,7 +103,7 @@ func _process(_delta: float) -> void:
 
 ## `ui_cancel` and `menu` close an open page before the dialog or the menu hear them.
 func _input(event: InputEvent) -> void:
-	if _open and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("menu")):
+	if is_open() and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("menu")):
 		close()
 		get_viewport().set_input_as_handled()
 
@@ -125,7 +124,7 @@ func open(kind: String, id: String) -> bool:
 	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
-	if not _open:
+	if not is_open():
 		_focused_before = get_viewport().gui_get_focus_owner()
 	_ease(true)
 	close_button.grab_focus()
@@ -176,7 +175,7 @@ func _show_name(kind_heading: String, shown_name: String, meaning: String) -> vo
 
 ## Closes the page, easing out; the focus goes back to where it was.
 func close() -> void:
-	if not _open:
+	if not is_open():
 		return
 	_ease(false)
 	if is_instance_valid(_focused_before) and _focused_before.is_visible_in_tree():
@@ -186,8 +185,9 @@ func close() -> void:
 	_focused_before = null
 
 
+## Whether the page is open: its sheet takes clicks exactly while it is (_ease).
 func is_open() -> bool:
-	return _open
+	return _sheet != null and _sheet.mouse_filter == Control.MOUSE_FILTER_STOP
 
 
 ## Sizes the text to a screen of `screen` pixels (tests lay it out for other screens this way).
@@ -225,8 +225,7 @@ func _standing_line(faction: Faction) -> String:
 
 ## Eases the page in or out; the game hears no input while it's in.
 func _ease(opening: bool) -> void:
-	var was_open: bool = _open
-	_open = opening
+	var was_open: bool = is_open()
 	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP if opening else Control.MOUSE_FILTER_IGNORE
 	if input != null:
 		# Opened over the menu (the codex book, #1174), closing it leaves the input as the menu has
