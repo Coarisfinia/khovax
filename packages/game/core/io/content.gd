@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads files and JSON for every core/io reader, #591)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads files and JSON for core/io, #591)
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
