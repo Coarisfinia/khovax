@@ -1,7 +1,7 @@
 class_name LocalInput
 extends Node
 ## The local player's commands. Every device feeds the same movement actions (keys, the touch
-## stick, later controllers), and this turns them into one command per tick for the player in
+## stick, a controller), and this turns them into one command per tick for the player in
 ## `slot`. A press of the special attack (#410) fires it in the next command: one press fires once,
 ## and a press between two ticks isn't lost. place_totem places their totem (#423) while it's held,
 ## and a tap between two ticks isn't lost either. focus_next and focus_previous (Q and R, or the

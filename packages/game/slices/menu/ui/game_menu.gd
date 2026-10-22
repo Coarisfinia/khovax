@@ -1,10 +1,9 @@
 class_name GameMenu
 extends Control
-## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it: Character
-## (#391), Settings, the Survey (#392) and Quests (#388). The `menu` action (Escape, a
-## controller's Start, #779) opens and closes it, and on touch screens a small button does; the
-## close button at its top right and `ui_cancel` (a controller's B) close it (#554). It eases in and
-## out, never snaps.
+## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it, gameplay
+## first, then system (_build_sheet). The `menu` action (Escape, a controller's Start, #779) opens
+## and closes it, and on touch screens a small button does; the close button at its top right and
+## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
 ## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows

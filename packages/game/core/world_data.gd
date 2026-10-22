@@ -141,7 +141,7 @@ static func _load_state(world: World, entry: DataReader) -> void:
 
 
 ## Restores every player's world store from the save into `world` (#724), before any instance
-## loads, so each is handed a copy: each slot once, its entries as PlayerStore reads them.
+## loads, so every instance shares them (#828): each slot once, entries as PlayerStore reads them.
 static func _load_stores(world: World, read: DataReader) -> void:
 	var seen: Array[int] = []
 	for saved: DataReader in read.entries("stores"):

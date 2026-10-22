@@ -1,9 +1,8 @@
 class_name ReplayFile
 extends RefCounted
 ## A replay's file format (#35, #281): JSON text, with the seed and the hashes as strings, since
-## JSON
-## numbers can't hold every 64-bit integer exactly. Every field is checked for its shape as it's
-## read, rather than silently read as 0. Recording and playing a replay is Replay's.
+## JSON numbers can't hold every 64-bit integer exactly. Every field is checked for its shape as
+## it's read, rather than silently read as 0. Recording and playing a replay is Replay's.
 ## A reference replay (tests/replays/, #876) holds only its inputs: its start and commands, without
 ## the rules, features and checkpoints a recorded one holds, which this build works out by playing
 ## it (Replay.rehash). The fields a replay leaves out are left out of its text too.

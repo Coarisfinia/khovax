@@ -59,9 +59,9 @@ static func faint(state: GameState, slot: int, short_id: String) -> void:
 
 
 ## Brings the fainted carried monster `short_id` of the player in `slot` back (#655): it can be
-## swapped to again, and as their companion it joins them on the next tick; the world takes it into
-## every instance once this one stepped. The hook reviving plugs into, for the base (#647) and
-## revive items (#656) once they exist. Nothing for one that hasn't fainted.
+## swapped to again, and as their companion it joins them on the next tick; every instance sees it
+## at once, since they share the world's stores (#828). Revive items (#656) bring monsters back
+## through it, and so will the base once it exists (#647). Nothing for one that hasn't fainted.
 static func revive(state: GameState, slot: int, short_id: String) -> void:
 	var entry: Dictionary = state.store(slot, CompanionFeature.ID)
 	var down: PackedStringArray = _fainted_of(entry)

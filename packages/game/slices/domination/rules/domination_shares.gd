@@ -5,10 +5,10 @@ extends RefCounted
 ## wall they colored plus the segments of it they reinforced while it sealed (#227). The monsters
 ## are handed out one at a time, each to the player with the largest share still owed, ties going to
 ## whoever joined first (the lower entity id, #86): that rounds every share to the closest whole
-## monster, and settles what rounding leaves over or short. Whoever gets none gets loot rolls
-## instead (DominationLootFeature). A ring around one monster keeps its dominator, the lowest slot
-## that colored it (#87). Integers only: shares are compared as contribution × monsters, never
-## divided.
+## monster, and settles what rounding leaves over or short. Loot rolls are apart from this: every
+## player who did enough gets them, whatever monsters they got (DominationLootFeature). A ring
+## around one monster keeps its dominator, the lowest slot that colored it (#87). Integers only:
+## shares are compared as contribution × monsters, never divided.
 
 
 ## How much each player in the instance did for `seal`'s ring, by entity id, in id order: its wall
