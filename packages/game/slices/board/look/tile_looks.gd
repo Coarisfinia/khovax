@@ -46,6 +46,11 @@ static func scale_of(blueprint: TileBlueprint) -> float:
 	return float(blueprint.scale) / TileBlueprint.FULL_SCALE
 
 
+## The color `blueprint`'s tiles are drawn in: the blueprint keeps it as a whole 0xRRGGBB (#515).
+static func color_of(blueprint: TileBlueprint) -> Color:
+	return Color.hex(blueprint.color << 8 | 0xff)
+
+
 ## `node`'s transform within `model`, every parent's on the way included: imported models nest.
 static func _in_model(model: Node3D, node: Node3D) -> Transform3D:
 	var placed: Transform3D = Transform3D.IDENTITY

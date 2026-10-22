@@ -1,4 +1,3 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (parses JSON, whose numbers come as floats)
 class_name TileBlueprint
 extends RefCounted
 ## A kind of tile a region is made of (#116), read from content data (core/data/tiles/, #72,
@@ -19,8 +18,9 @@ const FULL_SCALE: int = 100
 const MAX_SCALE: int = 4 * FULL_SCALE
 
 var id: String = ""
-## The tile's ground color.
-var color: Color = Color.BLACK
+## The tile's ground color as a whole number, 0xRRGGBB, read from its #rrggbb text (#515: no
+## float-backed Color in the core); the look turns it into a Color (TileLooks.color_of).
+var color: int = 0
 ## What tells the kind apart without its color (#68): one printable ASCII character, so every font
 ## has it, unique among the kinds (the content flow checks), drawn on the Survey.
 var symbol: String = ""
@@ -90,7 +90,7 @@ func _check(file_id: String, data: Dictionary, walks: Variant) -> String:
 	scale = _whole(data.get("scale", FULL_SCALE), MAX_SCALE)
 	if scale < 1:
 		return "its scale is a whole number of hundredths from 1 to %d" % MAX_SCALE
-	color = Color.html(html)
+	color = html.substr(1).hex_to_int()
 	return ""
 
 

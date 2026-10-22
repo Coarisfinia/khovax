@@ -155,7 +155,7 @@ func tile_color_of(tile: Vector2i) -> Color:
 ## The color a tile of this kind (Region.terrain) has when nothing paints it: its tile blueprint's.
 func terrain_color(kind: String) -> Color:
 	var blueprint: TileBlueprint = TileLooks.of(kind)
-	return blueprint.color if blueprint != null else Color.BLACK
+	return TileLooks.color_of(blueprint) if blueprint != null else Color.BLACK
 
 
 func tile_mesh() -> CylinderMesh:
