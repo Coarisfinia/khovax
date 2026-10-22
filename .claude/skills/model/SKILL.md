@@ -83,7 +83,7 @@ a second model could use goes into the library or a generic tool, never into one
     bone's shift whatever the root does): `Wisps.drift`, an `animate` overlay, hovers them slowly
     in every clip, the wave flowing along the body, and a `Gather` sends them to a ring during
     one clip (the attack) and back, or holds them on it across clips played in turn (the long
-    attack).
+    attack); with a `bone`, the ring trails that bone (the head) through a soft spring (#1164).
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)

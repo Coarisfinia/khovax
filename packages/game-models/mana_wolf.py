@@ -86,12 +86,12 @@ WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
 # The wisps hovering around the body on their own (lib/wisps.py, #1103), and the ring they gather
-# into above the head as it lunges (Attack: crouch to frame 8, lunge by 13, bite at 16, back by
-# 24), turning slowly.
+# into as it lunges (Attack: crouch to frame 8, lunge by 13, bite at 16, back by 24), turning
+# slowly: close around the brow crystal, swaying with the head, softly (#1164).
 WISPS = [(0.38, 0.15, 1.45), (-0.34, -0.12, 1.52), (0.0, 0.95, 1.38), (0.3, -0.62, 1.72), (-0.3, 0.62, 1.32),
          (0.0, 1.78, 0.86)]
-CROWN_CENTER, CROWN_RADIUS = (0.0, -1.1, 1.95), 0.2
-CROWN = wisps.Gather("Attack", 1, 11, 16, 24, CROWN_CENTER, CROWN_RADIUS, spin=0.06, stagger=2)
+CROWN_CENTER, CROWN_RADIUS, CROWN_BONE = (0.0, -0.82, 1.82), 0.14, "head"
+CROWN = wisps.Gather("Attack", 1, 11, 16, 24, CROWN_CENTER, CROWN_RADIUS, spin=0.06, stagger=2, bone=CROWN_BONE)
 # The long attack (#1158) holds the crown: they gather as it rears back (ChannelStart), the ring
 # turning once a loop (Channel, 2 s) for as long as it lasts, and leave it as the jaw snaps shut
 # (ChannelEnd); each clip turns the ring on from where ChannelStart's last frame left it.
@@ -99,9 +99,12 @@ CHANNEL_FRAMES = 60
 CHANNEL_SPIN = 2.0 * math.pi / CHANNEL_FRAMES
 HELD = CHANNEL_SPIN * (clips.CHANNEL_START - 1)
 CHANNEL_CROWN = [
-    wisps.Gather("ChannelStart", 1, 16, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, stagger=2),
-    wisps.Gather("Channel", 1, None, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD),
-    wisps.Gather("ChannelEnd", 1, None, 4, 20, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD),
+    wisps.Gather("ChannelStart", 1, 16, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, stagger=2,
+                 bone=CROWN_BONE),
+    wisps.Gather("Channel", 1, None, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD,
+                 bone=CROWN_BONE),
+    wisps.Gather("ChannelEnd", 1, None, 4, 20, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD,
+                 bone=CROWN_BONE),
 ]
 
 
