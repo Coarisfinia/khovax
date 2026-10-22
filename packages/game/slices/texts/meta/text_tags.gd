@@ -57,8 +57,16 @@ static func shown(text: String) -> String:
 	if not text.contains(TAG_START):
 		return text
 	if _shown == null:
-		_shown = load_tags()
+		use(load_tags())
 	return _shown.resolve(text)
+
+
+## Makes `shown` resolve tags with `tags` from now on, warning once when their content couldn't be
+## read (#949): every tag then shows as written.
+static func use(tags: TextTags) -> void:
+	_shown = tags
+	if not tags.problem.is_empty():
+		push_warning("the text tags' names can't be read, so tags show as written: " + tags.problem)
 
 
 ## `text` with every tag replaced by the name it stands for; a tag that stands for nothing stays as
