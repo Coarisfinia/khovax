@@ -49,7 +49,6 @@ ENDINGS: dict[str, str] = {
 # The shell scripts still waiting for their port (path: the issue that ports it).
 SH_EXEMPT: dict[str, int] = {
     "tools/checks/script_check.sh": 1096,
-    "tools/models/blender.sh": 1097,
 }
 
 THIS = "tools/checks/file_endings.py"
