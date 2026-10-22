@@ -11,9 +11,8 @@ extends SceneTree
 ## cameras frame it by its bounds. With `points`, it marks the model's attachment points
 ## (PointMarks, #1007).
 ##
-## Render it hidden and silent, as AGENTS.md's screenshot recipe says (the temporary one-pixel
-## `override.cfg`, `--audio-driver Dummy`, and `--display-driver wayland` under WSLg):
-##   godot --path . --audio-driver Dummy -s res://tools/models/render_in_game.gd -- \
+## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
+##   uv run --locked tools/godot/offscreen.py -- --path . -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] [clip=<Clip> [from=<view>]] \
 ##     [points] \
 ##     --seed=0 --user-dir=<branch>
