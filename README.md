@@ -92,9 +92,9 @@ state hash the headless run of the same flow ends in:
 
 ```sh
 godot --headless --path packages/game --export-release "Web Test" build/web-test/index.html
-uv run --locked --package khovax-web playwright install ffmpeg
+uv run --locked --package khovax-game-web-e2e playwright install ffmpeg
 CHROME=<path to chrome-headless-shell> EXPECTED_HASH=<hash> \
-  uv run --locked --package khovax-web packages/web/web_e2e.py packages/game/build/web-test
+  uv run --locked --package khovax-game-web-e2e packages/game-web-e2e/web_e2e.py packages/game/build/web-test
 ```
 
 ### Load test

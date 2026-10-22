@@ -1,0 +1,10 @@
+# The Blender model scripts (they run in Blender's own Python) and their GIFs: a member of the
+# repository's uv workspace (the root pyproject.toml).
+[project]
+name = "khovax-game-models"
+version = "0.0.0"
+requires-python = "==3.14.8"
+dependencies = []
+
+[tool.uv]
+package = false
