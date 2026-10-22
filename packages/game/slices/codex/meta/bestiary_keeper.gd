@@ -3,7 +3,8 @@ extends ProfileCompanion
 ## Keeps what this machine's player has learned about each species (Bestiary, #1173) in their
 ## profile's file, beside the profile (BestiarySave), whose companion it is
 ## (ProfileHolder.companions), so the two are saved together. What they learn (BestiaryTie) is
-## taken at once and saved like a gain.
+## taken at once and goes with the profile's next save (ProfileHolder.note), never taking the save
+## a gain like a domination asks for.
 
 ## The profile the bestiary is kept with.
 @export var holder: ProfileHolder
@@ -28,11 +29,11 @@ static func of(profile_holder: ProfileHolder) -> Bestiary:
 	return null
 
 
-## Learns `species` at `level` (Bestiary.SEEN, MET or KNOWN) in the instance `where`, saved with
+## Learns `species` at `level` (Bestiary.SEEN, MET or KNOWN) in the instance `where`, kept with
 ## the profile, when it teaches this player anything new.
 func learn(species: String, level: int, where: String) -> void:
 	if known() != null and bestiary.teaches(species, level, where):
-		holder.change(_learn.bind(species, level, where))
+		holder.note(_learn.bind(species, level, where))
 
 
 func _learn(_profile: Profile, species: String, level: int, where: String) -> void:

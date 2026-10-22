@@ -5,7 +5,9 @@ extends RefCounted
 ## they're in, and one not drawn isn't. A wild monster that strikes the player is met: its page
 ## then shows its types, its abilities by name and where they came across it; one striking the
 ## trail isn't. Their own domination of one teaches its lore, which the page shows; another
-## player's doesn't. What they learned is in the profile's file at once, read back as it was. A
+## player's doesn't. What they learned goes into the profile's file with its next save, never
+## asking for one itself (so a domination's gain is still saved at once), and reads back as it was.
+## A
 ## save whose bestiary is malformed is refused, and one from before the bestiary starts with
 ## nothing learned.
 
@@ -128,7 +130,7 @@ func _check_known() -> String:
 	return ""
 
 
-## What the player learned is in the profile's file, read back as it was.
+## What the player learned is in the profile's file once it's flushed, read back as it was.
 func _check_saved(holder: ProfileHolder) -> String:
 	holder.flush()
 	var quests: QuestKeeper = QuestKeeper.new()

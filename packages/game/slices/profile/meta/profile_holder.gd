@@ -81,6 +81,14 @@ func change(changing: Callable) -> void:
 	_tell_posted(posted)
 
 
+## Runs `changing` on this player's profile, a companion's part changing with it, without asking
+## for a save: it goes with the next one (ProfileKeeper.note), like what they learn about a species
+## (#1173).
+func note(changing: Callable) -> void:
+	if keeper != null:
+		keeper.note(changing)
+
+
 ## Drops the outbox's request `request` the world acknowledged (#771).
 func acknowledge(request: String) -> void:
 	if keeper != null:
