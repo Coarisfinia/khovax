@@ -155,8 +155,12 @@ a second model could use goes into the library or a generic tool, never into one
   it has one, tail and ear chains where it has them. Bones named left/right with `.L`/`.R`.
 - **Weights:** automatic weights (`ARMATURE_AUTO`) as a start, then fix by script where they
   fail. At most four bone influences per vertex, normalised.
-- **Clips:** one action per state the game plays. Read the view that will use it and the clip
-  names of the model it replaces, and cover each (e.g. Idle, Walk, Run, Attack, Hit, Death).
+- **Clips:** one action per state the game plays. Every creature carries the full creature set
+  (owner, #1157), named once in `packages/game-models/lib/clip_set.py`: `clips.animate` refuses a
+  creature without one of them, and CI's `check_clip_set.py` fails a committed creature `.glb`
+  that lacks one (every skinned model under the game's `assets/` except the non-creatures it
+  lists). A clip every creature gains goes into that set, with every creature's rebuild in the
+  same pull request. Read the view that will use the model too, and cover the clips it plays.
   Looping clips start and end on the same pose, and the walk speed matches how fast the game
   moves the entity (no foot sliding).
 - **Fluid, not stiff (the owner's pain point, #1075, #1071):** never key every bone on the same frames so every part
