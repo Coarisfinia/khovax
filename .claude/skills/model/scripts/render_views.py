@@ -10,7 +10,7 @@ import blf
 import bpy
 import imbuf
 import numpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
 glb, out_dir = args[0], args[1]
@@ -22,11 +22,17 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
 scene = bpy.context.scene
 
-# Pose: the named clip at the given frame, else the rest pose.
+# Pose: the named clip at the given frame, else the rest pose. The import has already posed the
+# bones with a clip, and its NLA tracks would pose them again, so the NLA goes off and every bone
+# starts at rest (#1079); then only the named clip moves them.
 for obj in scene.objects:
-	if obj.type == "ARMATURE" and obj.animation_data:
-		action = bpy.data.actions.get(clip) if clip else None
-		obj.animation_data.action = action
+	if obj.type != "ARMATURE":
+		continue
+	if obj.animation_data:
+		obj.animation_data.use_nla = False
+		obj.animation_data.action = bpy.data.actions.get(clip) if clip else None
+	for bone in obj.pose.bones:
+		bone.matrix_basis = Matrix.Identity(4)
 scene.frame_set(frame)
 
 # Frame the model: its world bounding box over every mesh, deformed.
