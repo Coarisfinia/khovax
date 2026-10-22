@@ -167,7 +167,7 @@ jobs:
           echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
           mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv
           GODOT=~/godot/godot JV=$(find /tmp/jv -type f -name jv | head -1) \
-            uv run --locked ../game-checks/content_schemas_check.py
+            uv run --locked --package khovax-game-checks ../game-checks/content_schemas_check.py
 
       - name: "🔎 Check every script (warnings as errors)"
         # Also catches scripts that no test loads. An ERROR: line fails the step too, even when
