@@ -78,10 +78,11 @@ repositories). The container folder `project-khovax/` holds `main/` (the primary
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
-**Having 5 pull requests open is the mandatory goal** (owner's rule), so the owner can go through
-them fast: whenever fewer than 5 are open, building the next one comes before anything but the
-owner's comments, right up to the usage budget's stop line. A pull
-request in the merge queue counts as done (owner's rule): it doesn't count toward the 5. Each is
+**Having 5 pull requests waiting for the owner's review at all times is the mandatory goal**
+(owner's rule, #1088), so the owner can go through them fast: whenever fewer than 5 wait, building
+the next one comes before anything but the owner's comments, right up to the usage budget's stop
+line. One the owner has approved, or one in the merge queue, no longer counts toward the 5 (owner,
+#1088). Each is
 branched from `main` and independent of the others: never stack pull requests, since they're
 squash-merged, which rewrites the history a stacked branch is built on. Work that needs another
 open pull request waits until that one is merged. The merge queue tests each one on top of `main`
