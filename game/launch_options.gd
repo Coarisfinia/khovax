@@ -17,6 +17,8 @@ const SEED: String = "--seed="
 const INSTANCE: String = "--instance="
 const INVINCIBLE: String = "--invincible"
 const USER_DIR: String = "--user-dir="
+## The renderer's shader cache, inside the user folder.
+const SHADER_CACHE: String = "shader_cache"
 ## The folder name `--user-dir=<name>` gives is this prefix and the name.
 const USER_DIR_PREFIX: String = "khovax_"
 
@@ -92,6 +94,7 @@ func apply() -> String:
 ## folder; it creates the user folder only at startup, so this creates the new one. Returns why it
 ## couldn't, or "".
 func _redirect_user_dir() -> String:
+	var engine_dir: String = OS.get_user_data_dir()
 	ProjectSettings.set_setting("application/config/use_custom_user_dir", true)
 	ProjectSettings.set_setting(
 		"application/config/custom_user_dir_name",
@@ -100,4 +103,18 @@ func _redirect_user_dir() -> String:
 	var made: Error = DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
 	if made != OK:
 		return "couldn't create the user folder %s: %s" % [OS.get_user_data_dir(), made]
+	_mirror_cache_folders(
+		engine_dir.path_join(SHADER_CACHE),
+		OS.get_user_data_dir().path_join(SHADER_CACHE),
+	)
 	return ""
+
+
+## Gives the new user folder the shader cache's folders the renderer made in `engine_dir`, the
+## folder `user://` was at startup (#1050): it saves each compiled shader into `user://` as it
+## goes, so without them every save failed and every run compiled its shaders again. Folders only:
+## each user folder keeps its own cache, so runs in parallel never share its files.
+static func _mirror_cache_folders(from: String, to: String) -> void:
+	for folder: String in DirAccess.get_directories_at(from):
+		var _made: Error = DirAccess.make_dir_recursive_absolute(to.path_join(folder))
+		_mirror_cache_folders(from.path_join(folder), to.path_join(folder))
