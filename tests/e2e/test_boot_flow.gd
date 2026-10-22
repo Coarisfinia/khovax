@@ -452,12 +452,17 @@ func _check_fainted_lies(
 	var idling: bool = animations != null and animations.current_animation == WildMonsterView.IDLE
 	if not feature.is_fainted(monster_id) or not view.fallen.has(monster_id) or idling:
 		return "a fainted wild monster's figure didn't lie down and stop idling"
+	# Its eyes' glow goes out (#1008).
+	var glow: EyeGlow = EyeGlow.of(model)
+	glow.advance(1.0 / EyeGlow.EASE_SPEED + EyeGlow.FLARE_SECONDS)
+	if not glow.out or glow.shown() > 0.0:
+		return "a fainted wild monster's eyes still glow"
 	return ""
 
 
 ## A wild monster's hit (#422) shows (#426): its figure's model lunges toward the struck tile and
-## comes back to stand on its own, turning to face it and playing its Attack clip (#993). One raised
-## in another instance doesn't (_check_struck_elsewhere).
+## comes back to stand on its own, turning to face it and playing its Attack clip (#993), and its
+## eyes' glow flares up (#1008). One raised in another instance doesn't (_check_struck_elsewhere).
 func _check_wild_monster_lunges(
 	driver: GameDriver,
 	view: WildMonsterView,
@@ -470,7 +475,9 @@ func _check_wild_monster_lunges(
 	if not elsewhere.is_empty():
 		return elsewhere
 	var events: Array[RefCounted] = [WildMonsterStruck.new(monster.id, 0, target, 1)]
-	FlowSteps.raise(driver, events)
+	elsewhere = _check_glow_flares(driver, model, events)
+	if not elsewhere.is_empty():
+		return elsewhere
 	var animations: AnimationPlayer = WildMonsterView.clips_of(model)
 	var attacking: bool = animations.current_animation == WildMonsterView.ATTACK
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS / 2)
@@ -482,6 +489,18 @@ func _check_wild_monster_lunges(
 	_step_tweens(view, WildMonsterView.LUNGE_SECONDS)
 	if not lunged or not model.position.is_zero_approx():
 		return "a wild monster's hit didn't lunge its figure toward the struck tile and back"
+	return ""
+
+
+## Raises `events`, a strike by the wild monster wearing `model`: its eyes' glow flares up (#1008),
+## a halo on each of its eyes.
+func _check_glow_flares(driver: GameDriver, model: Node3D, events: Array[RefCounted]) -> String:
+	var glow: EyeGlow = EyeGlow.of(model)
+	var calm: float = glow.shown()
+	FlowSteps.raise(driver, events)
+	glow.place()
+	if glow.shown() <= calm or ModelPoints.eyes(model).size() != glow.get_child_count():
+		return "a wild monster's hit didn't flare the glow on each of its eyes"
 	return ""
 
 

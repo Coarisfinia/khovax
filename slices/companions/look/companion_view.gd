@@ -71,7 +71,8 @@ func show_state() -> void:
 
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
-## shrinks it into them, and notes whose player chose another, so it grows out of them. Only the
+## shrinks it into them, notes whose player chose another, so it grows out of them, and flares the
+## eyes of every one that struck. Only the
 ## shown instance's events (#1025), and only once the figures are its: entity ids repeat across
 ## instances, so another's would name a figure here.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
@@ -81,12 +82,24 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		var chosen: CompanionChosen = event as CompanionChosen
 		if chosen != null and not _chosen.has(chosen.slot):
 			_chosen.append(chosen.slot)
+		_flare(event)
 		var returned: CompanionReturned = event as CompanionReturned
 		if returned != null and figures.has(returned.companion_id):
 			var figure: HexPiece = figures[returned.companion_id]
 			var _dropped: bool = figures.erase(returned.companion_id)
 			_dropped = _facing.erase(returned.companion_id)
 			_return(figure, returned.slot)
+
+
+## Flares the eyes of the companion that struck, if `event` is its auto attack or its special.
+func _flare(event: RefCounted) -> void:
+	var striker: int = -1
+	if event is CompanionStruck:
+		striker = (event as CompanionStruck).companion_id
+	elif event is SpecialStruck:
+		striker = (event as SpecialStruck).companion_id
+	if figures.has(striker):
+		EyeGlow.of(figures[striker].get_child(0) as Node3D).flare()
 
 
 ## Glides `figure` into the player in `slot` while it shrinks away and takes on their color, then

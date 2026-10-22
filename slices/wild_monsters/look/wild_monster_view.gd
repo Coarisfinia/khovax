@@ -11,7 +11,8 @@ extends Node3D
 ## hit and back, eased, so the hit reads without a flash (#426). Each figure turns smoothly to face
 ## where it last stepped or struck, as the companions do (#993), and plays its model's clips: Walk
 ## while it glides, Attack with the lunge, Hit when it loses HP, and Faint before it lies down;
-## Idle otherwise. It only reads the state and the tick's events.
+## Idle otherwise. Its eyes glow (EyeGlow, #1008): brighter while it's enraged, flaring up as it
+## strikes, and going out once it fainted. It only reads the state and the tick's events.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -112,6 +113,9 @@ func show_state() -> void:
 			_face(entity_id, spot)
 			_glide(figures[entity_id], spot)
 		figures[entity_id].visible = is_shown(driver.state, entity_id)
+		var glow: EyeGlow = EyeGlow.of(figures[entity_id].get_child(0) as Node3D)
+		glow.agitated = feature.rage_of(entity_id) > 0
+		glow.out = feature.is_fainted(entity_id)
 		if feature.is_fainted(entity_id) and not fallen.has(entity_id):
 			fallen[entity_id] = true
 			_fall(figures[entity_id])
@@ -139,6 +143,7 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 			_face(struck.monster_id, struck.tile)
 			_lunge(figures[struck.monster_id], struck.tile)
 			_play_once(figures[struck.monster_id], ATTACK)
+			EyeGlow.of(figures[struck.monster_id].get_child(0) as Node3D).flare()
 	_flinch()
 
 
@@ -287,10 +292,12 @@ func _add_figure() -> HexPiece:
 	return piece
 
 
-## A new copy of the placeholder model, in the comic look; companions wear it too (#338).
+## A new copy of the placeholder model, in the comic look and with glowing eyes; companions wear it
+## too (#338).
 static func placeholder_model() -> Node3D:
 	var model: Node3D = MODEL.instantiate() as Node3D
 	Toon.apply_to_model(model)
+	var _glow: EyeGlow = EyeGlow.add_to(model)
 	return model
 
 
