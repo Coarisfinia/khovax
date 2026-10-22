@@ -9,6 +9,7 @@ import os
 import sys
 from pathlib import Path
 
+from annotations import error
 from git_files import git_files
 
 
@@ -19,7 +20,7 @@ def main() -> int:
         path for path in git_files() if len(set(folders := path.split("/")[:-1])) < len(folders)
     ]
     for path in repeated:
-        print(f"::error file={path}::its path repeats a folder name")
+        print(error(path, "its path repeats a folder name"))
     return 1 if repeated else 0
 
 

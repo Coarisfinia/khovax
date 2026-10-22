@@ -16,6 +16,7 @@ import re
 import sys
 from pathlib import Path
 
+from annotations import error
 from gdscript_code import without_comments
 
 # What the rules never use, one alternation per kind; add a kind as its own line.
@@ -79,19 +80,22 @@ def main() -> int:
         if any(with_marker):
             print("\n".join(numbered(lines, with_marker)))
             print(
-                f"::error file={file}::the exemption marker sits in the top comment lines, with a"
-                f" reason: {MARKER} (reason)"
+                error(
+                    file,
+                    "the exemption marker sits in the top comment lines, with a reason:"
+                    f" {MARKER} (reason)",
+                )
             )
             failed = True
 
         code = without_comments(source).rstrip("\n").split("\n")
         if not extends.intersection(code):
-            print(f"::error file={file}::rules scripts extend RefCounted or a class of the rules")
+            print(error(file, "rules scripts extend RefCounted or a class of the rules"))
             failed = True
         hits = numbered(code, [FORBIDDEN.search(line) is not None for line in code])
         if hits:
             print("\n".join(hits))
-            print(f"::error file={file}::the rules must stay deterministic: see the lines above")
+            print(error(file, "the rules must stay deterministic: see the lines above"))
             failed = True
 
     return 1 if failed else 0

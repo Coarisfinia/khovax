@@ -13,6 +13,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from annotations import error
+
 FOLDER = "core/rules_changes"
 NAME = re.compile(r"([0-9]+)-[a-z0-9-]+\.md")
 
@@ -56,7 +58,7 @@ def main() -> int:
         file = f"{FOLDER}/{entry}"
         name = NAME.fullmatch(entry)
         if not name:
-            print(f"::error file={file}::a rule change file is named <issue>-<slug>.md")
+            print(error(file, "a rule change file is named <issue>-<slug>.md"))
             failed = True
             continue
         # newline="": a carriage return stays, so a CRLF frontmatter fails as it did in the shell.
@@ -65,15 +67,15 @@ def main() -> int:
         # No pr (#758): the squash commit that added the file names it (git log --diff-filter=A).
         if lines[0:3:2] != ["---", "---"] or lines[1:2] != [f"issue: {name[1]}"]:
             print(
-                f"::error file={file}::its frontmatter is its issue (the file's number), nothing"
-                " else (no pr: git log finds it)"
+                error(
+                    file,
+                    "its frontmatter is its issue (the file's number), nothing else (no pr: git"
+                    " log finds it)",
+                )
             )
             failed = True
         if re.search(r"/pull/[0-9]", text):
-            print(
-                f"::error file={file}::it links its issue, not its pull request (git log finds"
-                " that)"
-            )
+            print(error(file, "it links its issue, not its pull request (git log finds that)"))
             failed = True
 
     deleted = deleted_since(base)
@@ -82,8 +84,7 @@ def main() -> int:
         return 1
     for path in deleted:
         print(
-            f"::error file={path}::a rule change file is never deleted or renamed: the folder is"
-            " append-only"
+            error(path, "a rule change file is never deleted or renamed: the folder is append-only")
         )
         failed = True
 

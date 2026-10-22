@@ -196,7 +196,8 @@ jobs:
         # and a kind a slice owns (#412), slices/<slice>/data/<kind>/, against the
         # <kind>.schema.json beside it; the slice's own kind sits directly in its data/, beside
         # <slice>.schema.json, so no folder repeats the slice's name (#442). A schema without its
-        # data would sit unchecked, so it fails too, and so does a kind with two schemas.
+        # data would sit unchecked, so it fails too, and so does a kind with two schemas. An
+        # annotation names its file from the repository's root (#1106), so it links into the diff.
         run: |
           # Every kind's folder has its own schema: core/data/<kind>/ in core/data/schemas/, and a
           # slice's <kind>/ beside it, so a slice's data never borrows another's schema.
@@ -219,15 +220,15 @@ jobs:
             case "$schema" in slices/*) folder=$(dirname "$schema")/${name} ;; esac
             if [ "$folder" = "slices/${name}/data/${name}" ]; then
               if ! compgen -G "slices/${name}/data/*.jsonc" > /dev/null; then
-                echo "::error file=${schema}::has no slices/${name}/data/*.jsonc to check"
+                echo "::error file=packages/game/${schema}::has no slices/${name}/data/*.jsonc to check"
                 exit 1
               fi
             elif [ ! -d "$folder" ]; then
-              echo "::error file=${schema}::has no ${folder}/ folder to check"
+              echo "::error file=packages/game/${schema}::has no ${folder}/ folder to check"
               exit 1
             fi
             if [ -n "${schema_of[$name]:-}" ]; then
-              echo "::error file=${schema}::${name} already has a schema: ${schema_of[$name]}"
+              echo "::error file=packages/game/${schema}::${name} already has a schema: ${schema_of[$name]}"
               exit 1
             fi
             schema_of[$name]=$schema
