@@ -220,27 +220,31 @@ func _check_sent_to_spawn() -> String:
 
 
 ## An invincible player (#1142, the `--invincible` launch option), in the same place as the one
-## _check_sent_to_spawn sends back: the wild monster still strikes them, for more than their HP over
-## as many ticks, but no hit takes any of it, so they never fall, are never knocked down and stay
-## where they stand, the same entity.
+## _check_sent_to_spawn sends back, over as many ticks: the wild monster still strikes them, but
+## every strike deals 0 damage (#1147) and takes nothing, so they never fall, are never knocked down
+## and stay where they stand, the same entity.
 func _check_invincible() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
 	HealthFeature.make_invincible(world, 0)
 	var basic: GameState = world.instances[FlowSteps.BASIC]
 	var player: Entity = _beside_wild(world)
 	var knockdown: KnockdownFeature = basic.feature(KnockdownFeature.ID) as KnockdownFeature
-	var struck: int = 0
+	var strikes: int = 0
+	var dealt: int = 0
 	var fell: bool = false
 	for _tick: int in BESIDE_WILD_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
 		for event: RefCounted in basic.events:
 			var hit: WildMonsterStruck = event as WildMonsterStruck
 			if hit != null and hit.target_id == player.id:
-				struck += hit.damage
+				strikes += 1
+				dealt += hit.damage
 			fell = fell or event is EntityFell or event is SentToSpawn
 		fell = fell or knockdown.is_down(player.id)
-	if struck <= HealthFeature.PLAYER_HP:
-		return "the wild monster struck the invincible player for only %d" % struck
+	if strikes == 0:
+		return "the wild monster never struck the invincible player"
+	if dealt != 0:
+		return "the wild monster's strikes on the invincible player dealt %d damage" % dealt
 	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
 	if (fell
 			or world.player(0).id != player.id

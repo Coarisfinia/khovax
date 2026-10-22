@@ -200,11 +200,13 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 		side = _lowest_beside(_companion_at if on_companion else _player_at, tile)
 	if side != tile:
 		var target_id: int = _companion_at[side] if on_companion else _player_at[side]
-		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, damage)
+		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+		# An invincible player (#1142) is still struck, but the hit deals nothing (#1147).
+		var dealt: int = 0 if health.is_invincible(state, target_id) else damage
+		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, dealt)
 		if on_companion:
 			struck = _on_companion(state, struck)
 		state.events.append(struck)
-		var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 		var _fell: bool = health.hurt(state, target_id, struck.damage)
 		return
 	side = _trail_target(state, tile)
