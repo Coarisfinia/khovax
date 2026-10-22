@@ -148,7 +148,16 @@ jobs:
         # (#1085, #1161); a difference is an error annotation naming the model and what differs.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
-        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all
+        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
+
+      - name: "📤 Upload the models CI built"
+        # On a difference, the .glb files this runner built, to compare with or commit.
+        if: failure() && steps.models.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rebuilt-models
+          path: /tmp/rebuilt/
+          if-no-files-found: ignore
 
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
