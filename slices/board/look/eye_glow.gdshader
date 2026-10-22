@@ -6,8 +6,10 @@ shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
 
 uniform vec4 color : source_color = vec4(1.0);
-// How bright the halo is, 0 to 1.
+// How bright the halo is, 0 to 1, or above for a brighter core that saturates toward white.
 uniform float strength = 1.0;
+// How fast it fades from its middle to its edge: low is a round, full disc, high a sharp core.
+uniform float fade = 2.5;
 
 
 void vertex() {
@@ -29,7 +31,6 @@ void vertex() {
 void fragment() {
 	// 0 in the middle, 1 at the disc's edge: a bright core that falls off softly.
 	float out_from_middle = clamp(length(UV - vec2(0.5)) * 2.0, 0.0, 1.0);
-	float fade = pow(1.0 - out_from_middle, 2.5);
 	ALBEDO = color.rgb * strength;
-	ALPHA = fade;
+	ALPHA = pow(1.0 - out_from_middle, fade);
 }

@@ -11,8 +11,9 @@ extends Node3D
 ## hit and back, eased, so the hit reads without a flash (#426). Each figure turns smoothly to face
 ## where it last stepped or struck, as the companions do (#993), and plays its model's clips: Walk
 ## while it glides, Attack with the lunge, Hit when it loses HP, and Faint before it lies down;
-## Idle otherwise. Its eyes glow (EyeGlow, #1008): brighter while it's enraged, flaring up as it
-## strikes, and going out once it fainted. It only reads the state and the tick's events.
+## Idle otherwise. Its eyes glow (EyeGlow, #1008) in its type's colour (TypeGlow, #1063), with no
+## leaning, as no player's: brighter while it's enraged, flaring up as it strikes, and going out
+## once it fainted. It only reads the state and the tick's events.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
@@ -109,6 +110,9 @@ func show_state() -> void:
 		if not figures.has(entity_id):
 			figures[entity_id] = _add_figure()
 			figures[entity_id].tile = spot
+			EyeGlow.of(figures[entity_id].get_child(0) as Node3D).color = TypeGlow.of(
+				feature.species_of(entity_id)
+			)
 		elif figures[entity_id].tile != spot:
 			_face(entity_id, spot)
 			_glide(figures[entity_id], spot)

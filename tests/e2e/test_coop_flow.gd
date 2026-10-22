@@ -7,7 +7,8 @@ extends RefCounted
 ## inside it (#151). Each player's circle shows their own personal color, from the world's seed, and
 ## one mark per slot number, so the two are told apart by more than color (#233, #68), and the
 ## tiles each colored on the shared trail carry that mark too while they share the instance (#266).
-## Each player's companion (#338) joins them, in a smaller circle of their color and marks. An open
+## Each player's companion (#338) joins them, in a smaller circle of their color and marks, its eyes
+## glowing in its type's colour and shaped by its player's leaning (#1063). An open
 ## menu doesn't pause co-op (#362).
 ## Time is stepped by hand, one tick a frame.
 
@@ -134,7 +135,44 @@ func _check_companions_shown() -> String:
 	_driver.world.instances[here] = left
 	if not view.figures.has(companion_id):
 		return "a companion going back on arrival took a figure of the instance left"
+	return _check_companion_glows(view, feature)
+
+
+## Each companion's eyes glow in its type's colour, and the local player's are shaped by their
+## leaning (#1063): harmony's round and steady, supremacy's sharp. The other player's show none,
+## as this machine doesn't know it.
+func _check_companion_glows(view: CompanionView, feature: CompanionFeature) -> String:
+	var glows: Array[EyeGlow] = []
+	for slot: int in 2:
+		var companion_id: int = feature.companion_of(slot)
+		glows.append(EyeGlow.of(view.figures[companion_id].get_child(0) as Node3D))
+		if glows[slot].color != TypeGlow.of(feature.species_of(companion_id)):
+			return "player %d's companion's eyes don't glow in its type's colour" % (slot + 1)
+	if glows[0].color == glows[1].color:
+		return "two companions of different types glow in one colour"
+	var keeper: ProfileKeeper = _driver.holder.keeper
+	if keeper == null:
+		return "the co-op flow has no profile to lean"
+	var kept: PathLeaning = keeper.profile.leaning
+	keeper.profile.leaning = PathLeaning.new()
+	# One choice toward harmony, then two toward supremacy, which it then leans toward.
+	keeper.profile.leaning.lean(PathMark.HARMONY)
+	var harmony: bool = _shows_leaning(view, glows, PathMark.HARMONY)
+	keeper.profile.leaning.lean(PathMark.SUPREMACY)
+	keeper.profile.leaning.lean(PathMark.SUPREMACY)
+	var supremacy: bool = _shows_leaning(view, glows, PathMark.SUPREMACY)
+	keeper.profile.leaning = kept
+	view.show_state()
+	if not harmony or not supremacy:
+		return "the companions' eyes don't show their players' leanings"
 	return _check_trail_marks()
+
+
+## Whether, shown now, the local player's companion's eyes (the first of `glows`) show `mark`, and
+## the other player's none.
+func _shows_leaning(view: CompanionView, glows: Array[EyeGlow], mark: String) -> bool:
+	view.show_state()
+	return glows[0].leaning == mark and glows[1].leaning == PathMark.NONE
 
 
 ## While both share the instance, each player's tile on the shared trail carries their slot's

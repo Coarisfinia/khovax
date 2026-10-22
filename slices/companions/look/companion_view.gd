@@ -6,7 +6,8 @@ extends Node3D
 ## It glides from tile to tile as it walks, like the players, turning smoothly toward where it goes.
 ## One that goes back to its player at 0 HP (#456) shrinks into them, turning their personal color
 ## as it goes, eased; the one chosen in its place (#597), or by a swap (#55), grows out of them as
-## it joins. It only reads the state.
+## it joins. Its eyes glow (EyeGlow) in its type's colour (TypeGlow, #1063), shaped by its
+## player's leaning. It only reads the state.
 
 ## How big the figure is next to a wild monster's, and its circle next to a player's.
 const FIGURE_SCALE: float = 0.6
@@ -62,12 +63,26 @@ func show_state() -> void:
 		var slot: int = feature.owners[companion_id]
 		if not figures.has(companion_id):
 			figures[companion_id] = _add_figure(slot)
+			EyeGlow.of(figures[companion_id].get_child(0) as Node3D).color = TypeGlow.of(
+				feature.species_of(companion_id)
+			)
 			if _chosen.has(slot):
 				_chosen.erase(slot)
 				_grow(companion_id, slot)
-		# Every frame, so a color the player chooses in the menu shows at once (#391).
+		# Every frame, so a color the player chooses in the menu shows at once (#391), and so does
+		# a leaning their choices turn.
 		circle_of(companion_id).paint(PersonalColor.shown(driver, slot))
+		EyeGlow.of(figures[companion_id].get_child(0) as Node3D).leaning = leaning_of(slot)
 		_place(companion_id)
+
+
+## The path the player in `slot` leans toward (PathLeaning.toward), as this machine knows it: this
+## machine's player's from their profile; other players' none until co-op hands theirs over.
+func leaning_of(slot: int) -> String:
+	var local: int = driver.input.slot if driver.input != null else 0
+	if slot != local or driver.holder == null:
+		return PathMark.NONE
+	return driver.holder.leaning()
 
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
