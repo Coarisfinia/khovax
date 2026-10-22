@@ -115,12 +115,12 @@ func _find(state: GameState, tile: Vector2i, finder_id: int) -> LootFound:
 
 
 ## Every player's loot from one roll on `rolled`, by slot, in slot order so the stream rolls the
-## same
-## way.
+## same way. Neither a chest table nor an instance table holds a blank (LootTable), so no table
+## is passed for a blank to fall back on.
 func _roll_for_players(state: GameState, rolled: LootTable) -> Dictionary[int, Dictionary]:
 	var loot: Dictionary[int, Dictionary] = {}
 	for slot: int in GameState.MAX_PLAYERS:
 		if state.player(slot) == null:
 			continue
-		loot[slot] = rolled.roll_times(_rng, ROLLS_PER_PLAYER, rolled)
+		loot[slot] = rolled.roll_times(_rng, ROLLS_PER_PLAYER, null)
 	return loot
