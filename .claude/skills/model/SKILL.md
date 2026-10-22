@@ -54,14 +54,23 @@ a second model could use goes into the library or a generic tool, never into one
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
     four-bone legs, `.L`/`.R`).
   - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
-  - `clips`: `Clip` (a clip's keys and whether it loops), `cycle_frames` (gait timing from the
-    game's speed), `gait` (every frame posed: paws planted for `duty` of the cycle and running
-    back at the game's speed, the body bobbing and rolling over the planted legs, the head
-    countering the bob) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the quadruped
-    set (`idle`, `attack`, `hit`, `faint`), `FOLLOW` (the quadruped's chains and their springs)
-    and `animate` (fills, follows, keys every bone on every frame, cycles the loops' curves,
-    stashes every clip, and with `ground_meshes` lifts the root, eased, wherever a pose sinks
-    into the ground).
+  - `clips`: `Clip` (a clip's keys, whether it loops, its paws' steps and whether its paws are
+    planted), `cycle_frames` (gait timing from the game's speed), `gait` (every frame posed:
+    paws planted for `duty` of the cycle and running back at the game's speed, lifting and
+    landing on smooth paths, the body bobbing and rolling over the planted legs, the head
+    countering the bob; `planted=False` swings the legs freely, for a run too fast for planted
+    legs at the clip rate) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the
+    quadruped set (`idle`, `attack` with its forepaws stepping out, `hit`, `faint` with its legs
+    folding under it), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
+    `legs.plant`) and `animate` (fills, follows, plants the paws, keys every bone on every frame,
+    cycles the loops' curves, stashes every clip, and with `ground_meshes` lifts the root, eased,
+    wherever a pose sinks into the ground, the legs reaching down to their paws again).
+  - `legs` (#1073): planted paws. A paw stays where it stands unless a clip's `plant.<paw>`
+    channel or a `Step` moves it, and every leg reaches for it by analytic IK on every frame
+    (`Leg`: two bones bending between them and a follower: a hind leg's hock turning with its
+    thigh, a foreleg's forearm swinging with the leg), keyed as plain rotations: no constraint or
+    bake reaches the export. Where a planted leg can't reach, the body comes down onto it; past a
+    share of its reach a leg eases toward straight (soft IK) rather than snapping.
   - `motion` (#1071): `fill` (sparse keys to every frame, smooth and clamped, across the seam
     on a loop) and `follow` (overlap and follow-through: each chained bone trails its parent
     through a small second-order spring, so parts don't all start and stop at once).
@@ -86,7 +95,7 @@ a second model could use goes into the library or a generic tool, never into one
 - **The motion check (#1071):** `packages/game-models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
   samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
   the ground while it stands on it, against the speed the game moves the model at while it
-  plays that clip; the model script prints them), the **loop seam** (pose and roughness from the
+  plays that clip; the model script prints them; every clip, one-shots too), the **loop seam** (pose and roughness from the
   last frame to the first) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
@@ -142,7 +151,8 @@ a second model could use goes into the library or a generic tool, never into one
   starts and stops at once. Build clips as `clips.Clip`s through `clips.animate`, which fills
   them in (`motion.fill`), lets the chains trail (`motion.follow`, with the body plan's chains,
   like `clips.FOLLOW`) and cycles the loops' curves so a loop never eases to a stop at its seam.
-  A four-legged walk is four beats (`clips.WALK`), not a trot.
+  A four-legged walk is four beats (`clips.WALK`), not a trot. Paws stay planted (`legs`,
+  #1073): give a clip's legs no angles; move a paw with a `legs.Step` and let the legs reach.
 
 - **Attachment points (required, owner, #1007):** every model names its eyes and its centres of
   attack, so the game can place effects there (an eye's glow, an attack's flash) and they follow

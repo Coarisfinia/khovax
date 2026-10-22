@@ -123,11 +123,13 @@ def spring(targets, frequency, damping, response, fps, loop):
 
 
 class Rig:
-    """What `follow` needs to know of an armature: each bone's parent, its rest orientation in the
-    armature and its length and direction there, read once from the rig's bones."""
+    """What `follow` and legs.plant need to know of an armature: each bone's parent, its rest
+    matrix and orientation in the armature and its length and direction there, read once from the
+    rig's bones."""
 
     def __init__(self, armature):
         self.parent = {bone.name: bone.parent.name if bone.parent else None for bone in armature.data.bones}
+        self.matrix = {bone.name: bone.matrix_local.copy() for bone in armature.data.bones}
         self.rest = {bone.name: bone.matrix_local.to_quaternion() for bone in armature.data.bones}
         self.vector = {bone.name: bone.tail_local - bone.head_local for bone in armature.data.bones}
         self.root = next(name for name, parent in self.parent.items() if parent is None)
