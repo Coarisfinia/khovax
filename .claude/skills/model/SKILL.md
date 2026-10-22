@@ -52,10 +52,20 @@ a second model could use goes into the library or a generic tool, never into one
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
     four-bone legs, `.L`/`.R`).
   - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
-  - `clips`: `cycle_frames` (gait timing from the game's speed), `gait`, the quadruped set
-    (`idle`, `attack`, `hit`, `faint`) and `animate` (keys and stashes every clip, and with
-    `ground_meshes` lifts the root wherever a pose sinks into the ground).
+  - `clips`: `Clip` (a clip's keys and whether it loops), `cycle_frames` (gait timing from the
+    game's speed), `gait` (every frame posed: paws planted for `duty` of the cycle and running
+    back at the game's speed, the body bobbing and rolling over the planted legs, the head
+    countering the bob) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the quadruped
+    set (`idle`, `attack`, `hit`, `faint`), `FOLLOW` (the quadruped's chains and their springs)
+    and `animate` (fills, follows, keys every bone on every frame, cycles the loops' curves,
+    stashes every clip, and with `ground_meshes` lifts the root, eased, wherever a pose sinks
+    into the ground).
+  - `motion` (#1071): `fill` (sparse keys to every frame, smooth and clamped, across the seam
+    on a loop) and `follow` (overlap and follow-through: each chained bone trails its parent
+    through a small second-order spring, so parts don't all start and stop at once).
   - `ground`: ground contact (`lowest`, `settle`, `report`).
+  - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
+    the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
     mirrored across X; a model script runs it on its parts before they're joined.
   - `parts.claws`: claws fanned out along a paw's front like toes, the middle ones longer, curving
@@ -71,6 +81,16 @@ a second model could use goes into the library or a generic tool, never into one
 - **The ground check:** `tools/models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
+- **The motion check (#1071):** `tools/models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
+  samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
+  the ground while it stands on it, against the speed the game moves the model at while it
+  plays that clip; the model script prints them), the **loop seam** (pose and roughness from the
+  last frame to the first) and **jitter** (how rough the roughest joint curve runs); it fails
+  past its limits (in its header).
+- **The curve plots (#1071):** `tools/models/plot_motion.py -- <out.png> <Clip> <model.glb>
+  [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
+  marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
+  from a curve than from a GIF.
 - **The renders:** `scripts/render_views.py` (every side in Blender) and
   `tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides, the game
   camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
@@ -115,6 +135,11 @@ a second model could use goes into the library or a generic tool, never into one
   names of the model it replaces, and cover each (e.g. Idle, Walk, Run, Attack, Hit, Death).
   Looping clips start and end on the same pose, and the walk speed matches how fast the game
   moves the entity (no foot sliding).
+- **Fluid, not stiff (the owner's pain point, #1075, #1071):** never key every bone on the same frames so every part
+  starts and stops at once. Build clips as `clips.Clip`s through `clips.animate`, which fills
+  them in (`motion.fill`), lets the chains trail (`motion.follow`, with the body plan's chains,
+  like `clips.FOLLOW`) and cycles the loops' curves so a loop never eases to a stop at its seam.
+  A four-legged walk is four beats (`clips.WALK`), not a trot.
 
 - **Attachment points (required, owner, #1007):** every model names its eyes and its centres of
   attack, so the game can place effects there (an eye's glow, an attack's flash) and they follow
@@ -170,7 +195,6 @@ a second model could use goes into the library or a generic tool, never into one
    tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
-
 10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
    into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
    PR says so.
@@ -197,19 +221,26 @@ a second model could use goes into the library or a generic tool, never into one
    > as its creature at 128 px; (9) cute or fierce as intended, versus uncanny. Then name
    > anything that looks broken in either one, with where it is.
 
+
    Unblind its answers and put the table in the PR. Fix every item where the candidate loses,
    and treat every item where the two **measure** differently as a change to justify, whatever
    the reviewer preferred: a fresh eye measures reliably but can talk itself into liking a derp
    (on #1072 it measured close-set eyes correctly and still called them more focused). Only a
    change the owner asked for stays unfixed. A reviewer that only praises has failed: rerun it
    with a fresh subagent.
+13. **Motion (required, #1071):** `tools/models/blender.sh --background --factory-startup --python
+   tools/models/check_motion.py -- <model.glb> <the speeds the build prints>` must print
+   `MOTION CHECK: PASS`, and `tools/models/plot_motion.py` plots each clip the PR changes
+   against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
+   go into the PR, before and after.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
   1. **Every side as built:** the Blender sheet from step 1.
   2. **Every side in the game:** the same six views rendered in Godot, under the game's cel shading
      and lighting, plus the shot from the game camera at play distance (step 5).
-  3. **Animations:** a GIF of each clip in the game, the attack at least.
+  3. **Animations:** a GIF of each clip in the game, the attack at least; for changed clips the
+     curve plots and the motion check's numbers too, before and after (step 13).
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and

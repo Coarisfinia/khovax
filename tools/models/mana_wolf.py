@@ -5,6 +5,8 @@ are the shared library in tools/models/lib/ (model skill).
     tools/models/blender.sh --background --factory-startup --python tools/models/mana_wolf.py -- \
         assets/mana-wolf/mana_wolf.glb
 
+It prints the speeds the motion check (tools/models/check_motion.py) takes.
+
 Blender is Z-up and the wolf faces -Y (the game's +Z). Sizes are a large wolf's, in metres,
 shrunk by SCALE at the end to stand on one hex tile.
 """
@@ -70,13 +72,18 @@ REFERENCE = {
 # How tall the wolf stands at the hips: the faint sinks it this far.
 HIP_HEIGHT = 0.69
 
-# The game's speeds at the model's size: a wild monster glides a tile (sqrt(3) apart) in 0.8 s,
-# a companion follows at walking speed, a tile every 0.3 s; one walk cycle covers a tile, one
-# gallop cycle covers about one and a half.
+# The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
+# apart) in 0.8 s, a companion follows at a tile every 0.3 s. A walk cycle covers two thirds of a
+# tile (short, quick steps: a long stride at this speed would swing the legs past what a wolf's
+# reach allows), a gallop cycle about one and a half. The strides are what a whole number of
+# frames covers, at the model's unscaled size.
 TILE = math.sqrt(3.0)
-WALK_FRAMES = clips.cycle_frames(TILE / 0.8, TILE, FPS)
-RUN_FRAMES = clips.cycle_frames(TILE / 0.3, TILE * 1.5, FPS)
-
+WALK_SPEED = TILE / 0.8
+RUN_SPEED = TILE / 0.3
+WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 2 / 3, FPS)
+RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.5, FPS)
+WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
+RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
 def mirror(point, sign):
     return (point[0] * sign, point[1], point[2])
@@ -243,8 +250,8 @@ def build(out):
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R"))
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": clips.gait(WALK_FRAMES, 0.45, 0.6, clips.WALK, 0.02),
-        "Run": clips.gait(RUN_FRAMES, 0.65, 0.9, clips.GALLOP, 0.06, spine_flex=0.15),
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=0.5, lift=0.6, roll=0.06),
+        "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, WOLF, clips.GALLOP, duty=0.3, lift=0.9, spine_flex=0.06),
         "Attack": clips.attack(),
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
@@ -252,6 +259,8 @@ def build(out):
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
+    # The speeds the motion check runs the ground under the clips at (model skill).
+    print("SPEEDS Walk=%.3f Run=%.3f" % (WALK_SPEED, RUN_SPEED))
     if not metrics.report(rig, [skin], REFERENCE):
         sys.exit(1)
 

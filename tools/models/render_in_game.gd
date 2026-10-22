@@ -193,12 +193,19 @@ func _add_clip_shots(animations: AnimationPlayer, glow: EyeGlow) -> void:
 			quit(1)
 			return
 	for clip: String in clips:
-		var length: float = animations.get_animation(StringName(clip)).length
-		for frame: int in ceili(length * CLIP_FPS) + 1:
-			_add_shot(
-				"%s_%03d" % [clip, frame],
-				_pose_clip.bind(animations, glow, clip, minf(frame / CLIP_FPS, length)),
-			)
+		var animation: Animation = animations.get_animation(StringName(clip))
+		var length: float = animation.length
+		# A looping clip ends on its first pose again, so its frames stop short of the end and
+		# are spaced evenly over one cycle: a frame at the end would show the first pose twice,
+		# a hold at the GIF's seam the game never plays (#1089). A one-shot keeps its last pose.
+		var looping: bool = animation.loop_mode != Animation.LOOP_NONE
+		var frames: int = maxi(
+			1,
+			roundi(length * CLIP_FPS),
+		) if looping else ceili(length * CLIP_FPS) + 1
+		for frame: int in frames:
+			var time: float = frame * length / frames if looping else minf(frame / CLIP_FPS, length)
+			_add_shot("%s_%03d" % [clip, frame], _pose_clip.bind(animations, glow, clip, time))
 
 
 ## Makes `glow` agitated, in a type's colour or in a leaning's shape as the command line asks.
