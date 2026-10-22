@@ -4,10 +4,10 @@ extends Node3D
 ## The region's tiles, one hexagonal tile per cell, each in its kind's color (#36, #116). It only
 ## draws tiles: features color tiles through `paint`, each on its own layer (e.g. TrailView and
 ## SealFillView), and know nothing about each other (#851); TileDecorations stands each kind's
-## decoration on them. A tile a rule changes in place
-## (#530) eases into its new kind's color when its TileChanged event comes, or, for a neighbour's
-## grid that hears no events, when it's told to `show_changes` (NeighbourView, #538). A tool script,
-## so the grid also shows in the editor, as a disc of `radius` rings.
+## decoration on them. A tile a rule changes in place (#530) eases into its new kind's color when
+## its TileChanged event comes, or, for a neighbour's grid that hears no events, when it's told to
+## `show_changes` (NeighbourView, #538). A tool script, so the grid also shows in the editor, as a
+## disc of `radius` rings.
 ##
 ## All tiles are instances of one MultiMesh: one draw call, and nothing per tile in the scene tree.
 ## The tiles are rebuilt from the region and never saved; nodes added to the grid by hand are kept.

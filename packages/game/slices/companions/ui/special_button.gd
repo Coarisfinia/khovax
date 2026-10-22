@@ -4,8 +4,8 @@ extends ActionButton
 ## (`special_attack`, #410), as the E key and a controller's right trigger (#779) do. It shows an
 ## explosion icon for the special and, while it cools down, a circle with the seconds left; it never
 ## vanishes (#429), and it's drawn faded while the special can't fire
-## (SpecialAttackFeature.can_fire):
-## cooling down, no companion whose species has a special, or no wild monster next to it to strike.
+## (SpecialAttackFeature.can_fire): cooling down, no companion whose species has a special, or no
+## wild monster next to it to strike.
 
 
 func _init() -> void:

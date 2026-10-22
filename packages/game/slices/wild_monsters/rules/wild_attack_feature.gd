@@ -9,12 +9,11 @@ extends Feature
 ##
 ## Free, it strikes something next to it, in this order: a companion (#338), then a player (not one
 ## a dialog holds, whom HealthFeature shields, #981), the player first when it's enraged (#220,
-## #961), then a
-## tile of the allies' trail (#87), the lowest id or the first tile in sorted order among each. A
-## trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off the trail
-## (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks open.
-## A hit on a companion or a player comes off their HP at once (HealthFeature.hurt, #455); one on
-## a companion follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
+## #961), then a tile of the allies' trail (#87), the lowest id or the first tile in sorted order
+## among each. A trail tile wears down: once it has taken TILE_INTEGRITY, it gives way and comes off
+## the trail (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks
+## open. A hit on a companion or a player comes off their HP at once (HealthFeature.hurt, #455); one
+## on a companion follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -133,9 +132,8 @@ static func _strikes_now(tick: int, rage: int) -> bool:
 
 ## Finds, in one pass over the entities, which companion and which player stands on each tile,
 ## the one with the lowest id where several do, and returns the wild monsters that strike this tick
-## by their pace, in id order. A
-## shielded player isn't a target (#981). Companions aren't required, since an instance may have
-## none.
+## by their pace, in id order. A shielded player isn't a target (#981). Companions aren't required,
+## since an instance may have none.
 func _find_standing(
 	state: GameState,
 	wild: WildMonsterFeature,

@@ -538,8 +538,8 @@ func _domination_values(data: Dictionary) -> Dictionary:
 ## Two allies close one ring together (#87): the first player walks half of it, then the second
 ## the rest, and the second's step closes it. The second places their totem on it, and the
 ## domination still goes to the first, the lowest slot among those who colored its wall (owner,
-## #86). Then the ring is off the trail, but the trail
-## leading up to it stays, and each player colors the tile they stand on.
+## #86). Then the ring is off the trail, but the trail leading up to it stays, and each player
+## colors the tile they stand on.
 func _check_together() -> String:
 	var state: GameState = FlowSteps.basic(42, 2)
 	FlowSteps.drop_beach_toad(state)
@@ -1085,10 +1085,8 @@ func _check_companion_strikes() -> String:
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
 ## hiding, `first` the one with the lowest id: with nothing to strike it does nothing, and nor does
 ## a press for a slot without a player. Once they jump out, it fells `first` for its power, even
-## with
-## the player focused, which
-## faints for good, staying where it fell and saved as it is; it cools down, and once it's ready
-## again it fells the one the player focuses (#436).
+## with the player focused, which faints for good, staying where it fell and saved as it is; it
+## cools down, and once it's ready again it fells the one the player focuses (#436).
 func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> String:
 	var wild: WildMonsterFeature = _wild(state)
 	var nobody: Array[Command] = [Command.new(), Command.new(Command.NO_MOVE, true)]

@@ -2,11 +2,10 @@ extends RefCounted
 ## Boot flow: the main scene boots into a hex grid with the player's character standing on one tile,
 ## in view of the camera, a wild monster's figure standing on its own tile, the exploration music
 ## rising from silence, and, in the glade, the instances next door drawn beyond its exits under the
-## cloud. The ground
-## explored in an instance stays under light fog, also when it lies next door. A tile a rule changes
-## in place eases into its new look, also next door. Every model a view uses loads, and one it
-## animates has a rig and every clip the view plays (#992). The Survey has its own flow
-## (test_survey_flow.gd).
+## cloud. The ground explored in an instance stays under light fog, also when it lies next door. A
+## tile a rule changes in place eases into its new look, also next door. Every model a view uses
+## loads, and one it animates has a rig and every clip the view plays (#992). The Survey has its own
+## flow (test_survey_flow.gd).
 
 ## Where the views live: every slice's look/ folder.
 const SLICES: String = "res://slices/"
@@ -721,8 +720,7 @@ func _check_toon_look(main: Node) -> String:
 
 
 ## The ink outline is one pass over the whole screen (#166), in the ink color, never culled, so
-## every
-## mesh gets it, open or closed.
+## every mesh gets it, open or closed.
 func _check_ink_outline(main: Node) -> String:
 	var outline: InkOutline = main.get_node_or_null("InkOutline") as InkOutline
 	if outline == null:

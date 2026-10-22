@@ -87,9 +87,8 @@ func leaning_of(slot: int) -> String:
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
 ## shrinks it into them, notes whose player chose another, so it grows out of them, and flares the
-## eyes of every one that struck. Only the
-## shown instance's events (#1025), and only once the figures are its: entity ids repeat across
-## instances, so another's would name a figure here.
+## eyes of every one that struck. Only the shown instance's events (#1025), and only once the
+## figures are its: entity ids repeat across instances, so another's would name a figure here.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 	if driver.state != _shown:
 		return

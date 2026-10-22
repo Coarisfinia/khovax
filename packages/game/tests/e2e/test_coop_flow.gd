@@ -348,8 +348,7 @@ func _script(variant: int) -> Array[int]:
 
 ## Knocked down in co-op (#479): a player with an ally near is knocked down, not sent back; held
 ## still, their commands don't walk them. An ally beside them for REVIVE_TICKS revives them with
-## half
-## their HP. Knocked down again with nobody beside them, they're sent back to the spawn after
+## half their HP. Knocked down again with nobody beside them, they're sent back to the spawn after
 ## DOWN_TICKS. Alone, a player has no ally near.
 func _check_knocked_down() -> String:
 	var state: GameState = FlowSteps.basic(42, 2)

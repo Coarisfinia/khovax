@@ -4,9 +4,8 @@ extends RefCounted
 ## choice is kept in their Settings under the setting's key, by its index or by the number it's
 ## saved as (`saved_as`). A setting that isn't there is Auto, and so is a saved value that isn't one
 ## of the choices (a hand-edited file, a choice a later version dropped). Without Settings it stays
-## Auto and a choice isn't kept. Made
-## for each use, so it always reads the Settings its owner holds now; saving them stays with the
-## owner (Graphics.save_settings).
+## Auto and a choice isn't kept. Made for each use, so it always reads the Settings its owner holds
+## now; saving them stays with the owner (Graphics.save_settings).
 
 var settings: Settings
 var key: String

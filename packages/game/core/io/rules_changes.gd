@@ -10,8 +10,7 @@ extends RefCounted
 ## older rules then fails with a clear message, not a mismatch.
 ## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
 ## the folder is append-only (packages/game-checks/rules_changes_check.py): a file is never deleted
-## or
-## renamed. Git keeps when each arrived and its pull request
+## or renamed. Git keeps when each arrived and its pull request
 ## (`git log --diff-filter=A -- core/rules_changes/`, #758).
 
 const FOLDER: String = "res://core/rules_changes/"

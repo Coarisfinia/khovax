@@ -4,9 +4,9 @@ extends Node3D
 ## content next door (#816, Command.waiting), each player pressing out through an exit in this
 ## machine's player's instance gets a few words over them saying what they wait for, and a ring of
 ## ink marks over their head that turns slowly, a spinner. It goes as soon as the walk goes on.
-## Words
-## and a shape, never colour alone (#68); calm, as the camera is: it turns steadily, never pulses or
-## flashes. It only reads the state and the last tick's commands (ExitFeature.pressed_out).
+## Words and a shape, never colour alone (#68); calm, as the camera is: it turns steadily, never
+## pulses or flashes. It only reads the state and the last tick's commands
+## (ExitFeature.pressed_out).
 
 const TEXT: String = "Loading the way ahead…"
 ## Where the words stand from the tile's centre, in world units: above the spinner, and away from
