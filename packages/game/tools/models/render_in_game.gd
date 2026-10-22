@@ -6,9 +6,10 @@ extends SceneTree
 ## on the tile beside the player, idling. It writes the model from six sides (front, back, left,
 ## right, top, three-quarter), the shot from the game camera at play distance, and two close-ups
 ## on a bare background as its codex page shows it full-screen (#995): the whole model
-## ("portrait") and its front end, the face ("face"). Given clips, it writes each clip's frames
+## ("portrait") and its head and chest ("face"). Given clips, it writes each clip's frames
 ## for a GIF instead, from the game camera or from any of those views. Any model works: the
-## cameras frame it by its bounds. With `points`, it marks the model's attachment points
+## cameras frame it by its bounds, the close-ups by its outline. With `points`, it marks the model's
+## attachment points
 ## (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with
 ## `agitated`; an Attack clip's frames flare the glow as the game does when it strikes. With
 ## `type=<type>` they glow in that type's colour (TypeGlow), and with `leaning=<path>` in the shape
@@ -43,8 +44,9 @@ const VIEWS: Dictionary[String, Vector3] = {
 const CLOSE_UPS: Array[String] = ["portrait", "face"]
 ## What close-ups keep of the main scene: the game's sun, ink outline and graphics settings.
 const KEPT_IN_CLOSE_UPS: Array[String] = ["Driver", "Sun", "InkOutline", "Graphics"]
-## The face close-up frames this share of the model's length at its front end, and of its height
-## at the top.
+## The face close-up frames what lies within this share of the model's height of its head bone:
+## the head and the chest. A model without one frames this share of its length at its front end,
+## and of its height at the top.
 const FACE_SHARE: float = 0.4
 ## What the side shots keep of the instance: only the ground. The HUD, the player, the people,
 ## the other monsters and the trees would stand between the camera and the model.
@@ -59,7 +61,6 @@ const DRAW_FRAMES: int = 2
 var _viewport: SubViewport
 var _main: Node3D
 var _out_dir: String = ""
-var _model_path: String = ""
 var _clip: String = ""
 ## Where a clip is seen from: "game" (the game camera) or one of VIEWS.
 var _from: String = "game"
@@ -74,6 +75,10 @@ var _side_camera: Camera3D
 var _game_camera: Camera3D
 ## The model's bounds in the world, standing at rest.
 var _bounds: AABB
+## What each close-up frames: the model's vertices in the world, standing at rest, all of them
+## or its face's. The close-ups frame their outline, which fills far less of the frame than the
+## bounds' corners do from an angle (#1004).
+var _close_ups: Dictionary[String, PackedVector3Array] = {}
 
 
 ## One step a frame: settle, place the model, then pose, draw and capture each shot in turn.
@@ -125,7 +130,6 @@ func _initialize() -> void:
 	if problem.is_empty() and not (_from == "game" or VIEWS.has(_from)):
 		problem = "no view " + _from
 	if problem.is_empty() and args.size() >= 2:
-		_model_path = args[0]
 		_out_dir = args[1]
 		var made: Error = DirAccess.make_dir_recursive_absolute(_out_dir)
 		if made != OK:
@@ -152,7 +156,7 @@ func _place() -> void:
 	var driver: GameDriver = _main.get_node("Driver") as GameDriver
 	_piece = HexPiece.new()
 	_piece.base_offset = 0.0
-	var model: Node3D = (load(_model_path) as PackedScene).instantiate() as Node3D
+	var model: Node3D = (load(OS.get_cmdline_user_args()[0]) as PackedScene).instantiate() as Node3D
 	Toon.apply_to_model(model)
 	var glow: EyeGlow = EyeGlow.add_to(model)
 	_glow_as_asked(glow)
@@ -165,6 +169,13 @@ func _place() -> void:
 	_main.add_child(_side_camera)
 	_side_camera.fov = FOV
 	_bounds = _bounds_of(model)
+	var points: PackedVector3Array = _points_of(model)
+	var face: PackedVector3Array = PackedVector3Array(Array(points).filter(_in_face(model)))
+	# A model without vertices is framed by its bounds' corners, and a face without any by all of
+	# it.
+	if points.is_empty():
+		points = _corners(_bounds)
+	_close_ups = { "portrait": points, "face": points if face.is_empty() else face }
 	if OS.get_cmdline_user_args().has("points"):
 		_piece.add_child(PointMarks.new(model, _bounds.size.y))
 	if not _clip.is_empty():
@@ -272,37 +283,52 @@ func _pose_side(side: String) -> void:
 		# Stopped too, so a view that shows its node each frame doesn't show it again.
 		node.process_mode = Node.PROCESS_MODE_INHERIT if kept else Node.PROCESS_MODE_DISABLED
 		node.set("visible", kept)
-	var framed: AABB = _bounds
-	if side == "face":
-		var front: Vector3 = Vector3(_bounds.size.x, _bounds.size.y, _bounds.size.z) * FACE_SHARE
-		framed = AABB(_bounds.end - front, front)
-		framed.size.x = _bounds.size.x
-		framed.position.x = _bounds.position.x
-	var middle: Vector3 = framed.get_center()
-	var reach: float = framed.size.length() / 2.0 / sin(deg_to_rad(FOV) / 2.0)
 	_side_camera.make_current()
-	# Twice: place the camera, see how much of the frame the bounds fill, and move it so they fill
-	# it but for the margin (the fill shrinks about as the distance grows).
-	for _pass: int in 2:
-		_side_camera.position = middle + VIEWS[side].normalized() * reach
-		_side_camera.look_at(middle, Vector3.FORWARD if side == "top" else Vector3.UP)
-		reach *= _fill(framed) * MARGIN
+	if not CLOSE_UPS.has(side):
+		_aim(
+			_corners(_bounds),
+			VIEWS[side],
+			Vector3.FORWARD if side == "top" else Vector3.UP,
+			MARGIN,
+		)
+		return
+	# A clip's frames get room to lunge or stretch out of the resting outline.
+	var room: float = MARGIN if _clip.is_empty() else MARGIN * (1.0 + 2.0 * CLIP_ROOM)
+	_aim(_close_ups[side], VIEWS[side], Vector3.UP, room)
+
+
+## Points the camera from `direction` at `points`, so their outline sits in the middle of the
+## frame and fills it but for `margin`. A few passes: each centres the outline as the last one
+## saw it and moves the camera so it fills the frame (the fill shrinks about as the distance
+## grows).
+func _aim(points: PackedVector3Array, direction: Vector3, up: Vector3, margin: float) -> void:
+	var box: AABB = AABB(points[0], Vector3.ZERO)
+	for point: Vector3 in points:
+		box = box.expand(point)
+	var middle: Vector3 = box.get_center()
+	var reach: float = box.size.length() / 2.0 / sin(deg_to_rad(FOV) / 2.0)
+	for _pass: int in 3:
+		_side_camera.position = middle + direction.normalized() * reach
+		_side_camera.look_at(middle, up)
+		var outline: Rect2 = _outline(points)
+		var half: Vector2 = Vector2(_viewport.size) / 2.0
+		middle = _side_camera.project_position(outline.get_center(), reach)
+		var fill: Vector2 = outline.size / 2.0 / half
+		reach *= maxf(fill.x, fill.y) * margin
+
+
+## Where `points` lie on the side camera's frame, in pixels.
+func _outline(points: PackedVector3Array) -> Rect2:
+	var outline: Rect2 = Rect2(_side_camera.unproject_position(points[0]), Vector2.ZERO)
+	for point: Vector3 in points:
+		outline = outline.expand(_side_camera.unproject_position(point))
+	return outline
 
 
 ## Whether a close-up hides `node`, a child of the main scene: everything but the game's light
 ## and ink outline (and the model and the camera), so the model stands on a bare background.
 func _hidden_in_close_ups(node: Node) -> bool:
 	return not (node == _piece or node == _side_camera or KEPT_IN_CLOSE_UPS.has(node.name))
-
-
-## How much of the frame `box` fills seen from the side camera: 1 when it just touches an edge.
-func _fill(box: AABB) -> float:
-	var half: Vector2 = Vector2(_viewport.size) / 2.0
-	var fill: float = 0.0
-	for corner: int in 8:
-		var spot: Vector2 = _side_camera.unproject_position(box.get_endpoint(corner)) - half
-		fill = maxf(fill, maxf(absf(spot.x) / half.x, absf(spot.y) / half.y))
-	return fill
 
 
 ## The bounds of every mesh under `model`, in the world.
@@ -312,3 +338,46 @@ func _bounds_of(model: Node3D) -> AABB:
 		var mesh: MeshInstance3D = node as MeshInstance3D
 		bounds = bounds.merge(mesh.global_transform * mesh.get_aabb())
 	return bounds
+
+
+## Every vertex of every mesh under `model`, in the world.
+func _points_of(model: Node3D) -> PackedVector3Array:
+	var points: PackedVector3Array = []
+	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh: MeshInstance3D = node as MeshInstance3D
+		if mesh.mesh == null:
+			continue
+		for surface: int in mesh.mesh.get_surface_count():
+			var arrays: Array = mesh.mesh.surface_get_arrays(surface)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			points.append_array(mesh.global_transform * vertices)
+	return points
+
+
+## Whether a point of `model` is in the face close-up: within FACE_SHARE of its height of the bone
+## named "head" (in any case) of its skeleton, or at the front and top of its bounds when it has
+## none.
+func _in_face(model: Node3D) -> Callable:
+	var reach: float = _bounds.size.y * FACE_SHARE
+	for node: Node in model.find_children("*", "Skeleton3D", true, false):
+		var skeleton: Skeleton3D = node as Skeleton3D
+		for bone: int in skeleton.get_bone_count():
+			if skeleton.get_bone_name(bone).to_lower() == "head":
+				var rest: Transform3D = skeleton.get_bone_global_rest(bone)
+				var head: Vector3 = skeleton.global_transform * rest.origin
+				return func(point: Vector3) -> bool: return point.distance_to(head) <= reach
+	var front: Vector3 = _bounds.size * FACE_SHARE
+	var face: AABB = AABB(_bounds.end - front, front)
+	face.size.x = _bounds.size.x
+	face.position.x = _bounds.position.x
+	face = face.grow(0.001)
+	return func(point: Vector3) -> bool: return face.has_point(point)
+
+
+## The eight corners of `box`.
+func _corners(box: AABB) -> PackedVector3Array:
+	var corners: PackedVector3Array = []
+	var _sized: int = corners.resize(8)
+	for corner: int in 8:
+		corners[corner] = box.get_endpoint(corner)
+	return corners
