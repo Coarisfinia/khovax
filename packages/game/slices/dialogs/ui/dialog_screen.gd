@@ -283,7 +283,8 @@ func _ease(opening: bool) -> void:
 
 
 ## While the menu is open over the dialog its buttons rest, so A or Enter in the menu can't answer
-## behind it; once it closes, the first button takes the focus back if none of them has it.
+## behind it; once it closes, the first button takes the focus back if neither they nor the line
+## have it.
 func _follow_menu() -> void:
 	if dialog == null or input == null:
 		return
@@ -293,7 +294,7 @@ func _follow_menu() -> void:
 	_leave.visible = not _holds()
 	_leave.disabled = input.blocked
 	var focused: Control = get_viewport().gui_get_focus_owner()
-	var on_card: bool = live.has(focused) or focused == _line
+	var on_card: bool = focused == _line or (focused is Button and live.has(focused as Button))
 	if not input.blocked and not live.is_empty() and not on_card:
 		live[0].grab_focus()
 

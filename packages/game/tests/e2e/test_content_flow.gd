@@ -1032,6 +1032,10 @@ func _check_factions() -> String:
 		faction.replace("\"entry\": \"e\"", "\"entry\": \" \"") % [five, five]: (
 			"it needs a codex entry"
 		),
+		faction.replace(", \"gloss\": \"g\"", "") % [five, five]: "it needs a codex entry",
+		faction.replace("\"gloss\": \"g\"", "\"gloss\": \" \"") % [five, five]: (
+			"it needs a codex entry"
+		),
 	}
 	var refused: String = _factions_refused(cases)
 	return refused if not refused.is_empty() else _check_faction_territory(content)

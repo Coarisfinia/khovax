@@ -144,6 +144,9 @@ func lay_out(screen: Vector2) -> void:
 		title.add_theme_font_size_override("font_size", roundi(font * TITLE_SCALE))
 		gloss.add_theme_font_size_override("normal_font_size", font)
 		gloss.add_theme_font_size_override("italics_font_size", font)
+		# Half a line between the page's parts, so the name, its meaning, the entry and the standing
+		# read apart.
+		_column.add_theme_constant_override("separation", roundi(font * 0.5))
 		var side: float = font * GameMenu.BUTTON_FONTS
 		close_button.custom_minimum_size = Vector2(side, side)
 		close_button.add_theme_constant_override(
