@@ -272,13 +272,22 @@ SETTLED = 1e-4
 
 
 def _key(rig, poses, scale):
+    """Keys every bone's turn on every frame, and the root's shift. A "loc.<bone>" channel (a
+    child of the root, its axes the root's) holds that bone at its (sideways, up, forward) shift
+    from rest in the model, in unscaled metres, whatever the root does."""
     for frame, pose in poses:
+        root = pose.get("root_loc", (0.0, 0.0, 0.0))
         for bone in rig.pose.bones:
             bone.rotation_euler = pose.get(bone.name, (0.0, 0.0, 0.0))
             bone.keyframe_insert("rotation_euler", frame=frame)
             if bone.parent is None:
-                shift = pose.get("root_loc", (0.0, 0.0, 0.0))
-                bone.location = tuple(scale * value for value in shift)
+                bone.location = tuple(scale * value for value in root)
+                bone.keyframe_insert("location", frame=frame)
+            elif "loc." + bone.name in pose:
+                if bone.parent.parent is not None:
+                    raise ValueError("loc.%s: only a child of the root is placed in the model" % bone.name)
+                held = pose["loc." + bone.name]
+                bone.location = tuple(scale * (value - shift) for value, shift in zip(held, root))
                 bone.keyframe_insert("location", frame=frame)
 
 
@@ -289,7 +298,7 @@ def _lift(poses, lifts, scale):
         pose["root_loc"] = (x, y + lift / scale, z)
 
 
-def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS):
+def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS, overlays=()):
     """Keys every clip (name: Clip) as its own action and stashes it on an NLA track the glTF
     export turns into a named animation. Each clip is filled in to every frame, its `chains`
     trail their parents (motion) and its `limbs` reach for their paws (legs), so every bone moves
@@ -298,7 +307,9 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS):
     `scale` is the model's (scene.apply_scale), which the root's shifts are scaled by. With
     `ground_meshes` (the bound body), every frame where they sink below the ground lifts the
     root onto it, and the legs reach down again to their planted paws. Prints how far any leg
-    fell short of its planted paw per clip, and fails past legs.REACH_TOLERANCE."""
+    fell short of its planted paw per clip, and fails past legs.REACH_TOLERANCE. `overlays` are
+    functions that add channels of their own to every clip once it's filled in (its name, its
+    poses, every frame, and whether it loops), before the chains trail, like wisps.Wisps.drift."""
     rig.animation_data_create()
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="POSE")
@@ -313,8 +324,10 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS):
         _low, feet = ground.lowest(rig, ground_meshes, [leg.paw for leg in limbs])
         rises = {paw: max(0.0, ground.CLEARANCE - low) for paw, low in feet.items()}
     for name, clip in clips.items():
-        planned = legs.steps(motion.follow(shape, motion.fill(clip.keys, clip.loop), chains, scale, fps, clip.loop),
-                             clip.steps)
+        filled = motion.fill(clip.keys, clip.loop)
+        for overlay in overlays:
+            overlay(name, filled, clip.loop)
+        planned = legs.steps(motion.follow(shape, filled, chains, scale, fps, clip.loop), clip.steps)
         poses, short, sinks = planned, (0.0, ""), []
         if clip.planted:
             poses, short, sinks = legs.plant(shape, planned, limbs, scale, rises)

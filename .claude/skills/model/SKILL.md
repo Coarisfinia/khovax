@@ -76,6 +76,11 @@ a second model could use goes into the library or a generic tool, never into one
     on a loop) and `follow` (overlap and follow-through: each chained bone trails its parent
     through a small second-order spring, so parts don't all start and stop at once).
   - `ground`: ground contact (`lowest`, `settle`, `report`).
+  - `wisps` (#1103): pieces hovering around a body on their own, each on a bone hung from the
+    root and held in the model (a `loc.<bone>` channel, which `animate`'s keys turn into the
+    bone's shift whatever the root does): `Wisps.drift`, an `animate` overlay, hovers them slowly
+    in every clip, the wave flowing along the body, and a `Gather` sends them to a ring during
+    one clip (the attack) and back.
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
