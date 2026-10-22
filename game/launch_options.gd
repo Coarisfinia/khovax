@@ -103,18 +103,18 @@ func _redirect_user_dir() -> String:
 	var made: Error = DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
 	if made != OK:
 		return "couldn't create the user folder %s: %s" % [OS.get_user_data_dir(), made]
-	_share_shader_cache(engine_dir)
+	_mirror_cache_folders(
+		engine_dir.path_join(SHADER_CACHE),
+		OS.get_user_data_dir().path_join(SHADER_CACHE),
+	)
 	return ""
 
 
-## Links the new user folder's shader cache to the one in `engine_dir`, the folder `user://` was
-## at startup (#1050). The renderer made its cache's folders there before the redirect, but saves
-## into `user://` as it compiles, where they don't exist: every save failed and every run compiled
-## its shaders again. The cache is keyed by the shaders themselves, so runs can share it. Where no
-## link can be made (Windows without the right to), the shaders just compile again, as before.
-func _share_shader_cache(engine_dir: String) -> void:
-	var shared: String = engine_dir.path_join(SHADER_CACHE)
-	var here: DirAccess = DirAccess.open(OS.get_user_data_dir())
-	if here == null or here.dir_exists(SHADER_CACHE) or not DirAccess.dir_exists_absolute(shared):
-		return
-	var _linked: Error = here.create_link(shared, SHADER_CACHE)
+## Gives the new user folder the shader cache's folders the renderer made in `engine_dir`, the
+## folder `user://` was at startup (#1050): it saves each compiled shader into `user://` as it
+## goes, so without them every save failed and every run compiled its shaders again. Folders only:
+## each user folder keeps its own cache, so runs in parallel never share its files.
+static func _mirror_cache_folders(from: String, to: String) -> void:
+	for folder: String in DirAccess.get_directories_at(from):
+		var _made: Error = DirAccess.make_dir_recursive_absolute(to.path_join(folder))
+		_mirror_cache_folders(from.path_join(folder), to.path_join(folder))
