@@ -5,7 +5,14 @@ that too, which tells whether a pull request's .glb is what its script builds.
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py \
         packages/game-models/<name>.py \
         [packages/game/assets/<name>/<name>.glb]
+    uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all \
+        [--keep <folder>]
 
+`--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
+script is one here that exports through scene.export_glb, and its .glb is the tracked one under
+the game's assets/ named like it (mana_wolf.py builds assets/mana-wolf/mana_wolf.glb); a model
+script without one fails. `--keep` copies each model's build into the folder, named like its .glb,
+so CI can offer the build it compared.
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
 (nodes, materials, ...) or each binary accessor (a mesh's indices or attribute, a clip's
 channel) with how many values differ and by how much: indices that only move point to the order
@@ -14,6 +21,9 @@ every model script does. It reports through game_shared.log (#1115): in CI, a di
 error annotation on the committed .glb."""
 
 import json
+import os
+import re
+import shutil
 import struct
 import subprocess
 import sys
@@ -21,8 +31,12 @@ import tempfile
 from pathlib import Path
 
 from game_shared import log
+from game_shared.git_files import git_files
 
-BLENDER = Path(__file__).resolve().parent / "blender.py"
+MODELS = Path(__file__).resolve().parent
+BLENDER = MODELS / "blender.py"
+# A model script's export call, as a statement of its own.
+EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 
@@ -89,12 +103,19 @@ def differences(a: Path, b: Path) -> list[str]:
     return lines or ["the bytes differ outside the accessors (the JSON's layout or padding)"]
 
 
-def main() -> int:
-    if len(sys.argv) not in (2, 3):
-        print(__doc__, file=sys.stderr)
-        return 2
-    script = Path(sys.argv[1]).resolve()
-    committed = Path(sys.argv[2]) if len(sys.argv) == 3 else None
+def scripted_models() -> list[tuple[str, str | None]]:
+    """Every model script with the .glb it builds, both from the working directory: a model script
+    is a script here that exports through scene.export_glb, and its .glb is the tracked one under
+    the game's assets/ named like it (None when there is none)."""
+    glbs = {Path(path).stem: path for path in git_files(str(MODELS.parent / "game" / "assets" / "*.glb"))}
+    return [(os.path.relpath(script), glbs.get(script.stem)) for script in sorted(MODELS.glob("*.py"))
+            if EXPORT.search(script.read_text())]
+
+
+def check(script_path: str, committed: Path | None, keep: Path | None = None) -> bool:
+    """Builds the script twice and compares the builds, and the committed .glb when there is one;
+    true when they're all the same bytes. The first build is copied to keep, when given."""
+    script = Path(script_path).resolve()
     with tempfile.TemporaryDirectory(prefix="check_rebuild_") as scratch:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
         outputs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
@@ -110,21 +131,49 @@ def main() -> int:
         for code, output, out in zip(codes, outputs, outs):
             if code != 0 or not out.is_file():
                 print(output.read_text(), end="")
-                log.error(f"REBUILD CHECK: FAIL ({script.name} didn't build)", sys.argv[1])
-                return 1
-        failed = False
-        pairs = [("the two builds", outs[0], outs[1], sys.argv[1])]
+                log.error(f"{script.name} didn't build", script_path)
+                return False
+        if keep is not None and committed is not None:
+            keep.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(outs[0], keep / committed.name)
+        same = True
+        pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
         if committed is not None:
-            pairs.append((f"the build and {committed}", outs[0], committed, str(committed)))
+            pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
         for label, a, b, file in pairs:
             lines = differences(a, b)
             if not lines:
                 log.info(f"{label}: the same bytes")
                 continue
             log.error(f"{label} differ:\n" + "\n".join(f"  {line}" for line in lines), file)
-            failed = True
-    log.info("REBUILD CHECK: " + ("FAIL" if failed else "PASS"))
-    return 1 if failed else 0
+            same = False
+    return same
+
+
+def main() -> int:
+    keep = None
+    if sys.argv[1:2] == ["--all"] and len(sys.argv) == 4 and sys.argv[2] == "--keep":
+        keep = Path(sys.argv[3])
+    if sys.argv[1:2] == ["--all"] and (len(sys.argv) == 2 or keep is not None):
+        models = scripted_models()
+        unpaired = [script for script, glb in models if glb is None]
+        for script in unpaired:
+            # A renamed or deleted .glb would otherwise leave its model unchecked.
+            log.error("no tracked .glb under the game's assets/ is named like this model script", script)
+        if not models or unpaired:
+            if not models:
+                log.error("no model script calls scene.export_glb: nothing to check")
+            return 1
+    elif len(sys.argv) in (2, 3) and not sys.argv[1].startswith("--"):
+        models = [(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)]
+    else:
+        print(__doc__, file=sys.stderr)
+        return 2
+    # Every model is checked, so one failure doesn't hide another's.
+    results = [check(script, None if glb is None else Path(glb), keep) for script, glb in models]
+    passed = all(results)
+    log.info("REBUILD CHECK: " + ("PASS" if passed else "FAIL"))
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

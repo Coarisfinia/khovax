@@ -11,7 +11,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 
 ## Tools
 - **Blender 5.2.2**, portable at `~/.local/opt/blender-5.2.2` (`blender` on the PATH). Brew can't
-  install it on Linux. Run it headless, through `packages/game-models/blender.py`:
+  install it on Linux. CI pins the same version in `.github/actions/setup-blender/action.yml`
+  (#1161): a bump changes both, and every scripted model's rebuild with them. Run it headless, through `packages/game-models/blender.py`:
   `uv run --locked packages/game-models/blender.py --background --factory-startup
   --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
@@ -275,7 +276,11 @@ a second model could use goes into the library or a generic tool, never into one
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move
    point to a face order, values off by a hair to float noise. Run it after the last build, before
-   committing the `.glb`.
+   committing the `.glb`. CI runs it with `--all` (every script named like a `.glb` under the
+   game's `assets/`) whenever a model, its script or the library changes (#1161), with Blender in
+   an Ubuntu 24.04 container: the C library's maths differs between releases in the last bit, and
+   the decimation and face order turn that into a different file. So build committed models on
+   Ubuntu 24.04 (this machine's WSL); moving to another release moves CI's container with it.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**

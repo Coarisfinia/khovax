@@ -1,0 +1,78 @@
+name: Set up Blender
+description: >-
+  Blender's Linux build on the PATH as `blender`, for the model scripts in packages/game-models
+  (#1161). The one place CI pins Blender's version and checksum; the model skill names the same
+  version, and a bump changes both. Blender runs inside a pinned Ubuntu 24.04 container: its
+  geometry goes through the C library's maths, and the runner's newer C library rounds a few
+  results differently, which the build's decimation and face order turn into a different file
+  (#1161). In 24.04's, CI builds the same bytes as a 24.04 machine does.
+
+runs:
+  using: composite
+  steps:
+    - name: "📌 Blender: pin the version, checksum and container"
+      # The checksum is the Linux archive's, from the release's blender-<version>.sha256. The cache
+      # key includes it, so the cache only ever holds what was verified against it. The image is
+      # pinned by its digest, and the libraries Blender loads come from a fixed snapshot of
+      # Ubuntu's archive, signed by the archive's key, so nothing in the container moves until
+      # these move.
+      shell: bash
+      run: |
+        {
+          echo "BLENDER_VERSION=5.2.2"
+          echo "BLENDER_SHA256=84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168"
+          echo "BLENDER_IMAGE=ubuntu:24.04@sha256:68ee22004a9109b44973313b02ff7b1de250f1de0f5ecb628d73f579aaff33ac"
+          echo "BLENDER_APT_SNAPSHOT=20261020T000000Z"
+        } >> "$GITHUB_ENV"
+
+    - name: "💾 Cache Blender"
+      id: cache-blender
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/blender
+        key: blender-${{ env.BLENDER_VERSION }}-linux-x64-${{ env.BLENDER_SHA256 }}
+
+    - name: "⬇️ Download Blender"
+      if: steps.cache-blender.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        curl -fsSL -o /tmp/blender.tar.xz \
+          "https://download.blender.org/release/Blender${BLENDER_VERSION%.*}/blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+        echo "${BLENDER_SHA256}  /tmp/blender.tar.xz" | sha256sum --check
+        mkdir -p ~/blender
+        tar xJf /tmp/blender.tar.xz -C ~/blender --strip-components=1
+        rm /tmp/blender.tar.xz
+
+    - name: "🐳 Blender's container: Ubuntu 24.04 with the libraries Blender loads"
+      # The image has no CA certificates, so the runner's are lent to apt for the snapshot's HTTPS.
+      # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
+      shell: bash
+      run: |
+        docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
+          rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
+          printf "%s\n" "Types: deb" "URIs: https://snapshot.ubuntu.com/ubuntu/$0" \
+            "Suites: noble noble-updates noble-security" "Components: main" \
+            "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: no" \
+            > /etc/apt/sources.list.d/snapshot.sources
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+            libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
+          ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
+        docker commit blender-setup blender > /dev/null
+        docker rm -f blender-setup > /dev/null
+
+    - name: "🧊 Put Blender on the PATH"
+      # `blender` runs Blender in the container, as the runner's user, with the workspace and /tmp
+      # at the same paths, so the model tools pass it their paths as they are; without a network,
+      # so a build can only use what's committed.
+      shell: bash
+      run: |
+        mkdir -p ~/blender-bin
+        cat > ~/blender-bin/blender <<WRAPPER
+        #!/usr/bin/env bash
+        exec docker run --rm --network none -u "\$(id -u):\$(id -g)" -e HOME=/tmp -v "$HOME/blender:$HOME/blender:ro" \
+          -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -v /tmp:/tmp -w "\$PWD" blender "$HOME/blender/blender" "\$@"
+        WRAPPER
+        chmod +x ~/blender-bin/blender
+        echo ~/blender-bin >> "$GITHUB_PATH"
+        ~/blender-bin/blender --version | head -1
