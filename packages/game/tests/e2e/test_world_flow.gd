@@ -474,8 +474,12 @@ func _check_swaps() -> String:
 ## world with no party gets one, the species and the short id of each monster, and nothing more
 ## while it waits. The party is theirs once the run is whole, the first joining them; a run in
 ## another order keeps the companion they chose, a request sent again changes nothing, and a run of
-## none empties the party.
+## none empties the party. A request's place has room for a run of the most monsters a player
+## carries (#936), which the profile's limit follows.
 func _check_carry_requests() -> String:
+	if (2 * CarryRequest.MOST_CARRIED > 1 << CarryRequest.PLACE_BITS
+			or Profile.CARRY_LIMIT != CarryRequest.MOST_CARRIED):
+		return "a run of the most carried monsters doesn't fit a request's place"
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	var outbox: Outbox = Outbox.new()
 	var party: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])

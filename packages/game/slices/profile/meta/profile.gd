@@ -13,8 +13,8 @@ extends RefCounted
 ## Active slots at the start (design report: 1, then +1 from a lore quest, +1 at level 50).
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
-## How many dominated monsters a player carries (#53): always three, never more.
-const CARRY_LIMIT: int = 3
+## How many dominated monsters a player carries (#53), which their carry requests make room for.
+const CARRY_LIMIT: int = CarryRequest.MOST_CARRIED
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
 ## whole number up to 2^53 exactly, and this stays far below it.
 const MAX_NUMBER: int = Fixed.MAX_AMOUNT

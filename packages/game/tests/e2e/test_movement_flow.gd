@@ -246,7 +246,12 @@ func _check_every_action_on_controller() -> String:
 ## Swapping (#540): keys 1 to 3, by their physical position, and the d-pad's left, up and right
 ## press swap_1 to swap_3. A press swaps to that place in the carried order in the next command
 ## only, and so does a tap on the roster (choose_swap); while the game hears no input, neither does.
+## There is one swap action for each place a player carries (#936).
 func _check_swap_bindings() -> String:
+	if LocalInput.SWAP_ACTIONS.size() != CarryRequest.MOST_CARRIED:
+		return "%d swap actions for %d carried places" % [
+			LocalInput.SWAP_ACTIONS.size(), CarryRequest.MOST_CARRIED,
+		]
 	var input: LocalInput = _main.get_node("LocalInput") as LocalInput
 	var state: GameState = _driver.state
 	Input.action_press("swap_2")
