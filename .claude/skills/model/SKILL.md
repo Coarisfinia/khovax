@@ -24,10 +24,11 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   rasteriser), so `render_in_game.gd` turns off vsync and the frame cap itself: no waiting for
   the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
   run side by side; several Godot renders at once only share the CPU's cores.
-- **ImageMagick** (`montage`) for sheets, and **ffmpeg** for GIFs through
+- **ffmpeg** for GIFs through
   `uv run --locked tools/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
   header), never a hand-typed command.
-- The scripts beside this file: `scripts/render_views.py` (every side, one sheet) and
+- The scripts beside this file: `scripts/render_views.py` (every side, one labelled sheet, drawn
+  in Blender with its own font: no ImageMagick, no system font) and
   `scripts/check_glb.gd` (the Godot import check).
 
 ## Shared library and tools (owner's rule, #995)
