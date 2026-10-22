@@ -7,7 +7,7 @@ fails when its name appears nowhere but in its own declaration. Comments don't c
 does a scene naming a script's path for a class. A name shared with something else counts as used,
 so it never fails wrongly. Engine callbacks are used by the engine, so they're left out.
 
-    uv run --locked packages/game-checks/unused_code.py
+    uv run --locked --package khovax-game-checks packages/game-checks/unused_code.py
 """
 
 import os
@@ -16,9 +16,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from annotations import error
-from gdscript_code import without_comments
-from git_files import git_files
+from game_shared import log
+from game_shared.gdscript_code import without_comments
+from game_shared.git_files import git_files
 
 # Methods the engine calls itself.
 ENGINE = re.compile(
@@ -72,7 +72,7 @@ def main() -> int:
                 or (kind == "class_name" and file in attached)
             ):
                 continue
-            unused.append(error(file, f"{name} is declared but never used", number))
+            unused.append(log.text("error", f"{name} is declared but never used", file, number))
     if unused:
         print("\n".join(unused))
         return 1

@@ -9,6 +9,7 @@ members = [
     "khovax-game-models",
     "khovax-game-offscreen",
     "khovax-game-replays",
+    "khovax-game-shared",
     "khovax-game-web-e2e",
     "khovax-tools",
 ]
@@ -49,6 +50,12 @@ source = { virtual = "packages/game-build" }
 name = "khovax-game-checks"
 version = "0.0.0"
 source = { virtual = "packages/game-checks" }
+dependencies = [
+    { name = "khovax-game-shared" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
 
 [[package]]
 name = "khovax-game-models"
@@ -64,6 +71,17 @@ source = { virtual = "packages/game-offscreen" }
 name = "khovax-game-replays"
 version = "0.0.0"
 source = { virtual = "packages/game-replays" }
+dependencies = [
+    { name = "khovax-game-shared" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
+
+[[package]]
+name = "khovax-game-shared"
+version = "0.0.0"
+source = { editable = "packages/game-shared" }
 
 [[package]]
 name = "khovax-game-web-e2e"

@@ -8,7 +8,7 @@ A whole file is exempt while its top comment lines carry the marker below with a
 parentheses (owner, #515). It marks a workaround to fix later; a marker without a reason fails:
   # TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (why this file can't pass yet)
 
-    uv run --locked packages/game-checks/determinism_check.py
+    uv run --locked --package khovax-game-checks packages/game-checks/determinism_check.py
 """
 
 import os
@@ -16,8 +16,8 @@ import re
 import sys
 from pathlib import Path
 
-from annotations import error
-from gdscript_code import without_comments
+from game_shared import log
+from game_shared.gdscript_code import without_comments
 
 # What the rules never use, one alternation per kind; add a kind as its own line.
 FORBIDDEN = re.compile(
@@ -79,23 +79,21 @@ def main() -> int:
             continue
         if any(with_marker):
             print("\n".join(numbered(lines, with_marker)))
-            print(
-                error(
-                    file,
-                    "the exemption marker sits in the top comment lines, with a reason:"
-                    f" {MARKER} (reason)",
-                )
+            log.error(
+                "the exemption marker sits in the top comment lines, with a reason:"
+                f" {MARKER} (reason)",
+                file,
             )
             failed = True
 
         code = without_comments(source).rstrip("\n").split("\n")
         if not extends.intersection(code):
-            print(error(file, "rules scripts extend RefCounted or a class of the rules"))
+            log.error("rules scripts extend RefCounted or a class of the rules", file)
             failed = True
         hits = numbered(code, [FORBIDDEN.search(line) is not None for line in code])
         if hits:
             print("\n".join(hits))
-            print(error(file, "the rules must stay deterministic: see the lines above"))
+            log.error("the rules must stay deterministic: see the lines above", file)
             failed = True
 
     return 1 if failed else 0

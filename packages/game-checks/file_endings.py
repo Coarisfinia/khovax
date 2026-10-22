@@ -8,15 +8,15 @@ adds one to ENDINGS on its own.
 The shell scripts still tracked wait in SH_EXEMPT, each with the issue that ports it, and an
 exemption no longer used fails too, so the list only shrinks.
 
-    uv run --locked packages/game-checks/file_endings.py
+    uv run --locked --package khovax-game-checks packages/game-checks/file_endings.py
 """
 
 import os
 import sys
 from pathlib import Path, PurePosixPath
 
-from annotations import error
-from git_files import git_files
+from game_shared import log
+from game_shared.git_files import git_files
 
 # The endings allowed, each with what it's for. A new one needs the owner's sign-off (#1095).
 ENDINGS: dict[str, str] = {
@@ -66,21 +66,16 @@ def main() -> int:
     for path in sorted(tracked):
         if path in SH_EXEMPT or ending(path) in ENDINGS:
             continue
-        print(
-            error(
-                path,
-                f"its ending {ending(path)} isn't allowed ({THIS}, ENDINGS); a new ending needs"
-                " the owner's sign-off on its issue first (#1095)",
-            )
+        log.error(
+            f"its ending {ending(path)} isn't allowed ({THIS}, ENDINGS); a new ending needs the"
+            " owner's sign-off on its issue first (#1095)",
+            path,
         )
         failed = True
     for path, issue in SH_EXEMPT.items():
         if path not in tracked:
-            print(
-                error(
-                    THIS,
-                    f"{path} is no longer tracked: drop its exemption (#{issue}) from SH_EXEMPT",
-                )
+            log.error(
+                f"{path} is no longer tracked: drop its exemption (#{issue}) from SH_EXEMPT", THIS
             )
             failed = True
     return 1 if failed else 0

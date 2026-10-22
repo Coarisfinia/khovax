@@ -618,8 +618,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
   tooling, one workspace member per job: `game-checks/` (CI's checks of the game), `game-replays/`
   (comparing replays, load tests and the APK flow), `game-build/` (export helpers), `game-models/`
-  (the Blender model scripts), `game-offscreen/` (Godot on a private display) and `game-web-e2e/`
-  (the web build's e2e in headless Chrome, #1041). **Any package related to the game gets the
+  (the Blender model scripts), `game-offscreen/` (Godot on a private display), `game-web-e2e/`
+  (the web build's e2e in headless Chrome, #1041) and `game-shared/` (what the others share, #1115:
+  the one member that is built, as `game_shared`, so the ones depending on it can import it). **The
+  tools report through `game_shared.log`** (#1115), which writes GitHub's annotations in CI and plain
+  lines elsewhere, never a workflow command of their own. **Any package related to the game gets the
   `game-` prefix** (owner, #1114: *"any package related to the game gets the game- prefix"*), so
   names like `web` or `site` stay free for other parts of the project, such as a website; the game
   itself is `packages/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the

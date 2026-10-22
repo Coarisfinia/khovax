@@ -1,0 +1,19 @@
+# What the game's tool packages share (#1115): the one way they report (`log`) and the helpers more
+# than one of them reads with. A member of the repository's uv workspace (the root pyproject.toml).
+# Unlike the others it is built (as `game_shared`, editable), so the members that depend on it can
+# import it; they run with `--package <their name>`, which installs it.
+[project]
+name = "khovax-game-shared"
+version = "0.0.0"
+requires-python = "==3.14.8"
+dependencies = []
+
+[build-system]
+# uv's own backend, which the pinned uv (UV_VERSION in ci.yml) builds with directly, downloading
+# nothing: bump it with UV_VERSION.
+requires = ["uv_build==0.13.4"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "game_shared"
+module-root = ""
