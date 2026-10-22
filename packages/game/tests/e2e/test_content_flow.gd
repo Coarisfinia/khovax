@@ -523,8 +523,9 @@ func _check_quests() -> String:
 	return _unrefused(cases, content) + _check_target_steps(content)
 
 
-## Why a step asking for a quest target (#625) isn't read, or isn't refused when it's no id, sits
-## on a step other than a domination, comes with a species or counts more than once, or "".
+## Why a step asking for a quest target (#625) isn't read, or isn't refused when it's no id (an
+## upper-case one, or one ending in a newline, #944), sits on a step other than a domination, comes
+## with a species or counts more than once, or "".
 func _check_target_steps(content: QuestContent) -> String:
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [{\"condition\": \"%s\"%s}]}"
 	var target: String = ", \"target\": \"%s\""
@@ -534,6 +535,7 @@ func _check_target_steps(content: QuestContent) -> String:
 		return "a step asking for the quest target old_toad didn't read: " + read.problem
 	var cases: Dictionary[String, String] = {
 		quest % ["dominated", target % "Old"]: "step 0: its target must",
+		quest % ["dominated", target % "old\\n"]: "step 0: its target must",
 		quest % ["opened", target % "old_toad"]: "step 0: its target",
 		quest % ["dominated", target % "old_toad" + ", \"count\": 2"]: "step 0: its target",
 		quest % ["dominated", target % "old_toad" + ", \"species\": \"ombulumo\""]: (

@@ -7,7 +7,7 @@ extends RefCounted
 ## variants (#529). The first use: a wild monster a region names an event for raises it when it
 ## faints (WildMonsterFeature), e.g. the corrupted glade's corrupting monster, which purifies it.
 
-## The event's name, an identifier: letters, digits and `_`.
+## The event's name, an id (Ids).
 var event_name: String
 
 
