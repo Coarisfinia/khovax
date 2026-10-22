@@ -205,6 +205,12 @@ func _add_clip_shots(model: Node3D, animations: AnimationPlayer, glow: EyeGlow) 
 			return
 	var fps: float = _clip_fps()
 	for clip: String in clips:
+		# Beside the frames, the rate they play back at, for packages/game-models/gif.py.
+		var rate: FileAccess = FileAccess.open(_out_dir.path_join(clip + ".fps"), FileAccess.WRITE)
+		if rate == null or not rate.store_line(str(fps)):
+			printerr("can't write %s's rate: %s" % [clip, FileAccess.get_open_error()])
+			quit(1)
+			return
 		var times: PackedFloat32Array = _frame_times(
 			animations.get_animation(StringName(clip)),
 			fps,
