@@ -186,11 +186,10 @@ func _place(companion_id: int) -> void:
 	var walk: Walk = movement.walk(companion_id) if movement != null else null
 	if walk == null or not walk.is_moving():
 		return
-	var ticks_done: float = MovementFeature.MOVE_TICKS - walk.ticks_left + driver.tick_fraction()
 	var from: Vector3 = figure.position_on(walk.from)
 	figure.position = from.lerp(
 		figure.tile_position(),
-		clampf(ticks_done / MovementFeature.MOVE_TICKS, 0.0, 1.0),
+		driver.walk_progress(driver.state, companion_id),
 	)
 	var heading: Vector3 = figure.tile_position() - from
 	_facing[companion_id] = atan2(heading.x, heading.z)
