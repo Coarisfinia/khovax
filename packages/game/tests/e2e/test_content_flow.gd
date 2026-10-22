@@ -847,7 +847,7 @@ func _check_refused() -> String:
 		"{\"id\": \"xo\", \"types\": [\"fire\"], \"hp\": 1, \"strength\": 1}": "type fire",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1.5, \"strength\": 1}": "hp and strength",
 		"{\"id\": \"xo\", \"types\": [], \"hp\": 1, \"strength\": 1}": "a species has one",
-		"{\"id\": 7, \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id must be",
+		"{\"id\": 7, \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id must match",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1, \"y\": 1}": "field y",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
