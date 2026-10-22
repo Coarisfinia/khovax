@@ -1803,7 +1803,7 @@ func _check_spikes_hit(main: Node, driver: GameDriver) -> String:
 
 ## On a touch screen, standing on a ring that waits for a totem, the totem's button shows its
 ## charges and isn't faded; a touch on it presses place_totem and never starts the touch stick, and
-## lifting it lets go (#429).
+## lifting it lets go (#429). It shows T after a key and X after a controller's button (#1185).
 func _check_totem_button(main: Node) -> String:
 	var totem: TotemButton = main.get_node("Hud/TotemButton") as TotemButton
 	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
@@ -1815,12 +1815,20 @@ func _check_totem_button(main: Node) -> String:
 		return "the totem's button doesn't show its charges, usable, on a waiting ring"
 	if not _presses_alone(totem, stick):
 		return "a touch on the totem's button didn't press place_totem alone, or didn't let go"
+	var key: InputEventKey = InputEventKey.new()
+	key.physical_keycode = KEY_T
+	var face: InputEventJoypadButton = InputEventJoypadButton.new()
+	face.button_index = JOY_BUTTON_X
+	var glyphs: String = _glyphs_follow(
+		totem, key, face, [InputGlyphs.KEYS[KEY_T], InputGlyphs.BUTTONS[JOY_BUTTON_X]]
+	)
 	totem.touch = false
-	return _check_special_button(main)
+	return glyphs if not glyphs.is_empty() else _check_special_button(main)
 
 
 ## The special attack's button (#431) shows on a touch screen, with no cooldown while the special is
-## ready, and a touch on it presses special_attack alone.
+## ready, and a touch on it presses special_attack alone. It shows E after a key and the right
+## trigger after the controller's trigger (#1185).
 func _check_special_button(main: Node) -> String:
 	var special: SpecialButton = main.get_node("Hud/SpecialButton") as SpecialButton
 	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
@@ -1838,7 +1846,34 @@ func _check_special_button(main: Node) -> String:
 		return "the special's button covers the totem's"
 	if not _presses_alone(special, stick):
 		return "a touch on the special's button didn't press special_attack alone, or didn't let go"
+	var key: InputEventKey = InputEventKey.new()
+	key.physical_keycode = KEY_E
+	var trigger: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	trigger.axis = JOY_AXIS_TRIGGER_RIGHT
+	trigger.axis_value = 1.0
+	var glyphs: String = _glyphs_follow(
+		special, key, trigger, [InputGlyphs.KEYS[KEY_E], InputGlyphs.AXES[JOY_AXIS_TRIGGER_RIGHT]]
+	)
 	special.touch = false
+	return glyphs
+
+
+## While a keyboard or a controller is in use on a touch screen, `button` shows `glyphs[0]` after
+## `key` and `glyphs[1]` after `pad`, a controller's button or trigger (#1185); after a touch it
+## shows none, since the button itself is tapped.
+static func _glyphs_follow(
+	button: ActionButton, key: InputEvent, pad: InputEvent, glyphs: Array[Texture2D]
+) -> String:
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	var shown: Array[Texture2D] = []
+	for used: InputEvent in [key, pad, InputEventScreenTouch.new()]:
+		DeviceInUse.heard(used)
+		shown.append(button.glyph())
+	DeviceInUse.device = kept
+	var wanted: Array[Texture2D] = glyphs.duplicate()
+	wanted.append(null)
+	if glyphs.has(null) or shown != wanted:
+		return "%s's button shows %s after a key, a controller and a touch" % [button.action, shown]
 	return ""
 
 

@@ -6,7 +6,9 @@ extends Control
 ## charges or its cooldown, and never vanishes when empty or cooling down; it shows 0, or a
 ## cooldown circle with the seconds left. One it can't be used on right now is drawn faded, never
 ## hidden. It shows only where touch input exists, and a touch that lands on it is taken, so the
-## touch stick doesn't start under it. Subclasses set its icon and say the numbers, reading the
+## touch stick doesn't start under it. While a keyboard or a controller is in use instead
+## (DeviceInUse), its top left corner shows the key or button that presses it too (#1185).
+## Subclasses set its icon and say the numbers, reading the
 ## game through the lookups below (#934).
 
 ## How far the icon sits in from the button's edges, as a share of its side.
@@ -21,6 +23,12 @@ const PRESSED_ALPHA: float = 0.95
 ## How a button that can't be used right now is drawn: faded, never hidden.
 const UNUSABLE_ALPHA: float = 0.45
 const INK_PIXELS: float = 3.0
+## The key's or button's glyph on the top left corner, its side as a share of the button's. Half
+## of it stands out over the button's left edge, so it never covers the icon.
+const GLYPH_SHARE: float = 0.36
+## How far in from the glyph's edges its fog backdrop lies, as a share of its side, so the open
+## parts of its shape (the letter cut out of a key) show the fog, not the world behind.
+const GLYPH_BACKDROP_INSET: float = 0.14
 
 ## The InputMap action the button presses.
 @export var action: StringName = &""
@@ -66,6 +74,18 @@ func _draw() -> void:
 	draw_rect(area, ink, false, INK_PIXELS)
 	_draw_icon(area, ink)
 	_draw_numbers(area, ink)
+	_draw_glyph(area, faded)
+
+
+## The glyph of the key or button that presses the action, over the top left corner of `area`.
+func _draw_glyph(area: Rect2, faded: float) -> void:
+	var pressed_with: Texture2D = glyph()
+	if pressed_with == null:
+		return
+	var side: float = area.size.x * GLYPH_SHARE
+	var corner: Rect2 = Rect2(area.position - Vector2(side / 2.0, 0.0), Vector2(side, side))
+	draw_rect(corner.grow(-side * GLYPH_BACKDROP_INSET), Color(FogView.FOG, faded))
+	draw_texture_rect(pressed_with, corner, false, Color(Toon.INK, faded))
 
 
 ## The cooldown circle, while one runs, and the number in the corner.
@@ -90,6 +110,12 @@ func lay_out_in(screen: Vector2) -> void:
 	button.position = Vector2(screen.x - MARGIN - _side / 2.0, screen.y - from_bottom)
 	(button.shape as RectangleShape2D).size = Vector2(_side, _side)
 	queue_redraw()
+
+
+## The glyph of the key or button that presses the action on the device in use; null on touch,
+## where the button itself is tapped.
+func glyph() -> Texture2D:
+	return InputGlyphs.of(action, DeviceInUse.device)
 
 
 ## Where the button is on the screen.
