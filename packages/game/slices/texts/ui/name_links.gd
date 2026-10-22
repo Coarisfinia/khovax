@@ -11,6 +11,8 @@ extends RichTextLabel
 
 ## A name was selected: the kind of its tag (TextTags.FACTION) and its id.
 signal name_selected(kind: String, id: String)
+## A name with a codex page was shown, once each time a text shows it: the player met it (#1174).
+signal name_shown(kind: String, id: String)
 
 ## How long a touch must rest on a name to select it, in milliseconds.
 const LONG_PRESS_MS: int = 500
@@ -71,12 +73,19 @@ func show_tagged(tagged: String) -> void:
 	chosen = 0
 	_render()
 	focus_mode = Control.FOCUS_NONE if links.is_empty() else Control.FOCUS_ALL
+	for meta: String in links:
+		_raise(name_shown, meta)
 
 
 ## Selects the link `meta` ("FACTION:amvrel_velmarai"), as clicking it does.
 func select(meta: String) -> void:
+	_raise(name_selected, meta)
+
+
+## Raises `raised` with the kind and the id of the link `meta`.
+static func _raise(raised: Signal, meta: String) -> void:
 	var at: int = meta.find(META_SEPARATOR)
-	name_selected.emit(meta.left(at), meta.substr(at + 1))
+	raised.emit(meta.left(at), meta.substr(at + 1))
 
 
 func _on_meta_clicked(meta: Variant) -> void:

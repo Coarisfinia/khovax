@@ -19,13 +19,16 @@ extends Control
 ## `name_selected`: a click, a long press on touch, or a controller's d-pad up from the buttons to
 ## the line (and on up to the speaker), left and right to the name and A. The focused button and the
 ## leave button show the key or controller button that presses them, for the device in use (#583,
-## ActionGlyph).
+## ActionGlyph). Each such name the line or the speaker shows raises `name_shown`: the player met
+## it (the codex book, #1174).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
 ## A name in the line or the speaker's was selected (NameLinks): the kind of its tag and its id,
 ## whose codex page opens.
 signal name_selected(kind: String, id: String)
+## The line or the speaker showed a name that has a codex page: the kind of its tag and its id.
+signal name_shown(kind: String, id: String)
 
 ## The read-on button's words: on to the next line, or the end of the dialog.
 const READ_ON_TEXT: String = "Continue"
@@ -76,6 +79,8 @@ func _ready() -> void:
 	var _left: int = _leave.pressed.connect(leave)
 	var _selected: int = _line.name_selected.connect(name_selected.emit)
 	var _named: int = _speaker.name_selected.connect(name_selected.emit)
+	var _met: int = _line.name_shown.connect(name_shown.emit)
+	var _met_speaker: int = _speaker.name_shown.connect(name_shown.emit)
 	if driver != null:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 

@@ -10,7 +10,8 @@ extends Control
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
-## screen. The other named kinds' pages follow (#1175).
+## screen. The codex book (CodexBook, #1174) opens it over the menu, which stays open under it.
+## The other named kinds' pages follow (#1175).
 
 ## The page's heading over a faction's name.
 const LEXICON_TEXT: String = "Lexicon"
@@ -55,6 +56,8 @@ var _fade: Tween
 var _font_size: int = 0
 ## What had the focus before the page opened, which gets it back when it closes.
 var _focused_before: Control
+## Whether the game heard no input already before the page opened (the menu is open under it).
+var _blocked_before: bool = false
 
 
 func _ready() -> void:
@@ -222,10 +225,15 @@ func _standing_line(faction: Faction) -> String:
 
 ## Eases the page in or out; the game hears no input while it's in.
 func _ease(opening: bool) -> void:
+	var was_open: bool = _open
 	_open = opening
 	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP if opening else Control.MOUSE_FILTER_IGNORE
 	if input != null:
-		input.blocked = opening
+		# Opened over the menu (the codex book, #1174), closing it leaves the input as the menu has
+		# it.
+		if opening and not was_open:
+			_blocked_before = input.blocked
+		input.blocked = opening or _blocked_before
 	if _fade != null:
 		_fade.kill()
 	_sheet.visible = true

@@ -82,10 +82,11 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
+	var more_tabs: Array[Node] = get_children()
 	_open_button = _with_icon(button(OPEN_TEXT, toggle), OPEN_ICON)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	add_child(_open_button)
-	_build_sheet()
+	_build_sheet(more_tabs)
 
 
 func _process(_delta: float) -> void:
@@ -233,9 +234,9 @@ func _follow() -> void:
 		pinch.in_menu = survey_tab.view if _open else null
 
 
-## The sheet: the tabs over the whole screen, and the button that closes the menu at its top right,
-## beside the tabs, so it's the same on every tab (#554).
-func _build_sheet() -> void:
+## The sheet: the tabs over the whole screen, `more_tabs` after the gameplay ones, and the button
+## that closes the menu at its top right, beside the tabs, so it's the same on every tab (#554).
+func _build_sheet(more_tabs: Array[Node]) -> void:
 	_sheet = PanelContainer.new()
 	_sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_sheet.add_theme_stylebox_override("panel", UiTheme.sheet(MARGIN))
@@ -257,6 +258,12 @@ func _build_sheet() -> void:
 	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
 	quests_tab_shown.keeper = quest_keeper
 	tabs.add_child(quests_tab_shown)
+	# The tabs later slices add, like the codex book (#1174): game/ hands them over as the menu's
+	# own children in the main scene, so the menu never names a slice after it. Each is named by its
+	# node's name.
+	for more: Node in more_tabs:
+		remove_child(more)
+		tabs.add_child(more)
 	# The gameplay tabs first, then the system tabs (owner, #465).
 	settings = (load(SETTINGS_TAB) as PackedScene).instantiate() as SettingsTab
 	settings.graphics = graphics
