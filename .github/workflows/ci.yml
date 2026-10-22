@@ -613,6 +613,18 @@ jobs:
           hash=$(jq -er .apk_flow.final outcomes/outcomes.json)
           echo "EXPECTED_HASH=${hash}" >> "$GITHUB_ENV"
 
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "🐍 Install the pinned Python"
+        # Here, so the emulator step's timeout isn't spent downloading it.
+        run: uv run --locked python -c 'import sys; print(f"Python {sys.version}")'
+
       - name: "⚙️ Emulator: enable KVM"
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -673,7 +685,7 @@ jobs:
           # uniforms below what Godot's Compatibility shaders need, so they failed to link (#114).
           emulator-options: -no-window -gpu swangle_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: timeout 480 bash tools/replays/apk_e2e.sh build/khovax-test.apk "$EXPECTED_HASH"
+          script: timeout 480 uv run --locked tools/replays/apk_e2e.py build/khovax-test.apk "$EXPECTED_HASH"
 
   linux-e2e:
     # The same device flow on the Linux build (#113), played by the runner itself under a virtual
