@@ -405,8 +405,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   user flow however long it grows. A suppression is a `# gdstyle:ignore=<rule>` or
   `# gdstyle:ignore-file=<rule>` comment directly below a line giving the reason.
 - **Before pushing, run `gdstyle fmt .`**: it fixes the formatting rather than only checking it.
-  gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned there and
-  in CI (with the archive's checksum), so bump both together.
+  gdstyle is installed with scoop from `tools/scoop/gdstyle.json`; its version is pinned only there
+  (CI reads it from the manifest), so a bump also updates CI's `GDSTYLE_SHA256`, the checksum of
+  that version's Linux archive.
 - **Godot rewrites `project.godot` in its own form** whenever it runs: its own order, no comments,
   and settings equal to their default left out (four warnings are errors by default). Keep the file
   in that form so it doesn't churn, and keep the reasons for its settings in this file instead.
