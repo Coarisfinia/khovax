@@ -418,7 +418,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The Compatibility renderer is the baseline** on every platform, because the web supports only
   that one. Shaders and effects have to work there.
 - **The web page's loading screen** (#261, #264, #270) is explained in a comment at the start of
-  the web presets' `html/head_include` (the same in both).
+  the web presets' `html/head_include` (the same in both, which CI checks).
 - **The camera never shakes, pulses or snaps**: the game is designed around motion sickness.
 - **Fog always moves animated** (owner, #243): it eases open and closed, and no hole ever opens
   in it in one frame, not around a player at the start nor on arriving somewhere.

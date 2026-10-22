@@ -124,7 +124,7 @@ jobs:
         # Today's endings without .sh and .bat (owner, #1095); a new one needs the owner's sign-off.
         run: uv run --locked ../checks/file_endings.py
 
-      - name: "🗃️ Check the export presets share their file filters"
+      - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked ../checks/export_filters_check.py
 
       - name: "🎲 Check the simulation stays deterministic"

@@ -2,7 +2,8 @@
 export_presets.cfg has the same include_filter, and presets with the same custom_features (the
 release builds, the e2e_test builds) have the same exclude_filter. A filter change then touches
 them all, or CI says which preset was missed. Every exclude_filter also names tools/*: the
-developer tools run from the project, never from a build (#921).
+developer tools run from the project, never from a build (#921). The web presets share their
+html/head_include, the loading page (#925): the web e2e checks it on the Web Test build only.
 
     uv run --locked packages/checks/export_filters_check.py
 """
@@ -14,18 +15,26 @@ from pathlib import Path
 
 from annotations import error
 
-PRESET = re.compile(r"\[preset\.[0-9]+\]")
+# A preset's keys are in [preset.N] and its options in [preset.N.options]; both count as preset N.
+PRESET = re.compile(r"\[preset\.([0-9]+)(\.options)?\]")
 TOOLS_EXCLUDED = re.compile(r'"(.*,)?tools/\*(,.*)?"')
-KEYS = ("name", "custom_features", "include_filter", "exclude_filter")
+KEYS = (
+    "name",
+    "platform",
+    "custom_features",
+    "include_filter",
+    "exclude_filter",
+    "html/head_include",
+)
 
 
 def presets(text: str) -> dict[str, dict[str, str]]:
-    """Each [preset.N] section's keys that the check reads, by its header, in the file's order."""
+    """Each preset's keys that the check reads, by its [preset.N] header, in the file's order."""
     found: dict[str, dict[str, str]] = {}
     section = None
     for line in text.split("\n"):
-        if PRESET.fullmatch(line):
-            section = found.setdefault(line, {})
+        if match := PRESET.fullmatch(line):
+            section = found.setdefault(f"[preset.{match[1]}]", {})
         elif line.startswith("["):
             section = None
         elif section is not None:
@@ -41,6 +50,7 @@ def main() -> int:
     os.chdir(Path(__file__).resolve().parents[1] / "game")
     errors = []
     reference = None
+    web = None
     first_with: dict[str, dict[str, str]] = {}
     found = presets(Path("export_presets.cfg").read_text(encoding="utf-8", newline=""))
     for header, preset in found.items():
@@ -63,6 +73,13 @@ def main() -> int:
                 f"preset {name} has exclude_filter={exclude}, preset {same.get('name', '')}"
                 f" (same custom_features) has {same['exclude_filter']}"
             )
+        if preset.get("platform") == '"Web"':
+            web = web or preset
+            if preset.get("html/head_include") != web.get("html/head_include"):
+                errors.append(
+                    f"preset {name} has another html/head_include than preset"
+                    f" {web.get('name', '')}: the web presets share their loading page"
+                )
     if not found:
         errors.append("it has no preset")
     for message in errors:
