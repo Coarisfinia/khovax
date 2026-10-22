@@ -53,6 +53,11 @@ a second model could use goes into the library or a generic tool, never into one
     `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s and `rune`s (`GLYPHS`).
   - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid).
+  - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
+    `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
+    shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the
+    nose pad and the fangs; length, taper, stop depth, lips, jaw depth and width and the chin's
+    reach as parameters.
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
     four-bone legs, `.L`/`.R`).
   - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
@@ -93,7 +98,7 @@ a second model could use goes into the library or a generic tool, never into one
     down; count, spread, size, fan and curl as parameters.
   - `metrics`: proportions as numbers (#1072). A model script keeps a `REFERENCE` dict of its
     approved ratios (head/body, leg/body, ear/head, tail/body, eye spacing/head width, the
-    eyes' symmetry, ...) and its build ends with `metrics.report(rig, [skin], REFERENCE)`, which
+    eyes' symmetry, the snout's: the muzzle against the head, the lower jaw against the muzzle, ...) and its build ends with `metrics.report(rig, [skin], REFERENCE)`, which
     prints each as a measurement against the reference and fails the build beyond the
     tolerance. A new model measures itself first (a measure missing from `REFERENCE` prints as a
     note), and its `REFERENCE` takes the values once the owner approves the look.
