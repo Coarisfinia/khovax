@@ -10,17 +10,29 @@ Everything after the first `--` goes to Godot, which also gets `--display-driver
 `--rendering-driver opengl3` (the Compatibility renderer, on the CPU's llvmpipe) and
 `--audio-driver Dummy`, so the music stays silent, and `--fixed-fps 60`: every frame advances the
 game by a sixtieth of a second however fast it draws, so a script that waits a number of frames
-(the fog easing open, a camera settling) gets the same game time on any machine. Two runs of one
-build with the same `--seed` and a fresh `--user-dir` then draw the same pixels (#1140): nothing
-drawn reads the clock. One thing still runs on real time: the content the boot reads on a worker
+(the fog easing open, a camera settling) gets the same game time on any machine.
+
+Every run gets its own throwaway `user://` folder (#1188): Godot's data folder (`XDG_DATA_HOME`)
+points at a temporary folder that is deleted when Godot exits. A `-s` script reads and writes
+`user://` before the game's LaunchMode applies a `--user-dir`, so without this it would write the
+shared folder's `profile.json` and `world.json`, a player's or another agent's. So no
+`--user-dir` is needed here, and one given lands in the throwaway folder too. Only the renderer's
+shader cache is kept: the throwaway folder links the project's shared one, so shaders aren't
+compiled again on every run. Two runs of one build with the same `--seed` then draw the same
+pixels (#1140): nothing drawn reads the clock. One thing still runs on real time: the content the boot reads on a worker
 thread (ContentFill, #816), so a walk through an exit can hold for a different number of frames.
 A script that walks there calls `ContentFill.wait()` first, as the test flows do. The display
 matches no screen of the owner's, so no `override.cfg` is needed. It exits with Godot's exit
 code."""
 
 import os
+import re
 import shutil
+import signal
+import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
 # Godot's window, inside the virtual screen: the size of the game's own viewport.
 SCREEN = "1280x720x24"
@@ -32,6 +44,37 @@ GODOT_FLAGS = [
     "--audio-driver", "Dummy",
     "--fixed-fps", "60",
 ]
+
+# The renderer's shader cache, inside the user folder (LaunchOptions.SHADER_CACHE).
+SHADER_CACHE = "shader_cache"
+
+
+def project_name(godot_options: list[str]) -> str | None:
+    """The `config/name` of the project `--path` names (else the working folder's), which names
+    its default user folder, or None when there is none."""
+    folder = Path(".")
+    for index, option in enumerate(godot_options):
+        if option == "--path" and index + 1 < len(godot_options):
+            folder = Path(godot_options[index + 1])
+    try:
+        text = (folder / "project.godot").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    found = re.search(r'^config/name="([^"]+)"', text, re.MULTILINE)
+    return found.group(1) if found else None
+
+
+def link_shader_cache(data_home: str, godot_options: list[str], env: dict[str, str]) -> None:
+    """Links the project's shared shader cache into the default user folder Godot will use with
+    `data_home` as its data folder (`XDG_DATA_HOME`)."""
+    name = project_name(godot_options)
+    if name is not None:
+        default_home = Path(env.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
+        user_folder = Path("godot") / "app_userdata" / name
+        shared_cache = default_home / user_folder / SHADER_CACHE
+        shared_cache.mkdir(parents=True, exist_ok=True)
+        (Path(data_home) / user_folder).mkdir(parents=True)
+        (Path(data_home) / user_folder / SHADER_CACHE).symlink_to(shared_cache)
 
 
 def main() -> int:
@@ -56,7 +99,22 @@ def main() -> int:
     hidden = ("DISPLAY", "WAYLAND_DISPLAY")
     env = {name: value for name, value in os.environ.items() if name not in hidden}
     command = ["xvfb-run", "-a", "-s", f"-screen 0 {SCREEN}", "godot", *GODOT_FLAGS, *args]
-    os.execvpe(command[0], command, env)
+    data_home = tempfile.mkdtemp(prefix="khovax-offscreen-")
+    try:
+        link_shader_cache(data_home, godot_options, env)
+        env["XDG_DATA_HOME"] = data_home
+        godot = subprocess.Popen(command, env=env)
+        # A stop (Ctrl+C reaches Godot itself, SIGTERM is passed on) ends Godot first, so its
+        # folder is deleted only once nothing writes to it any more.
+        signal.signal(signal.SIGTERM, lambda _signal, _frame: godot.terminate())
+        while True:
+            try:
+                return godot.wait()
+            except KeyboardInterrupt:
+                continue
+    finally:
+        # The link goes, the shared shader cache it points at stays.
+        shutil.rmtree(data_home, ignore_errors=True)
 
 
 if __name__ == "__main__":

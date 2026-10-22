@@ -537,7 +537,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Local Godot runs pass `--user-dir=<branch>`** (owner, #786): the e2e runner, the load test, the
   game and screenshot scripts, e.g. `-s res://tests/e2e/run_e2e.gd -- --seed=0
   --user-dir=786-user-dir-flag`. Every worktree shares one `user://` folder otherwise, and parallel
-  runs overwrite each other's saves. CI runs without it.
+  runs overwrite each other's saves. CI runs without it. Runs through `offscreen.py` need none:
+  each gets its own throwaway `user://` folder (#1188), since a `-s` script touches `user://`
+  before `--user-dir` applies.
 - **A fresh checkout needs `godot --headless --path packages/game --import`** before headless
   runs, and so does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
   flows fail to load or log errors that have nothing to do with the change.
