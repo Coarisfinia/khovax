@@ -326,7 +326,8 @@ func _choose_with_controller(
 	driver.input.choose_answer(code + 1)
 	if _answered(driver).size() > 0:
 		return "an answer no dialog has was raised"
-	return _bestiary_by_controller(screen.get_node("../CodexPage") as CodexPage, driver, screen)
+	var page: CodexPage = screen.get_parent().get_node("CodexPage") as CodexPage
+	return _bestiary_by_controller(page, driver, screen)
 
 
 ## The line about Lumwen Hoal names the Ombulumo (#1173) as a link to its bestiary page, which the
