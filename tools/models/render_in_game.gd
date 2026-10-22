@@ -96,6 +96,13 @@ func _process(_delta: float) -> bool:
 
 
 func _initialize() -> void:
+	# Godot's Wayland display server can hang on exit (#1021): it wakes its event thread with a
+	# roundtrip, but when that thread isn't polling yet, the main thread reads the reply itself and
+	# then waits for ever for the thread, which polls for a reply that already came. Refused at
+	# once, and killed rather than quit, since quitting is what can hang.
+	if DisplayServer.get_name() == "Wayland":
+		printerr("Wayland can hang on exit: render through tools/godot/offscreen.py")
+		var _killed: Error = OS.kill(OS.get_process_id())
 	# It renders on the CPU, so it draws each frame as soon as it can, never waiting for the
 	# screen (#1050): no vsync and no frame cap, whatever the command line says.
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
