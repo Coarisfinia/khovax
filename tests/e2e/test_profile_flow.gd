@@ -71,8 +71,8 @@ func run(_tree: SceneTree) -> String:
 
 
 ## Saving is debounced (owner, #73): the first domination after a quiet spell is on disk at once, a
-## burst right after it is saved together once SAVE_INTERVAL_MSEC has passed, and ending the session
-## flushes whatever is pending.
+## burst right after it is saved together once SAVE_INTERVAL_MSEC has passed, and the game going to
+## the background flushes whatever is pending, through the holder's notification as the game does.
 func _check_kept_at_once() -> String:
 	var keeper: ProfileKeeper = ProfileKeeper.new(Profile.new(), SAVE_PATH)
 	var problem: String = keeper.take(_result(["ombulumo"], {}), 0)
@@ -87,11 +87,15 @@ func _check_kept_at_once() -> String:
 	problem = keeper.save_if_due(interval)
 	if not problem.is_empty() or _monsters_on_disk() != 50:
 		return "the burst wasn't saved once the interval passed: " + problem
-	problem = keeper.take(_result(["ombulumo"], {}), interval + 1) + keeper.end_session()
+	problem = keeper.take(_result(["ombulumo"], {}), interval + 1)
+	var holder: ProfileHolder = ProfileHolder.new()
+	holder.keeper = keeper
+	holder.notification(Node.NOTIFICATION_APPLICATION_PAUSED)
+	holder.free()
 	var on_disk: Profile = ProfileStore.load_from(SAVE_PATH)
 	SaveStore.remove(SAVE_PATH)
 	if not problem.is_empty() or on_disk.dominated_monsters.size() != 51:
-		return "ending the session didn't flush the pending domination: " + problem
+		return "going to the background didn't flush the pending domination: " + problem
 	return ""
 
 
