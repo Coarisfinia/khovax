@@ -3,7 +3,7 @@ extends RefCounted
 ## The core of the simulation's state, in integers: the tick, the seed, the region and the entities,
 ## plus the instance's features, which hold every game rule and their own state. The core holds no
 ## game rule itself. The presentation reads the state and never writes it.
-## Randomness, once a rule needs it, comes from a generator kept in here and seeded by `rng_seed`.
+## Randomness comes from `rng_seed`: each feature that rolls seeds its own Rng stream from it.
 
 ## Players in this instance, each in its own slot; a tick's commands are indexed by slot.
 const MAX_PLAYERS: int = 4

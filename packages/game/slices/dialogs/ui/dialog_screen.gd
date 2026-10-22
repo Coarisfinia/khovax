@@ -232,7 +232,7 @@ func _read_on() -> void:
 
 
 ## Sends the answer `answer_id` of the line shown to the simulation; the card moves on once the
-## simulation raises it (_on_answered).
+## simulation's state moves on (_on_ticked, follow_state).
 func _answer(answer_id: String) -> void:
 	if input != null:
 		input.choose_answer(DialogFeature.code(dialog.id, answer_id))

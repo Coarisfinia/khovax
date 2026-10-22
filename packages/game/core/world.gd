@@ -10,10 +10,9 @@ extends RefCounted
 ## through an exit or are sent to the spawn are moved once every instance stepped, with whoever
 ## follows them (WorldTravel, #154, #457, #716). Each player has a world store (PlayerStore,
 ## #724), where features keep what the player brings along, like their companions (#338): every
-## instance the world loads gets a copy, and what the instance the player is in changes in it is
-## taken back into the world once that instance stepped, and handed to every other. The world keeps
-## a set of flags (#529), which choose each blueprint's variant and which named events set and
-## replace (WorldFlags, #541, #638).
+## instance the world loads shares the world's own stores (#828), so what the instance the player is
+## in changes in one, every other sees at once. The world keeps a set of flags (#529), which choose
+## each blueprint's variant and which named events set and replace (WorldFlags, #541, #638).
 ## Deterministic, like everything in core/.
 
 ## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's

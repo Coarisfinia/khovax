@@ -20,8 +20,8 @@ const OUTPOST: String = "edhra_tewk"
 const CORRUPTED_GLADE_FLAG: String = "lumwen_hoal_corrupted"
 const CORRUPTED_GLADE: String = "lymwen_hoall"
 const GLADE_PURIFIED: String = "lumwen_hoal_purified"
-## The six tiles around the basic instance's wild monster, walked in a ring from the player's start
-## at (1, -1).
+## The step in from the player's start at (1, -1), then the six tiles around the basic instance's
+## wild monster, walked in a ring.
 const BASIC_RING: Array[Vector2i] = [
 	Vector2i(0, -1),
 	Vector2i(-1, -1),

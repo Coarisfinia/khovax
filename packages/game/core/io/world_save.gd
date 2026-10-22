@@ -7,9 +7,8 @@ extends RefCounted
 ## in it is WorldData.of as JSON; reading it back turns JSON's numbers into whole numbers first,
 ## so the simulation only ever sees integers. Beside the world lies what its owners keep with it
 ## (BESIDE), read apart by them: the ground this machine's player has explored, under EXPLORED,
-## which
-## the fog slice reads and writes (ExploredSave, #215, #506). It's saved with the world and goes
-## with it, but never enters its hash or replays, and bad memory never refuses the world.
+## which the fog slice reads and writes (ExploredSave, #215, #506). It's saved with the world and
+## goes with it, but never enters its hash or replays, and bad memory never refuses the world.
 
 const PATH: String = "user://world.json"
 ## The key of the explored ground beside the world's data.
