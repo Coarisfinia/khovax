@@ -131,18 +131,24 @@ func _check_launch_options() -> String:
 			return "%s wasn't refused as %s, but: %s" % [arg, refusals[arg], problem]
 	if LaunchOptions.parse([]).is_test_world():
 		return "no launch options make a test world"
+	if not LaunchOptions.parse([LaunchOptions.INVINCIBLE]).is_test_world():
+		return "an invincible run isn't a test world, so it would keep the player's save"
 	return ""
 
 
-## Launched with `--instance=lumwen_hoal --seed=42`, the main scene starts a fresh world from that
-## seed in
-## the glade, the player on its start, and keeps no world on disk: the save the player's own world
-## would go to is let go of when the options are applied. It runs last: it leaves the game launched
-## on its own options, which the runner puts back after the flow (#927).
+## Launched with `--instance=lumwen_hoal --seed=42 --invincible`, the main scene starts a fresh
+## world from that seed in the glade, the player on its start and invincible (#1142, which
+## test_world_flow.gd plays out), and keeps no world on disk: the save the player's own world would
+## go to is let go of when the options are applied. It runs last: it leaves the game launched on its
+## own options, which the runner puts back after the flow (#927).
 func _check_launched(tree: SceneTree) -> String:
 	WorldKeeper.default_path = WorldSave.PATH
 	# Without a user folder there's nothing that can fail to apply.
-	var launch: PackedStringArray = ["--instance=" + FlowSteps.GLADE, "--seed=42"]
+	var launch: PackedStringArray = [
+		"--instance=" + FlowSteps.GLADE,
+		"--seed=42",
+		LaunchOptions.INVINCIBLE,
+	]
 	var _applied: String = LaunchOptions.parse(launch).apply()
 	if not WorldKeeper.default_path.is_empty():
 		return "a launched test world would resume or overwrite the player's own"
@@ -158,6 +164,8 @@ func _check_launched(tree: SceneTree) -> String:
 			driver.local_instance_name(),
 			driver.world.world_seed,
 		]
+	elif not driver.world.stored(0, HealthFeature.ID).has(HealthFeature.INVINCIBLE):
+		result = "launched with --invincible, the player isn't invincible"
 	main.queue_free()
 	await tree.process_frame
 	return result

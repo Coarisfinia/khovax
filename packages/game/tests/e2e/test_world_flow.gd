@@ -28,11 +28,15 @@ extends RefCounted
 ## which purifies the glade once nobody is in it (#541). The first time a named event sets its
 ## flag, the world raises a world-changing moment, once (#499). A fresh world starts with the
 ## factions' territory as flags, which its save data keeps (#637). A walk out through an exit holds
-## while the content next door isn't read on any machine yet, and goes on once it is (#816).
+## while the content next door isn't read on any machine yet, and goes on once it is (#816). A
+## player out of HP is sent back to the spawn (#457), and an invincible one never runs out (#1142).
 
 const SEEDS: int = 40
 ## The damage the companion walks through the exit with, to see it arrive as hurt (#716).
 const FOLLOWER_DAMAGE: int = 3
+## How long a player stands beside the basic instance's wild monster: long enough for its strikes
+## to take more than a player's HP.
+const BESIDE_WILD_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
 ## Seeds every blueprint is loaded with as a full instance: fewer, since that includes the load
 ## test's big region.
 const INSTANCE_SEEDS: int = 6
@@ -100,6 +104,7 @@ func run(tree: SceneTree) -> String:
 		_check_start_kept,
 		_check_start_corrupted,
 		_check_sent_to_spawn,
+		_check_invincible,
 		_check_layout,
 		_check_tile_changed,
 	]
@@ -199,11 +204,9 @@ static func _free_ground_beside(state: GameState, tile: Vector2i) -> Vector2i:
 func _check_sent_to_spawn() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
 	var basic: GameState = world.instances[FlowSteps.BASIC]
-	var first: Entity = world.player(0)
-	var wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	first.tile = basic.entity(wild.monsters[0]).tile + Hex.DIRECTIONS[0]
+	var first: Entity = _beside_wild(world)
 	var start: Vector2i = basic.region.starts[0]
-	for _tick: int in WildAttackFeature.STRIKE_TICKS * 60:
+	for _tick: int in BESIDE_WILD_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
 		if world.player(0).id != first.id:
 			break
@@ -214,6 +217,45 @@ func _check_sent_to_spawn() -> String:
 	if health.hp_of(basic, back.id) != HealthFeature.PLAYER_HP:
 		return "a player sent back to the spawn isn't at full HP"
 	return ""
+
+
+## An invincible player (#1142, the `--invincible` launch option), in the same place as the one
+## _check_sent_to_spawn sends back: the wild monster still strikes them, for more than their HP over
+## as many ticks, but no hit takes any of it, so they never fall, are never knocked down and stay
+## where they stand, the same entity.
+func _check_invincible() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	HealthFeature.make_invincible(world, 0)
+	var basic: GameState = world.instances[FlowSteps.BASIC]
+	var player: Entity = _beside_wild(world)
+	var knockdown: KnockdownFeature = basic.feature(KnockdownFeature.ID) as KnockdownFeature
+	var struck: int = 0
+	var fell: bool = false
+	for _tick: int in BESIDE_WILD_TICKS:
+		world.step(FlowSteps.command(Command.NO_MOVE))
+		for event: RefCounted in basic.events:
+			var hit: WildMonsterStruck = event as WildMonsterStruck
+			if hit != null and hit.target_id == player.id:
+				struck += hit.damage
+			fell = fell or event is EntityFell or event is SentToSpawn
+		fell = fell or knockdown.is_down(player.id)
+	if struck <= HealthFeature.PLAYER_HP:
+		return "the wild monster struck the invincible player for only %d" % struck
+	var health: HealthFeature = basic.feature(HealthFeature.ID) as HealthFeature
+	if (fell
+			or world.player(0).id != player.id
+			or health.hp_of(basic, player.id) != HealthFeature.PLAYER_HP):
+		return "an invincible player was hurt, knocked down or sent back to the spawn"
+	return ""
+
+
+## Player 0 of `world`, placed beside the wild monster of its basic instance.
+static func _beside_wild(world: World) -> Entity:
+	var basic: GameState = world.instances[FlowSteps.BASIC]
+	var wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var player: Entity = world.player(0)
+	player.tile = basic.entity(wild.monsters[0]).tile + Hex.DIRECTIONS[0]
+	return player
 
 
 ## Walking through exits (#154): from the forest's start, onto its exit on (-2, 5) and on southeast
