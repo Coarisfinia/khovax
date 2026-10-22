@@ -37,44 +37,44 @@ static func auto_anti_aliasing() -> int:
 	return msaa
 
 
-## The anti-aliasing in use: the player's choice, or Auto's. A saved value that isn't one of the
-## choices (a hand-edited file, a choice a later version dropped) counts as Auto.
+## The anti-aliasing in use: the player's choice, or Auto's.
 func anti_aliasing() -> int:
-	var chosen: int = settings.chosen.get(ANTI_ALIASING, -1)
-	if chosen in ANTI_ALIASING_CHOICES:
-		return chosen
+	var at: int = _anti_aliasing().value()
+	if at >= 0:
+		return ANTI_ALIASING_CHOICES[at]
 	return auto_anti_aliasing()
 
 
 ## The anti-aliasing as a menu shows it: "4× MSAA", or "Auto (4× MSAA)" while Auto picks it.
 func anti_aliasing_label() -> String:
-	var shown: String = _msaa_name(anti_aliasing())
-	if settings.chosen.get(ANTI_ALIASING, -1) in ANTI_ALIASING_CHOICES:
-		return shown
-	return "Auto (%s)" % shown
+	return _anti_aliasing().label(_msaa_name(anti_aliasing()))
 
 
 ## Uses `msaa` (one of ANTI_ALIASING_CHOICES) from now on and keeps it; returns why it couldn't be
 ## saved, or "".
 func choose_anti_aliasing(msaa: int) -> String:
-	settings.chosen[ANTI_ALIASING] = msaa
+	_anti_aliasing().choose(ANTI_ALIASING_CHOICES.find(msaa))
 	apply()
-	return settings.save(settings_path)
+	return save_settings()
 
 
 ## Steps the anti-aliasing `steps` choices on (back for fewer), after the last one round to the
 ## first, and keeps it; returns why it couldn't be saved, or "".
 func step_anti_aliasing(steps: int) -> String:
-	var at: int = ANTI_ALIASING_CHOICES.find(anti_aliasing())
-	return choose_anti_aliasing(
-		ANTI_ALIASING_CHOICES[posmod(at + steps, ANTI_ALIASING_CHOICES.size())],
-	)
+	_anti_aliasing().step(steps)
+	apply()
+	return save_settings()
 
 
 ## Hands `setting` back to Auto; returns why that couldn't be saved, or "".
 func choose_auto(setting: String) -> String:
 	var _was_chosen: bool = settings.chosen.erase(setting)
 	apply()
+	return save_settings()
+
+
+## Saves the settings, every owner's choices in them; returns why they couldn't be saved, or "".
+func save_settings() -> String:
 	return settings.save(settings_path)
 
 
@@ -84,6 +84,18 @@ func apply() -> void:
 	get_viewport().msaa_3d = msaa as Viewport.MSAA
 	if ink != null:
 		ink.set_smoothed(msaa != Viewport.MSAA_DISABLED)
+
+
+## The anti-aliasing setting, saved as its MSAA's number. Auto picks the project's MSAA, which may
+## be none of the choices.
+func _anti_aliasing() -> SettingChoice:
+	return SettingChoice.new(
+		settings,
+		ANTI_ALIASING,
+		ANTI_ALIASING_CHOICES.size(),
+		ANTI_ALIASING_CHOICES.find(auto_anti_aliasing()),
+		ANTI_ALIASING_CHOICES,
+	)
 
 
 static func _msaa_name(msaa: int) -> String:

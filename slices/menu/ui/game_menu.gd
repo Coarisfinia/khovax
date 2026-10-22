@@ -166,22 +166,20 @@ func toggle() -> void:
 
 ## Whether an open menu pauses single player: the player's choice, or Auto's (on).
 func pauses() -> bool:
-	return _pause_choice() == PAUSE_ON
+	return _pause().value() == PAUSE_ON
 
 
 ## The pause setting as the Settings tab shows it: "On", or "Auto (On)" while Auto picks it.
 func pause_label() -> String:
-	var shown: String = PAUSE_CHOICES[_pause_choice()]
-	if _pause_chosen() >= 0:
-		return shown
-	return "Auto (%s)" % shown
+	var pause: SettingChoice = _pause()
+	return pause.label(PAUSE_CHOICES[pause.value()])
 
 
 ## Steps the pause setting `steps` choices on, round after the last, and keeps it; returns why it
 ## couldn't be saved, or "".
 func step_pause(steps: int) -> String:
-	graphics.settings.chosen[PAUSE_SETTING] = posmod(_pause_choice() + steps, PAUSE_CHOICES.size())
-	return graphics.settings.save(graphics.settings_path)
+	_pause().step(steps)
+	return graphics.save_settings()
 
 
 ## Sizes the text to a screen of `screen` pixels, the open button at the top's middle (tests lay
@@ -269,18 +267,12 @@ func _build_sheet() -> void:
 	add_child(_sheet)
 
 
-## The pause setting's choice in use, as an index into PAUSE_CHOICES.
-func _pause_choice() -> int:
-	var chosen: int = _pause_chosen()
-	return chosen if chosen >= 0 else AUTO_PAUSE
-
-
-## The player's choice of the pause setting, or -1 for Auto (also for a value that isn't a choice).
-func _pause_chosen() -> int:
-	if graphics == null:
-		return -1
-	var chosen: int = graphics.settings.chosen.get(PAUSE_SETTING, -1)
-	return chosen if chosen >= 0 and chosen < PAUSE_CHOICES.size() else -1
+## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.
+func _pause() -> SettingChoice:
+	var kept_in: Settings = null
+	if graphics != null:
+		kept_in = graphics.settings
+	return SettingChoice.new(kept_in, PAUSE_SETTING, PAUSE_CHOICES.size(), AUTO_PAUSE)
 
 
 ## The Quests tab, found under the sheet rather than kept in a field of its own.

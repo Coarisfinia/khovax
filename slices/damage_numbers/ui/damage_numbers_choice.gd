@@ -25,59 +25,58 @@ func _init(settings_owner: Graphics) -> void:
 
 ## Whether the damage numbers show: the player's choice, or Auto's.
 func shown() -> bool:
-	return _pick(SHOWN_SETTING, SHOWN_CHOICES.size(), AUTO_SHOWN) == 1
+	return _shown().value() == 1
 
 
 ## How large the damage numbers' text is, as a share of its usual size.
 func size_share() -> float:
-	return SIZES[_pick(SIZE_SETTING, SIZES.size(), AUTO_SIZE)] / 100.0
+	return SIZES[_size().value()] / 100.0
 
 
 ## Whether they show, as the Settings tab says it: "Off", or "Auto (On)" while Auto picks it.
 func shown_label() -> String:
-	var words: String = SHOWN_CHOICES[_pick(SHOWN_SETTING, SHOWN_CHOICES.size(), AUTO_SHOWN)]
-	return _labelled(SHOWN_SETTING, SHOWN_CHOICES.size(), words)
+	var choice: SettingChoice = _shown()
+	return choice.label(SHOWN_CHOICES[choice.value()])
 
 
 ## Their text size as the Settings tab says it: "150%", or "Auto (100%)" while Auto picks it.
 func size_label() -> String:
-	var percent: int = SIZES[_pick(SIZE_SETTING, SIZES.size(), AUTO_SIZE)]
-	return _labelled(SIZE_SETTING, SIZES.size(), "%d%%" % percent)
+	var choice: SettingChoice = _size()
+	return choice.label("%d%%" % SIZES[choice.value()])
 
 
 ## Turns the damage numbers on or off, `steps` choices on, round after the last, and keeps it;
 ## returns why it couldn't be saved, or "".
 func step_shown(steps: int) -> String:
-	var at: int = _pick(SHOWN_SETTING, SHOWN_CHOICES.size(), AUTO_SHOWN)
-	return _choose(SHOWN_SETTING, posmod(at + steps, SHOWN_CHOICES.size()))
+	_shown().step(steps)
+	return _keep()
 
 
 ## Steps the text size `steps` larger (fewer is smaller), within the sizes there are, and keeps it;
 ## returns why it couldn't be saved, or "".
 func step_size(steps: int) -> String:
-	var at: int = _pick(SIZE_SETTING, SIZES.size(), AUTO_SIZE)
-	return _choose(SIZE_SETTING, clampi(at + steps, 0, SIZES.size() - 1))
+	_size().step_within(steps)
+	return _keep()
 
 
-## The player's choice for `setting`, one of `count` values, or `auto` when there's none: a saved
-## value outside them counts as Auto.
-func _pick(setting: String, count: int, auto: int) -> int:
-	var chosen: int = -1
-	if graphics != null:
-		chosen = graphics.settings.chosen.get(setting, -1)
-	return chosen if chosen >= 0 and chosen < count else auto
+## Whether they show, an index into SHOWN_CHOICES; Auto while there's no Graphics to keep it.
+func _shown() -> SettingChoice:
+	return SettingChoice.new(_settings(), SHOWN_SETTING, SHOWN_CHOICES.size(), AUTO_SHOWN)
 
 
-## `words`, or "Auto (`words`)" while Auto picks `setting`, one of `count` values.
-func _labelled(setting: String, count: int, words: String) -> String:
-	if _pick(setting, count, -1) >= 0:
-		return words
-	return "Auto (%s)" % words
+## Their text size, an index into SIZES; Auto while there's no Graphics to keep it.
+func _size() -> SettingChoice:
+	return SettingChoice.new(_settings(), SIZE_SETTING, SIZES.size(), AUTO_SIZE)
 
 
-## Keeps `value` for `setting` in the player's Settings; returns why it couldn't be saved, or "".
-func _choose(setting: String, value: int) -> String:
-	if graphics != null:
-		graphics.settings.chosen[setting] = value
-		return graphics.settings.save(graphics.settings_path)
-	return ""
+func _settings() -> Settings:
+	if graphics == null:
+		return null
+	return graphics.settings
+
+
+## Keeps the player's choices; returns why they couldn't be saved, or "".
+func _keep() -> String:
+	if graphics == null:
+		return ""
+	return graphics.save_settings()
