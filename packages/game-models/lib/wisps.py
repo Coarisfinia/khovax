@@ -10,7 +10,7 @@ automatic weights (weights.bind's `rigid_bones`)."""
 import math
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 from . import legs, motion, scene
 
@@ -29,8 +29,8 @@ PERIOD = 2.0
 TOP_SPEED = 0.09
 # How far the frontmost wisp's wave runs ahead of the rearmost one's, as a share of a wave.
 FLOW = 0.5
-# How many frames a ring that rides with a bone takes to settle onto the bone's point where its
-# clip meets another clip's ring, so the two meet without a jump.
+# How many frames a ring that rides with a bone takes to settle upright where its clip meets
+# another clip's ring, so the two meet without a jump.
 SETTLE = 6
 
 
@@ -42,16 +42,20 @@ class Gather:
     A clip that plays on from another one's ring (a long attack's loop and its release, #1158)
     starts on it (`arrive` None), and one that hands on to another one's ring stays on it
     (`leave` None); the ring turns on from where the clip before left it (`turn`). With `bone`
-    (the head), the ring rides with that bone, `center` being where it sits at rest: it trails the
-    bone's moves through a spring (`lag`: frequency in Hz and damping, motion.spring), so it sways
-    with the head, softly, rather than hanging fixed or stuck to it. Where a clip meets another
-    one's ring, the ring has settled onto the bone's point (SETTLE), so the clips meet there."""
+    (the head), the ring rides with that bone, `center` being where it sits at rest, level: it
+    turns and tilts with the bone, so it can hug it, and leans like a loose hoop as the bone moves.
+    The lean comes from how far a spring (`lag`: frequency in Hz and damping, motion.spring) would
+    trail the bone's point: the side the ring trails toward lifts, up to `lean` (radians, reached
+    softly; `lever`, metres, is the trail that leans it about three quarters of the way), and the
+    underdamped spring swings it back past upright, so it sways with the head rather than sitting
+    stuck to it. Where a clip meets another one's ring the lean has settled (SETTLE), so the clips
+    meet there."""
 
     def __init__(self, clip, start, arrive, leave, end, center, radius, spin=0.0, stagger=0, turn=0.0, bone=None,
-                 lag=(2.5, 0.5)):
+                 lag=(1.5, 0.3), lean=math.radians(12.0), lever=0.02):
         self.clip, self.start, self.arrive, self.leave, self.end = clip, start, arrive, leave, end
         self.center, self.radius, self.spin, self.stagger = Vector(center), radius, spin, stagger
-        self.turn, self.bone, self.lag = turn, bone, lag
+        self.turn, self.bone, self.lag, self.lean, self.lever = turn, bone, lag, lean, lever
 
     def share(self, frame, late):
         """How far (0..1) a wisp `late` frames behind the first is from its spot to the ring."""
@@ -61,30 +65,40 @@ class Gather:
             return 1.0
         return legs.ease((frame - self.start - late) / (self.arrive - self.start - late))
 
-    def centers(self, shape, poses, loop):
-        """The ring's centre on every frame of `poses` (unscaled metres): fixed, or trailing its
-        bone's moves on `shape` (motion.Rig of the unscaled rig)."""
+    def rings(self, shape, poses, loop):
+        """The ring's centre (unscaled metres) and its turn (a 3x3 Matrix from level) on every
+        frame of `poses`: fixed and level, or riding its bone on `shape` (motion.Rig of the
+        unscaled rig) and leaning as it moves."""
         if self.bone is None:
-            return [self.center for _pose in poses]
+            return [(self.center, Matrix.Identity(3)) for _pose in poses]
         rest = shape.matrix[self.bone].inverted()
-        moved = [legs.posed(shape, pose, self.bone, 1.0, {}) @ rest @ self.center for _frame, pose in poses]
+        carried = [legs.posed(shape, pose, self.bone, 1.0, {}) @ rest for _frame, pose in poses]
+        moved = [carry @ self.center for carry in carried]
         lagged = motion.spring(moved, *self.lag, 0.0, bpy.context.scene.render.fps, loop)
         first, last = poses[0][0], poses[-1][0]
         out = []
-        for (frame, _pose), target, trailing in zip(poses, moved, lagged):
-            # Settled onto the bone's point where the ring meets another clip's: a start that
-            # plays on from one, an end that hands on to one, and both sides of a loop's seam.
+        for (frame, _pose), carry, target, trailing in zip(poses, carried, moved, lagged):
+            # Upright where the ring meets another clip's: a start that plays on from one, an end
+            # that hands on to one, and both sides of a loop's seam.
             hold = 1.0
             if self.arrive is None:
                 hold = min(hold, legs.ease((frame - first) / SETTLE))
             if self.leave is None:
                 hold = min(hold, legs.ease((last - frame) / SETTLE))
-            out.append(target + (trailing - target) * hold)
+            turn = carry.to_3x3().normalized()
+            up = turn @ Vector((0.0, 0.0, 1.0))
+            trail = (trailing - target) * hold
+            trail -= up * trail.dot(up)
+            if trail.length > 1e-9:
+                tip = self.lean * math.tanh(trail.length / self.lever)
+                turn = Matrix.Rotation(tip, 3, trail.cross(up).normalized()) @ turn
+            out.append((target, turn))
         return out
 
-    def spot(self, index, count, frame, center):
+    def spot(self, index, count, frame, ring):
+        center, turn = ring
         angle = 2.0 * math.pi * index / count + self.turn + self.spin * (frame - self.start)
-        return center + Vector((math.sin(angle), -math.cos(angle), 0.0)) * self.radius
+        return center + turn @ Vector((math.sin(angle), -math.cos(angle), 0.0)) * self.radius
 
 
 class Wisps:
@@ -126,8 +140,8 @@ class Wisps:
         swing = 2.0 * math.pi * waves / seconds * math.hypot(BOB, SWAY)
         share = min(1.0, TOP_SPEED / swing)
         gather = self.gathers.get(name)
-        centers = gather.centers(self.shape, poses, loop) if gather is not None else [None] * len(poses)
-        for (frame, pose), center in zip(poses, centers):
+        rings = gather.rings(self.shape, poses, loop) if gather is not None else [None] * len(poses)
+        for (frame, pose), held in zip(poses, rings):
             t = 2.0 * math.pi * waves * (frame - poses[0][0]) / span
             for index, (bone, rank) in enumerate(zip(self.names, self.rank)):
                 phase = -2.0 * math.pi * FLOW * rank
@@ -135,7 +149,7 @@ class Wisps:
                 hover = Vector((share * SWAY * (math.cos(t + phase) - math.cos(phase)),
                                 share * BOB * (math.sin(t + phase) - math.sin(phase)), 0.0))
                 if gather is not None:
-                    ring = gather.spot(index, len(self.names), frame, center) - self.spots[index]
+                    ring = gather.spot(index, len(self.names), frame, held) - self.spots[index]
                     toward = Vector((ring.x, ring.z, -ring.y)) - hover
                     hover = hover + toward * gather.share(frame, round(gather.stagger * rank))
                 pose[LOC + bone] = tuple(hover)

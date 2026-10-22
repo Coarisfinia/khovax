@@ -87,10 +87,11 @@ RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
 # The wisps hovering around the body on their own (lib/wisps.py, #1103), and the ring they gather
 # into as it lunges (Attack: crouch to frame 8, lunge by 13, bite at 16, back by 24), turning
-# slowly: close around the brow crystal, swaying with the head, softly (#1164).
+# slowly: a crown around the head just above the skull, outside the ears and around the brow
+# crystal, which tilts with the head and leans as it sways, softly (#1164).
 WISPS = [(0.38, 0.15, 1.45), (-0.34, -0.12, 1.52), (0.0, 0.95, 1.38), (0.3, -0.62, 1.72), (-0.3, 0.62, 1.32),
          (0.0, 1.78, 0.86)]
-CROWN_CENTER, CROWN_RADIUS, CROWN_BONE = (0.0, -0.82, 1.82), 0.14, "head"
+CROWN_CENTER, CROWN_RADIUS, CROWN_BONE = (0.0, -0.82, 1.68), 0.24, "head"
 CROWN = wisps.Gather("Attack", 1, 11, 16, 24, CROWN_CENTER, CROWN_RADIUS, spin=0.06, stagger=2, bone=CROWN_BONE)
 # The long attack (#1158) holds the crown: they gather as it rears back (ChannelStart), the ring
 # turning once a loop (Channel, 2 s) for as long as it lasts, and leave it as the jaw snaps shut

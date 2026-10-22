@@ -207,7 +207,10 @@ a second model could use goes into the library or a generic tool, never into one
    Attack; it lists the eyes and centres of attack. CI checks the same for every model a view
    uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
    plays a new clip adds it there.
-5. **In game:** with `packages/game/tools/models/render_in_game.gd`, run off the desktop through
+5. **In game:** first re-import after every build (`godot --headless --path packages/game
+   --import`): Godot renders its imported copy of the `.glb`, and a stale one shows the previous
+   build, however much the Blender checks say changed (#1164). Then, with
+   `packages/game/tools/models/render_in_game.gd`, run off the desktop through
    `packages/game-offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
