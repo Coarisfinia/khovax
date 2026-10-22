@@ -15,15 +15,16 @@ extends Control
 ## the card and lets the player walk; walking away or acting then closes the dialog in the state too
 ## (DialogFeature). One that holds them shows no leave button, and Escape opens the menu as ever.
 ## Its text tags show the names they stand for (#733), and the names that have a codex page can be
-## selected in its line (NameLinks, #959), which raises `name_selected`: a click, a long press on
-## touch, or a controller's d-pad up from the buttons to the line, left and right to the name and A.
-## The focused button and the leave button show the key or controller button that presses them,
-## for the device in use (#583, ActionGlyph).
+## selected in its line and the speaker's name (NameLinks, #959, #1005), which raises
+## `name_selected`: a click, a long press on touch, or a controller's d-pad up from the buttons to
+## the line (and on up to the speaker), left and right to the name and A. The focused button and the
+## leave button show the key or controller button that presses them, for the device in use (#583,
+## ActionGlyph).
 ## It eases in and out, never snaps, and its text grows with the screen. Its layout lives in
 ## dialog_screen.tscn (#437).
 
-## A name in the line was selected (NameLinks): the kind of its tag and its id, whose codex page
-## opens.
+## A name in the line or the speaker's was selected (NameLinks): the kind of its tag and its id,
+## whose codex page opens.
 signal name_selected(kind: String, id: String)
 
 ## The read-on button's words: on to the next line, or the end of the dialog.
@@ -59,7 +60,7 @@ var _fade: Tween
 var _font_size: int = 0
 
 @onready var _card: PanelContainer = $Card
-@onready var _speaker: Label = $Card/Rows/Header/Speaker
+@onready var _speaker: NameLinks = $Card/Rows/Header/Speaker
 @onready var _leave: Button = $Card/Rows/Header/Leave
 @onready var _line: NameLinks = $Card/Rows/Line
 @onready var _choices: VBoxContainer = $Card/Rows/Choices
@@ -74,6 +75,7 @@ func _ready() -> void:
 	var _glyph: ActionGlyph = ActionGlyph.badge(_leave, &"ui_cancel")
 	var _left: int = _leave.pressed.connect(leave)
 	var _selected: int = _line.name_selected.connect(name_selected.emit)
+	var _named: int = _speaker.name_selected.connect(name_selected.emit)
 	if driver != null:
 		var _connected: int = driver.ticked.connect(_on_ticked)
 
@@ -187,7 +189,7 @@ func choices() -> Array[String]:
 
 ## The text of the speaker's name and of the line on the card now.
 func shown_speaker() -> String:
-	return _speaker.text
+	return _speaker.get_parsed_text()
 
 
 func shown_line() -> String:
@@ -206,7 +208,8 @@ func lay_out(screen: Vector2) -> void:
 	if font != _font_size:
 		_font_size = font
 		theme.default_font_size = font
-		_speaker.add_theme_font_size_override("font_size", roundi(font * SPEAKER_SCALE))
+		for sized: String in ["normal_font_size", "bold_font_size"]:
+			_speaker.add_theme_font_size_override(sized, roundi(font * SPEAKER_SCALE))
 		_size_buttons()
 	var width: float = minf(font * WIDTH_FONTS, screen.x - 2.0 * MARGIN)
 	_card.custom_minimum_size.x = width
@@ -218,7 +221,7 @@ func lay_out(screen: Vector2) -> void:
 func _show_line(index: int) -> void:
 	line_index = index
 	var line: DialogLine = dialog.lines[index]
-	_speaker.text = TextTags.shown(dialog.speaker)
+	_speaker.show_tagged(TextTags.tag(TextTags.PERSON, dialog.speaker))
 	_line.show_tagged(line.text)
 	# The old buttons leave at once, so the card never shows both lines' buttons.
 	for old: Button in _buttons():
@@ -288,8 +291,8 @@ func _ease(opening: bool) -> void:
 
 
 ## While the menu is open over the dialog its buttons rest, so A or Enter in the menu can't answer
-## behind it; once it closes, the first button takes the focus back if neither they nor the line
-## have it.
+## behind it; once it closes, the first button takes the focus back if neither they, the line nor
+## the speaker's name have it.
 func _follow_menu() -> void:
 	if dialog == null or input == null:
 		return
@@ -299,7 +302,8 @@ func _follow_menu() -> void:
 	_leave.visible = not _holds()
 	_leave.disabled = input.blocked
 	var focused: Control = get_viewport().gui_get_focus_owner()
-	var on_card: bool = focused == _line or (focused is Button and live.has(focused as Button))
+	var on_names: bool = focused == _line or focused == _speaker
+	var on_card: bool = on_names or (focused is Button and live.has(focused as Button))
 	if not input.blocked and not live.is_empty() and not on_card:
 		live[0].grab_focus()
 

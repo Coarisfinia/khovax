@@ -1,9 +1,9 @@
 class_name Dialog
 extends RefCounted
 ## A dialog (#618), read from content data (the dialogs slice's data/, #72, #412): who speaks it,
-## and the lines they say, read in the file's order. A line can offer the player answers, each of
-## which ends the dialog or leads to the line it names. Only people speak: monsters never talk
-## (the owner's worldbuilding rules).
+## a person named by their id (#1005), and the lines they say, read in the file's order. A line can
+## offer the player answers, each of which ends the dialog or leads to the line it names. Only
+## people speak: monsters never talk (the owner's worldbuilding rules).
 
 ## Its schema, which says the fields a dialog file, its lines and their answers may have
 ## (SchemaFields, #825).
@@ -13,7 +13,7 @@ const SCHEMA: String = "res://slices/dialogs/data/dialogs.schema.json"
 const MOST_LOCKING_PER_REGION: int = 1
 
 var id: String = ""
-## The player-facing name of who says the lines.
+## The id of the person who says the lines (#1005; PeopleContent holds their name).
 var speaker: String = ""
 ## Whether the dialog holds its player until they finish it (#891): rare story beats only.
 var lock: bool = false
@@ -77,8 +77,8 @@ func _check(file_id: String, raw_lines: Variant) -> String:
 	var wrong_id: String = Content.id_problem(id, file_id)
 	if not wrong_id.is_empty():
 		return wrong_id
-	if speaker.strip_edges().is_empty():
-		return "it needs a speaker"
+	if not Content.is_id(speaker):
+		return "it needs a speaker, a person's id"
 	var entries: Array = raw_lines if raw_lines is Array else []
 	if entries.is_empty():
 		return "it needs a list of one or more lines"

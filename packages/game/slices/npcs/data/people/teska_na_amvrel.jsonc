@@ -1,0 +1,10 @@
+// Teska na Amvrel (#977), a scout of the Amvrel Velmarai (#484, #976), who stands east of Lumwen
+// Hoal's start (#557) and speaks its greeting (#618).
+{
+	"id": "teska_na_amvrel",
+	"name": "Teska na Amvrel",
+	"codex": {
+		"entry": "A scout of the Amvrel Velmarai who walks the uncharted wilds ahead of their charts and greets the newcomers at the edge of Lumwen Hoal. The name is Hearth-speech, the everyday tongue: the given name Teska, then na Amvrel, sworn to the guild by its oath word.",
+		"gloss": "Teska, sworn to the guild"
+	}
+}

@@ -2,7 +2,8 @@ class_name DialogContent
 extends Content
 ## The dialogs' content data (#618), which the dialogs slice owns (#412): one JSONC file per dialog
 ## directly in its data/ (its own kind, so no folder repeats the slice's name, #442), checked
-## against dialogs.schema.json beside them in CI. Everything else reads the dialogs through this.
+## against dialogs.schema.json beside them in CI, each spoken by a person the npcs slice's people
+## have (PeopleContent, #1005). Everything else reads the dialogs through this.
 
 const DIR: String = "res://slices/dialogs/data/"
 
@@ -20,12 +21,17 @@ var line_counts: Dictionary[String, int] = {}
 var locking: Dictionary[String, bool] = {}
 ## Whether each answer commits, by its code (#912).
 var committing: Dictionary[int, bool] = {}
+## The people the dialogs' speakers must be.
+var _people: PeopleContent = null
 
 
 ## Every dialog file in `directory`, read and checked.
 static func load_dialogs(directory: String = DIR) -> DialogContent:
 	var content: DialogContent = DialogContent.new()
-	content.read(directory)
+	content._people = PeopleContent.cached()
+	content.problem = content._people.problem
+	if content.problem.is_empty():
+		content.read(directory)
 	return content
 
 
@@ -36,6 +42,10 @@ static func cached() -> DialogContent:
 
 func add(file_id: String, text: String) -> String:
 	var dialog: Dialog = Dialog.parse(file_id, text)
+	if _people == null:
+		_people = PeopleContent.cached()
+	if dialog.problem.is_empty() and not _people.people.has(dialog.speaker):
+		dialog.problem = "its speaker %s is no person (#1005)" % dialog.speaker
 	if dialog.problem.is_empty():
 		dialog.problem = _code_answers(dialog)
 	if dialog.problem.is_empty():

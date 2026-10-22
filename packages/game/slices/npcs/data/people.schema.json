@@ -1,0 +1,27 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/npcs/data/people.schema.json",
+	"title": "Person",
+	"description": "A person (#1005), a humanoid who never fights (owner's worldbuilding rules): their player-facing name and their codex entry. Region legends place them by id (NpcSpot), and dialogs name their speaker by it, so a person's name and entry live once, however many dialogs they speak. One file per person, named after its id; quests and saves name a person by it, so an id is never reused.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "name", "codex"],
+	"properties": {
+		"id": {
+			"description": "Their name in lower case, spaces made underscores (#909), e.g. teska_na_amvrel; never reused.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": { "description": "The player-facing name.", "type": "string", "pattern": "\\S" },
+		"codex": {
+			"description": "Their codex entry (#959): what the player reads on their codex page.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["entry", "gloss"],
+			"properties": {
+				"entry": { "description": "A short text about them and where their name comes from.", "type": "string", "pattern": "\\S" },
+				"gloss": { "description": "What their name means, hand-written (#959), e.g. \"Teska, sworn to the guild\".", "type": "string", "pattern": "\\S" }
+			}
+		}
+	}
+}

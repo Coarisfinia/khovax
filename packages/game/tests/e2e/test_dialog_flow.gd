@@ -8,9 +8,9 @@ extends RefCounted
 ## it moves on or closes once the answer reaches it, also for an answer that came only through the
 ## commands, as in a replay, even from a line before the one that offers it. While the menu is open
 ## over a dialog, its buttons rest. A faction's name in a line opens its lexicon page (#959), with a
-## controller, a click or a long press on touch, never a tap, and a species' name its bestiary page
-## (#1173). A dialog that doesn't exist doesn't
-## open. In the glade, Teska
+## controller, a click or a long press on touch, never a tap, a species' name its bestiary page
+## (#1173), and the speaker's name their page (#1005). A dialog that doesn't exist doesn't open. In
+## the glade, Teska
 ## na Amvrel, the guild's scout, stands east of the start (#557): walking into them talks to them,
 ## raised as
 ## NpcTalkedTo, which opens their greeting in the state, saved with the world: a world resumed with
@@ -144,8 +144,48 @@ static func _codex_by_controller(
 		return "B didn't close the page back to the dialog's line"
 	if screen.get_viewport().gui_get_focus_owner() != line:
 		return "the focus didn't go back to the line"
+	var speaker: String = _speaker_by_controller(page, driver, screen)
+	if not speaker.is_empty():
+		return speaker
 	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	return "" if _focused(screen) == 0 else "the d-pad down from the line didn't reach the answers"
+
+
+## The speaker's name links to their page (#1005): the d-pad up from the line reaches it, and A
+## opens Teska na Amvrel's page: their name, what it means and their entry, with no standing. B
+## closes it back to the speaker's name, and the d-pad down goes back to the line.
+static func _speaker_by_controller(
+	page: CodexPage,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	var speaker: NameLinks = screen.get_node("Card/Rows/Header/Speaker") as NameLinks
+	if speaker.links != ["PERSON:teska_na_amvrel"]:
+		return "the speaker's name links %s" % [speaker.links]
+	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	if screen.get_viewport().gui_get_focus_owner() != speaker:
+		return "the d-pad up from the line didn't reach the speaker's name"
+	_press_pad(screen, JOY_BUTTON_A)
+	var gloss: String = page.gloss.get_parsed_text()
+	if (not page.is_open()
+			or not driver.input.blocked
+			or page.heading.text != CodexPage.PEOPLE_TEXT
+			or page.title.text != "Teska na Amvrel"
+			or gloss != "Teska na Amvrel: Teska, sworn to the guild"
+			or not page.entry.text.begins_with("A scout of the Amvrel Velmarai")
+			or page.standing.visible):
+		return "A on the speaker's name showed %s, %s, %s" % [
+			page.heading.text,
+			page.title.text,
+			gloss,
+		]
+	_press_pad(screen, JOY_BUTTON_B)
+	if page.is_open() or screen.get_viewport().gui_get_focus_owner() != speaker:
+		return "B didn't close the speaker's page back to their name"
+	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	if screen.get_viewport().gui_get_focus_owner() != screen.get_node("Card/Rows/Line"):
+		return "the d-pad down from the speaker's name didn't reach the line"
+	return ""
 
 
 ## A click on the name opens the page too, and Escape closes it. On a touch screen a tap on the
@@ -195,7 +235,8 @@ static func _page_problem(page: CodexPage, driver: GameDriver) -> String:
 			or page.title.text != "Amvrel Velmarai"
 			or gloss != "Amvrel Velmarai: the guild of those who chart"
 			or not page.entry.text.begins_with("A guild of mapmakers")
-			or page.standing.text != CodexPage.NEUTRAL_TEXT):
+			or page.standing.text != CodexPage.NEUTRAL_TEXT
+			or not page.standing.visible):
 		return "the page showed %s, %s, %s" % [page.title.text, gloss, page.standing.text]
 	return ""
 

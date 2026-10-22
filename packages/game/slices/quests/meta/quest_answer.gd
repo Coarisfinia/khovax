@@ -7,7 +7,7 @@ extends RefCounted
 var dialog: String = ""
 ## The answer's id within that dialog.
 var id: String = ""
-## Who speaks the dialog and what the answer says, as the player reads them, or "" (QuestContent
+## The id of the person who speaks the dialog (#1005) and what the answer says, or "" (QuestContent
 ## fills them in from the dialogs).
 var speaker: String = ""
 var text: String = ""

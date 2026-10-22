@@ -10,9 +10,11 @@ extends RefCounted
 ## their quest and ends close its own chain (#573), every path reaches an end (#576), and broken
 ## ones are refused; a quest can move the standing with a faction (#532). Factions (#483) load with
 ## their own names for the ranks of a standing, their symbols and the instances they hold (#637),
-## and broken ones are refused. Quests and abilities carry path marks (#471). Dialogs (#618) load
-## and read on line by line and answer by answer, state whether they lock and which answers commit
-## (#891), and broken ones are refused; a region placing more people with locking dialogs than
+## and broken ones are refused. Quests and abilities carry path marks (#471). People (#1005) load
+## with their names and codex entries, and every person a legend places is one, speaking the dialog
+## it opens; broken ones are refused. Dialogs (#618) load, spoken by a person, and read on line by
+## line and answer by answer, state whether they lock and which answers commit (#891), and broken
+## ones are refused; a region placing more people with locking dialogs than
 ## Dialog.MOST_LOCKING_PER_REGION is warned about in CI, without failing. Every text tag (#733) in a
 ## dialog, a quest's name or an ability's description names content that exists, shows its current
 ## name, and broken tags are refused; tags whose content can't be read are warned about (#949). No
@@ -117,6 +119,7 @@ func run(tree: SceneTree) -> String:
 		_check_tiles,
 		_check_quests,
 		_check_factions,
+		_check_people,
 		_check_dialogs,
 		_check_dialogs_refused,
 		_warn_locking_dialogs,
@@ -1111,17 +1114,8 @@ func _check_faction_territory(content: FactionContent) -> String:
 ## Why the factions in two faction files, x from `text_x` and y from `text_y` with its id made y,
 ## are refused together, or "".
 func _pair_problem(text_x: String, text_y: String) -> String:
-	var directory: String = "user://test_factions/"
-	var _made: Error = DirAccess.make_dir_recursive_absolute(directory)
 	var texts: Dictionary[String, String] = { "x": text_x, "y": text_y.replace("\"x\"", "\"y\"") }
-	for id: String in texts:
-		var file: FileAccess = FileAccess.open(directory + id + ".jsonc", FileAccess.WRITE)
-		var _stored: bool = file.store_string(texts[id])
-		file.close()
-	var problem: String = FactionContent.load_factions(directory).problem
-	for id: String in texts:
-		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
-	return problem
+	return FlowSteps.written_content(FactionContent.load_factions, texts).problem
 
 
 ## The dialogs load (#618): Teska na Amvrel's greeting reads on from its first line to its second,
@@ -1141,7 +1135,7 @@ func _check_dialogs() -> String:
 		greeting.after(1, "no_such_answer"),
 		greeting.after(0, "ask_about_lumwen_hoal"),
 	]
-	if greeting.speaker != "Teska na Amvrel" or walked != [1, 2, -1, -1, -1, -1]:
+	if greeting.speaker != "teska_na_amvrel" or walked != [1, 2, -1, -1, -1, -1]:
 		return "Teska na Amvrel's greeting reads %s, by %s" % [walked, greeting.speaker]
 	var commits: Array[bool] = []
 	for answer_id: String in ["ask_about_lumwen_hoal", "leave_scout", "promise_to_look"]:
@@ -1157,13 +1151,10 @@ func _check_dialogs() -> String:
 func _warn_locking_dialogs() -> String:
 	var dialogs: Dictionary[String, Dialog] = DialogContent.load_dialogs().dialogs
 	for instance_name: String in InstanceBlueprints.names():
-		var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
-		var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
 		var locking: int = 0
-		if people != null:
-			for spot: NpcSpot in people.spots.values():
-				var dialog: Dialog = dialogs.get(spot.dialog)
-				locking += 1 if dialog != null and dialog.lock else 0
+		for spot: NpcSpot in _placed_spots(instance_name):
+			var dialog: Dialog = dialogs.get(spot.dialog)
+			locking += 1 if dialog != null and dialog.lock else 0
 		if locking > Dialog.MOST_LOCKING_PER_REGION:
 			# A CI warning annotation on stdout, which GitHub shows without failing the run.
 			# gdstyle:ignore=quality/no-debug-print
@@ -1173,19 +1164,21 @@ func _warn_locking_dialogs() -> String:
 	return ""
 
 
-## Dialog files with a wrong id, no speaker or lines, a line without text, an answer without an id,
+## Dialog files with a wrong id, no speaker or one that's no person's id (#1005), no lines, a line
+## without text, an answer without an id,
 ## two lines or answers sharing an id, or an answer leading to no line are refused (#618), and so
 ## are one that doesn't state whether it locks, or an answer whose commits isn't true or false
 ## (#891), and one that holds its player (it locks, or a committing answer leads on) up to a last
 ## line without answers, which would hold them forever (#1014), and one with a line nothing leads
 ## to from its first (#1029).
 func _check_dialogs_refused() -> String:
-	var dialog: String = "{\"id\": \"x\", \"speaker\": \"S\", \"lock\": false, \"lines\": [%s]}"
+	var dialog: String = "{\"id\": \"x\", \"speaker\": \"s\", \"lock\": false, \"lines\": [%s]}"
 	var line: String = "{\"id\": \"a\", \"text\": \"T\", \"answers\": [%s]}"
 	var answer: String = "{\"id\": \"%s\", \"text\": \"T\", \"next\": \"%s\"}"
 	var cases: Dictionary[String, String] = {
 		dialog.replace("\"x\"", "\"y\"") % "{\"text\": \"T\"}": "its id must",
-		dialog.replace("\"S\"", "\" \"") % "{\"text\": \"T\"}": "it needs a speaker",
+		dialog.replace("\"s\"", "\" \"") % "{\"text\": \"T\"}": "it needs a speaker",
+		dialog.replace("\"s\"", "\"Teska na Amvrel\"") % "{\"text\": \"T\"}": "it needs a speaker",
 		dialog % "": "it needs a list",
 		dialog % "{\"text\": \" \"}": "line 0: a line needs a text",
 		dialog % "{\"text\": \"T\", \"answers\": []}": "line 0: a line's answers",
@@ -1217,7 +1210,72 @@ func _check_dialogs_refused() -> String:
 		var refusal: String = Dialog.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken dialog gave %s, not %s" % [refusal, cases[text]]
+	var nobody: String = FlowSteps.written_content(
+		DialogContent.load_dialogs,
+		{ "x": dialog % "{\"text\": \"T\"}" },
+	).problem
+	if not nobody.contains("its speaker s is no person"):
+		return "a dialog spoken by no person gave %s" % nobody
 	return ""
+
+
+## The people load (#1005): Teska na Amvrel with their name and codex entry, and every person a
+## region's legend places is one, and speaks the dialog talking to them opens. A person file with a
+## wrong id, no name, an unknown field, or without a codex entry and gloss is refused.
+func _check_people() -> String:
+	var content: PeopleContent = PeopleContent.load_people()
+	var scout: Person = content.people.get("teska_na_amvrel")
+	if not content.problem.is_empty() or scout == null or scout.name != "Teska na Amvrel":
+		return "the people didn't load: " + content.problem
+	if scout.codex_gloss != "Teska, sworn to the guild" or not scout.codex_entry.begins_with("A "):
+		return "Teska na Amvrel's codex entry reads %s" % scout.codex_gloss
+	var placed: String = _placed_people_problem(content)
+	if not placed.is_empty():
+		return placed
+	var person: String = (
+		"{\"id\": \"x\", \"name\": \"X\", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}}"
+	)
+	var cases: Dictionary[String, String] = {
+		person.replace("\"x\"", "\"y\""): "its id must",
+		person.replace("\"X\"", "\" \""): "it needs a name",
+		person.replace("\"codex\"", "\"z\""): "field z",
+		person.replace("\"e\"", "\" \""): "it needs a codex entry",
+		person.replace(", \"gloss\": \"g\"", ""): "it needs a codex entry",
+		"[]": Content.NOT_AN_OBJECT,
+	}
+	for text: String in cases:
+		var refusal: String = Person.parse("x", text).problem
+		if not refusal.begins_with(cases[text]):
+			return "a broken person gave %s, not %s" % [refusal, cases[text]]
+	return ""
+
+
+## Why a person a region's legend places isn't one of `content`'s people, or doesn't speak the
+## dialog talking to them opens, or "".
+func _placed_people_problem(content: PeopleContent) -> String:
+	var dialogs: Dictionary[String, Dialog] = DialogContent.load_dialogs().dialogs
+	for instance_name: String in InstanceBlueprints.names():
+		for spot: NpcSpot in _placed_spots(instance_name):
+			if not content.people.has(spot.id):
+				return "%s places %s, who is no person (#1005)" % [instance_name, spot.id]
+			var said: Dialog = dialogs.get(spot.dialog)
+			if not spot.dialog.is_empty() and (said == null or said.speaker != spot.id):
+				return "%s's %s opens %s, which they don't speak" % [
+					instance_name,
+					spot.id,
+					spot.dialog,
+				]
+	return ""
+
+
+## The people a new instance of `instance_name` places, as its legend says.
+static func _placed_spots(instance_name: String) -> Array[NpcSpot]:
+	var state: GameState = InstanceBlueprints.create(instance_name, 0, 0)
+	var people: NpcFeature = state.feature(NpcFeature.ID) as NpcFeature
+	var spots: Array[NpcSpot] = []
+	if people != null:
+		spots.assign(people.spots.values())
+	return spots
 
 
 ## Command codes (#818): no id's code is CommandCodes.NONE, and filing one refuses NONE and a code
@@ -1237,7 +1295,7 @@ func _check_command_codes() -> String:
 	return ""
 
 
-## Every text tag (#733) in the texts that show them (a dialog's speaker, lines and answers, a
+## Every text tag (#733) in the texts that show them (a dialog's lines and answers, a
 ## quest's name, an ability's name and description, a faction's name and ranks, a piece of gear's
 ## name, #752) names content that exists, and shows its current name;
 ## a tag of an unknown kind, with an id that doesn't exist, or written wrong is refused.
@@ -1247,7 +1305,6 @@ func _check_text_tags() -> String:
 		return "the text tags' names didn't load: " + tags.problem
 	var texts: Array[String] = []
 	for dialog: Dialog in DialogContent.load_dialogs().dialogs.values():
-		texts.append(dialog.speaker)
 		for line: DialogLine in dialog.lines:
 			texts.append(line.text)
 			for answer: DialogAnswer in line.answers:
@@ -1268,9 +1325,11 @@ func _check_text_tags() -> String:
 	var ahead: String = greeting.lines[2].text
 	if not TextTags.shown(ahead).begins_with("Lumwen Hoal, thick with Ombulumo. Something"):
 		return "the scout's Lumwen Hoal line shows %s" % TextTags.shown(ahead)
-	var shown: String = tags.resolve("${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}")
-	if shown != "Amvrel Velmarai sells Berry pouch":
-		return "faction and gear tags show %s" % shown
+	var shown: String = tags.resolve(
+		"${PERSON:teska_na_amvrel} of the ${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}",
+	)
+	if shown != "Teska na Amvrel of the Amvrel Velmarai sells Berry pouch":
+		return "person, faction and gear tags show %s" % shown
 	var fang: GearItem = GearItem.new()
 	fang.name = "${MONSTER:ombulumo} fang"
 	fang.rarity = "loose"
