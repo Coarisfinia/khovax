@@ -140,7 +140,8 @@ a second model could use goes into the library or a generic tool, never into one
    Attack; it lists the eyes and centres of attack. CI checks the same for every model a view
    uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
    plays a new clip adds it there.
-5. **In game:** with `tools/models/render_in_game.gd` and AGENTS.md's hidden-window recipe, put
+5. **In game:** with `tools/models/render_in_game.gd`, run off the desktop through
+   `tools/godot/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and

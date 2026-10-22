@@ -190,20 +190,14 @@ background; only wait in the foreground for a result the very next step needs.
 - **Batch your changes** into one push.
 - **Every pull request that changes what the player sees shows it** in its description as a
   screenshot. Headless runs have no renderer, so render it locally with a throwaway `-s` script
-  that never shows a window (owner's rule: the owner works on the same PC, and off-screen
-  positions get clamped onto a second monitor). Godot opens its window before any script runs,
-  so the window must start as nothing: a temporary `override.cfg` in the worktree's root makes it
-  one borderless pixel that never takes focus (`[display]` with `window/size/viewport_width=1`,
-  `window/size/viewport_height=1`, `window/size/borderless=true`, `window/size/no_focus=true`,
-  `window/size/resizable=false`), deleted right after the run and never committed (starting it
-  minimized instead renders nothing). Parse-check the script headless first (`--check-only`):
-  one that doesn't load leaves Godot's window showing. The script sets `root.mode = Window.MODE_MINIMIZED`, runs
+  that never shows a window on the owner's desktop (owner's rule: the owner works on the same PC,
+  and under WSL every window on WSLg's display, even a one-pixel one, becomes a Windows window that
+  takes the focus from their typing). Run it on a private virtual display instead, through
+  `uv run --locked tools/godot/offscreen.py -- --path . -s res://<script>.gd -- <args>`
+  (Xvfb, the Compatibility renderer, silent audio; nothing reaches the desktop, so no
+  `override.cfg`). Never `--display-driver wayland`, never the desktop's `DISPLAY`. The script runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
-  `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Run it with
-  `--audio-driver Dummy`, so the music stays silent (headless runs already are). **Under WSLg**, add
-  `--display-driver wayland` (its X server dropped Godot's connection) and leave the root window
-  as it is instead of minimizing it: a minimized Wayland window stops drawing, its `SubViewport`
-  too, so the PNG shows a frame from before it was minimized. Publish it on
+  `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Publish it on
   the `assets` branch (an orphan branch that is never merged), through the
   `assets/` worktree next to `main/`: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
   When the change has no visible part, say so instead. **Before and after pictures always go in
@@ -534,7 +528,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Local Godot runs pass `--user-dir=<branch>`** (owner, #786): the e2e runner, the load test, the
   game and screenshot scripts, e.g. `-s res://tests/e2e/run_e2e.gd -- --seed=0
   --user-dir=786-user-dir-flag`. Every worktree shares one `user://` folder otherwise, and parallel
-  runs overwrite each other's saves. No temporary `override.cfg` for it. CI runs without it.
+  runs overwrite each other's saves. CI runs without it.
 - **A fresh checkout needs `godot --headless --path . --import`** before headless runs, and so
   does a worktree after a rebase brings in a new `class_name` script: with a stale class cache, the
   flows fail to load or log errors that have nothing to do with the change.
