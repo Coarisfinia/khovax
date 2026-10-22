@@ -16,6 +16,8 @@ import sys
 
 # Godot's window, inside the virtual screen: the size of the game's own viewport.
 SCREEN = "1280x720x24"
+# The options offscreen.py sets and a caller may not override.
+FORCED = ("--display-driver", "--rendering-driver", "--audio-driver")
 GODOT_FLAGS = [
     "--display-driver", "x11",
     "--rendering-driver", "opengl3",
@@ -30,6 +32,13 @@ def main() -> int:
     if not args:
         print(__doc__, file=sys.stderr)
         return 2
+    # Godot's own options end at the next `--`; what follows is the script's. A driver given there
+    # would override the forced ones, and `--display-driver wayland` would find the desktop again.
+    godot_options = args[: args.index("--")] if "--" in args else args
+    for option in godot_options:
+        if option.split("=")[0] in FORCED:
+            print(f"offscreen.py: {option} is forced here and can't be given", file=sys.stderr)
+            return 2
     for tool in ("xvfb-run", "godot"):
         if shutil.which(tool) is None:
             print(f"offscreen.py: {tool} is not on the PATH", file=sys.stderr)
