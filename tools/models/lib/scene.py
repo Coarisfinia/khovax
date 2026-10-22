@@ -33,12 +33,15 @@ def triangles(obj):
 
 def export_glb(path):
     """Exports the scene as the game takes it: a binary glTF with the skin and every clip, one
-    animation per NLA track (clips.animate stashes each there), Y up."""
+    animation per NLA track (clips.animate stashes each there), Y up. Each animation starts at
+    time 0: the clips are keyed from frame 1, and Godot's importer fills the gap before a late
+    first key by holding it, a frame's pause on every loop (#1089)."""
     bpy.ops.export_scene.gltf(
         filepath=path,
         export_format="GLB",
         export_animations=True,
         export_animation_mode="NLA_TRACKS",
+        export_anim_slide_to_zero=True,
         export_skins=True,
         export_apply=False,
         export_yup=True,

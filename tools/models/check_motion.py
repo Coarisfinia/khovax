@@ -17,6 +17,9 @@ seam and jitter, as numbers with limits that fail the build.
   either side, at the roughest frame of any joint, across the seam too on a loop. A fast move
   that bends smoothly passes; a pop, a snap or a stall doesn't.
 
+- **Start:** a clip must start at time 0; Godot holds a late first key from 0 until then, a
+  pause at every loop's seam.
+
 It prints a line per clip and `MOTION CHECK: PASS` or `FAIL` (and exits 1 on a fail). The clip
 rate and the loops come from the .glb's .import, as the game imports it."""
 
@@ -141,12 +144,15 @@ def check(rig, meshes, fps, loops, speeds):
     lines, passed = [], True
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
+        # A clip that starts after time 0 holds its first pose until then in the game: a pause
+        # at every loop's seam (#1089).
+        late = start != 0
         loop = action.name in loops
         frames = sample(rig, meshes, feet, start, end)
         slide, mean, fastest = sliding(frames, feet, fps, speeds.get(action.name, 0.0))
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
-        fails = shake > JITTER_LIMIT
+        fails = late or shake > JITTER_LIMIT
         text = "slide %.2f m/s (mean %.2f; %s)" % (
             slide, mean, ", ".join("%s %.2f" % (name, value) for name, value in sorted(fastest.items())))
         if loop:
@@ -155,6 +161,8 @@ def check(rig, meshes, fps, loops, speeds):
             text += "; seam %.2f deg, root %.1f mm, rough %.2f deg/frame^2 (%s)" % (
                 pose, root * 1000, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
+        if late:
+            text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
         lines.append("%s %s%s: %s" % ("FAIL" if fails else "ok", action.name, " (loop)" if loop else "", text))
     return lines, passed
