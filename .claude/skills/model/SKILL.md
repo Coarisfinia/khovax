@@ -11,8 +11,9 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 
 ## Tools
 - **Blender 5.2.2**, portable at `~/.local/opt/blender-5.2.2` (`blender` on the PATH). Brew can't
-  install it on Linux. Run it headless, through `tools/models/blender.sh`:
-  `tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>`
+  install it on Linux. Run it headless, through `tools/models/blender.py`:
+  `uv run --locked tools/models/blender.py --background --factory-startup
+  --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
   only: Mesa's default falls back to the CPU's software rasteriser. It also makes a script that
   raises exit 1 (`--python-exit-code 1`, #1077): plain Blender prints the traceback and exits 0,
@@ -158,8 +159,8 @@ a second model could use goes into the library or a generic tool, never into one
   there (as `Rogue.glb.import` does).
 
 ## 4. Verify (every item gives an image or a number for the PR)
-1. **Every side:** `tools/models/blender.sh --background --factory-startup --python
-   .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]`. It
+1. **Every side:** `uv run --locked tools/models/blender.py --background --factory-startup
+   --python .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]`. It
    writes front, back, left, right, top and a three-quarter view, and `sheet.png`. **Look at it.**
    Check the proportions, gaps, stretched textures and anything floating or clipping.
 2. **Deformation stress:** render the extreme frames of each clip, plus a pose with each major
@@ -191,15 +192,15 @@ a second model could use goes into the library or a generic tool, never into one
    means a few thousand triangles for a monster; justify anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
-9. **Ground contact:** `tools/models/blender.sh --background --factory-startup --python
-   tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
+9. **Ground contact:** `uv run --locked tools/models/blender.py --background --factory-startup
+   --python tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
 10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
    into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
    PR says so.
-11. **Reference comparison (#1072):** `tools/models/blender.sh --background --factory-startup
-   --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir>
+11. **Reference comparison (#1072):** `uv run --locked tools/models/blender.py --background
+   --factory-startup --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir>
    [views]`, the reference being the last approved `.glb` (`git show origin/main:assets/<name>/<name>.glb
    > <scratch>/reference.glb`) or, for a new model, its concept image. It writes `compare.png`
    (reference | ours | overlay | 128 px) and prints the silhouette match and the ten-band width
