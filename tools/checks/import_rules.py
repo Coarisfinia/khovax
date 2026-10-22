@@ -30,13 +30,13 @@ Comments don't count (gdscript_code.py strips them), so the rules can be explain
 
 import os
 import re
-import subprocess
 import sys
 from collections.abc import Iterable
 from fnmatch import fnmatchcase
 from pathlib import Path
 
 from gdscript_code import without_comments
+from git_files import git_files
 
 # The slices, each after every slice it names (#821).
 SLICE_ORDER: tuple[str, ...] = (
@@ -77,14 +77,6 @@ PATH_WITH_SCHEME = re.compile(r'\bpath="[a-z]+://')
 
 type Lines = list[str]
 type Pattern = re.Pattern[str] | None
-
-
-def git_files(*pathspecs: str) -> list[str]:
-    """The tracked files the pathspecs match, as git lists them."""
-    listing = subprocess.run(
-        ["git", "ls-files", "-z", "--", *pathspecs], check=True, capture_output=True, text=True
-    ).stdout
-    return [path for path in listing.split("\0") if path]
 
 
 def lines_of(text: str) -> Lines:

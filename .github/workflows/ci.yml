@@ -109,7 +109,7 @@ jobs:
       - name: "🧹 Check every declared function, variable, constant and class is used"
         # Godot's script check already fails on unused locals, parameters and signals; this finds
         # what nothing in the whole project names (#315).
-        run: bash tools/checks/unused_code.sh
+        run: uv run --locked tools/checks/unused_code.py
 
       - name: "🧭 Check the core never depends on a slice and paths are absolute"
         run: uv run --locked tools/checks/import_rules.py
@@ -124,7 +124,7 @@ jobs:
         # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
         # forbidden list and the exemption marker (#515) are in the script.
         timeout-minutes: 5
-        run: bash tools/checks/determinism_check.sh
+        run: uv run --locked tools/checks/determinism_check.py
 
       - name: "🔖 Check the rule change files"
         # The parent is the base on a pull request's merge commit, the queue's previous commit in
