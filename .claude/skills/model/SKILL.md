@@ -104,8 +104,8 @@ a second model could use goes into the library or a generic tool, never into one
 - **The motion check (#1071):** `packages/game-models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
   samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
   the ground while it stands on it, against the speed the game moves the model at while it
-  plays that clip; the model script prints them; every clip, one-shots too), the **loop seam** (pose and roughness from the
-  last frame to the first), the **joins** of a loop to its lead-in and lead-out (`<Loop>Start`,
+  plays that clip; the model script prints them; every clip, one-shots too), the **loop seam** (pose, every bone's shift, the
+  wisps' `loc.` channels too, and roughness from the last frame to the first), the **joins** of a loop to its lead-in and lead-out (`<Loop>Start`,
   `<Loop>End`) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
