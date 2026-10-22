@@ -2,7 +2,7 @@
 for a clip (`<Clip>_000.png`, `<Clip>_001.png`, ...), through ffmpeg's palette pass, which is
 faster and smaller than ImageMagick, looping forever.
 
-    uv run --locked packages/game-models/gif.py <frame_dir> <Clip> [--fps 15] [--width 640] \
+    uv run --locked packages/game-models/gif.py <frame_dir> <Clip> [--fps 30] [--width 640] \
         [--out <file.gif>]
 
 It writes `<frame_dir>/<Clip>.gif` unless `--out` says otherwise, and prints its path."""
@@ -17,8 +17,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="A clip's GIF from its frames.")
     parser.add_argument("frame_dir", type=Path)
     parser.add_argument("clip")
-    # render_in_game.gd's CLIP_FPS: the frames play back at the rate they were captured.
-    parser.add_argument("--fps", type=float, default=15.0)
+    # The frames play back at the rate render_in_game.gd captured them: the clip's own, which is
+    # the models' import rate (`animation/fps` in their `.import`, #1150).
+    parser.add_argument("--fps", type=float, default=30.0)
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()

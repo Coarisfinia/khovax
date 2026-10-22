@@ -7,8 +7,9 @@ extends SceneTree
 ## right, top, three-quarter), the shot from the game camera at play distance, and two close-ups
 ## on a bare background as its codex page shows it full-screen (#995): the whole model
 ## ("portrait") and its head and chest ("face"). Given clips, it writes each clip's frames
-## for a GIF instead, from the game camera or from any of those views. Any model works: the
-## cameras frame it by its bounds, the close-ups by its outline. With `points`, it marks the model's
+## for a GIF instead, at the clip's own rate, from the game camera or from any of those views. Any
+## model works: the cameras frame it by its bounds, the close-ups by its outline, and a clip's by
+## where it moves over the clip. With `points`, it marks the model's
 ## attachment points
 ## (PointMarks, #1007). Its eyes glow as in the game (EyeGlow, #1008), calm, or agitated with
 ## `agitated`; an Attack clip's frames flare the glow as the game does when it strikes. With
@@ -51,10 +52,8 @@ const FACE_SHARE: float = 0.4
 ## What the side shots keep of the instance: only the ground. The HUD, the player, the people,
 ## the other monsters and the trees would stand between the camera and the model.
 const KEPT_IN_SIDES: String = "HexGrid"
-## How much a clip's framing grows the resting bounds, as a share of their size.
-const CLIP_ROOM: float = 0.1
-## A clip's frames are captured this many times a second of the clip.
-const CLIP_FPS: float = 15.0
+## A clip's frame rate when the model's import doesn't give one: Godot's import default.
+const DEFAULT_FPS: float = 30.0
 ## Frames to wait after posing a shot before capturing it, so the pose has been drawn.
 const DRAW_FRAMES: int = 2
 
@@ -178,9 +177,6 @@ func _place() -> void:
 	_close_ups = { "portrait": points, "face": points if face.is_empty() else face }
 	if OS.get_cmdline_user_args().has("points"):
 		_piece.add_child(PointMarks.new(model, _bounds.size.y))
-	if not _clip.is_empty():
-		# The bounds are the resting pose's: room for a clip to lunge or stretch out of them.
-		_bounds = _bounds.grow(_bounds.size.length() * CLIP_ROOM)
 	if _clip.is_empty():
 		animations.play(&"Idle")
 		_add_shot("game", _game_camera.make_current)
@@ -188,18 +184,18 @@ func _place() -> void:
 			_add_shot(side, _pose_side.bind(side))
 		return
 	if VIEWS.has(_from):
-		_pose_side(_from)
+		_show_alone(_from)
 	else:
 		_game_camera.make_current()
 	# The glow moves on with the clips' frames, not with how long the frames take to draw.
 	glow.process_mode = Node.PROCESS_MODE_DISABLED
-	_add_clip_shots(animations, glow)
+	_add_clip_shots(model, animations, glow)
 
 
 ## Lists every frame of every clip `_clip` names, or ends the run when the model lacks one.
 ## Several clips in one run (#1050): the game starts once for all of them, which is most of what a
 ## run costs.
-func _add_clip_shots(animations: AnimationPlayer, glow: EyeGlow) -> void:
+func _add_clip_shots(model: Node3D, animations: AnimationPlayer, glow: EyeGlow) -> void:
 	var clips: PackedStringArray = _clip.split(",")
 	for clip: String in clips:
 		if not animations.has_animation(StringName(clip)):
@@ -207,20 +203,67 @@ func _add_clip_shots(animations: AnimationPlayer, glow: EyeGlow) -> void:
 			printerr("the model has no clip %s: it has %s" % [clip, known])
 			quit(1)
 			return
+	var fps: float = _clip_fps()
 	for clip: String in clips:
-		var animation: Animation = animations.get_animation(StringName(clip))
-		var length: float = animation.length
-		# A looping clip ends on its first pose again, so its frames stop short of the end and
-		# are spaced evenly over one cycle: a frame at the end would show the first pose twice,
-		# a hold at the GIF's seam the game never plays (#1089). A one-shot keeps its last pose.
-		var looping: bool = animation.loop_mode != Animation.LOOP_NONE
-		var frames: int = maxi(
-			1,
-			roundi(length * CLIP_FPS),
-		) if looping else ceili(length * CLIP_FPS) + 1
-		for frame: int in frames:
-			var time: float = frame * length / frames if looping else minf(frame / CLIP_FPS, length)
-			_add_shot("%s_%03d" % [clip, frame], _pose_clip.bind(animations, glow, clip, time))
+		var times: PackedFloat32Array = _frame_times(
+			animations.get_animation(StringName(clip)),
+			fps,
+		)
+		# A view's camera frames where the model moves over the whole clip, set on its first frame
+		# and kept for the rest; the game camera stays where the game has it.
+		var framed: PackedVector3Array = []
+		if VIEWS.has(_from):
+			framed = _posed_over(model, animations, clip, times)
+		for frame: int in times.size():
+			var pose: Callable = _pose_clip.bind(animations, glow, clip, times[frame], framed)
+			_add_shot("%s_%03d" % [clip, frame], pose)
+			framed = []
+
+
+## The rate the model's clips are imported at, as its `.import` gives it: their frames are captured
+## at it, so every keyed frame is in the GIF (#1150).
+func _clip_fps() -> float:
+	var import: ConfigFile = ConfigFile.new()
+	if import.load(OS.get_cmdline_user_args()[0] + ".import") != OK:
+		return DEFAULT_FPS
+	return float(import.get_value("params", "animation/fps", DEFAULT_FPS))
+
+
+## When in `animation` each of its frames is captured, `fps` a second. A looping clip ends on its
+## first pose again, so its frames stop short of the end and are spaced evenly over one cycle: a
+## frame at the end would show the first pose twice, a hold at the GIF's seam the game never plays
+## (#1089). A one-shot keeps its last pose.
+func _frame_times(animation: Animation, fps: float) -> PackedFloat32Array:
+	var length: float = animation.length
+	var looping: bool = animation.loop_mode != Animation.LOOP_NONE
+	var frames: int = maxi(1, roundi(length * fps)) if looping else ceili(length * fps) + 1
+	var times: PackedFloat32Array = []
+	for frame: int in frames:
+		var _added: bool = times.append(
+			frame * length / frames if looping else minf(frame / fps, length),
+		)
+	return times
+
+
+## Where `model`'s vertices pass over `clip` at `times`: all of them, or the face's for the face
+## close-up. Framing these rather than the resting outline keeps a lunge in the frame (#1148).
+func _posed_over(
+		model: Node3D,
+		animations: AnimationPlayer,
+		clip: String,
+		times: PackedFloat32Array,
+) -> PackedVector3Array:
+	animations.play(StringName(clip))
+	animations.pause()
+	var points: PackedVector3Array = []
+	for time: float in times:
+		animations.seek(time, true)
+		var posed: PackedVector3Array = _points_of(model)
+		if _from == "face":
+			var face: PackedVector3Array = PackedVector3Array(Array(posed).filter(_in_face(model)))
+			posed = posed if face.is_empty() else face
+		points.append_array(posed)
+	return _corners(_bounds) if points.is_empty() else points
 
 
 ## Makes `glow` agitated, in a type's colour or in a leaning's shape as the command line asks.
@@ -237,16 +280,27 @@ func _glow_as_asked(glow: EyeGlow) -> void:
 
 
 ## Poses `clip` at `time`, and the `glow` in the model's eyes with it. Its first frame starts the
-## clip, and an Attack's flares the glow, as the game does when the monster strikes.
-func _pose_clip(animations: AnimationPlayer, glow: EyeGlow, clip: String, time: float) -> void:
+## clip, aims the camera at what it `framed` (unless that's empty), and flares an Attack's glow, as
+## the game does when the monster strikes.
+func _pose_clip(
+		animations: AnimationPlayer,
+		glow: EyeGlow,
+		clip: String,
+		time: float,
+		framed: PackedVector3Array,
+) -> void:
+	if not framed.is_empty():
+		_aim_side(_from, framed)
 	if is_zero_approx(time):
 		animations.play(StringName(clip))
 		animations.pause()
 		glow.flare_left = 0.0
 		if clip == "Attack":
 			glow.flare()
+	# The glow moves on by as much of the clip as passed since the last frame.
+	var step: float = 0.0 if is_zero_approx(time) else time - animations.current_animation_position
 	animations.seek(time, true)
-	glow.advance(0.0 if is_zero_approx(time) else 1.0 / CLIP_FPS)
+	glow.advance(step)
 	glow.place()
 
 
@@ -274,6 +328,13 @@ func _beside(state: GameState, tile: Vector2i) -> Vector2i:
 ## Looks at the model from `side` (VIEWS), framing all of it (or its face), alone on bare
 ## ground, or on nothing at all for a close-up.
 func _pose_side(side: String) -> void:
+	_show_alone(side)
+	_aim_side(side, _close_ups[side] if CLOSE_UPS.has(side) else _corners(_bounds))
+
+
+## Shows the model alone for `side` (VIEWS), through the side camera: on bare ground, or on
+## nothing at all for a close-up.
+func _show_alone(side: String) -> void:
 	var hidden: Array[Node] = _main.get_node("Instance").get_children()
 	if CLOSE_UPS.has(side):
 		hidden = _main.get_children().filter(_hidden_in_close_ups)
@@ -284,17 +345,16 @@ func _pose_side(side: String) -> void:
 		node.process_mode = Node.PROCESS_MODE_INHERIT if kept else Node.PROCESS_MODE_DISABLED
 		node.set("visible", kept)
 	_side_camera.make_current()
-	if not CLOSE_UPS.has(side):
-		_aim(
-			_corners(_bounds),
-			VIEWS[side],
-			Vector3.FORWARD if side == "top" else Vector3.UP,
-			MARGIN,
-		)
+
+
+## Aims the side camera from `side` (VIEWS) at `points`: a close-up at their outline, any other
+## side at their bounds' corners.
+func _aim_side(side: String, points: PackedVector3Array) -> void:
+	if CLOSE_UPS.has(side):
+		_aim(points, VIEWS[side], Vector3.UP, MARGIN)
 		return
-	# A clip's frames get room to lunge or stretch out of the resting outline.
-	var room: float = MARGIN if _clip.is_empty() else MARGIN * (1.0 + 2.0 * CLIP_ROOM)
-	_aim(_close_ups[side], VIEWS[side], Vector3.UP, room)
+	var up: Vector3 = Vector3.FORWARD if side == "top" else Vector3.UP
+	_aim(_corners(_box_of(points)), VIEWS[side], up, MARGIN)
 
 
 ## Points the camera from `direction` at `points`, so their outline sits in the middle of the
@@ -302,9 +362,7 @@ func _pose_side(side: String) -> void:
 ## saw it and moves the camera so it fills the frame (the fill shrinks about as the distance
 ## grows).
 func _aim(points: PackedVector3Array, direction: Vector3, up: Vector3, margin: float) -> void:
-	var box: AABB = AABB(points[0], Vector3.ZERO)
-	for point: Vector3 in points:
-		box = box.expand(point)
+	var box: AABB = _box_of(points)
 	var middle: Vector3 = box.get_center()
 	var reach: float = box.size.length() / 2.0 / sin(deg_to_rad(FOV) / 2.0)
 	for _pass: int in 3:
@@ -340,31 +398,82 @@ func _bounds_of(model: Node3D) -> AABB:
 	return bounds
 
 
-## Every vertex of every mesh under `model`, in the world.
+## The box around `points`.
+func _box_of(points: PackedVector3Array) -> AABB:
+	var box: AABB = AABB(points[0], Vector3.ZERO)
+	for point: Vector3 in points:
+		box = box.expand(point)
+	return box
+
+
+## Every vertex of every mesh under `model`, in the world, in the pose its skeleton holds now.
 func _points_of(model: Node3D) -> PackedVector3Array:
 	var points: PackedVector3Array = []
 	for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 		var mesh: MeshInstance3D = node as MeshInstance3D
 		if mesh.mesh == null:
 			continue
+		var bones: Array[Transform3D] = _bones_of(mesh)
 		for surface: int in mesh.mesh.get_surface_count():
 			var arrays: Array = mesh.mesh.surface_get_arrays(surface)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			if not bones.is_empty() and arrays[Mesh.ARRAY_BONES] != null:
+				vertices = _skinned(
+					vertices,
+					arrays[Mesh.ARRAY_BONES],
+					arrays[Mesh.ARRAY_WEIGHTS],
+					bones,
+				)
 			points.append_array(mesh.global_transform * vertices)
 	return points
 
 
+## Where each of `mesh`'s skin binds moves its vertices in the skeleton's current pose, or nothing
+## when the mesh isn't skinned: what the renderer skins it by.
+func _bones_of(mesh: MeshInstance3D) -> Array[Transform3D]:
+	var skeleton: Skeleton3D = mesh.get_node_or_null(mesh.skeleton) as Skeleton3D
+	var bones: Array[Transform3D] = []
+	if skeleton == null or mesh.skin == null:
+		return bones
+	for bind: int in mesh.skin.get_bind_count():
+		var bone: int = mesh.skin.get_bind_bone(bind)
+		if bone < 0:
+			bone = skeleton.find_bone(mesh.skin.get_bind_name(bind))
+		var pose: Transform3D = skeleton.get_bone_global_pose(bone) if bone >= 0 else Transform3D()
+		bones.append(pose * mesh.skin.get_bind_pose(bind))
+	return bones
+
+
+## `vertices` skinned: each moved by its `weights` of its `binds`' `bones` (four or eight each).
+func _skinned(
+		vertices: PackedVector3Array,
+		binds: PackedInt32Array,
+		weights: PackedFloat32Array,
+		bones: Array[Transform3D],
+) -> PackedVector3Array:
+	var per: int = 8 if binds.size() == vertices.size() * 8 else 4
+	var skinned: PackedVector3Array = []
+	var _sized: int = skinned.resize(vertices.size())
+	for vertex: int in vertices.size():
+		var point: Vector3 = Vector3.ZERO
+		for slot: int in range(vertex * per, vertex * per + per):
+			if weights[slot] > 0.0:
+				point += bones[binds[slot]] * vertices[vertex] * weights[slot]
+		skinned[vertex] = point
+	return skinned
+
+
 ## Whether a point of `model` is in the face close-up: within FACE_SHARE of its height of the bone
-## named "head" (in any case) of its skeleton, or at the front and top of its bounds when it has
-## none.
+## named "head" (in any case) of its skeleton, where its pose holds it now, or at the front and top
+## of its bounds when it has none.
 func _in_face(model: Node3D) -> Callable:
 	var reach: float = _bounds.size.y * FACE_SHARE
 	for node: Node in model.find_children("*", "Skeleton3D", true, false):
 		var skeleton: Skeleton3D = node as Skeleton3D
 		for bone: int in skeleton.get_bone_count():
 			if skeleton.get_bone_name(bone).to_lower() == "head":
-				var rest: Transform3D = skeleton.get_bone_global_rest(bone)
-				var head: Vector3 = skeleton.global_transform * rest.origin
+				var pose: Transform3D = skeleton.get_bone_global_pose(bone)
+				var head: Vector3 = skeleton.global_transform * pose.origin
 				return func(point: Vector3) -> bool: return point.distance_to(head) <= reach
 	var front: Vector3 = _bounds.size * FACE_SHARE
 	var face: AABB = AABB(_bounds.end - front, front)
