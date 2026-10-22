@@ -16,11 +16,16 @@ const GEAR: String = "GEAR"
 const TAG_PATTERN: String = "\\$\\{([A-Z_]+):([a-z][a-z0-9_]*)\\}"
 ## Where any tag starts, well formed or not.
 const TAG_START: String = "${"
+## The kinds whose names open a codex page when the player selects them (#959): a faction's lexicon
+## entry. Monsters' bestiary entries and the other named kinds follow.
+const CODEX_KINDS: Array[String] = [FACTION]
 
 ## The tags read from the game's content, read the first time one is shown.
 static var _shown: TextTags = null
 ## Where `shown` reads the species from; the content flow points it at one that can't be read.
 static var _species_directory: String = SpeciesContent.DIR
+## Finds the tags in a text, for `tags_in`.
+static var _finder: RegEx = RegEx.create_from_string(TAG_PATTERN)
 
 ## Every name a tag can show, by its kind's word and its id.
 var names: Dictionary[String, Dictionary] = {}
@@ -65,6 +70,11 @@ static func shown(text: String) -> String:
 			var why: String = _shown.problem
 			push_warning("the text tags' names can't be read, so tags show as written: " + why)
 	return _shown.resolve(text)
+
+
+## Every well-formed tag in `text`, in order: its kind's word is group 1 and its id group 2.
+static func tags_in(text: String) -> Array[RegExMatch]:
+	return _finder.search_all(text)
 
 
 ## Makes `shown` read the species from `directory` the next time a tag is shown.

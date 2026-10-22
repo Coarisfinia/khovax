@@ -55,6 +55,7 @@
 [ext_resource type="Script" path="res://slices/quests/meta/quest_keeper.gd" id="48_quest_keeper"]
 [ext_resource type="Script" path="res://slices/revive_items/look/revive_tie.gd" id="51_revive_tie"]
 [ext_resource type="Script" path="res://slices/exits/look/exit_hold_hint.gd" id="52_exit_hold_hint"]
+[ext_resource type="Script" path="res://slices/codex/ui/codex_page.gd" id="53_codex_page"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -350,3 +351,17 @@ survey = NodePath("../../SurveyChoice")
 stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
 quest_keeper = NodePath("../../QuestKeeper")
+
+[node name="CodexPage" type="Control" parent="Hud" node_paths=PackedStringArray("input", "driver")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("53_codex_page")
+input = NodePath("../../LocalInput")
+driver = NodePath("../../Driver")
+
+[connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]

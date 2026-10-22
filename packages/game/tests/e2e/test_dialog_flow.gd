@@ -7,7 +7,9 @@ extends RefCounted
 ## nothing, nor does an answer no dialog has. The card follows the simulation's state (#890, #898):
 ## it moves on or closes once the answer reaches it, also for an answer that came only through the
 ## commands, as in a replay, even from a line before the one that offers it. While the menu is open
-## over a dialog, its buttons rest. A dialog that doesn't exist doesn't open. In the glade, Teska
+## over a dialog, its buttons rest. A faction's name in a line opens its lexicon page (#959), with a
+## controller, a click or a long press on touch, never a tap. A dialog that doesn't exist doesn't
+## open. In the glade, Teska
 ## na Amvrel, the guild's scout, stands east of the start (#557): walking into them talks to them,
 ## raised as
 ## NpcTalkedTo, which opens their greeting in the state, saved with the world: a world resumed with
@@ -73,7 +75,7 @@ func run(tree: SceneTree) -> String:
 
 ## The greeting opens at its first line, by Teska na Amvrel, with one button to read on, which has
 ## the focus; the player stands while it's open; A reads on to the line with two answers, raising
-## nothing.
+## nothing, whose faction's name opens its codex page (_open_codex).
 func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
 	if not screen.open(GREETING) or not driver.input.in_dialog:
 		return "Teska na Amvrel's greeting didn't open"
@@ -93,7 +95,141 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 		return "A didn't read on to the line with answers: %s" % [screen.choices()]
 	if _answered(driver).size() > 0:
 		return "reading on raised an answer"
+	return await _open_codex(tree, driver, screen)
+
+
+## The second line names the Amvrel Velmarai (#959) as a link to its lexicon page, which a
+## controller, a click and a long press on touch open.
+func _open_codex(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
+	var page: CodexPage = screen.get_node("../CodexPage") as CodexPage
+	if (screen.line_links() != ["FACTION:amvrel_velmarai"]
+			or not screen.shown_line().begins_with("The Amvrel Velmarai pay")):
+		return "the second line showed %s with links %s" % [
+			screen.shown_line(),
+			screen.line_links(),
+		]
+	var by_pad: String = _codex_by_controller(page, driver, screen)
+	if not by_pad.is_empty():
+		return by_pad
+	return await _codex_by_pointer(tree, page, driver, screen)
+
+
+## The d-pad up from the answers reaches the line's names, and A opens the page: the faction's
+## name, what the name means, its entry and the player's standing, neutral, while the game hears no
+## input. B closes it and gives the focus back to the line, the dialog still on it, and the d-pad
+## down goes back to the answers.
+static func _codex_by_controller(
+	page: CodexPage,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	var line: Control = screen.get_node("Card/Rows/Line") as Control
+	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	if screen.get_viewport().gui_get_focus_owner() != line:
+		return "the d-pad up didn't reach the line's names"
+	_press_pad(screen, JOY_BUTTON_A)
+	var shown: String = _page_problem(page, driver)
+	if not shown.is_empty():
+		return "A on the name: " + shown
+	_press_pad(screen, JOY_BUTTON_B)
+	if page.is_open() or driver.input.blocked or screen.line_index != 1:
+		return "B didn't close the page back to the dialog's line"
+	if screen.get_viewport().gui_get_focus_owner() != line:
+		return "the focus didn't go back to the line"
+	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	return "" if _focused(screen) == 0 else "the d-pad down from the line didn't reach the answers"
+
+
+## A click on the name opens the page too, and Escape closes it. On a touch screen a tap on the
+## name opens nothing, while a long press does; A then closes it from its focused close button,
+## and the d-pad down goes back to the answers.
+func _codex_by_pointer(
+	tree: SceneTree,
+	page: CodexPage,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	# The card settles where the line's new height puts it.
+	await tree.process_frame
+	await tree.process_frame
+	var spot: Vector2 = _name_spot(screen.get_node("Card/Rows/Line") as NameLinks)
+	_tap(screen, spot, InputEvent.DEVICE_ID_MOUSE)
+	var shown: String = _page_problem(page, driver)
+	if not shown.is_empty():
+		return "a click on the name: " + shown
+	var cancel: InputEventAction = InputEventAction.new()
+	cancel.action = "ui_cancel"
+	cancel.pressed = true
+	screen.get_viewport().push_input(cancel)
+	if page.is_open() or not screen.is_open():
+		return "Escape didn't close the page back to the dialog"
+	await tree.process_frame
+	_tap(screen, spot, InputEvent.DEVICE_ID_EMULATION)
+	if page.is_open():
+		return "a tap on the name opened its page"
+	await _hold(tree, screen, spot)
+	shown = _page_problem(page, driver)
+	if not shown.is_empty():
+		return "a long press on the name: " + shown
+	_press_pad(screen, JOY_BUTTON_A)
+	if page.is_open():
+		return "A on the page's close button didn't close it"
+	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	return "" if _focused(screen) == 0 else "the d-pad down didn't go back to the answers"
+
+
+## Why the open codex page isn't the Amvrel Velmarai's lexicon page, or "".
+static func _page_problem(page: CodexPage, driver: GameDriver) -> String:
+	if not page.is_open() or not driver.input.blocked:
+		return "the page didn't open, or the game still hears input"
+	var gloss: String = page.gloss.get_parsed_text()
+	if (page.heading.text != CodexPage.LEXICON_TEXT
+			or page.title.text != "Amvrel Velmarai"
+			or gloss != "Amvrel Velmarai: the guild of those who chart"
+			or not page.entry.text.begins_with("A guild of mapmakers")
+			or page.standing.text != CodexPage.NEUTRAL_TEXT):
+		return "the page showed %s, %s, %s" % [page.title.text, gloss, page.standing.text]
 	return ""
+
+
+## Where the line shows the middle of "Amvrel", the first word of its link, in the viewport.
+static func _name_spot(line: NameLinks) -> Vector2:
+	var font: Font = line.get_theme_font("normal_font")
+	var size: int = line.get_theme_font_size("normal_font_size")
+	var before: float = font.get_string_size("The ", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var word: float = font.get_string_size("Amvrel", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var middle: Vector2 = Vector2(before + word / 2.0, font.get_height(size) / 2.0)
+	return line.get_global_rect().position + middle
+
+
+## Presses the left button at `at` and lets go at once, from `device`: the mouse, or a touch as
+## Godot emulates a mouse from it.
+static func _tap(screen: DialogScreen, at: Vector2, device: int) -> void:
+	var press: InputEventMouseButton = _left_button(at, device)
+	screen.get_viewport().push_input(press)
+	var lift: InputEventMouseButton = press.duplicate() as InputEventMouseButton
+	lift.pressed = false
+	screen.get_viewport().push_input(lift)
+
+
+## Rests a touch on `at` for longer than a long press takes, then lifts it.
+static func _hold(tree: SceneTree, screen: DialogScreen, at: Vector2) -> void:
+	var press: InputEventMouseButton = _left_button(at, InputEvent.DEVICE_ID_EMULATION)
+	screen.get_viewport().push_input(press)
+	await tree.create_timer(NameLinks.LONG_PRESS_MS / 1000.0 + 0.2).timeout
+	var lift: InputEventMouseButton = press.duplicate() as InputEventMouseButton
+	lift.pressed = false
+	screen.get_viewport().push_input(lift)
+
+
+## The left button pressed at `at`, from `device`.
+static func _left_button(at: Vector2, device: int) -> InputEventMouseButton:
+	var press: InputEventMouseButton = InputEventMouseButton.new()
+	press.device = device
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.position = at
+	press.pressed = true
+	return press
 
 
 ## The d-pad moves the focus down to the second answer and back up; A chooses the first, which

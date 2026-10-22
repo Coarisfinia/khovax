@@ -38,9 +38,11 @@ const ANSWERED: String = "{\"condition\": \"answered\", \"dialog\": \"%s\", \"an
 const STEP_B: String = "{\"id\": \"b\", \"condition\": \"opened\", \"ends\": \"x\"}"
 ## A quest step to open a chest that ends the chain x (#576).
 const OPENED_END: String = "{\"condition\": \"opened\", \"ends\": \"x\"}"
-## A faction file x with a symbol (#637), its ranks up and down left open (#483).
+## A faction file x with a symbol (#637) and a codex entry (#959), its ranks up and down left open
+## (#483).
 const FACTION_TEXT: String = (
-	"{\"id\": \"x\", \"name\": \"X\", \"symbol\": \"+\", \"ranks_up\": %s, \"ranks_down\": %s}"
+	"{\"id\": \"x\", \"name\": \"X\", \"symbol\": \"+\", \"ranks_up\": %s, \"ranks_down\": %s, "
+	+ "\"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}}"
 )
 ## Five rank names, as a faction has each way.
 const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
@@ -999,8 +1001,8 @@ func _check_loot_refused() -> String:
 
 ## The factions load, each with its own name for every rank but neutral (#483): the Amvrel
 ## Velmarai's (#484) run from Apprentice Charter up to Charted in Legend and from Betrayer down. A
-## faction file with a wrong id, no name, an unknown field, or not five rank names with more than
-## spaces each way is refused.
+## faction file with a wrong id, no name, an unknown field, not five rank names with more than
+## spaces each way, or without a codex entry and gloss (#959) is refused.
 func _check_factions() -> String:
 	var content: FactionContent = FactionContent.load_factions()
 	if not content.problem.is_empty() or not content.factions.has("amvrel_velmarai"):
@@ -1023,7 +1025,13 @@ func _check_factions() -> String:
 		faction % [five, "[\"a\", \"b\", \"c\", \"d\", \"e\", \"f\"]"]: "it needs 5 rank names",
 		faction % ["[\"a\", \"b\", \"c\", \"d\", \" \"]", five]: "it needs 5 rank names",
 		faction % ["[\"a\", \"b\", \"c\", \"d\", 5]", five]: "it needs 5 rank names",
-		faction.replace("}", ", \"z\": 1}") % [five, five]: "field z",
+		faction.replace("\"codex\"", "\"z\"") % [five, five]: "field z",
+		faction.replace(", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}", "") % [five, five]: (
+			"it needs a codex entry"
+		),
+		faction.replace("\"entry\": \"e\"", "\"entry\": \" \"") % [five, five]: (
+			"it needs a codex entry"
+		),
 	}
 	var refused: String = _factions_refused(cases)
 	return refused if not refused.is_empty() else _check_faction_territory(content)
@@ -1057,7 +1065,7 @@ func _check_faction_territory(content: FactionContent) -> String:
 				return "%s's territory %s isn't an instance blueprint" % [each.id, instance_name]
 	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
 	var symbol: String = "\"symbol\": \"+\", "
-	var territory: String = faction.replace("}", ", \"territory\": %s}")
+	var territory: String = faction.trim_suffix("}") + ", \"territory\": %s}"
 	var refused: String = _factions_refused({
 		faction.replace(symbol, ""): "it needs a symbol",
 		faction.replace(symbol, "\"symbol\": \"+++\", "): "it needs a symbol",

@@ -3,7 +3,8 @@ extends RefCounted
 ## A faction (#483), read from content data (the factions slice's data/, #72, #412): a player-facing
 ## name, a symbol that tells it apart where it's marked (#68), its own names for the ranks of the
 ## player's standing with it (Standings), five each way from neutral, which has none, and the
-## instances it holds when a world starts (its territory, #637; Territory).
+## instances it holds when a world starts (its territory, #637; Territory), and its codex entry,
+## which its lexicon page shows (#959).
 
 ## Its schema, which says the fields a faction file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/factions/data/factions.schema.json"
@@ -23,6 +24,10 @@ var ranks_up: Array[String] = []
 var ranks_down: Array[String] = []
 ## The instances it holds when a world starts, by blueprint name, each once (#637).
 var territory: Array[String] = []
+## Its codex entry (#959): a short text about it and where its name comes from.
+var codex_entry: String = ""
+## What its name means, hand-written (#959), e.g. "the guild of those who chart".
+var codex_gloss: String = ""
 ## Why the faction couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -43,6 +48,8 @@ static func parse(file_id: String, text: String) -> Faction:
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
 	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):
 		faction.problem = "its territory must list instance ids, each once"
+	if faction.problem.is_empty() and not faction._read_codex(data.get("codex")):
+		faction.problem = "it needs a codex entry and gloss (#959)"
 	return faction
 
 
@@ -93,3 +100,11 @@ func _read_territory(raw: Variant) -> bool:
 			return false
 		territory.append(instance_name)
 	return true
+
+
+## Whether `raw` holds a codex entry and gloss, each with more than spaces; reads them.
+func _read_codex(raw: Variant) -> bool:
+	var codex: Dictionary = raw if raw is Dictionary else {}
+	codex_entry = Content.text_of(codex.get("entry"))
+	codex_gloss = Content.text_of(codex.get("gloss"))
+	return not codex_entry.strip_edges().is_empty() and not codex_gloss.strip_edges().is_empty()
