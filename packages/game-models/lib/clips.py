@@ -206,6 +206,74 @@ def hit():
     return Clip([(1, {}), (5, recoil), (18, {})])
 
 
+# A long attack's braced stance (#1158): where each paw stands, (sideways, up, forward) from rest
+# in unscaled metres, the forepaws wide and ahead, the hind paws back, so it leans into the attack.
+BRACE = {"front_paw": (0.06, 0.0, 0.18), "hind_paw": (0.04, 0.0, -0.08)}
+# How many frames its wind-up (ChannelStart) takes, from rest to the braced stance.
+CHANNEL_START = 24
+
+
+def _braced(t):
+    """The braced stance at `t` (0..1) of the held loop: low and leaning in, the jaw wide and the
+    ears flat, the body pushed back and the jaw working as it holds the attack, the head swaying
+    once. Every wave leaves the stance at t=0 with no speed, so the wind-up's still
+    end, the loop's seam and the release's start meet without a jolt."""
+    def wave(waves):
+        # 0 at t=0 and 1, rising and falling smoothly in between, `waves` times.
+        return 0.5 - 0.5 * math.cos(2 * math.pi * waves * t)
+    # Once to each side and back, leaving and returning to the middle with no speed.
+    sway = math.sin(2 * math.pi * t) ** 3
+    pose = {
+        "root_loc": (0.0, -0.10 + 0.01 * wave(2), 0.04 - 0.015 * wave(2)),
+        "hips": (-0.06, 0.0, 0.0),
+        "spine_02": (0.04 + 0.02 * wave(2), 0.0, 0.0),
+        "neck": (0.08 + 0.03 * wave(1), 0.0, 0.04 * sway),
+        "head": (-0.06 - 0.03 * wave(1), 0.0, -0.04 * sway),
+        "jaw": (0.55 + 0.06 * wave(3), 0.0, 0.0),
+        # Held out stiff: a swaying tail would still trail behind its sway at the loop's start, a
+        # step from the wind-up's still end (motion.follow).
+        "tail_01": (0.3, 0.0, 0.0),
+    }
+    _both(pose, "ear", (0.5, 0.0, 0.0))
+    for paw, (side, up, forward) in BRACE.items():
+        pose["plant." + paw + ".L"] = (side, up, forward)
+        pose["plant." + paw + ".R"] = (-side, up, forward)
+    return pose
+
+
+def _brace_steps(out, front, hind):
+    """Each paw's step out to its BRACE spot (`out`) or back to rest, the forepaws from frame
+    `front` and the hind paws from `hind`, the right one a frame after the left."""
+    steps = []
+    for paw, start, height in (("front_paw", front, 0.08), ("hind_paw", hind, 0.05)):
+        side, up, forward = BRACE[paw] if out else (0.0, 0.0, 0.0)
+        for name, sign, late in (("L", 1.0, 0), ("R", -1.0, 1)):
+            steps.append(legs.Step(paw + "." + name, start + late, start + late + 8, (sign * side, up, forward),
+                                   height))
+    return steps
+
+
+def channel(frames=60):
+    """A long attack, held for as long as it lasts (#1158), as three clips the game plays in turn
+    (name: Clip): ChannelStart rears back with the jaw opening and lunges into the braced stance,
+    the forepaws stepping out wide and ahead and the hind paws back; Channel holds the stance, a
+    loop of `frames`, for as long as the attack lasts; ChannelEnd snaps the jaw shut, recoils and
+    steps back to stand. The start ends and the end starts on the loop's first pose."""
+    braced = _braced(0.0)
+    rear = {"root_loc": (0.0, -0.06, -0.12), "hips": (-0.1, 0.0, 0.0), "neck": (-0.25, 0.0, 0.0),
+            "head": (-0.2, 0.0, 0.0), "jaw": (0.25, 0.0, 0.0), "tail_01": (-0.15, 0.0, 0.0)}
+    _both(rear, "ear", (0.3, 0.0, 0.0))
+    lunge = dict(braced, root_loc=(0.0, -0.09, 0.07), jaw=(0.65, 0.0, 0.0))
+    start = Clip([(1, {}), (10, rear), (17, lunge), (CHANNEL_START, braced)], steps=_brace_steps(True, 6, 3))
+    held = Clip([(step + 1, _braced(step / frames)) for step in range(frames + 1)], loop=True)
+    # The jaw snaps shut and the head jerks up while the body holds the stance; it rises and
+    # steps back only once the snap is over, so the legs can reach their paws all along.
+    snap = dict(braced, neck=(-0.1, 0.0, 0.0), head=(-0.12, 0.0, 0.0), jaw=(0.0, 0.0, 0.0))
+    _both(snap, "ear", (0.6, 0.0, 0.0))
+    end = Clip([(1, braced), (6, snap), (24, {})], steps=_brace_steps(False, 7, 10))
+    return {"ChannelStart": start, "Channel": held, "ChannelEnd": end}
+
+
 # How far (radians) a lying foreleg's forearm turns its wrist forward beyond the leg's own swing.
 FOREARM_FLAT = 0.8
 

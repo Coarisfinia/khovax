@@ -4,7 +4,7 @@ own that moves nothing but its wisp. The bones hang from the rig's root, not fro
 (clips._key), so the body's moves never carry them. `drift` gives them a slow hover on every frame
 of every clip, each wisp's wave a little later than the one ahead of it, so the hover flows along
 the body. `Gather` makes them shoot to a ring above the head during one clip (an attack) and drift
-back. Weight each wisp to its bone (parts.part's `bone`) and keep the bones out of the body's
+back, or hold it across clips played in turn (a long attack). Weight each wisp to its bone (parts.part's `bone`) and keep the bones out of the body's
 automatic weights (weights.bind's `rigid_bones`)."""
 
 import math
@@ -34,21 +34,27 @@ FLOW = 0.5
 class Gather:
     """In `clip`, the wisps leave their spots at `start` (frame), the frontmost first and each one
     behind it up to `stagger` frames later, and arrive by `arrive` on a level ring of `radius`
-    around `center` (metres, unscaled, the rig's axes), which turns `spin` radians a frame; they
-    leave it at `leave` and are back hovering at their spots by `end`."""
+    around `center` (metres, unscaled, the rig's axes), which turns `spin` radians a frame from
+    `turn` at `start`; they leave it at `leave` and are back hovering at their spots by `end`.
+    A clip that plays on from another one's ring (a long attack's loop and its release, #1158)
+    starts on it (`arrive` None), and one that hands on to another one's ring stays on it
+    (`leave` None); the ring turns on from where the clip before left it (`turn`)."""
 
-    def __init__(self, clip, start, arrive, leave, end, center, radius, spin=0.0, stagger=0):
+    def __init__(self, clip, start, arrive, leave, end, center, radius, spin=0.0, stagger=0, turn=0.0):
         self.clip, self.start, self.arrive, self.leave, self.end = clip, start, arrive, leave, end
         self.center, self.radius, self.spin, self.stagger = Vector(center), radius, spin, stagger
+        self.turn = turn
 
     def share(self, frame, late):
         """How far (0..1) a wisp `late` frames behind the first is from its spot to the ring."""
-        if frame <= self.leave:
-            return legs.ease((frame - self.start - late) / (self.arrive - self.start - late))
-        return 1.0 - legs.ease((frame - self.leave) / (self.end - self.leave))
+        if self.leave is not None and frame > self.leave:
+            return 1.0 - legs.ease((frame - self.leave) / (self.end - self.leave))
+        if self.arrive is None:
+            return 1.0
+        return legs.ease((frame - self.start - late) / (self.arrive - self.start - late))
 
     def spot(self, index, count, frame):
-        angle = 2.0 * math.pi * index / count + self.spin * (frame - self.start)
+        angle = 2.0 * math.pi * index / count + self.turn + self.spin * (frame - self.start)
         return self.center + Vector((math.sin(angle), -math.cos(angle), 0.0)) * self.radius
 
 

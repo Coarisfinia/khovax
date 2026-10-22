@@ -17,6 +17,10 @@ seam and jitter, as numbers with limits that fail the build.
   either side, at the roughest frame of any joint, across the seam too on a loop. A fast move
   that bends smoothly passes; a pop, a snap or a stall doesn't.
 
+- **Joins** (#1158): a loop played between a lead-in and a lead-out, named after it (`Channel`
+  between `ChannelStart` and `ChannelEnd`): how far the lead-in's last pose is from the loop's
+  first, and the loop's first from the lead-out's first, under the seam's limits, so the game
+  can hand over from one to the next at any loop's end.
 - **Start:** a clip must start at time 0; Godot holds a late first key from 0 until then, a
   pause at every loop's seam.
 
@@ -132,16 +136,38 @@ def jitter(rough, start):
 def seam(frames, rough):
     """How far a loop's last pose is from its first (degrees, root metres), and how rough its
     curves run through the seam (the first frame), with the roughest bone."""
-    first, last = frames[0], frames[-1]
-    pose = max(spin(first[0][bone], last[0][bone]).length for bone in first[0])
-    root = (last[1] - first[1]).length
+    pose, root = apart(frames[0], frames[-1])
     speed, bone = max((values[0], bone) for bone, values in rough.items())
     return pose, root, speed, bone
 
 
+def apart(a, b):
+    """How far pose `b` is from pose `a`: the most any bone turns (degrees), the root's shift (metres)."""
+    return max(spin(a[0][bone], b[0][bone]).length for bone in a[0]), (b[1] - a[1]).length
+
+
+def joins(ends, loops):
+    """Each loop's joins to its lead-in (<loop>Start) and lead-out (<loop>End), from `ends` (each
+    clip's first and last frame): lines and whether they pass."""
+    lines, passed = [], True
+    for loop in sorted(name for name in loops if name in ends):
+        first = ends[loop][0]
+        pairs = []
+        if loop + "Start" in ends:
+            pairs.append((loop + "Start", ends[loop + "Start"][1], first))
+        if loop + "End" in ends:
+            pairs.append((loop + "End", first, ends[loop + "End"][0]))
+        for lead, before, after in pairs:
+            pose, root = apart(before, after)
+            fails = pose > SEAM_POSE_LIMIT or root > SEAM_ROOT_LIMIT
+            passed = passed and not fails
+            lines.append("%s %s join: %.2f deg, root %.1f mm" % ("FAIL" if fails else "ok", lead, pose, root * 1000))
+    return lines, passed
+
+
 def check(rig, meshes, fps, loops, speeds):
     feet = ground.foot_bones(rig)
-    lines, passed = [], True
+    lines, passed, ends = [], True, {}
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
         # A clip that starts after time 0 holds its first pose until then in the game: a pause
@@ -149,6 +175,7 @@ def check(rig, meshes, fps, loops, speeds):
         late = start != 0
         loop = action.name in loops
         frames = sample(rig, meshes, feet, start, end)
+        ends[action.name] = (frames[0], frames[-1])
         slide, mean, fastest = sliding(frames, feet, fps, speeds.get(action.name, 0.0))
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
@@ -165,7 +192,8 @@ def check(rig, meshes, fps, loops, speeds):
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
         lines.append("%s %s%s: %s" % ("FAIL" if fails else "ok", action.name, " (loop)" if loop else "", text))
-    return lines, passed
+    joined, joins_pass = joins(ends, loops)
+    return lines + joined, passed and joins_pass
 
 
 def main():

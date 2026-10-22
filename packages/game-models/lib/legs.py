@@ -64,9 +64,10 @@ def steps(poses, made):
     """Lays `made` (Steps, each paw's in order) over `poses` ([(frame, pose)], every frame) as
     plant channels: forward and sideways ease in and out, after the paw has risen and before it
     comes down, so it leaves and lands without sliding, and it rises and falls smoothly (`ease`,
-    `bump`)."""
+    `bump`). A paw starts where the clip's first pose plants it (a clip that plays on from
+    another one's stance), at rest without one."""
     for paw in sorted({step.paw for step in made}):
-        spot, frames = (0.0, 0.0, 0.0), []
+        spot, frames = tuple(poses[0][1].get("plant." + paw, (0.0, 0.0, 0.0))), []
         for step in sorted((step for step in made if step.paw == paw), key=lambda step: step.start):
             frames.append((step, spot))
             spot = step.spot
