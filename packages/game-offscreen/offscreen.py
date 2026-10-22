@@ -28,6 +28,7 @@ code."""
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -55,8 +56,6 @@ def project_name(godot_options: list[str]) -> str | None:
     for index, option in enumerate(godot_options):
         if option == "--path" and index + 1 < len(godot_options):
             folder = Path(godot_options[index + 1])
-        elif option.startswith("--path="):
-            folder = Path(option.removeprefix("--path="))
     try:
         text = (folder / "project.godot").read_text(encoding="utf-8")
     except OSError:
@@ -65,10 +64,9 @@ def project_name(godot_options: list[str]) -> str | None:
     return found.group(1) if found else None
 
 
-def throwaway_data_home(godot_options: list[str], env: dict[str, str]) -> str:
-    """A temporary folder for Godot's data folder (`XDG_DATA_HOME`), so `user://` is a fresh
-    folder in it, holding a link to the project's shared shader cache. The caller deletes it."""
-    data_home = tempfile.mkdtemp(prefix="khovax-offscreen-")
+def link_shader_cache(data_home: str, godot_options: list[str], env: dict[str, str]) -> None:
+    """Links the project's shared shader cache into the default user folder Godot will use with
+    `data_home` as its data folder (`XDG_DATA_HOME`)."""
     name = project_name(godot_options)
     if name is not None:
         default_home = Path(env.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
@@ -77,7 +75,6 @@ def throwaway_data_home(godot_options: list[str], env: dict[str, str]) -> str:
         shared_cache.mkdir(parents=True, exist_ok=True)
         (Path(data_home) / user_folder).mkdir(parents=True)
         (Path(data_home) / user_folder / SHADER_CACHE).symlink_to(shared_cache)
-    return data_home
 
 
 def main() -> int:
@@ -101,14 +98,23 @@ def main() -> int:
     # Without these, Godot could still find the desktop's display and open its window there.
     hidden = ("DISPLAY", "WAYLAND_DISPLAY")
     env = {name: value for name, value in os.environ.items() if name not in hidden}
-    data_home = throwaway_data_home(godot_options, env)
-    env["XDG_DATA_HOME"] = data_home
     command = ["xvfb-run", "-a", "-s", f"-screen 0 {SCREEN}", "godot", *GODOT_FLAGS, *args]
+    data_home = tempfile.mkdtemp(prefix="khovax-offscreen-")
     try:
-        return subprocess.run(command, env=env, check=False).returncode
+        link_shader_cache(data_home, godot_options, env)
+        env["XDG_DATA_HOME"] = data_home
+        godot = subprocess.Popen(command, env=env)
+        # A stop (Ctrl+C reaches Godot itself, SIGTERM is passed on) ends Godot first, so its
+        # folder is deleted only once nothing writes to it any more.
+        signal.signal(signal.SIGTERM, lambda _signal, _frame: godot.terminate())
+        while True:
+            try:
+                return godot.wait()
+            except KeyboardInterrupt:
+                continue
     finally:
         # The link goes, the shared shader cache it points at stays.
-        shutil.rmtree(data_home)
+        shutil.rmtree(data_home, ignore_errors=True)
 
 
 if __name__ == "__main__":
