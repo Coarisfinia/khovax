@@ -38,9 +38,8 @@ static func of(
 
 ## The tiles `step` could be met at in `state`: wild monsters of its species, or its quest target
 ## (#625), that aren't hiding, in id order, the closed chests, the tiles of its place, in the
-## legend's order, the tiles of
-## its piece, or the exits leading to its instance, also when it counts there and `state` is
-## another instance, `here`.
+## legend's order, the tiles of its piece, or the exits leading to its instance, also when it counts
+## there and `state` is another instance, `here`.
 static func _candidates(state: GameState, step: QuestStep, here: String) -> Array[Vector2i]:
 	var elsewhere: bool = not step.instance.is_empty() and step.instance != here
 	if step.enters_instance() or elsewhere:

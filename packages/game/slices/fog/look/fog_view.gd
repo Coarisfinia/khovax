@@ -9,8 +9,7 @@ extends Node
 ## in a widening circle around this machine's player, each ring of tiles starting to clear a
 ## moment after the one inside it. While the boot fog still hides the game (boot_covering), the
 ## circle waits, so the player first sees the world fully fogged. No hole ever opens in one frame.
-## Wild
-## monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
+## Wild monsters out of every ally's sight are hidden (WildMonsterView asks `ally_sees`).
 ## It only reads the state: what was seen before is remembered here, per machine and per instance
 ## (#190), so coming back to an instance, or looking at one next door (NeighbourView), shows the
 ## ground explored there under light fog. The keeper saves it with the world (#215).
@@ -159,8 +158,8 @@ static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 
 
 ## How bright `tile` should be, remembering it once an ally sees it or an event reveals it (#177). A
-## switched-off fog keeps its
-## last sight, so it lifts instead, easing like any other change (a rule switches it, #30).
+## switched-off fog keeps its last sight, so it lifts instead, easing like any other change (a rule
+## switches it, #30).
 func _target(fog: FogFeature, tile: Vector2i) -> float:
 	if not fog.enabled:
 		return VISIBLE

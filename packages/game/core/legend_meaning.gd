@@ -87,7 +87,7 @@ func lay(region: Region, tile: Vector2i) -> String:
 		return ""
 	region.terrain[tile] = kind
 	if turns.size() > 1 or walkable_overrides.size() > 1 or heights.size() > 1:
-		return "tile %s says its turn or its walkable trait twice" % tile
+		return "tile %s says its turn, its walkable trait or its height twice" % tile
 	for turn: int in turns:
 		if turn < 0 or turn >= Hex.DIRECTIONS.size():
 			return "tile %s's turn %d isn't 0 to 5" % [tile, turn]

@@ -4,9 +4,9 @@ extends SpeciesLootFeature
 ## and instead of being dominated it drops crafting materials, a real choice between the two. Every
 ## player in the instance rolls their own (#74): ROLLS_PER_PLAYER rolls on the felled monster's
 ## species' harvest table (#687, apart from the one dominations roll on), whose blank rolls on the
-## instance's table (#90), or gives nothing in an instance without one. A species without a
-## harvest table drops nothing. The rolls draw from this
-## feature's own stream, in slot order. The number of rolls is a placeholder to tune (#960).
+## instance's table (#90), or gives nothing in an instance without one. A species without a harvest
+## table drops nothing. The rolls draw from this feature's own stream, in slot order. The number of
+## rolls is a placeholder to tune (#960).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "harvest"

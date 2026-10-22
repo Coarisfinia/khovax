@@ -3,10 +3,9 @@ extends VBoxContainer
 ## The player's gear slots on the menu's Character tab (#690): a button for each slot (GearSlots),
 ## showing the slot's icon and, in words, the gear in it with its rarity, or that it's empty.
 ## Pressing one, with a tap, a click or a controller (#438), puts the next piece of the player's
-## gear
-## for that slot into it, in id order, and empties it after the last. Gear changes anywhere outside
-## a fight (owner, #223, Fight): during one, the buttons still show the slots but don't change them,
-## and a line says why. It keeps up with the profile and the fight while shown.
+## gear for that slot into it, in id order, and empties it after the last. Gear changes anywhere
+## outside a fight (owner, #223, Fight): during one, the buttons still show the slots but don't
+## change them, and a line says why. It keeps up with the profile and the fight while shown.
 
 const TITLE: String = "Gear"
 const EMPTY_TEXT: String = "empty"

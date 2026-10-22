@@ -193,8 +193,7 @@ func _update(state: GameState) -> void:
 ## straight line reaches without passing over rock, in Hex.disc's order: sight crosses the seam.
 ## Every line is worked out once per radius, from the origin, and
 ## walked from `from` (#289): a hex line doesn't depend on where it starts, so the tiles are the
-## same
-## as drawing each line afresh, without the work.
+## same as drawing each line afresh, without the work.
 static func sight(
 		region: Region,
 		from: Vector2i,

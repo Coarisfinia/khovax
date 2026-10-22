@@ -10,8 +10,8 @@ extends Feature
 ## player colors the tile they stand on.
 ##
 ## The domination goes to the lowest slot among the players in the instance who colored the ring's
-## wall (owner, #86, #87): allies close rings together, whoever's move closes it. Splitting a
-## domination by contribution is #86 and #260.
+## wall (owner, #86, #87): allies close rings together, whoever's move closes it. A ring around
+## several monsters hands them out by contribution instead (#260, DominationShares).
 ##
 ## Enclosed means the monster's tile can't reach the region's edge without crossing the trail: one
 ## flood fill from the edge over the region's tiles, whatever their terrain, so only the trail
@@ -117,12 +117,12 @@ func ring_waiting(state: GameState, dominator_id: int) -> Array[Vector2i]:
 	return RingShape.wall_around(state.region, trail, _spots(state, encircled[dominator_id]))
 
 
-## Every new ring closed this tick around wild monsters in no ring yet waits for a totem, unless
-## its dominator has a ring waiting or sealing already. A ring can only close when the trail grows,
-## so rings are
-## checked per new trail tile, in entity id order of who moved, whatever order the moves were raised
-## in. This relies on no wild monster stepping into a ring after it closed: one that moves (#364)
-## never steps onto the trail, and a ring's inside only borders the outside through its trail.
+## Every new ring closed this tick around wild monsters in no ring yet waits for a totem, unless its
+## dominator has a ring waiting or sealing already. A ring can only close when the trail grows, so
+## rings are checked per new trail tile, in entity id order of who moved, whatever order the moves
+## were raised in. This relies on no wild monster stepping into a ring after it closed: one that
+## moves (#364) never steps onto the trail, and a ring's inside only borders the outside through its
+## trail.
 func _close_rings(state: GameState) -> void:
 	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature

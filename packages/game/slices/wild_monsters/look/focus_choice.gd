@@ -2,8 +2,7 @@ class_name FocusChoice
 extends RefCounted
 ## Which wild monster the local player focuses (#436): the ones near the player, nearest first (ties
 ## by id), stepped through with focus_next and focus_previous. A focus that's gone or out of range
-## is
-## dropped. The simulation checks the focus again before striking it.
+## is dropped. The simulation checks the focus again before striking it.
 
 ## How far from the player a wild monster can be focused, in tiles.
 const RANGE: int = 6

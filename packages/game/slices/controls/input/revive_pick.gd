@@ -5,10 +5,9 @@ extends RefCounted
 ## carry at once; with several fainted it picks the first, in carried order, and then the arrows or
 ## the d-pad (ui_left/ui_up back, ui_right/ui_down and revive_monster on) move the pick between the
 ## fainted ones, ui_accept (Enter, A) uses the item on it and ui_cancel (Escape, B) lets it go. A
-## tap
-## on a fainted square of the roster (RosterHud, `tap`) revives that one at once. The player stands
-## while picking (LocalInput). Presses are heard every frame and settled once per command, against
-## the state the command is for.
+## tap on a fainted square of the roster (RosterHud, `tap`) revives that one at once. The player
+## stands while picking (LocalInput). Presses are heard every frame and settled once per command,
+## against the state the command is for.
 
 ## The short id of the fainted monster picked, or "" while not picking.
 var picked: String = ""

@@ -2,13 +2,11 @@ class_name QuestsTab
 extends ScrollContainer
 ## The menu's Quests tab (#388): the same open quests as the list at the side of the screen (#340,
 ## QuestTracker.open_steps), each with its name and path mark (#471) and its steps on the player's
-## way,
-## worded as the list words them (QuestListView.step_line): the steps done, the one it's on with its
-## count, and the ones still to come up to its next choice (#573). Each step says which it is in
-## words, never by color alone (#68). It
-## only reads the quests, keeps up with them while shown, and scrolls when the screen is too short
-## for every quest. Its layout lives in its scene, quests_tab.tscn (#437): this script keeps only
-## what it does.
+## way, worded as the list words them (QuestListView.step_line): the steps done, the one it's on
+## with its count, and the ones still to come up to its next choice (#573). Each step says which it
+## is in words, never by color alone (#68). It only reads the quests, keeps up with them while
+## shown, and scrolls when the screen is too short for every quest. Its layout lives in its scene,
+## quests_tab.tscn (#437): this script keeps only what it does.
 
 ## The gap between rows, as the scene sets it.
 const GAP: float = 8.0
@@ -57,9 +55,8 @@ func fit(width: float) -> void:
 
 
 ## The steps of the open quest `id` of `quests` on the player's way, worded: the ones done, in the
-## order
-## done, the one it's on with its count, and the ones sure to come later, up to its next choice
-## (#573), whose way on isn't known yet.
+## order done, the one it's on with its count, and the ones sure to come later, up to its next
+## choice (#573), whose way on isn't known yet.
 static func quest_lines(quests: QuestTracker, id: String) -> Array[String]:
 	var progress: QuestProgress = quests.progress_of(id)
 	var quest: QuestDefinition = quests.book[id]

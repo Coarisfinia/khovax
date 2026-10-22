@@ -62,9 +62,9 @@ func _process(_delta: float) -> void:
 
 
 ## A tap or a left click on a square swaps to its monster, or revives a fainted one, and is taken,
-## so the touch stick doesn't
-## start under it. Godot hands `_input` to later nodes first, so this node comes after the stick in
-## the Hud. While the game hears no input (the menu is open) it takes nothing.
+## so the touch stick doesn't start under it. Godot hands `_input` to later nodes first, so this
+## node comes after the stick in the Hud. While the game hears no input (the menu is open) it takes
+## nothing.
 func _input(event: InputEvent) -> void:
 	if driver == null or driver.input == null or driver.input.blocked:
 		return

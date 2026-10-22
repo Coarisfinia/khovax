@@ -5,9 +5,9 @@ extends ScrollContainer
 ## step to the previous or next choice or to hand it back to Auto. The settings' owners (Graphics,
 ## SurveyChoice, DamageNumbersChoice, the menu's pause) know each setting's choices and keep the
 ## player's; the tab only shows them and passes the player's picks on. It says everything in words,
-## never by color alone
-## (#68). It scrolls when the screen is too short for every row. Its layout lives in its scene,
-## settings_tab.tscn (#437): the rows sit in the middle of the tab, as wide as `fit` makes them.
+## never by color alone (#68). It scrolls when the screen is too short for every row. Its layout
+## lives in its scene, settings_tab.tscn (#437): the rows sit in the middle of the tab, as wide as
+## `fit` makes them.
 
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed

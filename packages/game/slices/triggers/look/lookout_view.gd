@@ -2,8 +2,7 @@ class_name LookoutView
 extends Node3D
 ## The lookouts' look (#181): a tall post with a pennant on every tile whose trigger reveals (#183),
 ## so a player can spot one by its shape (#68), hidden in the fog until an ally sees it (#137). A
-## placeholder made
-## of primitive meshes until the game's own look exists. It only reads the state.
+## placeholder made of primitive meshes until the game's own look exists. It only reads the state.
 
 const POST_HEIGHT: float = 1.4
 const POST_COLOR: Color = Color(0.55, 0.38, 0.22)

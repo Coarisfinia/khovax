@@ -2,8 +2,8 @@ class_name MonsterDetails
 extends VBoxContainer
 ## The detail pane on the Character tab (#430): every stat of the dominated monster selected in the
 ## list beside it (DominatedMonstersList), in words: its species and level, its types (each after
-## its family's badge, TypeBadge), HP, strength
-## and speed, its special attack and its two passives by name. It only reads what it's given.
+## its family's badge, TypeBadge), HP, strength and speed, its special attack and its two passives
+## by name. It only reads what it's given.
 
 const TITLE: String = "Details"
 const NONE_TEXT: String = "No monster selected"

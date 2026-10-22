@@ -55,8 +55,7 @@ static func _all() -> Dictionary[String, Callable]:
 			HidingFeature.ID: _plain(HidingFeature),
 			NpcFeature.ID: _plain(NpcFeature),
 			ChestFeature.ID: ChestFactory.build,
-			# The companions and the features built on them. A companion
-			# whose player walks out
+			# The companions and the features built on them. A companion whose player walks out
 			# through an exit goes with them whatever the order: the world moves it after the tick
 			# (#716).
 			CompanionFeature.ID: CompanionFactory.build,

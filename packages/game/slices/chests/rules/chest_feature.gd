@@ -1,14 +1,13 @@
 class_name ChestFeature
 extends Feature
 ## Treasure chests (#124): placed by hand in region pieces (ChestPlacements), opened by the first
-## player who
-## walks onto one. An opened chest bursts into loot and **every player in the instance gets their
-## own roll** on the instance's chest table (owner, #124), not only the one who opened it: crafting
-## supplies and basic gear (#694). The rolls come from the feature's own random stream (#32), so a
-## replay opens the same chests with the same loot; a ChestOpened event says who got what, and each
-## player's loot goes into their own profile (#74). Loot on the ground (#203) is found the same way,
-## by the first player to step on it, with every player rolling their own on the instance's loot
-## table (#90), which holds no gear; a LootFound event says so, as it's no chest.
+## player who walks onto one. An opened chest bursts into loot and **every player in the instance
+## gets their own roll** on the instance's chest table (owner, #124), not only the one who opened
+## it: crafting supplies and basic gear (#694). The rolls come from the feature's own random stream
+## (#32), so a replay opens the same chests with the same loot; a ChestOpened event says who got
+## what, and each player's loot goes into their own profile (#74). Loot on the ground (#203) is
+## found the same way, by the first player to step on it, with every player rolling their own on the
+## instance's loot table (#90), which holds no gear; a LootFound event says so, as it's no chest.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "chests"
