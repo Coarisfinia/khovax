@@ -664,6 +664,9 @@ func _check_toon_look(main: Node) -> String:
 	for model: Node in models:
 		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
 			var part: MeshInstance3D = node as MeshInstance3D
+			# The eyes' halos are light, not a lit surface (EyeGlow, #1008).
+			if part.get_parent() is EyeGlow:
+				continue
 			for surface: int in part.mesh.get_surface_count():
 				materials.append(part.get_active_material(surface))
 	if view.figures.is_empty() or materials.size() < 3:

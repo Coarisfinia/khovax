@@ -30,6 +30,10 @@ const NARROW: float = 0.07
 const STAND_OUT: float = 0.35
 
 static var _halo: GradientTexture2D
+## The halos' material, which each glow copies to set its own brightness. Kept for good, so its
+## shader stays compiled while no monster is shown: compiled again, the GLES3 renderer reloads it
+## from its shader cache, which fails with a warning on some Android drivers.
+static var _halo_material: StandardMaterial3D
 
 ## Whether the monster is agitated (enraged, #220), and whether it fainted.
 var agitated: bool = false
@@ -39,17 +43,12 @@ var brightness: float = CALM
 ## What is left of the last attack's flare: 1 just as it struck, 0 once it's eased back.
 var flare_left: float = 0.0
 var _model: Node3D
-var _material: StandardMaterial3D = StandardMaterial3D.new()
+var _material: StandardMaterial3D
 var _clock: float = 0.0
 
 
 func _init() -> void:
-	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	_material.billboard_keep_scale = true
-	_material.albedo_texture = _halo_texture()
+	_material = _template().duplicate() as StandardMaterial3D
 	# After the model's clips have posed it this frame, so the halos sit on the eyes.
 	process_priority = 1
 
@@ -120,6 +119,19 @@ func _halo_mesh() -> MeshInstance3D:
 	halo.mesh = quad
 	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return halo
+
+
+## The halos' material: unshaded, added onto what is behind it, facing the camera, made once.
+static func _template() -> StandardMaterial3D:
+	if _halo_material == null:
+		_halo_material = StandardMaterial3D.new()
+		_halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_halo_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		_halo_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		_halo_material.billboard_keep_scale = true
+		_halo_material.albedo_texture = _halo_texture()
+	return _halo_material
 
 
 ## A disc, white in its middle and fading out to nothing at its edge, made once.
