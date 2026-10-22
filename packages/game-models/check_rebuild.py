@@ -8,8 +8,9 @@ that too, which tells whether a pull request's .glb is what its script builds.
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all
 
 `--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
-script is the one named like a tracked .glb under the game's assets/ (mana_wolf.py builds
-assets/mana-wolf/mana_wolf.glb), so a new model is checked as soon as both are committed.
+script is one here that exports through scene.export_glb, and its .glb is the tracked one under
+the game's assets/ named like it (mana_wolf.py builds assets/mana-wolf/mana_wolf.glb); a model
+script without one fails.
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
 (nodes, materials, ...) or each binary accessor (a mesh's indices or attribute, a clip's
 channel) with how many values differ and by how much: indices that only move point to the order
@@ -19,6 +20,7 @@ error annotation on the committed .glb."""
 
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -30,6 +32,8 @@ from game_shared.git_files import git_files
 
 MODELS = Path(__file__).resolve().parent
 BLENDER = MODELS / "blender.py"
+# A model script's export call, as a statement of its own.
+EXPORT = re.compile(r"^\s*scene\.export_glb\(", re.MULTILINE)
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 
@@ -96,12 +100,13 @@ def differences(a: Path, b: Path) -> list[str]:
     return lines or ["the bytes differ outside the accessors (the JSON's layout or padding)"]
 
 
-def scripted_models() -> list[tuple[str, str]]:
-    """Every model script with the .glb it builds, both from the working directory: the tracked
-    .glb under the game's assets/ named like the script."""
+def scripted_models() -> list[tuple[str, str | None]]:
+    """Every model script with the .glb it builds, both from the working directory: a model script
+    is a script here that exports through scene.export_glb, and its .glb is the tracked one under
+    the game's assets/ named like it (None when there is none)."""
     glbs = {Path(path).stem: path for path in git_files(str(MODELS.parent / "game" / "assets" / "*.glb"))}
-    return [(os.path.relpath(script), glbs[script.stem])
-            for script in sorted(MODELS.glob("*.py")) if script.stem in glbs]
+    return [(os.path.relpath(script), glbs.get(script.stem)) for script in sorted(MODELS.glob("*.py"))
+            if EXPORT.search(script.read_text())]
 
 
 def check(script_path: str, committed: Path | None) -> bool:
@@ -142,9 +147,13 @@ def check(script_path: str, committed: Path | None) -> bool:
 def main() -> int:
     if sys.argv[1:] == ["--all"]:
         models = scripted_models()
-        if not models:
-            # The naming that pairs a script with its .glb broke: nothing would be checked.
-            log.error("no model script is named like a .glb under the game's assets/")
+        unpaired = [script for script, glb in models if glb is None]
+        for script in unpaired:
+            # A renamed or deleted .glb would otherwise leave its model unchecked.
+            log.error("no tracked .glb under the game's assets/ is named like this model script", script)
+        if not models or unpaired:
+            if not models:
+                log.error("no model script calls scene.export_glb: nothing to check")
             return 1
     elif len(sys.argv) in (2, 3) and sys.argv[1] != "--all":
         models = [(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)]
