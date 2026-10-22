@@ -21,12 +21,12 @@ env:
   # Same version as tools/scoop/gdstyle.json; the checksum is of the Linux release archive.
   GDSTYLE_VERSION: 0.3.3
   GDSTYLE_SHA256: afc3c7a1b9fba219a2eeb2b3896470babffe010b6cf9f3a8c9526a2f6155d64c
-  # jv, the JSON Schema validator for the content data (#72); the checksum is of its Linux release
-  # archive, as GitHub records it for the release asset.
   # jscpd, the duplicate-code check (#247); the checksum is of its Linux release archive, from the
   # release's checksums.txt.
   JSCPD_VERSION: 5.4.1
   JSCPD_SHA256: f2017a17de2a8d5708f8354c6e7223f82da3dc6489675bce543ba00d9d529468
+  # jv, the JSON Schema validator for the content data (#72); the checksum is of its Linux release
+  # archive, as GitHub records it for the release asset.
   JV_VERSION: 6.0.3
   JV_SHA256: 36e9ab8481cc8e2cb27c8336decc9abdcbd606b05792ca88d6188e01ec28766b
   # uv runs the Python tooling (#1036) and installs the Python pyproject.toml pins, which it checks
@@ -80,7 +80,8 @@ jobs:
 
       - name: "🧰 Install jscpd (the duplicate-code check)"
         run: |
-          curl -fsSL -o /tmp/jscpd.tar.gz             "https://github.com/kucherenko/jscpd/releases/download/v${JSCPD_VERSION}/jscpd-linux-x64-gnu.tar.gz"
+          curl -fsSL -o /tmp/jscpd.tar.gz \
+            "https://github.com/kucherenko/jscpd/releases/download/v${JSCPD_VERSION}/jscpd-linux-x64-gnu.tar.gz"
           echo "${JSCPD_SHA256}  /tmp/jscpd.tar.gz" | sha256sum --check
           sudo tar xzf /tmp/jscpd.tar.gz -C /usr/local/bin jscpd
 
@@ -158,67 +159,15 @@ jobs:
         run: uv run --locked --package khovax-game-checks ../game-checks/unused_assets.py
 
       - name: "🗂️ Check the content data against its schemas"
-        # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
-        # each kind's files against its schema: the core's (#506), core/data/<kind>/, against
-        # core/data/schemas/<kind>.schema.json,
-        # and a kind a slice owns (#412), slices/<slice>/data/<kind>/, against the
-        # <kind>.schema.json beside it; the slice's own kind sits directly in its data/, beside
-        # <slice>.schema.json, so no folder repeats the slice's name (#442). A schema without its
-        # data would sit unchecked, so it fails too, and so does a kind with two schemas. An
-        # annotation names its file from the repository's root (#1106), so it links into the diff.
+        # Each kind's content files, as Godot's data_to_json.gd writes them, against its schema;
+        # the rules for which schema checks which folder are in the check itself.
         run: |
-          # Every kind's folder has its own schema: core/data/<kind>/ in core/data/schemas/, and a
-          # slice's <kind>/ beside it, so a slice's data never borrows another's schema.
-          for folder in core/data/*/ slices/*/data/*/; do
-            [ -d "$folder" ] || continue
-            name=$(basename "$folder")
-            [ "$folder" = "core/data/schemas/" ] && continue
-            schema=core/data/schemas/${name}.schema.json
-            case "$folder" in slices/*) schema=${folder%/}.schema.json ;; esac
-            if [ ! -f "$schema" ]; then
-              echo "::error::${folder} has no schema at ${schema}"
-              exit 1
-            fi
-          done
-          declare -A schema_of
-          for schema in core/data/schemas/*.schema.json slices/*/data/*.schema.json; do
-            [ -e "$schema" ] || continue
-            name=$(basename "$schema" .schema.json)
-            folder=core/data/${name}
-            case "$schema" in slices/*) folder=$(dirname "$schema")/${name} ;; esac
-            if [ "$folder" = "slices/${name}/data/${name}" ]; then
-              if ! compgen -G "slices/${name}/data/*.jsonc" > /dev/null; then
-                echo "::error file=packages/game/${schema}::has no slices/${name}/data/*.jsonc to check"
-                exit 1
-              fi
-            elif [ ! -d "$folder" ]; then
-              echo "::error file=packages/game/${schema}::has no ${folder}/ folder to check"
-              exit 1
-            fi
-            if [ -n "${schema_of[$name]:-}" ]; then
-              echo "::error file=packages/game/${schema}::${name} already has a schema: ${schema_of[$name]}"
-              exit 1
-            fi
-            schema_of[$name]=$schema
-          done
-          curl -fsSL -o /tmp/jv.tar.gz             "https://github.com/santhosh-tekuri/jsonschema/releases/download/v${JV_VERSION}/jv-v${JV_VERSION}-linux-amd64.tar.gz"
+          curl -fsSL -o /tmp/jv.tar.gz \
+            "https://github.com/santhosh-tekuri/jsonschema/releases/download/v${JV_VERSION}/jv-v${JV_VERSION}-linux-amd64.tar.gz"
           echo "${JV_SHA256}  /tmp/jv.tar.gz" | sha256sum --check
           mkdir -p /tmp/jv && tar xzf /tmp/jv.tar.gz -C /tmp/jv
-          jv=$(find /tmp/jv -type f -name jv | head -1)
-          timeout 60 ~/godot/godot --headless --path . -s res://tools/godot/data_to_json.gd
-          # Godot exits 0 even when a script fails to compile, so check every file was converted.
-          sources=$(find core/data slices/*/data -name '*.jsonc' 2>/dev/null | wc -l)
-          test "$sources" -eq "$(find build/data-json -name '*.json' | wc -l)"
-          for folder in build/data-json/*/; do
-            name=$(basename "$folder")
-            if [ -z "${schema_of[$name]:-}" ]; then
-              echo "::error::content kind ${name} has no schema"
-              exit 1
-            fi
-            for file in "$folder"*.json; do
-              "$jv" "${schema_of[$name]}" "$file"
-            done
-          done
+          GODOT=~/godot/godot JV=$(find /tmp/jv -type f -name jv | head -1) \
+            uv run --locked --package khovax-game-checks ../game-checks/content_schemas_check.py
 
       - name: "🔎 Check every script (warnings as errors)"
         # Also catches scripts that no test loads. An ERROR: line fails the step too, even when
@@ -236,7 +185,8 @@ jobs:
         # compare fairly (#303); the numbers go into the job's summary either way.
         run: |
           set -o pipefail
-          timeout 120 ~/godot/godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000             | tee /tmp/load-head.txt
+          timeout 120 ~/godot/godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000 \
+            | tee /tmp/load-head.txt
           if [ "${{ github.event_name }}" = pull_request ]; then
             git fetch -q --depth=1 origin "${{ github.base_ref }}"
             git worktree add -q /tmp/base FETCH_HEAD
@@ -245,7 +195,9 @@ jobs:
             [ -f "$base/project.godot" ] || base=/tmp/base
             # A base that fails its own load test is the base's problem: this branch is then
             # reported without a comparison, and nothing of the failed run is compared.
-            if timeout 120 ~/godot/godot --headless --path "$base" --import > /dev/null 2>&1               && timeout 120 ~/godot/godot --headless --path "$base" -s res://tools/godot/load_test.gd                 -- ticks=2000 > /tmp/load-base.txt 2>&1; then
+            if timeout 120 ~/godot/godot --headless --path "$base" --import > /dev/null 2>&1 \
+              && timeout 120 ~/godot/godot --headless --path "$base" -s res://tools/godot/load_test.gd \
+                -- ticks=2000 > /tmp/load-base.txt 2>&1; then
               cat /tmp/load-base.txt
             else
               echo "::warning::The base's load test failed, so there's nothing to compare against."
@@ -561,7 +513,8 @@ jobs:
 
       - name: "⚙️ Emulator: enable KVM"
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"'             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
@@ -599,7 +552,8 @@ jobs:
         id: emulator-revisions
         run: |
           sdk=/usr/local/lib/android/sdk
-          revisions=$(cat "$sdk/emulator/package.xml"             "$sdk/system-images/android-34/default/x86_64/package.xml" | sha256sum | cut -c1-16)
+          revisions=$(cat "$sdk/emulator/package.xml" \
+            "$sdk/system-images/android-34/default/x86_64/package.xml" | sha256sum | cut -c1-16)
           echo "key=android-emulator-34-x86_64-$revisions" >> "$GITHUB_OUTPUT"
 
       - name: "💾 Android emulator: save the cache under the installed revisions"
