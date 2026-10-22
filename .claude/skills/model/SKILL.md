@@ -11,8 +11,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 
 ## Tools
 - **Blender 5.2.2**, portable at `~/.local/opt/blender-5.2.2` (`blender` on the PATH). Brew can't
-  install it on Linux. Run it headless, through `packages/models/blender.py`:
-  `uv run --locked packages/models/blender.py --background --factory-startup
+  install it on Linux. Run it headless, through `packages/game-models/blender.py`:
+  `uv run --locked packages/game-models/blender.py --background --factory-startup
   --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
   only: Mesa's default falls back to the CPU's software rasteriser. It also makes a script that
@@ -28,7 +28,7 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   the screen between frames. Blender (GPU) and Godot (CPU) renders don't compete and
   run side by side; several Godot renders at once only share the CPU's cores.
 - **ffmpeg** for GIFs through
-  `uv run --locked packages/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
+  `uv run --locked packages/game-models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
   header), never a hand-typed command.
 - The scripts beside this file: `scripts/render_views.py` (every side, one labelled sheet, drawn
   in Blender with its own font: no ImageMagick, no system font),
@@ -40,8 +40,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
 **Tools are built reusable; a model script holds only that model's parameters and parts.** Anything
 a second model could use goes into the library or a generic tool, never into one model's script.
 
-- **The Blender library, `packages/models/lib/`** (a model script imports it after
-  `sys.path.insert(0, <packages/models>)`):
+- **The Blender library, `packages/game-models/lib/`** (a model script imports it after
+  `sys.path.insert(0, <packages/game-models>)`):
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
     export settings the game takes: GLB, skins, one animation per NLA track, Y up).
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
@@ -80,23 +80,23 @@ a second model could use goes into the library or a generic tool, never into one
     note), and its `REFERENCE` takes the values once the owner approves the look.
   - `attachments`: `add` gives the rig its attachment points (below), each a small bone that
     deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out.
-- **The ground check:** `packages/models/check_ground.py -- <model.glb> [tolerance]` samples every
+- **The ground check:** `packages/game-models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
-- **The motion check (#1071):** `packages/models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
+- **The motion check (#1071):** `packages/game-models/check_motion.py -- <model.glb> [<Clip>=<speed> ...]`
   samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
   the ground while it stands on it, against the speed the game moves the model at while it
   plays that clip; the model script prints them), the **loop seam** (pose and roughness from the
   last frame to the first) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
-- **The curve plots (#1071):** `packages/models/plot_motion.py -- <out.png> <Clip> <model.glb>
+- **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
   from a curve than from a GIF.
 - **The renders:** `scripts/render_views.py` (every side in Blender) and
   `packages/game/tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides,
   the game camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
-- **A new model:** copy the shape of `packages/models/mana_wolf.py`: its proportions, its `Blob`
+- **A new model:** copy the shape of `packages/game-models/mana_wolf.py`: its proportions, its `Blob`
   body, its own parts and its palette, then `quadruped.armature`, `attachments.add`,
   `weights.bind`, `clips.animate` and `scene.export_glb`. A body plan the library lacks (a bird, a serpent)
   becomes a new library module first, then the model.
@@ -107,7 +107,7 @@ a second model could use goes into the library or a generic tool, never into one
   and react when it finishes. Independent renders run in parallel (owner, #1047).
 
 ## 1. Build (Blender script)
-- **Where:** `packages/models/<name>.py` builds the model, and
+- **Where:** `packages/game-models/<name>.py` builds the model, and
   `packages/game/assets/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
   `CREDITS.md` entry, as AGENTS.md's asset rules say.
 - **Look:** cel-shaded eye candy, medium-poly for anything the camera sees up close (AGENTS.md,
@@ -120,7 +120,7 @@ a second model could use goes into the library or a generic tool, never into one
   body without legs (a vortex, floating rocks, a blob) must be buildable from it too, from `body`,
   `parts`, `surface`, `eyes` and its own rig module.
 - **Baseline:** the mana wolf (#995) is the baseline for the level of detail: every new model
-  matches or exceeds it up close (owner). Its build script, `packages/models/mana_wolf.py`, and its
+  matches or exceeds it up close (owner). Its build script, `packages/game-models/mana_wolf.py`, and its
   renders on the `assets` branch (`pr-995-v2-*`, the close-ups `pr-995-v2-portrait.png` and
   `pr-995-v2-face.png` first) are the reference.
 - **Scale and placement:** the origin at the feet, facing +Z after import (glTF's forward,
@@ -161,7 +161,7 @@ a second model could use goes into the library or a generic tool, never into one
   there (as `Rogue.glb.import` does).
 
 ## 4. Verify (every item gives an image or a number for the PR)
-1. **Every side:** `uv run --locked packages/models/blender.py --background --factory-startup
+1. **Every side:** `uv run --locked packages/game-models/blender.py --background --factory-startup
    --python .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]`. It
    writes front, back, left, right, top and a three-quarter view, and `sheet.png`. **Look at it.**
    Check the proportions, gaps, stretched textures and anything floating or clipping.
@@ -178,7 +178,7 @@ a second model could use goes into the library or a generic tool, never into one
    uses (the boot flow, #992), from the clips the view lists in its `CLIPS` constant: a view that
    plays a new clip adds it there.
 5. **In game:** with `packages/game/tools/models/render_in_game.gd`, run off the desktop through
-   `packages/offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
+   `packages/game-offscreen/offscreen.py` (AGENTS.md's screenshot recipe; never a WSLg window), put
    the model in the game, under the game's
    cel shading and its top-down camera at play distance, on real terrain, next to the player for
    scale. Capture it at a desktop and a phone resolution. It must stand out from the ground and
@@ -188,20 +188,20 @@ a second model could use goes into the library or a generic tool, never into one
    through the attack clip too.
 6. **Clips in game:** a GIF of each clip playing in Godot, all of them from one run
    (`clip=Idle,Walk,Attack,...` per view: the game starts once, which is most of a run's cost),
-   each made with `packages/models/gif.py`. Check that loops don't jump, steps don't slide, and the
+   each made with `packages/game-models/gif.py`. Check that loops don't jump, steps don't slide, and the
    attack and hit read at game zoom.
 7. **Budget:** report the triangles, bones, materials, texture sizes and `.glb` size. Medium-poly
    means a few thousand triangles for a monster; justify anything far above.
 8. **Renderer:** check the glow and materials in the web build (Compatibility renderer) as well as
    on desktop.
-9. **Ground contact:** `uv run --locked packages/models/blender.py --background --factory-startup
-   --python packages/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
+9. **Ground contact:** `uv run --locked packages/game-models/blender.py --background --factory-startup
+   --python packages/game-models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
 10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
    into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
    PR says so.
-11. **Reference comparison (#1072):** `uv run --locked packages/models/blender.py --background
+11. **Reference comparison (#1072):** `uv run --locked packages/game-models/blender.py --background
    --factory-startup --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb>
    <reference> <out_dir> [views]`, the reference being the last approved `.glb` (`git show
    origin/main:packages/game/assets/<name>/<name>.glb > <scratch>/reference.glb`) or, for a new
@@ -232,10 +232,10 @@ a second model could use goes into the library or a generic tool, never into one
    (on #1072 it measured close-set eyes correctly and still called them more focused). Only a
    change the owner asked for stays unfixed. A reviewer that only praises has failed: rerun it
    with a fresh subagent.
-13. **Motion (required, #1071):** `uv run --locked packages/models/blender.py --background
-   --factory-startup --python packages/models/check_motion.py -- <model.glb> <the speeds the build
+13. **Motion (required, #1071):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_motion.py -- <model.glb> <the speeds the build
    prints>` must print
-   `MOTION CHECK: PASS`, and `packages/models/plot_motion.py` plots each clip the PR changes
+   `MOTION CHECK: PASS`, and `packages/game-models/plot_motion.py` plots each clip the PR changes
    against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
    go into the PR, before and after.
 

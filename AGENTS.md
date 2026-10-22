@@ -194,7 +194,7 @@ background; only wait in the foreground for a result the very next step needs.
   that never shows a window on the owner's desktop (owner's rule: the owner works on the same PC,
   and under WSL every window on WSLg's display, even a one-pixel one, becomes a Windows window that
   takes the focus from their typing). Run it on a private virtual display instead, through
-  `uv run --locked packages/offscreen/offscreen.py -- --path packages/game -s res://<script>.gd --
+  `uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game -s res://<script>.gd --
   <args>`
   (Xvfb, the Compatibility renderer, silent audio; nothing reaches the desktop, so no
   `override.cfg`). Never `--display-driver wayland`, never the desktop's `DISPLAY`. The script runs
@@ -265,9 +265,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   commands, only in `slices/controls/`, #514) and `meta/` (profile, content
   and saves, under the rules for lasting data below). The split between them holds inside every slice. Shared
   slices (the trail, loot tables) come before the ones that use them: **a slice names only the
-  slices before it** in the order `packages/checks/import_rules.py` declares once (CI, #821;
+  slices before it** in the order `packages/game-checks/import_rules.py` declares once (CI, #821;
   today's back-edges are listed there, each with its issue), so a new slice takes its place in it. **The core never depends on
-  a slice** (CI, `packages/checks/import_rules.py`: no script in `core/` names a class declared in
+  a slice** (CI, `packages/game-checks/import_rules.py`: no script in `core/` names a class declared in
   `slices/` or names a `slices/` path in its code, even one built from parts, #526): data the core holds (a
   region's exits) and events it reads (`ExitTaken`, which the `World` moves a player through) stay
   in the core, and only the rules that run them move; what a slice places on a region (people,
@@ -288,7 +288,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   integers only, durations in ticks (`Simulation.TICKS_PER_SECOND`). No nodes, `Input`, `Time`,
   `Engine`, `OS`, global randomness, frame `delta`, `float` or float-backed types (`Vector2`, `Color`,
   `Rect2` and the like; `Vector2i` and `Rect2i` are fine), `FileAccess`, `DirAccess` or `JSON`:
-  CI greps for them (`packages/checks/determinism_check.py`, #572). A file that can't pass yet is
+  CI greps for them (`packages/game-checks/determinism_check.py`, #572). A file that can't pass yet is
   exempt only with a reason, in its top comment lines (owner, #515), and gets an issue to drop the marker:
   `# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reason)`. Randomness comes
   from `Rng` (#32, xoshiro128** in integers): each feature that rolls owns its own stream,
@@ -498,7 +498,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
 - **Models follow the model skill** (owner): every 3D model is built, rigged, textured and checked
   from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender 5.2.2
-  headless from a committed script in `packages/models/`, then Godot).
+  headless from a committed script in `packages/game-models/`, then Godot).
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
@@ -516,7 +516,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   and no separate unit tests while the flows already check the same things (owner, #61).
 - **Exactly one e2e flow runs on the devices** (owner's rule, #61, #102, #113):
   `tests/apk/apk_flow.gd`, on an Android emulator (`apk-e2e`), in headless Chrome (`web-e2e`,
-  the repository's `packages/web/web_e2e.py`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
+  the repository's `packages/game-web-e2e/web_e2e.py`) and on the Linux build under a virtual display (`linux-e2e`) in CI,
   started by `game/test_mode.gd` in the test builds only (the `e2e_test` export feature). It
   starts from a fixed seed, scripts its touches per tick, and must end in the same state hash as
   the same flow played headless for the same commit (`tests/e2e/test_apk_flow.gd`, in the
@@ -572,7 +572,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
   commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
   `rules-compare` job plays them and the APK flow on the commit and on its parent
-  (`packages/replays/rules_compare.py`, run from the parent's checkout) and fails a difference that
+  (`packages/game-replays/rules_compare.py`, run from the parent's checkout) and fails a difference that
   comes without a new rule change file. If the change is on purpose, add its file to `core/rules_changes/`
   (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then one line on what plays
   differently linking the issue; no `pr`, which CI refuses: the squash commit that added the file
@@ -584,7 +584,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Point to the source, never enumerate it** (owner's rule, #99): a list that exists somewhere
   (the presets, the assets, the content files) is read from there, not copied into a workflow, a
   doc or a comment, where it would drift. E.g. CI unpacks the templates
-  `packages/build/export_templates.py` reads from `export_presets.cfg`, and `CREDITS.md` is
+  `packages/game-build/export_templates.py` reads from `export_presets.cfg`, and `CREDITS.md` is
   generated from the assets.
 - **No measured numbers in docs or comments** (durations, sizes, counts): they go stale. They belong
   in the PR or issue that measured them.
@@ -616,17 +616,20 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The repository is a uv workspace of packages** (#1036, #1101): the root's `pyproject.toml`
   and its `uv.lock`, and one folder per package in `packages/`. `packages/game/` is the Godot
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
-  tooling, one workspace member per job: `checks/` (CI's checks of the game), `replays/` (comparing
-  replays, load tests and the APK flow), `build/` (export helpers), `models/` (the Blender model
-  scripts), `offscreen/` (Godot on a private display) and `web/` (the web e2e in headless Chrome,
-  #1041). A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
+  tooling, one workspace member per job: `game-checks/` (CI's checks of the game), `game-replays/`
+  (comparing replays, load tests and the APK flow), `game-build/` (export helpers), `game-models/`
+  (the Blender model scripts), `game-offscreen/` (Godot on a private display) and `game-web-e2e/`
+  (the web build's e2e in headless Chrome, #1041). **Any package related to the game gets the
+  `game-` prefix** (owner, #1114: *"any package related to the game gets the game- prefix"*), so
+  names like `web` or `site` stay free for other parts of the project, such as a website; the game
+  itself is `packages/game/`, and a member's uv name is `khovax-<its folder>`. A member with dependencies runs with `--package <its name>`, which installs them. The GDScript tools Godot runs stay in the
   game, in `packages/game/tools/` (`godot/`, and `models/` for the model checks and renders),
   since Godot only runs scripts under `res://`. `tools/scoop/` holds the pinned scoop manifests.
   New tooling is Python, run with uv from the repository's root (`uv run --locked
   packages/<package>/<script>.py`). Godot commands name the project: `--path packages/game`.
 - **Only the file endings on the list** (owner, #1095: *"I would like all currently used file
   endings to be allowed, except for .sh and .bat. A new entry requires signoff."*): CI refuses a
-  tracked file whose ending isn't in `ENDINGS` in `packages/checks/file_endings.py`. **An agent
+  tracked file whose ending isn't in `ENDINGS` in `packages/game-checks/file_endings.py`. **An agent
   never adds an ending without the owner's approval on its issue.** The shell scripts still tracked wait
   in its exception list, each with the issue that ports it, and that list only shrinks.
 - **Install tools with scoop** (owner's rule). The development machine runs Windows, so Homebrew isn't

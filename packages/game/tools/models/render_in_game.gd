@@ -15,7 +15,7 @@ extends SceneTree
 ## of a player's leaning toward that path (#1063).
 ##
 ## Render it off the desktop and silent, as AGENTS.md's screenshot recipe says:
-##   uv run --locked packages/offscreen/offscreen.py -- --path packages/game \
+##   uv run --locked packages/game-offscreen/offscreen.py -- --path packages/game \
 ##     -s res://tools/models/render_in_game.gd -- \
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
 ##     [clip=<Clip>[,<Clip>...] [from=<view>]] [points] [agitated] [type=<type>] \
@@ -105,7 +105,7 @@ func _initialize() -> void:
 	# then waits for ever for the thread, which polls for a reply that already came. Refused at
 	# once, and killed rather than quit, since quitting is what can hang.
 	if DisplayServer.get_name() == "Wayland":
-		printerr("Wayland can hang on exit: render through packages/offscreen/offscreen.py")
+		printerr("Wayland can hang on exit: render through packages/game-offscreen/offscreen.py")
 		var _killed: Error = OS.kill(OS.get_process_id())
 	# It renders on the CPU, so it draws each frame as soon as it can, never waiting for the
 	# screen (#1050): no vsync and no frame cap, whatever the command line says.

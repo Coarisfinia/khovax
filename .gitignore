@@ -19,5 +19,5 @@ Thumbs.db
 
 # uv's environment for the Python tooling (pyproject.toml)
 .venv/
-# Python bytecode from the Blender model scripts (packages/models/lib/).
+# Python bytecode from the Blender model scripts (packages/game-models/lib/).
 __pycache__/

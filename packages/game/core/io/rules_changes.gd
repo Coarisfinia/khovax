@@ -6,10 +6,11 @@ extends RefCounted
 ## core/rules_changes/. A change that makes existing replays play out
 ## differently adds its file there, `<issue>-<slug>.md` with the issue in its frontmatter and one
 ## line on what plays differently: CI fails a change that plays the reference replays differently
-## from its parent without one (packages/replays/rules_compare.py), and a replay recorded under
+## from its parent without one (packages/game-replays/rules_compare.py), and a replay recorded under
 ## older rules then fails with a clear message, not a mismatch.
 ## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
-## the folder is append-only (packages/checks/rules_changes_check.py): a file is never deleted or
+## the folder is append-only (packages/game-checks/rules_changes_check.py): a file is never deleted
+## or
 ## renamed. Git keeps when each arrived and its pull request
 ## (`git log --diff-filter=A -- core/rules_changes/`, #758).
 

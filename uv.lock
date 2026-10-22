@@ -4,13 +4,13 @@ requires-python = "==3.14.8"
 
 [manifest]
 members = [
-    "khovax-build",
-    "khovax-checks",
-    "khovax-models",
-    "khovax-offscreen",
-    "khovax-replays",
+    "khovax-game-build",
+    "khovax-game-checks",
+    "khovax-game-models",
+    "khovax-game-offscreen",
+    "khovax-game-replays",
+    "khovax-game-web-e2e",
     "khovax-tools",
-    "khovax-web",
 ]
 
 [[package]]
@@ -41,45 +41,45 @@ wheels = [
 ]
 
 [[package]]
-name = "khovax-build"
+name = "khovax-game-build"
 version = "0.0.0"
-source = { virtual = "packages/build" }
+source = { virtual = "packages/game-build" }
 
 [[package]]
-name = "khovax-checks"
+name = "khovax-game-checks"
 version = "0.0.0"
-source = { virtual = "packages/checks" }
+source = { virtual = "packages/game-checks" }
 
 [[package]]
-name = "khovax-models"
+name = "khovax-game-models"
 version = "0.0.0"
-source = { virtual = "packages/models" }
+source = { virtual = "packages/game-models" }
 
 [[package]]
-name = "khovax-offscreen"
+name = "khovax-game-offscreen"
 version = "0.0.0"
-source = { virtual = "packages/offscreen" }
+source = { virtual = "packages/game-offscreen" }
 
 [[package]]
-name = "khovax-replays"
+name = "khovax-game-replays"
 version = "0.0.0"
-source = { virtual = "packages/replays" }
+source = { virtual = "packages/game-replays" }
 
 [[package]]
-name = "khovax-tools"
+name = "khovax-game-web-e2e"
 version = "0.0.0"
-source = { virtual = "." }
-
-[[package]]
-name = "khovax-web"
-version = "0.0.0"
-source = { virtual = "packages/web" }
+source = { virtual = "packages/game-web-e2e" }
 dependencies = [
     { name = "playwright" },
 ]
 
 [package.metadata]
 requires-dist = [{ name = "playwright", specifier = "==1.64.0" }]
+
+[[package]]
+name = "khovax-tools"
+version = "0.0.0"
+source = { virtual = "." }
 
 [[package]]
 name = "playwright"
