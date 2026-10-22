@@ -1,10 +1,8 @@
 class_name EyeGlow
 extends Node3D
 ## The glow in a monster's eyes (#1008): a soft halo on each of its model's eyes (ModelPoints,
-## #1007), following them through every clip. The Compatibility renderer has no bloom, so the glow
-## is a camera-facing disc that fades out from its middle, added onto what is behind it: it
-## brightens
-## the eye and the fur around it the way a bloom would. It reads its monster's mood from its view:
+## #1007), following them through every clip, drawn by its shader (eye_glow.gdshader) in place of
+## the bloom the Compatibility renderer lacks. It reads its monster's mood from its view:
 ## calm, it glows softly and steadily; agitated, brighter and wider, flickering; and an attack makes
 ## it flare up and ease back. Fainted, it goes out. It changes how bright and how big it is, never
 ## only its colour (#68), and eases between moods. A model without eyes gets none.
@@ -28,12 +26,11 @@ const NARROW: float = 0.07
 ## How far the halo stands out of the eye toward the camera, as a share of its width, so the head
 ## hides it only when it is between the eye and the camera.
 const STAND_OUT: float = 0.35
-
-static var _halo: GradientTexture2D
-## The halos' material, which each glow copies to set its own brightness. Kept for good, so its
-## shader stays compiled while no monster is shown: compiled again, the GLES3 renderer reloads it
-## from its shader cache, which fails with a warning on some Android drivers.
-static var _halo_material: StandardMaterial3D
+## The halos' shader, one for every glow: a fixed shader resource, compiled once for the session.
+## A generated material shader is freed with its last material and compiled again with the next,
+## and the GLES3 renderer then reloads it from its shader cache, which fails with a warning on the
+## Android emulator's driver and so the device flow.
+const SHADER: Shader = preload("res://slices/board/look/eye_glow.gdshader")
 
 ## Whether the monster is agitated (enraged, #220), and whether it fainted.
 var agitated: bool = false
@@ -43,12 +40,13 @@ var brightness: float = CALM
 ## What is left of the last attack's flare: 1 just as it struck, 0 once it's eased back.
 var flare_left: float = 0.0
 var _model: Node3D
-var _material: StandardMaterial3D
+var _material: ShaderMaterial = ShaderMaterial.new()
 var _clock: float = 0.0
 
 
 func _init() -> void:
-	_material = _template().duplicate() as StandardMaterial3D
+	_material.shader = SHADER
+	_material.set_shader_parameter(&"color", COLOR)
 	# After the model's clips have posed it this frame, so the halos sit on the eyes.
 	process_priority = 1
 
@@ -98,7 +96,7 @@ func place() -> void:
 	while get_child_count() < eyes.size():
 		add_child(_halo_mesh())
 	var glow: float = shown()
-	_material.albedo_color = Color(COLOR * glow, 1.0)
+	_material.set_shader_parameter(&"strength", glow)
 	var width: float = lerpf(NARROW, WIDE, glow)
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var size: float = _model.global_basis.get_scale().x
@@ -119,34 +117,3 @@ func _halo_mesh() -> MeshInstance3D:
 	halo.mesh = quad
 	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return halo
-
-
-## The halos' material: unshaded, added onto what is behind it, facing the camera, made once.
-static func _template() -> StandardMaterial3D:
-	if _halo_material == null:
-		_halo_material = StandardMaterial3D.new()
-		_halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_halo_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		_halo_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-		_halo_material.billboard_keep_scale = true
-		_halo_material.albedo_texture = _halo_texture()
-	return _halo_material
-
-
-## A disc, white in its middle and fading out to nothing at its edge, made once.
-static func _halo_texture() -> GradientTexture2D:
-	if _halo == null:
-		var fade: Gradient = Gradient.new()
-		fade.set_color(0, Color(1.0, 1.0, 1.0, 1.0))
-		fade.set_color(1, Color(1.0, 1.0, 1.0, 0.0))
-		fade.add_point(0.2, Color(1.0, 1.0, 1.0, 0.85))
-		fade.add_point(0.5, Color(1.0, 1.0, 1.0, 0.25))
-		_halo = GradientTexture2D.new()
-		_halo.gradient = fade
-		_halo.fill = GradientTexture2D.FILL_RADIAL
-		_halo.fill_from = Vector2(0.5, 0.5)
-		_halo.fill_to = Vector2(0.5, 0.0)
-		_halo.width = 64
-		_halo.height = 64
-	return _halo
