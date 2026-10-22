@@ -1,4 +1,4 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads content files, #591)
+# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads files and JSON for every core/io reader, #591)
 class_name Content
 extends RefCounted
 ## The game's content data (#72): JSONC files, one per entry, each kind in the slice that owns it
@@ -39,14 +39,24 @@ func add(file_id: String, _text: String) -> String:
 ## name order (#713): every content reader reads through this, so all of them read their files,
 ## and name the first bad one, in the same order on every machine.
 static func texts_in(directory: String) -> Dictionary[String, String]:
+	var texts: Dictionary[String, String] = {}
+	for file_name: String in file_names_in(directory):
+		if file_name.ends_with(".jsonc"):
+			texts[file_name.get_basename()] = text_in(directory + file_name)
+	return texts
+
+
+## The names of the files in `directory`, in file name order, so every machine lists them alike.
+static func file_names_in(directory: String) -> Array[String]:
 	var file_names: Array[String] = []
 	file_names.assign(DirAccess.get_files_at(directory))
 	file_names.sort()
-	var texts: Dictionary[String, String] = {}
-	for file_name: String in file_names:
-		if file_name.ends_with(".jsonc"):
-			texts[file_name.get_basename()] = FileAccess.get_file_as_string(directory + file_name)
-	return texts
+	return file_names
+
+
+## The text of the file at `path`, or "" when it can't be read.
+static func text_in(path: String) -> String:
+	return FileAccess.get_file_as_string(path)
 
 
 ## The JSON object a content file's JSONC `text` holds, or null when it holds anything else: every
@@ -56,6 +66,13 @@ static func object_of(text: String) -> Variant:
 	if json.parse(Jsonc.strip(text)) != OK or not json.data is Dictionary:
 		return null
 	return json.data
+
+
+## The value in the JSON `text` (no comments, unlike content files), or null when it isn't JSON.
+static func json_of(text: String) -> Variant:
+	# A JSON object reports a parse error through its result instead of logging it.
+	var json: JSON = JSON.new()
+	return json.data if json.parse(text) == OK else null
 
 
 ## Why `id` can't be the id of the entry in the file named `file_id`, or "": every content

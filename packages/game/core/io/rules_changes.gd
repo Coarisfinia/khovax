@@ -1,4 +1,3 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (lists the rule change files, #736)
 class_name RulesChanges
 extends RefCounted
 ## The id of the rules (#736, #876), held by every world save and every replay the game records (a
@@ -25,9 +24,8 @@ static var _id: String = ""
 static func id() -> String:
 	if _id.is_empty():
 		var names: Array[String] = []
-		for file_name: String in DirAccess.get_files_at(FOLDER):
+		for file_name: String in Content.file_names_in(FOLDER):
 			if file_name.ends_with(".md"):
 				names.append(file_name)
-		names.sort()
 		_id = "\n".join(PackedStringArray(names)).sha256_text().left(LENGTH)
 	return _id

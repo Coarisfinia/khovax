@@ -28,7 +28,7 @@ static func load_into(path: String, into: ExploredGround, source: InstanceSource
 	var saved: SaveRead = SaveStore.read_save(path)
 	if not saved.problem.is_empty():
 		return saved.problem
-	var parsed: Variant = WorldSave.json_of(saved.text)
+	var parsed: Variant = Content.json_of(saved.text)
 	var table: Dictionary = parsed if parsed is Dictionary else {}
 	var problem: String = _read(
 		table[WorldSave.EXPLORED],

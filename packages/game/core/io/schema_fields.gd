@@ -1,4 +1,3 @@
-# TODO_REFACTOR_IF_POSSIBLE: IGNORE_DETERMINISM_CHECK (reads schema files, #591)
 class_name SchemaFields
 extends RefCounted
 ## The fields a content kind's JSON Schema allows (#825), read from the schema beside its files, so
@@ -23,7 +22,7 @@ static func at(path: String, pointer: String = "") -> Array[String]:
 ## The schema at `path`, read on first use; empty when it can't be read.
 static func _schema(path: String) -> Dictionary:
 	if not _schemas.has(path):
-		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		var parsed: Variant = Content.json_of(Content.text_in(path))
 		_schemas[path] = parsed if parsed is Dictionary else {}
 	return _schemas[path]
 
