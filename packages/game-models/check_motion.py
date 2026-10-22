@@ -10,8 +10,9 @@ seam and jitter, as numbers with limits that fail the build.
   speed the game moves it while it plays the clip (`Walk=2.17`, metres a second; none given is
   standing still). The limit holds for every clip: the legs plant their paws (#1073).
 - **Loop seam** (the clips the model's .import loops): how far the last frame's pose is from the
-  first's (degrees, and the root's shift in millimetres), and how rough the curves run through
-  it (below). A loop that eases to a stop at its ends shows here.
+  first's (degrees, and the largest shift of any bone, in millimetres, naming the bone: the
+  root, or a wisp its `loc.` channel places, #1170), and how rough the curves run through it
+  (below). A loop that eases to a stop at its ends shows here.
 - **Jitter:** how rough a joint's curve runs: how much its change of speed from one frame to the
   next (the second difference of its angle, degrees a frame per frame) departs from the frames
   either side, at the roughest frame of any joint, across the seam too on a loop. A fast move
@@ -24,8 +25,9 @@ seam and jitter, as numbers with limits that fail the build.
 - **Start:** a clip must start at time 0; Godot holds a late first key from 0 until then, a
   pause at every loop's seam.
 
-It prints a line per clip and `MOTION CHECK: PASS` or `FAIL` (and exits 1 on a fail). The clip
-rate and the loops come from the .glb's .import, as the game imports it."""
+It prints a line per clip and `MOTION CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
+game_shared.log (#1115): a failing line is an error on the .glb. The clip rate and the loops come
+from the .glb's .import, as the game imports it."""
 
 import math
 import os
@@ -33,18 +35,22 @@ import sys
 
 import bpy
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+HERE = os.path.dirname(os.path.abspath(__file__))
+# Blender's own Python runs this, outside the uv environment: game_shared comes from its folder.
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
+from game_shared import log  # noqa: E402
 from lib import ground, imported  # noqa: E402
 
 # A paw this close to the ground (metres) stands on it.
 CONTACT = 0.02
-# The limits: paw speed over the ground (m/s), the seam's pose (degrees) and root shift
-# (metres), and how rough a curve may run anywhere, the seam included (degrees a frame per frame,
-# see roughness).
+# The limits: paw speed over the ground (m/s), the seam's pose (degrees) and any bone's shift
+# (metres, the root's or a wisp's), and how rough a curve may run anywhere, the seam included
+# (degrees a frame per frame, see roughness).
 SLIDE_LIMIT = 0.2
 SEAM_POSE_LIMIT = 0.5
-SEAM_ROOT_LIMIT = 0.002
+SEAM_SHIFT_LIMIT = 0.002
 JITTER_LIMIT = 15.0
 
 
@@ -58,7 +64,8 @@ def spin(a, b):
 
 
 def sample(rig, meshes, feet, start, end):
-    """Every frame's local bone rotations, root shift and, per foot, its lowest point and centre."""
+    """Every frame's local bone rotations and translations (metres: the model is built at its
+    scale) and, per foot, its lowest point and centre."""
     scene = bpy.context.scene
     depsgraph = bpy.context.evaluated_depsgraph_get()
     parts = {obj.name: ground.owned(obj, feet) for obj in meshes}
@@ -66,7 +73,7 @@ def sample(rig, meshes, feet, start, end):
     for frame in range(start, end + 1):
         scene.frame_set(frame)
         turns = {bone.name: bone.matrix_basis.to_quaternion() for bone in rig.pose.bones}
-        root = next(bone for bone in rig.pose.bones if bone.parent is None).location.copy()
+        places = {bone.name: bone.location.copy() for bone in rig.pose.bones}
         points = {name: [] for name in feet}
         for obj in meshes:
             evaluated = obj.evaluated_get(depsgraph)
@@ -81,7 +88,7 @@ def sample(rig, meshes, feet, start, end):
             if found:
                 centre = sum(found, found[0] * 0.0) / len(found)
                 spots[name] = (min(point.z for point in found), centre.x, centre.y)
-        frames.append((turns, root, spots))
+        frames.append((turns, places, spots))
     return frames
 
 
@@ -134,16 +141,19 @@ def jitter(rough, start):
 
 
 def seam(frames, rough):
-    """How far a loop's last pose is from its first (degrees, root metres), and how rough its
-    curves run through the seam (the first frame), with the roughest bone."""
-    pose, root = apart(frames[0], frames[-1])
+    """How far a loop's last pose is from its first (see apart), and how rough its curves run
+    through the seam (the first frame), with the roughest bone."""
+    pose, shift, shifted = apart(frames[0], frames[-1])
     speed, bone = max((values[0], bone) for bone, values in rough.items())
-    return pose, root, speed, bone
+    return pose, shift, shifted, speed, bone
 
 
 def apart(a, b):
-    """How far pose `b` is from pose `a`: the most any bone turns (degrees), the root's shift (metres)."""
-    return max(spin(a[0][bone], b[0][bone]).length for bone in a[0]), (b[1] - a[1]).length
+    """How far pose `b` is from pose `a`: the most any bone turns (degrees), and the most any bone
+    shifts (metres) with that bone's name."""
+    pose = max(spin(a[0][bone], b[0][bone]).length for bone in a[0])
+    shift, shifted = max(((b[1][bone] - a[1][bone]).length, bone) for bone in a[1])
+    return pose, shift, shifted
 
 
 def joins(ends, loops):
@@ -158,10 +168,11 @@ def joins(ends, loops):
         if loop + "End" in ends:
             pairs.append((loop + "End", first, ends[loop + "End"][0]))
         for lead, before, after in pairs:
-            pose, root = apart(before, after)
-            fails = pose > SEAM_POSE_LIMIT or root > SEAM_ROOT_LIMIT
+            pose, shift, shifted = apart(before, after)
+            fails = pose > SEAM_POSE_LIMIT or shift > SEAM_SHIFT_LIMIT
             passed = passed and not fails
-            lines.append("%s %s join: %.2f deg, root %.1f mm" % ("FAIL" if fails else "ok", lead, pose, root * 1000))
+            lines.append("%s %s join: %.2f deg, shift %.1f mm (%s)" % (
+                "FAIL" if fails else "ok", lead, pose, shift * 1000, shifted))
     return lines, passed
 
 
@@ -183,10 +194,10 @@ def check(rig, meshes, fps, loops, speeds):
         text = "slide %.2f m/s (mean %.2f; %s)" % (
             slide, mean, ", ".join("%s %.2f" % (name, value) for name, value in sorted(fastest.items())))
         if loop:
-            pose, root, speed, jumping = seam(frames, rough)
-            fails = fails or pose > SEAM_POSE_LIMIT or root > SEAM_ROOT_LIMIT
-            text += "; seam %.2f deg, root %.1f mm, rough %.2f deg/frame^2 (%s)" % (
-                pose, root * 1000, speed, jumping)
+            pose, shift, shifted, speed, jumping = seam(frames, rough)
+            fails = fails or pose > SEAM_POSE_LIMIT or shift > SEAM_SHIFT_LIMIT
+            text += "; seam %.2f deg, shift %.1f mm (%s), rough %.2f deg/frame^2 (%s)" % (
+                pose, shift * 1000, shifted, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
         if late:
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
@@ -204,8 +215,11 @@ def main():
     rig = imported.load(glb, fps)
     lines, passed = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds)
     for line in lines:
-        print("MOTION", line)
-    print("MOTION CHECK:", "PASS" if passed else "FAIL", "(at %d fps)" % fps)
+        if line.startswith("FAIL"):
+            log.error("MOTION " + line, glb)
+        else:
+            log.info("MOTION " + line)
+    log.info("MOTION CHECK: %s (at %d fps)" % ("PASS" if passed else "FAIL", fps))
     sys.exit(0 if passed else 1)
 
 
