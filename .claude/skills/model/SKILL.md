@@ -14,8 +14,10 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   install it on Linux. Run it headless, through `tools/models/blender.sh`:
   `tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>`
   The wrapper puts Blender on the GPU under WSL (`GALLIUM_DRIVER=d3d12`, #1050), for that process
-  only: Mesa's default falls back to the CPU's software rasteriser. (On the owner's laptop,
-  `blender` on the PATH is such a wrapper already; `blender.sh` is for every other machine.)
+  only: Mesa's default falls back to the CPU's software rasteriser. It also makes a script that
+  raises exit 1 (`--python-exit-code 1`, #1077): plain Blender prints the traceback and exits 0,
+  so a failed check would look like a success. So every model script runs through it, also where
+  `blender` on the PATH already picks the GPU (as on the owner's laptop).
   Never set it for the shell:
   Godot would pick it up, and on d3d12 its renderer breaks every skinned mesh. The MESA/ZINK/EGL
   warnings are harmless; EEVEE still renders.

@@ -4,9 +4,12 @@
 # only when asked for. Only this process gets it, never the shell: Godot's Compatibility renderer
 # skins meshes on the GPU, and on d3d12 that breaks every skinned mesh. Blender skins on the CPU,
 # so its renders come out the same, only faster.
+# A script that raises only prints its traceback, and Blender still exits 0 (#1077), so a failed
+# check would look like a success: --python-exit-code makes every raise exit 1. It comes first,
+# because Blender reads its options in order and applies it to the --python scripts after it.
 #   tools/models/blender.sh --background --factory-startup --python <script.py> -- <args>
 set -euo pipefail
 if [[ -e /dev/dxg ]]; then
 	export GALLIUM_DRIVER=d3d12
 fi
-exec blender "$@"
+exec blender --python-exit-code 1 "$@"
