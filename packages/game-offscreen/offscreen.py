@@ -10,9 +10,13 @@ Everything after the first `--` goes to Godot, which also gets `--display-driver
 `--rendering-driver opengl3` (the Compatibility renderer, on the CPU's llvmpipe) and
 `--audio-driver Dummy`, so the music stays silent, and `--fixed-fps 60`: every frame advances the
 game by a sixtieth of a second however fast it draws, so a script that waits a number of frames
-(the fog easing open, a camera settling) gets the same game time on any machine, and a render is
-the same each time. The display matches no screen of the owner's, so no `override.cfg` is needed.
-It exits with Godot's exit code."""
+(the fog easing open, a camera settling) gets the same game time on any machine. Two runs of one
+build with the same `--seed` and a fresh `--user-dir` then draw the same pixels (#1140): nothing
+drawn reads the clock. One thing still runs on real time: the content the boot reads on a worker
+thread (ContentFill, #816), so a walk through an exit can hold for a different number of frames.
+A script that walks there calls `ContentFill.wait()` first, as the test flows do. The display
+matches no screen of the owner's, so no `override.cfg` is needed. It exits with Godot's exit
+code."""
 
 import os
 import shutil

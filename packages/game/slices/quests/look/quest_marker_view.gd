@@ -34,11 +34,15 @@ var markers: Dictionary[String, Node3D] = {}
 var goals: Dictionary[String, Vector2i] = {}
 var _fill: ArrayMesh
 var _ink: ArrayMesh
+## The seconds the arrows have bobbed: game time, summed from the frames' steps rather than read
+## off the clock, so a render with fixed frame steps (offscreen.py) bobs the same each run (#1140).
+var _bobbed: float = 0.0
 
 
 func _process(delta: float) -> void:
 	show_quests()
-	var bob: float = sin(Time.get_ticks_msec() / 1000.0 * TAU / BOB_SECONDS) * BOB
+	_bobbed = fmod(_bobbed + delta, BOB_SECONDS)
+	var bob: float = sin(_bobbed * TAU / BOB_SECONDS) * BOB
 	var glide: float = 1.0 - exp(-GLIDE * delta)
 	# Every arrow faces the camera, so its tip points down the screen at its target.
 	var camera: Camera3D = get_viewport().get_camera_3d()
