@@ -21,8 +21,9 @@ extends SceneTree
 ##     res://assets/<name>/<name>.glb <out_dir> [size=1280x720] \
 ##     [clip=<Clip>[,<Clip>...] [from=<view>]] [points] [agitated] [type=<type>] \
 ##     [leaning=harmony|supremacy] \
-##     --seed=0 --user-dir=<branch>
-## The launch options after it (LaunchOptions) start the world as the game would.
+##     --seed=0
+## The launch options after it (LaunchOptions) start the world as the game would. No `--user-dir`
+## is needed: offscreen.py gives every run its own throwaway `user://` folder (#1188).
 
 ## Frames the game draws before the first capture: shaders compile and the fog eases open.
 const SETTLE_FRAMES: int = 90
