@@ -115,7 +115,7 @@ jobs:
         run: uv run --locked tools/checks/import_rules.py
 
       - name: "📁 Check no path repeats a folder name"
-        run: bash tools/checks/repeated_folders.sh
+        run: uv run --locked tools/checks/repeated_folders.py
 
       - name: "🗃️ Check the export presets share their file filters"
         run: bash tools/checks/export_filters_check.sh
@@ -129,7 +129,7 @@ jobs:
       - name: "🔖 Check the rule change files"
         # The parent is the base on a pull request's merge commit, the queue's previous commit in
         # the merge queue, and the previous commit on main (squash merges only).
-        run: bash tools/checks/rules_changes_check.sh HEAD^1
+        run: uv run --locked tools/checks/rules_changes_check.py HEAD^1
 
       - name: "💾 Cache Godot (Linux editor)"
         id: cache-godot
