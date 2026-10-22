@@ -42,12 +42,12 @@ static func read(meaning: String) -> WildSpot:
 			spot.wounded = true
 		elif (clause.begins_with(EMITTING)
 				and spot.emits.is_empty()
-				and emitted.is_valid_ascii_identifier()):
+				and Ids.is_id(emitted)):
 			spot.emits = emitted
 		elif (clause.begins_with(TARGETED)
 				and spot.target.is_empty()
-				and TileTrigger.is_place_id(targeted)):
+				and Ids.is_id(targeted)):
 			spot.target = targeted
 		else:
 			return null
-	return spot if spot.species.is_valid_ascii_identifier() else null
+	return spot if Ids.is_id(spot.species) else null

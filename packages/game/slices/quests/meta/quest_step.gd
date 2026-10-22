@@ -252,7 +252,7 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"target": step.quarry.target,
 	}
 	for field: String in named:
-		if data.has(field) and not TileTrigger.is_place_id(named[field]):
+		if data.has(field) and not Ids.is_id(named[field]):
 			return "its %s must be an id, lowercase words joined by underscores" % field
 	return ""
 

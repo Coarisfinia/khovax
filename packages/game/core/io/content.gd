@@ -46,10 +46,9 @@ static func texts_in(directory: String) -> Dictionary[String, String]:
 	return texts
 
 
-## Whether `text` is an id: a lowercase letter, then lowercase letters, digits and underscores.
+## Whether `text` is an id, as Ids says.
 static func is_id(text: String) -> bool:
-	var pattern: RegEx = RegEx.create_from_string("^[a-z][a-z0-9_]*$")
-	return pattern.search(text) != null
+	return Ids.is_id(text)
 
 
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.

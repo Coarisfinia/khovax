@@ -1266,8 +1266,8 @@ func _check_documents() -> String:
 
 
 ## A grid without a single middle, a narrow or unexplained symbol, a clause the legend doesn't know,
-## a turn past five sixths, a place or a quest target without an id is refused; the glade's thicket
-## has forest.
+## a turn past five sixths, a place, a quest target, an event or a person without an id (Ids, #944)
+## is refused; the glade's thicket has forest.
 func _check_refusals(tiles: String) -> String:
 	var base: String = BASE_LEGEND
 	var refusals: Dictionary[String, String] = {
@@ -1295,6 +1295,12 @@ func _check_refusals(tiles: String) -> String:
 		),
 		tiles % ["🐸🔴🐸", base + "- `🐸`: a wild monster, always ombulumo, the quest target old"]: (
 			"the quest target old is one monster"
+		),
+		tiles % ["🔴🐸🟫", base + "- `🐸`: a wild monster, always tikazzir, emitting GladeFreed"]: (
+			"the legend doesn't explain `🐸`"
+		),
+		tiles % ["🔴🧑🟫", base + "- `🧑`: a person to talk to, Teska"]: (
+			"the legend doesn't explain `🧑`"
 		),
 	}
 	for text: String in refusals:

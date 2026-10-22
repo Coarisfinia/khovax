@@ -25,7 +25,7 @@ static func read(meaning: String) -> NpcSpot:
 		return null
 	var said: PackedStringArray = meaning.trim_prefix(NPC).split(SAYING)
 	var dialog_id: String = said[1] if said.size() == 2 else ""
-	var named: bool = said.size() <= 2 and said[0].is_valid_ascii_identifier()
-	if named and (dialog_id.is_empty() or dialog_id.is_valid_ascii_identifier()):
+	var named: bool = said.size() <= 2 and Ids.is_id(said[0])
+	if named and (dialog_id.is_empty() or Ids.is_id(dialog_id)):
 		return NpcSpot.new(said[0], dialog_id)
 	return null
