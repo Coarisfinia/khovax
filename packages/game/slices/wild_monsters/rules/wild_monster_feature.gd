@@ -116,7 +116,7 @@ func start(state: GameState) -> void:
 					false,
 				)
 		_wild[monster.id] = wild
-	# Drawn after every species, so the species roll as they did before short ids; one already
+	# Drawn after every species, so the short ids never shift which species roll; one already
 	# taken here is drawn again, so no two share one.
 	for monster: int in monsters:
 		var drawn: String = ShortId.drawn(rng)
@@ -400,11 +400,8 @@ func _short_id_taken(short_id: String) -> bool:
 
 
 ## Adds `names`, each by its monster's entity id, to `values`, in id order after how many there
-## are. Only a region naming events (#541) or quest targets (#625) has any, so every other instance
-## hashes as before.
+## are: the events (#541) or quest targets (#625) a region names.
 static func _hash_names(values: Array[int], names: Dictionary[int, String]) -> void:
-	if names.is_empty():
-		return
 	values.append(names.size())
 	var ids: Array[int] = []
 	ids.assign(names.keys())

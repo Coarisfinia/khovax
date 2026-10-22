@@ -44,12 +44,9 @@ func flat() -> Array[int]:
 
 
 ## Restores what `flat` gave, saved under `key` in `values`, for a region with `count` areas: each
-## an entity in `state` standing in one of them, or the save is refused. A save without it has
-## nobody standing in an area.
+## an entity in `state` standing in one of them, or the save is refused.
 func load_flat(state: GameState, values: DataReader, key: String, count: int) -> void:
 	areas.clear()
-	if not values.data.has(key):
-		return
 	var saved: Dictionary[int, int] = values.pairs(key, 0, DataReader.MOST)
 	for entity_id: int in saved:
 		if saved[entity_id] >= count or state.entity(entity_id) == null:

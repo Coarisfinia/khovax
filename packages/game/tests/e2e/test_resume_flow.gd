@@ -147,7 +147,8 @@ func _check_round_trip(world: World) -> String:
 ## behind while
 ## someone is in it or not left behind while nobody is, or one left long enough to be purged. A
 ## feature's id and value pairs (#933) are refused cut off, out of order or naming an entity they
-## can't: the area a stranger stands in, or the wait of a companion that is a player.
+## can't: the area a stranger stands in, or the wait of a companion that is a player. A trigger
+## saved as fired twice is refused too.
 func _check_refused(world: World) -> String:
 	var text: String = WorldSave.to_text(world)
 	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
@@ -174,6 +175,7 @@ func _check_refused(world: World) -> String:
 		_with_values(data, EnteringFeature.ID, "inside", [player]): "inside holds half a pair",
 		_with_values(data, EnteringFeature.ID, "inside", [stranger, 0]): "inside: %d" % stranger,
 		_with_values(data, TriggerFeature.ID, "standing", [player, 0, player, 0]): "standing holds",
+		_with_values(data, TriggerFeature.ID, "fired", [0, 0]): "fired holds 0 twice",
 		_with_values(data, CompanionAttackFeature.ID, "waits", [player, 1]): "wait of %d" % player,
 	}
 	var source: BlueprintSource = BlueprintSource.new()
