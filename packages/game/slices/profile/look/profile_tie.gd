@@ -25,10 +25,8 @@ var _sent: Array[String] = []
 
 func _ready() -> void:
 	bus.subscribe(WildMonsterDominated, _on_event)
-	bus.subscribe(ChestOpened, _on_event)
-	bus.subscribe(LootFound, _on_event)
-	bus.subscribe(DominationLoot, _on_event)
-	bus.subscribe(Harvested, _on_event)
+	for loot_event: Script in LootRolls.events():
+		bus.subscribe(loot_event, _on_event)
 	bus.subscribe(RequestApplied, _on_applied)
 	var _posted: int = holder.outbox_posted.connect(_send_new)
 	# What the world hasn't acknowledged yet goes again, from the start of every session.
@@ -82,24 +80,11 @@ func _gain_of(event: RefCounted) -> Gain:
 		var dominated: WildMonsterDominated = event as WildMonsterDominated
 		gain.dominated_species.append(dominated.species)
 		gain.dominated_short_ids.append(dominated.short_id)
-	elif event is ChestOpened and (event as ChestOpened).loot.has(input.slot):
-		_add_loot(gain, (event as ChestOpened).loot[input.slot])
-	elif _rolls_of(event).has(input.slot):
-		_add_loot(gain, _rolls_of(event)[input.slot])
+	else:
+		var rolls: Dictionary[int, Dictionary] = LootRolls.of(event)
+		if rolls.has(input.slot):
+			_add_loot(gain, rolls[input.slot])
 	return gain
-
-
-## Every player's loot from `event`, by slot, when it's loot that counts as no chest: found on the
-## ground (#203), from a domination (#86) or from a felled wild monster (#629). None otherwise.
-static func _rolls_of(event: RefCounted) -> Dictionary[int, Dictionary]:
-	var none: Dictionary[int, Dictionary] = {}
-	if event is LootFound:
-		return (event as LootFound).loot
-	if event is DominationLoot:
-		return (event as DominationLoot).loot
-	if event is Harvested:
-		return (event as Harvested).loot
-	return none
 
 
 ## Adds a roll of loot, {item id: amount}, to `gain`: its gear (#694), and the rest as materials.
