@@ -56,6 +56,7 @@
 [ext_resource type="Script" path="res://slices/revive_items/look/revive_tie.gd" id="51_revive_tie"]
 [ext_resource type="Script" path="res://slices/exits/look/exit_hold_hint.gd" id="52_exit_hold_hint"]
 [ext_resource type="Script" path="res://slices/codex/ui/codex_page.gd" id="53_codex_page"]
+[ext_resource type="Script" path="res://slices/input_prompts/ui/device_in_use.gd" id="54_device_in_use"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -363,5 +364,8 @@ mouse_filter = 2
 script = ExtResource("53_codex_page")
 input = NodePath("../../LocalInput")
 driver = NodePath("../../Driver")
+
+[node name="DeviceInUse" type="Node" parent="."]
+script = ExtResource("54_device_in_use")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
