@@ -85,9 +85,12 @@ RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.25, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
-# The wisps drifting around the body (lib/wisps.py, #1103): where each floats and the bone it goes with.
-WISPS = [((0.38, 0.15, 1.45), "spine_01"), ((-0.34, -0.12, 1.52), "spine_02"), ((0.0, 0.95, 1.38), "tail_01"),
-         ((0.3, -0.62, 1.72), "neck"), ((-0.3, 0.62, 1.32), "hips"), ((0.0, 1.78, 0.86), "tail_04")]
+# The wisps hovering around the body on their own (lib/wisps.py, #1103), and the ring they gather
+# into above the head as it lunges (Attack: crouch to frame 8, lunge by 13, bite at 16, back by
+# 24), turning slowly.
+WISPS = [(0.38, 0.15, 1.45), (-0.34, -0.12, 1.52), (0.0, 0.95, 1.38), (0.3, -0.62, 1.72), (-0.3, 0.62, 1.32),
+         (0.0, 1.78, 0.86)]
+CROWN = wisps.Gather("Attack", 1, 11, 16, 24, (0.0, -1.1, 1.95), 0.2, spin=0.06, stagger=2)
 
 
 def mirror(point, sign):
@@ -233,7 +236,7 @@ def magic(skin, mats):
                 made.append(parts.part("torus", "Band.%s.%s.%s" % (bone, share, side), spot, (1, 1, 1), mat=glow,
                                        bone="%s.%s" % (bone, side), major_radius=radius, minor_radius=0.011,
                                        major_segments=16, minor_segments=4))
-    for index, (spot, _bone) in enumerate(WISPS):
+    for index, spot in enumerate(WISPS):
         made.append(parts.part("uv_sphere", "Wisp.%d" % index, spot, (0.022, 0.022, 0.05), mat=glow,
                                bone=wisps.PREFIX + str(index), segments=8, ring_count=5))
     return made
@@ -248,7 +251,7 @@ def build(out):
     symmetry.check(pieces)
     rig = quadruped.armature("ManaWolfRig", WOLF)
     points(rig, pieces)
-    drifting = wisps.Wisps(rig, WISPS)
+    drifting = wisps.Wisps(rig, WISPS, [CROWN])
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names))
     clips.animate(rig, {
@@ -261,7 +264,7 @@ def build(out):
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
-        chains=clips.FOLLOW | drifting.follow(), overlays=[drifting.drift])
+        overlays=[drifting.drift])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
