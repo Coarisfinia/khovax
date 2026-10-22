@@ -195,12 +195,6 @@ a second model could use goes into the library or a generic tool, never into one
    tools/models/check_ground.py -- <model.glb>` must print `GROUND CHECK: PASS`: no paw, foot or
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
-10. **Motion (required, #1071):** `tools/models/blender.sh --background --factory-startup --python
-   tools/models/check_motion.py -- <model.glb> <the speeds the build prints>` must print
-   `MOTION CHECK: PASS`, and `tools/models/plot_motion.py` plots each clip the PR changes
-   against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both go into the PR, before and
-   after.
-
 10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
    into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
    PR says so.
@@ -227,12 +221,18 @@ a second model could use goes into the library or a generic tool, never into one
    > as its creature at 128 px; (9) cute or fierce as intended, versus uncanny. Then name
    > anything that looks broken in either one, with where it is.
 
+
    Unblind its answers and put the table in the PR. Fix every item where the candidate loses,
    and treat every item where the two **measure** differently as a change to justify, whatever
    the reviewer preferred: a fresh eye measures reliably but can talk itself into liking a derp
    (on #1072 it measured close-set eyes correctly and still called them more focused). Only a
    change the owner asked for stays unfixed. A reviewer that only praises has failed: rerun it
    with a fresh subagent.
+13. **Motion (required, #1071):** `tools/models/blender.sh --background --factory-startup --python
+   tools/models/check_motion.py -- <model.glb> <the speeds the build prints>` must print
+   `MOTION CHECK: PASS`, and `tools/models/plot_motion.py` plots each clip the PR changes
+   against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
+   go into the PR, before and after.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
@@ -240,7 +240,7 @@ a second model could use goes into the library or a generic tool, never into one
   2. **Every side in the game:** the same six views rendered in Godot, under the game's cel shading
      and lighting, plus the shot from the game camera at play distance (step 5).
   3. **Animations:** a GIF of each clip in the game, the attack at least; for changed clips the
-     curve plots and the motion check's numbers too, before and after (step 10).
+     curve plots and the motion check's numbers too, before and after (step 13).
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
 - **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and
