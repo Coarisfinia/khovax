@@ -90,7 +90,19 @@ RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 # 24), turning slowly.
 WISPS = [(0.38, 0.15, 1.45), (-0.34, -0.12, 1.52), (0.0, 0.95, 1.38), (0.3, -0.62, 1.72), (-0.3, 0.62, 1.32),
          (0.0, 1.78, 0.86)]
-CROWN = wisps.Gather("Attack", 1, 11, 16, 24, (0.0, -1.1, 1.95), 0.2, spin=0.06, stagger=2)
+CROWN_CENTER, CROWN_RADIUS = (0.0, -1.1, 1.95), 0.2
+CROWN = wisps.Gather("Attack", 1, 11, 16, 24, CROWN_CENTER, CROWN_RADIUS, spin=0.06, stagger=2)
+# The long attack (#1158) holds the crown: they gather as it rears back (ChannelStart), the ring
+# turning once a loop (Channel, 2 s) for as long as it lasts, and leave it as the jaw snaps shut
+# (ChannelEnd); each clip turns the ring on from where ChannelStart's last frame left it.
+CHANNEL_FRAMES = 60
+CHANNEL_SPIN = 2.0 * math.pi / CHANNEL_FRAMES
+HELD = CHANNEL_SPIN * (clips.CHANNEL_START - 1)
+CHANNEL_CROWN = [
+    wisps.Gather("ChannelStart", 1, 16, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, stagger=2),
+    wisps.Gather("Channel", 1, None, None, None, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD),
+    wisps.Gather("ChannelEnd", 1, None, 4, 20, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD),
+]
 
 
 def mirror(point, sign):
@@ -251,7 +263,7 @@ def build(out):
     symmetry.check(pieces)
     rig = quadruped.armature("ManaWolfRig", WOLF)
     points(rig, pieces)
-    drifting = wisps.Wisps(rig, WISPS, [CROWN])
+    drifting = wisps.Wisps(rig, WISPS, [CROWN, *CHANNEL_CROWN])
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names))
     clips.animate(rig, {
@@ -263,6 +275,7 @@ def build(out):
         "Attack": clips.attack(),
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
+        **clips.channel(CHANNEL_FRAMES),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
         overlays=[drifting.drift])
     scene.export_glb(out)

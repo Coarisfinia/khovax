@@ -62,7 +62,9 @@ a second model could use goes into the library or a generic tool, never into one
     countering the bob; `planted=False` swings the legs freely, for a run too fast for planted
     legs at the clip rate) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the
     quadruped set (`idle`, `attack` with its forepaws stepping out, `hit`, `faint` with its legs
-    folding under it), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
+    folding under it, `channel`: a long attack held for as long as it lasts, as a wind-up
+    `ChannelStart`, the looping `Channel` and a release `ChannelEnd` the game plays in turn,
+    #1158), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
     `legs.plant`) and `animate` (fills, follows, plants the paws, keys every bone on every frame,
     cycles the loops' curves, stashes every clip, and with `ground_meshes` lifts the root, eased,
     wherever a pose sinks into the ground, the legs reaching down to their paws again).
@@ -80,7 +82,8 @@ a second model could use goes into the library or a generic tool, never into one
     root and held in the model (a `loc.<bone>` channel, which `animate`'s keys turn into the
     bone's shift whatever the root does): `Wisps.drift`, an `animate` overlay, hovers them slowly
     in every clip, the wave flowing along the body, and a `Gather` sends them to a ring during
-    one clip (the attack) and back.
+    one clip (the attack) and back, or holds them on it across clips played in turn (the long
+    attack).
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
@@ -102,7 +105,8 @@ a second model could use goes into the library or a generic tool, never into one
   samples every frame of every clip and prints, per clip, **foot sliding** (a paw's speed over
   the ground while it stands on it, against the speed the game moves the model at while it
   plays that clip; the model script prints them; every clip, one-shots too), the **loop seam** (pose and roughness from the
-  last frame to the first) and **jitter** (how rough the roughest joint curve runs); it fails
+  last frame to the first), the **joins** of a loop to its lead-in and lead-out (`<Loop>Start`,
+  `<Loop>End`) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam

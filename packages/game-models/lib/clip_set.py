@@ -5,7 +5,9 @@ one. A clip every creature gains is added here, and each creature's build then m
 
 Plain Python, without Blender, so the check reads it outside Blender too."""
 
-CREATURE = ("Idle", "Walk", "Run", "Attack", "Hit", "Faint")
+# The long attack (#1158) is three clips the game plays in turn: its wind-up, the loop it holds
+# for as long as the attack lasts, and its release.
+CREATURE = ("Idle", "Walk", "Run", "Attack", "Hit", "Faint", "ChannelStart", "Channel", "ChannelEnd")
 
 
 def missing(names):
