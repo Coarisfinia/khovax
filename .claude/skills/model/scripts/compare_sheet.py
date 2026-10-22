@@ -1,9 +1,9 @@
 # Compares a model with its reference as numbers and one sheet (model skill, #1072), so a derpy
 # shape shows as a measurement instead of slipping past the eye.
-# Usage: uv run --locked tools/models/blender.py --background --factory-startup --python \
+# Usage: uv run --locked packages/models/blender.py --background --factory-startup --python \
 #     .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir> [views]
 # The reference is the last approved version of the model (a .glb, e.g. from
-# `git show <commit>:assets/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
+# `git show <commit>:packages/game/assets/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
 # its alpha, else everything unlike its corners, is the figure; one view only). `views` is a
 # comma-separated list of front, back, left, right and top (default left,front,top).
 # Per view, a row of the sheet: the reference | ours | the two silhouettes overlaid | both at the

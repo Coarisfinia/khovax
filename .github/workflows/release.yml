@@ -1,8 +1,9 @@
 name: release
 
 # A version tag (v1.2.3) makes a GitHub release with the desktop and web builds attached (#21,
-# #22, #92). The tag must match application/config/version in project.godot; the README says how to
-# cut one. The build runs read-only; only the release job, which runs no project code, may write.
+# #22, #92). The tag must match application/config/version in packages/game/project.godot; the
+# README says how to cut one. The build runs read-only; only the release job, which runs no project
+# code, may write.
 on:
   push:
     tags: ["v*"]
@@ -26,6 +27,11 @@ jobs:
       zip: ${{ steps.export.outputs.zip }}
       web: ${{ steps.export.outputs.web }}
       linux: ${{ steps.export.outputs.linux }}
+    # Every step runs in the game's project (#1101), where its version and builds are; the Python
+    # tooling is beside it, in ../<package>/.
+    defaults:
+      run:
+        working-directory: packages/game
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -63,7 +69,7 @@ jobs:
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
           # Listed into a file first: a failure inside mapfile's process substitution would pass.
-          uv run --locked tools/build/export_templates.py > /tmp/templates.txt
+          uv run --locked ../build/export_templates.py > /tmp/templates.txt
           mapfile -t needed < <(sed 's#^#templates/#' /tmp/templates.txt)
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
@@ -111,9 +117,9 @@ jobs:
         with:
           name: release-builds
           path: |
-            build/${{ steps.export.outputs.zip }}
-            build/${{ steps.export.outputs.web }}
-            build/${{ steps.export.outputs.linux }}
+            packages/game/build/${{ steps.export.outputs.zip }}
+            packages/game/build/${{ steps.export.outputs.web }}
+            packages/game/build/${{ steps.export.outputs.linux }}
           retention-days: 3
 
   release:

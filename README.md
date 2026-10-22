@@ -21,13 +21,17 @@ scoop install "$(cygpath -w "$PWD/tools/scoop/gdstyle.json")"
 ```
 
 On macOS and Linux, install uv with [Homebrew](https://brew.sh): `brew install uv`. uv runs the Python
-tooling in `tools/` (`uv run tools/<folder>/<script>.py`) with the Python version `pyproject.toml`
-pins, which it downloads itself.
+tooling in `packages/` (`uv run packages/<package>/<script>.py`, from the repository's root) with the
+Python version `pyproject.toml` pins, which it downloads itself.
+
+The game is the Godot project in `packages/game/`; every command below runs from the repository's
+root and names it with `--path packages/game`.
 
 `gdstyle` (the GDScript linter and formatter) isn't in a scoop bucket, so the repository carries its
 manifest, and scoop needs its absolute path (the `cygpath` above is for Git Bash).
 
-Open the project in Godot (`godot --path . --editor`), or run it directly with `godot --path .`.
+Open the project in Godot (`godot --path packages/game --editor`), or run it directly with
+`godot --path packages/game`.
 
 ## On an Android phone
 
@@ -55,7 +59,7 @@ CI builds the web version on every pull request and every push to `main`, as the
 ## Cutting a release
 
 A release is a GitHub release with the desktop and web builds attached, made by `.github/workflows/release.yml`:
-1. Set the new version in `project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
+1. Set the new version in `packages/game/project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
 2. Once that's merged, tag that commit on `main` with the same version and push the tag:
    `git tag v0.2.0 && git push origin v0.2.0`.
 3. The workflow checks the tag against `config/version`, exports the build, and creates the release with a zip named after the game. The release notes list the merged pull requests.
@@ -65,11 +69,11 @@ A release is a GitHub release with the desktop and web builds attached, made by 
 The e2e tests run headless. A fresh checkout needs one import first:
 
 ```sh
-godot --headless --path . --import
-godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
+godot --headless --path packages/game --import
+godot --headless --path packages/game -s res://tests/e2e/run_e2e.gd -- --seed=0
 ```
 
-Every `tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
+Every `packages/game/tests/e2e/test_*.gd` runs; the exit code is non-zero when one fails. CI runs the same on every
 pull request and every push to `main`.
 
 Every checkout of the project shares one `user://` folder, so runs in parallel worktrees overwrite
@@ -85,9 +89,9 @@ yourself, with Bun (`scoop install bun`) and a
 version CI pins in `.github/workflows/ci.yml`):
 
 ```sh
-godot --headless --path . --export-release "Web Test" build/web-test/index.html
-bun install --cwd tests/web
-CHROME=<path to chrome-headless-shell> bun tests/web/web_e2e.ts build/web-test
+godot --headless --path packages/game --export-release "Web Test" build/web-test/index.html
+bun install --cwd packages/game/tests/web
+CHROME=<path to chrome-headless-shell> bun packages/game/tests/web/web_e2e.ts packages/game/build/web-test
 ```
 
 ### Load test
@@ -98,8 +102,8 @@ end in the same state; CI runs that on every push (2000 ticks) and compares the 
 branch's. Rendered, on demand, it times frames, uncapped:
 
 ```sh
-godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000
-godot --path . -s res://tools/godot/load_test.gd -- rendered seconds=20
+godot --headless --path packages/game -s res://tools/godot/load_test.gd -- ticks=2000
+godot --path packages/game -s res://tools/godot/load_test.gd -- rendered seconds=20
 ```
 
 Measurements go into the pull request or issue that made them, not into docs.
@@ -113,4 +117,4 @@ gdstyle check .    # lint
 
 Every gdstyle rule is an error (`gdstyle.toml`), and so is every Godot GDScript warning
 (`project.godot`). A script with a warning fails to load. CI lints, checks the formatting, and checks
-every script with `godot --headless --path . --check-only -s res://<script>`.
+every script with `godot --headless --path packages/game --check-only -s res://<script>`.

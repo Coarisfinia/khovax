@@ -1,0 +1,9 @@
+# Export helpers: a member of the repository's uv workspace (the root pyproject.toml).
+[project]
+name = "khovax-build"
+version = "0.0.0"
+requires-python = "==3.14.8"
+dependencies = []
+
+[tool.uv]
+package = false

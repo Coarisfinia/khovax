@@ -1,6 +1,8 @@
-# The repository's tooling in Python, run with uv (#1036): `uv run tools/<folder>/<script>.py`.
-# Not a package: uv only keeps the Python version and the locked dependencies (uv.lock). The game
-# itself is GDScript; the model scripts run in Blender's own Python, not this one.
+# The repository's Python tooling, run with uv (#1036), as a uv workspace (#1101): each tool
+# package in packages/ is a member; the game (packages/game) is the Godot project, not a member.
+# `uv run --locked packages/<package>/<script>.py` from the repository root. No member is built:
+# uv only keeps the Python version and the locked dependencies (uv.lock) for all of them. The
+# model scripts run in Blender's own Python, not this one.
 [project]
 name = "khovax-tools"
 version = "0.0.0"
@@ -10,3 +12,7 @@ dependencies = []
 
 [tool.uv]
 package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["packages/game"]
