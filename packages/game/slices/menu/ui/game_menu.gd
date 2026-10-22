@@ -40,7 +40,8 @@ const OPEN_TEXT: String = "Menu"
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
 const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
 const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
-## How wide their icons are, in font sizes: a little larger than the text, so they read as clearly.
+## How wide the menu's icons are, in font sizes: a little larger than the text, so they read as
+## clearly.
 const ICON_FONTS: float = 1.3
 ## The close button's words on hover: it shows only its icon.
 const CLOSE_TIP: String = "Close the menu (Escape, or B or Start on a controller)"
@@ -132,6 +133,14 @@ static func button(text: String, pressed: Callable) -> Button:
 	return made
 
 
+## A button showing only the icon `shown` (#459), with `tip` as its words on hover, that calls
+## `pressed`.
+static func icon_button(shown: Texture2D, tip: String, pressed: Callable) -> Button:
+	var made: Button = _with_icon(button("", pressed), shown)
+	made.tooltip_text = tip
+	return made
+
+
 ## Gives `made` the icon `shown`, beside its text, if any; lay_out sizes it with the font.
 static func _with_icon(made: Button, shown: Texture2D) -> Button:
 	made.icon = shown
@@ -189,8 +198,8 @@ func lay_out(screen: Vector2) -> void:
 		_font_size = font
 		theme.default_font_size = font
 		_size_buttons(self)
-		for iconed: Button in [_open_button, close_button()]:
-			iconed.add_theme_constant_override("icon_max_width", roundi(font * ICON_FONTS))
+		# Every button's icon in the menu, those of rows it builds later too (#584).
+		theme.set_constant("icon_max_width", "Button", roundi(font * ICON_FONTS))
 		character.fit(font)
 	# The close button stands beside the tabs, so they have its width less.
 	var room: float = screen.x - 4.0 * MARGIN - font * BUTTON_FONTS
@@ -257,9 +266,8 @@ func _build_sheet() -> void:
 	tabs.add_child(settings)
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
-	var close: Button = _with_icon(button("", toggle), CLOSE_ICON)
+	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
 	close.name = CLOSE_NAME
-	close.tooltip_text = CLOSE_TIP
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	row.add_child(close)
 	_sheet.add_child(row)

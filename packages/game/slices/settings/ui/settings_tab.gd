@@ -12,6 +12,12 @@ extends ScrollContainer
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed
 
+## The buttons that step a setting back and on: their icons (#584) and their words on hover.
+const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-left.svg")
+const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
+const PREVIOUS_TIP: String = "Previous choice"
+const NEXT_TIP: String = "Next choice"
+
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
 ## The Survey's place and zoom.
@@ -110,8 +116,9 @@ func _add_row(setting: String, title: String, label: Callable, stepper: Callable
 	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(value)
 	_values[setting] = value
-	row.add_child(_named(GameMenu.button("<", step.bind(setting, -1)), "Previous"))
-	row.add_child(_named(GameMenu.button(">", step.bind(setting, 1)), "Next"))
+	var back: Button = GameMenu.icon_button(PREVIOUS_ICON, PREVIOUS_TIP, step.bind(setting, -1))
+	row.add_child(_named(back, "Previous"))
+	row.add_child(_named(GameMenu.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1)), "Next"))
 	row.add_child(_named(GameMenu.button("Auto", choose_auto.bind(setting)), "Auto"))
 	_rows.add_child(row)
 
