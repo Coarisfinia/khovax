@@ -354,8 +354,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   the content reader, JSONC): the core's edge, which reads files and JSON's numbers. Only
   `Content` (reading files and JSON), `SaveStore` (writing them), through which every other reader
   and writer there goes (#591, #1177), and `JsonNumbers`, the one place JSON's floats become whole
-  numbers (#589), carry the determinism check's exemption marker (#515); `TileBlueprint` too until
-  its color is a whole number (#1179). The core-never-depends-on-a-slice check covers them all. A
+  numbers (#589), carry the determinism check's exemption marker (#515); the rest pass it (a tile
+  blueprint keeps its color as a whole `0xRRGGBB`, which `TileLooks.color_of` turns into a
+  `Color`, #1179). The core-never-depends-on-a-slice check covers them all. A
   reader takes JSON's numbers as whole
   numbers through `JsonNumbers` (#589), never by checking floats itself.
 - **Content data** (#72): species, loot tables, tile blueprints, quests and, later, items are JSONC

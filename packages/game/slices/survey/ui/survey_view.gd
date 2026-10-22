@@ -108,7 +108,7 @@ func _draw() -> void:
 		var shape: PackedVector2Array = PackedVector2Array()
 		for corner: Vector2 in corners:
 			var _added: bool = shape.append(at + corner)
-		draw_colored_polygon(shape, tiles[tile].color)
+		draw_colored_polygon(shape, TileLooks.color_of(tiles[tile]))
 		if blocking.has(tile):
 			var _closed: bool = shape.append(shape[0])
 			draw_polyline(shape, Toon.INK, INK_PIXELS)
@@ -331,6 +331,6 @@ func _slot() -> int:
 ## How a tile of a kind without a blueprint shows: grey, with a question mark.
 static func _unknown_tile() -> TileBlueprint:
 	var unknown: TileBlueprint = TileBlueprint.new()
-	unknown.color = Color.GRAY
+	unknown.color = Color.GRAY.to_rgba32() >> 8
 	unknown.symbol = "?"
 	return unknown
