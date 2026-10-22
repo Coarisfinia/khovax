@@ -1,9 +1,8 @@
 class_name ChestFactory
 extends RefCounted
 ## Builds an instance's treasure chests (#124, #694, #823), rolling on its chest loot table, with
-## the
-## loot on its ground rolling on its instance loot table. Either not loading is an error, and the
-## instance has no chests then.
+## the loot on its ground rolling on its instance loot table. Either not loading is an error, and
+## the instance has no chests then.
 
 
 static func build(setup: FeatureSetup) -> ChestFeature:

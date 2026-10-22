@@ -2,8 +2,7 @@ class_name QuestListView
 extends Control
 ## The open quests at the side of the screen (#340): one card per quest of this machine's player
 ## that isn't finished (QuestTracker.open_steps), with its name (and its path mark in words, #471)
-## and
-## what its current step asks, and the count where the step counts up ("1/3"). A quest that
+## and what its current step asks, and the count where the step counts up ("1/3"). A quest that
 ## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
 ## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows

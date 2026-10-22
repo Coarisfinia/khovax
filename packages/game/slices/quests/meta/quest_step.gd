@@ -4,8 +4,7 @@ extends RefCounted
 ## (#573), each a place to reach or an area to enter, which the Survey marks, or an answer to give
 ## in a dialog (#636), leading to a step of its own. It's checked only against what the player
 ## obtains (its QuestFacts), never inside the simulation. A step naming an instance counts only
-## there
-## (#769), as every step of a territory quest does.
+## there (#769), as every step of a territory quest does.
 ## A step, a choice or a step that ends the chain can emit an event once it's done or taken (#575),
 ## which can start a side quest (`QuestDefinition.starts_on`).
 
@@ -29,8 +28,7 @@ const CONDITION_FIELDS: Array[String] = [
 	"count",
 ]
 ## The conditions of a step, each counted from the facts QuestFacts makes of events (CONDITIONS says
-## what each
-## asks for).
+## what each asks for).
 const DOMINATED: String = "dominated"
 const OPENED: String = "opened"
 const REACHED: String = "reached"
@@ -49,10 +47,9 @@ const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
 const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED]
 ## The conditions a step can have, each counted from the facts QuestFacts makes of events:
-## `dominated`, a wild
-## monster this player dominated (the `quarry`: of `species`, or any, or the one quest target
-## `target` a region's legend marks, #625); `opened`, a treasure chest this player got loot from;
-## `reached`, the place `place` this player stepped into (#339); `entered`, the region
+## `dominated`, a wild monster this player dominated (the `quarry`: of `species`, or any, or the one
+## quest target `target` a region's legend marks, #625); `opened`, a treasure chest this player got
+## loot from; `reached`, the place `place` this player stepped into (#339); `entered`, the region
 ## piece `piece` (#350) or the instance `instance` (#370) this player entered; `answered`, the
 ## answer `answer` this player chose in the dialog `dialog` (#636); `obtained`, one of the item
 ## `item` this player obtained (#686), counted one per item. Each of them but entering an instance
@@ -288,10 +285,10 @@ func choice_for(fact_condition: String, what: String, where: String) -> QuestSte
 ## Whether one fact of `fact_condition` (a domination of a species, a TARGET_DOMINATED, a chest, a
 ## place reached, a piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED or an
 ## item obtained) counts here, toward any of its choices on a branching step; `what` is the species
-## or the quest target dominated, the
-## place reached, the piece or instance entered, the answer chosen as `answer_key` names it, the
-## event emitted or the item obtained; `where` is the instance it happened in, by blueprint name,
-## which a step naming an instance asks for (#769), or "" for none.
+## or the quest target dominated, the place reached, the piece or instance entered, the answer
+## chosen as `answer_key` names it, the event emitted or the item obtained; `where` is the instance
+## it happened in, by blueprint name, which a step naming an instance asks for (#769), or "" for
+## none.
 func counts(fact_condition: String, what: String, where: String) -> bool:
 	if not choices.is_empty():
 		return choice_for(fact_condition, what, where) != null

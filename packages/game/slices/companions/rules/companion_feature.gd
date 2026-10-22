@@ -4,20 +4,20 @@ extends Feature
 ## the first they carry until they choose another (#55, CompanionSwapFeature): their party says
 ## which monster (CompanionParty, in their world store, #724). When the choice changes, the old one
 ## goes and the new one joins. It joins its player in whichever instance they are, on a free tile
-## next to them, as an entity no player
-## controls: players are the entities with a slot, which walk by commands, draw the trail, take
-## exits and open chests, and a companion does none of that, so it never grows or closes a ring. It
-## follows its player (#716): when they take an exit, the world moves it along with them, keeping
-## its rest, its HP and its wait (`carry_out`), so it's never left behind. It goes when its player
-## brings another one, and when its player gets LOST_DISTANCE away (it was stuck behind
-## something), it goes and joins them afresh beside them. One at 0 HP faints: it goes back to its
-## player (`send_home`, #456), and the first monster they carry that hasn't fainted, in their
-## carried order, is chosen in its place at once (#597), so it joins them the next tick. A fainted
-## one stays fainted (in their party, kept by the world across exits, instances and sessions): it
-## doesn't join them, nor can they swap to it, until it's revived (CompanionParty.revive, #655). A
-## player whose companion has fainted while another they carry hasn't, as after a session starts,
-## gets that one chosen. Fainting is kept by the monster's short id (#700), like the companion
-## choice itself, so two carried monsters of one species are two companions.
+## next to them, as an entity no player controls: players are the entities with a slot, which walk
+## by commands, draw the trail, take exits and open chests, and a companion does none of that, so it
+## never grows or closes a ring. It follows its player (#716): when they take an exit, the world
+## moves it along with them, keeping its rest, its HP and its wait (`carry_out`), so it's never left
+## behind. It goes when its player brings another one, and when its player gets LOST_DISTANCE away
+## (it was stuck behind something), it goes and joins them afresh beside them. One at 0 HP faints:
+## it goes back to its player (`send_home`, #456), and the first monster they carry that hasn't
+## fainted, in their carried order, is chosen in its place at once (#597), so it joins them the next
+## tick. A fainted one stays fainted (in their party, kept by the world across exits, instances and
+## sessions): it doesn't join them, nor can they swap to it, until it's revived
+## (CompanionParty.revive, #655). A player whose companion has fainted while another they carry
+## hasn't, as after a session starts, gets that one chosen. Fainting is kept by the monster's short
+## id (#700), like the companion choice itself, so two carried monsters of one species are two
+## companions.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -90,10 +90,9 @@ func start(state: GameState) -> void:
 ## Takes every player's request bringing monsters into their party (#818), in slot order, then
 ## sends home the companions that fell this tick (EntityFell, from HealthFeature, which runs
 ## earlier), sends off the companions whose player brings another or lost them, or that fainted,
-## chooses
-## another for every player whose companion fainted, lets every player who brings one that hasn't
-## fainted and has none here be joined by it, then lets each companion roam, in id order. One whose
-## player takes an exit this tick stays: the world moves it with them (`followers_of`).
+## chooses another for every player whose companion fainted, lets every player who brings one that
+## hasn't fainted and has none here be joined by it, then lets each companion roam, in id order. One
+## whose player takes an exit this tick stays: the world moves it with them (`followers_of`).
 func step(state: GameState, commands: Array[Command]) -> void:
 	_take_parties(state, commands)
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature

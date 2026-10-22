@@ -4,8 +4,7 @@ extends Node
 ## where it touched down, or a left click, focuses the wild monster whose figure shows nearest the
 ## point on the screen, within PICK_PIXELS. A tap still reaches the touch stick, but it lifts before
 ## it steers anywhere; a touch a button took doesn't pick. It sets the local input's focus, which
-## the
-## next command carries (#436).
+## the next command carries (#436).
 
 ## How quick and how still a touch has to be to count as a tap.
 const TAP_SECONDS: float = 0.3

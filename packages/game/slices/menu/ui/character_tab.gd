@@ -8,11 +8,10 @@ extends ScrollContainer
 ## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
 ## them, or below them on a phone held upright (MonsterDetails, #430), then their gear slots (#690,
 ## GearPanel) and their materials (MaterialsList, #295). Above them all, the character's name
-## (#399): typed into a field and kept
-## once confirmed (Enter, or leaving the field), with a line that says in words why a name was
-## refused. It scrolls when the screen is too short. Its layout lives in its scene,
-## character_tab.tscn (#437): this script keeps only what it does, and adds the panels that are
-## built from their own classes.
+## (#399): typed into a field and kept once confirmed (Enter, or leaving the field), with a line
+## that says in words why a name was refused. It scrolls when the screen is too short. Its layout
+## lives in its scene, character_tab.tscn (#437): this script keeps only what it does, and adds the
+## panels that are built from their own classes.
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0

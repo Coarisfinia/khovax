@@ -26,8 +26,7 @@ const KEPT: float = 0.5
 @export var decorations: TileDecorations
 
 ## How far each decoration is cut away as drawn now, by tile: 0 whole, 1 cut down to KEPT. Kept
-## here, since
-## the headless renderer can't be read back.
+## here, since the headless renderer can't be read back.
 var cut: Dictionary[Vector2i, float] = {}
 ## The region the cuts belong to: another one starts every decoration whole.
 var _region: Region

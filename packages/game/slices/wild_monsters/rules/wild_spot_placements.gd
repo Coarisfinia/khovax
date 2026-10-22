@@ -2,8 +2,7 @@ class_name WildSpotPlacements
 extends PlacementReader
 ## Reads the named wild monsters a region's legend places (#133, #824), each a WildSpot, for
 ## WildMonsterFeature. Each is a wild monster's spot too, which the core keeps
-## (Region.wild_monsters),
-## and stands on the tile kind it names, or on ground.
+## (Region.wild_monsters), and stands on the tile kind it names, or on ground.
 
 ## The kind the region keeps its named wild monsters under (Region.placements).
 const KIND: String = "wild_spot"

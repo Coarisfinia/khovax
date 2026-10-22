@@ -8,9 +8,9 @@ extends RefCounted
 ## - `--invincible`: this machine's player takes no damage from any hit, so they're never knocked
 ##   down or sent back to the spawn, while wild monsters still fight them (#1142).
 ## - `--user-dir=<name>`: `user://` (saves, settings, the tests' files) is the folder
-## `khovax_<name>`
-##   in the system's data folder instead of the project's own (#786), so local runs in parallel
-##   worktrees, each given its branch name, keep apart. Without it, the default folder is used.
+##   `khovax_<name>` in the system's data folder instead of the project's own (#786), so local runs
+##   in parallel worktrees, each given its branch name, keep apart. Without it, the default folder
+##   is used.
 ## A world started with a seed, an instance or invincibility is a test world: it never resumes or
 ## overwrites the player's saved one. The game reads them in every build (LaunchMode).
 
