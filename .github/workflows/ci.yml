@@ -125,6 +125,31 @@ jobs:
         # The set is named once, in the model library's lib/clip_set.py, which the build reads too (#1157).
         run: uv run --locked --package khovax-game-models ../game-models/check_clip_set.py
 
+      - name: "🔀 See whether a model or its build changed"
+        id: models
+        # The rebuild check below needs Blender, so it runs only where it can find something: a
+        # change to the model scripts and their library, to a .glb, or to Blender's pin. The parent
+        # is the one the rule change files check compares with (below). A failing diff counts as a
+        # change, so the check runs rather than being skipped.
+        run: |
+          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' \
+            ':(top).github/actions/setup-blender'; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "🧊 Set up Blender"
+        if: steps.models.outputs.changed == 'true'
+        uses: ./.github/actions/setup-blender
+
+      - name: "🐺 Check every scripted model's .glb is what its script builds"
+        # Builds each model twice and compares the bytes with each other and the committed .glb
+        # (#1085, #1161); a difference is an error annotation naming the model and what differs.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all
+
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 

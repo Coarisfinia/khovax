@@ -5,7 +5,11 @@ that too, which tells whether a pull request's .glb is what its script builds.
     uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py \
         packages/game-models/<name>.py \
         [packages/game/assets/<name>/<name>.glb]
+    uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py --all
 
+`--all` checks every scripted model against its committed .glb, as CI does (#1161): a model
+script is the one named like a tracked .glb under the game's assets/ (mana_wolf.py builds
+assets/mana-wolf/mana_wolf.glb), so a new model is checked as soon as both are committed.
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
 (nodes, materials, ...) or each binary accessor (a mesh's indices or attribute, a clip's
 channel) with how many values differ and by how much: indices that only move point to the order
@@ -14,6 +18,7 @@ every model script does. It reports through game_shared.log (#1115): in CI, a di
 error annotation on the committed .glb."""
 
 import json
+import os
 import struct
 import subprocess
 import sys
@@ -21,8 +26,10 @@ import tempfile
 from pathlib import Path
 
 from game_shared import log
+from game_shared.git_files import git_files
 
-BLENDER = Path(__file__).resolve().parent / "blender.py"
+MODELS = Path(__file__).resolve().parent
+BLENDER = MODELS / "blender.py"
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 
@@ -89,12 +96,18 @@ def differences(a: Path, b: Path) -> list[str]:
     return lines or ["the bytes differ outside the accessors (the JSON's layout or padding)"]
 
 
-def main() -> int:
-    if len(sys.argv) not in (2, 3):
-        print(__doc__, file=sys.stderr)
-        return 2
-    script = Path(sys.argv[1]).resolve()
-    committed = Path(sys.argv[2]) if len(sys.argv) == 3 else None
+def scripted_models() -> list[tuple[str, str]]:
+    """Every model script with the .glb it builds, both from the working directory: the tracked
+    .glb under the game's assets/ named like the script."""
+    glbs = {Path(path).stem: path for path in git_files(str(MODELS.parent / "game" / "assets" / "*.glb"))}
+    return [(os.path.relpath(script), glbs[script.stem])
+            for script in sorted(MODELS.glob("*.py")) if script.stem in glbs]
+
+
+def check(script_path: str, committed: Path | None) -> bool:
+    """Builds the script twice and compares the builds, and the committed .glb when there is one;
+    true when they're all the same bytes."""
+    script = Path(script_path).resolve()
     with tempfile.TemporaryDirectory(prefix="check_rebuild_") as scratch:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
         outputs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
@@ -110,21 +123,39 @@ def main() -> int:
         for code, output, out in zip(codes, outputs, outs):
             if code != 0 or not out.is_file():
                 print(output.read_text(), end="")
-                log.error(f"REBUILD CHECK: FAIL ({script.name} didn't build)", sys.argv[1])
-                return 1
-        failed = False
-        pairs = [("the two builds", outs[0], outs[1], sys.argv[1])]
+                log.error(f"{script.name} didn't build", script_path)
+                return False
+        same = True
+        pairs = [(f"{script.name}: the two builds", outs[0], outs[1], script_path)]
         if committed is not None:
-            pairs.append((f"the build and {committed}", outs[0], committed, str(committed)))
+            pairs.append((f"{script.name}: the build and {committed}", outs[0], committed, str(committed)))
         for label, a, b, file in pairs:
             lines = differences(a, b)
             if not lines:
                 log.info(f"{label}: the same bytes")
                 continue
             log.error(f"{label} differ:\n" + "\n".join(f"  {line}" for line in lines), file)
-            failed = True
-    log.info("REBUILD CHECK: " + ("FAIL" if failed else "PASS"))
-    return 1 if failed else 0
+            same = False
+    return same
+
+
+def main() -> int:
+    if sys.argv[1:] == ["--all"]:
+        models = scripted_models()
+        if not models:
+            # The naming that pairs a script with its .glb broke: nothing would be checked.
+            log.error("no model script is named like a .glb under the game's assets/")
+            return 1
+    elif len(sys.argv) in (2, 3) and sys.argv[1] != "--all":
+        models = [(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else None)]
+    else:
+        print(__doc__, file=sys.stderr)
+        return 2
+    # Every model is checked, so one failure doesn't hide another's.
+    results = [check(script, None if glb is None else Path(glb)) for script, glb in models]
+    passed = all(results)
+    log.info("REBUILD CHECK: " + ("PASS" if passed else "FAIL"))
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":
