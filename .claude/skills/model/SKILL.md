@@ -43,7 +43,8 @@ a second model could use goes into the library or a generic tool, never into one
 - **The Blender library, `packages/game-models/lib/`** (a model script imports it after
   `sys.path.insert(0, <packages/game-models>)`):
   - `scene`: a clean scene at the clip rate, `apply_scale`, `triangles`, and `export_glb` (the
-    export settings the game takes: GLB, skins, one animation per NLA track, Y up).
+    export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
+    faces in a fixed order so a rebuild gives the same bytes).
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
   - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`),
     converted and reduced to a triangle budget.
@@ -137,6 +138,12 @@ a second model could use goes into the library or a generic tool, never into one
   `atan2(heading.x, heading.z)`, so one built facing -Z walks backwards. The height matches the
   model it sits beside in the game (measure the reference .glb).
 - **Mesh health:** apply transforms, recalculate normals outside, no loose or non-manifold geometry.
+- **Reproducible (#1085):** a rebuild from an unchanged script gives the same file, byte for byte,
+  so a pull request shows whether its build changed the model and two builds compare by hash.
+  `scene.export_glb` puts every mesh's faces in a fixed order first (Blender's UV sphere lays out
+  its faces in a different order on every run, and the exporter writes triangles in face order).
+  A step that still varies between runs is a bug to fix in the library (a fixed seed, a sorted
+  order), never something to commit whichever build came out. Step 14 checks it.
 
 ## 2. Rig
 - **Armature:** a full chain per limb (at least three bones per leg), spine, neck, head, jaw where
@@ -248,6 +255,14 @@ a second model could use goes into the library or a generic tool, never into one
    `MOTION CHECK: PASS`, and `packages/game-models/plot_motion.py` plots each clip the PR changes
    against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
    go into the PR, before and after.
+
+14. **Rebuild (#1085):** `uv run --locked packages/game-models/check_rebuild.py
+   packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb` builds the model twice,
+   side by side, and compares the two builds with each other and with the committed `.glb`; it
+   must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
+   each mesh's indices or attribute and each clip's channel, by how much): indices that only move
+   point to a face order, values off by a hair to float noise. Run it after the last build, before
+   committing the `.glb`.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
