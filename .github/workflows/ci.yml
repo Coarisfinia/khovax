@@ -118,7 +118,7 @@ jobs:
         run: uv run --locked tools/checks/repeated_folders.py
 
       - name: "🗃️ Check the export presets share their file filters"
-        run: bash tools/checks/export_filters_check.sh
+        run: uv run --locked tools/checks/export_filters_check.py
 
       - name: "🎲 Check the simulation stays deterministic"
         # core/ and every slice's rules/ never use nodes, time, floats, files or JSON (#572); the
@@ -177,7 +177,7 @@ jobs:
       - name: "📦 Check every asset is used"
         # Commit only what the game uses (AGENTS.md, #69): every file under assets/ is named by a
         # scene, script, content file or setting, or by a glTF that is (#320).
-        run: bash tools/checks/unused_assets.sh
+        run: uv run --locked tools/checks/unused_assets.py
 
       - name: "🗂️ Check the content data against its schemas"
         # data_to_json.gd strips the JSONC comments with the game's own stripper; jv then checks
@@ -420,9 +420,18 @@ jobs:
           # A preset added or changed makes a new cache, with the templates it needs.
           key: godot-templates-${{ env.GODOT_VERSION }}-${{ env.GODOT_TEMPLATES_SHA512 }}-${{ hashFiles('export_presets.cfg') }}
 
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        if: steps.cache-templates.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
       - name: "⬇️ Download the export templates"
         # The archive holds every platform's templates; only those export_presets.cfg needs are kept
-        # (tools/build/export_templates.sh reads them from it), so the cache stays small.
+        # (tools/build/export_templates.py reads them from it), so the cache stays small.
         if: steps.cache-templates.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/templates.tpz \
@@ -430,7 +439,9 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          mapfile -t needed < <(bash tools/build/export_templates.sh | sed 's#^#templates/#')
+          # Listed into a file first: a failure inside mapfile's process substitution would pass.
+          uv run --locked tools/build/export_templates.py > /tmp/templates.txt
+          mapfile -t needed < <(sed 's#^#templates/#' /tmp/templates.txt)
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: "🤖 Android: point Godot at the SDK and Java"

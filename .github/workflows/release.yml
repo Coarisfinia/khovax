@@ -15,6 +15,8 @@ env:
   # The same checksums as in ci.yml; bump them together with the version.
   GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
   GODOT_TEMPLATES_SHA512: ca4d71c4d7b81dfc15d1a98baa07534aa95b03fdda78a0075b06672e1648d2e5f40980c9adc28d23e1b92e732ee7bf3461997aa804af74ec2fcd7a93ccb84079
+  UV_VERSION: 0.13.4
+  UV_SHA256: 2b428396f12572d4429cf210ca234dd599a33b3af0958a4d5ed569d63e3f344f
 
 jobs:
   build:
@@ -39,6 +41,14 @@ jobs:
             exit 1
           fi
 
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
       - name: "⬇️ Download Godot and the export templates"
         # Not cached: releases are rare, and a release is built from verified downloads only.
         run: |
@@ -52,7 +62,9 @@ jobs:
           echo "${GODOT_TEMPLATES_SHA512}  /tmp/templates.tpz" | sha512sum --check
           target=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
           mkdir -p "$target"
-          mapfile -t needed < <(bash tools/build/export_templates.sh | sed 's#^#templates/#')
+          # Listed into a file first: a failure inside mapfile's process substitution would pass.
+          uv run --locked tools/build/export_templates.py > /tmp/templates.txt
+          mapfile -t needed < <(sed 's#^#templates/#' /tmp/templates.txt)
           unzip -q -j /tmp/templates.tpz "${needed[@]}" templates/version.txt -d "$target"
 
       - name: "📦 Import the project"
