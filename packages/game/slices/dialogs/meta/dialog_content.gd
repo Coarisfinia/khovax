@@ -42,6 +42,8 @@ static func cached() -> DialogContent:
 
 func add(file_id: String, text: String) -> String:
 	var dialog: Dialog = Dialog.parse(file_id, text)
+	if _people == null:
+		_people = PeopleContent.cached()
 	if dialog.problem.is_empty() and not _people.people.has(dialog.speaker):
 		dialog.problem = "its speaker %s is no person (#1005)" % dialog.speaker
 	if dialog.problem.is_empty():
