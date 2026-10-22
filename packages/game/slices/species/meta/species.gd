@@ -23,7 +23,8 @@ var hp: int = 0
 var strength: int = 0
 ## Higher is faster (#222).
 var speed: int = 0
-## How it behaves as a wild monster against rings: one of ARCHETYPES (#222).
+## How it behaves as a wild monster against rings: one of ARCHETYPES (#222). Nothing reads it yet:
+## whether to build that behaviour, drop the field or make it optional is #1116.
 var archetype: String = ""
 ## Its abilities' ids (the species slice's data/abilities/): its special attack and its two passives
 ## (#222).

@@ -51,7 +51,7 @@
 		"strength": { "description": "Base strength, a whole amount (#33).", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"speed": { "description": "Base speed, a whole amount (#33, #222): higher is faster.", "type": "integer", "minimum": 1, "maximum": 1000000000 },
 		"archetype": {
-			"description": "How it behaves as a wild monster against rings (#222).",
+			"description": "How it behaves as a wild monster against rings (#222). Nothing reads it yet: whether to build that behaviour, drop the field or make it optional is #1116.",
 			"enum": ["charger", "burrower", "flyer", "swarm", "pusher"]
 		},
 		"special": { "description": "Its special attack, an ability of kind special that no other species has (#222, #228).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
