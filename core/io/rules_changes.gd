@@ -9,7 +9,7 @@ extends RefCounted
 ## from its parent without one (tools/replays/rules_compare.py), and a replay recorded under older
 ## rules then fails with a clear message, not a mismatch.
 ## Adding the file is the change of id, so two parallel rule changes never claim the same id, and
-## the folder is append-only (tools/checks/rules_changes_check.sh): a file is never deleted or
+## the folder is append-only (tools/checks/rules_changes_check.py): a file is never deleted or
 ## renamed. Git keeps when each arrived and its pull request
 ## (`git log --diff-filter=A -- core/rules_changes/`, #758).
 
