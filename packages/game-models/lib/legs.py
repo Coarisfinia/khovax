@@ -91,7 +91,7 @@ def steps(poses, made):
     return poses
 
 
-def _posed(rig, pose, name, scale, cache):
+def posed(rig, pose, name, scale, cache):
     """A bone's posed matrix in the armature (its rest, turned by its parents and itself)."""
     if name not in cache:
         basis = Euler(pose.get(name, (0.0, 0.0, 0.0)), "XYZ").to_matrix().to_4x4()
@@ -100,7 +100,7 @@ def _posed(rig, pose, name, scale, cache):
             shift = Vector(pose.get("root_loc", (0.0, 0.0, 0.0))) * scale
             cache[name] = rig.matrix[name] @ Matrix.Translation(shift) @ basis
         else:
-            above = _posed(rig, pose, parent, scale, cache) @ rig.matrix[parent].inverted()
+            above = posed(rig, pose, parent, scale, cache) @ rig.matrix[parent].inverted()
             cache[name] = above @ rig.matrix[name] @ basis
     return cache[name]
 
@@ -157,7 +157,7 @@ def _solve(rig, pose, leg, scale, cache, rise):
     on the ground, and how far its top would have to come down for it to reach there without
     stretching past STRETCH."""
     parent = rig.parent[leg.upper]
-    carry = _posed(rig, pose, parent, scale, cache) @ rig.matrix[parent].inverted()
+    carry = posed(rig, pose, parent, scale, cache) @ rig.matrix[parent].inverted()
     turn = carry.to_3x3()
     top = (carry @ rig.matrix[leg.upper]).translation
     side, up, forward = pose.get("plant." + leg.paw, (0.0, 0.0, 0.0))
@@ -237,8 +237,8 @@ def plant(rig, poses, legs, scale, rises=None):
             for name, turn in turns.items():
                 # Each bone's turn is kept relative to its parent's: the leg's own, or the body's.
                 parent = rig.parent[name]
-                posed = turns[parent] if parent in turns else _posed(rig, planned, parent, scale, cache).to_3x3()
-                base = posed @ rig.matrix[parent].to_3x3().inverted() @ rig.matrix[name].to_3x3()
+                held = turns[parent] if parent in turns else posed(rig, planned, parent, scale, cache).to_3x3()
+                base = held @ rig.matrix[parent].to_3x3().inverted() @ rig.matrix[name].to_3x3()
                 local = (base.inverted() @ turn).to_euler("XYZ", previous.get(name, Euler()))
                 previous[name] = local
                 pose[name] = tuple(local)
