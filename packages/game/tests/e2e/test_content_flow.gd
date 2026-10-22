@@ -20,10 +20,10 @@ extends RefCounted
 ## are warned about (#949). No two things share an id or a name, whatever their kinds, in any case
 ## (#909). Every content kind is read ahead in the background (#816).
 
-## A species file's speed, archetype, abilities (#222), name (#351) and strike type (#626), as a
+## A species file's speed, abilities (#222), name (#351) and strike type (#626), as a
 ## valid species ends.
 const KIT: String = (
-	", \"name\": \"Xo\", \"strike_type\": \"might\", \"speed\": 1, \"archetype\": \"pusher\","
+	", \"name\": \"Xo\", \"strike_type\": \"might\", \"speed\": 1,"
 	+ " \"special\": \"a_special\", \"player_passive\": \"a_passive\","
 	+ " \"self_passive\": \"its_passive\""
 )
@@ -850,8 +850,6 @@ func _check_refused() -> String:
 		"{\"id\": 7, \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "its id must match",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1, \"y\": 1}": "field y",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1}": "speed is",
-		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
-		+ KIT.replace("pusher", "digger") + "}": "its archetype",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("might", "fire") + "}": "its strike type",
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
