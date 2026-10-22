@@ -157,9 +157,9 @@ func _check_refused() -> String:
 		"{\"ombulumo\": {\"level\": 1, \"habitat\": [7]}}": "habitat",
 	}
 	for stored: String in cases:
-		var problem: String = _read_bestiary(stored)
-		if not problem.contains(cases[stored]):
-			return "the bestiary %s wasn't refused: %s" % [stored, problem]
+		var refused: String = _read_bestiary(stored)
+		if not refused.contains(cases[stored]):
+			return "the bestiary %s wasn't refused: %s" % [stored, refused]
 	var keeper: BestiaryKeeper = BestiaryKeeper.new()
 	keeper.bestiary.learn("ombulumo", Bestiary.KNOWN, "")
 	var text: String = ProfileSave.to_text(Profile.new(), [keeper])
