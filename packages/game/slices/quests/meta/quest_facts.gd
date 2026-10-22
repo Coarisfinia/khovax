@@ -12,18 +12,17 @@ extends RefCounted
 
 ## The events quests count, each a class the bus delivers by.
 static func events() -> Array[Script]:
-	return [
-		WildMonsterDominated,
-		ChestOpened,
-		LootFound,
-		DominationLoot,
-		Harvested,
+	var counted: Array[Script] = [WildMonsterDominated]
+	counted.append_array(LootRolls.events())
+	var others: Array[Script] = [
 		PlaceReached,
 		PieceEntered,
 		InstanceEntered,
 		DialogAnswered,
 		WorldChanged,
 	]
+	counted.append_array(others)
+	return counted
 
 
 ## The facts `event`, which happened in the instance `where`, is for the player in `slot`, in the
@@ -39,7 +38,7 @@ static func of(event: RefCounted, slot: int, where: String) -> Array[QuestFact]:
 		return facts
 	if event is ChestOpened and (event as ChestOpened).loot.has(slot):
 		facts.append(QuestFact.new(QuestStep.OPENED, "", where))
-	var rolls: Dictionary[int, Dictionary] = _rolls_of(event)
+	var rolls: Dictionary[int, Dictionary] = LootRolls.of(event)
 	if rolls.has(slot):
 		facts.append_array(_obtained(rolls[slot], where))
 		return facts
@@ -77,21 +76,6 @@ static func _single_fact_of(event: RefCounted, slot: int, where: String) -> Ques
 	if event is WorldChanged:
 		return _emitted((event as WorldChanged).event_name)
 	return null
-
-
-## Every player's loot from `event`, by slot: from a felled wild monster (#629), a domination
-## (#86), the ground (#203) or an opened chest (#124). None otherwise.
-static func _rolls_of(event: RefCounted) -> Dictionary[int, Dictionary]:
-	var none: Dictionary[int, Dictionary] = {}
-	if event is Harvested:
-		return (event as Harvested).loot
-	if event is DominationLoot:
-		return (event as DominationLoot).loot
-	if event is LootFound:
-		return (event as LootFound).loot
-	if event is ChestOpened:
-		return (event as ChestOpened).loot
-	return none
 
 
 ## The items of a roll of loot, {item id: amount}, obtained in the instance `where`, in the roll's
