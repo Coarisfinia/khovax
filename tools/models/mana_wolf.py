@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, parts, quadruped, scene, surface, symmetry, weights  # noqa: E402
+from lib import attachments, body, clips, eyes, metrics, parts, quadruped, scene, surface, symmetry, weights  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -50,6 +50,22 @@ WOLF = quadruped.Proportions(
         (0.24, 0.44, 0.06),
     ],
 )
+# The approved proportions (#1072), measured from the version the owner approved on #995: a change
+# that drifts from them fails the build (lib/metrics.py), so a derpy edit shows as numbers.
+REFERENCE = {
+    "head/body": 0.866,
+    "head height/length": 0.742,
+    "head width/length": 0.558,
+    "leg/body": 1.167,
+    "ear/head": 0.318,
+    "tail/body": 1.512,
+    "eye spacing/head width": 0.566,
+    # The eyes mirror each other: level, side by side, equally far out.
+    "eye.R/eye.L height": 0.0,
+    "eye.R/eye.L depth": 0.0,
+    "eye.R/eye.L sides": 0.0,
+}
+
 # How tall the wolf stands at the hips: the faint sinks it this far.
 HIP_HEIGHT = 0.69
 
@@ -235,6 +251,8 @@ def build(out):
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
+    if not metrics.report(rig, [skin], REFERENCE):
+        sys.exit(1)
 
 
 build(sys.argv[sys.argv.index("--") + 1])

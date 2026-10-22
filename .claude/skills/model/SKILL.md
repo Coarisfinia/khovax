@@ -28,7 +28,8 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   `uv run --locked tools/models/gif.py <frame_dir> <Clip>` (a palette pass, looping; options in its
   header), never a hand-typed command.
 - The scripts beside this file: `scripts/render_views.py` (every side, one labelled sheet, drawn
-  in Blender with its own font: no ImageMagick, no system font) and
+  in Blender with its own font: no ImageMagick, no system font),
+  `scripts/compare_sheet.py` (the model against its reference, as a sheet and numbers, #1072) and
   `scripts/check_glb.gd` (the Godot import check).
 
 ## Shared library and tools (owner's rule, #995)
@@ -57,6 +58,12 @@ a second model could use goes into the library or a generic tool, never into one
     mirrored across X; a model script runs it on its parts before they're joined.
   - `parts.claws`: claws fanned out along a paw's front like toes, the middle ones longer, curving
     down; count, spread, size, fan and curl as parameters.
+  - `metrics`: proportions as numbers (#1072). A model script keeps a `REFERENCE` dict of its
+    approved ratios (head/body, leg/body, ear/head, tail/body, eye spacing/head width, the
+    eyes' symmetry, ...) and its build ends with `metrics.report(rig, [skin], REFERENCE)`, which
+    prints each as a measurement against the reference and fails the build beyond the
+    tolerance. A new model measures itself first (a measure missing from `REFERENCE` prints as a
+    note), and its `REFERENCE` takes the values once the owner approves the look.
   - `attachments`: `add` gives the rig its attachment points (below), each a small bone that
     deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out.
 - **The ground check:** `tools/models/check_ground.py -- <model.glb> [tolerance]` samples every
@@ -160,6 +167,36 @@ a second model could use goes into the library or a generic tool, never into one
    any other part sinks into the ground in any frame of any clip (owner, #995). Its numbers go
    into the PR.
 
+10. **Proportions:** the build prints `PROPORTIONS CHECK: PASS` (`lib/metrics.py`); its lines go
+   into the PR. A deliberate change of proportions updates `REFERENCE` in the same PR, and the
+   PR says so.
+11. **Reference comparison (#1072):** `tools/models/blender.sh --background --factory-startup
+   --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb> <reference> <out_dir>
+   [views]`, the reference being the last approved `.glb` (`git show origin/main:assets/<name>/<name>.glb
+   > <scratch>/reference.glb`) or, for a new model, its concept image. It writes `compare.png`
+   (reference | ours | overlay | 128 px) and prints the silhouette match and the ten-band width
+   profile per view, ending in `COMPARE CHECK: PASS` or `FAIL`. A fail is either a bug or an
+   intended change of shape, which the PR names band by band.
+12. **Blind rubric review (required before the first owner ping, #1072):** the builder can't see
+   its own model fresh, so a **separate subagent** with no build history judges it. Copy the
+   candidate's and the reference's views (`render_views.py` sheets, the `portrait` and `face`
+   close-ups, the 128 px strip) into a new folder as `A-*.png` and `B-*.png`, the order decided
+   by a coin flip (`python3 -c 'import random; print(random.choice("AB"))'`) and kept from the
+   reviewer, so neither file name nor order says which is new. Start the subagent (the same
+   model) with only that folder and this rubric, nothing about the build or the change:
+   > Two versions of one game monster, A and B, are shown from every side, up close and at
+   > 128 px. Judge only what you see. For each item answer "A better", "B better" or "same",
+   > with a measurement in pixels or a ratio, never only an adjective: (1) eyes level, equal in
+   > size and evenly spaced; (2) eyes looking forward, not cross-eyed or wall-eyed; (3) head to
+   > body size; (4) the neck joins head and body smoothly; (5) legs under the body, equal
+   > pairs; (6) paws on the ground; (7) nothing floating, detached or intersecting; (8) reads
+   > as its creature at 128 px; (9) cute or fierce as intended, versus uncanny. Then name
+   > anything that looks broken in either one, with where it is.
+
+   Unblind its answers, fix every item where the candidate loses (unless the owner asked for
+   that change), and put the table in the PR. A reviewer that only praises has failed: rerun it
+   with a fresh subagent.
+
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
   1. **Every side as built:** the Blender sheet from step 1.
@@ -175,5 +212,6 @@ a second model could use goes into the library or a generic tool, never into one
   owner once every visual is in.
 - **Splitting the work:** a model can come in two PRs: the model with its rig (visuals 1 and 2),
   then its clips (visual 3). Each PR shows what it adds.
-- **Numbers:** the budget from step 7, and the `check_glb.gd` result.
+- **Numbers:** the budget from step 7, the `check_glb.gd` result, the proportions (step 10), the
+  comparison sheet with its numbers (step 11) and the blind review's table (step 12).
 - **Review:** Codex reviews the build script's diff, never the binary.
