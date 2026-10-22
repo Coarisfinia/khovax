@@ -19,6 +19,8 @@ var path: String = ProfileStore.PATH
 var companions: Array[ProfileCompanion] = []
 ## Whether the profile has changes the save doesn't have yet.
 var _pending: bool = false
+## Whether it has changes that wait for the next save without asking for one (`note`).
+var _noted: bool = false
 var _last_save_msec: int = -SAVE_INTERVAL_MSEC
 
 
@@ -48,6 +50,15 @@ func change(changing: Callable, now_msec: int) -> String:
 	changing.call(profile)
 	_pending = true
 	return save_if_due(now_msec)
+
+
+## Runs `changing` on the profile, a companion's part changing with it, like `change`, but asks
+## for no save: the change goes with the next one, or with the flush as the session ends. For what
+## the player learns as they go, like the bestiary (#1173), which would otherwise take the first
+## save after a quiet spell from a gain that follows.
+func note(changing: Callable) -> void:
+	changing.call(profile)
+	_noted = true
 
 
 ## Takes over the player's choice of personal color (#391), `color` as 0xRRGGBB or
@@ -150,8 +161,9 @@ func save_if_due(now_msec: int) -> String:
 ## Saves pending changes now (the session ends or the game goes to the background); returns why it
 ## couldn't, or "".
 func flush() -> String:
-	if not _pending:
+	if not _pending and not _noted:
 		return ""
 	var problem: String = ProfileStore.save(profile, path, companions)
-	_pending = not problem.is_empty()
+	_pending = _pending and not problem.is_empty()
+	_noted = _noted and not problem.is_empty()
 	return problem

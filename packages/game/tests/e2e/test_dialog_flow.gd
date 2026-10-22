@@ -8,7 +8,8 @@ extends RefCounted
 ## it moves on or closes once the answer reaches it, also for an answer that came only through the
 ## commands, as in a replay, even from a line before the one that offers it. While the menu is open
 ## over a dialog, its buttons rest. A faction's name in a line opens its lexicon page (#959), with a
-## controller, a click or a long press on touch, never a tap. A dialog that doesn't exist doesn't
+## controller, a click or a long press on touch, never a tap, and a species' name its bestiary page
+## (#1173). A dialog that doesn't exist doesn't
 ## open. In the glade, Teska
 ## na Amvrel, the guild's scout, stands east of the start (#557): walking into them talks to them,
 ## raised as
@@ -325,7 +326,38 @@ func _choose_with_controller(
 	driver.input.choose_answer(code + 1)
 	if _answered(driver).size() > 0:
 		return "an answer no dialog has was raised"
-	return ""
+	var page: CodexPage = screen.get_parent().get_node("CodexPage") as CodexPage
+	return _bestiary_by_controller(page, driver, screen)
+
+
+## The line about Lumwen Hoal names the Ombulumo (#1173) as a link to its bestiary page, which the
+## d-pad up and A open: its name and what the name means, and its bestiary entry instead of a
+## lexicon's, its lore still to learn. B closes it, and the d-pad down goes back to the answer.
+static func _bestiary_by_controller(
+	page: CodexPage,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	if screen.line_links() != ["MONSTER:ombulumo"]:
+		return "the line about Lumwen Hoal had the links %s" % [screen.line_links()]
+	_press_pad(screen, JOY_BUTTON_DPAD_UP)
+	_press_pad(screen, JOY_BUTTON_A)
+	if not page.is_open() or not driver.input.blocked:
+		return "A on the Ombulumo's name didn't open its page"
+	var gloss: String = page.gloss.get_parsed_text()
+	if (page.heading.text != CodexPage.BESTIARY_TEXT
+			or page.title.text != "Ombulumo"
+			or gloss != "Ombulumo: the low boom from the shallows"
+			or page.entry.visible
+			or page.standing.visible
+			or not page.beast.visible
+			or page.beast.shown.back() != BestiaryEntry.NOT_KNOWN_TEXT):
+		return "the Ombulumo's page showed %s, %s, %s" % [page.title.text, gloss, page.beast.shown]
+	_press_pad(screen, JOY_BUTTON_B)
+	if page.is_open():
+		return "B didn't close the Ombulumo's page"
+	_press_pad(screen, JOY_BUTTON_DPAD_DOWN)
+	return "" if _focused(screen) == 0 else "the d-pad down didn't go back to the answer"
 
 
 ## While the menu is open over the dialog, its buttons rest; closed again, they work.

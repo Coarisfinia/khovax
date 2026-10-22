@@ -88,6 +88,17 @@ static func is_id(text: String) -> bool:
 	return Ids.is_id(text)
 
 
+## A content file's codex entry (#959) from its `codex` object `raw`: its entry and its gloss, or
+## an empty list unless both have more than spaces.
+static func codex_of(raw: Variant) -> Array[String]:
+	var codex: Dictionary = raw if raw is Dictionary else {}
+	var parts: Array[String] = [text_of(codex.get("entry")), text_of(codex.get("gloss"))]
+	for part: String in parts:
+		if part.strip_edges().is_empty():
+			return []
+	return parts
+
+
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.
 static func amount(value: Variant) -> int:
 	return JsonNumbers.whole(value, 1, Fixed.MAX_AMOUNT, 0)

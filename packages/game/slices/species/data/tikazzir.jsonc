@@ -3,6 +3,10 @@
 {
 	"id": "tikazzir",
 	"name": "Tikazzir",
+	"codex": {
+		"entry": "A small, quick flier with sharp eyes that darts low between the reeds and clicks as it turns, gone before it can be struck. Its name is a beast-call, the sound it makes: the clicks of its turns in t and k, and the buzz of its wings in the doubled z.",
+		"gloss": "the click and buzz in the reeds"
+	},
 	"types": ["breeze", "mana"],
 	"strike_type": "breeze",
 	"hp": 60,

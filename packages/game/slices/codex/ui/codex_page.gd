@@ -3,14 +3,18 @@ extends Control
 ## A codex page (#959): what selecting an invented name in a text opens (NameLinks), over the whole
 ## screen. A faction's is its lexicon entry: its name, the line saying what its name means ("Amvrel
 ## Velmarai: *the guild of those who chart*"), its entry, and this machine's player's standing
-## with it, its current rank only (#484). The close button at its top right, `ui_cancel` (Escape,
+## with it, its current rank only (#484). A species' is its bestiary entry (#1173): its name, the
+## line saying what its name means, and only what this machine's player has learned about it
+## (BestiaryEntry). The close button at its top right, `ui_cancel` (Escape,
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
-## screen. Monsters' bestiary entries and the other named kinds' pages follow (#959).
+## screen. The other named kinds' pages follow (#1175).
 
 ## The page's heading over a faction's name.
 const LEXICON_TEXT: String = "Lexicon"
+## The page's heading over a species' name.
+const BESTIARY_TEXT: String = "Bestiary"
 ## The standing line: neutral, or the standing with its sign and the rank the faction names it.
 const NEUTRAL_TEXT: String = "Your standing: neutral"
 const STANDING_TEXT: String = "Your standing: %+d, %s"
@@ -28,16 +32,18 @@ const MARGIN: float = GameMenu.MARGIN
 
 ## This machine's player's input, which hears nothing while the page is open.
 @export var input: LocalInput
-## The session, whose holder keeps this machine's player's standings.
+## The session, whose holder keeps this machine's player's standings and, beside them, what they've
+## learned about each species (BestiaryKeeper).
 @export var driver: Session
 
 ## What the page shows, kept here so tests can read them: the heading, the name, the meaning line
-## (as the player reads it), the entry and the standing line.
+## (as the player reads it), the entry and the standing line, or a species' bestiary entry.
 var heading: Label
 var title: Label
 var gloss: RichTextLabel
 var entry: Label
 var standing: Label
+var beast: BestiaryEntry
 var close_button: Button
 var _sheet: PanelContainer
 var _column: VBoxContainer
@@ -69,7 +75,8 @@ func _ready() -> void:
 	entry = Label.new()
 	entry.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	standing = GameMenu.label("")
-	for shown: Control in [heading, title, gloss, entry, standing]:
+	beast = BestiaryEntry.new()
+	for shown: Control in [heading, title, gloss, entry, standing, beast]:
 		_column.add_child(shown)
 	# Only the sheet takes clicks, and only while open: fading out, the page lets them through.
 	for passive: Control in [row, middle, _column, gloss]:
@@ -96,30 +103,56 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Opens the page of the thing of the kind `kind` (TextTags.FACTION) with the id `id`; whether it
-## has one.
+## Opens the page of the thing of the kind `kind` (TextTags.FACTION or MONSTER) with the id `id`;
+## whether it has one.
 func open(kind: String, id: String) -> bool:
-	if kind != TextTags.FACTION:
+	var faction: Faction = FactionContent.cached().factions.get(id)
+	var species: Species = SpeciesContent.cached().species.get(id)
+	var shown: bool = false
+	if kind == TextTags.FACTION:
+		shown = _show_faction(faction)
+	elif kind == TextTags.MONSTER:
+		shown = _show_species(species)
+	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
-	var faction: Faction = FactionContent.cached().factions.get(id)
-	if faction == null:
-		push_warning("no faction %s for a codex page" % id)
-		return false
-	var faction_name: String = TextTags.shown(faction.name)
-	heading.text = LEXICON_TEXT
-	title.text = faction_name
-	gloss.text = GLOSS_TEXT % [
-		NameLinks.escaped(faction_name),
-		NameLinks.escaped(faction.codex_gloss),
-	]
-	entry.text = faction.codex_entry
-	standing.text = _standing_line(faction)
 	if not _open:
 		_focused_before = get_viewport().gui_get_focus_owner()
 	_ease(true)
 	close_button.grab_focus()
 	return true
+
+
+## Shows `faction`'s lexicon entry; whether there is one.
+func _show_faction(faction: Faction) -> bool:
+	if faction == null:
+		return false
+	_show_name(LEXICON_TEXT, TextTags.shown(faction.name), faction.codex_gloss)
+	entry.text = faction.codex_entry
+	standing.text = _standing_line(faction)
+	return true
+
+
+## Shows `species`' bestiary entry, as much as this machine's player has learned; whether there is
+## one.
+func _show_species(species: Species) -> bool:
+	if species == null:
+		return false
+	_show_name(BESTIARY_TEXT, species.name, species.codex_gloss)
+	beast.show_species(species, BestiaryKeeper.of(driver.holder if driver != null else null))
+	return true
+
+
+## Shows the page's `kind_heading`, the thing's name `shown_name` and what it means, `meaning`;
+## only the lexicon's or the bestiary's parts show below them, whichever `kind_heading` names.
+func _show_name(kind_heading: String, shown_name: String, meaning: String) -> void:
+	heading.text = kind_heading
+	title.text = shown_name
+	gloss.text = GLOSS_TEXT % [NameLinks.escaped(shown_name), NameLinks.escaped(meaning)]
+	var lexicon: bool = kind_heading == LEXICON_TEXT
+	entry.visible = lexicon
+	standing.visible = lexicon
+	beast.visible = not lexicon
 
 
 ## Closes the page, easing out; the focus goes back to where it was.

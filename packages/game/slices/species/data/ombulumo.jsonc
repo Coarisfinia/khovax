@@ -2,6 +2,10 @@
 {
 	"id": "ombulumo",
 	"name": "Ombulumo",
+	"codex": {
+		"entry": "A round, soggy creature of still water that sits half-sunk in the shallows and booms at dusk, slow to rouse and hard to shift once it has. Its name is a beast-call, the sound it makes: round, soft b, m and l, and its o's and u's as deep as the boom.",
+		"gloss": "the low boom from the shallows"
+	},
 	"types": ["growth"],
 	"strike_type": "growth", // its auto attack's (#626)
 	"hp": 120, // sturdy

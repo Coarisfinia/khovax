@@ -19,12 +19,12 @@ extends RefCounted
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816).
 
-## A species file's speed, abilities (#222), name (#351) and strike type (#626), as a
-## valid species ends.
+## A species file's speed, abilities (#222), name (#351), strike type (#626) and codex entry
+## (#1173), as a valid species ends.
 const KIT: String = (
 	", \"name\": \"Xo\", \"strike_type\": \"might\", \"speed\": 1,"
 	+ " \"special\": \"a_special\", \"player_passive\": \"a_passive\","
-	+ " \"self_passive\": \"its_passive\""
+	+ " \"self_passive\": \"its_passive\", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}"
 )
 ## A quest step to reach a place, its id left open (#339).
 const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
@@ -878,6 +878,13 @@ func _check_refused() -> String:
 		# Its id is its name in lower case (#763).
 		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
 		+ KIT.replace("\"Xo\"", "\"Zo\"") + "}": "its id must be its name",
+		# Its codex entry and gloss (#1173), each with more than spaces.
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace("\"g\"", "\" \"") + "}": "it needs a codex entry",
+		"{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+		+ KIT.replace(", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}", "") + "}": (
+			"it needs a codex entry"
+		),
 	}
 	for text: String in cases:
 		var problem: String = _add_to_empty(text)
