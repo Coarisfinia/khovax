@@ -20,8 +20,8 @@ const TAG_PATTERN: String = "\\$\\{([A-Z_]+):([a-z][a-z0-9_]*)\\}"
 ## Where any tag starts, well formed or not.
 const TAG_START: String = "${"
 ## The kinds whose names open a codex page when the player selects them (#959): a faction's lexicon
-## entry, a species' bestiary entry (#1173) and a person's page (#1005). The other named kinds follow
-## (#1175).
+## entry, a species' bestiary entry (#1173) and a person's page (#1005). The other named kinds
+## follow (#1175).
 const CODEX_KINDS: Array[String] = [FACTION, MONSTER, PERSON]
 
 ## The tags read from the game's content, read the first time one is shown.
