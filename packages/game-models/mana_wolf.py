@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, metrics, parts, quadruped, scene, surface, symmetry, weights, wisps  # noqa: E402
+from lib import attachments, body, clips, eyes, metrics, muzzle, parts, quadruped, scene, surface, symmetry, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -67,7 +67,22 @@ REFERENCE = {
     "eye.R/eye.L height": 0.0,
     "eye.R/eye.L depth": 0.0,
     "eye.R/eye.L sides": 0.0,
+    # The snout (#1026), measured against a wolf's: under the upper muzzle, a lower jaw about half
+    # as deep and nearly as wide, its chin reaching almost to the nose.
+    "muzzle/head": 0.413,
+    "muzzle depth/length": 0.506,
+    "muzzle width/head width": 0.370,
+    "nose width/muzzle width": 0.560,
+    "jaw depth/muzzle depth": 0.551,
+    "jaw width/muzzle width": 0.860,
+    "jaw/muzzle": 1.555,
+    "chin reach/muzzle": 0.867,
 }
+
+# The snout (#1026): the upper muzzle as approved on #995, and a lower jaw sized against it (the
+# snout lines in REFERENCE).
+SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, hinge=WOLF.jaw[0][1:], taper=0.67,
+                     stop_depth=0.08, lip=0.04, jaw_depth=0.6, jaw_width=1.1, chin=1.05)
 
 # How tall the wolf stands at the hips: the faint sinks it this far.
 HIP_HEIGHT = 0.69
@@ -123,14 +138,9 @@ def wolf_body():
     blob.ellipsoid((0.0, 0.58, 1.03), (0.21, 0.22, 0.22))
     blob.capsule((0.0, -0.40, 1.16), (0.0, -0.66, 1.38), 0.19)
     blob.ellipsoid((0.0, -0.52, 1.08), (0.15, 0.15, 0.17))
-    # A wedge of a head: a flat skull, a brow that steps down to the muzzle, and a muzzle that
-    # narrows to the nose under a straight bridge.
+    # A wedge of a head: a flat skull, and the snout's brow, stop and upper muzzle.
     blob.ellipsoid((0.0, -0.78, 1.47), (0.17, 0.22, 0.14))
-    blob.ellipsoid((0.0, -0.86, 1.52), (0.12, 0.08, 0.06))
-    blob.capsule((0.0, -0.90, 1.42), (0.0, -1.08, 1.40), 0.075)
-    blob.capsule((0.0, -1.08, 1.40), (0.0, -1.22, 1.37), 0.05)
-    blob.capsule((0.0, -0.92, 1.47), (0.0, -1.20, 1.41), 0.03)
-    blob.ellipsoid((0.0, -1.00, 1.35), (0.055, 0.15, 0.04))
+    SNOUT.upper(blob)
     blob.limb(list(reversed(WOLF.tail)), [0.10, 0.15, 0.13, 0.06])
     for sign in (1, -1):
         blob.ellipsoid((0.1 * sign, -0.84, 1.41), (0.08, 0.11, 0.075))
@@ -150,19 +160,9 @@ def wolf_body():
 
 
 def head_parts(skin, mats):
-    """Jaw, nose, fangs, ears with pale insides, and the eyes."""
-    made = [
-        # A lean lower jaw narrowing to the chin, and an angled nose pad on the muzzle's tip.
-        parts.part("cone", "Jaw", (0.0, -1.0, 1.33), (0.052, 0.028, 0.34), parts.pointing((0.0, -1.0, -0.12)),
-                   mats["fur"], "jaw", vertices=12, radius1=1.0, radius2=0.35, depth=1.0),
-        parts.part("uv_sphere", "Nose", (0.0, -1.245, 1.395), (0.042, 0.03, 0.026), (0.45, 0, 0), mats["dark"],
-                   "head", segments=12, ring_count=6),
-    ]
+    """The snout's jaw, nose, mouth and fangs, the ears with pale insides, and the eyes."""
+    made = SNOUT.parts(mats, "head", "jaw")
     for sign in (1, -1):
-        for name, base, bone in (("Fang", (0.035, -1.15, 1.345), "head"), ("LowFang", (0.03, -1.10, 1.325), "jaw")):
-            direction = (0.0, 0.0, -1.0) if bone == "head" else (0.0, 0.0, 1.0)
-            made.append(parts.crystal("%s.%d" % (name, sign), mirror(base, sign), direction, 0.04,
-                                      mats["light"], bone, width=0.25, sides=5))
         side = "L" if sign == 1 else "R"
         base, tip = (mirror(p, sign) for p in WOLF.ear)
         out = tuple(t - b for t, b in zip(tip, base))

@@ -68,6 +68,7 @@ class Body:
         self.tail = self._reach(rig, meshes, "tail_01", tail_bones)
         self.eyes = (_joint(rig, "eye.L"), _joint(rig, "eye.R"))
         self.eye_spacing = None if None in self.eyes else (self.eyes[0] - self.eyes[1]).length
+        self.snout = Snout(head, _owned(rig, meshes, {"jaw"}), self.eyes[0])
 
     @staticmethod
     def _reach(rig, meshes, root, bones):
@@ -75,6 +76,41 @@ class Body:
         start = _joint(rig, root)
         points = _owned(rig, meshes, bones)
         return max((point - start).length for point in points) if start is not None and points else None
+
+
+class Snout:
+    """The snout's lengths (#1026): the upper muzzle (the head's skin ahead of the eyes, the stop
+    to the nose) and the lower jaw (the skin the jaw moves), each measured across at the muzzle's
+    middle, where a wolf's snout is judged; and the nose's tip, the front of the muzzle. Each is
+    None when the rig lacks a jaw or eyes, or the jaw has no skin there."""
+
+    # How much of the muzzle's length the middle and the tip span.
+    MIDDLE = 0.2
+    TIP = 0.15
+
+    def __init__(self, head, jaw, eye):
+        self.length = self.depth = self.width = self.tip_width = None
+        self.jaw_length = self.jaw_depth = self.jaw_width = self.chin = None
+        if eye is None or not head:
+            return
+        # The wolf faces -Y: ahead of the eyes is a smaller Y.
+        muzzle = [point for point in head if point.y < eye.y]
+        if not muzzle:
+            return
+        nose = min(point.y for point in muzzle)
+        self.length = eye.y - nose
+        middle = eye.y - self.length / 2
+        band = self.length * self.MIDDLE / 2
+        across = [point for point in muzzle if abs(point.y - middle) <= band]
+        self.depth, self.width = _extent(across, 2), _extent(across, 0)
+        self.tip_width = _extent([point for point in muzzle if point.y <= nose + self.length * self.TIP], 0)
+        if not jaw:
+            return
+        self.jaw_length = _extent(jaw, 1)
+        # How far ahead of the eyes the chin reaches: the muzzle's length when it meets the nose.
+        self.chin = eye.y - min(point.y for point in jaw)
+        across = [point for point in jaw if abs(point.y - middle) <= band]
+        self.jaw_depth, self.jaw_width = _extent(across, 2), _extent(across, 0)
 
 
 def _ratio(top, bottom):
@@ -98,6 +134,17 @@ RATIOS = {
     "ear/head": lambda b: _ratio(b.ear, b.head_length),
     "tail/body": lambda b: _ratio(b.tail, b.body),
     "eye spacing/head width": lambda b: _ratio(b.eye_spacing, b.head_width),
+    # The snout (#1026), against the head and against itself, as a wolf's is judged: its length
+    # against the head's, how deep and wide it is, how it narrows to the nose, and the lower jaw
+    # against the upper muzzle (as deep, as wide, as long, and how far forward the chin reaches).
+    "muzzle/head": lambda b: _ratio(b.snout.length, b.head_length),
+    "muzzle depth/length": lambda b: _ratio(b.snout.depth, b.snout.length),
+    "muzzle width/head width": lambda b: _ratio(b.snout.width, b.head_width),
+    "nose width/muzzle width": lambda b: _ratio(b.snout.tip_width, b.snout.width),
+    "jaw depth/muzzle depth": lambda b: _ratio(b.snout.jaw_depth, b.snout.depth),
+    "jaw width/muzzle width": lambda b: _ratio(b.snout.jaw_width, b.snout.width),
+    "jaw/muzzle": lambda b: _ratio(b.snout.jaw_length, b.snout.length),
+    "chin reach/muzzle": lambda b: _ratio(b.snout.chin, b.snout.length),
 }
 SYMMETRY = {
     # Mirrored across X, so their heights and depths match and their sides cancel.
