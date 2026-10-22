@@ -1261,11 +1261,11 @@ func _check_text_tags() -> String:
 
 ## Text tags whose content can't be read are warned about, and show as written (#949).
 func _check_text_tags_unread(tree: SceneTree) -> String:
-	tree.call("expect_warning", "the text tags' names can't be read")
 	# The factions' files, read as species, are a species directory that can't be read.
-	TextTags.use(TextTags.load_tags(FactionContent.DIR))
+	TextTags.read_species_from(FactionContent.DIR)
+	tree.call("expect_warning", "the text tags' names can't be read")
 	var unread: String = TextTags.shown("${MONSTER:ombulumo}")
-	TextTags.use(TextTags.load_tags())
+	TextTags.read_species_from(SpeciesContent.DIR)
 	if unread != "${MONSTER:ombulumo}":
 		return "a tag shows %s when its content can't be read" % unread
 	return ""

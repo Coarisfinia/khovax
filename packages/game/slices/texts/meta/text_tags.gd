@@ -19,6 +19,8 @@ const TAG_START: String = "${"
 
 ## The tags read from the game's content, read the first time one is shown.
 static var _shown: TextTags = null
+## Where `shown` reads the species from; the content flow points it at one that can't be read.
+static var _species_directory: String = SpeciesContent.DIR
 
 ## Every name a tag can show, by its kind's word and its id.
 var names: Dictionary[String, Dictionary] = {}
@@ -57,16 +59,18 @@ static func shown(text: String) -> String:
 	if not text.contains(TAG_START):
 		return text
 	if _shown == null:
-		use(load_tags())
+		_shown = load_tags(_species_directory)
+		# Warned once, when read (#949): every tag then shows as written.
+		if not _shown.problem.is_empty():
+			var why: String = _shown.problem
+			push_warning("the text tags' names can't be read, so tags show as written: " + why)
 	return _shown.resolve(text)
 
 
-## Makes `shown` resolve tags with `tags` from now on, warning once when their content couldn't be
-## read (#949): every tag then shows as written.
-static func use(tags: TextTags) -> void:
-	_shown = tags
-	if not tags.problem.is_empty():
-		push_warning("the text tags' names can't be read, so tags show as written: " + tags.problem)
+## Makes `shown` read the species from `directory` the next time a tag is shown.
+static func read_species_from(directory: String) -> void:
+	_species_directory = directory
+	_shown = null
 
 
 ## `text` with every tag replaced by the name it stands for; a tag that stands for nothing stays as
