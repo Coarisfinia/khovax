@@ -256,8 +256,8 @@ a second model could use goes into the library or a generic tool, never into one
    against the previous build (`git show main:<model.glb>`, with its `.import` beside it). Both
    go into the PR, before and after.
 
-14. **Rebuild (#1085):** `uv run --locked packages/game-models/check_rebuild.py
-   packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb` builds the model twice,
+14. **Rebuild (#1085):** `uv run --locked --package khovax-game-models
+   packages/game-models/check_rebuild.py packages/game-models/<name>.py packages/game/assets/<name>/<name>.glb` builds the model twice,
    side by side, and compares the two builds with each other and with the committed `.glb`; it
    must print `REBUILD CHECK: PASS`. On a difference it names what differs (the JSON's part, or
    each mesh's indices or attribute and each clip's channel, by how much): indices that only move

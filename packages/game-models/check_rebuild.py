@@ -2,14 +2,16 @@
 side by side, and compares the two .glb files byte for byte; with the committed .glb, it compares
 that too, which tells whether a pull request's .glb is what its script builds.
 
-    uv run --locked packages/game-models/check_rebuild.py packages/game-models/<name>.py \
+    uv run --locked --package khovax-game-models packages/game-models/check_rebuild.py \
+        packages/game-models/<name>.py \
         [packages/game/assets/<name>/<name>.glb]
 
 It prints `REBUILD CHECK: PASS` or `FAIL`. On a difference it names what differs, the JSON part
 (nodes, materials, ...) or each binary accessor (a mesh's indices or attribute, a clip's
 channel) with how many values differ and by how much: indices that only move point to the order
 of faces, values off by a hair to float noise. A script builds into the path after its `--`, as
-every model script does."""
+every model script does. It reports through game_shared.log (#1115): in CI, a difference is an
+error annotation on the committed .glb."""
 
 import json
 import struct
@@ -18,15 +20,17 @@ import sys
 import tempfile
 from pathlib import Path
 
+from game_shared import log
+
 BLENDER = Path(__file__).resolve().parent / "blender.py"
 WIDTHS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4, "MAT2": 4, "MAT3": 9, "MAT4": 16}
 FORMATS = {5120: "b", 5121: "B", 5122: "h", 5123: "H", 5125: "I", 5126: "f"}
 
 
-def build(script: Path, out: Path, log: Path) -> subprocess.Popen:
+def build(script: Path, out: Path, output: Path) -> subprocess.Popen:
     command = [sys.executable, str(BLENDER), "--background", "--factory-startup", "--python", str(script),
                "--", str(out)]
-    return subprocess.Popen(command, stdout=log.open("w"), stderr=subprocess.STDOUT)
+    return subprocess.Popen(command, stdout=output.open("w"), stderr=subprocess.STDOUT)
 
 
 def read_glb(path: Path) -> tuple[dict, bytes]:
@@ -93,8 +97,8 @@ def main() -> int:
     committed = Path(sys.argv[2]) if len(sys.argv) == 3 else None
     with tempfile.TemporaryDirectory(prefix="check_rebuild_") as scratch:
         outs = [Path(scratch) / f"build{index}.glb" for index in (1, 2)]
-        logs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
-        runs = [build(script, out, log) for out, log in zip(outs, logs)]
+        outputs = [Path(scratch) / f"build{index}.log" for index in (1, 2)]
+        runs = [build(script, out, output) for out, output in zip(outs, outputs)]
         try:
             codes = [run.wait() for run in runs]
         finally:
@@ -103,22 +107,23 @@ def main() -> int:
                 if run.poll() is None:
                     run.kill()
                     run.wait()
-        for code, log, out in zip(codes, logs, outs):
+        for code, output, out in zip(codes, outputs, outs):
             if code != 0 or not out.is_file():
-                print(log.read_text(), end="")
-                print(f"REBUILD CHECK: FAIL ({script.name} didn't build)")
+                print(output.read_text(), end="")
+                log.error(f"REBUILD CHECK: FAIL ({script.name} didn't build)", sys.argv[1])
                 return 1
         failed = False
-        pairs = [("the two builds", outs[0], outs[1])]
+        pairs = [("the two builds", outs[0], outs[1], sys.argv[1])]
         if committed is not None:
-            pairs.append((f"the build and {committed}", outs[0], committed))
-        for label, a, b in pairs:
+            pairs.append((f"the build and {committed}", outs[0], committed, str(committed)))
+        for label, a, b, file in pairs:
             lines = differences(a, b)
-            print(f"{label}: " + ("the same bytes" if not lines else "differ"))
-            for line in lines:
-                print(f"  {line}")
-            failed = failed or bool(lines)
-    print("REBUILD CHECK: " + ("FAIL" if failed else "PASS"))
+            if not lines:
+                log.info(f"{label}: the same bytes")
+                continue
+            log.error(f"{label} differ:\n" + "\n".join(f"  {line}" for line in lines), file)
+            failed = True
+    log.info("REBUILD CHECK: " + ("FAIL" if failed else "PASS"))
     return 1 if failed else 0
 
 
