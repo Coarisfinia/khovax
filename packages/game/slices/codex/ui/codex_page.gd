@@ -5,7 +5,8 @@ extends Control
 ## Velmarai: *the guild of those who chart*"), its entry, and this machine's player's standing
 ## with it, its current rank only (#484). A species' is its bestiary entry (#1173): its name, the
 ## line saying what its name means, and only what this machine's player has learned about it
-## (BestiaryEntry). The close button at its top right, `ui_cancel` (Escape,
+## (BestiaryEntry). A person's (#1005) is their name, its meaning and their entry, under the
+## heading People. The close button at its top right, `ui_cancel` (Escape,
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
@@ -15,6 +16,8 @@ extends Control
 const LEXICON_TEXT: String = "Lexicon"
 ## The page's heading over a species' name.
 const BESTIARY_TEXT: String = "Bestiary"
+## The page's heading over a person's name (#1005).
+const PEOPLE_TEXT: String = "People"
 ## The standing line: neutral, or the standing with its sign and the rank the faction names it.
 const NEUTRAL_TEXT: String = "Your standing: neutral"
 const STANDING_TEXT: String = "Your standing: %+d, %s"
@@ -103,16 +106,19 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Opens the page of the thing of the kind `kind` (TextTags.FACTION or MONSTER) with the id `id`;
-## whether it has one.
+## Opens the page of the thing of the kind `kind` (TextTags.FACTION, MONSTER or PERSON) with the id
+## `id`; whether it has one.
 func open(kind: String, id: String) -> bool:
 	var faction: Faction = FactionContent.cached().factions.get(id)
 	var species: Species = SpeciesContent.cached().species.get(id)
+	var person: Person = PeopleContent.cached().people.get(id)
 	var shown: bool = false
 	if kind == TextTags.FACTION:
 		shown = _show_faction(faction)
 	elif kind == TextTags.MONSTER:
 		shown = _show_species(species)
+	elif kind == TextTags.PERSON:
+		shown = _show_person(person)
 	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
@@ -143,16 +149,26 @@ func _show_species(species: Species) -> bool:
 	return true
 
 
+## Shows `person`'s page; whether there is one.
+func _show_person(person: Person) -> bool:
+	if person == null:
+		return false
+	_show_name(PEOPLE_TEXT, TextTags.shown(person.name), person.codex_gloss)
+	entry.text = person.codex_entry
+	return true
+
+
 ## Shows the page's `kind_heading`, the thing's name `shown_name` and what it means, `meaning`;
-## only the lexicon's or the bestiary's parts show below them, whichever `kind_heading` names.
+## only the parts of the page `kind_heading` names show below them: the bestiary's, or the entry,
+## with the standing on the lexicon's only.
 func _show_name(kind_heading: String, shown_name: String, meaning: String) -> void:
 	heading.text = kind_heading
 	title.text = shown_name
 	gloss.text = GLOSS_TEXT % [NameLinks.escaped(shown_name), NameLinks.escaped(meaning)]
-	var lexicon: bool = kind_heading == LEXICON_TEXT
-	entry.visible = lexicon
-	standing.visible = lexicon
-	beast.visible = not lexicon
+	var bestiary: bool = kind_heading == BESTIARY_TEXT
+	entry.visible = not bestiary
+	standing.visible = kind_heading == LEXICON_TEXT
+	beast.visible = bestiary
 
 
 ## Closes the page, easing out; the focus goes back to where it was.

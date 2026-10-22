@@ -24,10 +24,10 @@ layout_mode = 2
 [node name="Header" type="HBoxContainer" parent="Card/Rows"]
 layout_mode = 2
 
-[node name="Speaker" type="Label" parent="Card/Rows/Header"]
+[node name="Speaker" type="RichTextLabel" parent="Card/Rows/Header"]
 layout_mode = 2
 size_flags_horizontal = 3
-autowrap_mode = 3
+script = ExtResource("2_links")
 
 [node name="Leave" type="Button" parent="Card/Rows/Header"]
 layout_mode = 2

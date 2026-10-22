@@ -16,6 +16,7 @@ static func kinds() -> Dictionary[String, Callable]:
 		LootContent.HARVEST_DIR: LootContent.cached.bind(LootContent.HARVEST_DIR),
 		GearContent.DIR: GearContent.cached,
 		FactionContent.DIR: FactionContent.cached,
+		PeopleContent.DIR: PeopleContent.cached,
 		DialogContent.DIR: DialogContent.cached,
 		QuestContent.DIR: QuestContent.cached,
 		RuleSetContent.DIR: RuleSetContent.cached,

@@ -153,7 +153,11 @@ static func collected() -> ContentTerms:
 	for realm: Realm in Realms.all():
 		terms.add("realm", realm.id)
 	_add_loot(terms, gear)
-	_add_instances(terms, DialogContent.load_dialogs().dialogs)
+	for person: Person in PeopleContent.load_people().people.values():
+		terms.add("person", person.id, person.name)
+	for dialog: Dialog in DialogContent.load_dialogs().dialogs.values():
+		terms.add("dialog", dialog.id)
+	_add_instances(terms)
 	return terms
 
 
@@ -359,12 +363,9 @@ static func _add_loot(terms: ContentTerms, gear: GearContent) -> void:
 
 ## The instances, the regions their variants load, their region pieces but the start piece every
 ## instance has (a piece is a place inside its instance and takes its name from it, the pond of an
-## instance, so two instances may each have a pond, #909), the places their legends name, and the
-## people standing there by the speakers of the dialogs they open; a dialog nobody opens keeps its
-## speaker.
-static func _add_instances(terms: ContentTerms, dialogs: Dictionary[String, Dialog]) -> void:
+## instance, so two instances may each have a pond, #909) and the places their legends name.
+static func _add_instances(terms: ContentTerms) -> void:
 	var start_piece: String = InstanceBlueprints.START_PIECE.get_basename()
-	var spoken: Dictionary[String, bool] = {}
 	for instance_name: String in InstanceBlueprints.names():
 		terms.add("instance", instance_name)
 		var region_names: Array[String] = [""]
@@ -380,10 +381,3 @@ static func _add_instances(terms: ContentTerms, dialogs: Dictionary[String, Dial
 			for trigger: TileTrigger in TileTrigger.all_in(region):
 				if trigger.action == TileTrigger.REACH:
 					terms.add("place", trigger.place)
-			for meaning: String in region.placed(NpcPlacements.KIND).values():
-				var person: NpcSpot = NpcSpot.read(meaning)
-				var said: Dialog = dialogs.get(person.dialog)
-				spoken[person.dialog] = true
-				terms.add("person", person.id, said.speaker if said != null else "")
-	for dialog: Dialog in dialogs.values():
-		terms.add("dialog", dialog.id, "" if spoken.has(dialog.id) else dialog.speaker)

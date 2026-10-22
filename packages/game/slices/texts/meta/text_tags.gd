@@ -2,23 +2,27 @@ class_name TextTags
 extends RefCounted
 ## Typed placeholder tags in player-facing text (#733): `${MONSTER:ombulumo}` names a species by
 ## its id and shows its current name ("Ombulumo"), so renaming one changes every text at once. A
-## tag has a kind (MONSTER, FACTION, GEAR) and an id of that kind; the content flow refuses a text
+## tag has a kind (MONSTER, FACTION, GEAR, PERSON) and an id of that kind; the content flow refuses
+## a text
 ## whose tag has an unknown kind or an id that doesn't exist. Tags are resolved when a text is
 ## shown (owner, #733), never when content loads, so saves and content keep the tags and never a
 ## resolved name. A tag shows the name as written: a plural or an article is part of the text
 ## around it.
 
-## Each kind of tag, by the word that names it in a tag: a species, a faction, a piece of gear.
+## Each kind of tag, by the word that names it in a tag: a species, a faction, a piece of gear, a
+## person (#1005).
 const MONSTER: String = "MONSTER"
 const FACTION: String = "FACTION"
 const GEAR: String = "GEAR"
+const PERSON: String = "PERSON"
 ## A tag: `${`, its kind's word, `:`, an id, `}`.
 const TAG_PATTERN: String = "\\$\\{([A-Z_]+):([a-z][a-z0-9_]*)\\}"
 ## Where any tag starts, well formed or not.
 const TAG_START: String = "${"
 ## The kinds whose names open a codex page when the player selects them (#959): a faction's lexicon
-## entry and a species' bestiary entry (#1173). The other named kinds follow (#1175).
-const CODEX_KINDS: Array[String] = [FACTION, MONSTER]
+## entry, a species' bestiary entry (#1173) and a person's page (#1005). The other named kinds follow
+## (#1175).
+const CODEX_KINDS: Array[String] = [FACTION, MONSTER, PERSON]
 
 ## The tags read from the game's content, read the first time one is shown.
 static var _shown: TextTags = null
@@ -39,12 +43,14 @@ static func load_tags(
 	species_directory: String = SpeciesContent.DIR,
 	faction_directory: String = FactionContent.DIR,
 	gear_directory: String = GearContent.DIR,
+	people_directory: String = PeopleContent.DIR,
 ) -> TextTags:
 	var tags: TextTags = TextTags.new()
 	var species: SpeciesContent = SpeciesContent.load_species(species_directory)
 	var factions: FactionContent = FactionContent.load_factions(faction_directory)
 	var gear: GearContent = GearContent.load_gear(gear_directory)
-	tags.problem = species.problem + factions.problem + gear.problem
+	var people: PeopleContent = PeopleContent.load_people(people_directory)
+	tags.problem = species.problem + factions.problem + gear.problem + people.problem
 	var monsters: Dictionary[String, String] = {}
 	for id: String in species.species:
 		monsters[id] = species.species[id].name
@@ -54,7 +60,15 @@ static func load_tags(
 	var gear_names: Dictionary[String, String] = {}
 	for id: String in gear.items:
 		gear_names[id] = gear.items[id].name
-	tags.names = { MONSTER: monsters, FACTION: faction_names, GEAR: gear_names }
+	var person_names: Dictionary[String, String] = {}
+	for id: String in people.people:
+		person_names[id] = people.people[id].name
+	tags.names = {
+		MONSTER: monsters,
+		FACTION: faction_names,
+		GEAR: gear_names,
+		PERSON: person_names,
+	}
 	return tags
 
 
@@ -70,6 +84,11 @@ static func shown(text: String) -> String:
 			var why: String = _shown.problem
 			push_warning("the text tags' names can't be read, so tags show as written: " + why)
 	return _shown.resolve(text)
+
+
+## The tag of the kind `kind` for the id `id`: `${KIND:id}`.
+static func tag(kind: String, id: String) -> String:
+	return "${%s:%s}" % [kind, id]
 
 
 ## Every well-formed tag in `text`, in order: its kind's word is group 1 and its id group 2.

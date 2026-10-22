@@ -2,10 +2,10 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/dialogs/data/dialogs.schema.json",
 	"title": "Dialog",
-	"description": "A dialog (#618): who speaks it, always a person (monsters never talk), and the lines they say, read in the file's order. A line can offer the player answers instead of reading on: each ends the dialog, or leads to the line it names. Choosing an answer raises an event naming the dialog's id and the answer's id, which quests count and branch on (#573, #624), so neither id is ever reused or changed once shipped. One file per dialog, named after its id.",
+	"description": "A dialog (#618): who speaks it, always a person (monsters never talk), named by their id (#1005), and the lines they say, read in the file's order. A line can offer the player answers instead of reading on: each ends the dialog, or leads to the line it names. Choosing an answer raises an event naming the dialog's id and the answer's id, which quests count and branch on (#573, #624), so neither id is ever reused or changed once shipped. One file per dialog, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id", "speaker", "speaker_codex", "lock", "lines"],
+	"required": ["id", "speaker", "lock", "lines"],
 	"$defs": {
 		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"text": { "type": "string", "pattern": "\\S" }
@@ -15,16 +15,9 @@
 			"description": "Stable, never reused: lowercase words joined by underscores.",
 			"$ref": "#/$defs/id"
 		},
-		"speaker": { "description": "The player-facing name of who says the lines.", "$ref": "#/$defs/text" },
-		"speaker_codex": {
-			"description": "The speaker's codex entry (#959): what the player reads on their codex page. People have no content file of their own, so it rides on the dialog they speak.",
-			"type": "object",
-			"additionalProperties": false,
-			"required": ["entry", "gloss"],
-			"properties": {
-				"entry": { "description": "A short text about them and where their name comes from.", "$ref": "#/$defs/text" },
-				"gloss": { "description": "What their name means, hand-written (#959), e.g. \"Teska, sworn to the guild\".", "$ref": "#/$defs/text" }
-			}
+		"speaker": {
+			"description": "The id of the person who says the lines (#1005): their file in the npcs slice's data/people/ holds their name and codex entry.",
+			"$ref": "#/$defs/id"
 		},
 		"lock": {
 			"description": "Whether the dialog holds its player until they finish it (#891): only for rare story beats and scripted events, never an average quest giver. Every dialog states it.",
