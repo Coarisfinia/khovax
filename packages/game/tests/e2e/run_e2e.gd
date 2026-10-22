@@ -94,6 +94,7 @@ func _run_test(file: String) -> String:
 	if connected != OK:
 		return "could not start the watchdog"
 	var errors_before: int = _errors.count
+	var launched: Launched = Launched.new()
 	var run: Callable = Callable(test, "run")
 	var message: String = await run.call(self)
 	_current = ""
@@ -102,6 +103,8 @@ func _run_test(file: String) -> String:
 	# reach the next one.
 	for child: Node in root.get_children():
 		child.queue_free()
+	# Nor what it launched the game with, which a flow changes to boot another world (#927).
+	launched.restore()
 	await process_frame
 
 	var new_errors: int = _errors.count - errors_before
@@ -124,3 +127,17 @@ func _on_timeout(file: String) -> void:
 	if _current == file:
 		printerr("FAIL  ", file, ": still running after %d s" % int(TEST_TIMEOUT_SECONDS))
 		quit(1)
+
+
+## The process-wide statics the game boots from, as they were before a test: a flow sets them to
+## boot another instance or seed, and the runner puts them back after it, even when it failed
+## halfway, so a later flow never boots the wrong world or touches the device's own world file.
+class Launched:
+	var fixed_seed: int = GameDriver.fixed_seed
+	var start_instance: String = GameDriver.start_instance
+	var world_path: String = WorldKeeper.default_path
+
+	func restore() -> void:
+		GameDriver.fixed_seed = fixed_seed
+		GameDriver.start_instance = start_instance
+		WorldKeeper.default_path = world_path
