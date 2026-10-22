@@ -572,7 +572,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
   commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
   `rules-compare` job plays them and the APK flow on the commit and on its parent
-  (`tools/replays/rules_compare.sh`, run from the parent's checkout) and fails a difference that comes
+  (`tools/replays/rules_compare.py`, run from the parent's checkout) and fails a difference that comes
   without a new rule change file. If the change is on purpose, add its file to `core/rules_changes/`
   (`<issue>-<slug>.md`: only the `issue` in its frontmatter, then one line on what plays
   differently linking the issue; no `pr`, which CI refuses: the squash commit that added the file

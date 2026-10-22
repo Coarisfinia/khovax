@@ -270,7 +270,8 @@ jobs:
               rm -f /tmp/load-base.txt
             fi
           fi
-          bash tools/replays/load_test_compare.sh /tmp/load-head.txt /tmp/load-base.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          uv run --locked tools/replays/load_test_compare.py /tmp/load-head.txt /tmp/load-base.txt \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
   rules-compare:
     # Compares how this commit plays with how its parent plays (#876): both are built, each plays
@@ -309,6 +310,15 @@ jobs:
           echo "${GODOT_SHA512}  /tmp/godot.zip" | sha512sum --check
           unzip -q /tmp/godot.zip -d ~/godot
           mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        if: github.event_name != 'push'
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
 
       - name: "🎲 Play this commit"
         # The import's script errors are the headless job's to report.
@@ -356,20 +366,21 @@ jobs:
           echo "labelled=${labelled}" >> "$GITHUB_OUTPUT"
 
       - name: "🔖 Check a different outcome comes with a rules change"
-        # The comparison runs from the parent's checkout, so a pull request can't weaken its own
-        # check. Only the pull requests that add the script (#876) and move it (#1037) run their own.
+        # The comparison runs from the parent's checkout, with the parent's uv project, so a pull
+        # request can't weaken its own check. Only the pull requests that add the script (#876),
+        # move it (#1037) and port it to Python (#1039) run their own.
         if: github.event_name != 'push'
         env:
           OUTCOMES_CHANGE: ${{ steps.label.outputs.labelled }}
         run: |
           set -o pipefail
-          compare=/tmp/parent/tools/replays/rules_compare.sh
-          if [ ! -f "$compare" ]; then
-            echo "::notice::The parent has no tools/replays/rules_compare.sh yet (it moved there in #1037), so this commit's own runs."
-            compare=tools/replays/rules_compare.sh
+          project=/tmp/parent
+          if [ ! -f "$project/tools/replays/rules_compare.py" ]; then
+            echo "::notice::The parent has no tools/replays/rules_compare.py yet (it was ported to Python in #1039), so this commit's own runs."
+            project=.
           fi
-          bash "$compare" /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          uv run --locked --project "$project" "$project/tools/replays/rules_compare.py" \
+            /tmp/outcomes-parent.json /tmp/outcomes/outcomes.json HEAD^1 | tee -a "$GITHUB_STEP_SUMMARY"
 
   export:
     # Every platform's build, from one Godot and export templates download (#168): the debug APK

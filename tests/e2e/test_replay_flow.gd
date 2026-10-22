@@ -823,7 +823,7 @@ func _check_rehash() -> String:
 
 ## Every golden replay in tests/replays/ holds only its inputs (#876), and plays under this
 ## build's rules; playing it twice gives the same game. Whether it plays as on the parent commit is
-## the rules-compare job's (tools/replays/rules_compare.sh).
+## the rules-compare job's (tools/replays/rules_compare.py).
 func _check_golden_replays() -> String:
 	var folder: String = "res://tests/replays/"
 	var played: int = 0
