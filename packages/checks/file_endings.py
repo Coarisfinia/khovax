@@ -15,6 +15,7 @@ import os
 import sys
 from pathlib import Path, PurePosixPath
 
+from annotations import error
 from git_files import git_files
 
 # The endings allowed, each with what it's for. A new one needs the owner's sign-off (#1095).
@@ -66,15 +67,20 @@ def main() -> int:
         if path in SH_EXEMPT or ending(path) in ENDINGS:
             continue
         print(
-            f"::error file={path}::its ending {ending(path)} isn't allowed ({THIS}, ENDINGS);"
-            " a new ending needs the owner's sign-off on its issue first (#1095)"
+            error(
+                path,
+                f"its ending {ending(path)} isn't allowed ({THIS}, ENDINGS); a new ending needs"
+                " the owner's sign-off on its issue first (#1095)",
+            )
         )
         failed = True
     for path, issue in SH_EXEMPT.items():
         if path not in tracked:
             print(
-                f"::error file={THIS}::{path} is no longer tracked: drop its exemption"
-                f" (#{issue}) from SH_EXEMPT"
+                error(
+                    THIS,
+                    f"{path} is no longer tracked: drop its exemption (#{issue}) from SH_EXEMPT",
+                )
             )
             failed = True
     return 1 if failed else 0

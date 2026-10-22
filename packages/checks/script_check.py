@@ -14,6 +14,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from annotations import error
 from git_files import git_files
 
 # A script error can leave Godot running forever, so every check has a time limit.
@@ -60,7 +61,7 @@ def main() -> int:
     for script, (output, failure) in zip(scripts, results, strict=True):
         print(output)
         if failure:
-            print(f"::error file={script}::{failure}")
+            print(error(script, failure))
             failed += 1
     print(f"{len(scripts)} scripts checked, {failed} failed.")
     return 1 if failed else 0

@@ -16,6 +16,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from annotations import error
 from gdscript_code import without_comments
 from git_files import git_files
 
@@ -71,7 +72,7 @@ def main() -> int:
                 or (kind == "class_name" and file in attached)
             ):
                 continue
-            unused.append(f"::error file={file},line={number}::{name} is declared but never used")
+            unused.append(error(file, f"{name} is declared but never used", number))
     if unused:
         print("\n".join(unused))
         return 1

@@ -16,6 +16,7 @@ import re
 import sys
 from pathlib import Path
 
+from annotations import error
 from git_files import git_files
 
 NOTES = re.compile(r".*\.import|.*/SOURCE\.md|.*/LICENSE[^/]*")
@@ -83,7 +84,7 @@ def main() -> int:
 
     unused = [path for path in assets if path not in named]
     for path in unused:
-        print(f"::error file={path}::{path} is in the repository but nothing uses it")
+        print(error(path, f"{path} is in the repository but nothing uses it"))
     return 1 if unused else 0
 
 

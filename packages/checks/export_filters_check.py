@@ -12,6 +12,8 @@ import re
 import sys
 from pathlib import Path
 
+from annotations import error
+
 PRESET = re.compile(r"\[preset\.[0-9]+\]")
 TOOLS_EXCLUDED = re.compile(r'"(.*,)?tools/\*(,.*)?"')
 KEYS = ("name", "custom_features", "include_filter", "exclude_filter")
@@ -63,8 +65,8 @@ def main() -> int:
             )
     if not found:
         errors.append("it has no preset")
-    for error in errors:
-        print(f"::error file=export_presets.cfg::{error}")
+    for message in errors:
+        print(error("export_presets.cfg", message))
     return 1 if errors else 0
 
 

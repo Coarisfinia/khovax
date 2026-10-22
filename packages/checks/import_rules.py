@@ -35,6 +35,7 @@ from collections.abc import Iterable
 from fnmatch import fnmatchcase
 from pathlib import Path
 
+from annotations import error
 from gdscript_code import without_comments
 from git_files import git_files
 
@@ -111,17 +112,17 @@ class Check:
     def __init__(self) -> None:
         self.failed = False
 
-    def fail(self, hits: list[str], error: str) -> None:
+    def fail(self, hits: list[str], annotation: str) -> None:
         for hit in hits:
             print(hit)
-        print(error)
+        print(annotation)
         self.failed = True
 
     def refuse(self, file: str, lines: Lines, classes: Pattern, path: Pattern, rule: str) -> None:
         """Fails a file whose code names one of the classes or matches the path pattern."""
         hits = matching(lines, classes) + matching(lines, path)
         if hits:
-            self.fail(hits, f"::error file={file}::{rule}: see the lines above")
+            self.fail(hits, error(file, f"{rule}: see the lines above"))
 
 
 def main() -> int:
@@ -266,7 +267,7 @@ def main() -> int:
         if relative:
             check.fail(
                 relative,
-                f"::error file={file}::paths are absolute from res://: see the lines above",
+                error(file, "paths are absolute from res://: see the lines above"),
             )
 
     scenes = {
@@ -293,7 +294,7 @@ def main() -> int:
         if hits:
             check.fail(
                 hits,
-                f"::error file={file}::{LATER_SLICE}: see the lines above",
+                error(file, f"{LATER_SLICE}: see the lines above"),
             )
         for exempt, later in exemptions_of(slice_):
             if any(f"res://slices/{later}/" in line for line in lines):
