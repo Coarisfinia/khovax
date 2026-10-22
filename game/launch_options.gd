@@ -17,6 +17,8 @@ const SEED: String = "--seed="
 const INSTANCE: String = "--instance="
 const INVINCIBLE: String = "--invincible"
 const USER_DIR: String = "--user-dir="
+## The renderer's shader cache, inside the user folder.
+const SHADER_CACHE: String = "shader_cache"
 ## The folder name `--user-dir=<name>` gives is this prefix and the name.
 const USER_DIR_PREFIX: String = "khovax_"
 
@@ -92,6 +94,7 @@ func apply() -> String:
 ## folder; it creates the user folder only at startup, so this creates the new one. Returns why it
 ## couldn't, or "".
 func _redirect_user_dir() -> String:
+	var engine_dir: String = OS.get_user_data_dir()
 	ProjectSettings.set_setting("application/config/use_custom_user_dir", true)
 	ProjectSettings.set_setting(
 		"application/config/custom_user_dir_name",
@@ -100,4 +103,18 @@ func _redirect_user_dir() -> String:
 	var made: Error = DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
 	if made != OK:
 		return "couldn't create the user folder %s: %s" % [OS.get_user_data_dir(), made]
+	_share_shader_cache(engine_dir)
 	return ""
+
+
+## Links the new user folder's shader cache to the one in `engine_dir`, the folder `user://` was
+## at startup (#1050). The renderer made its cache's folders there before the redirect, but saves
+## into `user://` as it compiles, where they don't exist: every save failed and every run compiled
+## its shaders again. The cache is keyed by the shaders themselves, so runs can share it. Where no
+## link can be made (Windows without the right to), the shaders just compile again, as before.
+func _share_shader_cache(engine_dir: String) -> void:
+	var shared: String = engine_dir.path_join(SHADER_CACHE)
+	var here: DirAccess = DirAccess.open(OS.get_user_data_dir())
+	if here == null or here.dir_exists(SHADER_CACHE) or not DirAccess.dir_exists_absolute(shared):
+		return
+	var _linked: Error = here.create_link(shared, SHADER_CACHE)
