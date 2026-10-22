@@ -9,7 +9,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** Cleyton Kauffman (https://soundcloud.com/cleytonkauffman)
 - **Source:** https://opengameart.org/content/exploration-theme (`Exploration Theme.ogg` from
   `exploration_theme.zip`)
-- **License:** CC0 1.0, see `LICENSE.txt` next to this file (the pack names the license; the file
+- **License:** CC0 1.0, see `LICENSE.md` next to this file (the pack names the license; the file
   is its legal text). Credit is welcome, not required.
 
 ## Game-icons.net
@@ -23,7 +23,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white
   shape is left, which the game tints with its ink
-- **License:** CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), see `LICENSE.txt` next to
+- **License:** CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/), see `LICENSE.md` next to
   this file (the pack's own notice naming its contributors)
 
 ## KayKit Adventurers Character Pack 1.0
@@ -32,7 +32,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
   (`addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb`)
-- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
+- **License:** CC0 1.0, see `LICENSE.md` next to this file. Credit is welcome, not required.
 
 ## KayKit Dungeon Remastered 1.0
 
@@ -41,7 +41,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0
   (`addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb`, and `box_small_decorated.gltf.glb` as
   `box_small_decorated.glb`)
-- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
+- **License:** CC0 1.0, see `LICENSE.md` next to this file. Credit is welcome, not required.
 
 ## KayKit Medieval Hexagon Pack 1.0
 
@@ -49,7 +49,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** Kay Lousberg (www.kaylousberg.com)
 - **Source:** https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
   (`addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/`)
-- **License:** CC0 1.0, see `LICENSE.txt` next to this file. Credit is welcome, not required.
+- **License:** CC0 1.0, see `LICENSE.md` next to this file. Credit is welcome, not required.
 
 ## Mana wolf
 
@@ -57,4 +57,4 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** the khovax contributors (built in this repository)
 - **Source:** `tools/models/mana_wolf.py` on the shared model library `tools/models/lib/`, Blender
   scripts that build, rig, animate and export `mana_wolf.glb` (#990, #995)
-- **License:** The Unlicense, the repository's own license, see `LICENSE.txt` next to this file.
+- **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.

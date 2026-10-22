@@ -30,8 +30,7 @@ ENDINGS: dict[str, str] = {
     ".jsonc": "content data",
     ".json": "the content's schemas and other JSON data",
     ".replay": "the golden replays' inputs",
-    ".md": "docs, region pieces, rule change files and asset sources",
-    ".txt": "asset licenses",
+    ".md": "docs, region pieces, rule change files, asset sources and licenses",
     "LICENSE": "the repository's license",
     ".png": "images",
     ".svg": "vector icons",
@@ -51,7 +50,6 @@ ENDINGS: dict[str, str] = {
 SH_EXEMPT: dict[str, int] = {
     "tools/checks/script_check.sh": 1096,
     "tools/models/blender.sh": 1097,
-    "tools/replays/apk_e2e.sh": 1039,
 }
 
 THIS = "tools/checks/file_endings.py"
