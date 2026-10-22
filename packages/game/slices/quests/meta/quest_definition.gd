@@ -6,13 +6,12 @@ extends RefCounted
 ## order, except where a step's choices lead to the steps they name, and it ends after a step tagged
 ## as its chain's end. A quest without choices is one path from its first step to its last, which
 ## is tagged as the end; in every quest, every path must reach a tagged end (#576, QuestPaths).
-## Each player's progress through it lives in their profile
-## (QuestTracker.progress), advanced by what they obtain. A side quest (#473) starts only when the
-## player enters the area it names, or once a quest emits the event it names (#575); every other
-## quest is open from the start. Finishing a quest, by whichever end, can move the player's standing
-## with a faction (#532), and finishing a territory quest hands its instance to its faction (#638);
-## its
-## steps all count only there (#769).
+## Each player's progress through it lives in their profile (QuestTracker.progress), advanced by
+## what they obtain. A side quest (#473) starts only when the player enters the area it names, or
+## once a quest emits the event it names (#575); every other quest is open from the start.
+## Finishing a quest, by whichever end, can move the player's standing with a faction (#532), and
+## finishing a territory quest hands its instance to its faction (#638); its steps all count only
+## there (#769).
 
 ## Its schema, which says the fields a quest file and its parts may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/quests/data/quests.schema.json"
@@ -163,9 +162,8 @@ func index_of(step_id: String) -> int:
 
 ## The index of the step that comes after the step at `index` once it's done, by the fact
 ## (`fact_condition`, `what` and `where`, as QuestStep.counts reads them) that did it: the step the
-## choice it
-## took leads to (the first choice's, for saved progress settling on a fact that takes none), past
-## the last step when it ends the chain, or the next one in the file.
+## choice it took leads to (the first choice's, for saved progress settling on a fact that takes
+## none), past the last step when it ends the chain, or the next one in the file.
 func next_index(index: int, fact_condition: String, what: String, where: String) -> int:
 	var step: QuestStep = step_at(index)
 	if step == null or not step.ends.is_empty():

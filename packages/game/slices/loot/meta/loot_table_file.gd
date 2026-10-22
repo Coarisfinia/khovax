@@ -1,9 +1,8 @@
 class_name LootTableFile
 extends RefCounted
 ## Reads a loot table (LootTable, #90) from its content file (the loot slice's data/loot_tables/,
-## #72, #412): checks its
-## fields, its id against the file name, and that its chances add up to 100 %, and hands the rules
-## the table's plain data.
+## #72, #412): checks its fields, its id against the file name, and that its chances add up to
+## 100 %, and hands the rules the table's plain data.
 
 ## Its schema, which says the fields a loot table file and its entries may have (SchemaFields,
 ## #825); a harvest table's schema (harvest_tables.schema.json beside it) allows the same.

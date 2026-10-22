@@ -1,13 +1,12 @@
 class_name Ability
 extends RefCounted
 ## Something a species brings (#222), read from content data (the species slice's data/abilities/,
-## #72, #412): a special
-## attack the player triggers (#221), a passive that helps the player while the companion is
-## active (e.g. stronger warding, #223), or a passive that helps the companion itself. Each species
-## names one of each; what they do comes with the systems that use them. A special attack is one
-## species' own (owner, #228): no two species share one. A special has a power and a cooldown
-## (SpecialAttackFeature, #410) and a strike type (TypeEffectivenessFeature, #626); a passive has
-## none of them.
+## #72, #412): a special attack the player triggers (#221), a passive that helps the player while
+## the companion is active (e.g. stronger warding, #223), or a passive that helps the companion
+## itself. Each species names one of each; what they do comes with the systems that use them. A
+## special attack is one species' own (owner, #228): no two species share one. A special has a power
+## and a cooldown (SpecialAttackFeature, #410) and a strike type (TypeEffectivenessFeature, #626); a
+## passive has none of them.
 
 const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"

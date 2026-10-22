@@ -2,7 +2,7 @@ class_name CarryRequest
 extends RefCounted
 ## The monsters a player carries, as requests from their profile's outbox (#818,
 ## OutboxEntry.CARRY): their profile holds them, outside the simulation, and the world takes them
-## into the player's party (CompanionParty.take_values). A request's data holds one whole number,
+## into the player's party (CompanionParty.take_request). A request's data holds one whole number,
 ## too few bits for a monster's short id and its species together, so a party is a run of
 ## requests: each monster's species' code (species_code), then its short id's code (ShortId.code),
 ## in carried order. Each request's data also says its place in the run and how many monsters the
