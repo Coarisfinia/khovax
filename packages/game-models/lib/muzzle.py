@@ -11,7 +11,7 @@ as shares of the upper muzzle's above it and how far toward the nose its chin re
 Z up, facing -Y, mirrored across X = 0, as the body plans are; a point is its (y, z) on the
 middle.
 
-    snout = muzzle.Snout(stop=(-0.9, 1.5), tip=(-1.22, 1.37), radius=0.075, hinge=(-0.8, 1.28))
+    snout = muzzle.Snout(stop=(-0.9, 1.5), tip=(-1.22, 1.37), radius=0.075, hinge=(-0.8, 1.34))
     snout.upper(blob)  # into the head's body, before blob.mesh
     pieces += snout.parts(mats, "head", "jaw")
 """
@@ -36,9 +36,10 @@ class Snout:
                  jaw_width=0.85, chin=1.05, tuck=0.25, triangles=900):
         """`stop`: the bridge's top where the brow steps down to it; `tip`: the muzzle's front end,
         under the nose pad; `radius`: the muzzle's half width at the stop; `hinge`: where the lower
-        jaw turns (the jaw bone's head). `chin` is how far along the muzzle (1 at its tip) the
-        chin reaches; `tuck` the share of the lower jaw's depth that hides inside the upper lip
-        while the mouth is shut. `triangles` is the lower jaw's budget."""
+        jaw's back ends, under the cheek (the jaw bone should turn it from above and behind
+        there, so it swings clear of the throat). `chin` is how far along the muzzle (1 at its
+        tip) the chin reaches; `tuck` the share of the lower jaw's depth that hides inside the
+        upper lip while the mouth is shut. `triangles` is the lower jaw's budget."""
         self.stop, self.tip, self.hinge = _point(*stop), _point(*tip), _point(*hinge)
         self.radius, self.taper, self.stop_depth, self.lip_drop = radius, taper, stop_depth, lip
         self.jaw_depth, self.jaw_width, self.chin, self.tuck = jaw_depth, jaw_width, chin, tuck
@@ -96,8 +97,7 @@ class Snout:
         hinge, where the cheeks hide it, to a rounded chin at `chin` along the muzzle."""
         blob = body.Blob(name)
         for t in JAW_STATIONS:
-            # Its back rises toward the hinge (shallower there), so the jaw's lower edge runs
-            # into the throat instead of ending in a bulge.
+            # Its back rises toward the hinge (shallower there), so its lower edge curves up to it.
             half_depth = self.jaw_half_depth(t) * min(1.0, 0.7 + 1.2 * t)
             top = self.jaw_top(t)
             blob.ellipsoid((0.0, top.y, top.z - half_depth),
@@ -108,8 +108,10 @@ class Snout:
         top = self.jaw_top(self.chin)
         blob.ellipsoid((0.0, top.y + half_length, top.z - half_depth),
                        (self.radius * self.share(self.chin) * self.jaw_width * 0.85, half_length, half_depth))
-        radius = self.jaw_half_depth(0.0) * 0.6
-        blob.capsule(self.hinge + _point(0.0, radius * 0.5), self.jaw_top(0.0) - _point(0.0, radius), radius)
+        # Its back ends in a slim, round end at the hinge, up under the cheek, clear of the
+        # throat: opening, the jaw swings away from the throat rather than out of it.
+        radius = self.jaw_half_depth(0.0) * 0.5
+        blob.capsule(self.hinge, self.jaw_top(0.0) - _point(0.0, radius), radius)
         jaw = blob.mesh(self.triangles)
         jaw.name = name
         jaw.data.materials.append(mat)
@@ -123,9 +125,9 @@ class Snout:
         made = [self._jaw(name + ".Jaw", mats["fur"], jaw_bone)]
         # The mouth: dark, flat linings under the palate and over the jaw's floor, inside the lips
         # (and the jaw), so they show only when it opens.
-        middle = self.chin * 0.5
+        middle = self.chin * 0.42
         half_width = self.radius * self.share(middle) * 0.75
-        half_length = self.length * self.chin * 0.42
+        half_length = self.length * self.chin * 0.5
         lining = 0.15 * self.radius
         for piece, at, bone in (("Palate", self.lip(middle) + _point(0.0, lining), head_bone),
                                 ("Mouth", self.jaw_top(middle) - _point(0.0, lining * 0.5), jaw_bone)):

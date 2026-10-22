@@ -40,7 +40,7 @@ WOLF = quadruped.Proportions(
     chest=(0.0, -0.22, 1.10),
     head_base=(0.0, -0.66, 1.38),
     nose=(0.0, -1.26, 1.35),
-    jaw=((0.0, -0.80, 1.28), (0.0, -1.18, 1.23)),
+    jaw=((0.0, -0.82, 1.38), (0.0, -1.18, 1.27)),
     ear=((0.10, -0.70, 1.58), (0.13, -0.68, 1.80)),
     scapula=(0.12, -0.18, 1.22),
     front_leg=[(0.20, -0.40, 0.98), (0.23, -0.36, 0.58), (0.23, -0.42, 0.18), (0.23, -0.56, 0.06)],
@@ -75,13 +75,13 @@ REFERENCE = {
     "nose width/muzzle width": 0.560,
     "jaw depth/muzzle depth": 0.551,
     "jaw width/muzzle width": 0.860,
-    "jaw/muzzle": 1.555,
+    "jaw/muzzle": 1.371,
     "chin reach/muzzle": 0.867,
 }
 
 # The snout (#1026): the upper muzzle as approved on #995, and a lower jaw sized against it (the
 # snout lines in REFERENCE).
-SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, hinge=WOLF.jaw[0][1:], taper=0.67,
+SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, hinge=(-0.85, 1.35), taper=0.67,
                      stop_depth=0.08, lip=0.04, jaw_depth=0.6, jaw_width=1.1, chin=1.05)
 
 # How tall the wolf stands at the hips: the faint sinks it this far.
