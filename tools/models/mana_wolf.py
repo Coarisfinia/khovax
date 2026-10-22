@@ -59,7 +59,8 @@ REFERENCE = {
     "leg/body": 1.177,
     "ear/head": 0.318,
     "tail/body": 1.512,
-    "eye spacing/head width": 0.566,
+    # The eyes moved in halfway toward a close-set test on the owner's word (#1084).
+    "eye spacing/head width": 0.429,
     # The eyes mirror each other: level, side by side, equally far out.
     "eye.R/eye.L height": 0.0,
     "eye.R/eye.L depth": 0.0,
@@ -141,7 +142,7 @@ def head_parts(skin, mats):
         inner = (center[0], center[1] - 0.02, center[2] - 0.01)
         made.append(parts.part("cone", "InnerEar." + side, inner, (0.065, 0.02, 0.18), rotation,
                                mats["light"], "ear." + side, vertices=10, radius1=1.0, radius2=0.0, depth=1.0))
-        made += eyes.eye(skin, "Eye." + side, (0.10 * sign, -0.93, 1.49), (0.2 * sign, -1.0, 0.05), 0.055,
+        made += eyes.eye(skin, "Eye." + side, (0.07 * sign, -0.94, 1.505), (0.2 * sign, -1.0, 0.05), 0.055,
                          {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
                          "head", almond=0.5, tilt=math.radians(14), brow=math.radians(18))
     return made
