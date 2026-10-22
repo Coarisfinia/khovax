@@ -289,6 +289,23 @@ func waiting_dominator(monster_id: int) -> int:
 	return 0
 
 
+## The wall segment the wild monster `monster_id` pushes on in the ring of `dominator_id` (#937):
+## its seal's segment while that ring seals, else the segment of that waiting ring nearest to it,
+## which it strikes (#422), else its own tile. The one rule for it, which WildAttackFeature and the
+## spikes' look (SpikesHitView) both ask.
+func wall_pushed_by(state: GameState, monster_id: int, dominator_id: int) -> Vector2i:
+	var monster: Entity = state.entity(monster_id)
+	var seal: RingSeal = seals.get(dominator_id)
+	var index: int = seal.monsters.find(monster_id) if seal != null else -1
+	if index >= 0:
+		return seal.walls[seal.targets[index]]
+	if encircled.has(dominator_id):
+		var walls: Array[Vector2i] = ring_waiting(state, dominator_id)
+		if not walls.is_empty():
+			return walls[RingShape.nearest(walls, monster.tile)]
+	return monster.tile
+
+
 ## Breaks the ring of `dominator_id` waiting for a totem, its segment `wall` worn through by the
 ## wild monsters inside (#422, WildAttackFeature): a RingBroken event, as when a seal breaks (so
 ## EnrageFeature enrages them), and the ring comes off the trail. A waiting ring breaks no other

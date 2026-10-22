@@ -27,20 +27,10 @@ func _ready() -> void:
 	var _connected: int = driver.ticked.connect(_on_ticked)
 
 
-## The wall segment the wild monster `struck` hurt pushes on: its seal's segment while its ring
-## seals, else the waiting ring's segment nearest to it, as it strikes that one (#422).
+## The wall segment the wild monster `struck` hurt pushes on, by the rings' own rule (#937).
 static func wall_of(state: GameState, struck: SpikesStruck) -> Vector2i:
-	var monster: Entity = state.entity(struck.monster_id)
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
-	var seal: RingSeal = domination.seals.get(struck.dominator_id)
-	var index: int = seal.monsters.find(struck.monster_id) if seal != null else -1
-	if index >= 0:
-		return seal.walls[seal.targets[index]]
-	if domination.encircled.has(struck.dominator_id):
-		var walls: Array[Vector2i] = domination.ring_waiting(state, struck.dominator_id)
-		if not walls.is_empty():
-			return walls[RingShape.nearest(walls, monster.tile)]
-	return monster.tile
+	return domination.wall_pushed_by(state, struck.monster_id, struck.dominator_id)
 
 
 ## Flashes thorns on `wall`, leaning toward `toward`.
