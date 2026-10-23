@@ -15,6 +15,8 @@ SURFACE_SHARE = 0.574
 # d, and the surface lies where the sum reaches THRESHOLD (its defaults).
 STIFFNESS = 2.0
 THRESHOLD = 0.6
+# How finely `Blob.tube` samples its curve to space its balls evenly along it.
+FINE = 1000
 
 
 def _line_radius(surface, spacing):
@@ -96,16 +98,23 @@ class Blob:
         add up where they overlap and bulge into beads; an even row has nothing to bulge."""
         points = [Vector(point) for point in points]
         widths = [Vector((radius, 0.0, 0.0)) for radius in radii]  # the radii, as a curve too
-        length = sum((b - a).length for a, b in zip(points, points[1:]))
-        count = max(3, math.ceil(length / (spacing * min(radii))) + 1)
-        shares = [index / (count - 1) for index in range(count)]
-        centers = [_spline(points, share) for share in shares]
-        for index, share in enumerate(shares):
-            # The row runs faster or slower along the curve: each ball takes its own spacing.
-            near = centers[max(0, index - 1):index + 2]
-            gap = sum((b - a).length for a, b in zip(near, near[1:])) / (len(near) - 1)
+        # The curve's length along it, finely sampled, so the balls lie evenly spaced along it
+        # whatever its spans' lengths: (share of the curve's parameter, length so far).
+        fine = [index / FINE for index in range(FINE + 1)]
+        along = [0.0]
+        for a, b in zip(fine, fine[1:]):
+            along.append(along[-1] + (_spline(points, b) - _spline(points, a)).length)
+        count = max(3, math.ceil(along[-1] / (spacing * min(radii))) + 1)
+        gap = along[-1] / (count - 1)
+        span = 0
+        for index in range(count):
+            wanted = gap * index
+            while span < FINE - 1 and along[span + 1] < wanted:
+                span += 1
+            within = (wanted - along[span]) / max(along[span + 1] - along[span], 1e-12)
+            share = fine[span] + min(1.0, within) / FINE
             element = self.data.elements.new(type="BALL")
-            element.co = centers[index]
+            element.co = _spline(points, share)
             element.radius = _line_radius(max(_spline(widths, share).x, min(radii)), gap)
 
     def mesh(self, triangles):
