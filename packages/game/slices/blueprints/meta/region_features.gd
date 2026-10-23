@@ -3,8 +3,8 @@ extends RefCounted
 ## The features an instance has because of what its region holds (#879), not because its blueprint
 ## lists them: what its region pieces' legends place, over all of its pieces. A slice that places
 ## something on the ground says through its PlacementReader which feature runs it; the core's own
-## meanings (exits, wild monsters, hiding) and region pieces to enter are matched here. Only which
-## features; FeatureFactories says when they step.
+## meanings (exits, wild monsters and their schedules, hiding) and region pieces to enter are
+## matched here. Only which features; FeatureFactories says when they step.
 
 
 ## Every slice's reader of what it places on a region's ground (#824).
@@ -36,7 +36,8 @@ static func of(region: Region) -> Array[String]:
 	if not region.piece_of.is_empty():
 		needed.append(EnteringFeature.ID)
 	if not region.wild_monsters.is_empty():
-		needed.append(WildMonsterFeature.ID)
+		# Every wild monster has its daily schedule (#1201).
+		needed.append_array([WildMonsterFeature.ID, ScheduleFeature.ID])
 	if HidingFeature.has_hiding(region):
 		needed.append(HidingFeature.ID)
 	for reader: PlacementReader in readers():
@@ -48,4 +49,10 @@ static func of(region: Region) -> Array[String]:
 
 ## The features the core's own legend meanings and region pieces need.
 static func _built_in() -> Array[String]:
-	return [ExitFeature.ID, EnteringFeature.ID, WildMonsterFeature.ID, HidingFeature.ID]
+	return [
+		ExitFeature.ID,
+		EnteringFeature.ID,
+		WildMonsterFeature.ID,
+		ScheduleFeature.ID,
+		HidingFeature.ID,
+	]
