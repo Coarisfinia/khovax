@@ -124,7 +124,7 @@ func _check_known() -> String:
 	if not _page.open(
 		TextTags.MONSTER,
 		species.id,
-	) or _page.beast.shown.back() != species.codex_entry:
+	) or _page.beast.shown.back() != species.codex_entry():
 		return "a known species' page showed %s" % [_page.beast.shown]
 	_page.close()
 	return ""
@@ -190,7 +190,7 @@ func _page_problem(species: Species, expected: Array[String]) -> String:
 	_page.close()
 	if (_page.heading.text != CodexPage.BESTIARY_TEXT
 			or _page.title.text != species.name
-			or gloss != "%s: %s" % [species.name, species.codex_gloss]):
+			or gloss != "%s: %s" % [species.name, species.codex_gloss()]):
 		return "it showed %s, %s, %s" % [_page.heading.text, _page.title.text, gloss]
 	return "" if shown == expected else "it showed %s" % [shown]
 

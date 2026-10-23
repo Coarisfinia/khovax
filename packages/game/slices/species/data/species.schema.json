@@ -23,7 +23,8 @@
 		"special",
 		"player_passive",
 		"self_passive",
-		"behaviour"
+		"behaviour",
+		"model"
 	],
 	"properties": {
 		"id": {
@@ -74,6 +75,7 @@
 				{ "contains": { "enum": ["grazer", "drinker", "predator"] } }
 			]
 		},
+		"model": { "description": "The model its monsters wear (#1223), wild or a companion: a res:// path to a rigged glTF model under assets/. The game checks it exists and has the clips the views play.", "type": "string", "pattern": "^res://assets/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(glb|gltf)$" },
 		"sight": { "description": "Its sight trait (#962): how many steps further a player who carries it sees. None when left out.", "type": "integer", "minimum": 1, "maximum": 5 }
 	}
 }

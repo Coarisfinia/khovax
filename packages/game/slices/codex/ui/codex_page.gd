@@ -155,7 +155,7 @@ func _show_faction(faction: Faction) -> bool:
 func _show_species(species: Species) -> bool:
 	if species == null:
 		return false
-	_show_name(BESTIARY_TEXT, species.name, species.codex_gloss)
+	_show_name(BESTIARY_TEXT, species.name, species.codex_gloss())
 	beast.show_species(species, BestiaryKeeper.of(driver.holder if driver != null else null))
 	return true
 
