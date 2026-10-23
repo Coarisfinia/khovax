@@ -47,6 +47,9 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		HealthFeature.ID: HealthFactory.build,
 		WildMonsterFeature.ID: WildMonsterFactory.build,
 		ScheduleFeature.ID: ScheduleFactory.build,
+		# Right after the schedules, so a pack member is on its leader's day before sleep puts it
+		# to bed by it (#1205).
+		PackFeature.ID: PackFactory.build,
 		# Right after the schedules, and before every feature that moves or strikes a wild
 		# monster but the wild monsters' own, so one that falls asleep on the hour strikes
 		# nothing in that tick (#1202).

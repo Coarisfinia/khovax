@@ -25,6 +25,12 @@ extends RefCounted
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
 ## home; it gives up on prey it can't beat; outside its hunt hours it rests no more. A save in
 ## the middle of a hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
+##
+## Pack monsters band together (#1205): by species, or by a similar typing for `pack_type` ones,
+## never more than a pack can hold; members live by their leader's day and, in the hours they
+## follow their pack, walk back to their leader. A dominated or fainted leader hands the pack to its
+## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
+## band in Ivenwhal Wudhen.
 
 ## A test species of each sleep rhythm, with needs and bands that cover every activity.
 const TEST_TRAITS: Dictionary[String, Array] = {
@@ -59,6 +65,36 @@ const HUNT_HP: Dictionary[String, int] = {
 	"str": 30,
 	"tou": 100_000,
 }
+## The pack flow's species (#1205): wolves banding by species; a diurnal and a nocturnal one of a
+## Lesser type and its Greater, which band by type; one banding by type of another family; and one
+## that doesn't band.
+const PACK_TRAITS: Dictionary[String, Array] = {
+	"wol": ["sleepless", "grazer", "pack_species"],
+	"arc": ["diurnal", "grazer", "pack_type"],
+	"man": ["nocturnal", "drinker", "pack_type"],
+	"sha": ["sleepless", "grazer", "pack_type"],
+	"lon": ["sleepless", "grazer"],
+}
+const PACK_TYPES: Dictionary[String, Array] = {
+	"wol": ["mana"],
+	"arc": ["arcane"],
+	"man": ["mana"],
+	"sha": ["shadow"],
+	"lon": ["mana"],
+}
+## Where each of the pack flow's wild monsters stands, in id order: five wolves close together,
+## the fifth furthest, and the others apart from them.
+const PACK_SPOTS: Dictionary[Vector2i, String] = {
+	Vector2i(-5, 0): "wol",
+	Vector2i(-5, 1): "wol",
+	Vector2i(-4, 0): "wol",
+	Vector2i(-3, 0): "wol",
+	Vector2i(-1, 0): "wol",
+	Vector2i(3, 0): "arc",
+	Vector2i(5, 0): "man",
+	Vector2i(3, 2): "sha",
+	Vector2i(4, -2): "lon",
+}
 
 
 func run(_tree: SceneTree) -> String:
@@ -79,6 +115,11 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_saved,
 		_check_content_hunters,
 		_check_light_sleeper_wakes,
+		_check_packs_band,
+		_check_pack_follows,
+		_check_pack_leader_lost,
+		_check_pack_saved,
+		_check_content_packs,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -747,3 +788,178 @@ static func _to_hour_doing(state: GameState, monster: int, activity: int, doing:
 			var hours: int = day_start * DayClock.HOURS + from_dawn
 			state.world_tick = hours * DayClock.TICKS_PER_HOUR
 			return
+
+
+## Wild monsters band into packs as their traits say (#1205): five of a `pack_species` species
+## close together make a pack of PACK_SIZE and leave the last alone; two `pack_type` ones of a
+## Lesser type and its Greater band; one of another family, and one that doesn't band, stay alone.
+## Every member lives by its leader's day, the nocturnal member of a diurnal leader too.
+func _check_packs_band() -> String:
+	var state: GameState = _pack_state(true)
+	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
+	var wolves: Array[int] = _monsters_of(state, "wol")
+	var expected: Dictionary[int, int] = {
+		wolves[1]: wolves[0],
+		wolves[2]: wolves[0],
+		wolves[3]: wolves[0],
+		_monsters_of(state, "man")[0]: _monsters_of(state, "arc")[0],
+	}
+	if packs.leaders != expected:
+		return "the packs banded as %s, not %s" % [packs.leaders, expected]
+	for member: int in packs.leaders:
+		if _schedules(state).day_of(member) != _schedules(state).day_of(packs.leaders[member]):
+			return "pack member %d doesn't live by its leader's day" % member
+	var alone: GameState = _pack_state(false)
+	var follower: int = _monsters_of(state, "man")[0]
+	if _schedules(alone).day_of(follower) == _schedules(state).day_of(follower):
+		return "the nocturnal member's day didn't change for its diurnal leader's"
+	return ""
+
+
+## In the hours it follows its pack, a member far from its leader walks back to it and stays near,
+## while its leader stays where it is.
+func _check_pack_follows() -> String:
+	var state: GameState = _pack_state(true)
+	var wolves: Array[int] = _monsters_of(state, "wol")
+	var leader_tile: Vector2i = state.entity(wolves[0]).tile
+	_to_hour_doing(state, wolves[0], Schedule.FOLLOW_PACK, true)
+	state.entity(wolves[1]).tile = leader_tile + Vector2i(0, 5)
+	for _tick: int in 8 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if state.entity(wolves[0]).tile != leader_tile:
+		return "the leader walked off after its pack"
+	var gap: int = Hex.distance(state.entity(wolves[1]).tile, leader_tile)
+	if gap > PackFeature.KEEP_NEAR:
+		return "a pack member stayed %d tiles from its leader" % gap
+	return ""
+
+
+## A dominated leader hands its pack to its member with the lowest id, whose own day the rest live
+## by; a leader that faints does the same; a pack down to one is gone, and its last monster lives
+## by its own day again, and so does a member that left.
+func _check_pack_leader_lost() -> String:
+	var state: GameState = _pack_state(true)
+	var alone: GameState = _pack_state(false)
+	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
+	var wolves: Array[int] = _monsters_of(state, "wol")
+	# The type pack stands apart from the wolves' until its own leader is dominated below.
+	var follower: int = _monsters_of(state, "man")[0]
+	var type_leader: int = _monsters_of(state, "arc")[0]
+	state.remove_entity(wolves[0])
+	var expected: Dictionary[int, int] = {
+		wolves[2]: wolves[1],
+		wolves[3]: wolves[1],
+		follower: type_leader,
+	}
+	var problem: String = _pack_problem(state, alone, expected, wolves[1], "dominated")
+	if not problem.is_empty():
+		return problem
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	wild.wound(state, wolves[1], 1000, true)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	expected = { wolves[3]: wolves[2], follower: type_leader }
+	problem = _pack_problem(state, alone, expected, wolves[2], "fainted")
+	if not problem.is_empty():
+		return problem
+	if _schedules(state).day_of(wolves[1]) != _schedules(alone).day_of(wolves[1]):
+		return "the fainted leader didn't get its own day back"
+	state.remove_entity(type_leader)
+	expected = { wolves[3]: wolves[2] }
+	problem = _pack_problem(state, alone, expected, wolves[2], "down to one")
+	if not problem.is_empty():
+		return problem
+	var last: int = follower
+	if _schedules(state).day_of(last) != _schedules(alone).day_of(last) or packs.leaders.has(last):
+		return "the last monster of a pack didn't live by its own day again"
+	return ""
+
+
+## Why `state`'s packs aren't `expected`, each member on its leader's day, the new leader `leader`
+## on its own as in `alone`, once a leader was `how`; or "".
+static func _pack_problem(
+	state: GameState,
+	alone: GameState,
+	expected: Dictionary[int, int],
+	leader: int,
+	how: String,
+) -> String:
+	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
+	if packs.leaders != expected:
+		return "once the leader %s, the packs were %s, not %s" % [how, packs.leaders, expected]
+	if _schedules(state).day_of(leader) != _schedules(alone).day_of(leader):
+		return "once the leader %s, the new leader didn't keep its own day" % how
+	for member: int in expected:
+		if _schedules(state).day_of(member) != _schedules(state).day_of(expected[member]):
+			return "once the leader %s, member %d didn't live by its leader's day" % [how, member]
+	return ""
+
+
+## A save taken while a pack gathers, and after its leader was dominated, loads the same and plays
+## on the same.
+func _check_pack_saved() -> String:
+	var state: GameState = _pack_state(true)
+	var wolves: Array[int] = _monsters_of(state, "wol")
+	_to_hour_doing(state, wolves[0], Schedule.FOLLOW_PACK, true)
+	state.entity(wolves[2]).tile = state.entity(wolves[0]).tile + Vector2i(0, 5)
+	state.remove_entity(wolves[0])
+	for _tick: int in 2 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var loaded: GameState = _pack_state(true)
+	loaded.load_data(DataReader.new(state.to_data()))
+	# The world's time comes back with the world's save (#1215), not the instance's.
+	loaded.world_tick = state.world_tick
+	if loaded.state_hash() != state.state_hash():
+		return "a save of a pack didn't load the same"
+	for _tick: int in 5 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		Simulation.step(loaded, FlowSteps.command(Command.NO_MOVE))
+	if loaded.state_hash() != state.state_hash():
+		return "a loaded pack played on otherwise"
+	return ""
+
+
+## The content's Vynakiir, wolves that hunt in packs, band into one in Ivenwhal Wudhen, their home.
+func _check_content_packs() -> String:
+	var state: GameState = InstanceBlueprints.create("ivenwhal_wudhen", SEED, 1)
+	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
+	if packs == null or packs.leaders.is_empty():
+		return "the Vynakiir of Ivenwhal Wudhen don't band into a pack"
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	for member: int in packs.leaders:
+		var leader: int = packs.leaders[member]
+		if wild.species_of(member) != "vynakiir" or wild.species_of(leader) != "vynakiir":
+			return "a pack in Ivenwhal Wudhen isn't of Vynakiir"
+	return ""
+
+
+## A disc with the pack flow's wild monsters (PACK_SPOTS), with the packs or, not `packed`,
+## without.
+static func _pack_state(packed: bool) -> GameState:
+	var region: Region = Region.disc(8)
+	var hp: Dictionary[String, int] = {}
+	for spot: Vector2i in PACK_SPOTS:
+		region.wild_monsters.append(spot)
+		region.add_placement(WildSpotPlacements.KIND, spot, WildSpot.NAMED + PACK_SPOTS[spot])
+		hp[PACK_SPOTS[spot]] = 10
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		KnockdownFeature.new(),
+		TrailFeature.new(),
+		HealthFeature.new(hp),
+		WildMonsterFeature.new([], [], {}),
+		ScheduleFeature.new(PACK_TRAITS),
+	]
+	if packed:
+		ordered.append(PackFeature.new(PACK_TYPES))
+	return GameState.new(region, SEED, ordered)
+
+
+## The entity ids of `state`'s wild monsters of `species`, standing or fainted, in id order.
+static func _monsters_of(state: GameState, species: String) -> Array[int]:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var found: Array[int] = []
+	for monster: int in wild.monsters + wild.fainted:
+		if wild.species_of(monster) == species:
+			found.append(monster)
+	found.sort()
+	return found
