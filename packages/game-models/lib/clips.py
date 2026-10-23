@@ -448,6 +448,63 @@ def faint(body_height):
                  (39, lying), (50, still)], steps=steps)
 
 
+# Where each paw lies while it sleeps curled (#1229), (sideways, up, forward) from rest in unscaled
+# metres: the forepaws out in front, under its chin, and the hind paws splayed out and back beside
+# the belly, where Faint's steps leave them. A paw's sideways shift is its left one's, mirrored.
+CURLED = {"front_paw": (0.0, 0.0, 0.45), "hind_paw": (0.12, 0.0, -0.12)}
+# The ear that twitches in its sleep (#1229): as TWITCHES, once a loop.
+DREAM = ("ear.L", 0.6, (0.12, 0.0, -0.2), 4, 18)
+
+
+def curled(body_height):
+    """A canine's sleeping pose (#1229), at `chest` (0..1) of a breath: lying on its belly,
+    `body_height` down, as calmly as Faint's end is limp, its forearms flat, its chin resting on its
+    forepaws, its ears laid back and its tail curled round its flank; the breath swells its ribcage
+    and lifts its head a little. Its paws lie on CURLED."""
+    def pose(chest):
+        lying = {
+            "root_loc": (0.0, -body_height * 0.92, 0.0),
+            "spine_02": (0.04 * chest, 0.0, 0.03),
+            "spine_01": (0.0, 0.0, 0.05),
+            "neck": (0.5 - 0.03 * chest, 0.0, 0.08),
+            "head": (0.32 - 0.01 * chest, 0.0, 0.06),
+            "ear.L": (0.6, 0.0, 0.2),
+            "ear.R": (0.6, 0.0, -0.2),
+            # Curled round its left flank toward its forepaws, the tip turning in most.
+            "tail_01": (0.15, 0.0, 0.6),
+            "tail_02": (0.05, 0.0, 0.7),
+            "tail_03": (0.0, 0.0, 0.7),
+            "tail_04": (0.0, 0.0, 0.6 + 0.03 * chest),
+        }
+        return _both(lying, "forearm", (-FOREARM_FLAT, 0.0, 0.0))
+    return pose
+
+
+def sleep(lying, paws=CURLED, breath=120, breaths=2):
+    """Asleep (#1229), a loop posed on every frame: `lying(chest)` is its pose at `chest` (0..1) of
+    a breath (`curled`, or a body plan's own), its paws lying on `paws` (paw: its left one's
+    shift, as CURLED) all along. It breathes slowly, `breaths` breaths of `breath` frames a loop,
+    the ribcage swelling quicker than it settles, and once a loop an ear twitches in its sleep
+    (DREAM). Every wave runs a whole number of times a loop, so the seam is exact; the game blends
+    into it from whatever it played, so it has no lead-in of its own."""
+    frames = breath * breaths
+    ear, start, amplitude, out, back = DREAM
+    if round(start * frames) + out + back > frames:
+        raise ValueError("the dream's twitch runs past a loop of %d frames" % frames)
+    poses = []
+    for step in range(frames + 1):
+        # The last frame is the first one again, exactly.
+        lap = 2.0 * math.pi * breaths * (step % frames) / frames
+        pose = lying(0.5 - 0.5 * math.cos(lap) + 0.15 * math.sin(lap) * (1.0 - math.cos(lap)))
+        for paw, (side, up, forward) in paws.items():
+            pose["plant." + paw + ".L"] = (side, up, forward)
+            pose["plant." + paw + ".R"] = (-side, up, forward)
+        turn = _twitch(step % frames, round(start * frames), amplitude, out, back)
+        pose[ear] = tuple(value + extra for value, extra in zip(pose.get(ear, (0.0, 0.0, 0.0)), turn))
+        poses.append((step + 1, pose))
+    return Clip(poses, loop=True)
+
+
 # Overlap and follow-through (motion.follow): which bones trail their parent, and how:
 # (frequency in Hz, damping, response, how much the root's movement swings them). The chains
 # run spine, neck, head (and its jaw and ears), and hips to the tail's tip, each looser than the

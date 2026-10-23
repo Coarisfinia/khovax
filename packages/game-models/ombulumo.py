@@ -103,7 +103,7 @@ MOUTH = [(0.40 * math.sin(1.25 * share), -0.42 - 0.46 * math.cos(1.25 * share), 
 # with the head alone, so it never slides across the eye set into it (check_brows.py).
 TURRET, TURRET_RADIUS = (0.24, -0.52, 0.80), 0.12
 
-# How high its belly sits off the ground: the faint sinks it this far.
+# How high its belly sits off the ground: the faint and the sleep sink it this far.
 BELLY_HEIGHT = 0.16
 
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
@@ -342,6 +342,21 @@ def flop():
                        (50, still)], steps=steps)
 
 
+# Where its feet lie while it sleeps (#1229), splayed out to the sides as its faint leaves them
+# (the left one's; the right mirrors it): clips.sleep.
+SQUAT = {"front_paw": (0.08, 0.0, 0.06), "hind_paw": (0.10, 0.0, -0.04)}
+
+
+def squat(chest):
+    """Its sleeping pose (#1229), at `chest` (0..1) of a breath: flat on its belly, `BELLY_HEIGHT`
+    down, as calmly as its faint is limp, its chin on the ground (no lowered head, as a wolf's),
+    its fronds laid back and its tail tucked to one side; the breath swells its back and lifts its
+    chin a little."""
+    return {"root_loc": (0, -BELLY_HEIGHT * 0.92, 0), "spine_02": (0.03 * chest, 0, 0), "neck": (0.06, 0, 0),
+            "head": (0.06 - 0.02 * chest, 0, 0.04), "ear.L": (0.7, 0, 0.25), "ear.R": (0.7, 0, -0.25),
+            "tail_01": (0.2, 0, 0.35)}
+
+
 def _booming(t):
     """The held boom at `t` (0..1) of the loop: head raised, the chest
     pumping with each boom (CHANNEL_FRAMES / BOOM of them a loop), every wave leaving and
@@ -419,6 +434,7 @@ def build(out):
         **channel,
         # No neck: the toad's head is near the ground already, and dips to it.
         "Feed": clips.feed(neck=0.18, head=-0.05, crouch=0.06, forepaws=0.06),
+        "Sleep": clips.sleep(squat, SQUAT),
     }, SCALE, ground_meshes=[skin], overlays=[booming.beat])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),

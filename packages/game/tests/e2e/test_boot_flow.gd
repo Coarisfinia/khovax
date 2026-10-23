@@ -510,15 +510,17 @@ static func _awake_hour(day: Array[int]) -> int:
 	return 0
 
 
-## A sleeping wild monster's figure (#1202) lies in its Faint clip's last pose, not idling, upright
-## rather than rolled onto its side like a fainted one, and its eyes are shut.
+## A sleeping wild monster's figure (#1202) plays its Sleep clip (#1229), not idling, upright rather
+## than rolled onto its side like a fainted one, and its eyes are shut.
 func _check_asleep(figure: HexPiece) -> String:
 	if figure == null:
 		return "no figure shown for the sleeping wild monster"
 	var model: Node3D = figure.get_child(0) as Node3D
 	var animations: AnimationPlayer = WildMonsterView.clips_of(model)
 	var settled: bool = (
-		animations != null and animations.assigned_animation == WildMonsterView.FAINT
+		animations != null
+		and animations.is_playing()
+		and animations.current_animation == WildMonsterView.SLEEP
 	)
 	if not settled or not is_zero_approx(model.rotation.z) or not EyeGlow.of(model).out:
 		return "a sleeping wild monster's figure didn't settle down upright with its eyes shut"
