@@ -17,12 +17,12 @@ extends Feature
 ## dominates it any more, and it still blocks walkers like anything that doesn't walk. Enraged
 ## (#220, EnrageFeature), it grows stronger with every stack of rage, which it keeps, and faster
 ## (#961): its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it
-## chase the nearest player (`chase`), never off ground a ring could enclose it on; hunted, it
-## flees its hunter the same way (`chase` away, HuntFeature, #1239). Asleep (#1202,
-## SleepFeature puts it to sleep by its schedule), it neither steps nor strikes (WildAttackFeature)
-## until it wakes: by its schedule, or at once when a strike wounds it or rage takes it. Like every
-## feature, switched off it keeps its state: the monsters stay where they are, and only its own
-## rules stop.
+## chase the nearest player (`chase`), round what stands in its way (#1259) and never off ground
+## a ring could enclose it on; hunted, it flees its hunter the same way (`chase` away, HuntFeature,
+## #1239). Asleep (#1202, SleepFeature puts it to sleep by its schedule), it neither steps nor
+## strikes (WildAttackFeature) until it wakes: by its schedule, or at once when a strike wounds it
+## or rage takes it. Like every feature, switched off it keeps its state: the monsters stay where
+## they are, and only its own rules stop.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_monsters"
@@ -162,10 +162,10 @@ func _moves_now(state: GameState, entity_id: int) -> bool:
 	return (state.tick + entity_id) % WildPace.paced(STEP_TICKS, rage_of(entity_id)) == 0
 
 
-## Steps the wild monster with this id one tile toward `goal` (#961), onto the walkable tile next to
-## it nearest to `goal`, the first in direction order of the equally near, if that's nearer than
-## where it stands; `away`, it steps away from `goal` instead, onto the one furthest from it, if
-## that's further (a hunted one fleeing its hunter, #1239). It never steps onto the trail or onto
+## Steps the wild monster with this id one tile toward `goal` (#961) along the way it finds round
+## what stands between them (WildWay.toward, #1259), if it can get nearer; `away`, it steps away
+## from `goal` instead, along the way that takes it furthest from it (WildWay.away; a hunted one
+## fleeing its hunter, #1239), if it can get further. It never steps onto the trail or onto
 ## anyone, and only from and onto ground a ring could enclose it on, so it stays catchable; only on
 ## its tick to step (`_moves_now`), and not when it already stepped this tick (`step` or `chase`).
 ## Switched off, the feature moves nobody.
@@ -182,14 +182,8 @@ func chase(state: GameState, entity_id: int, goal: Vector2i, away: bool = false)
 	if stuck.has(standing.tile):
 		return
 	var blocked: Dictionary[Vector2i, bool] = _blocked(state)
-	var toward: int = -1 if away else 1
-	var best: Vector2i = standing.tile
-	for direction: Vector2i in Hex.DIRECTIONS:
-		var tile: Vector2i = standing.tile + direction
-		if blocked.has(tile) or stuck.has(tile) or not state.region.is_walkable(tile):
-			continue
-		if toward * Hex.distance(tile, goal) < toward * Hex.distance(best, goal):
-			best = tile
+	var way: WildWay = WildWay.new(state.region, stuck, blocked)
+	var best: Vector2i = way.away(standing.tile, goal) if away else way.toward(standing.tile, goal)
 	if best != standing.tile:
 		standing.tile = best
 		_stepped.append(entity_id)
