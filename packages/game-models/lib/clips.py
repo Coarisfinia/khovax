@@ -161,25 +161,66 @@ def _both(pose, bone, rotation):
     return pose
 
 
-def idle(frames=60):
-    """Breathing, a swaying head and tail, and a flick of one ear, posed on every frame (sparse
-    keys on a wave would flatten each crest into a hold)."""
+# How an ear twitches in Idle (#1196): (ear, at which share of the loop it starts, its turn at the
+# peak (back, 0, sideways) in radians, frames to flick out, frames to come back). Fast out (an ease
+# that gathers speed at once and slows into the peak), slow back; never both ears at once, and
+# never alike: the right ear flicks twice in a row.
+TWITCHES = [
+    ("ear.L", 0.14, (0.10, 0.0, -0.32), 4, 16),
+    ("ear.R", 0.47, (0.22, 0.0, 0.18), 3, 12),
+    ("ear.R", 0.55, (0.16, 0.0, 0.24), 3, 14),
+    ("ear.L", 0.80, (0.30, 0.0, -0.12), 5, 18),
+]
+
+
+def _twitch(frame, start, amplitude, out, back):
+    """An ear's turn on `frame` (from 0) for a twitch from `start`: quick to its peak, slow back."""
+    since = frame - start
+    if since <= 0 or since >= out + back:
+        return (0.0, 0.0, 0.0)
+    share = motion.EASES["quart"](since / out) if since < out else 1.0 - legs.ease((since - out) / back)
+    return tuple(share * value for value in amplitude)
+
+
+def _flat_wave(x):
+    """A wave that lingers at each crest: sin with a third harmonic that flattens its tops,
+    -1..1, so a weight shift holds on each side and moves between them."""
+    return (math.sin(x) + math.sin(3.0 * x) / 6.0) / (1.0 - 1.0 / 6.0)
+
+
+def idle(breath=105, breaths=2):
+    """Standing still and alive (#1196), posed on every frame (sparse keys on a wave would flatten
+    each crest into a hold): it breathes, `breaths` breaths of `breath` frames a loop, the
+    ribcage rising quicker than it falls; it shifts its weight from its left legs to its right
+    ones and back once a loop, the paws planted (legs.plant), its head glancing about and its
+    tail swaying; and its ears twitch one at a time (TWITCHES). Every wave runs a whole number of
+    times a loop and every twitch is over before it ends, so the seam is exact."""
+    frames = breath * breaths
     poses = []
     for step in range(frames + 1):
         t = step / frames
-        wave = math.sin(2 * math.pi * t)
+        lap = 2.0 * math.pi * t
+        # The ribcage's rise, 0..1-ish: a breath in is quicker than the breath out.
+        chest = 0.5 - 0.5 * math.cos(breaths * lap) + 0.15 * math.sin(breaths * lap) * (1.0 - math.cos(breaths * lap))
+        # Toward the left legs (+1) or the right (-1); lingering on each side.
+        weight = _flat_wave(lap)
+        glance = math.sin(lap + 1.0)
         pose = {
-            "spine_02": (0.02 * wave, 0, 0),
-            "neck": (-0.04 * wave, 0, 0),
-            "head": (0.05 * wave, 0, 0.08 * math.sin(2 * math.pi * t + 1)),
-            "tail_01": (0.1, 0, 0.2 * wave),
-            "tail_02": (0, 0, 0.18 * math.sin(2 * math.pi * t - 0.8)),
-            "tail_03": (0, 0, 0.15 * math.sin(2 * math.pi * t - 1.6)),
-            "jaw": (0.05 + 0.05 * wave, 0, 0),
-            "root_loc": (0, -0.01 + 0.01 * wave, 0),
+            "root_loc": (0.03 * weight, -0.012 + 0.008 * chest, 0.0),
+            # The body rolls a little toward the legs that bear it, the chest a touch more.
+            "hips": (0.0, -0.035 * weight, 0.0),
+            "spine_02": (0.035 * chest, -0.015 * weight, 0.0),
+            "neck": (-0.04 * chest, 0.0, -0.05 * weight),
+            "head": (0.03 * chest + 0.03 * math.sin(2.0 * lap), 0.0, 0.12 * glance + 0.04 * weight),
+            "jaw": (0.05 + 0.04 * chest, 0.0, 0.0),
+            "tail_01": (0.1, 0.0, 0.12 * math.sin(2.0 * lap) - 0.08 * weight),
+            "tail_02": (0.0, 0.0, 0.12 * math.sin(2.0 * lap - 0.8)),
+            "tail_03": (0.0, 0.0, 0.1 * math.sin(2.0 * lap - 1.6)),
         }
-        if 0.5 <= t < 0.75:
-            pose["ear.L"] = (0, 0, -0.3 * math.sin(4 * math.pi * (t - 0.5)) ** 2)
+        for ear, start, amplitude, out, back in TWITCHES:
+            turn = _twitch(step, round(start * frames), amplitude, out, back)
+            x, y, z = pose.get(ear, (0.0, 0.0, 0.0))
+            pose[ear] = (x + turn[0], y + turn[1], z + turn[2])
         poses.append((step + 1, pose))
     return Clip(poses, loop=True)
 

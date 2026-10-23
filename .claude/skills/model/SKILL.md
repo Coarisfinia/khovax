@@ -67,7 +67,8 @@ a second model could use goes into the library or a generic tool, never into one
     landing on smooth paths, the body bobbing and rolling over the planted legs, the head
     countering the bob; `planted=False` swings the legs freely, for a run too fast for planted
     legs at the clip rate) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the
-    quadruped set (`idle`; the one-shots posed as anticipation, action, overshoot and settle,
+    quadruped set (`idle` breathing, shifting its weight over planted paws and twitching one ear
+    at a time, as waves that run a whole number of times a loop, #1196; the one-shots posed as anticipation, action, overshoot and settle,
     #1074: `attack` with its forepaws stepping out, `hit` with a shiver and an ear flick, `faint`
     with its legs folding under it and a moving hold; `channel`: a long attack held for as long as it lasts, as a wind-up
     `ChannelStart`, the looping `Channel` and a release `ChannelEnd` the game plays in turn,
