@@ -425,9 +425,10 @@ func _survey_mark_glides(driver: GameDriver, survey: SurveyView) -> String:
 
 
 ## Why the Survey's quest arrows aren't labelled with their quests' names and the pills naming
-## where their steps count (#1278), each label just above its arrow, those over one tile stacked,
-## or "": none for a step that counts anywhere, filled for one that counts in the glade the player
-## is in, outlined with its arrow for one that counts in the forest, whose arrow is on an exit.
+## where their steps count (#1278), each label above its arrow, inside the Survey and clear of the
+## others, or "": none for a step that counts anywhere, filled for one that counts in the glade the
+## player is in, outlined with its arrow for one that counts in the forest, whose arrow is on an
+## exit. A Survey in a corner, too small for them, shows none.
 func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker) -> String:
 	var where: Dictionary[String, String] = {
 		"survey_any": "",
@@ -439,10 +440,16 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 		text += "[{\"condition\": \"dominated\", \"ends\": \"%s\"" % id
 		text += ", \"instance\": \"%s\"}]}" % where[id] if not where[id].is_empty() else "}]}"
 		quests.book[id] = QuestDefinition.parse(id, text, {})
-	survey.show_state()
 	var labels: SurveyQuestLabels = survey.quest_labels()
+	survey.show_state()
 	labels.show_state()
 	var result: String = ""
+	if not labels.labels.is_empty():
+		result = "the Survey in a corner, %s big, labels its arrows" % [survey.size]
+	var kept: Vector2 = survey.size
+	survey.size = Vector2(800.0, 600.0)
+	survey.show_state()
+	labels.show_state()
 	for id: String in where:
 		if result.is_empty():
 			result = _survey_label(driver, survey, labels, id, where[id])
@@ -452,12 +459,13 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 	labels.show_state()
 	if result.is_empty() and labels.labels.keys().any(where.has):
 		result = "the Survey keeps the labels of quests no longer open"
+	survey.size = kept
 	return result
 
 
 ## Why the Survey's arrow for quest `id` isn't labelled with its name and a pill naming `instance`
-## (none when it's ""), filled when that's where the player is, the label above the arrow and clear
-## of the other labels over its tile, or "".
+## (none when it's ""), filled when that's where the player is, the label above the arrow, inside
+## the Survey and clear of the other labels, or "".
 func _survey_label(
 	driver: GameDriver,
 	survey: SurveyView,
@@ -485,7 +493,7 @@ func _survey_label(
 		]
 	var top: Vector2 = survey.arrow_top(survey.quest_targets[id])
 	var box: Rect2 = label.get_rect()
-	if box.end.y > top.y + 0.5 or not is_equal_approx(box.get_center().x, top.x):
+	if box.end.y > top.y + 0.5 or not Rect2(Vector2.ZERO, survey.size).encloses(box):
 		return "the Survey's label for %s isn't above its arrow: %s, arrow top %s" % [id, box, top]
 	for other: String in labels.labels:
 		if other != id and labels.labels[other].get_rect().intersects(box):
