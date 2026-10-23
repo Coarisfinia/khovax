@@ -60,12 +60,14 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The wild monsters it strikes, what spares one from the auto attack
-## (CompanionAttackFeature.can_strike), whose targets it strikes, and the type chart, where the
-## instance has them: without wild monster spots (#884), a special finds nothing to strike.
+## The wild monsters it strikes, their strikes that break a bind (#1167), what spares one from the
+## auto attack (CompanionAttackFeature.can_strike), whose targets it strikes, and the type chart,
+## where the instance has them: without wild monster spots (#884), a special finds nothing to
+## strike.
 func after() -> Array[String]:
 	var earlier: Array[String] = [
 		WildMonsterFeature.ID,
+		WildAttackFeature.ID,
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,
@@ -203,11 +205,12 @@ static func _broken(companion_id: int, monster_id: int) -> BindBroken:
 
 
 ## A bind ends with its companion or its wild monster leaving the instance (#1167): the one that
-## stays is let go.
+## stays is let go, and the bind breaks.
 func entity_removed(state: GameState, removed_id: int) -> void:
 	for companion_id: int in _binding():
 		if companion_id == removed_id or _binds[companion_id].x == removed_id:
 			_hold(state, companion_id, false)
+			state.events.append(_broken(companion_id, _binds[companion_id].x))
 			var _ended: bool = _binds.erase(companion_id)
 
 
@@ -244,7 +247,7 @@ func save_values() -> Dictionary:
 	}
 
 
-func load_values(_state: GameState, values: DataReader) -> void:
+func load_values(state: GameState, values: DataReader) -> void:
 	_cooling.clear()
 	var saved: Dictionary[int, int] = values.pairs("cooling", 0, DataReader.MOST)
 	for slot: int in saved:
