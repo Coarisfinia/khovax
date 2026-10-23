@@ -183,9 +183,10 @@ def _twitch(frame, start, amplitude, out, back):
 
 
 def _flat_wave(x):
-    """A wave that lingers at each crest: sin with a third harmonic that flattens its tops,
-    -1..1, so a weight shift holds on each side and moves between them."""
-    return (math.sin(x) + math.sin(3.0 * x) / 6.0) / (1.0 - 1.0 / 6.0)
+    """A wave that lingers at each crest: sin with the third harmonic that flattens its tops
+    without a dip (its slope is 4/3 cos^3 x), -1..1, so a weight shift holds on each side and
+    moves between them."""
+    return (math.sin(x) + math.sin(3.0 * x) / 9.0) / (1.0 - 1.0 / 9.0)
 
 
 def idle(breath=105, breaths=2):
@@ -196,9 +197,13 @@ def idle(breath=105, breaths=2):
     tail swaying; and its ears twitch one at a time (TWITCHES). Every wave runs a whole number of
     times a loop and every twitch is over before it ends, so the seam is exact."""
     frames = breath * breaths
+    for ear, start, _amplitude, out, back in TWITCHES:
+        if round(start * frames) + out + back > frames:
+            raise ValueError("%s's twitch at %.2f runs past a loop of %d frames" % (ear, start, frames))
     poses = []
     for step in range(frames + 1):
-        t = step / frames
+        # The last frame is the first one again, exactly.
+        t = (step % frames) / frames
         lap = 2.0 * math.pi * t
         # The ribcage's rise, 0..1-ish: a breath in is quicker than the breath out.
         chest = 0.5 - 0.5 * math.cos(breaths * lap) + 0.15 * math.sin(breaths * lap) * (1.0 - math.cos(breaths * lap))
@@ -218,7 +223,7 @@ def idle(breath=105, breaths=2):
             "tail_03": (0.0, 0.0, 0.1 * math.sin(2.0 * lap - 1.6)),
         }
         for ear, start, amplitude, out, back in TWITCHES:
-            turn = _twitch(step, round(start * frames), amplitude, out, back)
+            turn = _twitch(step % frames, round(start * frames), amplitude, out, back)
             x, y, z = pose.get(ear, (0.0, 0.0, 0.0))
             pose[ear] = (x + turn[0], y + turn[1], z + turn[2])
         poses.append((step + 1, pose))
