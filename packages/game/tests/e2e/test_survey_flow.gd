@@ -3,9 +3,11 @@ extends RefCounted
 ## the glade. It starts at Auto, in a corner; it shows exactly the tiles explored, each in its
 ## kind's color with its kind's symbol (#68), while ground still in the fog stays hidden; next
 ## door it shows exactly what was explored there, at its place in the world, and the exits on the
-## tiles it shows, one chevron per exit in its middle (#790), loading nothing; it marks each
-## instance shown that a faction holds with its holder's symbol, and its menu tab says who holds the
-## glade (#637); it marks every player by slot and every open quest's target; its action cycles it
+## tiles it shows, one chevron per exit in its middle (#790), and of two exits facing each other
+## across a seam only the one pointing away from the player, seen from either side (#799), loading
+## nothing; it marks each instance shown that a faction holds with its holder's symbol, and its menu
+## tab says who holds the glade (#637); it marks every player by slot and every open quest's target;
+## its action cycles it
 ## through the corners, over the game, opaque and off, its zoom steps within their range, and both
 ## choices are kept. In every place, on desktop screens and phones held either way, it sits against
 ## its own corner or covers the whole screen; every zoom step is followed, and zooming stops at both
@@ -212,8 +214,9 @@ func _survey_exits(here: Region, there: Region, shift: Vector2i, survey: SurveyV
 
 
 ## Why an exit here, three tiles wide (#689), doesn't show exactly one chevron, on its middle tile
-## (#790), or "".
+## (#790), or one facing its way back next door shows both (#799), or none does, or "".
 func _survey_exit_arrows(here: Region, survey: SurveyView) -> String:
+	var faced: int = 0
 	for i: int in here.exits.size():
 		var side: int = here.exits[i].z
 		var tiles: Array[Vector2i] = []
@@ -239,6 +242,64 @@ func _survey_exit_arrows(here: Region, survey: SurveyView) -> String:
 				here.exit_blueprints[i],
 				on,
 				middle[0],
+			]
+		var across: Array[Vector2i] = _survey_across(survey, tiles, side)
+		if not across.is_empty():
+			faced += 1
+			var facing: String = _survey_facing(
+				survey,
+				here.exit_blueprints[i],
+				tiles,
+				across,
+				side,
+			)
+			if not facing.is_empty():
+				return facing
+	return "" if faced > 0 else "no exit here faces its way back next door on the Survey"
+
+
+## The exit tiles shown next door right across `tiles` here, out of `side`, each leading back out of
+## the opposite side; empty unless every one of `tiles` has one.
+func _survey_across(survey: SurveyView, tiles: Array[Vector2i], side: int) -> Array[Vector2i]:
+	var back: int = posmod(side + 3, Hex.DIRECTIONS.size())
+	var across: Array[Vector2i] = []
+	for tile: Vector2i in tiles:
+		var there: Vector2i = tile + Hex.DIRECTIONS[side]
+		if survey.exits.has(Vector3i(there.x, there.y, back)):
+			across.append(there)
+	if across.size() != tiles.size():
+		across.clear()
+	return across
+
+
+## Why the exit to `target` on `tiles` here, out of `side`, and its way back on `across` next door
+## don't show only the chevron pointing away from the player (#799), seen from here and from beyond
+## the seam, or "".
+func _survey_facing(
+		survey: SurveyView,
+		target: String,
+		tiles: Array[Vector2i],
+		across: Array[Vector2i],
+		side: int,
+) -> String:
+	var back: int = posmod(side + 3, Hex.DIRECTIONS.size())
+	var both: Array[Vector2i] = tiles.duplicate()
+	both.append_array(across)
+	var beyond: Vector2 = SurveyView.ground_of(across[0] + Hex.DIRECTIONS[side] * 2)
+	var views: Dictionary[int, Array] = {
+		side: survey.exit_arrows(),
+		back: SurveyExitArrow.of(survey.exits, beyond),
+	}
+	for away: int in views:
+		var on: Dictionary[int, int] = { side: 0, back: 0 }
+		for arrow: SurveyExitArrow in views[away]:
+			if on.has(arrow.side) and _near_any(arrow.at, both):
+				on[arrow.side] += 1
+		if on[away] != 1 or on[posmod(away + 3, Hex.DIRECTIONS.size())] != 0:
+			return "the exit to %s and its way back show %s chevrons by side seen from %s" % [
+				target,
+				on,
+				"here" if away == side else "next door",
 			]
 	return ""
 

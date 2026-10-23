@@ -5,7 +5,8 @@ extends Control
 ## explored them. It draws each tile they explored (FogView's memory, ExploredGround), sees now or
 ## had revealed (#177) in its kind's color (TileLooks) with its kind's symbol over it, so no kind
 ## is told by color alone (#68), a tile nobody can walk onto ringed in ink, and every exit with a
-## tile shown as one chevron in its middle pointing out across its side (SurveyExitArrow, #790);
+## tile shown as one chevron in its middle pointing out across its side (SurveyExitArrow, #790),
+## of two exits facing each other across a seam only the one pointing away from the player (#799);
 ## the rest stays the backdrop, the fog's color, so what is still in the fog stays hidden here too.
 ## Every player in the instance is a circle in their personal color with one mark per slot number,
 ## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
@@ -163,9 +164,11 @@ func show_state() -> void:
 		quest_targets = QuestTargets.of(state, quest_keeper.quests(), _slot(), here)
 
 
-## The chevrons drawn for `exits`: one per exit, in its middle (#790).
+## The chevrons drawn for `exits`: one per exit, in its middle (#790), of a facing pair only the one
+## pointing away from this machine's player (#799).
 func exit_arrows() -> Array[SurveyExitArrow]:
-	return SurveyExitArrow.of(exits)
+	var own: Vector2 = circles.get(_slot(), ground_of(Vector2i.ZERO))
+	return SurveyExitArrow.of(exits, own)
 
 
 ## Where `tile` is drawn, in the view's own pixels.
