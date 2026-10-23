@@ -436,7 +436,8 @@ SETTLED = 1e-4
 def _key(rig, poses, scale):
     """Keys every bone's turn on every frame, and the root's shift. A "loc.<bone>" channel (a
     child of the root, its axes the root's) holds that bone at its (sideways, up, forward) shift
-    from rest in the model, in unscaled metres, whatever the root does."""
+    from rest in the model, in unscaled metres, whatever the root does, and a "scale.<bone>" channel
+    sizes that bone (pulse.Pulse)."""
     for frame, pose in poses:
         root = pose.get("root_loc", (0.0, 0.0, 0.0))
         for bone in rig.pose.bones:
@@ -451,6 +452,9 @@ def _key(rig, poses, scale):
                 held = pose["loc." + bone.name]
                 bone.location = tuple(scale * (value - shift) for value, shift in zip(held, root))
                 bone.keyframe_insert("location", frame=frame)
+            if "scale." + bone.name in pose:
+                bone.scale = pose["scale." + bone.name]
+                bone.keyframe_insert("scale", frame=frame)
 
 
 def _lift(poses, lifts, scale):
@@ -535,3 +539,4 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS, over
     for bone in rig.pose.bones:
         bone.rotation_euler = (0.0, 0.0, 0.0)
         bone.location = (0.0, 0.0, 0.0)
+        bone.scale = (1.0, 1.0, 1.0)

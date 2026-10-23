@@ -98,6 +98,9 @@ a second model could use goes into the library or a generic tool, never into one
     one clip (the attack) and back, or holds them on it across clips played in turn (the long
     attack); with a `bone`, the ring trails that bone (the head) through a soft spring (#1164), and with a
     `rise` the wisps fly over the body to it and back, not through it (#1182).
+  - `pulse` (#1224): a part that swells and settles on beats (a crystal flaring in step with the
+    wisps' ring, `wisps.Gather.frames_at`), on a bone of its own whose scale an `animate` overlay
+    keys in every clip (a `scale.<bone>` channel); `metrics` counts its bone as its parent's.
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
