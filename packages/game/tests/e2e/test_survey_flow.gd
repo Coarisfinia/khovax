@@ -447,7 +447,7 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 	if not labels.labels.is_empty():
 		result = "the Survey in a corner, %s big, labels its arrows" % [survey.size]
 	var kept: Vector2 = survey.size
-	survey.size = Vector2(800.0, 600.0)
+	survey.size = Vector2(1280.0, 720.0)
 	survey.show_state()
 	labels.show_state()
 	for id: String in where:
@@ -460,6 +460,8 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 	if result.is_empty() and labels.labels.keys().any(where.has):
 		result = "the Survey keeps the labels of quests no longer open"
 	survey.size = kept
+	survey.show_state()
+	labels.show_state()
 	return result
 
 
@@ -473,7 +475,9 @@ func _survey_label(
 	id: String,
 	instance: String,
 ) -> String:
-	if not survey.quest_targets.has(id) or not labels.labels.has(id):
+	if (not survey.quest_targets.has(id)
+			or not labels.labels.has(id)
+			or not labels.labels[id].visible):
 		return "the Survey has no labelled arrow for %s: %s" % [id, labels.labels.keys()]
 	var label: QuestMarkerLabel = labels.labels[id]
 	var pill: QuestPill = label.pill()
@@ -496,7 +500,8 @@ func _survey_label(
 	if box.end.y > top.y + 0.5 or not Rect2(Vector2.ZERO, survey.size).encloses(box):
 		return "the Survey's label for %s isn't above its arrow: %s, arrow top %s" % [id, box, top]
 	for other: String in labels.labels:
-		if other != id and labels.labels[other].get_rect().intersects(box):
+		var shown: bool = labels.labels[other].visible
+		if other != id and shown and labels.labels[other].get_rect().intersects(box):
 			return "the Survey's labels for %s and %s overlap" % [id, other]
 	return ""
 

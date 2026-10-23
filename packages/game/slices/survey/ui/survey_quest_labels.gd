@@ -6,9 +6,10 @@ extends Control
 ## QuestPill, #794): filled while this machine's player is there, outlined with an arrow while
 ## elsewhere, and none while the step counts anywhere. A step with choices labels each choice's
 ## arrow with that choice's instance. Labels keep inside the Survey, and one that would cover
-## another moves up above it, in the quests' order. A Survey too small to fit them, like one in a
-## corner, which the quest list sits beside anyway, shows its arrows bare, and an arrow off the
-## Survey has no label. It only reads what the Survey worked out and this machine's player's quests,
+## another moves up above it, in the quests' order; one that still can't fit is left out. A Survey
+## too small for them, like one in a corner, which the quest list sits beside anyway, shows its
+## arrows bare, and an arrow off the Survey has no label. It only reads what the Survey worked out
+## and this machine's player's quests,
 ## after the Survey each frame.
 
 ## A quest marker's label: the quest's name and its pill.
@@ -85,7 +86,9 @@ func _show(survey: SurveyView, targets: Dictionary[String, Vector2i]) -> void:
 		label.fit(font)
 		label.reset_size()
 		label.position = _spot(label.size, survey.arrow_top(targets[key]), survey.size, placed)
-		placed.append(label.get_rect())
+		label.visible = _fits(label.get_rect(), survey.size, placed)
+		if label.visible:
+			placed.append(label.get_rect())
 
 
 ## Where a label `box` big goes, its top left corner: its bottom's middle on `top`, the top of its
@@ -101,6 +104,17 @@ static func _spot(box: Vector2, top: Vector2, area: Vector2, placed: Array[Rect2
 				corner.y = other.position.y - GAP - box.y
 				moved = true
 	return corner
+
+
+## Whether `box` lies inside a Survey `area` big, clear of the labels already `placed`: a label
+## that can't, as one too wide or crowded against the top edge, isn't shown.
+static func _fits(box: Rect2, area: Vector2, placed: Array[Rect2]) -> bool:
+	if not Rect2(Vector2.ZERO, area).encloses(box):
+		return false
+	for other: Rect2 in placed:
+		if other.intersects(box):
+			return false
+	return true
 
 
 ## The step the arrow `key` points for, of the open `steps`: the quest's current step, or the
