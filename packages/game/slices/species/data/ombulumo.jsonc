@@ -16,5 +16,5 @@
 	"self_passive": "ombulumo_bolmu_wolmu",
 	// It booms at dusk and sits half-sunk in the shallows: awake by night, it grazes and drinks (#1200).
 	"behaviour": ["nocturnal", "grazer", "drinker"],
-	"model": "res://assets/mana-wolf/mana_wolf.glb" // the mana wolf stands in until it has its own model (#1223)
+	"model": "res://assets/ombulumo/ombulumo.glb" // its own: a round, toad-like dome that booms (#1271)
 }

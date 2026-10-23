@@ -7,11 +7,13 @@ from mathutils import Matrix, Vector
 
 from . import parts
 
-def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0):
+def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0,
+        pupil=(0.16, 0.55)):
     """An eye on the body near `guess`, of radius `size`, looking between the surface's normal
     there and `forward`. `brow` angles the ridge over it down toward the snout (radians), and
     `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
-    whose top edge stays above the eye.
+    whose top edge stays above the eye. `pupil` is the pupil's (width, height) as shares of the
+    eye: a predator's upright slit by default, wide and round for a gentler creature.
     `mats` needs "dark", "glow", "light" and "skin" (the brow). Returns its pieces, all weighted to
     `bone`."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
@@ -38,7 +40,7 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
     pieces = [
         ("eyeball", "uv_sphere", at(0, 0, 0), (1.0, almond, 0.75), rotation, "dark"),
         ("iris", "uv_sphere", at(0, 0, 0.5), (0.7, 0.7 * iris, 0.28), rotation, "glow"),
-        ("pupil", "uv_sphere", at(0, 0, 0.66), (0.16, 0.55 * iris, 0.16), rotation, "dark"),
+        ("pupil", "uv_sphere", at(0, 0, 0.66), (pupil[0], pupil[1] * iris, 0.16), rotation, "dark"),
         ("glint", "uv_sphere", at(0.25, 0.25 * almond, 0.74), (0.15, 0.15, 0.1), rotation, "light"),
         ("brow", "uv_sphere", at(-0.05, 0.75 * almond + 0.12 + lift, 0.3), ridge,
          (turn @ Matrix.Rotation(brow * outer, 3, "Z")).to_euler(), "skin"),
