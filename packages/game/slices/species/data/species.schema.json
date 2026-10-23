@@ -66,13 +66,14 @@
 		"player_passive": { "description": "Its passive that helps the player while it's out, an ability of kind player_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"self_passive": { "description": "Its passive that helps itself, an ability of kind self_passive (#222).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
 		"behaviour": {
-			"description": "Its behaviour traits (#1200), which its monsters' daily schedule is made from (owner's ground rule, #1199): exactly one sleep rhythm (diurnal, nocturnal, cathemeral: awake and asleep in bouts through day and night, or sleepless: never asleep), at least one need (grazer: eats grass now and then, drinker: walks to the nearest water now and then, predator: roams in search of weaker or grazer monsters), and optionally its instincts to band together (pack_species: with its own species, pack_type: with monsters of the same or similar typing).",
+			"description": "Its behaviour traits (#1200), which its monsters' daily schedule is made from (owner's ground rule, #1199): exactly one sleep rhythm (diurnal, nocturnal, cathemeral: awake and asleep in bouts through day and night, or sleepless: never asleep), at least one need (grazer: eats grass now and then, drinker: walks to the nearest water now and then, predator: roams in search of weaker or grazer monsters), optionally its instincts to band together (pack_species: with its own species, pack_type: with monsters of the same or similar typing), and optionally light_sleeper (#1230): asleep, it wakes when a player comes next to it, where others sleep on until struck or enraged; never with sleepless.",
 			"type": "array",
 			"uniqueItems": true,
-			"items": { "enum": ["diurnal", "nocturnal", "cathemeral", "sleepless", "grazer", "drinker", "predator", "pack_species", "pack_type"] },
+			"items": { "enum": ["diurnal", "nocturnal", "cathemeral", "sleepless", "grazer", "drinker", "predator", "pack_species", "pack_type", "light_sleeper"] },
 			"allOf": [
 				{ "contains": { "enum": ["diurnal", "nocturnal", "cathemeral", "sleepless"] }, "minContains": 1, "maxContains": 1 },
-				{ "contains": { "enum": ["grazer", "drinker", "predator"] } }
+				{ "contains": { "enum": ["grazer", "drinker", "predator"] } },
+				{ "if": { "contains": { "const": "light_sleeper" } }, "then": { "not": { "contains": { "const": "sleepless" } } } }
 			]
 		},
 		"model": { "description": "The model its monsters wear (#1223), wild or a companion: a res:// path to a rigged glTF model under assets/. The game checks it exists and has the clips the views play.", "type": "string", "pattern": "^res://assets/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(glb|gltf)$" },

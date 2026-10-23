@@ -63,6 +63,14 @@ func day_of(entity_id: int) -> Array[int]:
 	return day
 
 
+## Whether the wild monster with this entity id is of a species with the behaviour trait `named`
+## (SpeciesBehaviour).
+func has_trait(state: GameState, entity_id: int, named: String) -> bool:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var its_traits: Array = traits.get(wild.species_of(entity_id), [])
+	return its_traits.has(named)
+
+
 func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _days.erase(removed_id)
 

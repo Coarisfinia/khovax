@@ -939,7 +939,8 @@ func _check_model_refused() -> String:
 
 
 ## A species whose behaviour can't form a daily schedule (#1200) is refused, naming what's missing:
-## a sleep rhythm, more than one, a need, a trait that isn't one or is named twice, or the list.
+## a sleep rhythm, more than one, a need, a trait that isn't one or is named twice, or the list; and
+## so is a sleepless light sleeper (#1230).
 func _check_behaviour_refused() -> String:
 	var cases: Dictionary[String, String] = {
 		XO + KIT.replace("\"diurnal\", ", "") + "}": "its behaviour lacks a sleep rhythm",
@@ -952,6 +953,9 @@ func _check_behaviour_refused() -> String:
 			"\"grazer\", \"grazer\"",
 		) + "}": "its behaviour names grazer",
 		XO + KIT.replace("\"grazer\"", "\"flying\"") + "}": "its behaviour names flying",
+		XO + KIT.replace("\"diurnal\"", "\"sleepless\", \"light_sleeper\"") + "}": (
+			"its behaviour is sleepless and light_sleeper"
+		),
 		XO + KIT.replace(", \"behaviour\": [\"diurnal\", \"grazer\"]", "") + "}": (
 			"it needs a behaviour list"
 		),
