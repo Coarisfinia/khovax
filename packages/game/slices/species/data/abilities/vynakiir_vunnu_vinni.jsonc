@@ -12,6 +12,6 @@
 	"power": 1500,
 	"cooldown_seconds": 12,
 	"channel_seconds": 4,
-	"strike_type": "mana",
+	"strike_type": "arcane",
 	"path": "supremacy"
 }
