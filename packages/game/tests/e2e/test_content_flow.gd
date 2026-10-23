@@ -442,7 +442,7 @@ func _check_branches(content: QuestContent) -> String:
 	var fork: QuestDefinition = content.quests.get(fork_id)
 	if (fork == null or fork.steps[0].choices.size() != 2
 			or fork.steps[0].choices[0].piece != "pond"
-			or fork.next_index(0, QuestStep.ENTERED, "thicket", "") != 2
+			or fork.next_index(0, QuestStep.ENTERED, "thicket", FlowSteps.GLADE) != 2
 			or fork.steps[1].ends != fork_id or fork.steps[2].ends != fork_id):
 		return "the glade's fork didn't read as a choice between two ends"
 	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"steps\": [%s, " + STEP_B + "]}"

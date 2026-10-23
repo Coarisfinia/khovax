@@ -4,6 +4,6 @@
 	"name": "Dominate three ${MONSTER:ombulumo}",
 	"path": "supremacy",
 	"steps": [
-		{ "condition": "dominated", "species": "ombulumo", "count": 3, "ends": "three_ombulumo" }
+		{ "condition": "dominated", "species": "ombulumo", "instance": "lumwen_hoal", "count": 3, "ends": "three_ombulumo" }
 	]
 }
