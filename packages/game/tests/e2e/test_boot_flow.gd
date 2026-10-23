@@ -672,6 +672,8 @@ func _check_glyph_backdrops() -> String:
 	glyphs.append_array(InputGlyphs.KEYS.values())
 	glyphs.append_array(InputGlyphs.BUTTONS.values())
 	glyphs.append_array(InputGlyphs.AXES.values())
+	glyphs.append_array(InputGlyphs.GESTURES.values())
+	glyphs.append_array(InputGlyphs.POINTING.values())
 	for glyph: Texture2D in glyphs:
 		var backdrop: Texture2D = ActionGlyph.glyph_backdrop(glyph)
 		if backdrop == null:
