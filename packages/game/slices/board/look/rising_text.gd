@@ -27,11 +27,11 @@ static func make(tile: Vector2i, text: String) -> Label3D:
 	return label
 
 
-## Lets `label` rise `distance` while it fades over `seconds`, with the sprites on it (a strike's
-## type marks, #701); then `done` is called with it.
+## Lets `label` rise `distance` up the screen while it fades over `seconds`, with the sprites on it
+## (a strike's type marks, #701); then `done` is called with it.
 static func rise(label: Label3D, seconds: float, distance: float, done: Callable) -> void:
 	var tween: Tween = label.create_tween().set_parallel()
-	var top: Vector3 = label.position + Vector3(0.0, distance, 0.0)
+	var top: Vector3 = label.position + screen_up(label) * distance
 	var _up: PropertyTweener = tween.tween_property(label, "position", top, seconds)
 	var _fade: PropertyTweener = tween.tween_property(label, "modulate:a", 0.0, seconds)
 	var _ink: PropertyTweener = tween.tween_property(label, "outline_modulate:a", 0.0, seconds)
@@ -39,3 +39,19 @@ static func rise(label: Label3D, seconds: float, distance: float, done: Callable
 		if child is SpriteBase3D:
 			var _sprite: PropertyTweener = tween.tween_property(child, "modulate:a", 0.0, seconds)
 	var _done: CallbackTweener = tween.chain().tween_callback(done.bind(label))
+
+
+## The way up the screen from `label`, in its parent's space: the camera's up, which leans away from
+## the camera on the ground. The camera looks down steeply (FollowCamera), so a rise straight up
+## would
+## climb only a small part of its length on screen (#804); along this it climbs all of it. Straight
+## up while no camera sees it.
+static func screen_up(label: Label3D) -> Vector3:
+	var camera: Camera3D = label.get_viewport().get_camera_3d() if label.is_inside_tree() else null
+	if camera == null:
+		return Vector3.UP
+	var up: Vector3 = camera.global_basis.y
+	var parent: Node3D = label.get_parent_node_3d()
+	if parent != null:
+		up = parent.global_basis.inverse() * up
+	return up.normalized()

@@ -636,7 +636,19 @@ func _menu_damage_numbers(menu: GameMenu) -> String:
 		return "a larger damage number size isn't followed or kept: %s" % [kept.chosen]
 	tab.button(DamageNumbersChoice.SIZE_SETTING, "Auto").pressed.emit()
 	var sized: String = tab.shown[DamageNumbersChoice.SIZE_SETTING]
-	return "" if sized == "Auto (100%)" else "the damage number size's Auto shows %s" % sized
+	if sized != "Auto (100%)":
+		return "the damage number size's Auto shows %s" % sized
+	return _numbers_rise_up_the_screen(numbers.strikes[-1])
+
+
+## A number rises up the screen by its whole rise (#804): along the game camera's up, across its
+## view, not straight up, of which the steep camera shows only a small part.
+static func _numbers_rise_up_the_screen(label: Label3D) -> String:
+	var camera: Camera3D = label.get_viewport().get_camera_3d()
+	var up: Vector3 = RisingText.screen_up(label)
+	if camera == null or not up.is_equal_approx(camera.global_basis.y.normalized()):
+		return "a damage number rises along %s, not up the game camera's screen" % up
+	return ""
 
 
 ## The settings' rows fit a phone held either way and a desktop screen.
