@@ -12,7 +12,12 @@ extends Feature
 ##
 ## The hunt ends one of two ways, and the hunter rests until its next hunt hours: it wins once
 ## its prey is down to 1 HP, or it gives up after GIVE_UP_TICKS stalking the same prey. Prey that
-## gets out of sight is lost, and the hunter roams on. Prey down to 1 HP, held (hidden or bound,
+## gets out of sight is lost, and the hunter roams on. Hunted prey that's awake flees (#1239):
+## before
+## the hunters move, it steps away from its hunter, the nearest of them, at its pace
+## (WildMonsterFeature.chase away from it), never off ground a ring could enclose it on; enraged, it
+## goes for
+## the players instead, and held or in a ring it can't. Prey down to 1 HP, held (hidden or bound,
 ## WildMonsterFeature.held) or in a ring is no prey; sleeping prey is. An enraged hunter goes for
 ## the players instead (EnrageFeature, which steps earlier); a sleeping, held or ringed one doesn't
 ## hunt.
@@ -73,6 +78,7 @@ static func _is_predator(state: GameState, wild: WildMonsterFeature, monster: in
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
+	_flee(state, wild)
 	var struck: Dictionary[int, bool] = {}
 	for event: RefCounted in state.events:
 		if event is WildMonsterStruck:
@@ -89,6 +95,32 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if not _free(state, wild, hunter):
 			continue
 		_hunt(state, wild, hunter, struck.has(hunter))
+
+
+## Every hunted wild monster flees the nearest of its hunters, the lowest id of the equally near,
+## in id order, unless it's enraged, held or in a ring (WildMonsterFeature.chase away, which keeps
+## a sleeping one put).
+func _flee(state: GameState, wild: WildMonsterFeature) -> void:
+	var threats: Dictionary[int, Vector2i] = {}
+	var hunters: Array[int] = []
+	hunters.assign(prey.keys())
+	hunters.sort()
+	for hunter: int in hunters:
+		var hunted: int = prey[hunter]
+		if not wild.monsters.has(hunted):
+			continue
+		var from: Vector2i = state.entity(hunter).tile
+		var tile: Vector2i = state.entity(hunted).tile
+		var nearer: bool = not threats.has(hunted)
+		nearer = nearer or Hex.distance(from, tile) < Hex.distance(threats[hunted], tile)
+		if nearer:
+			threats[hunted] = from
+	var fleeing: Array[int] = []
+	fleeing.assign(threats.keys())
+	fleeing.sort()
+	for hunted: int in fleeing:
+		if wild.rage_of(hunted) == 0 and _free(state, wild, hunted):
+			wild.chase(state, hunted, threats[hunted], true)
 
 
 ## The hunter stalks its prey, or one it sights, and strikes it next to it, unless it `struck`
