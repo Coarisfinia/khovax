@@ -1,14 +1,15 @@
-// The mana wolf (#1167): a Mana species that wears the mana wolf's model (#990). Its stats are
-// placeholders to tune (#960).
+// The arcane wolf (#1167): the evolved form of the mana pups (#1219, #1220), so it has mana's
+// Greater type, arcane. It wears the mana wolf's model (#990). Its stats are placeholders to tune
+// (#960).
 {
 	"id": "vynakiir",
 	"name": "Vynakiir",
 	"codex": {
-		"entry": "A lean wolf of the high passes with a crystal on its brow and a crown of wisps turning above its head. It hunts by holding its prey still: it hums low while its crown closes on it, then snaps. Its name is a beast-call, the sound it makes: the hum in v, n and y, the howl that carries in its long ii, and the snap of its jaw in the k.",
+		"entry": "A lean wolf of the high passes with a crystal on its brow and a crown of wisps turning above its head: a mana pup grown, whose crystal has hardened and whose mana has deepened into the arcane. It hunts by holding its prey still: it hums low while its crown closes on it, then snaps. Its name is a beast-call, the sound it makes: the hum in v, n and y, the howl that carries in its long ii, and the snap of its jaw in the k.",
 		"gloss": "the hum that holds, then the howl"
 	},
-	"types": ["mana"],
-	"strike_type": "mana",
+	"types": ["arcane"],
+	"strike_type": "arcane",
 	"hp": 90,
 	"strength": 55,
 	"speed": 60,

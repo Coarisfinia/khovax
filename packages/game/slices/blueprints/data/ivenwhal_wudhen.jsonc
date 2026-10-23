@@ -1,8 +1,9 @@
-// Ivenwhal Wudhen, the mana forest southeast of the foot of Brekhal Varn (#1218): Vynakiir's home.
+// Ivenwhal Wudhen, the mana forest southeast of the foot of Brekhal Varn (#1218):
+// the home of Vynakiir, the arcane wolf (#1219).
 {
 	"id": "ivenwhal_wudhen",
 	"codex": {
-		"entry": "A wood southeast of the foot of Brekhal Varn, its moss soaked violet with mana and ringed by gems taller than a person, where the Vynakiir den. Its name hums in v and n like the mana in its ground, with the breathy wh of the settlers' tongue; Wudhen is their word for a wood.",
+		"entry": "A wood southeast of the foot of Brekhal Varn, its moss soaked violet with mana and ringed by gems taller than a person, where the Vynakiir den, wolves whose mana has deepened into the arcane. Its name hums in v and n like the mana in its ground, with the breathy wh of the settlers' tongue; Wudhen is their word for a wood.",
 		"gloss": "the humming wood"
 	},
 	"rules": "standard",

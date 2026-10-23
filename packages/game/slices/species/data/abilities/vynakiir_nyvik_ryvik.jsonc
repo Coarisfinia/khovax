@@ -3,7 +3,7 @@
 	"id": "vynakiir_nyvik_ryvik",
 	"kind": "self_passive",
 	"name": "Nyvik-ryvik",
-	"description": "The crystal on the ${MONSTER:vynakiir}'s brow turns aside part of every mana strike.",
+	"description": "The crystal on the ${MONSTER:vynakiir}'s brow turns aside part of every mana or arcane strike.",
 	"codex": {
 		"entry": "The ring of a struck crystal. Dominators called it after a beast whose brow took a blow and only sang.",
 		"gloss": "it rings, and holds"
