@@ -42,6 +42,30 @@ func away(from: Vector2i, threat: Vector2i) -> Vector2i:
 	return _search(from, threat, true)
 
 
+## The tile within REACH steps of `from` a wild monster reaches first where `wanted` (a
+## `func(tile: Vector2i) -> bool`) holds: fewest steps away, then first in direction order, so a
+## forager goes for the food it can walk to soonest, not the food behind a wall (#1291). `from`
+## itself when no such tile is within reach.
+func nearest(from: Vector2i, wanted: Callable) -> Vector2i:
+	var reached: Dictionary[Vector2i, int] = { from: 0 }
+	var queue: Array[Vector2i] = [from]
+	var index: int = 0
+	while index < queue.size():
+		var at: Vector2i = queue[index]
+		index += 1
+		if reached[at] == REACH:
+			continue
+		for direction: Vector2i in Hex.DIRECTIONS:
+			var tile: Vector2i = at + direction
+			if reached.has(tile) or not _is_open(tile):
+				continue
+			if wanted.call(tile):
+				return tile
+			reached[tile] = reached[at] + 1
+			queue.append(tile)
+	return from
+
+
 ## Whether a wild monster may step onto `tile`.
 func _is_open(tile: Vector2i) -> bool:
 	return not (_blocked.has(tile) or _stuck.has(tile)) and _region.is_walkable(tile)

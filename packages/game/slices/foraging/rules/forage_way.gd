@@ -1,16 +1,16 @@
 class_name ForageWay
 extends RefCounted
-## Where a wild monster goes for its food or water (#1203): the nearest tile within a reach where
-## it feeds, of the ground it may stand on (a ring could enclose it there and nothing stands
-## there, the ground WildMonsterFeature lets it step onto, WildGround). WildMonsterFeature.chase
-## then finds its way there round whatever stands between (WildWay). It looks as far as a wild
-## monster looks ahead for its way (WildWay.REACH, #1274), so one reach tunes both.
+## Where a wild monster goes for its food or water (#1203): the tile where it feeds that it reaches
+## in the fewest steps over the ground it may step onto (WildWay.nearest), not the nearest as the
+## crow flies, so food behind a wall it can't soon walk round doesn't stall it (#1291).
+## WildMonsterFeature.chase then walks it there, a step at a time. It looks as far as a wild monster
+## looks ahead for its way (WildWay.REACH, #1274), so one reach tunes both.
 
 
-## The tile nearest to `from` within WildWay.REACH where a monster doing `activity`
-## (Schedule.GRAZE or Schedule.DRINK) feeds (`feeds_at`) and may stand (walkable, in neither
-## `blocked` nor `stuck`), the first in Hex.disc's order of the equally near: `from` itself when
-## it feeds there already, or when no such tile is within reach.
+## The tile where a monster at `from` doing `activity` (Schedule.GRAZE or Schedule.DRINK) feeds
+## (`feeds_at`) that it reaches first within WildWay.REACH steps, over walkable ground in neither
+## `blocked` nor `stuck` (WildWay): `from` itself when it feeds there already, or when no such
+## tile is within reach.
 static func target(
 	region: Region,
 	stuck: Dictionary[Vector2i, bool],
@@ -20,13 +20,8 @@ static func target(
 ) -> Vector2i:
 	if feeds_at(region, from, activity):
 		return from
-	# Ring by ring from `from`, so the first that fits is the nearest.
-	for tile: Vector2i in Hex.disc(WildWay.REACH, from):
-		if blocked.has(tile) or stuck.has(tile) or not region.is_walkable(tile):
-			continue
-		if feeds_at(region, tile, activity):
-			return tile
-	return from
+	var way: WildWay = WildWay.new(region, stuck, blocked)
+	return way.nearest(from, func(tile: Vector2i) -> bool: return feeds_at(region, tile, activity))
 
 
 ## Whether a monster doing `activity` feeds on `tile` of `region`: a grazing one on grass, a

@@ -1,9 +1,10 @@
 class_name ForagingFeature
 extends Feature
 ## Wild monsters graze and drink by their schedules (#1203, owner's ground rule, #1199). In an hour
-## its day (ScheduleFeature) gives to grazing, a standing wild monster walks to the nearest grass
-## within reach and eats there until the hour ends; in one it gives to drinking, it walks to the
-## nearest tile beside water within reach and drinks there (ForageWay). It walks there a step at a
+## its day (ScheduleFeature) gives to grazing, a standing wild monster walks to the grass it can
+## reach in the fewest steps and eats there until the hour ends; in one it gives to drinking, it
+## walks to the tile beside water it can reach in the fewest steps and drinks there (ForageWay). It
+## walks there a step at a
 ## time at its own pace, round whatever stands in its way (WildMonsterFeature.chase, WildWay), so
 ## it never steps onto the trail, onto anyone or off ground a ring could enclose it on (WildGround):
 ## it stays catchable. With no grass or water within reach, it stays where it is. One held (hiding,
