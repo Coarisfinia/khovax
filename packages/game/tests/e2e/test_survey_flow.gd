@@ -454,6 +454,8 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 	for id: String in where:
 		if result.is_empty():
 			result = _survey_label(driver, survey, labels, id, where[id])
+	if result.is_empty():
+		result = _survey_label_clears_player(driver, survey, labels, "survey_any")
 	for id: String in where:
 		var _dropped: bool = quests.book.erase(id)
 	survey.show_state()
@@ -469,7 +471,7 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 
 ## Why the Survey's arrow for quest `id` isn't labelled with its name and a pill naming `instance`
 ## (none when it's ""), filled when that's where the player is, the label above the arrow, inside
-## the Survey and clear of the other labels, or "".
+## the Survey and clear of the other labels and the player's circle (#1289), or "".
 func _survey_label(
 	driver: GameDriver,
 	survey: SurveyView,
@@ -505,7 +507,37 @@ func _survey_label(
 		var shown: bool = labels.labels[other].visible
 		if other != id and shown and labels.labels[other].get_rect().intersects(box):
 			return "the Survey's labels for %s and %s overlap" % [id, other]
+	for circle: Rect2 in survey.circle_boxes():
+		if circle.intersects(box):
+			return "the Survey's label for %s covers a player's circle: %s, circle %s" % [
+				id,
+				box,
+				circle,
+			]
 	return ""
+
+
+## Why the label of quest `id`, its arrow moved onto the tile right below the player, where the
+## label would sit over the player's circle, isn't moved clear of it and still shown (#1289), or "".
+func _survey_label_clears_player(
+	driver: GameDriver,
+	survey: SurveyView,
+	labels: SurveyQuestLabels,
+	id: String,
+) -> String:
+	var own: Vector2i = driver.state.player(0).tile
+	var circle: Rect2 = survey.circle_boxes()[0]
+	var below: Vector2i = own + Hex.DIRECTIONS[0]
+	for side: Vector2i in Hex.DIRECTIONS:
+		var at: Vector2 = survey.to_view(own + side) - circle.get_center()
+		var best: Vector2 = survey.to_view(below) - circle.get_center()
+		if at.y - absf(at.x) > best.y - absf(best.x):
+			below = own + side
+	if not circle.has_point(survey.arrow_top(below)):
+		return "the Survey's arrow below the player doesn't reach up to their circle: %s" % circle
+	survey.quest_targets[id] = below
+	labels.show_state()
+	return _survey_label(driver, survey, labels, id, "")
 
 
 ## Why cycling the Survey doesn't lead through every place in turn, each followed, or zooming it
