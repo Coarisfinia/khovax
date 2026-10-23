@@ -9,7 +9,9 @@ extends VBoxContainer
 ## by color alone (#68). One more cycles where the Survey shows. Above them, a line says which
 ## faction holds the instance the player is in, by its symbol and name (#637), or that none does.
 ## The buttons always show here, with no cogwheel (#438): this tab is where a controller reaches
-## them, since the cogwheel on the screen hides with a controller.
+## them, since the cogwheel on the screen hides with a controller. Each shows the glyph of the key
+## or controller button that presses it too (ActionGlyph, #1192): - or the left trigger, = or the
+## right one, and Tab or Back; they share the row's width, so their words leave the glyph room.
 ## Its layout lives in its scene, survey_tab.tscn (#437): this script keeps only what it does.
 
 ## The Survey's choices, whose zoom the tab follows and steps, and whose Survey it reads from.
@@ -35,9 +37,14 @@ func _ready() -> void:
 		view.quest_keeper = shown.quest_keeper
 		view.input = shown.input
 		view.neighbours = shown.neighbours
-	var _farther: int = ($Row/ZoomOut as Button).pressed.connect(zoom_by.bind(-1))
-	var _closer: int = ($Row/ZoomIn as Button).pressed.connect(zoom_by.bind(1))
+	var farther: Button = $Row/ZoomOut as Button
+	var closer: Button = $Row/ZoomIn as Button
+	var _farther: int = farther.pressed.connect(zoom_by.bind(-1))
+	var _closer: int = closer.pressed.connect(zoom_by.bind(1))
 	var _cycled: int = place_button.pressed.connect(cycle)
+	var _out_glyph: ActionGlyph = ActionGlyph.badge(farther, &"survey_zoom_out")
+	var _in_glyph: ActionGlyph = ActionGlyph.badge(closer, &"survey_zoom_in")
+	var _place_glyph: ActionGlyph = ActionGlyph.badge(place_button, &"survey")
 
 
 func _process(_delta: float) -> void:

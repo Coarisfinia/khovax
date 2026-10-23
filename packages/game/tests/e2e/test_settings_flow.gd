@@ -143,10 +143,13 @@ func _check_menu() -> String:
 
 
 ## The `menu` action opens the menu, easing in, and its Settings tab lists every setting, each on
-## Auto.
+## Auto. Before, its open button on a touch screen shows the glyph of the menu's key or button.
 func _open_menu(menu: GameMenu) -> String:
 	if menu.is_open() or menu.opacity() > 0.0:
 		return "the menu shows before it's opened"
+	var glyphs: String = _open_button_glyphs(menu)
+	if not glyphs.is_empty():
+		return glyphs
 	_press(menu, &"menu")
 	if not menu.is_open() or menu.opacity() >= 1.0:
 		return "the menu action doesn't open the menu, or it snaps open"
@@ -173,6 +176,27 @@ func _open_menu(menu: GameMenu) -> String:
 	for setting: String in listed:
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
+	return ""
+
+
+## Why the menu's open button, shown as on a touch screen, doesn't show Escape after a key and
+## Start after a controller's button, or shows a glyph after a touch, or "" (#1192).
+static func _open_button_glyphs(menu: GameMenu) -> String:
+	var button: Button = menu.open_button()
+	var kept: bool = button.visible
+	button.visible = true
+	var buttons: Array[Button] = [button]
+	var shown: Array = FlowInput.glyphs_by_device(
+		func() -> Array: return FlowInput.badges_shown(buttons)
+	)
+	button.visible = kept
+	var wanted: Array = [
+		[InputGlyphs.KEYS[KEY_ESCAPE]],
+		[InputGlyphs.BUTTONS[JOY_BUTTON_START]],
+		[null],
+	]
+	if shown != wanted:
+		return "the menu's open button shows %s after a key, a controller and a touch" % [shown]
 	return ""
 
 

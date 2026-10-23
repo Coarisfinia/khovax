@@ -1,8 +1,10 @@
 class_name RosterHud
 extends Control
 ## The roster at the top left of the screen (#540): one square per monster this machine's player
-## carries, in their carried order (#53), with its species' initials and its place's number, the key
-## that swaps to it (1 to 3; the d-pad's left, up and right on a controller). The companion's square
+## carries, in their carried order (#53), with its species' initials and its place's number in its
+## corner; while a keyboard or a controller is in use (DeviceInUse), the glyph of the key or button
+## that swaps to it stands there instead (1 to 3; the d-pad's left, up and right, #1192). The
+## companion's square
 ## is drawn bold, with a pointer under it, and the reserve's thin and faded, so which is which shows
 ## by a shape too, never by color alone (#68). One that fainted here (#597) is crossed out and
 ## faded further, and can't be swapped to. The fainted one being picked for a revive item (#780,
@@ -28,6 +30,10 @@ const RESERVE_ALPHA: float = 0.55
 const FAINTED_ALPHA: float = 0.35
 const INK_PIXELS: float = 2.0
 const COMPANION_INK_PIXELS: float = 6.0
+## The swap's glyph in a square's top left corner, its side as a share of the square's, and its gap
+## to the square's edges, as a share of the square's.
+const GLYPH_SHARE: float = 0.42
+const GLYPH_INSET: float = 0.03
 
 @export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.
@@ -174,15 +180,43 @@ func _draw_square(place: int) -> void:
 	var baseline: Vector2 = Vector2(area.position.x, area.get_center().y + big * 0.45)
 	var initials: String = _initials.get(shown[place], shown[place].left(2).to_upper())
 	draw_string(font, baseline, initials, HORIZONTAL_ALIGNMENT_CENTER, area.size.x, big, ink)
-	var small: int = int(area.size.x * 0.22)
-	var corner: Vector2 = area.position + Vector2(area.size.x * 0.1, area.size.y * 0.1 + small)
-	draw_string(font, corner, str(place + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, small, ink)
+	_draw_corner(area, place, faded)
 	if chosen:
 		_draw_pointer(area, ink)
 	if has_fainted(place):
 		_draw_cross(area, ink)
 	if place == picked_place:
 		draw_rect(area.grow(GAP * 0.5), Color(Toon.INK), false, COMPANION_INK_PIXELS)
+
+
+## The top left corner of the square of the monster at `place`, faded to `faded`: the glyph of what
+## swaps to it on the device in use, or on touch its place's number.
+func _draw_corner(area: Rect2, place: int, faded: float) -> void:
+	var swapped_by: Texture2D = glyph_of(place)
+	if swapped_by != null:
+		var at: Vector2 = area.position + area.size * GLYPH_INSET
+		ActionGlyph.draw_on(self, swapped_by, Rect2(at, area.size * GLYPH_SHARE), faded)
+		return
+	var small: int = int(area.size.x * 0.22)
+	var corner: Vector2 = area.position + Vector2(area.size.x * 0.1, area.size.y * 0.1 + small)
+	var ink: Color = Color(Toon.INK, faded)
+	draw_string(
+		ThemeDB.fallback_font,
+		corner,
+		str(place + 1),
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		small,
+		ink,
+	)
+
+
+## The glyph of the key or button that swaps to the monster at `place` (from 0) on the device in
+## use, or null on touch, where the square itself is tapped, and past the swap keys.
+static func glyph_of(place: int) -> Texture2D:
+	if place >= LocalInput.SWAP_ACTIONS.size():
+		return null
+	return InputGlyphs.of(LocalInput.SWAP_ACTIONS[place], DeviceInUse.device)
 
 
 ## Whether the monster at `place` (from 0) fainted here (#597).

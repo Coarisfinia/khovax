@@ -26,9 +26,6 @@ const INK_PIXELS: float = 3.0
 ## The key's or button's glyph on the top left corner, its side as a share of the button's. Half
 ## of it stands out over the button's left edge, so it never covers the icon.
 const GLYPH_SHARE: float = 0.36
-## How far in from the glyph's edges its fog backdrop lies, as a share of its side, so the open
-## parts of its shape (the letter cut out of a key) show the fog, not the world behind.
-const GLYPH_BACKDROP_INSET: float = 0.14
 
 ## The InputMap action the button presses.
 @export var action: StringName = &""
@@ -84,8 +81,7 @@ func _draw_glyph(area: Rect2, faded: float) -> void:
 		return
 	var side: float = area.size.x * GLYPH_SHARE
 	var corner: Rect2 = Rect2(area.position - Vector2(side / 2.0, 0.0), Vector2(side, side))
-	draw_rect(corner.grow(-side * GLYPH_BACKDROP_INSET), Color(FogView.FOG, faded))
-	draw_texture_rect(pressed_with, corner, false, Color(Toon.INK, faded))
+	ActionGlyph.draw_on(self, pressed_with, corner, faded)
 
 
 ## The cooldown circle, while one runs, and the number in the corner.

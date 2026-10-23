@@ -2,7 +2,8 @@ class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it, gameplay
 ## first, then system (_build_sheet). The `menu` action (Escape, a controller's Start, #779) opens
-## and closes it, and on touch screens a small button does; the close button at its top right and
+## and closes it, and on touch screens a small button does, showing the glyph of that key or button
+## while a keyboard or a controller is in use there (#1192); the close button at its top right and
 ## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
@@ -85,6 +86,7 @@ func _ready() -> void:
 	var more_tabs: Array[Node] = get_children()
 	_open_button = _with_icon(button(OPEN_TEXT, toggle), OPEN_ICON)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
+	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
 	_build_sheet(more_tabs)
 
@@ -293,6 +295,11 @@ func _pause() -> SettingChoice:
 ## The Quests tab, found under the sheet rather than kept in a field of its own.
 func quests_tab() -> QuestsTab:
 	return _sheet.find_child("Quests", true, false) as QuestsTab
+
+
+## The button at the top that opens the menu on touch screens.
+func open_button() -> Button:
+	return _open_button
 
 
 ## The button at the top right that closes the menu, found like the Quests tab.

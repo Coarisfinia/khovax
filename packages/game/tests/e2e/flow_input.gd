@@ -33,3 +33,38 @@ static func left_button(at: Vector2, device: int) -> InputEventMouseButton:
 	press.position = at
 	press.pressed = true
 	return press
+
+
+## What `shown` returns (the glyphs a hint shows) after a key, a controller's button and a touch,
+## each making its device the one in use (DeviceInUse, #1192), in that order; the device in use
+## before is kept.
+static func glyphs_by_device(shown: Callable) -> Array:
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	var key: InputEventKey = InputEventKey.new()
+	key.keycode = KEY_SHIFT
+	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
+	pad.button_index = JOY_BUTTON_MISC1
+	var after: Array = []
+	for used: InputEvent in [key, pad, InputEventScreenTouch.new()]:
+		DeviceInUse.heard(used)
+		after.append(shown.call())
+	DeviceInUse.device = kept
+	return after
+
+
+## The glyph badge on `button` (ActionGlyph), or null.
+static func badge_of(button: Button) -> ActionGlyph:
+	for child: Node in button.get_children():
+		if child is ActionGlyph:
+			return child as ActionGlyph
+	return null
+
+
+## The glyphs the badges on `buttons` show now, each following the device in use first.
+static func badges_shown(buttons: Array[Button]) -> Array:
+	var glyphs: Array = []
+	for button: Button in buttons:
+		var badge: ActionGlyph = badge_of(button)
+		badge.follow()
+		glyphs.append(badge.texture)
+	return glyphs

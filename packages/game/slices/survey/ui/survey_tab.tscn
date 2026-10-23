@@ -21,6 +21,7 @@ alignment = 1
 
 [node name="ZoomOut" type="Button" parent="Row"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Zoom out"
 
 [node name="ZoomText" type="Label" parent="Row"]
@@ -29,7 +30,9 @@ vertical_alignment = 1
 
 [node name="ZoomIn" type="Button" parent="Row"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Zoom in"
 
 [node name="Place" type="Button" parent="Row"]
 layout_mode = 2
+size_flags_horizontal = 3

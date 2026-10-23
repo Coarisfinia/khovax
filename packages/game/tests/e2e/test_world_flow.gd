@@ -791,7 +791,8 @@ func _check_two_of_one_species() -> String:
 ## it. A tap on the toad's square swaps to it in the local player's next command without starting
 ## the touch stick, and a left click on the finch's swaps to the finch; while the game hears no
 ## input (the menu is open) a tap swaps nothing. Swapped to the toad, the roster shows it as the
-## companion, and once it faints, as fainted (#597).
+## companion, and once it faints, as fainted (#597). Its squares show the glyphs of what swaps to
+## them for the device in use (#1192).
 func _check_roster(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree, ROSTER_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -803,6 +804,8 @@ func _check_roster(tree: SceneTree) -> String:
 	roster.lay_out_in(ROSTER_SCREEN)
 	var result: String = _roster_shown(main, roster)
 	if result.is_empty():
+		result = _roster_glyphs()
+	if result.is_empty():
 		result = _roster_swaps(main, roster, driver)
 	if result.is_empty():
 		result = await _check_revive_item(main, driver)
@@ -810,6 +813,26 @@ func _check_roster(tree: SceneTree) -> String:
 	await tree.process_frame
 	SaveStore.remove(ROSTER_PROFILE)
 	return result
+
+
+## The first two squares show the glyphs of 1 and 2 after a key, of the d-pad's left and up after a
+## controller's button, and none after a touch, where the square itself is tapped and its number
+## shows; a fourth place has no swap, so no glyph.
+static func _roster_glyphs() -> String:
+	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _roster_glyphs_shown())
+	var wanted: Array = [
+		[InputGlyphs.KEYS[KEY_1], InputGlyphs.KEYS[KEY_2], null],
+		[InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_LEFT], InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_UP], null],
+		[null, null, null],
+	]
+	if shown != wanted:
+		return "the roster's squares show %s after a key, a controller and a touch" % [shown]
+	return ""
+
+
+## The glyphs the roster's first two squares and a fourth place show now.
+static func _roster_glyphs_shown() -> Array:
+	return [RosterHud.glyph_of(0), RosterHud.glyph_of(1), RosterHud.glyph_of(3)]
 
 
 ## The roster shows the finch and the toad at the top left, apart, the finch as the companion, and

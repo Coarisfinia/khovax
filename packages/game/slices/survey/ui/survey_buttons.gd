@@ -9,7 +9,8 @@ extends Control
 ## taken, so neither the touch stick nor a pinch starts under it. With a controller the cogwheel
 ## is hidden entirely, since it can't be pointed at: controller players use the menu's Survey tab.
 ## Each button carries a symbol, never color alone (#68): a screen with a block in its corner, a
-## lens with a plus or a minus, and the cogwheel.
+## lens with a plus or a minus, and the cogwheel. While the keyboard is in use (DeviceInUse), each
+## shown button's top left corner shows the glyph of its key too (Tab, = and -, #1192).
 
 ## A button's side as a share of the screen's shorter side, and never smaller than this, so it
 ## stays big enough to hit with a thumb on a phone. The cogwheel is smaller, as a share of that.
@@ -35,6 +36,9 @@ const COG_ICON: Texture2D = preload("res://assets/game-icons/cog.svg")
 const LENS_ICON: Texture2D = preload("res://assets/game-icons/magnifying-glass.svg")
 const SCREEN_ICON: Texture2D = preload("res://assets/game-icons/resize.svg")
 const ICON_INSET: float = 0.2
+## The key's glyph on a button's top left corner, its side as a share of the button's; half of it
+## stands out past the button's left edge, so it never covers the icon.
+const GLYPH_SHARE: float = 0.45
 ## How far a controller's stick has to move to count as using the controller, past any drift.
 const STICK_USED: float = 0.5
 
@@ -113,6 +117,11 @@ func _draw() -> void:
 			_draw_screen(rect)
 		else:
 			_draw_lens(rect, action == &"survey_zoom_in")
+		var pressed_with: Texture2D = glyph_of(action)
+		if pressed_with != null:
+			var side: float = rect.size.x * GLYPH_SHARE
+			var glyph: Rect2 = Rect2(rect.position - Vector2(side / 2.0, 0.0), Vector2(side, side))
+			ActionGlyph.draw_on(self, pressed_with, glyph)
 
 
 ## Shows the buttons if they're hidden and hides them if they show, turning the cogwheel.
@@ -179,6 +188,12 @@ func _cog_middle(screen: Vector2, place: SurveyChoice.Place) -> Vector2:
 	var right: float = SurveyChoice.MARGIN + corner if left else screen.x - SurveyChoice.MARGIN
 	var upper: float = SurveyChoice.MARGIN if top else screen.y - SurveyChoice.MARGIN - corner
 	return Vector2(right - INSET - _cog_side / 2.0, upper + INSET + _cog_side / 2.0)
+
+
+## The glyph of the key that presses `action` on the device in use, or null on touch, where its
+## button itself is tapped.
+static func glyph_of(action: StringName) -> Texture2D:
+	return InputGlyphs.of(action, DeviceInUse.device)
 
 
 ## Where `action`'s button is on the screen.

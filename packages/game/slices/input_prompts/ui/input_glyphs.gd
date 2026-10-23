@@ -6,6 +6,12 @@ extends RefCounted
 ## without one, and touch, whose hints are the buttons tapped, show none.
 
 const KEYS: Dictionary[Key, Texture2D] = {
+	KEY_1: preload("res://assets/kenney-input-prompts/keyboard_1.svg"),
+	KEY_2: preload("res://assets/kenney-input-prompts/keyboard_2.svg"),
+	KEY_3: preload("res://assets/kenney-input-prompts/keyboard_3.svg"),
+	KEY_EQUAL: preload("res://assets/kenney-input-prompts/keyboard_equals.svg"),
+	KEY_MINUS: preload("res://assets/kenney-input-prompts/keyboard_minus.svg"),
+	KEY_TAB: preload("res://assets/kenney-input-prompts/keyboard_tab.svg"),
 	KEY_ENTER: preload("res://assets/kenney-input-prompts/keyboard_enter.svg"),
 	KEY_ESCAPE: preload("res://assets/kenney-input-prompts/keyboard_escape.svg"),
 	KEY_E: preload("res://assets/kenney-input-prompts/keyboard_e.svg"),
@@ -18,10 +24,17 @@ const BUTTONS: Dictionary[JoyButton, Texture2D] = {
 	JOY_BUTTON_B: preload("res://assets/kenney-input-prompts/controller_button_b.svg"),
 	JOY_BUTTON_X: preload("res://assets/kenney-input-prompts/controller_button_x.svg"),
 	JOY_BUTTON_Y: preload("res://assets/kenney-input-prompts/controller_button_y.svg"),
+	JOY_BUTTON_BACK: preload("res://assets/kenney-input-prompts/controller_button_back.svg"),
+	JOY_BUTTON_START: preload("res://assets/kenney-input-prompts/controller_button_start.svg"),
+	JOY_BUTTON_DPAD_LEFT: preload("res://assets/kenney-input-prompts/controller_dpad_left.svg"),
+	JOY_BUTTON_DPAD_UP: preload("res://assets/kenney-input-prompts/controller_dpad_up.svg"),
+	JOY_BUTTON_DPAD_RIGHT: preload("res://assets/kenney-input-prompts/controller_dpad_right.svg"),
 	JOY_BUTTON_DPAD_DOWN: preload("res://assets/kenney-input-prompts/controller_dpad_down.svg"),
 }
 ## A trigger or stick, by its axis.
 const AXES: Dictionary[JoyAxis, Texture2D] = {
+	JOY_AXIS_TRIGGER_LEFT:
+	preload("res://assets/kenney-input-prompts/controller_trigger_left.svg"),
 	JOY_AXIS_TRIGGER_RIGHT:
 	preload("res://assets/kenney-input-prompts/controller_trigger_right.svg"),
 }
