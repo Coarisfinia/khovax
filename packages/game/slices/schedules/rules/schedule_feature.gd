@@ -39,10 +39,18 @@ func start(state: GameState) -> void:
 ## activity for the hour of the day, or Schedule.NONE when it has none or has fainted.
 func activity_of(state: GameState, entity_id: int) -> int:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
-	if not _days.has(entity_id) or wild.is_fainted(entity_id):
+	if wild.is_fainted(entity_id):
+		return Schedule.NONE
+	return activity_at(entity_id, DayClock.hour_now(state))
+
+
+## What the wild monster with this entity id does at `hour` o'clock by its schedule (a Schedule
+## activity), or Schedule.NONE when it has none.
+func activity_at(entity_id: int, hour: int) -> int:
+	if not _days.has(entity_id):
 		return Schedule.NONE
 	var day: Array = _days[entity_id]
-	var activity: int = day[DayClock.hour_now(state)]
+	var activity: int = day[hour]
 	return activity
 
 
