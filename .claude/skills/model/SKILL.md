@@ -67,8 +67,9 @@ a second model could use goes into the library or a generic tool, never into one
     landing on smooth paths, the body bobbing and rolling over the planted legs, the head
     countering the bob; `planted=False` swings the legs freely, for a run too fast for planted
     legs at the clip rate) with the phases `WALK` (four beats), `TROT` and `GALLOP`, the
-    quadruped set (`idle`, `attack` with its forepaws stepping out, `hit`, `faint` with its legs
-    folding under it, `channel`: a long attack held for as long as it lasts, as a wind-up
+    quadruped set (`idle`; the one-shots posed as anticipation, action, overshoot and settle,
+    #1074: `attack` with its forepaws stepping out, `hit` with a shiver and an ear flick, `faint`
+    with its legs folding under it and a moving hold; `channel`: a long attack held for as long as it lasts, as a wind-up
     `ChannelStart`, the looping `Channel` and a release `ChannelEnd` the game plays in turn,
     #1158), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
     `legs.plant`) and `animate` (fills, follows, plants the paws, keys every bone on every frame,
@@ -81,7 +82,9 @@ a second model could use goes into the library or a generic tool, never into one
     bake reaches the export. Where a planted leg can't reach, the body comes down onto it; past a
     share of its reach a leg eases toward straight (soft IK) rather than snapping.
   - `motion` (#1071): `fill` (sparse keys to every frame, smooth and clamped, across the seam
-    on a loop) and `follow` (overlap and follow-through: each chained bone trails its parent
+    on a loop; a key may name the ease of the move into it, per channel too, from `EASES`:
+    `quart` and `expo` snap, `back` overshoots, `elastic` wobbles, #1074), `Shiver` (a
+    one-shot clip's tremble, growing and dying away) and `follow` (overlap and follow-through: each chained bone trails its parent
     through a small second-order spring, so parts don't all start and stop at once).
   - `ground`: ground contact (`lowest`, `settle`, `report`).
   - `wisps` (#1103): pieces hovering around a body on their own, each on a bone hung from the
@@ -174,7 +177,9 @@ a second model could use goes into the library or a generic tool, never into one
   Looping clips start and end on the same pose, and the walk speed matches how fast the game
   moves the entity (no foot sliding).
 - **Fluid, not stiff (the owner's pain point, #1075, #1071):** never key every bone on the same frames so every part
-  starts and stops at once. Build clips as `clips.Clip`s through `clips.animate`, which fills
+  starts and stops at once. A one-shot clip is pose to pose with timing (#1074): an
+  anticipation, a fast action (a snappy ease), an overshoot and a slow settle, and a hold that
+  keeps moving rather than a frozen last pose. Build clips as `clips.Clip`s through `clips.animate`, which fills
   them in (`motion.fill`), lets the chains trail (`motion.follow`, with the body plan's chains,
   like `clips.FOLLOW`) and cycles the loops' curves so a loop never eases to a stop at its seam.
   A four-legged walk is four beats (`clips.WALK`), not a trot. Paws stay planted (`legs`,

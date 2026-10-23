@@ -5,7 +5,9 @@ A pose is clips' {bone: (rx, ry, rz)} (plus "root_loc"); a clip here is one pose
 
 - `fill` interpolates the keys to every frame with smooth, clamped tangents (no overshoot at a
   key, like Blender's auto-clamped handles), across the seam on a loop, so a loop never eases
-  to a stop at its ends.
+  to a stop at its ends. A key may name how the move into it runs (an ease, #1074): a snappy
+  ease-out for a lunge, one that overshoots and comes back, or a wobble that dies down, like
+  Blender's per-key interpolation and easing.
 - `follow` makes each named bone trail its parent: the parent's turn (and the root's shift,
   seen from the bone) goes through a small second-order spring (frequency, damping, response),
   and the bone keeps the difference, so it starts late and overshoots a little. Down a chain
@@ -30,13 +32,62 @@ WARM_CYCLES = 6
 FADE_FRAMES = 6
 
 
-def _tangents(times, values, loop):
+def _expo(s):
+    return (1.0 - (1.0 + 8.0 * s) * math.exp(-8.0 * s)) / (1.0 - 9.0 * math.exp(-8.0))
+
+
+def _elastic(s):
+    return 1.0 - (1.0 + 7.0 * s) * math.exp(-7.0 * s) * math.cos(2.5 * math.pi * s)
+
+
+def _rested(curve, speed):
+    """`curve` with its `speed` at its end taken out (s^3 - s^2 is 0 at both ends, and leaves
+    with no speed and ends with one), so it comes to rest on its key."""
+    return lambda s: curve(s) - speed * (s ** 3 - s ** 2)
+
+
+# How a move into a key runs (#1074), from 0 at the key before to 1 at this one. Each leaves its
+# key with no speed but gathers it within the first frames, so a snap from a held pose doesn't
+# pop (a jolt from standstill reads as one at the clip rate, and the motion check's jitter fails
+# it), and each comes to rest on its key, so the move after it starts from rest: "quart" leaves
+# fast and slows into the key (an ease-out: a lunge, a recoil), "expo" likewise but snappier,
+# "back" swings about a tenth past the key and comes back (an overshoot), and "elastic" wobbles
+# about it as it dies down, like a spring let go (an ear's flick; sparingly).
+EASES = {
+    "quart": lambda s: 1.0 - (1.0 - s) ** 4 * (1.0 + 4.0 * s),
+    "expo": _rested(_expo, 64.0 * math.exp(-8.0) / (1.0 - 9.0 * math.exp(-8.0))),
+    "back": lambda s: 1.0 - (1.0 - s) ** 2 * (1.0 + 2.0 * s - 7.0 * s * s),
+    "elastic": _rested(_elastic, 8.0 * math.exp(-7.0) * 2.5 * math.pi),
+}
+
+
+def ease_of(key, name):
+    """The ease of the move into `key` ((frame, pose) or (frame, pose, ease)) for channel `name`:
+    None for the smooth default. A key's ease is a name of EASES, or {channel: name} with "*" for
+    every channel it doesn't name."""
+    ease = key[2] if len(key) > 2 else None
+    if isinstance(ease, dict):
+        ease = ease.get(name, ease.get("*"))
+    if ease is not None and ease not in EASES:
+        raise ValueError("no ease %r (motion.EASES)" % ease)
+    return ease
+
+
+def _tangents(times, values, loop, eased=None):
     """A tangent per key: the slope across its neighbours, flat at a peak or a dip (and at a
-    one-shot clip's ends), so the curve never swings past a key."""
+    one-shot clip's ends), so the curve never swings past a key. Flat too at either end of an
+    eased move (`eased`, per move from each key to the next): an ease leaves its key at speed
+    and comes to rest on the next, so a smooth move next to it meets it at rest."""
     count = len(values)
     period = times[-1] - times[0]
+    eased = eased or [False] * (count - 1)
     out = []
     for index in range(count):
+        before_eased = eased[index - 1] if index > 0 else (loop and eased[-1])
+        after_eased = eased[index] if index < count - 1 else (loop and eased[0])
+        if before_eased or after_eased:
+            out.append(0.0)
+            continue
         if loop:
             # The last key is the first one again: neighbours wrap around the seam.
             before = index - 1 if index > 0 else count - 2
@@ -68,32 +119,69 @@ def _hermite(t0, t1, v0, v1, m0, m1, t):
             + (-2 * s ** 3 + 3 * s ** 2) * v1 + (s ** 3 - s ** 2) * span * m1)
 
 
-def _channel(times, values, frames, loop):
+def _channel(times, values, frames, loop, eases):
+    """One channel's value on every frame: through the keys' `eases` (per move, the ease into its
+    later key, or None for the smooth default)."""
     if len(times) == 1:
         return [values[0]] * len(frames)
-    slopes = _tangents(times, values, loop)
+    slopes = _tangents(times, values, loop, [ease is not None for ease in eases])
     out, key = [], 0
     for frame in frames:
         while key < len(times) - 2 and frame > times[key + 1]:
             key += 1
-        out.append(_hermite(times[key], times[key + 1], values[key], values[key + 1], slopes[key],
-                            slopes[key + 1], frame))
+        ease = eases[key]
+        if ease is None:
+            out.append(_hermite(times[key], times[key + 1], values[key], values[key + 1], slopes[key],
+                                slopes[key + 1], frame))
+        else:
+            share = EASES[ease]((frame - times[key]) / (times[key + 1] - times[key]))
+            out.append(values[key] + (values[key + 1] - values[key]) * share)
     return out
 
 
 def fill(poses, loop):
-    """Every frame from the first key to the last, each channel interpolated through its keys. A
-    bone or axis a key leaves out is at rest there. Returns [(frame, pose)]."""
-    times = [frame for frame, _pose in poses]
+    """Every frame from the first key to the last, each channel interpolated through its keys
+    (`poses`: [(frame, pose)], a key optionally naming its ease, (frame, pose, ease), see
+    ease_of). A bone or axis a key leaves out is at rest there. Returns [(frame, pose)]."""
+    times = [key[0] for key in poses]
     frames = list(range(times[0], times[-1] + 1))
-    names = sorted({name for _frame, pose in poses for name in pose})
+    names = sorted({name for key in poses for name in key[1]})
     filled = [{} for _frame in frames]
     for name in names:
-        axes = [_channel(times, [pose.get(name, (0.0, 0.0, 0.0))[axis] for _frame, pose in poses], frames, loop)
+        eases = [ease_of(key, name) for key in poses[1:]]
+        axes = [_channel(times, [key[1].get(name, (0.0, 0.0, 0.0))[axis] for key in poses], frames, loop, eases)
                 for axis in range(3)]
         for index, pose in enumerate(filled):
             pose[name] = tuple(axes[axis][index] for axis in range(3))
     return list(zip(frames, filled))
+
+
+class Shiver:
+    """A shiver (#1074): `bones` tremble from frame `start` to `end`, quickly growing and dying
+    away, about `hz` times a second and at most `amplitude` radians, as waves at unrelated rates
+    on two axes, each bone out of step with the others. No noise generator, so a rebuild gives
+    the same file. For one-shot clips only: it fades to nothing at both ends rather than meeting
+    itself at a loop's seam."""
+
+    def __init__(self, bones, start, end, amplitude, hz=7.0):
+        self.bones, self.start, self.end, self.amplitude, self.hz = bones, start, end, amplitude, hz
+
+    def __call__(self, poses, fps):
+        """Adds the shiver to `poses` ([(frame, pose)], every frame, as `fill` gives them)."""
+        for frame, pose in poses:
+            if not self.start < frame < self.end:
+                continue
+            u = (frame - self.start) / (self.end - self.start)
+            # Up to its peak a quarter of the way in, then dying away (u (1 - u)^3, peaking at 1).
+            envelope = u * (1.0 - u) ** 3 / (0.25 * 0.75 ** 3) * self.amplitude
+            t = 2.0 * math.pi * self.hz * (frame - self.start) / fps
+            for index, bone in enumerate(self.bones):
+                phase = 1.3 * index
+                x, y, z = pose.get(bone, (0.0, 0.0, 0.0))
+                bend = (math.sin(t + phase) + 0.4 * math.sin(1.71 * t + 2.0 * phase)) / 1.4
+                sway = math.sin(0.83 * t + phase + 1.1)
+                pose[bone] = (x + envelope * bend, y, z + envelope * sway)
+        return poses
 
 
 def spring(targets, frequency, damping, response, fps, loop):
