@@ -618,11 +618,109 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	driver.input.focus = focus
 	mark.show_state()
 	var marked: bool = mark.piece.visible and mark.piece.tile == driver.state.entity(focus).tile
+	var keys_shown: String = _check_focus_keys(main, focus)
 	driver.input.focus = Command.NO_FOCUS
 	mark.show_state()
 	if not marked or mark.piece.visible:
 		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
+	if not keys_shown.is_empty():
+		return keys_shown
 	return _check_focus_picked(main, driver)
+
+
+## The focus keys' hint (#1210): the glyphs of focus_previous and focus_next stand left and right
+## of the focused wild monster's figure on the screen, Q and R with a keyboard, the shoulder buttons
+## with a controller, and none on touch, where a monster is tapped.
+func _check_focus_keys(main: Node, focus: int) -> String:
+	var keys: FocusKeys = main.get_node("Hud/FocusKeys") as FocusKeys
+	# The device in use is static and outlives a flow: an earlier flow's touch leaves it on touch.
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	var hinted: int = keys.hinted()
+	DeviceInUse.device = kept
+	if hinted != focus:
+		return "the focus keys' hint didn't stand by the focused wild monster"
+	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _focus_keys_shown(keys))
+	var expected: Array = [
+		[InputGlyphs.KEYS[KEY_Q], InputGlyphs.KEYS[KEY_R]],
+		[
+			InputGlyphs.BUTTONS[JOY_BUTTON_LEFT_SHOULDER],
+			InputGlyphs.BUTTONS[JOY_BUTTON_RIGHT_SHOULDER],
+		],
+		[],
+	]
+	if shown != expected:
+		return "the focus keys' glyphs weren't Q and R, the shoulder buttons and none on touch"
+	var figure: HexPiece = keys.wild_view.figures[focus]
+	var feet: Vector2 = keys.camera.unproject_position(figure.global_position)
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	keys.show_state()
+	DeviceInUse.device = kept
+	var left: Rect2 = keys.shown.get(&"focus_previous", Rect2())
+	var right: Rect2 = keys.shown.get(&"focus_next", Rect2())
+	if keys.shown.size() != 2 or left.end.x > feet.x or right.position.x < feet.x:
+		return "the focus keys' glyphs didn't stand left and right of the focused wild monster"
+	return _check_glyph_backdrops()
+
+
+## Every hint draws its glyph through ActionGlyph.draw_on, on fog in the glyph's own outline (owner,
+## on #1212 and #1240): no fog shows past a glyph's edge, as a square or a rounded tile behind it
+## did twice. A backdrop pixel more opaque than a clear pixel of the glyph must lie inside its
+## shape: with shape on both sides of it, along its row and along its column.
+func _check_glyph_backdrops() -> String:
+	var glyphs: Array[Texture2D] = []
+	glyphs.append_array(InputGlyphs.KEYS.values())
+	glyphs.append_array(InputGlyphs.BUTTONS.values())
+	glyphs.append_array(InputGlyphs.AXES.values())
+	glyphs.append_array(InputGlyphs.GESTURES.values())
+	glyphs.append_array(InputGlyphs.POINTING.values())
+	for glyph: Texture2D in glyphs:
+		var backdrop: Texture2D = ActionGlyph.glyph_backdrop(glyph)
+		if backdrop == null:
+			return "a glyph's backdrop couldn't be made: %s" % glyph.resource_path
+		if _fog_past_outline(glyph.get_image(), backdrop.get_image()):
+			return "fog shows past a glyph's outline: %s" % glyph.resource_path
+	return ""
+
+
+## Whether `fog` is more opaque than `image`'s clear pixels anywhere outside `image`'s shape.
+static func _fog_past_outline(image: Image, fog: Image) -> bool:
+	if image.is_compressed():
+		var _plain: Error = image.decompress()
+	for y: int in image.get_height():
+		for x: int in image.get_width():
+			var alpha: float = image.get_pixel(x, y).a
+			var past: bool = fog.get_pixel(
+				x,
+				y,
+			).a > alpha + 0.02 and alpha < ActionGlyph.SHAPE_ALPHA
+			if past and not _enclosed(image, x, y):
+				return true
+	return false
+
+
+## Whether `image`'s shape lies on both sides of (`x`, `y`), along its row and its column.
+static func _enclosed(image: Image, x: int, y: int) -> bool:
+	var sides: Array[bool] = [false, false, false, false]
+	for at: int in image.get_width():
+		if image.get_pixel(at, y).a >= ActionGlyph.SHAPE_ALPHA:
+			sides[0] = sides[0] or at < x
+			sides[1] = sides[1] or at > x
+	for at: int in image.get_height():
+		if image.get_pixel(x, at).a >= ActionGlyph.SHAPE_ALPHA:
+			sides[2] = sides[2] or at < y
+			sides[3] = sides[3] or at > y
+	return not sides.has(false)
+
+
+## The glyphs the focus keys' hint shows now, from the left.
+static func _focus_keys_shown(keys: FocusKeys) -> Array:
+	keys.show_state()
+	var glyphs: Array = []
+	for action: StringName in FocusKeys.ACTIONS:
+		if keys.shown.has(action):
+			glyphs.append(keys.glyphs[action])
+	return glyphs
 
 
 ## Tapping or clicking a wild monster focuses it (#486): picking at its figure's place on the screen

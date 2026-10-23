@@ -17,6 +17,8 @@ const KEYS: Dictionary[Key, Texture2D] = {
 	KEY_ENTER: preload("res://assets/kenney-input-prompts/keyboard_enter.svg"),
 	KEY_ESCAPE: preload("res://assets/kenney-input-prompts/keyboard_escape.svg"),
 	KEY_E: preload("res://assets/kenney-input-prompts/keyboard_e.svg"),
+	KEY_Q: preload("res://assets/kenney-input-prompts/keyboard_q.svg"),
+	KEY_R: preload("res://assets/kenney-input-prompts/keyboard_r.svg"),
 	KEY_T: preload("res://assets/kenney-input-prompts/keyboard_t.svg"),
 	KEY_V: preload("res://assets/kenney-input-prompts/keyboard_v.svg"),
 	KEY_X: preload("res://assets/kenney-input-prompts/keyboard_x.svg"),
@@ -28,6 +30,10 @@ const BUTTONS: Dictionary[JoyButton, Texture2D] = {
 	JOY_BUTTON_Y: preload("res://assets/kenney-input-prompts/controller_button_y.svg"),
 	JOY_BUTTON_BACK: preload("res://assets/kenney-input-prompts/controller_button_back.svg"),
 	JOY_BUTTON_START: preload("res://assets/kenney-input-prompts/controller_button_start.svg"),
+	JOY_BUTTON_LEFT_SHOULDER:
+	preload("res://assets/kenney-input-prompts/controller_button_left_shoulder.svg"),
+	JOY_BUTTON_RIGHT_SHOULDER:
+	preload("res://assets/kenney-input-prompts/controller_button_right_shoulder.svg"),
 	JOY_BUTTON_DPAD_LEFT: preload("res://assets/kenney-input-prompts/controller_dpad_left.svg"),
 	JOY_BUTTON_DPAD_UP: preload("res://assets/kenney-input-prompts/controller_dpad_up.svg"),
 	JOY_BUTTON_DPAD_RIGHT: preload("res://assets/kenney-input-prompts/controller_dpad_right.svg"),

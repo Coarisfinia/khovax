@@ -63,6 +63,7 @@
 [ext_resource type="Script" path="res://slices/codex/look/place_tie.gd" id="place_tie"]
 [ext_resource type="PackedScene" path="res://slices/codex/ui/codex_book.tscn" id="56_codex_book"]
 [ext_resource type="Script" path="res://slices/companions/look/crown_bind_view.gd" id="57_crown_bind"]
+[ext_resource type="Script" path="res://slices/wild_monsters/ui/focus_keys.gd" id="58_focus_keys"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -310,6 +311,19 @@ script = ExtResource("28_quest_list")
 keeper = NodePath("../../QuestKeeper")
 survey = NodePath("../../SurveyChoice")
 roster = NodePath("../RosterHud")
+
+[node name="FocusKeys" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "camera", "wild_view")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("58_focus_keys")
+driver = NodePath("../../Driver")
+camera = NodePath("../../Camera3D")
+wild_view = NodePath("../../Instance/WildMonsterView")
 
 [node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
 layout_mode = 3
