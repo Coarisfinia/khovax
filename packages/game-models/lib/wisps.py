@@ -123,6 +123,20 @@ class Gather:
             out.append((target, turn))
         return out
 
+    def frames_at(self, angle, first, last):
+        """The frames from `first` to `last` (whole or not, beyond the clip's own too) where the
+        ring's turn comes round to `angle` (radians), for something that keeps time with it."""
+        if not self.spin:
+            return []
+        lap = 2.0 * math.pi / abs(self.spin)
+        frame = self.start + (angle - self.turn) / self.spin
+        frame -= math.floor((frame - first) / lap) * lap
+        found = []
+        while frame <= last:
+            found.append(frame)
+            frame += lap
+        return found
+
     def spot(self, index, count, frame, ring):
         center, turn = ring
         angle = 2.0 * math.pi * index / count + self.turn + self.spin * (frame - self.start)

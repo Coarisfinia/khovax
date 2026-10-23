@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, metrics, muzzle, parts, quadruped, scene, surface, symmetry, weights, wisps  # noqa: E402
+from lib import attachments, body, clips, eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -132,6 +132,13 @@ CHANNEL_CROWN = [
     wisps.Gather("ChannelEnd", 1, None, 4, 20, CROWN_CENTER, CROWN_RADIUS, spin=CHANNEL_SPIN, turn=HELD,
                  bone=CROWN_BONE, rise=CROWN_RISE),
 ]
+# The brow crystal pulses on every turn of the crown while it binds (#1224): it flares a few frames
+# after the ring closes around it (ChannelStart's arrival) and again each time the ring comes round
+# to that turn, swelling from its base on a bone of its own (lib/pulse.py). A pulse runs on from one
+# clip into the next one the game plays, so each clip takes the beats either side of its frames.
+BROW, BROW_BONE = (0.0, -0.78, 1.62), pulse.PREFIX + "brow"
+BROW_PULSE, BROW_RISE, BROW_FALL = 1.5, 5, 15
+BROW_FLARE = CHANNEL_SPIN * (CHANNEL_CROWN[0].arrive + 3 - CHANNEL_CROWN[0].start)
 
 
 def mirror(point, sign):
@@ -253,10 +260,11 @@ def flank_veins(skin, name, top, sign, rune, glow):
     return made
 
 
-def magic(skin, mats):
+def magic(skin, mats, brow):
     """The mana: a crest of crystals with glowing veins running from them, crystals on the brow,
     shoulders and tail tip, runes on the shoulders, ribs and haunches, rune bands on the
-    legs, and wisps drifting around the body."""
+    legs, and wisps drifting around the body. The brow crystal grows from `brow`, on its own bone
+    so it can pulse."""
     glow = mats["glow"]
     made = []
     # The crest's crystals, each with the rune its veins flow around on the flank, if any.
@@ -271,8 +279,7 @@ def magic(skin, mats):
                                       height * 0.45, glow, bone))
             made += flank_veins(skin, "Vein.%d.%d" % (index, sign), guess, sign,
                                 None if rune is None else RUNES[rune], glow)
-    made.append(parts.crystal("Brow", surface.onto(skin, (0.0, -0.78, 1.62), -0.02), (0.0, 0.45, 1.0),
-                              0.17, glow, "head"))
+    made.append(parts.crystal("Brow", brow, (0.0, 0.45, 1.0), 0.17, glow, BROW_BONE))
     for sign in (0, 1, -1):
         made.append(parts.crystal("TailTip.%d" % sign, (0.03 * sign, 1.58, 0.70), (0.3 * sign, 1.0, -0.2),
                                   0.26 - 0.08 * abs(sign), glow, "tail_04"))
@@ -301,13 +308,18 @@ def build(out):
     mats = palette(COLORS)
     skin = wolf_body()
     skin.data.materials.append(mats["fur"])
-    pieces = head_parts(skin, mats) + fur(mats) + paws(mats) + magic(skin, mats)
+    brow = surface.onto(skin, BROW, -0.02)
+    pieces = head_parts(skin, mats) + fur(mats) + paws(mats) + magic(skin, mats, brow)
     symmetry.check(pieces)
     rig = quadruped.armature("ManaWolfRig", WOLF)
     points(rig, pieces)
     drifting = wisps.Wisps(rig, WISPS, [CROWN, *CHANNEL_CROWN])
+    channel = clips.channel(CHANNEL_FRAMES)
+    beats = {crown.clip: crown.frames_at(BROW_FLARE, 1 - BROW_FALL, channel[crown.clip].keys[-1][0] + BROW_RISE)
+             for crown in CHANNEL_CROWN}
+    flaring = pulse.Pulse(rig, "brow", brow, "head", beats, BROW_PULSE, BROW_RISE, BROW_FALL)
     scene.apply_scale([rig, skin] + pieces, SCALE)
-    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names),
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", BROW_BONE, *drifting.names),
                  reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
     clips.animate(rig, {
         "Idle": clips.idle(),
@@ -318,9 +330,9 @@ def build(out):
         "Attack": clips.attack(),
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
-        **clips.channel(CHANNEL_FRAMES),
+        **channel,
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
-        overlays=[drifting.drift])
+        overlays=[drifting.drift, flaring.beat])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))

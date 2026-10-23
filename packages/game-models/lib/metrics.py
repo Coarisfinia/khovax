@@ -13,6 +13,8 @@ those out of its REFERENCE.
     lines, passed = metrics.check(rig, [skin], REFERENCE)
 """
 
+from . import pulse
+
 # How far a ratio may drift from its reference, as a share of it (a proportion within 5 %, the
 # blockout gate of the sources on #1072).
 TOLERANCE = 0.05
@@ -30,7 +32,10 @@ def _joint(rig, name):
 
 
 def _owned(rig, meshes, bones):
-    """The rest positions of the vertices each bone in `bones` moves most."""
+    """The rest positions of the vertices each bone in `bones` moves most, a pulsing part's bone
+    (pulse.Pulse) counting as its parent's, whose part it is."""
+    bones = set(bones) | {bone.name for bone in rig.data.bones
+                          if bone.name.startswith(pulse.PREFIX) and bone.parent is not None and bone.parent.name in bones}
     to_rig = rig.matrix_world.inverted()
     points = []
     for obj in meshes:
