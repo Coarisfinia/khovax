@@ -4,5 +4,5 @@
 	"id": "pond_chest",
 	"name": "The chest by the pond",
 	"starts_on": { "condition": "entered", "piece": "pond" },
-	"steps": [{ "condition": "opened", "ends": "pond_chest" }]
+	"steps": [{ "condition": "opened", "instance": "lumwen_hoal", "ends": "pond_chest" }]
 }

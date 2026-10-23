@@ -151,6 +151,8 @@ func run(tree: SceneTree) -> String:
 ## this player's domination, handed out by the bus, finishes it, and it's saved and loads back; a
 ## chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
+	# In the glade, where the content's quests count (#1282); the runner puts the playground back.
+	GameDriver.start_instance = FlowSteps.GLADE
 	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -264,7 +266,7 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, quests: QuestTr
 			return "the starting instance's beach isn't sand"
 		var distance: int = Hex.distance(trigger.tile, from)
 		nearest = distance if beach and (nearest < 0 or distance < nearest) else nearest
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, driver.local_instance_name())
 	if (nearest < 0 or not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "the first domination isn't marked over the starting instance's nearest beach tile"
@@ -289,7 +291,7 @@ func _check_marked_monster(
 	var nearest: int = Hex.distance(state.entity(wild.monsters[0]).tile, from)
 	for entity_id: int in wild.monsters:
 		nearest = mini(nearest, Hex.distance(state.entity(entity_id).tile, from))
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, driver.local_instance_name())
 	if (not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "after the beach, the first domination isn't marked over the nearest wild monster"
@@ -581,39 +583,46 @@ func _check_territory(
 ## The instance a quest's step counts in shows as a pill under its name (#794), in the list and on
 ## the Quests tab alike: the territory quest `quest`'s names the forest, only outlined with an
 ## arrow while this player is in the glade, filled once they're in the forest; the pond's side
-## quest, whose step counts anywhere, has none.
+## quest's names the glade (#1282), filled while they're there, outlined once they're in the forest.
 func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> String:
 	var tab: QuestsTab = (list.get_parent().get_node("GameMenu") as GameMenu).quests_tab()
+	var glade: String = FlowSteps.GLADE
+	var forest: String = FlowSteps.FOREST
 	list.show_quests()
 	tab.refresh()
-	if list.pill("pond_chest").visible or tab.pills["pond_chest"].visible:
-		return "the pond's side quest, which counts anywhere, shows an instance's pill"
-	var result: String = _check_pill(list.pill(quest), false)
-	result = result if not result.is_empty() else _check_pill(tab.pills[quest], false)
+	var result: String = _check_pill(list.pill(quest), forest, false)
+	result = result if not result.is_empty() else _check_pill(tab.pills[quest], forest, false)
+	result = result if not result.is_empty() else _check_pill(list.pill("pond_chest"), glade, true)
+	if result.is_empty():
+		result = _check_pill(tab.pills["pond_chest"], glade, true)
 	var there: Elsewhere = Elsewhere.new()
 	there.where = FlowSteps.FOREST
 	list.driver = there
 	tab.driver = there
 	list.show_quests()
 	tab.refresh()
-	result = result if not result.is_empty() else _check_pill(list.pill(quest), true)
-	result = result if not result.is_empty() else _check_pill(tab.pills[quest], true)
+	result = result if not result.is_empty() else _check_pill(list.pill(quest), forest, true)
+	result = result if not result.is_empty() else _check_pill(tab.pills[quest], forest, true)
+	if result.is_empty():
+		result = _check_pill(list.pill("pond_chest"), glade, false)
 	list.driver = driver
 	tab.driver = driver
 	there.free()
 	return result
 
 
-## Why `pill` doesn't name the forest as `here` says (filled, or outlined with its arrow), or "".
-func _check_pill(pill: QuestPill, here: bool) -> String:
+## Why `pill` doesn't name the instance `where` as `here` says (filled, or outlined with its
+## arrow), or "".
+func _check_pill(pill: QuestPill, where: String, here: bool) -> String:
 	var style: StyleBoxFlat = pill.get_theme_stylebox("panel") as StyleBoxFlat
 	var label: Label = pill.get_node("Row/Name") as Label
-	if (not pill.visible or pill.instance_id != FlowSteps.FOREST or pill.here != here
-			or label.text != Realms.name_of(FlowSteps.FOREST) or style.draw_center != here
+	if (not pill.visible or pill.instance_id != where or pill.here != here
+			or label.text != Realms.name_of(where) or style.draw_center != here
 			or (pill.get_node("Row/Arrow") as Control).visible == here):
-		return "the territory quest's pill shows %s (here: %s), not the forest, here: %s" % [
+		return "a quest's pill shows %s (here: %s), not %s, here: %s" % [
 			label.text,
 			pill.here,
+			where,
 			here,
 		]
 	return ""
@@ -1022,7 +1031,7 @@ func _check_branching() -> String:
 ## marker each, and not as a whole.
 func _check_fork_marked(state: GameState, quests: QuestTracker) -> String:
 	var from: Vector2i = state.player(0).tile
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0)
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, FlowSteps.GLADE)
 	var pieces: Array[String] = ["pond", "thicket"]
 	for index: int in pieces.size():
 		var tiles: Array[Vector2i] = []
@@ -1255,7 +1264,7 @@ static func _obtaining(items: Dictionary[String, int]) -> Array[QuestFact]:
 
 ## The fact of this player entering the region piece `piece`.
 static func _entering(piece: String) -> Array[QuestFact]:
-	return [QuestFact.new(QuestStep.ENTERED, piece)]
+	return [QuestFact.new(QuestStep.ENTERED, piece, FlowSteps.GLADE)]
 
 
 ## Counts `facts` on `quests`, in order, as the quests' keeper does, giving what finishing one
@@ -1310,17 +1319,17 @@ static func _reached(events: Array[RefCounted]) -> Array[PlaceReached]:
 	return reached
 
 
-## Raises `event` in a tick and has the bus hand it out at once.
+## Raises `event` in a tick, in the instance this player is in, and has the bus hand it out at once.
 func _emit(driver: GameDriver, bus: EventBus, event: RefCounted) -> void:
-	var events: Array[RefCounted] = [event]
-	driver.ticked.emit(driver.state.tick, events)
-	bus.flush()
+	_emit_in(driver, bus, event, driver.local_instance_name())
 
 
 ## Hands `event` to the bus as one the instance `instance_name` raised (#769), then flushes it.
 func _emit_in(driver: GameDriver, bus: EventBus, event: RefCounted, instance_name: String) -> void:
 	driver.world.instance(instance_name).events.append(event)
-	_emit(driver, bus, event)
+	var events: Array[RefCounted] = [event]
+	driver.ticked.emit(driver.state.tick, events)
+	bus.flush()
 
 
 ## Steps count up one fact at a time: only the species a step asks for counts, a step at its count
@@ -1335,7 +1344,7 @@ func _check_counted() -> String:
 	var two: QuestDefinition = QuestDefinition.parse("toads_then_chest", TWO_STEPS, content.species)
 	quests.book[two.id] = two
 	var at_beach: Array[QuestFact] = _gain(["tikazzir", "ombulumo"], 0)
-	at_beach.append(QuestFact.new(QuestStep.REACHED, "beach"))
+	at_beach.append(QuestFact.new(QuestStep.REACHED, "beach", FlowSteps.GLADE))
 	var applied: String = _count(quests, at_beach, profile)
 	var progress: QuestProgress = quests.progress.get(two.id)
 	var first: QuestProgress = quests.progress.get("first_domination")
@@ -1432,7 +1441,9 @@ func _check_settled() -> String:
 
 ## Every instance a quest's start, step or choice names is an instance blueprint that exists: the
 ## quests can't check it as they read, since the blueprints come after them (#851). A quest naming
-## one that doesn't exist reads, and this check finds it.
+## one that doesn't exist reads, and this check finds it. Every step and choice of the game's quests
+## names the instance it counts in, its target (owner, #1282: "each quest step should have a
+## target/location"): a quest whose step names none, as the flows' own quests may, is refused.
 func _check_instances() -> String:
 	var content: QuestContent = QuestContent.load_quests()
 	if not content.problem.is_empty():
@@ -1441,6 +1452,18 @@ func _check_instances() -> String:
 		var unknown: String = _unknown_instance(quest)
 		if not unknown.is_empty():
 			return "%s names %s, which isn't an instance blueprint" % [quest.id, unknown]
+		var unplaced: int = _unplaced_step(quest)
+		if unplaced >= 0:
+			return "%s's step %d names no instance it counts in (#1282)" % [quest.id, unplaced]
+	var anywhere: QuestDefinition = QuestDefinition.parse("enter_thicket", ENTER_THICKET, {})
+	if not anywhere.problem.is_empty() or _unplaced_step(anywhere) != 0:
+		return "a quest whose step names no instance wasn't found: " + anywhere.problem
+	var placed: QuestDefinition = QuestDefinition.parse("enter_glade", ENTER_GLADE, {})
+	if _unplaced_step(placed) >= 0:
+		return "a step entering an instance, which names it, was taken for one naming none"
+	# Neither counts in one instance, so neither shows a pill (#794).
+	if anywhere.steps[0].counts_in() != "" or placed.steps[0].counts_in() != "":
+		return "a step counting anywhere, or entering an instance, counts in one"
 	var astray: QuestDefinition = QuestDefinition.parse(
 		"enter_glade",
 		ENTER_GLADE.replace("\"%s\"" % FlowSteps.GLADE, "\"nowhere\""),
@@ -1449,6 +1472,15 @@ func _check_instances() -> String:
 	if not astray.problem.is_empty() or _unknown_instance(astray) != "nowhere":
 		return "a quest naming an instance that doesn't exist wasn't found: " + astray.problem
 	return ""
+
+
+## The index of the first step of `quest` that, or one of whose choices, names no instance, or -1.
+static func _unplaced_step(quest: QuestDefinition) -> int:
+	for index: int in quest.steps.size():
+		for step: QuestStep in quest.steps[index].triggers():
+			if step.instance.is_empty():
+				return index
+	return -1
 
 
 ## The first instance a start, step or choice of `quest` names that isn't an instance blueprint, or
@@ -1528,12 +1560,13 @@ static func _load_written(files: Dictionary[String, String]) -> QuestContent:
 	return FlowSteps.written_content(QuestContent.load_quests, files) as QuestContent
 
 
-## The facts of this player dominating a monster of each of `species`, then opening `chests` chests.
+## The facts of this player dominating a monster of each of `species`, then opening `chests` chests,
+## all in the glade, where the content's quests count (#1282).
 func _gain(species: Array[String], chests: int) -> Array[QuestFact]:
 	var facts: Array[QuestFact] = []
 	for one: String in species:
-		facts.append_array(QuestFacts.of(_dominated(one), 0, ""))
-	var opened: QuestFact = QuestFact.new(QuestStep.OPENED)
+		facts.append_array(QuestFacts.of(_dominated(one), 0, FlowSteps.GLADE))
+	var opened: QuestFact = QuestFact.new(QuestStep.OPENED, "", FlowSteps.GLADE)
 	for _chest: int in chests:
 		facts.append(opened)
 	return facts

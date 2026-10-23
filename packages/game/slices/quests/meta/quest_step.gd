@@ -96,7 +96,8 @@ var place: String = ""
 ## instance.
 var piece: String = ""
 ## The instance an `entered` step without a piece asks for, by its blueprint name; on any other
-## step, the one it counts in only (#769), or "" for anywhere.
+## step, the one it counts in only (#769), or "" for anywhere, which only the flows' own quests
+## use: every step of the game's quests names one (owner, #1282; the quest flow checks it).
 var instance: String = ""
 ## The answer an `answered` step asks for (#636); its fields are "" on any other step.
 var answer: QuestAnswer = QuestAnswer.new()
