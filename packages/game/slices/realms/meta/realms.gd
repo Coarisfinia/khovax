@@ -35,7 +35,7 @@ static func named(realm_id: String) -> Realm:
 ## The name the player reads for a realm or an instance with the id `id`: its id in words (#909),
 ## "Lumwen Hoal" for lumwen_hoal.
 static func name_of(id: String) -> String:
-	return id.capitalize()
+	return id.replace("_", " ").capitalize()
 
 
 ## The first realm, in file name order, that draws the instance `instance_id`, or null.
