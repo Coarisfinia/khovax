@@ -11,7 +11,7 @@ const NONE_TEXT: String = "No monster selected"
 const UNKNOWN_TEXT: String = "Its species' stats can't be read"
 const TYPES_HEADING: String = "Types:"
 ## Its progress toward the next level: what it has, what that level needs, and the level.
-const PROGRESS_TEXT: String = "Progress: %d of %d dominations to level %d"
+const PROGRESS_TEXT: String = "Progress: %d of %d to level %d"
 ## Which line names its types, shown with their family badges.
 const TYPES_LINE: int = 2
 

@@ -1,9 +1,10 @@
 class_name ProfileTie
 extends Node
 ## Ties this machine's player's profile (ProfileHolder) to the running session (#831): every
-## domination of that player and their loot from every chest opened (#124) and every wild monster
-## felled (#629) goes into the profile at once; what it means to their quests is counted by the
-## quests' own tie (QuestTie, #817). What the profile asks the world to do, like handing over the
+## domination of that player, every wild monster their companion defeats (#1256), and their loot
+## from every chest opened (#124) and every wild monster felled (#629) goes into the profile at
+## once; what it means to their quests is counted by the quests' own tie (QuestTie, #817). What the
+## profile asks the world to do, like handing over the
 ## territory of a territory quest it finished (#638), waits in its outbox (#771) and goes in this
 ## player's next commands, so the world changes in a tick, the same on every machine and in the
 ## replay; it's sent again at the start of every session until the world acknowledges it
@@ -25,6 +26,7 @@ var _sent: Array[String] = []
 
 func _ready() -> void:
 	bus.subscribe(WildMonsterDominated, _on_event)
+	bus.subscribe(SpecialStruck, _on_event)
 	for loot_event: Script in LootRolls.events():
 		bus.subscribe(loot_event, _on_event)
 	bus.subscribe(RequestApplied, _on_applied)
@@ -72,7 +74,8 @@ func _on_applied(event: RefCounted) -> void:
 
 ## What this machine's player gains from `event`: their domination, or their own roll from an
 ## opened chest (every player rolls their own, owner, #124), from loot found on the ground (#203)
-## or from a wild monster felled (#629); empty when it isn't theirs.
+## or from a wild monster felled (#629), or their companion's defeat of one (#1256); empty when it
+## isn't theirs.
 func _gain_of(event: RefCounted) -> Gain:
 	var gain: Gain = Gain.new()
 	if (event is WildMonsterDominated
@@ -80,11 +83,20 @@ func _gain_of(event: RefCounted) -> Gain:
 		var dominated: WildMonsterDominated = event as WildMonsterDominated
 		gain.dominated_species.append(dominated.species)
 		gain.dominated_short_ids.append(dominated.short_id)
+	elif event is SpecialStruck:
+		gain.defeats = defeats_in(event, input.slot)
 	else:
 		var rolls: Dictionary[int, Dictionary] = LootRolls.of(event)
 		if rolls.has(input.slot):
 			_add_loot(gain, rolls[input.slot])
 	return gain
+
+
+## How many wild monsters `event` says the companion of the player in `slot` defeated (#1256): one
+## for its special felling one, none otherwise.
+static func defeats_in(event: RefCounted, slot: int) -> int:
+	var struck: SpecialStruck = event as SpecialStruck
+	return 1 if struck != null and struck.felled and struck.slot == slot else 0
 
 
 ## Adds a roll of loot, {item id: amount}, to `gain`: its gear (#694), and the rest as materials.

@@ -1118,6 +1118,9 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 		]
 	if not felled[0].felled or not wild.is_fainted(first) or wild.monsters.has(first):
 		return "the special didn't fell the wild monster"
+	# Whose companion felled it, which the profile counts as their defeat (#1256).
+	if felled[0].slot != 0 or ProfileTie.defeats_in(felled[0], 0) != 1:
+		return "the felling special doesn't say it was the player's: slot %d" % felled[0].slot
 	# Its look (#431): the damage rises from the monster, and says in words that it fainted.
 	var shown: String = DamageNumbersView.text_of(felled[0])
 	if shown != "-%d\n%s" % [damage, DamageNumbersView.FAINTED_TEXT]:
