@@ -26,6 +26,12 @@ const NARROW: float = 0.07
 ## How far the halo stands out of the eye toward the camera, as a share of its width, so the head
 ## hides it only when it is between the eye and the camera.
 const STAND_OUT: float = 0.35
+## How far an eye has to face the camera for its halo to show, and to show whole (the cosine of the
+## angle between where it looks and the camera): an eye turned away, like the far one past the
+## snout's bridge in a three-quarter view, shrinks its halo into itself, so the head in front of it
+## hides it rather than it glowing past the head's outline (#1171).
+const FACING_HIDDEN: float = 0.3
+const FACING_WHOLE: float = 0.75
 ## How a leaning shapes the halo (#1063), never by colour alone (#68): how fast it fades from its
 ## middle to its edge (higher fades sooner), how wide it is, and how bright its core, each as a
 ## share of the glow without a leaning. Harmony's is round and steady (it never flickers);
@@ -105,7 +111,8 @@ func advance(seconds: float) -> void:
 
 
 ## Puts a halo on each of the model's eyes, as bright and as wide as the glow shows now, in its
-## colour and shaped by its leaning, standing out of the eye toward the camera.
+## colour and shaped by its leaning, standing out of the eye toward the camera, each as far and as
+## wide as its eye faces the camera.
 func place() -> void:
 	var eyes: Array[Vector3] = ModelPoints.eyes(_model)
 	while get_child_count() < eyes.size():
@@ -120,17 +127,27 @@ func place() -> void:
 	_material.set_shader_parameter(&"color", color)
 	_material.set_shader_parameter(&"strength", glow * (SHARP_CORE if sharp else 1.0))
 	_material.set_shader_parameter(&"fade", fade)
-	var width: float = lerpf(NARROW, WIDE, glow) * (SHARP_WIDTH if sharp else 1.0)
+	_place_halos(eyes, glow > 0.0, lerpf(NARROW, WIDE, glow) * (SHARP_WIDTH if sharp else 1.0))
+
+
+## Puts a halo `width` wide on each of `eyes`, standing out toward the camera, both as far as its
+## eye
+## faces the camera; one turned away hides.
+func _place_halos(eyes: Array[Vector3], glowing: bool, width: float) -> void:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var size: float = _model.global_basis.get_scale().x
+	var looks: Array[Vector3] = ModelPoints.eye_looks(_model)
 	for index: int in eyes.size():
 		var halo: MeshInstance3D = get_child(index) as MeshInstance3D
 		var toward: Vector3 = Vector3.ZERO
+		var facing: float = 1.0
 		if camera != null:
 			toward = (camera.global_position - eyes[index]).normalized()
-		halo.global_position = eyes[index] + toward * width * STAND_OUT * size
-		halo.scale = Vector3.ONE * width
-		halo.visible = glow > 0.0
+			facing = smoothstep(FACING_HIDDEN, FACING_WHOLE, looks[index].dot(toward))
+		halo.visible = glowing and facing > 0.0
+		if halo.visible:
+			halo.global_position = eyes[index] + toward * width * STAND_OUT * facing * size
+			halo.scale = Vector3.ONE * width * facing
 
 
 func _halo_mesh() -> MeshInstance3D:

@@ -40,8 +40,9 @@ def _dense(points, step):
     return out
 
 
-def tube(name, points, radius, mat):
-    """A round tube along `points`, capped, as a mesh."""
+def tube(name, points, radius, mat, shares=None):
+    """A round tube along `points`, capped, as a mesh; with `shares`, each point's radius is that
+    share of `radius`."""
     data = bpy.data.curves.new(name, "CURVE")
     data.dimensions = "3D"
     data.bevel_depth = radius
@@ -49,8 +50,9 @@ def tube(name, points, radius, mat):
     data.use_fill_caps = True
     spline = data.splines.new("POLY")
     spline.points.add(len(points) - 1)
-    for spline_point, point in zip(spline.points, points):
+    for index, (spline_point, point) in enumerate(zip(spline.points, points)):
         spline_point.co = (point.x, point.y, point.z, 1.0)
+        spline_point.radius = shares[index] if shares else 1.0
     obj = bpy.data.objects.new(name, data)
     bpy.context.collection.objects.link(obj)
     scene.select_only(obj)
@@ -61,11 +63,37 @@ def tube(name, points, radius, mat):
     return obj
 
 
-def vein(body, name, guide, radius, mat, lift=None):
-    """A glowing vein along the guide points, hugging the body."""
+# The share of its radius a tapered vein keeps at its tip: thin enough to read as a point, wide
+# enough that the tube's last ring doesn't collapse into one vertex.
+TIP = 0.12
+
+
+def _tapering(points, taper):
+    """Each point's share of the radius along a vein whose last `taper` of its length narrows to a
+    point, smoothly, so it fades into the skin rather than stopping blunt."""
+    lengths = [0.0]
+    for a, b in zip(points, points[1:]):
+        lengths.append(lengths[-1] + (b - a).length)
+    total = max(lengths[-1], 1e-9)
+    shares = []
+    for length in lengths:
+        left = min(1.0, (total - length) / (total * taper))
+        shares.append(TIP + (1.0 - TIP) * left * left * (3.0 - 2.0 * left))
+    return shares
+
+
+def vein(body, name, guide, radius, mat, lift=None, taper=0.0):
+    """A glowing vein along the guide points, hugging the body. With `taper`, the last share of
+    its length narrows to a point (a vein's loose end); without, it keeps its width (a rune's
+    stroke)."""
     lift = radius * 0.6 if lift is None else lift
     points = [onto(body, point, lift) for point in _dense(guide, radius * 6)]
-    return tube(name, points, radius, mat)
+    if not taper:
+        return tube(name, points, radius, mat)
+    # A narrowing end sinks with its width, so its tip lies on the skin rather than above it.
+    shares = _tapering(points, taper)
+    points = [onto(body, point, lift * share) for point, share in zip(points, shares)]
+    return tube(name, points, radius, mat, shares)
 
 
 def rune(body, name, glyph, center, right, up, size, radius, mat):

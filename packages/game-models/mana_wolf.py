@@ -84,6 +84,9 @@ REFERENCE = {
 SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, hinge=(-0.85, 1.35), taper=0.67,
                      stop_depth=0.08, lip=0.04, jaw_depth=0.6, jaw_width=1.1, chin=1.05)
 
+# Where the tail's form starts, inside the haunches.
+TAIL_ROOT = (0.0, 0.70, 1.05)
+
 # How tall the wolf stands at the hips: the faint sinks it this far.
 HIP_HEIGHT = 0.69
 
@@ -141,7 +144,10 @@ def wolf_body():
     # A wedge of a head: a flat skull, and the snout's brow, stop and upper muzzle.
     blob.ellipsoid((0.0, -0.78, 1.47), (0.17, 0.22, 0.14))
     SNOUT.upper(blob)
-    blob.limb(list(reversed(WOLF.tail)), [0.10, 0.15, 0.13, 0.06])
+    # One bushy tail, thickest a third of the way out, as thick as the beads it replaces were at
+    # their fullest: an even row, never beads (#1171). It
+    # starts inside the haunches, so its root melts into them without a crease.
+    blob.tube([TAIL_ROOT, *reversed(WOLF.tail)], [0.12, 0.12, 0.175, 0.155, 0.065])
     for sign in (1, -1):
         blob.ellipsoid((0.1 * sign, -0.84, 1.41), (0.08, 0.11, 0.075))
         front = [mirror(p, sign) for p in WOLF.front_leg]
@@ -183,7 +189,7 @@ def points(rig, pieces):
     """The attachment points (#1007): the eyes, and its one centre of attack, the mouth between
     the fangs, which moves with the head."""
     sides = {side: [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)] for side in ("L", "R")}
-    attachments.add(rig, {side: (eyes.spot(eye), "head") for side, eye in sides.items()},
+    attachments.add(rig, {side: (eyes.spot(eye), "head", eyes.look(eye)) for side, eye in sides.items()},
                     [((0.0, -1.14, 1.32), "head")])
 
 
@@ -210,28 +216,53 @@ def fur(mats):
     return made
 
 
+# The runes on the shoulder, the ribs and the haunch: glyph, centre (on the left flank) and size.
+RUNES = (("eye", (0.27, -0.33, 0.95), 0.2), ("chevrons", (0.26, 0.06, 0.99), 0.18), ("fork", (0.29, 0.52, 0.86), 0.2))
+# How much of a vein's length narrows to its tip, and how far its branches pass a rune's edge.
+VEIN_TAPER = 0.45
+RUNE_CLEARANCE = 0.05
+
+
+def flank_veins(skin, name, top, sign, rune, glow):
+    """The veins running from a crest crystal at `top` down one flank, tapering out at their ends
+    (#1171). Above a rune they fork around it, a branch passing each of its sides, so no vein runs
+    into its strokes and reads as ending in a loop; without one, a single vein runs down."""
+    start = (0.05 * sign, top[1], top[2] - 0.02)
+    if rune is None:
+        return [surface.vein(skin, name, [start, (0.2 * sign, top[1] + 0.05, top[2] - 0.2),
+                                          (0.27 * sign, top[1] + 0.02, top[2] - 0.42)], 0.0065, glow,
+                             taper=VEIN_TAPER)]
+    _glyph, (x, y, z), size = rune
+    half = size / 2
+    mid = (0.21 * sign, y, z + half + RUNE_CLEARANCE * 1.6)
+    made = []
+    for side, (suffix, radius) in ((-1, ("", 0.0065)), (1, (".b", 0.005))):
+        # Out to beside the rune's top corner first, then down its side.
+        aside = y + side * (half + RUNE_CLEARANCE)
+        guide = [mid, ((x + 0.01) * sign, aside, z + half), ((x + 0.01) * sign, aside, z - size * 0.2)]
+        made.append(surface.vein(skin, name + suffix, ([start] if side < 0 else []) + guide, radius, glow,
+                                 taper=VEIN_TAPER))
+    return made
+
+
 def magic(skin, mats):
     """The mana: a crest of crystals with glowing veins running from them, crystals on the brow,
     shoulders and tail tip, runes on the shoulders, ribs and haunches, rune bands on the
     legs, and wisps drifting around the body."""
     glow = mats["glow"]
     made = []
-    crest = (((0.0, -0.28, 1.33), 0.50, "spine_02"), ((0.0, -0.02, 1.30), 0.42, "spine_02"),
-             ((0.0, 0.24, 1.26), 0.34, "spine_01"), ((0.0, 0.48, 1.24), 0.24, "hips"))
-    for index, (guess, height, bone) in enumerate(crest):
+    # The crest's crystals, each with the rune its veins flow around on the flank, if any.
+    crest = (((0.0, -0.28, 1.33), 0.50, "spine_02", 0), ((0.0, -0.02, 1.30), 0.42, "spine_02", 1),
+             ((0.0, 0.24, 1.26), 0.34, "spine_01", None), ((0.0, 0.48, 1.24), 0.24, "hips", 2))
+    for index, (guess, height, bone, rune) in enumerate(crest):
         base = surface.onto(skin, guess, -0.03)
         made.append(parts.crystal("Crest.%d" % index, base, (0.0, 0.35, 1.0), height, glow, bone))
         for sign in (1, -1):
             side_base = surface.onto(skin, (0.13 * sign, guess[1] + 0.06, guess[2] - 0.06), -0.02)
             made.append(parts.crystal("Flank.%d.%d" % (index, sign), side_base, (0.6 * sign, 0.3, 1.0),
                                       height * 0.45, glow, bone))
-            # Veins running from the crystal down the flank, forking once.
-            start = (0.05 * sign, guess[1], guess[2] - 0.02)
-            mid = (0.2 * sign, guess[1] + 0.05, guess[2] - 0.2)
-            made.append(surface.vein(skin, "Vein.%d.%d" % (index, sign),
-                                     [start, mid, (0.27 * sign, guess[1] + 0.02, guess[2] - 0.42)], 0.0065, glow))
-            made.append(surface.vein(skin, "Vein.%d.%d.b" % (index, sign),
-                                     [mid, (0.26 * sign, guess[1] + 0.14, guess[2] - 0.3)], 0.005, glow))
+            made += flank_veins(skin, "Vein.%d.%d" % (index, sign), guess, sign,
+                                None if rune is None else RUNES[rune], glow)
     made.append(parts.crystal("Brow", surface.onto(skin, (0.0, -0.78, 1.62), -0.02), (0.0, 0.45, 1.0),
                               0.17, glow, "head"))
     for sign in (0, 1, -1):
@@ -241,8 +272,7 @@ def magic(skin, mats):
         side = "L" if sign == 1 else "R"
         # The same axes on both sides: the right flank shows the left one's runes mirrored.
         right = (0.0, 1.0, 0.0)
-        for glyph, center, size in (("eye", (0.27, -0.33, 0.95), 0.2), ("chevrons", (0.26, 0.06, 0.99), 0.18),
-                                    ("fork", (0.29, 0.52, 0.86), 0.2)):
+        for glyph, center, size in RUNES:
             made += surface.rune(skin, "Rune.%s.%s" % (glyph, side), glyph, mirror(center, sign), right,
                                  (0.0, 0.0, 1.0), size, 0.009, glow)
         for leg, joint, bone in ((WOLF.front_leg, 1, "forearm"), (WOLF.hind_leg, 2, "hock")):
