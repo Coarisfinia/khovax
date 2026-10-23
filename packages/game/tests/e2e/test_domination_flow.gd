@@ -858,7 +858,7 @@ func _check_enraged_chase() -> String:
 	var _far: Entity = state.add_entity(1, Vector2i(0, -4))
 	var paces: Array[int] = []
 	for rage: int in WildMonsterFeature.MOST_RAGE + 1:
-		paces.append(WildMonsterFeature.paced(WildMonsterFeature.STEP_TICKS, rage))
+		paces.append(WildPace.paced(WildMonsterFeature.STEP_TICKS, rage))
 	for rage: int in WildMonsterFeature.MOST_RAGE:
 		if paces[rage + 1] >= paces[rage]:
 			return "rage doesn't make a wild monster faster: its paces are %s" % [paces]
@@ -888,7 +888,7 @@ func _check_enraged_strikes() -> String:
 	_wild(state).enrage(state, monster, 0)
 	# The companion joins its player first, away from the monster.
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
-	var pace: int = WildMonsterFeature.paced(WildAttackFeature.STRIKE_TICKS, 1)
+	var pace: int = WildPace.paced(WildAttackFeature.STRIKE_TICKS, 1)
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, pace, Vector2i(-1, 0))
 	if strikes.size() != 1 or strikes[0].target_id != player.id:
 		return "the enraged monster didn't strike the player first, once in %d ticks" % pace
