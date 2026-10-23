@@ -7,9 +7,11 @@ from mathutils import Matrix, Vector
 
 from . import parts
 
-def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0):
+def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0):
     """An eye on the body near `guess`, of radius `size`, looking between the surface's normal
-    there and `forward`. `brow` angles the ridge over it down toward the snout (radians).
+    there and `forward`. `brow` angles the ridge over it down toward the snout (radians), and
+    `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
+    whose top edge stays above the eye.
     `mats` needs "dark", "glow", "light" and "skin" (the brow). Returns its pieces, all weighted to
     `bone`."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
@@ -27,12 +29,18 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
 
     rotation = turn.to_euler()
     iris = min(1.0, almond + 0.15)
+    # A smaller ridge is thinner, but keeps most of its width and depth, and its top edge a little
+    # above where the full one has it, over the eye's rim, so the eye never shows above its brow,
+    # also with the head turned (the owner, on #1249; check_brows.py).
+    keep = 0.5 + 0.5 * brow_size
+    ridge = (1.45 * keep, 0.32 * brow_size, 0.7 * keep)
+    lift = 0.4 * (1.0 - brow_size)
     pieces = [
         ("eyeball", "uv_sphere", at(0, 0, 0), (1.0, almond, 0.75), rotation, "dark"),
         ("iris", "uv_sphere", at(0, 0, 0.5), (0.7, 0.7 * iris, 0.28), rotation, "glow"),
         ("pupil", "uv_sphere", at(0, 0, 0.66), (0.16, 0.55 * iris, 0.16), rotation, "dark"),
         ("glint", "uv_sphere", at(0.25, 0.25 * almond, 0.74), (0.15, 0.15, 0.1), rotation, "light"),
-        ("brow", "uv_sphere", at(-0.05, 0.75 * almond + 0.12, 0.3), (1.45, 0.32, 0.7),
+        ("brow", "uv_sphere", at(-0.05, 0.75 * almond + 0.12 + lift, 0.3), ridge,
          (turn @ Matrix.Rotation(brow * outer, 3, "Z")).to_euler(), "skin"),
     ]
     made = []

@@ -1,0 +1,15 @@
+// The pup's pounce (#1220). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "vynnimu_nimmi_nummu",
+	"kind": "special",
+	"name": "Nimmi-nummu",
+	"description": "The ${MONSTER:vynnimu} yips, crouches and pounces on its target, paws first.",
+	"codex": {
+		"entry": "The yip a pup gives as it crouches, then the soft thump as it lands on what it pounced on. Dominators said it of any small beast that throws its whole weight at a foe twice its size.",
+		"gloss": "yip, then thump"
+	},
+	"power": 2000,
+	"cooldown_seconds": 10,
+	"strike_type": "mana",
+	"path": "harmony"
+}

@@ -80,6 +80,14 @@ The assets this game uses, with their authors and licenses. Generated from each 
   Blender script that builds and exports `mana_gems.glb` (#1218)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
 
+## Mana pup
+
+- **Files:** `assets/mana-pup/`
+- **Author:** the khovax contributors (built in this repository)
+- **Source:** `packages/game-models/mana_pup.py` on the shared model library `packages/game-models/lib/`, Blender
+  scripts that build, rig, animate and export `mana_pup.glb` (#1220)
+- **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
 ## Mana wolf
 
 - **Files:** `assets/mana-wolf/`

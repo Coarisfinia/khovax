@@ -1013,17 +1013,24 @@ func _check_pack_saved() -> String:
 	return ""
 
 
-## The content's Vynakiir, wolves that hunt in packs, band into one in Ivenwhal Wudhen, their home.
+## The content's Vynakiir, wolves that hunt in packs, band into one in Ivenwhal Wudhen, their home,
+## and so do their pups, the Vynnimu (#1220), each with its own kind: both are `pack_species`.
 func _check_content_packs() -> String:
 	var state: GameState = InstanceBlueprints.create("ivenwhal_wudhen", SEED, 1)
 	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
 	if packs == null or packs.leaders.is_empty():
 		return "the Vynakiir of Ivenwhal Wudhen don't band into a pack"
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var banded: Dictionary[String, bool] = {}
 	for member: int in packs.leaders:
 		var leader: int = packs.leaders[member]
-		if wild.species_of(member) != "vynakiir" or wild.species_of(leader) != "vynakiir":
-			return "a pack in Ivenwhal Wudhen isn't of Vynakiir"
+		var species: String = wild.species_of(member)
+		if not species in ["vynakiir", "vynnimu"] or wild.species_of(leader) != species:
+			return "a pack in Ivenwhal Wudhen isn't of Vynakiir or of Vynnimu alone"
+		banded[species] = true
+	for species: String in ["vynakiir", "vynnimu"]:
+		if not banded.has(species):
+			return "the %s of Ivenwhal Wudhen don't band into a pack" % species
 	return ""
 
 

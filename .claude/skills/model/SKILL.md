@@ -55,7 +55,8 @@ a second model could use goes into the library or a generic tool, never into one
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends
     taper out to a point (`taper`, #1171), and `rune`s (`GLYPHS`).
   - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid), where
-    it looks out from (`spot`) and which way (`look`).
+    it looks out from (`spot`) and which way (`look`); a smaller brow with `brow_size`, whose top
+    edge stays over the eye (#1249).
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
     shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the
@@ -132,6 +133,11 @@ a second model could use goes into the library or a generic tool, never into one
   rest of the mesh, the frame, and the wisp and body bone it's between; it fails when a wisp's
   faces cross the body's, a wisp sits inside it, or the gap falls below the tolerance
   (`lib/clearance.py`).
+- **The brow check (#1249):** `packages/game-models/check_brows.py -- <model.glb> [tolerance]`
+  looks at each eye (its `eye.*` point and the pieces `eyes.eye` built around it) every other frame
+  of every clip, from the model's front, from the eye's side and straight into it, and fails when
+  more of the eye than the tolerance shows above a brow (or anything lying on the eye) crossing it:
+  a brow may overlap the eye, but the eye's top never shines through above it (`lib/brows.py`).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
@@ -318,6 +324,12 @@ a second model could use goes into the library or a generic tool, never into one
    clip. A model without wisps passes. A clip that still fails waits in its `KNOWN` list with the
    issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14).
+16. **Brows (#1249):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_brows.py -- <model.glb>` must print
+   `BROW CHECK: PASS`: no eye shows above its brow in any clip, from the front, the side or
+   straight on. A model without eye points passes. Its lines go into the PR. CI runs it on every
+   `.glb` with the rebuild check (step 14). `eyes.eye`'s `brow_size` makes a smaller brow that still
+   covers the eye's top.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**

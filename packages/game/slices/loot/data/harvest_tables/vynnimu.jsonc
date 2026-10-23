@@ -1,0 +1,10 @@
+// A placeholder harvest table (#687): what a felled Vynnimu drops, apart from what dominating it
+// gives. Mostly a little hide, else a blank, which rolls on the instance's table instead.
+{
+	"id": "vynnimu",
+	"kind": "harvest",
+	"entries": [
+		{ "item": "hide", "chance": 600, "min": 1, "max": 1 }, // 60 %
+		{ "blank": true, "chance": 400 }
+	]
+}
