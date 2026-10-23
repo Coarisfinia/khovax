@@ -186,7 +186,8 @@ func _check_short_ids_read(profile: Profile) -> String:
 ## The profile keys its monsters on their short ids (#754): a gain bringing one it already holds, or
 ## the same one twice, gets a fresh stand-in, and a save holding one twice is refused. A save from
 ## before (format 19) numbered them and named the carried ones by their numbers, which load as
-## their short ids, in the player's order; a carried number no monster has is refused.
+## their short ids, in the player's order; a carried number no monster has, or a number held twice
+## or from the next one up, is refused.
 func _check_short_id_keys() -> String:
 	var profile: Profile = Profile.new()
 	var gain: Gain = _result(["ombulumo", "tikazzir", "ombulumo", "tikazzir"], {})
@@ -202,13 +203,26 @@ func _check_short_id_keys() -> String:
 	var migrated: Profile = _parse(JSON.stringify(_numbered(profile, 19)))
 	if not migrated.problem.is_empty() or _text(migrated) != _text(profile):
 		return "a format 19 save didn't load keyed on its short ids: " + migrated.problem
+	return _check_short_id_keys_refused(profile)
+
+
+## `profile`'s save holding a short id twice, or from format 19 with a carried number no monster
+## has or a number held twice or from the next one up, is refused (#754).
+func _check_short_id_keys_refused(profile: Profile) -> String:
 	var stray: Dictionary = _numbered(profile, 19)
 	stray["carried"] = [1, 9]
 	var twice: String = _text(profile).replace(ShortId.stand_in(2), "abc2345")
-	return _unrefused({
+	var renumbered: Dictionary = _numbered(profile, 19)
+	renumbered["dominated_monsters"][1]["id"] = 1
+	var beyond: Dictionary = _numbered(profile, 19)
+	beyond["next_monster_id"] = 4
+	var problem: String = _unrefused({
 		JSON.stringify(stray): "a carried monster isn't",
+		JSON.stringify(renumbered): "a dominated monster",
+		JSON.stringify(beyond): "a dominated monster",
 		twice: "a dominated monster",
 	})
+	return problem if not problem.is_empty() else _check_old_species_ids()
 
 
 ## A save from before a species' id was its name (format 13, #763) names its monsters and quests by

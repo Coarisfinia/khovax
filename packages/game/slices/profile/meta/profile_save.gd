@@ -261,12 +261,17 @@ static func _migrate_to_19(data: Dictionary) -> void:
 
 
 ## Format 19 to 20: the profile keys its dominated monsters on their short ids (#754), so the
-## carried ones are named by theirs, and the numbers and the next one go. A carried number no
-## monster has stays, which reading refuses.
+## carried ones are named by theirs, and the numbers and the next one go. A number the save
+## couldn't hold before (below 1, from the next one up, or held twice) loses its monster's short
+## id, and a carried number no monster has stays, so reading refuses either as it did the numbers.
 static func _migrate_to_20(data: Dictionary) -> void:
+	var next: int = _int(data.get("next_monster_id"))
 	var short_ids: Dictionary[int, String] = {}
 	for fields: Dictionary in _monster_entries(data):
-		short_ids[_int(fields.get("id"))] = Content.text_of(fields.get("short_id"))
+		var number: int = _int(fields.get("id"))
+		if number < 1 or number >= next or short_ids.has(number):
+			fields["short_id"] = ""
+		short_ids[number] = Content.text_of(fields.get("short_id"))
 		var _numbered: bool = fields.erase("id")
 	var carried: Variant = data.get("carried")
 	var numbers: Array = carried if carried is Array else []
