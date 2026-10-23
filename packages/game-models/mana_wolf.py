@@ -31,6 +31,8 @@ COLORS = {
     "light": ((0.62, 0.68, 0.92, 1.0), 0.0),
     "glow": ((0.05, 0.55, 1.0, 1.0), 1.0),
     "dark": ((0.03, 0.03, 0.06, 1.0), 0.0),
+    # The mouth's inside, a dark red-brown (#1194): a fifth material, which only the mouth uses.
+    "mouth": ((0.20, 0.05, 0.05, 1.0), 0.0),
 }
 
 WOLF = quadruped.Proportions(
