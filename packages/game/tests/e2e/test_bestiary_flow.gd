@@ -1,15 +1,14 @@
 extends RefCounted
 ## Bestiary flow (#1173): what this machine's player learns about each species, which a species'
 ## codex page shows. Before they've seen one, its page shows only its name and what the name means,
-## and says what's still to learn. Every wild monster drawn on their screen is seen, in the instance
-## they're in, and one not drawn isn't. A wild monster that strikes the player is met: its page
-## then shows its types, its abilities by name and where they came across it; one striking the
-## trail isn't. Their own domination of one teaches its lore, which the page shows; another
-## player's doesn't. What they learned goes into the profile's file with its next save, never
-## asking for one itself (so a domination's gain is still saved at once), and reads back as it was.
-## A
-## save whose bestiary is malformed is refused, and one from before the bestiary starts with
-## nothing learned.
+## and says what's still to learn, with no picture in its place; once seen, it shows its picture,
+## the model its monsters wear (#1190). Every wild monster drawn on their screen is seen, in the
+## instance they're in, and one not drawn isn't. A wild monster that strikes the player is met: its
+## page then shows its types, its abilities by name and where they came across it; one striking the
+## trail isn't. Their own domination of one teaches its lore, which the page shows; another player's
+## doesn't. What they learned goes into the profile's file with its next save, never asking for one
+## itself (so a domination's gain is still saved at once), and reads back as it was. A save whose
+## bestiary is malformed is refused, and one from before the bestiary starts with nothing learned.
 
 const PROFILE: String = "user://test_bestiary_profile.json"
 ## The instance the flows play, which the habitat names.
@@ -187,7 +186,13 @@ func _page_problem(species: Species, expected: Array[String]) -> String:
 		return "it didn't open"
 	var shown: Array[String] = _page.beast.shown.duplicate()
 	var gloss: String = _page.gloss.get_parsed_text()
+	var picture: SpeciesPicture = _page.beast.picture
 	_page.close()
+	var seen: bool = expected.front() != BestiaryEntry.NOT_SEEN_TEXT
+	if (picture != null) != seen:
+		return "its picture was %s, seen: %s" % ["shown" if picture != null else "missing", seen]
+	if seen and picture.model.scene_file_path != species.model:
+		return "its picture showed %s, not %s" % [picture.model.scene_file_path, species.model]
 	if (_page.heading.text != CodexPage.BESTIARY_TEXT
 			or _page.title.text != species.name
 			or gloss != "%s: %s" % [species.name, species.codex_gloss()]):
