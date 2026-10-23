@@ -523,7 +523,8 @@ static func _sleep_follows(state: GameState, when: String) -> String:
 ## to the nearer of two patches of grass, and a drinker in its drinking hour round the rock wall to
 ## the pond, each one tile at a time and only over ground a ring could enclose it on; then each
 ## stays there, eating or drinking, for the rest of the hour. In an hour of wandering, neither goes
-## anywhere, and a grazer with no grass about stays where it is.
+## anywhere, a grazer with no grass about stays where it is, and one whose nearer grass is walled
+## in walks to the further grass it can reach (#1291).
 func _check_grazing_and_drinking() -> String:
 	if not TileKinds.is_grazable(Region.GROUND) or not TileKinds.is_drinkable(Region.WATER):
 		return "ground isn't grass or water isn't drinkable"
@@ -550,6 +551,22 @@ func _check_grazing_and_drinking() -> String:
 	var grazer: int = _forager(bare, "gra")
 	if _forage_at(bare, grazer, Schedule.GRAZE, FORAGE_TICKS).size() != 1:
 		return "a grazer with no grass about walked off"
+	return _check_grass_behind_wall()
+
+
+## A grazer picks its grass by the way it walks, not as the crow flies (#1291): with the nearer
+## patch walled in by rock, it walks to the further one instead of stalling at the wall.
+static func _check_grass_behind_wall() -> String:
+	var state: GameState = _forage_state(true)
+	for direction: Vector2i in Hex.DIRECTIONS:
+		var _walled: bool = state.change_tile(FORAGE_GRASS[0] + direction, Region.BLOCKED)
+	var grazer: int = _forager(state, "gra")
+	var walked: Array[Vector2i] = _forage_at(state, grazer, Schedule.GRAZE, FORAGE_TICKS)
+	var problem: String = _walk_problem(state, walked, Schedule.GRAZE)
+	if not problem.is_empty():
+		return "with the nearer grass walled in, the grazer %s" % problem
+	if walked[-1] != FORAGE_GRASS[1]:
+		return "with the nearer grass walled in, the grazer went to %s" % walked[-1]
 	return ""
 
 
