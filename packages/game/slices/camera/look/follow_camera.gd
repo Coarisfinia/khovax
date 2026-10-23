@@ -25,8 +25,9 @@ extends Camera3D
 ## World units per second: just above walking speed (a tile every MovementFeature.MOVE_TICKS ticks),
 ## so the camera never falls behind a walking player for good (#726).
 @export var max_speed: float = 6.5
-## World units per second squared; low, so the camera eases in and out.
-@export var acceleration: float = 1.5
+## World units per second squared: low, so the camera eases in and out, but high enough that it
+## doesn't trail a long walk far behind or glide far past the player when they stop (#748).
+@export var acceleration: float = 2.0
 
 ## The point on the ground the camera looks at.
 var focus: Vector3 = Vector3.ZERO
