@@ -541,7 +541,7 @@ func _check_grazing_and_drinking() -> String:
 			return "the grazer went to %s, not the nearest grass" % walked[-1]
 		if activity == Schedule.DRINK and walked.size() - 1 <= Hex.distance(walked[0], walked[-1]):
 			return "the drinker went straight through the rock wall: %s" % [walked]
-		var rest: int = DayClock.TICKS_PER_HOUR - state.tick % DayClock.TICKS_PER_HOUR - 1
+		var rest: int = DayClock.TICKS_PER_HOUR - state.world_tick % DayClock.TICKS_PER_HOUR - 1
 		if _forage_at(state, monster, Schedule.NONE, rest).size() != 1:
 			return "%s didn't stay to eat or drink for the rest of the hour" % species
 		if _forage_at(state, monster, Schedule.WANDER, FORAGE_TICKS).size() != 1:
@@ -691,7 +691,7 @@ static func _forage_at(
 	if activity != Schedule.NONE:
 		var hour: int = _schedules(state).day_of(monster).find(activity)
 		var from_dawn: int = (hour - DayClock.DAWN + DayClock.HOURS) % DayClock.HOURS
-		state.tick = from_dawn * DayClock.TICKS_PER_HOUR
+		state.world_tick = from_dawn * DayClock.TICKS_PER_HOUR
 	var walked: Array[Vector2i] = [state.entity(monster).tile]
 	for _tick: int in ticks:
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
