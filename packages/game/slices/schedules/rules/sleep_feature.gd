@@ -31,7 +31,7 @@ func start(state: GameState) -> void:
 ## On the hour, a wild monster whose sleep block begins falls asleep, and one whose block ended
 ## wakes.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	if state.tick % DayClock.TICKS_PER_HOUR == 0:
+	if state.world_tick % DayClock.TICKS_PER_HOUR == 0:
 		_settle(state, false)
 
 
@@ -40,7 +40,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 func _settle(state: GameState, starting: bool) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
-	var hour: int = DayClock.hour_of(state.tick)
+	var hour: int = DayClock.hour_now(state)
 	var last_hour: int = (hour + DayClock.HOURS - 1) % DayClock.HOURS
 	for monster: int in wild.monsters:
 		if schedules.activity_of(state, monster) != Schedule.SLEEP:

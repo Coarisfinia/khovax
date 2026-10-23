@@ -30,12 +30,14 @@ func variant(_instance_name: String, _flags: Array[String]) -> String:
 
 
 ## A new instance of the named one's `variant` for `seed_value`, with `players` players in slots 0
-## and up, or null when it can't load.
+## and up, starting at the world's tick `world_tick` (GameState.world_tick, #1215), or null when it
+## can't load.
 func create(
 	_instance_name: String,
 	_seed_value: int,
 	_players: int,
 	_variant: String,
+	_world_tick: int = 0,
 ) -> GameState:
 	return null
 

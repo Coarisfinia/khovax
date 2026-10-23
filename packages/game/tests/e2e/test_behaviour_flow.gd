@@ -318,9 +318,9 @@ static func _nobody_on(state: GameState, tile: Vector2i) -> bool:
 	return true
 
 
-## Steps `state` by a real tick onto `tick`, whatever tick it was on.
+## Steps `state` by a real tick onto the world's tick `tick`, whatever tick it was on.
 static func _step_onto(state: GameState, tick: int) -> void:
-	state.tick = tick - 1
+	state.world_tick = tick - 1
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 
 

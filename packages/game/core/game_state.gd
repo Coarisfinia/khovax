@@ -52,9 +52,18 @@ var next_door_version: int = 0
 var problem: String = ""
 
 
-func _init(start_region: Region, seed_value: int, ordered: Array[Feature]) -> void:
+## A state of `start_region` for `seed_value` with the features `ordered`, which start at the
+## world's tick `world_time` (#1215): a world's instance loaded late starts at the world's time of
+## day, not at dawn.
+func _init(
+	start_region: Region,
+	seed_value: int,
+	ordered: Array[Feature],
+	world_time: int = 0,
+) -> void:
 	region = start_region
 	rng_seed = seed_value
+	world_tick = world_time
 	stores = PlayerStore.for_every_slot()
 	problem = order_problem(ordered)
 	if not problem.is_empty():

@@ -121,14 +121,20 @@ func instance(instance_name: String) -> GameState:
 ## with `players` players and a view of every player's world store, not yet among the loaded ones,
 ## though its variant is noted; null when it can't load.
 func create_instance(instance_name: String, players: int, variant: String) -> GameState:
-	var created: GameState = source.create(instance_name, seed_for(instance_name), players, variant)
+	# At the world's time (#1215), not the dawn a fresh instance's own tick starts at: its features
+	# start by it.
+	var created: GameState = source.create(
+		instance_name,
+		seed_for(instance_name),
+		players,
+		variant,
+		tick,
+	)
 	if created != null:
 		variants[instance_name] = variant
 		# The world's own stores, not copies (#828): a player is in one instance each tick, and only
 		# the rules there write their entries, so every instance sees a change as soon as it's made.
 		created.stores = stores
-		# The world's time (#1215), not the dawn a fresh instance's own tick starts at.
-		created.world_tick = tick
 		_hand_next_door(instance_name, created)
 	return created
 
