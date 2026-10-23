@@ -59,6 +59,10 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		SpikesFeature.ID: SpikesFactory.build,
 		DominationLootFeature.ID: DominationLootFactory.build,
 		EnrageFeature.ID: _plain(EnrageFeature),
+		# After enrage, which chases with the enraged, so no monster takes two steps a tick, and
+		# after the wild monsters' strikes, so a hunter that struck something strikes no prey too
+		# (#1204).
+		HuntFeature.ID: _plain(HuntFeature),
 		FogFeature.ID: _plain(FogFeature),
 	}
 	return rules
