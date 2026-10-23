@@ -27,7 +27,7 @@ func run(tree: SceneTree) -> String:
 	# land on the book's entry.
 	var kept_size: Vector2i = tree.root.size
 	tree.root.size = SCREEN
-	var main: Node = await FlowGame.start(tree, PROFILE)
+	var main: Node = await FlowGame.start_held(tree, PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var book: CodexBook = menu.find_child("Codex", true, false) as CodexBook
@@ -210,7 +210,7 @@ static func _open_place(book: CodexBook, page: CodexPage) -> String:
 ## The runner puts its own starting instance back after.
 static func _enter_a_place(tree: SceneTree) -> String:
 	GameDriver.start_instance = FlowSteps.GLADE
-	var main: Node = await FlowGame.start(tree, ENTERING_PROFILE)
+	var main: Node = await FlowGame.start_held(tree, ENTERING_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
 	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)

@@ -22,7 +22,7 @@ var _page: CodexPage
 
 
 func run(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree, PROFILE)
+	var main: Node = await FlowGame.start_held(tree, PROFILE)
 	_driver = FlowGame.held_driver(main)
 	_bus = main.get_node("EventBus") as EventBus
 	_keeper = main.get_node("BestiaryKeeper") as BestiaryKeeper

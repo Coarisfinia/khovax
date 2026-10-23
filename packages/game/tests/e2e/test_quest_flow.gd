@@ -151,7 +151,7 @@ func run(tree: SceneTree) -> String:
 ## this player's domination, handed out by the bus, finishes it, and it's saved and loads back; a
 ## chest counts for whoever got loot from it.
 func _check_tracked(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree, SAVE_PATH)
+	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var bus: EventBus = main.get_node("EventBus") as EventBus
