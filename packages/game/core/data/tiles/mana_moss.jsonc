@@ -1,0 +1,8 @@
+// Mana moss: ground soaked in mana, the floor of the mana forest (#1218): a violet moss, apart
+// from the water's blue. Walkable, and sight passes over it, like plain ground.
+{
+	"id": "mana_moss",
+	"color": "#6e5ba8",
+	"symbol": "%", // tells it apart without its color (#68)
+	"traits": { "walkable": true }
+}
