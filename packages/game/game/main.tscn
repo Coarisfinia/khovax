@@ -64,6 +64,7 @@
 [ext_resource type="PackedScene" path="res://slices/codex/ui/codex_book.tscn" id="56_codex_book"]
 [ext_resource type="Script" path="res://slices/companions/look/crown_bind_view.gd" id="57_crown_bind"]
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/focus_keys.gd" id="58_focus_keys"]
+[ext_resource type="Script" path="res://slices/wild_monsters/ui/wild_hp_bars.gd" id="59_wild_hp_bars"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -293,6 +294,19 @@ transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.8111
 script = ExtResource("10_music")
 
 [node name="Hud" type="CanvasLayer" parent="." unique_id=1873390211]
+
+[node name="WildHpBars" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "camera", "wild_view")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("59_wild_hp_bars")
+driver = NodePath("../../Driver")
+camera = NodePath("../../Camera3D")
+wild_view = NodePath("../../Instance/WildMonsterView")
 
 [node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "quest_keeper", "input", "neighbours") unique_id=3010301030]
 layout_mode = 3

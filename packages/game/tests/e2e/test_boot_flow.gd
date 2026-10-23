@@ -619,6 +619,8 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	mark.show_state()
 	var marked: bool = mark.piece.visible and mark.piece.tile == driver.state.entity(focus).tile
 	var keys_shown: String = _check_focus_keys(main, focus)
+	if keys_shown.is_empty():
+		keys_shown = _check_hp_bar(main, driver, focus)
 	var pointed: int = (main.get_node("Hud/FocusKeys") as FocusKeys).pointed()
 	driver.input.focus = Command.NO_FOCUS
 	mark.show_state()
@@ -632,6 +634,58 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	if not pointing_shown.is_empty():
 		return pointing_shown
 	return _check_focus_picked(main, driver)
+
+
+## The wild monsters' HP bars (#814): the focused wild monster `focus` shows its bar above its
+## figure, full and with its HP on it; unfocused at full HP it shows none. Once hurt it shows its
+## bar
+## without the focus, the HP left on it at once and its fill easing down to it rather than jumping.
+## Healed again, its bar goes.
+func _check_hp_bar(main: Node, driver: GameDriver, focus: int) -> String:
+	var bars: WildHpBars = main.get_node("Hud/WildHpBars") as WildHpBars
+	var health: HealthFeature = driver.state.feature(HealthFeature.ID) as HealthFeature
+	var full: int = health.max_hp_of(driver.state, focus)
+	bars.show_state()
+	var figure: HexPiece = bars.wild_view.figures[focus]
+	var feet: Vector2 = bars.camera.unproject_position(figure.global_position)
+	var bar: Rect2 = bars.shown.get(focus, Rect2())
+	if bar.size == Vector2.ZERO or bar.end.y > feet.y or bars.hps[focus] != full:
+		return "the focused wild monster's HP bar didn't stand above it with its full HP on it"
+	driver.input.focus = Command.NO_FOCUS
+	bars.show_state()
+	if bars.shown.has(focus):
+		return "a wild monster at full HP showed its HP bar without the focus"
+	var hurt: String = _check_hp_bar_hurt(bars, health, driver.state, focus)
+	driver.input.focus = focus
+	return hurt
+
+
+## A hurt wild monster `focus` shows its HP bar without the focus, the HP left on it at once and its
+## fill easing down to it rather than jumping; healed again, its bar goes.
+func _check_hp_bar_hurt(
+	bars: WildHpBars,
+	health: HealthFeature,
+	state: GameState,
+	focus: int,
+) -> String:
+	var full: int = health.max_hp_of(state, focus)
+	var _fell: bool = health.hurt(state, focus, Fixed.scale(full, 333), false)
+	var left: int = health.hp_of(state, focus)
+	var target: float = float(left) / float(full)
+	bars.show_state()
+	var at_once: bool = bars.shown.has(focus) and bars.hps[focus] == left
+	bars.show_state(0.1)
+	var easing: float = bars.shares[focus]
+	bars.show_state(5.0)
+	var eased: bool = easing < 1.0 and easing > target and is_equal_approx(
+		bars.shares[focus],
+		target,
+	)
+	health.heal(state, focus, full)
+	bars.show_state()
+	if not at_once or not eased or bars.shown.has(focus):
+		return "a hurt wild monster's HP bar didn't show its HP left, ease down, or go once healed"
+	return ""
 
 
 ## The focus keys' hint (#1210): the glyphs of focus_previous and focus_next stand left and right
@@ -875,6 +929,13 @@ func _check_wild_monster_removed(main: Node) -> String:
 	var fell: String = _check_fainted_lies(driver.state, view, feature, monster_id)
 	if not fell.is_empty():
 		return fell
+	# A fainted wild monster shows no HP bar (#814), though it has none left.
+	var bars: WildHpBars = main.get_node("Hud/WildHpBars") as WildHpBars
+	driver.input.focus = monster_id
+	bars.show_state()
+	driver.input.focus = Command.NO_FOCUS
+	if bars.shown.has(monster_id):
+		return "a fainted wild monster showed its HP bar"
 	driver.state.remove_entity(monster_id)
 	view.show_state()
 	if feature.monsters.has(monster_id) or view.figures.has(monster_id):
