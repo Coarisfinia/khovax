@@ -384,7 +384,39 @@ func _check_levels() -> String:
 	var expected: Array[int] = [3, 1, 3, 0, 2, 5, 1, 0]
 	if levels != expected:
 		return "levels and progress didn't follow the dominations carried through: %s" % [levels]
-	return _check_levels_saved(profile)
+	var problem: String = _check_defeats(profile)
+	return problem if not problem.is_empty() else _check_levels_saved(profile)
+
+
+## Defeats (#1256): each wild monster the player's companion fells with its special earns every
+## monster they carry PROGRESS_PER_DEFEAT, like a domination; a felling by another player's
+## companion, or a strike that doesn't fell, is no defeat of theirs; a gain with a negative count is
+## refused.
+func _check_defeats(profile: Profile) -> String:
+	var mine: SpecialStruck = SpecialStruck.new(1, 2, 7, true)
+	mine.slot = 0
+	var theirs: SpecialStruck = SpecialStruck.new(1, 2, 7, true)
+	theirs.slot = 1
+	var standing: SpecialStruck = SpecialStruck.new(1, 2, 7, false)
+	standing.slot = 0
+	var counted: Array[int] = [
+		ProfileTie.defeats_in(mine, 0),
+		ProfileTie.defeats_in(theirs, 0),
+		ProfileTie.defeats_in(standing, 0),
+	]
+	if counted != ([1, 0, 0] as Array[int]):
+		return "defeats were counted as %s, not only the player's own felling" % [counted]
+	var gain: Gain = Gain.new()
+	gain.defeats = 2
+	# The third carried monster was at level 2 with 5 of 6: two defeats of a point each take it to
+	# level 3 with 1.
+	var third: DominatedMonster = profile.dominated_monsters[2]
+	if not profile.apply(gain).is_empty() or third.level != 3 or third.progress != 1:
+		return "two defeats gave the third monster level %d with %d" % [third.level, third.progress]
+	gain.defeats = -1
+	if profile.apply(gain).is_empty():
+		return "a gain with a negative count of defeats was taken over"
+	return ""
 
 
 ## `profile`'s levels and progress (#1251) are kept through saving and loading; a format 18 save

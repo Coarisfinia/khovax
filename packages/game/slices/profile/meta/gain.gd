@@ -1,7 +1,8 @@
 class_name Gain
 extends RefCounted
-## What the player just obtained in the world (#37): monsters dominated and materials and gear found
-## (#694). What it means to their quests is counted apart (QuestTie, #817).
+## What the player just obtained in the world (#37): monsters dominated, wild monsters defeated
+## (#1256) and materials and gear found (#694). What it means to their quests is counted apart
+## (QuestTie, #817).
 ## Loot is obtained once it's the player's (#686): loot landing in their missed-loot chest (#242)
 ## isn't obtained yet, and taking it out is, like taking it from their own chest (#293), so only
 ## taking it out hands a Gain.
@@ -15,8 +16,11 @@ var dominated_short_ids: Array[String] = []
 var materials: Dictionary[String, int] = {}
 ## Gear found (#694), by id: how many of each.
 var gear: Dictionary[String, int] = {}
+## How many wild monsters the player's companion defeated (#1256): felled them with its special.
+var defeats: int = 0
 
 
 ## Whether it holds nothing at all.
 func is_empty() -> bool:
-	return dominated_species.is_empty() and materials.is_empty() and gear.is_empty()
+	return (dominated_species.is_empty() and materials.is_empty() and gear.is_empty()
+			and defeats == 0)

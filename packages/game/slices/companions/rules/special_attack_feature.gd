@@ -156,7 +156,15 @@ func _strike(
 	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
 	wild.wound(state, target, damage, lethal)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, true, struck)
-	return SpecialStruck.new(companion_id, target, damage, wild.is_fainted(target), strong)
+	var event: SpecialStruck = SpecialStruck.new(
+		companion_id,
+		target,
+		damage,
+		wild.is_fainted(target),
+		strong,
+	)
+	event.slot = companions.owners.get(companion_id, Entity.NO_SLOT)
+	return event
 
 
 ## The companion `companion_id` binds the wild monster `target` for `ticks` (#1167): both are held

@@ -15,8 +15,10 @@ extends RefCounted
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
 ## The progress each monster a player carries earns toward its next level from every domination
-## they make (#1251, which one earns it asked on #1256).
+## they make (#1251) and every wild monster their companion defeats (#1256): the same for both, as
+## each ends an encounter with a wild monster.
 const PROGRESS_PER_DOMINATION: int = 1
+const PROGRESS_PER_DEFEAT: int = 1
 ## How many dominated monsters a player carries (#53), which their carry requests make room for.
 const CARRY_LIMIT: int = CarryRequest.MOST_CARRIED
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
@@ -58,8 +60,9 @@ var character_name: String = ""
 var problem: String = ""
 
 
-## Takes over what the player just obtained: its dominations, each earning the monsters they carry
-## progress (#1251) before the dominated one joins them, and its loot. Returns why the gain
+## Takes over what the player just obtained: its defeats and dominations, each earning the monsters
+## they carry progress (#1251, #1256), a dominated one joining them after its own, and its loot.
+## Returns why the gain
 ## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
 ## gain couldn't be loaded again. ProfileKeeper saves it. What it means to the player's quests is
 ## counted apart (QuestKeeper).
@@ -67,10 +70,11 @@ func apply(result: Gain) -> String:
 	var refusal: String = _result_problem(result)
 	if not refusal.is_empty():
 		return refusal
+	for _defeat: int in result.defeats:
+		_earn(PROGRESS_PER_DEFEAT)
 	for i: int in result.dominated_species.size():
 		var short_ids: Array[String] = result.dominated_short_ids
-		for monster: DominatedMonster in carried_monsters():
-			monster.earn(PROGRESS_PER_DOMINATION)
+		_earn(PROGRESS_PER_DOMINATION)
 		_dominate(result.dominated_species[i], short_ids[i] if i < short_ids.size() else "")
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
@@ -131,6 +135,12 @@ static func name_problem(typed: String) -> String:
 	return ""
 
 
+## Gives every monster the player carries `points` of progress toward its next level (#1251).
+func _earn(points: int) -> void:
+	for monster: DominatedMonster in carried_monsters():
+		monster.earn(points)
+
+
 ## Adds a newly dominated monster of `species`, with the next id, keeping `short_id` (#700), or a
 ## stand-in for "".
 func _dominate(species: String, short_id: String) -> void:
@@ -146,6 +156,8 @@ func _dominate(species: String, short_id: String) -> void:
 func _result_problem(result: Gain) -> String:
 	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
+	if result.defeats < 0 or result.defeats > MAX_NUMBER:
+		return "a gain's defeats are out of range"
 	var dominated: String = _dominated_problem(result)
 	if not dominated.is_empty():
 		return dominated

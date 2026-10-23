@@ -5,7 +5,9 @@ extends RefCounted
 ## for each of the monster's types on the type chart, whether the strike was strong against it (weak
 ## otherwise); it's empty while the chart is off (TypeEffectivenessFeature.strong_against, #701).
 ## `channel_ticks` says how long the companion holds a special that lasts (#1163), from this tick
-## on; 0 for one that strikes and is over.
+## on; 0 for one that strikes and is over. `slot` is the striking companion's player's, so whoever
+## reads the event later (the profile, which counts a defeat toward its monsters' levels, #1256)
+## knows whose strike it was.
 
 var companion_id: int
 var monster_id: int
@@ -13,6 +15,7 @@ var damage: int
 var felled: bool
 var strong: Array[bool]
 var channel_ticks: int = 0
+var slot: int = Entity.NO_SLOT
 
 
 func _init(

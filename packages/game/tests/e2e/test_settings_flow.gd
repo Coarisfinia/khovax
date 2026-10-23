@@ -512,7 +512,7 @@ func _menu_details(tab: CharacterTab) -> String:
 	third.gui_input.emit(click)
 	var expected: Array[String] = [
 		"Tikazzir, level 1",
-		"Progress: 2 of 3 dominations to level 2",
+		"Progress: 2 of 3 to level 2",
 		"Types: breeze, mana",
 		"HP: 60",
 		"Strength: 70",
