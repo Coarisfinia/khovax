@@ -619,12 +619,18 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	mark.show_state()
 	var marked: bool = mark.piece.visible and mark.piece.tile == driver.state.entity(focus).tile
 	var keys_shown: String = _check_focus_keys(main, focus)
+	var pointed: int = (main.get_node("Hud/FocusKeys") as FocusKeys).pointed()
 	driver.input.focus = Command.NO_FOCUS
 	mark.show_state()
 	if not marked or mark.piece.visible:
 		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
 	if not keys_shown.is_empty():
 		return keys_shown
+	if pointed == focus:
+		return "the click's or tap's glyph stood by the wild monster already focused"
+	var pointing_shown: String = _check_focus_pointing(main, focus)
+	if not pointing_shown.is_empty():
+		return pointing_shown
 	return _check_focus_picked(main, driver)
 
 
@@ -658,7 +664,9 @@ func _check_focus_keys(main: Node, focus: int) -> String:
 	DeviceInUse.device = kept
 	var left: Rect2 = keys.shown.get(&"focus_previous", Rect2())
 	var right: Rect2 = keys.shown.get(&"focus_next", Rect2())
-	if keys.shown.size() != 2 or left.end.x > feet.x or right.position.x < feet.x:
+	if not keys.shown.has(&"focus_previous") or not keys.shown.has(&"focus_next"):
+		return "the focus keys' glyphs didn't show with a keyboard"
+	if left.end.x > feet.x or right.position.x < feet.x:
 		return "the focus keys' glyphs didn't stand left and right of the focused wild monster"
 	return _check_glyph_backdrops()
 
@@ -713,11 +721,48 @@ static func _enclosed(image: Image, x: int, y: int) -> bool:
 	return not sides.has(false)
 
 
-## The glyphs the focus keys' hint shows now, from the left.
-static func _focus_keys_shown(keys: FocusKeys) -> Array:
+## The click's or tap's glyph (#1248): with nothing focused, it stands under the nearest wild
+## monster in reach, which a click or tap focuses, a click's after a key, a tap's after a touch and
+## none after a controller's button, beside the keys' glyphs where they show.
+func _check_focus_pointing(main: Node, nearest: int) -> String:
+	var keys: FocusKeys = main.get_node("Hud/FocusKeys") as FocusKeys
+	var hints: Callable = func() -> Array: return _focus_keys_shown(keys, true)
+	var shown: Array = FlowInput.glyphs_by_device(hints)
+	var pointing: Dictionary[DeviceInUse.Device, Texture2D] = InputGlyphs.POINTING
+	var expected: Array = [
+		[InputGlyphs.KEYS[KEY_Q], InputGlyphs.KEYS[KEY_R], pointing[DeviceInUse.Device.KEYBOARD]],
+		[
+			InputGlyphs.BUTTONS[JOY_BUTTON_LEFT_SHOULDER],
+			InputGlyphs.BUTTONS[JOY_BUTTON_RIGHT_SHOULDER],
+		],
+		[pointing[DeviceInUse.Device.TOUCH]],
+	]
+	if shown != expected:
+		return "the focus hints showed %s after a key, a controller and a touch" % [shown]
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.TOUCH
+	var pointed: int = keys.pointed()
+	keys.show_state()
+	DeviceInUse.device = kept
+	if pointed != nearest:
+		return "the tap's glyph didn't stand by the nearest wild monster"
+	var figure: HexPiece = keys.wild_view.figures[nearest]
+	var feet: Vector2 = keys.camera.unproject_position(figure.global_position)
+	var glyph: Rect2 = keys.shown.get(FocusKeys.POINTING, Rect2())
+	if glyph.position.y <= feet.y or glyph.position.x > feet.x or glyph.end.x < feet.x:
+		return "the tap's glyph %s didn't stand under the wild monster at %s" % [glyph, feet]
+	return ""
+
+
+## The glyphs the focus keys' hint shows now, from the left, then with `pointing` the click's or
+## tap's.
+static func _focus_keys_shown(keys: FocusKeys, pointing: bool = false) -> Array:
 	keys.show_state()
 	var glyphs: Array = []
-	for action: StringName in FocusKeys.ACTIONS:
+	var hints: Array[StringName] = FocusKeys.ACTIONS.duplicate()
+	if pointing:
+		hints.append(FocusKeys.POINTING)
+	for action: StringName in hints:
 		if keys.shown.has(action):
 			glyphs.append(keys.glyphs[action])
 	return glyphs
