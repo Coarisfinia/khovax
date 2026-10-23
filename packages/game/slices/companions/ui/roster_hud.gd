@@ -32,8 +32,8 @@ const INK_PIXELS: float = 2.0
 const COMPANION_INK_PIXELS: float = 6.0
 ## The swap's glyph in a square's top left corner, its side as a share of the square's, and its gap
 ## to the square's edges, as a share of the square's.
-const GLYPH_SHARE: float = 0.5
-const GLYPH_INSET: float = 0.04
+const GLYPH_SHARE: float = 0.42
+const GLYPH_INSET: float = 0.03
 
 @export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.

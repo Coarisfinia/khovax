@@ -16,4 +16,6 @@
   the dialog's buttons and the menu's close button, the action buttons (#1185), the roster's
   squares, the Survey's buttons on the screen and in the menu, and the menu's open button (#1192).
 - **Only what the game uses is here:** those glyphs, unchanged but for the controller ones'
-  names.
+  names and the d-pad's colors: the pack marks the pressed arm in red, which the ink the glyphs are
+  drawn in hides, so its arm is solid white and the rest of the cross faint (#1192), a difference
+  of shape rather than color.
