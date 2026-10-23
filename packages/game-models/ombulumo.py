@@ -70,20 +70,20 @@ TOAD = quadruped.Proportions(
 # deep and wider than it is long, short legs, eyes far apart on top, a short, deep, blunt muzzle.
 REFERENCE = {
     "head/body": 1.307,
-    "head height/length": 0.899,
-    "head width/length": 1.177,
+    "head height/length": 0.941,
+    "head width/length": 1.203,
     "leg/body": 0.719,
     # The leaf fronds behind the eyes, on the ears' bones.
     "ear/head": 0.410,
     # The stub of a tail and the round rump it moves.
     "tail/body": 0.799,
-    "eye spacing/head width": 0.647,
+    "eye spacing/head width": 0.625,
     # The eyes mirror each other: level, side by side, equally far out.
     "eye.R/eye.L height": 0.0,
     "eye.R/eye.L depth": 0.0,
     "eye.R/eye.L sides": 0.0,
     "muzzle/head": 0.609,
-    "muzzle depth/length": 1.030,
+    "muzzle depth/length": 1.072,
     "muzzle width/head width": 0.725,
     "nose width/muzzle width": 0.409,
 }
@@ -109,14 +109,15 @@ BELLY_HEIGHT = 0.16
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
 # apart) in 0.8 s, a companion follows at a tile every 0.3 s. Its legs are short, so a walk
 # cycle covers two thirds of a tile, each foot only briefly down (a scurrying waddle), and each
-# hop of its run two tiles: a run is longer hops, not quicker legs.
+# hop of its run takes as long as the game takes to carry it two tiles: a run is longer hops, not
+# quicker legs. Like every clip it plays in place (the game moves the model), so its hops carry
+# no stride of their own: its feet skim the ground rather than stand on it (hop).
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 2 / 3, FPS)
 RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 2, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
-RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
 # The throat sac booms (#1271): it swells from the back of the throat on its own bone
 # (lib/pulse.py), twice in a resting loop, once as it leaps, and on every beat of its long attack,
