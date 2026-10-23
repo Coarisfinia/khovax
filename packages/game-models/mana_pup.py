@@ -275,7 +275,7 @@ def build(out):
         "Faint": clips.faint(HIP_HEIGHT),
         **clips.channel(CHANNEL_FRAMES),
         # A pup's short neck reaches the ground with less of a bend.
-        "Feed": clips.feed(neck=0.5, head=0.0, crouch=0.25),
+        "Feed": clips.feed(neck=0.5, head=0.0, crouch=0.25, forepaws=0.2),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
         overlays=[drifting.drift])
     scene.export_glb(out)

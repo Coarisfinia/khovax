@@ -238,12 +238,14 @@ FEED_TWITCHES = [
 ]
 
 
-def feed(frames=90, laps=3, neck=0.78, head=-0.02, crouch=0.10):
+def feed(frames=90, laps=3, neck=0.78, head=-0.02, crouch=0.10, forepaws=0.0):
     """Feeding at its grass or water (#1281), one clip for eating and drinking, posed on every
     frame like idle: the chest lowers and the neck bends down until the muzzle is at the ground,
     the paws planted (legs.plant): the chest `crouch` down (unscaled metres), the neck bent down
     `neck` and the head `head` radians, a body plan's own reach to the ground (a short neck bends
-    less, or the head curls under the chest). It laps or tears `laps` times a loop of `frames` frames,
+    less, or the head curls under the chest). Its forepaws stand `forepaws` (unscaled metres)
+    further forward the whole loop, so the forelegs lean out under the lowered chest rather than
+    folding with their elbows jutting up (owner, #1297). It laps or tears `laps` times a loop of `frames` frames,
     each a quick jaw opening and a dip of the head with a tug back up as the jaw closes, the head
     turning a little to one side and back once a loop. It breathes, its tail sways and its ears
     twitch now and then (FEED_TWITCHES). Every wave runs a whole number of times a loop, so the
@@ -274,6 +276,7 @@ def feed(frames=90, laps=3, neck=0.78, head=-0.02, crouch=0.10):
             "tail_03": (0.0, 0.0, 0.08 * math.sin(lap - 1.0)),
         }
         _both(pose, "ear", (-0.08, 0.0, 0.0))
+        _both(pose, "plant.front_paw", (0.0, 0.0, forepaws))
         for ear, start, amplitude, out, back in FEED_TWITCHES:
             turn = _twitch(step % frames, round(start * frames), amplitude, out, back)
             x, y, z = pose[ear]
