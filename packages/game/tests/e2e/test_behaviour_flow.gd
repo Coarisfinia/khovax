@@ -842,33 +842,40 @@ func _check_pack_leader_lost() -> String:
 	var alone: GameState = _pack_state(false)
 	var packs: PackFeature = state.feature(PackFeature.ID) as PackFeature
 	var wolves: Array[int] = _monsters_of(state, "wol")
+	# The type pack stands apart from the wolves' until its own leader is dominated below.
+	var follower: int = _monsters_of(state, "man")[0]
+	var type_leader: int = _monsters_of(state, "arc")[0]
 	state.remove_entity(wolves[0])
-	var expected: Dictionary[int, int] = { wolves[2]: wolves[1], wolves[3]: wolves[1] }
+	var expected: Dictionary[int, int] = {
+		wolves[2]: wolves[1],
+		wolves[3]: wolves[1],
+		follower: type_leader,
+	}
 	var problem: String = _pack_problem(state, alone, expected, wolves[1], "dominated")
 	if not problem.is_empty():
 		return problem
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	wild.wound(state, wolves[1], 1000, true)
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
-	expected = { wolves[3]: wolves[2] }
+	expected = { wolves[3]: wolves[2], follower: type_leader }
 	problem = _pack_problem(state, alone, expected, wolves[2], "fainted")
 	if not problem.is_empty():
 		return problem
 	if _schedules(state).day_of(wolves[1]) != _schedules(alone).day_of(wolves[1]):
 		return "the fainted leader didn't get its own day back"
-	state.remove_entity(_monsters_of(state, "arc")[0])
+	state.remove_entity(type_leader)
 	expected = { wolves[3]: wolves[2] }
 	problem = _pack_problem(state, alone, expected, wolves[2], "down to one")
 	if not problem.is_empty():
 		return problem
-	var last: int = _monsters_of(state, "man")[0]
+	var last: int = follower
 	if _schedules(state).day_of(last) != _schedules(alone).day_of(last) or packs.leaders.has(last):
 		return "the last monster of a pack didn't live by its own day again"
 	return ""
 
 
-## Why `state`'s packs aren't `expected`, each member on the day of `leader`, which is its own as
-## in `alone`, once a leader was `how`; or "".
+## Why `state`'s packs aren't `expected`, each member on its leader's day, the new leader `leader`
+## on its own as in `alone`, once a leader was `how`; or "".
 static func _pack_problem(
 	state: GameState,
 	alone: GameState,
@@ -882,11 +889,8 @@ static func _pack_problem(
 	if _schedules(state).day_of(leader) != _schedules(alone).day_of(leader):
 		return "once the leader %s, the new leader didn't keep its own day" % how
 	for member: int in expected:
-		if _schedules(state).day_of(member) != _schedules(state).day_of(leader):
-			return "once the leader %s, member %d didn't live by the new leader's day" % [
-				how,
-				member,
-			]
+		if _schedules(state).day_of(member) != _schedules(state).day_of(expected[member]):
+			return "once the leader %s, member %d didn't live by its leader's day" % [how, member]
 	return ""
 
 
@@ -902,6 +906,8 @@ func _check_pack_saved() -> String:
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	var loaded: GameState = _pack_state(true)
 	loaded.load_data(DataReader.new(state.to_data()))
+	# The world's time comes back with the world's save (#1215), not the instance's.
+	loaded.world_tick = state.world_tick
 	if loaded.state_hash() != state.state_hash():
 		return "a save of a pack didn't load the same"
 	for _tick: int in 5 * Simulation.TICKS_PER_SECOND:
