@@ -11,7 +11,8 @@ extends VBoxContainer
 ## The buttons always show here, with no cogwheel (#438): this tab is where a controller reaches
 ## them, since the cogwheel on the screen hides with a controller. Each shows the glyph of the key
 ## or controller button that presses it too (ActionGlyph, #1192): - or the left trigger, = or the
-## right one, and Tab or Back; they share the row's width, so their words leave the glyph room.
+## right one, and Tab or Back, and on touch the zoom buttons the pinch (#1221); they share the
+## row's width, so their words leave the glyph room.
 ## Its layout lives in its scene, survey_tab.tscn (#437): this script keeps only what it does.
 
 ## The Survey's choices, whose zoom the tab follows and steps, and whose Survey it reads from.

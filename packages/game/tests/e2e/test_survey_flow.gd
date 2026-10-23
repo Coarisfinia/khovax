@@ -522,8 +522,8 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	return problem
 
 
-## Why the Survey's buttons don't show the glyphs of Tab, = and - after a key, or show any after a
-## touch, or "". A controller hides them, cogwheel and all.
+## Why the Survey's buttons don't show the glyphs of Tab, = and - after a key, or the pinch's on the
+## zoom buttons alone after a touch (#1221), or "". A controller hides them, cogwheel and all.
 static func _survey_button_glyphs() -> String:
 	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _survey_buttons_shown())
 	var keys: Array = [
@@ -531,7 +531,12 @@ static func _survey_button_glyphs() -> String:
 		InputGlyphs.KEYS[KEY_EQUAL],
 		InputGlyphs.KEYS[KEY_MINUS],
 	]
-	if shown[0] != keys or shown[2] != [null, null, null]:
+	var pinches: Array = [
+		null,
+		InputGlyphs.GESTURES[&"survey_zoom_in"],
+		InputGlyphs.GESTURES[&"survey_zoom_out"],
+	]
+	if shown[0] != keys or shown[2] != pinches:
 		return "the Survey's buttons show %s after a key and %s after a touch" % [
 			shown[0],
 			shown[2],
@@ -756,8 +761,8 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 
 
 ## Why the Survey tab's zoom and place buttons don't show the glyphs of -, = and Tab after a key,
-## of the left and right triggers and Back after a controller's button, and none after a touch,
-## each inside its button, or "".
+## of the left and right triggers and Back after a controller's button, and after a touch the
+## pinch's on the zoom buttons alone (#1221), each inside its button, or "".
 static func _survey_tab_glyphs(tab: SurveyTab) -> String:
 	var buttons: Array[Button] = [
 		tab.find_child("ZoomOut", true, false) as Button,
@@ -774,7 +779,7 @@ static func _survey_tab_glyphs(tab: SurveyTab) -> String:
 			InputGlyphs.AXES[JOY_AXIS_TRIGGER_RIGHT],
 			InputGlyphs.BUTTONS[JOY_BUTTON_BACK],
 		],
-		[null, null, null],
+		[InputGlyphs.GESTURES[&"survey_zoom_out"], InputGlyphs.GESTURES[&"survey_zoom_in"], null],
 	]
 	if shown != wanted:
 		return "the Survey tab's buttons show %s after a key, a controller and a touch" % [shown]

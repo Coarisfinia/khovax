@@ -2,9 +2,10 @@ class_name ActionGlyph
 extends Control
 ## A hint on a button (#583): the glyph of the key or controller button that presses it, for the
 ## device in use (DeviceInUse): inside a button with words, at its right end, where its words leave
-## room for it, and over the bottom right corner of an icon button or one whose words fill it. It
-## shows none for touch, where
-## the button itself is tapped, and none while the button is hidden or rests; with `only_focused`,
+## room for it, and over the bottom right corner of an icon button or one whose words fill it. On
+## touch, where the button itself is tapped, it shows only a gesture that presses it too (a pinch,
+## InputGlyphs.GESTURES), and it shows none while the button is hidden or rests; with
+## `only_focused`,
 ## only while the button has the focus, which is what the confirming key or button presses. It
 ## follows a change of device at once.
 

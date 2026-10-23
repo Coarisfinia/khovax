@@ -10,7 +10,9 @@ extends Control
 ## faded further, and can't be swapped to. The fainted one being picked for a revive item (#780,
 ## RevivePick) gets a second frame around its square.
 ## A tap or a click on a square swaps to that monster for the next tick (LocalInput.choose_swap,
-## #55), and on a fainted one uses a revive item on it (LocalInput.choose_revive, #780). It moves
+## #55), and on a fainted one uses a revive item on it (LocalInput.choose_revive, #780): the glyph
+## of a click with the mouse and keyboard, or of a tap on touch, stands right of the row to say so
+## (#1221), and none with a controller, which can't point. It moves
 ## below the Survey when that shows in the top left corner. It only reads the state.
 ## It runs before the rest of the Hud (process_priority in main.tscn), so the quest list below it
 ## lays out under where it is this frame.
@@ -34,6 +36,8 @@ const COMPANION_INK_PIXELS: float = 6.0
 ## to the square's edges, as a share of the square's.
 const GLYPH_SHARE: float = 0.42
 const GLYPH_INSET: float = 0.03
+## The click's or tap's glyph right of the row, its side as a share of a square's.
+const POINTING_SHARE: float = 0.6
 
 @export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.
@@ -100,6 +104,9 @@ func _draw() -> void:
 		return
 	for place: int in shown.size():
 		_draw_square(place)
+	var pointed_with: Texture2D = pointing_glyph()
+	if pointed_with != null and not shown.is_empty():
+		ActionGlyph.draw_on(self, pointed_with, pointing_rect())
 
 
 ## Matches the squares to the state. Called every frame; tests call it after stepping.
@@ -148,6 +155,20 @@ func lay_out_in(screen: Vector2) -> void:
 ## Where the square of the monster at `place` (from 0) in the carried order is on the screen.
 func rect_of(place: int) -> Rect2:
 	return Rect2(MARGIN + (_side + GAP) * place, _top, _side, _side)
+
+
+## Where the click's or tap's glyph stands on the screen: right of the last square, in the middle
+## of its height.
+func pointing_rect() -> Rect2:
+	var side: float = _side * POINTING_SHARE
+	var last: Rect2 = rect_of(maxi(shown.size() - 1, 0))
+	return Rect2(last.end.x + GAP, last.get_center().y - side / 2.0, side, side)
+
+
+## The glyph of pointing at a square on the device in use, a click or a tap, or null with a
+## controller.
+static func pointing_glyph() -> Texture2D:
+	return InputGlyphs.pointing(DeviceInUse.device)
 
 
 ## The height on the screen below the roster and its pointer, where whatever stands under it starts.
