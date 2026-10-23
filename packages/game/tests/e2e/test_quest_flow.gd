@@ -266,7 +266,8 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, quests: QuestTr
 			return "the starting instance's beach isn't sand"
 		var distance: int = Hex.distance(trigger.tile, from)
 		nearest = distance if beach and (nearest < 0 or distance < nearest) else nearest
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, driver.local_instance_name())
+	var here: String = driver.local_instance_name()
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, here)
 	if (nearest < 0 or not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "the first domination isn't marked over the starting instance's nearest beach tile"
@@ -291,7 +292,8 @@ func _check_marked_monster(
 	var nearest: int = Hex.distance(state.entity(wild.monsters[0]).tile, from)
 	for entity_id: int in wild.monsters:
 		nearest = mini(nearest, Hex.distance(state.entity(entity_id).tile, from))
-	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, driver.local_instance_name())
+	var here: String = driver.local_instance_name()
+	var targets: Dictionary[String, Vector2i] = QuestTargets.of(state, quests, 0, here)
 	if (not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "after the beach, the first domination isn't marked over the nearest wild monster"
