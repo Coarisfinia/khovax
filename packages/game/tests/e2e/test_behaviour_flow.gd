@@ -16,9 +16,10 @@ extends RefCounted
 ## Struck awake, one stays awake for the rest of its block and sleeps again in its next one. An
 ## instance nobody is in, which keeps the world's time without stepping, settles every hour it
 ## missed when it steps again (#1245), from a save made meanwhile too, so its monsters sleep as if
-## it had stepped all along. Asleep,
-## it strikes nobody, not even a player standing right next to it, whom it doesn't wake for
-## (decided here; #1230 asks the owner); a strike or rage wakes it, and then it strikes again.
+## it had stepped all along. Asleep, it strikes nobody, not even a player standing right next to
+## it, whom it doesn't wake for; a strike or rage wakes it, and then it strikes again. A light
+## sleeper (#1230), like the content's Tikazzir, does wake as soon as a player comes next to it,
+## though not for one two tiles away.
 ##
 ## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
@@ -77,6 +78,7 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_given_up,
 		_check_hunt_saved,
 		_check_content_hunters,
+		_check_light_sleeper_wakes,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -328,31 +330,28 @@ static func _returned_onto(back: int) -> GameState:
 	return loaded
 
 
-## In the blueprints' basic instance, a sleeping wild monster strikes nobody, not even the player
-## standing next to it, who doesn't wake it either. Struck, it wakes and strikes the player; rage
-## wakes one too.
+## In the blueprints' basic instance, a sleeping wild monster of a deep-sleeping species strikes
+## nobody, not even the player standing next to it, who doesn't wake it either. Struck, it wakes and
+## strikes the player; rage wakes one too.
 func _check_sleeper_strikes_nobody() -> String:
 	var state: GameState = FlowSteps.basic(SEED)
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
 	var stuck: Dictionary[Vector2i, bool] = RingableGround.unringable(state.region)
-	# One that stands still awake too: not held, not hidden, and on ground a ring could enclose.
+	# One that stands still awake too: not held, not hidden, on ground a ring could enclose, and
+	# not a light sleeper, which the player would wake.
 	var monster: int = 0
 	for each: int in wild.monsters:
 		var held: bool = wild.held.has(each) or (hiding != null and hiding.is_hidden(each))
-		if not held and not stuck.has(state.entity(each).tile):
+		if (not held
+				and not stuck.has(state.entity(each).tile)
+				and not _schedules(state).has_trait(state, each, SpeciesBehaviour.LIGHT_SLEEPER)):
 			monster = each
 			break
 	if monster == 0:
-		return "the basic instance has no wild monster standing free"
+		return "the basic instance has no deep-sleeping wild monster standing free"
 	var tile: Vector2i = state.entity(monster).tile
-	var player: Entity = state.player(0)
-	for direction: Vector2i in Hex.DIRECTIONS:
-		var side: Vector2i = tile + direction
-		if state.region.is_walkable(side) and _nobody_on(state, side):
-			player.tile = side
-			break
-	if Hex.distance(player.tile, tile) != 1:
+	if not _place_player(state, tile, 1):
 		return "the player found no room next to wild monster %d" % monster
 	wild.sleep(monster, true)
 	if _strikes(state, monster) > 0:
@@ -367,6 +366,44 @@ func _check_sleeper_strikes_nobody() -> String:
 	if wild.asleep.has(monster):
 		return "rage didn't wake a sleeping wild monster"
 	return ""
+
+
+## A sleeping light sleeper (#1230) sleeps on while a player stands two tiles away, and wakes on
+## the tick the player stands next to it; the content's Tikazzir is one.
+func _check_light_sleeper_wakes() -> String:
+	var tikazzir: Species = SpeciesContent.cached().species["tikazzir"]
+	if not tikazzir.behaviour.has(SpeciesBehaviour.LIGHT_SLEEPER):
+		return "the content's Tikazzir isn't a light sleeper"
+	var traits: Dictionary[String, Array] = TEST_TRAITS.duplicate(true)
+	traits["diu"].append(SpeciesBehaviour.LIGHT_SLEEPER)
+	var state: GameState = _test_state(SEED, traits)
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var monster: int = wild.monsters[TEST_TRAITS.keys().find("diu")]
+	var tile: Vector2i = state.entity(monster).tile
+	var _player: Entity = state.add_entity(0, tile + Vector2i(0, 3))
+	if not _place_player(state, tile, 2):
+		return "the player found no room two tiles from the light sleeper"
+	wild.sleep(monster, true)
+	for _tick: int in MovementFeature.MOVE_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not wild.asleep.has(monster):
+		return "a player two tiles from a sleeping light sleeper woke it"
+	if not _place_player(state, tile, 1):
+		return "the player found no room next to the light sleeper"
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if wild.asleep.has(monster):
+		return "a player next to a sleeping light sleeper didn't wake it"
+	return ""
+
+
+## Puts the player of slot 0 on a free walkable tile `distance` tiles from `tile`; whether there
+## was one.
+static func _place_player(state: GameState, tile: Vector2i, distance: int) -> bool:
+	for side: Vector2i in Hex.ring(distance, tile):
+		if state.region.is_walkable(side) and _nobody_on(state, side):
+			state.player(0).tile = side
+			return true
+	return false
 
 
 ## How many times the wild monster `monster` strikes over two of its strikes' time, standing still.

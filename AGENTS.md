@@ -448,7 +448,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   and then, a `grazer` finds grass to eat now and then. Every species has exactly one sleep rhythm
   (`diurnal`, `nocturnal`, `cathemeral` for sleeping in bouts, or `sleepless` for those that never
   sleep, like eldritch or gaseous ones) and enough needs to form a schedule (at least one of
-  `grazer`, `drinker`, `predator`); the content flow refuses a species that hasn't.
+  `grazer`, `drinker`, `predator`); the content flow refuses a species that hasn't. A sleeping
+  monster wakes only when struck or enraged, unless its species is a `light_sleeper` (owner, #1230):
+  then a player coming next to it wakes it too.
 - **Territory quests keep to ground rules** (draft for the owner's review, #638): a territory
   quest (`territory` in its quest data) names one instance and one faction, and finishing it hands
   that instance to that faction, whoever held it. It's written for its territory: its steps happen

@@ -3,7 +3,8 @@ extends RefCounted
 ## A species' behaviour traits (#1200), from which its monsters' daily schedule is made (owner's
 ## ground rule, #1199): they act on needs and instincts, never strolling at random. Each species has
 ## exactly one sleep rhythm (sleepless is one, for monsters that never sleep, owner on #1199) and at
-## least one need to fill its waking hours; banding with others is optional.
+## least one need to fill its waking hours; banding with others is optional, and so is sleeping
+## lightly.
 
 ## Awake by day, asleep at night.
 const DIURNAL: String = "diurnal"
@@ -23,6 +24,8 @@ const PREDATOR: String = "predator"
 const PACK_SPECIES: String = "pack_species"
 ## Bands together with monsters of the same or similar typing.
 const PACK_TYPE: String = "pack_type"
+## Wakes when a player comes next to it (#1230): the others sleep on until struck or enraged.
+const LIGHT_SLEEPER: String = "light_sleeper"
 ## The sleep rhythms, of which a species has exactly one.
 const RHYTHMS: Array[String] = [DIURNAL, NOCTURNAL, CATHEMERAL, SLEEPLESS]
 ## The needs, of which a species has at least one.
@@ -38,7 +41,9 @@ static func read(raw: Variant, traits: Array[String]) -> String:
 	var given: Array = raw
 	for value: Variant in given:
 		var named: String = Content.text_of(value)
-		if not (named in RHYTHMS or named in NEEDS or named in BANDS) or named in traits:
+		var known: bool = (named in RHYTHMS or named in NEEDS or named in BANDS
+				or named == LIGHT_SLEEPER)
+		if not known or named in traits:
 			return "its behaviour names %s, which isn't a trait or is named twice" % [value]
 		traits.append(named)
 	var rhythms: Array[String] = []
@@ -55,4 +60,6 @@ static func read(raw: Variant, traits: Array[String]) -> String:
 		)
 	if needs == 0:
 		return "its behaviour lacks a need: one of %s (#1200)" % ", ".join(NEEDS)
+	if LIGHT_SLEEPER in traits and SLEEPLESS in traits:
+		return "its behaviour is sleepless and light_sleeper; one that never sleeps can't (#1230)"
 	return ""
