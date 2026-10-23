@@ -797,7 +797,7 @@ func _check_two_of_one_species() -> String:
 ## companion, and once it faints, as fainted (#597). Its squares show the glyphs of what swaps to
 ## them for the device in use (#1192).
 func _check_roster(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree, ROSTER_PROFILE)
+	var main: Node = await FlowGame.start_held(tree, ROSTER_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	CompanionParty.bring(driver.world, FlowSteps.parties([["tikazzir", "ombulumo"]]))
 	var roster: RosterHud = main.get_node("Hud/RosterHud") as RosterHud

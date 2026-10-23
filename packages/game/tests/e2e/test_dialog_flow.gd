@@ -48,7 +48,7 @@ func run(tree: SceneTree) -> String:
 	# must land on its button.
 	var kept_size: Vector2i = tree.root.size
 	tree.root.size = SCREEN
-	var main: Node = await FlowGame.start(tree, PROFILE)
+	var main: Node = await FlowGame.start_held(tree, PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var screen: DialogScreen = main.get_node("Hud/DialogScreen") as DialogScreen
 	var _connected: int = driver.ticked.connect(_hear)

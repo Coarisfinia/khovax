@@ -1799,7 +1799,7 @@ func _toward(walker: Entity, next: Vector2i) -> int:
 ## blink out: it shrinks away calmly, and then it's gone, and so is the brace. Before the totem,
 ## a spikes hit flashes thorns on the wall segment the monster pushes on, which then go (#777).
 func _check_view(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree)
+	var main: Node = await FlowGame.start_held(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
 	FlowSteps.drop_beach_toad(driver.state)
@@ -1844,7 +1844,7 @@ func _check_view(tree: SceneTree) -> String:
 ## releases it (ChannelEnd) and idles again. Held again, it releases it at once when its bind breaks
 ## (#1167).
 func _check_channel(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree)
+	var main: Node = await FlowGame.start_held(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	CompanionParty.bring(driver.world, FlowSteps.parties([[COMPANION]]))
 	driver.world.step(FlowSteps.command(Command.NO_MOVE))
@@ -1881,7 +1881,7 @@ func _check_channel(tree: SceneTree) -> String:
 ## the thread breaks into motes, then frees itself; bound again, the bind breaks as the companion is
 ## taken away from it, and the thread snaps.
 func _check_bind_thread(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree)
+	var main: Node = await FlowGame.start_held(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	CompanionParty.bring(driver.world, FlowSteps.parties([[COMPANION]]))
 	_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
@@ -2201,7 +2201,7 @@ func _check_brace(main: Node, state: GameState) -> String:
 ## over and, the first gain after a quiet spell, saved at once. Another slot's domination isn't this
 ## player's.
 func _check_saved(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree, SAVE_PATH)
+	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	(main.get_node("LocalInput") as LocalInput).slot = 1

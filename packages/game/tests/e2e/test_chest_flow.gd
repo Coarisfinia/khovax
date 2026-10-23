@@ -195,7 +195,7 @@ func _first_loot() -> String:
 ## A chest opened and loot found in a session: the driver's ticked events bring this machine's
 ## player (slot 0) their own rolls, into the profile and its save at once, and not slot 1's.
 func _check_saved(tree: SceneTree) -> String:
-	var main: Node = await FlowGame.start(tree, SAVE_PATH)
+	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
 	var driver: GameDriver = FlowGame.held_driver(main)
 	driver.ticked.emit(driver.state.tick, _chest_opened())
