@@ -1,0 +1,21 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://slices/quests/ui/quest_marker_label.gd" id="1_label"]
+[ext_resource type="PackedScene" path="res://slices/quests/ui/quest_pill.tscn" id="2_pill"]
+
+[node name="QuestLabel" type="PanelContainer"]
+mouse_filter = 2
+script = ExtResource("1_label")
+
+[node name="Lines" type="VBoxContainer" parent="."]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Name" type="Label" parent="Lines"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="Where" parent="Lines" instance=ExtResource("2_pill")]
+layout_mode = 2
+size_flags_horizontal = 4

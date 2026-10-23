@@ -394,7 +394,8 @@ func _survey_marks(driver: GameDriver, survey: SurveyView, quests: QuestTracker)
 	)
 	if survey.circles.keys() != [0] or not on_tile:
 		return "the Survey doesn't mark the player on their tile: %s" % [survey.circles]
-	return _survey_mark_glides(driver, survey)
+	var labelled: String = _survey_labels(driver, survey, quests)
+	return labelled if not labelled.is_empty() else _survey_mark_glides(driver, survey)
 
 
 ## Why the player's mark, a tick into a step, doesn't sit on the way between the tile they walk
@@ -420,6 +421,75 @@ func _survey_mark_glides(driver: GameDriver, survey: SurveyView) -> String:
 		return "the Survey's mark of a walking player isn't between their tiles: %s of the way" % [
 			share,
 		]
+	return ""
+
+
+## Why the Survey's quest arrows aren't labelled with their quests' names and the pills naming
+## where their steps count (#1278), each label just above its arrow, those over one tile stacked,
+## or "": none for a step that counts anywhere, filled for one that counts in the glade the player
+## is in, outlined with its arrow for one that counts in the forest, whose arrow is on an exit.
+func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker) -> String:
+	var where: Dictionary[String, String] = {
+		"survey_any": "",
+		"survey_here": FlowSteps.GLADE,
+		"survey_there": FlowSteps.FOREST,
+	}
+	for id: String in where:
+		var text: String = "{\"id\": \"%s\", \"name\": \"%s\", \"steps\": " % [id, id.capitalize()]
+		text += "[{\"condition\": \"dominated\", \"ends\": \"%s\"" % id
+		text += ", \"instance\": \"%s\"}]}" % where[id] if not where[id].is_empty() else "}]}"
+		quests.book[id] = QuestDefinition.parse(id, text, {})
+	survey.show_state()
+	var labels: SurveyQuestLabels = survey.quest_labels()
+	labels.show_state()
+	var result: String = ""
+	for id: String in where:
+		if result.is_empty():
+			result = _survey_label(driver, survey, labels, id, where[id])
+	for id: String in where:
+		var _dropped: bool = quests.book.erase(id)
+	survey.show_state()
+	labels.show_state()
+	if result.is_empty() and labels.labels.keys().any(where.has):
+		result = "the Survey keeps the labels of quests no longer open"
+	return result
+
+
+## Why the Survey's arrow for quest `id` isn't labelled with its name and a pill naming `instance`
+## (none when it's ""), filled when that's where the player is, the label above the arrow and clear
+## of the other labels over its tile, or "".
+func _survey_label(
+	driver: GameDriver,
+	survey: SurveyView,
+	labels: SurveyQuestLabels,
+	id: String,
+	instance: String,
+) -> String:
+	if not survey.quest_targets.has(id) or not labels.labels.has(id):
+		return "the Survey has no labelled arrow for %s: %s" % [id, labels.labels.keys()]
+	var label: QuestMarkerLabel = labels.labels[id]
+	var pill: QuestPill = label.pill()
+	var here: bool = instance == driver.local_instance_name()
+	if label.quest_name != id.capitalize() or pill.visible != not instance.is_empty():
+		return "the Survey's label for %s says %s, its pill shown: %s" % [
+			id,
+			label.quest_name,
+			pill.visible,
+		]
+	if not instance.is_empty() and (pill.instance_id != instance or pill.here != here):
+		return "the Survey's pill for %s names %s (here: %s), not %s" % [
+			id,
+			pill.instance_id,
+			pill.here,
+			instance,
+		]
+	var top: Vector2 = survey.arrow_top(survey.quest_targets[id])
+	var box: Rect2 = label.get_rect()
+	if box.end.y > top.y + 0.5 or not is_equal_approx(box.get_center().x, top.x):
+		return "the Survey's label for %s isn't above its arrow: %s, arrow top %s" % [id, box, top]
+	for other: String in labels.labels:
+		if other != id and labels.labels[other].get_rect().intersects(box):
+			return "the Survey's labels for %s and %s overlap" % [id, other]
 	return ""
 
 
