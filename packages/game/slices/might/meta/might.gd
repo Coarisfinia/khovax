@@ -20,7 +20,7 @@ static func monsters_part(profile: Profile, species: Dictionary[String, Species]
 	var total: int = 0
 	for monster: DominatedMonster in profile.dominated_monsters:
 		var stats: Species = species.get(monster.species)
-		if not profile.carried.has(monster.id) or stats == null:
+		if not profile.carried.has(monster.short_id) or stats == null:
 			continue
 		total += (stats.hp + STRENGTH_WEIGHT * stats.strength + stats.speed) * monster.level
 	return total

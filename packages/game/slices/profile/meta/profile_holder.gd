@@ -159,10 +159,10 @@ func choose_color(color: int) -> void:
 		_report(keeper.choose_color(color, Time.get_ticks_msec()))
 
 
-## Moves the dominated monster `monster_id` to `place` in this player's order (#430).
-func move_monster(monster_id: int, place: int) -> void:
+## Moves the dominated monster `short_id` to `place` in this player's order (#430).
+func move_monster(short_id: String, place: int) -> void:
 	if keeper != null:
-		_report(keeper.move_monster(monster_id, place, Time.get_ticks_msec()))
+		_report(keeper.move_monster(short_id, place, Time.get_ticks_msec()))
 
 
 ## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690), and tells when

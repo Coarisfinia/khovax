@@ -72,10 +72,10 @@ func choose_color(color: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
-## Moves the dominated monster `monster_id` to `place` in the player's order (#430) and saves it
+## Moves the dominated monster `short_id` to `place` in the player's order (#430) and saves it
 ## like any choice; returns why it can't, or "".
-func move_monster(monster_id: int, place: int, now_msec: int) -> String:
-	var problem: String = profile.move_monster(monster_id, place)
+func move_monster(short_id: String, place: int, now_msec: int) -> String:
+	var problem: String = profile.move_monster(short_id, place)
 	if not problem.is_empty():
 		return problem
 	_pending = true

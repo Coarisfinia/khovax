@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 19
+const FORMAT: int = 20
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -39,7 +39,6 @@ static func to_text(profile: Profile, companions: Array[ProfileCompanion] = []) 
 	var data: Dictionary[String, Variant] = {
 		"format": FORMAT,
 		"unlocked_slots": profile.unlocked_slots,
-		"next_monster_id": profile.next_monster_id,
 		"dominated_monsters": monsters,
 		"carried": profile.carried,
 		"materials": _sorted(profile.materials),
@@ -115,6 +114,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_17,
 		_migrate_to_18,
 		_migrate_to_19,
+		_migrate_to_20,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -260,6 +260,26 @@ static func _migrate_to_19(data: Dictionary) -> void:
 		fields["progress"] = 0
 
 
+## Format 19 to 20: the profile keys its dominated monsters on their short ids (#754), so the
+## carried ones are named by theirs, and the numbers and the next one go. A number the save
+## couldn't hold before (below 1, from the next one up, or held twice) loses its monster's short
+## id, and a carried number no monster has stays, so reading refuses either as it did the numbers.
+static func _migrate_to_20(data: Dictionary) -> void:
+	var next: int = _int(data.get("next_monster_id"))
+	var short_ids: Dictionary[int, String] = {}
+	for fields: Dictionary in _monster_entries(data):
+		var number: int = _int(fields.get("id"))
+		if number < 1 or number >= next or short_ids.has(number):
+			fields["short_id"] = ""
+		short_ids[number] = Content.text_of(fields.get("short_id"))
+		var _numbered: bool = fields.erase("id")
+	var carried: Variant = data.get("carried")
+	var numbers: Array = carried if carried is Array else []
+	for place: int in numbers.size():
+		numbers[place] = short_ids.get(_int(numbers[place]), numbers[place])
+	var _next: bool = data.erase("next_monster_id")
+
+
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
 ## code it maps to.
 static func _recode_territories(data: Dictionary, recoded: Dictionary[int, int]) -> void:
@@ -276,10 +296,9 @@ static func _recode_territories(data: Dictionary, recoded: Dictionary[int, int])
 ## Reads current-format data into this profile; returns why it can't, or "".
 static func _read(profile: Profile, data: Dictionary) -> String:
 	profile.unlocked_slots = _int(data.get("unlocked_slots"))
-	profile.next_monster_id = _int(data.get("next_monster_id"))
 	var slots: int = profile.unlocked_slots
-	if slots < Profile.START_SLOTS or slots > Profile.MAX_SLOTS or profile.next_monster_id < 1:
-		return "the save's slots or next id are out of range"
+	if slots < Profile.START_SLOTS or slots > Profile.MAX_SLOTS:
+		return "the save's slots are out of range"
 	var monsters: Variant = data.get("dominated_monsters")
 	var stored: Variant = data.get("materials")
 	if not monsters is Array or not stored is Dictionary:
@@ -287,10 +306,8 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	var monster_list: Array = monsters
 	for entry: Variant in monster_list:
 		var monster: DominatedMonster = _monster(entry)
-		if (monster == null
-				or monster.id >= profile.next_monster_id
-				or profile.has_monster(monster.id)):
-			return "a dominated monster in the save is malformed or its id isn't unique"
+		if monster == null or profile.has_monster(monster.short_id):
+			return "a dominated monster in the save is malformed or its short id isn't unique"
 		profile.dominated_monsters.append(monster)
 	var by_name: Dictionary = stored
 	var counted: String = _read_counts(by_name, profile.materials)
@@ -384,7 +401,7 @@ static func _read_carried(profile: Profile, data: Dictionary) -> String:
 	if ids.size() > Profile.CARRY_LIMIT:
 		return "a carried monster too many: at most %d" % Profile.CARRY_LIMIT
 	for entry: Variant in ids:
-		var id: int = _int(entry)
+		var id: String = Content.text_of(entry)
 		if not profile.has_monster(id) or profile.carried.has(id):
 			return "a carried monster isn't one of the save's, or is carried twice"
 		profile.carried.append(id)
@@ -402,14 +419,13 @@ static func _monster(entry: Variant) -> DominatedMonster:
 		return null
 	var data: Dictionary = entry
 	var monster: DominatedMonster = DominatedMonster.new(
-		_int(data.get("id")),
 		str(data.get("species", "")),
 		_int(data.get("level")),
 		Content.text_of(data.get("short_id")),
 		_int(data.get("progress")),
 	)
 	var named: bool = not monster.species.is_empty() and ShortId.is_valid(monster.short_id)
-	if monster.id < 1 or not named or monster.level < 1:
+	if not named or monster.level < 1:
 		return null
 	# Progress always stays below what its level needs.
 	if monster.progress < 0 or monster.progress >= DominatedMonster.progress_needed(monster.level):

@@ -23,11 +23,11 @@ const DOWN_TIP: String = "Move down"
 var holder: ProfileHolder
 ## What the list shows, one line per monster. Kept here so tests can read it.
 var shown: Array[String] = []
-## The monster each row shows, by entity id, in the rows' order.
-var shown_ids: Array[int] = []
-## The monster whose stats the detail pane shows, by entity id: the first one until the player
+## The monster each row shows, by short id (#754), in the rows' order.
+var shown_ids: Array[String] = []
+## The monster whose stats the detail pane shows, by short id: the first one until the player
 ## taps, clicks or moves the focus onto another (#430).
-var selected: int = 0
+var selected: String = ""
 ## The pane that shows the selected monster's stats, if the tab has one.
 var details: MonsterDetails
 ## Each species' data and each ability's name with its path mark in words (#471), by id; a species
@@ -61,7 +61,7 @@ func _process(_delta: float) -> void:
 ## Shows the monsters as they are now; builds the rows anew only when that changed.
 func refresh() -> void:
 	var lines: Array[String] = []
-	var ids: Array[int] = []
+	var ids: Array[String] = []
 	if holder != null and holder.keeper != null:
 		ids = holder.keeper.profile.order()
 		lines = _lines_of(holder.keeper.profile, ids)
@@ -70,13 +70,13 @@ func refresh() -> void:
 	if lines != shown or ids != shown_ids:
 		_show(lines, ids)
 	if not shown_ids.has(selected):
-		selected = shown_ids[0] if not shown_ids.is_empty() else 0
+		selected = shown_ids[0] if not shown_ids.is_empty() else ""
 	_show_details()
 
 
-## Shows the monster `monster_id`'s stats in the detail pane, as a tap, a click or the focus does.
-func select(monster_id: int) -> void:
-	selected = monster_id
+## Shows the monster `short_id`'s stats in the detail pane, as a tap, a click or the focus does.
+func select(short_id: String) -> void:
+	selected = short_id
 	_show_details()
 
 
@@ -84,8 +84,8 @@ func _show_details() -> void:
 	if details == null:
 		return
 	var monster: DominatedMonster = null
-	if selected != 0 and holder != null and holder.keeper != null:
-		monster = _monster(holder.keeper.profile, selected)
+	if holder != null and holder.keeper != null:
+		monster = holder.keeper.profile.monster_of(selected)
 	var species: Species = null
 	if monster != null:
 		species = _species.get(monster.species)
@@ -94,40 +94,32 @@ func _show_details() -> void:
 
 ## A line for each of `profile`'s dominated monsters in `ids`, the player's order: the carried
 ## ones first, then the rest.
-func _lines_of(profile: Profile, ids: Array[int]) -> Array[String]:
+func _lines_of(profile: Profile, ids: Array[String]) -> Array[String]:
 	var lines: Array[String] = []
 	for place: int in ids.size():
 		var prefix: String = RESTING_TEXT
 		if place < profile.carried.size():
 			prefix = COMPANION_TEXT if place == 0 else CARRIED_TEXT % (place + 1)
-		lines.append(prefix + _described(_monster(profile, ids[place])))
+		lines.append(prefix + _described(profile.monster_of(ids[place])))
 	return lines
 
 
-## Moves the monster `monster_id` to `place` in the player's order, as its buttons and a drag do.
-func move(monster_id: int, place: int) -> void:
+## Moves the monster `short_id` to `place` in the player's order, as its buttons and a drag do.
+func move(short_id: String, place: int) -> void:
 	if holder != null:
-		holder.move_monster(monster_id, place)
+		holder.move_monster(short_id, place)
 	refresh()
 
 
-## The dominated monster with id `monster_id` in `profile`; the save guarantees every carried one
-## is there (ProfileSave).
-static func _monster(profile: Profile, monster_id: int) -> DominatedMonster:
-	for monster: DominatedMonster in profile.dominated_monsters:
-		if monster.id == monster_id:
-			return monster
-	return DominatedMonster.new(monster_id)
-
-
-## `monster`'s species name and level, in words.
+## `monster`'s species name and level, in words: every one in the order is there, as the save
+## guarantees every carried one is (ProfileSave).
 func _described(monster: DominatedMonster) -> String:
 	var known: Species = _species.get(monster.species)
 	return "%s, level %d" % [known.name if known != null else monster.species, monster.level]
 
 
 ## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any.
-func _show(lines: Array[String], ids: Array[int]) -> void:
+func _show(lines: Array[String], ids: Array[String]) -> void:
 	shown = lines
 	shown_ids = ids
 	# Out of the list at once, so its buttons and places are only ever the current ones.
@@ -135,40 +127,40 @@ func _show(lines: Array[String], ids: Array[int]) -> void:
 		_rows.remove_child(row)
 		row.queue_free()
 	for place: int in lines.size():
-		_rows.add_child(_row(lines[place], ids[place] if place < ids.size() else 0, place))
+		_rows.add_child(_row(lines[place], ids[place] if place < ids.size() else "", place))
 
 
 ## A monster's row: its line, which can be dragged onto another row, and its up and down buttons.
-## Without a monster (`monster_id` 0), the line alone.
-func _row(line: String, monster_id: int, place: int) -> Control:
+## Without a monster (`short_id` ""), the line alone.
+func _row(line: String, short_id: String, place: int) -> Control:
 	var text: Label = GameMenu.label(line)
-	if monster_id == 0:
+	if short_id.is_empty():
 		return text
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.mouse_filter = Control.MOUSE_FILTER_STOP
 	# A tap or a click shows it in the detail pane, and so does a controller's focus (#438).
 	text.focus_mode = Control.FOCUS_ALL
-	var _focused: int = text.focus_entered.connect(select.bind(monster_id))
-	var _tapped: int = text.gui_input.connect(_on_row_input.bind(monster_id))
+	var _focused: int = text.focus_entered.connect(select.bind(short_id))
+	var _tapped: int = text.gui_input.connect(_on_row_input.bind(short_id))
 	text.set_drag_forwarding(
-		func(_at: Vector2) -> Variant: return monster_id,
-		func(_at: Vector2, data: Variant) -> bool: return data is int,
+		func(_at: Vector2) -> Variant: return short_id,
+		func(_at: Vector2, data: Variant) -> bool: return data is String,
 		func(_at: Vector2, data: Variant) -> void: _dropped(data, place),
 	)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_child(text)
-	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(monster_id, place - 1)))
-	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(monster_id, place + 1)))
+	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
+	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
 	return row
 
 
 ## A row's monster, dragged and dropped onto the row in `place`: it moves there.
 func _dropped(data: Variant, place: int) -> void:
-	var monster_id: int = data
-	move(monster_id, place)
+	var short_id: String = data
+	move(short_id, place)
 
 
-func _on_row_input(event: InputEvent, monster_id: int) -> void:
+func _on_row_input(event: InputEvent, short_id: String) -> void:
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
-		select(monster_id)
+		select(short_id)

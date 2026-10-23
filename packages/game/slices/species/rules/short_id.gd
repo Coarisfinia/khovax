@@ -21,8 +21,9 @@ static func drawn(rng: Rng) -> String:
 
 
 ## The short id standing in for the monster numbered `number` where none was drawn: a dominated
-## monster saved before short ids existed (its profile id), or a carried one an old replay names
-## (its place). The same number always gives the same one.
+## monster saved before short ids existed (its old profile number), one a gain brought without a
+## short id or with one the profile already holds (#754), or a carried one an old replay names (its
+## place). The same number always gives the same one.
 static func stand_in(number: int) -> String:
 	return drawn(Rng.new(number, STAND_IN_STREAM))
 
