@@ -94,6 +94,15 @@ func cooldown_left(slot: int) -> int:
 	return _cooling.get(slot, 0)
 
 
+## The wild monster each held special binds now (#1167), by its companion's entity id: what the
+## crown bind's look draws (CrownBindView, #1206).
+func bound_monsters() -> Dictionary[int, int]:
+	var targets: Dictionary[int, int] = {}
+	for companion_id: int in _binds:
+		targets[companion_id] = _binds[companion_id].x
+	return targets
+
+
 ## Whether a press of the player in `slot` would fire their special now (#931, the special's button
 ## asks this too): it's on and ready, and they have a companion here whose species has a special and
 ## something next to it to strike. The focus (#436) only picks what it strikes, never whether.

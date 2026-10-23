@@ -62,6 +62,7 @@
 [ext_resource type="Script" path="res://slices/codex/meta/codex_keeper.gd" id="55_codex_keeper"]
 [ext_resource type="Script" path="res://slices/codex/look/place_tie.gd" id="place_tie"]
 [ext_resource type="PackedScene" path="res://slices/codex/ui/codex_book.tscn" id="56_codex_book"]
+[ext_resource type="Script" path="res://slices/companions/look/crown_bind_view.gd" id="57_crown_bind"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -188,6 +189,12 @@ driver = NodePath("../../Driver")
 [node name="CompanionView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver") unique_id=3380338033]
 script = ExtResource("29_companions")
 driver = NodePath("../../Driver")
+
+[node name="CrownBindView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "companions", "wild_monsters") unique_id=1206120612]
+script = ExtResource("57_crown_bind")
+driver = NodePath("../../Driver")
+companions = NodePath("../CompanionView")
+wild_monsters = NodePath("../WildMonsterView")
 
 [node name="DamageNumbersView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "graphics")]
 script = ExtResource("40_damage_numbers")

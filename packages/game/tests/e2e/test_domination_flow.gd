@@ -1873,7 +1873,121 @@ func _check_channel(tree: SceneTree) -> String:
 				]
 	main.queue_free()
 	await tree.process_frame
+	return result if not result.is_empty() else await _check_bind_thread(tree)
+
+
+## While a held special binds a wild monster, a thread of wisps runs from its companion's crown,
+## above its figure, down to the monster and loops around it (#1206): it lets go with its strike and
+## the thread breaks into motes, then frees itself; bound again, the bind breaks as the companion is
+## taken away from it, and the thread snaps.
+func _check_bind_thread(tree: SceneTree) -> String:
+	var main: Node = await FlowGame.start(tree)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	CompanionParty.bring(driver.world, FlowSteps.parties([[COMPANION]]))
+	_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+	var specials: SpecialAttackFeature = (
+		driver.state.feature(SpecialAttackFeature.ID) as SpecialAttackFeature
+	)
+	# Held for two ticks, so nothing else gets in the bind's way, and ready again a tick later.
+	specials.channels[COMPANION] = 2
+	specials.cooldowns[COMPANION] = 1
+	var view: CrownBindView = main.get_node("Instance/CrownBindView") as CrownBindView
+	var result: String = _bind_next_to(driver, view)
+	if result.is_empty():
+		var thread: BindThread = view.threads.values()[0]
+		_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+		_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+		view.show_state()
+		if not view.threads.is_empty() or thread.ending != BindThread.Ending.RELEASED:
+			result = "the thread didn't break into motes as the bind let go with its strike"
+		thread.advance(BindThread.MOTE_SECONDS)
+		if result.is_empty() and not thread.is_queued_for_deletion():
+			result = "the motes of a released thread didn't go"
+	if result.is_empty():
+		for _tick: int in specials.cooldown_left(0):
+			_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+		result = _bind_next_to(driver, view)
+	if result.is_empty():
+		var thread: BindThread = view.threads.values()[0]
+		var monster: Vector2i = driver.state.entity(_wild(driver.state).monsters[0]).tile
+		_move_near(driver.state, _companion_id(driver.state), monster, 2)
+		_announce_step(driver, FlowSteps.command(Command.NO_MOVE))
+		view.show_state()
+		if not view.threads.is_empty() or thread.ending != BindThread.Ending.SNAPPED:
+			result = "the thread didn't snap as the bind broke early"
+	main.queue_free()
+	await tree.process_frame
 	return result
+
+
+## Puts the companion of the player in slot 0 next to the first wild monster and fires its special,
+## which binds it: the crown bind's look then shows one thread for it. The reason if not.
+func _bind_next_to(driver: GameDriver, view: CrownBindView) -> String:
+	var state: GameState = driver.state
+	var companion_id: int = _companion_id(state)
+	var monster_id: int = _wild(state).monsters[0]
+	_move_near(state, companion_id, state.entity(monster_id).tile, 1)
+	_announce_step(driver, _fire())
+	var specials: SpecialAttackFeature = (
+		state.feature(SpecialAttackFeature.ID) as SpecialAttackFeature
+	)
+	var bound: Dictionary[int, int] = specials.bound_monsters()
+	if bound.size() != 1 or bound.get(companion_id, 0) != monster_id:
+		return "the companion's held special didn't bind the wild monster next to it"
+	view.companions.show_state()
+	view.wild_monsters.show_state()
+	view.show_state()
+	if not view.threads.has(companion_id) or view.threads.size() != 1:
+		return "a bind shows no thread"
+	return _thread_between(view, companion_id, monster_id)
+
+
+## Whether the thread of the bind of `companion_id` in `view` runs from the crown above its figure
+## to a loop around the figure of the wild monster `monster_id`; the reason if not.
+static func _thread_between(view: CrownBindView, companion_id: int, monster_id: int) -> String:
+	var thread: BindThread = view.threads[companion_id]
+	thread.advance(0.0)
+	var figure: HexPiece = view.companions.figures[companion_id]
+	var crown: Vector3 = CrownBindView.crown_of(figure)
+	var middle: Vector3 = CrownBindView.loop_middle_of(view.wild_monsters.figures[monster_id])
+	var loop: Vector3 = (thread.get_child(BindThread.THREAD_WISPS) as Node3D).global_position
+	var around: float = Vector2(loop.x - middle.x, loop.z - middle.z).length()
+	if not thread.crown.is_equal_approx(crown) or crown.y <= figure.global_position.y:
+		return "the thread doesn't start at the crown above the companion's figure"
+	if (not thread.middle.is_equal_approx(middle)
+			or not is_equal_approx(around, BindThread.LOOP_RADIUS)):
+		return "the thread doesn't loop around the bound wild monster's figure"
+	return ""
+
+
+## The companion of the player in slot 0 in `state`.
+static func _companion_id(state: GameState) -> int:
+	return (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+
+
+## Puts the entity `entity_id` in `state` on the first tile `radius` tiles from `around` that can be
+## walked on with nothing on it.
+static func _move_near(state: GameState, entity_id: int, around: Vector2i, radius: int) -> void:
+	for spot: Vector2i in Hex.ring(radius, around):
+		if _free(state, spot):
+			state.entity(entity_id).tile = spot
+			return
+
+
+## Whether `spot` in `state` can be walked on and nothing stands on it.
+static func _free(state: GameState, spot: Vector2i) -> bool:
+	for standing: Entity in state.entities:
+		if standing.tile == spot:
+			return false
+	return state.region.is_walkable(spot)
+
+
+## Steps the world one tick of `commands` and announces it, as the driver does.
+static func _announce_step(driver: GameDriver, commands: Array[Command]) -> void:
+	driver.world.step(commands)
+	var events: Array[RefCounted] = []
+	events.assign(driver.state.events)
+	driver.announce(driver.world.tick, events)
 
 
 ## Whether the companion's figure, whose `clips` play, winds up, holds and releases its special as
