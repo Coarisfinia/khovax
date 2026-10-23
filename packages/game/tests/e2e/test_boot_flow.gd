@@ -618,11 +618,55 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	driver.input.focus = focus
 	mark.show_state()
 	var marked: bool = mark.piece.visible and mark.piece.tile == driver.state.entity(focus).tile
+	var keys_shown: String = _check_focus_keys(main, focus)
 	driver.input.focus = Command.NO_FOCUS
 	mark.show_state()
 	if not marked or mark.piece.visible:
 		return "the focus mark didn't stand on the focused wild monster, or showed with no focus"
+	if not keys_shown.is_empty():
+		return keys_shown
 	return _check_focus_picked(main, driver)
+
+
+## The focus keys' hint (#1210): the glyphs of focus_previous and focus_next stand left and right
+## of the focused wild monster's figure on the screen, Q and R with a keyboard, the shoulder buttons
+## with a controller, and none on touch, where a monster is tapped.
+func _check_focus_keys(main: Node, focus: int) -> String:
+	var keys: FocusKeys = main.get_node("Hud/FocusKeys") as FocusKeys
+	if keys.hinted() != focus:
+		return "the focus keys' hint didn't stand by the focused wild monster"
+	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _focus_keys_shown(keys))
+	var expected: Array = [
+		[InputGlyphs.KEYS[KEY_Q], InputGlyphs.KEYS[KEY_R]],
+		[
+			InputGlyphs.BUTTONS[JOY_BUTTON_LEFT_SHOULDER],
+			InputGlyphs.BUTTONS[JOY_BUTTON_RIGHT_SHOULDER],
+		],
+		[],
+	]
+	if shown != expected:
+		return "the focus keys' glyphs weren't Q and R, the shoulder buttons and none on touch"
+	var figure: HexPiece = keys.wild_view.figures[focus]
+	var feet: Vector2 = keys.camera.unproject_position(figure.global_position)
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	keys.show_state()
+	DeviceInUse.device = kept
+	var left: Rect2 = keys.shown.get(&"focus_previous", Rect2())
+	var right: Rect2 = keys.shown.get(&"focus_next", Rect2())
+	if keys.shown.size() != 2 or left.end.x > feet.x or right.position.x < feet.x:
+		return "the focus keys' glyphs didn't stand left and right of the focused wild monster"
+	return ""
+
+
+## The glyphs the focus keys' hint shows now, from the left.
+static func _focus_keys_shown(keys: FocusKeys) -> Array:
+	keys.show_state()
+	var glyphs: Array = []
+	for action: StringName in FocusKeys.ACTIONS:
+		if keys.shown.has(action):
+			glyphs.append(InputGlyphs.of(action, DeviceInUse.device))
+	return glyphs
 
 
 ## Tapping or clicking a wild monster focuses it (#486): picking at its figure's place on the screen
