@@ -29,12 +29,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 from game_shared import log  # noqa: E402
 from lib import clearance, ground, imported  # noqa: E402
 
-# (model, clip) that fails today, with the issue that fixes it.
+# (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 KNOWN = {
-    ("mana_wolf", "Hit"): 1241,
-    ("mana_wolf", "Idle"): 1241,
-    ("mana_wolf", "Run"): 1241,
-    ("mana_wolf", "Walk"): 1241,
+    ("mana_wolf", "Hit"): 1231,
+    ("mana_wolf", "Idle"): 1231,
+    ("mana_wolf", "Run"): 1231,
+    ("mana_wolf", "Walk"): 1231,
 }
 
 
