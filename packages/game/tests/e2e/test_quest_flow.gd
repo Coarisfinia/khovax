@@ -605,6 +605,8 @@ func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> Str
 	result = result if not result.is_empty() else _check_pill(tab.pills[quest], forest, true)
 	if result.is_empty():
 		result = _check_pill(list.pill("pond_chest"), glade, false)
+	if result.is_empty():
+		result = _check_pill(tab.pills["pond_chest"], glade, false)
 	list.driver = driver
 	tab.driver = driver
 	there.free()
