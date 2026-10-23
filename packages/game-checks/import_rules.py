@@ -43,7 +43,7 @@ from game_shared.git_files import git_files
 SLICE_ORDER: tuple[str, ...] = (
     "emoji_grid", "realms", "camera", "music", "credits", "hiding", "movement", "entering",
     "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons", "triggers",
-    "species", "health", "players", "npcs", "trail", "wild_monsters", "schedules", "tiles", "outbox", "controls",
+    "species", "health", "players", "npcs", "trail", "wild_monsters", "schedules", "packs", "tiles", "outbox", "controls",
     "settings", "texts", "factions",
     "survey", "menu",
     "domination", "enrage", "hunts", "domination_loot", "companions", "gear", "chests", "damage_numbers",

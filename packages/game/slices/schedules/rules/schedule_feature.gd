@@ -7,6 +7,7 @@ extends Feature
 ## its entity id, so its day never depends on the other monsters, and follows from what the save
 ## holds already: a loaded instance makes them again, the same, rather than saving them. The
 ## schedules are in the state hash. It doesn't step: the time of day follows from the world's tick.
+## A pack member lives by its leader's day instead of its own (`follow`, PackFeature, #1205).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "schedules"
@@ -69,6 +70,20 @@ func has_trait(state: GameState, entity_id: int, named: String) -> bool:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var its_traits: Array = traits.get(wild.species_of(entity_id), [])
 	return its_traits.has(named)
+
+
+## Gives the wild monster with this entity id the day of the wild monster `leader` (#1205): a pack
+## member follows its leader's day, and sleeps when it sleeps. With itself as `leader`, it gets its
+## own day back. A leader's day is always its own, so it follows from the save like every day:
+## PackFeature, which saves the packs, gives each member its leader's day again on loading.
+func follow(state: GameState, entity_id: int, leader: int) -> void:
+	if not _days.has(entity_id) or not _days.has(leader):
+		return
+	if leader == entity_id:
+		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		_days[entity_id] = _made_day(state, entity_id, wild.species_of(entity_id))
+	else:
+		_days[entity_id] = _days[leader].duplicate()
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:
