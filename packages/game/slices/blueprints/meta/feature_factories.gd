@@ -38,6 +38,7 @@ static func _all() -> Dictionary[String, Callable]:
 			# Before the wild monsters and every feature that hurts or heals (#835).
 			HealthFeature.ID: HealthFactory.build,
 			WildMonsterFeature.ID: WildMonsterFactory.build,
+			ScheduleFeature.ID: ScheduleFactory.build,
 			DominationFeature.ID: _plain(DominationFeature),
 			# After domination, whose waiting rings it breaks, and before enrage, which enrages the
 			# wild monsters of a ring that broke.
