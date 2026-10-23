@@ -267,7 +267,7 @@ func _draw_exit(from: Vector2, side: int) -> void:
 
 ## A player's circle at `at` in `color`, ringed in ink, with `slot` + 1 ink marks across it.
 func _draw_player(at: Vector2, slot: int, color: Color) -> void:
-	var radius: float = maxf(zoom() * PLAYER_SHARE, PLAYER_MIN_PIXELS)
+	var radius: float = _player_radius()
 	draw_circle(at, radius + INK_PIXELS, Toon.INK)
 	draw_circle(at, radius, color)
 	var marks: int = slot + 1
@@ -275,6 +275,21 @@ func _draw_player(at: Vector2, slot: int, color: Color) -> void:
 	for i: int in marks:
 		var offset: float = (i - (marks - 1) / 2.0) * mark * 2.4
 		draw_circle(at + Vector2(offset, 0.0), mark, Toon.INK)
+
+
+## The boxes round the players' circles, their ink included, in the view's pixels: what the quest
+## labels keep clear of (#1289).
+func circle_boxes() -> Array[Rect2]:
+	var boxes: Array[Rect2] = []
+	var reach: float = _player_radius() + INK_PIXELS
+	for slot: int in circles:
+		boxes.append(Rect2(on_view(circles[slot]), Vector2.ZERO).grow(reach))
+	return boxes
+
+
+## How large a player's circle is, in pixels, at this zoom, without its ink.
+func _player_radius() -> float:
+	return maxf(zoom() * PLAYER_SHARE, PLAYER_MIN_PIXELS)
 
 
 ## A quest's arrow over `at`, its tip on it, in ink round the quest marker's color: the shape says
