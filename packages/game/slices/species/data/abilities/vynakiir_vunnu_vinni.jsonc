@@ -1,0 +1,17 @@
+// The crown bind (#1167): held, it binds its target. Its power, cooldown and hold are placeholders
+// to tune (#960).
+{
+	"id": "vynakiir_vunnu_vinni",
+	"kind": "special",
+	"name": "Vunnu-vinni",
+	"description": "The ${MONSTER:vynakiir} hums and closes its crown around its target, holding it still: it can't move or strike until the crown lets go with a snap of the jaw.",
+	"codex": {
+		"entry": "The low hum a beast gives as its crown closes on its prey, then the high snap of its jaw. Dominators hummed it to send their beast to hold a foe still while they walked their ring around it.",
+		"gloss": "hum, hold, snap"
+	},
+	"power": 1500,
+	"cooldown_seconds": 12,
+	"channel_seconds": 4,
+	"strike_type": "mana",
+	"path": "supremacy"
+}

@@ -17,7 +17,7 @@ const MOVE_TICKS: int = 6
 ## Every walking entity's walk, by entity id. Players get one when they are added; other entities
 ## get one from the rule that adds them.
 var walks: Dictionary[int, Walk] = {}
-## The players held still by a later rule (`hold`), by entity id.
+## The walkers held still by a later rule (`hold`), by entity id.
 var held: Dictionary[int, bool] = {}
 
 
@@ -47,9 +47,10 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	_dropped = held.erase(removed_id)
 
 
-## Holds the player `entity_id` still, or lets them walk again: a later rule's (a knocked-down
-## player, #479). Their commands don't start steps while held; a step already under way ends. The
-## rule that holds them keeps that in its own state and holds them again on loading.
+## Holds the walker `entity_id` still, or lets it walk again: a later rule's (a knocked-down
+## player, #479, or a companion holding its special, #1167). Neither commands nor `try_step` start
+## its steps while held; a step already under way ends. The rule that holds it keeps that in its
+## own state and holds it again on loading.
 func hold(entity_id: int, on: bool) -> void:
 	if on:
 		held[entity_id] = true
@@ -67,7 +68,7 @@ func add_walk(added: Entity) -> void:
 ## and nothing stops it there; returns whether it started.
 func try_step(state: GameState, walker: Entity, direction: int) -> bool:
 	var current: Walk = walks.get(walker.id)
-	if current == null or current.is_moving():
+	if current == null or current.is_moving() or held.has(walker.id):
 		return false
 	return _start_move(state, walker, current, direction)
 
