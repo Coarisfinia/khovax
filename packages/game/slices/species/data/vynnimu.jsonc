@@ -1,7 +1,7 @@
 // The mana pup (#1220): the young of the Vynakiir, a Mana species wearing its own model. It ascends
 // into a Vynakiir (#1246, #1283) once it has reached its level and is given an arcane crystal, the
-// hardened crystal from a grown one's brow (#1252); the ascension itself is #1235. Its stats and
-// its ascension's level are placeholders to tune (#960).
+// hardened crystal from a grown one's brow (#1252); the ascension itself is #1235. Its level, 43,
+// is the owner's (#1284). Its stats are placeholders to tune (#960).
 {
 	"id": "vynnimu",
 	"name": "Vynnimu",
@@ -19,5 +19,5 @@
 	"self_passive": "vynnimu_nivvu_mivvu",
 	"behaviour": ["nocturnal", "predator", "pack_species"], // a wolf pup: up at night with its pack, learning to hunt (#1200)
 	"model": "res://assets/mana-pup/mana_pup.glb",
-	"ascension": { "into": "vynakiir", "level": 10, "material": "arcane_crystal" }
+	"ascension": { "into": "vynakiir", "level": 43, "material": "arcane_crystal" }
 }
