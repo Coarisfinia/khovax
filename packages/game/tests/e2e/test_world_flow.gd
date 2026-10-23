@@ -258,6 +258,9 @@ static func _beside_wild(world: World) -> Entity:
 	var wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var player: Entity = world.player(0)
 	player.tile = basic.entity(wild.monsters[0]).tile + Hex.DIRECTIONS[0]
+	# Awake, and kept so whatever its schedule (#1202): these checks are about its strikes.
+	wild.sleep(wild.monsters[0], false)
+	basic.set_enabled(SleepFeature.ID, false)
 	return player
 
 
