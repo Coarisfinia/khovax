@@ -169,6 +169,16 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_brows.py --
 
+      - name: "🦴 Check every model's limbs have sane dimensions"
+        # Each limb's segments against each other and the body's height, at rest, per body plan
+        # (the owner, on #1297); a model without limbs of a known body plan passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_dimensions.py --
+
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
         if: failure() && steps.models.outputs.changed == 'true'

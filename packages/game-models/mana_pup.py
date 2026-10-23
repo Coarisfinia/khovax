@@ -53,7 +53,10 @@ PUP = quadruped.Proportions(
     jaw=((0.0, -0.56, 1.26), (0.0, -0.92, 1.17)),
     ear=((0.15, -0.50, 1.50), (0.27, -0.47, 1.72)),
     scapula=(0.12, -0.12, 1.08),
-    front_leg=[(0.17, -0.24, 0.88), (0.20, -0.21, 0.54), (0.20, -0.27, 0.17), (0.20, -0.38, 0.06)],
+    # The forearm is clearly shorter than the upper arm above it, as a canine's is (the owner, on
+    # #1297; #1299, lib/dimensions.py): the elbow sits lower and the wrist higher, over a longer
+    # pastern, so the leg reaches as far as before.
+    front_leg=[(0.17, -0.24, 0.88), (0.20, -0.21, 0.48), (0.20, -0.26, 0.21), (0.20, -0.38, 0.06)],
     hind_leg=[
         (0.17, 0.32, 0.86),
         (0.20, 0.16, 0.56),
@@ -266,7 +269,9 @@ def build(out):
                  reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, PUP, clips.TROT, duty=0.3, fold=0.6, lift=0.22, curl=0.6,
+        # With the shorter forearm (#1299), its paws stay down a little longer and the forearm folds a
+        # little more, so the swing back stays smooth (the motion check's jitter).
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, PUP, clips.TROT, duty=0.32, fold=0.65, lift=0.22, curl=0.6,
                           roll=0.05),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, PUP, clips.GALLOP, duty=0.2, fold=0.4, spine_flex=0.04,
                          planted=False),
