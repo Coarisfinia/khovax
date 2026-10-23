@@ -18,6 +18,9 @@ const GAP: float = 6.0
 
 ## Where each glyph shows now, by its action: empty while none shows. Tests read it.
 var shown: Dictionary[StringName, Rect2] = {}
+## The glyph each shows, by its action, taken with its place: the device in use can change before
+## the next draw.
+var glyphs: Dictionary[StringName, Texture2D] = {}
 
 
 func _process(_delta: float) -> void:
@@ -26,13 +29,14 @@ func _process(_delta: float) -> void:
 
 func _draw() -> void:
 	for action: StringName in shown:
-		ActionGlyph.draw_on(self, InputGlyphs.of(action, DeviceInUse.device), shown[action])
+		ActionGlyph.draw_on(self, glyphs[action], shown[action])
 
 
 ## Places the glyphs beside the wild monster the hint stands by, or hides them. Called every
 ## frame; tests call it.
 func show_state() -> void:
 	shown = {}
+	glyphs = {}
 	var monster: int = hinted()
 	if camera != null and wild_view != null and wild_view.figures.has(monster):
 		var figure: HexPiece = wild_view.figures[monster]
@@ -69,7 +73,8 @@ func _place_beside(feet: Vector3) -> void:
 	var side: float = get_theme_default_font_size() * ActionGlyph.SIDE_FONTS
 	for i: int in ACTIONS.size():
 		var action: StringName = ACTIONS[i]
-		if InputGlyphs.of(action, DeviceInUse.device) == null:
+		var glyph: Texture2D = InputGlyphs.of(action, DeviceInUse.device)
+		if glyph == null:
 			continue
 		var outward: float = -1.0 if i == 0 else 1.0
 		var edge: Vector2 = camera.unproject_position(
@@ -77,3 +82,4 @@ func _place_beside(feet: Vector3) -> void:
 		)
 		var left: float = edge.x + GAP if outward > 0.0 else edge.x - GAP - side
 		shown[action] = Rect2(left, edge.y - side / 2.0, side, side)
+		glyphs[action] = glyph

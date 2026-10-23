@@ -633,7 +633,12 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 ## with a controller, and none on touch, where a monster is tapped.
 func _check_focus_keys(main: Node, focus: int) -> String:
 	var keys: FocusKeys = main.get_node("Hud/FocusKeys") as FocusKeys
-	if keys.hinted() != focus:
+	# The device in use is static and outlives a flow: an earlier flow's touch leaves it on touch.
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	var hinted: int = keys.hinted()
+	DeviceInUse.device = kept
+	if hinted != focus:
 		return "the focus keys' hint didn't stand by the focused wild monster"
 	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _focus_keys_shown(keys))
 	var expected: Array = [
@@ -648,7 +653,6 @@ func _check_focus_keys(main: Node, focus: int) -> String:
 		return "the focus keys' glyphs weren't Q and R, the shoulder buttons and none on touch"
 	var figure: HexPiece = keys.wild_view.figures[focus]
 	var feet: Vector2 = keys.camera.unproject_position(figure.global_position)
-	var kept: DeviceInUse.Device = DeviceInUse.device
 	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
 	keys.show_state()
 	DeviceInUse.device = kept
@@ -665,7 +669,7 @@ static func _focus_keys_shown(keys: FocusKeys) -> Array:
 	var glyphs: Array = []
 	for action: StringName in FocusKeys.ACTIONS:
 		if keys.shown.has(action):
-			glyphs.append(InputGlyphs.of(action, DeviceInUse.device))
+			glyphs.append(keys.glyphs[action])
 	return glyphs
 
 
