@@ -4,11 +4,10 @@ extends RefCounted
 ## types come from the type chart, never two from one family; every species has a name for the
 ## player (#351), one invented word (#717), behaviour traits that can form a daily schedule
 ## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
-## that
-## ascends (#1252) ascends into another species, never in a loop, with a material the tables drop;
-## and broken entries are refused. Loot tables (#90) load, roll the same for the same stream, and a
-## blank
-## rolls on the instance's table.
+## that ascends (#1252) ascends into another species, never in a loop, with a material the tables
+## drop; and broken entries are refused. Loot tables (#90) load, roll the same for the same stream,
+## and a blank rolls on the instance's table; every item a table names is a piece of gear or a
+## material (#774).
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
@@ -136,6 +135,7 @@ func run(tree: SceneTree) -> String:
 		_check_harvest_tables,
 		_check_instance_tables,
 		_check_loot_refused,
+		_check_loot_items,
 		_check_wild_species.bind(content),
 		_check_blueprints,
 		_check_rule_sets,
@@ -978,16 +978,16 @@ func _check_behaviour_refused() -> String:
 
 
 ## Every species' ascension material (#1252) is one the player can find: a loot or harvest table
-## drops it, and it's a material, not a piece of gear.
+## drops it, and it's a material (MaterialContent, #774), not a piece of gear.
 func _check_ascensions(content: SpeciesContent) -> String:
 	var dropped: Array[String] = []
 	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
 		for table: LootTable in LootContent.load_loot_tables(directory).loot_tables.values():
 			dropped.append_array(table.items)
-	var gear: GearContent = GearContent.load_gear()
+	var materials: Array[String] = MaterialContent.load_materials().ids
 	for species_id: String in content.ascensions:
 		var material: String = content.ascensions[species_id].material
-		if not dropped.has(material) or gear.items.has(material):
+		if not dropped.has(material) or not materials.has(material):
 			return "%s's ascension material %s is no material a table drops" % [
 				species_id,
 				material,
@@ -1150,6 +1150,55 @@ func _check_loot_refused() -> String:
 		var problem: String = LootTableFile.parse("x", text).problem
 		if not problem.begins_with(cases[text]):
 			return "expected a refusal starting %s, got: %s" % [cases[text], problem]
+	return ""
+
+
+## Every item a loot, harvest or chest table names exists (#774): a piece of gear or a material,
+## each read from its own data. A table naming an item that's neither is refused, and so is a
+## material file with a wrong id or a field it can't have.
+func _check_loot_items() -> String:
+	var materials: MaterialContent = MaterialContent.load_materials()
+	if not materials.problem.is_empty():
+		return "the materials didn't load: " + materials.problem
+	var gear: GearContent = GearContent.load_gear()
+	var tables: Array[LootTable] = []
+	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
+		tables.append_array(LootContent.load_loot_tables(directory).loot_tables.values())
+	var problem: String = _unknown_item(tables, gear, materials)
+	if not problem.is_empty():
+		return problem
+	var item: String = "{\"item\": \"%s\", \"chance\": 250, \"min\": 1, \"max\": 1}"
+	var entries: Array[String] = []
+	for named: String in ["moss", "thorn_spikes", "warding_charm", "mos"]:
+		entries.append(item % named)
+	var text: String = "{\"id\": \"x\", \"kind\": \"chest\", \"entries\": [%s]}"
+	var made_up: LootTable = LootTableFile.parse("x", text % ", ".join(entries))
+	problem = _unknown_item([made_up], gear, materials)
+	if not made_up.problem.is_empty() or not problem.begins_with("x's table names mos,"):
+		return "a table naming an item there isn't was refused with %s" % problem
+	var cases: Dictionary[String, String] = {
+		"{\"id\": \"y\"}": "its id must",
+		"{\"id\": \"x\", \"name\": \"X\"}": "field name",
+		"[\"x\"]": Content.NOT_AN_OBJECT,
+	}
+	var refusing: MaterialContent = MaterialContent.new()
+	for refused: String in cases:
+		problem = refusing.add("x", refused)
+		if not problem.begins_with(cases[refused]):
+			return "a material file was refused with %s, not %s" % [problem, cases[refused]]
+	return ""
+
+
+## Why one of `tables` names an item that's neither a piece of `gear` nor one of `materials`, or "".
+func _unknown_item(
+		tables: Array[LootTable],
+		gear: GearContent,
+		materials: MaterialContent,
+) -> String:
+	for table: LootTable in tables:
+		for item: String in table.items:
+			if not item.is_empty() and not gear.items.has(item) and not materials.ids.has(item):
+				return "%s's table names %s, which is no gear or material (#774)" % [table.id, item]
 	return ""
 
 

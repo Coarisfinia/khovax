@@ -47,7 +47,7 @@ const LAND_SOUNDS: String = "dh|gh|hr|wh"
 ## marks (a hyphen, an apostrophe, vo or na, a last word in -ai, a word in -vaun, a lexicon word),
 ## and its id is its name in lower case, spaces, hyphens and apostrophes made `_`, after its
 ## species' id for an ability. Trade Speech (gear, pieces, places) is plain words, so letters aren't
-## held against it. Kinds left out (tiles, items, loot tables, quests, dialogs) are vocabulary.
+## held against it. Kinds left out (tiles, materials, loot tables, quests, dialogs) are vocabulary.
 const NAME_RULES: Dictionary[String, String] = {
 	"species": "one beast-call of 6 to 11 letters and at least 3 vowels, echoing itself (a vowel "
 	+ "recurring or a consonant doubled), ending in a vowel, r, s, x, k or n, with a sound of its "
@@ -143,8 +143,7 @@ static func collected() -> ContentTerms:
 		var kind: String = "special" if ability.kind == Ability.SPECIAL else "passive"
 		var owner: String = species_of.get(ability.id, "")
 		terms.add(kind, ability.id, ability.name, owner)
-	var gear: GearContent = GearContent.load_gear()
-	for item: GearItem in gear.items.values():
+	for item: GearItem in GearContent.load_gear().items.values():
 		terms.add("unique" if item.rarity == UNIQUE_RARITY else "gear", item.id, item.name)
 	for faction: Faction in FactionContent.load_factions().factions.values():
 		terms.add("faction", faction.id, faction.name)
@@ -152,7 +151,7 @@ static func collected() -> ContentTerms:
 		terms.add("quest", quest.id, quest.name)
 	for realm: Realm in Realms.all():
 		terms.add("realm", realm.id)
-	_add_loot(terms, gear)
+	_add_loot(terms)
 	for person: Person in PeopleContent.load_people().people.values():
 		terms.add("person", person.id, person.name)
 	for dialog: Dialog in DialogContent.load_dialogs().dialogs.values():
@@ -348,17 +347,16 @@ static func _shares(text: String, sounds: String, least: int) -> bool:
 	return shared.size() >= least
 
 
-## The loot tables but a species' own, whose id is its species' (LootContent), and the items they
-## drop but gear, which is noted already.
-static func _add_loot(terms: ContentTerms, gear: GearContent) -> void:
+## The loot tables but a species' own, whose id is its species' (LootContent), and the materials
+## (MaterialContent, #774): every item a table drops is one or a piece of gear, noted already.
+static func _add_loot(terms: ContentTerms) -> void:
 	var species_kinds: Array[String] = [LootTable.SPECIES, LootTable.HARVEST]
 	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
 		for table: LootTable in LootContent.load_loot_tables(directory).loot_tables.values():
 			if not species_kinds.has(table.kind):
 				terms.add("loot table", table.id)
-			for item: String in table.items:
-				if not item.is_empty() and not gear.items.has(item):
-					terms.add("item", item)
+	for material: String in MaterialContent.load_materials().ids:
+		terms.add("material", material)
 
 
 ## The instances, the regions their variants load, their region pieces but the start piece every
