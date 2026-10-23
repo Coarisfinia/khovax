@@ -78,7 +78,7 @@ static func _is_predator(state: GameState, wild: WildMonsterFeature, monster: in
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
-	_flee(state, wild)
+	_flee(state, wild, schedules)
 	var struck: Dictionary[int, bool] = {}
 	for event: RefCounted in state.events:
 		if event is WildMonsterStruck:
@@ -90,24 +90,35 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_end(hunter)
 			rested.erase(hunter)
 			continue
-		if rested.has(hunter) or wild.asleep.has(hunter) or wild.rage_of(hunter) > 0:
-			continue
-		if not _free(state, wild, hunter):
-			continue
-		_hunt(state, wild, hunter, struck.has(hunter))
+		if _hunting(state, wild, hunter):
+			_hunt(state, wild, hunter, struck.has(hunter))
 
 
-## Every hunted wild monster flees the nearest of its hunters, the lowest id of the equally near,
-## in id order, unless it's enraged, held or in a ring (WildMonsterFeature.chase away, which keeps
-## a sleeping one put).
-func _flee(state: GameState, wild: WildMonsterFeature) -> void:
+## Whether the hunter in its hunt hours hunts now: it hasn't rested yet, and it's standing, awake,
+## not enraged, not held and not in a ring.
+func _hunting(state: GameState, wild: WildMonsterFeature, hunter: int) -> bool:
+	if not wild.monsters.has(hunter) or rested.has(hunter) or wild.asleep.has(hunter):
+		return false
+	return wild.rage_of(hunter) == 0 and _free(state, wild, hunter)
+
+
+## Every hunted wild monster flees the nearest of its hunters still on the hunt in their hunt
+## hours, the lowest id of the equally near, in id order, unless it's beaten, enraged, held or in
+## a ring (WildMonsterFeature.chase away, which keeps a sleeping one put). The hunts are the last
+## tick's: the hunters move after it.
+func _flee(state: GameState, wild: WildMonsterFeature, schedules: ScheduleFeature) -> void:
 	var threats: Dictionary[int, Vector2i] = {}
 	var hunters: Array[int] = []
 	hunters.assign(prey.keys())
 	hunters.sort()
 	for hunter: int in hunters:
 		var hunted: int = prey[hunter]
-		if not wild.monsters.has(hunted):
+		if not wild.monsters.has(hunted) or _beaten(state, hunted):
+			continue
+		if schedules.activity_of(
+			state,
+			hunter,
+		) != Schedule.HUNT or not _hunting(state, wild, hunter):
 			continue
 		var from: Vector2i = state.entity(hunter).tile
 		var tile: Vector2i = state.entity(hunted).tile
