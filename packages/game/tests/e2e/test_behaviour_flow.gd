@@ -13,7 +13,10 @@ extends RefCounted
 ##
 ## Wild monsters sleep by their schedules (#1202): asleep from the start when the instance starts in
 ## a sleep block, falling asleep as each block begins and waking as it ends, the sleepless never.
-## Struck awake, one stays awake for the rest of its block and sleeps again in its next one. Asleep,
+## Struck awake, one stays awake for the rest of its block and sleeps again in its next one. An
+## instance nobody is in, which keeps the world's time without stepping, settles every hour it
+## missed when it steps again (#1245), from a save made meanwhile too, so its monsters sleep as if
+## it had stepped all along. Asleep,
 ## it strikes nobody, not even a player standing right next to it, whom it doesn't wake for
 ## (decided here; #1230 asks the owner); a strike or rage wakes it, and then it strikes again.
 
@@ -39,6 +42,7 @@ func run(_tree: SceneTree) -> String:
 		_check_content_species,
 		_check_sleep_follows_schedule,
 		_check_woken_stays_awake,
+		_check_sleep_catches_up,
 		_check_sleeper_strikes_nobody,
 	]
 	for check: Callable in steps:
@@ -255,6 +259,40 @@ func _check_woken_stays_awake() -> String:
 	if not wild.asleep.has(diurnal):
 		return "a wild monster struck awake didn't sleep again the next night"
 	return ""
+
+
+## An instance that stood still while the world's time went on, as one nobody is in does (#1215),
+## and was saved and loaded meanwhile, sleeps on its next step as one that stepped all along
+## (#1245): after part of an hour, after a few hours and after more than a day.
+func _check_sleep_catches_up() -> String:
+	var stepped: GameState = _test_state(SEED, TEST_TRAITS)
+	var half_hour: int = Fixed.div_floor(DayClock.TICKS_PER_HOUR, 2)
+	for hours: int in [0, 1, 5, 13, 30]:
+		var back: int = hours * DayClock.TICKS_PER_HOUR + half_hour
+		while stepped.world_tick < back:
+			Simulation.step(stepped, FlowSteps.command(Command.NO_MOVE))
+		var returned: GameState = _returned_onto(back)
+		if returned == null:
+			return "a save of an instance standing still didn't hash the same"
+		var wild: WildMonsterFeature = returned.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		if wild.asleep != (stepped.feature(WildMonsterFeature.ID) as WildMonsterFeature).asleep:
+			return "back after %d hours, other wild monsters slept than after stepping" % hours
+	return ""
+
+
+## A test instance that stepped once, then stood still until the world's tick `back` - 1, was
+## saved and loaded there, and stepped onto `back`; null when the loaded one hashed otherwise.
+static func _returned_onto(back: int) -> GameState:
+	var still: GameState = _test_state(SEED, TEST_TRAITS)
+	Simulation.step(still, FlowSteps.command(Command.NO_MOVE))
+	still.world_tick = back - 1
+	var loaded: GameState = _test_state(SEED, TEST_TRAITS)
+	loaded.load_data(DataReader.new(still.to_data()))
+	loaded.world_tick = still.world_tick
+	if loaded.state_hash() != still.state_hash():
+		return null
+	Simulation.step(loaded, FlowSteps.command(Command.NO_MOVE))
+	return loaded
 
 
 ## In the blueprints' basic instance, a sleeping wild monster strikes nobody, not even the player
