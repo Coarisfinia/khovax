@@ -19,6 +19,10 @@ const SETTLED: float = 0.01
 const WALK_STEPS: int = 1200
 ## The camera eases in at the distance beyond its dead zone per this many seconds.
 const EASE_SECONDS: float = 1.0
+## On a long walk the camera trails the player by at most this much while it speeds up (#748).
+const PEAK_LAG: float = 10.5
+## And when the player stops, it glides at most this much past them before it settles (#748).
+const OVERSHOOT: float = 1.0
 
 var _main: Node3D
 var _camera: FollowCamera
@@ -163,8 +167,9 @@ func _check_seamless_crossing() -> String:
 
 
 ## On a long walk the camera keeps up with the player (#726): its cap is above walking speed, so
-## after a long straight walk it trails the player at a steady distance, and once the player stops
-## it settles with them back inside the dead zone.
+## after a long straight walk it trails the player at a steady distance, never further behind than
+## PEAK_LAG while it speeds up, and once the player stops it glides no more than OVERSHOOT past them
+## (#748) and settles with them back inside the dead zone.
 func _check_keeps_up() -> String:
 	var walking: float = _walking_speed()
 	if _camera.max_speed <= walking:
@@ -176,16 +181,31 @@ func _check_keeps_up() -> String:
 	_player_view.global_position = _camera.focus
 	_advance(600)
 	var start: Vector3 = _player_view.global_position
+	var peak: float = 0.0
 	for i: int in WALK_STEPS:
 		_player_view.global_position = start + Vector3.RIGHT * walking * STEP * (i + 1)
 		_camera.advance(STEP)
+		peak = maxf(peak, _ground(_player_view.global_position).x - _camera.focus.x)
+	if peak > PEAK_LAG:
+		return "on a long walk the camera fell %f behind the player, more than %f" % [
+			peak,
+			PEAK_LAG,
+		]
 	# The camera eases in at as many units per second as the target is beyond the dead zone, so
 	# it moves at walking speed when the player is the ground walked in EASE_SECONDS beyond it.
 	var steady: float = _camera.dead_zone_radius + walking * EASE_SECONDS
 	var behind: float = _camera.focus.distance_to(_ground(_player_view.global_position))
 	if behind > steady + SETTLED:
 		return "after a long walk the camera trails the player by %f, not %f" % [behind, steady]
-	_advance(1200)
+	var past: float = 0.0
+	for _i: int in 1200:
+		_camera.advance(STEP)
+		past = maxf(past, _camera.focus.x - _ground(_player_view.global_position).x)
+	if past > OVERSHOOT:
+		return "when the player stopped, the camera glided %f past them, more than %f" % [
+			past,
+			OVERSHOOT,
+		]
 	var left: float = _camera.focus.distance_to(_ground(_player_view.global_position))
 	if left > _camera.dead_zone_radius + SETTLED:
 		return "after a long walk and 20 s standing, the player is %f from the focus" % left
