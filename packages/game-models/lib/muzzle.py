@@ -2,7 +2,7 @@
 lower jaw with the cheeks over its back half, all melted into the head's metaball body as one skin,
 the mouth a slit carved between the lips back to their corner; the jaw bone turns the skin below
 the slit about the jaw joint far back on the skull, the cheek behind the corner stretching between
-the jaws as it opens; the nose pad on its tip; the mouth's dark inside, which shows only when it
+the jaws as it opens; the nose pad on its tip; the mouth's dark linings, which show only when it
 opens; and the fangs.
 
 Its parameters are what lib/metrics.py's snout measures read, so a model sets the snout it wants
@@ -22,10 +22,6 @@ middle.
                  reweigh=lambda body: snout.bind_jaw(body, "jaw", scale))
 """
 
-import math
-
-import bmesh
-import bpy
 from mathutils import Vector
 
 from . import body, parts
@@ -210,72 +206,11 @@ class Snout:
             jaw.add([vertex.index], share, "REPLACE")
             _limit(skin, vertex, jaw.index)
 
-    def _inside(self, name, mats, head_bone, jaw_bone, columns=8, rows=7):
-        """The mouth's inside: a pocket between the jaws, its top along the palate, on the
-        skull, its bottom along the jaw's floor, on the jaw, its weight blending between them,
-        from behind the fangs back past the corner into the cheeks. Its two walls bow out toward
-        the cheeks and back toward the throat between the jaws, and face inward only (culled
-        from behind), so an open mouth shows the far wall's hollow, the near one unseen: a
-        cavity, not a panel. The front is the mouth's red-brown and the throat, past the
-        corner, its shadow. Shut, it hides between the jaws, inside the head."""
-        mesh = bpy.data.meshes.new(name)
-        build = bmesh.new()
-        layer = build.verts.layers.deform.verify()
-        lining = 0.15 * self.radius
-        corner = self.corner_point()
-        grid = {}
-        for side, sign in ((0, 1.0), (1, -1.0)):
-            for column in range(columns):
-                u = column / (columns - 1)
-                # Toward the fangs along the muzzle for the first two thirds, then back toward
-                # the joint inside the cheeks.
-                if u < 2.0 / 3.0:
-                    t = self.chin * 0.75 + (self.corner - self.chin * 0.75) * u * 1.5
-                    upper, lower = self.lip(t) + _point(0.0, lining), self.jaw_top(t) - _point(0.0, lining)
-                else:
-                    t = self.corner
-                    share = (u - 2.0 / 3.0) * 3.0 * 0.6
-                    upper = (corner + _point(0.0, lining)).lerp(self.joint, share)
-                    lower = (self.jaw_top(self.corner) - _point(0.0, lining)).lerp(self.joint, share)
-                half_width = self.radius * self.share(t) * 0.6
-                for row in range(rows):
-                    v = row / (rows - 1)
-                    bow = math.sin(math.pi * v)
-                    point = upper.lerp(lower, v)
-                    point.x = sign * half_width * bow
-                    point.y += self.length * 0.25 * bow
-                    vert = build.verts.new(point)
-                    vert[layer][0] = 1.0 - _smooth(v)
-                    vert[layer][1] = _smooth(v)
-                    grid[side, column, row] = vert
-        for side in (0, 1):
-            for column in range(columns - 1):
-                for row in range(rows - 1):
-                    quad = [grid[side, column, row], grid[side, column + 1, row],
-                            grid[side, column + 1, row + 1], grid[side, column, row + 1]]
-                    # Facing in, toward the middle, on either side.
-                    if side:
-                        quad.reverse()
-                    face = build.faces.new(quad)
-                    face.material_index = 1 if 3 * column >= 2 * (columns - 1) else 0
-                    face.smooth = True
-        build.to_mesh(mesh)
-        build.free()
-        obj = bpy.data.objects.new(name, mesh)
-        bpy.context.collection.objects.link(obj)
-        obj.vertex_groups.new(name=head_bone)
-        obj.vertex_groups.new(name=jaw_bone)
-        obj.data.materials.append(mats["mouth"])
-        obj.data.materials.append(mats["dark"])
-        return obj
-
     def parts(self, mats, head_bone, jaw_bone, name="Snout"):
         """The pieces beside the head's skin: the mouth's floor and the lower fangs on `jaw_bone`;
-        the palate, the nose pad and the upper fangs on `head_bone`; the mouth's inside between
-        both. `mats` needs "mouth" (its inside, red-brown, which this culls from behind), "dark"
-        (the nose, the throat) and "light" (the fangs)."""
-        mats["mouth"].use_backface_culling = True
-        made = [self._inside(name + ".Inside", mats, head_bone, jaw_bone)]
+        the palate, the nose pad and the upper fangs on `head_bone`. `mats` needs "dark" (the
+        nose, the mouth) and "light" (the fangs)."""
+        made = []
         # The mouth: dark, flat linings under the palate and over the jaw's floor, inside the lips
         # (and the jaw), so they show only when it opens.
         middle = self.chin * 0.42
