@@ -442,7 +442,72 @@ func _check_wild_monster(main: Node) -> String:
 		feature.sleep(monster.id, false)
 		view.show_state()
 		view._process(0.0)
-	return _check_figure(figure, spot)
+	var standing: String = _check_figure(figure, spot)
+	return standing if not standing.is_empty() else _check_wild_monster_feeds(main)
+
+
+## A wild monster feeding at its grass or water (#1281) lowers its head into its Feed clip, and
+## raises it into Idle once its hour to feed is over: the main scene's FeedingTie hands the view
+## whoever feeds (ForagingFeature.is_feeding) before the view picks its clips, each frame. The
+## basic region's grazer is put on grass in its grazing hour, then the clock moves on.
+func _check_wild_monster_feeds(main: Node) -> String:
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
+	var tie: FeedingTie = main.get_node_or_null("Instance/FeedingTie") as FeedingTie
+	if tie == null or tie.wild_monsters != view or tie.process_priority >= view.process_priority:
+		return "the main scene needs a FeedingTie telling the wild monsters' view who feeds first"
+	var grazer: int = _grazer(driver.state)
+	if grazer == 0:
+		return "the basic region has no wild monster that grazes"
+	# On grass for the check, and back as it was after it, so the later checks find the region
+	# and the clock as the game left them.
+	var spot: Vector2i = driver.state.entity(grazer).tile
+	var kind: String = driver.state.region.terrain[spot]
+	var _grassed: bool = driver.state.change_tile(spot, Region.GROUND)
+	var was: int = driver.state.world_tick
+	var clips: Array[StringName] = _clips_through_day(driver.state, main, grazer)
+	driver.state.world_tick = was
+	_grassed = driver.state.change_tile(spot, kind)
+	if clips.size() != 2 or clips[0] != WildMonsterView.FEED or clips[1] != WildMonsterView.IDLE:
+		return "a grazing wild monster's figure played %s, not Feed, then Idle" % [clips]
+	return ""
+
+
+## The clip `monster`'s figure plays in its first hour to graze, then in its first awake hour it
+## doesn't feed in: the clock set to each, the main scene's FeedingTie and its wild monsters' view
+## each taking a frame, in their order.
+static func _clips_through_day(state: GameState, main: Node, monster: int) -> Array[StringName]:
+	var view: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
+	var tie: FeedingTie = main.get_node("Instance/FeedingTie") as FeedingTie
+	var day: Array[int] = (state.feature(ScheduleFeature.ID) as ScheduleFeature).day_of(monster)
+	var clips: Array[StringName] = []
+	for hour: int in [day.find(Schedule.GRAZE), _awake_hour(day)]:
+		var from_dawn: int = (hour - DayClock.DAWN + DayClock.HOURS) % DayClock.HOURS
+		state.world_tick = from_dawn * DayClock.TICKS_PER_HOUR
+		tie._process(0.0)
+		view._process(0.0)
+		var model: Node3D = view.figures[monster].get_child(0) as Node3D
+		clips.append(StringName(WildMonsterView.clips_of(model).current_animation))
+	return clips
+
+
+## The first standing wild monster in `state` whose day has an hour to graze, awake, or 0.
+static func _grazer(state: GameState) -> int:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
+	for monster: int in wild.monsters:
+		if schedules.day_of(monster).has(Schedule.GRAZE):
+			wild.sleep(monster, false)
+			return monster
+	return 0
+
+
+## The first hour of `day` it neither sleeps nor feeds in.
+static func _awake_hour(day: Array[int]) -> int:
+	for hour: int in day.size():
+		if not [Schedule.SLEEP, Schedule.GRAZE, Schedule.DRINK].has(day[hour]):
+			return hour
+	return 0
 
 
 ## A sleeping wild monster's figure (#1202) lies in its Faint clip's last pose, not idling, upright

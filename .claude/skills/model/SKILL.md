@@ -76,7 +76,8 @@ a second model could use goes into the library or a generic tool, never into one
     #1074: `attack` with its forepaws stepping out, `hit` with a shiver and an ear flick, `faint`
     with its legs folding under it and a moving hold; `channel`: a long attack held for as long as it lasts, as a wind-up
     `ChannelStart`, the looping `Channel` and a release `ChannelEnd` the game plays in turn,
-    #1158), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
+    #1158; `feed`: the head lowered to the ground, lapping or tearing in a loop, its reach to the
+    ground set per body plan, #1281), `FOLLOW` (the quadruped's chains and their springs), `LEGS` (its legs for
     `legs.plant`) and `animate` (fills, follows, plants the paws, keys every bone on every frame,
     cycles the loops' curves, stashes every clip, and with `ground_meshes` lifts the root, eased,
     wherever a pose sinks into the ground, the legs reaching down to their paws again).

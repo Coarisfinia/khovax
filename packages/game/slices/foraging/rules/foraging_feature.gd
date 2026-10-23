@@ -65,5 +65,20 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			wild.chase(state, monster, food)
 
 
+## Whether the wild monster with this entity id is feeding now: standing, due to graze or drink
+## this hour (its schedule) and at its grass or beside its water (ForageWay.feeds_at). The look
+## plays its Feed clip then (FeedingTie).
+static func is_feeding(state: GameState, entity_id: int) -> bool:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
+	if wild == null or schedules == null or not wild.monsters.has(entity_id):
+		return false
+	if wild.rage_of(entity_id) > 0 or wild.asleep.has(entity_id):
+		return false
+	var activity: int = schedules.activity_of(state, entity_id)
+	var standing: Entity = state.entity(entity_id)
+	return standing != null and ForageWay.feeds_at(state.region, standing.tile, activity)
+
+
 func tile_changed(_state: GameState, _tile: Vector2i) -> void:
 	_ground.forget()
