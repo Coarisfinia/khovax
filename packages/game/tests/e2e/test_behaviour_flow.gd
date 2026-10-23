@@ -16,6 +16,11 @@ extends RefCounted
 ## Struck awake, one stays awake for the rest of its block and sleeps again in its next one. Asleep,
 ## it strikes nobody, not even a player standing right next to it, whom it doesn't wake for
 ## (decided here; #1230 asks the owner); a strike or rage wakes it, and then it strikes again.
+##
+## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
+## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
+## home; it gives up on prey it can't beat; outside its hunt hours it rests no more. A save in
+## the middle of a hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
 
 ## A test species of each sleep rhythm, with needs and bands that cover every activity.
 const TEST_TRAITS: Dictionary[String, Array] = {
@@ -27,6 +32,29 @@ const TEST_TRAITS: Dictionary[String, Array] = {
 const SEED: int = 42
 ## The content species the flow checks, which the blueprints' basic instance places.
 const CONTENT_SPECIES: Array[String] = ["ombulumo", "tikazzir"]
+## The hunt flow's species (#1204): a predator, a grazer as strong as it, a weaker and a stronger
+## drinker, and a grazer it can't wear down. None sleeps, so none sleeps through a hunt.
+const HUNT_TRAITS: Dictionary[String, Array] = {
+	"hun": ["sleepless", "predator"],
+	"gra": ["sleepless", "grazer"],
+	"wea": ["sleepless", "drinker"],
+	"str": ["sleepless", "drinker"],
+	"tou": ["sleepless", "grazer"],
+}
+const HUNT_STRENGTHS: Dictionary[String, int] = {
+	"hun": 10,
+	"gra": 10,
+	"wea": 5,
+	"str": 20,
+	"tou": 10,
+}
+const HUNT_HP: Dictionary[String, int] = {
+	"hun": 50,
+	"gra": 30,
+	"wea": 30,
+	"str": 30,
+	"tou": 100_000,
+}
 
 
 func run(_tree: SceneTree) -> String:
@@ -40,6 +68,11 @@ func run(_tree: SceneTree) -> String:
 		_check_sleep_follows_schedule,
 		_check_woken_stays_awake,
 		_check_sleeper_strikes_nobody,
+		_check_hunt_won,
+		_check_hunt_spares_stronger,
+		_check_hunt_given_up,
+		_check_hunt_saved,
+		_check_content_hunters,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -428,3 +461,178 @@ static func _days(state: GameState) -> Array[Array]:
 	for monster: int in wild.monsters + wild.fainted:
 		days.append(_schedules(state).day_of(monster))
 	return days
+
+
+## The predator stalks the grazer it sights, strikes it for its strength, never below 1 HP, and
+## rests once it's beaten; past its hunt hours it rests no more.
+func _check_hunt_won() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-2, 0), "gra": Vector2i(1, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var target: int = _monster_of(state, "gra")
+	var hunts: HuntFeature = state.feature(HuntFeature.ID) as HuntFeature
+	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
+	_to_hunt_hours(state, hunter)
+	var damage: Array[int] = []
+	for _tick: int in 20 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		damage.append_array(_strikes_on(state, hunter, target))
+		if hunts.rested.has(hunter):
+			break
+	var problem: String = _damage_problem(damage)
+	if not problem.is_empty():
+		return problem
+	if not hunts.rested.has(hunter) or health.hp_of(state, target) != 1:
+		return "the hunt didn't end with the prey down to 1 HP: %d" % health.hp_of(state, target)
+	if Hex.distance(state.entity(hunter).tile, state.entity(target).tile) != 1:
+		return "the predator struck its prey from afar"
+	for _tick: int in 3 * WildAttackFeature.STRIKE_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		for event: RefCounted in state.events:
+			if event is WildMonsterStruck:
+				return "a resting predator struck again"
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild.is_fainted(target):
+		return "the hunt felled its prey"
+	_out_of_hunt_hours(state, hunter)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if hunts.rested.has(hunter):
+		return "the predator still rested past its hunt hours"
+	return ""
+
+
+## A stronger wild monster that's no grazer isn't prey: the predator leaves it be and roams
+## around its home, never further than ROAM_RADIUS.
+func _check_hunt_spares_stronger() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-2, 0), "str": Vector2i(-2, 2) })
+	var hunter: int = _monster_of(state, "hun")
+	var home: Vector2i = state.entity(hunter).tile
+	_to_hunt_hours(state, hunter)
+	var roamed: bool = false
+	for _tick: int in 20 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if state.events.any(func(event: RefCounted) -> bool: return event is WildMonsterStruck):
+			return "the predator struck a stronger wild monster"
+		var tile: Vector2i = state.entity(hunter).tile
+		if Hex.distance(tile, home) > HuntFeature.ROAM_RADIUS:
+			return "the predator roamed %d tiles from home" % Hex.distance(tile, home)
+		roamed = roamed or tile != home
+	if not roamed:
+		return "the predator didn't roam in its hunt hours"
+	return ""
+
+
+## Prey it can't wear down, the predator gives up on after GIVE_UP_TICKS, and rests; a weaker
+## wild monster is prey too.
+func _check_hunt_given_up() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-1, 0), "tou": Vector2i(0, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var hunts: HuntFeature = state.feature(HuntFeature.ID) as HuntFeature
+	_to_hunt_hours(state, hunter)
+	for _tick: int in HuntFeature.GIVE_UP_TICKS - Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if hunts.rested.has(hunter) or hunts.prey.get(hunter, 0) != _monster_of(state, "tou"):
+		return "the predator gave up too soon"
+	for _tick: int in 2 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not hunts.rested.has(hunter):
+		return "the predator never gave up on prey it can't beat"
+	var weaker: GameState = _hunt_state({ "hun": Vector2i(-1, 0), "wea": Vector2i(1, 0) })
+	_to_hunt_hours(weaker, _monster_of(weaker, "hun"))
+	for _tick: int in 3 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(weaker, FlowSteps.command(Command.NO_MOVE))
+	var weak_hunts: HuntFeature = weaker.feature(HuntFeature.ID) as HuntFeature
+	if weak_hunts.prey.get(_monster_of(weaker, "hun"), 0) != _monster_of(weaker, "wea"):
+		return "the predator didn't hunt a weaker wild monster"
+	return ""
+
+
+## A save taken in the middle of a hunt plays on the same as the hunt it was taken from.
+func _check_hunt_saved() -> String:
+	var spots: Dictionary[String, Vector2i] = { "hun": Vector2i(-2, 0), "gra": Vector2i(2, 0) }
+	var state: GameState = _hunt_state(spots)
+	_to_hunt_hours(state, _monster_of(state, "hun"))
+	for _tick: int in 3 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var hunts: HuntFeature = state.feature(HuntFeature.ID) as HuntFeature
+	if hunts.prey.is_empty():
+		return "no hunt was going on to save"
+	var loaded: GameState = _hunt_state(spots)
+	loaded.load_data(DataReader.new(state.to_data()))
+	if loaded.state_hash() != state.state_hash():
+		return "a save in the middle of a hunt didn't load the same"
+	for _tick: int in 5 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		Simulation.step(loaded, FlowSteps.command(Command.NO_MOVE))
+	if loaded.state_hash() != state.state_hash():
+		return "a loaded hunt played on otherwise"
+	return ""
+
+
+## The content's predators, the Tikazzir, are hunters at home in the basic instance; its grazer
+## Ombulumo isn't. The basic instance rolls its species, so the seeds are tried until one places
+## a Tikazzir.
+func _check_content_hunters() -> String:
+	for seed_value: int in 20:
+		var basic: GameState = FlowSteps.basic(seed_value)
+		var hunts: HuntFeature = basic.feature(HuntFeature.ID) as HuntFeature
+		if hunts == null:
+			return "the basic instance has no hunts"
+		var wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		for monster: int in wild.monsters:
+			if hunts.homes.has(monster) != (wild.species_of(monster) == "tikazzir"):
+				return "%s's monster %d isn't a hunter by its traits" % [
+					wild.species_of(monster),
+					monster,
+				]
+		if not hunts.homes.is_empty():
+			return ""
+	return "no seed placed a Tikazzir to hunt in the basic instance"
+
+
+## A disc with a wild monster of each hunt flow species in `spots` where it says, with the hunts.
+static func _hunt_state(spots: Dictionary[String, Vector2i]) -> GameState:
+	var region: Region = Region.disc(8)
+	for species: String in spots:
+		region.wild_monsters.append(spots[species])
+		region.add_placement(WildSpotPlacements.KIND, spots[species], WildSpot.NAMED + species)
+	var ordered: Array[Feature] = [
+		MovementFeature.new(),
+		KnockdownFeature.new(),
+		TrailFeature.new(),
+		HealthFeature.new(HUNT_HP),
+		WildMonsterFeature.new([], [], HUNT_STRENGTHS),
+		ScheduleFeature.new(HUNT_TRAITS),
+		HuntFeature.new(),
+	]
+	return GameState.new(region, SEED, ordered)
+
+
+## The entity id of `state`'s wild monster of `species`.
+static func _monster_of(state: GameState, species: String) -> int:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	for monster: int in wild.monsters + wild.fainted:
+		if wild.species_of(monster) == species:
+			return monster
+	return 0
+
+
+## Sets `state`'s clock to the start of the first of `monster`'s hunt hours.
+static func _to_hunt_hours(state: GameState, monster: int) -> void:
+	_to_hour_doing(state, monster, Schedule.HUNT, true)
+
+
+## Sets `state`'s clock to the start of the first hour `monster` doesn't hunt.
+static func _out_of_hunt_hours(state: GameState, monster: int) -> void:
+	_to_hour_doing(state, monster, Schedule.HUNT, false)
+
+
+## Sets `state`'s clock to the start of the first hour from dawn in which `monster` is (or, not
+## `doing`, isn't) busy with `activity`, keeping the day it's in.
+static func _to_hour_doing(state: GameState, monster: int, activity: int, doing: bool) -> void:
+	var day: Array[int] = _schedules(state).day_of(monster)
+	var day_start: int = Fixed.div_floor(state.tick, DayClock.HOURS * DayClock.TICKS_PER_HOUR)
+	for from_dawn: int in DayClock.HOURS:
+		if (day[(DayClock.DAWN + from_dawn) % DayClock.HOURS] == activity) == doing:
+			var hours: int = day_start * DayClock.HOURS + from_dawn
+			state.tick = hours * DayClock.TICKS_PER_HOUR
+			return
