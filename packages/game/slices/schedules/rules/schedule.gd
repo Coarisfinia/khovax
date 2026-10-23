@@ -69,7 +69,8 @@ static func made(traits: Array, rng: Rng) -> Array[int]:
 		for _slot: int in NEED_HOURS[need]:
 			if waking.is_empty():
 				break
-			day[waking.pop_at(rng.below(waking.size()))] = NEED_ACTIVITIES[need]
+			var hour: int = waking.pop_at(rng.below(waking.size()))
+			day[hour] = NEED_ACTIVITIES[need]
 	return day
 
 
