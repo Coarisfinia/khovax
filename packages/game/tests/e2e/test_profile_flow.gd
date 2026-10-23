@@ -7,7 +7,8 @@ extends RefCounted
 ## dominated are carried (#53); the standing with each faction stays on its scale and is saved
 ## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
 ## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
-## monster keeps its short id (#700); the outbox's requests to the world are saved until the world
+## monster keeps its short id (#700) and grows in levels from the dominations it's carried through
+## (#1251); the outbox's requests to the world are saved until the world
 ## acknowledges them (#771); and a damaged save falls back to the newest intact generation
 ## before it (#179).
 
@@ -351,8 +352,9 @@ func _check_might() -> String:
 	var finch: Species = species["tikazzir"]
 	var each_toad: int = toad.hp + Might.STRENGTH_WEIGHT * toad.strength + toad.speed
 	var each_finch: int = finch.hp + Might.STRENGTH_WEIGHT * finch.strength + finch.speed
-	# The first three are carried: two toads and a finch; the second finch rests.
-	if Might.of(profile, species) != 2 * each_toad + each_finch:
+	# The first three are carried: two toads and a finch; the second finch rests. The first toad
+	# was carried through three dominations, a level's worth (#1251).
+	if Might.of(profile, species) != 3 * each_toad + each_finch:
 		return "Might isn't the carried monsters' stats: %d" % Might.of(profile, species)
 	profile.dominated_monsters[0].level = 3
 	if Might.of(profile, species) != 4 * each_toad + each_finch:
@@ -361,6 +363,57 @@ func _check_might() -> String:
 	if Might.of(profile, species) != each_toad + each_finch:
 		return "a monster of an unknown species adds to Might"
 	return ""
+
+
+## Levels (#1251): each domination earns every monster carried then a point of progress, the
+## dominated one none from its own; a level takes PROGRESS_PER_LEVEL times the level, and what is
+## left over counts toward the next.
+func _check_levels() -> String:
+	var profile: Profile = Profile.new()
+	var _first: String = profile.apply(_result(["ombulumo"], {}))
+	var first: DominatedMonster = profile.dominated_monsters[0]
+	if first.level != 1 or first.progress != 0:
+		return "a monster earned progress from its own domination"
+	var needed: int = DominatedMonster.progress_needed(1) + DominatedMonster.progress_needed(2)
+	for _domination: int in needed + 1:
+		var _taken: String = profile.apply(_result(["tikazzir"], {}))
+	var levels: Array[int] = []
+	for monster: DominatedMonster in profile.dominated_monsters.slice(0, 4):
+		levels.append_array([monster.level, monster.progress])
+	# The first earned 10, the second 9 and the third 8; the fourth rests.
+	var expected: Array[int] = [3, 1, 3, 0, 2, 5, 1, 0]
+	if levels != expected:
+		return "levels and progress didn't follow the dominations carried through: %s" % [levels]
+	return _check_levels_saved(profile)
+
+
+## `profile`'s levels and progress (#1251) are kept through saving and loading; a format 18 save
+## starts every monster at none; and a save with progress its level can't hold is refused.
+func _check_levels_saved(profile: Profile) -> String:
+	var loaded: Profile = _parse(_text(profile))
+	if not loaded.problem.is_empty() or _text(loaded) != _text(profile):
+		return "levels and progress weren't kept through saving: " + loaded.problem
+	var old: Dictionary = JSON.parse_string(_text(profile))
+	old["format"] = 18
+	for entry: Dictionary in old["dominated_monsters"]:
+		var _dropped: bool = entry.erase("progress")
+	var migrated: Profile = _parse(JSON.stringify(old))
+	if not migrated.problem.is_empty() or migrated.dominated_monsters[0].progress != 0:
+		return "a format 18 save's monsters didn't start without progress: " + migrated.problem
+	var text: String = _text(Profile.new()).replace(
+		"\"dominated_monsters\": []",
+		"\"dominated_monsters\": [%s]",
+	).replace("\"next_monster_id\": 1", "\"next_monster_id\": 2")
+	var monster: String = "{\"id\": 1, \"species\": \"ombulumo\", \"short_id\": \"%s\", " % (
+		ShortId.stand_in(1)
+	)
+	var held: Profile = _parse(text % (monster + "\"level\": 1, \"progress\": 2}"))
+	if not held.problem.is_empty() or held.dominated_monsters[0].progress != 2:
+		return "a save with progress its level holds was refused: " + held.problem
+	return _unrefused({
+		text % (monster + "\"level\": 1, \"progress\": 3}"): "a dominated",
+		text % (monster + "\"level\": 2, \"progress\": -1}"): "a dominated",
+	})
 
 
 ## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an
@@ -377,6 +430,8 @@ func _check_named() -> String:
 	if empty.is_empty() or long.is_empty() or keeper.profile.character_name != "Ash":
 		return "an empty or too long name wasn't refused, or changed the name"
 	var problem: String = _check_might()
+	if problem.is_empty():
+		problem = _check_levels()
 	return problem if not problem.is_empty() else _check_standings()
 
 

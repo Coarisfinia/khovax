@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 18
+const FORMAT: int = 19
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -114,6 +114,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_16,
 		_migrate_to_17,
 		_migrate_to_18,
+		_migrate_to_19,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -251,6 +252,12 @@ static func _migrate_to_17(_data: Dictionary) -> void:
 ## (CodexKeeper).
 static func _migrate_to_18(_data: Dictionary) -> void:
 	return
+
+
+## Format 18 to 19: dominated monsters earn progress toward their next level (#1251), none yet.
+static func _migrate_to_19(data: Dictionary) -> void:
+	for fields: Dictionary in _monster_entries(data):
+		fields["progress"] = 0
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
@@ -399,9 +406,13 @@ static func _monster(entry: Variant) -> DominatedMonster:
 		str(data.get("species", "")),
 		_int(data.get("level")),
 		Content.text_of(data.get("short_id")),
+		_int(data.get("progress")),
 	)
 	var named: bool = not monster.species.is_empty() and ShortId.is_valid(monster.short_id)
 	if monster.id < 1 or not named or monster.level < 1:
+		return null
+	# Progress always stays below what its level needs.
+	if monster.progress < 0 or monster.progress >= DominatedMonster.progress_needed(monster.level):
 		return null
 	return monster
 

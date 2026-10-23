@@ -14,6 +14,9 @@ extends RefCounted
 ## quest, then a Might threshold and another lore quest) is #654.
 const START_SLOTS: int = 1
 const MAX_SLOTS: int = 3
+## The progress each monster a player carries earns toward its next level from every domination
+## they make (#1251, which one earns it asked on #1256).
+const PROGRESS_PER_DOMINATION: int = 1
 ## How many dominated monsters a player carries (#53), which their carry requests make room for.
 const CARRY_LIMIT: int = CarryRequest.MOST_CARRIED
 ## The largest id, count or number a save may hold: JSON numbers are doubles, which hold every
@@ -55,7 +58,8 @@ var character_name: String = ""
 var problem: String = ""
 
 
-## Takes over what the player just obtained: its dominations and its loot. Returns why the gain
+## Takes over what the player just obtained: its dominations, each earning the monsters they carry
+## progress (#1251) before the dominated one joins them, and its loot. Returns why the gain
 ## can't be taken over, or "", and changes nothing when it can't: a profile that took over a bad
 ## gain couldn't be loaded again. ProfileKeeper saves it. What it means to the player's quests is
 ## counted apart (QuestKeeper).
@@ -65,6 +69,8 @@ func apply(result: Gain) -> String:
 		return refusal
 	for i: int in result.dominated_species.size():
 		var short_ids: Array[String] = result.dominated_short_ids
+		for monster: DominatedMonster in carried_monsters():
+			monster.earn(PROGRESS_PER_DOMINATION)
 		_dominate(result.dominated_species[i], short_ids[i] if i < short_ids.size() else "")
 	for material: String in result.materials:
 		materials[material] = materials.get(material, 0) + result.materials[material]
