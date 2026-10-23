@@ -32,6 +32,15 @@ FLOW = 0.5
 # How many frames a ring that rides with a bone takes to settle upright where its clip meets
 # another clip's ring, so the two meet without a jump.
 SETTLE = 6
+# With a Gather's `rise`: the share of a flight a wisp spends climbing to its flight height (and
+# as much coming down from it), and the share at each end where it only climbs or comes down, so
+# it neither leaves its spot nor reaches the ring sideways through what stands beside them (an ear
+# beside the ring).
+CLIMB = 0.35
+STRAIGHT_UP = 0.2
+# How far out from the ring's centre, against its up, a wisp comes down onto it: from above and a
+# little outside, so it clears an ear standing up inside the ring.
+OUTWARD = 0.5
 
 
 class Gather:
@@ -49,21 +58,40 @@ class Gather:
     softly; `lever`, metres, is the trail that leans it about three quarters of the way), and the
     underdamped spring swings it back past upright, so it sways with the head rather than sitting
     stuck to it. Where a clip meets another one's ring the lean has settled (SETTLE), so the clips
-    meet there."""
+    meet there.
+    With `rise` (metres), a wisp doesn't fly straight between its spot and the ring, which would
+    cut through whatever stands between them (#1182): it climbs to `rise` above the higher of the
+    two, flies over at that height and comes down onto the ring from above it and a little outside
+    (OUTWARD), in the ring's own frame (which tilts with the head), the climb and the descent each taking CLIMB of the flight (STRAIGHT_UP of
+    it straight up or down), and leaves the ring the same way back."""
 
     def __init__(self, clip, start, arrive, leave, end, center, radius, spin=0.0, stagger=0, turn=0.0, bone=None,
-                 lag=(1.5, 0.3), lean=math.radians(12.0), lever=0.02):
+                 lag=(1.5, 0.3), lean=math.radians(12.0), lever=0.02, rise=None):
         self.clip, self.start, self.arrive, self.leave, self.end = clip, start, arrive, leave, end
         self.center, self.radius, self.spin, self.stagger = Vector(center), radius, spin, stagger
         self.turn, self.bone, self.lag, self.lean, self.lever = turn, bone, lag, lean, lever
+        self.rise = rise
 
-    def share(self, frame, late):
-        """How far (0..1) a wisp `late` frames behind the first is from its spot to the ring."""
+    def progress(self, frame, late):
+        """How far (0..1, not eased) a wisp `late` frames behind the first has flown from its spot
+        to the ring."""
         if self.leave is not None and frame > self.leave:
-            return 1.0 - legs.ease((frame - self.leave) / (self.end - self.leave))
+            return 1.0 - min(1.0, max(0.0, (frame - self.leave) / (self.end - self.leave)))
         if self.arrive is None:
             return 1.0
-        return legs.ease((frame - self.start - late) / (self.arrive - self.start - late))
+        return min(1.0, max(0.0, (frame - self.start - late) / (self.arrive - self.start - late)))
+
+    def fly(self, spot, ring, toward, s):
+        """Where a wisp is `s` (progress) of the way from `spot` to `ring`, all three (sideways,
+        up, forward) from its spot, `toward` being the way it comes down onto the ring (from above
+        and outside): eased along the straight line, or with a `rise` from its spot raised to the
+        flight height to the ring raised to it along `toward`."""
+        if self.rise is None:
+            return spot + (ring - spot) * legs.ease(s)
+        top = max(spot.y, ring.y) + self.rise
+        lifted = spot + Vector((0.0, top - spot.y, 0.0)) * legs.ease(s / CLIMB)
+        above = ring + toward * ((top - ring.y) / max(toward.y, 0.5)) * legs.ease((1.0 - s) / CLIMB)
+        return lifted + (above - lifted) * legs.ease((s - STRAIGHT_UP) / (1.0 - 2.0 * STRAIGHT_UP))
 
     def rings(self, shape, poses, loop):
         """The ring's centre (unscaled metres) and its turn (a 3x3 Matrix from level) on every
@@ -149,7 +177,10 @@ class Wisps:
                 hover = Vector((share * SWAY * (math.cos(t + phase) - math.cos(phase)),
                                 share * BOB * (math.sin(t + phase) - math.sin(phase)), 0.0))
                 if gather is not None:
-                    ring = gather.spot(index, len(self.names), frame, held) - self.spots[index]
-                    toward = Vector((ring.x, ring.z, -ring.y)) - hover
-                    hover = hover + toward * gather.share(frame, round(gather.stagger * rank))
+                    ring = gather.spot(index, len(self.names), frame, held)
+                    toward = held[1] @ Vector((0.0, 0.0, 1.0)) + (ring - held[0]).normalized() * OUTWARD
+                    ring = ring - self.spots[index]
+                    hover = gather.fly(hover, Vector((ring.x, ring.z, -ring.y)),
+                                       Vector((toward.x, toward.z, -toward.y)),
+                                       gather.progress(frame, round(gather.stagger * rank)))
                 pose[LOC + bone] = tuple(hover)
