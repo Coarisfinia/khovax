@@ -9,7 +9,9 @@ extends RefCounted
 ## commands, as in a replay, even from a line before the one that offers it. While the menu is open
 ## over a dialog, its buttons rest. A faction's name in a line opens its lexicon page (#959), with a
 ## controller, a click or a long press on touch, never a tap, a species' name its bestiary page
-## (#1173), and the speaker's name their page (#1005). A dialog that doesn't exist doesn't open. In
+## (#1173), the speaker's name their page (#1005), and a realm's and a place's name theirs (#1175),
+## the d-pad's left and right stepping between a line's names. A dialog that doesn't exist doesn't
+## open. In
 ## the glade, Teska
 ## na Amvrel, the guild's scout, stands east of the start (#557): walking into them talks to them,
 ## raised as
@@ -107,10 +109,10 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 
 
 ## The second line names the Amvrel Velmarai (#959) as a link to its lexicon page, which a
-## controller, a click and a long press on touch open.
+## controller, a click and a long press on touch open, and then the realm Ardvaun (#1175).
 func _open_codex(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> String:
 	var page: CodexPage = screen.get_parent().get_node("CodexPage") as CodexPage
-	if (screen.line_links() != ["FACTION:amvrel_velmarai"]
+	if (screen.line_links() != ["FACTION:amvrel_velmarai", "REALM:ardvaun"]
 			or not screen.shown_line().begins_with("The Amvrel Velmarai pay")):
 		return "the second line showed %s with links %s" % [
 			screen.shown_line(),
@@ -124,8 +126,9 @@ func _open_codex(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> S
 
 ## The d-pad up from the answers reaches the line's names, and A opens the page: the faction's
 ## name, what the name means, its entry and the player's standing, neutral, while the game hears no
-## input. B closes it and gives the focus back to the line, the dialog still on it, and the d-pad
-## down goes back to the answers.
+## input. B closes it and gives the focus back to the line, the dialog still on it. The d-pad right
+## steps on to the realm's name, whose page A opens (_realm_by_controller), and the d-pad down goes
+## back to the answers.
 static func _codex_by_controller(
 	page: CodexPage,
 	driver: GameDriver,
@@ -144,11 +147,44 @@ static func _codex_by_controller(
 		return "B didn't close the page back to the dialog's line"
 	if screen.get_viewport().gui_get_focus_owner() != line:
 		return "the focus didn't go back to the line"
+	var realm: String = _realm_by_controller(page, driver, screen)
+	if not realm.is_empty():
+		return realm
 	var speaker: String = _speaker_by_controller(page, driver, screen)
 	if not speaker.is_empty():
 		return speaker
 	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_DOWN)
 	return "" if _focused(screen) == 0 else "the d-pad down from the line didn't reach the answers"
+
+
+## The d-pad right steps on to the realm Ardvaun's name (#1175), and A opens its page: its name,
+## what it means and its entry, with no standing. B closes it back to the line.
+static func _realm_by_controller(
+	page: CodexPage,
+	driver: GameDriver,
+	screen: DialogScreen,
+) -> String:
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_RIGHT)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
+	var gloss: String = page.gloss.get_parsed_text()
+	if (not page.is_open()
+			or not driver.input.blocked
+			or page.heading.text != CodexPage.REALMS_TEXT
+			or page.title.text != "Ardvaun"
+			or gloss != "Ardvaun: high land, heart land"
+			or not page.entry.text.begins_with("The high land at the heart of the world")
+			or page.standing.visible
+			or page.beast.visible):
+		return "A on the realm's name showed %s, %s, %s" % [
+			page.heading.text,
+			page.title.text,
+			gloss,
+		]
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
+	if (page.is_open()
+			or screen.get_viewport().gui_get_focus_owner() != screen.get_node("Card/Rows/Line")):
+		return "B didn't close the realm's page back to the line"
+	return ""
 
 
 ## The speaker's name links to their page (#1005): the d-pad up from the line reaches it, and A
@@ -351,17 +387,38 @@ func _choose_with_controller(
 	return _bestiary_by_controller(page, driver, screen)
 
 
-## The line about Lumwen Hoal names the Ombulumo (#1173) as a link to its bestiary page, which the
-## d-pad up and A open: its name and what the name means, and its bestiary entry instead of a
-## lexicon's, its lore still to learn. B closes it, and the d-pad down goes back to the answer.
+## The line about Lumwen Hoal names the place (#1175), which the player has now met, and the
+## Ombulumo (#1173) as links. The d-pad up and A open the place's page: its name, what it means and
+## its entry, with no standing; B closes it. The d-pad right and A open the Ombulumo's bestiary
+## page: its name and what the name means, and its bestiary entry instead of a lexicon's, its lore
+## still to learn. B closes it, and the d-pad down goes back to the answer.
 static func _bestiary_by_controller(
 	page: CodexPage,
 	driver: GameDriver,
 	screen: DialogScreen,
 ) -> String:
-	if screen.line_links() != ["MONSTER:ombulumo"]:
+	var main: Node = screen.get_parent().get_parent()
+	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
+	if screen.line_links() != ["PLACE:lumwen_hoal", "MONSTER:ombulumo"]:
 		return "the line about Lumwen Hoal had the links %s" % [screen.line_links()]
+	if not keeper.has_met(TextTags.PLACE, "lumwen_hoal"):
+		return "the line about Lumwen Hoal didn't meet the place"
 	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_UP)
+	FlowInput.press_pad(screen, JOY_BUTTON_A)
+	var place: String = page.gloss.get_parsed_text()
+	if (not page.is_open()
+			or page.heading.text != CodexPage.PLACES_TEXT
+			or page.title.text != "Lumwen Hoal"
+			or place != "Lumwen Hoal: the soft clearing"
+			or not page.entry.text.begins_with("The clearing where the settlers first made camp")
+			or page.standing.visible):
+		return "A on the place's name showed %s, %s, %s" % [
+			page.heading.text,
+			page.title.text,
+			place,
+		]
+	FlowInput.press_pad(screen, JOY_BUTTON_B)
+	FlowInput.press_pad(screen, JOY_BUTTON_DPAD_RIGHT)
 	FlowInput.press_pad(screen, JOY_BUTTON_A)
 	if not page.is_open() or not driver.input.blocked:
 		return "A on the Ombulumo's name didn't open its page"

@@ -8,7 +8,7 @@
 	"lines": [
 		{ "text": "Careful where you step. The ground here hasn't been charted yet." },
 		{
-			"text": "The ${FACTION:amvrel_velmarai} pay well for anyone who walks the wild places and comes back to tell of them.",
+			"text": "The ${FACTION:amvrel_velmarai} pay well for anyone who walks the wild places of ${REALM:ardvaun} and comes back to tell of them.",
 			"answers": [
 				{ "id": "ask_about_lumwen_hoal", "text": "What lies ahead?", "next": "lumwen_hoal" },
 				{ "id": "leave_scout", "text": "I'll find my own way." }
@@ -16,7 +16,7 @@
 		},
 		{
 			"id": "lumwen_hoal",
-			"text": "Lumwen Hoal, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still.",
+			"text": "${PLACE:lumwen_hoal}, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still.",
 			"answers": [{ "id": "promise_to_look", "text": "I'll take a look.", "commits": true }]
 		}
 	]

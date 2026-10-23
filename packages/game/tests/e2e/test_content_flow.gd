@@ -48,8 +48,12 @@ const FACTION_TEXT: String = (
 )
 ## Five rank names, as a faction has each way.
 const FIVE_RANKS: String = "[\"a\", \"b\", \"c\", \"d\", \"e\"]"
-## A blueprint file x on the rule set small (#941), its last fields left open.
-const BLUEPRINT: String = "{\"id\": \"x\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}%s}"
+## A blueprint file x on the rule set small (#941) with a codex entry (#1175), its last fields left
+## open.
+const BLUEPRINT: String = (
+	"{\"id\": \"x\", \"rules\": \"small\", \"wild_species\": {\"a\": 1}, "
+	+ "\"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}%s}"
+)
 ## What ContentTerms says of a name that breaks its kind's shape.
 const REFUSED: String = "isn't a name its kind allows"
 ## Each kind's name rule (#909) on names it allows ("" expected) and names it refuses (what the
@@ -693,15 +697,18 @@ func _wild_species_problem(instance_name: String, species: Dictionary[String, Sp
 	return ""
 
 
-## The glade's blueprint reads as written (#823): its rules, loot tables and variants in their
-## order. What its region holds brings the rest (#879): its people only to the glade itself, its
-## chests to its corrupted variant too, through its chest table. A blueprint file with a wrong id,
-## an unknown field, no species, a weight below 1, a chest table without a loot table, or a variant
-## without its region is refused.
+## The glade's blueprint reads as written (#823): its rules, loot tables, variants in their order
+## and codex entry (#1175). What its region holds brings the rest (#879): its people only to the
+## glade itself, its chests to its corrupted variant too, through its chest table. A blueprint file
+## with a wrong id, an unknown field, no species, a weight below 1, a chest table without a loot
+## table, a variant without its region, or without a codex entry and gloss is refused.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(FlowSteps.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
 		return "the glade's blueprint didn't load as written"
+	if (glade.codex_gloss != "the soft clearing"
+			or not glade.codex_entry.begins_with("The clearing")):
+		return "the glade's codex entry reads %s" % glade.codex_gloss
 	if glade.features[0] != MovementFeature.ID or glade.features.has(ChestFeature.ID):
 		return "the glade's features read %s" % [glade.features]
 	var own: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 0, 0)
@@ -730,6 +737,10 @@ func _check_blueprints() -> String:
 		BLUEPRINT % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
 		BLUEPRINT % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
 		BLUEPRINT % ", \"turned\": 1": "turned must",
+		BLUEPRINT.replace("\"g\"", "\" \"") % "": "it needs a codex entry",
+		BLUEPRINT.replace(", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}", "") % "": (
+			"it needs a codex entry"
+		),
 	})
 
 
@@ -1326,10 +1337,11 @@ func _check_text_tags() -> String:
 	if not TextTags.shown(ahead).begins_with("Lumwen Hoal, thick with Ombulumo. Something"):
 		return "the scout's Lumwen Hoal line shows %s" % TextTags.shown(ahead)
 	var shown: String = tags.resolve(
-		"${PERSON:teska_na_amvrel} of the ${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}",
+		"${PERSON:teska_na_amvrel} of the ${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}"
+		+ " in ${PLACE:edhra_tewk} of ${REALM:ardvaun}",
 	)
-	if shown != "Teska na Amvrel of the Amvrel Velmarai sells Berry pouch":
-		return "person, faction and gear tags show %s" % shown
+	if shown != "Teska na Amvrel of the Amvrel Velmarai sells Berry pouch in Edhra Tewk of Ardvaun":
+		return "person, faction, gear, place and realm tags show %s" % shown
 	var fang: GearItem = GearItem.new()
 	fang.name = "${MONSTER:ombulumo} fang"
 	fang.rarity = "loose"
