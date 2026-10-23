@@ -139,6 +139,10 @@ a second model could use goes into the library or a generic tool, never into one
   of every clip, from the model's front, from the eye's side and straight into it, and fails when
   more of the eye than the tolerance shows above a brow (or anything lying on the eye) crossing it:
   a brow may overlap the eye, but the eye's top never shines through above it (`lib/brows.py`).
+- **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
+  measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
+  foreleg against the shoulder's height) and fails a measure outside its range
+  (`lib/dimensions.py`, where the ranges and their reasons are).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
@@ -331,6 +335,12 @@ a second model could use goes into the library or a generic tool, never into one
    straight on. A model without eye points passes. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14). `eyes.eye`'s `brow_size` makes a smaller brow that still
    covers the eye's top.
+17. **Dimensions (#1299):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_dimensions.py -- <model.glb>` must print
+   `DIMENSIONS CHECK: PASS`: every limb's segments within their body plan's ranges at rest (the
+   owner, on #1297: no "weird dimensions"). A model without limbs of a known body plan passes. Its
+   lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14). A new body
+   plan adds its own ranges to `lib/dimensions.py`, with their reasons.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
