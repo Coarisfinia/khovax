@@ -32,12 +32,14 @@ var shown: Dictionary[String, String] = {}
 var pills: Dictionary[String, QuestPill] = {}
 ## The instance this machine's player was in when the rows were built.
 var _here: String = ""
+## The instance each open quest's current step counts in, by quest id, when the rows were built.
+var _wheres: Dictionary[String, String] = {}
 
 @onready var _rows: VBoxContainer = $Middle/Rows
 
 
 func _ready() -> void:
-	_show({}, {}, "")
+	_show({}, {}, {}, "")
 
 
 func _process(_delta: float) -> void:
@@ -50,14 +52,17 @@ func _process(_delta: float) -> void:
 func refresh() -> void:
 	var lines: Dictionary[String, String] = {}
 	var names: Dictionary[String, String] = {}
+	var wheres: Dictionary[String, String] = {}
 	var quests: QuestTracker = keeper.quests() if keeper != null else null
 	if quests != null:
 		for id: String in quests.open_steps():
 			names[id] = quests.book[id].shown_name()
 			lines[id] = "\n".join(quest_lines(quests, id))
+			var step: QuestStep = quests.book[id].step_at(quests.progress_of(id).step)
+			wheres[id] = step.counts_in() if step != null else ""
 	var here: String = driver.local_instance_name() if driver != null else ""
-	if lines != shown or here != _here:
-		_show(names, lines, here)
+	if lines != shown or wheres != _wheres or here != _here:
+		_show(names, lines, wheres, here)
 
 
 ## Makes the rows `width` pixels wide.
@@ -96,34 +101,34 @@ static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Arra
 
 
 ## Builds the rows: each quest's name from `names` and its `lines` below it, by quest id, the pill
-## between them filled when it names `here`, the instance this machine's player is in.
+## naming its instance from `wheres` between them, filled when that's `here`, the instance this
+## machine's player is in.
 func _show(
 	names: Dictionary[String, String],
 	lines: Dictionary[String, String],
+	wheres: Dictionary[String, String],
 	here: String,
 ) -> void:
 	shown = lines
+	_wheres = wheres
 	_here = here
 	pills.clear()
 	for row: Node in _rows.get_children():
 		row.queue_free()
 	if names.is_empty():
 		_rows.add_child(GameMenu.label(NONE_TEXT))
-	var quests: QuestTracker = keeper.quests() if keeper != null else null
 	for id: String in names:
-		_add_quest(names[id], lines[id])
-		var step: QuestStep = quests.book[id].step_at(quests.progress_of(id).step)
-		var where: String = step.counts_in() if step != null else ""
-		pills[id] = PILL.instantiate() as QuestPill
-		_rows.add_child(pills[id])
-		_rows.move_child(pills[id], -2)
-		pills[id].fit(get_theme_default_font_size())
-		pills[id].show_instance(where, where == here)
+		pills[id] = _add_quest(names[id], lines[id])
+		pills[id].show_instance(wheres[id], wheres[id] == here)
 
 
-## Adds a quest's rows: its name `quest_name`, and its steps' `lines` set in below it.
-func _add_quest(quest_name: String, lines: String) -> void:
+## Adds a quest's rows: its name `quest_name`, its pill, and its steps' `lines` set in below it;
+## returns the pill.
+func _add_quest(quest_name: String, lines: String) -> QuestPill:
 	_rows.add_child(GameMenu.label(quest_name))
+	var pill: QuestPill = PILL.instantiate() as QuestPill
+	_rows.add_child(pill)
+	pill.fit(get_theme_default_font_size())
 	var steps: MarginContainer = MarginContainer.new()
 	steps.add_theme_constant_override("margin_left", roundi(GAP * STEP_INDENT))
 	var column: VBoxContainer = VBoxContainer.new()
@@ -131,3 +136,4 @@ func _add_quest(quest_name: String, lines: String) -> void:
 		column.add_child(GameMenu.label(line))
 	steps.add_child(column)
 	_rows.add_child(steps)
+	return pill
