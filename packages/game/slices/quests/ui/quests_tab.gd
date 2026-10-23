@@ -4,7 +4,9 @@ extends ScrollContainer
 ## QuestTracker.open_steps), each with its name and path mark (#471) and its steps on the player's
 ## way, worded as the list words them (QuestListView.step_line): the steps done, the one it's on
 ## with its count, and the ones still to come up to its next choice (#573). Each step says which it
-## is in words, never by color alone (#68). It only reads the quests, keeps up with them while
+## is in words, never by color alone (#68). Under each quest's name, a pill names the instance its
+## current step counts in, as the list shows it (QuestPill, #794). It only reads the quests, keeps
+## up with them while
 ## shown, and scrolls when the screen is too short for every quest. Its layout lives in its scene,
 ## quests_tab.tscn (#437): this script keeps only what it does.
 
@@ -16,18 +18,28 @@ const DONE_STEP: String = "Done: "
 const CURRENT_STEP: String = "Now: "
 const LATER_STEP: String = "Later: "
 const NONE_TEXT: String = "No open quests"
+## A quest pill: the instance a step counts in.
+const PILL: PackedScene = preload("res://slices/quests/ui/quest_pill.tscn")
 
 ## Whose quests are shown: this machine's player's.
 var keeper: QuestKeeper
+## The running session, which says the instance this machine's player is in, for the pills.
+var driver: Session
 ## What the tab shows for each open quest, by quest id: its steps' lines, one per line. Kept here
 ## so tests can read it.
 var shown: Dictionary[String, String] = {}
+## Each open quest's pill, by quest id, while the tab shows it. Kept so tests can read them.
+var pills: Dictionary[String, QuestPill] = {}
+## The instance this machine's player was in when the rows were built.
+var _here: String = ""
+## The instance each open quest's current step counts in, by quest id, when the rows were built.
+var _wheres: Dictionary[String, String] = {}
 
 @onready var _rows: VBoxContainer = $Middle/Rows
 
 
 func _ready() -> void:
-	_show({}, {})
+	_show({}, {}, {}, "")
 
 
 func _process(_delta: float) -> void:
@@ -40,13 +52,17 @@ func _process(_delta: float) -> void:
 func refresh() -> void:
 	var lines: Dictionary[String, String] = {}
 	var names: Dictionary[String, String] = {}
+	var wheres: Dictionary[String, String] = {}
 	var quests: QuestTracker = keeper.quests() if keeper != null else null
 	if quests != null:
 		for id: String in quests.open_steps():
 			names[id] = quests.book[id].shown_name()
 			lines[id] = "\n".join(quest_lines(quests, id))
-	if lines != shown:
-		_show(names, lines)
+			var step: QuestStep = quests.book[id].step_at(quests.progress_of(id).step)
+			wheres[id] = step.counts_in() if step != null else ""
+	var here: String = driver.local_instance_name() if driver != null else ""
+	if lines != shown or wheres != _wheres or here != _here:
+		_show(names, lines, wheres, here)
 
 
 ## Makes the rows `width` pixels wide.
@@ -84,20 +100,35 @@ static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Arra
 	return lines
 
 
-## Builds the rows: each quest's name from `names` and its `lines` below it, by quest id.
-func _show(names: Dictionary[String, String], lines: Dictionary[String, String]) -> void:
+## Builds the rows: each quest's name from `names` and its `lines` below it, by quest id, the pill
+## naming its instance from `wheres` between them, filled when that's `here`, the instance this
+## machine's player is in.
+func _show(
+	names: Dictionary[String, String],
+	lines: Dictionary[String, String],
+	wheres: Dictionary[String, String],
+	here: String,
+) -> void:
 	shown = lines
+	_wheres = wheres
+	_here = here
+	pills.clear()
 	for row: Node in _rows.get_children():
 		row.queue_free()
 	if names.is_empty():
 		_rows.add_child(GameMenu.label(NONE_TEXT))
 	for id: String in names:
-		_add_quest(names[id], lines[id])
+		pills[id] = _add_quest(names[id], lines[id])
+		pills[id].show_instance(wheres[id], wheres[id] == here)
 
 
-## Adds a quest's rows: its name `quest_name`, and its steps' `lines` set in below it.
-func _add_quest(quest_name: String, lines: String) -> void:
+## Adds a quest's rows: its name `quest_name`, its pill, and its steps' `lines` set in below it;
+## returns the pill.
+func _add_quest(quest_name: String, lines: String) -> QuestPill:
 	_rows.add_child(GameMenu.label(quest_name))
+	var pill: QuestPill = PILL.instantiate() as QuestPill
+	_rows.add_child(pill)
+	pill.fit(get_theme_default_font_size())
 	var steps: MarginContainer = MarginContainer.new()
 	steps.add_theme_constant_override("margin_left", roundi(GAP * STEP_INDENT))
 	var column: VBoxContainer = VBoxContainer.new()
@@ -105,3 +136,4 @@ func _add_quest(quest_name: String, lines: String) -> void:
 		column.add_child(GameMenu.label(line))
 	steps.add_child(column)
 	_rows.add_child(steps)
+	return pill

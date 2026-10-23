@@ -2,7 +2,8 @@ class_name QuestListView
 extends Control
 ## The open quests at the side of the screen (#340): one card per quest of this machine's player
 ## that isn't finished (QuestTracker.open_steps), with its name (and its path mark in words, #471)
-## and what its current step asks, and the count where the step counts up ("1/3"). A quest that
+## and what its current step asks, and the count where the step counts up ("1/3"), with the
+## instance the step counts in as a pill under its name (QuestPill, #794). A quest that
 ## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
 ## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
@@ -10,7 +11,8 @@ extends Control
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn;
 ## this script keeps only what it does.
 
-## A quest's card: its name above its step, both wrapping, starting faded out.
+## A quest's card: its name above its step, both wrapping, the pill between them, starting faded
+## out.
 const QUEST_CARD: PackedScene = preload("res://slices/quests/ui/quest_card.tscn")
 ## How quickly a card glides to its place: the share of the way left it closes per second.
 const GLIDE: float = 8.0
@@ -33,6 +35,8 @@ const DONE_TEXT: String = "Done"
 
 ## Whose quests are listed: this machine's player's.
 @export var keeper: QuestKeeper
+## The running session, which says the instance this machine's player is in, for the pills.
+@export var driver: Session
 ## Where the Survey shows, so the list keeps out of its corner.
 @export var survey: SurveyChoice
 ## The roster in the top left corner (#540), which the list starts below when it's on that side.
@@ -59,6 +63,7 @@ func show_quests() -> void:
 	var quests: QuestTracker = keeper.quests() if keeper != null else null
 	if quests != null:
 		steps = quests.open_steps()
+	var here: String = driver.local_instance_name() if driver != null else ""
 	for id: String in order:
 		if not steps.has(id) and shown[id] != DONE_TEXT:
 			_finish(id)
@@ -70,6 +75,8 @@ func show_quests() -> void:
 		shown[id] = line
 		_line_label(id).text = line
 		_line_label(id).visible = not line.is_empty()
+		var where: String = steps[id].counts_in()
+		pill(id).show_instance(where, where == here)
 
 
 ## What `step` asks, worded for the player, with `count` of its count where it counts up; a step
@@ -177,6 +184,11 @@ func _drop(id: String) -> void:
 	order.erase(id)
 
 
+## The pill under quest `id`'s name, saying where its step counts.
+func pill(id: String) -> QuestPill:
+	return cards[id].get_node("Lines/Where") as QuestPill
+
+
 ## The label under quest `id`'s name.
 func _line_label(id: String) -> Label:
 	return _step_label(cards[id])
@@ -215,12 +227,14 @@ func _lay_out(glide: float) -> void:
 		y += card.size.y + GAP
 
 
-## Sizes `card`'s text to the font size in use: its name a little bigger than its step.
+## Sizes `card`'s text to the font size in use: its name a little bigger than its step, its pill a
+## little smaller.
 func _size_text(card: PanelContainer) -> void:
 	var font: int = maxi(MIN_FONT, _font_size)
 	var name_label: Label = card.get_node("Lines/Name") as Label
 	name_label.add_theme_font_size_override("font_size", roundi(font * NAME_SCALE))
 	_step_label(card).add_theme_font_size_override("font_size", font)
+	(card.get_node("Lines/Where") as QuestPill).fit(font)
 
 
 ## Where a new card starts: under the last one.

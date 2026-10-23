@@ -422,7 +422,7 @@ func _check_finds(
 	if result.is_empty():
 		result = _check_answered(driver, bus, quests)
 	if result.is_empty():
-		result = _check_territory(driver, bus, profile, quests)
+		result = _check_territory(driver, bus, profile, quests, list)
 	return result if not result.is_empty() else _check_world_event(driver, bus, quests)
 
 
@@ -529,7 +529,8 @@ func _check_answered(driver: GameDriver, bus: EventBus, quests: QuestTracker) ->
 ## Finishing a territory quest hands its instance to its faction (#638): the forest's, once this
 ## player walked its stream, grove and felling, not when another player entered the last one, nor
 ## when this player entered a felling in another instance, since its steps count only in the
-## forest (#769); meanwhile its marker in the glade points at an exit leading there. The
+## forest (#769); meanwhile its marker in the glade points at an exit leading there, and its pill
+## names the forest (#794). The
 ## hand-over waits in the profile's outbox (#771) and goes in this player's next command, which the
 ## replay records, and the world clears the forest's old holder in the same tick as it hands the
 ## forest to the guild. The world records the request applied and acknowledges it, and the outbox
@@ -540,11 +541,15 @@ func _check_territory(
 	bus: EventBus,
 	profile: Profile,
 	quests: QuestTracker,
+	list: QuestListView,
 ) -> String:
 	var forest: String = FlowSteps.FOREST
 	var quest: String = "guild_charts_morwe_wudhen"
 	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
+	var pilled: String = _check_pills(driver, list, quest)
+	if not pilled.is_empty():
+		return pilled
 	_emit_in(driver, bus, PieceEntered.new("stream", 1, 0), forest)
 	_emit_in(driver, bus, PieceEntered.new("grove", 1, 0), forest)
 	_emit_in(driver, bus, PieceEntered.new("felling", 9, 1), forest)
@@ -571,6 +576,47 @@ func _check_territory(
 	if not driver.recording.changes.has(Territory.code(forest, GUILD)):
 		return "the replay didn't record the forest handed over"
 	return _check_territory_resent(driver, bus, profile, request)
+
+
+## The instance a quest's step counts in shows as a pill under its name (#794), in the list and on
+## the Quests tab alike: the territory quest `quest`'s names the forest, only outlined with an
+## arrow while this player is in the glade, filled once they're in the forest; the pond's side
+## quest, whose step counts anywhere, has none.
+func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> String:
+	var tab: QuestsTab = (list.get_parent().get_node("GameMenu") as GameMenu).quests_tab()
+	list.show_quests()
+	tab.refresh()
+	if list.pill("pond_chest").visible or tab.pills["pond_chest"].visible:
+		return "the pond's side quest, which counts anywhere, shows an instance's pill"
+	var result: String = _check_pill(list.pill(quest), false)
+	result = result if not result.is_empty() else _check_pill(tab.pills[quest], false)
+	var there: Elsewhere = Elsewhere.new()
+	there.where = FlowSteps.FOREST
+	list.driver = there
+	tab.driver = there
+	list.show_quests()
+	tab.refresh()
+	result = result if not result.is_empty() else _check_pill(list.pill(quest), true)
+	result = result if not result.is_empty() else _check_pill(tab.pills[quest], true)
+	list.driver = driver
+	tab.driver = driver
+	there.free()
+	return result
+
+
+## Why `pill` doesn't name the forest as `here` says (filled, or outlined with its arrow), or "".
+func _check_pill(pill: QuestPill, here: bool) -> String:
+	var style: StyleBoxFlat = pill.get_theme_stylebox("panel") as StyleBoxFlat
+	var label: Label = pill.get_node("Row/Name") as Label
+	if (not pill.visible or pill.instance_id != FlowSteps.FOREST or pill.here != here
+			or label.text != Realms.name_of(FlowSteps.FOREST) or style.draw_center != here
+			or (pill.get_node("Row/Arrow") as Control).visible == here):
+		return "the territory quest's pill shows %s (here: %s), not the forest, here: %s" % [
+			label.text,
+			pill.here,
+			here,
+		]
+	return ""
 
 
 ## Why the territory quest `quest`, open in `quests`, isn't marked in the glade on an exit leading
@@ -1496,3 +1542,14 @@ func _gain(species: Array[String], chests: int) -> Array[QuestFact]:
 ## This player's domination of a wild monster of `species`.
 static func _dominated(species: String) -> WildMonsterDominated:
 	return WildMonsterDominated.new(1, 1, 0, Vector2i.ZERO, species)
+
+
+## A session whose player is in the instance `where`, for the pills (#794).
+class Elsewhere:
+	extends Session
+
+	var where: String = ""
+
+
+	func local_instance_name() -> String:
+		return where
