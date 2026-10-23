@@ -2,15 +2,15 @@ class_name DominatedMonster
 extends RefCounted
 ## A monster the player dominated and owns (a `dominated_monster`, #45), kept in the profile between
 ## sessions. Its species is an id into the content data (#72), and its short id the one it had in
-## the wild (#700), which tells it apart from every other monster of its species in the world. It
-## grows in levels (#1251) by earning progress, which the profile hands it (Profile.apply).
+## the wild (#700): its one id, which tells it apart from every other monster in the world and in
+## the profile, which keys it on it (#754). It grows in levels (#1251) by earning progress, which
+## the profile hands it (Profile.apply).
 
 ## How much progress a level needs, times the level: from level L to L + 1 takes this times L.
 const PROGRESS_PER_LEVEL: int = 3
 
-## Unique in the profile and never reused.
-var id: int = 0
 var species: String = ""
+## Unique in the profile (#754).
 var short_id: String = ""
 var level: int = 1
 ## The progress toward its next level, always below what its level needs (progress_needed).
@@ -18,13 +18,11 @@ var progress: int = 0
 
 
 func _init(
-	monster_id: int = 0,
 	species_id: String = "",
 	start_level: int = 1,
 	monster_short_id: String = "",
 	start_progress: int = 0,
 ) -> void:
-	id = monster_id
 	species = species_id
 	level = start_level
 	short_id = monster_short_id
@@ -33,7 +31,6 @@ func _init(
 
 func to_data() -> Dictionary[String, Variant]:
 	var data: Dictionary[String, Variant] = {
-		"id": id,
 		"species": species,
 		"short_id": short_id,
 		"level": level,

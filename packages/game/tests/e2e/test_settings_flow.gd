@@ -450,7 +450,7 @@ func _gear_locked_by_seal(panel: GearPanel, state: GameState, monster_id: int) -
 ## companion and pushes the third out of the carried three; its row's up button then moves the new
 ## second one up again. The order is kept in their profile on disk.
 func _menu_reorder(tab: CharacterTab, main: Node) -> String:
-	var ids: Array[int] = tab.monsters.shown_ids.duplicate()
+	var ids: Array[String] = tab.monsters.shown_ids.duplicate()
 	tab.monsters.move(ids[3], 0)
 	var moved: Array[String] = [
 		"Carried 1, companion: Ombulumo, level 1",
@@ -458,7 +458,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 		"Carried 3: Tikazzir, level 1",
 		"Not carried: Tikazzir, level 1",
 	]
-	var reordered: Array[int] = [ids[3], ids[0], ids[1], ids[2]]
+	var reordered: Array[String] = [ids[3], ids[0], ids[1], ids[2]]
 	if tab.monsters.shown != moved or tab.monsters.shown_ids != reordered:
 		return "moving a monster first didn't make it the companion: %s" % [tab.monsters.shown]
 	# The second row's up button: its line, then up, then down, each showing its arrow (#584).
@@ -471,7 +471,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	var _flushed: String = keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
-	var expected: Array[int] = [ids[0], ids[3], ids[1]]
+	var expected: Array[String] = [ids[0], ids[3], ids[1]]
 	if tab.monsters.shown_ids[0] != ids[0] or kept.carried != expected:
 		return "a row's up button didn't move it, or the order isn't kept: %s" % [kept.carried]
 	return _menu_details(tab)
@@ -501,7 +501,7 @@ func _type_badges(details: MonsterDetails) -> String:
 ## and below it on a portrait one.
 func _menu_details(tab: CharacterTab) -> String:
 	var details: MonsterDetails = tab.monsters.details
-	var first: int = tab.monsters.shown_ids[0]
+	var first: String = tab.monsters.shown_ids[0]
 	if tab.monsters.selected != first or not details.shown[0].begins_with("Ombulumo, level 2"):
 		return "the detail pane doesn't start on the first monster: %s" % [details.shown]
 	# A click on the third row, as the mouse gives it.

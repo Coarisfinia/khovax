@@ -1,6 +1,6 @@
 extends RefCounted
 ## Profile flow (#37): the player's profile across sessions. A new profile starts with one slot and
-## nothing dominated; every gain adds its dominations, with ids that are never reused, and its
+## nothing dominated; every gain adds its dominations, keyed on their short ids (#754), and its
 ## materials, and is on disk at once; the profile survives saving and loading; a save it can't trust
 ## is refused; an older save is migrated, oldest step first, into the current format with no quest
 ## progress (#184), and an open quest's earlier steps done (#573); the first three monsters
@@ -45,10 +45,10 @@ func run(_tree: SceneTree) -> String:
 	applied += profile.apply(_result(["ember_fox"], { "crystal": 1, "feather": 3 }))
 	if not applied.is_empty():
 		return "a valid gain was refused: " + applied
-	var ids: Array[int] = []
+	var ids: Array[String] = []
 	for monster: DominatedMonster in profile.dominated_monsters:
-		ids.append(monster.id)
-	var expected: Array[int] = [1, 2, 3]
+		ids.append(monster.short_id)
+	var expected: Array[String] = [ShortId.stand_in(1), ShortId.stand_in(2), ShortId.stand_in(3)]
 	var expected_materials: Dictionary[String, int] = { "crystal": 3, "feather": 3 }
 	if ids != expected or profile.materials != expected_materials or profile.carried != expected:
 		return "two gains gave monsters %s, materials %s and carried %s" % [
@@ -127,8 +127,8 @@ func _check_bad_results(profile: Profile) -> String:
 	return ""
 
 
-## Saving and loading gives back the same profile, with the next id still unused; then the short
-## ids (#700).
+## Saving and loading gives back the same profile, and a monster dominated after it gets a short id
+## no other has; then the short ids (#700).
 func _check_save(profile: Profile) -> String:
 	var problem: String = ProfileStore.save(profile, SAVE_PATH)
 	if not problem.is_empty():
@@ -140,16 +140,17 @@ func _check_save(profile: Profile) -> String:
 	if FileAccess.file_exists(SAVE_PATH + ".tmp"):
 		return "saving left its temporary file behind"
 	var _dominated: String = loaded.apply(_result(["ombulumo"], {}))
-	var three: Array[int] = [1, 2, 3]
-	if loaded.dominated_monsters.back().id != 4 or loaded.carried != three:
-		return "a monster dominated after loading reused an id or joined the carried three"
+	var three: Array[String] = profile.carried.duplicate()
+	if loaded.dominated_monsters.back().short_id != ShortId.stand_in(4) or loaded.carried != three:
+		return "a monster dominated after loading reused a short id or joined the carried three"
 	if not ProfileStore.load_from(SAVE_PATH).dominated_monsters.is_empty():
 		return "without a save, the game didn't start a new profile"
 	return _check_short_ids()
 
 
 ## A dominated monster keeps the short id it had in the wild (#700) through saving and loading, and
-## one dominated without one gets the stand-in for its id. A save from before short ids (format 11)
+## one dominated without one gets the stand-in for its place. A save from before short ids (format
+## 11)
 ## gives each the stand-in for its id, and a save with a short id that isn't one is refused.
 func _check_short_ids() -> String:
 	var profile: Profile = Profile.new()
@@ -169,8 +170,7 @@ func _check_short_ids() -> String:
 ## `profile`'s save from before short ids (format 11) gives each monster the stand-in for its id,
 ## and one with a short id that isn't one is refused.
 func _check_short_ids_read(profile: Profile) -> String:
-	var data: Dictionary = JSON.parse_string(_text(profile))
-	data["format"] = 11
+	var data: Dictionary = _numbered(profile, 11)
 	var monsters: Array = data["dominated_monsters"]
 	for entry: Dictionary in monsters:
 		var _dropped: bool = entry.erase("short_id")
@@ -180,7 +180,35 @@ func _check_short_ids_read(profile: Profile) -> String:
 	var bad: String = _text(profile).replace("abc2345", "abl2345")
 	if not _parse(bad).problem.begins_with("a dominated monster"):
 		return "a save with a short id that isn't one wasn't refused"
-	return _check_old_species_ids()
+	return _check_short_id_keys()
+
+
+## The profile keys its monsters on their short ids (#754): a gain bringing one it already holds, or
+## the same one twice, gets a fresh stand-in, and a save holding one twice is refused. A save from
+## before (format 19) numbered them and named the carried ones by their numbers, which load as
+## their short ids, in the player's order; a carried number no monster has is refused.
+func _check_short_id_keys() -> String:
+	var profile: Profile = Profile.new()
+	var gain: Gain = _result(["ombulumo", "tikazzir", "ombulumo", "tikazzir"], {})
+	gain.dominated_short_ids.assign(["abc2345", "abc2345", "xyz6789"])
+	var _taken: String = profile.apply(gain)
+	var kept: Array[String] = []
+	for monster: DominatedMonster in profile.dominated_monsters:
+		kept.append(monster.short_id)
+	var expected: Array[String] = ["abc2345", ShortId.stand_in(2), "xyz6789", ShortId.stand_in(4)]
+	if kept != expected:
+		return "a gain's short id already held didn't get a fresh stand-in: %s" % [kept]
+	var _moved: String = profile.move_monster("xyz6789", 0)
+	var migrated: Profile = _parse(JSON.stringify(_numbered(profile, 19)))
+	if not migrated.problem.is_empty() or _text(migrated) != _text(profile):
+		return "a format 19 save didn't load keyed on its short ids: " + migrated.problem
+	var stray: Dictionary = _numbered(profile, 19)
+	stray["carried"] = [1, 9]
+	var twice: String = _text(profile).replace(ShortId.stand_in(2), "abc2345")
+	return _unrefused({
+		JSON.stringify(stray): "a carried monster isn't",
+		twice: "a dominated monster",
+	})
 
 
 ## A save from before a species' id was its name (format 13, #763) names its monsters and quests by
@@ -277,7 +305,7 @@ static func _format(format: int) -> String:
 ## `profile`'s save with `quests` as format 13 wrote it, with the species and quest ids from before
 ## #763.
 func _format_13(profile: Profile, quests: QuestTracker) -> String:
-	var text: String = _text(profile, quests).replace(_format(ProfileSave.FORMAT), _format(13))
+	var text: String = JSON.stringify(_numbered(profile, 13, quests))
 	text = text.replace("three_ombulumo", "three_moss_toads")
 	return text.replace("ombulumo", "moss_toad").replace("tikazzir", "storm_finch")
 
@@ -311,11 +339,11 @@ func _check_refused() -> String:
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 7"): "the save's slots",
 		text.replace(
 			"\"dominated_monsters\": []",
-			"\"dominated_monsters\": [{\"id\": 5}]",
+			"\"dominated_monsters\": [{\"species\": \"ombulumo\"}]",
 		): "a dominated",
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 1.5"): "the save's slots",
-		text.replace("\"next_monster_id\": 1", "\"next_monster_id\": 0"): "the save's slots",
 		text.replace("\"carried\": []", "\"carried\": [5]"): "a carried monster isn't",
+		text.replace("\"carried\": []", "\"carried\": [\"abc2345\"]"): "a carried monster isn't",
 		text.replace("\"carried\": []", "\"carried\": {}"): "the save lacks its carried",
 		text.replace(color, "\"personal_color\": -2"): "the save's personal color",
 		text.replace(color, "\"personal_color\": 16777216"): "the save's personal color",
@@ -425,8 +453,7 @@ func _check_levels_saved(profile: Profile) -> String:
 	var loaded: Profile = _parse(_text(profile))
 	if not loaded.problem.is_empty() or _text(loaded) != _text(profile):
 		return "levels and progress weren't kept through saving: " + loaded.problem
-	var old: Dictionary = JSON.parse_string(_text(profile))
-	old["format"] = 18
+	var old: Dictionary = _numbered(profile, 18)
 	for entry: Dictionary in old["dominated_monsters"]:
 		var _dropped: bool = entry.erase("progress")
 	var migrated: Profile = _parse(JSON.stringify(old))
@@ -435,8 +462,8 @@ func _check_levels_saved(profile: Profile) -> String:
 	var text: String = _text(Profile.new()).replace(
 		"\"dominated_monsters\": []",
 		"\"dominated_monsters\": [%s]",
-	).replace("\"next_monster_id\": 1", "\"next_monster_id\": 2")
-	var monster: String = "{\"id\": 1, \"species\": \"ombulumo\", \"short_id\": \"%s\", " % (
+	)
+	var monster: String = "{\"species\": \"ombulumo\", \"short_id\": \"%s\", " % (
 		ShortId.stand_in(1)
 	)
 	var held: Profile = _parse(text % (monster + "\"level\": 1, \"progress\": 2}"))
@@ -769,8 +796,7 @@ func _check_migrated_carried() -> String:
 	var profile: Profile = Profile.new()
 	var four: Array = ["ember_fox", "ombulumo", "ember_fox", "ombulumo"]
 	var _dominated: String = profile.apply(_result(four, {}))
-	var save: Dictionary = _as_captured(_text(profile))
-	save["format"] = 4
+	var save: Dictionary = _as_captured(JSON.stringify(_numbered(profile, 4)))
 	for bad: Array in [[1, 1], [1, 2, 3, 4]]:
 		var wrong: Dictionary = save.duplicate()
 		wrong["carried"] = bad
@@ -780,7 +806,7 @@ func _check_migrated_carried() -> String:
 	var _dropped: bool = save.erase("carried")
 	save["format"] = 3
 	var loaded: Profile = _parse(JSON.stringify(save))
-	var three: Array[int] = [1, 2, 3]
+	var three: Array[String] = [ShortId.stand_in(1), ShortId.stand_in(2), ShortId.stand_in(3)]
 	if not loaded.problem.is_empty() or loaded.carried != three:
 		return "a format 3 save didn't carry its first three monsters: %s" % loaded.problem
 	return ""
@@ -843,6 +869,26 @@ static func _text(profile: Profile, quests: QuestTracker = null) -> String:
 	var text: String = ProfileSave.to_text(profile, [keeper])
 	keeper.free()
 	return text
+
+
+## `profile`'s save with `quests`, or none, beside it as data in save format `format`, from before
+## the profile keyed its monsters on their short ids (#754): each monster numbered by its place from
+## 1, the carried ones named by their numbers, and the next number beside them. What else changed
+## since `format` is the caller's to change.
+static func _numbered(profile: Profile, format: int, quests: QuestTracker = null) -> Dictionary:
+	var data: Dictionary = JSON.parse_string(_text(profile, quests))
+	var numbers: Dictionary = {}
+	var monsters: Array = data["dominated_monsters"]
+	for place: int in monsters.size():
+		var entry: Dictionary = monsters[place]
+		entry["id"] = place + 1
+		numbers[entry["short_id"]] = place + 1
+	var carried: Array = data["carried"]
+	for place: int in carried.size():
+		carried[place] = numbers[carried[place]]
+	data["next_monster_id"] = monsters.size() + 1
+	data["format"] = format
+	return data
 
 
 ## The profile read from the save `text`, its quests read beside it into `_parsed_quests`, as the

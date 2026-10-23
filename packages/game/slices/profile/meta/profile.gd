@@ -34,12 +34,11 @@ const NAME_LIMIT: int = 24
 var unlocked_slots: int = START_SLOTS
 ## Every dominated monster: in the order dominated, until the player orders them (`move_monster`).
 var dominated_monsters: Array[DominatedMonster] = []
-## The dominated monsters this player carries, by id, in the order the next one comes in when one
-## faints (#53, #54): the first three of the player's order (`order`, #430), the first of them their
-## companion. Until the player moves one, the first three dominated, in the order dominated.
-var carried: Array[int] = []
-## The id the next dominated monster gets; ids are never reused.
-var next_monster_id: int = 1
+## The dominated monsters this player carries, by short id (#754), in the order the next one comes
+## in when one faints (#53, #54): the first three of the player's order (`order`, #430), the first
+## of them their companion. Until the player moves one, the first three dominated, in the order
+## dominated.
+var carried: Array[String] = []
 ## Crafting materials, by id: how many of each.
 var materials: Dictionary[String, int] = {}
 ## The player's standing with each faction (#483).
@@ -97,29 +96,29 @@ func spend(item: String) -> String:
 	return ""
 
 
-## Every dominated monster's id in the player's order (#430): the carried ones first, in their
-## order, then the rest in the order dominated.
-func order() -> Array[int]:
-	var ids: Array[int] = carried.duplicate()
+## Every dominated monster's short id in the player's order (#430): the carried ones first, in
+## their order, then the rest in the order dominated.
+func order() -> Array[String]:
+	var ids: Array[String] = carried.duplicate()
 	for monster: DominatedMonster in dominated_monsters:
-		if not ids.has(monster.id):
-			ids.append(monster.id)
+		if not ids.has(monster.short_id):
+			ids.append(monster.short_id)
 	return ids
 
 
-## Moves the dominated monster `monster_id` to `place` in the player's order (#430), clamped to the
+## Moves the dominated monster `short_id` to `place` in the player's order (#430), clamped to the
 ## order's ends; the first three become the carried ones. Returns why it can't, or "".
-func move_monster(monster_id: int, place: int) -> String:
-	var ids: Array[int] = order()
-	if not ids.has(monster_id):
-		return "no dominated monster %d to move" % monster_id
-	ids.erase(monster_id)
-	var _placed: int = ids.insert(clampi(place, 0, ids.size()), monster_id)
-	var by_id: Dictionary[int, DominatedMonster] = {}
+func move_monster(short_id: String, place: int) -> String:
+	var ids: Array[String] = order()
+	if not ids.has(short_id):
+		return "no dominated monster %s to move" % short_id
+	ids.erase(short_id)
+	var _placed: int = ids.insert(clampi(place, 0, ids.size()), short_id)
+	var by_id: Dictionary[String, DominatedMonster] = {}
 	for monster: DominatedMonster in dominated_monsters:
-		by_id[monster.id] = monster
+		by_id[monster.short_id] = monster
 	dominated_monsters.clear()
-	for id: int in ids:
+	for id: String in ids:
 		dominated_monsters.append(by_id[id])
 	carried.assign(ids.slice(0, CARRY_LIMIT))
 	return ""
@@ -141,20 +140,23 @@ func _earn(points: int) -> void:
 		monster.earn(points)
 
 
-## Adds a newly dominated monster of `species`, with the next id, keeping `short_id` (#700), or a
-## stand-in for "".
+## Adds a newly dominated monster of `species`, keeping `short_id` (#700), or a fresh stand-in for
+## "" or for one a monster here already has (#754): the profile keys its monsters on it.
 func _dominate(species: String, short_id: String) -> void:
-	var kept: String = short_id if not short_id.is_empty() else ShortId.stand_in(next_monster_id)
-	dominated_monsters.append(DominatedMonster.new(next_monster_id, species, 1, kept))
+	var kept: String = short_id
+	var number: int = dominated_monsters.size()
+	while kept.is_empty() or has_monster(kept):
+		number += 1
+		kept = ShortId.stand_in(number)
+	dominated_monsters.append(DominatedMonster.new(species, 1, kept))
 	if carried.size() < CARRY_LIMIT:
-		carried.append(next_monster_id)
-	next_monster_id += 1
+		carried.append(kept)
 
 
 ## Why `result` can't be taken over (an empty species, a nameless or negative material or gear, or
 ## more than the save can hold), or "".
 func _result_problem(result: Gain) -> String:
-	if next_monster_id + result.dominated_species.size() > MAX_NUMBER:
+	if dominated_monsters.size() + result.dominated_species.size() > MAX_NUMBER:
 		return "the profile can't hold more monsters"
 	if result.defeats < 0 or result.defeats > MAX_NUMBER:
 		return "a gain's defeats are out of range"
@@ -196,16 +198,21 @@ static func _dominated_problem(result: Gain) -> String:
 ## (#338) until they choose another (#55).
 func carried_monsters() -> Array[DominatedMonster]:
 	var monsters: Array[DominatedMonster] = []
-	for monster_id: int in carried:
-		for monster: DominatedMonster in dominated_monsters:
-			if monster.id == monster_id:
-				monsters.append(monster)
+	for short_id: String in carried:
+		var monster: DominatedMonster = monster_of(short_id)
+		if monster != null:
+			monsters.append(monster)
 	return monsters
 
 
-## Whether a dominated monster has this id.
-func has_monster(monster_id: int) -> bool:
+## The dominated monster with the short id `short_id`, or null when there's none.
+func monster_of(short_id: String) -> DominatedMonster:
 	for monster: DominatedMonster in dominated_monsters:
-		if monster.id == monster_id:
-			return true
-	return false
+		if monster.short_id == short_id:
+			return monster
+	return null
+
+
+## Whether a dominated monster has the short id `short_id`.
+func has_monster(short_id: String) -> bool:
+	return monster_of(short_id) != null
