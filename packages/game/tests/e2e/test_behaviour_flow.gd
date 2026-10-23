@@ -1,7 +1,9 @@
 extends RefCounted
 ## Behaviour flow (#1199): wild monsters live by their species' behaviour traits. The day clock
-## (#1201) follows the tick: an instance starts at dawn, night falls at dusk, and a day later it's
-## dawn again. Every wild monster gets a daily schedule from its traits and the instance's seed:
+## (#1201) follows the world's tick: a world starts at dawn, night falls at dusk, and a day later
+## it's dawn again; every instance of the world shares it (#1215), one nobody is in and one loaded
+## later too, and a save gives it back. Every wild monster gets a daily schedule from its traits and
+## the instance's seed:
 ## a diurnal one sleeps one block at night, a nocturnal one one block by day, a cathemeral one in
 ## bouts by day and at night, a sleepless one never; each need takes its hours, and the rest it
 ## follows its pack, or wanders without one. What it's doing now follows the clock, and a fainted
@@ -30,6 +32,7 @@ const CONTENT_SPECIES: Array[String] = ["ombulumo", "tikazzir"]
 func run(_tree: SceneTree) -> String:
 	var steps: Array[Callable] = [
 		_check_day_clock,
+		_check_world_clock,
 		_check_rhythms,
 		_check_activity_follows_clock,
 		_check_deterministic,
@@ -50,7 +53,7 @@ func _check_day_clock() -> String:
 	var dusk: int = (DayClock.DUSK - DayClock.DAWN) * DayClock.TICKS_PER_HOUR
 	var day: int = DayClock.HOURS * DayClock.TICKS_PER_HOUR
 	if DayClock.hour_of(0) != DayClock.DAWN or not DayClock.is_day_hour(DayClock.hour_of(0)):
-		return "an instance didn't start at dawn"
+		return "a world didn't start at dawn"
 	if DayClock.hour_of(DayClock.TICKS_PER_HOUR - 1) != DayClock.DAWN:
 		return "the clock turned before an hour was up"
 	if DayClock.hour_of(dusk) != DayClock.DUSK or DayClock.is_day_hour(DayClock.hour_of(dusk)):
@@ -59,6 +62,46 @@ func _check_day_clock() -> String:
 		return "night fell before dusk"
 	if DayClock.hour_of(day) != DayClock.DAWN or DayClock.hour_of(day + dusk) != DayClock.DUSK:
 		return "the next day didn't run like the first"
+	return ""
+
+
+## Every instance of a world tells the world's time (#1215): the one a player walks into, loaded
+## late, the one they left, which no longer steps, and both after a save, which hashes the same.
+func _check_world_clock() -> String:
+	var world: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
+	for _tick: int in DayClock.TICKS_PER_HOUR:
+		world.step(FlowSteps.command(Command.NO_MOVE))
+	for direction: int in FlowSteps.INTO_GLADE:
+		world.step(FlowSteps.command(direction))
+		for _tick: int in MovementFeature.MOVE_TICKS + 1:
+			world.step(FlowSteps.command(Command.NO_MOVE))
+	if world.instance_of(0) != FlowSteps.GLADE:
+		return "the player didn't walk from the forest into the glade"
+	for _tick: int in DayClock.TICKS_PER_HOUR:
+		world.step(FlowSteps.command(Command.NO_MOVE))
+	var problem: String = _clock_problem(world, "after walking into the glade")
+	if not problem.is_empty():
+		return problem
+	var resumed: World = WorldData.to_world(WorldData.of(world), BlueprintSource.new())
+	if not resumed.problem.is_empty() or resumed.state_hash() != world.state_hash():
+		return "the world didn't come back from its save: %s" % resumed.problem
+	return _clock_problem(resumed, "after a save")
+
+
+## Why some instance of `world` doesn't tell the world's time `when`, or "".
+static func _clock_problem(world: World, when: String) -> String:
+	if world.sorted_names().size() < 2:
+		return "%s, the world has only %s loaded" % [when, world.sorted_names()]
+	for instance_name: String in world.sorted_names():
+		var state: GameState = world.instances[instance_name]
+		if (state.world_tick != world.tick
+				or DayClock.hour_now(state) != DayClock.hour_of(world.tick)):
+			return "%s, %s's clock is at %d, the world's at %d" % [
+				when,
+				instance_name,
+				state.world_tick,
+				world.tick,
+			]
 	return ""
 
 
@@ -87,12 +130,12 @@ func _check_activity_follows_clock() -> String:
 		var day: Array[int] = schedules.day_of(monster)
 		for hour: int in DayClock.HOURS:
 			var from_dawn: int = (hour - DayClock.DAWN + DayClock.HOURS) % DayClock.HOURS
-			state.tick = from_dawn * DayClock.TICKS_PER_HOUR
+			state.world_tick = from_dawn * DayClock.TICKS_PER_HOUR
 			if schedules.activity_of(state, monster) != day[hour]:
 				return "monster %d didn't do at %d o'clock what its day says" % [monster, hour]
 	var first: int = wild.monsters[0]
 	var first_day: Array[int] = schedules.day_of(first)
-	state.tick = DayClock.TICKS_PER_HOUR - 1
+	state.world_tick = DayClock.TICKS_PER_HOUR - 1
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if schedules.activity_of(state, first) != first_day[DayClock.DAWN + 1]:
 		return "a tick past the hour didn't bring the next hour's activity"
@@ -275,9 +318,9 @@ static func _nobody_on(state: GameState, tile: Vector2i) -> bool:
 	return true
 
 
-## Steps `state` by a real tick onto `tick`, whatever tick it was on.
+## Steps `state` by a real tick onto the world's tick `tick`, whatever tick it was on.
 static func _step_onto(state: GameState, tick: int) -> void:
-	state.tick = tick - 1
+	state.world_tick = tick - 1
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 
 

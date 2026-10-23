@@ -6,7 +6,7 @@ extends Feature
 ## #1205). Each monster draws from a random stream of its own, seeded from the instance's seed and
 ## its entity id, so its day never depends on the other monsters, and follows from what the save
 ## holds already: a loaded instance makes them again, the same, rather than saving them. The
-## schedules are in the state hash. It doesn't step: the time of day follows from the tick.
+## schedules are in the state hash. It doesn't step: the time of day follows from the world's tick.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "schedules"
@@ -42,7 +42,7 @@ func activity_of(state: GameState, entity_id: int) -> int:
 	if not _days.has(entity_id) or wild.is_fainted(entity_id):
 		return Schedule.NONE
 	var day: Array = _days[entity_id]
-	var activity: int = day[DayClock.hour_of(state.tick)]
+	var activity: int = day[DayClock.hour_now(state)]
 	return activity
 
 

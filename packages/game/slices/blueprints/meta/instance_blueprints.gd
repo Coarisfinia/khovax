@@ -46,13 +46,15 @@ static func variant(instance_name: String, flags: Array[String]) -> String:
 
 ## A new instance from the named blueprint, as its state, with `players` players in slots 0 and
 ## up (none for an instance loaded before anyone walks in, #148), from its `variant_name`'s region
-## ("" for its own), or null (with an error) for an unknown name, an unreadable region, more players
-## than the region has starts, or an invalid feature order.
+## ("" for its own), starting at the world's tick `world_tick` (#1215), or null (with an error) for
+## an unknown name, an unreadable region, more players than the region has starts, or an invalid
+## feature order.
 static func create(
 	instance_name: String,
 	seed_value: int,
 	players: int = 1,
 	variant_name: String = "",
+	world_tick: int = 0,
 ) -> GameState:
 	var region: Region = _region_for(instance_name, seed_value, players, variant_name)
 	if region == null:
@@ -61,7 +63,7 @@ static func create(
 		_features(blueprint(instance_name), region),
 		_setup(instance_name, region),
 	)
-	var state: GameState = GameState.new(region, seed_value, ordered)
+	var state: GameState = GameState.new(region, seed_value, ordered, world_tick)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
 		return null

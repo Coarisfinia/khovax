@@ -39,8 +39,9 @@ func create(
 	seed_value: int,
 	players: int,
 	variant_name: String,
+	world_tick: int = 0,
 ) -> GameState:
-	return InstanceBlueprints.create(instance_name, seed_value, players, variant_name)
+	return InstanceBlueprints.create(instance_name, seed_value, players, variant_name, world_tick)
 
 
 func region_of(instance_name: String, seed_value: int, variant_name: String) -> Region:

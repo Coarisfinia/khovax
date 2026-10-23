@@ -21,7 +21,9 @@ const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
 
 ## The world's seed, which every instance's own seed is drawn from.
 var world_seed: int = 0
-## Ticks the world has run. An instance nobody is in doesn't step, so its own tick can lag behind.
+## Ticks the world has run. An instance nobody is in doesn't step, so its own tick can lag behind;
+## every loaded instance holds this one as its world tick (GameState.world_tick, #1215), the time
+## of day they all share.
 var tick: int = 0
 ## Every loaded instance, by blueprint name.
 var instances: Dictionary[String, GameState] = {}
@@ -119,7 +121,15 @@ func instance(instance_name: String) -> GameState:
 ## with `players` players and a view of every player's world store, not yet among the loaded ones,
 ## though its variant is noted; null when it can't load.
 func create_instance(instance_name: String, players: int, variant: String) -> GameState:
-	var created: GameState = source.create(instance_name, seed_for(instance_name), players, variant)
+	# At the world's time (#1215), not the dawn a fresh instance's own tick starts at: its features
+	# start by it.
+	var created: GameState = source.create(
+		instance_name,
+		seed_for(instance_name),
+		players,
+		variant,
+		tick,
+	)
 	if created != null:
 		variants[instance_name] = variant
 		# The world's own stores, not copies (#828): a player is in one instance each tick, and only
@@ -199,10 +209,12 @@ func step(commands: Array[Command]) -> void:
 	tick += 1
 	var stepping: Array[String] = active()
 	# An instance nobody is in doesn't step, so it raises nothing this tick: its last tick's events
-	# would otherwise reach whoever walks into it as new (#386).
+	# would otherwise reach whoever walks into it as new (#386). Its time of day goes on all the
+	# same (#1215); the ones that step take theirs a tick on themselves (Simulation.step).
 	for instance_name: String in sorted_names():
 		if not stepping.has(instance_name):
 			instances[instance_name].events.clear()
+			instances[instance_name].world_tick = tick
 	var leaving: Array[Array] = []
 	var emitted: Array[EventEmitted] = []
 	var replaced: Array[FlagReplaced] = []

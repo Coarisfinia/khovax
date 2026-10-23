@@ -1,10 +1,11 @@
 class_name DayClock
 extends RefCounted
 ## The time of day in the rules (#1201): the smallest deterministic day clock, worked out from the
-## instance's tick alone, which the state already holds and hashes, so it replays and resumes with
-## it. A day has HOURS hours of TICKS_PER_HOUR ticks each; it's day from DAWN until DUSK and night
-## the rest. An instance's first tick falls at dawn, so a fresh instance starts in the morning. Each
-## instance keeps its own tick, so its clock is its own too: one nobody is in stands still.
+## world's tick alone (GameState.world_tick, #1215), which every instance holds and hashes, so it
+## replays and resumes with it, and every instance of the world shows the same time: one nobody is
+## in goes on with the rest, and walking through an exit never changes it. A day has HOURS hours of
+## TICKS_PER_HOUR ticks each; it's day from DAWN until DUSK and night the rest. The world's first
+## tick falls at dawn, so a fresh world starts in the morning.
 
 ## The hours of a day.
 const HOURS: int = 24
@@ -15,7 +16,12 @@ const DAWN: int = 6
 const DUSK: int = 18
 
 
-## The hour of the day (0 to HOURS - 1) the instance's `tick` falls in.
+## The hour of the day (0 to HOURS - 1) it is now in `state`'s world (#1215).
+static func hour_now(state: GameState) -> int:
+	return hour_of(state.world_tick)
+
+
+## The hour of the day (0 to HOURS - 1) the world's tick `tick` falls in.
 static func hour_of(tick: int) -> int:
 	return (DAWN + Fixed.div_floor(tick, TICKS_PER_HOUR)) % HOURS
 
