@@ -457,8 +457,9 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 		var _dropped: bool = quests.book.erase(id)
 	survey.show_state()
 	labels.show_state()
-	if result.is_empty() and labels.labels.keys().any(where.has):
-		result = "the Survey keeps the labels of quests no longer open"
+	for id: String in where:
+		if result.is_empty() and labels.labels.has(id):
+			result = "the Survey keeps the label of %s, no longer open" % id
 	survey.size = kept
 	survey.show_state()
 	labels.show_state()
