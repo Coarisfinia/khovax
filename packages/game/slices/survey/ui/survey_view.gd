@@ -11,13 +11,17 @@ extends Control
 ## Every player in the instance is a circle in their personal color with one mark per slot number,
 ## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
 ## and every open quest's target (QuestTargets.of, #300) an arrow pointing down at it. Over it, its
-## child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637). It's
+## child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637), and
+## its child QuestLabels labels each arrow with its quest's name and where its step counts
+## (SurveyQuestLabels, #1278). It's
 ## centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
 ## profile.
 
 ## The name of its child that marks faction territory.
 const HELD_MARKS: String = "HeldMarks"
+## The name of its child that labels the quests' arrows.
+const QUEST_LABELS: String = "QuestLabels"
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
 ## A tile's hexagon is drawn a little smaller than the tile, so tiles of one kind stay apart.
@@ -28,6 +32,8 @@ const PLAYER_MIN_PIXELS: float = 8.0
 const ARROW_SHARE: float = 1.1
 const ARROW_MIN_PIXELS: float = 9.0
 const INK_PIXELS: float = 2.0
+## The ink round a quest's arrow, in pixels.
+const ARROW_INK: float = INK_PIXELS * 1.5
 ## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
 ## Below the pixels here it wouldn't read, so it's left out at far zooms in a corner; the color and
 ## the ink ring remain.
@@ -86,6 +92,9 @@ func _ready() -> void:
 	var marks: SurveyHeldMarks = SurveyHeldMarks.new()
 	marks.name = HELD_MARKS
 	add_child(marks)
+	var labels: SurveyQuestLabels = SurveyQuestLabels.new()
+	labels.name = QUEST_LABELS
+	add_child(labels)
 
 
 func _process(delta: float) -> void:
@@ -128,6 +137,11 @@ func _draw() -> void:
 ## Its marks of faction territory (#637).
 func held_marks() -> SurveyHeldMarks:
 	return get_node(HELD_MARKS) as SurveyHeldMarks
+
+
+## Its labels on the quests' arrows (#1278).
+func quest_labels() -> SurveyQuestLabels:
+	return get_node(QUEST_LABELS) as SurveyQuestLabels
 
 
 ## Works out what is shown from the state. Called every frame while it shows; tests call it
@@ -266,10 +280,20 @@ func _draw_player(at: Vector2, slot: int, color: Color) -> void:
 ## A quest's arrow over `at`, its tip on it, in ink round the quest marker's color: the shape says
 ## what it is (#68).
 func _draw_arrow(at: Vector2) -> void:
-	var length: float = maxf(zoom() * ARROW_SHARE, ARROW_MIN_PIXELS)
-	var ink: float = INK_PIXELS * 1.5
-	draw_colored_polygon(_arrow(at, length + ink * 2.0, ink), Toon.INK)
+	var length: float = _arrow_length()
+	draw_colored_polygon(_arrow(at, length + ARROW_INK * 2.0, ARROW_INK), Toon.INK)
 	draw_colored_polygon(_arrow(at, length, 0.0), QuestMarkerView.COLOR)
+
+
+## The middle of the top of the arrow pointing at `tile`, its ink included, in the view's pixels:
+## where its label sits on (#1278).
+func arrow_top(tile: Vector2i) -> Vector2:
+	return to_view(tile) - Vector2(0.0, _arrow_length() + ARROW_INK)
+
+
+## How long a quest's arrow is, in pixels, at this zoom, without its ink.
+func _arrow_length() -> float:
+	return maxf(zoom() * ARROW_SHARE, ARROW_MIN_PIXELS)
 
 
 ## A triangle pointing down, `length` long and as wide, its tip `drop` below `at`.
