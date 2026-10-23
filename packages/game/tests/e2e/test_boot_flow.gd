@@ -660,7 +660,55 @@ func _check_focus_keys(main: Node, focus: int) -> String:
 	var right: Rect2 = keys.shown.get(&"focus_next", Rect2())
 	if keys.shown.size() != 2 or left.end.x > feet.x or right.position.x < feet.x:
 		return "the focus keys' glyphs didn't stand left and right of the focused wild monster"
+	return _check_glyph_backdrops()
+
+
+## Every hint draws its glyph through ActionGlyph.draw_on, on fog in the glyph's own outline (owner,
+## on #1212 and #1240): no fog shows past a glyph's edge, as a square or a rounded tile behind it
+## did twice. A backdrop pixel more opaque than a clear pixel of the glyph must lie inside its
+## shape: with shape on both sides of it, along its row and along its column.
+func _check_glyph_backdrops() -> String:
+	var glyphs: Array[Texture2D] = []
+	glyphs.append_array(InputGlyphs.KEYS.values())
+	glyphs.append_array(InputGlyphs.BUTTONS.values())
+	glyphs.append_array(InputGlyphs.AXES.values())
+	for glyph: Texture2D in glyphs:
+		var backdrop: Texture2D = ActionGlyph.glyph_backdrop(glyph)
+		if backdrop == null:
+			return "a glyph's backdrop couldn't be made: %s" % glyph.resource_path
+		if _fog_past_outline(glyph.get_image(), backdrop.get_image()):
+			return "fog shows past a glyph's outline: %s" % glyph.resource_path
 	return ""
+
+
+## Whether `fog` is more opaque than `image`'s clear pixels anywhere outside `image`'s shape.
+static func _fog_past_outline(image: Image, fog: Image) -> bool:
+	if image.is_compressed():
+		var _plain: Error = image.decompress()
+	for y: int in image.get_height():
+		for x: int in image.get_width():
+			var alpha: float = image.get_pixel(x, y).a
+			var past: bool = fog.get_pixel(
+				x,
+				y,
+			).a > alpha + 0.02 and alpha < ActionGlyph.SHAPE_ALPHA
+			if past and not _enclosed(image, x, y):
+				return true
+	return false
+
+
+## Whether `image`'s shape lies on both sides of (`x`, `y`), along its row and its column.
+static func _enclosed(image: Image, x: int, y: int) -> bool:
+	var sides: Array[bool] = [false, false, false, false]
+	for at: int in image.get_width():
+		if image.get_pixel(at, y).a >= ActionGlyph.SHAPE_ALPHA:
+			sides[0] = sides[0] or at < x
+			sides[1] = sides[1] or at > x
+	for at: int in image.get_height():
+		if image.get_pixel(x, at).a >= ActionGlyph.SHAPE_ALPHA:
+			sides[2] = sides[2] or at < y
+			sides[3] = sides[3] or at > y
+	return not sides.has(false)
 
 
 ## The glyphs the focus keys' hint shows now, from the left.
