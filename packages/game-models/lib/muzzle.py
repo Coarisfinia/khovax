@@ -1,8 +1,9 @@
-"""A canine snout (#1026): the upper muzzle with its brow, stop, bridge and lips, melted into a
-head's metaball body; the nose pad on its tip; the lower jaw, a soft piece of its own that the jaw
-bone turns about the jaw joint far back on the skull, its back half inside the head; the cheeks
-over it, skin that stretches between the jaws behind the mouth's corner as it opens; the mouth's
-dark inside, which shows only when it opens; and the fangs.
+"""A canine snout (#1026, #1194): the upper muzzle with its brow, stop, bridge and lips, and the
+lower jaw with the cheeks over its back half, all melted into the head's metaball body as one skin,
+the mouth a slit carved between the lips back to their corner; the jaw bone turns the skin below
+the slit about the jaw joint far back on the skull, the cheek behind the corner stretching between
+the jaws as it opens; the nose pad on its tip; the mouth's dark inside, which shows only when it
+opens; and the fangs.
 
 Its parameters are what lib/metrics.py's snout measures read, so a model sets the snout it wants
 and its build checks it: where the stop and the muzzle's tip are (its length), how wide it is at
@@ -15,9 +16,10 @@ middle.
 
     snout = muzzle.Snout(stop=(-0.9, 1.5), tip=(-1.22, 1.37), radius=0.075, joint=(-0.74, 1.4))
     snout.upper(blob)  # into the head's body, before blob.mesh
-    snout.cheeks(blob)
+    snout.lower(blob)
     pieces += snout.parts(mats, "head", "jaw")
-    snout.blend_cheeks(skin, "jaw", scale)  # after weights.bind
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", ...),
+                 reweigh=lambda body: snout.bind_jaw(body, "jaw", scale))
 """
 
 import bmesh
@@ -56,18 +58,18 @@ def _smooth(x):
 
 class Snout:
     def __init__(self, stop, tip, radius, joint, taper=0.67, stop_depth=0.08, lip=0.04, jaw_depth=0.5,
-                 jaw_width=0.85, chin=1.05, corner=0.1, tuck=0.25, triangles=900):
+                 jaw_width=0.85, chin=1.05, corner=0.1, tuck=0.25, slit=0.006):
         """`stop`: the bridge's top where the brow steps down to it; `tip`: the muzzle's front end,
         under the nose pad; `radius`: the muzzle's half width at the stop; `joint`: the jaw joint,
         on the skull's side below and before the ear, where the jaw bone turns the lower jaw (the
         bone's head belongs there). `chin` is how far along the muzzle (1 at its tip) the chin
         reaches, `corner` where the lips meet; `tuck` the share of the lower jaw's depth that
-        hides inside the upper lip while the mouth is shut. `triangles` is the lower jaw's
-        budget."""
+        hides inside the upper lip while the mouth is shut; `slit` how thick the mouth's slit is
+        carved between the lips."""
         self.stop, self.tip, self.joint = _point(*stop), _point(*tip), _point(*joint)
         self.radius, self.taper, self.stop_depth, self.lip_drop = radius, taper, stop_depth, lip
         self.jaw_depth, self.jaw_width, self.chin, self.tuck = jaw_depth, jaw_width, chin, tuck
-        self.corner, self.triangles = corner, triangles
+        self.corner, self.slit = corner, slit
         self.length = self.stop.y - self.tip.y
         # The muzzle's core runs from the stop, a radius below the bridge, to the tip.
         self.core = self.stop - _point(0.0, radius)
@@ -116,46 +118,40 @@ class Snout:
         """Half the lower jaw's depth at `t`: its share of the upper muzzle's there."""
         return self.depth(t) * self.jaw_depth / 2
 
-    def _jaw(self, name, mat, bone):
-        """The lower jaw: as deep and wide as its shares of the upper muzzle above it, from the
-        joint, inside the cheek, to a rounded chin at `chin` along the muzzle."""
-        blob = body.Blob(name)
-        for t in JAW_STATIONS:
-            # Its back is shallower, so its lower edge curves up toward the joint.
-            half_depth = self.jaw_half_depth(t) * min(1.0, 0.7 + 1.2 * t)
-            top = self.jaw_top(t)
-            blob.ellipsoid((0.0, top.y, top.z - half_depth),
-                           (self.radius * self.share(t) * self.jaw_width, self.length * JAW_SPAN, half_depth))
-        # The chin: round, its front at `chin` along the muzzle.
-        half_depth = self.jaw_half_depth(self.chin)
-        half_length = self.length * JAW_SPAN * 0.6
-        top = self.jaw_top(self.chin)
-        blob.ellipsoid((0.0, top.y + half_length, top.z - half_depth),
-                       (self.radius * self.share(self.chin) * self.jaw_width * 0.85, half_length, half_depth))
-        # The branch rising from the jaw's back up to the joint, inside the cheek: the whole jaw
-        # turns about the joint, far back on the skull, not about a point by the throat.
-        radius = self.jaw_half_depth(0.0) * 0.6
-        blob.capsule(self.jaw_top(0.0) - _point(0.0, radius), self.joint, radius)
-        jaw = blob.mesh(self.triangles)
-        jaw.name = name
-        jaw.data.materials.append(mat)
-        parts.weigh(jaw, bone)
-        return jaw
+    def mouth(self, t):
+        """The mouth's line at `t`, where the lips part: between the upper lip's edge and the lower
+        jaw's top, which tucks inside it. A straight line, from the corner to past the tip."""
+        return self.lip(t).lerp(self.jaw_top(t), 0.5)
 
     def corner_point(self):
-        """The mouth's corner, where the lips meet: on the upper lip's edge at `corner` along the
+        """The mouth's corner, where the lips meet: on the mouth's line at `corner` along the
         muzzle."""
-        return self.lip(self.corner)
+        return self.mouth(self.corner)
 
     def jaw_bottom(self):
         """The height of the lower jaw's lower edge at its back."""
         return self.jaw_top(0.0).z - 1.4 * self.jaw_half_depth(0.0)
 
-    def cheeks(self, blob):
-        """Adds the cheeks to the head's `blob`: on each side, the chewing muscle over the lower
-        jaw's back, from the mouth's corner to the joint and from the cheekbone down to the jaw's
-        lower edge, so the jaw's back half lies inside the head, as a mandible does, and only its
-        front shows below the lips."""
+    def lower(self, blob):
+        """Adds the lower jaw to the head's `blob`, so it is one skin with the cheeks and the
+        throat, as a wolf's furred jaw is: the jaw, as deep and wide as its shares of the upper
+        muzzle above it, narrowing to a rounded chin at `chin` along the muzzle; the cheeks, the
+        chewing muscle over the jaw's back from the mouth's corner to the joint, which hides the
+        jaw's back half inside the head as a mandible's is; and the mouth, a thin slit carved
+        between the lips from past the tip back to the corner, where it closes, so the lips part
+        there and nowhere behind it."""
+        for t in JAW_STATIONS:
+            # Its back is shallower, so its lower edge curves up toward the joint; its underside
+            # is round, its width narrowing with the muzzle's.
+            half_depth = self.jaw_half_depth(t) * min(1.0, 0.7 + 1.2 * t)
+            top = self.jaw_top(t)
+            blob.ellipsoid((0.0, top.y, top.z - half_depth),
+                           (self.radius * self.share(t) * self.jaw_width, self.length * JAW_SPAN, half_depth))
+        half_depth = self.jaw_half_depth(self.chin)
+        half_length = self.length * JAW_SPAN * 0.6
+        top = self.jaw_top(self.chin)
+        blob.ellipsoid((0.0, top.y + half_length, top.z - half_depth),
+                       (self.radius * self.share(self.chin) * self.jaw_width * 0.85, half_length, half_depth))
         corner = self.corner_point()
         middle = corner.lerp(self.joint, 0.5)
         bottom = self.jaw_bottom()
@@ -164,30 +160,47 @@ class Snout:
         for sign in (1, -1):
             blob.ellipsoid((sign * self.radius * self.jaw_width * 0.9, middle.y, bottom + half_height),
                            (self.radius * 0.8, half_length, half_height))
+        # The slit: a flat, negative slab along the mouth's line, wider than the muzzle, its
+        # rounded back edge at the corner.
+        front = self.mouth(1.0 + 3.0 * JAW_SPAN)
+        along = front - corner
+        slit = blob.data.elements.new(type="PLANE")
+        slit.use_negative = True
+        # Stiff, so it cuts cleanly through where the jaw's top tucks into the upper lip.
+        slit.stiffness = 10.0
+        slit.co = corner + along * 0.5
+        slit.radius = self.slit / body.SURFACE_SHARE
+        slit.size_x, slit.size_y = 2.0 * self.radius, along.length / 2
+        slit.rotation = Vector((0.0, -1.0, 0.0)).rotation_difference(-along)
 
-    def blend_cheeks(self, skin, jaw_bone, scale=1.0):
-        """Hands the head's skin over the lower jaw to the jaw bone: below the line from the
-        mouth's corner to the joint, fading in over half the jaw's depth, so the cheek between
-        the corner and the joint stretches as the jaw drops, as the skin over a mandible does;
-        not below the jaw's lower edge, where the throat stays with the neck, nor behind the
-        joint, fading out over the same distance past each, so the throat stretches a little
-        where it meets the jaw. Vertices already on the jaw (its own pieces, which weights.bind
-        joined into `skin`; the automatic weights give the body none) keep their weights. Call it
-        after weights.bind, with the scale the model was shrunk by since."""
+    def bind_jaw(self, skin, jaw_bone, scale=1.0):
+        """Hands the head's skin over the lower jaw to the jaw bone: below the mouth's line ahead
+        of the corner, wholly; behind it, below the line from the corner to the joint, fading in
+        over half the jaw's depth, so the cheek between the corner and the joint stretches as the
+        jaw drops, as the skin over a mandible does; not below the jaw's lower edge, where the
+        throat stays with the neck, nor behind the joint, fading out over the same distance past
+        each, so the throat stretches a little where it meets the jaw. `skin` is the head's body
+        with its automatic weights, before any piece joins it (weights.bind's `reweigh`), which
+        has a `jaw_bone` group to fill; `scale` is what the model was shrunk by since it was
+        built."""
         corner, joint = self.corner_point() * scale, self.joint * scale
         bottom = self.jaw_bottom() * scale
         fade = self.jaw_half_depth(0.0) * scale
-        along = (joint - corner).normalized()
-        jaw = skin.vertex_groups[jaw_bone]
+        lips = (corner - self.mouth(1.0) * scale).normalized()
+        cheek = (joint - corner).normalized()
+        jaw = skin.vertex_groups.get(jaw_bone) or skin.vertex_groups.new(name=jaw_bone)
         for vertex in skin.data.vertices:
             weights = {group.group: group.weight for group in vertex.groups}
-            if jaw.index in weights or vertex.co.y < corner.y:
-                continue
             offset = vertex.co - corner
-            # How far below the corner-to-joint line, square to it.
-            below = along.z * offset.y - along.y * offset.z
-            share = (_smooth(below / fade) * (1.0 - _smooth((bottom - vertex.co.z) / fade))
-                     * (1.0 - _smooth((vertex.co.y - joint.y) / fade)))
+            if vertex.co.y < corner.y:
+                # Ahead of the corner the slit parts the lips: whatever lies below it is the jaw's.
+                below = lips.y * offset.z - lips.z * offset.y
+                share = _smooth(0.5 - below / (0.2 * fade))
+            else:
+                # How far below the corner-to-joint line, square to it.
+                below = cheek.z * offset.y - cheek.y * offset.z
+                share = (_smooth(below / fade) * (1.0 - _smooth((bottom - vertex.co.z) / fade))
+                         * (1.0 - _smooth((vertex.co.y - joint.y) / fade)))
             if share <= 0.0:
                 continue
             for index, weight in weights.items():
@@ -248,12 +261,10 @@ class Snout:
         return obj
 
     def parts(self, mats, head_bone, jaw_bone, name="Snout"):
-        """The pieces beside the upper muzzle: the lower jaw with the mouth's floor and the lower
-        fangs on `jaw_bone`; the palate, the nose pad and the upper fangs on `head_bone`; the
-        mouth's inside between both. `mats`
-        needs "fur", "dark" (the nose, the mouth) and "light" (the fangs)."""
-        made = [self._jaw(name + ".Jaw", mats["fur"], jaw_bone),
-                self._inside(name + ".Inside", mats["dark"], head_bone, jaw_bone)]
+        """The pieces beside the head's skin: the mouth's floor and the lower fangs on `jaw_bone`;
+        the palate, the nose pad and the upper fangs on `head_bone`; the mouth's inside between
+        both. `mats` needs "dark" (the nose, the mouth) and "light" (the fangs)."""
+        made = [self._inside(name + ".Inside", mats["dark"], head_bone, jaw_bone)]
         # The mouth: dark, flat linings under the palate and over the jaw's floor, inside the lips
         # (and the jaw), so they show only when it opens.
         middle = self.chin * 0.42
