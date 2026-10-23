@@ -33,7 +33,11 @@ extends RefCounted
 ## one hiding in its tile alone, and one sealing in a ring (#409): its seal was worked out from its
 ## HP, so a save taken mid-seal resumes. A save taken while a ring waits resumes too. Its player
 ## fires its special attack (#410): lethal, it fells the wild monster next to it, which faints for
-## good where it fell, and then it cools down. The felled monster drops crafting materials (#629):
+## good where it fell, and then it cools down. A held special binds instead (#1167): it holds the
+## wild monster next to it still, so it neither steps nor strikes, and its companion stands still
+## too, through a save, until the hold has run its course and lets go with a strike that's never
+## lethal; a wild monster striking the companion breaks the bind early, without that strike, and
+## lets both go. The felled monster drops crafting materials (#629):
 ## every player in the instance rolls their own on its species' loot table, from a stream a save
 ## resumes, and this machine's player's own roll bursts from it and lands in their profile, while
 ## another player's doesn't. A wild monster strikes once a second too (#422): the
@@ -96,8 +100,8 @@ const STRONG_STRENGTH: int = 400
 ## cooldown.
 const SPECIAL_POWER: int = 3000
 const SPECIAL_TICKS: int = 50
-## How long the weak species' special is held once it fires (#1163), and the hold the look check's
-## companion is given.
+## How long the weak species' special is held once it fires where it binds (#1163, #1167), and the
+## hold the look check's companion is given.
 const CHANNEL_TICKS: int = 40
 ## What a felled weak monster drops (#629): its loot table always rolls this.
 const HIDE_LOOT: Dictionary[String, int] = { "hide": 2 }
@@ -1082,7 +1086,11 @@ func _check_companion_strikes() -> String:
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
 	var result: String = _check_no_special(spots, hemmed)
-	return result if not result.is_empty() else _check_special(state, first, spots)
+	if result.is_empty():
+		result = _check_special(state, first, spots)
+	if result.is_empty():
+		result = _check_bind()
+	return result if not result.is_empty() else _check_broken_bind()
 
 
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
@@ -1104,10 +1112,9 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
 	if felled.size() != 1 or felled[0].monster_id != first or felled[0].damage != damage:
 		return "the special didn't strike the first wild monster for its power"
-	if felled[0].channel_ticks != CHANNEL_TICKS:
-		return "the special held %d ticks, not its species' %d (#1163)" % [
+	if felled[0].channel_ticks != 0:
+		return "a special that isn't held said it held for %d ticks (#1163)" % [
 			felled[0].channel_ticks,
-			CHANNEL_TICKS,
 		]
 	if not felled[0].felled or not wild.is_fainted(first) or wild.monsters.has(first):
 		return "the special didn't fell the wild monster"
@@ -1123,6 +1130,109 @@ func _check_special(state: GameState, first: int, spots: Array[Vector2i]) -> Str
 		return "the fainted wild monster didn't stay where it fell, blocking walkers"
 	var result: String = _check_harvest(state, first)
 	return result if not result.is_empty() else _check_special_cooldown(state, spots)
+
+
+## A companion whose special is held (#1167), hemmed in by wild monsters, all but the first hiding:
+## its special binds the first, dealing nothing. Held, it doesn't strike the companion, nor step
+## when it would chase, and the companion stands still; the bind resumes from a save. Once the hold
+## has run its course, it lets go with a strike for the special's power that leaves the monster at
+## 1 HP, and the monster steps again.
+func _check_bind() -> String:
+	var state: GameState = _bind_state(1)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var first: int = _wild(state).monsters[0]
+	var tile: Vector2i = state.entity(first).tile
+	# Away from the companion, where it would chase to.
+	var goal: Vector2i = tile * 4
+	var bound: Array[SpecialStruck] = _specials_in(state, _fire())
+	if bound.size() != 1 or bound[0].monster_id != first or bound[0].damage != 0:
+		return "the held special didn't bind the first wild monster without dealing anything"
+	if bound[0].channel_ticks != CHANNEL_TICKS or DamageNumbersView.text_of(bound[0]) != "":
+		return "the bind didn't hold for its species' %d ticks, or showed damage" % CHANNEL_TICKS
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	for tick: int in CHANNEL_TICKS - 1:
+		if not _wild(state).held.has(first) or not movement.held.has(companion_id):
+			return "the bind let go of the wild monster or the companion after %d ticks" % tick
+		if tick == 0 and not _reloads(state, state, SpecialAttackFeature.ID):
+			return "the bind didn't resume from a save"
+		_wild(state).chase(state, first, goal)
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		for event: RefCounted in state.events:
+			if event is WildMonsterStruck or event is SpecialStruck or event is BindBroken:
+				return "while bound, the wild monster struck, or the bind ended early"
+	if state.entity(first).tile != tile or state.entity(companion_id).tile != Vector2i.ZERO:
+		return "the bound wild monster or its companion moved"
+	return _check_bind_released(state, first, goal)
+
+
+## The bind on the wild monster `first` in `state`, a tick from running its course, lets go with a
+## strike for the special's power that leaves it at 1 HP, and then it steps toward `goal` again.
+func _check_bind_released(state: GameState, first: int, goal: Vector2i) -> String:
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var tile: Vector2i = state.entity(first).tile
+	var released: Array[SpecialStruck] = _specials_in(state, FlowSteps.command(Command.NO_MOVE))
+	var damage: int = Fixed.scale(WEAK_STRENGTH, SPECIAL_POWER)
+	if released.size() != 1 or released[0].damage != damage or released[0].felled:
+		return "the bind didn't let go with a strike for its power (%d)" % damage
+	if _hp(state, first) != 1 or _wild(state).held.has(first) or movement.held.has(companion_id):
+		return "the bind's strike was lethal, or it still holds after letting go"
+	for _tick: int in WildMonsterFeature.STEP_TICKS:
+		_wild(state).chase(state, first, goal)
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if state.entity(first).tile == tile:
+		return "the wild monster didn't step again once the bind let go"
+	return ""
+
+
+## The bind breaks early (#1167): the companion binds the first of the wild monsters hemming it in,
+## and the second, out of hiding, strikes it; the bind breaks on that strike, without its own,
+## raising BindBroken, and lets both go. The companion's look releases its hold then
+## (_check_channel).
+func _check_broken_bind() -> String:
+	var state: GameState = _bind_state(2)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var first: int = _wild(state).monsters[0]
+	if _specials_in(state, _fire()).size() != 1 or not _wild(state).held.has(first):
+		return "the held special didn't bind the first wild monster"
+	for _tick: int in WildAttackFeature.STRIKE_TICKS:
+		var specials: Array[SpecialStruck] = _specials_in(state, FlowSteps.command(Command.NO_MOVE))
+		var broken: Array[BindBroken] = []
+		var hit: bool = false
+		for event: RefCounted in state.events:
+			if event is BindBroken:
+				broken.append(event as BindBroken)
+			var struck: WildMonsterStruck = event as WildMonsterStruck
+			hit = hit or (struck != null and struck.target_id == companion_id)
+		if broken.is_empty():
+			continue
+		if not hit or not specials.is_empty() or broken[0].monster_id != first:
+			return "the bind broke on another tick than the strike on its companion, or struck"
+		var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+		if _wild(state).held.has(first) or movement.held.has(companion_id):
+			return "the broken bind still holds the wild monster or its companion"
+		return ""
+	return "a strike on the companion didn't break its bind"
+
+
+## A state with a companion whose special is held (#1167), on the middle of the outcome disc,
+## hemmed in by wild monsters all around, all but the first `out` of them hiding, and its player
+## two tiles further west.
+func _bind_state(out: int) -> GameState:
+	var spots: Array[Vector2i] = []
+	spots.assign(Hex.DIRECTIONS)
+	var state: GameState = _strike_state(spots, [], CHANNEL_TICKS)
+	FlowSteps.carry(state, 0, [WEAK])
+	var _player: Entity = state.add_entity(0, Vector2i(-3, 0))
+	# The companion joins on the tick after its player arrives.
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	state.entity(companion_id).tile = Vector2i.ZERO
+	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
+	for monster: int in _wild(state).monsters.slice(out):
+		hiding.hidden.append(monster)
+		_wild(state).hold(monster, true)
+	return state
 
 
 ## A companion whose species has no special, hemmed in on `hemmed` by the wild monsters on `spots`,
@@ -1583,8 +1693,15 @@ func _wild_strikes_over(
 ## specials, and the wild monsters' attacks, with the `extra` features (a type chart) before the
 ## companions' attacks, which read them (#822). A species has one HP (#835), a companion's here: the
 ## wild monsters are worn down to OUTCOME_HP first, so their companion outlasts them.
-func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameState:
+func _strike_state(
+		spots: Array[Vector2i],
+		extra: Array[Feature] = [],
+		held: int = 0,
+) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
+	var channels: Dictionary[String, int] = {}
+	if held > 0:
+		channels[WEAK] = held
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		KnockdownFeature.new(),
@@ -1603,7 +1720,7 @@ func _strike_state(spots: Array[Vector2i], extra: Array[Feature] = []) -> GameSt
 		SpecialAttackFeature.new(
 			{ WEAK: SPECIAL_POWER },
 			{ WEAK: SPECIAL_TICKS },
-			{ WEAK: CHANNEL_TICKS },
+			channels,
 		),
 		HarvestFeature.new({ WEAK: _hide_table() }),
 	])
@@ -1724,7 +1841,8 @@ func _check_view(tree: SceneTree) -> String:
 
 ## A companion whose special lasts holds it (#1163): its figure winds up (ChannelStart), holds the
 ## middle (Channel), looping, for as long as the hold its SpecialStruck gives, not a tick less, then
-## releases it (ChannelEnd) and idles again.
+## releases it (ChannelEnd) and idles again. Held again, it releases it at once when its bind breaks
+## (#1167).
 func _check_channel(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start(tree)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -1745,6 +1863,14 @@ func _check_channel(tree: SceneTree) -> String:
 		]
 		FlowSteps.raise(driver, events)
 		result = _held(driver, view, clips)
+		if result.is_empty():
+			FlowSteps.raise(driver, events)
+			var broken: Array[RefCounted] = [BindBroken.new(companion_id, 0)]
+			FlowSteps.raise(driver, broken)
+			if clips.current_animation != CompanionView.CHANNEL_END or not view.channels.is_empty():
+				result = "a held special whose bind broke played %s, not its release (#1167)" % [
+					clips.current_animation,
+				]
 	main.queue_free()
 	await tree.process_frame
 	return result

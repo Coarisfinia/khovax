@@ -9,8 +9,8 @@ extends Node3D
 ## it joins. Its eyes glow (EyeGlow) in its type's colour (TypeGlow, #1063), shaped by its
 ## player's leaning. A companion whose special lasts (#1163) holds it: its figure winds up
 ## (ChannelStart), holds the middle (Channel, looping) until the hold the special's SpecialStruck
-## gave ends, and releases it (ChannelEnd), then idles again. It only reads the state and the
-## tick's events.
+## gave ends, or until its bind breaks (BindBroken, #1167), and releases it (ChannelEnd), then
+## idles again. It only reads the state and the tick's events.
 
 ## The model every companion wears: the wild monsters' placeholder (#338).
 const MODEL: PackedScene = WildMonsterView.MODEL
@@ -108,7 +108,8 @@ func leaning_of(slot: int) -> String:
 
 ## Takes the figure of every companion that went back to its player this tick off the board and
 ## shrinks it into them, notes whose player chose another, so it grows out of them, flares the
-## eyes of every one that struck, and starts the hold of every one whose special lasts. Only the
+## eyes of every one that struck, starts the hold of every one whose special lasts and releases
+## the hold of every one whose bind broke early. Only the
 ## shown instance's events (#1025), and only once the figures are its: entity ids repeat across
 ## instances, so another's would name a figure here.
 func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
@@ -120,6 +121,9 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 			_chosen.append(chosen.slot)
 		_flare(event)
 		_channel(event)
+		var broken: BindBroken = event as BindBroken
+		if broken != null and channels.has(broken.companion_id):
+			_release(broken.companion_id)
 		var returned: CompanionReturned = event as CompanionReturned
 		if returned != null and figures.has(returned.companion_id):
 			var figure: HexPiece = figures[returned.companion_id]

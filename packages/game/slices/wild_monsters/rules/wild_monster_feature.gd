@@ -8,7 +8,8 @@ extends Feature
 ## stands where it is (its look is a placeholder, #85), unless no ring could enclose it there
 ## (#364, RingableGround): then it steps, once every STEP_TICKS, toward the nearest tile where one
 ## could, never onto the trail or onto anyone, so it never walks into a ring. One held (hiding,
-## #202) stays put. Walkers can't step onto its tile (MovementFeature), and a ring dominates it
+## #202, or bound by a companion's held special, #1167) stays put. Walkers can't step onto its tile
+## (MovementFeature), and a ring dominates it
 ## (DominationFeature). Each has its species' strength (#219); its HP is HealthFeature's (#835), at
 ## its species' HP, or WOUNDED_HP of it where the region marks it wounded (#389). Companions'
 ## strikes wound it (#221), and a special attack can fell it (#410): it faints for good, staying
@@ -50,9 +51,10 @@ var strengths: Dictionary[String, int] = {}
 ## Each wild monster's own data (#820), standing or fainted, by entity id: one record, so its
 ## parts never drift apart.
 var _wild: Dictionary[int, WildMonster] = {}
-## The wild monsters held where they stand whatever the ground, in id order: HidingFeature holds
-## the hidden ones (#202) and lets them go when they jump out, and restores them on loading, so
-## they aren't saved here.
+## The wild monsters held where they stand whatever the ground, in id order, which don't strike
+## either (WildAttackFeature): HidingFeature holds the hidden ones (#202) and lets them go when they
+## jump out, and SpecialAttackFeature the ones a held special binds (#1167) until the bind ends.
+## Each restores its own on loading, so they aren't saved here.
 var held: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []

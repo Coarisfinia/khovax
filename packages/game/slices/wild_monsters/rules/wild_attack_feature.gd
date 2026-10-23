@@ -5,7 +5,8 @@ extends Feature
 ## makes it strike sooner (#961, WildMonsterFeature.paced): the enraged ones strike on the ticks of
 ## their own pace.
 ## Each hit raises WildMonsterStruck. Hidden in its tile (#202), it doesn't attack: it keeps out
-## of sight.
+## of sight. Nor does one a companion's held special binds (#1167): held still
+## (WildMonsterFeature.held), it can't strike anything, not even its ring's wall.
 ##
 ## Free, it strikes something next to it, in this order: a companion (#338), then a player (not one
 ## a dialog holds, whom HealthFeature shields, #981), the player first when it's enraged (#220,
@@ -107,7 +108,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			dominator_id = domination.waiting_dominator(monster.id)
 		if dominator_id == 0 and not near.has(monster.tile):
 			continue
-		if hiding != null and hiding.is_hidden(monster.id):
+		if (hiding != null and hiding.is_hidden(monster.id)) or wild.held.has(monster.id):
 			continue
 		var damage: int = wild.strength_of(monster.id)
 		if dominator_id > 0:

@@ -25,8 +25,9 @@ var description: String = ""
 ## seconds before it can fire again; 0 for a passive.
 var power: int = 0
 var cooldown_seconds: int = 0
-## A special's: the seconds it is held once it fires, an attack that lasts (#1163); 0 for one that
-## strikes and is over, and for a passive.
+## A special's: the seconds it is held once it fires, an attack that lasts (#1163), which binds its
+## target for as long (#1167, SpecialAttackFeature); 0 for one that strikes and is over, and for a
+## passive.
 var channel_seconds: int = 0
 ## A special's type, from the chart, whatever fits it (owner on #626); "" for a passive.
 var strike_type: String = ""

@@ -53,11 +53,11 @@ func show_auto(tile: Vector2i, damage: int, strong: Array[bool]) -> void:
 
 
 ## What `struck` shows: its damage while `numbers` show, and on a line after it that the wild
-## monster fainted.
+## monster fainted. A bind taking hold (#1167) deals nothing, and shows nothing.
 static func text_of(struck: SpecialStruck, numbers: bool = true) -> String:
-	var text: String = "-%d" % struck.damage if numbers else ""
+	var text: String = "-%d" % struck.damage if numbers and struck.damage > 0 else ""
 	if struck.felled:
-		text += ("\n" if numbers else "") + FAINTED_TEXT
+		text += ("\n" if not text.is_empty() else "") + FAINTED_TEXT
 	return text
 
 
