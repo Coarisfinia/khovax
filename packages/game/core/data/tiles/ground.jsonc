@@ -1,7 +1,8 @@
-// Plain ground: the tile most of a region is made of. Built in: `.` in a region file.
+// Plain ground: the tile most of a region is made of, grass that grazing wild monsters eat (#1203).
+// Built in: `.` in a region file.
 {
 	"id": "ground",
 	"color": "#5c8c52",
 	"symbol": ".", // tells it apart without its color (#68)
-	"traits": { "walkable": true }
+	"traits": { "walkable": true, "grazable": true }
 }

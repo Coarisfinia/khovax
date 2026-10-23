@@ -30,3 +30,15 @@ static func is_walkable(kind: String) -> bool:
 static func hides(kind: String) -> bool:
 	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
 	return tile != null and tile.hides
+
+
+## Whether a tile of kind `kind` is grass a grazing wild monster eats (#1203).
+static func is_grazable(kind: String) -> bool:
+	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
+	return tile != null and tile.grazable
+
+
+## Whether a tile of kind `kind` is water a drinking wild monster drinks from (#1203).
+static func is_drinkable(kind: String) -> bool:
+	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
+	return tile != null and tile.drinkable
