@@ -38,6 +38,9 @@ var clearance: int = 0
 var walkable: bool = false
 ## Whether a wild monster standing on it hides there until a player comes next to it (#202).
 var hides: bool = false
+## Whether it's grass a grazing wild monster eats, and water a drinking one drinks from (#1203).
+var grazable: bool = false
+var drinkable: bool = false
 ## Why the blueprint couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -55,6 +58,8 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	var traits: Dictionary = raw_traits if raw_traits is Dictionary else {}
 	var walks: Variant = traits.get("walkable")
 	var hiding: Variant = traits.get("hides", false)
+	var grass: Variant = traits.get("grazable", false)
+	var water: Variant = traits.get("drinkable", false)
 	blueprint.id = Content.text_of(data.get("id"))
 	blueprint.model = Content.text_of(data.get("model"))
 	blueprint.symbol = Content.text_of(data.get("symbol"))
@@ -62,6 +67,8 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 	blueprint.clearance = _whole(data.get("clearance", 0), MAX_HEIGHT)
 	blueprint.walkable = walks is bool and walks
 	blueprint.hides = hiding is bool and hiding
+	blueprint.grazable = grass is bool and grass
+	blueprint.drinkable = water is bool and water
 	blueprint.problem = (
 		Content.unknown_field(data, SchemaFields.at(SCHEMA))
 		+ Content.unknown_field(traits, SchemaFields.at(SCHEMA, "/properties/traits"))
@@ -72,6 +79,8 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 		blueprint.problem = blueprint._size_problem()
 	if blueprint.problem.is_empty() and not hiding is bool:
 		blueprint.problem = "its hides trait is true or false"
+	if blueprint.problem.is_empty() and not (grass is bool and water is bool):
+		blueprint.problem = "its grazable and drinkable traits are true or false"
 	return blueprint
 
 

@@ -19,10 +19,11 @@ extends Feature
 ## (#961): its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it
 ## chase the nearest player (`chase`), round what stands in its way (#1259) and never off ground
 ## a ring could enclose it on; hunted, it flees its hunter the same way (`chase` away, HuntFeature,
-## #1239). Asleep (#1202, SleepFeature puts it to sleep by its schedule), it neither steps nor
-## strikes (WildAttackFeature) until it wakes: by its schedule, or at once when a strike wounds it
-## or rage takes it. Like every feature, switched off it keeps its state: the monsters stay where
-## they are, and only its own rules stop.
+## #1239), and ForagingFeature walks it to its grass or water the same way, in its hours to graze
+## and drink (#1203). Asleep (#1202, SleepFeature puts it to sleep by its schedule), it neither
+## steps nor strikes (WildAttackFeature) until it wakes: by its schedule, or at once when a strike
+## wounds it or rage takes it. Like every feature, switched off it keeps its state: the monsters
+## stay where they are, and only its own rules stop.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_monsters"
@@ -62,11 +63,9 @@ var held: Array[int] = []
 var asleep: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
-## The tiles of `_unringable_region` no ring can enclose a wild monster on, cached by
-## _unringable_in. Derived from the region, so not hashed, and worked out again when a tile of it
-## changes (#530).
-var _unringable: Dictionary[Vector2i, bool] = {}
-var _unringable_region: Region = null
+## The ground it steps onto (WildGround), which keeps the region's tiles no ring can enclose a wild
+## monster on until a tile of it changes (#530).
+var _ground: WildGround = WildGround.new()
 ## The wild monsters `step` or `chase` moved this tick, and which tick that was: `chase` moves them
 ## no more, so none takes two steps in one tick (#1239). Worked out again each tick, so
 ## neither hashed nor saved.
@@ -135,7 +134,7 @@ func start(state: GameState) -> void:
 ## Every wild monster no ring could enclose where it stands steps toward where one could, each on
 ## its own tick of every STEP_TICKS, faster with rage (by its id, `_moves_now`), in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
+	var stuck: Dictionary[Vector2i, bool] = _ground.unringable(state.region)
 	var blocked: Dictionary[Vector2i, bool] = {}
 	_stepped.clear()
 	_stepped_tick = state.tick
@@ -147,7 +146,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if not stuck.has(standing.tile):
 			continue
 		if blocked.is_empty():
-			blocked = _blocked(state)
+			blocked = WildGround.blocked(state)
 		var from: Vector2i = standing.tile
 		standing.tile = RingableGround.way_out(state.region, stuck, blocked, from)
 		blocked[standing.tile] = true
@@ -177,11 +176,11 @@ func chase(state: GameState, entity_id: int, goal: Vector2i, away: bool = false)
 		_stepped_tick = state.tick
 	if _stepped.has(entity_id):
 		return
-	var stuck: Dictionary[Vector2i, bool] = _unringable_in(state.region)
+	var stuck: Dictionary[Vector2i, bool] = _ground.unringable(state.region)
 	var standing: Entity = state.entity(entity_id)
 	if stuck.has(standing.tile):
 		return
-	var blocked: Dictionary[Vector2i, bool] = _blocked(state)
+	var blocked: Dictionary[Vector2i, bool] = WildGround.blocked(state)
 	var way: WildWay = WildWay.new(state.region, stuck, blocked)
 	var best: Vector2i = way.away(standing.tile, goal) if away else way.toward(standing.tile, goal)
 	if best != standing.tile:
@@ -189,26 +188,8 @@ func chase(state: GameState, entity_id: int, goal: Vector2i, away: bool = false)
 		_stepped.append(entity_id)
 
 
-## The tiles a wild monster may not step onto: the trail, so it never walks into a ring, and every
-## tile something stands on.
-static func _blocked(state: GameState) -> Dictionary[Vector2i, bool]:
-	var blocked: Dictionary[Vector2i, bool] = {}
-	for tile: Vector2i in (state.feature(TrailFeature.ID) as TrailFeature).shared.tiles:
-		blocked[tile] = true
-	for entity: Entity in state.entities:
-		blocked[entity.tile] = true
-	return blocked
-
-
-func _unringable_in(region: Region) -> Dictionary[Vector2i, bool]:
-	if region != _unringable_region:
-		_unringable_region = region
-		_unringable = RingableGround.unringable(region)
-	return _unringable
-
-
 func tile_changed(_state: GameState, _tile: Vector2i) -> void:
-	_unringable_region = null
+	_ground.forget()
 
 
 func entity_removed(_state: GameState, removed_id: int) -> void:

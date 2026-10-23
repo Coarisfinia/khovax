@@ -38,6 +38,9 @@ extends RefCounted
 ## follow their pack, walk back to their leader. A dominated or fainted leader hands the pack to its
 ## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
 ## band in Ivenwhal Wudhen.
+##
+## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
+## hours a drinker finds its way round a rock wall to the nearest water and drinks (#1203).
 
 ## A test species of each sleep rhythm, with needs and bands that cover every activity.
 const TEST_TRAITS: Dictionary[String, Array] = {
@@ -104,6 +107,20 @@ const PACK_SPOTS: Dictionary[Vector2i, String] = {
 	Vector2i(3, 2): "sha",
 	Vector2i(4, -2): "lon",
 }
+## A test grazer and drinker (#1203), and what each does in its hours of need.
+const FORAGERS: Dictionary[String, Array] = {
+	"gra": ["diurnal", "grazer"],
+	"dri": ["diurnal", "drinker"],
+}
+const FORAGING: Dictionary[String, int] = { "gra": Schedule.GRAZE, "dri": Schedule.DRINK }
+## The foraging region's grass, the nearer patch to the grazer first, its pond, and the rock
+## wall's row between the drinker and the pond: all well inside its sand, where a ring could enclose
+## a monster.
+const FORAGE_GRASS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(4, -2)]
+const FORAGE_WATER: Vector2i = Vector2i(0, -4)
+const FORAGE_WALL_ROW: int = -2
+## How long the flow lets a forager walk: enough steps to go round the wall, within one hour.
+const FORAGE_TICKS: int = 12 * WildMonsterFeature.STEP_TICKS
 
 
 func run(_tree: SceneTree) -> String:
@@ -133,6 +150,7 @@ func run(_tree: SceneTree) -> String:
 		_check_pack_leader_lost,
 		_check_pack_saved,
 		_check_content_packs,
+		_check_grazing_and_drinking,
 	]
 	for check: Callable in steps:
 		var result: String = check.call()
@@ -290,8 +308,9 @@ func _check_content_species() -> String:
 		if not problem.is_empty():
 			return "%s's day: %s" % [species.id, problem]
 	var basic: GameState = FlowSteps.basic(SEED)
-	if basic.feature(ScheduleFeature.ID) == null or basic.feature(SleepFeature.ID) == null:
-		return "the basic instance's wild monsters have no schedules or don't sleep"
+	for feature_id: String in [ScheduleFeature.ID, SleepFeature.ID, ForagingFeature.ID]:
+		if basic.feature(feature_id) == null:
+			return "the basic instance's wild monsters lack the feature %s" % feature_id
 	var basic_wild: WildMonsterFeature = basic.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	for monster: int in basic_wild.monsters:
 		if (basic.feature(ScheduleFeature.ID) as ScheduleFeature).day_of(monster).is_empty():
@@ -500,6 +519,52 @@ static func _sleep_follows(state: GameState, when: String) -> String:
 	return ""
 
 
+## Ground is grass and water drinkable, sand neither (#1203). A grazer in its grazing hour walks
+## to the nearer of two patches of grass, and a drinker in its drinking hour round the rock wall to
+## the pond, each one tile at a time and only over ground a ring could enclose it on; then each
+## stays there, eating or drinking, for the rest of the hour. In an hour of wandering, neither goes
+## anywhere, and a grazer with no grass about stays where it is.
+func _check_grazing_and_drinking() -> String:
+	if not TileKinds.is_grazable(Region.GROUND) or not TileKinds.is_drinkable(Region.WATER):
+		return "ground isn't grass or water isn't drinkable"
+	if TileKinds.is_grazable("sand") or TileKinds.is_drinkable("sand"):
+		return "sand is grass or drinkable"
+	for species: String in FORAGERS:
+		var state: GameState = _forage_state(true)
+		var monster: int = _forager(state, species)
+		var activity: int = FORAGING[species]
+		var walked: Array[Vector2i] = _forage_at(state, monster, activity, FORAGE_TICKS)
+		var problem: String = _walk_problem(state, walked, activity)
+		if not problem.is_empty():
+			return "%s %s" % [species, problem]
+		if activity == Schedule.GRAZE and walked[-1] != FORAGE_GRASS[0]:
+			return "the grazer went to %s, not the nearest grass" % walked[-1]
+		if activity == Schedule.DRINK and walked.size() - 1 <= Hex.distance(walked[0], walked[-1]):
+			return "the drinker went straight through the rock wall: %s" % [walked]
+		var rest: int = DayClock.TICKS_PER_HOUR - state.world_tick % DayClock.TICKS_PER_HOUR - 1
+		if _forage_at(state, monster, Schedule.NONE, rest).size() != 1:
+			return "%s didn't stay to eat or drink for the rest of the hour" % species
+		if _forage_at(state, monster, Schedule.WANDER, FORAGE_TICKS).size() != 1:
+			return "%s walked off in an hour without grazing or drinking" % species
+	var bare: GameState = _forage_state(false)
+	var grazer: int = _forager(bare, "gra")
+	if _forage_at(bare, grazer, Schedule.GRAZE, FORAGE_TICKS).size() != 1:
+		return "a grazer with no grass about walked off"
+	return ""
+
+
+## Why `walked`, the tiles a monster doing `activity` stood on one after the other, isn't a walk to
+## where it feeds, a tile at a time over ground a ring could enclose it on, or "".
+static func _walk_problem(state: GameState, walked: Array[Vector2i], activity: int) -> String:
+	if walked.size() < 2 or not ForageWay.feeds_at(state.region, walked[-1], activity):
+		return "didn't walk to its food or water: %s" % [walked]
+	var stuck: Dictionary[Vector2i, bool] = RingableGround.unringable(state.region)
+	for i: int in range(1, walked.size()):
+		if Hex.distance(walked[i - 1], walked[i]) != 1 or stuck.has(walked[i]):
+			return "didn't walk a tile at a time over ringable ground: %s" % [walked]
+	return ""
+
+
 ## Why `day` doesn't follow `traits`, or "": its sleep by its rhythm, each need's hours, and the
 ## rest following its pack if it bands, wandering if not.
 static func _day_problem(day: Array[int], traits: Array) -> String:
@@ -557,16 +622,82 @@ static func _test_state(seed_value: int, traits: Dictionary[String, Array]) -> G
 	var health: Dictionary[String, int] = {}
 	for each: String in species:
 		health[each] = 10
+	var ordered: Array[Feature] = _wild_features(health, traits)
+	ordered.append(SleepFeature.new())
+	return GameState.new(_region(species), seed_value, ordered)
+
+
+## The features a test instance's wild monsters live by, up to their schedules made from
+## `traits`, each species with the HP in `health` and the strength in `strengths`; each flow adds
+## the behaviours it checks after them.
+static func _wild_features(
+	health: Dictionary[String, int],
+	traits: Dictionary[String, Array],
+	strengths: Dictionary[String, int] = {},
+) -> Array[Feature]:
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		KnockdownFeature.new(),
 		TrailFeature.new(),
 		HealthFeature.new(health),
-		WildMonsterFeature.new([], [], {}),
+		WildMonsterFeature.new([], [], strengths),
 		ScheduleFeature.new(traits),
-		SleepFeature.new(),
 	]
-	return GameState.new(_region(species), seed_value, ordered)
+	return ordered
+
+
+## A sand disc with a grazer and a drinker on it, its grass (`grass`) to the east and its pond to
+## the north behind a wall of rock, with the foraging feature after the schedules.
+static func _forage_state(grass: bool) -> GameState:
+	var region: Region = Region.disc(6)
+	for tile: Vector2i in region.sorted_tiles():
+		region.terrain[tile] = "sand"
+	if grass:
+		for patch: Vector2i in FORAGE_GRASS:
+			region.terrain[patch] = Region.GROUND
+	region.terrain[FORAGE_WATER] = Region.WATER
+	for q: int in range(-2, 3):
+		region.terrain[Vector2i(q, FORAGE_WALL_ROW)] = Region.BLOCKED
+	var spots: Dictionary[String, Vector2i] = { "gra": Vector2i(-3, 2), "dri": Vector2i(0, 3) }
+	var health: Dictionary[String, int] = {}
+	for species: String in spots:
+		region.wild_monsters.append(spots[species])
+		region.add_placement(WildSpotPlacements.KIND, spots[species], WildSpot.NAMED + species)
+		health[species] = 10
+	var ordered: Array[Feature] = _wild_features(health, FORAGERS)
+	ordered.append(SleepFeature.new())
+	ordered.append(ForagingFeature.new())
+	return GameState.new(region, SEED, ordered)
+
+
+## The entity id of the wild monster of `species` in `state`.
+static func _forager(state: GameState, species: String) -> int:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	for monster: int in wild.monsters:
+		if wild.species_of(monster) == species:
+			return monster
+	return -1
+
+
+## Sets the clock to the start of the first hour `monster` spends on `activity` (or leaves it, for
+## Schedule.NONE), lets `ticks` pass, and gives the tiles it stood on one after the other, the first
+## included.
+static func _forage_at(
+	state: GameState,
+	monster: int,
+	activity: int,
+	ticks: int,
+) -> Array[Vector2i]:
+	if activity != Schedule.NONE:
+		var hour: int = _schedules(state).day_of(monster).find(activity)
+		var from_dawn: int = (hour - DayClock.DAWN + DayClock.HOURS) % DayClock.HOURS
+		state.world_tick = from_dawn * DayClock.TICKS_PER_HOUR
+	var walked: Array[Vector2i] = [state.entity(monster).tile]
+	for _tick: int in ticks:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if state.entity(monster).tile != walked[-1]:
+			walked.append(state.entity(monster).tile)
+	return walked
 
 
 ## A disc with a wild monster of each of `species` in a row, each named by its spot.
@@ -913,15 +1044,8 @@ static func _hunt_state(spots: Dictionary[String, Vector2i]) -> GameState:
 	for species: String in spots:
 		region.wild_monsters.append(spots[species])
 		region.add_placement(WildSpotPlacements.KIND, spots[species], WildSpot.NAMED + species)
-	var ordered: Array[Feature] = [
-		MovementFeature.new(),
-		KnockdownFeature.new(),
-		TrailFeature.new(),
-		HealthFeature.new(HUNT_HP),
-		WildMonsterFeature.new([], [], HUNT_STRENGTHS),
-		ScheduleFeature.new(HUNT_TRAITS),
-		HuntFeature.new(),
-	]
+	var ordered: Array[Feature] = _wild_features(HUNT_HP, HUNT_TRAITS, HUNT_STRENGTHS)
+	ordered.append(HuntFeature.new())
 	return GameState.new(region, SEED, ordered)
 
 
@@ -1114,14 +1238,7 @@ static func _pack_state(packed: bool) -> GameState:
 		region.wild_monsters.append(spot)
 		region.add_placement(WildSpotPlacements.KIND, spot, WildSpot.NAMED + PACK_SPOTS[spot])
 		hp[PACK_SPOTS[spot]] = 10
-	var ordered: Array[Feature] = [
-		MovementFeature.new(),
-		KnockdownFeature.new(),
-		TrailFeature.new(),
-		HealthFeature.new(hp),
-		WildMonsterFeature.new([], [], {}),
-		ScheduleFeature.new(PACK_TRAITS),
-	]
+	var ordered: Array[Feature] = _wild_features(hp, PACK_TRAITS)
 	if packed:
 		ordered.append(PackFeature.new(PACK_TYPES))
 	return GameState.new(region, SEED, ordered)

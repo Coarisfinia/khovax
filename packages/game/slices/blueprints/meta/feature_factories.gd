@@ -66,6 +66,10 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		# after the wild monsters' strikes, so a hunter that struck something strikes no prey too
 		# (#1204).
 		HuntFeature.ID: _plain(HuntFeature),
+		# After domination, enrage and the hunts, so a wild monster in a ring or enraged this tick
+		# doesn't
+		# wander off to graze or drink (#1203).
+		ForagingFeature.ID: _plain(ForagingFeature),
 		FogFeature.ID: _plain(FogFeature),
 	}
 	return rules

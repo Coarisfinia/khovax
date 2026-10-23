@@ -1,7 +1,8 @@
-// Water: nobody walks it, but sight passes over it. Built in: `~` in a region file.
+// Water: nobody walks it, but sight passes over it, and drinking wild monsters drink from it
+// (#1203). Built in: `~` in a region file.
 {
 	"id": "water",
 	"color": "#4073b3",
 	"symbol": "~", // tells it apart without its color (#68)
-	"traits": { "walkable": false }
+	"traits": { "walkable": false, "drinkable": true }
 }

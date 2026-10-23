@@ -55,6 +55,14 @@
 				"hides": {
 					"description": "Whether a wild monster standing on it hides there until a player comes next to it (#202); false when left out.",
 					"type": "boolean"
+				},
+				"grazable": {
+					"description": "Whether it's grass a grazing wild monster walks to and eats in its grazing hours (#1203); false when left out.",
+					"type": "boolean"
+				},
+				"drinkable": {
+					"description": "Whether it's water a drinking wild monster walks up to and drinks from in its drinking hours (#1203); false when left out.",
+					"type": "boolean"
 				}
 			}
 		}
