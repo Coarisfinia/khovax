@@ -566,6 +566,8 @@ func _check_hunt_saved() -> String:
 		return "no hunt was going on to save"
 	var loaded: GameState = _hunt_state(spots)
 	loaded.load_data(DataReader.new(state.to_data()))
+	# The world's time isn't the instance's to save: the World hands it to a loaded one (#1215).
+	loaded.world_tick = state.world_tick
 	if loaded.state_hash() != state.state_hash():
 		return "a save in the middle of a hunt didn't load the same"
 	for _tick: int in 5 * Simulation.TICKS_PER_SECOND:
@@ -664,9 +666,9 @@ static func _out_of_hunt_hours(state: GameState, monster: int) -> void:
 ## `doing`, isn't) busy with `activity`, keeping the day it's in.
 static func _to_hour_doing(state: GameState, monster: int, activity: int, doing: bool) -> void:
 	var day: Array[int] = _schedules(state).day_of(monster)
-	var day_start: int = Fixed.div_floor(state.tick, DayClock.HOURS * DayClock.TICKS_PER_HOUR)
+	var day_start: int = Fixed.div_floor(state.world_tick, DayClock.HOURS * DayClock.TICKS_PER_HOUR)
 	for from_dawn: int in DayClock.HOURS:
 		if (day[(DayClock.DAWN + from_dawn) % DayClock.HOURS] == activity) == doing:
 			var hours: int = day_start * DayClock.HOURS + from_dawn
-			state.tick = hours * DayClock.TICKS_PER_HOUR
+			state.world_tick = hours * DayClock.TICKS_PER_HOUR
 			return
