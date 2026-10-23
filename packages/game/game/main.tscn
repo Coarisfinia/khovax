@@ -60,6 +60,7 @@
 [ext_resource type="Script" path="res://slices/codex/meta/bestiary_keeper.gd" id="bestiary_keeper"]
 [ext_resource type="Script" path="res://slices/codex/look/bestiary_tie.gd" id="bestiary_tie"]
 [ext_resource type="Script" path="res://slices/codex/meta/codex_keeper.gd" id="55_codex_keeper"]
+[ext_resource type="Script" path="res://slices/codex/look/place_tie.gd" id="place_tie"]
 [ext_resource type="PackedScene" path="res://slices/codex/ui/codex_book.tscn" id="56_codex_book"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
@@ -108,6 +109,11 @@ keeper = NodePath("../BestiaryKeeper")
 [node name="CodexKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
 script = ExtResource("55_codex_keeper")
 holder = NodePath("../ProfileHolder")
+
+[node name="PlaceTie" type="Node" parent="." node_paths=PackedStringArray("driver", "keeper")]
+script = ExtResource("place_tie")
+driver = NodePath("../Driver")
+keeper = NodePath("../CodexKeeper")
 
 [node name="ProfileTie" type="Node" parent="." node_paths=PackedStringArray("bus", "input", "holder") unique_id=2066135785]
 script = ExtResource("46_profile_tie")

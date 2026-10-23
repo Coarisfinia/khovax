@@ -4,7 +4,9 @@ extends RefCounted
 ## new player's book says it's empty. Teska na Amvrel's greeting shows the speaker's name, which
 ## lists them under "People" (#1005), and its second line the Amvrel Velmarai's, which lists the
 ## guild under "Lexicon", and the realm Ardvaun's, listed under "Realms" (#1175); a species seen is
-## listed under "Bestiary" (#1173), and a place met under "Places", whose entry opens its page. The
+## listed under "Bestiary" (#1173), and a place met under "Places", whose entry opens its page.
+## Entering a place a realm draws meets its name and its realm's; the playground, which no realm
+## draws, meets nothing. The
 ## names met are kept
 ## in the profile's file beside the profile, so a new session finds them there. The guild's entry
 ## opens its lexicon page over the menu, with a controller's A, a click or a tap, and B, Escape or
@@ -13,6 +15,7 @@ extends RefCounted
 ## and an older save starts with none.
 
 const PROFILE: String = "user://test_codex_profile.json"
+const ENTERING_PROFILE: String = "user://test_codex_entering_profile.json"
 const GREETING: String = "teska_na_amvrel_greeting"
 const GUILD: String = "amvrel_velmarai"
 const SCOUT: String = "teska_na_amvrel"
@@ -28,7 +31,7 @@ func run(tree: SceneTree) -> String:
 	var driver: GameDriver = FlowGame.held_driver(main)
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var book: CodexBook = menu.find_child("Codex", true, false) as CodexBook
-	var result: String = _empty_book(book)
+	var result: String = _empty_book(driver, book)
 	if result.is_empty():
 		result = await _meet_the_guild(tree, main, book)
 	if result.is_empty():
@@ -42,12 +45,16 @@ func run(tree: SceneTree) -> String:
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(PROFILE)
+	if result.is_empty():
+		result = await _enter_a_place(tree)
 	tree.root.size = kept_size
 	return result
 
 
-## The book is the menu's tab after Quests and before Settings, and a new player's lists nothing.
-static func _empty_book(book: CodexBook) -> String:
+## The book is the menu's tab after Quests and before Settings, and a new player's lists nothing,
+## also after a tick in the playground, which no realm draws.
+static func _empty_book(driver: GameDriver, book: CodexBook) -> String:
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
 	if book == null:
 		return "the menu has no Codex tab"
 	var tabs: Array[String] = []
@@ -193,6 +200,27 @@ static func _open_place(book: CodexBook, page: CodexPage) -> String:
 	if page.is_open() or entry.get_viewport().gui_get_focus_owner() != entry:
 		return "B didn't close Lumwen Hoal's page back to its entry"
 	return ""
+
+
+## A new session in Lumwen Hoal (#1175): its first ticks meet the place and its realm, Ardvaun.
+## The runner puts its own starting instance back after.
+static func _enter_a_place(tree: SceneTree) -> String:
+	GameDriver.start_instance = FlowSteps.GLADE
+	var main: Node = await FlowGame.start(tree, ENTERING_PROFILE)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	await tree.process_frame
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	var result: String = ""
+	if not keeper.has_met(TextTags.PLACE, FlowSteps.GLADE):
+		result = "entering Lumwen Hoal didn't meet it"
+	elif keeper.met_ids(TextTags.REALM) != ["ardvaun"]:
+		result = "entering Lumwen Hoal met the realms %s" % [keeper.met_ids(TextTags.REALM)]
+	main.queue_free()
+	await tree.process_frame
+	SaveStore.remove(ENTERING_PROFILE)
+	return result
 
 
 ## The guild stays met in the profile's file: a new session's keeper reads it from there.
