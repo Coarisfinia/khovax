@@ -1,22 +1,22 @@
 class_name WildHpBars
 extends Control
-## The wild monsters' HP bars (#814): a small bar above every wild monster that has lost HP, so a
+## The wild monsters' HP bars (#814): a small bar by every wild monster that has lost HP, so a
 ## fight shows how much each one has left, which the damage numbers (#764) don't. One at full HP
 ## shows none, so a calm board stays clean, unless this machine's player focuses it (FocusMark,
 ## #436): the one their special will strike shows its bar, full. The bar's fill eases to the HP
 ## left rather than jumping, so each hit shows it dropping, and the HP left stands on it as a
-## number, so it never relies on color (#68). A fainted wild monster shows none (its figure lies
-## down), nor does one out of sight (fog, hiding: WildMonsterView.is_shown) or off the screen. It
-## draws under the rest of the Hud (first in it, in main.tscn). It only reads the state and the
-## local input.
+## number, so it never relies on color (#68). It stands just below the ring around the monster's
+## feet on the screen, on the camera's side: over its head it would cover the figure and the quest
+## marker standing there (#300). A fainted wild monster shows none (its figure lies down), nor does
+## one out of sight (fog, hiding: WildMonsterView.is_shown) or off the screen. It draws under the
+## rest of the Hud (first in it, in main.tscn). It only reads the state and the local input.
 
 ## The bar's size, in the default font's sizes, and the number's on it.
-const WIDTH_FONTS: float = 3.6
+const WIDTH_FONTS: float = 3.4
 const HEIGHT_FONTS: float = 1.05
-const NUMBER_FONTS: float = 0.8
-## How high above its wild monster's feet the bar stands, in world units: over the figure's head,
-## from the camera's steep angle.
-const ABOVE: float = 1.7
+const NUMBER_FONTS: float = 0.85
+## The gap between the ring's edge and the bar, in pixels.
+const GAP: float = 2.0
 ## How fast the fill eases toward the HP left: the share of the way left it covers per second.
 const EASE_RATE: float = 6.0
 ## How round the bar's corners are and how wide its ink border is, in pixels, as the UI's panels.
@@ -102,7 +102,7 @@ func show_state(delta: float = 0.0) -> void:
 	queue_redraw()
 
 
-## Places the bar of the wild monster `entity_id` above its figure, if the camera shows it.
+## Places the bar of the wild monster `entity_id` below its figure's ring, if the camera shows it.
 func _place(entity_id: int) -> void:
 	var figure: HexPiece = wild_view.figures[entity_id]
 	if not figure.is_visible_in_tree() or not WildMonsterView.is_shown(driver.state, entity_id):
@@ -112,8 +112,9 @@ func _place(entity_id: int) -> void:
 		return
 	var fonts: float = get_theme_default_font_size()
 	var bar: Vector2 = Vector2(WIDTH_FONTS, HEIGHT_FONTS) * fonts
-	var head: Vector2 = camera.unproject_position(figure.global_position + Vector3.UP * ABOVE)
-	shown[entity_id] = Rect2(head - bar / 2.0, bar)
+	var front: Vector3 = figure.global_position + Vector3(0.0, 0.0, FocusMark.RADIUS)
+	var edge: Vector2 = camera.unproject_position(front)
+	shown[entity_id] = Rect2(edge.x - bar.x / 2.0, edge.y + GAP, bar.x, bar.y)
 
 
 ## The bar's backdrop (`filled`: the fog, as the UI's panels) or its ink border, rounded.

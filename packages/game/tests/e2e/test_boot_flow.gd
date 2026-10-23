@@ -636,8 +636,9 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	return _check_focus_picked(main, driver)
 
 
-## The wild monsters' HP bars (#814): the focused wild monster `focus` shows its bar above its
-## figure, full and with its HP on it; unfocused at full HP it shows none. Once hurt it shows its
+## The wild monsters' HP bars (#814): the focused wild monster `focus` shows its bar under its
+## figure's ring on the screen, full and with its HP on it; unfocused at full HP it shows none. Once
+## hurt it shows its
 ## bar
 ## without the focus, the HP left on it at once and its fill easing down to it rather than jumping.
 ## Healed again, its bar goes.
@@ -649,8 +650,9 @@ func _check_hp_bar(main: Node, driver: GameDriver, focus: int) -> String:
 	var figure: HexPiece = bars.wild_view.figures[focus]
 	var feet: Vector2 = bars.camera.unproject_position(figure.global_position)
 	var bar: Rect2 = bars.shown.get(focus, Rect2())
-	if bar.size == Vector2.ZERO or bar.end.y > feet.y or bars.hps[focus] != full:
-		return "the focused wild monster's HP bar didn't stand above it with its full HP on it"
+	var under: bool = bar.position.y > feet.y and bar.position.x < feet.x and bar.end.x > feet.x
+	if bar.size == Vector2.ZERO or not under or bars.hps[focus] != full:
+		return "the focused wild monster's HP bar didn't stand under it with its full HP on it"
 	driver.input.focus = Command.NO_FOCUS
 	bars.show_state()
 	if bars.shown.has(focus):
