@@ -27,7 +27,8 @@ from lib import attachments, body, clips, eyes, legs, metrics, muzzle, parts, pu
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
-SCALE = 0.75
+# Sturdier than the mana wolf, it stands a little larger on its tile.
+SCALE = 0.95
 # The body's budget before its parts, as the mana wolf's: seen full-screen on its codex page.
 BODY_TRIANGLES = 9000
 
@@ -53,19 +54,42 @@ TOAD = quadruped.Proportions(
     jaw=((0.0, -0.40, 0.52), (0.0, -0.84, 0.47)),
     # The leaf fronds behind the eyes take the ears' bones.
     ear=((0.24, -0.34, 0.80), (0.36, -0.14, 0.94)),
-    scapula=(0.22, -0.22, 0.54),
-    front_leg=[(0.36, -0.28, 0.40), (0.43, -0.22, 0.24), (0.45, -0.30, 0.08), (0.45, -0.42, 0.04)],
+    scapula=(0.38, -0.10, 0.58),
+    front_leg=[(0.40, -0.34, 0.40), (0.42, -0.20, 0.22), (0.43, -0.24, 0.08), (0.43, -0.32, 0.04)],
     hind_leg=[
-        (0.38, 0.36, 0.42),
-        (0.47, 0.12, 0.30),
+        (0.44, 0.36, 0.42),
+        (0.46, 0.12, 0.30),
         (0.47, 0.42, 0.18),
         (0.47, 0.36, 0.06),
         (0.47, 0.20, 0.05),
     ],
 )
 # Its proportions as first built (#1271): a change that drifts from them fails the build
-# (lib/metrics.py), so a derpy edit shows as numbers.
-REFERENCE = {}
+# (lib/metrics.py), so a derpy edit shows as numbers. A toad's: a head as long as the body is
+# deep and wider than it is long, short legs, eyes far apart on top, a short, deep, blunt mouth.
+REFERENCE = {
+    "head/body": 1.307,
+    "head height/length": 0.899,
+    "head width/length": 1.177,
+    "leg/body": 0.719,
+    # The leaf fronds behind the eyes, on the ears' bones.
+    "ear/head": 0.410,
+    # The stub of a tail and the round rump it moves.
+    "tail/body": 0.938,
+    "eye spacing/head width": 0.647,
+    # The eyes mirror each other: level, side by side, equally far out.
+    "eye.R/eye.L height": 0.0,
+    "eye.R/eye.L depth": 0.0,
+    "eye.R/eye.L sides": 0.0,
+    "muzzle/head": 0.609,
+    "muzzle depth/length": 1.030,
+    "muzzle width/head width": 0.602,
+    "nose width/muzzle width": 0.542,
+    "jaw depth/muzzle depth": 0.465,
+    "jaw width/muzzle width": 0.711,
+    "jaw/muzzle": 1.562,
+    "chin reach/muzzle": 0.957,
+}
 
 # A wide, blunt mouth across the whole front of the head, its lower jaw as wide as the head.
 SNOUT = muzzle.Snout(stop=(-0.60, 0.74), tip=(-0.86, 0.60), radius=0.20, joint=TOAD.jaw[0][1:], taper=0.85,
@@ -78,12 +102,13 @@ BELLY_HEIGHT = 0.16
 
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
 # apart) in 0.8 s, a companion follows at a tile every 0.3 s. Its legs are short, so a walk
-# cycle covers two fifths of a tile (a quick waddle) and its bounding run one tile.
+# cycle covers two thirds of a tile, each foot only briefly down (a scurrying waddle), and each
+# hop of its run two tiles: a run is longer hops, not quicker legs.
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 0.4, FPS)
-RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.0, FPS)
+WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 2 / 3, FPS)
+RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 2, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
@@ -161,7 +186,7 @@ def head_parts(skin, mats):
     # A toad's mouth has no fangs, and two nostrils instead of a nose pad.
     for piece in SNOUT.parts(mats, "head", "jaw"):
         if "Fang." in piece.name or piece.name.endswith(".Nose"):
-            bpy.data.objects.remove(piece)
+            bpy.data.objects.remove(piece, do_unlink=True)
         else:
             made.append(piece)
     for sign in (1, -1):
@@ -181,7 +206,7 @@ def head_parts(skin, mats):
                           {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
                           "head", almond=0.95, pupil=(0.42, 0.34)):
         if piece.name.endswith(".brow"):
-            bpy.data.objects.remove(piece)
+            bpy.data.objects.remove(piece, do_unlink=True)
         else:
             left.append(piece)
     made += left + [parts.mirrored(piece, piece.name.replace("Eye.L.", "Eye.R.")) for piece in left]
@@ -234,22 +259,59 @@ def leap():
     weight, squashing flat, wobbles back up and waddles back to where it stood."""
     crouch = {"root_loc": (0, -0.08, -0.04), "hips": (-0.10, 0, 0), "neck": (0.12, 0, 0), "head": (-0.08, 0, 0)}
     coiled = dict(crouch, root_loc=(0, -0.09, -0.05), hips=(-0.12, 0, 0))
-    air = {"root_loc": (0, 0.26, 0.24), "hips": (0.10, 0, 0), "neck": (-0.12, 0, 0), "head": (-0.05, 0, 0),
+    air = {"root_loc": (0, 0.18, 0.22), "hips": (0.10, 0, 0), "neck": (-0.12, 0, 0), "head": (-0.05, 0, 0),
            "jaw": (0.45, 0, 0), "tail_01": (0.3, 0, 0)}
     slam = {"root_loc": (0, -0.07, 0.40), "hips": (0.04, 0, 0), "neck": (0.14, 0, 0), "head": (0.10, 0, 0),
             "jaw": (0.0, 0, 0), "tail_01": (-0.2, 0, 0)}
     wobble = {"root_loc": (0, 0.02, 0.40), "hips": (-0.02, 0, 0), "neck": (-0.04, 0, 0), "head": (-0.03, 0, 0)}
     steps = []
     for side, late in (("L", 0), ("R", 1)):
-        steps.append(legs.Step("front_paw." + side, 11 + late, 19 + late, (0.0, 0.0, 0.40), 0.26))
-        steps.append(legs.Step("hind_paw." + side, 12 + late, 20 + late, (0.0, 0.0, 0.40), 0.22))
+        steps.append(legs.Step("front_paw." + side, 10 + late, 20 + late, (0.0, 0.0, 0.40), 0.18))
+        steps.append(legs.Step("hind_paw." + side, 11 + late, 21 + late, (0.0, 0.0, 0.40), 0.16))
         steps.append(legs.Step("front_paw." + side, 27 + 2 * late, 33 + 2 * late, (0.0, 0.0, 0.18), 0.06))
         steps.append(legs.Step("hind_paw." + side, 29 + 2 * late, 35 + 2 * late, (0.0, 0.0, 0.18), 0.05))
         steps.append(legs.Step("front_paw." + side, 35 + 2 * late, 41 + 2 * late, (0.0, 0.0, 0.0), 0.06))
         steps.append(legs.Step("hind_paw." + side, 37 + 2 * late, 43 + 2 * late, (0.0, 0.0, 0.0), 0.05))
-    return clips.Clip([(1, {}), (7, crouch), (11, coiled), (15, air, {"*": "quart", "jaw": "back"}),
-                       (20, slam, "quart"), (24, wobble, "back"), (34, {"root_loc": (0, 0, 0.2)}), (46, {})],
+    return clips.Clip([(1, {}), (7, crouch), (11, coiled), (15, air, {"jaw": "back"}),
+                       (20, slam), (24, wobble, "back"), (34, {"root_loc": (0, 0, 0.2)}), (46, {})],
                       steps=steps)
+
+
+# Its run is a string of long, low hops (#1271): a run is longer hops, not quicker legs. Each hop
+# arcs HOP_HEIGHT up, its feet skimming HOP_SKIM over the ground where it comes down, so they never
+# drag along it; its hind legs kick back as it takes off and its forelegs reach for the landing.
+HOP_HEIGHT, HOP_SKIM = 0.18, 0.06
+HOP_KICK, HOP_REACH, HOP_FOLD = 0.45, 0.35, 0.3
+
+
+def hop():
+    """A run of hops, posed on every frame as smooth waves, one hop a loop: the body rises and
+    falls (lowest as it lands, t=0), pitching nose up as it takes off and down as it lands, the
+    hind legs kicking back behind it and folding up under it in the air, the forelegs swinging
+    forward to land."""
+    poses = []
+    for step in range(RUN_FRAMES + 1):
+        t = step / RUN_FRAMES
+        lap = 2.0 * math.pi * t
+        rise = 0.5 - 0.5 * math.cos(lap)
+        pitch = -0.10 * math.sin(lap)
+        kick = HOP_KICK * math.sin(lap - 0.6)
+        reach = HOP_REACH * math.sin(lap + 2.2)
+        fold = HOP_FOLD * rise
+        pose = {
+            "root_loc": (0.0, HOP_SKIM + HOP_HEIGHT * rise, 0.0),
+            "hips": (pitch, 0.0, 0.0),
+            "neck": (-0.6 * pitch, 0.0, 0.0),
+            "head": (-0.3 * pitch, 0.0, 0.0),
+            "tail_01": (0.2 * rise, 0.0, 0.0),
+        }
+        clips._both(pose, "thigh", (kick - pitch, 0.0, 0.0))
+        clips._both(pose, "shin", (fold, 0.0, 0.0))
+        clips._both(pose, "hock", (-0.9 * fold, 0.0, 0.0))
+        clips._both(pose, "upper_arm", (reach - pitch, 0.0, 0.0))
+        clips._both(pose, "forearm", (-fold, 0.0, 0.0))
+        poses.append((step + 1, pose))
+    return clips.Clip(poses, loop=True, planted=False)
 
 
 def flop():
@@ -287,15 +349,15 @@ def _booming(t):
 
     sway = math.sin(2 * math.pi * t) ** 3
     pose = {
-        "root_loc": (0.0, 0.03 - 0.015 * wave(booms), 0.0),
+        "root_loc": (0.0, 0.03 - 0.008 * wave(booms), 0.0),
         "hips": (-0.04, 0.0, 0.0),
-        "spine_02": (-0.05 + 0.03 * wave(booms), 0.0, 0.0),
-        "neck": (-0.12 - 0.02 * wave(booms), 0.0, 0.05 * sway),
-        "head": (-0.10 - 0.03 * wave(booms), 0.0, -0.04 * sway),
-        "jaw": (0.12 + 0.05 * wave(booms), 0.0, 0.0),
+        "spine_02": (-0.05 + 0.012 * wave(booms), 0.0, 0.0),
+        "neck": (-0.12 - 0.008 * wave(booms), 0.0, 0.05 * sway),
+        "head": (-0.10 - 0.012 * wave(booms), 0.0, -0.04 * sway),
+        "jaw": (0.12 + 0.02 * wave(booms), 0.0, 0.0),
         "tail_01": (0.15, 0.0, 0.0),
     }
-    clips._both(pose, "ear", (-0.25 - 0.1 * wave(booms), 0.0, 0.0))
+    clips._both(pose, "ear", (-0.25 - 0.03 * wave(booms), 0.0, 0.0))
     return pose
 
 
@@ -309,7 +371,7 @@ def boom():
             "head": (0.05, 0.0, 0.0)}
     clips._both(gulp, "ear", (0.2, 0.0, 0.0))
     risen = dict(held, root_loc=(0.0, 0.045, 0.0), neck=(-0.16, 0.0, 0.0))
-    start = clips.Clip([(1, {}), (8, gulp), (16, risen, "back"), (clips.CHANNEL_START, held)])
+    start = clips.Clip([(1, {}), (6, gulp), (12, risen, "back"), (17, held), (clips.CHANNEL_START, held)])
     loop = clips.Clip([(step + 1, _booming(step / CHANNEL_FRAMES)) for step in range(CHANNEL_FRAMES + 1)],
                       loop=True)
     sag = {"root_loc": (0.0, -0.03, 0.0), "hips": (0.02, 0.0, 0.0), "neck": (0.06, 0.0, 0.0),
@@ -346,10 +408,9 @@ def build(out):
                  reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=0.45, fold=0.5, lift=0.2, curl=0.5,
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=0.35, fold=0.5, lift=0.25, curl=0.25,
                           roll=0.08),
-        "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, TOAD, clips.GALLOP, duty=0.3, fold=0.5, spine_flex=0.04,
-                         planted=False),
+        "Run": hop(),
         "Attack": leap(),
         "Hit": clips.hit(),
         "Faint": flop(),

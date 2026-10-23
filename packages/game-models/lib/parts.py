@@ -21,6 +21,8 @@ def mirrored(obj, name):
     """A twin of `obj` (a part with its rotation and scale applied) mirrored across X, named
     `name`, with the same material and bone weights: a part found on a body's surface on one
     side, whose other side a reduced mesh leaves a hair off its mirror image."""
+    if not _placed_only(obj):
+        raise ValueError("%s: mirrored takes a part whose rotation and scale are applied" % obj.name)
     twin = obj.copy()
     twin.data = obj.data.copy()
     twin.name = name
@@ -30,6 +32,12 @@ def mirrored(obj, name):
     # Set whole, so it holds before the scene next updates (as `location` alone wouldn't).
     twin.matrix_world = Matrix.Translation((-obj.location.x, obj.location.y, obj.location.z))
     return twin
+
+
+def _placed_only(obj):
+    """Whether `obj` is only moved (its rotation and scale baked into its mesh)."""
+    turn = obj.matrix_world.to_3x3()
+    return all(abs(turn[row][col] - (row == col)) < 1e-6 for row in range(3) for col in range(3))
 
 
 def weigh(obj, bone):
