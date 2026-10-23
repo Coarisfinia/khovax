@@ -15,6 +15,15 @@ static func eyes(model: Node) -> Array[Vector3]:
 	return places(model, EYE)
 
 
+## Which way each eye of `model` looks in the world, in the order of `eyes`: its point's bone points
+## that way (the model skill's `attachments`).
+static func eye_looks(model: Node) -> Array[Vector3]:
+	var looks: Array[Vector3] = []
+	for pose: Transform3D in _poses(model, EYE):
+		looks.append(pose.basis.y.normalized())
+	return looks
+
+
 ## Where each centre of attack of `model` is in the world, `attack.0` first.
 static func attack_centres(model: Node) -> Array[Vector3]:
 	return places(model, ATTACK)
@@ -25,6 +34,15 @@ static func attack_centres(model: Node) -> Array[Vector3]:
 ## them in its own space.
 static func places(model: Node, prefix: String) -> Array[Vector3]:
 	var found: Array[Vector3] = []
+	for pose: Transform3D in _poses(model, prefix):
+		found.append(pose.origin)
+	return found
+
+
+## How each point of `model` whose name begins with `prefix` is posed now, in the world (see
+## `places`), by name.
+static func _poses(model: Node, prefix: String) -> Array[Transform3D]:
+	var found: Array[Transform3D] = []
 	var skeletons: Array[Node] = model.find_children("*", "Skeleton3D", true, false)
 	if skeletons.is_empty():
 		return found
@@ -37,8 +55,7 @@ static func places(model: Node, prefix: String) -> Array[Vector3]:
 	names.sort_custom(func(a: String, b: String) -> bool: return a.naturalnocasecmp_to(b) < 0)
 	var space: Transform3D = _space_of(skeleton, model)
 	for point: String in names:
-		var pose: Transform3D = skeleton.get_bone_global_pose(skeleton.find_bone(point))
-		found.append(space * pose.origin)
+		found.append(space * skeleton.get_bone_global_pose(skeleton.find_bone(point)))
 	return found
 
 

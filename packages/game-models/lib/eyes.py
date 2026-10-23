@@ -53,3 +53,12 @@ def spot(pieces):
     """Where an eye built by `eye` looks out from: its iris's centre, for its attachment point
     (attachments.add)."""
     return next(piece for piece in pieces if piece.name.endswith(".iris")).location.copy()
+
+
+def look(pieces):
+    """Which way an eye built by `eye` looks out: from its eyeball's centre through its pupil, for
+    its attachment point's direction (attachments.add)."""
+    def center(piece):
+        return next(made for made in pieces if made.name.endswith(piece)).location
+
+    return (center(".pupil") - center(".eyeball")).normalized()

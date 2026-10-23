@@ -36,6 +36,7 @@ func _init() -> void:
 				print("MISSING CLIP ", clip)
 				failed = true
 		print("EYES ", ModelPoints.eyes(model))
+		print("EYE LOOKS ", ModelPoints.eye_looks(model))
 		print("ATTACK CENTRES ", ModelPoints.attack_centres(model))
 		if "Attack" in args.slice(1) and ModelPoints.attack_centres(model).is_empty():
 			print("NO CENTRE OF ATTACK")

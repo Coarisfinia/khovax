@@ -47,12 +47,15 @@ a second model could use goes into the library or a generic tool, never into one
     export settings the game takes: GLB, skins, one animation per NLA track, Y up, every mesh's
     faces in a fixed order so a rebuild gives the same bytes).
   - `materials`: cel-friendly flat colours and emissive glows (`palette`).
-  - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`),
-    converted and reduced to a triangle budget.
+  - `body`: soft organic bodies from metaballs (`Blob`: `ball`, `ellipsoid`, `capsule`, `limb`,
+    and `tube`, one smooth tapering form along a curve, such as a tail, where a `limb`'s joints
+    would bulge into beads, #1171), converted and reduced to a triangle budget.
   - `parts`: rigid pieces weighted to one bone (`part`), faceted `crystal`s (with an optional
     `curl`), curling fur `tuft`s.
-  - `surface`: patterns laid on a body and bending with it: glowing `vein`s and `rune`s (`GLYPHS`).
-  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid).
+  - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends
+    taper out to a point (`taper`, #1171), and `rune`s (`GLYPHS`).
+  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid), where
+    it looks out from (`spot`) and which way (`look`).
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
     shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the
@@ -107,7 +110,9 @@ a second model could use goes into the library or a generic tool, never into one
     tolerance. A new model measures itself first (a measure missing from `REFERENCE` prints as a
     note), and its `REFERENCE` takes the values once the owner approves the look.
   - `attachments`: `add` gives the rig its attachment points (below), each a small bone that
-    deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out.
+    deforms nothing, parented to the bone it moves with; `eyes.spot` is where an eye looks out,
+    and its bone points the way it looks (`eyes.look`), so the game's eye glow shrinks into an
+    eye turned away from the camera (#1171).
 - **The ground check:** `packages/game-models/check_ground.py -- <model.glb> [tolerance]` samples every
   frame of every clip and prints, per clip, the lowest point of the deformed mesh and of each
   paw or foot; it fails when anything sinks below the ground (z = 0) by more than the tolerance.
