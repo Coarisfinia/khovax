@@ -537,12 +537,20 @@ func _check_hunt_given_up() -> String:
 	if not hunts.rested.has(hunter):
 		return "the predator never gave up on prey it can't beat"
 	var weaker: GameState = _hunt_state({ "hun": Vector2i(-1, 0), "wea": Vector2i(1, 0) })
-	_to_hunt_hours(weaker, _monster_of(weaker, "hun"))
-	for _tick: int in 3 * Simulation.TICKS_PER_SECOND:
-		Simulation.step(weaker, FlowSteps.command(Command.NO_MOVE))
+	var weak_hunter: int = _monster_of(weaker, "hun")
+	var prey: int = _monster_of(weaker, "wea")
 	var weak_hunts: HuntFeature = weaker.feature(HuntFeature.ID) as HuntFeature
-	if weak_hunts.prey.get(_monster_of(weaker, "hun"), 0) != _monster_of(weaker, "wea"):
-		return "the predator didn't hunt a weaker wild monster"
+	_to_hunt_hours(weaker, weak_hunter)
+	# Hunted to the end: its prey beaten, it rests (a hunt ends within a few strikes).
+	var strikes: int = 0
+	for _tick: int in 20 * Simulation.TICKS_PER_SECOND:
+		Simulation.step(weaker, FlowSteps.command(Command.NO_MOVE))
+		strikes += _strikes_on(weaker, weak_hunter, prey).size()
+		if weak_hunts.rested.has(weak_hunter):
+			break
+	var health: HealthFeature = weaker.feature(HealthFeature.ID) as HealthFeature
+	if strikes == 0 or health.hp_of(weaker, prey) != 1 or not weak_hunts.rested.has(weak_hunter):
+		return "the predator didn't hunt a weaker wild monster down"
 	return ""
 
 
