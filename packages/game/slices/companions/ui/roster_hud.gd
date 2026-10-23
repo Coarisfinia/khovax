@@ -30,8 +30,10 @@ const RESERVE_ALPHA: float = 0.55
 const FAINTED_ALPHA: float = 0.35
 const INK_PIXELS: float = 2.0
 const COMPANION_INK_PIXELS: float = 6.0
-## The swap's glyph in a square's top left corner, its side as a share of the square's.
-const GLYPH_SHARE: float = 0.4
+## The swap's glyph in a square's top left corner, its side as a share of the square's, and its gap
+## to the square's edges, as a share of the square's.
+const GLYPH_SHARE: float = 0.5
+const GLYPH_INSET: float = 0.04
 
 @export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.
@@ -192,7 +194,8 @@ func _draw_square(place: int) -> void:
 func _draw_corner(area: Rect2, place: int, faded: float) -> void:
 	var swapped_by: Texture2D = glyph_of(place)
 	if swapped_by != null:
-		ActionGlyph.draw_on(self, swapped_by, Rect2(area.position, area.size * GLYPH_SHARE), faded)
+		var at: Vector2 = area.position + area.size * GLYPH_INSET
+		ActionGlyph.draw_on(self, swapped_by, Rect2(at, area.size * GLYPH_SHARE), faded)
 		return
 	var small: int = int(area.size.x * 0.22)
 	var corner: Vector2 = area.position + Vector2(area.size.x * 0.1, area.size.y * 0.1 + small)

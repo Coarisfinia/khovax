@@ -38,7 +38,7 @@ const SCREEN_ICON: Texture2D = preload("res://assets/game-icons/resize.svg")
 const ICON_INSET: float = 0.2
 ## The key's glyph on a button's top left corner, its side as a share of the button's; half of it
 ## stands out past the button's left edge, so it never covers the icon.
-const GLYPH_SHARE: float = 0.36
+const GLYPH_SHARE: float = 0.45
 ## How far a controller's stick has to move to count as using the controller, past any drift.
 const STICK_USED: float = 0.5
 
