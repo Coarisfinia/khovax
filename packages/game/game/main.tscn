@@ -304,11 +304,12 @@ quest_keeper = NodePath("../../QuestKeeper")
 input = NodePath("../../LocalInput")
 neighbours = NodePath("../../Instance/NeighbourView")
 
-[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("keeper", "survey", "roster") unique_id=3403403400]
+[node name="QuestList" type="Control" parent="Hud" node_paths=PackedStringArray("keeper", "driver", "survey", "roster") unique_id=3403403400]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("28_quest_list")
 keeper = NodePath("../../QuestKeeper")
+driver = NodePath("../../Driver")
 survey = NodePath("../../SurveyChoice")
 roster = NodePath("../RosterHud")
 

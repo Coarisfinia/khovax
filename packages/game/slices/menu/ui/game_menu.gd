@@ -259,6 +259,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_child(survey_tab)
 	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
 	quests_tab_shown.keeper = quest_keeper
+	quests_tab_shown.driver = driver
 	tabs.add_child(quests_tab_shown)
 	# The tabs later slices add, like the codex book (#1174): game/ hands them over as the menu's
 	# own children in the main scene, so the menu never names a slice after it. Each is named by its

@@ -315,6 +315,20 @@ func _asks_for(fact_condition: String, what: String) -> bool:
 	return fact_condition == condition and quarry.fits(what, "")
 
 
+## The instance it counts in only (#769), by blueprint name: its own, or the one every choice
+## names; "" when it counts anywhere, or asks to enter an instance, which it counts on arriving in.
+func counts_in() -> String:
+	if enters_instance():
+		return ""
+	if choices.is_empty():
+		return instance
+	var shared: String = choices[0].counts_in()
+	for choice: QuestStep in choices:
+		if choice.counts_in() != shared:
+			return ""
+	return shared
+
+
 ## Whether it asks to enter its instance, naming no piece in it (#370).
 func enters_instance() -> bool:
 	return condition == ENTERED and piece.is_empty()

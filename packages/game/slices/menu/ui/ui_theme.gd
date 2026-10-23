@@ -18,6 +18,10 @@ const CARD_ALPHA: float = 0.82
 ## How much lighter a hovered button is, and how much darker a pressed one.
 const HOVER: float = 0.08
 const PRESSED: float = 0.12
+## How much lighter than the fog a filled pill is, and how round its ends (round enough for any
+## height).
+const PILL_LIGHT: float = 0.6
+const PILL_CORNER: int = 99
 ## How faded the names of the tabs not chosen are.
 const UNCHOSEN_ALPHA: float = 0.7
 
@@ -91,6 +95,22 @@ static func card() -> StyleBoxFlat:
 	style.set_border_width_all(BORDER)
 	style.shadow_color = Color(Toon.INK, SHADOW_ALPHA)
 	style.shadow_size = SHADOW
+	return style
+
+
+## A small tag (#794): round-ended, in ink, filled lighter than the fog when `filled`, only
+## outlined when not.
+static func pill(filled: bool) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = FogView.FOG.lightened(PILL_LIGHT)
+	style.draw_center = filled
+	style.border_color = Toon.INK
+	style.set_border_width_all(BORDER)
+	style.set_corner_radius_all(PILL_CORNER)
+	style.content_margin_left = PADDING / 2.0
+	style.content_margin_right = PADDING / 2.0
+	style.content_margin_top = BORDER
+	style.content_margin_bottom = BORDER
 	return style
 
 
