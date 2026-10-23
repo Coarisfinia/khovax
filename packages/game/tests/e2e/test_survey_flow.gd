@@ -16,7 +16,9 @@ extends RefCounted
 ## spreading the fingers closer and pinching them farther, and never starts the touch stick, which
 ## still starts anywhere else (#358). In the menu's Survey tab (#392) it shows the same ground,
 ## players and quest targets over the tab, and its zoom key, its buttons there and a pinch on it
-## step the one zoom, which it follows; its place button there cycles where the Survey shows.
+## step the one zoom, which it follows; its place button there cycles where the Survey shows. The
+## buttons on the screen and in the tab show the glyphs of their keys, and those in the tab of their
+## controller's buttons too, inside them (#1192).
 
 ## Desktop screens and phones held either way.
 const SCREENS: Array[Vector2] = [
@@ -503,6 +505,8 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	var turned: bool = is_equal_approx(buttons.cog_angle(), SurveyButtons.COG_TURN)
 	if problem.is_empty() and (not buttons.open or held or not turned):
 		problem = "a tap on the Survey's cogwheel didn't turn it and show its buttons alone"
+	if problem.is_empty():
+		problem = _survey_button_glyphs()
 	var actions: Array[StringName] = [&"survey_zoom_out", &"survey_zoom_in", &"survey"]
 	for action: StringName in actions:
 		if problem.is_empty():
@@ -516,6 +520,31 @@ func _survey_buttons(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 		problem = "a click on the Survey's cogwheel didn't hide its buttons"
 	window.size = kept_size
 	return problem
+
+
+## Why the Survey's buttons don't show the glyphs of Tab, = and - after a key, or show any after a
+## touch, or "". A controller hides them, cogwheel and all.
+static func _survey_button_glyphs() -> String:
+	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _survey_buttons_shown())
+	var keys: Array = [
+		InputGlyphs.KEYS[KEY_TAB],
+		InputGlyphs.KEYS[KEY_EQUAL],
+		InputGlyphs.KEYS[KEY_MINUS],
+	]
+	if shown[0] != keys or shown[2] != [null, null, null]:
+		return "the Survey's buttons show %s after a key and %s after a touch" % [
+			shown[0],
+			shown[2],
+		]
+	return ""
+
+
+## The glyphs the Survey's buttons show now, in their order.
+static func _survey_buttons_shown() -> Array:
+	var glyphs: Array = []
+	for action: StringName in SurveyButtons.ACTIONS:
+		glyphs.append(SurveyButtons.glyph_of(action))
+	return glyphs
 
 
 ## Why the Survey's cogwheel shows while a controller is used, or doesn't show again on a touch,
@@ -706,6 +735,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"])
 	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
 		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
+	problem += _survey_tab_glyphs(tab)
 	problem += _survey_tab_zooms(tab, choice)
 	var place: int = choice.place_shown()
 	tab.place_button.pressed.emit()
@@ -723,6 +753,36 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	menu.toggle()
 	window.size = kept_size
 	return problem if not problem.is_empty() else _survey_triggers_in_game(choice)
+
+
+## Why the Survey tab's zoom and place buttons don't show the glyphs of -, = and Tab after a key,
+## of the left and right triggers and Back after a controller's button, and none after a touch,
+## each inside its button, or "".
+static func _survey_tab_glyphs(tab: SurveyTab) -> String:
+	var buttons: Array[Button] = [
+		tab.find_child("ZoomOut", true, false) as Button,
+		tab.find_child("ZoomIn", true, false) as Button,
+		tab.place_button,
+	]
+	var shown: Array = FlowInput.glyphs_by_device(
+		func() -> Array: return FlowInput.badges_shown(buttons)
+	)
+	var wanted: Array = [
+		[InputGlyphs.KEYS[KEY_MINUS], InputGlyphs.KEYS[KEY_EQUAL], InputGlyphs.KEYS[KEY_TAB]],
+		[
+			InputGlyphs.AXES[JOY_AXIS_TRIGGER_LEFT],
+			InputGlyphs.AXES[JOY_AXIS_TRIGGER_RIGHT],
+			InputGlyphs.BUTTONS[JOY_BUTTON_BACK],
+		],
+		[null, null, null],
+	]
+	if shown != wanted:
+		return "the Survey tab's buttons show %s after a key, a controller and a touch" % [shown]
+	for button: Button in buttons:
+		var badge: ActionGlyph = FlowInput.badge_of(button)
+		if not Rect2(Vector2.ZERO, button.size).encloses(Rect2(badge.position, badge.size)):
+			return "the glyph on the Survey tab's %s button stands outside it" % button.name
+	return ""
 
 
 ## Why the menu's Survey tab's zoom key, its buttons or a controller's triggers (#779) don't step

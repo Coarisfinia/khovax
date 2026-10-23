@@ -1,8 +1,9 @@
 class_name ActionGlyph
 extends Control
 ## A hint on a button (#583): the glyph of the key or controller button that presses it, for the
-## device in use (DeviceInUse): inside a button with words, at its right end, and over an icon
-## button's bottom right corner. It shows none for touch, where
+## device in use (DeviceInUse): inside a button with words, at its right end, where its words leave
+## room for it, and over the bottom right corner of an icon button or one whose words fill it. It
+## shows none for touch, where
 ## the button itself is tapped, and none while the button is hidden or rests; with `only_focused`,
 ## only while the button has the focus, which is what the confirming key or button presses. It
 ## follows a change of device at once.
@@ -27,7 +28,6 @@ var action: StringName = &""
 var only_focused: bool = false
 ## The glyph shown now, or null while none shows.
 var texture: Texture2D
-var _backdrop: StyleBoxFlat = _make_backdrop()
 
 
 func _process(_delta: float) -> void:
@@ -37,9 +37,16 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	if texture == null:
 		return
-	var area: Rect2 = Rect2(Vector2.ZERO, size)
-	draw_style_box(_backdrop, area.grow(-size.x * BACKDROP_INSET))
-	draw_texture_rect(texture, area, false, Toon.INK)
+	draw_on(self, texture, Rect2(Vector2.ZERO, size))
+
+
+## Draws `glyph` in `area` of `canvas` on its rounded fog backdrop, as a hint drawn by hand does
+## (the roster's squares, the Survey's buttons, #1192), faded to `alpha`.
+static func draw_on(canvas: CanvasItem, glyph: Texture2D, area: Rect2, alpha: float = 1.0) -> void:
+	var backdrop: StyleBoxFlat = _make_backdrop()
+	backdrop.bg_color.a = alpha
+	canvas.draw_style_box(backdrop, area.grow(-area.size.x * BACKDROP_INSET))
+	canvas.draw_texture_rect(glyph, area, false, Color(Toon.INK, alpha))
 
 
 ## Puts a glyph for `pressed_by` on `button`'s corner.
@@ -65,11 +72,13 @@ func follow() -> void:
 	if button == null:
 		return
 	var side: float = button.get_theme_default_font_size() * SIDE_FONTS
-	if button.size.x > button.size.y * 2.0:
-		# A button with words: at its right end, inside it.
-		side = minf(side, button.size.y * INSIDE_HEIGHT)
-		size = Vector2(side, side)
-		position = Vector2(button.size.x - side * (1.0 + INSIDE), (button.size.y - side) / 2.0)
+	var inside: float = minf(side, button.size.y * INSIDE_HEIGHT)
+	# Its words stand in the middle, so the room on either side of them is half what they leave.
+	var room: float = (button.size.x - button.get_minimum_size().x) / 2.0
+	if button.size.x > button.size.y * 2.0 and room >= inside * (1.0 + INSIDE):
+		# A button with words and room beside them: at its right end, inside it.
+		size = Vector2(inside, inside)
+		position = Vector2(button.size.x - inside * (1.0 + INSIDE), (button.size.y - inside) / 2.0)
 	else:
 		size = Vector2(side, side)
 		position = button.size - size * (1.0 - OVERHANG)

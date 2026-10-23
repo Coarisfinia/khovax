@@ -282,8 +282,11 @@ static func _page_problem(page: CodexPage, driver: GameDriver) -> String:
 static func _glyphs_follow_device(screen: DialogScreen) -> String:
 	var kept: DeviceInUse.Device = DeviceInUse.device
 	var leave: Button = screen.get_node("Card/Rows/Header/Leave") as Button
-	var shown: Array[ActionGlyph] = [_glyph(_buttons(screen)[0]), _glyph(_buttons(screen)[1])]
-	shown.append(_glyph(leave))
+	var shown: Array[ActionGlyph] = [
+		FlowInput.badge_of(_buttons(screen)[0]),
+		FlowInput.badge_of(_buttons(screen)[1]),
+		FlowInput.badge_of(leave),
+	]
 	var result: String = ""
 	for step: Array in _device_steps():
 		for event: InputEvent in step[1]:
@@ -323,14 +326,6 @@ static func _device_steps() -> Array[Array]:
 		["a touch and its mouse stand-in", [InputEventScreenTouch.new(), stand_in], none],
 		["a key again", [key], keys],
 	]
-
-
-## The glyph badge on `button`.
-static func _glyph(button: Button) -> ActionGlyph:
-	for child: Node in button.get_children():
-		if child is ActionGlyph:
-			return child as ActionGlyph
-	return null
 
 
 ## Where the line shows the middle of "Amvrel", the first word of its link, in the viewport.
