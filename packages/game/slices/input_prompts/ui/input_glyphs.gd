@@ -3,7 +3,9 @@ extends RefCounted
 ## The glyph of the key, button or axis that presses an InputMap action on a device (#583): a
 ## white shape, drawn in ink like the UI's icons. It reads the action's own events, so a hint always
 ## shows what the InputMap says. Only the glyphs a hint shows are in the game: a key or button
-## without one, and touch, whose hints are the buttons tapped, show none.
+## without one shows none, and so does touch, whose hints are the buttons tapped, but for the
+## gestures that press an action too (GESTURES). Pointing at the screen, a click or a tap, has its
+## own glyph (pointing).
 
 const KEYS: Dictionary[Key, Texture2D] = {
 	KEY_1: preload("res://assets/kenney-input-prompts/keyboard_1.svg"),
@@ -38,10 +40,25 @@ const AXES: Dictionary[JoyAxis, Texture2D] = {
 	JOY_AXIS_TRIGGER_RIGHT:
 	preload("res://assets/kenney-input-prompts/controller_trigger_right.svg"),
 }
+## Touch gestures that press an action, by the action: a pinch on the Survey zooms it in or out
+## (SurveyPinch, #1221).
+const GESTURES: Dictionary[StringName, Texture2D] = {
+	&"survey_zoom_in": preload("res://assets/kenney-input-prompts/touch_zoom_in.svg"),
+	&"survey_zoom_out": preload("res://assets/kenney-input-prompts/touch_zoom_out.svg"),
+}
+## Pointing at something on the screen, by device: a left click (the mouse counts with the
+## keyboard, DeviceInUse) or a tap (#1221). A controller can't point.
+const POINTING: Dictionary[DeviceInUse.Device, Texture2D] = {
+	DeviceInUse.Device.KEYBOARD: preload("res://assets/kenney-input-prompts/mouse_left.svg"),
+	DeviceInUse.Device.TOUCH: preload("res://assets/kenney-input-prompts/touch_tap.svg"),
+}
 
 
-## The glyph of the first key, button or axis that presses `action` on `device`, or null for none.
+## The glyph of the first key, button or axis that presses `action` on `device`, or of the touch
+## gesture that does, or null for none.
 static func of(action: StringName, device: DeviceInUse.Device) -> Texture2D:
+	if device == DeviceInUse.Device.TOUCH:
+		return GESTURES.get(action)
 	if not InputMap.has_action(action):
 		return null
 	for event: InputEvent in InputMap.action_get_events(action):
@@ -65,3 +82,9 @@ static func _glyph(event: InputEvent, device: DeviceInUse.Device) -> Texture2D:
 	if motion != null and device == DeviceInUse.Device.CONTROLLER:
 		return AXES.get(motion.axis)
 	return null
+
+
+## The glyph of pointing at something on the screen on `device`, a click or a tap, or null for a
+## controller.
+static func pointing(device: DeviceInUse.Device) -> Texture2D:
+	return POINTING.get(device)

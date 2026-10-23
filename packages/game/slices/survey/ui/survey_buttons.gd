@@ -10,7 +10,8 @@ extends Control
 ## is hidden entirely, since it can't be pointed at: controller players use the menu's Survey tab.
 ## Each button carries a symbol, never color alone (#68): a screen with a block in its corner, a
 ## lens with a plus or a minus, and the cogwheel. While the keyboard is in use (DeviceInUse), each
-## shown button's top left corner shows the glyph of its key too (Tab, = and -, #1192).
+## shown button's top left corner shows the glyph of its key too (Tab, = and -, #1192), and on
+## touch the zoom buttons' show the pinch that zooms the Survey too (#1221).
 
 ## A button's side as a share of the screen's shorter side, and never smaller than this, so it
 ## stays big enough to hit with a thumb on a phone. The cogwheel is smaller, as a share of that.
@@ -190,8 +191,8 @@ func _cog_middle(screen: Vector2, place: SurveyChoice.Place) -> Vector2:
 	return Vector2(right - INSET - _cog_side / 2.0, upper + INSET + _cog_side / 2.0)
 
 
-## The glyph of the key that presses `action` on the device in use, or null on touch, where its
-## button itself is tapped.
+## The glyph of the key that presses `action` on the device in use, or on touch of the pinch that
+## does; null for the Survey's place on touch, where its button itself is tapped.
 static func glyph_of(action: StringName) -> Texture2D:
 	return InputGlyphs.of(action, DeviceInUse.device)
 

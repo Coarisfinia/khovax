@@ -807,7 +807,7 @@ func _check_roster(tree: SceneTree) -> String:
 	roster.lay_out_in(ROSTER_SCREEN)
 	var result: String = _roster_shown(main, roster)
 	if result.is_empty():
-		result = _roster_glyphs()
+		result = _roster_glyphs(roster)
 	if result.is_empty():
 		result = _roster_swaps(main, roster, driver)
 	if result.is_empty():
@@ -820,22 +820,42 @@ func _check_roster(tree: SceneTree) -> String:
 
 ## The first two squares show the glyphs of 1 and 2 after a key, of the d-pad's left and up after a
 ## controller's button, and none after a touch, where the square itself is tapped and its number
-## shows; a fourth place has no swap, so no glyph.
-static func _roster_glyphs() -> String:
+## shows; a fourth place has no swap, so no glyph. Right of the row, a click's glyph shows after a
+## key, a tap's after a touch, and none after a controller's button (#1221), clear of the squares.
+static func _roster_glyphs(roster: RosterHud) -> String:
 	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _roster_glyphs_shown())
+	var pointing: Dictionary[DeviceInUse.Device, Texture2D] = InputGlyphs.POINTING
 	var wanted: Array = [
-		[InputGlyphs.KEYS[KEY_1], InputGlyphs.KEYS[KEY_2], null],
-		[InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_LEFT], InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_UP], null],
-		[null, null, null],
+		[
+			InputGlyphs.KEYS[KEY_1],
+			InputGlyphs.KEYS[KEY_2],
+			null,
+			pointing[DeviceInUse.Device.KEYBOARD],
+		],
+		[
+			InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_LEFT],
+			InputGlyphs.BUTTONS[JOY_BUTTON_DPAD_UP],
+			null,
+			null,
+		],
+		[null, null, null, pointing[DeviceInUse.Device.TOUCH]],
 	]
 	if shown != wanted:
 		return "the roster's squares show %s after a key, a controller and a touch" % [shown]
+	var glyph: Rect2 = roster.pointing_rect()
+	if glyph.position.x <= roster.rect_of(roster.shown.size() - 1).end.x:
+		return "the roster's click or tap glyph %s isn't right of its squares" % glyph
 	return ""
 
 
-## The glyphs the roster's first two squares and a fourth place show now.
+## The glyphs the roster's first two squares and a fourth place show now, and the click's or tap's.
 static func _roster_glyphs_shown() -> Array:
-	return [RosterHud.glyph_of(0), RosterHud.glyph_of(1), RosterHud.glyph_of(3)]
+	return [
+		RosterHud.glyph_of(0),
+		RosterHud.glyph_of(1),
+		RosterHud.glyph_of(3),
+		RosterHud.pointing_glyph(),
+	]
 
 
 ## The roster shows the finch and the toad at the top left, apart, the finch as the companion, and

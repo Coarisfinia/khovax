@@ -60,7 +60,8 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Source:** https://kenney.nl/assets/input-prompts (`kenney_input-prompts_1.5.zip`:
   `Keyboard & Mouse/Vector/keyboard_enter.svg`, `keyboard_escape.svg`, `keyboard_tab.svg`,
   `keyboard_1.svg` to `keyboard_3.svg`, `keyboard_equals.svg`, `keyboard_minus.svg`,
-  `keyboard_e.svg`, `keyboard_t.svg`, `keyboard_v.svg` and `keyboard_x.svg`, and from the
+  `keyboard_e.svg`, `keyboard_t.svg`, `keyboard_v.svg`, `keyboard_x.svg` and `mouse_left.svg`,
+  `Touch/Vector/touch_tap.svg`, `touch_zoom_in.svg` and `touch_zoom_out.svg`, and from the
   `Vector/` folder of the pack's controller set whose face buttons read A, B, X and Y its A, B, X
   and Y buttons, its view and menu buttons, its triggers and its d-pad pressed each way, renamed
   `controller_button_a.svg` to `controller_button_y.svg`, `controller_button_back.svg`,
