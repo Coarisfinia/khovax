@@ -159,6 +159,16 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_clearance.py --
 
+      - name: "👁️ Check no eye shows above its brow"
+        # Every other frame of every clip of every .glb, each eye from the front, its side and
+        # straight on (the owner, on #1249); a model without eye points passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_brows.py --
+
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
         if: failure() && steps.models.outputs.changed == 'true'

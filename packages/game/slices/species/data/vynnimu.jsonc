@@ -1,0 +1,21 @@
+// The mana pup (#1220): the young of the Vynakiir, a Mana species wearing its own model. It ascends
+// into a Vynakiir once Ascension exists (#1235, #1246); until then only its lore says so. Its stats
+// are placeholders to tune (#960).
+{
+	"id": "vynnimu",
+	"name": "Vynnimu",
+	"codex": {
+		"entry": "A round, soft-footed pup of the Vynakiir, with a crystal only budding on its brow and a few wisps already drifting about its head, the start of the crown it will wear. It tumbles after its packmates through the mana moss and pounces on whatever moves, and in time it ascends into a Vynakiir, its mana deepening into the arcane. Its name is a beast-call, its whimper: the hum it shares with its elders in v, n and y, gone soft and small in the doubled n and the round u.",
+		"gloss": "the little hum that will howl"
+	},
+	"types": ["mana"],
+	"strike_type": "mana",
+	"hp": 60,
+	"strength": 35,
+	"speed": 70,
+	"special": "vynnimu_nimmi_nummu",
+	"player_passive": "vynnimu_mynu_vynu",
+	"self_passive": "vynnimu_nivvu_mivvu",
+	"behaviour": ["nocturnal", "predator", "pack_species"], // a wolf pup: up at night with its pack, learning to hunt (#1200)
+	"model": "res://assets/mana-pup/mana_pup.glb"
+}

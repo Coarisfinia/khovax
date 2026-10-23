@@ -1,0 +1,12 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "vynnimu_mynu_vynu",
+	"kind": "player_passive",
+	"name": "Mynu-vynu",
+	"description": "While the ${MONSTER:vynnimu} is out, the player's trail glows a little longer.",
+	"codex": {
+		"entry": "The whimper of a pup that keeps close at its packmate's heels. Dominators hummed it to a beast that walks their trail after them and keeps it warm.",
+		"gloss": "close, keep close"
+	},
+	"path": "harmony"
+}

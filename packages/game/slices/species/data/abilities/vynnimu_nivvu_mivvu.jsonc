@@ -1,0 +1,11 @@
+// A placeholder: its effect comes once passives work while the monster is out (#616).
+{
+	"id": "vynnimu_nivvu_mivvu",
+	"kind": "self_passive",
+	"name": "Nivvu-mivvu",
+	"description": "The ${MONSTER:vynnimu}'s soft, round body rolls with every might strike and takes less of it.",
+	"codex": {
+		"entry": "The squeak of a pup knocked over that rolls and springs back up. Dominators said it of a beast too soft and round to be knocked down for long.",
+		"gloss": "roll over, up again"
+	}
+}
