@@ -8,6 +8,7 @@
 # one Blender start, which is most of a render's cost (#1050).
 import math
 import os
+import re
 import sys
 
 import blf
@@ -21,8 +22,10 @@ glb, out_dir = args[0], args[1]
 clips = args[2].split(",") if len(args) > 2 else [""]
 frames = []
 for part in (args[3] if len(args) > 3 else "1").split(","):
-	first, _, last = part.partition("-")
-	frames.extend(range(int(first), int(last or first) + 1))
+	span = re.fullmatch(r"(-?\d+)(?:-(-?\d+))?", part)  # a frame may be negative: `-3--1`
+	if not span:
+		sys.exit(f"not a frame or a range of frames: {part!r}")
+	frames.extend(range(int(span[1]), int(span[2] or span[1]) + 1))
 poses = [(clip, frame) for clip in clips for frame in frames]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
