@@ -25,6 +25,10 @@ extends RefCounted
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
 ## home; it gives up on prey it can't beat; outside its hunt hours it rests no more. A save in
 ## the middle of a hunt plays on the same, and the content's Tikazzir hunt in the basic instance.
+## Hunted prey that's awake flees its hunter at its pace (#1239), a step at a time away from it and
+## never off ground a ring could enclose it on, so it's cornered where the ground ends; sighted at
+## the edge of its hunter's sight, it gets out of it, and the hunter roams on. Asleep, it stays put
+## until a strike wakes it, and enraged it stands its ground.
 ##
 ## Pack monsters band together (#1205): by species, or by a similar typing for `pack_type` ones,
 ## never more than a pack can hold; members live by their leader's day and, in the hours they
@@ -110,6 +114,8 @@ func run(_tree: SceneTree) -> String:
 		_check_sleep_catches_up,
 		_check_sleeper_strikes_nobody,
 		_check_hunt_won,
+		_check_prey_escapes,
+		_check_prey_asleep_or_enraged,
 		_check_hunt_spares_stronger,
 		_check_hunt_given_up,
 		_check_hunt_saved,
@@ -589,11 +595,9 @@ func _check_hunt_won() -> String:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	_to_hunt_hours(state, hunter)
 	var damage: Array[int] = []
-	for _tick: int in 20 * Simulation.TICKS_PER_SECOND:
-		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
-		damage.append_array(_strikes_on(state, hunter, target))
-		if hunts.rested.has(hunter):
-			break
+	var fled: String = _hunted_down(state, hunter, target, damage)
+	if not fled.is_empty():
+		return fled
 	var problem: String = _damage_problem(damage)
 	if not problem.is_empty():
 		return problem
@@ -613,6 +617,97 @@ func _check_hunt_won() -> String:
 	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
 	if hunts.rested.has(hunter):
 		return "the predator still rested past its hunt hours"
+	return ""
+
+
+## Plays the hunt of `hunter` on `target` for up to 20 s, until the hunter rests, adding the damage
+## of each strike on it to `damage`; says why the prey didn't flee by the rules (#1239), or "".
+static func _hunted_down(state: GameState, hunter: int, target: int, damage: Array[int]) -> String:
+	var hunts: HuntFeature = state.feature(HuntFeature.ID) as HuntFeature
+	var start: Vector2i = state.entity(target).tile
+	for _tick: int in 20 * Simulation.TICKS_PER_SECOND:
+		var hunter_was: Vector2i = state.entity(hunter).tile
+		var prey_was: Vector2i = state.entity(target).tile
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var fled: String = _flight_problem(state, target, prey_was, hunter_was)
+		if not fled.is_empty():
+			return fled
+		damage.append_array(_strikes_on(state, hunter, target))
+		if hunts.rested.has(hunter):
+			break
+	if state.entity(target).tile == start:
+		return "the hunted grazer never fled"
+	return ""
+
+
+## Why the hunted wild monster `target`, on `was` before the tick and hunted from `hunter_was`,
+## didn't flee by the rules (#1239): it stepped no nearer its hunter, a tile at most, and never onto
+## ground no ring could enclose it on; or "".
+static func _flight_problem(
+	state: GameState,
+	target: int,
+	was: Vector2i,
+	hunter_was: Vector2i,
+) -> String:
+	var tile: Vector2i = state.entity(target).tile
+	if tile == was:
+		return ""
+	if Hex.distance(
+		tile,
+		was,
+	) != 1 or Hex.distance(tile, hunter_was) <= Hex.distance(was, hunter_was):
+		return "the hunted grazer stepped from %s to %s, not away from %s" % [was, tile, hunter_was]
+	if RingableGround.unringable(state.region).has(tile):
+		return "the hunted grazer fled onto ground no ring could enclose it on: %s" % tile
+	return ""
+
+
+## Prey sighted at the edge of its hunter's sight flees out of it on its first step: the hunt is
+## lost, and the hunter roams on without resting.
+func _check_prey_escapes() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-2, 0), "gra": Vector2i(2, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var target: int = _monster_of(state, "gra")
+	var hunts: HuntFeature = state.feature(HuntFeature.ID) as HuntFeature
+	_to_hunt_hours(state, hunter)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if hunts.prey.get(hunter, 0) != target:
+		return "the predator didn't sight the grazer at the edge of its sight"
+	for _tick: int in WildMonsterFeature.STEP_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if hunts.prey.is_empty():
+			break
+	var gap: int = Hex.distance(state.entity(hunter).tile, state.entity(target).tile)
+	if not hunts.prey.is_empty() or hunts.rested.has(hunter) or gap <= HuntFeature.SIGHT:
+		return "the grazer didn't flee out of sight, or its hunter didn't roam on: %d away" % gap
+	return ""
+
+
+## A sleeping grazer the predator stalks stays put until its strike wakes it, and then flees; an
+## enraged one stands its ground.
+func _check_prey_asleep_or_enraged() -> String:
+	for enraged: bool in [false, true]:
+		var state: GameState = _hunt_state({ "hun": Vector2i(-2, 0), "gra": Vector2i(1, 0) })
+		var hunter: int = _monster_of(state, "hun")
+		var target: int = _monster_of(state, "gra")
+		var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+		if enraged:
+			wild.enrage(state, target, 0)
+		else:
+			wild.sleep(target, true)
+		_to_hunt_hours(state, hunter)
+		var start: Vector2i = state.entity(target).tile
+		var struck: int = -1
+		for tick: int in 10 * Simulation.TICKS_PER_SECOND:
+			Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+			if struck < 0 and not _strikes_on(state, hunter, target).is_empty():
+				struck = tick
+			if struck < 0 and state.entity(target).tile != start:
+				return "the grazer left its tile before a strike, though asleep or enraged"
+		if struck < 0:
+			return "the predator never struck the grazer that didn't flee"
+		if (state.entity(target).tile == start) != enraged:
+			return "struck awake, the grazer didn't flee, or enraged, it fled"
 	return ""
 
 
@@ -672,7 +767,7 @@ func _check_hunt_given_up() -> String:
 
 ## A save taken in the middle of a hunt plays on the same as the hunt it was taken from.
 func _check_hunt_saved() -> String:
-	var spots: Dictionary[String, Vector2i] = { "hun": Vector2i(-2, 0), "gra": Vector2i(2, 0) }
+	var spots: Dictionary[String, Vector2i] = { "hun": Vector2i(-2, 0), "gra": Vector2i(1, 0) }
 	var state: GameState = _hunt_state(spots)
 	_to_hunt_hours(state, _monster_of(state, "hun"))
 	for _tick: int in 3 * Simulation.TICKS_PER_SECOND:
