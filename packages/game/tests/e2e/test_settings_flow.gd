@@ -12,7 +12,8 @@ extends RefCounted
 ## out, and the game goes on. Its Character tab (#391) shows the player's personal
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
 ## kept in their profile, and its Auto button hands the world's default back. It lists the player's
-## dominated monsters (#400): none at first, then each by its species' name and level, the three
+## dominated monsters (#400): none at first, then each by its species' name and level, which the
+## monsters carried through a domination earn progress toward (#1251), the three
 ## they carry first, in order, the first their companion, each marked in words. Its gear slots
 ## (#690) change with a press outside a fight and are kept in the profile, and stay put during one.
 
@@ -253,8 +254,10 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 	if not problem.is_empty():
 		return "the dominations aren't taken: " + problem
 	tab.refresh()
+	# Each domination earns the monsters carried then a point (#1251): the first earned three, a
+	# level.
 	var listed: Array[String] = [
-		"Carried 1, companion: Ombulumo, level 1",
+		"Carried 1, companion: Ombulumo, level 2",
 		"Carried 2: Tikazzir, level 1",
 		"Carried 3: Tikazzir, level 1",
 		"Not carried: Ombulumo, level 1",
@@ -451,7 +454,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	tab.monsters.move(ids[3], 0)
 	var moved: Array[String] = [
 		"Carried 1, companion: Ombulumo, level 1",
-		"Carried 2: Ombulumo, level 1",
+		"Carried 2: Ombulumo, level 2",
 		"Carried 3: Tikazzir, level 1",
 		"Not carried: Tikazzir, level 1",
 	]
@@ -494,11 +497,12 @@ func _type_badges(details: MonsterDetails) -> String:
 
 
 ## The detail pane (#430) shows the first monster until another is selected, then that one's
-## stats; it sits beside the list on a landscape screen and below it on a portrait one.
+## progress toward its next level (#1251) and stats; it sits beside the list on a landscape screen
+## and below it on a portrait one.
 func _menu_details(tab: CharacterTab) -> String:
 	var details: MonsterDetails = tab.monsters.details
 	var first: int = tab.monsters.shown_ids[0]
-	if tab.monsters.selected != first or not details.shown[0].begins_with("Ombulumo, level 1"):
+	if tab.monsters.selected != first or not details.shown[0].begins_with("Ombulumo, level 2"):
 		return "the detail pane doesn't start on the first monster: %s" % [details.shown]
 	# A click on the third row, as the mouse gives it.
 	var click: InputEventMouseButton = InputEventMouseButton.new()
@@ -508,6 +512,7 @@ func _menu_details(tab: CharacterTab) -> String:
 	third.gui_input.emit(click)
 	var expected: Array[String] = [
 		"Tikazzir, level 1",
+		"Progress: 2 of 3 dominations to level 2",
 		"Types: breeze, mana",
 		"HP: 60",
 		"Strength: 70",
