@@ -151,11 +151,11 @@ jobs:
         run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
 
       - name: "🫧 Check no wisp cuts into a model's body"
-        # Every frame of every clip of every .glb (#1227); a model without wisps passes.
+        # Every frame of every clip of every .glb in the repository (#1227); a model without wisps passes.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
-          git ls-files -z '*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_clearance.py --
 
