@@ -33,7 +33,7 @@ func show_species(species: Species, bestiary: Bestiary) -> void:
 		_add_line(NOT_MET_TEXT)
 	else:
 		_show_met(species, bestiary.habitat_of(species.id))
-	_add_line(species.codex_entry if level >= Bestiary.KNOWN else NOT_KNOWN_TEXT)
+	_add_line(species.codex_entry() if level >= Bestiary.KNOWN else NOT_KNOWN_TEXT)
 
 
 ## What meeting `species` teaches: its types, its abilities and where it was come across.

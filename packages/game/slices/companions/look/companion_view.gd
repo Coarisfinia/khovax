@@ -1,19 +1,20 @@
 class_name CompanionView
 extends Node3D
-## The companions' look (#338): a placeholder figure for each, the wild monsters' placeholder made
-## smaller, standing in a smaller circle in its player's personal color with its player's slot marks
-## (PlayerCircle, #233), so whose companion it is shows by a shape too, never by color alone (#68).
-## It glides from tile to tile as it walks, like the players, turning smoothly toward where it goes.
-## One that goes back to its player at 0 HP (#456) shrinks into them, turning their personal color
-## as it goes, eased; the one chosen in its place (#597), or by a swap (#55), grows out of them as
-## it joins. Its eyes glow (EyeGlow) in its type's colour (TypeGlow, #1063), shaped by its
-## player's leaning. A companion whose special lasts (#1163) holds it: its figure winds up
-## (ChannelStart), holds the middle (Channel, looping) until the hold the special's SpecialStruck
-## gave ends, or until its bind breaks (BindBroken, #1167), and releases it (ChannelEnd), then
-## idles again. It only reads the state and the tick's events.
+## The companions' look (#338): a figure for each, wearing its species' model as a wild one does
+## (SpeciesModels, #1223) but smaller, standing in a smaller circle in its player's personal color
+## with its player's slot marks (PlayerCircle, #233), so whose companion it is shows by a shape too,
+## never by color alone (#68). It glides from tile to tile as it walks, like the players, turning
+## smoothly toward where it goes. One that goes back to its player at 0 HP (#456) shrinks into them,
+## turning their personal color as it goes, eased; the one chosen in its place (#597), or by a swap
+## (#55), grows out of them as it joins. Its eyes glow (EyeGlow) in its type's colour (TypeGlow,
+## #1063), shaped by its player's leaning. A companion whose special lasts (#1163) holds it: its
+## figure winds up (ChannelStart), holds the middle (Channel, looping) until the hold the special's
+## SpecialStruck gave ends, or until its bind breaks (BindBroken, #1167), and releases it
+## (ChannelEnd), then idles again. It only reads the state and the tick's events.
 
-## The model every companion wears: the wild monsters' placeholder (#338).
-const MODEL: PackedScene = WildMonsterView.MODEL
+## Its figures wear their species' models (SpeciesModels, #1223): the boot flow checks every
+## species' model has CLIPS.
+const WEARS_SPECIES_MODELS: bool = true
 ## The clips the view plays, by the names its model gives them: Idle, and a held special's wind-up,
 ## held middle and release.
 const IDLE: StringName = WildMonsterView.IDLE
@@ -83,7 +84,7 @@ func show_state() -> void:
 	for companion_id: int in shown:
 		var slot: int = feature.owners[companion_id]
 		if not figures.has(companion_id):
-			figures[companion_id] = _add_figure(slot)
+			figures[companion_id] = _add_figure(slot, feature.species_of(companion_id))
 			EyeGlow.of(figures[companion_id].get_child(0) as Node3D).color = TypeGlow.of(
 				feature.species_of(companion_id)
 			)
@@ -252,12 +253,12 @@ func _place(companion_id: int) -> void:
 	_facing[companion_id] = atan2(heading.x, heading.z)
 
 
-## A new figure for the companion of the player in `slot`, in the comic look and idling, in a
-## circle of that player's marks (show_state paints it in their color).
-func _add_figure(slot: int) -> HexPiece:
+## A new figure for the companion of the player in `slot`, a `species_id`, in the comic look and
+## idling, in a circle of that player's marks (show_state paints it in their color).
+func _add_figure(slot: int, species_id: String) -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
-	var model: Node3D = WildMonsterView.placeholder_model()
+	var model: Node3D = WildMonsterView.model_of(species_id)
 	model.scale = Vector3.ONE * FIGURE_SCALE
 	piece.add_child(model)
 	var circle: PlayerCircle = PlayerCircle.new(slot)

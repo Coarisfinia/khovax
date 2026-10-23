@@ -2,14 +2,16 @@ class_name Species
 extends RefCounted
 ## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
 ## its auto attack's type, base stats and its three abilities (#222), its bestiary entry (#1173),
-## which its codex page shows, and its behaviour traits (#1200). Everything the simulation reads is
-## integers and ids.
+## which its codex page shows, its behaviour traits (#1200) and the model its monsters wear (#1223).
+## Everything the simulation reads is integers and ids.
 
 ## Its schema, which says the fields a species file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/species/data/species.schema.json"
 ## A species' name is one invented word (owner, #717), never a description like "Moss Toad": a
 ## capital, then small letters. Its schema has the same pattern.
 const NAME_PATTERN: String = "^[A-Z][a-z]+$"
+## Where the models its monsters wear live (#1223).
+const MODELS: String = "res://assets/"
 
 var id: String = ""
 ## What the player reads (#351); code and saves use the id.
@@ -30,12 +32,14 @@ var player_passive: String = ""
 var self_passive: String = ""
 ## Its sight trait (#962): how many steps further a player who carries it sees, 0 for none.
 var sight: int = 0
-## Its bestiary entry (#1173): its lore, a short text about it and where its name comes from, and
-## what its name means, hand-written (#959), e.g. "the low boom from the shallows".
-var codex_entry: String = ""
-var codex_gloss: String = ""
+## Its bestiary entry (#1173), as Content.codex_of reads it: its entry, then its gloss (codex_entry
+## and codex_gloss). One field for both keeps the class within gdstyle's count of variables.
+var _codex: Array[String] = ["", ""]
 ## Its behaviour traits (SpeciesBehaviour, #1200), which its monsters' daily schedule is made from.
 var behaviour: Array[String] = []
+## The model its monsters wear (#1223), wild or a companion: a res:// path to a glTF model under
+## assets/ (SpeciesModels loads it).
+var model: String = ""
 ## Why the species couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -105,8 +109,18 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	if wrong.is_empty() and entry.id != entry.name.to_lower():
 		wrong = "its id must be its name in lower case (#763)"
 	if wrong.is_empty():
-		wrong = entry._read_codex_and_behaviour(data)
+		wrong = entry._read_codex_behaviour_and_model(data)
 	return wrong
+
+
+## Its lore, a short text about it and where its name comes from (#1173).
+func codex_entry() -> String:
+	return _codex[0]
+
+
+## What its name means, hand-written (#959), e.g. "the low boom from the shallows".
+func codex_gloss() -> String:
+	return _codex[1]
 
 
 ## Why its types don't fit the chart, or "": one or two, from the chart, never two of one family.
@@ -122,19 +136,24 @@ func _types_problem() -> String:
 	return ""
 
 
-## Reads its codex entry and gloss and its behaviour traits from `data`; returns why it can't, or
-## "".
-func _read_codex_and_behaviour(data: Dictionary) -> String:
-	if not _read_codex(data.get("codex")):
-		return "it needs a codex entry and gloss (#1173)"
-	return SpeciesBehaviour.read(data.get("behaviour"), behaviour)
-
-
-## Whether `raw` holds a codex entry and gloss, each with more than spaces; reads them.
-func _read_codex(raw: Variant) -> bool:
-	var codex: Array[String] = Content.codex_of(raw)
+## Reads its codex entry and gloss, its behaviour traits and its model from `data`; returns why it
+## can't, or "".
+func _read_codex_behaviour_and_model(data: Dictionary) -> String:
+	var codex: Array[String] = Content.codex_of(data.get("codex"))
 	if codex.is_empty():
-		return false
-	codex_entry = codex[0]
-	codex_gloss = codex[1]
-	return true
+		return "it needs a codex entry and gloss (#1173)"
+	_codex = codex
+	var wrong: String = SpeciesBehaviour.read(data.get("behaviour"), behaviour)
+	return wrong if not wrong.is_empty() else _read_model(data.get("model"))
+
+
+## Reads the model its monsters wear from `raw`; returns why it can't, or "": a glTF model under
+## assets/ that exists.
+func _read_model(raw: Variant) -> String:
+	model = Content.text_of(raw)
+	# Simplified, a path that climbs out of assets/ (`..`) would change.
+	var named: bool = model.begins_with(MODELS) and model.simplify_path() == model
+	named = named and model.get_extension() in ["glb", "gltf"]
+	if not named or not ResourceLoader.exists(model):
+		return "it needs a model: a glTF model under %s that exists (#1223)" % MODELS
+	return ""

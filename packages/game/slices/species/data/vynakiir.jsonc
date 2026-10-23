@@ -15,5 +15,6 @@
 	"special": "vynakiir_vunnu_vinni",
 	"player_passive": "vynakiir_kynri_vynri",
 	"self_passive": "vynakiir_nyvik_ryvik",
-	"behaviour": ["nocturnal", "predator", "pack_species"] // a wolf: hunts at night, in packs (#1200)
+	"behaviour": ["nocturnal", "predator", "pack_species"], // a wolf: hunts at night, in packs (#1200)
+	"model": "res://assets/mana-wolf/mana_wolf.glb"
 }

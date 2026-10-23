@@ -2,9 +2,10 @@ extends RefCounted
 ## Content flow (#72): the game's content data loads, and holds together where a schema can't
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; every species has a name for the
-## player (#351), one invented word (#717), and behaviour traits that can form a daily schedule
-## (#1200: exactly one sleep rhythm, at least one need); and broken entries are refused. Loot
-## tables (#90) load, roll the same for the same stream, and a blank rolls on the instance's table.
+## player (#351), one invented word (#717), behaviour traits that can form a daily schedule
+## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223); and broken
+## entries are refused. Loot tables (#90) load, roll the same for the same stream, and a blank
+## rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
@@ -22,13 +23,15 @@ extends RefCounted
 ## two things share an id or a name, whatever their kinds, in any case (#909). Every content kind is
 ## read ahead in the background (#816).
 
-## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173)
-## and behaviour traits (#1200), as a valid species ends.
+## A model a species can wear (#1223).
+const MODEL: String = "res://assets/mana-wolf/mana_wolf.glb"
+## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173),
+## behaviour traits (#1200) and model (#1223), as a valid species ends.
 const KIT: String = (
 	", \"name\": \"Xo\", \"strike_type\": \"might\", \"speed\": 1,"
 	+ " \"special\": \"a_special\", \"player_passive\": \"a_passive\","
 	+ " \"self_passive\": \"its_passive\", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"},"
-	+ " \"behaviour\": [\"diurnal\", \"grazer\"]"
+	+ " \"behaviour\": [\"diurnal\", \"grazer\"], \"model\": \"" + MODEL + "\""
 )
 ## A valid species file's start, before its KIT.
 const XO: String = "{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
@@ -118,6 +121,7 @@ func run(tree: SceneTree) -> String:
 		_check_strip,
 		_check_refused,
 		_check_behaviour_refused,
+		_check_model_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
 		_check_instance_tables,
@@ -915,6 +919,22 @@ func _check_refused() -> String:
 	var first: String = twice.add("xo", valid)
 	if not first.is_empty() or not twice.add("xo", valid).begins_with("its id"):
 		return "a second species with the same id was accepted"
+	return ""
+
+
+## A species without a model (#1223) is refused: one it doesn't name, one that isn't there, or a
+## file that isn't a glTF model under assets/.
+func _check_model_refused() -> String:
+	var texts: Array[String] = [
+		XO + KIT.replace(", \"model\": \"" + MODEL + "\"", "") + "}",
+		XO + KIT.replace(MODEL, "res://assets/mana-wolf/no_wolf.glb") + "}",
+		XO + KIT.replace(MODEL, "res://CREDITS.md") + "}",
+		XO + KIT.replace(MODEL, "res://assets/../assets/mana-wolf/mana_wolf.glb") + "}",
+	]
+	for text: String in texts:
+		var problem: String = _add_to_empty(text)
+		if not problem.begins_with("it needs a model"):
+			return "a species without a model was refused with: " + problem
 	return ""
 
 

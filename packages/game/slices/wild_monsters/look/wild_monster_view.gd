@@ -1,24 +1,25 @@
 class_name WildMonsterView
 extends Node3D
-## The wild monsters' look (#19): for now a placeholder figure for each (#85), standing on its tile
-## and idling, its shape standing out from the players' (so it doesn't rely on color alone). It
-## follows the wild monster feature's state: a figure appears for each wild monster and, when it
-## goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild monster hidden in a tile
-## that hides (#202) isn't drawn until it jumps out, and then hops once on its tile. One that steps
-## away from where no ring could enclose it (#364) glides to its new tile. A fainted one (#410)
-## stays where it fell, and its figure lies down on its side, still: a shape that tells it apart
-## from a standing one without color (#68, #431). One that strikes (#422) lunges toward what it
-## hit and back, eased, so the hit reads without a flash (#426). Each figure turns smoothly to face
-## where it last stepped or struck, as the companions do (#993), and plays its model's clips: Walk
-## while it glides, Attack with the lunge, Hit when it loses HP, and Faint before it lies down;
-## Idle otherwise. Its eyes glow (EyeGlow, #1008) in its type's colour (TypeGlow, #1063), with no
-## leaning, as no player's: brighter while it's enraged, flaring up as it strikes, and going out
-## once it fainted. It only reads the state and the tick's events.
+## The wild monsters' look (#19): a figure for each, wearing its species' model (SpeciesModels,
+## #1223), standing on its tile and idling, its shape standing out from the players' (so it doesn't
+## rely on color alone). It follows the wild monster feature's state: a figure appears for each wild
+## monster and, when it goes (dominated, #20), shrinks away calmly: no flash, no shake. A wild
+## monster hidden in a tile that hides (#202) isn't drawn until it jumps out, and then hops once on
+## its tile. One that steps away from where no ring could enclose it (#364) glides to its new tile.
+## A fainted one (#410) stays where it fell, and its figure lies down on its side, still: a shape
+## that tells it apart from a standing one without color (#68, #431). One that strikes (#422) lunges
+## toward what it hit and back, eased, so the hit reads without a flash (#426). Each figure turns
+## smoothly to face where it last stepped or struck, as the companions do (#993), and plays its
+## model's clips: Walk while it glides, Attack with the lunge, Hit when it loses HP, and Faint
+## before it lies down; Idle otherwise. Its eyes glow (EyeGlow, #1008) in its type's colour
+## (TypeGlow, #1063), with no leaning, as no player's: brighter while it's enraged, flaring up as it
+## strikes, and going out once it fainted. It only reads the state and the tick's events.
 
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
-## The model every wild monster wears until species get their own looks: the mana wolf (#990).
-const MODEL: PackedScene = preload("res://assets/mana-wolf/mana_wolf.glb")
+## Its figures wear their species' models (SpeciesModels, #1223), not one of its own: the boot flow
+## checks every species' model has CLIPS.
+const WEARS_SPECIES_MODELS: bool = true
 ## The clips the view plays, by the names its model gives them: when the model changes, so do they.
 const IDLE: StringName = &"Idle"
 const WALK: StringName = &"Walk"
@@ -108,7 +109,7 @@ func show_state() -> void:
 			continue
 		var spot: Vector2i = driver.state.entity(entity_id).tile
 		if not figures.has(entity_id):
-			figures[entity_id] = _add_figure()
+			figures[entity_id] = _add_figure(feature.species_of(entity_id))
 			figures[entity_id].tile = spot
 			EyeGlow.of(figures[entity_id].get_child(0) as Node3D).color = TypeGlow.of(
 				feature.species_of(entity_id)
@@ -202,7 +203,7 @@ func _play_once(figure: HexPiece, wanted: StringName) -> void:
 
 
 ## `clip` when `animations` has it, or empty when it doesn't or there are none: a model without it
-## goes without (the boot flow checks the view's model has every one of CLIPS, #992).
+## goes without (the boot flow checks every species' model has every one of CLIPS, #992).
 static func has_clip(animations: AnimationPlayer, clip: StringName) -> StringName:
 	return clip if animations != null and animations.has_animation(clip) else &""
 
@@ -286,26 +287,28 @@ func _fade_out(figure: HexPiece) -> void:
 
 
 ## A new figure, standing on its tile once it's given one, in the comic look and idling.
-func _add_figure() -> HexPiece:
+func _add_figure(species_id: String) -> HexPiece:
 	var piece: HexPiece = HexPiece.new()
 	piece.base_offset = 0.0
-	var model: Node3D = placeholder_model()
+	var model: Node3D = model_of(species_id)
 	piece.add_child(model)
 	add_child(piece)
 	idle(model)
 	return piece
 
 
-## A new copy of the placeholder model, in the comic look and with glowing eyes; companions wear it
-## too (#338).
-static func placeholder_model() -> Node3D:
-	var model: Node3D = MODEL.instantiate() as Node3D
+## A new copy of the model monsters of `species_id` wear (#1223), in the comic look and with glowing
+## eyes; companions wear it too (#338). An empty figure when no model loads, which SpeciesModels
+## reports as an error.
+static func model_of(species_id: String) -> Node3D:
+	var scene: PackedScene = SpeciesModels.scene_of(species_id)
+	var model: Node3D = scene.instantiate() as Node3D if scene != null else Node3D.new()
 	Toon.apply_to_model(model)
 	var _glow: EyeGlow = EyeGlow.add_to(model)
 	return model
 
 
-## Starts the placeholder model's idle clip, once it's in the tree.
+## Starts a monster model's idle clip, once it's in the tree.
 static func idle(model: Node3D) -> void:
 	var animations: AnimationPlayer = clips_of(model)
 	if animations != null and animations.has_animation(IDLE):

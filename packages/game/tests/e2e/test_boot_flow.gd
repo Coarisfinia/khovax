@@ -296,8 +296,10 @@ func _check_player_model(main: Node) -> String:
 	return ""
 
 
-## Every model a view uses (#992): the one it preloads (its MODEL), or the player's, which the main
-## scene places. A view that plays clips (its CLIPS) needs a model with a skeleton that has bones,
+## Every model a view uses (#992): the one it preloads (its MODEL), the player's, which the main
+## scene places, or, for a view whose figures wear their species' models (its WEARS_SPECIES_MODELS,
+## #1223), every model a species names. A view that plays clips (its CLIPS) needs a model with a
+## skeleton that has bones,
 ## every skinned mesh bound to it, and each of those clips: a model swap that drops a clip or
 ## breaks the rig fails here instead of showing a T-pose in the game. One that plays an attack (its
 ## ATTACK among its CLIPS) needs a centre of attack too (ModelPoints, #1007), where the attack's
@@ -320,13 +322,37 @@ func _check_view_models(main: Node) -> String:
 				result = _check_rig(player.model, clips, attacks)
 			elif constants.get("MODEL") is PackedScene:
 				var scene: PackedScene = constants["MODEL"]
-				var shown: Node = scene.instantiate()
-				result = _check_rig(shown, clips, attacks) if not clips.is_empty() else ""
-				shown.free()
+				result = _check_scene(scene, clips, attacks)
+			elif constants.get("WEARS_SPECIES_MODELS", false):
+				result = _check_species_models(clips, attacks)
 			elif not clips.is_empty():
 				result = "it plays clips but names no model"
 			if not result.is_empty():
 				return "%s's model: %s" % [file, result]
+	return ""
+
+
+## Whether `scene` loads and, when the view plays `clips`, its model has them (_check_rig).
+func _check_scene(scene: PackedScene, clips: Array, attacks: bool) -> String:
+	var shown: Node = scene.instantiate()
+	var result: String = _check_rig(shown, clips, attacks) if not clips.is_empty() else ""
+	shown.free()
+	return result
+
+
+## Whether every species' model (SpeciesModels, #1223) has `clips` and, when the view `attacks`, a
+## centre of attack (_check_rig).
+func _check_species_models(clips: Array, attacks: bool) -> String:
+	var species: Dictionary[String, Species] = SpeciesContent.cached().species
+	if species.is_empty():
+		return "no species to wear a model"
+	for species_id: String in species:
+		var scene: PackedScene = SpeciesModels.scene_of(species_id)
+		var result: String = (
+			_check_scene(scene, clips, attacks) if scene != null else "it doesn't load"
+		)
+		if not result.is_empty():
+			return "%s's model: %s" % [species_id, result]
 	return ""
 
 
