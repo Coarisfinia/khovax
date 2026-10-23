@@ -65,6 +65,7 @@
 [ext_resource type="Script" path="res://slices/companions/look/crown_bind_view.gd" id="57_crown_bind"]
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/focus_keys.gd" id="58_focus_keys"]
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/wild_hp_bars.gd" id="59_wild_hp_bars"]
+[ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -196,6 +197,11 @@ driver = NodePath("../../Driver")
 script = ExtResource("57_crown_bind")
 driver = NodePath("../../Driver")
 companions = NodePath("../CompanionView")
+wild_monsters = NodePath("../WildMonsterView")
+
+[node name="FeedingTie" type="Node" parent="Instance" node_paths=PackedStringArray("driver", "wild_monsters")]
+script = ExtResource("60_feeding_tie")
+driver = NodePath("../../Driver")
 wild_monsters = NodePath("../WildMonsterView")
 
 [node name="DamageNumbersView" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver", "graphics")]

@@ -522,9 +522,9 @@ static func _sleep_follows(state: GameState, when: String) -> String:
 ## Ground is grass and water drinkable, sand neither (#1203). A grazer in its grazing hour walks
 ## to the nearer of two patches of grass, and a drinker in its drinking hour round the rock wall to
 ## the pond, each one tile at a time and only over ground a ring could enclose it on; then each
-## stays there, eating or drinking, for the rest of the hour. In an hour of wandering, neither goes
-## anywhere, a grazer with no grass about stays where it is, and one whose nearer grass is walled
-## in walks to the further grass it can reach (#1291).
+## stays there, eating or drinking (ForagingFeature.is_feeding, #1281), for the rest of the hour.
+## In an hour of wandering, neither goes anywhere, a grazer with no grass about stays where it is,
+## and one whose nearer grass is walled in walks to the further grass it can reach (#1291).
 func _check_grazing_and_drinking() -> String:
 	if not TileKinds.is_grazable(Region.GROUND) or not TileKinds.is_drinkable(Region.WATER):
 		return "ground isn't grass or water isn't drinkable"
@@ -542,11 +542,9 @@ func _check_grazing_and_drinking() -> String:
 			return "the grazer went to %s, not the nearest grass" % walked[-1]
 		if activity == Schedule.DRINK and walked.size() - 1 <= Hex.distance(walked[0], walked[-1]):
 			return "the drinker went straight through the rock wall: %s" % [walked]
-		var rest: int = DayClock.TICKS_PER_HOUR - state.world_tick % DayClock.TICKS_PER_HOUR - 1
-		if _forage_at(state, monster, Schedule.NONE, rest).size() != 1:
-			return "%s didn't stay to eat or drink for the rest of the hour" % species
-		if _forage_at(state, monster, Schedule.WANDER, FORAGE_TICKS).size() != 1:
-			return "%s walked off in an hour without grazing or drinking" % species
+		var fed: String = _feeding_problem(state, monster)
+		if not fed.is_empty():
+			return "%s %s" % [species, fed]
 	var bare: GameState = _forage_state(false)
 	var grazer: int = _forager(bare, "gra")
 	if _forage_at(bare, grazer, Schedule.GRAZE, FORAGE_TICKS).size() != 1:
@@ -567,6 +565,22 @@ static func _check_grass_behind_wall() -> String:
 		return "with the nearer grass walled in, the grazer %s" % problem
 	if walked[-1] != FORAGE_GRASS[1]:
 		return "with the nearer grass walled in, the grazer went to %s" % walked[-1]
+	return ""
+
+
+## Why `monster`, at its food or water in its hour to feed, doesn't feed there (#1281, the look
+## plays its Feed clip then), stay there for the rest of the hour, and stop feeding without moving
+## in an hour of wandering, or "".
+static func _feeding_problem(state: GameState, monster: int) -> String:
+	if not ForagingFeature.is_feeding(state, monster):
+		return "doesn't feed at its food or water"
+	var rest: int = DayClock.TICKS_PER_HOUR - state.world_tick % DayClock.TICKS_PER_HOUR - 1
+	if _forage_at(state, monster, Schedule.NONE, rest).size() != 1:
+		return "didn't stay to eat or drink for the rest of the hour"
+	if _forage_at(state, monster, Schedule.WANDER, FORAGE_TICKS).size() != 1:
+		return "walked off in an hour without grazing or drinking"
+	if ForagingFeature.is_feeding(state, monster):
+		return "still feeds in an hour without grazing or drinking"
 	return ""
 
 

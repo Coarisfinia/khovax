@@ -7,7 +7,8 @@ Plain Python, without Blender, so the check reads it outside Blender too."""
 
 # The long attack (#1158) is three clips the game plays in turn: its wind-up, the loop it holds
 # for as long as the attack lasts, and its release.
-CREATURE = ("Idle", "Walk", "Run", "Attack", "Hit", "Faint", "ChannelStart", "Channel", "ChannelEnd")
+# Feed (#1203) is its grazing and drinking, one clip for both.
+CREATURE = ("Idle", "Walk", "Run", "Attack", "Hit", "Faint", "ChannelStart", "Channel", "ChannelEnd", "Feed")
 
 
 def missing(names):

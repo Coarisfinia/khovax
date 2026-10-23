@@ -13,7 +13,9 @@ extends Node3D
 ## model's clips: Walk while it glides, Attack with the lunge, Hit when it loses HP, and Faint
 ## before it lies down; Idle otherwise. Asleep (#1202), it settles onto its belly, the pose its
 ## Faint clip ends in, and stays there, upright rather than rolled onto its side like a fainted one,
-## so the two read apart by shape (#68), until it wakes and idles again. Its eyes glow (EyeGlow,
+## so the two read apart by shape (#68), until it wakes and idles again. Feeding at its grass or
+## water (#1203, as a later slice tells it in `feeding`), it lowers its head and plays Feed, eased
+## in and out. Its eyes glow (EyeGlow,
 ## #1008) in its type's colour (TypeGlow, #1063), with no leaning, as no player's: brighter while
 ## it's enraged, flaring up as it strikes, and shut while it sleeps or once it fainted. It only
 ## reads the state and the tick's events.
@@ -29,13 +31,17 @@ const WALK: StringName = &"Walk"
 const ATTACK: StringName = &"Attack"
 const HIT: StringName = &"Hit"
 const FAINT: StringName = &"Faint"
+const FEED: StringName = &"Feed"
 ## Every clip the view plays, which the boot flow checks its model has (#992); as ATTACK is among
 ## them, it checks the model has a centre of attack too (ModelPoints, #1007).
-const CLIPS: Array[StringName] = [IDLE, WALK, ATTACK, HIT, FAINT]
+const CLIPS: Array[StringName] = [IDLE, WALK, ATTACK, HIT, FAINT, FEED]
 ## How long a figure's model takes to blend from one clip into the next, and to settle down into
 ## its sleeping pose.
 const BLEND_SECONDS: float = 0.15
 const SETTLE_SECONDS: float = 1.2
+## How long a figure takes to lower its head into Feed, or raise it again: slower than a clip's
+## blend, so the head drops to the ground rather than snapping there.
+const FEED_BLEND_SECONDS: float = 0.6
 ## How fast a figure turns toward where it steps or strikes, in radians per second.
 const TURN_SPEED: float = 10.0
 ## How high and how long a wild monster hops when it jumps out of hiding.
@@ -63,6 +69,9 @@ var _shown: GameState
 var fallen: Dictionary[int, bool] = {}
 ## The wild monsters asleep (#1202), by entity id, as the state showed them last.
 var sleeping: Dictionary[int, bool] = {}
+## The wild monsters feeding at their grass or water (#1203), by entity id: set every frame by the
+## foraging slice's FeedingTie, which can read the foraging rules this slice comes before.
+var feeding: Dictionary[int, bool] = {}
 ## The lunge running on each figure, so a new hit replaces it rather than fighting it.
 var _lunges: Dictionary[HexPiece, Tween] = {}
 ## The yaw each figure turns toward, by entity id: where it last stepped or struck. Kept here so
@@ -82,7 +91,13 @@ func _process(delta: float) -> void:
 	for entity_id: int in figures:
 		var yaw: float = facing.get(entity_id, 0.0)
 		if not fallen.has(entity_id):
-			_animate(figures[entity_id], yaw, delta, sleeping.has(entity_id))
+			_animate(
+				figures[entity_id],
+				yaw,
+				delta,
+				sleeping.has(entity_id),
+				feeding.has(entity_id),
+			)
 
 
 ## Matches the figures to the current state. Called every frame; tests call it after stepping.
@@ -93,6 +108,7 @@ func show_state() -> void:
 		HexPiece.free_all(figures)
 		fallen.clear()
 		sleeping.clear()
+		feeding.clear()
 		_lunges.clear()
 		facing.clear()
 		_hp.clear()
@@ -193,9 +209,10 @@ func _face(entity_id: int, spot: Vector2i) -> void:
 		facing[entity_id] = atan2(heading.x, heading.z)
 
 
-## Turns `figure`'s model toward `yaw` and keeps its clip going: Walk while it glides and Idle while
-## it stands, once a one-off clip (Attack, Hit) is done, or its sleeping pose while it's `asleep`.
-func _animate(figure: HexPiece, yaw: float, delta: float, asleep: bool) -> void:
+## Turns `figure`'s model toward `yaw` and keeps its clip going: Walk while it glides, Feed while
+## it stands `feeding` and Idle while it stands otherwise, once a one-off clip (Attack, Hit) is
+## done, or its sleeping pose while it's `asleep`. Feed eases in and out more slowly.
+func _animate(figure: HexPiece, yaw: float, delta: float, asleep: bool, feeding_now: bool) -> void:
 	var model: Node3D = figure.get_child(0) as Node3D
 	model.rotation.y = rotate_toward(model.rotation.y, yaw, TURN_SPEED * delta)
 	var animations: AnimationPlayer = clips_of(model)
@@ -210,10 +227,13 @@ func _animate(figure: HexPiece, yaw: float, delta: float, asleep: bool) -> void:
 		return
 	var gliding: bool = not figure.position.is_equal_approx(figure.tile_position())
 	var clip: StringName = has_clip(animations, WALK) if gliding else &""
+	if clip.is_empty() and feeding_now:
+		clip = has_clip(animations, FEED)
 	if clip.is_empty():
 		clip = has_clip(animations, IDLE)
 	if not clip.is_empty() and (clip != current or not playing):
-		animations.play(clip, BLEND_SECONDS)
+		var lowering: bool = clip == FEED or current == FEED
+		animations.play(clip, FEED_BLEND_SECONDS if lowering else BLEND_SECONDS)
 
 
 ## Settles `animations`' model into its sleeping pose, eased, unless it's there already: its Faint

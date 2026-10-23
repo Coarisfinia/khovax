@@ -230,6 +230,61 @@ def idle(breath=105, breaths=2):
     return Clip(poses, loop=True)
 
 
+# How the ears twitch while it feeds (Feed): like TWITCHES, but fewer and slower, its attention on
+# its food.
+FEED_TWITCHES = [
+    ("ear.R", 0.30, (0.18, 0.0, 0.22), 4, 14),
+    ("ear.L", 0.72, (0.14, 0.0, -0.26), 4, 16),
+]
+
+
+def feed(frames=90, laps=3, neck=0.78, head=-0.02, crouch=0.10, forepaws=0.0):
+    """Feeding at its grass or water (#1281), one clip for eating and drinking, posed on every
+    frame like idle: the chest lowers and the neck bends down until the muzzle is at the ground,
+    the paws planted (legs.plant): the chest `crouch` down (unscaled metres), the neck bent down
+    `neck` and the head `head` radians, a body plan's own reach to the ground (a short neck bends
+    less, or the head curls under the chest). Its forepaws stand `forepaws` (unscaled metres)
+    further forward the whole loop, so the forelegs lean out under the lowered chest rather than
+    folding with their elbows jutting up (owner, #1297). It laps or tears `laps` times a loop of `frames` frames,
+    each a quick jaw opening and a dip of the head with a tug back up as the jaw closes, the head
+    turning a little to one side and back once a loop. It breathes, its tail sways and its ears
+    twitch now and then (FEED_TWITCHES). Every wave runs a whole number of times a loop, so the
+    seam is exact; the game blends into it from standing (WildMonsterView)."""
+    for ear, start, _amplitude, out, back in FEED_TWITCHES:
+        if round(start * frames) + out + back > frames:
+            raise ValueError("%s's twitch at %.2f runs past a loop of %d frames" % (ear, start, frames))
+    poses = []
+    for step in range(frames + 1):
+        t = (step % frames) / frames
+        lap = 2.0 * math.pi * t
+        # 0..1 each lap: quick to open, slower to close, a lingering crest (_flat_wave).
+        bite = 0.5 + 0.5 * _flat_wave(laps * lap - math.pi / 2.0)
+        # The tug back up trails the bite by a quarter of a lap.
+        tug = 0.5 + 0.5 * math.sin(laps * lap - math.pi)
+        breath = 0.5 - 0.5 * math.cos(lap)
+        side = math.sin(lap)
+        pose = {
+            "root_loc": (0.0, -crouch + 0.006 * breath, -0.03),
+            "hips": (-0.04, 0.0, 0.0),
+            "spine_01": (0.06, 0.0, 0.0),
+            "spine_02": (0.16 + 0.02 * breath, 0.0, 0.03 * side),
+            "neck": (neck + 0.05 * bite - 0.06 * tug, 0.0, 0.05 * side),
+            "head": (head + 0.06 * bite - 0.04 * tug, 0.0, 0.08 * side),
+            "jaw": (0.04 + 0.30 * bite, 0.0, 0.0),
+            "tail_01": (0.05, 0.0, 0.10 * math.sin(lap + 0.6)),
+            "tail_02": (0.0, 0.0, 0.10 * math.sin(lap - 0.2)),
+            "tail_03": (0.0, 0.0, 0.08 * math.sin(lap - 1.0)),
+        }
+        _both(pose, "ear", (-0.08, 0.0, 0.0))
+        _both(pose, "plant.front_paw", (0.0, 0.0, forepaws))
+        for ear, start, amplitude, out, back in FEED_TWITCHES:
+            turn = _twitch(step % frames, round(start * frames), amplitude, out, back)
+            x, y, z = pose[ear]
+            pose[ear] = (x + turn[0], y + turn[1], z + turn[2])
+        poses.append((step + 1, pose))
+    return Clip(poses, loop=True)
+
+
 def attack():
     """Anticipation, action, overshoot and settle (#1074): it crouches back with the ears flat,
     still coiling lower as it holds, snaps forward into the lunge with the jaw wide, the body

@@ -332,6 +332,7 @@ def build(out):
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
         **channel,
+        "Feed": clips.feed(forepaws=0.1),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
         overlays=[drifting.drift, flaring.beat])
     scene.export_glb(out)

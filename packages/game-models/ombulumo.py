@@ -417,6 +417,8 @@ def build(out):
         "Hit": clips.hit(),
         "Faint": flop(),
         **channel,
+        # No neck: the toad's head is near the ground already, and dips to it.
+        "Feed": clips.feed(neck=0.18, head=-0.05, crouch=0.06, forepaws=0.06),
     }, SCALE, ground_meshes=[skin], overlays=[booming.beat])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
