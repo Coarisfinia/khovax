@@ -129,7 +129,7 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
-		result = _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
+		result = await _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
 	if result.is_empty():
 		result = await _menu_pause_choice(menu, driver)
 	if result.is_empty():
@@ -585,7 +585,7 @@ func _menu_choices(menu: GameMenu, graphics: Graphics, survey: SurveyChoice) -> 
 	if problem.is_empty() and (kept.chosen.has(Graphics.ANTI_ALIASING)
 			or not tab.shown[Graphics.ANTI_ALIASING].begins_with("Auto (")):
 		problem = "the menu's Auto doesn't hand anti-aliasing back: %s" % [kept.chosen]
-	return problem if not problem.is_empty() else _menu_damage_numbers(menu)
+	return problem if not problem.is_empty() else await _menu_damage_numbers(menu)
 
 
 ## Turning the pause off lets the ticks run on behind the open menu, and keeps that; its Auto
@@ -636,7 +636,23 @@ func _menu_damage_numbers(menu: GameMenu) -> String:
 		return "a larger damage number size isn't followed or kept: %s" % [kept.chosen]
 	tab.button(DamageNumbersChoice.SIZE_SETTING, "Auto").pressed.emit()
 	var sized: String = tab.shown[DamageNumbersChoice.SIZE_SETTING]
-	return "" if sized == "Auto (100%)" else "the damage number size's Auto shows %s" % sized
+	if sized != "Auto (100%)":
+		return "the damage number size's Auto shows %s" % sized
+	return await _numbers_rise_up_the_screen(numbers)
+
+
+## A damage number rises up the screen by its whole rise (#804): along the game camera's up,
+## across its view, not straight up, of which the steep camera shows only a small part.
+func _numbers_rise_up_the_screen(numbers: DamageNumbersView) -> String:
+	numbers.show_strike(Vector2i.ZERO, SpecialStruck.new(0, 0, 5, false))
+	var label: Label3D = numbers.strikes[-1]
+	var start: Vector3 = label.position
+	await _tree.create_timer(DamageNumbersView.SECONDS * 0.5).timeout
+	var risen: Vector3 = label.position - start
+	var up: Vector3 = label.get_viewport().get_camera_3d().global_basis.y.normalized()
+	if risen.length() <= 0.0 or risen.normalized().dot(up) < 0.999:
+		return "a damage number rose by %s, not up the game camera's screen (%s)" % [risen, up]
+	return ""
 
 
 ## The settings' rows fit a phone held either way and a desktop screen.
