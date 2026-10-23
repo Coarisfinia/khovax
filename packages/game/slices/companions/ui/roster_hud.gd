@@ -1,8 +1,11 @@
 class_name RosterHud
 extends Control
 ## The roster at the top left of the screen (#540): one square per monster this machine's player
-## carries, in their carried order (#53), with its species' initials and its place's number in its
-## corner; while a keyboard or a controller is in use (DeviceInUse), the glyph of the key or button
+## carries, in their carried order (#53), with its species' picture (SpeciesStage, #722), the
+## first two letters of its name in the bottom right corner, since species may share a stand-in
+## model, and its place's number in the top left corner; while a keyboard or a controller is in use
+## (DeviceInUse), the glyph
+## of the key or button
 ## that swaps to it stands there instead (1 to 3; the d-pad's left, up and right, #1192). The
 ## companion's square
 ## is drawn bold, with a pointer under it, and the reserve's thin and faded, so which is which shows
@@ -36,6 +39,10 @@ const COMPANION_INK_PIXELS: float = 6.0
 ## to the square's edges, as a share of the square's.
 const GLYPH_SHARE: float = 0.42
 const GLYPH_INSET: float = 0.03
+## The name's letters in a square's bottom right corner, their size as a share of the square's.
+const NAME_SHARE: float = 0.3
+## The fog around those letters, in pixels, so they read over the picture.
+const NAME_OUTLINE_PIXELS: int = 4
 ## The click's or tap's glyph right of the row, its side as a share of a square's.
 const POINTING_SHARE: float = 0.85
 
@@ -53,8 +60,11 @@ var fainted: Array[bool] = []
 var picked_place: int = -1
 ## The short ids of the squares' monsters, in carried order.
 var _short_ids: PackedStringArray = PackedStringArray()
-## The initials shown for each species, by id; a species missing from the data shows its id's.
-var _initials: Dictionary[String, String] = {}
+## The picture of each species shown, by id: rendered once, a still in a square, since a HUD
+## that fidgets draws the eye and every frame costs on a phone.
+var _pictures: Dictionary[String, SpeciesStage] = {}
+## The letters shown for each species, by id; a species missing from the data shows its id's.
+var _letters: Dictionary[String, String] = {}
 var _side: float = 0.0
 var _top: float = MARGIN
 
@@ -63,7 +73,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var species: SpeciesContent = SpeciesContent.cached()
 	for id: String in species.species:
-		_initials[id] = initials_of(species.species[id].name)
+		_letters[id] = letters_of(species.species[id].name)
 
 
 func _process(_delta: float) -> void:
@@ -130,7 +140,38 @@ func show_state() -> void:
 		companion_place = party.find(companion)
 		fainted = down
 		picked_place = party.find(picked)
+		_keep_pictures()
 		queue_redraw()
+
+
+## A picture for every species shown, and none for one no longer shown.
+func _keep_pictures() -> void:
+	for id: String in _pictures.keys():
+		if not shown.has(id):
+			_pictures[id].queue_free()
+			var _dropped: bool = _pictures.erase(id)
+	for id: String in shown:
+		if not _pictures.has(id):
+			_add_picture(id)
+
+
+## Adds the picture of `species_id` and renders it.
+func _add_picture(species_id: String) -> void:
+	var picture: SpeciesStage = SpeciesStage.new(species_id)
+	_pictures[species_id] = picture
+	add_child(picture)
+	_render(picture)
+
+
+## Renders `picture` once more, at the squares' side.
+func _render(picture: SpeciesStage) -> void:
+	picture.size = Vector2i(roundi(maxf(_side, MIN_SIDE)), roundi(maxf(_side, MIN_SIDE)))
+	picture.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
+## The picture shown for `species_id`, or null when none is shown.
+func picture_of(species_id: String) -> SpeciesStage:
+	return _pictures.get(species_id)
 
 
 ## Whether each of `party`, the short ids of the monsters the player in `slot` carries, fainted in
@@ -145,7 +186,11 @@ static func _fainted_in(state: GameState, slot: int, party: PackedStringArray) -
 ## Lays the squares out for a screen of `screen` pixels: in a row from the top left corner, below
 ## the Survey when it shows there.
 func lay_out_in(screen: Vector2) -> void:
-	_side = maxf(MIN_SIDE, minf(screen.x, screen.y) * SIDE_SHARE)
+	var side: float = maxf(MIN_SIDE, minf(screen.x, screen.y) * SIDE_SHARE)
+	if side != _side:
+		_side = side
+		for picture: SpeciesStage in _pictures.values():
+			_render(picture)
 	_top = MARGIN
 	if survey != null and survey.place_shown() == SurveyChoice.Place.TOP_LEFT:
 		_top += minf(screen.x, screen.y) * SurveyChoice.CORNER_SHARE + GAP
@@ -178,15 +223,15 @@ func bottom() -> float:
 	return _top + _side * (1.0 + POINTER_SHARE) + GAP * 2.0
 
 
-## A species' initials: the first letter of each word of its name, as "T" for "Tikazzir".
-static func initials_of(species_name: String) -> String:
-	var letters: String = ""
-	for word: String in species_name.split(" ", false):
-		letters += word.left(1).to_upper()
-	return letters
+## A species' letters in its square: the first two of its one-word name (#717), as "Ti" for
+## "Tikazzir".
+static func letters_of(species_name: String) -> String:
+	return species_name.left(2)
 
 
-## The square of the monster at `place`: its initials, its place's number in the corner, for the
+## The square of the monster at `place`: its species' picture and letters, its place's number in the
+## corner, for
+## the
 ## companion a bold frame and a pointer under it, for a fainted one a cross over it, and for the one
 ## picked for a revive item a second frame around it.
 func _draw_square(place: int) -> void:
@@ -194,13 +239,13 @@ func _draw_square(place: int) -> void:
 	var chosen: bool = place == companion_place
 	var faded: float = FAINTED_ALPHA if has_fainted(place) else (1.0 if chosen else RESERVE_ALPHA)
 	draw_rect(area, Color(FogView.FOG, BACKDROP_ALPHA * faded))
+	var picture: SpeciesStage = picture_of(shown[place])
+	if picture != null:
+		draw_texture_rect(picture.get_texture(), area, false, Color(Color.WHITE, faded))
 	var ink: Color = Color(Toon.INK, faded)
+	var letters: String = _letters.get(shown[place], shown[place].left(2).capitalize())
+	_draw_letters(area, letters, ink)
 	draw_rect(area, ink, false, COMPANION_INK_PIXELS if chosen else INK_PIXELS)
-	var font: Font = ThemeDB.fallback_font
-	var big: int = int(area.size.x * 0.36)
-	var baseline: Vector2 = Vector2(area.position.x, area.get_center().y + big * 0.45)
-	var initials: String = _initials.get(shown[place], shown[place].left(2).to_upper())
-	draw_string(font, baseline, initials, HORIZONTAL_ALIGNMENT_CENTER, area.size.x, big, ink)
 	_draw_corner(area, place, faded)
 	if chosen:
 		_draw_pointer(area, ink)
@@ -208,6 +253,19 @@ func _draw_square(place: int) -> void:
 		_draw_cross(area, ink)
 	if place == picked_place:
 		draw_rect(area.grow(GAP * 0.5), Color(Toon.INK), false, COMPANION_INK_PIXELS)
+
+
+## `letters` in the bottom right corner of `area`, in `ink` on a fog outline.
+func _draw_letters(area: Rect2, letters: String, ink: Color) -> void:
+	var font: Font = ThemeDB.fallback_font
+	var font_size: int = int(area.size.x * NAME_SHARE)
+	var inset: float = area.size.x * 0.1
+	var baseline: Vector2 = Vector2(area.position.x, area.end.y - inset)
+	var width: float = area.size.x - inset
+	var fog: Color = Color(FogView.FOG, ink.a)
+	var right: HorizontalAlignment = HORIZONTAL_ALIGNMENT_RIGHT
+	draw_string_outline(font, baseline, letters, right, width, font_size, NAME_OUTLINE_PIXELS, fog)
+	draw_string(font, baseline, letters, right, width, font_size, ink)
 
 
 ## The top left corner of the square of the monster at `place`, faded to `faded`: the glyph of what
