@@ -9,6 +9,12 @@ extends RefCounted
 const MAX_PLAYERS: int = 4
 
 var tick: int = 0
+## The world's tick (#1215): the time every instance of a world shares, which the time of day
+## follows, so it's the same everywhere and walking through an exit never changes it. It steps with
+## the instance's own tick (Simulation.step), and the world keeps it in step with its own, also in
+## an instance nobody is in, or one loaded later (World.step, World.create_instance). It follows
+## from the world's tick, so it's hashed but not saved.
+var world_tick: int = 0
 var rng_seed: int = 0
 ## Which tiles exist and their terrain (#36). While the instance is loaded, only `change_tile`
 ## changes it.
@@ -283,10 +289,11 @@ static func _restored(id: int, slot: int, tile: Vector2i) -> Entity:
 
 ## A fingerprint of the whole state, the same on every platform: two sessions from the same start
 ## with the same commands must end with the same hash. A 32-bit FNV-1a (StateHash) over both 32-bit
-## halves of every core value, every slot's world store (#724), the region, every entity in id order
+## halves of every core value (the world's tick too, #1215), every slot's world store (#724), the
+## region, every entity in id order
 ## and, in order, every feature's id (as its code, StateHash.name_code), on/off and state.
 func state_hash() -> int:
-	var values: Array[int] = [tick, rng_seed]
+	var values: Array[int] = [tick, world_tick, rng_seed]
 	for each: PlayerStore in stores:
 		var stored_values: Array[int] = each.hash_values()
 		values.append(stored_values.size())
