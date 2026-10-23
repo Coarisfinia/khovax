@@ -198,11 +198,13 @@ a second model could use goes into the library or a generic tool, never into one
 
 ## 4. Verify (every item gives an image or a number for the PR)
 1. **Every side:** `uv run --locked packages/game-models/blender.py --background --factory-startup
-   --python .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clip] [frame]`. It
+   --python .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clips] [frames]`. It
    writes front, back, left, right, top and a three-quarter view, and `sheet.png`. **Look at it.**
    Check the proportions, gaps, stretched textures and anything floating or clipping.
 2. **Deformation stress:** render the extreme frames of each clip, plus a pose with each major
-   bone bent ±45°. Joints must not collapse or tear.
+   bone bent ±45°. Joints must not collapse or tear. Give `render_views.py` every clip and frame at
+   once (`Attack,Hit 1,8,14`, or a range `1-14`): Blender starts once, which is most of a render's
+   cost, and each pose gets its own folder (`<out_dir>/Attack_008/`).
 3. **Silhouette:** a flat black render from the game camera's angle. Is it readable as what it
    is, at the size it has on screen?
 4. **Godot import, in the game project:** after `godot --headless --path packages/game --import`,
