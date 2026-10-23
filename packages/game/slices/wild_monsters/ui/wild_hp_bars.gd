@@ -7,7 +7,9 @@ extends Control
 ## left rather than jumping, so each hit shows it dropping, and the HP left stands on it as a
 ## number, so it never relies on color (#68). It stands just below the ring around the monster's
 ## feet on the screen, on the camera's side: over its head it would cover the figure and the quest
-## marker standing there (#300). A fainted wild monster shows none (its figure lies down), nor does
+## marker standing there (#300). Where the click's or tap's glyph stands there (FocusKeys, #1248),
+## the
+## bar stands under it. A fainted wild monster shows none (its figure lies down), nor does
 ## one out of sight (fog, hiding: WildMonsterView.is_shown) or off the screen. It draws under the
 ## rest of the Hud (first in it, in main.tscn). It only reads the state and the local input.
 
@@ -28,6 +30,8 @@ const FILL: Color = Color(0.85, 0.33, 0.3)
 @export var driver: Session
 @export var camera: Camera3D
 @export var wild_view: WildMonsterView
+## The focus keys' hint, whose click or tap glyph the bar makes way for.
+@export var focus_keys: FocusKeys
 
 ## Where each bar shows now, by entity id: none while it doesn't. Tests read it.
 var shown: Dictionary[int, Rect2] = {}
@@ -88,6 +92,7 @@ func show_state(delta: float = 0.0) -> void:
 		queue_redraw()
 		return
 	var focus: int = driver.input.focus if driver.input != null else Command.NO_FOCUS
+	var pointed: int = focus_keys.pointed() if focus_keys != null else Command.NO_FOCUS
 	for entity_id: int in wild_view.figures:
 		if state.entity(entity_id) == null:
 			continue
@@ -98,12 +103,13 @@ func show_state(delta: float = 0.0) -> void:
 		shares[entity_id] = lerpf(eased, share, 1.0 - exp(-EASE_RATE * delta))
 		hps[entity_id] = hp
 		if (hp < full or entity_id == focus) and not wild.is_fainted(entity_id):
-			_place(entity_id)
+			_place(entity_id, entity_id == pointed)
 	queue_redraw()
 
 
-## Places the bar of the wild monster `entity_id` below its figure's ring, if the camera shows it.
-func _place(entity_id: int) -> void:
+## Places the bar of the wild monster `entity_id` below its figure's ring, if the camera shows it,
+## and below the click's or tap's glyph there when it's `pointed` at.
+func _place(entity_id: int, pointed: bool) -> void:
 	var figure: HexPiece = wild_view.figures[entity_id]
 	if not figure.is_visible_in_tree() or not WildMonsterView.is_shown(driver.state, entity_id):
 		return
@@ -112,9 +118,15 @@ func _place(entity_id: int) -> void:
 		return
 	var fonts: float = get_theme_default_font_size()
 	var bar: Vector2 = Vector2(WIDTH_FONTS, HEIGHT_FONTS) * fonts
-	var front: Vector3 = figure.global_position + Vector3(0.0, 0.0, FocusMark.RADIUS)
-	var edge: Vector2 = camera.unproject_position(front)
-	shown[entity_id] = Rect2(edge.x - bar.x / 2.0, edge.y + GAP, bar.x, bar.y)
+	# Towards the camera along the ground is down on the screen, as FocusKeys places its glyph.
+	var toward: Vector3 = (camera.global_basis.z * Vector3(1.0, 0.0, 1.0)).normalized()
+	var edge: Vector2 = camera.unproject_position(
+		figure.global_position + toward * FocusMark.RADIUS
+	)
+	var top: float = edge.y + GAP
+	if pointed:
+		top += focus_keys.get_theme_default_font_size() * ActionGlyph.SIDE_FONTS + FocusKeys.GAP
+	shown[entity_id] = Rect2(edge.x - bar.x / 2.0, top, bar.x, bar.y)
 
 
 ## The bar's backdrop (`filled`: the fog, as the UI's panels) or its ink border, rounded.

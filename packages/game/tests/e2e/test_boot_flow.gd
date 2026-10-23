@@ -676,6 +676,9 @@ func _check_hp_bar_hurt(
 	var target: float = float(left) / float(full)
 	bars.show_state()
 	var at_once: bool = bars.shown.has(focus) and bars.hps[focus] == left
+	var clear: String = _check_hp_bar_under_glyph(bars, focus)
+	if not clear.is_empty():
+		return clear
 	bars.show_state(0.1)
 	var easing: float = bars.shares[focus]
 	bars.show_state(5.0)
@@ -687,6 +690,24 @@ func _check_hp_bar_hurt(
 	bars.show_state()
 	if not at_once or not eased or bars.shown.has(focus):
 		return "a hurt wild monster's HP bar didn't show its HP left, ease down, or go once healed"
+	return ""
+
+
+## With the mouse and keyboard, the click's glyph stands under the ring of the nearest wild monster
+## not focused, `monster` (#1248): its HP bar stands under the glyph, not behind it.
+func _check_hp_bar_under_glyph(bars: WildHpBars, monster: int) -> String:
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	bars.focus_keys.show_state()
+	bars.show_state()
+	var pointed: int = bars.focus_keys.pointed()
+	DeviceInUse.device = kept
+	var glyph: Rect2 = bars.focus_keys.shown.get(FocusKeys.POINTING, Rect2())
+	var bar: Rect2 = bars.shown.get(monster, Rect2())
+	if pointed != monster or glyph.size == Vector2.ZERO:
+		return "the click's glyph didn't stand by the nearest wild monster, hurt and not focused"
+	if bar.position.y < glyph.end.y:
+		return "a hurt wild monster's HP bar stood behind the click's glyph, not under it"
 	return ""
 
 
