@@ -95,3 +95,11 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Source:** `packages/game-models/mana_wolf.py` on the shared model library `packages/game-models/lib/`, Blender
   scripts that build, rig, animate and export `mana_wolf.glb` (#990, #995)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
+## Ombulumo
+
+- **Files:** `assets/ombulumo/`
+- **Author:** the khovax contributors (built in this repository)
+- **Source:** `packages/game-models/ombulumo.py` on the shared model library `packages/game-models/lib/`, Blender
+  script that builds, rigs, animates and exports `ombulumo.glb` (#1271)
+- **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.

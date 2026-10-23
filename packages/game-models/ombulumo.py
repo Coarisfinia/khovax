@@ -1,0 +1,367 @@
+"""The Ombulumo (#1271): a round, soggy creature of still water that sits half-sunk in the shallows
+and booms at dusk. A squat, toad-like dome on short splayed legs with webbed feet, a broad flat
+head with a wide mouth, round eyes bulging on top, a pale throat sac that swells as it booms, two
+leaf fronds behind its eyes, moss pads on its back and soft glowing spots. Only its parameters and
+its own parts live here; the building blocks are the shared library in packages/game-models/lib/
+(model skill).
+
+    uv run --locked packages/game-models/blender.py --background --factory-startup \
+        --python packages/game-models/ombulumo.py -- packages/game/assets/ombulumo/ombulumo.glb
+
+It prints the speeds the motion check (packages/game-models/check_motion.py) takes.
+
+Blender is Z-up and it faces -Y (the game's +Z). Sizes are in metres, shrunk by SCALE at the end
+to sit on one hex tile.
+"""
+
+import math
+import os
+import sys
+
+import bpy
+from mathutils import Vector
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from lib import attachments, body, clips, eyes, legs, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, weights  # noqa: E402
+from lib.materials import palette  # noqa: E402
+
+FPS = 30
+SCALE = 0.75
+# The body's budget before its parts, as the mana wolf's: seen full-screen on its codex page.
+BODY_TRIANGLES = 9000
+
+# A deep teal green, so it stands out from the grass; a pale belly and throat; moss pads and
+# fronds in a brighter green; and soft lime glows.
+COLORS = {
+    "skin": ((0.06, 0.20, 0.17, 1.0), 0.0),
+    "light": ((0.80, 0.72, 0.48, 1.0), 0.0),
+    "moss": ((0.30, 0.48, 0.08, 1.0), 0.0),
+    "glow": ((0.62, 1.0, 0.18, 1.0), 1.0),
+    "dark": ((0.02, 0.03, 0.03, 1.0), 0.0),
+}
+
+TOAD = quadruped.Proportions(
+    # A stub of a tail, mostly inside the round rump.
+    tail=[(0.0, 0.84, 0.30), (0.0, 0.77, 0.34), (0.0, 0.70, 0.38), (0.0, 0.62, 0.42)],
+    hips=(0.0, 0.40, 0.52),
+    waist=(0.0, 0.14, 0.56),
+    chest=(0.0, -0.16, 0.58),
+    head_base=(0.0, -0.36, 0.62),
+    nose=(0.0, -0.88, 0.58),
+    # The jaw turns far back under the eyes, as a toad's wide mouth does.
+    jaw=((0.0, -0.40, 0.52), (0.0, -0.84, 0.47)),
+    # The leaf fronds behind the eyes take the ears' bones.
+    ear=((0.24, -0.34, 0.80), (0.36, -0.14, 0.94)),
+    scapula=(0.22, -0.22, 0.54),
+    front_leg=[(0.36, -0.28, 0.40), (0.43, -0.22, 0.24), (0.45, -0.30, 0.08), (0.45, -0.42, 0.04)],
+    hind_leg=[
+        (0.38, 0.36, 0.42),
+        (0.47, 0.12, 0.30),
+        (0.47, 0.42, 0.18),
+        (0.47, 0.36, 0.06),
+        (0.47, 0.20, 0.05),
+    ],
+)
+# Its proportions as first built (#1271): a change that drifts from them fails the build
+# (lib/metrics.py), so a derpy edit shows as numbers.
+REFERENCE = {}
+
+# A wide, blunt mouth across the whole front of the head, its lower jaw as wide as the head.
+SNOUT = muzzle.Snout(stop=(-0.60, 0.74), tip=(-0.86, 0.60), radius=0.20, joint=TOAD.jaw[0][1:], taper=0.85,
+                     stop_depth=0.02, lip=0.03, jaw_depth=0.6, jaw_width=1.0, chin=1.0, corner=0.0)
+
+TAIL_ROOT = (0.0, 0.55, 0.44)
+
+# How high its belly sits off the ground: the faint sinks it this far.
+BELLY_HEIGHT = 0.16
+
+# The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
+# apart) in 0.8 s, a companion follows at a tile every 0.3 s. Its legs are short, so a walk
+# cycle covers two fifths of a tile (a quick waddle) and its bounding run one tile.
+TILE = math.sqrt(3.0)
+WALK_SPEED = TILE / 0.8
+RUN_SPEED = TILE / 0.3
+WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 0.4, FPS)
+RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.0, FPS)
+WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
+RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
+
+# The throat sac booms (#1271): it swells from the back of the throat on its own bone
+# (lib/pulse.py), twice in a resting loop, once as it leaps, and on every beat of its long attack,
+# a boom every BOOM frames. A loop takes the beats either side of its seam.
+THROAT, THROAT_BONE = (0.0, -0.46, 0.42), pulse.PREFIX + "throat"
+BOOM, BOOM_SWELL, BOOM_RISE, BOOM_FALL = 20, 1.55, 6, 14
+CHANNEL_FRAMES = 60
+
+
+def mirror(point, sign):
+    return (point[0] * sign, point[1], point[2])
+
+
+def toad_body():
+    """Soft forms: a round dome of a body, wider than it is long, a round rump, a broad flat head
+    melting into it with no neck, eyes bulging on top, short splayed forelegs, thick folded hind
+    legs with round haunches, wide webbed feet and a stub of a tail."""
+    blob = body.Blob("Ombulumo")
+    blob.ellipsoid((0.0, 0.08, 0.52), (0.62, 0.48, 0.36))
+    blob.ellipsoid((0.0, 0.40, 0.46), (0.50, 0.26, 0.30))
+    blob.ellipsoid((0.0, -0.22, 0.54), (0.52, 0.30, 0.28))
+    # The head: broad and flat, its brow, upper lip and lower jaw from the snout.
+    blob.ellipsoid((0.0, -0.50, 0.62), (0.47, 0.28, 0.18))
+    SNOUT.upper(blob)
+    SNOUT.lower(blob)
+    blob.tube([TAIL_ROOT, *reversed(TOAD.tail)], [0.10, 0.10, 0.085, 0.065, 0.04])
+    for sign in (1, -1):
+        # The eyes' turrets, on top of the head.
+        blob.ball((0.24 * sign, -0.52, 0.80), 0.12)
+        front = [mirror(p, sign) for p in TOAD.front_leg]
+        blob.limb(front[:3], [0.12, 0.09, 0.06])
+        hind = [mirror(p, sign) for p in TOAD.hind_leg]
+        blob.limb(hind[1:4], [0.11, 0.08, 0.055])
+        # The haunch: a round thigh folded against the flank.
+        blob.ellipsoid(mirror((0.43, 0.26, 0.36), sign), (0.15, 0.24, 0.14), (0.15 * sign, -1.0, -0.25))
+        # The webbed feet: a broad pad and round toes fanned out, three in front and four behind.
+        for paw, toes, spread in ((front[2], 3, 0.55), (hind[3], 4, 0.7)):
+            px, py, _pz = paw
+            blob.ellipsoid((px, py - 0.06, 0.05), (0.08, 0.09, 0.04))
+            for index in range(toes):
+                turn = (index / (toes - 1) - 0.5) * spread * 2 * sign
+                reach = 0.14
+                toe = (px + math.sin(turn) * reach, py - 0.04 - math.cos(turn) * reach, 0.035)
+                blob.capsule((px, py - 0.06, 0.04), toe, 0.024)
+                blob.ball(toe, 0.034)
+    return blob.mesh(BODY_TRIANGLES)
+
+
+def two_tone(skin, mats):
+    """Its belly, throat and lower jaw pale: the faces under a soft line from the chin to the rump,
+    between the legs."""
+    skin.data.materials.append(mats["light"])
+    for polygon in skin.data.polygons:
+        x, y, z = polygon.center
+        # Below the mouth on the head; under a line falling toward the rump on the body.
+        line = 0.43 if y < -0.45 else 0.46 - 0.12 * max(0.0, min(1.0, (y + 0.3) / 0.8))
+        if 0.1 < z < line and (x / 0.42) ** 2 + (y / 1.0) ** 2 < 1.0:
+            polygon.material_index = 1
+
+
+def leaf(name, base, toward, length, width, mat, bone=None):
+    """A soft, flat leaf: a flattened ellipsoid from `base` toward `toward`, `length` long and
+    `width` across, lying flat (its face up)."""
+    direction = Vector(toward).normalized()
+    center = Vector(base) + direction * length / 2
+    return parts.part("uv_sphere", name, center, (width / 2, 0.012, length / 2),
+                      parts.pointing(direction, up=(0.0, 0.0, 1.0)), mat, bone, segments=12, ring_count=8)
+
+
+def head_parts(skin, mats):
+    """The mouth's lining, two nostrils, the leaf fronds and the round, bulging eyes."""
+    made = []
+    # A toad's mouth has no fangs, and two nostrils instead of a nose pad.
+    for piece in SNOUT.parts(mats, "head", "jaw"):
+        if "Fang." in piece.name or piece.name.endswith(".Nose"):
+            bpy.data.objects.remove(piece)
+        else:
+            made.append(piece)
+    for sign in (1, -1):
+        side = "L" if sign == 1 else "R"
+        made.append(parts.part("uv_sphere", "Nostril." + side, (0.07 * sign, -0.855, 0.655), (0.018, 0.012, 0.012), mat=mats["dark"],
+                               bone="head", segments=8, ring_count=5))
+        base, tip = (mirror(p, sign) for p in TOAD.ear)
+        out = tuple(t - b for t, b in zip(tip, base))
+        for index, (share, length, width) in enumerate(((0.0, 0.30, 0.10), (0.15, 0.22, 0.08))):
+            spot = tuple(b + o * share for b, o in zip(base, out))
+            toward = (out[0] + 0.12 * index * sign, out[1] - 0.1 * index, out[2] + 0.08 * index)
+            made.append(leaf("Frond.%d.%s" % (index, side), spot, toward, length, width, mats["moss"], "ear." + side))
+    # The left eye, set into the skin, and its mirror image on the right. Its turret is its lid:
+    # a brow ridge would float over a bulging eye.
+    left = []
+    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.57, 0.90), (0.45, -1.0, 0.2), 0.09,
+                          {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
+                          "head", almond=0.95, pupil=(0.42, 0.34)):
+        if piece.name.endswith(".brow"):
+            bpy.data.objects.remove(piece)
+        else:
+            left.append(piece)
+    made += left + [parts.mirrored(piece, piece.name.replace("Eye.L.", "Eye.R.")) for piece in left]
+    return made
+
+
+def throat(mats):
+    """The pale throat sac under the chin, on a bone of its own so it swells as it booms."""
+    return [parts.part("uv_sphere", "Throat", (0.0, -0.58, 0.36), (0.20, 0.16, 0.11), mat=mats["light"],
+                       bone=THROAT_BONE, segments=16, ring_count=8)]
+
+
+# The glowing spots along its back, on the left side (the right mirrors them): (y, how far out).
+SPOTS = ((-0.18, 0.22), (0.02, 0.30), (0.22, 0.26), (0.40, 0.18), (-0.02, 0.12), (0.30, 0.08), (0.12, 0.40))
+# The moss pads on its back: centre (x, y) and radius, the middle one, which sprouts, and the
+# left one (the right mirrors it).
+PADS = (((0.0, 0.10), 0.13), ((0.17, 0.30), 0.09))
+
+
+def back(skin, mats):
+    """Moss pads on its back, a sprout of two leaves from the middle one, and soft glowing spots."""
+    made = []
+    for name, ((x, y), radius) in zip(("Pad.0", "Pad.1.L"), PADS):
+        found, location, normal, _index = skin.closest_point_on_mesh((x, y, 1.2))
+        pad = parts.part("cylinder", name, location + normal * 0.005, (radius, radius, 0.012), parts.pointing(normal),
+                         mats["moss"], vertices=16)
+        made += [pad] if x == 0 else [pad, parts.mirrored(pad, "Pad.1.R")]
+    sprout = surface.onto(skin, (0.0, 0.10, 1.2), 0.0)
+    sprouting = leaf("Sprout.L", sprout, (0.6, 0.1, 1.0), 0.18, 0.07, mats["moss"])
+    made += [sprouting, parts.mirrored(sprouting, "Sprout.R")]
+    for index, (y, out) in enumerate(SPOTS):
+        found, location, normal, _index = skin.closest_point_on_mesh((out, y, 1.2))
+        size = 0.028 + 0.008 * (index % 3)
+        spot = parts.part("uv_sphere", "Spot.%d.L" % index, location, (size, size, size * 0.4),
+                          parts.pointing(normal), mats["glow"], segments=10, ring_count=5)
+        made += [spot, parts.mirrored(spot, "Spot.%d.R" % index)]
+    return made
+
+
+def points(rig, pieces):
+    """The attachment points (#1007): the eyes, and its one centre of attack, its wide mouth."""
+    sides = {side: [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)] for side in ("L", "R")}
+    attachments.add(rig, {side: (eyes.spot(eye), "head", eyes.look(eye)) for side, eye in sides.items()},
+                    [((0.0, -0.84, 0.55), "head")])
+
+
+def leap():
+    """Its attack (#1271): it crouches, still sinking as it gathers itself, leaps up and forward
+    with its mouth wide and every foot leaving the ground, lands on its target with all its soggy
+    weight, squashing flat, wobbles back up and waddles back to where it stood."""
+    crouch = {"root_loc": (0, -0.08, -0.04), "hips": (-0.10, 0, 0), "neck": (0.12, 0, 0), "head": (-0.08, 0, 0)}
+    coiled = dict(crouch, root_loc=(0, -0.09, -0.05), hips=(-0.12, 0, 0))
+    air = {"root_loc": (0, 0.26, 0.24), "hips": (0.10, 0, 0), "neck": (-0.12, 0, 0), "head": (-0.05, 0, 0),
+           "jaw": (0.45, 0, 0), "tail_01": (0.3, 0, 0)}
+    slam = {"root_loc": (0, -0.07, 0.40), "hips": (0.04, 0, 0), "neck": (0.14, 0, 0), "head": (0.10, 0, 0),
+            "jaw": (0.0, 0, 0), "tail_01": (-0.2, 0, 0)}
+    wobble = {"root_loc": (0, 0.02, 0.40), "hips": (-0.02, 0, 0), "neck": (-0.04, 0, 0), "head": (-0.03, 0, 0)}
+    steps = []
+    for side, late in (("L", 0), ("R", 1)):
+        steps.append(legs.Step("front_paw." + side, 11 + late, 19 + late, (0.0, 0.0, 0.40), 0.26))
+        steps.append(legs.Step("hind_paw." + side, 12 + late, 20 + late, (0.0, 0.0, 0.40), 0.22))
+        steps.append(legs.Step("front_paw." + side, 27 + 2 * late, 33 + 2 * late, (0.0, 0.0, 0.18), 0.06))
+        steps.append(legs.Step("hind_paw." + side, 29 + 2 * late, 35 + 2 * late, (0.0, 0.0, 0.18), 0.05))
+        steps.append(legs.Step("front_paw." + side, 35 + 2 * late, 41 + 2 * late, (0.0, 0.0, 0.0), 0.06))
+        steps.append(legs.Step("hind_paw." + side, 37 + 2 * late, 43 + 2 * late, (0.0, 0.0, 0.0), 0.05))
+    return clips.Clip([(1, {}), (7, crouch), (11, coiled), (15, air, {"*": "quart", "jaw": "back"}),
+                       (20, slam, "quart"), (24, wobble, "back"), (34, {"root_loc": (0, 0, 0.2)}), (46, {})],
+                      steps=steps)
+
+
+def flop():
+    """Its faint (#1271): it sways, catches itself once, then flops flat onto its belly, `BELLY_HEIGHT`
+    down, its feet sliding out to the sides as its legs splay, its chin settling on the ground
+    (a wolf's faint would drive its low head into it), its fronds drooping, and it keeps sinking
+    into the ground's hold, rather than freezing there."""
+    sway = {"root_loc": (0, -BELLY_HEIGHT * 0.12, 0), "spine_02": (0, 0, 0.06), "neck": (0.06, 0, 0),
+            "head": (0.05, 0, -0.1)}
+    clips._both(sway, "ear", (0.3, 0, 0))
+    caught = {"root_loc": (0, -BELLY_HEIGHT * 0.05, 0), "spine_02": (0, 0, -0.03), "head": (-0.04, 0, 0.06)}
+    clips._both(caught, "ear", (0.2, 0, 0))
+    flat = {"root_loc": (0, -BELLY_HEIGHT * 0.9, 0), "neck": (0.06, 0, 0), "head": (0.06, 0, 0.12),
+            "jaw": (0.12, 0, 0), "ear.L": (0.7, 0, 0.25), "ear.R": (0.7, 0, -0.25), "tail_01": (0.2, 0, 0.2)}
+    # The belly lands and the body wobbles once, a soggy bounce.
+    bounce = dict(flat, root_loc=(0, -BELLY_HEIGHT * 0.75, 0), head=(0.02, 0, 0.1))
+    still = dict(flat, root_loc=(0, -BELLY_HEIGHT * 0.95, 0), head=(0.08, 0, 0.14), jaw=(0.15, 0, 0))
+    still["ear.L"], still["ear.R"] = (0.85, 0, 0.3), (0.85, 0, -0.3)
+    steps = []
+    for side, sign, late in (("L", 1.0, 0), ("R", -1.0, 2)):
+        steps.append(legs.Step("front_paw." + side, 14 + late, 26 + late, (0.08 * sign, 0.0, 0.06), 0.03))
+        steps.append(legs.Step("hind_paw." + side, 16 + late, 28 + late, (0.10 * sign, 0.0, -0.04), 0.03))
+    return clips.Clip([(1, {}), (6, sway), (10, caught), (24, flat, "quart"), (28, bounce), (32, flat),
+                       (50, still)], steps=steps)
+
+
+def _booming(t):
+    """The held boom at `t` (0..1) of the loop: head raised and mouth a little open, the chest
+    pumping with each boom (CHANNEL_FRAMES / BOOM of them a loop), every wave leaving and
+    returning to the pose at t=0 with no speed, so the wind-up, the seam and the release meet."""
+    booms = CHANNEL_FRAMES // BOOM
+
+    def wave(waves):
+        return 0.5 - 0.5 * math.cos(2 * math.pi * waves * t)
+
+    sway = math.sin(2 * math.pi * t) ** 3
+    pose = {
+        "root_loc": (0.0, 0.03 - 0.015 * wave(booms), 0.0),
+        "hips": (-0.04, 0.0, 0.0),
+        "spine_02": (-0.05 + 0.03 * wave(booms), 0.0, 0.0),
+        "neck": (-0.12 - 0.02 * wave(booms), 0.0, 0.05 * sway),
+        "head": (-0.10 - 0.03 * wave(booms), 0.0, -0.04 * sway),
+        "jaw": (0.12 + 0.05 * wave(booms), 0.0, 0.0),
+        "tail_01": (0.15, 0.0, 0.0),
+    }
+    clips._both(pose, "ear", (-0.25 - 0.1 * wave(booms), 0.0, 0.0))
+    return pose
+
+
+def boom():
+    """Its long attack (#1158, #1271) as the three clips the game plays in turn: it draws itself up
+    and fills its throat (ChannelStart), booms on and on for as long as the attack lasts, the
+    throat sac swelling with each boom (Channel), and lets the air out, sinking back and settling
+    (ChannelEnd). Its feet stay planted: it booms where it sits."""
+    held = _booming(0.0)
+    gulp = {"root_loc": (0.0, -0.03, -0.02), "hips": (0.03, 0.0, 0.0), "neck": (0.08, 0.0, 0.0),
+            "head": (0.05, 0.0, 0.0)}
+    clips._both(gulp, "ear", (0.2, 0.0, 0.0))
+    risen = dict(held, root_loc=(0.0, 0.045, 0.0), neck=(-0.16, 0.0, 0.0))
+    start = clips.Clip([(1, {}), (8, gulp), (16, risen, "back"), (clips.CHANNEL_START, held)])
+    loop = clips.Clip([(step + 1, _booming(step / CHANNEL_FRAMES)) for step in range(CHANNEL_FRAMES + 1)],
+                      loop=True)
+    sag = {"root_loc": (0.0, -0.03, 0.0), "hips": (0.02, 0.0, 0.0), "neck": (0.06, 0.0, 0.0),
+           "head": (0.04, 0.0, 0.0), "jaw": (0.05, 0.0, 0.0)}
+    clips._both(sag, "ear", (0.25, 0.0, 0.0))
+    end = clips.Clip([(1, held), (8, sag, "quart"), (18, {"root_loc": (0.0, 0.008, 0.0)}), (26, {})])
+    return {"ChannelStart": start, "Channel": loop, "ChannelEnd": end}
+
+
+def build(out):
+    scene.reset(FPS)
+    mats = palette(COLORS)
+    skin = toad_body()
+    skin.data.materials.append(mats["skin"])
+    two_tone(skin, mats)
+    pieces = head_parts(skin, mats) + throat(mats) + back(skin, mats)
+    symmetry.check(pieces)
+    rig = quadruped.armature("OmbulumoRig", TOAD)
+    points(rig, pieces)
+    channel = boom()
+    # The booms fall where the chest pumps highest, halfway between the loop's beats; the wind-up
+    # and the release take the beat either side of them, so the pulse runs on across the clips.
+    booms = [beat + BOOM // 2 + 1 for beat in range(-BOOM, CHANNEL_FRAMES + BOOM, BOOM)]
+    beats = {
+        "Idle": [70, 175],
+        "Attack": [14],
+        "ChannelStart": [clips.CHANNEL_START + booms[0]],
+        "Channel": booms,
+        "ChannelEnd": [booms[-2] - CHANNEL_FRAMES],
+    }
+    booming = pulse.Pulse(rig, "throat", THROAT, "neck", beats, BOOM_SWELL, BOOM_RISE, BOOM_FALL)
+    scene.apply_scale([rig, skin] + pieces, SCALE)
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", THROAT_BONE),
+                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
+    clips.animate(rig, {
+        "Idle": clips.idle(),
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=0.45, fold=0.5, lift=0.2, curl=0.5,
+                          roll=0.08),
+        "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, TOAD, clips.GALLOP, duty=0.3, fold=0.5, spine_flex=0.04,
+                         planted=False),
+        "Attack": leap(),
+        "Hit": clips.hit(),
+        "Faint": flop(),
+        **channel,
+    }, SCALE, ground_meshes=[skin], overlays=[booming.beat])
+    scene.export_glb(out)
+    print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
+          "materials", len(skin.data.materials))
+    # The speeds the motion check runs the ground under the clips at (model skill).
+    print("SPEEDS Walk=%.3f Run=%.3f" % (WALK_SPEED, RUN_SPEED))
+    if not metrics.report(rig, [skin], REFERENCE):
+        sys.exit(1)
+
+
+build(sys.argv[sys.argv.index("--") + 1])
