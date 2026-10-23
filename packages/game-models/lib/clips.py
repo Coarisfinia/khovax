@@ -20,15 +20,20 @@ def cycle_frames(speed, stride, fps):
 
 
 class Clip:
-    """A clip's keys, [(frame, pose)], whether the game loops it, its paws' steps (legs.Step), and
-    whether its paws are planted. A looping clip's last key is its first pose again, one cycle on."""
+    """A clip's keys, [(frame, pose)] or (frame, pose, ease) (motion.fill), whether the game loops
+    it, its paws' steps (legs.Step), whether its paws are planted, and a shiver laid over it
+    (motion.Shiver, one-shot clips only). A looping clip's last key is its first pose again, one
+    cycle on."""
 
-    def __init__(self, keys, loop=False, steps=(), planted=True):
+    def __init__(self, keys, loop=False, steps=(), planted=True, shiver=None):
         self.keys = keys
         self.loop = loop
         self.steps = list(steps)
         # Whether the legs reach for the paws (legs.plant), or the clip turns them itself.
         self.planted = planted
+        if shiver is not None and loop:
+            raise ValueError("a shiver doesn't meet itself at a loop's seam")
+        self.shiver = shiver
 
 
 # The legs' phases in a cycle, as ("front"|"hind", "L"|"R"): 0..1. A walk is four beats, each
@@ -180,30 +185,50 @@ def idle(frames=60):
 
 
 def attack():
-    """Crouch, lunge with the jaw wide, bite, and back: the forepaws step out with the lunge and
-    back after the bite, one just after the other; the hind paws stay planted and the hind legs
-    push."""
+    """Anticipation, action, overshoot and settle (#1074): it crouches back with the ears flat,
+    still coiling lower as it holds, snaps forward into the lunge with the jaw wide, the body
+    running on a little past it, bites (the jaw snapping shut), pulls back, sways past where it
+    stands and settles there. The forepaws step out with the lunge and back after the bite, one
+    just after the other; the hind paws stay planted and the hind legs push."""
     crouch = {"root_loc": (0, -0.12, -0.12), "hips": (-0.12, 0, 0), "neck": (0.25, 0, 0),
               "head": (-0.1, 0, 0), "tail_01": (-0.2, 0, 0)}
     _both(crouch, "ear", (0.4, 0, 0))
+    # The held crouch keeps sinking, so the anticipation never freezes.
+    coiled = dict(crouch, root_loc=(0, -0.13, -0.14), hips=(-0.13, 0, 0), neck=(0.28, 0, 0))
     lunge = {"root_loc": (0, 0.05, 0.35), "hips": (0.08, 0, 0), "neck": (-0.15, 0, 0),
              "head": (0.2, 0, 0), "jaw": (0.6, 0, 0), "tail_01": (0.3, 0, 0)}
     _both(lunge, "ear", (0.4, 0, 0))
-    bite = dict(lunge, jaw=(0.0, 0, 0))
+    bite = dict(lunge, head=(0.26, 0, 0), jaw=(0.0, 0, 0))
+    back = {"root_loc": (0, 0.0, 0.06), "hips": (0.02, 0, 0), "neck": (-0.04, 0, 0), "head": (0.05, 0, 0),
+            "jaw": (0.06, 0, 0), "tail_01": (0.1, 0, 0)}
+    _both(back, "ear", (0.15, 0, 0))
+    past = {"root_loc": (0, -0.01, -0.025), "hips": (-0.025, 0, 0), "neck": (0.05, 0, 0), "head": (-0.03, 0, 0),
+            "tail_01": (-0.06, 0, 0)}
+    _both(past, "ear", (-0.08, 0, 0))
     steps = []
     for side, late in (("L", 0), ("R", 1)):
-        steps.append(legs.Step("front_paw." + side, 7 + late, 14 + late, (0.0, 0.0, 0.42), 0.14))
-        steps.append(legs.Step("front_paw." + side, 15 + late, 23 + late, (0.0, 0.0, 0.0), 0.08))
-    return Clip([(1, {}), (8, crouch), (13, lunge), (16, bite), (24, {})], steps=steps)
+        steps.append(legs.Step("front_paw." + side, 7 + late, 17 + late, (0.0, 0.0, 0.42), 0.14))
+        steps.append(legs.Step("front_paw." + side, 19 + late, 29 + late, (0.0, 0.0, 0.0), 0.08))
+    return Clip([(1, {}), (7, crouch), (10, coiled), (16, lunge, {"*": "back", "jaw": None}),
+                 (20, bite, {"jaw": "quart"}), (25, back, "quart"), (29, past), (33, {})], steps=steps)
 
 
 def hit():
-    """Recoil from a blow: back, head up, ears flat, and back again, the paws planted."""
+    """Recoil from a blow (#1074): it snaps back, head up and ears flat, the body running on a
+    little further, a shiver running through its back and neck; then it rebounds past where it
+    stood, the ears flicking forward and wobbling, and settles, the paws planted."""
     recoil = {"root_loc": (0, -0.04, -0.14), "spine_01": (0.12, 0, 0.1), "spine_02": (0.1, 0, 0.1),
               "neck": (-0.3, 0, 0.15), "head": (-0.25, 0, 0.1), "jaw": (0.35, 0, 0),
               "tail_01": (-0.4, 0, 0)}
     _both(recoil, "ear", (0.6, 0, 0))
-    return Clip([(1, {}), (5, recoil), (18, {})])
+    reeling = dict(recoil, root_loc=(0, -0.05, -0.17), spine_01=(0.14, 0, 0.12), neck=(-0.34, 0, 0.17))
+    rebound = {"root_loc": (0, -0.01, 0.03), "spine_01": (-0.03, 0, -0.02), "spine_02": (-0.02, 0, -0.02),
+               "neck": (0.07, 0, -0.03), "head": (0.05, 0, -0.02), "jaw": (0.05, 0, 0), "tail_01": (0.08, 0, 0)}
+    # The ears are still coming up as it rebounds, and flick upright last.
+    _both(rebound, "ear", (0.25, 0, 0))
+    flick = {"ear.L": "elastic", "ear.R": "elastic"}
+    shiver = motion.Shiver(["spine_01", "spine_02", "neck"], 4, 18, math.radians(1.5))
+    return Clip([(1, {}), (4, recoil, "expo"), (8, reeling), (16, rebound), (26, {}, flick)], shiver=shiver)
 
 
 # A long attack's braced stance (#1158): where each paw stands, (sideways, up, forward) from rest
@@ -255,22 +280,31 @@ def _brace_steps(out, front, hind):
 
 def channel(frames=60):
     """A long attack, held for as long as it lasts (#1158), as three clips the game plays in turn
-    (name: Clip): ChannelStart rears back with the jaw opening and lunges into the braced stance,
+    (name: Clip): ChannelStart rears back with the jaw opening and snaps into the braced stance,
     the forepaws stepping out wide and ahead and the hind paws back; Channel holds the stance, a
-    loop of `frames`, for as long as the attack lasts; ChannelEnd snaps the jaw shut, recoils and
-    steps back to stand. The start ends and the end starts on the loop's first pose."""
+    loop of `frames`, for as long as the attack lasts; ChannelEnd snaps the jaw shut, recoils,
+    steps back to stand and settles. The start ends and the end starts on the loop's first pose."""
     braced = _braced(0.0)
     rear = {"root_loc": (0.0, -0.06, -0.12), "hips": (-0.1, 0.0, 0.0), "neck": (-0.25, 0.0, 0.0),
             "head": (-0.2, 0.0, 0.0), "jaw": (0.25, 0.0, 0.0), "tail_01": (-0.15, 0.0, 0.0)}
     _both(rear, "ear", (0.3, 0.0, 0.0))
+    # It holds the rear a moment, still drawing back (#1074), snaps into the lunge and runs on past
+    # the stance, settling back into it.
+    reared = dict(rear, root_loc=(0.0, -0.065, -0.135), neck=(-0.28, 0.0, 0.0))
     lunge = dict(braced, root_loc=(0.0, -0.09, 0.07), jaw=(0.65, 0.0, 0.0))
-    start = Clip([(1, {}), (10, rear), (17, lunge), (CHANNEL_START, braced)], steps=_brace_steps(True, 6, 3))
+    start = Clip([(1, {}), (9, rear), (11, reared), (17, lunge, {"*": "quart", "jaw": "back"}), (CHANNEL_START, braced)],
+                 steps=_brace_steps(True, 6, 3))
     held = Clip([(step + 1, _braced(step / frames)) for step in range(frames + 1)], loop=True)
     # The jaw snaps shut and the head jerks up while the body holds the stance; it rises and
     # steps back only once the snap is over, so the legs can reach their paws all along.
     snap = dict(braced, neck=(-0.1, 0.0, 0.0), head=(-0.12, 0.0, 0.0), jaw=(0.0, 0.0, 0.0))
     _both(snap, "ear", (0.6, 0.0, 0.0))
-    end = Clip([(1, braced), (6, snap), (24, {})], steps=_brace_steps(False, 7, 10))
+    # Standing again, it sways back a little past where it stands and settles (#1074).
+    past = {"root_loc": (0.0, 0.0, -0.02), "hips": (-0.02, 0.0, 0.0), "neck": (-0.05, 0.0, 0.0),
+            "head": (-0.03, 0.0, 0.0), "tail_01": (0.06, 0.0, 0.0)}
+    _both(past, "ear", (-0.08, 0.0, 0.0))
+    end = Clip([(1, braced), (6, snap, {"*": "quart", "jaw": "expo"}), (20, past), (28, {})],
+               steps=_brace_steps(False, 7, 10))
     return {"ChannelStart": start, "Channel": held, "ChannelEnd": end}
 
 
@@ -279,10 +313,17 @@ FOREARM_FLAT = 0.8
 
 
 def faint(body_height):
-    """The legs give way and it sinks onto its belly, `body_height` down, the hind legs folding
-    under it where they stood and the forepaws stepping out in front, head on the ground and tail
-    lying out behind (a hanging tail would hold the body off the ground once animate grounds the
-    clip), and stays there."""
+    """The legs give way (#1074): it staggers, catches itself once, then sinks onto its belly,
+    `body_height` down, the hind legs folding under it where they stood and the forepaws stepping
+    out in front; the head hits the ground and bounces once, the tail lying out behind (a
+    hanging tail would hold the body off the ground once animate grounds the clip), and it keeps
+    sinking into the ground's hold as its ears droop, rather than freezing there."""
+    stagger = {"root_loc": (0, -body_height * 0.08, 0), "spine_02": (0, 0, 0.06), "neck": (0.15, 0, 0),
+               "head": (0.12, 0, -0.12)}
+    _both(stagger, "ear", (0.35, 0, 0))
+    caught = {"root_loc": (0, -body_height * 0.04, 0), "spine_02": (0, 0, -0.03), "neck": (0.02, 0, 0),
+              "head": (-0.04, 0, 0.08)}
+    _both(caught, "ear", (0.25, 0, 0))
     sinking = {"root_loc": (0, -body_height * 0.45, 0), "neck": (0.2, 0, 0), "head": (0.1, 0, 0.1)}
     _both(sinking, "ear", (0.5, 0, 0))
     lying = {"root_loc": (0, -body_height * 0.9, 0), "neck": (0.45, 0, 0), "head": (0.25, 0, 0.25),
@@ -290,13 +331,20 @@ def faint(body_height):
              "tail_02": (0.1, 0, 0.3)}
     # The forearms lie along the ground, the elbows down on it, as a canine lies on its front.
     _both(lying, "forearm", (-FOREARM_FLAT, 0, 0))
+    # The head knocks onto the ground and bounces back up a little.
+    bounce = dict(lying, neck=(0.38, 0, 0), head=(0.2, 0, 0.22))
+    # The held end: a little lower, the head heavier, the ears drooping, the tail tip curled in.
+    still = dict(lying, root_loc=(0, -body_height * 0.92, 0), neck=(0.47, 0, 0), head=(0.27, 0, 0.27),
+                 jaw=(0.12, 0, 0), tail_02=(0.1, 0, 0.36))
+    still["ear.L"], still["ear.R"] = (0.8, 0, 0.25), (0.8, 0, -0.25)
     # One after the other, so it lies on its forearms rather than propped up on folded forelegs.
     steps = []
     for side, sign, late in (("L", 1.0, 0), ("R", -1.0, 2)):
-        steps.append(legs.Step("front_paw." + side, 10 + late, 24 + late, (0.0, 0.0, 0.45), 0.1))
+        steps.append(legs.Step("front_paw." + side, 14 + late, 28 + late, (0.0, 0.0, 0.45), 0.1))
         # The hind paws splay out and back, so the knees fold beside the belly, not under it.
-        steps.append(legs.Step("hind_paw." + side, 14 + late, 28 + late, (0.12 * sign, 0.0, -0.12), 0.06))
-    return Clip([(1, {}), (14, sinking), (30, lying), (40, lying)], steps=steps)
+        steps.append(legs.Step("hind_paw." + side, 17 + late, 30 + late, (0.12 * sign, 0.0, -0.12), 0.06))
+    return Clip([(1, {}), (6, stagger), (10, caught), (19, sinking), (32, lying), (35, bounce, "quart"),
+                 (39, lying), (50, still)], steps=steps)
 
 
 # Overlap and follow-through (motion.follow): which bones trail their parent, and how:
@@ -397,6 +445,8 @@ def animate(rig, clips, scale, ground_meshes=(), chains=FOLLOW, limbs=LEGS, over
         rises = {paw: max(0.0, ground.CLEARANCE - low) for paw, low in feet.items()}
     for name, clip in clips.items():
         filled = motion.fill(clip.keys, clip.loop)
+        if clip.shiver is not None:
+            clip.shiver(filled, fps)
         for overlay in overlays:
             overlay(name, filled, clip.loop)
         planned = legs.steps(motion.follow(shape, filled, chains, scale, fps, clip.loop), clip.steps)
