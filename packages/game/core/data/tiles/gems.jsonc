@@ -1,0 +1,9 @@
+// Gems: a cluster of large mana crystals on a low rock, which ring the mana forest (#1218). Nobody
+// walks it, but sight passes over it, like a boulder.
+{
+	"id": "gems",
+	"color": "#4a4f7a",
+	"symbol": "&", // tells it apart without its color (#68)
+	"model": "res://assets/mana-gems/mana_gems.glb",
+	"traits": { "walkable": false }
+}
