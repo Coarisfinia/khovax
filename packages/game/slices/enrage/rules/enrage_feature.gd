@@ -5,7 +5,7 @@ extends Feature
 ## stronger (so it pushes harder on the next ring) and heals part of its HP. Stacks add up with
 ## every further ring that fails. The camera stays still: the rage shows on the monsters.
 ##
-## Enraged, a wild monster goes for the players (#961): it's faster (WildMonsterFeature.paced), and
+## Enraged, a wild monster goes for the players (#961): it's faster (WildPace.paced), and
 ## free, it chases the nearest player (not one a dialog holds, whom HealthFeature shields, #981),
 ## the lowest id of the equally near, a step at a time at its pace (WildMonsterFeature.chase); one
 ## a ring encircles or seals stays where it stands, as every monster in a ring does. Next to a

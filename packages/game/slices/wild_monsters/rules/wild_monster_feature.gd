@@ -17,7 +17,9 @@ extends Feature
 ## dominates it any more, and it still blocks walkers like anything that doesn't walk. Enraged
 ## (#220, EnrageFeature), it grows stronger with every stack of rage, which it keeps, and faster
 ## (#961): its steps and its strikes (WildAttackFeature) come sooner, and EnrageFeature makes it
-## chase the nearest player (`chase`), never off ground a ring could enclose it on. Like every
+## chase the nearest player (`chase`), never off ground a ring could enclose it on. Asleep (#1202,
+## SleepFeature puts it to sleep by its schedule), it neither steps nor strikes (WildAttackFeature)
+## until it wakes: by its schedule, or at once when a strike wounds it or rage takes it. Like every
 ## feature, switched off it keeps its state: the monsters stay where they are, and only its own
 ## rules stop.
 
@@ -29,9 +31,6 @@ const UNKNOWN_STRENGTH: int = 0
 ## takes. Placeholders to tune (#960).
 const RAGE_STRENGTH: int = 500
 const MOST_RAGE: int = 3
-## How much faster each stack of rage makes a wild monster (thousandths, #961): its steps and its
-## strikes come this much more often. A placeholder to tune (#960).
-const RAGE_SPEED: int = 500
 ## How many ticks a wild monster that can't be ringed where it stands takes for each step away: its
 ## own pace, slower than a player's. A placeholder to tune (#960).
 const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
@@ -56,6 +55,10 @@ var _wild: Dictionary[int, WildMonster] = {}
 ## jump out, and SpecialAttackFeature the ones a held special binds (#1167) until the bind ends.
 ## Each restores its own on loading, so they aren't saved here.
 var held: Array[int] = []
+## The standing wild monsters asleep (#1202), in id order: SleepFeature puts them to sleep and wakes
+## them by their schedules, and a strike (`wound`) or rage (`enrage`) wakes one at once. Saved,
+## since a woken one stays awake until its schedule wakes it anyway.
+var asleep: Array[int] = []
 ## Every species id this instance can place, sorted: the hash counts a species by its place here.
 var _known: Array[String] = []
 ## The tiles of `_unringable_region` no ring can enclose a wild monster on, cached by
@@ -149,18 +152,12 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		_stepped.append(monster)
 
 
-## `ticks` (a wild monster's pace between two steps or strikes) made shorter by RAGE_SPEED for
-## every stack of rage in `rage` (#961), never below one tick.
-static func paced(ticks: int, rage: int) -> int:
-	return maxi(Fixed.mul_div(ticks, Fixed.ONE, Fixed.ONE + rage * RAGE_SPEED), 1)
-
-
 ## Whether the standing wild monster with this id may step this tick: once every STEP_TICKS, paced
 ## by its rage, on its own tick (by its id), and not while it's held.
 func _moves_now(state: GameState, entity_id: int) -> bool:
-	if held.has(entity_id):
+	if held.has(entity_id) or asleep.has(entity_id):
 		return false
-	return (state.tick + entity_id) % paced(STEP_TICKS, rage_of(entity_id)) == 0
+	return (state.tick + entity_id) % WildPace.paced(STEP_TICKS, rage_of(entity_id)) == 0
 
 
 ## Steps the wild monster with this id one tile toward `goal` (#961), onto the walkable tile next to
@@ -214,6 +211,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	monsters.erase(removed_id)
 	fainted.erase(removed_id)
 	held.erase(removed_id)
+	asleep.erase(removed_id)
 	var _dropped: bool = _wild.erase(removed_id)
 
 
@@ -223,6 +221,14 @@ func hold(entity_id: int, holding: bool) -> void:
 	if holding and monsters.has(entity_id):
 		held.append(entity_id)
 		held.sort()
+
+
+## Puts the standing wild monster with this entity id to sleep, or wakes it.
+func sleep(entity_id: int, sleeping: bool) -> void:
+	asleep.erase(entity_id)
+	if sleeping and monsters.has(entity_id):
+		asleep.append(entity_id)
+		asleep.sort()
 
 
 ## The species id of the wild monster with this entity id, or "" when it has none.
@@ -263,8 +269,9 @@ func is_fainted(entity_id: int) -> bool:
 ## Takes `damage` off the standing wild monster's HP (HealthFeature, #835). A non-lethal hit (#221)
 ## never takes it below 1, so it weakens it for a domination; a `lethal` one (#410) can take it to
 ## 0, and then it faints: it loses its rage and emits in `state` the event its region names for it,
-## if any (#541).
+## if any (#541). Any strike wakes it (#1202).
 func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) -> void:
+	asleep.erase(entity_id)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	if not monsters.has(entity_id) or not health.hurt(state, entity_id, damage, lethal):
 		return
@@ -280,17 +287,20 @@ func wound(state: GameState, entity_id: int, damage: int, lethal: bool = false) 
 
 
 ## Enrages the standing wild monster once more (#220), up to MOST_RAGE stacks: it grows stronger and
-## heals `heal` thousandths of its full HP, never past it. EnrageFeature's rule calls this.
+## heals `heal` thousandths of its full HP, never past it, and wakes (#1202). EnrageFeature's rule
+## calls this.
 func enrage(state: GameState, entity_id: int, heal: int) -> void:
 	if not monsters.has(entity_id):
 		return
+	asleep.erase(entity_id)
 	_wild[entity_id].rage = mini(_wild[entity_id].rage + 1, MOST_RAGE)
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	health.heal(state, entity_id, Fixed.scale(health.max_hp_of(state, entity_id), heal))
 
 
 ## Each wild monster still in the instance as its entity's id, its species, its short id and
-## whether it fainted, in id order, its rage, the event a standing one emits when it
+## whether it fainted, in id order, its rage, whether a standing one is asleep (#1202), the event
+## a standing one emits when it
 ## faints, if any (#541), and the quest target it is, if any (#625). The roster, the species this
 ## instance can place and their stats follow from the blueprint, the region and the content.
 func save_values() -> Dictionary:
@@ -307,6 +317,8 @@ func save_values() -> Dictionary:
 			"fainted": 1 if fainted.has(monster) else 0,
 		}
 		entry["rage"] = wild.rage
+		if asleep.has(monster):
+			entry["asleep"] = 1
 		if not wild.emits.is_empty():
 			entry["emits"] = wild.emits
 		if not wild.target.is_empty():
@@ -319,6 +331,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 	monsters.clear()
 	fainted.clear()
 	held.clear()
+	asleep.clear()
 	_wild.clear()
 	for entry: DataReader in values.entries("wild_monsters"):
 		var monster: int = entry.whole("entity", 1, DataReader.MOST)
@@ -347,10 +360,14 @@ func load_values(state: GameState, values: DataReader) -> void:
 			continue
 		monsters.append(monster)
 		wild.rage = entry.whole("rage", 0, MOST_RAGE)
+		# Saves from before sleep (#1202) have none: their monsters are awake.
+		if (entry.data as Dictionary).has("asleep") and entry.whole("asleep", 0, 1) == 1:
+			asleep.append(monster)
 		if (entry.data as Dictionary).has("emits"):
 			wild.emits = entry.text("emits")
 	monsters.sort()
 	fainted.sort()
+	asleep.sort()
 	_track_loaded(state, values)
 
 
@@ -375,6 +392,8 @@ func hash_values() -> Array[int]:
 		values.append_array([strength_of(monster), wild.rage])
 	values.append(held.size())
 	values.append_array(held)
+	values.append(asleep.size())
+	values.append_array(asleep)
 	values.append(fainted.size())
 	for monster: int in fainted:
 		values.append_array([monster, _known.find(_wild[monster].species)])

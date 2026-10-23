@@ -433,7 +433,31 @@ func _check_wild_monster(main: Node) -> String:
 		if not driver.state.region.is_walkable(spot + direction):
 			return "no ring fits around the wild monster: %s isn't ground" % (spot + direction)
 	var figure: HexPiece = view.figures.get(monster.id)
+	# Its schedule may have it asleep from the start (#1202): then it lies settled, its eyes shut,
+	# and woken, it idles like any standing one.
+	if feature.asleep.has(monster.id):
+		var asleep: String = _check_asleep(figure)
+		if not asleep.is_empty():
+			return asleep
+		feature.sleep(monster.id, false)
+		view.show_state()
+		view._process(0.0)
 	return _check_figure(figure, spot)
+
+
+## A sleeping wild monster's figure (#1202) lies in its Faint clip's last pose, not idling, upright
+## rather than rolled onto its side like a fainted one, and its eyes are shut.
+func _check_asleep(figure: HexPiece) -> String:
+	if figure == null:
+		return "no figure shown for the sleeping wild monster"
+	var model: Node3D = figure.get_child(0) as Node3D
+	var animations: AnimationPlayer = WildMonsterView.clips_of(model)
+	var settled: bool = (
+		animations != null and animations.assigned_animation == WildMonsterView.FAINT
+	)
+	if not settled or not is_zero_approx(model.rotation.z) or not EyeGlow.of(model).out:
+		return "a sleeping wild monster's figure didn't settle down upright with its eyes shut"
+	return ""
 
 
 ## The wild monster's figure (#85): on its tile, standing on the tile's top, with a model that has
