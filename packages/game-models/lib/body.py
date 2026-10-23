@@ -117,13 +117,17 @@ class Blob:
             element.co = _spline(points, share)
             element.radius = _line_radius(max(_spline(widths, share).x, min(radii)), gap)
 
-    def mesh(self, triangles):
-        """The finished body: converted to a mesh, reduced to about `triangles`, smooth shaded."""
+    def mesh(self, triangles, symmetric=False):
+        """The finished body: converted to a mesh, reduced to about `triangles`, smooth shaded.
+        `symmetric` reduces its two halves alike, mirrored across X, so what is set into its
+        surface on one side (an eye in its socket) sits in the other side alike."""
         scene.select_only(self.obj)
         bpy.ops.object.convert(target="MESH")
         body = bpy.context.object
         decimate = body.modifiers.new("Decimate", "DECIMATE")
         decimate.ratio = min(1.0, triangles / max(1, scene.triangles(body)))
+        decimate.use_symmetry = symmetric
+        decimate.symmetry_axis = "X"
         bpy.ops.object.modifier_apply(modifier=decimate.name)
         bpy.ops.object.shade_smooth()
         return body

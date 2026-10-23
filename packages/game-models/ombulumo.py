@@ -32,8 +32,8 @@ SCALE = 0.95
 # The body's budget before its parts, as the mana wolf's: seen full-screen on its codex page.
 BODY_TRIANGLES = 9000
 
-# A deep teal green, so it stands out from the grass; a pale belly and throat; moss pads and
-# fronds in a brighter green; and soft lime glows.
+# A deep teal green, so it stands out from the grass; a pale throat sac; moss pads and fronds in
+# a brighter green; and soft lime glows.
 COLORS = {
     "skin": ((0.06, 0.20, 0.17, 1.0), 0.0),
     "light": ((0.80, 0.72, 0.48, 1.0), 0.0),
@@ -44,16 +44,17 @@ COLORS = {
 
 TOAD = quadruped.Proportions(
     # A stub of a tail, mostly inside the round rump.
-    tail=[(0.0, 0.84, 0.30), (0.0, 0.77, 0.34), (0.0, 0.70, 0.38), (0.0, 0.62, 0.42)],
+    tail=[(0.0, 0.76, 0.34), (0.0, 0.71, 0.37), (0.0, 0.66, 0.40), (0.0, 0.61, 0.43)],
     hips=(0.0, 0.40, 0.52),
     waist=(0.0, 0.14, 0.56),
     chest=(0.0, -0.16, 0.58),
     head_base=(0.0, -0.36, 0.62),
     nose=(0.0, -0.88, 0.58),
-    # The jaw turns far back under the eyes, as a toad's wide mouth does.
+    # Every quadruped rig has a jaw; this one's mouth is drawn on (MOUTH), so it moves nothing.
     jaw=((0.0, -0.40, 0.52), (0.0, -0.84, 0.47)),
-    # The leaf fronds behind the eyes take the ears' bones.
-    ear=((0.24, -0.34, 0.80), (0.36, -0.14, 0.94)),
+    # The leaf fronds take the ears' bones, far enough behind the eyes that, flattened back or
+    # twitching, they never cross them (check_brows.py).
+    ear=((0.25, -0.27, 0.80), (0.40, -0.09, 0.92)),
     scapula=(0.38, -0.10, 0.58),
     front_leg=[(0.40, -0.34, 0.40), (0.42, -0.20, 0.22), (0.43, -0.24, 0.08), (0.43, -0.32, 0.04)],
     hind_leg=[
@@ -66,7 +67,7 @@ TOAD = quadruped.Proportions(
 )
 # Its proportions as first built (#1271): a change that drifts from them fails the build
 # (lib/metrics.py), so a derpy edit shows as numbers. A toad's: a head as long as the body is
-# deep and wider than it is long, short legs, eyes far apart on top, a short, deep, blunt mouth.
+# deep and wider than it is long, short legs, eyes far apart on top, a short, deep, blunt muzzle.
 REFERENCE = {
     "head/body": 1.307,
     "head height/length": 0.899,
@@ -75,7 +76,7 @@ REFERENCE = {
     # The leaf fronds behind the eyes, on the ears' bones.
     "ear/head": 0.410,
     # The stub of a tail and the round rump it moves.
-    "tail/body": 0.938,
+    "tail/body": 0.799,
     "eye spacing/head width": 0.647,
     # The eyes mirror each other: level, side by side, equally far out.
     "eye.R/eye.L height": 0.0,
@@ -83,19 +84,24 @@ REFERENCE = {
     "eye.R/eye.L sides": 0.0,
     "muzzle/head": 0.609,
     "muzzle depth/length": 1.030,
-    "muzzle width/head width": 0.602,
-    "nose width/muzzle width": 0.542,
-    "jaw depth/muzzle depth": 0.465,
-    "jaw width/muzzle width": 0.711,
-    "jaw/muzzle": 1.562,
-    "chin reach/muzzle": 0.957,
+    "muzzle width/head width": 0.725,
+    "nose width/muzzle width": 0.409,
 }
 
-# A wide, blunt mouth across the whole front of the head, its lower jaw as wide as the head.
+# A wide, blunt muzzle across the whole front of the head. Its mouth is a line drawn round the
+# head's front (MOUTH), not a jaw that opens: a cut as wide as a toad's would leave flaps of skin.
 SNOUT = muzzle.Snout(stop=(-0.60, 0.74), tip=(-0.86, 0.60), radius=0.20, joint=TOAD.jaw[0][1:], taper=0.85,
-                     stop_depth=0.02, lip=0.03, jaw_depth=0.6, jaw_width=1.0, chin=1.0, corner=0.0)
+                     stop_depth=0.02, lip=0.03, jaw_depth=0.6, jaw_width=1.0, chin=0.85, corner=0.0)
 
 TAIL_ROOT = (0.0, 0.55, 0.44)
+
+# The mouth's line, cheek to cheek round the front of the head, a little above the chin.
+MOUTH = [(0.40 * math.sin(1.25 * share), -0.42 - 0.46 * math.cos(1.25 * share), 0.50)
+         for share in (index / 8 - 1.0 for index in range(17))]
+
+# The eyes' turrets on top of the head (the left one; the right mirrors it): the skin there moves
+# with the head alone, so it never slides across the eye set into it (check_brows.py).
+TURRET, TURRET_RADIUS = (0.24, -0.52, 0.80), 0.12
 
 # How high its belly sits off the ground: the faint sinks it this far.
 BELLY_HEIGHT = 0.16
@@ -132,14 +138,14 @@ def toad_body():
     blob.ellipsoid((0.0, 0.08, 0.52), (0.62, 0.48, 0.36))
     blob.ellipsoid((0.0, 0.40, 0.46), (0.50, 0.26, 0.30))
     blob.ellipsoid((0.0, -0.22, 0.54), (0.52, 0.30, 0.28))
-    # The head: broad and flat, its brow, upper lip and lower jaw from the snout.
+    # The head: broad and flat, its brow and upper lip from the snout, and a round chin.
     blob.ellipsoid((0.0, -0.50, 0.62), (0.47, 0.28, 0.18))
     SNOUT.upper(blob)
-    SNOUT.lower(blob)
-    blob.tube([TAIL_ROOT, *reversed(TOAD.tail)], [0.10, 0.10, 0.085, 0.065, 0.04])
+    blob.ellipsoid((0.0, -0.66, 0.47), (0.34, 0.22, 0.10))
+    blob.tube([TAIL_ROOT, *reversed(TOAD.tail)], [0.10, 0.10, 0.085, 0.07, 0.055])
     for sign in (1, -1):
         # The eyes' turrets, on top of the head.
-        blob.ball((0.24 * sign, -0.52, 0.80), 0.12)
+        blob.ball(mirror(TURRET, sign), TURRET_RADIUS)
         front = [mirror(p, sign) for p in TOAD.front_leg]
         blob.limb(front[:3], [0.12, 0.09, 0.06])
         hind = [mirror(p, sign) for p in TOAD.hind_leg]
@@ -156,19 +162,21 @@ def toad_body():
                 toe = (px + math.sin(turn) * reach, py - 0.04 - math.cos(turn) * reach, 0.035)
                 blob.capsule((px, py - 0.06, 0.04), toe, 0.024)
                 blob.ball(toe, 0.034)
-    return blob.mesh(BODY_TRIANGLES)
+    return blob.mesh(BODY_TRIANGLES, symmetric=True)
 
 
-def two_tone(skin, mats):
-    """Its belly, throat and lower jaw pale: the faces under a soft line from the chin to the rump,
-    between the legs."""
-    skin.data.materials.append(mats["light"])
-    for polygon in skin.data.polygons:
-        x, y, z = polygon.center
-        # Below the mouth on the head; under a line falling toward the rump on the body.
-        line = 0.43 if y < -0.45 else 0.46 - 0.12 * max(0.0, min(1.0, (y + 0.3) / 0.8))
-        if 0.1 < z < line and (x / 0.42) ** 2 + (y / 1.0) ** 2 < 1.0:
-            polygon.material_index = 1
+def turrets(skin):
+    """Hands the skin of the eyes' turrets wholly to the head (weights.bind's `reweigh`, after
+    scene.apply_scale), so the eyes and their sockets move as one."""
+    head = skin.vertex_groups["head"]
+    centres = [Vector(mirror(TURRET, sign)) * SCALE for sign in (1, -1)]
+    reach = TURRET_RADIUS * 1.6 * SCALE
+    for vertex in skin.data.vertices:
+        if min((vertex.co - centre).length for centre in centres) > reach:
+            continue
+        for group in [group.group for group in vertex.groups]:
+            skin.vertex_groups[group].remove([vertex.index])
+        head.add([vertex.index], 1.0, "REPLACE")
 
 
 def leaf(name, base, toward, length, width, mat, bone=None):
@@ -181,14 +189,9 @@ def leaf(name, base, toward, length, width, mat, bone=None):
 
 
 def head_parts(skin, mats):
-    """The mouth's lining, two nostrils, the leaf fronds and the round, bulging eyes."""
-    made = []
-    # A toad's mouth has no fangs, and two nostrils instead of a nose pad.
-    for piece in SNOUT.parts(mats, "head", "jaw"):
-        if "Fang." in piece.name or piece.name.endswith(".Nose"):
-            bpy.data.objects.remove(piece, do_unlink=True)
-        else:
-            made.append(piece)
+    """The mouth, two nostrils, the leaf fronds and the round, bulging eyes."""
+    # The mouth, a dark line from cheek to cheek round the front of the head, and two nostrils.
+    made = [surface.vein(skin, "Mouth", MOUTH, 0.012, mats["dark"])]
     for sign in (1, -1):
         side = "L" if sign == 1 else "R"
         made.append(parts.part("uv_sphere", "Nostril." + side, (0.07 * sign, -0.855, 0.655), (0.018, 0.012, 0.012), mat=mats["dark"],
@@ -197,12 +200,12 @@ def head_parts(skin, mats):
         out = tuple(t - b for t, b in zip(tip, base))
         for index, (share, length, width) in enumerate(((0.0, 0.30, 0.10), (0.15, 0.22, 0.08))):
             spot = tuple(b + o * share for b, o in zip(base, out))
-            toward = (out[0] + 0.12 * index * sign, out[1] - 0.1 * index, out[2] + 0.08 * index)
+            toward = (out[0] + 0.12 * index * sign, out[1] + 0.1 * index, out[2] + 0.08 * index)
             made.append(leaf("Frond.%d.%s" % (index, side), spot, toward, length, width, mats["moss"], "ear." + side))
     # The left eye, set into the skin, and its mirror image on the right. Its turret is its lid:
     # a brow ridge would float over a bulging eye.
     left = []
-    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.57, 0.90), (0.45, -1.0, 0.2), 0.09,
+    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.57, 0.90), (0.25, -1.0, 0.2), 0.09,
                           {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
                           "head", almond=0.95, pupil=(0.42, 0.34)):
         if piece.name.endswith(".brow"):
@@ -255,14 +258,14 @@ def points(rig, pieces):
 
 def leap():
     """Its attack (#1271): it crouches, still sinking as it gathers itself, leaps up and forward
-    with its mouth wide and every foot leaving the ground, lands on its target with all its soggy
+    its throat swelling and every foot leaving the ground, lands on its target with all its soggy
     weight, squashing flat, wobbles back up and waddles back to where it stood."""
     crouch = {"root_loc": (0, -0.08, -0.04), "hips": (-0.10, 0, 0), "neck": (0.12, 0, 0), "head": (-0.08, 0, 0)}
     coiled = dict(crouch, root_loc=(0, -0.09, -0.05), hips=(-0.12, 0, 0))
     air = {"root_loc": (0, 0.18, 0.22), "hips": (0.10, 0, 0), "neck": (-0.12, 0, 0), "head": (-0.05, 0, 0),
-           "jaw": (0.45, 0, 0), "tail_01": (0.3, 0, 0)}
+           "tail_01": (0.3, 0, 0)}
     slam = {"root_loc": (0, -0.07, 0.40), "hips": (0.04, 0, 0), "neck": (0.14, 0, 0), "head": (0.10, 0, 0),
-            "jaw": (0.0, 0, 0), "tail_01": (-0.2, 0, 0)}
+            "tail_01": (-0.2, 0, 0)}
     wobble = {"root_loc": (0, 0.02, 0.40), "hips": (-0.02, 0, 0), "neck": (-0.04, 0, 0), "head": (-0.03, 0, 0)}
     steps = []
     for side, late in (("L", 0), ("R", 1)):
@@ -272,7 +275,7 @@ def leap():
         steps.append(legs.Step("hind_paw." + side, 29 + 2 * late, 35 + 2 * late, (0.0, 0.0, 0.18), 0.05))
         steps.append(legs.Step("front_paw." + side, 35 + 2 * late, 41 + 2 * late, (0.0, 0.0, 0.0), 0.06))
         steps.append(legs.Step("hind_paw." + side, 37 + 2 * late, 43 + 2 * late, (0.0, 0.0, 0.0), 0.05))
-    return clips.Clip([(1, {}), (7, crouch), (11, coiled), (15, air, {"jaw": "back"}),
+    return clips.Clip([(1, {}), (7, crouch), (11, coiled), (15, air),
                        (20, slam), (24, wobble, "back"), (34, {"root_loc": (0, 0, 0.2)}), (46, {})],
                       steps=steps)
 
@@ -325,10 +328,10 @@ def flop():
     caught = {"root_loc": (0, -BELLY_HEIGHT * 0.05, 0), "spine_02": (0, 0, -0.03), "head": (-0.04, 0, 0.06)}
     clips._both(caught, "ear", (0.2, 0, 0))
     flat = {"root_loc": (0, -BELLY_HEIGHT * 0.9, 0), "neck": (0.06, 0, 0), "head": (0.06, 0, 0.12),
-            "jaw": (0.12, 0, 0), "ear.L": (0.7, 0, 0.25), "ear.R": (0.7, 0, -0.25), "tail_01": (0.2, 0, 0.2)}
+            "ear.L": (0.7, 0, 0.25), "ear.R": (0.7, 0, -0.25), "tail_01": (0.2, 0, 0.2)}
     # The belly lands and the body wobbles once, a soggy bounce.
     bounce = dict(flat, root_loc=(0, -BELLY_HEIGHT * 0.75, 0), head=(0.02, 0, 0.1))
-    still = dict(flat, root_loc=(0, -BELLY_HEIGHT * 0.95, 0), head=(0.08, 0, 0.14), jaw=(0.15, 0, 0))
+    still = dict(flat, root_loc=(0, -BELLY_HEIGHT * 0.95, 0), head=(0.08, 0, 0.14))
     still["ear.L"], still["ear.R"] = (0.85, 0, 0.3), (0.85, 0, -0.3)
     steps = []
     for side, sign, late in (("L", 1.0, 0), ("R", -1.0, 2)):
@@ -339,7 +342,7 @@ def flop():
 
 
 def _booming(t):
-    """The held boom at `t` (0..1) of the loop: head raised and mouth a little open, the chest
+    """The held boom at `t` (0..1) of the loop: head raised, the chest
     pumping with each boom (CHANNEL_FRAMES / BOOM of them a loop), every wave leaving and
     returning to the pose at t=0 with no speed, so the wind-up, the seam and the release meet."""
     booms = CHANNEL_FRAMES // BOOM
@@ -349,12 +352,11 @@ def _booming(t):
 
     sway = math.sin(2 * math.pi * t) ** 3
     pose = {
-        "root_loc": (0.0, 0.03 - 0.008 * wave(booms), 0.0),
+        "root_loc": (0.0, 0.03 - 0.004 * wave(booms), 0.0),
         "hips": (-0.04, 0.0, 0.0),
         "spine_02": (-0.05 + 0.012 * wave(booms), 0.0, 0.0),
         "neck": (-0.12 - 0.008 * wave(booms), 0.0, 0.05 * sway),
         "head": (-0.10 - 0.012 * wave(booms), 0.0, -0.04 * sway),
-        "jaw": (0.12 + 0.02 * wave(booms), 0.0, 0.0),
         "tail_01": (0.15, 0.0, 0.0),
     }
     clips._both(pose, "ear", (-0.25 - 0.03 * wave(booms), 0.0, 0.0))
@@ -375,7 +377,7 @@ def boom():
     loop = clips.Clip([(step + 1, _booming(step / CHANNEL_FRAMES)) for step in range(CHANNEL_FRAMES + 1)],
                       loop=True)
     sag = {"root_loc": (0.0, -0.03, 0.0), "hips": (0.02, 0.0, 0.0), "neck": (0.06, 0.0, 0.0),
-           "head": (0.04, 0.0, 0.0), "jaw": (0.05, 0.0, 0.0)}
+           "head": (0.04, 0.0, 0.0)}
     clips._both(sag, "ear", (0.25, 0.0, 0.0))
     end = clips.Clip([(1, held), (8, sag, "quart"), (18, {"root_loc": (0.0, 0.008, 0.0)}), (26, {})])
     return {"ChannelStart": start, "Channel": loop, "ChannelEnd": end}
@@ -386,7 +388,6 @@ def build(out):
     mats = palette(COLORS)
     skin = toad_body()
     skin.data.materials.append(mats["skin"])
-    two_tone(skin, mats)
     pieces = head_parts(skin, mats) + throat(mats) + back(skin, mats)
     symmetry.check(pieces)
     rig = quadruped.armature("OmbulumoRig", TOAD)
@@ -405,7 +406,7 @@ def build(out):
     booming = pulse.Pulse(rig, "throat", THROAT, "neck", beats, BOOM_SWELL, BOOM_RISE, BOOM_FALL)
     scene.apply_scale([rig, skin] + pieces, SCALE)
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", THROAT_BONE),
-                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
+                 reweigh=turrets)
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=0.35, fold=0.5, lift=0.25, curl=0.25,
