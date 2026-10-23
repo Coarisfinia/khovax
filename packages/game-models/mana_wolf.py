@@ -91,7 +91,7 @@ SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, joint=
 # Where the tail's form starts, inside the haunches.
 TAIL_ROOT = (0.0, 0.70, 1.05)
 
-# How tall the wolf stands at the hips: the faint sinks it this far.
+# How tall the wolf stands at the hips: the faint and the sleep sink it this far.
 HIP_HEIGHT = 0.69
 
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
@@ -333,6 +333,7 @@ def build(out):
         "Faint": clips.faint(HIP_HEIGHT),
         **channel,
         "Feed": clips.feed(forepaws=0.1),
+        "Sleep": clips.sleep(clips.curled(HIP_HEIGHT)),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
         overlays=[drifting.drift, flaring.beat])
     scene.export_glb(out)
