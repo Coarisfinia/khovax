@@ -13,5 +13,7 @@
 	"speed": 40,
 	"special": "ombulumo_bulum_bolom",
 	"player_passive": "ombulumo_mulbo_lulbo",
-	"self_passive": "ombulumo_bolmu_wolmu"
+	"self_passive": "ombulumo_bolmu_wolmu",
+	// It booms at dusk and sits half-sunk in the shallows: awake by night, it grazes and drinks (#1200).
+	"behaviour": ["nocturnal", "grazer", "drinker"]
 }

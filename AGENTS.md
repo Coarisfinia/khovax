@@ -440,6 +440,15 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   make peace with them or work against them, but no humanoid fights a humanoid. Humanoids who side
   with the monsters surrender once their monsters are defeated, and battles between humans are
   fought by their monsters.
+- **Monsters act on needs and instincts, never strolling at random** (owner's ground rule, #1199):
+  every species has a list of behaviour traits (`behaviour` in its data, #1200), and each monster
+  acts by them on a daily schedule made from them. A `pack_species` monster bands with its own
+  species, a `pack_type` one with monsters of the same or similar typing; a `predator` roams in
+  search of prey (weaker or `grazer` monsters), a `drinker` finds its way to the nearest water now
+  and then, a `grazer` finds grass to eat now and then. Every species has exactly one sleep rhythm
+  (`diurnal`, `nocturnal`, `cathemeral` for sleeping in bouts, or `sleepless` for those that never
+  sleep, like eldritch or gaseous ones) and enough needs to form a schedule (at least one of
+  `grazer`, `drinker`, `predator`); the content flow refuses a species that hasn't.
 - **Territory quests keep to ground rules** (draft for the owner's review, #638): a territory
   quest (`territory` in its quest data) names one instance and one faction, and finishing it hands
   that instance to that faction, whoever held it. It's written for its territory: its steps happen

@@ -1,8 +1,9 @@
 class_name Species
 extends RefCounted
 ## What a monster is, dominated or not (a `species`, #45), read from content data (#72): its types,
-## its auto attack's type, base stats and its three abilities (#222), and its bestiary entry
-## (#1173), which its codex page shows. Everything the simulation reads is integers and ids.
+## its auto attack's type, base stats and its three abilities (#222), its bestiary entry (#1173),
+## which its codex page shows, and its behaviour traits (#1200). Everything the simulation reads is
+## integers and ids.
 
 ## Its schema, which says the fields a species file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/species/data/species.schema.json"
@@ -33,6 +34,8 @@ var sight: int = 0
 ## what its name means, hand-written (#959), e.g. "the low boom from the shallows".
 var codex_entry: String = ""
 var codex_gloss: String = ""
+## Its behaviour traits (SpeciesBehaviour, #1200), which its monsters' daily schedule is made from.
+var behaviour: Array[String] = []
 ## Why the species couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -101,8 +104,8 @@ static func _read(entry: Species, file_id: String, data: Dictionary) -> String:
 	# Code, data and saves name a species by its id, which is its name (owner, #763).
 	if wrong.is_empty() and entry.id != entry.name.to_lower():
 		wrong = "its id must be its name in lower case (#763)"
-	if wrong.is_empty() and not entry._read_codex(data.get("codex")):
-		wrong = "it needs a codex entry and gloss (#1173)"
+	if wrong.is_empty():
+		wrong = entry._read_codex_and_behaviour(data)
 	return wrong
 
 
@@ -117,6 +120,14 @@ func _types_problem() -> String:
 			return "type %s isn't on the chart, or two types share a family" % type
 		families.append(family)
 	return ""
+
+
+## Reads its codex entry and gloss and its behaviour traits from `data`; returns why it can't, or
+## "".
+func _read_codex_and_behaviour(data: Dictionary) -> String:
+	if not _read_codex(data.get("codex")):
+		return "it needs a codex entry and gloss (#1173)"
+	return SpeciesBehaviour.read(data.get("behaviour"), behaviour)
 
 
 ## Whether `raw` holds a codex entry and gloss, each with more than spaces; reads them.
