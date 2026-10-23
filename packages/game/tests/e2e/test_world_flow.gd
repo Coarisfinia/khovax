@@ -790,12 +790,13 @@ func _check_two_of_one_species() -> String:
 
 
 ## The roster (#540) in the main scene: carrying a Tikazzir and an Ombulumo, it shows both at
-## the top left, apart, in that order, the finch as the companion, and the quest list starts below
-## it. A tap on the toad's square swaps to it in the local player's next command without starting
-## the touch stick, and a left click on the finch's swaps to the finch; while the game hears no
-## input (the menu is open) a tap swaps nothing. Swapped to the toad, the roster shows it as the
-## companion, and once it faints, as fainted (#597). Its squares show the glyphs of what swaps to
-## them for the device in use (#1192).
+## the top left, apart, in that order, each as its species' picture and its name's first two
+## letters (#722), the finch as the companion, and the quest list starts below it. A tap on the
+## toad's square swaps to it in the local player's next command without starting the touch stick,
+## and a left click on the finch's swaps to the finch; while the game hears no input (the menu is
+## open) a tap swaps nothing. Swapped to the toad, the roster shows it as the companion, and once
+## it faints, as fainted (#597). Its squares show the glyphs of what swaps to them for the device
+## in use (#1192).
 func _check_roster(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start_held(tree, ROSTER_PROFILE)
 	var driver: GameDriver = FlowGame.held_driver(main)
@@ -858,8 +859,9 @@ static func _roster_glyphs_shown() -> Array:
 	]
 
 
-## The roster shows the finch and the toad at the top left, apart, the finch as the companion, and
-## the quest list starts below it.
+## The roster shows the finch and the toad at the top left, apart, each as its species' picture
+## and its name's first two letters (#722), the finch as the companion, and the quest list starts
+## below it.
 func _roster_shown(main: Node, roster: RosterHud) -> String:
 	var carried: PackedStringArray = ["tikazzir", "ombulumo"]
 	if roster.shown != carried or roster.companion_place != 0:
@@ -872,8 +874,13 @@ func _roster_shown(main: Node, roster: RosterHud) -> String:
 			roster.rect_of(1),
 			corner,
 		]
-	if RosterHud.initials_of("Tikazzir") != "T":
-		return "the Tikazzir's square doesn't show its initial"
+	for id: String in carried:
+		var picture: SpeciesStage = roster.picture_of(id)
+		var model: String = SpeciesContent.cached().species[id].model
+		if picture == null or picture.model.scene_file_path != model:
+			return "the %s's square doesn't show its picture, %s" % [id, model]
+	if RosterHud.letters_of("Tikazzir") != "Ti":
+		return "the Tikazzir's square doesn't show its first two letters"
 	var quests: QuestListView = main.get_node("Hud/QuestList") as QuestListView
 	quests._lay_out(1.0)
 	# A position is kept in single precision.
