@@ -113,8 +113,9 @@ RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 # crystal, which tilts with the head and leans as it sways, softly (#1164). On their way to it and
 # back they fly over the crest crystals and the ears, CROWN_RISE above the ring or their spot,
 # whichever is higher, and the ring is wide enough that a flattened ear stays inside it (#1182).
+# The rearmost hovers high over the tail's tip, out of its swing and its crystals (#1231).
 WISPS = [(0.38, 0.15, 1.45), (-0.34, -0.12, 1.52), (0.0, 0.95, 1.38), (0.3, -0.62, 1.72), (-0.3, 0.62, 1.32),
-         (0.0, 1.78, 0.86)]
+         (0.0, 1.70, 1.22)]
 CROWN_CENTER, CROWN_RADIUS, CROWN_BONE, CROWN_RISE = (0.0, -0.82, 1.68), 0.30, "head", 0.25
 CROWN = wisps.Gather("Attack", 1, 12, 21, 31, CROWN_CENTER, CROWN_RADIUS, spin=0.06, stagger=2, bone=CROWN_BONE,
                      rise=CROWN_RISE)

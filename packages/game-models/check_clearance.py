@@ -30,12 +30,7 @@ from game_shared import log  # noqa: E402
 from lib import clearance, ground, imported  # noqa: E402
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
-KNOWN = {
-    ("mana_wolf", "Hit"): 1231,
-    ("mana_wolf", "Idle"): 1231,
-    ("mana_wolf", "Run"): 1231,
-    ("mana_wolf", "Walk"): 1231,
-}
+KNOWN = {}
 
 
 def judge(model, line):
