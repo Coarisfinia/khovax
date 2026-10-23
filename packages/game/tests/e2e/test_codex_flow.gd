@@ -3,7 +3,9 @@ extends RefCounted
 ## the codex book, which lists every entry the player has unlocked, each kind under its heading. A
 ## new player's book says it's empty. Teska na Amvrel's greeting shows the speaker's name, which
 ## lists them under "People" (#1005), and its second line the Amvrel Velmarai's, which lists the
-## guild under "Lexicon"; a species seen is listed under "Bestiary" (#1173). The names met are kept
+## guild under "Lexicon", and the realm Ardvaun's, listed under "Realms" (#1175); a species seen is
+## listed under "Bestiary" (#1173), and a place met under "Places", whose entry opens its page. The
+## names met are kept
 ## in the profile's file beside the profile, so a new session finds them there. The guild's entry
 ## opens its lexicon page over the menu, with a controller's A, a click or a tap, and B, Escape or
 ## the page's close button close it back to the book: the menu stays open, the game still hears no
@@ -83,14 +85,19 @@ static func _meet_the_guild(tree: SceneTree, main: Node, book: CodexBook) -> Str
 		return "the book listed %s" % [book.shown]
 	if heading.text != CodexPage.LEXICON_TEXT or entry.text != "Amvrel Velmarai":
 		return "the book showed %s: %s" % [heading.text, entry.text]
+	if book.shown.get(TextTags.REALM, []) != ["ardvaun"]:
+		return "reading the guild's line didn't list the realm it names: %s" % [book.shown]
 	return ""
 
 
 ## A species the player has seen (the bestiary, #1173) is listed under the bestiary's heading,
-## after the lexicon, and the greeting's speaker under the people's, after it (#1005).
+## after the lexicon, and the greeting's speaker under the people's, after it (#1005); then the
+## realms' and, once the player has met Lumwen Hoal's name, as the greeting's third line shows it,
+## the places' (#1175).
 static func _see_a_species(main: Node, book: CodexBook) -> String:
 	var bestiary: BestiaryKeeper = main.get_node("BestiaryKeeper") as BestiaryKeeper
 	bestiary.learn("ombulumo", Bestiary.SEEN, "lumwen_hoal")
+	(main.get_node("CodexKeeper") as CodexKeeper).meet(TextTags.PLACE, "lumwen_hoal")
 	book.refresh()
 	var rows: Array[String] = []
 	for row: Node in book.get_node("Middle/Rows").get_children():
@@ -104,6 +111,10 @@ static func _see_a_species(main: Node, book: CodexBook) -> String:
 		"Ombulumo",
 		CodexPage.PEOPLE_TEXT,
 		"Teska na Amvrel",
+		CodexPage.REALMS_TEXT,
+		"Ardvaun",
+		CodexPage.PLACES_TEXT,
+		"Lumwen Hoal",
 	]
 	return "" if rows == expected else "the book showed %s" % [rows]
 
@@ -138,6 +149,9 @@ static func _open_from_book(
 	problem = _closes_back(page, driver, menu, entry, _pad_closer(book, JOY_BUTTON_A))
 	if not problem.is_empty():
 		return "a tap, then A on the close button: " + problem
+	problem = _open_place(book, page)
+	if not problem.is_empty():
+		return problem
 	menu.toggle()
 	return "" if not driver.input.blocked else "the game still heard no input with the menu closed"
 
@@ -161,6 +175,26 @@ static func _closes_back(
 	return ""
 
 
+## A on Lumwen Hoal's entry opens its page (#1175): the place's name, what it means and its entry,
+## with no standing; B closes it back to the entry.
+static func _open_place(book: CodexBook, page: CodexPage) -> String:
+	var entry: Button = book.entry_button(TextTags.PLACE, "lumwen_hoal")
+	entry.grab_focus()
+	FlowInput.press_pad(book, JOY_BUTTON_A)
+	var gloss: String = page.gloss.get_parsed_text()
+	if (not page.is_open()
+			or page.heading.text != CodexPage.PLACES_TEXT
+			or page.title.text != "Lumwen Hoal"
+			or gloss != "Lumwen Hoal: the soft clearing"
+			or page.entry.text.is_empty()
+			or page.standing.visible):
+		return "Lumwen Hoal's entry opened %s, %s" % [page.title.text, gloss]
+	FlowInput.press_pad(book, JOY_BUTTON_B)
+	if page.is_open() or entry.get_viewport().gui_get_focus_owner() != entry:
+		return "B didn't close Lumwen Hoal's page back to its entry"
+	return ""
+
+
 ## The guild stays met in the profile's file: a new session's keeper reads it from there.
 static func _kept_in_profile(main: Node) -> String:
 	FlowGame.holder(main).flush()
@@ -179,7 +213,7 @@ static func _refuse_malformed() -> String:
 	var keeper: CodexKeeper = CodexKeeper.new()
 	var bad: Array[Variant] = [
 		null,
-		{ "PLACE": [GUILD] },
+		{ TextTags.GEAR: [GUILD] },
 		{ TextTags.FACTION: GUILD },
 		{ TextTags.FACTION: ["Amvrel Velmarai"] },
 		{ TextTags.FACTION: [GUILD, GUILD] },

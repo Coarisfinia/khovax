@@ -2,8 +2,9 @@ class_name Blueprint
 extends RefCounted
 ## An instance blueprint's content data (#823), read from the blueprints slice's data/ (#72, #412):
 ## the rules its instances have (its rule set's, #941, with the ones it adds or drops), whether the
-## seed turns its region pieces, its loot tables, the species its wild monsters roll from and the
-## variants the world's flags choose. InstanceBlueprints builds instances from it.
+## seed turns its region pieces, its loot tables, the species its wild monsters roll from, the
+## variants the world's flags choose and its codex entry. InstanceBlueprints builds instances from
+## it.
 
 ## Its schema, which says the fields a blueprint file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/blueprints/data/blueprints.schema.json"
@@ -27,6 +28,10 @@ var wild_species: Dictionary[String, int] = {}
 ## Its variants (#529, #541), in the order written: each a world flag and the region it chooses,
 ## "" for the blueprint's own; the first whose flag the world has set chooses.
 var variants: Array[PackedStringArray] = []
+## Its codex entry (#959, #1175): a short text about the place and where its name comes from.
+var codex_entry: String = ""
+## What its name means, hand-written (#959), e.g. "the soft clearing".
+var codex_gloss: String = ""
 ## Why the blueprint couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -53,6 +58,12 @@ static func parse(
 		read.problem = read._check(file_id, data)
 	if read.problem.is_empty():
 		read.problem = read._read_rules(data, rule_sets)
+	var codex: Array[String] = Content.codex_of(data.get("codex"))
+	if read.problem.is_empty() and codex.is_empty():
+		read.problem = "it needs a codex entry and gloss (#959)"
+	elif not codex.is_empty():
+		read.codex_entry = codex[0]
+		read.codex_gloss = codex[1]
 	return read
 
 

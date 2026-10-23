@@ -6,12 +6,12 @@ extends Control
 ## with it, its current rank only (#484). A species' is its bestiary entry (#1173): its name, the
 ## line saying what its name means, and only what this machine's player has learned about it
 ## (BestiaryEntry). A person's (#1005) is their name, its meaning and their entry, under the
-## heading People. The close button at its top right, `ui_cancel` (Escape,
+## heading People. A realm's and a place's (#1175), an instance a realm draws, are the same, under
+## the headings Realms and Places. The close button at its top right, `ui_cancel` (Escape,
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
 ## screen. The codex book (CodexBook, #1174) opens it over the menu, which stays open under it.
-## The other named kinds' pages follow (#1175).
 
 ## The page's heading over a faction's name.
 const LEXICON_TEXT: String = "Lexicon"
@@ -19,6 +19,9 @@ const LEXICON_TEXT: String = "Lexicon"
 const BESTIARY_TEXT: String = "Bestiary"
 ## The page's heading over a person's name (#1005).
 const PEOPLE_TEXT: String = "People"
+## The page's heading over a realm's name, and over a place's (#1175).
+const REALMS_TEXT: String = "Realms"
+const PLACES_TEXT: String = "Places"
 ## The standing line: neutral, or the standing with its sign and the rank the faction names it.
 const NEUTRAL_TEXT: String = "Your standing: neutral"
 const STANDING_TEXT: String = "Your standing: %+d, %s"
@@ -110,8 +113,8 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Opens the page of the thing of the kind `kind` (TextTags.FACTION, MONSTER or PERSON) with the id
-## `id`; whether it has one.
+## Opens the page of the thing of the kind `kind` (TextTags.CODEX_KINDS) with the id `id`; whether
+## it has one.
 func open(kind: String, id: String) -> bool:
 	var faction: Faction = FactionContent.cached().factions.get(id)
 	var species: Species = SpeciesContent.cached().species.get(id)
@@ -123,6 +126,10 @@ func open(kind: String, id: String) -> bool:
 		shown = _show_species(species)
 	elif kind == TextTags.PERSON:
 		shown = _show_person(person)
+	elif kind == TextTags.REALM:
+		shown = _show_realm(Realms.named(id))
+	elif kind == TextTags.PLACE:
+		shown = _show_place(id, InstanceBlueprints.blueprint(id))
 	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
@@ -159,6 +166,25 @@ func _show_person(person: Person) -> bool:
 		return false
 	_show_name(PEOPLE_TEXT, TextTags.shown(person.name), person.codex_gloss)
 	entry.text = person.codex_entry
+	return true
+
+
+## Shows `realm`'s page; whether there is one.
+func _show_realm(realm: Realm) -> bool:
+	if realm == null:
+		return false
+	_show_name(REALMS_TEXT, Realms.name_of(realm.id), realm.codex_gloss)
+	entry.text = realm.codex_entry
+	return true
+
+
+## Shows the page of the place `id`, an instance read from `blueprint`; whether there is one: a
+## realm must draw it, as the tags that name it say (TextTags.PLACE).
+func _show_place(id: String, blueprint: Blueprint) -> bool:
+	if blueprint == null or Realms.holding(id) == null:
+		return false
+	_show_name(PLACES_TEXT, Realms.name_of(id), blueprint.codex_gloss)
+	entry.text = blueprint.codex_entry
 	return true
 
 
