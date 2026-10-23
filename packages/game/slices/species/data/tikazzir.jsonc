@@ -15,5 +15,7 @@
 	"special": "tikazzir_tizik_tazak",
 	"player_passive": "tikazzir_kirzi_tirzi",
 	"self_passive": "tikazzir_zirki_kirki",
-	"sight": 2 // its keen eyes: its player sees further (#962)
+	"sight": 2, // its keen eyes: its player sees further (#962)
+	// Its sharp eyes hunt by day, darting after prey with others of its kind (#1200).
+	"behaviour": ["diurnal", "predator", "pack_species"]
 }
