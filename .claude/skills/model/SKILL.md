@@ -124,6 +124,11 @@ a second model could use goes into the library or a generic tool, never into one
   wisps' `loc.` channels too, and roughness from the last frame to the first), the **joins** of a loop to its lead-in and lead-out (`<Loop>Start`,
   `<Loop>End`) and **jitter** (how rough the roughest joint curve runs); it fails
   past its limits (in its header).
+- **The clearance check (#1227):** `packages/game-models/check_clearance.py -- <model.glb> [tolerance]`
+  samples every frame of every clip and prints, per clip, the smallest gap between a wisp and the
+  rest of the mesh, the frame, and the wisp and body bone it's between; it fails when a wisp's
+  faces cross the body's, a wisp sits inside it, or the gap falls below the tolerance
+  (`lib/clearance.py`).
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
@@ -304,6 +309,12 @@ a second model could use goes into the library or a generic tool, never into one
    an Ubuntu 24.04 container: the C library's maths differs between releases in the last bit, and
    the decimation and face order turn that into a different file. So build committed models on
    Ubuntu 24.04 (this machine's WSL); moving to another release moves CI's container with it.
+15. **Clearance (#1227):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_clearance.py -- <model.glb>` must print
+   `CLEARANCE CHECK: PASS`: no wisp cuts into the body (crest, ears, anything) in any frame of any
+   clip. A model without wisps passes. A clip that still fails waits in its `KNOWN` list with the
+   issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
+   `.glb` with the rebuild check (step 14).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
