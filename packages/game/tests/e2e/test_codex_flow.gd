@@ -51,10 +51,10 @@ func run(tree: SceneTree) -> String:
 	return result
 
 
-## The book is the menu's tab after Quests and before Settings, and a new player's lists nothing,
-## also after a tick in the playground, which no realm draws.
+## The book is the menu's tab after Quests and before Settings, and a new player's lists nothing.
+## A tick in the playground, which no realm draws, meets no place or realm (#1175); the wild
+## monster it shows is seen, which lists its species under the bestiary's heading (#1173).
 static func _empty_book(driver: GameDriver, book: CodexBook) -> String:
-	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
 	if book == null:
 		return "the menu has no Codex tab"
 	var tabs: Array[String] = []
@@ -67,6 +67,10 @@ static func _empty_book(driver: GameDriver, book: CodexBook) -> String:
 	var none: Label = book.get_node("Middle/Rows").get_child(0) as Label
 	if not book.shown.is_empty() or none == null or none.text != CodexBook.NONE_TEXT:
 		return "a new player's book listed %s" % [book.shown]
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	book.refresh()
+	if book.shown.has(TextTags.PLACE) or book.shown.has(TextTags.REALM):
+		return "a tick in the playground listed %s" % [book.shown]
 	return ""
 
 
