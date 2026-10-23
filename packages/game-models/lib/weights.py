@@ -6,11 +6,13 @@ import bpy
 from . import scene
 
 
-def bind(body, rig, pieces, rigid_bones=()):
+def bind(body, rig, pieces, rigid_bones=(), reweigh=None):
     """Weights `body` to `rig` automatically and joins `pieces` into it. A piece already weighted
     to a bone (parts.part with `bone`) keeps that; one without takes the weights of the body
-    under it, so patterns on the skin bend with it. `rigid_bones` (a jaw, ears) only move the
-    pieces weighted to them, never the body's skin."""
+    under it, so patterns on the skin bend with it. `rigid_bones` (a jaw, ears) get none of the
+    body's skin from the automatic weights; `reweigh`, given the body after them and before the
+    pieces join it, may hand a rigid bone its share (a jaw the skin over it,
+    muzzle.Snout.bind_jaw)."""
     for name in rigid_bones:
         rig.data.bones[name].use_deform = False
     bpy.ops.object.select_all(action="DESELECT")
@@ -20,6 +22,8 @@ def bind(body, rig, pieces, rigid_bones=()):
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
     for name in rigid_bones:
         rig.data.bones[name].use_deform = True
+    if reweigh is not None:
+        reweigh(body)
     for piece in pieces:
         if not piece.vertex_groups:
             _take_weights(piece, body)

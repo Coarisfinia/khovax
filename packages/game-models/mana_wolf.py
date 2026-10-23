@@ -24,7 +24,7 @@ FPS = 30
 SCALE = 0.75
 # The body's budget before its parts: a monster seen full-screen on its codex page, and several
 # at once on a phone.
-BODY_TRIANGLES = 9000
+BODY_TRIANGLES = 9900
 
 COLORS = {
     "fur": ((0.11, 0.12, 0.27, 1.0), 0.0),
@@ -40,7 +40,10 @@ WOLF = quadruped.Proportions(
     chest=(0.0, -0.22, 1.10),
     head_base=(0.0, -0.66, 1.38),
     nose=(0.0, -1.26, 1.35),
-    jaw=((0.0, -0.82, 1.38), (0.0, -1.18, 1.27)),
+    # The jaw turns at its joint (#1194), as a wolf's does: on the skull's side below and before
+    # the ear, behind and below the eye, about three quarters of the head's length back from the
+    # nose, a little above the line of the lips; the bone runs from there to the chin.
+    jaw=((0.0, -0.74, 1.40), (0.0, -1.18, 1.27)),
     ear=((0.10, -0.70, 1.58), (0.13, -0.68, 1.80)),
     scapula=(0.12, -0.18, 1.22),
     front_leg=[(0.20, -0.40, 0.98), (0.23, -0.36, 0.58), (0.23, -0.42, 0.18), (0.23, -0.56, 0.06)],
@@ -75,14 +78,15 @@ REFERENCE = {
     "nose width/muzzle width": 0.560,
     "jaw depth/muzzle depth": 0.551,
     "jaw width/muzzle width": 0.860,
-    "jaw/muzzle": 1.371,
+    # The lower jaw runs back to its joint (#1194), as a mandible does: longer than the muzzle.
+    "jaw/muzzle": 1.751,
     "chin reach/muzzle": 0.867,
 }
 
 # The snout (#1026): the upper muzzle as approved on #995, and a lower jaw sized against it (the
-# snout lines in REFERENCE).
-SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, hinge=(-0.85, 1.35), taper=0.67,
-                     stop_depth=0.08, lip=0.04, jaw_depth=0.6, jaw_width=1.1, chin=1.05)
+# snout lines in REFERENCE), turning at the jaw's joint, the lips meeting under the eye (#1194).
+SNOUT = muzzle.Snout(stop=(-0.90, 1.50), tip=(-1.22, 1.37), radius=0.075, joint=WOLF.jaw[0][1:], taper=0.67,
+                     stop_depth=0.08, lip=0.04, jaw_depth=0.62, jaw_width=1.1, chin=1.05)
 
 # Where the tail's form starts, inside the haunches.
 TAIL_ROOT = (0.0, 0.70, 1.05)
@@ -147,6 +151,7 @@ def wolf_body():
     # A wedge of a head: a flat skull, and the snout's brow, stop and upper muzzle.
     blob.ellipsoid((0.0, -0.78, 1.47), (0.17, 0.22, 0.14))
     SNOUT.upper(blob)
+    SNOUT.lower(blob)
     # One bushy tail, thickest a third of the way out, as thick as the beads it replaces were at
     # their fullest: an even row, never beads (#1171). It
     # starts inside the haunches, so its root melts into them without a crease.
@@ -302,7 +307,8 @@ def build(out):
     points(rig, pieces)
     drifting = wisps.Wisps(rig, WISPS, [CROWN, *CHANNEL_CROWN])
     scene.apply_scale([rig, skin] + pieces, SCALE)
-    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names))
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names),
+                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=0.4, fold=0.6, lift=0.2, curl=0.6,

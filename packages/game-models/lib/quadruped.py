@@ -19,7 +19,7 @@ class Proportions:
 
     - `tail`: tip first; its first bone runs from the hips to its last point.
     - `hips`, `waist` (where the spine bends), `chest`, `head_base`, `nose`.
-    - `jaw`: (hinge, chin); `ear`: (base, tip); `scapula`: its top, above the front leg.
+    - `jaw`: (joint, chin), the joint where the skull hinges it; `ear`: (base, tip); `scapula`: its top, above the front leg.
     - `front_leg`: shoulder, elbow, wrist, paw tip; `hind_leg`: hip, knee, hock, ankle, paw tip.
     """
 
