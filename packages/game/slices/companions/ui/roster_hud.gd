@@ -37,7 +37,7 @@ const COMPANION_INK_PIXELS: float = 6.0
 const GLYPH_SHARE: float = 0.42
 const GLYPH_INSET: float = 0.03
 ## The click's or tap's glyph right of the row, its side as a share of a square's.
-const POINTING_SHARE: float = 0.6
+const POINTING_SHARE: float = 0.85
 
 @export var driver: Session
 ## Where the Survey shows, so the roster keeps out of its corner.
