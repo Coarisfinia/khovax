@@ -84,6 +84,8 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var world: World = World.new(source, seed_value, "", 0)
 	_load_stores(world, read)
 	world.start_name = start
+	# Before any instance loads: each takes it as its world tick, the time of day (#1215), which the
+	# save doesn't hold apart.
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
 	for entry: DataReader in read.entries("generations"):
