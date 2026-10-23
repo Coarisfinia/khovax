@@ -3,8 +3,11 @@ extends RefCounted
 ## check it. Every species file reads, with comments stripped; ids are unique and match their file;
 ## types come from the type chart, never two from one family; every species has a name for the
 ## player (#351), one invented word (#717), behaviour traits that can form a daily schedule
-## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223); and broken
-## entries are refused. Loot tables (#90) load, roll the same for the same stream, and a blank
+## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
+## that
+## ascends (#1252) ascends into another species, never in a loop, with a material the tables drop;
+## and broken entries are refused. Loot tables (#90) load, roll the same for the same stream, and a
+## blank
 ## rolls on the instance's table.
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
@@ -35,6 +38,11 @@ const KIT: String = (
 )
 ## A valid species file's start, before its KIT.
 const XO: String = "{\"id\": \"xo\", \"types\": [\"mana\"], \"hp\": 1, \"strength\": 1"
+## A species file's ascension (#1252), after its KIT: into which species and at what level left
+## open.
+const ASCENSION: String = (
+	", \"ascension\": {\"into\": \"%s\", \"level\": %s, \"material\": \"m\"}"
+)
 ## A quest step to reach a place, its id left open (#339).
 const REACH: String = "{\"condition\": \"reached\", \"place\": \"%s\"}"
 ## A quest step to enter a region piece, its id left open (#350).
@@ -122,6 +130,8 @@ func run(tree: SceneTree) -> String:
 		_check_refused,
 		_check_behaviour_refused,
 		_check_model_refused,
+		_check_ascensions.bind(content),
+		_check_ascensions_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
 		_check_instance_tables,
@@ -965,6 +975,63 @@ func _check_behaviour_refused() -> String:
 		if not problem.begins_with(cases[text]):
 			return "a species' behaviour gave %s, not %s" % [problem, cases[text]]
 	return ""
+
+
+## Every species' ascension material (#1252) is one the player can find: a loot or harvest table
+## drops it, and it's a material, not a piece of gear.
+func _check_ascensions(content: SpeciesContent) -> String:
+	var dropped: Array[String] = []
+	for directory: String in [LootContent.DIR, LootContent.HARVEST_DIR]:
+		for table: LootTable in LootContent.load_loot_tables(directory).loot_tables.values():
+			dropped.append_array(table.items)
+	var gear: GearContent = GearContent.load_gear()
+	for species_id: String in content.ascensions:
+		var material: String = content.ascensions[species_id].material
+		if not dropped.has(material) or gear.items.has(material):
+			return "%s's ascension material %s is no material a table drops" % [
+				species_id,
+				material,
+			]
+	return ""
+
+
+## A species' ascension (#1252) is refused when it lacks the species, the level or the material,
+## asks for level 1, which every monster starts at, or names another field; and the species are
+## refused when one ascends into itself or a species there isn't, or two ascend into each other.
+func _check_ascensions_refused() -> String:
+	var cases: Dictionary[String, String] = {
+		XO + KIT + ", \"ascension\": {\"into\": \"zo\", \"level\": 2}}": "its ascension names",
+		XO + KIT + ASCENSION % ["zo", "1"] + "}": "its ascension's level",
+		XO + KIT + ASCENSION % ["zo", "2.5"] + "}": "its ascension's level",
+		XO + KIT + ASCENSION.replace(
+			"}",
+			", \"y\": 1}",
+		) % ["zo", "2"] + "}": "its ascension's field y",
+		XO + KIT + ", \"ascension\": 7}": "its ascension names",
+	}
+	for text: String in cases:
+		var problem: String = _add_to_empty(text)
+		if not problem.begins_with(cases[text]):
+			return "an ascension was refused with %s, not %s" % [problem, cases[text]]
+	var pairs: Dictionary[String, String] = {
+		"xo": "isn't another species",
+		"yo": "isn't another species",
+		"zo": "xo's ascensions come back",
+	}
+	for into: String in pairs:
+		var problem: String = _pair_ascension_problem(into)
+		if not problem.contains(pairs[into]):
+			return "xo ascending into %s gave %s" % [into, problem]
+	return ""
+
+
+## Why the species xo, ascending into `into`, and zo, ascending into xo, can't be together, or "".
+func _pair_ascension_problem(into: String) -> String:
+	var both: SpeciesContent = SpeciesContent.new()
+	var zo: String = XO.replace("xo", "zo") + KIT.replace("Xo", "Zo")
+	var added: String = both.add("xo", XO + KIT + ASCENSION % [into, "2"] + "}")
+	added += both.add("zo", zo + ASCENSION % ["xo", "2"] + "}")
+	return added if not added.is_empty() else both.ascension_problem()
 
 
 ## The placeholder tables load. A roll on the toad's table gives 2 to 4 berries, or on its blank

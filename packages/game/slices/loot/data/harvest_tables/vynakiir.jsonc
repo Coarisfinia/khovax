@@ -1,11 +1,14 @@
 // A placeholder harvest table (#687): what a felled Vynakiir drops, apart from what dominating it
-// gives. Mostly hide, sometimes a bone, else a blank, which rolls on the instance's table instead.
+// gives. Mostly hide, sometimes a bone, now and then the hardened arcane crystal from its brow,
+// which a mana pup needs to ascend into a Vynakiir (#1252), else a blank, which rolls on the
+// instance's table instead.
 {
 	"id": "vynakiir",
 	"kind": "harvest",
 	"entries": [
-		{ "item": "hide", "chance": 600, "min": 1, "max": 2 }, // 60 %
+		{ "item": "hide", "chance": 500, "min": 1, "max": 2 }, // 50 %
 		{ "item": "bone", "chance": 200, "min": 1, "max": 1 }, // 20 %
+		{ "item": "arcane_crystal", "chance": 100, "min": 1, "max": 1 }, // 10 %
 		{ "blank": true, "chance": 200 }
 	]
 }

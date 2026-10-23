@@ -77,6 +77,17 @@
 			]
 		},
 		"model": { "description": "The model its monsters wear (#1223), wild or a companion: a res:// path to a rigged glTF model under assets/. The game checks it exists and has the clips the views play.", "type": "string", "pattern": "^res://assets/([A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(glb|gltf)$" },
-		"sight": { "description": "Its sight trait (#962): how many steps further a player who carries it sees. None when left out.", "type": "integer", "minimum": 1, "maximum": 5 }
+		"sight": { "description": "Its sight trait (#962): how many steps further a player who carries it sees. None when left out.", "type": "integer", "minimum": 1, "maximum": 5 },
+		"ascension": {
+			"description": "What it ascends into (#1246, #1252): a dominated monster of it ascends once it has reached the level and is given the material (#1235). Left out when it doesn't ascend.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["into", "level", "material"],
+			"properties": {
+				"into": { "description": "The species it ascends into, by id: another species, never one whose ascensions come back to it.", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+				"level": { "description": "The level it has to reach first; a monster starts at level 1.", "type": "integer", "minimum": 2, "maximum": 1000000000 },
+				"material": { "description": "Its ascension material: the id of a material that a loot or harvest table drops, held in the profile's materials.", "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+			}
+		}
 	}
 }
