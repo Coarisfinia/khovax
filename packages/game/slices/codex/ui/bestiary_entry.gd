@@ -1,10 +1,12 @@
 class_name BestiaryEntry
 extends VBoxContainer
-## A species' bestiary entry on its codex page (#1173), showing only what this machine's player
-## has learned about it (Bestiary): once they've met one in a fight, its types (each after its
-## family's badge, TypeBadge), its special attack and two passives by name, and the instances
-## they've come across it in; once they've dominated one, its lore. What's still to learn is said
-## in words, so the player knows how to learn it.
+## A species' bestiary entry on its codex page (#1173), showing only what this machine's player has
+## learned about it (Bestiary): once they've seen one, its picture (SpeciesPicture, #1190), and
+## before that nothing in its place, not even a silhouette, which would give its shape away; once
+## they've met one in a fight, its types (each after its family's badge, TypeBadge), its special
+## attack and two passives by name, and the instances they've come across it in; once they've
+## dominated one, its lore. What's still to learn is said in words, so the player knows how to learn
+## it.
 
 const NOT_SEEN_TEXT: String = "You haven't seen one yet."
 const NOT_MET_TEXT: String = "Fight one to learn its types, abilities and haunts."
@@ -18,6 +20,8 @@ const HABITAT_TEXT: String = "Found in: %s"
 ## What the entry shows, one line each, its types as their heading and names: kept here so tests
 ## can read it.
 var shown: Array[String] = []
+## The species' picture, or null while the player hasn't seen one: kept here so tests can read it.
+var picture: SpeciesPicture
 
 
 ## Shows what `bestiary` (null for nothing learned) knows about `species`.
@@ -26,9 +30,13 @@ func show_species(species: Species, bestiary: Bestiary) -> void:
 		remove_child(old)
 		old.queue_free()
 	shown.clear()
+	picture = null
 	var level: int = bestiary.level_of(species.id) if bestiary != null else 0
 	if level < Bestiary.SEEN:
 		_add_line(NOT_SEEN_TEXT)
+	else:
+		picture = SpeciesPicture.new(species.id)
+		add_child(picture)
 	if level < Bestiary.MET:
 		_add_line(NOT_MET_TEXT)
 	else:
