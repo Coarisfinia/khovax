@@ -28,7 +28,10 @@ extends RefCounted
 ## Hunted prey that's awake flees its hunter at its pace (#1239), a step at a time away from it and
 ## never off ground a ring could enclose it on, so it's cornered where the ground ends; sighted at
 ## the edge of its hunter's sight, it gets out of it, and the hunter roams on. Asleep, it stays put
-## until a strike wakes it, and enraged it stands its ground.
+## until a strike wakes it, and enraged it stands its ground. A hunter walks round a wall between
+## it and its prey (#1259), a tile a step and never off ground a ring could enclose it on, where a
+## greedy step would stall behind it; fleeing prey runs the way that leads furthest from its hunter,
+## not into a dead end.
 ##
 ## Pack monsters band together (#1205): by species, or by a similar typing for `pack_type` ones,
 ## never more than a pack can hold; members live by their leader's day and, in the hours they
@@ -44,6 +47,8 @@ const TEST_TRAITS: Dictionary[String, Array] = {
 	"sle": ["sleepless", "drinker", "predator"],
 }
 const SEED: int = 42
+## How far the hunt flow's wall of rock (#1259) runs each way from the middle of its disc.
+const WALL_HALF: int = 1
 ## The content species the flow checks, which the blueprints' basic instance places.
 const CONTENT_SPECIES: Array[String] = ["ombulumo", "tikazzir"]
 ## The hunt flow's species (#1204): a predator, a grazer as strong as it, a weaker and a stronger
@@ -120,6 +125,8 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_given_up,
 		_check_hunt_saved,
 		_check_content_hunters,
+		_check_hunt_round_wall,
+		_check_flight_shuns_dead_end,
 		_check_light_sleeper_wakes,
 		_check_packs_band,
 		_check_pack_follows,
@@ -823,6 +830,70 @@ static func _damage_problem(damage: Array[int]) -> String:
 			return "the hunter struck for %s, not its strength" % [damage]
 	if dealt != HUNT_HP["gra"] - 1:
 		return "the hunt's strikes didn't add up to all but the prey's last HP"
+	return ""
+
+
+## A predator walks round a wall of rock between it and its sleeping prey (#1259), a tile a step
+## and never onto ground no ring could enclose it on, and strikes it; a greedy step toward it would
+## stall behind the wall.
+func _check_hunt_round_wall() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-2, 0), "gra": Vector2i(2, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var target: int = _monster_of(state, "gra")
+	for r: int in range(-WALL_HALF, WALL_HALF + 1):
+		if not state.change_tile(Vector2i(0, r), "rock"):
+			return "the wall's tile %s didn't turn to rock" % Vector2i(0, r)
+	(state.feature(WildMonsterFeature.ID) as WildMonsterFeature).sleep(target, true)
+	_to_hunt_hours(state, hunter)
+	var stuck: Dictionary[Vector2i, bool] = RingableGround.unringable(state.region)
+	var round_end: bool = false
+	for _tick: int in HuntFeature.GIVE_UP_TICKS:
+		var was: Vector2i = state.entity(hunter).tile
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var tile: Vector2i = state.entity(hunter).tile
+		if Hex.distance(tile, was) > 1 or stuck.has(tile) or not state.region.is_walkable(tile):
+			return "the hunter went from %s to %s round the wall" % [was, tile]
+		round_end = round_end or absi(tile.y) > WALL_HALF
+		if not _strikes_on(state, hunter, target).is_empty():
+			if not round_end:
+				return "the hunter struck its prey without walking round the wall"
+			return ""
+	return "the hunter never got round the wall to its prey: it stands on %s" % (
+		state.entity(hunter).tile
+	)
+
+
+## Hunted prey with two ways away from its hunter takes the one that leads furthest (#1259): not
+## the first in direction order, which runs into a dead end of rock a step on.
+func _check_flight_shuns_dead_end() -> String:
+	var state: GameState = _hunt_state({ "hun": Vector2i(-1, 0), "gra": Vector2i(1, 0) })
+	var hunter: int = _monster_of(state, "hun")
+	var target: int = _monster_of(state, "gra")
+	var prey_tile: Vector2i = state.entity(target).tile
+	# The ways one step further from the hunter, in direction order; rock walls the first in, one
+	# step on, and blocks the rest but the last, so only the last runs on.
+	var ways: Array[Vector2i] = []
+	for direction: Vector2i in Hex.DIRECTIONS:
+		var tile: Vector2i = prey_tile + direction
+		if Hex.distance(tile, Vector2i(-1, 0)) > Hex.distance(prey_tile, Vector2i(-1, 0)):
+			ways.append(tile)
+	for way: Vector2i in ways.slice(1, ways.size() - 1):
+		var _walled: bool = state.change_tile(way, "rock")
+	for direction: Vector2i in Hex.DIRECTIONS:
+		var beyond: Vector2i = ways[0] + direction
+		if not ways.has(beyond) and Hex.distance(beyond, Vector2i(-1, 0)) > 2:
+			var _rock: bool = state.change_tile(beyond, "rock")
+	_to_hunt_hours(state, hunter)
+	for _tick: int in 2 * WildMonsterFeature.STEP_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		if state.entity(target).tile != prey_tile:
+			break
+	if state.entity(target).tile != ways[ways.size() - 1]:
+		return "the hunted grazer fled from %s to %s, not the open way %s" % [
+			prey_tile,
+			state.entity(target).tile,
+			ways[ways.size() - 1],
+		]
 	return ""
 
 
