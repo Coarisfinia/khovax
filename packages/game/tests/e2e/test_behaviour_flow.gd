@@ -589,6 +589,32 @@ func _check_content_hunters() -> String:
 	return "no seed placed a Tikazzir to hunt in the basic instance"
 
 
+## Why the hunter's strikes on the grazer, `damage`, aren't its strength each, but the last no
+## more than leaves the prey its last HP; or "".
+static func _damage_problem(damage: Array[int]) -> String:
+	if damage.is_empty():
+		return "the predator never struck the grazer it sighted"
+	var strength: int = HUNT_STRENGTHS["hun"]
+	var dealt: int = 0
+	for i: int in damage.size():
+		dealt += damage[i]
+		if damage[i] > strength or (damage[i] < strength and i < damage.size() - 1):
+			return "the hunter struck for %s, not its strength" % [damage]
+	if dealt != HUNT_HP["gra"] - 1:
+		return "the hunt's strikes didn't add up to all but the prey's last HP"
+	return ""
+
+
+## The damage of each strike `hunter` dealt `target` this tick.
+static func _strikes_on(state: GameState, hunter: int, target: int) -> Array[int]:
+	var damage: Array[int] = []
+	for event: RefCounted in state.events:
+		var struck: WildMonsterStruck = event as WildMonsterStruck
+		if struck != null and struck.monster_id == hunter and struck.target_id == target:
+			damage.append(struck.damage)
+	return damage
+
+
 ## A disc with a wild monster of each hunt flow species in `spots` where it says, with the hunts.
 static func _hunt_state(spots: Dictionary[String, Vector2i]) -> GameState:
 	var region: Region = Region.disc(8)
