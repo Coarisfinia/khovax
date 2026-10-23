@@ -1,8 +1,9 @@
 class_name MaterialsList
 extends VBoxContainer
 ## The player's materials on the menu's Character tab (#295): each material in their profile with
-## how many they have, in id order. Materials have no data of their own yet, so each shows by its id
-## in words. It only reads the profile, and keeps up with it while shown.
+## how many they have, in id order. Materials have no names of their own yet (MaterialContent,
+## #774),
+## so each shows by its id in words. It only reads the profile, and keeps up with it while shown.
 
 const TITLE: String = "Materials"
 const NONE_TEXT: String = "No materials yet"

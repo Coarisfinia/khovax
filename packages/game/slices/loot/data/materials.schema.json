@@ -1,0 +1,16 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/loot/data/materials.schema.json",
+	"title": "Material",
+	"description": "A material (#774): an item the loot, harvest and chest tables may give that isn't a piece of gear, kept in the player's profile by its id with how many they have. One file per material, named after its id, so the content flow can refuse a table naming an item that doesn't exist. An id is never reused or changed once shipped.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id"],
+	"properties": {
+		"id": {
+			"description": "Stable, never reused: lowercase words joined by underscores.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		}
+	}
+}
