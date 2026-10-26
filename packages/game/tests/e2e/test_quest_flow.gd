@@ -290,6 +290,9 @@ func _check_followed_markers(markers: QuestMarkerView, quests: QuestTracker) -> 
 	markers.show_quests()
 	if not markers.markers.has("first_domination"):
 		return "the open first domination has no marker"
+	# Another quest's marker too, so the grey, smaller look is checked, not skipped.
+	if markers.markers.size() < 2:
+		return "no other open quest has a marker to check as not followed"
 	# A long frame settles every marker at its size.
 	markers._process(10.0)
 	for id: String in markers.followed:
