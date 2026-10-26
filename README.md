@@ -6,6 +6,17 @@ A top-down, real-time ARPG on a hex grid. You dominate monsters by walking rings
 
 Status: pre-production. **[Play the latest build in your browser](https://coarisfinia.github.io/khovax/)**
 
+## Download
+
+**[Download the newest build](https://github.com/Coarisfinia/khovax/releases)**: every push to `main` that
+passes all checks makes a dev release there (the newest is at the top), with each build as its own
+file:
+- **Android:** the `…-android.apk`. Copy it to the phone and open it; see [On an Android phone](#on-an-android-phone).
+- **Windows:** the `…-windows-x86_64.exe`. Run it; see [On Windows](#on-windows).
+- **Linux:** the `…-linux.x86_64`. Run `chmod +x` on it, then start it.
+- **Web:** play it at https://coarisfinia.github.io/khovax/. The release also carries the web build's
+  files (`index.html` and its neighbours), which run when served from one folder.
+
 ## License
 
 The code is released into the public domain under [the Unlicense](LICENSE). Assets added later keep their own licenses, next to them.
@@ -36,33 +47,36 @@ Open the project in Godot (`godot --path packages/game --editor`), or run it dir
 ## On an Android phone
 
 CI builds a debug APK on every pull request and every push to `main`:
-1. Open the `ci` workflow's latest result on the repository's Actions tab.
-2. Download the `khovax-debug-apk` artifact (a zip with `khovax.apk` inside; kept for 14 days).
-3. Copy the APK to the phone and open it. Android asks once to allow installs from that source (the file manager or browser).
+1. Download the newest dev release's `…-android.apk` ([Download](#download)), or, for a pull
+   request's build, the `khovax-debug-apk` artifact from its `ci` run on the Actions tab (a zip with
+   `khovax.apk` inside; kept for 14 days).
+2. Copy the APK to the phone and open it. Android asks once to allow installs from that source (the file manager or browser).
 
 It's signed with a throwaway debug key made in each CI run. Installing a newer build over an older one fails because the keys differ, so uninstall the old one first.
 
 ## On Windows
 
-CI builds the Windows version on every pull request and every push to `main`, as the `khovax-windows` artifact on the run's page (a zip with one `khovax.exe`; kept for 14 days). Unzip it and run the `.exe`. It isn't signed, so Windows SmartScreen asks once: "More info", then "Run anyway".
+CI builds the Windows version on every pull request and every push to `main`: the dev release's `…-windows-x86_64.exe` ([Download](#download)), or a pull request's `khovax-windows` artifact on its run's page (a zip with one `khovax.exe`; kept for 14 days). Run the `.exe`. It isn't signed, so Windows SmartScreen asks once: "More info", then "Run anyway".
 
 ## On Linux
 
-CI builds the Linux version (x86_64) on every pull request and every push to `main`, as the `khovax-linux` artifact (kept for 14 days). GitHub's artifact zips drop the executable bit, so after unzipping: `chmod +x khovax.x86_64 && ./khovax.x86_64`. Releases attach a `.tar.gz` that keeps it.
+CI builds the Linux version (x86_64) on every pull request and every push to `main`, as the `khovax-linux` artifact (kept for 14 days). Downloads drop the executable bit, so after downloading the dev release's `…-linux.x86_64` ([Download](#download)) or unzipping the artifact: `chmod +x <file> && ./<file>`.
 
 ## In a browser
 
 **Play it at https://coarisfinia.github.io/khovax/**: every push to `main` that passes all checks deploys there.
 
-CI builds the web version on every pull request and every push to `main`, as the `khovax-web` artifact (kept for 14 days). Browsers won't run it from a file, so serve the unzipped folder: `python -m http.server 8000` inside it, then open http://localhost:8000. It's single-threaded, so it needs no special server headers. Every release attaches the same build as a zip.
+CI builds the web version on every pull request and every push to `main`, as the `khovax-web` artifact (kept for 14 days). Browsers won't run it from a file, so serve the unzipped folder: `python -m http.server 8000` inside it, then open http://localhost:8000. It's single-threaded, so it needs no special server headers. Every release attaches the same build's files.
 
 ## Cutting a release
 
-A release is a GitHub release with the desktop and web builds attached, made by `.github/workflows/release.yml`:
+The dev releases (`v<next>-dev.<run number>`, prereleases) are made by CI on its own. A version
+release is a GitHub release with the desktop and web builds attached, made by
+`.github/workflows/release.yml`:
 1. Set the new version in `packages/game/project.godot` (`config/version="0.2.0"` under `[application]`), in a pull request like any change.
 2. Once that's merged, tag that commit on `main` with the same version and push the tag:
    `git tag v0.2.0 && git push origin v0.2.0`.
-3. The workflow checks the tag against `config/version`, exports the build, and creates the release with a zip named after the game. The release notes list the merged pull requests.
+3. The workflow checks the tag against `config/version`, exports the build, and creates the release with the files named after the game. The release notes list the merged pull requests.
 
 ## Tests
 
