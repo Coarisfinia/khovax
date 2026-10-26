@@ -88,6 +88,22 @@
 				"change": { "type": "integer", "minimum": -10, "maximum": 10, "not": { "const": 0 } }
 			}
 		},
+		"alignment": {
+			"description": "The alignment finishing it enforces (#1326), as a story choice such as handing in an artifact: for each faction, by its id, the player's standing is set to at least at_least, at most at_most, or both, on the standing's scale from -5 to 5, after any standing change. A standing already within them stays. Each faction once.",
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["faction"],
+				"minProperties": 2,
+				"properties": {
+					"faction": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+					"at_least": { "type": "integer", "minimum": -5, "maximum": 5 },
+					"at_most": { "type": "integer", "minimum": -5, "maximum": 5 }
+				}
+			}
+		},
 		"materials": {
 			"description": "The materials finishing it gives the player (#1348), by id, each a whole count from 1: such as a species' ascension material (#1260).",
 			"type": "object",

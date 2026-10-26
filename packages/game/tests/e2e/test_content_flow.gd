@@ -386,6 +386,55 @@ func _check_quest_standings(content: QuestContent) -> String:
 	if not lowered.problem.is_empty() or lowered.standing.change != -QuestStanding.MAX_CHANGE:
 		return "a quest lowering a standing by the whole scale didn't read: " + lowered.problem
 	var problem: String = _unrefused(cases, content)
+	return problem if not problem.is_empty() else _check_quest_alignment(content)
+
+
+## Why the alignment quests enforce (#1326) doesn't read, or "": a floor and a ceiling read for two
+## factions, while an alignment that isn't a list, is empty, has an entry that isn't an object, has
+## another field, names no faction id or one that doesn't exist, sets no bound, a bound off the
+## scale
+## or a fraction, a floor above its ceiling, or names a faction twice is refused.
+func _check_quest_alignment(content: QuestContent) -> String:
+	var quest: String = "{\"id\": \"x\", \"name\": \"N\", \"alignment\": %s, \"steps\": [%s]}"
+	var both: String = (
+		"[{\"faction\": \"odun_kragothai\", \"at_least\": 1}, "
+		+ "{\"faction\": \"sorn_lumawenai\", \"at_most\": -1}]"
+	)
+	var read: QuestDefinition = QuestDefinition.parse("x", quest % [both, OPENED_END], {})
+	if (not read.problem.is_empty() or read.alignment.size() != 2
+			or read.alignment[0].at_least != 1 or read.alignment[0].at_most != Standings.HIGHEST
+			or read.alignment[1].at_most != -1 or read.alignment[1].at_least != Standings.LOWEST):
+		return "an alignment raising one faction and holding another didn't read: " + read.problem
+	var entry: String = "[{\"faction\": \"%s\", %s}]"
+	var cases: Dictionary[String, String] = {
+		quest % ["1", OPENED_END]: "its alignment must be a list",
+		quest % ["[]", OPENED_END]: "its alignment must be a list",
+		quest % ["[1]", OPENED_END]: "its alignment: it isn't",
+		quest % [
+			entry % ["a", "\"at_least\": 1, \"by\": 1"],
+			OPENED_END,
+		]: "its alignment: field by",
+		quest % [
+			entry % ["The Guild", "\"at_least\": 1"],
+			OPENED_END,
+		]: "its alignment: its faction",
+		quest % ["[{\"faction\": \"a\"}]", OPENED_END]: "its alignment: it sets neither",
+		quest % [entry % ["a", "\"at_least\": 6"], OPENED_END]: "its alignment: its ranks",
+		quest % [entry % ["a", "\"at_most\": -6"], OPENED_END]: "its alignment: its ranks",
+		quest % [entry % ["a", "\"at_least\": 1.5"], OPENED_END]: "its alignment: its ranks",
+		quest % [
+			entry % ["a", "\"at_least\": 2, \"at_most\": 1"],
+			OPENED_END,
+		]: "its alignment: its at_least",
+		quest % [
+			"[{\"faction\": \"a\", \"at_least\": 1}, {\"faction\": \"a\", \"at_most\": 2}]",
+			OPENED_END,
+		]: "its alignment names a twice",
+	}
+	var vanished: String = quest % [entry % ["zz_vanished", "\"at_least\": 1"], OPENED_END]
+	if not content.add("x", vanished).begins_with("its alignment's faction"):
+		return "a quest enforcing alignment with a faction that doesn't exist was read"
+	var problem: String = _unrefused(cases, content)
 	return problem if not problem.is_empty() else _check_quest_territories(content)
 
 

@@ -83,6 +83,9 @@ func add(file_id: String, text: String) -> String:
 	var quest: QuestDefinition = QuestDefinition.parse(file_id, text, species)
 	if quest.standing != null and not _factions.factions.has(quest.standing.faction):
 		quest.problem = "its standing's faction must be one that exists"
+	for aligned: QuestAlignment in quest.alignment:
+		if quest.problem.is_empty() and not _factions.factions.has(aligned.faction):
+			quest.problem = "its alignment's faction %s must be one that exists" % aligned.faction
 	if quest.problem.is_empty():
 		quest.problem = _answers_problem(quest, _dialogs)
 	if quest.problem.is_empty():

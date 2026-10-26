@@ -27,6 +27,9 @@ var path: String = PathMark.NONE
 var starts_on: QuestStep = null
 ## How finishing it moves the player's standing with a faction; null when it doesn't.
 var standing: QuestStanding = null
+## The alignment finishing it enforces (#1326), one per faction, applied after `standing`; none
+## when it enforces none.
+var alignment: Array[QuestAlignment] = []
 ## The territory finishing it hands over (#638); null for a quest that isn't a territory quest.
 var territory: QuestTerritory = null
 ## Whether finishing it ends the main story (#1333), which puts the player in the postgame
@@ -59,10 +62,8 @@ static func parse(
 		quest.problem = quest._check(file_id, data.get("steps"), known_species)
 	if quest.problem.is_empty() and data.has("starts_on"):
 		quest.problem = quest._check_start(data.get("starts_on"))
-	if quest.problem.is_empty() and data.has("standing"):
-		quest.standing = QuestStanding.parse(data.get("standing"))
-		if not quest.standing.problem.is_empty():
-			quest.problem = "its standing: " + quest.standing.problem
+	if quest.problem.is_empty():
+		quest.problem = quest._read_factions(data)
 	if quest.problem.is_empty() and data.has("materials"):
 		quest.problem = quest._read_materials(data.get("materials"))
 	if quest.problem.is_empty() and data.has("territory"):
@@ -228,3 +229,30 @@ func steps_after(index: int) -> Array[int]:
 		at += 1
 		after.append(at)
 	return after
+
+
+## Reads how finishing it moves and enforces the player's standings (#532, #1326) from the quest
+## file's `data` into `standing` and `alignment`; returns why they can't be read, or "".
+func _read_factions(data: Dictionary) -> String:
+	if data.has("standing"):
+		standing = QuestStanding.parse(data.get("standing"))
+		if not standing.problem.is_empty():
+			return "its standing: " + standing.problem
+	return _read_alignment(data.get("alignment")) if data.has("alignment") else ""
+
+
+## Reads the alignment `entries` it enforces (#1326) into `alignment`; returns why they can't be
+## read (not a list, an empty one, an entry that doesn't read, or a faction named twice), or "".
+func _read_alignment(entries: Variant) -> String:
+	var listed: Array = entries if entries is Array else []
+	if listed.is_empty():
+		return "its alignment must be a list of at least one faction"
+	for entry: Variant in listed:
+		var read: QuestAlignment = QuestAlignment.parse(entry)
+		if not read.problem.is_empty():
+			return "its alignment: " + read.problem
+		for earlier: QuestAlignment in alignment:
+			if earlier.faction == read.faction:
+				return "its alignment names %s twice" % read.faction
+		alignment.append(read)
+	return ""

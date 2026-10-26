@@ -100,6 +100,28 @@ const SWORN: String = (
 	+ "\"standing\": {\"faction\": \"odun_kragothai\", \"change\": 1}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"sworn\"}]}"
 )
+## A story choice enforcing alignment (#1326): the Odun Kragothai at least at their second rank,
+## the Sorn Lumawenai at most hostile.
+const CHOSEN: String = (
+	"{\"id\": \"chosen\", \"name\": \"Chosen\", \"alignment\": ["
+	+ "{\"faction\": \"odun_kragothai\", \"at_least\": 2}, "
+	+ "{\"faction\": \"sorn_lumawenai\", \"at_most\": -1}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"chosen\"}]}"
+)
+## Floors for two factions that are enemies of each other (#1326): both at least at their first
+## rank.
+const TRUCE: String = (
+	"{\"id\": \"truce\", \"name\": \"Truce\", \"alignment\": ["
+	+ "{\"faction\": \"odun_kragothai\", \"at_least\": 1}, "
+	+ "{\"faction\": \"sorn_lumawenai\", \"at_least\": 1}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"truce\"}]}"
+)
+## A ceiling on the Story guild (#1326): at most neutral.
+const PARTED: String = (
+	"{\"id\": \"parted\", \"name\": \"Parted\", \"alignment\": ["
+	+ "{\"faction\": \"amvrel_velmarai\", \"at_most\": 0}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"parted\"}]}"
+)
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
@@ -1521,6 +1543,63 @@ func _check_enemy_loss() -> String:
 	QuestRewards.give(sworn, profile)
 	if profile.standings.of("sorn_lumawenai") != -2 or not profile.standings.half_lost.is_empty():
 		return "two quests raising the Odun Kragothai didn't lose a rank with its enemy"
+	return _check_enforced()
+
+
+## A story choice enforces alignment (#1326): a quest raising the Odun Kragothai to at least their
+## second rank and holding the Sorn Lumawenai at most hostile sets both from their start (-1), the
+## gain of three ranks costing one and a half with the Sorn Lumawenai; finishing it again changes
+## nothing, as both are within their bounds by then.
+func _check_enforced() -> String:
+	var chosen: QuestDefinition = QuestDefinition.parse("chosen", CHOSEN, {})
+	var profile: Profile = Profile.new()
+	QuestRewards.give(chosen, profile)
+	var half: Array[String] = ["sorn_lumawenai"]
+	var standings: Standings = profile.standings
+	if (standings.of("odun_kragothai") != 2
+			or standings.of("sorn_lumawenai") != -2
+			or standings.half_lost != half):
+		return "a quest enforcing alignment set %d and %d: %s" % [
+			standings.of("odun_kragothai"),
+			standings.of("sorn_lumawenai"),
+			chosen.problem,
+		]
+	QuestRewards.give(chosen, profile)
+	if (standings.of("odun_kragothai") != 2
+			or standings.of("sorn_lumawenai") != -2
+			or standings.half_lost != half):
+		return "finishing a quest enforcing alignment again moved a standing within its bounds"
+	# Floors for two enemies of each other: the second's gain costs the first rank, which the quest
+	# then holds at its floor again, so both bounds hold whatever their order.
+	var truce: QuestDefinition = QuestDefinition.parse("truce", TRUCE, {})
+	var held: Profile = Profile.new()
+	QuestRewards.give(truce, held)
+	if held.standings.of("odun_kragothai") != 1 or held.standings.of("sorn_lumawenai") != 1:
+		return "a quest enforcing floors for two enemies left %d and %d: %s" % [
+			held.standings.of("odun_kragothai"),
+			held.standings.of("sorn_lumawenai"),
+			truce.problem,
+		]
+	return _check_enforced_lock()
+
+
+## A ceiling never breaks an alliance until the postgame (#1324, #1326): a player who joined the
+## Story guild stays at its first rank against a quest holding it at most neutral, until they're in
+## the postgame (#1333), when the ceiling holds.
+func _check_enforced_lock() -> String:
+	var parted: QuestDefinition = QuestDefinition.parse("parted", PARTED, {})
+	var profile: Profile = Profile.new()
+	var _joined: String = profile.standings.change(GUILD, 1)
+	QuestRewards.give(parted, profile)
+	if profile.standings.of(GUILD) != 1:
+		return "a quest's ceiling lowered a joined ally to %d: %s" % [
+			profile.standings.of(GUILD),
+			parted.problem,
+		]
+	profile.postgame = true
+	QuestRewards.give(parted, profile)
+	if profile.standings.of(GUILD) != 0:
+		return "a quest's ceiling didn't hold in the postgame: %d" % profile.standings.of(GUILD)
 	return ""
 
 
