@@ -45,16 +45,29 @@ runs:
 
     - name: "🐳 Blender's container: Ubuntu 24.04 with the libraries Blender loads"
       # The image has no CA certificates, so the runner's are lent to apt for the snapshot's HTTPS.
-      # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
+      # A snapshot's metadata is old by design, so only its expiry check is disabled; the live
+      # fallback keeps HTTPS and metadata-expiration checks. Both use Ubuntu's signing key.
+      # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
+      # delay, and if the snapshot's index still can't be fetched, the libraries come from Ubuntu's
+      # live archive, signed by the same key, with a warning, rather than failing the run. A failed
+      # index fetch is only a warning to apt-get update, so --error-on=any makes it an error.
       shell: bash
       run: |
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
+          echo "Acquire::Retries \"5\";" > /etc/apt/apt.conf.d/80retries
           rm -f /etc/apt/sources.list /etc/apt/sources.list.d/*
-          printf "%s\n" "Types: deb" "URIs: https://snapshot.ubuntu.com/ubuntu/$0" \
-            "Suites: noble noble-updates noble-security" "Components: main" \
-            "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: no" \
-            > /etc/apt/sources.list.d/snapshot.sources
-          apt-get update -qq
+          use_mirror() {
+            printf "%s\n" "Types: deb" "URIs: $1" \
+              "Suites: noble noble-updates noble-security" "Components: main" \
+              "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: $2" \
+              > /etc/apt/sources.list.d/ubuntu.sources
+          }
+          use_mirror "https://snapshot.ubuntu.com/ubuntu/$0" no
+          if ! apt-get update --error-on=any -qq; then
+            echo "::warning::Updating from Ubuntu snapshot $0 failed: Blender'"'"'s libraries come from the live archive, maybe newer."
+            use_mirror "https://archive.ubuntu.com/ubuntu" yes
+            apt-get update --error-on=any -qq
+          fi
           DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
             libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
