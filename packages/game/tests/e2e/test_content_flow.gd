@@ -843,7 +843,8 @@ func _check_realms() -> String:
 	var forest: String = FlowSteps.FOREST
 	var start: String = forest + RealmDocument.START
 	# A signed colour reads as a whole number, but isn't six hex digits (#1367).
-	var signed: String = "\n## Day and night\n\n- Day light: #-fffff\n"
+	var signed: String = "\n## Day and night\n\n- Day light: #-fffff\n- Day ambience: #000000\n"
+	signed += "- Night light: #000000\n- Night ambience: #000000\n"
 	var no_look: String = (
 		"its day and night look needs %s#rrggbb under %s (#1247)"
 		% [RealmDocument.DAY_LIGHT, RealmDocument.DAY_AND_NIGHT]
