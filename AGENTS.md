@@ -639,8 +639,24 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **`.coderabbit.yml` is a copy of the organization's CodeRabbit settings** (owner's rule, #1340):
   both are kept identical by hand, so a change to one goes into the other in the same step (the
   organization's side is the YAML editor in CodeRabbit's organization settings, with the owner's
-  browser login). Automatic approvals have no security-risk limit, so a stale CHANGES_REQUESTED
-  from CodeRabbit doesn't hold an approved, green pull request out of the merge queue.
+  browser login). Automatic approvals have no security-risk limit.
+- **A stale change request from CodeRabbit is dismissed, not waited out** (owner's rule, #1390):
+  GitHub blocks merging while any reviewer's latest review is CHANGES_REQUESTED, even with the
+  owner's approval. "protect main" doesn't dismiss reviews on a push, which keeps the owner's
+  approval across rebases but keeps CodeRabbit's old change requests too. So:
+  1. Answer or fix every CodeRabbit comment, then resolve its thread with `resolve-review-thread
+     PRRT_<id>` (owner, #1363): only once it is fixed or answered. The unresolved threads' ids:
+     `agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved}}}}}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id'`.
+  2. Rebase when needed.
+  3. Once the owner has approved, run `dismiss-stale-coderabbit <n>` (owner, #1390). It dismisses
+     CodeRabbit's change request only when the owner's latest review is APPROVED, CodeRabbit's
+     latest review is CHANGES_REQUESTED on a commit other than the head, and no review thread is
+     unresolved; otherwise it says why and does nothing.
+
+  A change request on the head commit isn't stale, and answering it doesn't clear it: fix what it
+  asks, and CodeRabbit's review of that push replaces it (or, once the owner has approved, the next
+  push makes it stale). Never post `@coderabbitai` commands. Both tools live in `~/.local/bin` on the
+  owner's machine, not in the repository.
 - **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
   #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
   approval fills the "protect main" ruleset's required review. An agent may queue on it only when
