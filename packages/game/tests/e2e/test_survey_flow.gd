@@ -6,8 +6,9 @@ extends RefCounted
 ## tiles it shows, one chevron per exit in its middle (#790), and of two exits facing each other
 ## across a seam only the one pointing away from the player, seen from either side (#799), loading
 ## nothing; it marks each instance shown that a faction holds with its holder's symbol, and its menu
-## tab says who holds the glade (#637); it marks every player by slot and every open quest's target;
-## its action cycles it
+## tab says who holds the glade (#637); it marks every player by slot and every open quest's target,
+## the followed quest's large above everything and labelled, clear of the player's circle, the
+## others small (#1298, #1278, #1289); its action cycles it
 ## through the corners, over the game, opaque and off, its zoom steps within their range, and both
 ## choices are kept. In every place, on desktop screens and phones held either way, it sits against
 ## its own corner or covers the whole screen; every zoom step is followed, and zooming stops at both
@@ -425,11 +426,13 @@ func _survey_mark_glides(driver: GameDriver, survey: SurveyView) -> String:
 	return ""
 
 
-## Why the Survey's quest arrows aren't labelled with their quests' names and the pills naming
-## where their steps count (#1278), each label above its arrow, inside the Survey and clear of the
-## others, or "": none for a step that counts anywhere, filled for one that counts in the glade the
-## player is in, outlined with its arrow for one that counts in the forest, whose arrow is on an
-## exit. A Survey in a corner, too small for them, shows none.
+## Why only the followed quest's arrows (#1298) aren't drawn large above the Survey and labelled
+## with its quest's name and the pill naming where its step counts (#1278), the label above its
+## arrow, inside the Survey and clear of the player's circle (#1289), or "": the others' arrows stay
+## the Survey's own, small and grey, unlabelled. Each of three quests followed in turn: no pill for
+## a step that counts anywhere, filled for one that counts in the glade the player is in, outlined
+## with its arrow for one that counts in the forest, whose arrow is on an exit. A Survey in a
+## corner, too small for labels, shows none, but still draws the followed quest's arrows large.
 func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker) -> String:
 	var where: Dictionary[String, String] = {
 		"survey_any": "",
@@ -441,47 +444,59 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 		text += "[{\"condition\": \"dominated\", \"ends\": \"%s\"" % id
 		text += ", \"instance\": \"%s\"}]}" % where[id] if not where[id].is_empty() else "}]}"
 		quests.book[id] = QuestDefinition.parse(id, text, {})
-	var labels: SurveyQuestLabels = survey.quest_labels()
+	var focused: SurveyFocusedQuest = survey.focused_quest()
+	quests.focus = "survey_any"
 	survey.show_state()
-	labels.show_state()
+	focused.show_state()
 	var result: String = ""
-	if not labels.labels.is_empty():
-		result = "the Survey in a corner, %s big, labels its arrows" % [survey.size]
+	if not focused.labels.is_empty() or focused.arrows.keys() != ["survey_any"]:
+		result = "the Survey in a corner labels its arrows or doesn't draw the followed one large"
 	var kept: Vector2 = survey.size
 	survey.size = Vector2(1280.0, 720.0)
-	survey.show_state()
-	labels.show_state()
 	for id: String in where:
+		quests.focus = id
+		survey.show_state()
+		focused.show_state()
 		if result.is_empty():
-			result = _survey_label(driver, survey, labels, id, where[id])
+			result = _survey_label(driver, survey, focused, id, where[id])
+		if result.is_empty() and (focused.labels.keys() != [id] or focused.arrows.keys() != [id]):
+			result = "following %s, the Survey labels %s and draws %s large" % [
+				id,
+				focused.labels.keys(),
+				focused.arrows.keys(),
+			]
+	quests.focus = "survey_any"
+	if result.is_empty():
+		result = _survey_label_clears_player(driver, survey, focused, "survey_any")
+	quests.focus = ""
 	for id: String in where:
 		var _dropped: bool = quests.book.erase(id)
 	survey.show_state()
-	labels.show_state()
+	focused.show_state()
 	for id: String in where:
-		if result.is_empty() and labels.labels.has(id):
-			result = "the Survey keeps the label of %s, no longer open" % id
+		if result.is_empty() and (focused.labels.has(id) or focused.arrows.has(id)):
+			result = "the Survey keeps the label or the large arrow of %s, no longer open" % id
 	survey.size = kept
 	survey.show_state()
-	labels.show_state()
+	focused.show_state()
 	return result
 
 
 ## Why the Survey's arrow for quest `id` isn't labelled with its name and a pill naming `instance`
-## (none when it's ""), filled when that's where the player is, the label above the arrow, inside
-## the Survey and clear of the other labels, or "".
+## (none when it's ""), filled when that's where the player is, the label above the arrow (or below
+## its tip, #1289), inside the Survey and clear of the player's circle, or "".
 func _survey_label(
 	driver: GameDriver,
 	survey: SurveyView,
-	labels: SurveyQuestLabels,
+	focused: SurveyFocusedQuest,
 	id: String,
 	instance: String,
 ) -> String:
 	if (not survey.quest_targets.has(id)
-			or not labels.labels.has(id)
-			or not labels.labels[id].visible):
-		return "the Survey has no labelled arrow for %s: %s" % [id, labels.labels.keys()]
-	var label: QuestMarkerLabel = labels.labels[id]
+			or not focused.labels.has(id)
+			or not focused.labels[id].visible):
+		return "the Survey has no labelled arrow for %s: %s" % [id, focused.labels.keys()]
+	var label: QuestMarkerLabel = focused.labels[id]
 	var pill: QuestPill = label.pill()
 	var here: bool = instance == driver.local_instance_name()
 	if label.quest_name != id.capitalize() or pill.visible != not instance.is_empty():
@@ -498,14 +513,58 @@ func _survey_label(
 			instance,
 		]
 	var top: Vector2 = survey.arrow_top(survey.quest_targets[id])
+	var tip: Vector2 = survey.arrow_tip(survey.quest_targets[id])
 	var box: Rect2 = label.get_rect()
-	if box.end.y > top.y + 0.5 or not Rect2(Vector2.ZERO, survey.size).encloses(box):
-		return "the Survey's label for %s isn't above its arrow: %s, arrow top %s" % [id, box, top]
-	for other: String in labels.labels:
-		var shown: bool = labels.labels[other].visible
-		if other != id and shown and labels.labels[other].get_rect().intersects(box):
-			return "the Survey's labels for %s and %s overlap" % [id, other]
+	var off_arrow: bool = box.end.y <= top.y + 0.5 or box.position.y >= tip.y - 0.5
+	if not off_arrow or not Rect2(Vector2.ZERO, survey.size).encloses(box):
+		return "the Survey's label for %s isn't above or below its arrow: %s, arrow %s to %s" % [
+			id,
+			box,
+			top,
+			tip,
+		]
+	for circle: Rect2 in survey.circle_boxes():
+		if circle.intersects(box):
+			return "the Survey's label for %s covers a player's circle: %s, circle %s" % [
+				id,
+				box,
+				circle,
+			]
 	return ""
+
+
+## Why the label of quest `id`, followed, its arrow alone and moved onto the tile right below the
+## player, where the label would sit over the player's circle, doesn't hang below the arrow's tip
+## instead, clear of the circle and still shown (#1289), or "".
+func _survey_label_clears_player(
+	driver: GameDriver,
+	survey: SurveyView,
+	focused: SurveyFocusedQuest,
+	id: String,
+) -> String:
+	survey.show_state()
+	var own: Vector2i = driver.state.player(0).tile
+	var circle: Rect2 = survey.circle_boxes()[0]
+	var below: Vector2i = own + Hex.DIRECTIONS[0]
+	for side: Vector2i in Hex.DIRECTIONS:
+		var at: Vector2 = survey.to_view(own + side) - circle.get_center()
+		var best: Vector2 = survey.to_view(below) - circle.get_center()
+		if at.y - absf(at.x) > best.y - absf(best.x):
+			below = own + side
+	if not circle.has_point(survey.arrow_top(below)):
+		return "the Survey's arrow below the player doesn't reach up to their circle: %s" % circle
+	# That arrow alone, so no other label has taken the spot below it.
+	survey.quest_targets = { id: below }
+	focused.show_state()
+	var hung: String = _survey_label(driver, survey, focused, id, "")
+	var tip: Vector2 = survey.arrow_tip(below)
+	if hung.is_empty() and focused.labels[id].position.y < tip.y:
+		hung = "the Survey's label for %s doesn't hang below its arrow: %s, tip %s" % [
+			id,
+			focused.labels[id].get_rect(),
+			tip,
+		]
+	return hung
 
 
 ## Why cycling the Survey doesn't lead through every place in turn, each followed, or zooming it

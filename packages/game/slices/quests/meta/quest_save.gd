@@ -1,10 +1,15 @@
 class_name QuestSave
 extends RefCounted
-## The player's quests' part of the profile's save (#37, #855): their progress (`quest_progress`)
-## and the ones finished (`quests_done`), kept in the profile's file by QuestKeeper, its companion.
+## The player's quests' part of the profile's save (#37, #855): their progress (`quest_progress`),
+## the ones finished (`quests_done`), the side quests started, in the order started
+## (`quests_started`), and the one the player picked to follow (`quest_focus`, #1298), kept in the
+## profile's file by QuestKeeper, its companion.
 ## Integers and ids only, every value checked as it's read, and brought up to date from older
 ## formats one step at a time, at the profile's save format (ProfileSave.FORMAT).
 
+## The save format that brought the quest the player follows and the order side quests started
+## in (#1298).
+const FOCUS_FORMAT: int = 21
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -27,7 +32,12 @@ static func beside(tracker: QuestTracker) -> Dictionary:
 	for id: String in ids:
 		var at: QuestProgress = tracker.progress[id]
 		progress[id] = { "step": at.step, "count": at.count, "done": at.done }
-	return { "quest_progress": progress, "quests_done": tracker.finished }
+	return {
+		"quest_progress": progress,
+		"quests_done": tracker.finished,
+		"quests_started": tracker.started,
+		"quest_focus": tracker.focus,
+	}
 
 
 ## Brings the quests in the save `data`, in save format `format`, up to the current one, oldest
@@ -51,6 +61,15 @@ static func migrate(data: Dictionary, format: int) -> void:
 	if format < 16:
 		for old_id: String in OLD_INSTANCE_QUESTS:
 			_rename_quest(data, old_id, OLD_INSTANCE_QUESTS[old_id])
+	# Format 20 to 21: the player follows the newest quest (#1298), and the order side quests
+	# started in wasn't kept, so the ones started count as started in id order.
+	if format < FOCUS_FORMAT:
+		var progress: Variant = data.get("quest_progress")
+		var by_id: Dictionary = progress if progress is Dictionary else {}
+		var ids: Array = by_id.keys()
+		ids.sort()
+		data["quests_started"] = ids
+		data["quest_focus"] = ""
 
 
 ## Format 8 to 9: a quest's progress keeps the steps done (#573). Quests had no choices before, so
@@ -100,6 +119,27 @@ static func read(tracker: QuestTracker, data: Dictionary) -> String:
 		if progress == null or not Content.is_id(str(id)) or tracker.finished.has(str(id)):
 			return "quest %s's progress in the save is malformed or it's finished" % id
 		tracker.progress[str(id)] = progress
+	return _read_focus(tracker, data)
+
+
+## Reads the side quests started and the quest followed (#1298) from the save `data` into
+## `tracker`, whose progress is read; returns why it can't, or "". A quest started is one with
+## progress, there once, and the quest followed is an id or "".
+static func _read_focus(tracker: QuestTracker, data: Dictionary) -> String:
+	var order: Variant = data.get("quests_started")
+	var focus: Variant = data.get("quest_focus")
+	if not order is Array or not focus is String:
+		return "the save lacks the quests started or the one followed"
+	var order_list: Array = order
+	for id: Variant in order_list:
+		var text: String = Content.text_of(id)
+		if not tracker.progress.has(text) or tracker.started.has(text):
+			return "a quest started in the save has no progress or is there twice"
+		tracker.started.append(text)
+	var focus_text: String = Content.text_of(focus)
+	if not focus_text.is_empty() and not Content.is_id(focus_text):
+		return "the quest followed in the save has no valid id"
+	tracker.focus = focus_text
 	return ""
 
 

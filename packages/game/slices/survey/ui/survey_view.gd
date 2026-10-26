@@ -10,18 +10,20 @@ extends Control
 ## the rest stays the backdrop, the fog's color, so what is still in the fog stays hidden here too.
 ## Every player in the instance is a circle in their personal color with one mark per slot number,
 ## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
-## and every open quest's target (QuestTargets.of, #300) an arrow pointing down at it. Over it, its
-## child HeldMarks marks the instances it shows that a faction holds (SurveyHeldMarks, #637), and
-## its child QuestLabels labels each arrow with its quest's name and where its step counts
-## (SurveyQuestLabels, #1278). It's
+## and every open quest's target (QuestTargets.of, #300) an arrow pointing down at it, small and
+## grey but for the quest this machine's player follows (#1298). Over it, its child HeldMarks marks
+## the instances it shows that a faction holds (SurveyHeldMarks, #637), and over that its child
+## FocusedQuest draws the followed quest's arrows, large and bright yellow, each labelled with its
+## quest's name and where its step counts (SurveyFocusedQuest, #1278): size and label, not only
+## color, tell it from the others (#68). It's
 ## centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
 ## profile.
 
 ## The name of its child that marks faction territory.
 const HELD_MARKS: String = "HeldMarks"
-## The name of its child that labels the quests' arrows.
-const QUEST_LABELS: String = "QuestLabels"
+## The name of its child that draws the followed quest's arrows and labels them.
+const FOCUSED_QUEST: String = "FocusedQuest"
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
 ## A tile's hexagon is drawn a little smaller than the tile, so tiles of one kind stay apart.
@@ -34,6 +36,11 @@ const ARROW_MIN_PIXELS: float = 9.0
 const INK_PIXELS: float = 2.0
 ## The ink round a quest's arrow, in pixels.
 const ARROW_INK: float = INK_PIXELS * 1.5
+## The arrows of the quests not followed, as a share of the followed one's, and their color (#1298).
+const OTHER_ARROW_SHARE: float = 0.6
+const OTHER_ARROW_COLOR: Color = Color(0.66, 0.66, 0.66)
+## The followed quest's arrow: bright yellow.
+const FOLLOWED_ARROW_COLOR: Color = Color(1.0, 0.9, 0.1)
 ## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
 ## Below the pixels here it wouldn't read, so it's left out at far zooms in a corner; the color and
 ## the ink ring remain.
@@ -92,9 +99,9 @@ func _ready() -> void:
 	var marks: SurveyHeldMarks = SurveyHeldMarks.new()
 	marks.name = HELD_MARKS
 	add_child(marks)
-	var labels: SurveyQuestLabels = SurveyQuestLabels.new()
-	labels.name = QUEST_LABELS
-	add_child(labels)
+	var focused: SurveyFocusedQuest = SurveyFocusedQuest.new()
+	focused.name = FOCUSED_QUEST
+	add_child(focused)
 
 
 func _process(delta: float) -> void:
@@ -126,10 +133,12 @@ func _draw() -> void:
 			_draw_symbol(font, font_size, at, tiles[tile].symbol)
 	for arrow: SurveyExitArrow in exit_arrows():
 		_draw_exit(on_view(arrow.at), arrow.side)
+	# The followed quest's arrows are FocusedQuest's, drawn above everything here.
+	for key: String in quest_targets:
+		if not focused_quest().arrows.has(key):
+			draw_quest_arrow(self, to_view(quest_targets[key]), false)
 	for slot: int in circles:
 		_draw_player(on_view(circles[slot]), slot, PersonalColor.shown(driver, slot))
-	for id: String in quest_targets:
-		_draw_arrow(to_view(quest_targets[id]))
 	if bordered:
 		draw_rect(Rect2(Vector2.ZERO, size), Toon.INK, false, BORDER_PIXELS)
 
@@ -139,9 +148,9 @@ func held_marks() -> SurveyHeldMarks:
 	return get_node(HELD_MARKS) as SurveyHeldMarks
 
 
-## Its labels on the quests' arrows (#1278).
-func quest_labels() -> SurveyQuestLabels:
-	return get_node(QUEST_LABELS) as SurveyQuestLabels
+## Its child drawing the followed quest's arrows and their labels (#1278, #1298).
+func focused_quest() -> SurveyFocusedQuest:
+	return get_node(FOCUSED_QUEST) as SurveyFocusedQuest
 
 
 ## Works out what is shown from the state. Called every frame while it shows; tests call it
@@ -267,7 +276,7 @@ func _draw_exit(from: Vector2, side: int) -> void:
 
 ## A player's circle at `at` in `color`, ringed in ink, with `slot` + 1 ink marks across it.
 func _draw_player(at: Vector2, slot: int, color: Color) -> void:
-	var radius: float = maxf(zoom() * PLAYER_SHARE, PLAYER_MIN_PIXELS)
+	var radius: float = _player_radius()
 	draw_circle(at, radius + INK_PIXELS, Toon.INK)
 	draw_circle(at, radius, color)
 	var marks: int = slot + 1
@@ -277,12 +286,29 @@ func _draw_player(at: Vector2, slot: int, color: Color) -> void:
 		draw_circle(at + Vector2(offset, 0.0), mark, Toon.INK)
 
 
-## A quest's arrow over `at`, its tip on it, in ink round the quest marker's color: the shape says
-## what it is (#68).
-func _draw_arrow(at: Vector2) -> void:
-	var length: float = _arrow_length()
-	draw_colored_polygon(_arrow(at, length + ARROW_INK * 2.0, ARROW_INK), Toon.INK)
-	draw_colored_polygon(_arrow(at, length, 0.0), QuestMarkerView.COLOR)
+## The boxes round the players' circles, their ink included, in the view's pixels: what the
+## followed quest's labels keep clear of (#1289).
+func circle_boxes() -> Array[Rect2]:
+	var boxes: Array[Rect2] = []
+	var reach: float = _player_radius() + INK_PIXELS
+	for slot: int in circles:
+		boxes.append(Rect2(on_view(circles[slot]), Vector2.ZERO).grow(reach))
+	return boxes
+
+
+## How large a player's circle is, in pixels, at this zoom, without its ink.
+func _player_radius() -> float:
+	return maxf(zoom() * PLAYER_SHARE, PLAYER_MIN_PIXELS)
+
+
+## Draws a quest's arrow on `canvas` over `at`, its tip on it, in ink round its fill: the followed
+## quest's large and bright yellow, another's small and grey (#1298). The shape says what it is,
+## and the size which (#68).
+func draw_quest_arrow(canvas: CanvasItem, at: Vector2, is_followed_quest: bool) -> void:
+	var length: float = _arrow_length() * (1.0 if is_followed_quest else OTHER_ARROW_SHARE)
+	var fill: Color = FOLLOWED_ARROW_COLOR if is_followed_quest else OTHER_ARROW_COLOR
+	canvas.draw_colored_polygon(_arrow(at, length + ARROW_INK * 2.0, ARROW_INK), Toon.INK)
+	canvas.draw_colored_polygon(_arrow(at, length, 0.0), fill)
 
 
 ## The middle of the top of the arrow pointing at `tile`, its ink included, in the view's pixels:
@@ -291,7 +317,13 @@ func arrow_top(tile: Vector2i) -> Vector2:
 	return to_view(tile) - Vector2(0.0, _arrow_length() + ARROW_INK)
 
 
-## How long a quest's arrow is, in pixels, at this zoom, without its ink.
+## The tip of the arrow pointing at `tile`, its ink included, in the view's pixels: where its label
+## hangs from when the spot above the arrow is a player's (#1289).
+func arrow_tip(tile: Vector2i) -> Vector2:
+	return to_view(tile) + Vector2(0.0, ARROW_INK)
+
+
+## How long the followed quest's arrow is, in pixels, at this zoom, without its ink.
 func _arrow_length() -> float:
 	return maxf(zoom() * ARROW_SHARE, ARROW_MIN_PIXELS)
 

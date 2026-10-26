@@ -1,10 +1,12 @@
 class_name QuestListView
 extends Control
-## The open quests at the side of the screen (#340): one card per quest of this machine's player
-## that isn't finished (QuestTracker.open_steps), with its name (and its path mark in words, #471)
+## The quest followed at the side of the screen (#340, #1298): a card for the open quest this
+## machine's player follows (QuestTracker.focused), with its name (and its path mark in words, #471)
 ## and what its current step asks, and the count where the step counts up ("1/3"), with the
-## instance the step counts in as a pill under its name (QuestPill, #794). A quest that
-## finishes says so and fades out, and the cards below glide up into its place; nothing snaps.
+## instance the step counts in as a pill under its name (QuestPill, #794). The other open quests
+## are in the menu's Quests tab. A quest that finishes says so and fades out, and one the player
+## stops following fades out at once, while the card of the one followed next fades in under it
+## and glides up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
 ## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
 ## with the screen, so it stays readable on a phone. It only reads the quests.
@@ -49,6 +51,9 @@ var shown: Dictionary[String, String] = {}
 var cards: Dictionary[String, PanelContainer] = {}
 ## The cards' order from the top, finished ones included until they're gone.
 var order: Array[String] = []
+## The quests whose cards fade out, by quest id: finished, or no longer followed. Each with the
+## tween fading it, which stops when the player follows the quest again before it's gone.
+var leaving: Dictionary[String, Tween] = {}
 var _font_size: int = 0
 
 
@@ -57,17 +62,25 @@ func _process(delta: float) -> void:
 	_lay_out(1.0 - exp(-GLIDE * delta))
 
 
-## Matches the cards to the open quests. Called every frame; tests call it directly.
+## Matches the card to the quest followed. Called every frame; tests call it directly.
 func show_quests() -> void:
+	var open: Dictionary[String, QuestStep] = {}
 	var steps: Dictionary[String, QuestStep] = {}
 	var quests: QuestTracker = keeper.quests() if keeper != null else null
 	if quests != null:
-		steps = quests.open_steps()
+		open = quests.open_steps()
+		var followed: String = quests.focused()
+		if not followed.is_empty():
+			steps[followed] = open[followed]
 	var here: String = driver.local_instance_name() if driver != null else ""
 	for id: String in order:
-		if not steps.has(id) and shown[id] != DONE_TEXT:
+		if not leaving.has(id) and not open.has(id):
 			_finish(id)
+		elif not leaving.has(id) and not steps.has(id):
+			_fade_out(id, 0.0)
 	for id: String in steps:
+		if leaving.has(id):
+			_come_back(id)
 		var progress: QuestProgress = quests.progress.get(id)
 		var line: String = step_line(steps[id], progress.count if progress != null else 0)
 		if not cards.has(id):
@@ -156,6 +169,38 @@ func _add_card(id: String, quest_name: String) -> void:
 	card.position = Vector2(0.0, _bottom())
 	cards[id] = card
 	order.append(id)
+	_fade_in(card)
+
+
+## Says quest `id` is done, fades its card out after a while, then lets the card below move up.
+func _finish(id: String) -> void:
+	shown[id] = DONE_TEXT
+	_line_label(id).text = DONE_TEXT
+	_line_label(id).visible = true
+	_fade_out(id, DONE_SECONDS)
+
+
+## Fades quest `id`'s card out after `wait` seconds, then forgets it.
+func _fade_out(id: String, wait: float) -> void:
+	var card: PanelContainer = cards[id]
+	var tween: Tween = card.create_tween()
+	leaving[id] = tween
+	var _waited: IntervalTweener = tween.tween_interval(wait)
+	var _faded: PropertyTweener = tween.tween_property(card, "modulate:a", 0.0, FADE_SECONDS)
+	var _gone: CallbackTweener = tween.tween_callback(_drop.bind(id))
+
+
+## Fades quest `id`'s card, fading out as it's no longer followed, back in: the player follows it
+## again.
+func _come_back(id: String) -> void:
+	leaving[id].kill()
+	var _stays: bool = leaving.erase(id)
+	var card: PanelContainer = cards[id]
+	_fade_in(card)
+
+
+## Fades `card` in.
+static func _fade_in(card: PanelContainer) -> void:
 	var _faded_in: PropertyTweener = card.create_tween().tween_property(
 		card,
 		"modulate:a",
@@ -164,23 +209,12 @@ func _add_card(id: String, quest_name: String) -> void:
 	)
 
 
-## Says quest `id` is done, fades its card out after a while, then lets the cards below move up.
-func _finish(id: String) -> void:
-	shown[id] = DONE_TEXT
-	_line_label(id).text = DONE_TEXT
-	_line_label(id).visible = true
-	var card: PanelContainer = cards[id]
-	var tween: Tween = card.create_tween()
-	var _waited: IntervalTweener = tween.tween_interval(DONE_SECONDS)
-	var _faded: PropertyTweener = tween.tween_property(card, "modulate:a", 0.0, FADE_SECONDS)
-	var _gone: CallbackTweener = tween.tween_callback(_drop.bind(id))
-
-
-## Forgets finished quest `id`'s card, once it has faded out.
+## Forgets quest `id`'s card, once it has faded out.
 func _drop(id: String) -> void:
 	cards[id].queue_free()
 	var _forgotten: bool = cards.erase(id)
 	var _unshown: bool = shown.erase(id)
+	var _left: bool = leaving.erase(id)
 	order.erase(id)
 
 
