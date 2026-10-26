@@ -1191,7 +1191,7 @@ func _check_music(main: Node) -> String:
 ## The fog (#137), drawn from the fog feature's state: a tile an ally sees is bright, one seen
 ## before dimmed, one never seen dark, and the cloud (#156) lies on each that thick; brightness
 ## eases rather than jumps, and a settled fog eases no tile; and a wild monster out of every
-## ally's sight is hidden.
+## ally's sight is hidden. Whether an ally sees a tile follows each new sight (#1395).
 func _check_fog(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: FogView = main.get_node("FogView") as FogView
@@ -1202,6 +1202,11 @@ func _check_fog(main: Node) -> String:
 	view.show_state(10.0)
 	var far: Vector2i = Vector2i(-3, 0)
 	var result: String = _fog_levels(view, own, far)
+	# An ally's sight is looked up in a set built from their sight (#1395), so it follows the sight
+	# that replaced it.
+	if result.is_empty() and (
+			not FogView.ally_sees(driver.state, own) or FogView.ally_sees(driver.state, far)):
+		result = "whether an ally sees a tile didn't follow their new sight"
 	if result.is_empty():
 		result = _check_circle(view, fog, own)
 	if result.is_empty():
@@ -1218,6 +1223,8 @@ func _check_fog(main: Node) -> String:
 	fog.enabled = true
 	view.show_state(10.0)
 	fog.visible[0] = everything
+	if result.is_empty() and FogView.ally_sees(driver.state, far) != everything.has(far):
+		result = "whether an ally sees a tile didn't follow their sight back"
 	view.show_state(0.1)
 	if result.is_empty() and not is_equal_approx(view.brightness[far], 0.45 + 0.15):
 		result = "the fog didn't ease: %s" % view.brightness[far]
