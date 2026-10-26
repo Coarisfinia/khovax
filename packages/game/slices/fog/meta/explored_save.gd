@@ -5,9 +5,13 @@ extends RefCounted
 ## world, never enters its hash or replays, and bad memory never refuses the world. The fog slice
 ## owns it (#506), so the world's save never names it.
 
-## The format. Format 2 notes each instance's generation (#212); format 1 had none, from before
-## purging: generation 0.
-const FORMAT: int = 2
+## The format's changes (FormatChanges, #801), one file each.
+const CHANGES: String = "res://slices/fog/meta/format_changes/"
+## Each instance notes its generation (#212); a save without it is from before purging: generation
+## 0.
+const GENERATIONS: String = "212-generations"
+## The changes of the numbered formats before names (#801): format n had the first n - 1.
+const NUMBERED: Array[String] = [GENERATIONS]
 ## The farthest a remembered tile's coordinate lies from zero: a tile holds 32-bit numbers.
 const MOST_COORDINATE: int = 0x7fff_ffff
 
@@ -40,7 +44,8 @@ static func load_into(path: String, into: ExploredGround, source: InstanceSource
 	return problem
 
 
-## The ground `explored` as save data: its format, and per instance in name order its generation
+## The ground `explored` as save data: its format changes, and per instance in name order its
+## generation
 ## and its tiles, as q and r after one another in tile order (DataReader.flat).
 static func explored_data(explored: ExploredGround) -> Dictionary:
 	var names: Array[String] = []
@@ -58,7 +63,7 @@ static func explored_data(explored: ExploredGround) -> Dictionary:
 				"tiles": DataReader.flat(tiles),
 			},
 		)
-	return { "format": FORMAT, "instances": instances }
+	return { FormatChanges.KEY: FormatChanges.names_in(CHANGES), "instances": instances }
 
 
 ## Reads the explored ground `data` (as `explored_data` wrote it) into `into`, naming only
@@ -67,9 +72,7 @@ static func _read(data: Variant, into: ExploredGround, source: InstanceSource) -
 	if not data is Dictionary or not JsonNumbers.all_whole(data):
 		return "not explored ground, or it holds a number that isn't whole"
 	var read: DataReader = DataReader.new(JsonNumbers.wholes(data))
-	var format: int = read.whole("format", 0, DataReader.MOST)
-	if not read.failed() and (format < 1 or format > FORMAT):
-		read.fail("explored ground format %d, this build reads %d" % [format, FORMAT])
+	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED)
 	for entry: DataReader in read.entries("instances"):
 		var instance_name: String = entry.text("name")
 		if not source.exists(instance_name) or into.tiles_in.has(instance_name):
@@ -77,7 +80,11 @@ static func _read(data: Variant, into: ExploredGround, source: InstanceSource) -
 		var numbers: Array[int] = entry.wholes("tiles", -MOST_COORDINATE, MOST_COORDINATE)
 		if numbers.size() % 2 != 0:
 			entry.fail("the tiles explored in %s hold half a tile" % instance_name)
-		var generation: int = entry.whole("generation", 0, DataReader.MOST) if format > 1 else 0
+		var generation: int = entry.whole(
+			"generation",
+			0,
+			DataReader.MOST,
+		) if changes.has(GENERATIONS) else 0
 		var tiles: Dictionary[Vector2i, bool] = into.tiles_of(instance_name, generation)
 		for i: int in range(0, numbers.size() - 1, 2):
 			tiles[Vector2i(numbers[i], numbers[i + 1])] = true

@@ -356,7 +356,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   with what later slices keep in its file, like the quest progress, #855; the saved `World`, the player's `Settings`), each in its own
   file, never inside the simulation. Saves are versioned JSON of integers and ids only, kept by
   `SaveStore`; gains are taken at once and saved debounced (owner, #73: `ProfileKeeper`,
-  `WorldKeeper`). **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
+  `WorldKeeper`). **Anything that versions data across builds records names, never a count or a
+  hand-kept number** (owner, #801): a save names the format changes it was written with
+  (`FormatChanges`), and a format change adds its `<issue>-<slug>.md` to its format's
+  `format_changes/` folder (append-only, checked by CI) instead of bumping a `FORMAT`; the formats
+  still on a number move to names in #1409, #1410 and #1411. **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
   the content reader, JSONC): the core's edge, which reads files and JSON's numbers. Only
   `Content` (reading files and JSON), `SaveStore` (writing them), through which every other reader
   and writer there goes (#591, #1177), and `JsonNumbers`, the one place JSON's floats become whole
