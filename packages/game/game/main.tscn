@@ -68,6 +68,7 @@
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/wild_hp_bars.gd" id="59_wild_hp_bars"]
 [ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_quest_picker.gd" id="61_survey_quest_picker"]
+[ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -459,6 +460,11 @@ driver = NodePath("../../Driver")
 
 [node name="DeviceInUse" type="Node" parent="."]
 script = ExtResource("54_device_in_use")
+
+[node name="FactionMetTie" type="Node" parent="." node_paths=PackedStringArray("menu", "keeper")]
+script = ExtResource("62_faction_met_tie")
+menu = NodePath("../Hud/GameMenu")
+keeper = NodePath("../CodexKeeper")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]

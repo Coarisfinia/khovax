@@ -332,6 +332,24 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	panel.refresh()
 	if not changed.is_empty() or panel.shown != neutral:
 		return "a faction back at neutral stays listed: %s" % [panel.shown]
+	return _menu_met_factions(tab, main)
+
+
+## A faction whose name the player has met is listed at its standing before anything moves it
+## (#1383): the Odun Kragothai, met, at its start one rank below neutral (#1378); met at neutral,
+## the Story guild isn't listed.
+func _menu_met_factions(tab: CharacterTab, main: Node) -> String:
+	var panel: FactionStandingsPanel = tab.factions
+	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
+	keeper.meet(TextTags.FACTION, "amvrel_velmarai")
+	keeper.meet(TextTags.FACTION, "odun_kragothai")
+	panel.refresh()
+	var odun: Faction = FactionContent.cached().factions["odun_kragothai"]
+	var listed: Array[String] = [
+		FactionStandingsPanel.LINE_TEXT % [odun.name, -1, odun.rank_name(-1)],
+	]
+	if panel.shown != listed:
+		return "the met factions on the Character tab are %s, not %s" % [panel.shown, listed]
 	return _menu_gear(tab, main)
 
 
