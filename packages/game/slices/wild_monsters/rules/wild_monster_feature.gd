@@ -139,7 +139,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	_stepped.clear()
 	_stepped_tick = state.tick
 	for monster: int in monsters:
-		# Only the monsters due this tick are looked up: finding an entity goes through them all.
+		# Only the monsters due this tick are looked up.
 		if not _moves_now(state, monster):
 			continue
 		var standing: Entity = state.entity(monster)

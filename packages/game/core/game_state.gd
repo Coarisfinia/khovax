@@ -28,6 +28,9 @@ var next_entity_id: int = 1
 ## Every entity, in id order. Rules always go through entities in this order, never in a
 ## dictionary's or a hash's order, so every machine runs them the same way.
 var entities: Array[Entity] = []
+## The same entities by id, so `entity` finds one without going through them all (#1293): rules
+## look entities up by id many times a tick. Kept with `entities`, never iterated, nor hashed.
+var _by_id: Dictionary[int, Entity] = {}
 ## The instance's features, in the order they step each tick.
 var features: Array[Feature] = []
 ## What happened during the current tick, in order, for features later in the order; the driver
@@ -106,6 +109,7 @@ func add_entity(slot: int, tile: Vector2i) -> Entity:
 	next_entity_id += 1
 	# Ids only grow, so appending keeps the list in id order.
 	entities.append(added)
+	_by_id[added.id] = added
 	for each: Feature in features:
 		each.entity_added(self, added)
 	return added
@@ -117,6 +121,7 @@ func remove_entity(id: int) -> void:
 	for i: int in entities.size():
 		if entities[i].id == id:
 			entities.remove_at(i)
+			var _dropped: bool = _by_id.erase(id)
 			for each: Feature in features:
 				each.entity_removed(self, id)
 			return
@@ -142,10 +147,7 @@ func stored(slot: int, feature_id: String) -> Dictionary:
 
 ## The entity with this id, or null.
 func entity(id: int) -> Entity:
-	for candidate: Entity in entities:
-		if candidate.id == id:
-			return candidate
-	return null
+	return _by_id.get(id)
 
 
 ## The entity the player in this slot controls, or null when the slot is empty.
@@ -241,12 +243,15 @@ func load_data(data: DataReader) -> void:
 		data.fail("an entity is cut off")
 		return
 	entities.clear()
+	_by_id.clear()
 	for i: int in range(0, flat.size(), 4):
 		var problem_here: String = _entity_problem(flat[i], flat[i + 1], flat[i + 2], flat[i + 3])
 		if not problem_here.is_empty():
 			data.fail(problem_here)
 			return
-		entities.append(_restored(flat[i], flat[i + 1], Vector2i(flat[i + 2], flat[i + 3])))
+		var restored: Entity = _restored(flat[i], flat[i + 1], Vector2i(flat[i + 2], flat[i + 3]))
+		entities.append(restored)
+		_by_id[restored.id] = restored
 	var saved: Array[DataReader] = data.entries("features")
 	if saved.size() != features.size():
 		data.fail("the instance has %d features, the save %d" % [features.size(), saved.size()])
