@@ -67,8 +67,9 @@ PUP = quadruped.Proportions(
 # drifts from them fails the build (lib/metrics.py), so a derpy edit shows as numbers. Against the
 # wolf's: a bigger, rounder head on a short trunk on stubby legs, a short muzzle, and big round eyes
 # set forward on the face (the blind review on #1249). leg/body updated for the shorter legs (#1307),
-# and nose width/muzzle width with them: the same nose, but the body's reduction to its triangle
-# budget lays the few vertices at the nose's tip differently once the legs change.
+# and the snout's measures read from few vertices (nose width/muzzle width, jaw width/muzzle width,
+# chin reach/muzzle) with them and #1302's deeper mouth slit: the same snout, but the body's
+# reduction to its triangle budget lays those vertices differently once the legs and the slit change.
 REFERENCE = {
     "head/body": 1.519,
     "head height/length": 0.775,
@@ -84,12 +85,12 @@ REFERENCE = {
     "muzzle/head": 0.287,
     "muzzle depth/length": 0.832,
     "muzzle width/head width": 0.327,
-    "nose width/muzzle width": 0.530,
+    "nose width/muzzle width": 0.556,
     "jaw depth/muzzle depth": 0.364,
-    "jaw width/muzzle width": 0.785,
+    "jaw width/muzzle width": 0.827,
     # The lower jaw runs back to its joint (#1194), as a mandible does: longer than the muzzle.
     "jaw/muzzle": 2.077,
-    "chin reach/muzzle": 0.762,
+    "chin reach/muzzle": 0.728,
 }
 
 # A short snout, its stop high on a round brow and its tip blunt, the lower jaw small under it,
