@@ -70,9 +70,7 @@ static func _read_day_and_night(realm: Realm, items: Dictionary[String, String])
 	var colors: Array[int] = []
 	for item: String in [DAY_LIGHT, DAY_AMBIENCE, NIGHT_LIGHT, NIGHT_AMBIENCE]:
 		var color: String = items.get(item, "")
-		if (color.length() != 7
-				or not color.begins_with("#")
-				or not color.substr(1).is_valid_hex_number()):
+		if not _is_rgb(color):
 			return "its day and night look needs %s#rrggbb under %s (#1247)" % [item, DAY_AND_NIGHT]
 		colors.append(color.substr(1).hex_to_int())
 	realm.day_light = colors[0]
@@ -80,6 +78,17 @@ static func _read_day_and_night(realm: Realm, items: Dictionary[String, String])
 	realm.night_light = colors[2]
 	realm.night_ambience = colors[3]
 	return ""
+
+
+## Whether `color` is "#rrggbb": six hex digits, each checked alone, since a whole number may carry
+## a sign (#1367).
+static func _is_rgb(color: String) -> bool:
+	if color.length() != 7 or not color.begins_with("#"):
+		return false
+	for digit: String in color.substr(1):
+		if not digit.is_valid_hex_number():
+			return false
+	return true
 
 
 ## The items listed in `text`'s section under `heading` (up to its next heading): each item's
