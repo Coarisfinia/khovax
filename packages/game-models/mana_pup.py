@@ -66,7 +66,9 @@ PUP = quadruped.Proportions(
 # Its proportions (#1072), measured from the build first shown to the owner on #1220: a change that
 # drifts from them fails the build (lib/metrics.py), so a derpy edit shows as numbers. Against the
 # wolf's: a bigger, rounder head on a short trunk on stubby legs, a short muzzle, and big round eyes
-# set forward on the face (the blind review on #1249). leg/body updated for the shorter legs (#1307).
+# set forward on the face (the blind review on #1249). leg/body updated for the shorter legs (#1307),
+# and nose width/muzzle width with them: the same nose, but the body's reduction to its triangle
+# budget lays the few vertices at the nose's tip differently once the legs change.
 REFERENCE = {
     "head/body": 1.519,
     "head height/length": 0.775,
