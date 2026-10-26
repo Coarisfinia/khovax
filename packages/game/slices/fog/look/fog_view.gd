@@ -211,6 +211,14 @@ func thinned(tile: Vector2i) -> float:
 	return clampf(inverse_lerp(UNSEEN, REMEMBERED, bright), 0.0, 1.0)
 
 
+## How many times the tiles' targets were worked out: every time, also on another instance, a
+## tile's brightness can change outside `moving`, even arrive within the frame. A view following the
+## brightness (TileDecorations) checks every tile when it grows, and otherwise only the moving ones
+## (#1386).
+func retargets() -> int:
+	return _inputs.times
+
+
 ## Whether any player in `state` sees `tile`: allies share sight. True without fog, or with it
 ## switched off.
 static func ally_sees(state: GameState, tile: Vector2i) -> bool:

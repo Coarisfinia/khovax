@@ -1366,7 +1366,7 @@ func _check_remembered_ground(main: Node) -> String:
 
 ## Back in the glade, the forest next door stands its decorations (#1043), placed like its grid: on
 ## a tile seen on arrival (explored) its decoration has risen out of the light fog whole, and on one
-## never seen it stays hidden under the thick cloud.
+## never seen it stays hidden under the thick cloud. Once settled, none is eased any more (#1386).
 func _check_neighbour_decorations(
 	main: Node,
 	forest_seen: Array[Vector2i],
@@ -1395,13 +1395,15 @@ func _check_neighbour_decorations(
 			return "next door, the decoration on the forest's unexplored %s shows" % [tile]
 	if counted.x == 0 or counted.y == 0:
 		return "expected decorations next door on the forest's explored and unexplored ground"
+	if not forest.moving.is_empty():
+		return "next door, %d decorations are still eased once settled" % forest.moving.size()
 	return ""
 
 
 ## Back in the glade (#945), a decoration on its ground explored before that no event revealed and
 ## no ally sees now (remembered as a resumed save remembers it) shows again as the fog remembers
 ## the ground under it: it rises out of the cloud as the cloud thins, never popping in, and stands
-## whole once it has.
+## whole once it has; then no decoration is eased any more (#1386).
 func _check_decorations_remembered(main: Node) -> String:
 	var fog: FogView = main.get_node("FogView") as FogView
 	var view: TileDecorations = main.get_node("Instance/TileDecorations") as TileDecorations
@@ -1417,6 +1419,8 @@ func _check_decorations_remembered(main: Node) -> String:
 		return "back in the glade, the decoration on ground explored before is hidden"
 	if not rising:
 		return "back in the glade, a decoration on ground explored before popped in"
+	if not view.moving.is_empty():
+		return "back in the glade, %d decorations are still eased once settled" % view.moving.size()
 	return ""
 
 
