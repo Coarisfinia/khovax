@@ -1,5 +1,5 @@
 class_name SurveyQuestHover
-extends Control
+extends SurveyLayer
 ## The card of the quest whose small grey arrow the pointer rests on, on the SurveyView it's a
 ## child of (#1298): the quest card the list on the side shows (QuestCard), its name, the pill
 ## naming where its step counts and what the step asks, next to the arrow's target wherever
@@ -21,19 +21,7 @@ var hovered: String = ""
 var card: QuestCard = null
 
 
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-
-
-func _process(_delta: float) -> void:
-	# After the Survey, its parent, which processes first.
-	if is_visible_in_tree():
-		show_state()
-
-
-## Shows the card of the arrow `hovered`, or none when it's no grey arrow the Survey shows. Called
-## every frame while it shows; tests call it directly, after the Survey's own.
+## Shows the card of the arrow `hovered`, or none when it's no grey arrow the Survey shows.
 func show_state() -> void:
 	var survey: SurveyView = get_parent() as SurveyView
 	var quests: QuestTracker = null

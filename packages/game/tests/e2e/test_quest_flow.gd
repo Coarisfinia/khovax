@@ -382,6 +382,21 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 		var _unbooked: bool = quests.book.erase(id)
 	if shown != expected:
 		return "the Quests tab shows %s, not %s" % [shown, expected]
+	return _check_tab_follows(menu.quests_tab(), quests)
+
+
+## The Quests tab's button beside the followed quest says so with its star and takes no press, and
+## pressing another's follows that quest (#1298), a pick the profile keeps.
+func _check_tab_follows(tab: QuestsTab, quests: QuestTracker) -> String:
+	tab.refresh()
+	var followed: Button = tab.follow_buttons.get(quests.focused())
+	if followed == null or followed.text != QuestsTab.FOLLOWED_TEXT or not followed.disabled:
+		return "the Quests tab doesn't mark the followed quest %s" % quests.focused()
+	tab.follow_buttons["three_ombulumo"].pressed.emit()
+	tab.refresh()
+	var now: Button = tab.follow_buttons["three_ombulumo"]
+	if quests.focus != "three_ombulumo" or now.text != QuestsTab.FOLLOWED_TEXT:
+		return "pressing the toads' quest's button in the Quests tab didn't follow it"
 	return ""
 
 
