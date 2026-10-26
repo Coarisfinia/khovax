@@ -1593,7 +1593,7 @@ func _check_broken_data() -> String:
 		"{\"mose\": 1}": "it gives mose, which is no material",
 		"{\"moss\": 0}": "its materials must give each id a whole count from 1",
 		"{\"moss\": 1.5}": "its materials must give each id a whole count from 1",
-		"{}": "its materials must name one or more materials",
+		"{}": "must name one or more materials, each with a count",
 	}
 	for given: String in cases:
 		var rewarding: String = good.replace("\"steps\"", "\"materials\": %s, \"steps\"" % given)
