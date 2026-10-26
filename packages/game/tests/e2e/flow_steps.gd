@@ -59,6 +59,25 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 	return InstanceBlueprints.create(BASIC, seed_value, players)
 
 
+## The named blueprint's rules on `region`, a flow's own ground, with the features what it holds
+## brings (as InstanceBlueprints.create builds them, from the blueprint's wild species and loot),
+## and no player yet; null, with an error, when the features' order is invalid.
+static func rules_on(instance_name: String, region: Region, seed_value: int) -> GameState:
+	var named: Blueprint = InstanceBlueprints.blueprint(instance_name)
+	var setup: FeatureSetup = FeatureSetup.new()
+	setup.instance = instance_name
+	setup.region = region
+	setup.wild_species = named.wild_species
+	setup.loot_table = named.loot_table
+	var listed: Array[String] = named.features.duplicate()
+	listed.append_array(RegionFeatures.of(region))
+	var state: GameState = GameState.new(region, seed_value, FeatureFactories.build(listed, setup))
+	if not state.problem.is_empty():
+		push_error("%s's rules don't load on a flow's region: %s" % [instance_name, state.problem])
+		return null
+	return state
+
+
 ## The region a region document of the tiles `grid` reads as (#824), its legend REGION_LEGEND and
 ## `legend`'s lines.
 static func region(grid: String, legend: String = "") -> Region:

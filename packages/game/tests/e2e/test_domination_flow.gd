@@ -51,6 +51,12 @@ extends RefCounted
 ## for the spikes' damage, while it waits for a totem and while it seals, never below 1 HP; without,
 ## it doesn't.
 ##
+## An early wild monster (#1321), one of the starting instance's own species, the first a player
+## meets, can be dominated by a small ring around it, and defeated by a companion of its kind (the
+## monster a player carries after their first domination) and its special, within EARLY_SECONDS,
+## on every difficulty the host can choose (#1315): under the starting instance's own rules and
+## its species' own numbers, so a change to either that makes one of them impossible fails here.
+##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
 ## tile that hides.
@@ -83,6 +89,8 @@ const OTHER_RING: Array[Vector2i] = [
 const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 ## Ticks a seal may take at most in this flow, before it counts as stuck.
 const MOST_SEAL_TICKS: int = 400
+## How long the early monster check gives a companion to defeat an early wild monster.
+const EARLY_SECONDS: int = 60
 ## The companion the first player brings into the saved world.
 const COMPANION: String = "ombulumo"
 ## The outcome tests' species, in a disc region of radius OUTCOME_RADIUS: a weak and a strong one,
@@ -139,24 +147,24 @@ const CROWD: Array[Vector2i] = [
 
 
 func run(tree: SceneTree) -> String:
-	var result: String = _check_open_ring()
-	if result.is_empty():
-		result = _check_other_ring()
-	if result.is_empty():
-		result = _check_domination()
-	if result.is_empty():
-		result = _check_seal_saved()
-	if result.is_empty():
-		result = _check_together()
-	if result.is_empty():
-		result = _check_outcomes()
-	if result.is_empty():
-		result = _check_species()
-	if result.is_empty():
-		result = await _check_view(tree)
-	if result.is_empty():
-		result = await _check_saved(tree)
-	return result
+	var steps: Array[Callable] = [
+		_check_open_ring,
+		_check_other_ring,
+		_check_domination,
+		_check_seal_saved,
+		_check_together,
+		_check_outcomes,
+		_check_species,
+		_check_early_monster,
+	]
+	for check: Callable in steps:
+		var result: String = check.call()
+		if not result.is_empty():
+			return result
+	var shown: String = await _check_view(tree)
+	if not shown.is_empty():
+		return shown
+	return await _check_saved(tree)
 
 
 ## The glade's wild monster in the shrubs starts hidden, and jumps out on the step that brings the
@@ -1051,6 +1059,55 @@ func _outcome_state(
 	]
 	ordered.append_array(extra)
 	return GameState.new(region, 1, ordered)
+
+
+## An early wild monster is dominated by a small ring around it, and defeated by a companion of
+## its species with its special, on every difficulty (#1321).
+func _check_early_monster() -> String:
+	for difficulty: int in HostSettings.DIFFICULTIES:
+		var state: GameState = _early_state(difficulty, false)
+		_close(state, Hex.ring(SMALL_RING).slice(1))
+		var dominated: int = _dominated(_settle(state)).size()
+		if dominated != 1:
+			return "at difficulty %d, a small ring around an early wild monster dominated %d" % [
+				difficulty,
+				dominated,
+			]
+		state = _early_state(difficulty, true)
+		var monster: int = _wild(state).monsters[0]
+		for _tick: int in EARLY_SECONDS * Simulation.TICKS_PER_SECOND:
+			if _wild(state).is_fainted(monster):
+				break
+			Simulation.step(state, _fire())
+		if not _wild(state).is_fainted(monster):
+			return "at difficulty %d, a companion didn't defeat an early wild monster in %d s" % [
+				difficulty,
+				EARLY_SECONDS,
+			]
+	return ""
+
+
+## A disc under the starting instance's rules with one wild monster of its first species in the
+## middle, at the host's `difficulty` (asked for in the first tick), and the player in slot 0 next
+## to
+## it, where a small ring starts, carrying one of its species as their companion when `carrying`.
+func _early_state(difficulty: int, carrying: bool) -> GameState:
+	var start: String = Realms.start()
+	var kinds: Array[String] = []
+	kinds.assign(InstanceBlueprints.blueprint(start).wild_species.keys())
+	kinds.sort()
+	var region: Region = Region.disc(OUTCOME_RADIUS)
+	region.wild_monsters = [Vector2i.ZERO]
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, WildSpot.NAMED + kinds[0])
+	var state: GameState = FlowSteps.rules_on(start, region, 42)
+	if carrying:
+		FlowSteps.carry(state, 0, [kinds[0]])
+	var _player: Entity = state.add_entity(0, Hex.ring(SMALL_RING)[0])
+	var asking: Command = Command.new()
+	var data: int = HostSettings.request_data(HostSettings.DIFFICULTY, difficulty)
+	Outbox.new().post(OutboxEntry.HOST_SETTING, data).fill(asking)
+	Simulation.step(state, [asking])
+	return state
 
 
 ## A weak companion hemmed in by weak wild monsters strikes the one with the lowest id at once
