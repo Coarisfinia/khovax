@@ -120,6 +120,8 @@ func start(state: GameState) -> void:
 					full - maxi(Fixed.scale(full, WOUNDED_HP), 1),
 					false,
 				)
+		# Wild after its starting wound, so a region's wounded share doesn't hang on the difficulty.
+		health.track(monster.id, species, true)
 		_wild[monster.id] = wild
 	# Drawn after every species, so the short ids never shift which species roll; one already
 	# taken here is drawn again, so no two share one.
@@ -158,7 +160,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 func _moves_now(state: GameState, entity_id: int) -> bool:
 	if held.has(entity_id) or asleep.has(entity_id):
 		return false
-	return (state.tick + entity_id) % WildPace.paced(STEP_TICKS, rage_of(entity_id)) == 0
+	return (state.tick + entity_id) % WildPace.paced(state, STEP_TICKS, rage_of(entity_id)) == 0
 
 
 ## Steps the wild monster with this id one tile toward `goal` (#961) along the way it finds round
@@ -234,8 +236,15 @@ func target_of(entity_id: int) -> String:
 	return wild.target if wild != null else ""
 
 
-## Its species' strength, raised by RAGE_STRENGTH for every stack of rage it has (#220).
-func strength_of(entity_id: int) -> int:
+## Its species' strength, raised by RAGE_STRENGTH for every stack of rage it has (#220), at the
+## host's difficulty in `state` (HostSettings, #1315).
+func strength_of(state: GameState, entity_id: int) -> int:
+	return HostSettings.enemy_strength(state, _raged_strength(entity_id))
+
+
+## Its species' strength, raised by its rage, at no difficulty: the state's own, which the
+## difficulty, hashed in the host's world store, scales.
+func _raged_strength(entity_id: int) -> int:
 	var base: int = strengths.get(species_of(entity_id), UNKNOWN_STRENGTH)
 	return Fixed.scale(base, Fixed.ONE + rage_of(entity_id) * RAGE_STRENGTH)
 
@@ -361,7 +370,7 @@ func load_values(state: GameState, values: DataReader) -> void:
 func _track_loaded(state: GameState, values: DataReader) -> void:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	for monster: int in _wild:
-		health.track(monster, _wild[monster].species)
+		health.track(monster, _wild[monster].species, true)
 		var down: bool = health.hp_of(state, monster) == 0
 		if not health.fits(state, monster) or down != fainted.has(monster):
 			values.fail("wild monster %d's HP doesn't match whether it fainted" % monster)
@@ -374,7 +383,7 @@ func hash_values() -> Array[int]:
 		values.append(monster)
 		var wild: WildMonster = _wild[monster]
 		values.append_array([_known.find(wild.species), StateHash.name_code(wild.short_id)])
-		values.append_array([strength_of(monster), wild.rage])
+		values.append_array([_raged_strength(monster), wild.rage])
 	values.append(held.size())
 	values.append_array(held)
 	values.append(asleep.size())

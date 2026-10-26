@@ -16,8 +16,11 @@ const TRAP: int = 3
 ## Bring monsters into the player's party (#53, #818): a run of these, its data a place in the run,
 ## how many monsters it brings and one value of them (CarryRequest).
 const CARRY: int = 4
+## Set one of the world's settings, from its host (#1309, HostSettings): its data is the
+## setting's code and its choice (HostSettings.request_data).
+const HOST_SETTING: int = 5
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY]
+const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING]
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the
 ## world records the ids it applied.

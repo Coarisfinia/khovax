@@ -731,7 +731,8 @@ func _check_blueprints() -> String:
 	if (glade.codex_gloss != "the soft clearing"
 			or not glade.codex_entry.begins_with("The clearing")):
 		return "the glade's codex entry reads %s" % glade.codex_gloss
-	if glade.features[0] != MovementFeature.ID or glade.features.has(ChestFeature.ID):
+	var opening: Array[String] = [HostSettingsFeature.ID, MovementFeature.ID]
+	if glade.features.slice(0, 2) != opening or glade.features.has(ChestFeature.ID):
 		return "the glade's features read %s" % [glade.features]
 	var own: GameState = InstanceBlueprints.create(FlowSteps.GLADE, 0, 0)
 	var corrupted: GameState = InstanceBlueprints.create(

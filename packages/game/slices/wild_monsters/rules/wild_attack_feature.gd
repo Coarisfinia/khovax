@@ -90,7 +90,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	for tile: Vector2i in _wear.keys():
 		if not trail.shared.tiles.has(tile):
 			var _dropped: bool = _wear.erase(tile)
-	if not _anyone_strikes(state.tick):
+	if not _anyone_strikes(state):
 		return
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	if wild == null:
@@ -115,25 +115,25 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			or wild.asleep.has(monster.id)
 		):
 			continue
-		var damage: int = wild.strength_of(monster.id)
+		var damage: int = wild.strength_of(state, monster.id)
 		if dominator_id > 0:
 			_strike_ring(state, monster, dominator_id, damage)
 		elif not domination.is_sealed(monster.id):
 			_strike(state, monster, damage, wild.rage_of(monster.id) > 0)
 
 
-## Whether a wild monster of any rage strikes on `tick`: on most ticks none does.
-static func _anyone_strikes(tick: int) -> bool:
+## Whether a wild monster of any rage strikes on this tick of `state`: on most ticks none does.
+static func _anyone_strikes(state: GameState) -> bool:
 	for rage: int in WildMonsterFeature.MOST_RAGE + 1:
-		if _strikes_now(tick, rage):
+		if _strikes_now(state, rage):
 			return true
 	return false
 
 
-## Whether a wild monster with `rage` stacks of rage strikes on `tick`: once every STRIKE_TICKS,
-## paced by its rage (#961).
-static func _strikes_now(tick: int, rage: int) -> bool:
-	return tick % WildPace.paced(STRIKE_TICKS, rage) == 0
+## Whether a wild monster with `rage` stacks of rage strikes on this tick of `state`: once every
+## STRIKE_TICKS, paced by the host's difficulty and its rage (#961, #1315).
+static func _strikes_now(state: GameState, rage: int) -> bool:
+	return state.tick % WildPace.paced(state, STRIKE_TICKS, rage) == 0
 
 
 ## Finds, in one pass over the entities, which companion and which player stands on each tile,
@@ -155,7 +155,7 @@ func _find_standing(
 		while next < wild.monsters.size() and wild.monsters[next] < entity.id:
 			next += 1
 		if next < wild.monsters.size() and wild.monsters[next] == entity.id:
-			if _strikes_now(state.tick, wild.rage_of(entity.id)):
+			if _strikes_now(state, wild.rage_of(entity.id)):
 				monsters.append(entity)
 		elif entity.slot != Entity.NO_SLOT:
 			if not _player_at.has(entity.tile) and not health.is_shielded(entity.id):

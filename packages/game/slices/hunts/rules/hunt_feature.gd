@@ -157,11 +157,11 @@ func _hunt(state: GameState, wild: WildMonsterFeature, hunter: int, struck: bool
 	if Hex.distance(tile, prey_tile) > 1:
 		wild.chase(state, hunter, prey_tile)
 		return
-	if struck or state.tick % WildAttackFeature.STRIKE_TICKS != 0:
+	if struck or state.tick % WildPace.paced(state, WildAttackFeature.STRIKE_TICKS, 0) != 0:
 		return
 	# What the strike deals: never the prey's last HP, which a non-lethal strike leaves it.
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	var damage: int = mini(wild.strength_of(hunter), health.hp_of(state, target) - 1)
+	var damage: int = mini(wild.strength_of(state, hunter), health.hp_of(state, target) - 1)
 	state.events.append(WildMonsterStruck.new(hunter, target, prey_tile, damage))
 	wild.wound(state, target, damage)
 	if _beaten(state, target):
@@ -201,7 +201,7 @@ func _is_prey(
 		return false
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
 	var traits: Array = schedules.traits.get(wild.species_of(monster), [])
-	var weaker: bool = wild.strength_of(monster) < wild.strength_of(hunter)
+	var weaker: bool = wild.strength_of(state, monster) < wild.strength_of(state, hunter)
 	return weaker or traits.has(SpeciesBehaviour.GRAZER)
 
 
@@ -223,7 +223,7 @@ static func _beaten(state: GameState, monster: int) -> bool:
 ## On its tick to step, the hunter on `tile` steps a random way, or back toward its home when that
 ## way leads further than ROAM_RADIUS from it.
 func _roam(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Vector2i) -> void:
-	if (state.tick + hunter) % WildMonsterFeature.STEP_TICKS != 0:
+	if (state.tick + hunter) % WildPace.paced(state, WildMonsterFeature.STEP_TICKS, 0) != 0:
 		return
 	var goal: Vector2i = tile + Hex.DIRECTIONS[_rng.below(Hex.DIRECTIONS.size())]
 	if Hex.distance(goal, homes[hunter]) > ROAM_RADIUS:

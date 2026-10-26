@@ -38,7 +38,10 @@ static func _all() -> Dictionary[String, Callable]:
 ## The order's first part: the ground rules, the wild monsters and the fights with them.
 static func _world_rules() -> Dictionary[String, Callable]:
 	var rules: Dictionary[String, Callable] = {
-		# First, so every rule after it sees a player a locking dialog holds as standing (#912).
+		# Before every rule, so they all play by the settings the host chose this tick (#1309).
+		HostSettingsFeature.ID: _plain(HostSettingsFeature),
+		# First after them, so every rule after it sees a player a locking dialog holds as standing
+		# (#912).
 		DialogHoldFeature.ID: _plain(DialogHoldFeature),
 		MovementFeature.ID: _plain(MovementFeature),
 		KnockdownFeature.ID: _plain(KnockdownFeature),

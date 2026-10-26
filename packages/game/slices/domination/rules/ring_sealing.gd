@@ -38,7 +38,7 @@ static func pressure(
 		health.hp_of(state, monster_id),
 		health.max_hp_of(state, monster_id),
 	)
-	return wild.strength_of(monster_id) * left
+	return wild.strength_of(state, monster_id) * left
 
 
 ## A new seal of the ring `trail` closed around the wild monsters `inside`.
@@ -52,7 +52,9 @@ static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSea
 	seal.walls = RingShape.wall_around(state.region, trail, spots)
 	var _sized: int = seal.damage.resize(seal.walls.size())
 	seal.damage.fill(0)
-	seal.integrity = Fixed.mul_div(ring_power(PLAYER_LEVEL), Fixed.ONE, seal.walls.size())
+	# Against the wild monsters at the host's difficulty (HostSettings, #1315).
+	var power: int = HostSettings.ring_power(state, ring_power(PLAYER_LEVEL))
+	seal.integrity = Fixed.mul_div(power, Fixed.ONE, seal.walls.size())
 	seal.monsters = inside
 	var total: int = 0
 	for i: int in inside.size():

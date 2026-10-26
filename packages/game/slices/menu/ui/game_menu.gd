@@ -89,6 +89,8 @@ func _ready() -> void:
 	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
 	_build_sheet(more_tabs)
+	# Once the sheet is in the tree, so the Settings tab has its submenus.
+	_add_difficulty()
 
 
 func _process(_delta: float) -> void:
@@ -283,6 +285,24 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	row.add_child(close)
 	_sheet.add_child(row)
 	add_child(_sheet)
+
+
+## The world's difficulty, which the host chooses (#1315), in the Settings tab's Difficulty
+## submenu: a child of the menu, so its row's callables stay bound to it.
+func _add_difficulty() -> void:
+	if driver == null:
+		return
+	var names: Array[String] = ["Easy", "Standard", "Hard"]
+	var difficulty: HostChoice = HostChoice.new(driver, HostSettings.DIFFICULTY, names)
+	difficulty.name = "Difficulty"
+	add_child(difficulty)
+	var _row: HBoxContainer = settings.add_row(
+		SettingsTab.DIFFICULTY,
+		HostSettings.DIFFICULTY,
+		"Difficulty",
+		difficulty.label,
+		difficulty.step,
+	)
 
 
 ## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.
