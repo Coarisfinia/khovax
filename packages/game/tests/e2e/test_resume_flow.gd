@@ -67,7 +67,9 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = await _check_bad_explored(tree, world)
 	if result.is_empty():
-		result = await _check_purged_explored(tree)
+		result = await _check_purged_explored(tree, false)
+	if result.is_empty():
+		result = await _check_purged_explored(tree, true)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
 	# Its outbox aside, where a fresh world's session posts the party for the world (#818).
@@ -431,8 +433,8 @@ static func _saved_tick() -> int:
 
 
 ## A world file whose explored ground is malformed (half a tile after a good instance, a number
-## that isn't whole, another format, null) resumes the world all the same, but with nothing
-## explored: the memory is warned about and dropped whole.
+## that isn't whole, a newer build's format change or format number, null) resumes the world all
+## the same, but with nothing explored: the memory is warned about and dropped whole.
 func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var explored: Dictionary = ExploredSave.explored_data(_explored)
 	var half: Dictionary = explored.duplicate(true)
@@ -444,12 +446,17 @@ func _check_bad_explored(tree: SceneTree, world: World) -> String:
 	var fraction: Dictionary = explored.duplicate(true)
 	fraction["instances"] = [{ "name": FlowSteps.FOREST, "tiles": [0.5, 1] }]
 	var newer: Dictionary = explored.duplicate(true)
-	newer["format"] = ExploredSave.FORMAT + 1
+	newer[FormatChanges.KEY] = ExploredSave.NUMBERED + ["9999-from-a-newer-build"]
+	var numbered: Dictionary = explored.duplicate(true)
+	var _unnamed: bool = numbered.erase(FormatChanges.KEY)
+	numbered["format"] = ExploredSave.NUMBERED.size() + 2
 	var result: String = await _resumes_forgetting(tree, world, half)
 	if result.is_empty():
 		result = await _resumes_forgetting(tree, world, fraction)
 	if result.is_empty():
 		result = await _resumes_forgetting(tree, world, newer)
+	if result.is_empty():
+		result = await _resumes_forgetting(tree, world, numbered)
 	if result.is_empty():
 		result = await _resumes_forgetting(tree, world, null)
 	return result
@@ -478,15 +485,20 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 ## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
 ## without what was seen in the glade before: it comes back arranged anew, and only what is seen of
 ## it from next door now (#191) is remembered, at its new generation. What was seen in the forest
-## is kept.
-func _check_purged_explored(tree: SceneTree) -> String:
+## is kept. The same holds for a save from before format changes had names (#801, `numbered`): its
+## format number 2 had the generations.
+func _check_purged_explored(tree: SceneTree, numbered: bool) -> String:
 	var world: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(FlowSteps.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
-	var problem: String = WorldSave.save(world, WORLD_PATH, ExploredSave.beside(_explored))
+	var explored_data: Dictionary = ExploredSave.explored_data(_explored)
+	if numbered:
+		var _unnamed: bool = explored_data.erase(FormatChanges.KEY)
+		explored_data["format"] = 2
+	var problem: String = WorldSave.save(world, WORLD_PATH, { WorldSave.EXPLORED: explored_data })
 	if world.generation(FlowSteps.GLADE) != 1 or not problem.is_empty():
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
 	var main: Node = _boot(tree)

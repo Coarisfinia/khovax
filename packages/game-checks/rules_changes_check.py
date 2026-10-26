@@ -1,13 +1,17 @@
-"""Checks the rule change files (#736): each file's name and frontmatter, and that the folder is
-append-only (#876): a file deleted or renamed would give the rules (RulesChanges, a digest of the
-names of the files in core/rules_changes/) an id that older rules may already have had. Whether a
-change needs a new file is the rules-compare job's (packages/game-replays/rules_compare.py).
+"""Checks the rule change files (#736) and the save formats' change files (#801, every
+format_changes/ folder): each file's name and frontmatter, and that the folders are append-only
+(#876): a rule change file deleted or renamed would give the rules (RulesChanges, a digest of the
+names of the files in core/rules_changes/) an id that older rules may already have had, and saves
+name their format changes (FormatChanges), so a build without one could no longer read them.
+Whether a change needs a new rule change file is the rules-compare job's
+(packages/game-replays/rules_compare.py).
 <base> is the commit the change is compared with, e.g. HEAD^1 of a pull request's merge commit.
 
     uv run --locked --package khovax-game-checks packages/game-checks/rules_changes_check.py <base>
 """
 
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -16,22 +20,30 @@ from pathlib import Path
 from game_shared import log
 
 FOLDER = "core/rules_changes"
+# Each save format's changes are in a folder of this name, next to its reader.
+FORMATS = "format_changes"
 NAME = re.compile(r"([0-9]+)-[a-z0-9-]+\.md")
 
 
+def is_change(path: str) -> bool:
+    """Whether the path, relative to the game's folder, is in a folder of change files."""
+    folder = posixpath.dirname(path)
+    return folder == FOLDER or posixpath.basename(folder) == FORMATS
+
+
 def names(commit: str) -> set[str] | None:
-    """The file names in FOLDER at that commit, or None when git can't list them. The folder is the
-    game's: under packages/game, or at the root in a commit from before the move there (#1101), so
-    the commit that moves it compares names, not paths."""
-    game = "packages/game/" if git("cat-file", "-e", f"{commit}:packages/game/project.godot") else ""
+    """The change files' paths at that commit, relative to the game's folder, or None when git
+    can't list them. The folder is the game's: under packages/game, or at the root in a commit from
+    before the move there (#1101), so the commit that moves it compares names, not paths."""
+    game = "packages/game" if git("cat-file", "-e", f"{commit}:packages/game/project.godot") else ""
     listing = subprocess.run(
-        ["git", "ls-tree", "-z", "--full-tree", "--name-only", f"{commit}:{game}{FOLDER}"],
+        ["git", "ls-tree", "-r", "-z", "--full-tree", "--name-only", f"{commit}:{game}"],
         stdout=subprocess.PIPE,
         text=True,
     )
     if listing.returncode != 0:
         return None
-    return {name for name in listing.stdout.split("\0") if name}
+    return {path for path in listing.stdout.split("\0") if path and is_change(path)}
 
 
 def git(*args: str) -> bool:
@@ -40,12 +52,12 @@ def git(*args: str) -> bool:
 
 
 def deleted_since(base: str) -> list[str] | None:
-    """The files under FOLDER that HEAD no longer has since base, or None when git can't compare
-    them. A renamed file shows as deleted (and another added)."""
+    """The change files that HEAD no longer has since base, or None when git can't compare them.
+    A renamed file shows as deleted (and another added)."""
     before, after = names(base), names("HEAD")
     if before is None or after is None:
         return None
-    return [f"{FOLDER}/{name}" for name in sorted(before - after)]
+    return sorted(before - after)
 
 
 def main() -> int:
@@ -54,11 +66,17 @@ def main() -> int:
     base = sys.argv[1]
     failed = False
 
-    for entry in sorted(path for path in os.listdir(FOLDER) if not path.startswith(".")):
-        file = f"{FOLDER}/{entry}"
-        name = NAME.fullmatch(entry)
+    folders = [FOLDER, *sorted(str(path) for path in Path(".").glob(f"**/{FORMATS}"))]
+    files = [
+        f"{folder}/{entry}"
+        for folder in folders
+        for entry in sorted(os.listdir(folder))
+        if not entry.startswith(".")
+    ]
+    for file in files:
+        name = NAME.fullmatch(posixpath.basename(file))
         if not name:
-            log.error("a rule change file is named <issue>-<slug>.md", file)
+            log.error("a change file is named <issue>-<slug>.md", file)
             failed = True
             continue
         # newline="": a carriage return stays, so a CRLF frontmatter fails as it did in the shell.
@@ -78,10 +96,10 @@ def main() -> int:
 
     deleted = deleted_since(base)
     if deleted is None:
-        log.error(f"git can't compare {FOLDER} with {base}")
+        log.error(f"git can't compare the change files with {base}")
         return 1
     for path in deleted:
-        log.error("a rule change file is never deleted or renamed: the folder is append-only", path)
+        log.error("a change file is never deleted or renamed: its folder is append-only", path)
         failed = True
 
     return 1 if failed else 0
