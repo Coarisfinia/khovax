@@ -1869,7 +1869,8 @@ func _check_neighbour_cloud(main: Node) -> String:
 ## lay (#1388): a tile lit next door, then no neighbour's any more, goes back under thick cloud.
 func _check_neighbour_gone(view: NeighbourView, fog: FogView) -> String:
 	# Beyond the region and every neighbour, still on the cloud's margin.
-	var drawn: Array[Vector2i] = view.placed_tiles().duplicate()
+	var drawn: Array[Vector2i] = []
+	drawn.append_array(view.placed_tiles())
 	drawn.append_array(view.driver.state.region.sorted_tiles())
 	var last: Vector2i = drawn.max()
 	var left: Vector2i = last + Vector2i(1, 0)
