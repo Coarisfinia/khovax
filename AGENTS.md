@@ -596,7 +596,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   date.
   **The one exception** (owner, #252): the web e2e's Mesa packages come unpinned from the runner
   image's signed Ubuntu archive. They must match the image's own Mesa, and the archive drops a
-  superseded version, so an exact pin would break CI on the next security update.
+  superseded version, so an exact pin would break CI on the next security update. **One fallback**
+  (#1429): when the Ubuntu snapshot that Blender's container pins can't be reached, its libraries
+  come from the live, signed archive, with a warning on the run, rather than a mirror outage turning
+  the run red.
 - **Golden replays** (`tests/replays/*.replay`) hold only their inputs, the start and the
   commands, never a hash or the rules (#876): nothing a build computes is committed. CI's
   `rules-compare` job plays them and the APK flow on the commit and on its parent
