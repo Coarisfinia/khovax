@@ -7,7 +7,9 @@ extends Node
 ## and grows back once nobody needs the view. It eases both ways,
 ## never snapping (motion sickness). Only figures that are drawn count: every player, and the wild
 ## monsters an ally sees that aren't hiding in their tile (WildMonsterView.is_shown), so a cut
-## never gives away what the fog or a hiding place keeps hidden. It only reads the state.
+## never gives away what the fog or a hiding place keeps hidden. It only reads the state. It works
+## out which decorations to cut only when a figure in cover moves or a tile changes in place, and
+## eases and draws only the decorations still on their way (#1386).
 
 ## How tall a decoration must stand to hide a figure, in hundredths of a tile's radius
 ## (TileLooks.height_of): trees and boulders do, a stump doesn't.
@@ -28,8 +30,21 @@ const KEPT: float = 0.5
 ## How far each decoration is cut away as drawn now, by tile: 0 whole, 1 cut down to KEPT. Kept
 ## here, since the headless renderer can't be read back.
 var cut: Dictionary[Vector2i, float] = {}
+## The decorations not yet as cut as they are to be, or not yet drawn so: the only ones eased.
+var moving: Dictionary[Vector2i, bool] = {}
 ## The region the cuts belong to: another one starts every decoration whole.
 var _region: Region
+## The tiles of the figures in cover the cuts were last worked out for.
+var _covered: Array[Vector2i] = []
+## The tiles whose decoration is to be cut away.
+var _to_cut: Dictionary[Vector2i, bool] = {}
+## Whether a tile changed in place since the cuts were worked out, which can change what hides.
+var _stale: bool = true
+
+
+func _ready() -> void:
+	if decorations != null:
+		var _connected: int = decorations.stood.connect(_on_stood)
 
 
 func _process(delta: float) -> void:
@@ -47,23 +62,67 @@ static func scale_of(amount: float) -> Vector3:
 	return Vector3(1.0, 1.0 - smoothstep(0.0, 1.0, amount) * (1.0 - KEPT), 1.0)
 
 
-## Eases every decoration `delta` seconds towards cut away or whole, and draws it. Called every
-## frame, after the decorations matched the state; tests call it with a long `delta` to settle.
+## Eases the decorations still on their way `delta` seconds towards cut away or whole, and draws
+## them. Called every frame, after the decorations matched the state; tests call it with a long
+## `delta` to settle.
 func show_state(delta: float) -> void:
 	if driver == null or driver.state == null or decorations == null:
 		return
 	var state: GameState = driver.state
 	if state.region != _region:
-		_region = state.region
-		cut.clear()
+		_start(state.region)
 	var covered: Array[Vector2i] = figures_in_cover(state)
-	for tile: Vector2i in decorations.figures:
-		var target: float = 1.0 if _is_cut(state.region, tile, covered) else 0.0
+	if _stale or covered != _covered:
+		_retarget(state.region, covered)
+	for tile: Vector2i in moving.keys():
+		if not decorations.figures.has(tile):
+			var _gone: bool = moving.erase(tile)
+			continue
+		var target: float = 1.0 if _to_cut.has(tile) else 0.0
 		var before: float = cut.get(tile, 0.0)
 		var now: float = move_toward(before, target, EASE_PER_SECOND * delta)
 		cut[tile] = now
-		# Drawn every frame: a tile changed in place (#530) gets a new, whole figure.
 		_draw(decorations.figures[tile], now)
+		if now == target:
+			var _arrived: bool = moving.erase(tile)
+
+
+## Starts every decoration of `region` whole.
+func _start(region: Region) -> void:
+	_region = region
+	cut.clear()
+	moving.clear()
+	_to_cut.clear()
+	_stale = true
+	for tile: Vector2i in decorations.figures:
+		_on_stood(tile)
+
+
+## A decoration stood on `tile` (the region drawn, or the tile changed in place, #530): its new,
+## whole figure is drawn as cut as the old one was, and its kind may hide differently.
+func _on_stood(tile: Vector2i) -> void:
+	cut[tile] = cut.get(tile, 0.0)
+	moving[tile] = true
+	_stale = true
+
+
+## Works out which decorations to cut around the figures on `covered`, and sets those whose target
+## changed moving.
+func _retarget(region: Region, covered: Array[Vector2i]) -> void:
+	_covered = covered
+	_stale = false
+	var to_cut: Dictionary[Vector2i, bool] = {}
+	for figure: Vector2i in covered:
+		for tile: Vector2i in Hex.disc(RADIUS, figure):
+			if hides(region, tile):
+				to_cut[tile] = true
+	for tile: Vector2i in to_cut:
+		if not _to_cut.has(tile):
+			moving[tile] = true
+	for tile: Vector2i in _to_cut:
+		if not to_cut.has(tile):
+			moving[tile] = true
+	_to_cut = to_cut
 
 
 ## The tiles of every drawn figure in `state` that a decoration hides from the camera.
@@ -91,13 +150,3 @@ static func figures_in_cover(state: GameState) -> Array[Vector2i]:
 ## Whether the decoration on `tile` stands tall enough to hide a figure.
 static func hides(region: Region, tile: Vector2i) -> bool:
 	return region.has_tile(tile) and TileLooks.height_of(region.terrain[tile]) >= HIDING_HEIGHT
-
-
-## Whether the decoration on `tile` is to be cut away: it hides, near a figure in cover.
-static func _is_cut(region: Region, tile: Vector2i, covered: Array[Vector2i]) -> bool:
-	if not hides(region, tile):
-		return false
-	for figure: Vector2i in covered:
-		if Hex.distance(tile, figure) <= RADIUS:
-			return true
-	return false
