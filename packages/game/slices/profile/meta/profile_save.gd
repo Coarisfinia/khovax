@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 24
+const FORMAT: int = 25
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -121,6 +121,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_22,
 		_migrate_to_23,
 		_migrate_to_24,
+		_migrate_to_25,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -313,6 +314,12 @@ static func _migrate_to_23(data: Dictionary) -> void:
 ## Format 23 to 24: the profile marks the postgame (#1333), which no player is in yet.
 static func _migrate_to_24(data: Dictionary) -> void:
 	data["postgame"] = false
+
+
+## Format 24 to 25: the move hint (#1222) keeps whether the player has walked, its own key
+## (MoveHintKeeper).
+static func _migrate_to_25(_data: Dictionary) -> void:
+	return
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the

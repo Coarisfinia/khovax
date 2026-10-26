@@ -69,6 +69,9 @@
 [ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
 [ext_resource type="Script" path="res://slices/survey/ui/survey_quest_picker.gd" id="61_survey_quest_picker"]
 [ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
+[ext_resource type="Script" path="res://slices/move_hint/meta/move_hint_keeper.gd" id="63_move_hint_keeper"]
+[ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
+[ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -100,7 +103,7 @@ driver = NodePath("../Driver")
 
 [node name="ProfileHolder" type="Node" parent="." node_paths=PackedStringArray("companions") unique_id=2066135784]
 script = ExtResource("11_profile")
-companions = [NodePath("../QuestKeeper"), NodePath("../BestiaryKeeper"), NodePath("../CodexKeeper")]
+companions = [NodePath("../QuestKeeper"), NodePath("../BestiaryKeeper"), NodePath("../CodexKeeper"), NodePath("../MoveHintKeeper")]
 
 [node name="QuestKeeper" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=2066135787]
 script = ExtResource("48_quest_keeper")
@@ -120,6 +123,15 @@ keeper = NodePath("../BestiaryKeeper")
 [node name="CodexKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
 script = ExtResource("55_codex_keeper")
 holder = NodePath("../ProfileHolder")
+
+[node name="MoveHintKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
+script = ExtResource("63_move_hint_keeper")
+holder = NodePath("../ProfileHolder")
+
+[node name="MoveHintTie" type="Node" parent="." node_paths=PackedStringArray("driver", "keeper")]
+script = ExtResource("65_move_hint_tie")
+driver = NodePath("../Driver")
+keeper = NodePath("../MoveHintKeeper")
 
 [node name="PlaceTie" type="Node" parent="." node_paths=PackedStringArray("driver", "keeper")]
 script = ExtResource("place_tie")
@@ -363,6 +375,20 @@ script = ExtResource("58_focus_keys")
 driver = NodePath("../../Driver")
 camera = NodePath("../../Camera3D")
 wild_view = NodePath("../../Instance/WildMonsterView")
+
+[node name="MoveHint" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "camera", "figure", "keeper")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("64_move_hint")
+driver = NodePath("../../Driver")
+camera = NodePath("../../Camera3D")
+figure = NodePath("../../Instance/Player")
+keeper = NodePath("../../MoveHintKeeper")
 
 [node name="TouchStick" type="Control" parent="Hud" unique_id=958312446]
 layout_mode = 3

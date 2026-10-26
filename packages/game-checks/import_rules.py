@@ -50,6 +50,7 @@ SLICE_ORDER: tuple[str, ...] = (
     "domination", "enrage", "hunts", "foraging", "domination_loot", "companions", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",
     "profile", "quests", "revive_items", "blueprints", "might", "codex",
+    "move_hint",
 )  # fmt: skip
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
 SLICE_EXEMPT: dict[str, int] = {

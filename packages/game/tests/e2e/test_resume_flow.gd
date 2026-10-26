@@ -220,15 +220,20 @@ static func _carry(species: String) -> String:
 	var gain: Gain = Gain.new()
 	gain.dominated_species.append(species)
 	var _taken: String = profile.apply(gain)
-	# With its quests, bestiary and names met beside it, as the game saves it (QuestKeeper, #855;
-	# BestiaryKeeper, #1173; CodexKeeper, #1174).
-	var quests: QuestKeeper = QuestKeeper.new()
-	var bestiary: BestiaryKeeper = BestiaryKeeper.new()
-	var codex: CodexKeeper = CodexKeeper.new()
-	var _saved: String = ProfileStore.save(profile, PROFILE_PATH, [quests, bestiary, codex])
-	quests.free()
-	bestiary.free()
-	codex.free()
+	# With its quests, bestiary, names met and first walk beside it, as the game saves it
+	# (QuestKeeper, #855; BestiaryKeeper, #1173; CodexKeeper, #1174; MoveHintKeeper, #1222).
+	# A player who has walked before, so the move hint stays away for them (MoveHint).
+	var move_hint: MoveHintKeeper = MoveHintKeeper.new()
+	move_hint.walked = true
+	var companions: Array[ProfileCompanion] = [
+		QuestKeeper.new(),
+		BestiaryKeeper.new(),
+		CodexKeeper.new(),
+		move_hint,
+	]
+	var _saved: String = ProfileStore.save(profile, PROFILE_PATH, companions)
+	for companion: ProfileCompanion in companions:
+		companion.free()
 	return ProfileSave.to_text(profile)
 
 
@@ -637,6 +642,10 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
 	if result.is_empty() and _carry_requests(holder) != 2:
 		result = "the fresh world wasn't sent the profile's companion: " + content
+	# A fresh world is no new game for the player: their profile kept their first walk (#1222).
+	var hint: MoveHint = main.get_node("Hud/MoveHint") as MoveHint
+	if result.is_empty() and (not hint.keeper.walked or hint.alpha != 0.0):
+		result = "a fresh world showed the move hint to a player who had walked: " + content
 	# A frame for the fog view to remember the fresh world's sight: of the glade, only what the
 	# player sees of it from the start, across the seam (#191), none of the refused world's.
 	await tree.process_frame
