@@ -27,22 +27,10 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import clearance, ground, imported  # noqa: E402
+from lib import clearance, ground, imported, known  # noqa: E402
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
 KNOWN = {}
-
-
-def judge(model, line):
-    """The line as reported, and whether it fails the check: a known failure doesn't, and a known
-    one that passes does."""
-    verdict, clip = line.split(" ", 2)[:2]
-    issue = KNOWN.get((model, clip.rstrip(":")))
-    if issue is None:
-        return line, verdict == "FAIL"
-    if verdict == "FAIL":
-        return "known %s (#%d)" % (line, issue), False
-    return "FAIL %s, which KNOWN still lists (#%d): take it off" % (line, issue), True
 
 
 def main():
@@ -65,7 +53,7 @@ def main():
         rig.animation_data.use_nla = False
         lines, _passed = clearance.report(rig, ground.skinned(bpy.data.objects), tolerance)
         for line in lines:
-            text, fails = judge(model, line)
+            text, fails = known.judge(KNOWN, model, line)
             passed = passed and not fails
             if fails:
                 log.error("CLEARANCE %s %s" % (model, text), glb)
