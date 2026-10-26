@@ -1293,9 +1293,8 @@ func _check_faction_territory(content: FactionContent) -> String:
 
 
 ## The Amvrel Velmarai, the Story guild, is no faction's enemy (#1310). A faction whose enemies
-## aren't
-## a list of faction ids, each once and never its own, is refused, and so is an enemy that isn't a
-## faction naming it back; two factions naming each other load as enemies.
+## aren't a list of faction ids, each once and never its own, is refused, and so is an enemy that
+## isn't a faction naming it back; two factions naming each other load as enemies.
 func _check_faction_enemies(content: FactionContent) -> String:
 	for each: Faction in content.factions.values():
 		if each.enemies.has("amvrel_velmarai"):
