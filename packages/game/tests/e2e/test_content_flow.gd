@@ -1325,6 +1325,41 @@ func _check_faction_territory(content: FactionContent) -> String:
 	var shared: String = _pair_problem(held, territory % ("[\"%s\"]" % FlowSteps.GLADE))
 	if not shared.contains("its symbol + is x's already"):
 		return "two factions sharing a symbol gave %s" % shared
+	return _check_faction_enemies(content)
+
+
+## The Amvrel Velmarai, the Story guild, is no faction's enemy (#1310). A faction whose enemies
+## aren't a list of faction ids, each once and never its own, is refused, and so is an enemy that
+## isn't a faction naming it back; two factions naming each other load as enemies.
+func _check_faction_enemies(content: FactionContent) -> String:
+	for each: Faction in content.factions.values():
+		if each.enemies.has("amvrel_velmarai"):
+			return "the Story guild is an enemy of %s" % each.id
+	if not content.factions["amvrel_velmarai"].enemies.is_empty():
+		return "the Story guild has enemies"
+	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
+	var enemies: String = faction.trim_suffix("}") + ", \"enemies\": %s}"
+	var refused: String = _factions_refused({
+		enemies % "\"y\"": "its enemies must",
+		enemies % "[\"x\"]": "its enemies must",
+		enemies % "[\"y\", \"y\"]": "its enemies must",
+		enemies % "[\"Y\"]": "its enemies must",
+	})
+	if not refused.is_empty():
+		return refused
+	# Faction y, with its own symbol, naming x as its enemy, or naming none.
+	var x_start: String = "\"x\", \"name\": \"X\", \"symbol\": \"+"
+	var y_start: String = "\"y\", \"name\": \"Y\", \"symbol\": \"-"
+	var y: String = (enemies % "[\"x\"]").replace(x_start, y_start)
+	var x: String = enemies % "[\"y\"]"
+	var texts: Dictionary[String, String] = { "x": x, "y": y.replace(", \"enemies\": [\"x\"]", "") }
+	var one_way: String = FlowSteps.written_content(FactionContent.load_factions, texts).problem
+	if not one_way.contains("its enemy y isn't a faction naming it back"):
+		return "an enemy not naming its enemy back gave %s" % one_way
+	texts["y"] = y
+	var mutual: FactionContent = FlowSteps.written_content(FactionContent.load_factions, texts)
+	if not mutual.problem.is_empty() or " ".join(mutual.factions["y"].enemies) != "x":
+		return "two factions naming each other didn't load as enemies: %s" % mutual.problem
 	return ""
 
 

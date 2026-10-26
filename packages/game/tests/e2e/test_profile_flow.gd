@@ -24,6 +24,7 @@ const ADDED_KEYS: Array[String] = [
 	"personal_color",
 	"character_name",
 	"standings",
+	"standings_half_lost",
 	"gear",
 	"equipped",
 	"path_leaning",
@@ -543,6 +544,37 @@ func _check_standings() -> String:
 			loaded.problem,
 			loaded.standings.by_faction,
 		]
+	return _check_alignment()
+
+
+## Alignment (#1310): gaining rank with a faction loses half that gain with each of its enemies, a
+## half left over carried until a second makes a whole rank, kept through saving and loading;
+## losing rank, or a gain past the top, costs its enemies nothing.
+func _check_alignment() -> String:
+	var profile: Profile = Profile.new()
+	var standings: Standings = profile.standings
+	var harmony: Faction = Faction.new()
+	harmony.id = "harmony"
+	harmony.enemies.assign(["supremacy"])
+	standings.align(harmony, 1)
+	var half: Array[String] = ["supremacy"]
+	if standings.of("supremacy") != 0 or standings.half_lost != half:
+		return "a gain of one didn't lose half a rank with the enemy: %s" % [standings.half_lost]
+	standings.align(harmony, 1)
+	if standings.of("supremacy") != -1 or not standings.half_lost.is_empty():
+		return "two halves didn't make a whole rank lost with the enemy"
+	standings.align(harmony, 3)
+	if standings.of("supremacy") != -2 or standings.half_lost != half:
+		return "a gain of three didn't lose one and a half ranks with the enemy"
+	standings.align(harmony, -2)
+	standings.align(harmony, 4)
+	if standings.of(harmony.id) != Standings.HIGHEST or standings.of("supremacy") != -3:
+		return "only the rank gained up to the top should cost the enemy: %s" % [
+			standings.by_faction,
+		]
+	var loaded: Profile = _parse(_text(profile))
+	if not loaded.problem.is_empty() or loaded.standings.half_lost != half:
+		return "the half rank lost didn't survive saving: %s" % loaded.problem
 	return _check_standings_refused()
 
 
@@ -552,6 +584,8 @@ func _check_standings_refused() -> String:
 	var text: String = _text(Profile.new())
 	var neutral: String = "\"standings\": {}"
 	var faction_a: String = "the standing with faction a"
+	var half_lost: String = "\"standings_half_lost\": []"
+	var halves: String = "the save's half ranks lost"
 	var cases: Dictionary[String, String] = {
 		text.replace(neutral, "\"standings\": []"): "the save lacks its standings",
 		text.replace(neutral, "\"standings\": {\"Bad id\": 1}"): "the standing with faction Bad",
@@ -560,6 +594,9 @@ func _check_standings_refused() -> String:
 		text.replace(neutral, "\"standings\": {\"a\": -6}"): faction_a,
 		text.replace(neutral, "\"standings\": {\"a\": 1.5}"): faction_a,
 		text.replace(neutral, "\"standings\": {\"a\": \"1\"}"): faction_a,
+		text.replace(half_lost, "\"standings_half_lost\": {}"): halves,
+		text.replace(half_lost, "\"standings_half_lost\": [\"Bad id\"]"): halves,
+		text.replace(half_lost, "\"standings_half_lost\": [\"a\", \"a\"]"): halves,
 	}
 	var problem: String = _unrefused(cases)
 	if problem.is_empty():

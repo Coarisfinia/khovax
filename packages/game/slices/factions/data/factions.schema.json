@@ -44,6 +44,12 @@
 			"uniqueItems": true,
 			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
 		},
+		"enemies": {
+			"description": "The factions it is an enemy of (#1310), by id, each naming it back: gaining rank with it costs half that gain with each of them (Standings.align).",
+			"type": "array",
+			"uniqueItems": true,
+			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+		},
 		"ranks_up": {
 			"description": "The ranks' names above neutral, from standing +1 up to +5.",
 			"$ref": "#/$defs/ranks"
