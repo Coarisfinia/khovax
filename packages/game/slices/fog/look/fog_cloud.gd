@@ -49,9 +49,9 @@ func light_by(color: Color) -> void:
 ## Shows the fog over `region` from each tile's brightness (FogView's scale), or hides it when
 ## `brightness` is empty (no fog in this instance). Only the tiles in `changed` are drawn again
 ## (#1361), unless `everything` is set or the region is new: then the cloud is fitted anew, all
-## thick
-## cloud to start with, and every tile is, so a tile no longer in `brightness` (a neighbour that
-## went or moved, #1388) lies under thick cloud again, and the cloud reaches the neighbours now.
+## thick cloud to start with, and every tile is drawn, so a tile no longer in `brightness` (a
+## neighbour that went or moved, #1388) lies under thick cloud again, and the cloud reaches the
+## neighbours drawn now.
 func show_fog(
 		region: Region,
 		brightness: Dictionary[Vector2i, float],
