@@ -1,7 +1,8 @@
 class_name FactionStandingsPanel
 extends VBoxContainer
 ## The player's standing with each faction on the menu's Character tab (#533): every faction they
-## aren't neutral with (Standings), in id order, with its name, the standing as a signed number and
+## aren't neutral with whose standing moved from its start or whose name they've met (`met`, #1383),
+## in id order, with its name, the standing as a signed number and
 ## the rank the faction names it (Faction.rank_name), all in words, their text tags showing
 ## the names they stand for (#752), never in color alone (#68).
 ## Only the current rank's name, never the other ranks' (#484: they would spoil what's ahead). A
@@ -21,6 +22,9 @@ const UNKNOWN_TEXT: String = "%s: %+d"
 var holder: ProfileHolder
 ## What the panel shows, one line per faction. Kept here so tests can read it.
 var shown: Array[String] = []
+## The ids of the factions whose names this machine's player has met (#1383), as an Array[String]:
+## handed in by the codex (FactionMetTie), whose slice comes after this one; none without it.
+var met: Callable = Callable()
 var _factions: Dictionary[String, Faction] = {}
 var _rows: VBoxContainer
 
@@ -46,14 +50,18 @@ func _process(_delta: float) -> void:
 func refresh() -> void:
 	var lines: Array[String] = []
 	if holder != null and holder.keeper != null:
-		var standings: Dictionary[String, int] = holder.keeper.profile.standings.by_faction
+		var standings: Standings = holder.keeper.profile.standings
 		var ids: Array[String] = []
-		ids.assign(standings.keys())
+		ids.assign(standings.by_faction.keys())
+		if met.is_valid():
+			for id: String in met.call():
+				if not ids.has(id):
+					ids.append(id)
 		ids.sort()
 		for id: String in ids:
-			# A standing moved back to neutral from another start (#1378) is kept, not listed.
-			if standings[id] != 0:
-				lines.append(line_of(id, standings[id]))
+			# Neutral isn't listed, even a standing moved back to it from another start (#1378).
+			if standings.of(id) != 0:
+				lines.append(line_of(id, standings.of(id)))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines == shown:
