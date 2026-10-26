@@ -112,7 +112,9 @@ func _read_node(raw: Variant, node_id: String) -> String:
 ## direction's outermost, and none links two nodes already next to each other.
 func _read_links(raw: Variant, bridges: bool) -> String:
 	var kind: String = "bridge" if bridges else "portal"
-	var pairs: Array = raw if raw is Array else []
+	if not raw is Array:
+		return "its web lists its %ss, none when it has none" % kind
+	var pairs: Array = raw
 	for raw_pair: Variant in pairs:
 		var pair: Array = raw_pair if raw_pair is Array else []
 		if pair.size() != 2 or not nodes.has(pair[0]) or not nodes.has(pair[1]):

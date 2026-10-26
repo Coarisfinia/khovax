@@ -1223,6 +1223,7 @@ func _check_development_refused() -> String:
 		web % [node, "[\"a_1\", \"b_2\"], [\"b_2\", \"a_1\"]", ""]: "bridge b_2-a_1 links two",
 		web % [node + ", " + node + ", " + node, "[\"a_3\", \"b_1\"]", ""]: "bridge a_3-b_1",
 		web % [node, "", "[\"a_1\", \"b_1\"]"]: "portal a_1-b_1 links two directions' outermost",
+		web.replace(", \"portals\": [%s]", "") % [node, ""]: "its web lists its portals",
 		web.replace(", {\"id\": \"c\"", ", {\"id\": \"a\"") % [node, "", ""]: "each direction's id",
 	}
 	for text: String in cases:
