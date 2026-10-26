@@ -98,20 +98,23 @@ func _row(words: String) -> PanelContainer:
 	var row: PanelContainer = PanelContainer.new()
 	row.name = words.to_pascal_case()
 	row.focus_mode = Control.FOCUS_ALL
-	# A drag on a row still scrolls the tab on touch.
 	row.mouse_filter = Control.MOUSE_FILTER_PASS
 	row.add_theme_stylebox_override("panel", _resting)
 	var _entered: int = row.focus_entered.connect(_frame.bind(row, true))
 	var _exited: int = row.focus_exited.connect(_frame.bind(row, false))
+	# A drag on a row still scrolls the tab on touch: nothing in it takes the pointer.
 	var line: HBoxContainer = HBoxContainer.new()
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label: Label = Label.new()
 	label.text = words
 	# Cut short rather than wrapped, so a phone's narrow screen keeps the glyphs in view.
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	line.add_child(label)
 	var box: HBoxContainer = HBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	line.add_child(box)
 	row.add_child(line)
 	rows[words] = row

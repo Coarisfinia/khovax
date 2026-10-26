@@ -853,13 +853,29 @@ func _menu_controls(menu: GameMenu) -> String:
 	var problem: String = _controls_glyphs(FlowInput.glyphs_by_device(_controls_shown.bind(tab)))
 	if not problem.is_empty():
 		return problem
-	var row: PanelContainer = tab.rows["Confirm"]
-	var resting: StyleBox = row.get_theme_stylebox("panel")
-	row.focus_entered.emit()
-	var framed: StyleBox = row.get_theme_stylebox("panel")
-	row.focus_exited.emit()
-	if row.focus_mode != Control.FOCUS_ALL or framed == resting:
-		return "the Controls tab's rows don't take the focus or show it"
+	return _controls_focus(menu, tab)
+
+
+## On the Controls tab, down (the left stick, the d-pad or the arrow key) moves the focus to the
+## next row, which is framed.
+func _controls_focus(menu: GameMenu, tab: ControlsTab) -> String:
+	var tabs: TabContainer = tab.get_parent() as TabContainer
+	var was_on: int = tabs.current_tab
+	tabs.current_tab = tab.get_index()
+	var walk: PanelContainer = tab.rows["Walk"]
+	walk.grab_focus()
+	var down: InputEventAction = InputEventAction.new()
+	down.action = &"ui_down"
+	down.pressed = true
+	menu.get_viewport().push_input(down)
+	var focused: Control = menu.get_viewport().gui_get_focus_owner()
+	var resting: StyleBox = walk.get_theme_stylebox("panel")
+	var framed: StyleBox = tab.rows["Special attack"].get_theme_stylebox("panel")
+	if focused != null:
+		focused.release_focus()
+	tabs.current_tab = was_on
+	if focused != tab.rows["Special attack"] or framed == resting:
+		return "down on the Controls tab focuses %s, framed: %s" % [focused, framed != resting]
 	return ""
 
 
