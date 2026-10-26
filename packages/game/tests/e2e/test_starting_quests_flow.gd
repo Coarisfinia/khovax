@@ -4,10 +4,9 @@ extends RefCounted
 ## who does only what the quests point at. Until a tutorial line exists, these stand in for it
 ## (owner, #1320). The player plays a fresh world alone, without companions, follows the quest
 ## their quest list follows (QuestTracker.focused) to the tile it's marked at (QuestTargets), and
-## walks onto it; a domination step marked over a wild monster no ring can enclose where it stands
-## (RingableGround) rings the nearest one of its species that can be, as a player would. They ring a
-## monster by
-## walking once round it and placing their totem, and the quests count what the world raises.
+## walks onto it. A domination step's marked monster must be one that a ring of one can close round
+## where it stands (#1379): a player following the marker rings it by walking once round it and
+## placing their totem, and the quests count what the world raises.
 
 ## The world's seed: the same world every run, so the check is deterministic.
 const WORLD_SEED: int = 0
@@ -99,8 +98,7 @@ func _follow(targets: Dictionary[String, Vector2i]) -> bool:
 	var monster: int = _monster_at(tile)
 	if monster < 0:
 		return _walk_to(tile)
-	monster = monster if _ringable(tile) else _nearest_ringable(_wild().species_of(monster))
-	return monster >= 0 and _dominate(monster)
+	return _ringable(tile) and _dominate(monster)
 
 
 ## The wild monster standing on `tile`, or -1.
@@ -117,21 +115,6 @@ func _ringable(center: Vector2i) -> bool:
 		if not FlowSteps.walkable_for_players(_state(), tile):
 			return false
 	return true
-
-
-## The wild monster of `species` nearest the player a ring of one can close round, or -1: the
-## marked one's species, which its step asks for.
-func _nearest_ringable(species: String) -> int:
-	var nearest: int = -1
-	var gap: int = 0
-	var from: Vector2i = _state().player(0).tile
-	for monster: int in _wild().monsters:
-		var tile: Vector2i = _state().entity(monster).tile
-		var near: bool = nearest < 0 or Hex.distance(tile, from) < gap
-		if _wild().species_of(monster) == species and _ringable(tile) and near:
-			nearest = monster
-			gap = Hex.distance(tile, from)
-	return nearest
 
 
 ## Walks once round `monster`, from the ring tile nearest the player, and places the totem until the
