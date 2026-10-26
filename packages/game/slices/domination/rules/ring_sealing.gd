@@ -3,7 +3,7 @@ extends RefCounted
 ## How strong a sealing ring is (#219, #286): its power, spread over its wall's segments; how hard
 ## each wild monster inside pushes on its nearest segment; how long the seal takes; and how a player
 ## standing on a segment reinforces it (#227). DominationFeature closes the rings and decides what a
-## held or broken one gives; the numbers live here.
+## held or broken one gives; the numbers live in Tuning (#1309).
 
 ## The ring rules' constants (#219). Their numbers are in Tuning (#1309).
 ## Players have no level yet: every player draws rings at this level until they do.
