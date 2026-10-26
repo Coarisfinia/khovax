@@ -125,69 +125,6 @@ jobs:
         # The set is named once, in the model library's lib/clip_set.py, which the build reads too (#1157).
         run: uv run --locked --package khovax-game-models ../game-models/check_clip_set.py
 
-      - name: "🔀 See whether a model or its build changed"
-        id: models
-        # The rebuild check below needs Blender, so it runs only where it can find something: a
-        # change to the model scripts and their library, to a .glb, or to Blender's pin. The parent
-        # is the one the rule change files check compares with (below). A failing diff counts as a
-        # change, so the check runs rather than being skipped.
-        run: |
-          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' \
-            ':(top).github/actions/setup-blender'; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: "🧊 Set up Blender"
-        if: steps.models.outputs.changed == 'true'
-        uses: ./.github/actions/setup-blender
-
-      - name: "🐺 Check every scripted model's .glb is what its script builds"
-        # Builds each model twice and compares the bytes with each other and the committed .glb
-        # (#1085, #1161); a difference is an error annotation naming the model and what differs.
-        if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
-        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
-
-      - name: "🫧 Check no wisp cuts into a model's body"
-        # Every frame of every clip of every .glb in the repository (#1227); a model without wisps passes.
-        if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
-        run: |
-          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_clearance.py --
-
-      - name: "👁️ Check no eye shows above its brow"
-        # Every other frame of every clip of every .glb, each eye from the front, its side and
-        # straight on (the owner, on #1249); a model without eye points passes.
-        if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
-        run: |
-          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_brows.py --
-
-      - name: "🦴 Check every model's limbs have sane dimensions"
-        # Each limb's segments against each other and the body's height, at rest, per body plan
-        # (the owner, on #1297); a model without limbs of a known body plan passes.
-        if: steps.models.outputs.changed == 'true'
-        timeout-minutes: 5
-        run: |
-          git ls-files -z ':(top)*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
-            ../game-models/blender.py --background --factory-startup \
-            --python ../game-models/check_dimensions.py --
-
-      - name: "📤 Upload the models CI built"
-        # On a difference, the .glb files this runner built, to compare with or commit.
-        if: failure() && steps.models.outputs.changed == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: rebuilt-models
-          path: /tmp/rebuilt/
-          if-no-files-found: ignore
-
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 
@@ -275,6 +212,94 @@ jobs:
           fi
           uv run --locked ../game-replays/load_test_compare.py /tmp/load-head.txt /tmp/load-base.txt \
             | tee -a "$GITHUB_STEP_SUMMARY"
+
+  models:
+    # The model checks (#1357): every scripted model rebuilt and checked in Blender, which takes
+    # most of ten minutes on its own, so it runs beside headless rather than inside its time limit.
+    # It always runs, and only sets up Blender where a model or its build changed.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/game
+    steps:
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No token left in .git/config while the branch's own code runs (#928).
+          persist-credentials: false
+          # The parent too: whether a model changed is read against it.
+          fetch-depth: 2
+
+      - name: "🧰 Install uv (the Python tooling's runner)"
+        run: |
+          curl -fsSL -o /tmp/uv.tar.gz \
+            "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum --check
+          sudo tar xzf /tmp/uv.tar.gz -C /usr/local/bin --strip-components=1 \
+            uv-x86_64-unknown-linux-gnu/uv
+
+      - name: "🔀 See whether a model or its build changed"
+        id: models
+        # The rebuild check below needs Blender, so it runs only where it can find something: a
+        # change to the model scripts and their library, to a .glb, or to Blender's pin, against the
+        # parent. A failing diff counts as a change, so the check runs rather than being skipped.
+        run: |
+          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' \
+            ':(top).github/actions/setup-blender'; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "🧊 Set up Blender"
+        if: steps.models.outputs.changed == 'true'
+        uses: ./.github/actions/setup-blender
+
+      - name: "🐺 Check every scripted model's .glb is what its script builds"
+        # Builds each model twice and compares the bytes with each other and the committed .glb
+        # (#1085, #1161); a difference is an error annotation naming the model and what differs.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: uv run --locked --package khovax-game-models ../game-models/check_rebuild.py --all --keep /tmp/rebuilt
+
+      - name: "🫧 Check no wisp cuts into a model's body"
+        # Every frame of every clip of every .glb in the repository (#1227); a model without wisps passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_clearance.py --
+
+      - name: "👁️ Check no eye shows above its brow"
+        # Every other frame of every clip of every .glb, each eye from the front, its side and
+        # straight on (the owner, on #1249); a model without eye points passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_brows.py --
+
+      - name: "🦴 Check every model's limbs have sane dimensions"
+        # Each limb's segments against each other and the body's height, at rest, per body plan
+        # (the owner, on #1297); a model without limbs of a known body plan passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_dimensions.py --
+
+      - name: "📤 Upload the models CI built"
+        # On a difference, the .glb files this runner built, to compare with or commit.
+        if: failure() && steps.models.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rebuilt-models
+          path: /tmp/rebuilt/
+          if-no-files-found: ignore
 
   rules-compare:
     # Compares how this commit plays with how its parent plays (#876): both are built, each plays
@@ -765,7 +790,7 @@ jobs:
     # checks all pass, the web build the export job just made is published as it is, not
     # built again. Pull requests never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [headless, export, apk-e2e, web-e2e]
+    needs: [headless, models, export, apk-e2e, web-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     # One deploy at a time: one under way is never cancelled, and a newer one waiting replaces an
@@ -803,7 +828,7 @@ jobs:
     # config/version while there is none. It checks out only project.godot, for the version and the
     # name, and runs nothing from the repository. Pull requests and the merge queue never release.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [headless, export, apk-e2e, linux-e2e, web-e2e]
+    needs: [headless, models, export, apk-e2e, linux-e2e, web-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
