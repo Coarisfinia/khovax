@@ -34,6 +34,9 @@ var fixed_region: Region
 var shift: Vector2i = Vector2i.ZERO
 ## The decoration standing on each decorated tile.
 var figures: Dictionary[Vector2i, HexPiece] = {}
+## The decorations not yet as risen as the fog over them lets them, or whose fog still moves: the
+## only ones a frame eases (#1386), so a settled view costs a frame almost nothing.
+var moving: Dictionary[Vector2i, bool] = {}
 ## Decorations of tiles changed in place (#530), shrinking away.
 var shrinking: Array[HexPiece] = []
 ## How far each decoration has risen out of the fog as drawn now, by tile: 0 hidden, 1 whole. Kept
@@ -41,6 +44,8 @@ var shrinking: Array[HexPiece] = []
 var risen: Dictionary[Vector2i, float] = {}
 ## The region the figures stand on: another one clears them.
 var _region: Region
+## The fog's retargets() when the moving decorations were last matched to it.
+var _fog_retargets: int = -1
 ## The kind each tile showed when its decoration was stood, so a neighbour's tile changed in place
 ## is found (show_changes).
 var _kinds: Dictionary[Vector2i, String] = {}
@@ -68,9 +73,9 @@ func _draw(tile: Vector2i) -> void:
 	figure.visible = risen[tile] > 0.0
 
 
-## Matches the decorations to the current state and eases each one `delta` seconds towards how far
-## the fog over its tile has thinned. Called every frame; tests call it with a long `delta` to let
-## it settle.
+## Matches the decorations to the current state and eases each one still moving `delta` seconds
+## towards how far the fog over its tile has thinned. Called every frame; tests call it with a long
+## `delta` to let it settle.
 func show_state(delta: float) -> void:
 	var region: Region = fixed_region
 	if region == null and driver != null and driver.state != null:
@@ -79,12 +84,34 @@ func show_state(delta: float) -> void:
 		return
 	if region != _region:
 		_build(region)
-	for tile: Vector2i in figures:
+	_follow_fog()
+	for tile: Vector2i in moving.keys():
+		if not figures.has(tile):
+			var _gone: bool = moving.erase(tile)
+			continue
 		var target: float = fog.thinned(tile + shift) if fog != null else 1.0
 		var now: float = move_toward(risen[tile], target, delta / HexGrid.CHANGE_SECONDS)
 		if now != risen[tile]:
 			risen[tile] = now
 			_draw(tile)
+		# Kept while the fog over it still moves: it may arrive after this frame's look.
+		if now == target and (fog == null or not fog.moving.has(tile + shift)):
+			var _arrived: bool = moving.erase(tile)
+
+
+## Sets moving the decorations whose fog moves: every one when the fog may have changed beyond its
+## moving tiles (FogView.retargets).
+func _follow_fog() -> void:
+	if fog == null:
+		return
+	if fog.retargets() != _fog_retargets:
+		_fog_retargets = fog.retargets()
+		for tile: Vector2i in figures:
+			moving[tile] = true
+		return
+	for tile: Vector2i in fog.moving:
+		if figures.has(tile - shift):
+			moving[tile - shift] = true
 
 
 func _build(region: Region) -> void:
@@ -93,6 +120,7 @@ func _build(region: Region) -> void:
 	figures.clear()
 	shrinking.clear()
 	risen.clear()
+	moving.clear()
 	_kinds.clear()
 	_region = region
 	for tile: Vector2i in region.sorted_tiles():
@@ -109,6 +137,7 @@ func _decorate(tile: Vector2i) -> void:
 	var turn: int = _region.looks.decoration_turns.get(tile, 0)
 	figures[tile] = _add_figure(tile, blueprint, turn)
 	risen[tile] = 0.0
+	moving[tile] = true
 	_draw(tile)
 	stood.emit(tile)
 

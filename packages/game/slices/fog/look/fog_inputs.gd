@@ -5,6 +5,9 @@ extends RefCounted
 ## where the neighbours lie and whether they were drawn anew. Copies, so a change made in place is
 ## noticed too. While none of it changes, no tile's target can, and the view skips working them out.
 
+## How many times the targets were worked out (`remember`): each time, a tile's brightness can
+## change and even arrive within that frame, outside FogView.moving (#1386).
+var times: int = 0
 var _sight: Dictionary[int, Array] = {}
 var _enabled: bool = true
 var _revealed: Array[Vector2i] = []
@@ -38,6 +41,7 @@ func next_door_moved(next_door: NeighbourView) -> bool:
 
 ## Remembers `fog`, the `explored` count and `next_door` as they are now.
 func remember(fog: FogFeature, explored: int, next_door: NeighbourView) -> void:
+	times += 1
 	_enabled = fog.enabled
 	_explored = explored
 	_sight.clear()
