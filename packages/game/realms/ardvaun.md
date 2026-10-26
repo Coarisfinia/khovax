@@ -28,3 +28,12 @@ The realm the world plays in today (#865), named in Land-speech on #909 (#974): 
 
 - Entry: The high land at the heart of the world, where the settlers made their first camps and named the ground in Land-speech. Every realm's name ends in -vaun, the Land-speech word for land.
 - Gloss: high land, heart land
+
+## Day and night
+
+Ardvaun keeps the world's clock (#1247) and shows it: warm sunlight by day, a dim blue moonlight at night.
+
+- Day light: #fff4e6
+- Day ambience: #202020
+- Night light: #5a6aa0
+- Night ambience: #1a2238

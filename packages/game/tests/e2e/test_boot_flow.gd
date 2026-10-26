@@ -1060,6 +1060,36 @@ func _check_toon_look(main: Node) -> String:
 			return "a shown material lacks the toon light bands"
 		if toon.next_pass != null:
 			return "a shown material draws an outline of its own"
+	return _check_daylight(main)
+
+
+## The day and night look (#1247): the main scene's Daylight lights the instance by the hour of the
+## world's one clock, in its realm's colours by day and at night, and keeps the playground, which no
+## realm draws, always lit.
+func _check_daylight(main: Node) -> String:
+	var daylight: Daylight = main.get_node_or_null("Daylight") as Daylight
+	if daylight == null or daylight.world_environment.environment == null:
+		return "the main scene needs a Daylight lighting the sun and the ambience"
+	daylight._process(0.0)
+	if daylight.sun.light_color != Daylight.UNREALMED_LIGHT:
+		return "the playground isn't always lit"
+	var realm: Realm = Realms.holding(FlowSteps.GLADE)
+	var noon: float = float((12 - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
+	var midnight: float = float((DayClock.HOURS - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
+	var looks: Array[Color] = [
+		Daylight.light_of(realm, noon), Daylight.ambience_of(realm, noon),
+		Daylight.light_of(realm, midnight), Daylight.ambience_of(realm, midnight),
+	]
+	var colors: Array[int] = [
+		realm.day_light, realm.day_ambience, realm.night_light, realm.night_ambience,
+	]
+	for index: int in looks.size():
+		if not looks[index].is_equal_approx(TileLooks.rgb(colors[index])):
+			return "the glade's realm shows %s, not its colours by day and at night" % [looks]
+	var half_past_dusk: float = (DayClock.DUSK - DayClock.DAWN + 0.5) * DayClock.TICKS_PER_HOUR
+	if (Daylight.day_share(0.0) != 1.0
+			or not is_equal_approx(Daylight.day_share(half_past_dusk), 0.5)):
+		return "dawn doesn't start the world by day, or dusk doesn't blend into night"
 	return ""
 
 

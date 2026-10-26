@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://slices/profile/look/profile_tie.gd" id="46_profile_tie"]
 [ext_resource type="Script" path="res://slices/quests/look/quest_tie.gd" id="47_quest_tie"]
 [ext_resource type="Script" path="res://slices/fog/look/fog_view.gd" id="12_fog"]
+[ext_resource type="Script" path="res://slices/schedules/look/daylight.gd" id="61_daylight"]
 [ext_resource type="Script" path="res://slices/board/look/ink_outline.gd" id="13_ink"]
 [ext_resource type="Script" path="res://slices/settings/look/graphics.gd" id="14_graphics"]
 [ext_resource type="Script" path="res://slices/chests/look/chest_view.gd" id="15_chests"]
@@ -66,6 +67,10 @@
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/focus_keys.gd" id="58_focus_keys"]
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/wild_hp_bars.gd" id="59_wild_hp_bars"]
 [ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
+
+[sub_resource type="Environment" id="Environment_daylight"]
+ambient_light_source = 2
+ambient_light_color = Color(0, 0, 0, 1)
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -295,6 +300,15 @@ graphics = NodePath("../Graphics")
 
 [node name="Sun" type="DirectionalLight3D" parent="." unique_id=118727424]
 transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.81110716, -0.55470014, -0.674882, 0.4866642, 2, 5, 3)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1247124701]
+environment = SubResource("Environment_daylight")
+
+[node name="Daylight" type="Node" parent="." node_paths=PackedStringArray("driver", "sun", "world_environment") unique_id=1247124702]
+script = ExtResource("61_daylight")
+driver = NodePath("../Driver")
+sun = NodePath("../Sun")
+world_environment = NodePath("../WorldEnvironment")
 
 [node name="Music" type="AudioStreamPlayer" parent="." unique_id=1926104357]
 script = ExtResource("10_music")

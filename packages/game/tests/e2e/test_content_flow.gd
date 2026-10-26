@@ -819,7 +819,7 @@ func _small_rule_set() -> Dictionary[String, RuleSet]:
 ## each once, whose regions read, so every exit leads to the instance drawn beside it on that side.
 ## The realms mark one start, the glade (#712). A realm file drawing an instance twice, with a
 ## symbol its legend doesn't explain, marking two starts or one it doesn't draw, or without its
-## codex entry and gloss (#959) is refused.
+## codex entry and gloss (#959) or its look by day and at night (#1247) is refused.
 func _check_realms() -> String:
 	var starts: Array[String] = []
 	for realm: Realm in Realms.all():
@@ -851,6 +851,10 @@ func _check_realms() -> String:
 		),
 		text % ["🟦🌲🟦", forest] + "\n## Codex\n\n- Gloss: g\n": (
 			"its codex entry and gloss are missing under %s (#959)" % RealmDocument.CODEX
+		),
+		text % ["🟦🌲🟦", forest] + "\n## Codex\n\n- Entry: e\n- Gloss: g\n": (
+			"its day and night look needs %s#rrggbb under %s (#1247)"
+			% [RealmDocument.DAY_LIGHT, RealmDocument.DAY_AND_NIGHT]
 		),
 	}
 	for case: String in cases:

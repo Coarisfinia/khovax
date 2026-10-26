@@ -48,7 +48,12 @@ static func scale_of(blueprint: TileBlueprint) -> float:
 
 ## The color `blueprint`'s tiles are drawn in: the blueprint keeps it as a whole 0xRRGGBB (#515).
 static func color_of(blueprint: TileBlueprint) -> Color:
-	return Color.hex(blueprint.color << 8 | 0xff)
+	return rgb(blueprint.color)
+
+
+## The color a whole 0xRRGGBB stands for, as content data keeps colors (#515).
+static func rgb(value: int) -> Color:
+	return Color.hex(value << 8 | 0xff)
 
 
 ## `node`'s transform within `model`, every parent's on the way included: imported models nest.

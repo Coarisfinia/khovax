@@ -16,6 +16,13 @@ var start: String = ""
 var codex_entry: String = ""
 ## What its name means, hand-written (#959), e.g. "high land, heart land".
 var codex_gloss: String = ""
+## How its instances look by day and at night (#1247), each a whole 0xRRGGBB: the sun's light and
+## the ambient light. Every realm keeps the world's one clock (DayClock); only this look is its
+## own, so a realm whose day and night look alike hides the hour from the player.
+var day_light: int = 0
+var day_ambience: int = 0
+var night_light: int = 0
+var night_ambience: int = 0
 ## Why the realm's file can't be read, or "".
 var problem: String = ""
 
