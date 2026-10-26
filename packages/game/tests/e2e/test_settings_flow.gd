@@ -7,7 +7,8 @@ extends RefCounted
 ## by default, single player pauses (#302): no tick runs. The tab lists every setting, each on Auto
 ## at first; a step changes one and keeps it, its Auto button hands it back; turning the pause off
 ## lets the ticks run on behind the menu; turning the damage numbers off hides them and a text size
-## sizes them (#764); the rows fit a phone's screen; and the close button at its
+## sizes them (#764); its README button opens the README's downloads (#1312); the rows fit a
+## phone's screen; and the close button at its
 ## top right, the cancel action (a controller's B) and the menu action each close the menu, easing
 ## out, and the game goes on. Its Character tab (#391) shows the player's personal
 ## color (#233), on Auto at first: a color picked on its wheel colors their circle at once and is
@@ -133,7 +134,7 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = await _menu_pause_choice(menu, driver)
 	if result.is_empty():
-		result = _menu_on_screens(menu)
+		result = _menu_readme(menu)
 	if result.is_empty():
 		result = await _close_menu(menu)
 	if result.is_empty():
@@ -714,6 +715,22 @@ func _numbers_rise_up_the_screen(numbers: DamageNumbersView) -> String:
 	if risen.length() <= 0.0 or risen.normalized().dot(up) < 0.999:
 		return "a damage number rose by %s, not up the game camera's screen (%s)" % [risen, up]
 	return ""
+
+
+## The Settings tab's README button (#1312) opens the README's downloads, through the link opener
+## the test swaps in, so no browser opens. Then the rows fit every screen.
+func _menu_readme(menu: GameMenu) -> String:
+	var tab: SettingsTab = menu.settings
+	var opened: Array[String] = []
+	tab.open_link = func(url: String) -> Error:
+		opened.append(url)
+		return OK
+	tab.readme_button.pressed.emit()
+	if (tab.readme_button.text != SettingsTab.README_TEXT
+			or opened.size() != 1
+			or opened[0] != SettingsTab.README_URL):
+		return "the README button opened %s" % [opened]
+	return _menu_on_screens(menu)
 
 
 ## The settings' rows fit a phone held either way and a desktop screen.
