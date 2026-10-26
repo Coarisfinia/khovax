@@ -1,10 +1,12 @@
 [gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://slices/quests/ui/quest_pill.tscn" id="1_pill"]
+[ext_resource type="Script" path="res://slices/quests/ui/quest_card.gd" id="2_card"]
 
 [node name="Card" type="PanelContainer"]
 modulate = Color(1, 1, 1, 0)
 mouse_filter = 2
+script = ExtResource("2_card")
 
 [node name="Lines" type="VBoxContainer" parent="."]
 layout_mode = 2

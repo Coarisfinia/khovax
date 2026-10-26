@@ -10,8 +10,8 @@ extends Control
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
 ## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
 ## with the screen, so it stays readable on a phone. It only reads the quests.
-## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn;
-## this script keeps only what it does.
+## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn
+## (QuestCard); this script keeps only what it does.
 
 ## A quest's card: its name above its step, both wrapping, the pill between them, starting faded
 ## out.
@@ -28,8 +28,6 @@ const GAP: float = 8.0
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
 const FONT_SHARE: float = 0.028
 const MIN_FONT: int = 16
-## How much bigger a quest's name is than its step.
-const NAME_SCALE: float = 1.15
 ## How wide a card is, in font sizes, and never more than this share of the screen's width.
 const WIDTH_FONTS: float = 15.0
 const MAX_WIDTH_SHARE: float = 0.42
@@ -48,7 +46,7 @@ const DONE_TEXT: String = "Done"
 ## Kept here so tests can read what is shown.
 var shown: Dictionary[String, String] = {}
 ## Each listed quest's card, by quest id, while it's listed or fading out.
-var cards: Dictionary[String, PanelContainer] = {}
+var cards: Dictionary[String, QuestCard] = {}
 ## The cards' order from the top, finished ones included until they're gone.
 var order: Array[String] = []
 ## The quests whose cards fade out, by quest id: finished, or no longer followed. Each with the
@@ -86,8 +84,7 @@ func show_quests() -> void:
 		if not cards.has(id):
 			_add_card(id, quests.book[id].shown_name())
 		shown[id] = line
-		_line_label(id).text = line
-		_line_label(id).visible = not line.is_empty()
+		cards[id].show_line(line)
 		var where: String = steps[id].counts_in()
 		pill(id).show_instance(where, where == here)
 
@@ -158,14 +155,10 @@ static func _with_article(species_name: String) -> String:
 
 ## A new card for quest `id`, named `quest_name`, fading in under the others.
 func _add_card(id: String, quest_name: String) -> void:
-	var card: PanelContainer = QUEST_CARD.instantiate() as PanelContainer
-	card.add_theme_stylebox_override("panel", UiTheme.card())
-	var name_label: Label = card.get_node("Lines/Name") as Label
-	name_label.text = quest_name
-	name_label.add_theme_color_override("font_color", Toon.INK)
-	_step_label(card).add_theme_color_override("font_color", Toon.INK)
+	var card: QuestCard = QUEST_CARD.instantiate() as QuestCard
+	card.name_label().text = quest_name
 	add_child(card)
-	_size_text(card)
+	card.fit(maxi(MIN_FONT, _font_size))
 	card.position = Vector2(0.0, _bottom())
 	cards[id] = card
 	order.append(id)
@@ -175,14 +168,13 @@ func _add_card(id: String, quest_name: String) -> void:
 ## Says quest `id` is done, fades its card out after a while, then lets the card below move up.
 func _finish(id: String) -> void:
 	shown[id] = DONE_TEXT
-	_line_label(id).text = DONE_TEXT
-	_line_label(id).visible = true
+	cards[id].show_line(DONE_TEXT)
 	_fade_out(id, DONE_SECONDS)
 
 
 ## Fades quest `id`'s card out after `wait` seconds, then forgets it.
 func _fade_out(id: String, wait: float) -> void:
-	var card: PanelContainer = cards[id]
+	var card: QuestCard = cards[id]
 	var tween: Tween = card.create_tween()
 	leaving[id] = tween
 	var _waited: IntervalTweener = tween.tween_interval(wait)
@@ -195,12 +187,11 @@ func _fade_out(id: String, wait: float) -> void:
 func _come_back(id: String) -> void:
 	leaving[id].kill()
 	var _stays: bool = leaving.erase(id)
-	var card: PanelContainer = cards[id]
-	_fade_in(card)
+	_fade_in(cards[id])
 
 
 ## Fades `card` in.
-static func _fade_in(card: PanelContainer) -> void:
+static func _fade_in(card: QuestCard) -> void:
 	var _faded_in: PropertyTweener = card.create_tween().tween_property(
 		card,
 		"modulate:a",
@@ -220,17 +211,7 @@ func _drop(id: String) -> void:
 
 ## The pill under quest `id`'s name, saying where its step counts.
 func pill(id: String) -> QuestPill:
-	return cards[id].get_node("Lines/Where") as QuestPill
-
-
-## The label under quest `id`'s name.
-func _line_label(id: String) -> Label:
-	return _step_label(cards[id])
-
-
-## The label under `card`'s name.
-static func _step_label(card: PanelContainer) -> Label:
-	return card.get_node("Lines/Step") as Label
+	return cards[id].pill()
 
 
 ## Puts the list on the Survey's other side and glides each card the share `glide` of the way to
@@ -252,23 +233,12 @@ func _lay_out(glide: float) -> void:
 	)
 	var y: float = 0.0
 	for id: String in order:
-		var card: PanelContainer = cards[id]
+		var card: QuestCard = cards[id]
 		if font_changed:
-			_size_text(card)
-		card.custom_minimum_size.x = width
-		card.size = Vector2(width, 0.0)
+			card.fit(font)
+		card.lay_out(width)
 		card.position = card.position.lerp(Vector2(0.0, y), glide)
 		y += card.size.y + GAP
-
-
-## Sizes `card`'s text to the font size in use: its name a little bigger than its step, its pill a
-## little smaller.
-func _size_text(card: PanelContainer) -> void:
-	var font: int = maxi(MIN_FONT, _font_size)
-	var name_label: Label = card.get_node("Lines/Name") as Label
-	name_label.add_theme_font_size_override("font_size", roundi(font * NAME_SCALE))
-	_step_label(card).add_theme_font_size_override("font_size", font)
-	(card.get_node("Lines/Where") as QuestPill).fit(font)
 
 
 ## Where a new card starts: under the last one.

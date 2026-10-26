@@ -465,6 +465,8 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 				focused.labels.keys(),
 				focused.arrows.keys(),
 			]
+	if result.is_empty():
+		result = _survey_picks(survey, quests, "survey_here")
 	quests.focus = "survey_any"
 	if result.is_empty():
 		result = _survey_label_clears_player(driver, survey, focused, "survey_any")
@@ -530,6 +532,63 @@ func _survey_label(
 				box,
 				circle,
 			]
+	return ""
+
+
+## Why the pointer resting on quest `id`'s small grey arrow doesn't show the card of the quest
+## whose arrow is there next to it, on the Survey and clear of the arrow, nor a click on it follow
+## that quest, or "" (#1298). A tap on the forest quest's grey arrow follows the quest there too,
+## and the touch stick doesn't start from it.
+func _survey_picks(survey: SurveyView, quests: QuestTracker, id: String) -> String:
+	quests.focus = "survey_any"
+	survey.show_state()
+	survey.focused_quest().show_state()
+	var hover: SurveyQuestHover = survey.quest_hover()
+	var box: Rect2 = survey.grey_arrow_box(id)
+	# Another quest's grey arrow may point at the same tile, drawn over it.
+	var key: String = survey.quest_at(box.get_center())
+	var on_screen: Vector2 = survey.get_global_transform() * box.get_center()
+	var moved: InputEventMouseMotion = InputEventMouseMotion.new()
+	moved.position = on_screen
+	survey.get_viewport().push_input(moved)
+	hover.show_state()
+	var card: QuestCard = hover.card
+	var quest: String = key.get_slice("/", 0)
+	if (key.is_empty() or hover.hovered != key or card == null
+			or card.name_label().text != quests.book[quest].shown_name()
+			or not Rect2(Vector2.ZERO, survey.size).encloses(card.get_rect())
+			or card.get_rect().intersects(survey.grey_arrow_box(key))):
+		return "resting on %s's grey arrow doesn't show %s's card by it: %s, card %s, box %s" % [
+			id,
+			key,
+			hover.hovered,
+			card.get_rect() if card != null else Rect2(),
+			survey.grey_arrow_box(key),
+		]
+	_click(survey.get_viewport(), on_screen, true)
+	_click(survey.get_viewport(), on_screen, false)
+	if quests.focus != quest:
+		return "a click on %s's grey arrow didn't follow it" % quest
+	return _survey_tapped(survey, quests, "survey_there")
+
+
+## Why a tap on quest `id`'s grey arrow doesn't follow the quest whose arrow is there as its finger
+## lifts, or starts the touch stick, or "" (#1298).
+func _survey_tapped(survey: SurveyView, quests: QuestTracker, id: String) -> String:
+	survey.show_state()
+	survey.focused_quest().show_state()
+	var at: Vector2 = survey.grey_arrow_box(id).get_center()
+	var key: String = survey.quest_at(at)
+	var tap: InputEventScreenTouch = InputEventScreenTouch.new()
+	tap.pressed = true
+	tap.position = survey.get_global_transform() * at
+	survey.get_viewport().push_input(tap)
+	var stick: TouchStick = survey.get_parent().get_node("TouchStick") as TouchStick
+	var held: bool = stick.is_held()
+	tap.pressed = false
+	survey.get_viewport().push_input(tap)
+	if key.is_empty() or quests.focus != key.get_slice("/", 0) or held:
+		return "a tap on %s's grey arrow didn't follow it, or started the touch stick" % id
 	return ""
 
 
