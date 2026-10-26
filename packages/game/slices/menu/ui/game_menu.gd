@@ -90,7 +90,7 @@ func _ready() -> void:
 	add_child(_open_button)
 	_build_sheet(more_tabs)
 	# Once the sheet is in the tree, so the Settings tab has its submenus.
-	_add_difficulty()
+	_add_host_settings()
 
 
 func _process(_delta: float) -> void:
@@ -287,22 +287,27 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	add_child(_sheet)
 
 
-## The world's difficulty, which the host chooses (#1315), in the Settings tab's Difficulty
-## submenu: a child of the menu, so its row's callables stay bound to it.
-func _add_difficulty() -> void:
+## The world's settings, which the host chooses (#1309), in the Settings tab: the difficulty in its
+## Difficulty submenu (#1315) and the world settings in its World submenu (#1316).
+func _add_host_settings() -> void:
 	if driver == null:
 		return
-	var names: Array[String] = ["Easy", "Standard", "Hard"]
-	var difficulty: HostChoice = HostChoice.new(driver, HostSettings.DIFFICULTY, names)
-	difficulty.name = "Difficulty"
-	add_child(difficulty)
-	var _row: HBoxContainer = settings.add_row(
-		SettingsTab.DIFFICULTY,
-		HostSettings.DIFFICULTY,
-		"Difficulty",
-		difficulty.label,
-		difficulty.step,
-	)
+	var difficulties: Array[String] = ["Easy", "Standard", "Hard"]
+	_add_host_row(SettingsTab.DIFFICULTY, HostSettings.DIFFICULTY, "Difficulty", difficulties)
+	var rates: Array[String] = ["50%", "Standard (100%)", "150%", "200%"]
+	_add_host_row(SettingsTab.WORLD, HostSettings.DROP_RATE, "Drop rate", rates)
+	var delays: Array[String] = ["15 min", "30 min", "Standard (1 hour)", "2 hours", "4 hours"]
+	_add_host_row(SettingsTab.WORLD, HostSettings.RESET_DELAY, "Instance reset delay", delays)
+
+
+## A row in the Settings tab's `submenu` for the host's `setting` (HostChoice), named `title`, its
+## choices called `names`. The choice is a child of the menu, so the row's callables stay bound to
+## it.
+func _add_host_row(submenu: String, setting: String, title: String, names: Array[String]) -> void:
+	var choice: HostChoice = HostChoice.new(driver, setting, names)
+	choice.name = setting.to_pascal_case()
+	add_child(choice)
+	var _row: HBoxContainer = settings.add_row(submenu, setting, title, choice.label, choice.step)
 
 
 ## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.
