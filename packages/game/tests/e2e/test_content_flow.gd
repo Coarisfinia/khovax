@@ -1238,9 +1238,12 @@ func _check_development_refused() -> String:
 	return ""
 
 
-## A level-up's choice offers three of `web`'s open nodes (#678), the same each time for the same
-## monster and the same nodes taken, and all of them when fewer are open. One offered before and
-## skipped still comes back, but far less often than one never offered.
+## DevelopmentOffer.of, the draw a level-up's choice will offer (#678), picks three of `web`'s open
+## nodes, the same each time for the same monster and the same nodes taken, and all of them when
+## fewer are open. A skipped node weighs a tenth of one never offered: with the toad's four first
+## nodes open and one of them skipped, it's offered with the chance 1 - 3000/3100 * 2000/2100 *
+## 1000/1100, about 162 in 1000 monsters. The bounds lie over three standard deviations off it, and
+## a skipped weight of half or double the tenth falls outside them.
 func _check_development_offers(web: DevelopmentWeb) -> String:
 	var none: Array[String] = []
 	var monster: String = ShortId.stand_in(1)
@@ -1257,17 +1260,15 @@ func _check_development_offers(web: DevelopmentWeb) -> String:
 	taken.erase("deep_3")
 	if DevelopmentOffer.of(web, monster, taken, none) != ["deep_3"]:
 		return "with only deep_3 open, the toad didn't offer just it"
-	var fresh: int = 0
 	var skipped: int = 0
 	var differs: bool = false
 	var deep: Array[String] = ["deep_1"]
-	for number: int in 200:
+	for number: int in 1000:
 		var other: String = ShortId.stand_in(number + 2)
 		differs = differs or DevelopmentOffer.of(web, other, none, none) != offer
-		fresh += int(DevelopmentOffer.of(web, other, none, none).has("deep_1"))
 		skipped += int(DevelopmentOffer.of(web, other, none, deep).has("deep_1"))
-	if not differs or skipped == 0 or skipped * 2 >= fresh:
-		return "a skipped node came back %d times in 200, one never offered %d" % [skipped, fresh]
+	if not differs or skipped < 120 or skipped > 205:
+		return "a skipped node came back for %d of 1000 monsters, not 120 to 205" % skipped
 	return ""
 
 
