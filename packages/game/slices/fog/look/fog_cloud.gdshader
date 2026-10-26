@@ -19,6 +19,9 @@ uniform float hex_size = 1.0;
 uniform sampler2D cloud_noise : filter_linear, repeat_enable;
 uniform vec4 cloud_light : source_color = vec4(0.86, 0.88, 0.93, 1.0);
 uniform vec4 cloud_shade : source_color = vec4(0.70, 0.73, 0.82, 1.0);
+// The light the cloud is seen in (Daylight, #1360): it's drawn unshaded, so it dims with the night
+// by this tint instead of by the scene's lights. White leaves it as it is.
+uniform vec4 daylight : source_color = vec4(1.0);
 // How fast the cloud drifts, in noise texture widths per second: barely moving (motion sickness).
 uniform vec2 drift = vec2(0.004, 0.002);
 // How many world units one noise texture width covers.
@@ -64,6 +67,6 @@ void fragment() {
 	// Fading out as the cloud thickens, so wisps don't bleed into the cloud's edge.
 	float light = fog.y * (1.0 - thick) * mix(wisp_thin, wisp_thick, smoothstep(0.35, 0.75, wisps));
 	vec3 cloud = mix(cloud_shade.rgb, cloud_light.rgb, smoothstep(0.3, 0.7, noise));
-	ALBEDO = mix(cloud_light.rgb, cloud, thick);
+	ALBEDO = mix(cloud_light.rgb, cloud, thick) * daylight.rgb;
 	ALPHA = max(thick, light);
 }

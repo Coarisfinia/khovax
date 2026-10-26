@@ -40,6 +40,12 @@ func _ready() -> void:
 	visible = false
 
 
+## Tints the cloud by the light it's seen in (#1360): drawn unshaded, it doesn't follow the scene's
+## lights, so Daylight hands it the hour's light; white leaves it as it is.
+func light_by(color: Color) -> void:
+	(material_override as ShaderMaterial).set_shader_parameter("daylight", color)
+
+
 ## Shows the fog over `region` from each tile's brightness (FogView's scale), or hides it when
 ## `brightness` is empty (no fog in this instance).
 func show_fog(region: Region, brightness: Dictionary[Vector2i, float]) -> void:

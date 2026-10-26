@@ -305,11 +305,12 @@ transform = Transform3D(0.8320503, -0.44992125, 0.32444277, 0, 0.5848976, 0.8111
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1247124701]
 environment = SubResource("Environment_daylight")
 
-[node name="Daylight" type="Node" parent="." node_paths=PackedStringArray("driver", "sun", "world_environment") unique_id=1247124702]
+[node name="Daylight" type="Node" parent="." node_paths=PackedStringArray("driver", "sun", "world_environment", "cloud") unique_id=1247124702]
 script = ExtResource("61_daylight")
 driver = NodePath("../Driver")
 sun = NodePath("../Sun")
 world_environment = NodePath("../WorldEnvironment")
+cloud = NodePath("../Instance/FogCloud")
 
 [node name="Music" type="AudioStreamPlayer" parent="." unique_id=1926104357]
 script = ExtResource("10_music")

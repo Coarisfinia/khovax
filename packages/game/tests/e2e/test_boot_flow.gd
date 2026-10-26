@@ -1065,7 +1065,7 @@ func _check_toon_look(main: Node) -> String:
 
 ## The day and night look (#1247): the main scene's Daylight lights the instance by the hour of the
 ## world's one clock, in its realm's colours by day and at night, and keeps the playground, which no
-## realm draws, always lit.
+## realm draws, always lit; the fog's cloud with it (#1360).
 func _check_daylight(main: Node) -> String:
 	var daylight: Daylight = main.get_node_or_null("Daylight") as Daylight
 	if daylight == null or daylight.world_environment.environment == null:
@@ -1073,6 +1073,11 @@ func _check_daylight(main: Node) -> String:
 	daylight._process(0.0)
 	if daylight.sun.light_color != Daylight.UNREALMED_LIGHT:
 		return "the playground isn't always lit"
+	var cloud: ShaderMaterial = daylight.cloud.material_override as ShaderMaterial
+	var tint: Color = cloud.get_shader_parameter("daylight")
+	if (daylight.cloud != main.get_node("Instance/FogCloud")
+			or not tint.is_equal_approx(Color.WHITE)):
+		return "the fog's cloud isn't seen in the playground's light (#1360)"
 	var realm: Realm = Realms.holding(FlowSteps.GLADE)
 	var noon: float = float((12 - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
 	var midnight: float = float((DayClock.HOURS - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
@@ -1086,10 +1091,37 @@ func _check_daylight(main: Node) -> String:
 	for index: int in looks.size():
 		if not looks[index].is_equal_approx(TileLooks.rgb(colors[index])):
 			return "the glade's realm shows %s, not its colours by day and at night" % [looks]
+	var lit: String = _check_lit_by_hour(daylight, realm, [noon, midnight], looks)
+	if not lit.is_empty():
+		return lit
 	var half_past_dusk: float = (DayClock.DUSK - DayClock.DAWN + 0.5) * DayClock.TICKS_PER_HOUR
 	if (Daylight.day_share(0.0) != 1.0
 			or not is_equal_approx(Daylight.day_share(half_past_dusk), 0.5)):
 		return "dawn doesn't start the world by day, or dusk doesn't blend into night"
+	return ""
+
+
+## Shown in `realm` at each of `hours` (noon, then midnight), `daylight` lights the sun and the
+## ambience in `looks` (each hour's light, then its ambience) and the unshaded fog's cloud follows:
+## white by day, dimmer at night (#1360). Back to the playground's look after.
+static func _check_lit_by_hour(
+	daylight: Daylight, realm: Realm, hours: Array[float], looks: Array[Color]
+) -> String:
+	var cloud: ShaderMaterial = daylight.cloud.material_override as ShaderMaterial
+	var shown: Array[Color] = []
+	var clouds: Array[Color] = []
+	for ticks: float in hours:
+		daylight.light_up(realm, ticks)
+		shown.append(daylight.sun.light_color)
+		shown.append(daylight.world_environment.environment.ambient_light_color)
+		var tint: Color = cloud.get_shader_parameter("daylight")
+		clouds.append(tint)
+	daylight._process(0.0)
+	for index: int in looks.size():
+		if not shown[index].is_equal_approx(looks[index]):
+			return "the glade's realm lights the scene in %s, not %s" % [shown, looks]
+	if not clouds[0].is_equal_approx(Color.WHITE) or clouds[1].v >= 1.0:
+		return "the fog's cloud isn't white by day or doesn't dim at night (#1360): %s" % [clouds]
 	return ""
 
 
