@@ -13,6 +13,9 @@ extends Node3D
 ## instance's region (`fixed_region`), whose tiles the fog knows shifted into the local instance's
 ## coordinates.
 
+## A new decoration stood on `tile`, whole: the region drawn, or the tile changed in place.
+signal stood(tile: Vector2i)
+
 ## The hexagon pack's decorations are modeled for a tile about two world units across, wider than
 ## ours (HexLayout.SIZE), so they shrink to fit inside it.
 const MODEL_SCALE: float = 0.8
@@ -107,6 +110,7 @@ func _decorate(tile: Vector2i) -> void:
 	figures[tile] = _add_figure(tile, blueprint, turn)
 	risen[tile] = 0.0
 	_draw(tile)
+	stood.emit(tile)
 
 
 ## Swaps the decoration of every tile of the shown region changed in place this tick (#530): the old

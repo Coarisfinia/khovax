@@ -1753,7 +1753,8 @@ func _cut_eases(cutaway: CanopyCutaway, covered: Array[Vector2i], where: String)
 
 
 ## What's wrong with the cuts once settled, or "": exactly the decorations tall enough to hide a
-## figure within the radius of one on `covered` are gone, every other one whole, some of each.
+## figure within the radius of one on `covered` are gone, every other one whole, some of each, and
+## none is still eased (#1386).
 func _cut_problem(cutaway: CanopyCutaway, covered: Array[Vector2i], where: String) -> String:
 	var cut: int = 0
 	var kept_tall: int = 0
@@ -1770,6 +1771,8 @@ func _cut_problem(cutaway: CanopyCutaway, covered: Array[Vector2i], where: Strin
 		cut += 1 if expected else 0
 		var tall: bool = CanopyCutaway.hides(cutaway.driver.state.region, tile)
 		kept_tall += 1 if tall and not expected else 0
+	if not cutaway.moving.is_empty():
+		return "%d decorations still eased once settled %s" % [cutaway.moving.size(), where]
 	if not covered.is_empty() and (cut == 0 or kept_tall == 0):
 		return "expected some decorations cut and some tall ones kept %s: %d cut" % [where, cut]
 	return ""
