@@ -280,12 +280,26 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, quests: QuestTr
 	if (nearest < 0 or not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "the first domination isn't marked over the starting instance's nearest beach tile"
+	return _check_followed_markers(markers, quests)
+
+
+## Only the followed quest's marker in the world (#1328), the first domination's once followed, is
+## drawn as followed, in the followed color at full size; every other one grey and smaller.
+func _check_followed_markers(markers: QuestMarkerView, quests: QuestTracker) -> String:
 	quests.focus = "first_domination"
 	markers.show_quests()
 	if not markers.markers.has("first_domination"):
 		return "the open first domination has no marker"
+	# A long frame settles every marker at its size.
+	markers._process(10.0)
 	for id: String in markers.followed:
-		if markers.followed[id] != (id == "first_domination"):
+		var big: bool = id == "first_domination"
+		var fill: MeshInstance3D = markers.markers[id].get_child(1) as MeshInstance3D
+		var color: Color = (fill.mesh.surface_get_material(0) as StandardMaterial3D).albedo_color
+		var size: float = 1.0 if big else QuestMarkerView.OTHER_SHARE
+		var looks: bool = color == (QuestMarkerView.COLOR if big else QuestMarkerView.OTHER_COLOR)
+		var sized: bool = markers.markers[id].scale.is_equal_approx(Vector3.ONE * size)
+		if markers.followed[id] != big or not looks or not sized:
 			return "the world's marker of %s isn't drawn as followed or not as it is (#1328)" % id
 	return ""
 
