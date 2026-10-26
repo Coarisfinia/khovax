@@ -145,6 +145,11 @@ a second model could use goes into the library or a generic tool, never into one
   of every clip, from the model's front, from the eye's side and straight into it, and fails when
   more of the eye than the tolerance shows above a brow (or anything lying on the eye) crossing it:
   a brow may overlap the eye, but the eye's top never shines through above it (`lib/brows.py`).
+- **The volume check (#1306):** `packages/game-models/check_volume.py -- <model.glb> [share]`
+  samples every frame of every clip and prints, per clip, the smallest share of its rest depth or
+  width the body keeps at a station on the spine or neck, the frame, the station and which; it
+  fails below the share (`lib/volume.py`). Its `KNOWN` list and `check_clearance.py`'s are judged
+  alike (`lib/known.py`).
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
@@ -347,6 +352,15 @@ a second model could use goes into the library or a generic tool, never into one
    owner, on #1297: no "weird dimensions"). A model without limbs of a known body plan passes. Its
    lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14). A new body
    plan adds its own ranges to `lib/dimensions.py`, with their reasons.
+
+18. **Volume (#1306):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_volume.py -- <model.glb>` must print
+   `VOLUME CHECK: PASS`: in every frame of every clip, the body's depth and width at stations
+   along the spine and neck keep their share of rest (`lib/volume.py`, where the stations and
+   the share are), so a creature bending down doesn't thin out (the owner, on #1305). A model
+   without spine or neck bones passes. A clip that still fails waits in its `KNOWN` list with the
+   issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
+   `.glb` with the rebuild check (step 14).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
