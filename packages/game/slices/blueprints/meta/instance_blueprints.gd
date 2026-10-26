@@ -59,10 +59,7 @@ static func create(
 	var region: Region = _region_for(instance_name, seed_value, players, variant_name)
 	if region == null:
 		return null
-	var ordered: Array[Feature] = FeatureFactories.build(
-		_features(blueprint(instance_name), region),
-		_setup(instance_name, region),
-	)
+	var ordered: Array[Feature] = features_for(instance_name, region)
 	var state: GameState = GameState.new(region, seed_value, ordered, world_tick)
 	if not state.problem.is_empty():
 		push_error("instance %s has an invalid feature order: %s" % [instance_name, state.problem])
@@ -71,6 +68,16 @@ static func create(
 		# Can't be refused: the count is checked above and every slot is new.
 		var _player: Entity = state.add_entity(slot, region.starts[slot])
 	return state
+
+
+## The features an instance of the named blueprint has on `region`, in their order: its rules,
+## what the region holds and its treasure chests (`_features`), built from its setup. The flows
+## put them on a region of their own too.
+static func features_for(instance_name: String, region: Region) -> Array[Feature]:
+	return FeatureFactories.build(
+		_features(blueprint(instance_name), region),
+		_setup(instance_name, region),
+	)
 
 
 ## The region a new instance of the named blueprint's `variant_name` is loaded with for

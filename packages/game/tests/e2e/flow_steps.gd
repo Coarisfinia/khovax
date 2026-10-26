@@ -59,19 +59,12 @@ static func basic(seed_value: int, players: int = 1) -> GameState:
 	return InstanceBlueprints.create(BASIC, seed_value, players)
 
 
-## The named blueprint's rules on `ground`, a flow's own region, with the features what it holds
-## brings (as InstanceBlueprints.create builds them, from the blueprint's wild species and loot),
-## and no player yet; null, with an error, when the features' order is invalid.
+## The named blueprint's rules on `ground`, a flow's own region, as an instance of it has them
+## there (InstanceBlueprints.features_for), with no player yet; null, with an error, when the
+## features' order is invalid.
 static func rules_on(instance_name: String, ground: Region, seed_value: int) -> GameState:
-	var named: Blueprint = InstanceBlueprints.blueprint(instance_name)
-	var setup: FeatureSetup = FeatureSetup.new()
-	setup.instance = instance_name
-	setup.region = ground
-	setup.wild_species = named.wild_species
-	setup.loot_table = named.loot_table
-	var listed: Array[String] = named.features.duplicate()
-	listed.append_array(RegionFeatures.of(ground))
-	var state: GameState = GameState.new(ground, seed_value, FeatureFactories.build(listed, setup))
+	var ordered: Array[Feature] = InstanceBlueprints.features_for(instance_name, ground)
+	var state: GameState = GameState.new(ground, seed_value, ordered)
 	if not state.problem.is_empty():
 		push_error("%s's rules don't load on a flow's region: %s" % [instance_name, state.problem])
 		return null
