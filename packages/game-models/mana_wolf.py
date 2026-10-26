@@ -335,8 +335,13 @@ def build(out):
              for crown in CHANNEL_CROWN}
     flaring = pulse.Pulse(rig, "brow", brow, "head", beats, BROW_PULSE, BROW_RISE, BROW_FALL)
     scene.apply_scale([rig, skin] + pieces, SCALE)
+
+    def reweigh(body):
+        quadruped.bind_underside(body, rig)
+        SNOUT.bind_jaw(body, "jaw", SCALE)
+
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", BROW_BONE, *drifting.names, *lids.names),
-                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
+                 reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=0.4, fold=0.6, lift=0.2, curl=0.6,

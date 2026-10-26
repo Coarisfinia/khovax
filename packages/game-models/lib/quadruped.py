@@ -80,26 +80,53 @@ def _between(a, b):
     return tuple((x + y) / 2 for x, y in zip(a, b))
 
 
+def _trunk(skin, rig, names, middle=False):
+    """The trunk bones `names`, each with where it lies along the body (y: its rest head, or with
+    `middle` its middle) and its vertex group, in order along the body."""
+    trunk = []
+    for name in names:
+        group = skin.vertex_groups.get(name) or skin.vertex_groups.new(name=name)
+        bone = rig.data.bones[name]
+        trunk.append(((bone.head_local.y + bone.tail_local.y) / 2.0 if middle else bone.head_local.y, group))
+    trunk.sort(key=lambda item: item[0])
+    return trunk
+
+
+def _hand_to_trunk(trunk, index, point, taken):
+    """Gives the vertex `index` at `point` (rig space) a `taken` weight on the trunk bones, blended
+    between the two whose heads lie either side of it along the body."""
+    for (start, first), (end, second) in zip(trunk, trunk[1:]):
+        if point.y <= end:
+            along = max(0.0, min(1.0, (point.y - start) / (end - start)))
+            first.add([index], taken * (1.0 - along), "ADD")
+            second.add([index], taken * along, "ADD")
+            return
+    trunk[-1][1].add([index], taken, "ADD")
+
+
+def _limbs(rig, roots):
+    """The bones of the limbs whose roots are `roots` (each root and every bone below it)."""
+    return {bone.name for name in roots for bone in [rig.data.bones[name], *rig.data.bones[name].children_recursive]}
+
+
+def _smooth(value):
+    value = max(0.0, min(1.0, value))
+    return value * value * (3.0 - 2.0 * value)
+
+
 def bind_torso(skin, rig, bottom, top):
     """Keeps the upper trunk with its spine rather than the legs' automatic weights. Between
     `bottom` and `top` (rest height in rig space), smoothly transfers the legs' influence to
     the hips and spine, blended along their length. Below it the legs keep their weights;
     head, jaw and tail weights are untouched. Runs before pieces join the skin (weights.bind's
     `reweigh`), so markings on the torso inherit its corrected weights too."""
-    roots = [rig.data.bones[name + "." + side]
-             for name in ("scapula", "thigh") for side in ("L", "R")]
-    limbs = {bone.name for root in roots for bone in [root, *root.children_recursive]}
+    limbs = _limbs(rig, [name + "." + side for name in ("scapula", "thigh") for side in ("L", "R")])
     sources = {group.index for group in skin.vertex_groups if group.name in limbs}
-    spine = []
-    for name in ("hips", "spine_01", "spine_02"):
-        group = skin.vertex_groups.get(name) or skin.vertex_groups.new(name=name)
-        spine.append((rig.data.bones[name].head_local.y, group))
-    spine.sort(key=lambda item: item[0])
+    spine = _trunk(skin, rig, ("hips", "spine_01", "spine_02"))
     to_rig = rig.matrix_world.inverted() @ skin.matrix_world
     for vertex in skin.data.vertices:
         point = to_rig @ vertex.co
-        share = max(0.0, min(1.0, (point.z - bottom) / (top - bottom)))
-        share = share * share * (3.0 - 2.0 * share)
+        share = _smooth((point.z - bottom) / (top - bottom))
         if share == 0.0:
             continue
         taken = 0.0
@@ -107,16 +134,52 @@ def bind_torso(skin, rig, bottom, top):
             moved = weight * share
             skin.vertex_groups[index].add([vertex.index], weight - moved, "REPLACE")
             taken += moved
-        if taken == 0.0:
-            continue
-        for (start, first), (end, second) in zip(spine, spine[1:]):
-            if point.y <= end:
-                along = max(0.0, min(1.0, (point.y - start) / (end - start)))
-                first.add([vertex.index], taken * (1.0 - along), "ADD")
-                second.add([vertex.index], taken * along, "ADD")
-                break
-        else:
-            spine[-1][1].add([vertex.index], taken, "ADD")
+        if taken > 0.0:
+            _hand_to_trunk(spine, vertex.index, point, taken)
+
+
+# Between the legs (#1422), as shares of how far out a leg stands from the midline: the skin
+# nearer the midline than INNER is wholly the trunk's, beyond OUTER wholly the leg's, eased between.
+INNER, OUTER = 0.4, 0.8
+
+
+def bind_underside(skin, rig, inner=INNER, outer=OUTER):
+    """Keeps the skin between the legs with the trunk (#1422): the chest's and throat's underside
+    between the forelegs, the belly between the hind legs and the back between the shoulder
+    blades. Automatic weights give that skin to the nearest leg bones, so it rose with a foreleg
+    swinging back or folding (a walk, a crouch, a faint) and the body thinned out over it (the
+    owner, on #1305). Near the midline (`inner` and `outer`, shares of how far out the leg's root
+    stands) and above the elbows and knees, the legs' share goes to the spine and neck, blended
+    along the body; not to the head, whose skin is the head's measure in `metrics`. The legs keep
+    the skin at their own sides. Runs as `bind_torso` does, before pieces join the skin."""
+    legs = {}
+    for root, top, joint in (("scapula", "upper_arm", "forearm"), ("thigh", "thigh", "shin")):
+        for side in ("L", "R"):
+            head = rig.data.bones[top + "." + side].head_local
+            low = rig.data.bones[joint + "." + side].head_local.z
+            # (how far out the leg stands, the elbow's or knee's height, and halfway up to the
+            # leg's root): the leg's own skin, below, keeps all of its weights.
+            leg = (abs(head.x), low, (low + head.z) / 2.0)
+            for name in _limbs(rig, [root + "." + side]):
+                group = skin.vertex_groups.get(name)
+                if group is not None:
+                    legs[group.index] = leg
+    # Each bone takes the skin around its middle, and two share it where they meet: skin just
+    # behind the neck's root (the crest's first crystal) stays the chest's as the neck bows.
+    trunk = _trunk(skin, rig, ("hips", "spine_01", "spine_02", "neck"), middle=True)
+    to_rig = rig.matrix_world.inverted() @ skin.matrix_world
+    for vertex in skin.data.vertices:
+        point = to_rig @ vertex.co
+        taken = 0.0
+        for index, weight in [(group.group, group.weight) for group in vertex.groups if group.group in legs]:
+            reach, low, high = legs[index]
+            across = 1.0 - _smooth((abs(point.x) / reach - inner) / (outer - inner))
+            moved = weight * across * _smooth((point.z - low) / (high - low))
+            if moved > 0.0:
+                skin.vertex_groups[index].add([vertex.index], weight - moved, "REPLACE")
+                taken += moved
+        if taken > 0.0:
+            _hand_to_trunk(trunk, vertex.index, point, taken)
 
 
 def _chain(out, names, points, parent, side):

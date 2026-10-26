@@ -288,6 +288,7 @@ def build(out):
 
     def reweigh(body):
         quadruped.bind_torso(body, rig, *(height * SCALE for height in TORSO_WEIGHT_HEIGHTS))
+        quadruped.bind_underside(body, rig)
         SNOUT.bind_jaw(body, "jaw", SCALE)
 
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "tongue", "ear.L", "ear.R", *drifting.names, *lids.names),
