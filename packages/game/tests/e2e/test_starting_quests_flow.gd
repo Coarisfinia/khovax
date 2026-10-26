@@ -38,8 +38,7 @@ func _play(difficulty: int) -> String:
 	if not _world.problem.is_empty():
 		return _world.problem
 	_quests = QuestTracker.new()
-	# Read afresh: the session's cached quest book is the one other flows add their own quests to.
-	_quests.book = QuestKeeper.book_of(QuestContent.load_quests())
+	_quests.book = QuestKeeper.book_of(QuestContent.cached())
 	_dominated = 0
 	var asking: Command = Command.new()
 	var data: int = HostSettings.request_data(HostSettings.DIFFICULTY, difficulty)
