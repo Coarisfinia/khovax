@@ -388,10 +388,15 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 			traps.append(request.data)
 	if traps != [code]:
 		return "changing the gear posted the trap requests %s, not one for the spikes" % [traps]
+	# A tick carries one request, oldest first: the host's difficulty steps (_menu_difficulty) go
+	# ahead of the trap's.
 	var driver: GameDriver = FlowGame.driver(main)
-	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
-	var entry: Dictionary = driver.world.stored(driver.input.slot, SpikesFeature.ID)
-	var stored: int = SpikesFeature.trap_of(entry)
+	var stored: int = 0
+	for _tick: int in kept.outbox.entries.size():
+		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+		stored = SpikesFeature.trap_of(driver.world.stored(driver.input.slot, SpikesFeature.ID))
+		if stored == code:
+			break
 	if stored != code:
 		return "the spikes in the trap slot didn't reach the world's store: %d" % stored
 	return ""

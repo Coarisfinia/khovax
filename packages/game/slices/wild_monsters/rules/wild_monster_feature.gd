@@ -108,7 +108,7 @@ func start(state: GameState) -> void:
 		var monster: Entity = state.add_entity(Entity.NO_SLOT, spot)
 		monsters.append(monster.id)
 		var wild: WildMonster = WildMonster.of(species)
-		health.track(monster.id, species, true)
+		health.track(monster.id, species)
 		if named != null:
 			wild.emits = named.emits
 			wild.target = named.target
@@ -120,6 +120,8 @@ func start(state: GameState) -> void:
 					full - maxi(Fixed.scale(full, WOUNDED_HP), 1),
 					false,
 				)
+		# Wild after its starting wound, so a region's wounded share doesn't hang on the difficulty.
+		health.track(monster.id, species, true)
 		_wild[monster.id] = wild
 	# Drawn after every species, so the short ids never shift which species roll; one already
 	# taken here is drawn again, so no two share one.
