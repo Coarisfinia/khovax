@@ -5,7 +5,8 @@ extends RefCounted
 ## (owner, #1320). The player plays a fresh world alone, without companions, follows the quest
 ## their quest list follows (QuestTracker.focused) to the tile it's marked at (QuestTargets), and
 ## walks onto it; a domination step marked over a wild monster no ring can enclose where it stands
-## (RingableGround) rings the nearest one that can be, as a player would. They ring a monster by
+## (RingableGround) rings the nearest one of its species that can be, as a player would. They ring a
+## monster by
 ## walking once round it and placing their totem, and the quests count what the world raises.
 
 ## The world's seed: the same world every run, so the check is deterministic.
@@ -37,12 +38,15 @@ func _play(difficulty: int) -> String:
 	if not _world.problem.is_empty():
 		return _world.problem
 	_quests = QuestTracker.new()
-	_quests.book = QuestKeeper.book_of(QuestContent.cached())
+	# Read afresh: the session's cached quest book is the one other flows add their own quests to.
+	_quests.book = QuestKeeper.book_of(QuestContent.load_quests())
 	_dominated = 0
 	var asking: Command = Command.new()
 	var data: int = HostSettings.request_data(HostSettings.DIFFICULTY, difficulty)
 	Outbox.new().post(OutboxEntry.HOST_SETTING, data).fill(asking)
 	_tick([asking])
+	if HostSettings.difficulty(_state()) != difficulty:
+		return "the host's request for the difficulty wasn't taken"
 	var starting: Array[String] = _starting()
 	if starting.is_empty():
 		return "the starting instance %s has no quest of its own" % _start
@@ -96,7 +100,7 @@ func _follow(targets: Dictionary[String, Vector2i]) -> bool:
 	var monster: int = _monster_at(tile)
 	if monster < 0:
 		return _walk_to(tile)
-	monster = monster if _ringable(tile) else _nearest_ringable()
+	monster = monster if _ringable(tile) else _nearest_ringable(_wild().species_of(monster))
 	return monster >= 0 and _dominate(monster)
 
 
@@ -116,14 +120,16 @@ func _ringable(center: Vector2i) -> bool:
 	return true
 
 
-## The wild monster nearest the player a ring of one can close round, or -1.
-func _nearest_ringable() -> int:
+## The wild monster of `species` nearest the player a ring of one can close round, or -1: the
+## marked one's species, which its step asks for.
+func _nearest_ringable(species: String) -> int:
 	var nearest: int = -1
 	var gap: int = 0
 	var from: Vector2i = _state().player(0).tile
 	for monster: int in _wild().monsters:
 		var tile: Vector2i = _state().entity(monster).tile
-		if _ringable(tile) and (nearest < 0 or Hex.distance(tile, from) < gap):
+		var near: bool = nearest < 0 or Hex.distance(tile, from) < gap
+		if _wild().species_of(monster) == species and _ringable(tile) and near:
 			nearest = monster
 			gap = Hex.distance(tile, from)
 	return nearest
@@ -151,7 +157,9 @@ func _dominate(monster: int) -> bool:
 	return false
 
 
-## Walks the player to `goal` by a shortest way. Whether they stand there.
+## Walks the player to `goal` by a shortest way. Whether they stand there. It steps the whole
+## World, so the instance's and the world's events reach the quests, where FlowSteps.walk steps one
+## instance's state alone.
 func _walk_to(goal: Vector2i) -> bool:
 	var from: Vector2i = _state().player(0).tile
 	for direction: int in FlowSteps.shortest_path(_state(), from, goal):
