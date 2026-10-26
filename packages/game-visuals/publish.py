@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from urllib.parse import quote
 
 from game_shared import log
 
@@ -41,6 +42,14 @@ def main() -> int:
     missing = [str(file) for file in args.files if not file.is_file()]
     if missing:
         log.error(f"no such file: {', '.join(missing)}")
+        return 1
+    # Each file lands under its own name, so two with one name, or one also being removed, would
+    # leave a link to the wrong picture or to none.
+    names = [file.name for file in args.files]
+    twice = {name for name in names if names.count(name) > 1}
+    clashes = sorted(twice | (set(names) & set(args.remove)))
+    if clashes:
+        log.error(f"named twice, or both published and removed: {', '.join(clashes)}")
         return 1
 
     for attempt in range(1, ATTEMPTS + 1):
@@ -65,7 +74,7 @@ def main() -> int:
         return 1
 
     for file in args.files:
-        log.info(f"![{file.stem}]({URL.format(file.name)})")
+        log.info(f"![{file.stem}]({URL.format(quote(file.name))})")
     return 0
 
 
