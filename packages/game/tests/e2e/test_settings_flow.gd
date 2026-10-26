@@ -632,10 +632,16 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 	return ""
 
 
-## The host steps the difficulty to Hard (#1315): it has no Auto button, the row says Hard at once
-## and the request waits in the profile's outbox for the world; stepping back says Standard again.
+## The host opens the Difficulty submenu and steps the difficulty to Hard (#1315): it has no Auto
+## button, the row says Hard at once and the request waits in the profile's outbox for the world;
+## stepping back says Standard again, and the submenu's Back button returns to the list.
 func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	var next: Button = tab.button(HostSettings.DIFFICULTY, "Next")
+	if next.is_visible_in_tree():
+		return "the difficulty's row shows over the list"
+	tab.opener(SettingsTab.DIFFICULTY).pressed.emit()
+	if tab.open_submenu() != SettingsTab.DIFFICULTY or not next.is_visible_in_tree():
+		return "the Difficulty button doesn't show the difficulty's row"
 	if next.get_parent().has_node("Auto"):
 		return "the difficulty has an Auto button"
 	next.pressed.emit()
@@ -647,6 +653,9 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	tab.button(HostSettings.DIFFICULTY, "Previous").pressed.emit()
 	if said != "Hard" or not asked or tab.shown[HostSettings.DIFFICULTY] != "Standard":
 		return "stepping the difficulty shows %s, asking the world: %s" % [said, asked]
+	tab.back_button(SettingsTab.DIFFICULTY).pressed.emit()
+	if tab.open_submenu() != SettingsTab.LIST or next.is_visible_in_tree():
+		return "the Difficulty submenu's Back button doesn't return to the list"
 	return ""
 
 
