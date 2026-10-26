@@ -2,8 +2,9 @@ class_name MoveHint
 extends Control
 ## The move hint (#1222): at the start of a new game, the glyphs that walk this machine's player
 ## stand just under them, for the device in use (InputGlyphs): the left stick, W, A, S and D, or a
-## drag on touch (TouchStick). Once the player first walks it fades, and it never shows again for
-## their profile (MoveHintKeeper). None while the game hears no input (the menu or a dialog is
+## drag on touch (TouchStick). Once the player first walks (MoveHintTie) it fades, and it never
+## shows again for their profile (MoveHintKeeper). It only reads whether they walked. None while the
+## game hears no input (the menu or a dialog is
 ## open), and none while the camera doesn't show the player.
 
 ## The walking actions, each with its place in the keys' block in glyph sides: W over S, with A
@@ -57,28 +58,13 @@ func fade(delta: float) -> void:
 	alpha = maxf(alpha - delta / FADE_SECONDS, 0.0) if keeper.walked else 1.0
 
 
-## Notes the player's first walk and places the glyphs under them, or hides them. Called every
-## frame; tests call it.
+## Places the glyphs under the player, or hides them. Called every frame; tests call it.
 func show_state() -> void:
 	shown = {}
 	glyphs = {}
-	if keeper != null and not keeper.walked and _walks():
-		keeper.walk()
 	if alpha > 0.0 and _hears_input() and _figure_shown():
 		_place_under(figure.global_position)
 	queue_redraw()
-
-
-## Whether this machine's player is walking now.
-func _walks() -> bool:
-	if driver == null or driver.state == null or driver.input == null:
-		return false
-	var player: Entity = driver.state.player(driver.input.slot)
-	var movement: MovementFeature = driver.state.feature(MovementFeature.ID) as MovementFeature
-	if player == null or movement == null:
-		return false
-	var walk: Walk = movement.walk(player.id)
-	return walk != null and walk.is_moving()
 
 
 ## Whether the game hears this machine's player's input now: none while blocked or in a dialog.

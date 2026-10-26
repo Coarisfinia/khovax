@@ -316,7 +316,8 @@ func _check_stick_walk() -> String:
 
 ## The move hint (#1222): until the player first walks, the glyphs that walk them stand just under
 ## them, W over S with A and D beside it with a keyboard, the left stick alone with a controller and
-## a drag alone on touch. The first step notes the walk in their profile, and the hint fades.
+## a drag alone on touch. The first step notes the walk in their profile (MoveHintTie), and the
+## hint fades.
 func _check_move_hint() -> String:
 	var hint: MoveHint = _main.get_node("Hud/MoveHint") as MoveHint
 	hint.set_process(false)
@@ -350,9 +351,7 @@ func _check_move_hint() -> String:
 	if not keys_lie or not under:
 		return "the move hint's keys didn't lie as on a keyboard, just under the player"
 	Input.action_press(_open_side())
-	for _i: int in ceili(MOVE_SECONDS / STEP):
-		_step()
-		hint.show_state()
+	_finish_step()
 	_release_all()
 	_finish_step()
 	if not hint.keeper.walked or hint.keeper.beside() != { MoveHintKeeper.KEY: true }:

@@ -71,6 +71,7 @@
 [ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/meta/move_hint_keeper.gd" id="63_move_hint_keeper"]
 [ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
+[ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -126,6 +127,11 @@ holder = NodePath("../ProfileHolder")
 [node name="MoveHintKeeper" type="Node" parent="." node_paths=PackedStringArray("holder")]
 script = ExtResource("63_move_hint_keeper")
 holder = NodePath("../ProfileHolder")
+
+[node name="MoveHintTie" type="Node" parent="." node_paths=PackedStringArray("driver", "keeper")]
+script = ExtResource("65_move_hint_tie")
+driver = NodePath("../Driver")
+keeper = NodePath("../MoveHintKeeper")
 
 [node name="PlaceTie" type="Node" parent="." node_paths=PackedStringArray("driver", "keeper")]
 script = ExtResource("place_tie")
