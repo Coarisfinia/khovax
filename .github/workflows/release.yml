@@ -1,12 +1,13 @@
 name: release
 
-# A version tag (v1.2.3) makes a GitHub release with the desktop and web builds attached (#21,
-# #22, #92). The tag must match application/config/version in packages/game/project.godot; the
-# README says how to cut one. The build runs read-only; only the release job, which runs no project
-# code, may write.
+# A version tag (v1.2.3) makes a GitHub release with the desktop and web builds attached as plain
+# files, never zips (#21, #22, #92, #1312). The tag must match application/config/version in
+# packages/game/project.godot; the README says how to cut one. The build runs read-only; only the
+# release job, which runs no project code, may write.
 on:
   push:
-    tags: ["v*"]
+    # Not the dev releases' tags (v1.2.3-dev.45, made by ci.yml, #1312).
+    tags: ["v*", "!v*-*"]
 
 permissions:
   contents: read
@@ -20,10 +21,6 @@ jobs:
   build:
     runs-on: ubuntu-26.04
     timeout-minutes: 20
-    outputs:
-      zip: ${{ steps.export.outputs.zip }}
-      web: ${{ steps.export.outputs.web }}
-      linux: ${{ steps.export.outputs.linux }}
     # Every step runs in the game's project (#1101), where its version and builds are; the Python
     # tooling is beside it, in ../<package>/.
     defaults:
@@ -59,44 +56,31 @@ jobs:
           cache: "false"
           templates: "true"
 
-      - name: "📦 Windows + Linux + web: export and pack the release builds"
-        id: export
+      - name: "📦 Windows + Linux + web: export the release builds"
         # Files are named after the game's display name, so renaming the game needs no change here;
-        # only letters, digits, dots, dashes and underscores are kept, and never a leading dash.
+        # only letters, digits, dots, dashes and underscores are kept, and never a leading dash. The
+        # web build's files keep their names, which its index.html loads them by.
         run: |
-          mkdir -p build/zip
-          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
-          test -s build/khovax.exe
           name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' project.godot \
             | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
           name=${name:-khovax}
-          cp build/khovax.exe "build/zip/${name}.exe"
-          zip="${name}-${GITHUB_REF_NAME}-windows-x86_64.zip"
-          (cd build/zip && zip -q -- "../${zip}" "${name}.exe")
-          echo "zip=${zip}" >> "$GITHUB_OUTPUT"
-          mkdir -p build/web
-          timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
-          test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
-          web="${name}-${GITHUB_REF_NAME}-web.zip"
-          (cd build/web && zip -q -r -- "../${web}" .)
-          echo "web=${web}" >> "$GITHUB_OUTPUT"
-          # A tar.gz keeps the executable bit, which a zip from here loses on extraction.
+          mkdir -p build/release build/web
+          timeout 300 ~/godot/godot --headless --path . --export-release "Windows Desktop" build/khovax.exe
+          test -s build/khovax.exe
+          cp build/khovax.exe "build/release/${name}-${GITHUB_REF_NAME}-windows-x86_64.exe"
           timeout 300 ~/godot/godot --headless --path . --export-release "Linux" build/khovax.x86_64
           test -s build/khovax.x86_64
-          mkdir -p build/linux && cp build/khovax.x86_64 "build/linux/${name}.x86_64"
-          chmod +x "build/linux/${name}.x86_64"
-          linux="${name}-${GITHUB_REF_NAME}-linux-x86_64.tar.gz"
-          tar -czf "build/${linux}" -C build/linux "${name}.x86_64"
-          echo "linux=${linux}" >> "$GITHUB_OUTPUT"
+          cp build/khovax.x86_64 "build/release/${name}-${GITHUB_REF_NAME}-linux.x86_64"
+          timeout 300 ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
+          test -s build/web/index.html && test -s build/web/index.wasm && test -s build/web/index.pck
 
-      - name: "⬆️ 📦 Release builds: upload (Windows, Linux and web archives)"
+      - name: "⬆️ 📦 Release builds: upload (Windows, Linux and web)"
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-builds
           path: |
-            packages/game/build/${{ steps.export.outputs.zip }}
-            packages/game/build/${{ steps.export.outputs.web }}
-            packages/game/build/${{ steps.export.outputs.linux }}
+            packages/game/build/release/
+            packages/game/build/web/
           retention-days: 3
 
   release:
@@ -115,9 +99,6 @@ jobs:
       - name: "🚀 Create the GitHub release"
         env:
           GH_TOKEN: ${{ github.token }}
-          ZIP: ${{ needs.build.outputs.zip }}
-          WEB: ${{ needs.build.outputs.web }}
-          LINUX: ${{ needs.build.outputs.linux }}
         run: |
           # The tag must still point at the commit that was built: a tag moved since then fails.
           tagged=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}" --jq .sha)
@@ -125,5 +106,9 @@ jobs:
             echo "::error::tag ${GITHUB_REF_NAME} now points at ${tagged}, not the built ${GITHUB_SHA}"
             exit 1
           fi
-          gh release create "$GITHUB_REF_NAME" "$ZIP" "$WEB" "$LINUX" --repo "$GITHUB_REPOSITORY" --verify-tag \
+          files=(release/*)
+          for file in web/*; do
+            files+=("${file}#web: $(basename "$file")")
+          done
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "$GITHUB_REF_NAME" --generate-notes

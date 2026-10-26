@@ -793,3 +793,81 @@ jobs:
       - name: "🚀 🌐 Web build: deploy to GitHub Pages"
         id: deploy
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  dev-release:
+    # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per
+    # build), with the builds the export job just made attached as plain files, never zips: the
+    # Android APK, the Windows .exe, the Linux executable and the web build's files. Its tag is
+    # v<next>-dev.<run number>, where <next> follows the last prod release (#747), or is the game's
+    # config/version while there is none. It checks out only project.godot, for the version and the
+    # name, and runs nothing from the repository. Pull requests and the merge queue never release.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [headless, export, apk-e2e, linux-e2e, web-e2e]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      # Creating the release creates its tag. A tag made with the workflow's token starts no
+      # workflow, so release.yml doesn't run for it either.
+      contents: write
+    steps:
+      - name: "📥 Check out the game's project settings"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: packages/game/project.godot
+          sparse-checkout-cone-mode: false
+
+      - name: "⬇️ 📦 Builds: download (khovax-debug-apk, khovax-windows, khovax-linux, khovax-web)"
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: khovax-{debug-apk,windows,linux,web}
+          path: builds
+
+      - name: "🚀 Create the dev release"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          godot_setting() {
+            awk -F'"' -v key="$1" '/^\[/ { section = $0 } section == "[application]" && $0 ~ "^config/" key "=\"" { print $2 }' \
+              packages/game/project.godot
+          }
+          # The next version after the last prod release (a full release, never a prerelease).
+          last=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          if [[ "$last" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          else
+            next=$(godot_setting version)
+          fi
+          if ! [[ "$next" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::no x.y.z version to build on: last prod release \"${last}\", config/version \"${next}\""
+            exit 1
+          fi
+          tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
+          # A rerun of this run finds its release already made.
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "${tag} already exists"
+            exit 0
+          fi
+          # Named after the game's display name, as release.yml names its files.
+          name=$(godot_setting name | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
+          name=${name:-khovax}
+          mkdir upload
+          cp builds/khovax-debug-apk/khovax.apk "upload/${name}-${tag}-android.apk"
+          cp builds/khovax-windows/khovax.exe "upload/${name}-${tag}-windows-x86_64.exe"
+          cp builds/khovax-linux/khovax.x86_64 "upload/${name}-${tag}-linux.x86_64"
+          files=(upload/*)
+          # The web build's files keep their names, which its index.html loads them by.
+          for file in builds/khovax-web/*; do
+            files+=("${file}#web: $(basename "$file")")
+          done
+          pages="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
+          notes="Dev build of ${GITHUB_SHA}, made by [this CI run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+          The Android APK is signed with a throwaway debug key: uninstall an older build before installing it. The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
+          # The changes since the previous dev release; the very first lists none, not the whole history.
+          previous=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          start=()
+          if [ -n "$previous" ]; then
+            start=(--generate-notes --notes-start-tag "$previous")
+          fi
+          gh release create "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --title "$tag" --notes "$notes" "${start[@]}"
