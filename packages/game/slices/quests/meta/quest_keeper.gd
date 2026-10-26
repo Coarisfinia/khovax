@@ -39,6 +39,17 @@ func count(facts: Array[QuestFact]) -> void:
 		holder.change(advance.bind(tracker, facts))
 
 
+## Makes the open quest `id` the one this player follows (#1298), saved with the profile.
+func follow(id: String) -> void:
+	if quests() != null and tracker.open_steps().has(id):
+		holder.change(_follow.bind(tracker, id))
+
+
+## Makes `id` the quest followed in `kept`; `_profile` has nothing to change.
+static func _follow(_profile: Profile, kept: QuestTracker, id: String) -> void:
+	kept.focus = id
+
+
 ## Counts `facts` on the quests `kept`, in order, and gives `profile` what finishing each quest
 ## they finish gives (QuestRewards), in the same change.
 static func advance(profile: Profile, kept: QuestTracker, facts: Array[QuestFact]) -> void:

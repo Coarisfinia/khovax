@@ -66,6 +66,7 @@
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/focus_keys.gd" id="58_focus_keys"]
 [ext_resource type="Script" path="res://slices/wild_monsters/ui/wild_hp_bars.gd" id="59_wild_hp_bars"]
 [ext_resource type="Script" path="res://slices/foraging/look/feeding_tie.gd" id="60_feeding_tie"]
+[ext_resource type="Script" path="res://slices/survey/ui/survey_quest_picker.gd" id="61_survey_quest_picker"]
 
 [node name="Main" type="Node3D" unique_id=1635831808]
 
@@ -360,6 +361,11 @@ script = ExtResource("6_stick")
 [node name="SurveyPinch" type="Node" parent="Hud" node_paths=PackedStringArray("survey") unique_id=3580358035]
 script = ExtResource("32_survey_pinch")
 survey = NodePath("../../SurveyChoice")
+
+[node name="SurveyQuestPicker" type="Node" parent="Hud" node_paths=PackedStringArray("survey", "pinch")]
+script = ExtResource("61_survey_quest_picker")
+survey = NodePath("../../SurveyChoice")
+pinch = NodePath("../SurveyPinch")
 
 [node name="SurveyButtons" type="Control" parent="Hud" node_paths=PackedStringArray("survey") unique_id=3520352035]
 layout_mode = 3

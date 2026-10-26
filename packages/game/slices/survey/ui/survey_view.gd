@@ -15,7 +15,9 @@ extends Control
 ## the instances it shows that a faction holds (SurveyHeldMarks, #637), and over that its child
 ## FocusedQuest draws the followed quest's arrows, large and bright yellow, each labelled with its
 ## quest's name and where its step counts (SurveyFocusedQuest, #1278): size and label, not only
-## color, tell it from the others (#68). It's
+## color, tell it from the others (#68). Above all, its child QuestHover shows the quest card of a
+## grey arrow the pointer rests on (SurveyQuestHover), which a tap or a click follows
+## (SurveyQuestPicker). It's
 ## centered on this machine's player, gliding after them. Where it shows and how close is
 ## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
 ## profile.
@@ -24,6 +26,8 @@ extends Control
 const HELD_MARKS: String = "HeldMarks"
 ## The name of its child that draws the followed quest's arrows and labels them.
 const FOCUSED_QUEST: String = "FocusedQuest"
+## The name of its child that shows the card of the quest whose arrow the pointer rests on.
+const QUEST_HOVER: String = "QuestHover"
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
 ## A tile's hexagon is drawn a little smaller than the tile, so tiles of one kind stay apart.
@@ -41,6 +45,8 @@ const OTHER_ARROW_SHARE: float = 0.6
 const OTHER_ARROW_COLOR: Color = QuestMarkerView.OTHER_COLOR
 ## The followed quest's arrow: bright yellow, as its markers in the world (#1328).
 const FOLLOWED_ARROW_COLOR: Color = QuestMarkerView.COLOR
+## How large the spot a pointer or a finger picks a grey arrow on is, at least, in pixels.
+const PICK_PIXELS: float = 32.0
 ## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
 ## Below the pixels here it wouldn't read, so it's left out at far zooms in a corner; the color and
 ## the ink ring remain.
@@ -102,6 +108,9 @@ func _ready() -> void:
 	var focused: SurveyFocusedQuest = SurveyFocusedQuest.new()
 	focused.name = FOCUSED_QUEST
 	add_child(focused)
+	var hover: SurveyQuestHover = SurveyQuestHover.new()
+	hover.name = QUEST_HOVER
+	add_child(hover)
 
 
 func _process(delta: float) -> void:
@@ -151,6 +160,31 @@ func held_marks() -> SurveyHeldMarks:
 ## Its child drawing the followed quest's arrows and their labels (#1278, #1298).
 func focused_quest() -> SurveyFocusedQuest:
 	return get_node(FOCUSED_QUEST) as SurveyFocusedQuest
+
+
+## Its child showing the card of the quest whose grey arrow the pointer rests on (#1298).
+func quest_hover() -> SurveyQuestHover:
+	return get_node(QUEST_HOVER) as SurveyQuestHover
+
+
+## The key in `quest_targets` of the grey arrow, a quest not followed, at `at` in the view's own
+## pixels, or "" (#1298): the spot round it, at least PICK_PIXELS large, so a finger finds it.
+func quest_at(at: Vector2) -> String:
+	var found: String = ""
+	for key: String in quest_targets:
+		if not focused_quest().arrows.has(key) and grey_arrow_box(key).has_point(at):
+			found = key
+	return found
+
+
+## The box round the grey arrow `key` of `quest_targets` that picks it, in the view's own pixels:
+## the arrow's, grown to at least PICK_PIXELS each way.
+func grey_arrow_box(key: String) -> Rect2:
+	var length: float = _arrow_length() * OTHER_ARROW_SHARE + ARROW_INK * 2.0
+	var tip: Vector2 = to_view(quest_targets[key])
+	var box: Rect2 = Rect2(tip - Vector2(length / 2.0, length), Vector2(length, length))
+	var short: Vector2 = (Vector2.ONE * PICK_PIXELS - box.size).max(Vector2.ZERO)
+	return box.grow_individual(short.x / 2.0, short.y / 2.0, short.x / 2.0, short.y / 2.0)
 
 
 ## Works out what is shown from the state. Called every frame while it shows; tests call it

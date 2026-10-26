@@ -89,7 +89,7 @@ func _show(survey: SurveyView, targets: Dictionary[String, Vector2i]) -> void:
 	var placed: Array[Rect2] = []
 	placed.append_array(circles)
 	for key: String in targets:
-		var step: QuestStep = _step_of(steps, key)
+		var step: QuestStep = step_of(steps, key)
 		if step == null:
 			continue
 		var label: QuestMarkerLabel = _label(key)
@@ -157,7 +157,7 @@ static func _fits(box: Rect2, area: Vector2, placed: Array[Rect2]) -> bool:
 
 ## The step the arrow `key` points for, of the open `steps`: the quest's current step, or the
 ## choice its key names after a slash (QuestTargets.of); null when its quest isn't open.
-static func _step_of(steps: Dictionary[String, QuestStep], key: String) -> QuestStep:
+static func step_of(steps: Dictionary[String, QuestStep], key: String) -> QuestStep:
 	var id: String = key.get_slice("/", 0)
 	if not steps.has(id):
 		return null
