@@ -79,7 +79,8 @@ def _take_weights(piece, body):
 
 def _take_root_weights(pieces, body):
     """Every vertex of each piece takes the body's weights at the piece's root (`root`): those
-    of the corners of the body's face nearest it, blended by where the root lies on it."""
+    of the corners of the body's face nearest it, blended by where the point nearest the root
+    lies on it."""
     world = body.matrix_world
     corners = [world @ vertex.co for vertex in body.data.vertices]
     faces = [list(polygon.vertices) for polygon in body.data.polygons]
@@ -89,9 +90,11 @@ def _take_root_weights(pieces, body):
         low, high = _bounds(piece)
         spot = Vector([a + share * (b - a) for share, a, b in zip(piece[ROOT], low, high)])
         del piece[ROOT]
-        _location, _normal, face, _distance = tree.find_nearest(spot)
+        # The root lies a little under the skin (a crystal grows from inside it): its weights are
+        # those of the nearest point on the skin.
+        location, _normal, face, _distance = tree.find_nearest(spot)
         indices = faces[face]
-        shares = poly_3d_calc([corners[index] for index in indices], spot)
+        shares = poly_3d_calc([corners[index] for index in indices], location)
         weights = {}
         for index, share in zip(indices, shares):
             for group in body.data.vertices[index].groups:
