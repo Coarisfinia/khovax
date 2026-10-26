@@ -49,10 +49,12 @@ func _draw() -> void:
 		ActionGlyph.draw_on(self, glyphs[action], shown[action], alpha)
 
 
-## Fades the hint by `delta` seconds' worth once the player has walked; tests call it.
+## Fades the hint by `delta` seconds' worth once the player has walked, and shows it whole while
+## they haven't, also once a profile starts afresh; tests call it.
 func fade(delta: float) -> void:
-	if keeper != null and keeper.walked:
-		alpha = maxf(alpha - delta / FADE_SECONDS, 0.0)
+	if keeper == null:
+		return
+	alpha = maxf(alpha - delta / FADE_SECONDS, 0.0) if keeper.walked else 1.0
 
 
 ## Notes the player's first walk and places the glyphs under them, or hides them. Called every
