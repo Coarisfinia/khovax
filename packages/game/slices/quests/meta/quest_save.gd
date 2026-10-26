@@ -5,11 +5,16 @@ extends RefCounted
 ## (`quests_started`), and the one the player picked to follow (`quest_focus`, #1298), kept in the
 ## profile's file by QuestKeeper, its companion.
 ## Integers and ids only, every value checked as it's read, and brought up to date from older
-## formats one step at a time, at the profile's save format (ProfileSave.FORMAT).
+## formats one step at a time, at the profile's format changes (ProfileSave.CHANGES).
 
-## The save format that brought the quest the player follows and the order side quests started
-## in (#1298).
-const FOCUS_FORMAT: int = 21
+## The profile's format changes that changed the quests' keys, each named for its step.
+const QUESTS: String = "184-quests"
+const DOMINATED: String = "317-dominated-monsters"
+const STEPS_DONE: String = "573-quest-steps-done"
+const SPECIES_IDS: String = "763-species-ids"
+const INSTANCE_IDS: String = "975-instance-ids"
+## The one that brought the quest the player follows and the order side quests started in (#1298).
+const FOCUS: String = "1298-quest-focus"
 ## The first quest's id before format 5, and since (#317).
 const OLD_FIRST_QUEST: String = "first_catch"
 const NEW_FIRST_QUEST: String = "first_domination"
@@ -40,30 +45,29 @@ static func beside(tracker: QuestTracker) -> Dictionary:
 	}
 
 
-## Brings the quests in the save `data`, in save format `format`, up to the current one, oldest
-## step first.
-static func migrate(data: Dictionary, format: int) -> void:
-	# Format 2 to 3: quests (#184) start with no progress.
-	if format < 3:
+## Brings the quests in the save `data`, written with the profile's format changes `changes`, up to
+## the current format: a step for each change it lacks, oldest first.
+static func migrate(data: Dictionary, changes: Array[String]) -> void:
+	# Quests (#184) start with no progress.
+	if not changes.has(QUESTS):
 		data["quest_progress"] = {}
 		data["quests_done"] = []
-	# Format 4 to 5: monsters are dominated, not captured (#317), and so is the first quest.
-	if format < 5:
+	# Monsters are dominated, not captured (#317), and so is the first quest.
+	if not changes.has(DOMINATED):
 		_rename_quest(data, OLD_FIRST_QUEST, NEW_FIRST_QUEST)
-	if format < 9:
+	if not changes.has(STEPS_DONE):
 		_keep_done(data)
-	# Format 13 to 14: a species' id is its name (#763), and so are the quest ids that named one.
-	if format < 14:
+	# A species' id is its name (#763), and so are the quest ids that named one.
+	if not changes.has(SPECIES_IDS):
 		for old_id: String in OLD_QUESTS:
 			_rename_quest(data, old_id, OLD_QUESTS[old_id])
-	# Format 15 to 16: the instances have Land-speech ids (#975), and so do the quest ids that named
-	# one.
-	if format < 16:
+	# The instances have Land-speech ids (#975), and so do the quest ids that named one.
+	if not changes.has(INSTANCE_IDS):
 		for old_id: String in OLD_INSTANCE_QUESTS:
 			_rename_quest(data, old_id, OLD_INSTANCE_QUESTS[old_id])
-	# Format 20 to 21: the player follows the newest quest (#1298), and the order side quests
-	# started in wasn't kept, so the ones started count as started in id order.
-	if format < FOCUS_FORMAT:
+	# The player follows the newest quest (#1298), and the order side quests started in wasn't
+	# kept, so the ones started count as started in id order.
+	if not changes.has(FOCUS):
 		var progress: Variant = data.get("quest_progress")
 		var by_id: Dictionary = progress if progress is Dictionary else {}
 		var ids: Array = by_id.keys()

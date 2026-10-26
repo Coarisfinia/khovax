@@ -6,8 +6,8 @@ extends ProfileCompanion
 ## companion it is (ProfileHolder.companions), as `codex_met`: each kind's word, then the ids met,
 ## in order.
 
-## The profile save format the book starts in (ProfileSave.FORMAT then).
-const SINCE_FORMAT: int = 18
+## The profile's format change the book starts in (ProfileSave.CHANGES).
+const SINCE: String = "1174-codex-met"
 ## The save's key.
 const KEY: String = "codex_met"
 
@@ -39,9 +39,9 @@ func meet(kind: String, id: String) -> void:
 	holder.change(_add.bind(kind, id))
 
 
-func migrate(data: Dictionary, format: int) -> void:
-	# Format 17 to 18: the book starts with nothing met.
-	if format < SINCE_FORMAT:
+func migrate(data: Dictionary, changes: Array[String]) -> void:
+	# The book starts with nothing met.
+	if not changes.has(SINCE):
 		data[KEY] = {}
 
 

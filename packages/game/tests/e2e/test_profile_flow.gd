@@ -267,7 +267,7 @@ func _check_old_faction_ids() -> String:
 	var new_code: int = Territory.code(FlowSteps.FOREST, new_id)
 	var then_code: int = Territory.code("forest", new_id)
 	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, then_code)
-	var text: String = _text(profile).replace(_format(ProfileSave.FORMAT), _format(14))
+	var text: String = _in_format(_text(profile), 14)
 	text = text.replace(
 		new_id,
 		old_id,
@@ -297,7 +297,7 @@ func _check_old_instance_ids() -> String:
 	var quests: QuestTracker = QuestTracker.new()
 	quests.progress["guild_charts_morwe_wudhen"] = QuestProgress.new(1, 0)
 	quests.finished.append("lumwen_hoal_fork")
-	var text: String = _text(profile, quests).replace(_format(ProfileSave.FORMAT), _format(15))
+	var text: String = _in_format(_text(profile, quests), 15)
 	text = text.replace("guild_charts_morwe_wudhen", "guild_charts_the_forest")
 	text = text.replace("lumwen_hoal_fork", "glade_fork")
 	text = text.replace(
@@ -315,9 +315,12 @@ func _check_old_instance_ids() -> String:
 	return ""
 
 
-## The save text's format field for `format`.
-static func _format(format: int) -> String:
-	return "\"format\": %d" % format
+## The save `text` in the numbered format `format`, from before format changes had names (#801).
+static func _in_format(text: String, format: int) -> String:
+	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
+	var _unnamed: bool = data.erase(FormatChanges.KEY)
+	data["format"] = format
+	return JSON.stringify(data)
 
 
 ## `profile`'s save with `quests` as format 13 wrote it, with the species and quest ids from before
@@ -331,7 +334,6 @@ func _format_13(profile: Profile, quests: QuestTracker) -> String:
 ## A save that isn't one, comes from a newer build, or contradicts itself is refused, not misread.
 func _check_refused() -> String:
 	var text: String = _text(Profile.new())
-	var format: String = "\"format\": %d" % ProfileSave.FORMAT
 	var done: String = "\"quests_done\": []"
 	var progress: String = "\"quest_progress\": {}"
 	var color: String = "\"personal_color\": -1"
@@ -339,7 +341,6 @@ func _check_refused() -> String:
 	var cases: Dictionary[String, String] = {
 
 		"not json": "not a profile save",
-		text.replace(format, "\"format\": 99"): "save format 99",
 		text.replace(done, "\"quests_done\": [\"a\", \"a\"]"): "a finished quest",
 		text.replace(done, "\"quests_done\": [7]"): "a finished quest",
 		text.replace(done, "\"quests_done\": [\"Bad id\"]"): "a finished quest",
@@ -377,6 +378,20 @@ func _check_refused() -> String:
 		),
 	}
 	var problem: String = _unrefused(cases)
+	return problem if not problem.is_empty() else _check_format_refused()
+
+
+## A save in a format this build can't read is refused (#801): with a newer build's format change,
+## with one listed twice, or numbered past the last numbered format.
+func _check_format_refused() -> String:
+	var text: String = _text(Profile.new())
+	var changes: String = "\"%s\": [" % FormatChanges.KEY
+	var first: String = ProfileSave.NUMBERED[0]
+	var problem: String = _unrefused({
+		text.replace(changes, changes + "\"9999-newer\", "): "save format: format change 9999",
+		text.replace(changes, changes + "\"%s\", " % first): "save format: format change " + first,
+		_in_format(text, ProfileSave.NUMBERED.size() + 2): "save format: format isn't",
+	})
 	return problem if not problem.is_empty() else _check_named()
 
 
@@ -656,7 +671,7 @@ func _check_starting_standing() -> String:
 	if not _parse(at_start).problem.begins_with("the standing with faction " + odun):
 		return "a save holding a faction's starting standing wasn't refused"
 	# A format 22 save could hold it; it loads at the start, as nothing kept.
-	var old: Profile = _parse(at_start.replace(_format(ProfileSave.FORMAT), _format(22)))
+	var old: Profile = _parse(_in_format(at_start, 22))
 	if not old.problem.is_empty() or not old.standings.by_faction.is_empty():
 		return "a format 22 save at a faction's starting standing didn't load: " + old.problem
 	return _check_standings_refused()
@@ -813,8 +828,34 @@ func _check_migrated() -> String:
 		var loaded: Profile = _parse(JSON.stringify(save))
 		if not loaded.problem.is_empty() or _text(loaded) != text:
 			return "an older save %s didn't load as the current one: %s" % [old, loaded.problem]
-	var problem: String = _check_migrated_quest()
+	var last: Profile = _parse(_in_format(text, ProfileSave.NUMBERED.size() + 1))
+	if not last.problem.is_empty() or _text(last) != text:
+		return "a save in the last numbered format didn't load as the current one: " + last.problem
+	var problem: String = _check_change_names()
+	if problem.is_empty():
+		problem = _check_migrated_quest()
 	return problem if not problem.is_empty() else _check_migrated_carried()
+
+
+## Every format change the profile's migrations ask for by name (#801), its own and its
+## companions', is a file in its folder, so a misspelt one can't migrate every save.
+static func _check_change_names() -> String:
+	var known: Array[String] = FormatChanges.names_in(ProfileSave.CHANGES)
+	var asked: Array = ProfileSave.NUMBERED + [
+		QuestSave.QUESTS,
+		QuestSave.DOMINATED,
+		QuestSave.STEPS_DONE,
+		QuestSave.SPECIES_IDS,
+		QuestSave.INSTANCE_IDS,
+		QuestSave.FOCUS,
+		BestiarySave.SINCE,
+		CodexKeeper.SINCE,
+		MoveHintKeeper.SINCE,
+	]
+	for change: Variant in asked:
+		if not known.has(change):
+			return "the profile's format change %s has no file" % [change]
+	return ""
 
 
 ## What a save in each older format holds that the current one doesn't, or holds otherwise.
@@ -902,9 +943,7 @@ func _check_migrated_done() -> String:
 	var refused: String = _unrefused(cases)
 	if not refused.is_empty():
 		return refused
-	var save: Variant = JSON.parse_string(_text(Profile.new()))
-	var data: Dictionary = save
-	data["format"] = 8
+	var data: Dictionary = JSON.parse_string(_in_format(_text(Profile.new()), 8))
 	data["quest_progress"] = {
 		"toads": { "step": 2, "count": 1 },
 		"fresh": { "step": 0, "count": 0 },
@@ -927,6 +966,7 @@ func _as_captured(text: String) -> Dictionary:
 	var data: Dictionary = parsed
 	data["captured_monsters"] = data["dominated_monsters"]
 	var _renamed: bool = data.erase("dominated_monsters")
+	var _unnamed: bool = data.erase(FormatChanges.KEY)
 	return data
 
 
@@ -1027,6 +1067,7 @@ static func _numbered(profile: Profile, format: int, quests: QuestTracker = null
 	for place: int in carried.size():
 		carried[place] = numbers[carried[place]]
 	data["next_monster_id"] = monsters.size() + 1
+	var _unnamed: bool = data.erase(FormatChanges.KEY)
 	data["format"] = format
 	return data
 

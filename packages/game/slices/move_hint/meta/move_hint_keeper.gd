@@ -4,8 +4,8 @@ extends ProfileCompanion
 ## they first do, once per profile. Kept in their profile's file beside the profile, whose companion
 ## it is (ProfileHolder.companions), as `walked`.
 
-## The profile save format the move hint starts in (ProfileSave.FORMAT then).
-const SINCE_FORMAT: int = 25
+## The profile's format change the move hint starts in (ProfileSave.CHANGES).
+const SINCE: String = "1222-move-hint-walked"
 ## The save's key.
 const KEY: String = "walked"
 
@@ -25,9 +25,9 @@ func walk() -> void:
 	walked = true
 
 
-func migrate(data: Dictionary, format: int) -> void:
-	# Format 24 to 25: a profile saved before has played, so the hint for a new game stays away.
-	if format < SINCE_FORMAT:
+func migrate(data: Dictionary, changes: Array[String]) -> void:
+	# A profile saved before has played, so the hint for a new game stays away.
+	if not changes.has(SINCE):
 		data[KEY] = true
 
 

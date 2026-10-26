@@ -1,13 +1,44 @@
 class_name ProfileSave
 extends RefCounted
-## A profile's save format (#37, #276): versioned JSON, integers and ids only. A save in a newer
-## format is refused, and an older one is brought up to date in `parse`, one step at a time, before
-## it's read, every value checked as it's read. What the profile holds and how it changes is
-## Profile's. What later slices keep in the profile's file, like the player's quests, their
-## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
+## A profile's save format (#37, #276): versioned JSON, integers and ids only. A save names the
+## format changes it was written with (FormatChanges, #801); one with a change this build doesn't
+## know (a newer build's) is refused, and one without some is brought up to date in `parse`, one
+## step per change it lacks, before it's read, every value checked as it's read. What the profile
+## holds and how it changes is Profile's. What later slices keep in the profile's file, like the
+## player's quests, their companions (ProfileCompanion, #855) bring up to date, read and write,
+## asking for the same format changes.
 
-## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 25
+## The format's changes, one file each. A format change adds its file there, and its step to
+## `_migrate` or to the companion whose keys it changes.
+const CHANGES: String = "res://slices/profile/meta/format_changes/"
+## The changes of the numbered formats before names (#801), in the order they were numbered: format
+## n had the first n - 1.
+const NUMBERED: Array[String] = [
+	"197-no-runs",
+	"184-quests",
+	"53-carried-monsters",
+	"317-dominated-monsters",
+	"391-personal-color",
+	"399-character-name",
+	"483-standings",
+	"573-quest-steps-done",
+	"690-gear",
+	"658-path-leaning",
+	"700-short-ids",
+	"771-outbox",
+	"763-species-ids",
+	"976-faction-ids",
+	"975-instance-ids",
+	"1173-bestiary",
+	"1174-codex-met",
+	"1251-monster-progress",
+	"754-keyed-on-short-ids",
+	"1298-quest-focus",
+	"1322-half-ranks-lost",
+	"1378-standings-from-start",
+	"1333-postgame",
+	"1222-move-hint-walked",
+]
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -37,7 +68,7 @@ static func to_text(profile: Profile, companions: Array[ProfileCompanion] = []) 
 	for monster: DominatedMonster in profile.dominated_monsters:
 		monsters.append(monster.to_data())
 	var data: Dictionary[String, Variant] = {
-		"format": FORMAT,
+		FormatChanges.KEY: FormatChanges.names_in(CHANGES),
 		"unlocked_slots": profile.unlocked_slots,
 		"dominated_monsters": monsters,
 		"carried": profile.carried,
@@ -80,13 +111,18 @@ static func parse(text: String, companions: Array[ProfileCompanion] = []) -> Pro
 		profile.problem = "not a profile save"
 		return profile
 	var data: Dictionary = parsed
-	var format: int = _int(data.get("format"))
-	if format > FORMAT or format < 1:
-		profile.problem = "save format %d, this build reads up to format %d" % [format, FORMAT]
+	# JSON's numbers are floats here, and DataReader takes whole numbers only (JsonNumbers, #589).
+	var saved: Dictionary = { "format": _int(data.get("format")) }
+	if data.has(FormatChanges.KEY):
+		saved[FormatChanges.KEY] = data[FormatChanges.KEY]
+	var read: DataReader = DataReader.new(saved)
+	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED)
+	if read.failed():
+		profile.problem = "save format: " + read.problem
 		return profile
-	_migrate(data, format)
+	_migrate(data, changes)
 	for companion: ProfileCompanion in companions:
-		companion.migrate(data, format)
+		companion.migrate(data, changes)
 	profile.problem = _read(profile, data)
 	for companion: ProfileCompanion in companions:
 		if profile.problem.is_empty():
@@ -94,47 +130,39 @@ static func parse(text: String, companions: Array[ProfileCompanion] = []) -> Pro
 	return profile
 
 
-## Brings `data` in save format `format` up to the current one, oldest step first.
-static func _migrate(data: Dictionary, format: int) -> void:
-	# The step from format n to n + 1 is at n - 1, so a save in format n takes every one from there.
-	var steps: Array[Callable] = [
-		_migrate_to_2,
-		_migrate_to_3,
-		_migrate_to_4,
-		_migrate_to_5,
-		_migrate_to_6,
-		_migrate_to_7,
-		_migrate_to_8,
-		_migrate_to_9,
-		_migrate_to_10,
-		_migrate_to_11,
-		_migrate_to_12,
-		_migrate_to_13,
-		_migrate_to_14,
-		_migrate_to_15,
-		_migrate_to_16,
-		_migrate_to_17,
-		_migrate_to_18,
-		_migrate_to_19,
-		_migrate_to_20,
-		_migrate_to_21,
-		_migrate_to_22,
-		_migrate_to_23,
-		_migrate_to_24,
-		_migrate_to_25,
-	]
-	for step: int in range(format - 1, steps.size()):
-		steps[step].call(data)
+## Brings `data`, written with the format changes `changes`, up to the current format: each step
+## for a change it lacks, oldest first. The steps from before names (#801) keep the number of the
+## format they brought; a change only the companions' keys took has no step here.
+static func _migrate(data: Dictionary, changes: Array[String]) -> void:
+	# A Dictionary keeps its insertion order, so the steps run in the order written here.
+	var steps: Dictionary[String, Callable] = {
+		"197-no-runs": _migrate_to_2,
+		"53-carried-monsters": _migrate_to_4,
+		"317-dominated-monsters": _migrate_to_5,
+		"391-personal-color": _migrate_to_6,
+		"399-character-name": _migrate_to_7,
+		"483-standings": _migrate_to_8,
+		"690-gear": _migrate_to_10,
+		"658-path-leaning": _migrate_to_11,
+		"700-short-ids": _migrate_to_12,
+		"771-outbox": _migrate_to_13,
+		"763-species-ids": _migrate_to_14,
+		"976-faction-ids": _migrate_to_15,
+		"975-instance-ids": _migrate_to_16,
+		"1251-monster-progress": _migrate_to_19,
+		"754-keyed-on-short-ids": _migrate_to_20,
+		"1322-half-ranks-lost": _migrate_to_22,
+		"1378-standings-from-start": _migrate_to_23,
+		"1333-postgame": _migrate_to_24,
+	}
+	for change: String in steps:
+		if not changes.has(change):
+			steps[change].call(data)
 
 
 ## Format 1 to 2: there are no runs (#183, #197), so their count is dropped.
 static func _migrate_to_2(data: Dictionary) -> void:
 	var _dropped: bool = data.erase("runs_finished")
-
-
-## Format 2 to 3: quests (#184) start, which keep their own keys (QuestSave).
-static func _migrate_to_3(_data: Dictionary) -> void:
-	return
 
 
 ## Format 3 to 4: a player carries three monsters (#53), the first three they dominated until their
@@ -169,12 +197,6 @@ static func _migrate_to_7(data: Dictionary) -> void:
 ## Format 7 to 8: the player is neutral with every faction (#483).
 static func _migrate_to_8(data: Dictionary) -> void:
 	data["standings"] = {}
-
-
-## Format 8 to 9: a quest's progress keeps the steps done (#573), which the quests' own keys hold
-## (QuestSave).
-static func _migrate_to_9(_data: Dictionary) -> void:
-	return
 
 
 ## Format 9 to 10: the player owns no gear, and their gear slots are empty (#690).
@@ -250,17 +272,6 @@ static func _migrate_to_16(data: Dictionary) -> void:
 	_recode_territories(data, renamed)
 
 
-## Format 16 to 17: the bestiary (#1173) starts, which keeps its own key (BestiarySave).
-static func _migrate_to_17(_data: Dictionary) -> void:
-	return
-
-
-## Format 17 to 18: the codex book (#1174) keeps the names the player has met, its own key
-## (CodexKeeper).
-static func _migrate_to_18(_data: Dictionary) -> void:
-	return
-
-
 ## Format 18 to 19: dominated monsters earn progress toward their next level (#1251), none yet.
 static func _migrate_to_19(data: Dictionary) -> void:
 	for fields: Dictionary in _monster_entries(data):
@@ -287,12 +298,6 @@ static func _migrate_to_20(data: Dictionary) -> void:
 	var _next: bool = data.erase("next_monster_id")
 
 
-## Format 20 to 21: the quests keep the one the player follows (#1298) and the order side quests
-## started in, their own keys (QuestSave).
-static func _migrate_to_21(_data: Dictionary) -> void:
-	return
-
-
 ## Format 21 to 22: a gain with a faction costs half that with its enemies (#1310), and the half
 ## ranks lost that make no whole one yet are kept; none yet.
 static func _migrate_to_22(data: Dictionary) -> void:
@@ -314,12 +319,6 @@ static func _migrate_to_23(data: Dictionary) -> void:
 ## Format 23 to 24: the profile marks the postgame (#1333), which no player is in yet.
 static func _migrate_to_24(data: Dictionary) -> void:
 	data["postgame"] = false
-
-
-## Format 24 to 25: the move hint (#1222) keeps whether the player has walked, its own key
-## (MoveHintKeeper).
-static func _migrate_to_25(_data: Dictionary) -> void:
-	return
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the

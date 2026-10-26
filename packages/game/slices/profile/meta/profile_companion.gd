@@ -6,9 +6,10 @@ extends Node
 ## other slices keep there. Like WorldCompanion for the world's file (#827).
 
 
-## Brings this part's keys in the save `data`, in save format `format`, up to ProfileSave.FORMAT,
-## one step at a time, as ProfileSave does its own.
-func migrate(_data: Dictionary, _format: int) -> void:
+## Brings this part's keys in the save `data`, written with the profile's format changes `changes`
+## (ProfileSave.CHANGES), up to the current format: a step for each change of its own the save
+## lacks, as ProfileSave does its own.
+func migrate(_data: Dictionary, _changes: Array[String]) -> void:
 	return
 
 

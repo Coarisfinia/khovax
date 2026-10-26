@@ -40,8 +40,8 @@ func _learn(_profile: Profile, species: String, level: int, where: String) -> vo
 	bestiary.learn(species, level, where)
 
 
-func migrate(data: Dictionary, format: int) -> void:
-	BestiarySave.migrate(data, format)
+func migrate(data: Dictionary, changes: Array[String]) -> void:
+	BestiarySave.migrate(data, changes)
 
 
 func read(data: Dictionary) -> String:
