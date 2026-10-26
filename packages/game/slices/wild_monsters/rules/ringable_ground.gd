@@ -58,7 +58,7 @@ static func _unwalkable_from_edge(region: Region) -> Dictionary[Vector2i, bool]:
 static func way_out(
 	region: Region,
 	stuck: Dictionary[Vector2i, bool],
-	blocked: Dictionary[Vector2i, bool],
+	blocked: WildBlocked,
 	from: Vector2i,
 ) -> Vector2i:
 	var first: Dictionary[Vector2i, Vector2i] = { from: from }

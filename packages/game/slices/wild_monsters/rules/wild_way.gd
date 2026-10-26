@@ -14,14 +14,14 @@ const REACH: int = Tuning.WAY_REACH
 
 var _region: Region
 var _stuck: Dictionary[Vector2i, bool]
-var _blocked: Dictionary[Vector2i, bool]
+var _blocked: WildBlocked
 
 
 ## The ground of `region` a wild monster may step onto: walkable, in neither `stuck` nor `blocked`.
 func _init(
 	region: Region,
 	stuck: Dictionary[Vector2i, bool],
-	blocked: Dictionary[Vector2i, bool],
+	blocked: WildBlocked,
 ) -> void:
 	_region = region
 	_stuck = stuck

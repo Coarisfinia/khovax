@@ -135,7 +135,7 @@ func start(state: GameState) -> void:
 ## its own tick of every STEP_TICKS, faster with rage (by its id, `_moves_now`), in id order.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var stuck: Dictionary[Vector2i, bool] = _ground.unringable(state.region)
-	var blocked: Dictionary[Vector2i, bool] = {}
+	var blocked: WildBlocked = null
 	_stepped.clear()
 	_stepped_tick = state.tick
 	for monster: int in monsters:
@@ -145,11 +145,11 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var standing: Entity = state.entity(monster)
 		if not stuck.has(standing.tile):
 			continue
-		if blocked.is_empty():
+		if blocked == null:
 			blocked = WildGround.blocked(state)
 		var from: Vector2i = standing.tile
 		standing.tile = RingableGround.way_out(state.region, stuck, blocked, from)
-		blocked[standing.tile] = true
+		blocked.add(standing.tile)
 		_stepped.append(monster)
 
 
@@ -180,7 +180,7 @@ func chase(state: GameState, entity_id: int, goal: Vector2i, away: bool = false)
 	var standing: Entity = state.entity(entity_id)
 	if stuck.has(standing.tile):
 		return
-	var blocked: Dictionary[Vector2i, bool] = WildGround.blocked(state)
+	var blocked: WildBlocked = WildGround.blocked(state)
 	var way: WildWay = WildWay.new(state.region, stuck, blocked)
 	var best: Vector2i = way.away(standing.tile, goal) if away else way.toward(standing.tile, goal)
 	if best != standing.tile:
