@@ -831,8 +831,21 @@ jobs:
             awk -F'"' -v key="$1" '/^\[/ { section = $0 } section == "[application]" && $0 ~ "^config/" key "=\"" { print $2 }' \
               packages/game/project.godot
           }
+          # A release's field by jq (the latest full release without a tag), or nothing when there is
+          # no such release (#1329). Any other error (a rate limit, an outage) fails the job, so it is
+          # never mistaken for "none", which could put an immutable tag on the wrong version.
+          release_field() {
+            local found
+            if found=$(gh release view ${2:+"$2"} --repo "$GITHUB_REPOSITORY" --json tagName,isDraft \
+              --jq "$1" 2> "$RUNNER_TEMP/release-view.err"); then
+              echo "$found"
+            elif [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
+              cat "$RUNNER_TEMP/release-view.err" >&2
+              return 1
+            fi
+          }
           # The next version after the last prod release (a full release, never a prerelease).
-          last=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          last=$(release_field .tagName)
           if [[ "$last" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
           else
@@ -845,7 +858,7 @@ jobs:
           tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
           # A rerun of this run finds its release already published, or the draft a failed upload
           # left, which has no tag yet and is made again.
-          draft=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || true)
+          draft=$(release_field .isDraft "$tag")
           if [ "$draft" = false ]; then
             echo "${tag} already exists"
             exit 0
