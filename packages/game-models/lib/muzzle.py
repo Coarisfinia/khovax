@@ -22,6 +22,8 @@ middle.
                  reweigh=lambda body: snout.bind_jaw(body, "jaw", scale))
 """
 
+import math
+
 from mathutils import Vector
 
 from . import body, parts
@@ -31,6 +33,8 @@ from . import body, parts
 # one smooth taper. The chin rounds it off past the last one.
 JAW_STATIONS = (0.0, 0.25, 0.5, 0.75)
 JAW_SPAN = 0.2
+# Where a tongue runs along the muzzle (0 at the stop, 1 at its tip): its root and its tip.
+TONGUE = (0.1, 0.85)
 
 
 def _point(y, z):
@@ -205,6 +209,28 @@ class Snout:
                 skin.vertex_groups[index].add([vertex.index], weight * (1.0 - share), "REPLACE")
             jaw.add([vertex.index], share, "REPLACE")
             _limit(skin, vertex, jaw.index)
+
+    def tongue_bone(self):
+        """Where a tongue's bone runs (quadruped.Proportions' `tongue`): along the middle of the
+        mouth's floor, from behind the corner to short of the chin, so it turns with the jaw and
+        rests inside the shut mouth."""
+        return tuple(self._floor(t)[:] for t in TONGUE)
+
+    def _floor(self, t):
+        """The top of the mouth's floor lining at `t` along the muzzle, where a tongue lies."""
+        return self.jaw_top(t) + _point(0.0, 0.15 * self.radius * 0.5)
+
+    def tongue(self, mat, bone, name="Snout"):
+        """A soft, flat tongue on its own `bone` (tongue_bone), lying on the mouth's floor
+        inside the lower jaw, as wide as the floor and a little thicker than its lining, so it
+        shows only when the jaw opens or a clip lolls it out."""
+        root, tip = (self._floor(t) for t in TONGUE)
+        along = tip - root
+        middle = root + along * 0.5
+        half_width = self.radius * self.share(0.5) * 0.8
+        return parts.part("uv_sphere", name + ".Tongue", middle + _point(0.0, 0.06 * self.radius),
+                          (half_width, along.length * 0.55, 0.1 * self.radius),
+                          (math.atan2(along.z, along.y), 0.0, 0.0), mat, bone, segments=12, ring_count=6)
 
     def parts(self, mats, head_bone, jaw_bone, name="Snout"):
         """The pieces beside the head's skin: the mouth's floor and the lower fangs on `jaw_bone`;

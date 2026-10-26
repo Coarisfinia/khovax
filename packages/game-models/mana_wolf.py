@@ -93,6 +93,8 @@ TAIL_ROOT = (0.0, 0.70, 1.05)
 
 # How tall the wolf stands at the hips: the faint and the sleep sink it this far.
 HIP_HEIGHT = 0.69
+# How far (radians) it turns its head toward its curled tail as it sleeps on its paws (#1308).
+SLEEP_TURN = 0.3
 
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
 # apart) in 0.8 s, a companion follows at a tile every 0.3 s. A walk cycle covers two thirds of a
@@ -333,7 +335,8 @@ def build(out):
         "Faint": clips.faint(HIP_HEIGHT),
         **channel,
         "Feed": clips.feed(forepaws=0.1),
-        "Sleep": clips.sleep(clips.curled(HIP_HEIGHT)),
+        # Belly down, its head on its front paws, turned a little to the side (the owner, on #1308).
+        "Sleep": clips.sleep(clips.curled(HIP_HEIGHT, turn=SLEEP_TURN)),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
         overlays=[drifting.drift, flaring.beat])
     scene.export_glb(out)

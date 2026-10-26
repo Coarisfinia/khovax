@@ -35,6 +35,8 @@ COLORS = {
     "light": ((0.78, 0.82, 0.98, 1.0), 0.0),
     "glow": ((0.05, 0.55, 1.0, 1.0), 1.0),
     "dark": ((0.03, 0.03, 0.06, 1.0), 0.0),
+    # Its tongue (#1308): a soft pink.
+    "tongue": ((0.85, 0.42, 0.55, 1.0), 0.0),
 }
 
 # A pup's proportions against the wolf's: a short, round trunk on stubby, puppy-short legs with big
@@ -101,20 +103,23 @@ REFERENCE = {
 SNOUT = muzzle.Snout(stop=(-0.80, 1.23), tip=(-1.02, 1.14), radius=0.085, joint=PUP.jaw[0][1:], taper=0.78,
                      stop_depth=0.09, lip=0.03, jaw_depth=0.55, jaw_width=1.0, chin=1.0,
                      slit=0.012)
+# Its tongue, on a bone of its own on the mouth's floor: it lolls out as it sleeps on its back (#1308).
+PUP.tongue = SNOUT.tongue_bone()
 
 # Where the tail's form starts, inside the haunches.
 TAIL_ROOT = (0.0, 0.30, 0.82)
 
-# How tall the pup stands at its belly: the faint and the sleep sink it this far.
+# How tall the pup stands at its belly: the faint sinks it this far.
 HIP_HEIGHT = 0.48
-# Its shorter legs (#1307) reach less far: its forepaws lie closer in when it lies down (the faint
-# and the sleep, clips.CURLED), and step out less far into a long attack's braced stance
-# (clips.BRACE).
+# Its shorter legs (#1307) reach less far: its forepaws lie closer in when it faints, and step out
+# less far into a long attack's braced stance (clips.BRACE).
 FOREPAWS_LYING = 0.38
-CURLED = dict(clips.CURLED, front_paw=(0.0, 0.0, FOREPAWS_LYING))
 BRACE = {"front_paw": (0.06, 0.0, 0.14), "hind_paw": (0.04, 0.0, -0.06)}
 # The low trunk sits close to the leg bones: its belly must follow the spine when they fold.
 TORSO_WEIGHT_HEIGHTS = (0.45, 0.75)
+# How far up its back lies as it sleeps on it (#1308), above where it stands: roughly its back's
+# height, so the rolled body comes down onto the ground (animate lifts it where it still sinks).
+SLEEP_HEIGHT = 1.0
 
 # The game's speeds at the model's size (metres a second), as for the wolf: a wild monster glides a
 # tile (sqrt(3) apart) in 0.8 s, a companion follows at a tile every 0.3 s. It trots where the wolf
@@ -189,7 +194,7 @@ def pup_body():
 def head_parts(skin, mats):
     """The snout's jaw, nose, mouth and small fangs, big ears with pale insides, and big round
     eyes."""
-    made = SNOUT.parts(mats, "head", "jaw")
+    made = SNOUT.parts(mats, "head", "jaw") + [SNOUT.tongue(mats["tongue"], "tongue")]
     for sign in (1, -1):
         side = "L" if sign == 1 else "R"
         base, tip = (mirror(p, sign) for p in PUP.ear)
@@ -283,7 +288,7 @@ def build(out):
         quadruped.bind_torso(body, rig, *(height * SCALE for height in TORSO_WEIGHT_HEIGHTS))
         SNOUT.bind_jaw(body, "jaw", SCALE)
 
-    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names),
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "tongue", "ear.L", "ear.R", *drifting.names),
                  reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
@@ -301,9 +306,10 @@ def build(out):
         **clips.channel(CHANNEL_FRAMES, brace=BRACE),
         # A pup's short neck reaches the ground with less of a bend.
         "Feed": clips.feed(neck=0.5, head=0.0, crouch=0.25, forepaws=0.2),
-        "Sleep": clips.sleep(clips.curled(HIP_HEIGHT), paws=CURLED),
+        # It sleeps on its back, paws in the air and its tongue out (the owner, on #1308).
+        "Sleep": clips.sleep(clips.on_back(SLEEP_HEIGHT), paws={}, planted=False),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
-        overlays=[drifting.drift])
+        overlays=[drifting.drift, clips.tongue_in])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
