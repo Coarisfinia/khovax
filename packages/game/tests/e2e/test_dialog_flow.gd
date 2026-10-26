@@ -306,8 +306,15 @@ static func _glyphs_follow_device(screen: DialogScreen) -> String:
 static func _device_steps() -> Array[Array]:
 	var key: InputEventKey = InputEventKey.new()
 	key.keycode = KEY_SHIFT
-	var stick: InputEventJoypadMotion = InputEventJoypadMotion.new()
-	stick.axis_value = DeviceInUse.DEADZONE / 2.0
+	# The stick to the right: inside walking's deadzone, then past it (#1423) but short of
+	# ui_right's, so the focus stays on the first answer.
+	var deadzone: float = InputMap.action_get_deadzone(&"move_right")
+	var drift: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	drift.axis = JOY_AXIS_LEFT_X
+	drift.axis_value = deadzone / 2.0
+	var push: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	push.axis = JOY_AXIS_LEFT_X
+	push.axis_value = (deadzone + InputMap.action_get_deadzone(&"ui_right")) / 2.0
 	var pad: InputEventJoypadButton = InputEventJoypadButton.new()
 	pad.button_index = JOY_BUTTON_MISC1
 	var stand_in: InputEventMouseButton = InputEventMouseButton.new()
@@ -316,14 +323,17 @@ static func _device_steps() -> Array[Array]:
 	stand_in.button_index = MOUSE_BUTTON_LEFT
 	var keys: Array[Texture2D] = [InputGlyphs.KEYS[KEY_ENTER], null, InputGlyphs.KEYS[KEY_ESCAPE]]
 	var none: Array[Texture2D] = [null, null, null]
+	var buttons: Array[Texture2D] = [
+		InputGlyphs.BUTTONS[JOY_BUTTON_A],
+		null,
+		InputGlyphs.BUTTONS[JOY_BUTTON_B],
+	]
 	return [
 		["a key", [key], keys],
-		[
-			"a controller's button after a barely moved stick",
-			[stick, pad],
-			[InputGlyphs.BUTTONS[JOY_BUTTON_A], null, InputGlyphs.BUTTONS[JOY_BUTTON_B]],
-		],
+		["a stick drifting inside walking's deadzone", [drift], keys],
+		["a gentle stick push that walks", [push], buttons],
 		["a touch and its mouse stand-in", [InputEventScreenTouch.new(), stand_in], none],
+		["a controller's button", [pad], buttons],
 		["a key again", [key], keys],
 	]
 
