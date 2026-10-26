@@ -21,6 +21,8 @@ const FADE_SECONDS: float = 0.25
 ## a panel), so a preload here makes a load cycle that Godot's script check reports as a scene
 ## referencing a non-existent script (#964).
 const CHARACTER_TAB: String = "res://slices/menu/ui/character_tab.tscn"
+## The Controls tab, laid out in its scene (#1414).
+const CONTROLS_TAB: PackedScene = preload("res://slices/input_prompts/ui/controls_tab.tscn")
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
 ## The Quests tab, laid out in its scene (#437).
@@ -215,6 +217,7 @@ func lay_out(screen: Vector2) -> void:
 	character.fit_width(minf(2.0 * width, room) if beside else width)
 	character.place_details(beside)
 	quests_tab().fit(width)
+	controls_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
 
@@ -282,6 +285,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
+	tabs.add_child(CONTROLS_TAB.instantiate())
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
 	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
@@ -327,6 +331,11 @@ func _pause() -> SettingChoice:
 ## The Quests tab, found under the sheet rather than kept in a field of its own.
 func quests_tab() -> QuestsTab:
 	return _sheet.find_child("Quests", true, false) as QuestsTab
+
+
+## The Controls tab, found under the sheet like the Quests tab.
+func controls_tab() -> ControlsTab:
+	return _sheet.find_child("Controls", true, false) as ControlsTab
 
 
 ## The button at the top that opens the menu on touch screens.
