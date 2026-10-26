@@ -150,19 +150,22 @@ def bind_underside(skin, rig, inner=INNER, outer=OUTER):
     swinging back or folding (a walk, a crouch, a faint) and the body thinned out over it (the
     owner, on #1305). Near the midline (`inner` and `outer`, shares of how far out the leg's root
     stands) and off the leg itself (`_Limb`), the legs' share goes to the spine and neck, blended
-    along the body; not to the head, whose skin is the head's measure in `metrics`. The legs keep
-    the skin at their own sides. Runs as `bind_torso` does, before pieces join the skin."""
+    along the body (not to the head, whose skin is the head's measure in `metrics`), and the
+    shoulder blades' to the chest they hang from (`_blade`). The legs keep the skin at their own
+    sides. The change is smoothed over the skin around it (`_smooth_weights`). Runs as
+    `bind_torso` does, before pieces join the skin."""
     legs = {}
     for root, chain in (("scapula", ("upper_arm", "forearm", "front_paw")), ("thigh", ("thigh", "shin", "hock"))):
         for side in ("L", "R"):
             reach = abs(rig.data.bones[chain[0] + "." + side].head_local.x)
             limb = _Limb(skin, rig, [name + "." + side for name in chain])
+            if limb.thickness is None:
+                continue
             for name in _limbs(rig, [root + "." + side]):
                 group = skin.vertex_groups.get(name)
                 if group is not None:
-                    legs[group.index] = (reach, limb)
-    # Each bone takes the skin around its middle, and two share it where they meet: skin just
-    # behind the neck's root (the crest's first crystal) stays the chest's as the neck bows.
+                    legs[group.index] = (reach, limb, _blade(skin, rig, name))
+    # Each bone takes the skin around its middle, and two share it where they meet.
     trunk = _trunk(skin, rig, ("hips", "spine_01", "spine_02", "neck"), middle=True)
     to_rig = rig.matrix_world.inverted() @ skin.matrix_world
     touched = set()
@@ -170,16 +173,32 @@ def bind_underside(skin, rig, inner=INNER, outer=OUTER):
         point = to_rig @ vertex.co
         taken = 0.0
         for index, weight in [(group.group, group.weight) for group in vertex.groups if group.group in legs]:
-            reach, limb = legs[index]
+            reach, limb, blade = legs[index]
             across = 1.0 - _smooth((abs(point.x) / reach - inner) / (outer - inner))
             moved = weight * across * limb.beyond(point)
-            if moved > 0.0:
-                skin.vertex_groups[index].add([vertex.index], weight - moved, "REPLACE")
+            if moved <= 0.0:
+                continue
+            skin.vertex_groups[index].add([vertex.index], weight - moved, "REPLACE")
+            if blade is not None:
+                blade.add([vertex.index], moved, "ADD")
+                touched.add(vertex.index)
+            else:
                 taken += moved
         if taken > 0.0:
             _hand_to_trunk(trunk, vertex.index, point, taken)
             touched.add(vertex.index)
     _smooth_weights(skin, touched)
+
+
+def _blade(skin, rig, name):
+    """The vertex group a shoulder blade's share goes to: the bone it hangs from, as
+    `weights.root` does for a crest's crystal. The skin between the blades lies on the back over
+    the chest, which the neck's bend shouldn't turn (the crest's first crystal stands there).
+    None for any other leg bone, whose share is blended along the body."""
+    if not name.startswith("scapula."):
+        return None
+    parent = rig.data.bones[name].parent.name
+    return skin.vertex_groups.get(parent) or skin.vertex_groups.new(name=parent)
 
 
 class _Limb:
@@ -194,11 +213,14 @@ class _Limb:
     def __init__(self, skin, rig, names):
         to_rig = rig.matrix_world.inverted() @ skin.matrix_world
         self.segments = [(rig.data.bones[name].head_local, rig.data.bones[name].tail_local) for name in names]
-        group = skin.vertex_groups[names[0]]
+        group = skin.vertex_groups.get(names[0])
         distances = sorted(self._distance(to_rig @ vertex.co, *self.segments[0])
                            for vertex in skin.data.vertices
-                           if vertex.groups and max(vertex.groups, key=lambda g: g.weight).group == group.index)
-        self.thickness = distances[len(distances) // 2]
+                           if group is not None and vertex.groups
+                           and max(vertex.groups, key=lambda g: g.weight).group == group.index)
+        # None when the bone moves none of the skin most: there's no leg to tell the trunk from.
+        middle = distances[len(distances) // 2] if distances else 0.0
+        self.thickness = middle if middle > 0.0 else None
 
     @staticmethod
     def _distance(point, head, tail):
