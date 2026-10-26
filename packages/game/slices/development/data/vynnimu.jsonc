@@ -1,0 +1,31 @@
+// Vynnimu's development web (#677): a pup learning to hunt, it leans into its quick feet and grows
+// toward its pack's bite. Its shifts are placeholders to tune (#960).
+{
+	"species": "vynnimu",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "playful", "nodes": [
+			{ "leaning": { "speed": 50 } },
+			{ "leaning": { "speed": 60 } },
+			{ "leaning": { "speed": 80, "strength": -30 } }
+		] },
+		{ "id": "fierce", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60, "speed": 20 } },
+			{ "leaning": { "strength": 80, "hp": -30 } }
+		] },
+		{ "id": "sturdy", "nodes": [
+			{ "leaning": { "hp": 60 } },
+			{ "leaning": { "hp": 60, "speed": -20 } },
+			{ "leaning": { "hp": 100, "speed": -30 } }
+		] },
+		{ "id": "wild", "nodes": [
+			{ "leaning": { "strength": 30, "speed": 30 } },
+			{ "leaning": { "strength": 40, "speed": 40, "hp": -20 } },
+			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } }
+		] }
+	],
+	"bridges": [["playful_2", "fierce_2"], ["sturdy_1", "wild_1"]],
+	"portals": [["playful_3", "sturdy_3"]]
+}

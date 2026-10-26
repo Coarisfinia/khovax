@@ -1,0 +1,83 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/development/data/development.schema.json",
+	"title": "Development web",
+	"description": "A species' development web (#677): the nodes its dominated monsters develop along, in directions that portals and bridges connect. A node is open once a node next to it (along its direction, a bridge or a portal) is taken; every direction's first node is open from the start. One file per species, named after its id.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["species", "directions", "bridges", "portals"],
+	"$defs": {
+		"node_id": {
+			"description": "A node of this web: its direction's id, then its step along it from 1, e.g. sturdy_2.",
+			"type": "string",
+			"pattern": "^[a-z]+_[1-9][0-9]*$"
+		},
+		"shift": {
+			"description": "How much the node shifts the stat, in thousandths of the species' own (#33): 50 is +5%, -30 is -3%.",
+			"type": "integer",
+			"minimum": -500,
+			"maximum": 500,
+			"not": { "const": 0 }
+		},
+		"link": {
+			"description": "Two nodes it links, each next to the other from then on.",
+			"type": "array",
+			"minItems": 2,
+			"maxItems": 2,
+			"items": { "$ref": "#/$defs/node_id" }
+		}
+	},
+	"properties": {
+		"species": {
+			"description": "The species whose web it is, by id: the file's name.",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"directions": {
+			"description": "Its directions, in their order around the web: each sits beside the ones before and after it, the last beside the first.",
+			"type": "array",
+			"minItems": 2,
+			"items": {
+				"type": "object",
+				"additionalProperties": false,
+				"required": ["id", "nodes"],
+				"properties": {
+					"id": { "description": "Unique in its web: one lowercase word.", "type": "string", "pattern": "^[a-z]+$" },
+					"nodes": {
+						"description": "Its nodes, from the web's middle outward: each next to the one before it.",
+						"type": "array",
+						"minItems": 1,
+						"items": {
+							"type": "object",
+							"additionalProperties": false,
+							"required": ["leaning"],
+							"properties": {
+								"leaning": {
+									"description": "What taking it does: a stat leaning (#1358), raising some of the species' stats and maybe lowering others.",
+									"type": "object",
+									"additionalProperties": false,
+									"minProperties": 1,
+									"properties": {
+										"hp": { "$ref": "#/$defs/shift" },
+										"strength": { "$ref": "#/$defs/shift" },
+										"speed": { "$ref": "#/$defs/shift" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"bridges": {
+			"description": "Bridges connect directions sideways: each links nodes of two directions side by side, at most one step apart.",
+			"type": "array",
+			"items": { "$ref": "#/$defs/link" }
+		},
+		"portals": {
+			"description": "Portals connect one side of the web to the other: each links the outermost nodes of two directions.",
+			"type": "array",
+			"items": { "$ref": "#/$defs/link" }
+		}
+	}
+}
