@@ -3,8 +3,8 @@ extends RefCounted
 ## A faction (#483), read from content data (the factions slice's data/, #72, #412): a player-facing
 ## name, a symbol that tells it apart where it's marked (#68), its own names for the ranks of the
 ## player's standing with it (Standings), five each way from neutral, which has none, and the
-## instances it holds when a world starts (its territory, #637; Territory), and its codex entry,
-## which its lexicon page shows (#959).
+## instances it holds when a world starts (its territory, #637; Territory), the factions it is an
+## enemy of (#1310; Standings.align), and its codex entry, which its lexicon page shows (#959).
 
 ## Its schema, which says the fields a faction file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/factions/data/factions.schema.json"
@@ -24,6 +24,9 @@ var ranks_up: Array[String] = []
 var ranks_down: Array[String] = []
 ## The instances it holds when a world starts, by blueprint name, each once (#637).
 var territory: Array[String] = []
+## The factions it is an enemy of, by id, each once (#1310); FactionContent checks that each is a
+## faction naming it back.
+var enemies: Array[String] = []
 ## Its codex entry (#959): a short text about it and where its name comes from.
 var codex_entry: String = ""
 ## What its name means, hand-written (#959), e.g. "the guild of those who chart".
@@ -48,6 +51,8 @@ static func parse(file_id: String, text: String) -> Faction:
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
 	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):
 		faction.problem = "its territory must list instance ids, each once"
+	if faction.problem.is_empty() and not faction._read_enemies(data.get("enemies", [])):
+		faction.problem = "its enemies must list faction ids, each once, never its own"
 	if faction.problem.is_empty() and not faction._read_codex(data.get("codex")):
 		faction.problem = "it needs a codex entry and gloss (#959)"
 	return faction
@@ -91,14 +96,24 @@ static func _read_ranks(raw: Variant, names: Array[String]) -> bool:
 
 ## Whether `raw` lists instance ids, each once; reads them into `territory`.
 func _read_territory(raw: Variant) -> bool:
+	return _read_ids(raw, territory)
+
+
+## Whether `raw` lists faction ids, each once and none its own; reads them into `enemies`.
+func _read_enemies(raw: Variant) -> bool:
+	return _read_ids(raw, enemies) and not enemies.has(id)
+
+
+## Whether `raw` lists ids, each once; reads them into `ids`.
+static func _read_ids(raw: Variant, ids: Array[String]) -> bool:
 	if not raw is Array:
 		return false
 	var entries: Array = raw
 	for entry: Variant in entries:
-		var instance_name: String = Content.text_of(entry)
-		if not Content.is_id(instance_name) or territory.has(instance_name):
+		var each: String = Content.text_of(entry)
+		if not Content.is_id(each) or ids.has(each):
 			return false
-		territory.append(instance_name)
+		ids.append(each)
 	return true
 
 

@@ -14,8 +14,8 @@ var factions: Dictionary[String, Faction] = {}
 var _taken: Dictionary[String, String] = {}
 
 
-## Every faction file in `directory`, read and checked, with no instance in two factions' territory
-## and no two factions with one symbol (#637).
+## Every faction file in `directory`, read and checked, with no instance in two factions' territory,
+## no two factions with one symbol (#637), and every enemy a faction naming its enemy back (#1310).
 static func load_factions(directory: String = DIR) -> FactionContent:
 	var content: FactionContent = FactionContent.new()
 	content.read(directory)
@@ -25,6 +25,12 @@ static func load_factions(directory: String = DIR) -> FactionContent:
 ## The factions, read once per session (ContentCatalog).
 static func cached() -> FactionContent:
 	return ContentCatalog.kept(DIR, load_factions)
+
+
+func read(directory: String) -> void:
+	super.read(directory)
+	if problem.is_empty():
+		problem = _enemies_problem()
 
 
 func add(file_id: String, text: String) -> String:
@@ -48,4 +54,16 @@ func _hold(faction: Faction) -> String:
 	if _taken.has(symbol_key):
 		return "its symbol %s is %s's already" % [faction.symbol, _taken[symbol_key]]
 	_taken[symbol_key] = faction.id
+	return ""
+
+
+## Why a faction's enemy isn't a faction naming it back, or "": being enemies is mutual (#1310).
+func _enemies_problem() -> String:
+	var ids: Array[String] = []
+	ids.assign(factions.keys())
+	ids.sort()
+	for faction_id: String in ids:
+		for enemy: String in factions[faction_id].enemies:
+			if not factions.has(enemy) or not factions[enemy].enemies.has(faction_id):
+				return "%s.jsonc: its enemy %s isn't a faction naming it back" % [faction_id, enemy]
 	return ""
