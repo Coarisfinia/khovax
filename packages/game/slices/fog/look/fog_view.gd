@@ -94,7 +94,7 @@ func show_state(delta: float) -> void:
 	# New neighbour tiles may start at their target, so they never ease: they're drawn with the
 	# rest.
 	var redraw_all: bool = _stale or _inputs.next_door_moved(next_door)
-	if _stale or _inputs.changed(fog, next_door):
+	if _stale or _inputs.changed(fog, _seen.size(), next_door):
 		_retarget(fog, next_door)
 	var eased: Array[Vector2i] = _ease(delta)
 	cloud.show_fog(_region, brightness, eased, redraw_all)
@@ -103,7 +103,6 @@ func show_state(delta: float) -> void:
 ## Works out every tile's target again, in the region and next door, and marks the tiles not at
 ## theirs as moving. Remembers what it was worked out from.
 func _retarget(fog: FogFeature, next_door: NeighbourView) -> void:
-	_inputs.remember(fog, next_door)
 	_stale = false
 	var lit: Dictionary[Vector2i, bool] = {}
 	for slot: int in fog.visible:
@@ -118,6 +117,7 @@ func _retarget(fog: FogFeature, next_door: NeighbourView) -> void:
 		_aim(tile, _target(fog, tile, lit, shown), UNSEEN)
 	if next_door != null:
 		_remember_next_door(fog, next_door, lit)
+	_inputs.remember(fog, _seen.size(), next_door)
 
 
 ## Sets `tile`'s target, drawn at `start` until it first eases, and marks it moving if it isn't
