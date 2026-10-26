@@ -137,7 +137,7 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = _menu_readme(menu)
 	if result.is_empty():
-		result = await _close_menu(menu)
+		result = await _menu_controls(menu)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, false)
 	main.queue_free()
@@ -808,8 +808,7 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		var width: float = menu.settings.rows_width()
 		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
 			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
-	var credits: String = _menu_credits(menu)
-	return credits if not credits.is_empty() else _menu_controls(menu)
+	return _menu_credits(menu)
 
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's
@@ -853,15 +852,18 @@ func _menu_controls(menu: GameMenu) -> String:
 	var problem: String = _controls_glyphs(FlowInput.glyphs_by_device(_controls_shown.bind(tab)))
 	if not problem.is_empty():
 		return problem
-	return _controls_focus(menu, tab)
+	return await _controls_focus(menu, tab)
 
 
 ## On the Controls tab, down (the left stick, the d-pad or the arrow key) moves the focus to the
-## next row, which is framed.
+## next row, which is framed. Then the menu closes (_close_menu).
 func _controls_focus(menu: GameMenu, tab: ControlsTab) -> String:
 	var tabs: TabContainer = tab.get_parent() as TabContainer
 	var was_on: int = tabs.current_tab
 	tabs.current_tab = tab.get_index()
+	# The rows are laid out once the shown tab has had its frames.
+	await _tree.process_frame
+	await _tree.process_frame
 	var walk: PanelContainer = tab.rows["Walk"]
 	walk.grab_focus()
 	var down: InputEventAction = InputEventAction.new()
@@ -876,7 +878,7 @@ func _controls_focus(menu: GameMenu, tab: ControlsTab) -> String:
 	tabs.current_tab = was_on
 	if focused != tab.rows["Special attack"] or framed == resting:
 		return "down on the Controls tab focuses %s, framed: %s" % [focused, framed != resting]
-	return ""
+	return await _close_menu(menu)
 
 
 ## Checks the Controls tab's glyphs `by_device` (a keyboard's, a controller's, touch's): a glyph in
@@ -889,7 +891,8 @@ func _controls_glyphs(by_device: Array) -> String:
 	for device: int in by_device.size():
 		var shown: Dictionary = by_device[device]
 		for words: String in ControlsTab.ROWS:
-			if (shown[words] as Array).is_empty():
+			var glyphs: Array = shown[words]
+			if glyphs.is_empty():
 				return "the Controls tab shows no glyph for %s on device %d" % [words, device]
 		if shown["Walk"] != walks[device]:
 			return "the Controls tab's Walk row shows %s on device %d" % [shown["Walk"], device]
