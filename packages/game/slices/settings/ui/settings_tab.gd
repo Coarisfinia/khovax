@@ -95,6 +95,13 @@ func _ready() -> void:
 		)
 
 
+## Hidden (another tab chosen, or the menu closed), it's back on the list the next time it shows.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_node_ready() and not is_visible_in_tree():
+		_open = LIST
+		_show_open()
+
+
 ## A controller's B in a submenu goes back to the list, before the menu hears it and closes.
 func _unhandled_input(event: InputEvent) -> void:
 	if _open != LIST and is_visible_in_tree() and event.is_action_pressed("ui_cancel"):

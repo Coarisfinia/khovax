@@ -561,7 +561,8 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 
 ## The Settings tab opens on its list of submenus (#1314), each setting's row in its own: a
 ## submenu's button shows its rows in place of the list, and its Back button or a controller's B
-## goes back to the list, the menu still open.
+## goes back to the list, the menu still open. Left on a submenu, it's back on its list the next
+## time it shows.
 func _menu_submenus(menu: GameMenu) -> String:
 	var tab: SettingsTab = menu.settings
 	if tab.open_submenu() != SettingsTab.LIST:
@@ -582,6 +583,11 @@ func _menu_submenus(menu: GameMenu) -> String:
 	tabs.current_tab = tab.get_index()
 	var anti_aliasing: Button = tab.button(Graphics.ANTI_ALIASING, "Next")
 	var problem: String = _submenus_open(menu, tab, anti_aliasing)
+	tab.opener(SettingsTab.GRAPHICS).pressed.emit()
+	tabs.current_tab = was_on
+	tabs.current_tab = tab.get_index()
+	if problem.is_empty() and tab.open_submenu() != SettingsTab.LIST:
+		problem = "the Settings tab, shown again, is still on %s" % tab.open_submenu()
 	tabs.current_tab = was_on
 	return problem
 
