@@ -4,15 +4,26 @@ extends Node
 ## not followed (SurveyView.quest_at), makes this machine's player follow that quest
 ## (QuestKeeper.follow), and the pointer resting on one shows its quest card (SurveyQuestHover).
 ## It works on the Survey wherever it shows, and while the menu is open (GameMenu, #362) only on
-## its Survey tab's (#392), which SurveyPinch knows. A tap on an arrow is taken, so the touch stick
-## never starts from it; every other touch goes on as before. Godot hands `_input` to later nodes
-## first, so this node comes after the stick in the Hud and sees a touch before it does. A
-## controller picks in the Quests tab instead (QuestsTab).
+## its Survey tab's (#392), which SurveyPinch knows. A click picks as it's pressed. A tap picks as
+## its finger lifts, alone and where it went down, so a pinch that starts on an arrow still zooms
+## (SurveyPinch); it lets every touch through, so a corner Survey still keeps the touch stick from
+## starting under it. Like a menu's button, it's a choice kept in the profile, not a command to the
+## game, so it goes to the quests' keeper rather than the controls. Godot hands `_input` to later
+## nodes first, so this node comes after the stick and the pinch in the Hud and sees a touch first.
+## A controller picks in the Quests tab instead (QuestsTab).
+
+## How far a finger may move between going down and lifting for a tap, in pixels.
+const TAP_SLOP: float = 12.0
 
 ## Where the Survey shows.
 @export var survey: SurveyChoice
 ## Which Survey takes touches while the menu is open.
 @export var pinch: SurveyPinch
+
+## The fingers down, by index, each where it went down.
+var _fingers: Dictionary[int, Vector2] = {}
+## Whether the finger down is still a tap: alone, and near where it went down.
+var _tapping: bool = false
 
 
 func _input(event: InputEvent) -> void:
@@ -20,14 +31,32 @@ func _input(event: InputEvent) -> void:
 	if moved != null:
 		_hover(moved.position)
 		return
-	var touch: InputEventScreenTouch = event as InputEventScreenTouch
 	var click: InputEventMouseButton = event as InputEventMouseButton
-	var tapped: bool = touch != null and touch.pressed and not touch.canceled
-	var clicked: bool = click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT
-	if tapped or clicked:
-		var at: Vector2 = touch.position if tapped else click.position
-		if pick(at):
+	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+		if pick(click.position):
 			get_viewport().set_input_as_handled()
+		return
+	var drag: InputEventScreenDrag = event as InputEventScreenDrag
+	if drag != null and _fingers.has(drag.index):
+		_tapping = _tapping and drag.position.distance_to(_fingers[drag.index]) <= TAP_SLOP
+		return
+	var touch: InputEventScreenTouch = event as InputEventScreenTouch
+	if touch != null:
+		_on_touch(touch)
+
+
+## Keeps track of the fingers, and picks on a tap's finger lifting.
+func _on_touch(touch: InputEventScreenTouch) -> void:
+	if touch.pressed and not touch.canceled:
+		_fingers[touch.index] = touch.position
+		_tapping = _fingers.size() == 1
+		return
+	var tap: bool = _tapping and not touch.canceled and _fingers.has(touch.index)
+	tap = tap and touch.position.distance_to(_fingers[touch.index]) <= TAP_SLOP
+	var _lifted: bool = _fingers.erase(touch.index)
+	_tapping = false
+	if tap:
+		var _picked: bool = pick(touch.position)
 
 
 ## Follows the quest whose grey arrow is at `at` on the screen, on the Survey that takes it; returns

@@ -392,11 +392,19 @@ func _check_tab_follows(tab: QuestsTab, quests: QuestTracker) -> String:
 	var followed: Button = tab.follow_buttons.get(quests.focused())
 	if followed == null or followed.text != QuestsTab.FOLLOWED_TEXT or not followed.disabled:
 		return "the Quests tab doesn't mark the followed quest %s" % quests.focused()
-	tab.follow_buttons["three_ombulumo"].pressed.emit()
+	# Another open quest's button offers to follow it, and pressing it does.
+	var other_id: String = ""
+	for id: String in tab.follow_buttons:
+		if id != quests.focused():
+			other_id = id
+	var other: Button = tab.follow_buttons.get(other_id)
+	if other == null or other.text != QuestsTab.FOLLOW_TEXT or other.disabled:
+		return "the Quests tab doesn't offer to follow an open quest besides %s" % quests.focused()
+	other.pressed.emit()
 	tab.refresh()
-	var now: Button = tab.follow_buttons["three_ombulumo"]
-	if quests.focus != "three_ombulumo" or now.text != QuestsTab.FOLLOWED_TEXT:
-		return "pressing the toads' quest's button in the Quests tab didn't follow it"
+	var now: Button = tab.follow_buttons[other_id]
+	if quests.focus != other_id or now.text != QuestsTab.FOLLOWED_TEXT:
+		return "pressing %s's button in the Quests tab didn't follow it" % other_id
 	return ""
 
 

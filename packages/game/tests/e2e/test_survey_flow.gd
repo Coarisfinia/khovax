@@ -565,18 +565,15 @@ func _survey_picks(survey: SurveyView, quests: QuestTracker, id: String) -> Stri
 			card.get_rect() if card != null else Rect2(),
 			survey.grey_arrow_box(key),
 		]
-	var click: InputEventMouseButton = InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	click.position = on_screen
-	survey.get_viewport().push_input(click)
+	_click(survey.get_viewport(), on_screen, true)
+	_click(survey.get_viewport(), on_screen, false)
 	if quests.focus != quest:
 		return "a click on %s's grey arrow didn't follow it" % quest
 	return _survey_tapped(survey, quests, "survey_there")
 
 
-## Why a tap on quest `id`'s grey arrow doesn't follow the quest whose arrow is there, or starts the
-## touch stick, or "" (#1298).
+## Why a tap on quest `id`'s grey arrow doesn't follow the quest whose arrow is there as its finger
+## lifts, or starts the touch stick, or "" (#1298).
 func _survey_tapped(survey: SurveyView, quests: QuestTracker, id: String) -> String:
 	survey.show_state()
 	survey.focused_quest().show_state()

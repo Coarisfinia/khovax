@@ -29,6 +29,21 @@ func fit(font: int) -> void:
 	pill().fit(font)
 
 
+## Lays it out `width` pixels wide at once: its wrapping lines take their height from their width,
+## which the container would only hand them on the next frame, so a card shown at once (the
+## Survey's, SurveyQuestHover) would be as tall as one letter per line until then.
+func lay_out(width: float) -> void:
+	custom_minimum_size.x = width
+	var inner: float = width - get_theme_stylebox("panel").get_minimum_size().x
+	for line: Label in [name_label(), step_label()]:
+		line.size.x = inner
+		line.update_minimum_size()
+	# Each one keeps its minimum size until it's told to measure again, from the lines up.
+	($Lines as Control).update_minimum_size()
+	update_minimum_size()
+	reset_size()
+
+
 ## The label with the quest's name.
 func name_label() -> Label:
 	return $Lines/Name as Label

@@ -48,13 +48,12 @@ func show_state() -> void:
 		card.modulate.a = 1.0
 		add_child(card)
 		card.fit(FONT)
-	card.custom_minimum_size.x = minf(FONT * WIDTH_FONTS, survey.size.x)
 	var id: String = hovered.get_slice("/", 0)
 	card.name_label().text = quests.book[id].shown_name()
 	card.show_line(QuestListView.step_line(step, quests.progress_of(id).count))
 	var where: String = step.counts_in()
 	card.pill().show_instance(where, where == survey.driver.local_instance_name())
-	card.reset_size()
+	card.lay_out(minf(FONT * WIDTH_FONTS, survey.size.x))
 	card.position = spot(card.size, survey.grey_arrow_box(hovered), survey.size)
 
 
