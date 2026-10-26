@@ -212,15 +212,17 @@ static func _carry(species: String) -> String:
 	var gain: Gain = Gain.new()
 	gain.dominated_species.append(species)
 	var _taken: String = profile.apply(gain)
-	# With its quests, bestiary and names met beside it, as the game saves it (QuestKeeper, #855;
-	# BestiaryKeeper, #1173; CodexKeeper, #1174).
-	var quests: QuestKeeper = QuestKeeper.new()
-	var bestiary: BestiaryKeeper = BestiaryKeeper.new()
-	var codex: CodexKeeper = CodexKeeper.new()
-	var _saved: String = ProfileStore.save(profile, PROFILE_PATH, [quests, bestiary, codex])
-	quests.free()
-	bestiary.free()
-	codex.free()
+	# With its quests, bestiary, names met and first walk beside it, as the game saves it
+	# (QuestKeeper, #855; BestiaryKeeper, #1173; CodexKeeper, #1174; MoveHintKeeper, #1222).
+	var companions: Array[ProfileCompanion] = [
+		QuestKeeper.new(),
+		BestiaryKeeper.new(),
+		CodexKeeper.new(),
+		MoveHintKeeper.new(),
+	]
+	var _saved: String = ProfileStore.save(profile, PROFILE_PATH, companions)
+	for companion: ProfileCompanion in companions:
+		companion.free()
 	return ProfileSave.to_text(profile)
 
 
