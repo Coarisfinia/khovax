@@ -236,7 +236,8 @@ background; only wait in the foreground for a result the very next step needs.
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
   `agent-gh pr merge <n> --auto --squash`. It joins the merge queue, which tests it on top of the
   pull requests queued before it and merges it once the required checks are green. Without
-  the owner's approval, never enable auto-merge. **If it doesn't merge** although the PR is
+  the owner's approval (or CodeRabbit's low-risk approval, which counts as it, below), never
+  enable auto-merge. **If it doesn't merge** although the PR is
   approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
   merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The approval stays valid through
   later pushes (owner's rule), so check the comments again before enabling auto-merge after a fix.
@@ -634,6 +635,34 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   organization's side is the YAML editor in CodeRabbit's organization settings, with the owner's
   browser login). Automatic approvals have no security-risk limit, so a stale CHANGES_REQUESTED
   from CodeRabbit doesn't hold an approved, green pull request out of the merge queue.
+- **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
+  #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
+  approval fills the "protect main" ruleset's required review. An agent may queue on it only when
+  all of these hold, read from CodeRabbit's summary comment (its issue comment on the pull request):
+  - its **Merge Risk** is **Minimal** or **Low**;
+  - where it gives a **Security architecture risk**, that is Minimal or Low too;
+  - the assessment covers the pull request's **head commit**: `coveredCommitId` in its
+    `final_review_risk_coverage` marker equals `headRefOid`. A new push needs a new assessment,
+    even though CodeRabbit's APPROVED review stays on the pull request;
+  - the owner hasn't asked for changes or left a comment still unanswered: the owner's comments
+    and change requests always win.
+
+  Anything higher, or no assessment of the head commit, needs the owner's own approval. A pull
+  request that changes these rules needs it too. This prints the merge risk, the security risk
+  (`none` when not given) and the assessed commit:
+
+  ```sh
+  agent-gh api "repos/Coarisfinia/khovax/issues/<n>/comments?per_page=100" --paginate --jq '.[]
+    | select(.user.login == "coderabbitai[bot]") | .body | select(contains("final_review_risk_coverage"))
+    | [(capture("final_review_risk_label\\s*\\*\\*Merge Risk:\\*\\* \\*\\*\\S+ (?<r>[A-Za-z]+)\\*\\*").r),
+       ((capture("architecture_review_label[^>]*Security architecture risk:\\*\\* \\*\\*\\S+ (?<s>[A-Za-z]+)\\*\\*").s) // "none"),
+       (capture("final_review_risk_coverage:(?<c>\\{[^}]*\\})").c | fromjson | .coveredCommitId)] | join(" ")'
+  agent-gh pr view <n> --json headRefOid --jq .headRefOid
+  ```
+
+  CodeRabbit's Triage rule "Merge low-risk changes" (in its app, not `.coderabbit.yml`) may queue
+  such a pull request itself, as it did with #1346: check that a queued pull request meets the
+  rule above, and take it off the queue (`agent-gh pr merge <n> --disable-auto`) if it doesn't.
 
 ### Toolchain
 
