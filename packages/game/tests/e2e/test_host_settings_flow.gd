@@ -1,10 +1,10 @@
 extends RefCounted
-## Difficulty flow (#1315): the world's host (slot 0) chooses the difficulty with a request from
-## their profile's outbox, applied once and on the tick it comes; another player's request of the
-## kind is acknowledged and changes nothing, and so is a choice there is none of. Standard plays
-## Tuning's numbers as they are; Easy makes the wild monsters weaker by ×0.70 and Hard stronger by
-## ×1.30: their strength, the damage they take (their HP), their pace and the ring's power against
-## them.
+## Host settings flow (#1309): the world's host (slot 0) chooses its settings with requests from
+## their profile's outbox, each applied once and on the tick it comes; another player's request of
+## the kind is acknowledged and changes nothing, and so is a choice there is none of. The difficulty
+## (#1315): Standard plays Tuning's numbers as they are; Easy makes the wild monsters weaker by
+## ×0.70 and Hard stronger by ×1.30: their strength, the damage they take (their HP), their pace and
+## the ring's power against them.
 
 ## A species the flow makes up, with round numbers.
 const BEAST: String = "test_beast"
