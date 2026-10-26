@@ -15,9 +15,9 @@ extends RefCounted
 ## each blueprint's variant and which named events set and replace (WorldFlags, #541, #638).
 ## Deterministic, like everything in core/.
 
-## How long an instance nobody is in stays loaded (#212): an hour of play, counted in the world's
-## ticks, which only pass while the game is played, never while it's closed.
-const PURGE_TICKS: int = 60 * 60 * Simulation.TICKS_PER_SECOND
+## How long an instance nobody is in stays loaded (#212), counted in the world's ticks, which only
+## pass while the game is played, never while it's closed. Its number is in Tuning (#1309).
+const PURGE_TICKS: int = Tuning.INSTANCE_RESET_TICKS
 
 ## The world's seed, which every instance's own seed is drawn from.
 var world_seed: int = 0

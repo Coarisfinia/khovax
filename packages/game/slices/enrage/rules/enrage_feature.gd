@@ -18,8 +18,8 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "enrage"
-## What each enraging heals, in thousandths of full HP. A placeholder to tune (#960).
-const HEAL: int = 250
+## What each enraging heals, in thousandths of full HP. Its number is in Tuning (#1309).
+const HEAL: int = Tuning.ENRAGE_HEAL
 
 
 func id() -> String:

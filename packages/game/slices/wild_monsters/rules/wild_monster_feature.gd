@@ -30,15 +30,15 @@ const ID: String = "wild_monsters"
 ## The strength of a species the feature wasn't given one for: it pushes on nothing.
 const UNKNOWN_STRENGTH: int = 0
 ## How much stronger each stack of rage makes a wild monster (thousandths), and the most stacks it
-## takes. Placeholders to tune (#960).
-const RAGE_STRENGTH: int = 500
-const MOST_RAGE: int = 3
+## takes. Their numbers are in Tuning (#1309).
+const RAGE_STRENGTH: int = Tuning.RAGE_STRENGTH
+const MOST_RAGE: int = Tuning.MOST_RAGE
 ## How many ticks a wild monster that can't be ringed where it stands takes for each step away: its
-## own pace, slower than a player's. A placeholder to tune (#960).
-const STEP_TICKS: int = Simulation.TICKS_PER_SECOND
+## own pace, slower than a player's. Its number is in Tuning (#1309).
+const STEP_TICKS: int = Tuning.WILD_STEP_TICKS
 ## The share of its full HP a wild monster a region marks wounded starts with (#389), in
-## thousandths. A placeholder to tune (#960).
-const WOUNDED_HP: int = 250
+## thousandths. Its number is in Tuning (#1309).
+const WOUNDED_HP: int = Tuning.WOUNDED_HP
 
 ## Every wild monster's entity id, in id order.
 var monsters: Array[int] = []

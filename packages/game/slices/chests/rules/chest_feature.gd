@@ -12,7 +12,7 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "chests"
 ## How many times each player rolls on the table when a chest opens.
-const ROLLS_PER_PLAYER: int = 1
+const ROLLS_PER_PLAYER: int = Tuning.CHEST_ROLLS_PER_PLAYER
 
 ## The instance's chest table (#694), which the chests roll on.
 var table: LootTable

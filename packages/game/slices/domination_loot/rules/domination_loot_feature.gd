@@ -6,14 +6,14 @@ extends SpeciesLootFeature
 ## WALL_POINTS for each tile of the ring's wall they colored, and one for every TICKS_PER_POINT
 ## ticks they stood on the wall while it sealed (#227). Every POINTS_PER_ROLL points is a roll, up
 ## to FULL_ROLLS, so a player who barely helped gets nothing (owner, #86). The numbers are
-## placeholders to tune (#960).
+## in Tuning (#1309).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "domination_loot"
-const WALL_POINTS: int = 2
-const TICKS_PER_POINT: int = Simulation.TICKS_PER_SECOND
-const POINTS_PER_ROLL: int = 3
-const FULL_ROLLS: int = 3
+const WALL_POINTS: int = Tuning.WALL_POINTS
+const TICKS_PER_POINT: int = Tuning.TICKS_PER_POINT
+const POINTS_PER_ROLL: int = Tuning.POINTS_PER_ROLL
+const FULL_ROLLS: int = Tuning.FULL_ROLLS
 
 
 func id() -> String:

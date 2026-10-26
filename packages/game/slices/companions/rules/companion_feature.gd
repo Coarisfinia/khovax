@@ -30,16 +30,16 @@ extends Feature
 const ID: String = "companions"
 ## The reach of a species the feature wasn't given one for, and the shortest and longest any
 ## species has, in tiles.
-const LEAST_REACH: int = 1
-const MOST_REACH: int = 5
+const LEAST_REACH: int = Tuning.COMPANION_LEAST_REACH
+const MOST_REACH: int = Tuning.COMPANION_MOST_REACH
 ## How much of a species' stats (its HP plus twice its strength and its speed) widens its reach by
-## a tile. A placeholder to tune (#960).
-const STATS_PER_TILE: int = 120
+## a tile. Its number is in Tuning (#1309).
+const STATS_PER_TILE: int = Tuning.COMPANION_STATS_PER_TILE
 ## How far from its player a companion counts as lost, in tiles.
 const LOST_DISTANCE: int = 2 * MOST_REACH
 ## The shortest and longest rest between two roaming steps, in ticks.
-const LEAST_REST: int = 10
-const MOST_REST: int = 40
+const LEAST_REST: int = Tuning.COMPANION_LEAST_REST
+const MOST_REST: int = Tuning.COMPANION_MOST_REST
 
 ## Each species' reach, by species id, from its stats in the content data (the species slice reads
 ## them).

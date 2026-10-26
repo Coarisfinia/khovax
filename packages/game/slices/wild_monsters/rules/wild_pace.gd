@@ -4,8 +4,8 @@ extends RefCounted
 ## for every stack (WildMonsterFeature's steps and chase, WildAttackFeature's strikes).
 
 ## How much faster each stack of rage makes a wild monster (thousandths, #961): its steps and its
-## strikes come this much more often. A placeholder to tune (#960).
-const RAGE_SPEED: int = 500
+## strikes come this much more often. Its number is in Tuning (#1309).
+const RAGE_SPEED: int = Tuning.RAGE_SPEED
 
 
 ## `ticks` (a wild monster's pace between two steps or strikes) made shorter by RAGE_SPEED for

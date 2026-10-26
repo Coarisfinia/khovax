@@ -9,8 +9,8 @@ extends RefCounted
 ## away, then the first in direction order, so the same ground always gives the same way. Made for
 ## the ground of one tick, it finds the ways of any monster on it.
 
-## How many steps ahead a wild monster looks for its way. A placeholder to tune (#960).
-const REACH: int = 10
+## How many steps ahead a wild monster looks for its way. Its number is in Tuning (#1309).
+const REACH: int = Tuning.WAY_REACH
 
 var _region: Region
 var _stuck: Dictionary[Vector2i, bool]
