@@ -32,7 +32,9 @@ func _input(event: InputEvent) -> void:
 		_hover(moved.position)
 		return
 	var click: InputEventMouseButton = event as InputEventMouseButton
-	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+	# Godot also reports a touch as a click (emulate_mouse_from_touch): the touch picks on its own.
+	var own: bool = click != null and click.device != InputEvent.DEVICE_ID_EMULATION
+	if own and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
 		if pick(click.position):
 			get_viewport().set_input_as_handled()
 		return
