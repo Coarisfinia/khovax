@@ -1495,12 +1495,13 @@ func _check_enemy_loss() -> String:
 	var profile: Profile = Profile.new()
 	QuestRewards.give(sworn, profile)
 	var half: Array[String] = ["sorn_lumawenai"]
-	if profile.standings.of("sorn_lumawenai") != 0 or profile.standings.half_lost != half:
+	# Both start one rank below neutral (#1378).
+	if profile.standings.of("sorn_lumawenai") != -1 or profile.standings.half_lost != half:
 		return "a quest raising the Odun Kragothai didn't lose half a rank with its enemy: %s" % [
 			sworn.problem,
 		]
 	QuestRewards.give(sworn, profile)
-	if profile.standings.of("sorn_lumawenai") != -1 or not profile.standings.half_lost.is_empty():
+	if profile.standings.of("sorn_lumawenai") != -2 or not profile.standings.half_lost.is_empty():
 		return "two quests raising the Odun Kragothai didn't lose a rank with its enemy"
 	return ""
 

@@ -50,6 +50,12 @@
 			"uniqueItems": true,
 			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
 		},
+		"starting_standing": {
+			"description": "The standing every player starts at with it (#1378), 0 (neutral) when left out.",
+			"type": "integer",
+			"minimum": -5,
+			"maximum": 5
+		},
 		"allied_until_postgame": {
 			"description": "Whether it stays allied with the player until the postgame once they've joined it (#1324): their standing with it never drops below the first rank. Such a faction is neutral to every other, so it is no faction's enemy and has none.",
 			"type": "boolean"

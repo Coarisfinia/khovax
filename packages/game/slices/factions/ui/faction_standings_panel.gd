@@ -9,7 +9,9 @@ extends VBoxContainer
 ## profile, and keeps up with it while shown.
 
 const TITLE: String = "Factions"
-const NONE_TEXT: String = "Neutral with every faction"
+## Shown while no standing has moved from its start: not "neutral", since some factions start off it
+## (#1378), and without naming one the player may not have met.
+const NONE_TEXT: String = "No faction standings yet"
 ## A faction's line: its name, the standing with its sign, and the rank's name.
 const LINE_TEXT: String = "%s: %+d, %s"
 ## A faction's line when the content doesn't know it: its id in words and the standing.
@@ -49,7 +51,9 @@ func refresh() -> void:
 		ids.assign(standings.keys())
 		ids.sort()
 		for id: String in ids:
-			lines.append(line_of(id, standings[id]))
+			# A standing moved back to neutral from another start (#1378) is kept, not listed.
+			if standings[id] != 0:
+				lines.append(line_of(id, standings[id]))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines == shown:
