@@ -457,18 +457,19 @@ CURLED = {"front_paw": (0.0, 0.0, 0.45), "hind_paw": (0.12, 0.0, -0.12)}
 DREAM = ("ear.L", 0.6, (0.12, 0.0, -0.2), 4, 18)
 
 
-def curled(body_height):
+def curled(body_height, turn=0.0):
     """A canine's sleeping pose (#1229), at `chest` (0..1) of a breath: lying on its belly,
     `body_height` down, as calmly as Faint's end is limp, its forearms flat, its chin resting on its
     forepaws, its ears laid back and its tail curled round its flank; the breath swells its ribcage
-    and lifts its head a little. Its paws lie on CURLED."""
+    and lifts its head a little. Its head turns `turn` radians toward its curled tail as it rests
+    on its paws (#1308: a little, so it doesn't look straight ahead). Its paws lie on CURLED."""
     def pose(chest):
         lying = {
             "root_loc": (0.0, -body_height * 0.92, 0.0),
             "spine_02": (0.04 * chest, 0.0, 0.03),
             "spine_01": (0.0, 0.0, 0.05),
-            "neck": (0.5 - 0.03 * chest, 0.0, 0.08),
-            "head": (0.32 - 0.01 * chest, 0.0, 0.06),
+            "neck": (0.5 - 0.03 * chest, 0.0, 0.08 + 0.4 * turn),
+            "head": (0.32 - 0.01 * chest, 0.0, 0.06 + 0.6 * turn),
             "ear.L": (0.6, 0.0, 0.2),
             "ear.R": (0.6, 0.0, -0.2),
             # Curled round its left flank toward its forepaws, the tip turning in most.
@@ -481,10 +482,64 @@ def curled(body_height):
     return pose
 
 
-def sleep(lying, paws=CURLED, breath=120, breaths=2):
+# How long a lolling tongue grows out of its mouth (its bone's scale along its length), and
+# the resting length every other clip keys, so a clip blending out of Sleep draws it back in.
+TONGUE_OUT = 1.6
+
+
+def tongue_in(_name, poses, _loop):
+    """An animate overlay for a body with a tongue bone (on_back): every clip that doesn't loll
+    the tongue out keys its resting length, so none keeps a lolling one from the clip before."""
+    for _frame, pose in poses:
+        pose.setdefault("scale.tongue", (1.0, 1.0, 1.0))
+
+
+def on_back(height, roll=2.9, tongue=(-0.25, 0.0, 0.5)):
+    """A canine's sleeping pose on its back (#1308), at `chest` (0..1) of a breath: rolled `roll`
+    radians onto its back about its length, a little short of belly up so it leans on one
+    shoulder, its back `height` (unscaled metres) up from where it stood (animate lifts it out of
+    the ground wherever it still sinks); its forelegs folded loosely over its chest, its hind legs
+    splayed open, its head tipped back and lying on its cheek, its jaw hanging open and its `tongue`
+    bone turned up out of it toward the ground and to one side (a turn), grown TONGUE_OUT long so it
+    lolls out (an animate overlay, tongue_in, keys it back in every other clip), its ears and tail
+    lying flat. The breath swells its belly and lifts the forelegs a little. Its legs swing free
+    (sleep's `planted=False`): no paw stands on anything."""
+    def pose(chest):
+        lying = {
+            "root_loc": (0.0, height, 0.0),
+            "root": (0.0, 0.0, roll),
+            "hips": (0.0, 0.0, 0.0),
+            "spine_01": (-0.06 - 0.02 * chest, 0.0, 0.0),
+            "spine_02": (-0.08 - 0.03 * chest, 0.0, 0.0),
+            "neck": (0.5, 0.0, 0.2),
+            "head": (0.25, -0.6, 0.25),
+            "jaw": (0.3, 0.0, 0.0),
+            "tongue": tongue,
+            "scale.tongue": (1.0, TONGUE_OUT, 1.0),
+            "ear.L": (0.9, 0.0, 0.3),
+            "ear.R": (0.9, 0.0, -0.3),
+            "tail_01": (0.6, 0.0, 0.3),
+            "tail_02": (0.2, 0.0, 0.3),
+            "tail_03": (0.1, 0.0, 0.2),
+            "tail_04": (0.0, 0.0, 0.2),
+        }
+        for side, sign in (("L", 1.0), ("R", -1.0)):
+            lying["upper_arm." + side] = (-1.0 - 0.05 * chest, 0.0, 0.15 * sign)
+            lying["forearm." + side] = (2.2, 0.0, 0.0)
+            lying["front_paw." + side] = (-1.0, 0.0, 0.0)
+            lying["thigh." + side] = (-0.5, 0.0, -0.55 * sign)
+            lying["shin." + side] = (0.9, 0.0, 0.0)
+            lying["hock." + side] = (-0.6, 0.0, 0.0)
+            lying["hind_paw." + side] = (0.5, 0.0, 0.0)
+        return lying
+    return pose
+
+
+def sleep(lying, paws=CURLED, breath=120, breaths=2, planted=True):
     """Asleep (#1229), a loop posed on every frame: `lying(chest)` is its pose at `chest` (0..1) of
-    a breath (`curled`, or a body plan's own), its paws lying on `paws` (paw: its left one's
-    shift, as CURLED) all along. It breathes slowly, `breaths` breaths of `breath` frames a loop,
+    a breath (`curled`, `on_back`, or a body plan's own), its paws lying on `paws` (paw: its left
+    one's shift, as CURLED) all along; not `planted` (`on_back`), its legs swing free and `paws`
+    is empty. It breathes slowly, `breaths` breaths of `breath` frames a loop,
     the ribcage swelling quicker than it settles, and once a loop an ear twitches in its sleep
     (DREAM). Every wave runs a whole number of times a loop, so the seam is exact; the game blends
     into it from whatever it played, so it has no lead-in of its own."""
@@ -503,7 +558,7 @@ def sleep(lying, paws=CURLED, breath=120, breaths=2):
         turn = _twitch(step % frames, round(start * frames), amplitude, out, back)
         pose[ear] = tuple(value + extra for value, extra in zip(pose.get(ear, (0.0, 0.0, 0.0)), turn))
         poses.append((step + 1, pose))
-    return Clip(poses, loop=True)
+    return Clip(poses, loop=True, planted=planted)
 
 
 # Overlap and follow-through (motion.follow): which bones trail their parent, and how:

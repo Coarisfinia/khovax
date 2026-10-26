@@ -21,6 +21,8 @@ class Proportions:
     - `hips`, `waist` (where the spine bends), `chest`, `head_base`, `nose`.
     - `jaw`: (joint, chin), the joint where the skull hinges it; `ear`: (base, tip); `scapula`: its top, above the front leg.
     - `front_leg`: shoulder, elbow, wrist, paw tip; `hind_leg`: hip, knee, hock, ankle, paw tip.
+    - `tongue` (optional): (root, tip), lying on the mouth's floor, on a bone of its own hung from
+      the jaw, so a clip can loll it out (muzzle.Snout.tongue).
     """
 
     def __init__(self, **joints):
@@ -39,6 +41,8 @@ def bones(p):
         ("head", p.head_base, p.nose, "neck"),
         ("jaw", p.jaw[0], p.jaw[1], "head"),
     ]
+    if getattr(p, "tongue", None) is not None:
+        out.append(("tongue", p.tongue[0], p.tongue[1], "jaw"))
     parent, previous = "hips", p.hips
     for index, point in enumerate(reversed(p.tail)):
         name = "tail_%02d" % (index + 1)
