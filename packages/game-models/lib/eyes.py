@@ -1,21 +1,41 @@
 """Detailed eyes that hold up close: a dark eyeball, a glowing iris with a slit pupil, a glint, a
 glowing rim and a brow ridge over it, set into the head's surface and looking out and forward.
 `almond` narrows the eye's height (1 is round) and `tilt` lifts its outer corner, so a predator's
-eye reads sharp and angled rather than round."""
+eye reads sharp and angled rather than round.
 
+An eye may have a lid (#1304): a dome of the head's skin over the eye on a bone of its own,
+`lid.<side>`, hinged across the eye's middle. At rest it lies turned up and back over the eye, in
+the head; turning its bone OPEN radians about its length (the eye's own sideways axis) brings it
+down over the front of the eye, shut. `Lids` adds the bones and, as an animate overlay, shuts the
+lids in its clips: asleep, fainted and blinking now and then while it stands."""
+
+import math
+
+import bpy
 from mathutils import Matrix, Vector
 
-from . import parts
+from . import parts, scene
+
+LID = "lid."
+# How far (radians) an open lid lies turned up and back from shut: its lower edge just over the
+# eye's top, the dome tucked back into the head (and under a brow), so the open eye shows whole.
+OPEN = math.radians(160)
+# The lid's size against the eye's (sideways, up, out), the up share times `almond`: big enough
+# shut to cover the eyeball, iris, glint and the glowing rim round them. A round eye's lid is
+# deeper (DEEP times `almond`): halfway shut, its depth stands up over the eye, and must still
+# reach past the rim's top, or the rim shows above the lid in a blink (check_brows.py).
+LID_SIZE = (1.25, 1.25, 0.95)
+DEEP = 1.2
 
 def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0,
-        pupil=(0.16, 0.55)):
+        pupil=(0.16, 0.55), lid=None):
     """An eye on the body near `guess`, of radius `size`, looking between the surface's normal
     there and `forward`. `brow` angles the ridge over it down toward the snout (radians), and
     `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
     whose top edge stays above the eye. `pupil` is the pupil's (width, height) as shares of the
     eye: a predator's upright slit by default, wide and round for a gentler creature.
     `mats` needs "dark", "glow", "light" and "skin" (the brow). Returns its pieces, all weighted to
-    `bone`."""
+    `bone`, and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it)."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
     normal = normal if found else Vector(forward)
     looking = (normal * 0.55 + Vector(forward).normalized() * 0.45).normalized()
@@ -56,7 +76,96 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
                    mats["glow"], bone, major_radius=1.0, minor_radius=0.1, major_segments=16,
                    minor_segments=4)
     )
+    if lid is not None:
+        made.append(_lid(name + ".lid", center, turn, size, almond, mats["skin"], lid))
     return made
+
+
+def _lid(name, center, turn, size, almond, mat, bone):
+    """The lid: the front half of a dome over the eye, flat across its back, turned OPEN up
+    and back about the eye's sideways axis. Remembers its hinge and that axis (Lids)."""
+    width, height, depth = LID_SIZE
+    depth = max(depth, DEEP * almond)
+    made = parts.part("uv_sphere", name, (0.0, 0.0, 0.0), (width * size, height * almond * size, depth * size),
+                      mat=mat, bone=bone, segments=16, ring_count=8)
+    # The back half pressed flat onto the front's rim: one closed piece, its faces as built, so
+    # every build gives the same mesh (a filled hole's faces didn't, check_rebuild.py).
+    for vertex in made.data.vertices:
+        vertex.co.z = max(vertex.co.z, 0.0)
+    made.data.transform(Matrix.Translation(center) @ (turn @ Matrix.Rotation(-OPEN, 3, "X")).to_4x4())
+    made.data.update()
+    made["hinge"], made["axis"] = tuple(center), tuple(turn @ Vector((1.0, 0.0, 0.0)))
+    return made
+
+
+def mirrored(pieces):
+    """The right eye of a left one `eyes.eye` built ("Eye.L.*"), mirrored across X (parts.mirrored),
+    its lid on the right lid's bone, hinged on the right eye's own sideways axis."""
+    made = []
+    for piece in pieces:
+        twin = parts.mirrored(piece, piece.name.replace(".L.", ".R."))
+        if "hinge" in twin:
+            twin.vertex_groups[LID + "L"].name = LID + "R"
+            x, y, z = piece["hinge"]
+            twin["hinge"] = (-x, y, z)
+            # The right eye's own X runs toward its inner corner (eye), so its axis is the left
+            # one's mirrored and turned around.
+            x, y, z = piece["axis"]
+            twin["axis"] = (x, -y, -z)
+        made.append(twin)
+    return made
+
+
+class Lids:
+    """The lids' bones on `rig`, one per lid among `pieces` (`eyes.eye` with `lid`), hung from
+    `parent` at the eye's middle and pointing along its sideways axis, in the rig's unscaled
+    metres (before scene.apply_scale). `shut`, an animate overlay, closes them: all through Sleep,
+    over `faint` (first frame, last frame) of Faint and held shut after, and in a blink at each
+    share of Idle's loop in `blinks`, BLINK frames long."""
+
+    # How many frames a blink takes, shut and open again: quick, and slow enough for the motion
+    # check's jitter limit (shorter, the lid's swing starts and stops too sharply).
+    BLINK = 12
+
+    def __init__(self, rig, pieces, parent, faint, blinks=(0.3, 0.7)):
+        self.faint, self.blinks = faint, blinks
+        lids = sorted((piece for piece in pieces if "hinge" in piece), key=lambda piece: piece.name)
+        self.names = [piece.vertex_groups[0].name for piece in lids]
+        scene.select_only(rig)
+        bpy.ops.object.mode_set(mode="EDIT")
+        for name, piece in zip(self.names, lids):
+            bone = rig.data.edit_bones.new(name)
+            bone.head = Vector(piece["hinge"])
+            bone.tail = Vector(piece["hinge"]) + Vector(piece["axis"]) * 0.02
+            bone.parent = rig.data.edit_bones[parent]
+        bpy.ops.object.mode_set(mode="OBJECT")
+
+    def share(self, name, index, frame, frames):
+        """How far shut (0..1) the lids are on `frame` of clip `name`, `index` frames into it,
+        `frames` frames long."""
+        if name == "Sleep":
+            return 1.0
+        if name == "Faint":
+            start, end = self.faint
+            # Smooth at both ends: a lid snapping shut at speed is a pop the motion check fails.
+            done = max(0.0, min(1.0, (frame - start) / (end - start)))
+            return done * done * (3.0 - 2.0 * done)
+        if name == "Idle":
+            shut = 0.0
+            for at in self.blinks:
+                since = index - round(at * frames)
+                if 0 <= since <= self.BLINK:
+                    shut += 0.5 - 0.5 * math.cos(2.0 * math.pi * since / self.BLINK)
+            return shut
+        return 0.0
+
+    def shut(self, name, poses, loop):
+        """Keys the lids on every frame of `poses` ([(frame, pose)], every frame)."""
+        frames = len(poses) - 1 if loop else len(poses)
+        for index, (frame, pose) in enumerate(poses):
+            closed = self.share(name, index, frame, frames)
+            for bone in self.names:
+                pose[bone] = (0.0, OPEN * closed, 0.0)
 
 
 def spot(pieces):

@@ -208,7 +208,7 @@ def head_parts(skin, mats):
                                mats["light"], "ear." + side, vertices=10, radius1=1.0, radius2=0.0, depth=1.0))
         made += eyes.eye(skin, "Eye." + side, (0.10 * sign, -0.82, 1.24), (0.03 * sign, -1.0, 0.05), 0.09,
                          {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["fur"]},
-                         "head", almond=1.0, tilt=0.0, brow=math.radians(-20),
+                         "head", lid=eyes.LID + side, almond=1.0, tilt=0.0, brow=math.radians(-20),
                          # A pup's soft, small brow, not a predator's heavy ridge (the owner, on #1249).
                          brow_size=0.5)
     return made
@@ -281,6 +281,8 @@ def build(out):
     symmetry.check(pieces)
     rig = quadruped.armature("ManaPupRig", PUP)
     points(rig, pieces)
+    # The lids shut as it sinks into its faint, until it lies flat (clips.faint).
+    lids = eyes.Lids(rig, pieces, "head", faint=(19, 32))
     drifting = wisps.Wisps(rig, WISPS, [CROWN, *CHANNEL_CROWN])
     scene.apply_scale([rig, skin] + pieces, SCALE)
 
@@ -288,7 +290,7 @@ def build(out):
         quadruped.bind_torso(body, rig, *(height * SCALE for height in TORSO_WEIGHT_HEIGHTS))
         SNOUT.bind_jaw(body, "jaw", SCALE)
 
-    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "tongue", "ear.L", "ear.R", *drifting.names),
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "tongue", "ear.L", "ear.R", *drifting.names, *lids.names),
                  reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
@@ -309,7 +311,7 @@ def build(out):
         # It sleeps on its back, paws in the air and its tongue out (the owner, on #1308).
         "Sleep": clips.sleep(clips.on_back(SLEEP_HEIGHT), paws={}, planted=False),
     }, SCALE, ground_meshes=[skin],  # the body, with every part joined into it by weights.bind
-        overlays=[drifting.drift, clips.tongue_in])
+        overlays=[drifting.drift, clips.tongue_in, lids.shut])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))

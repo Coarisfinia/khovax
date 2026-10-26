@@ -54,9 +54,12 @@ a second model could use goes into the library or a generic tool, never into one
     `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends
     taper out to a point (`taper`, #1171), and `rune`s (`GLYPHS`).
-  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, lid), where
+  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, brow), where
     it looks out from (`spot`) and which way (`look`); a smaller brow with `brow_size`, whose top
-    edge stays over the eye (#1249).
+    edge stays over the eye (#1249); with `lid`, a lid on a bone of its own (#1304), which
+    `Lids` adds to the rig and, as an `animate` overlay, shuts in Sleep, at Faint's end and in a
+    blink now and then in Idle (its bones go into `weights.bind`'s `rigid_bones`); `mirrored`
+    makes a right eye from a left one, lid included.
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
     shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the

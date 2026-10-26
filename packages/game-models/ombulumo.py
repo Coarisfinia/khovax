@@ -206,19 +206,19 @@ def head_parts(skin, mats):
             spot = tuple(b + o * share for b, o in zip(base, out))
             toward = (out[0] + 0.12 * index * sign, out[1] + 0.1 * index, out[2] + 0.08 * index)
             made.append(leaf("Frond.%d.%s" % (index, side), spot, toward, length, width, mats["moss"], "ear." + side))
-    # The left eye, set into the skin, and its mirror image on the right. Its turret is its lid:
-    # a brow ridge would float over a bulging eye.
+    # The left eye, set into the skin, with its lid (#1304), and its mirror image on the right. No
+    # brow ridge: it would float over a bulging eye, which its turret holds.
     left = []
     # Set forward and low on its turret, looking level ahead: from the top camera it shows as an
     # eye, not a ring facing the sky, and from the front its rings sit round its pupil (#1294).
     for piece in eyes.eye(skin, "Eye.L", (0.27, -0.60, 0.88), (0.25, -1.0, 0.0), 0.09,
                           {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
-                          "head", almond=0.95, pupil=(0.42, 0.34)):
+                          "head", almond=0.95, pupil=(0.42, 0.34), lid=eyes.LID + "L"):
         if piece.name.endswith(".brow"):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             left.append(piece)
-    made += left + [parts.mirrored(piece, piece.name.replace("Eye.L.", "Eye.R.")) for piece in left]
+    made += left + eyes.mirrored(left)
     return made
 
 
@@ -414,6 +414,8 @@ def build(out):
     symmetry.check(pieces)
     rig = quadruped.armature("OmbulumoRig", TOAD)
     points(rig, pieces)
+    # The lids shut as it flops down, until it lies flat (flop).
+    lids = eyes.Lids(rig, pieces, "head", faint=(12, 26))
     channel = boom()
     # The booms fall where the chest pumps highest, halfway between the loop's beats; the wind-up
     # and the release take the beat either side of them, so the pulse runs on across the clips.
@@ -427,7 +429,7 @@ def build(out):
     }
     booming = pulse.Pulse(rig, "throat", THROAT, "neck", beats, BOOM_SWELL, BOOM_RISE, BOOM_FALL)
     scene.apply_scale([rig, skin] + pieces, SCALE)
-    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", THROAT_BONE),
+    weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", THROAT_BONE, *lids.names),
                  reweigh=turrets)
     clips.animate(rig, {
         "Idle": clips.idle(),
@@ -441,7 +443,7 @@ def build(out):
         # No neck: the toad's head is near the ground already, and dips to it.
         "Feed": clips.feed(neck=0.18, head=-0.05, crouch=0.06, forepaws=0.06),
         "Sleep": clips.sleep(squat, SQUAT),
-    }, SCALE, ground_meshes=[skin], overlays=[booming.beat])
+    }, SCALE, ground_meshes=[skin], overlays=[booming.beat, lids.shut])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
