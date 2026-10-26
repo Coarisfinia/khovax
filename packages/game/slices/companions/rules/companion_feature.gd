@@ -17,7 +17,9 @@ extends Feature
 ## (CompanionParty.revive, #655). A player whose companion has fainted while another they carry
 ## hasn't, as after a session starts, gets that one chosen. Fainting is kept by the monster's short
 ## id (#700), like the companion choice itself, so two carried monsters of one species are two
-## companions.
+## companions. Its level (CompanionParty.level_of, from its player's profile, #1255) grows its HP,
+## its strength and its speed (CompanionGrowth); the HP follows the level each tick, so a level
+## gained mid-session counts at once.
 ## It roams freely around its player, within a reach worked out from its species' stats
 ## (`reach_of`): a weak monster stays close, a strong one ranges further. Within reach, it rests a
 ## rolled while, then takes a step in a rolled direction that keeps it in reach; out of reach (its
@@ -95,6 +97,8 @@ func start(state: GameState) -> void:
 ## whose player takes an exit this tick stays: the world moves it with them (`followers_of`).
 func step(state: GameState, commands: Array[Command]) -> void:
 	_take_parties(state, commands)
+	for companion_id: int in companions():
+		var _fits: bool = _track(state, companion_id)
 	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
 	for event: RefCounted in state.events.duplicate():
 		var fell: EntityFell = event as EntityFell
@@ -210,12 +214,16 @@ func carry_in(state: GameState, arrived: Entity, carried: Dictionary) -> void:
 
 
 ## Tells the health feature, where the instance has it, the species of `companion_id`, whose HP it
-## keeps (#835); whether the companion took no more damage than that HP.
+## keeps (#835), grown by its level (#1255); whether the companion took no more damage than that HP.
 func _track(state: GameState, companion_id: int) -> bool:
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	if health == null:
 		return true
 	health.track(companion_id, _species[companion_id])
+	health.grow(
+		companion_id,
+		CompanionGrowth.share(CompanionGrowth.level_of(state, self, companion_id)),
+	)
 	return health.fits(state, companion_id)
 
 

@@ -4,8 +4,9 @@ extends RefCounted
 ## them walking beside them as their companion (#55), and the ones that fainted, in the order they
 ## did (#597, #655), none of which walks beside them or is swapped to until it's revived. It's the
 ## companions' entry in the player's world store (PlayerStore, #724), so the world carries it across
-## exits, instances and sessions: `carried` (short ids) with their `species` in the same order,
-## `companion` and `fainted`. Every monster is kept by its short id (ShortId, #700), so two of one
+## exits, instances and sessions: `carried` (short ids) with their `species` and `levels` (#1255)
+## in the same order, `companion` and `fainted`; a party saved before levels has none, so each of
+## its monsters is at level 1. Every monster is kept by its short id (ShortId, #700), so two of one
 ## species are two monsters. Who a player brings comes from their profile, as a run of requests
 ## from its outbox (#818, CarryRequest), which the world takes (`take_request`); a replay starts
 ## with who its players bring (`bring`). The rules choose, faint and revive inside a tick.
@@ -14,7 +15,7 @@ extends RefCounted
 ## whole.
 const INCOMING: String = "incoming"
 ## The keys of the party itself in the entry.
-const PARTY_KEYS: Array[String] = ["carried", "species", "companion", "fainted"]
+const PARTY_KEYS: Array[String] = ["carried", "species", "levels", "companion", "fainted"]
 
 
 ## The short ids of the monsters the player in `slot` carries, in their carried order, in `state`.
@@ -32,6 +33,15 @@ static func species_of(state: GameState, slot: int, short_id: String) -> String:
 	var place: int = carried(state, slot).find(short_id)
 	var party_species: PackedStringArray = carried_species(state, slot)
 	return party_species[place] if place >= 0 and place < party_species.size() else ""
+
+
+## The level of the carried monster `short_id` of the player in `slot` (#1255), from 1; 1 for one
+## they don't carry.
+static func level_of(state: GameState, slot: int, short_id: String) -> int:
+	var entry: Dictionary = state.stored(slot, CompanionFeature.ID)
+	var place: int = _carried_of(entry).find(short_id)
+	var party_levels: PackedInt64Array = _levels_of(entry)
+	return party_levels[place] if place >= 0 and place < party_levels.size() else 1
 
 
 ## The short id of the companion of the player in `slot`, or "" for none.
@@ -89,8 +99,8 @@ static func bring(
 ## Takes the request with the data `data` from a run bringing monsters into the party of the player
 ## in `slot` (CarryRequest, #818), inside a tick. Once the run is whole, its monsters, of the
 ## species `species_by_code` names by their codes, are the party, like `bring`'s with the chosen
-## one kept. A request out of its run's order changes nothing, and a monster of a species no code
-## names, or without a short id, isn't brought.
+## one kept, at the levels the run names. A request out of its run's order changes nothing, and a
+## monster of a species no code names, or without a short id, isn't brought.
 static func take_request(
 	state: GameState,
 	slot: int,
@@ -109,13 +119,13 @@ static func take_request(
 		return
 	var party: CarriedMonsters = CarriedMonsters.new()
 	for at: int in range(0, incoming.size() - 1, 2):
-		var species_code: int = incoming[at] if incoming[at] is int else CommandCodes.NONE
+		var value: int = incoming[at] if incoming[at] is int else CommandCodes.NONE
 		var id_code: int = incoming[at + 1] if incoming[at + 1] is int else 0
-		var species_id: String = species_by_code.get(species_code, "")
+		var species_id: String = species_by_code.get(CarryRequest.code_in(value), "")
 		var short_id: String = ShortId.of_code(id_code)
 		if not species_id.is_empty() and not short_id.is_empty():
 			if not party.short_ids.has(short_id):
-				party = party.add(short_id, species_id)
+				party = party.add(short_id, species_id, CarryRequest.level_in(value))
 	var brought: Dictionary = _entry_of(entry, party, true)
 	for key: String in PARTY_KEYS + [INCOMING]:
 		var _dropped: bool = entry.erase(key)
@@ -138,6 +148,7 @@ static func _entry_of(before: Dictionary, party: CarriedMonsters, keep_chosen: b
 	return {
 		"carried": Array(party.short_ids),
 		"species": Array(party.species),
+		"levels": Array(party.levels),
 		"companion": chosen,
 		"fainted": down,
 	}
@@ -169,8 +180,10 @@ static func _carried_monsters(entry: Dictionary) -> CarriedMonsters:
 	var party: CarriedMonsters = CarriedMonsters.new()
 	var party_species: PackedStringArray = _species_of(entry)
 	var short_ids: PackedStringArray = _carried_of(entry)
+	var party_levels: PackedInt64Array = _levels_of(entry)
 	for place: int in mini(short_ids.size(), party_species.size()):
-		party = party.add(short_ids[place], party_species[place])
+		var level: int = party_levels[place] if place < party_levels.size() else 1
+		party = party.add(short_ids[place], party_species[place], level)
 	return party
 
 
@@ -186,8 +199,9 @@ static func fainted_in(world: World, slot: int) -> PackedStringArray:
 
 
 ## Why the party of the player in `slot` in `state`, as a save brought it back, isn't one, or "":
-## none at all, or the short ids of the monsters they carry, each once, with a named species each,
-## one of them their companion, and the ones that fainted among them, each once.
+## none at all, or the short ids of the monsters they carry, each once, with a named species each
+## and a level each (or none saved, from before levels), one of them their companion, and the ones
+## that fainted among them, each once.
 static func problem(state: GameState, slot: int) -> String:
 	var entry: Dictionary = state.stored(slot, CompanionFeature.ID)
 	if entry.is_empty():
@@ -197,6 +211,7 @@ static func problem(state: GameState, slot: int) -> String:
 	var down: PackedStringArray = _fainted_of(entry)
 	var listed: bool = _lists_text(entry, "carried") and _lists_text(entry, "fainted")
 	listed = listed and _lists_text(entry, "species") and party_species.size() == party.size()
+	listed = listed and (not entry.has("levels") or _levels_of(entry).size() == party.size())
 	var named: bool = not party.is_empty() and not party_species.has("")
 	if not listed or not named or not party.has(_companion_of(entry)):
 		return "slot %d's party isn't named carried monsters with a companion among them" % slot
@@ -231,6 +246,22 @@ static func _species_of(entry: Dictionary) -> PackedStringArray:
 
 static func _fainted_of(entry: Dictionary) -> PackedStringArray:
 	return _text_list(entry, "fainted")
+
+
+## The levels listed in `entry`, in carried order: none when it lists none, or any that isn't a
+## whole number from 1 to CarryRequest.MOST_LEVEL.
+static func _levels_of(entry: Dictionary) -> PackedInt64Array:
+	var listed: PackedInt64Array = PackedInt64Array()
+	var value: Variant = entry.get("levels", [])
+	if not value is Array:
+		return listed
+	var items: Array = value
+	for item: Variant in items:
+		var level: int = item if item is int else 0
+		if level < 1 or level > CarryRequest.MOST_LEVEL:
+			return PackedInt64Array()
+		var _added: bool = listed.append(level)
+	return listed
 
 
 static func _companion_of(entry: Dictionary) -> String:

@@ -566,6 +566,45 @@ func _check_carry_requests() -> String:
 	_carry_in(world, outbox.entries[0])
 	if outbox.entries.size() != 1 or CompanionParty.carried_in(world)[0].size() != 0:
 		return "a run of none didn't empty the party"
+	return _check_carried_levels(world, outbox)
+
+
+## A monster's level rides to the world with its party (#1255): a level 1 monster's requests are
+## as before levels, a level gained since sends the party again, and the companion's HP grows with
+## it, 5% a level above 1, damage taken kept.
+func _check_carried_levels(world: World, outbox: Outbox) -> String:
+	var party: CarriedMonsters = FlowSteps.party(["tikazzir"])
+	if CarryRequest.values_of(party)[0] != CarryRequest.species_code("tikazzir"):
+		return "a level 1 monster's request isn't its species' code alone"
+	outbox.entries.clear()
+	var _posted: bool = _carry_posted(party, outbox, world)
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
+	var health: HealthFeature = forest.feature(HealthFeature.ID) as HealthFeature
+	var companion_id: int = companions.companion_of(0)
+	var species_hp: int = health.max_hp_of(forest, companion_id)
+	var _fell: bool = health.hurt(forest, companion_id, 1)
+	outbox.entries.clear()
+	var grown: CarriedMonsters = CarriedMonsters.new().add(party.short_ids[0], "tikazzir", 3)
+	if not _carry_posted(grown, outbox, world):
+		return "a monster's level gained since wasn't sent to the world"
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	species_hp = Fixed.scale(species_hp, Fixed.ONE + 2 * CompanionGrowth.GROWTH_PER_LEVEL)
+	if (CompanionParty.level_of(forest, 0, party.short_ids[0]) != 3
+			or companions.companion_of(0) != companion_id
+			or health.max_hp_of(forest, companion_id) != species_hp
+			or health.hp_of(forest, companion_id) != species_hp - 1
+			or not CompanionParty.carried_in(world)[0].same_as(grown)):
+		return "a level 3 companion didn't stay, with 110%% of its HP, damage kept: %d of %d" % [
+			health.hp_of(forest, companion_id),
+			health.max_hp_of(forest, companion_id),
+		]
+	party = CarriedMonsters.of_data(grown.to_data())
+	if party == null or not party.same_as(grown):
+		return "a level 3 monster didn't go through a replay's data and back"
 	return ""
 
 

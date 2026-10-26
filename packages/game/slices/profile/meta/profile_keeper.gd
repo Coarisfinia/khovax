@@ -121,7 +121,7 @@ func choose_name(typed: String, now_msec: int) -> String:
 func catch_up_party(stored: Dictionary, now_msec: int) -> String:
 	var party: CarriedMonsters = CarriedMonsters.new()
 	for monster: DominatedMonster in profile.carried_monsters():
-		party = party.add(monster.short_id, monster.species)
+		party = party.add(monster.short_id, monster.species, monster.level)
 	if not PartyRequests.catch_up(party, profile.outbox, stored):
 		return ""
 	_pending = true

@@ -2,7 +2,8 @@ class_name CompanionAttackFeature
 extends Feature
 ## Companions fight on their own (#221): every companion strikes a wild monster next to it once a
 ## second, the one with the lowest id, for its species' strength, after the type chart where the
-## instance has it (TypeEffectivenessFeature, #626). The hit is non-lethal, an auto
+## instance has it (TypeEffectivenessFeature, #626). Its level (#1255) makes its strikes harder and
+## more often (CompanionGrowth). The hit is non-lethal, an auto
 ## attack's property: it never takes a wild monster below 1 HP, so it weakens it for a domination
 ## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Nor are ones
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
@@ -58,8 +59,8 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		_strike(state, wild, companion_id, companions.species_of(companion_id), target)
 
 
-## The companion `companion_id`, a `species`, strikes `target` for its strength after the type
-## chart, then waits STRIKE_TICKS.
+## The companion `companion_id`, a `species`, strikes `target` for its strength at its level after
+## the type chart, then waits STRIKE_TICKS, shortened by its level.
 func _strike(
 		state: GameState,
 		wild: WildMonsterFeature,
@@ -68,10 +69,12 @@ func _strike(
 		target: int,
 ) -> void:
 	var struck: String = wild.species_of(target)
-	var strength: int = wild.strengths.get(species, 1)
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var level: int = CompanionGrowth.level_of(state, companions, companion_id)
+	var strength: int = CompanionGrowth.stat(wild.strengths.get(species, 1), level)
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
 	wild.wound(state, target, damage)
-	_waits[companion_id] = STRIKE_TICKS
+	_waits[companion_id] = CompanionGrowth.ticks(STRIKE_TICKS, level)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, false, struck)
 	state.events.append(CompanionStruck.new(companion_id, target, damage, strong))
 

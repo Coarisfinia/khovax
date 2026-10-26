@@ -7,7 +7,8 @@ extends Feature
 ## knocked down or sent back to the spawn (#457, #479); what a fallen wild monster or companion does
 ## is its own feature's rule (WildMonsterFeature.wound, CompanionFeature, #410, #456). A player has
 ## PLAYER_HP; a wild monster or a companion has its species' HP from the content data, once its
-## feature told this one its species (`track`). Only the damage taken is kept, so an entity nothing
+## feature told this one its species (`track`), times the share its feature grows it by (`grow`, a
+## companion's level, #1255). Only the damage taken is kept, so an entity nothing
 ## hit is at full HP without an entry. It steps before the wild monsters and the companions, so
 ## every feature that hurts or heals can require it, and it names neither (#821). A later rule can
 ## shield an entity (`shield`, a player a dialog holds, #981): no hit hurts it, and a wild monster
@@ -36,6 +37,9 @@ var _species: Dictionary[int, String] = {}
 ## The entities a later rule shields, by entity id. The rule shields them again at the start of
 ## every tick from its own state, so this is neither hashed nor saved.
 var _shielded: Dictionary[int, bool] = {}
+## The share of its species' HP each grown entity has, in thousandths (Fixed), by entity id
+## (`grow`). Its feature grows it again whenever it tracks it, so it's neither hashed nor saved.
+var _shares: Dictionary[int, int] = {}
 
 
 func _init(species_max_hps: Dictionary[String, int] = {}) -> void:
@@ -63,6 +67,15 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 ## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it.
 func track(entity_id: int, species: String) -> void:
 	_species[entity_id] = species
+
+
+## Gives the tracked `entity_id` `share` of its species' HP, in thousandths (a companion's level,
+## #1255); Fixed.ONE is its species' own. The damage it took stays, so more HP leaves it more.
+func grow(entity_id: int, share: int) -> void:
+	if share == Fixed.ONE:
+		var _dropped: bool = _shares.erase(entity_id)
+	else:
+		_shares[entity_id] = share
 
 
 ## Shields `entity_id` from every hit, or lets hits hurt it again: a later rule's (a player a
@@ -145,6 +158,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _damage.erase(removed_id)
 	_dropped = _species.erase(removed_id)
 	_dropped = _shielded.erase(removed_id)
+	_dropped = _shares.erase(removed_id)
 
 
 ## The damage a follower has taken (#716), so it arrives next door as hurt as it left.
@@ -164,10 +178,12 @@ func hp_of(state: GameState, entity_id: int) -> int:
 	return max_hp_of(state, entity_id) - taken
 
 
-## The HP `entity_id` has when unhurt: its species' for a tracked one, else a player's.
+## The HP `entity_id` has when unhurt: its species' for a tracked one, grown by its share, else a
+## player's.
 func max_hp_of(state: GameState, entity_id: int) -> int:
 	if _species.has(entity_id):
-		return max_hps.get(_species[entity_id], UNKNOWN_HP)
+		var species_hp: int = max_hps.get(_species[entity_id], UNKNOWN_HP)
+		return Fixed.scale(species_hp, _shares.get(entity_id, Fixed.ONE))
 	var entity: Entity = state.entity(entity_id)
 	if entity != null and entity.slot != Entity.NO_SLOT:
 		return PLAYER_HP
@@ -198,6 +214,7 @@ func save_values() -> Dictionary:
 func load_values(state: GameState, values: DataReader) -> void:
 	_damage.clear()
 	_species.clear()
+	_shares.clear()
 	var hurt_ids: Array[int] = values.wholes("hurt", 1, Fixed.MAX_AMOUNT)
 	var damage: Array[int] = values.wholes("damage", 1, Fixed.MAX_AMOUNT)
 	if values.failed():

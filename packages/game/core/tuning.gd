@@ -43,6 +43,9 @@ const COMPANION_MOST_REACH: int = 5
 ## The shortest and longest rest between a companion's two roaming steps, in ticks (#338).
 const COMPANION_LEAST_REST: int = 10
 const COMPANION_MOST_REST: int = 40
+## How much each level above 1 raises a companion's HP, strength and speed (its strikes come that
+## much more often), in thousandths of its species' (#1255): a level 3 companion has 110% of each.
+const COMPANION_GROWTH_PER_LEVEL: int = 50
 ## The ticks between two hurts of the trap's spikes, as between two auto attacks (#692).
 const SPIKES_STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
 # Wild monsters.
