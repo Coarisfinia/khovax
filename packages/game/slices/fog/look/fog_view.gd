@@ -117,6 +117,11 @@ func _retarget(fog: FogFeature, next_door: NeighbourView) -> void:
 		_aim(tile, _target(fog, tile, lit, shown), UNSEEN)
 	if next_door != null:
 		_remember_next_door(fog, next_door, lit)
+	# A neighbour that went or moved leaves tiles nothing aims at any more: they go, so the cloud,
+	# drawn anew, shows thick cloud there instead of their old brightness (#1388).
+	for tile: Vector2i in brightness.keys():
+		if not _targets.has(tile):
+			var _gone: bool = brightness.erase(tile)
 	_inputs.remember(fog, _seen.size(), next_door)
 
 
