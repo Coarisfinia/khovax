@@ -9,6 +9,7 @@ legs reach for it (legs, #1073); a paw's own rotation tilts it in the world."""
 import math
 
 import bpy
+from mathutils import Euler, Vector
 
 from . import clip_set, ground, legs, motion, scene
 
@@ -497,7 +498,8 @@ def tongue_in(_name, poses, _loop):
 def on_back(height, roll=2.9, tongue=(-0.25, 0.0, 0.5)):
     """A canine's sleeping pose on its back (#1308), at `chest` (0..1) of a breath: rolled `roll`
     radians onto its back about its length, a little short of belly up so it leans on one
-    shoulder, its back `height` (unscaled metres) up from where it stood (animate lifts it out of
+    shoulder, its spine level and on the ground (the owner, on #1308: not propped up on its tail
+    or its head), its back `height` (unscaled metres) up from where it stood (animate lifts it out of
     the ground wherever it still sinks); its forelegs folded loosely over its chest, its hind legs
     splayed open, its head tipped back and lying on its cheek, its jaw hanging open and its `tongue`
     bone turned up out of it toward the ground and to one side (a turn), grown TONGUE_OUT long so it
@@ -510,20 +512,24 @@ def on_back(height, roll=2.9, tongue=(-0.25, 0.0, 0.5)):
             # sideways keeps the rolled body over the spot it stood on.
             "root_loc": (height * math.sin(roll), height, 0.0),
             "root": (0.0, 0.0, roll),
-            "hips": (0.0, 0.0, 0.0),
-            "spine_01": (-0.06 - 0.02 * chest, 0.0, 0.0),
-            "spine_02": (-0.08 - 0.03 * chest, 0.0, 0.0),
-            "neck": (0.5, 0.0, 0.2),
-            "head": (0.25, -0.6, 0.25),
+            "hips": (0.08, 0.0, 0.0),
+            "spine_01": (-0.02 * chest, 0.0, 0.0),
+            "spine_02": (-0.03 * chest, 0.0, 0.0),
+            "neck": (0.6, 0.0, 0.2),
+            "head": (0.25, -0.35, 0.25),
             "jaw": (0.3, 0.0, 0.0),
             "tongue": tongue,
             "scale.tongue": (1.0, TONGUE_OUT, 1.0),
-            "ear.L": (0.9, 0.0, 0.3),
-            "ear.R": (0.9, 0.0, -0.3),
-            "tail_01": (0.6, 0.0, 0.3),
-            "tail_02": (0.2, 0.0, 0.3),
-            "tail_03": (0.1, 0.0, 0.2),
-            "tail_04": (0.0, 0.0, 0.2),
+            "ear.L": (1.2, 0.0, 0.4),
+            "ear.R": (1.2, 0.0, -0.4),
+            # The tail lies straight out along the ground, the spine's continuation (the owner, on
+            # #1308): from the hips it comes down to the ground and runs along it, rather than
+            # pointing into it as its rest would rolled over, which props the body up on it; its
+            # tip curls a little to one side.
+            "tail_01": (0.15, 0.0, 0.05),
+            "tail_02": (0.4, 0.0, 0.1),
+            "tail_03": (-0.95, 0.0, 0.15),
+            "tail_04": (-0.05, 0.0, 0.2),
         }
         for side, sign in (("L", 1.0), ("R", -1.0)):
             lying["upper_arm." + side] = (-1.0 - 0.05 * chest, 0.0, 0.15 * sign)
@@ -617,10 +623,18 @@ def _key(rig, poses, scale):
                 bone.location = tuple(scale * value for value in root)
                 bone.keyframe_insert("location", frame=frame)
             elif "loc." + bone.name in pose:
+                # It hangs from the root, so the root's turn (a body rolled onto its back,
+                # on_back) turns it too: that's undone, so it stays where it's held.
                 if bone.parent.parent is not None:
                     raise ValueError("loc.%s: only a child of the root is placed in the model" % bone.name)
-                held = pose["loc." + bone.name]
-                bone.location = tuple(scale * (value - shift) for value, shift in zip(held, root))
+                held = tuple(value - shift for value, shift in zip(pose["loc." + bone.name], root))
+                turn = pose.get(bone.parent.name, (0.0, 0.0, 0.0))
+                if any(turn):
+                    # Where it hangs from the root at rest, in the root's axes (unscaled metres).
+                    axes = bone.parent.bone.matrix_local.to_3x3().transposed()
+                    rest = axes @ (bone.bone.head_local - bone.parent.bone.head_local) / scale
+                    held = Euler(turn, "XYZ").to_matrix().inverted() @ (rest + Vector(held)) - rest
+                bone.location = tuple(scale * value for value in held)
                 bone.keyframe_insert("location", frame=frame)
             if "scale." + bone.name in pose:
                 bone.scale = pose["scale." + bone.name]
