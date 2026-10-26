@@ -580,7 +580,7 @@ func _survey_tapped(survey: SurveyView, quests: QuestTracker, id: String) -> Str
 	tap.pressed = true
 	tap.position = survey.get_global_transform() * at
 	survey.get_viewport().push_input(tap)
-	var stick: TouchStick = survey.get_node("../TouchStick") as TouchStick
+	var stick: TouchStick = survey.get_parent().get_node("TouchStick") as TouchStick
 	var held: bool = stick.is_held()
 	tap.pressed = false
 	survey.get_viewport().push_input(tap)
