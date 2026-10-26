@@ -12,6 +12,7 @@ static func kinds() -> Dictionary[String, Callable]:
 		TileContent.DIR: TileContent.cached,
 		AbilityContent.DIR: AbilityContent.cached,
 		SpeciesContent.DIR: SpeciesContent.cached,
+		DevelopmentContent.DIR: DevelopmentContent.cached,
 		LootContent.DIR: LootContent.cached,
 		LootContent.HARVEST_DIR: LootContent.cached.bind(LootContent.HARVEST_DIR),
 		MaterialContent.DIR: MaterialContent.cached,

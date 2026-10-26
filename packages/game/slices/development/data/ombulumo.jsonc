@@ -1,0 +1,31 @@
+// Ombulumo's development web (#677): it leans into its sturdy bulk, but may learn to move. Its
+// shifts are placeholders to tune (#960).
+{
+	"species": "ombulumo",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "sturdy", "nodes": [
+			{ "leaning": { "hp": 50 } },
+			{ "leaning": { "hp": 60 } },
+			{ "leaning": { "hp": 80, "speed": -30 } }
+		] },
+		{ "id": "heavy", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60, "hp": 20 } },
+			{ "leaning": { "strength": 80, "speed": -30 } }
+		] },
+		{ "id": "swift", "nodes": [
+			{ "leaning": { "speed": 60 } },
+			{ "leaning": { "speed": 60, "hp": -20 } },
+			{ "leaning": { "speed": 100, "strength": -30 } }
+		] },
+		{ "id": "deep", "nodes": [
+			{ "leaning": { "hp": 30, "strength": 30 } },
+			{ "leaning": { "hp": 40, "strength": 40, "speed": -20 } },
+			{ "leaning": { "hp": 60, "strength": 60, "speed": -40 } }
+		] }
+	],
+	"bridges": [["sturdy_2", "heavy_2"], ["swift_1", "deep_1"]],
+	"portals": [["sturdy_3", "swift_3"]]
+}

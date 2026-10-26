@@ -5,9 +5,10 @@ extends RefCounted
 ## player (#351), one invented word (#717), behaviour traits that can form a daily schedule
 ## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
 ## that ascends (#1252) ascends into another species, never in a loop, with a material the tables
-## drop; and broken entries are refused. Loot tables (#90) load, roll the same for the same stream,
-## and a blank rolls on the instance's table; every item a table names is a piece of gear or a
-## material (#774).
+## drop; and broken entries are refused. Every species has a development web (#677), whose nodes
+## open as the ones next to them are taken, and broken webs are refused. Loot tables (#90) load,
+## roll the same for the same stream, and a blank rolls on the instance's table; every item a table
+## names is a piece of gear or a material (#774).
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
@@ -133,6 +134,8 @@ func run(tree: SceneTree) -> String:
 		_check_ascension_habitats.bind(content),
 		_check_ascension_quests.bind(content),
 		_check_ascensions_refused,
+		_check_development_webs.bind(content),
+		_check_development_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
 		_check_instance_tables,
@@ -1162,6 +1165,81 @@ func _pair_ascension_problem(into: String) -> String:
 	var added: String = both.add("xo", XO + KIT + ASCENSION % [into, "2"] + "}")
 	added += both.add("zo", zo + ASCENSION % ["xo", "2"] + "}")
 	return added if not added.is_empty() else both.ascension_problem()
+
+
+## Every species has a development web (#677) and every web is a species'. In the toad's, its four
+## directions' first nodes are open from the start; taking one opens the next along its direction,
+## and a bridge or a portal opens the node it leads to; its nodes lean as written (#1358).
+func _check_development_webs(content: SpeciesContent) -> String:
+	var loaded: DevelopmentContent = DevelopmentContent.load_webs()
+	if not loaded.problem.is_empty():
+		return "the development webs didn't load: " + loaded.problem
+	var species_ids: Array[String] = []
+	var web_ids: Array[String] = []
+	species_ids.assign(content.species.keys())
+	web_ids.assign(loaded.webs.keys())
+	species_ids.sort()
+	web_ids.sort()
+	if web_ids != species_ids:
+		return "the development webs are %s, not one for each species %s" % [web_ids, species_ids]
+	var web: DevelopmentWeb = loaded.webs["ombulumo"]
+	var cases: Dictionary[String, Array] = {
+		"": ["sturdy_1", "heavy_1", "swift_1", "deep_1"],
+		"sturdy_1": ["sturdy_2", "heavy_1", "swift_1", "deep_1"],
+		"sturdy_1 sturdy_2": ["sturdy_3", "heavy_1", "heavy_2", "swift_1", "deep_1"],
+		"sturdy_1 sturdy_2 sturdy_3": ["heavy_1", "heavy_2", "swift_1", "swift_3", "deep_1"],
+	}
+	for taken: String in cases:
+		var taken_nodes: Array[String] = []
+		taken_nodes.assign(taken.split(" ", false))
+		var open: Array[String] = web.open_nodes(taken_nodes)
+		if open != cases[taken]:
+			return "with %s taken, the toad's web opened %s, not %s" % [taken, open, cases[taken]]
+	var heavy: DevelopmentLeaning = web.leanings["heavy_3"]
+	if web.nodes.size() != 12 or heavy.strength != 80 or heavy.speed != -30 or heavy.hp != 0:
+		return "the toad's web didn't load as written"
+	return ""
+
+
+## Webs a schema might let through, or whose links don't fit a web, are refused with a reason.
+func _check_development_refused() -> String:
+	var web: String = (
+		"{\"species\": \"xo\", \"directions\": [{\"id\": \"a\", \"nodes\": [%s]}, "
+		+ "{\"id\": \"b\", \"nodes\": [{\"leaning\": {\"hp\": 1}}, {\"leaning\": {\"hp\": 1}}]}, "
+		+ "{\"id\": \"c\", \"nodes\": [{\"leaning\": {\"hp\": 1}}]}], "
+		+ "\"bridges\": [%s], \"portals\": [%s]}"
+	)
+	var node: String = "{\"leaning\": {\"hp\": 1}}"
+	var cases: Dictionary[String, String] = {
+		web % [node, "[\"a_1\", \"b_1\"]", "[\"a_1\", \"b_2\"]"]: "",
+		web.replace("\"xo\"", "\"yo\"") % [node, "", ""]: "its species must",
+		web % ["", "", ""]: "direction a has a node",
+		web % ["{\"leaning\": {}}", "", ""]: "node a_1: its leaning shifts one stat",
+		web % ["{\"leaning\": {\"hp\": 0}}", "", ""]: "node a_1: its leaning shifts hp",
+		web % ["{\"leaning\": {\"hp\": 501}}", "", ""]: "node a_1: its leaning shifts hp",
+		web % ["{\"leaning\": {\"luck\": 1}}", "", ""]: "node a_1: its leaning's field luck",
+		web % [node, "[\"a_1\", \"d_1\"]", ""]: "each bridge links two",
+		web % [node, "[\"b_1\", \"b_2\"]", ""]: "bridge b_1-b_2 links two directions",
+		web % [node, "[\"a_1\", \"b_2\"], [\"b_2\", \"a_1\"]", ""]: "bridge b_2-a_1 links two",
+		web % [node + ", " + node + ", " + node, "[\"a_3\", \"b_1\"]", ""]: "bridge a_3-b_1",
+		web % [node, "", "[\"a_1\", \"b_1\"]"]: "portal a_1-b_1 links two directions' outermost",
+		web.replace(", \"portals\": [%s]", "") % [node, ""]: "its web lists its portals",
+		web.replace(", {\"id\": \"c\"", ", {\"id\": \"a\"") % [node, "", ""]: "each direction's id",
+	}
+	for text: String in cases:
+		var problem: String = _add_web(text)
+		if not problem.begins_with(cases[text]) or problem.is_empty() != cases[text].is_empty():
+			return "a development web was refused with \"%s\", not \"%s\": %s" % [
+				problem,
+				cases[text],
+				text,
+			]
+	return ""
+
+
+## Why the web file xo with the text `text` can't be read, or "".
+func _add_web(text: String) -> String:
+	return DevelopmentContent.new().add("xo", text)
 
 
 ## The placeholder tables load. A roll on the toad's table gives 2 to 4 berries, or on its blank

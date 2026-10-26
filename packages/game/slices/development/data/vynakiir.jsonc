@@ -1,0 +1,31 @@
+// Vynakiir's development web (#677): a pack hunter grown strong, it leans into its bite and its
+// stamina. Its shifts are placeholders to tune (#960).
+{
+	"species": "vynakiir",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "fierce", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60 } },
+			{ "leaning": { "strength": 80, "speed": -30 } }
+		] },
+		{ "id": "enduring", "nodes": [
+			{ "leaning": { "hp": 50 } },
+			{ "leaning": { "hp": 60, "strength": 20 } },
+			{ "leaning": { "hp": 80, "speed": -30 } }
+		] },
+		{ "id": "swift", "nodes": [
+			{ "leaning": { "speed": 60 } },
+			{ "leaning": { "speed": 60, "hp": -20 } },
+			{ "leaning": { "speed": 100, "strength": -30 } }
+		] },
+		{ "id": "hunter", "nodes": [
+			{ "leaning": { "strength": 30, "speed": 30 } },
+			{ "leaning": { "strength": 40, "speed": 40, "hp": -20 } },
+			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } }
+		] }
+	],
+	"bridges": [["fierce_2", "enduring_2"], ["swift_1", "hunter_1"]],
+	"portals": [["fierce_3", "swift_3"]]
+}
