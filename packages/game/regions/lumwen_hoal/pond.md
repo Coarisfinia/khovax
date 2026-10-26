@@ -27,6 +27,6 @@ A pond in Lumwen Hoal (#57): water in the middle, ground around it, a treasure c
 - `🪵`: stump
 - `🪨`: boulder
 - `🟦`: water
-- `🧰`: a treasure chest
+- `🧰`: a treasure chest on the ground
 - `🔗`: joins another piece to the east
 - `🧷`: joins another piece to the west

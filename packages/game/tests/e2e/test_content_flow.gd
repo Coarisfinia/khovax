@@ -130,6 +130,7 @@ func run(tree: SceneTree) -> String:
 		_check_behaviour_refused,
 		_check_model_refused,
 		_check_ascensions.bind(content),
+		_check_ascension_habitats.bind(content),
 		_check_ascensions_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
@@ -993,6 +994,41 @@ func _check_ascensions(content: SpeciesContent) -> String:
 				material,
 			]
 	return ""
+
+
+## Every species' ascension material lies in its grown species' habitat too (#1260): some instance
+## whose wild monsters roll that species has treasure chests and loot on the ground, and both its
+## chest table and its instance table can give the material.
+func _check_ascension_habitats(content: SpeciesContent) -> String:
+	for species_id: String in content.ascensions:
+		var ascension: SpeciesAscension = content.ascensions[species_id]
+		var found: bool = false
+		for instance_name: String in InstanceBlueprints.names():
+			var named: Blueprint = InstanceBlueprints.blueprint(instance_name)
+			if named.wild_species.has(ascension.into):
+				found = found or _holds_in_chests(instance_name, ascension.material)
+		if not found:
+			return "%s's ascension material %s lies in no chest and on no ground where %s lives" % [
+				species_id,
+				ascension.material,
+				ascension.into,
+			]
+	return ""
+
+
+## Whether an instance of `instance_name` has chests and loot on its ground, and both its chest
+## table and its instance table can give `material`.
+func _holds_in_chests(instance_name: String, material: String) -> bool:
+	var chests: ChestFeature = (
+		InstanceBlueprints.create(instance_name, 0, 0).feature(ChestFeature.ID) as ChestFeature
+	)
+	return (
+		chests != null
+		and not chests.chests.is_empty()
+		and not chests.loot_spots.is_empty()
+		and chests.table.items.has(material)
+		and chests.ground_table.items.has(material)
+	)
 
 
 ## A species' ascension (#1252) is refused when it lacks the species, the level or the material,

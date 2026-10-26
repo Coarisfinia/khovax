@@ -1,0 +1,17 @@
+// What Ivenwhal Wudhen's chests hold (#694), a placeholder to tune (#960): crafting supplies, a
+// crystal of its mana, sometimes a piece of basic gear, and more often than its ground the arcane
+// crystal a mana pup needs to ascend (#1252, #1260). Always something, never nothing.
+{
+	"id": "mana_wood_chest",
+	"kind": "chest",
+	"entries": [
+		{ "item": "moss", "chance": 300, "min": 1, "max": 3 },
+		{ "item": "berry", "chance": 200, "min": 1, "max": 2 },
+		{ "item": "crystal", "chance": 150, "min": 1, "max": 1 },
+		{ "item": "warding_charm", "chance": 50, "min": 1, "max": 1 },
+		{ "item": "thorn_spikes", "chance": 50, "min": 1, "max": 1 },
+		{ "item": "berry_pouch", "chance": 50, "min": 1, "max": 1 },
+		{ "item": "revive_herb", "chance": 50, "min": 1, "max": 1 },
+		{ "item": "arcane_crystal", "chance": 150, "min": 1, "max": 1 } // 15 %
+	]
+}

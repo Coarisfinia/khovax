@@ -1,5 +1,6 @@
 // Ivenwhal Wudhen, the mana forest southeast of the foot of Brekhal Varn (#1218):
-// the home of Vynakiir, the arcane wolf (#1219).
+// the home of Vynakiir, the arcane wolf (#1219). Its ground loot and chests can hold the arcane
+// crystal a mana pup needs to ascend (#1260).
 {
 	"id": "ivenwhal_wudhen",
 	"codex": {
@@ -7,6 +8,7 @@
 		"gloss": "the humming wood"
 	},
 	"rules": "standard",
-	"loot_table": "wild_ground",
+	"loot_table": "mana_wood",
+	"chest_table": "mana_wood_chest",
 	"wild_species": { "vynakiir": 1 }
 }
