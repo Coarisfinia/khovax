@@ -93,9 +93,13 @@ REFERENCE = {
 }
 
 # A short snout, its stop high on a round brow and its tip blunt, the lower jaw small under it,
-# turning at the jaw's joint (#1194).
+# turning at the jaw's joint (#1194). Its mouth's slit is cut twice as thick as the wolf's: its big
+# round skull and full cheeks swell over the short muzzle, and through a thinner slit they kept the
+# lips joined down the middle of the mouth, skin that stretched in streaks between the jaws as they
+# opened (#1302).
 SNOUT = muzzle.Snout(stop=(-0.80, 1.35), tip=(-1.02, 1.26), radius=0.085, joint=PUP.jaw[0][1:], taper=0.78,
-                     stop_depth=0.09, lip=0.03, jaw_depth=0.55, jaw_width=1.0, chin=1.0)
+                     stop_depth=0.09, lip=0.03, jaw_depth=0.55, jaw_width=1.0, chin=1.0,
+                     slit=0.012)
 
 # Where the tail's form starts, inside the haunches.
 TAIL_ROOT = (0.0, 0.30, 0.94)
