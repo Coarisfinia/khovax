@@ -17,6 +17,7 @@ extends RefCounted
 ## monsters carried through a domination earn progress toward (#1251), the three
 ## they carry first, in order, the first their companion, each marked in words. Its gear slots
 ## (#690) change with a press outside a fight and are kept in the profile, and stay put during one.
+## Its Controls tab (#1414) lists every action with the glyphs that press it on the device in use.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
 const PROFILE_PATH: String = "user://test_settings_profile.json"
@@ -136,7 +137,7 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = _menu_readme(menu)
 	if result.is_empty():
-		result = await _close_menu(menu)
+		result = await _menu_controls(menu)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, false)
 	main.queue_free()
@@ -831,6 +832,80 @@ func _menu_credits(menu: GameMenu) -> String:
 	if not shown.contains("[b]License:[/b]"):
 		return "the Credits tab doesn't name the licenses"
 	return ""
+
+
+## The Controls tab (#1414) lists every action the project binds, each row with the glyphs of what
+## presses it on the device in use, following a change of device: W, A, S and D, the left stick or
+## a drag to walk, and on touch a tap where no gesture does it. Every row takes the focus, so a
+## controller moves among them, and the focused one is framed.
+func _menu_controls(menu: GameMenu) -> String:
+	var tab: ControlsTab = menu.controls_tab()
+	var listed: Array[StringName] = []
+	for words: String in ControlsTab.ROWS:
+		listed.append_array(ControlsTab.ROWS[words])
+	# The actions the project binds itself, not Godot's own UI actions it leaves as they are.
+	var project: ConfigFile = ConfigFile.new()
+	var _read: Error = project.load("res://project.godot")
+	for action: String in project.get_section_keys("input"):
+		if StringName(action) not in listed:
+			return "the Controls tab doesn't list " + action
+	var problem: String = _controls_glyphs(FlowInput.glyphs_by_device(_controls_shown.bind(tab)))
+	if not problem.is_empty():
+		return problem
+	return await _controls_focus(menu, tab)
+
+
+## On the Controls tab, down (the left stick, the d-pad or the arrow key) moves the focus to the
+## next row, which is framed. Then the menu closes (_close_menu).
+func _controls_focus(menu: GameMenu, tab: ControlsTab) -> String:
+	var tabs: TabContainer = tab.get_parent() as TabContainer
+	var was_on: int = tabs.current_tab
+	tabs.current_tab = tab.get_index()
+	# The rows are laid out once the shown tab has had its frames.
+	await _tree.process_frame
+	await _tree.process_frame
+	var walk: PanelContainer = tab.rows["Walk"]
+	walk.grab_focus()
+	var down: InputEventAction = InputEventAction.new()
+	down.action = &"ui_down"
+	down.pressed = true
+	menu.get_viewport().push_input(down)
+	var focused: Control = menu.get_viewport().gui_get_focus_owner()
+	var resting: StyleBox = walk.get_theme_stylebox("panel")
+	var framed: StyleBox = tab.rows["Special attack"].get_theme_stylebox("panel")
+	if focused != null:
+		focused.release_focus()
+	tabs.current_tab = was_on
+	if focused != tab.rows["Special attack"] or framed == resting:
+		return "down on the Controls tab focuses %s, framed: %s" % [focused, framed != resting]
+	return await _close_menu(menu)
+
+
+## Checks the Controls tab's glyphs `by_device` (a keyboard's, a controller's, touch's): a glyph in
+## every row, the walking keys, stick or drag, and a tap on touch where no gesture does it.
+func _controls_glyphs(by_device: Array) -> String:
+	var keys: Array[Texture2D] = []
+	for key: Key in [KEY_W, KEY_A, KEY_S, KEY_D]:
+		keys.append(InputGlyphs.KEYS[key])
+	var walks: Array = [keys, [InputGlyphs.STICK_LEFT], [InputGlyphs.DRAG]]
+	for device: int in by_device.size():
+		var shown: Dictionary = by_device[device]
+		for words: String in ControlsTab.ROWS:
+			var glyphs: Array = shown[words]
+			if glyphs.is_empty():
+				return "the Controls tab shows no glyph for %s on device %d" % [words, device]
+		if shown["Walk"] != walks[device]:
+			return "the Controls tab's Walk row shows %s on device %d" % [shown["Walk"], device]
+	var touch: Dictionary = by_device[2]
+	if touch["Special attack"] != [InputGlyphs.pointing(DeviceInUse.Device.TOUCH)]:
+		return "on touch, the Controls tab doesn't show a tap for the special attack"
+	return ""
+
+
+## The glyphs the Controls tab shows now, by row, after it follows the device in use.
+func _controls_shown(tab: ControlsTab) -> Dictionary:
+	tab.refresh()
+	return tab.shown.duplicate()
 
 
 ## The close button sits at the menu's top right (#554), showing its icon (#459). It closes the
