@@ -654,6 +654,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   Anything higher, no assessment of the head commit, or conflicting ones, needs the owner's own
   approval. So does every pull request that changes this rule or the merge rules around it in this
   file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
+  **Model pull requests always wait for the owner** (owner, #1381), however low CodeRabbit rates
+  them: any that changes what the model skill covers, a `.glb`, its rig, its clips or its textures
+  (a model's script or the shared library in `packages/game-models/` included). CodeRabbit can't
+  judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
+  (#1376).
   This prints the newest assessment's merge risk, security risk (`none` when not given) and
   assessed commit, then the head commit and CodeRabbit's latest review:
 
