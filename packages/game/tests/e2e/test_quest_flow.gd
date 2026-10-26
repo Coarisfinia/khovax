@@ -94,6 +94,12 @@ const BETRAYAL: String = (
 	+ "\"materials\": {\"moss\": 2}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"betrayal\"}]}"
 )
+## A quest raising the Odun Kragothai by one, the Sorn Lumawenai's enemy (#1323).
+const SWORN: String = (
+	"{\"id\": \"sworn\", \"name\": \"Sworn\", "
+	+ "\"standing\": {\"faction\": \"odun_kragothai\", \"change\": 1}, "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"sworn\"}]}"
+)
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
@@ -1469,12 +1475,33 @@ func _check_standing(profile: Profile, quests: QuestTracker) -> String:
 		return "a quest lowering the guild, joined, didn't hold it at its first rank: " + applied
 	if profile.materials.get("moss", 0) != 2:
 		return "finishing a quest giving two moss gave %d" % profile.materials.get("moss", 0)
+	var enemies: String = _check_enemy_loss()
+	if not enemies.is_empty():
+		return enemies
 	var leaning: PathLeaning = profile.leaning
 	if leaning.supremacy != 1 or leaning.harmony != 0 or leaning.toward() != PathMark.SUPREMACY:
 		return "the quests finished didn't lean the player one toward supremacy: %d, %d" % [
 			leaning.harmony,
 			leaning.supremacy,
 		]
+	return ""
+
+
+## Finishing a quest that raises a faction costs half that with its enemy (#1310, #1323): two
+## quests each raising the Odun Kragothai by one lose half a rank, then a whole one, with the Sorn
+## Lumawenai.
+func _check_enemy_loss() -> String:
+	var sworn: QuestDefinition = QuestDefinition.parse("sworn", SWORN, {})
+	var profile: Profile = Profile.new()
+	QuestRewards.give(sworn, profile)
+	var half: Array[String] = ["sorn_lumawenai"]
+	if profile.standings.of("sorn_lumawenai") != 0 or profile.standings.half_lost != half:
+		return "a quest raising the Odun Kragothai didn't lose half a rank with its enemy: %s" % [
+			sworn.problem,
+		]
+	QuestRewards.give(sworn, profile)
+	if profile.standings.of("sorn_lumawenai") != -1 or not profile.standings.half_lost.is_empty():
+		return "two quests raising the Odun Kragothai didn't lose a rank with its enemy"
 	return ""
 
 

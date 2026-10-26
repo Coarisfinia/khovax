@@ -1,0 +1,28 @@
+// The Odun Kragothai (#1323, #1310), the faction of the supremacy path: an order sworn to bend wild
+// monsters to the player's will. Its name sounds harsh (k, g, r, th), as a supremacy faction's does
+// (#909). Neutral to the Amvrel Velmarai, the Story guild, and the enemy of the Sorn Lumawenai until
+// the postgame (#1310). Its ranks stay in Trade Speech (#484, #909).
+{
+	"id": "odun_kragothai",
+	"name": "Odun Kragothai",
+	"codex": {
+		"entry": "An order of tamers who hold that a monster is made to serve, and that the strongest will should rule the wild. They keep their beasts in iron discipline and look down on anyone who asks a monster's leave. Its name is Oath-speech: Odun, the oath word of an order sworn to a cause, then Kragothai, those who bend.",
+		"gloss": "the order of those who bend"
+	},
+	"symbol": "^", // a spearhead (#68)
+	"enemies": ["sorn_lumawenai"],
+	"ranks_up": [
+		"Sworn Initiate",
+		"Taskbearer",
+		"Warden of Chains",
+		"Iron Marshal",
+		"Hand of Dominion"
+	],
+	"ranks_down": [
+		"Defiant",
+		"Unbroken Foe",
+		"Marked for Breaking",
+		"Enemy of the Order",
+		"Sworn Nemesis"
+	]
+}
