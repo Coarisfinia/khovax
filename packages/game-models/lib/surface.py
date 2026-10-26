@@ -82,18 +82,27 @@ def _tapering(points, taper):
     return shares
 
 
-def vein(body, name, guide, radius, mat, lift=None, taper=0.0):
+def vein(body, name, guide, radius, mat, lift=None, taper=0.0, smooth=0):
     """A glowing vein along the guide points, hugging the body. With `taper`, the last share of
     its length narrows to a point (a vein's loose end); without, it keeps its width (a rune's
-    stroke)."""
+    stroke). With `smooth`, it evens out that many times, each point toward its neighbours, so a
+    thin line on a lumpy, reduced skin runs as a smooth curve rather than following every facet
+    (#1294); its ends stay put."""
     lift = radius * 0.6 if lift is None else lift
     points = [onto(body, point, lift) for point in _dense(guide, radius * 6)]
     if not taper:
-        return tube(name, points, radius, mat)
+        return tube(name, _smoothed(points, smooth), radius, mat)
     # A narrowing end sinks with its width, so its tip lies on the skin rather than above it.
     shares = _tapering(points, taper)
     points = [onto(body, point, lift * share) for point, share in zip(points, shares)]
-    return tube(name, points, radius, mat, shares)
+    return tube(name, _smoothed(points, smooth), radius, mat, shares)
+
+
+def _smoothed(points, passes):
+    """`points` evened out `passes` times, each toward its two neighbours; the ends stay put."""
+    for _pass in range(passes):
+        points = points[:1] + [(a + b * 2.0 + c) / 4.0 for a, b, c in zip(points, points[1:], points[2:])] + points[-1:]
+    return points
 
 
 def rune(body, name, glyph, center, right, up, size, radius, mat):
