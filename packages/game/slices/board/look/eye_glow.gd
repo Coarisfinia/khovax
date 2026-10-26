@@ -5,7 +5,8 @@ extends Node3D
 ## the bloom the Compatibility renderer lacks. It reads its monster's mood from its view:
 ## calm, it glows softly and steadily; agitated, brighter and wider, flickering; and an attack makes
 ## it flare up and ease back. Fainted, it goes out. It changes how bright and how big it is, never
-## only its colour (#68), and eases between moods. A model without eyes gets none.
+## only its colour (#68), and eases between moods. A model without eyes gets none. An eye whose lid
+## shuts (a blink, #1304) draws its halo in as the lid covers it, so none shines on the lid.
 
 ## The glow's colour until it takes its monster's type's (#1008).
 const COLOR: Color = Color(0.3, 0.9, 1.0)
@@ -131,12 +132,12 @@ func place() -> void:
 
 
 ## Puts a halo `width` wide on each of `eyes`, standing out toward the camera, both as far as its
-## eye
-## faces the camera; one turned away hides.
+## eye faces the camera and is open; one turned away or shut hides.
 func _place_halos(eyes: Array[Vector3], glowing: bool, width: float) -> void:
 	var camera: Camera3D = get_viewport().get_camera_3d()
 	var size: float = _model.global_basis.get_scale().x
 	var looks: Array[Vector3] = ModelPoints.eye_looks(_model)
+	var open: Array[float] = ModelPoints.eye_openness(_model)
 	for index: int in eyes.size():
 		var halo: MeshInstance3D = get_child(index) as MeshInstance3D
 		var toward: Vector3 = Vector3.ZERO
@@ -144,6 +145,7 @@ func _place_halos(eyes: Array[Vector3], glowing: bool, width: float) -> void:
 		if camera != null:
 			toward = (camera.global_position - eyes[index]).normalized()
 			facing = smoothstep(FACING_HIDDEN, FACING_WHOLE, looks[index].dot(toward))
+		facing *= open[index]
 		halo.visible = glowing and facing > 0.0
 		if halo.visible:
 			halo.global_position = eyes[index] + toward * width * STAND_OUT * facing * size
