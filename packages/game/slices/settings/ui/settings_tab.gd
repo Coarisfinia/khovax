@@ -8,7 +8,8 @@ extends ScrollContainer
 ## pause) know each setting's choices and keep the player's; the tab only shows them and passes the
 ## player's picks on. It says everything in words, never by color alone (#68). It scrolls when the
 ## screen is too short for every row. Its layout lives in its scene, settings_tab.tscn (#437): the
-## rows sit in the middle of the tab, as wide as `fit` makes them.
+## rows sit in the middle of the tab, as wide as `fit` makes them. Below the list of submenus, a
+## button opens the README (#1312), with its download links.
 
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed
@@ -24,6 +25,9 @@ const INTERFACE: String = "Interface"
 const GAME: String = "Game"
 ## The list of submenus, as `open_submenu` names it while none is open.
 const LIST: String = ""
+## The README's downloads, where every build can be fetched (#1312).
+const README_URL: String = "https://github.com/Coarisfinia/khovax#download"
+const README_TEXT: String = "Downloads and guide (README)"
 
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
@@ -36,6 +40,10 @@ var menu: GameMenu
 var damage_numbers: DamageNumbersChoice
 ## What each setting's row says it's on, by the setting's name. Kept here so tests can read it.
 var shown: Dictionary[String, String] = {}
+## What opens a link in the system's browser (a new tab on the web); tests swap it so none opens.
+var open_link: Callable = OS.shell_open
+## The button in the list that opens the README.
+var readme_button: Button
 ## How to word each setting's value and how to step it, by the setting's name.
 var _labels: Dictionary[String, Callable] = {}
 var _steps: Dictionary[String, Callable] = {}
@@ -52,6 +60,8 @@ var _open: String = LIST
 func _ready() -> void:
 	for submenu: String in [GRAPHICS, INTERFACE, GAME]:
 		_add_submenu(submenu)
+	readme_button = GameMenu.button(README_TEXT, open_readme)
+	_list.add_child(readme_button)
 	if graphics != null:
 		_add_row(
 			GRAPHICS,
@@ -127,6 +137,13 @@ func back() -> void:
 	_show_open()
 	if focused and _openers.has(left):
 		_openers[left].grab_focus()
+
+
+## Opens the README's downloads, as its button does.
+func open_readme() -> void:
+	var problem: int = open_link.call(README_URL)
+	if problem != OK:
+		push_warning("the README can't be opened: " + error_string(problem))
 
 
 ## The submenu open now, or LIST while the list shows.
