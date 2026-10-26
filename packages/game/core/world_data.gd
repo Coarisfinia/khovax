@@ -4,22 +4,32 @@ extends RefCounted
 ## WorldSave keeps in a file, replays start from and co-op will resync from. World holds the
 ## instances and runs them; this writes and reads them.
 
-## The format of the world's save data (`of`); data in another one is refused. Format 1 had no
-## purging, format 2 no ring seals, format 3 no companions, format 4 no tiles changed in place
-## (#530), format 5 no flags or variants (#529), format 6 no carried monsters (#53), format 7 no
-## fainted ones (#655), format 8 kept the companions in fields of their own instead of the
-## players' world stores (#724), format 9 kept no monster's short id (#700), format 10 numbered
-## the features instead of naming them (#784), format 11 numbered the kinds of the tiles changed
-## in place instead of naming them (#802), format 12 recorded the rules as a count, not as their id
-## (#876) and format 13 kept a sealing ring's player under its name from before domination (#317,
-## #1137). None is read: the fourth and fifth are long gone, the thirteenth is refused like a world
-## played by older rules (it boots fresh), and every other one was played by older rules, which
-## `to_world` refuses anyway.
-const FORMAT: int = 14
+## The format's changes (FormatChanges, #801), one file each. A world is read only with every one of
+## them and no other: the older formats were all played by older rules, which `to_world` refuses
+## anyway.
+const CHANGES: String = "res://core/format_changes/"
+## The changes of the numbered formats before names (#801), in the order they were numbered: format
+## n had the first n - 1. Only the last, format 14, which had them all, is still read.
+const NUMBERED: Array[String] = [
+	"212-purging",
+	"219-ring-seals",
+	"338-companions",
+	"530-changed-tiles",
+	"529-flags-and-variants",
+	"53-carried-monsters",
+	"655-fainted-monsters",
+	"724-world-stores",
+	"700-short-ids",
+	"784-named-features",
+	"802-named-tile-kinds",
+	"876-rules-id",
+	"1137-dominator",
+]
 
 
 ## The whole world as save data (#119): whole numbers, ids, lists and tables only, so it goes into
-## JSON as it is, and is the snapshot co-op will resync from later. The seed (in two 32-bit halves,
+## JSON as it is, and is the snapshot co-op will resync from later. Its format changes, the seed (in
+## two 32-bit halves,
 ## as JSON holds no 64-bit number exactly), the starting blueprint, the tick, every player's world
 ## store that isn't empty (#724), in slot order, every loaded instance in name order with its state
 ## (GameState.to_data), the tick it was left behind (-1 while
@@ -47,7 +57,7 @@ static func of(world: World) -> Dictionary:
 		if not entries.is_empty():
 			stores.append({ "slot": slot, "entries": entries })
 	return {
-		"format": FORMAT,
+		FormatChanges.KEY: FormatChanges.names_in(CHANGES),
 		"rules": RulesChanges.id(),
 		"seed": [(world.world_seed >> 32) & 0xffff_ffff, world.world_seed & 0xffff_ffff],
 		"start": world.start_name,
@@ -66,9 +76,10 @@ static func of(world: World) -> Dictionary:
 ## saved (its content changed since).
 static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var read: DataReader = DataReader.new(data)
-	var format: int = read.whole("format", 0, DataReader.MOST)
-	if not read.failed() and format != FORMAT:
-		read.fail("world format %d, this build reads format %d" % [format, FORMAT])
+	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED)
+	for change: String in FormatChanges.names_in(CHANGES):
+		if not read.failed() and not changes.has(change):
+			read.fail("world format without change %s: an older build saved it" % change)
 	var rules: String = read.text("rules")
 	if not read.failed() and rules != RulesChanges.id():
 		read.fail("played by rules %s, this build has %s" % [rules, RulesChanges.id()])

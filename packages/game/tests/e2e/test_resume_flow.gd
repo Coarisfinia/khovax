@@ -63,7 +63,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_refused(world)
 	if result.is_empty():
-		result = await _check_resumed(tree, world)
+		result = await _check_resumes(tree, world)
 	if result.is_empty():
 		result = await _check_bad_explored(tree, world)
 	if result.is_empty():
@@ -141,7 +141,8 @@ func _check_round_trip(world: World) -> String:
 	return ""
 
 
-## Save data the build can't go on from is refused whole: another format, other rules, a seed or
+## Save data the build can't go on from is refused whole: another format (a newer build's change,
+## an older numbered format, or one without a change this build needs, #801), other rules, a seed or
 ## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
 ## purging that doesn't add up (#212): a blueprint purged that doesn't exist, an instance left
 ## behind while someone is in it or not left behind while nobody is, or one left long enough to be
@@ -154,7 +155,14 @@ func _check_refused(world: World) -> String:
 	var player: int = world.player(0).id
 	var stranger: int = player + 1000
 	var cases: Dictionary[String, String] = {
-		_changed(data, "format", WorldData.FORMAT + 1): "world format",
+		_changed(
+			data,
+			FormatChanges.KEY,
+			WorldData.NUMBERED + ["9999-newer"],
+		): "format change 9999",
+		_changed(data, FormatChanges.KEY, WorldData.NUMBERED.slice(1)): "world format without",
+		_numbered(data, WorldData.NUMBERED.size()): "world format without change 1137",
+		_numbered(data, WorldData.NUMBERED.size() + 2): "format isn't",
 		# Another digest of the rule changes (#876).
 		_changed(data, "rules", "0000000000000000"): "played by rules 0000000000000000",
 		_changed(data, "tick", world.tick + 1): "the world doesn't hash",
@@ -249,6 +257,46 @@ static func _changed(data: Dictionary, key: String, value: Variant) -> String:
 	var changed: Dictionary = data.duplicate(true)
 	changed[key] = value
 	return JSON.stringify(changed)
+
+
+## `data` as text, in the numbered format `format` from before format changes had names (#801).
+static func _numbered(data: Dictionary, format: int) -> String:
+	var changed: Dictionary = data.duplicate(true)
+	var _unnamed: bool = changed.erase(FormatChanges.KEY)
+	changed["format"] = format
+	return JSON.stringify(changed)
+
+
+## The world resumes from a save that names its format changes (#801), and from one in the last
+## numbered format before names.
+func _check_resumes(tree: SceneTree, world: World) -> String:
+	var result: String = await _check_resumed(tree, world)
+	if result.is_empty():
+		result = await _check_numbered_resumes(tree, world)
+	return result
+
+
+## A world saved by a build from before format changes had names (#801), in the last numbered
+## format, 14, resumes like one that names them: in the glade, with the same hash.
+func _check_numbered_resumes(tree: SceneTree, world: World) -> String:
+	var text: String = WorldSave.to_text(world, ExploredSave.beside(_explored))
+	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
+	var problem: String = SaveStore.write_save(
+		WORLD_PATH,
+		_numbered(data, WorldData.NUMBERED.size() + 1),
+	)
+	if not problem.is_empty():
+		return "the numbered world couldn't be saved: " + problem
+	var main: Node = _boot(tree)
+	var driver: GameDriver = main.get_node("Driver") as GameDriver
+	var result: String = ""
+	if driver.world.state_hash() != world.state_hash():
+		result = "the main scene didn't resume a world saved in format 14: " + driver.world.problem
+	elif driver.local_instance_name() != FlowSteps.GLADE:
+		result = "a world saved in format 14 resumed in %s" % driver.local_instance_name()
+	main.queue_free()
+	await tree.process_frame
+	return result
 
 
 ## Saved to its file, the world is where the main scene comes back: in the glade, on the player's
@@ -520,7 +568,8 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(text))
 	var result: String = await _boots_fresh(tree, "not a world", false)
 	if result.is_empty():
-		result = await _boots_fresh(tree, _changed(data, "format", WorldData.FORMAT + 1), true)
+		var newer: Array = WorldData.NUMBERED + ["9999-newer"]
+		result = await _boots_fresh(tree, _changed(data, FormatChanges.KEY, newer), true)
 	if result.is_empty():
 		result = await _boots_fresh(tree, _changed(data, "rules", "0000000000000000"), true)
 	if result.is_empty():
