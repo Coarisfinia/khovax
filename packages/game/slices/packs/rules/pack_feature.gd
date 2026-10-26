@@ -24,11 +24,11 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "packs"
 ## The most monsters in one pack, its leader included; how far from a leader the monsters it
-## gathers stand when the instance begins; and how near its leader a member keeps. Placeholders to
-## tune (#960).
-const PACK_SIZE: int = 4
-const PACK_REACH: int = 6
-const KEEP_NEAR: int = 2
+## gathers stand when the instance begins; and how near its leader a member keeps. Their numbers
+## are in Tuning (#1309).
+const PACK_SIZE: int = Tuning.PACK_SIZE
+const PACK_REACH: int = Tuning.PACK_REACH
+const KEEP_NEAR: int = Tuning.PACK_KEEP_NEAR
 
 ## Each species' types, by species id, from the content data (the species slice reads them).
 var types: Dictionary[String, Array] = {}

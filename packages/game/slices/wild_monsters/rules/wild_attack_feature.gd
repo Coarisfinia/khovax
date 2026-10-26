@@ -30,9 +30,9 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_attacks"
 ## The ticks between two strikes of one wild monster, and how much a trail tile takes before it
-## gives way. Placeholders to tune (#960).
-const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
-const TILE_INTEGRITY: int = 400
+## gives way. Their numbers are in Tuning (#1309).
+const STRIKE_TICKS: int = Tuning.WILD_STRIKE_TICKS
+const TILE_INTEGRITY: int = Tuning.TILE_INTEGRITY
 
 ## The damage each trail tile has taken, by tile; one never hit isn't here.
 var _wear: Dictionary[Vector2i, int] = {}

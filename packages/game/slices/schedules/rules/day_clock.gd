@@ -9,8 +9,8 @@ extends RefCounted
 
 ## The hours of a day.
 const HOURS: int = 24
-## How many ticks an hour of the game's day lasts. A placeholder to tune (#960).
-const TICKS_PER_HOUR: int = 30 * Simulation.TICKS_PER_SECOND
+## How many ticks an hour of the game's day lasts. Its number is in Tuning (#1309).
+const TICKS_PER_HOUR: int = Tuning.TICKS_PER_HOUR
 ## The hour day breaks, and the hour night falls.
 const DAWN: int = 6
 const DUSK: int = 18

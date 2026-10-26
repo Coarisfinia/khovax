@@ -11,7 +11,7 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companion_attacks"
 ## The ticks between two strikes of one companion.
-const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
+const STRIKE_TICKS: int = Tuning.COMPANION_STRIKE_TICKS
 
 ## The ticks each companion still waits before it can strike again, by entity id; one that's
 ## ready isn't here.

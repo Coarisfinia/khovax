@@ -12,7 +12,7 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "movement"
 ## Ticks to walk from one tile to the next.
-const MOVE_TICKS: int = 6
+const MOVE_TICKS: int = Tuning.MOVE_TICKS
 
 ## Every walking entity's walk, by entity id. Players get one when they are added; other entities
 ## get one from the rule that adds them.

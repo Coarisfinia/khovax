@@ -3,22 +3,22 @@ extends RefCounted
 ## How strong a sealing ring is (#219, #286): its power, spread over its wall's segments; how hard
 ## each wild monster inside pushes on its nearest segment; how long the seal takes; and how a player
 ## standing on a segment reinforces it (#227). DominationFeature closes the rings and decides what a
-## held or broken one gives; the numbers live here.
+## held or broken one gives; the numbers live in Tuning (#1309).
 
-## The ring rules' constants (#219). Every one is a placeholder to tune (#960).
+## The ring rules' constants (#219). Their numbers are in Tuning (#1309).
 ## Players have no level yet: every player draws rings at this level until they do.
-const PLAYER_LEVEL: int = 1
+const PLAYER_LEVEL: int = Tuning.PLAYER_LEVEL
 ## Ring power is BASE + level × PER_LEVEL (+ companion passives, none yet): the issue's 100 + 20 ×
 ## level scaled up, so a monster's pressure each tick (its strength) wears a wall down over a
 ## whole seal rather than in one tick.
-const RING_POWER_BASE: int = 30_000
-const RING_POWER_PER_LEVEL: int = 6_000
+const RING_POWER_BASE: int = Tuning.RING_POWER_BASE
+const RING_POWER_PER_LEVEL: int = Tuning.RING_POWER_PER_LEVEL
 ## A seal takes this many ticks, plus one per SEAL_PRESSURE_PER_TICK of pressure inside
 ## (thousandths): more resistance seals slower.
-const SEAL_BASE_TICKS: int = 40
-const SEAL_PRESSURE_PER_TICK: int = 10 * Fixed.ONE
+const SEAL_BASE_TICKS: int = Tuning.SEAL_BASE_TICKS
+const SEAL_PRESSURE_PER_TICK: int = Tuning.SEAL_PRESSURE_PER_TICK
 ## The share of the pressure a wall segment takes while a player stands on it (thousandths).
-const REINFORCED_SHARE: int = 100
+const REINFORCED_SHARE: int = Tuning.REINFORCED_SHARE
 
 
 ## The power of a ring drawn at `level`.

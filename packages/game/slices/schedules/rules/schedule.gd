@@ -18,25 +18,25 @@ const HUNT: int = 5
 const FOLLOW_PACK: int = 6
 ## How many hours a diurnal or nocturnal monster sleeps in one block, and over how many hours after
 ## dusk (diurnal) or dawn (nocturnal) its bedtime is spread. A night or a day has room for both:
-## its sleep never spills into its waking half. Placeholders to tune (#960).
-const SLEEP_HOURS: int = 8
-const BEDTIME_SPREAD: int = 3
+## its sleep never spills into its waking half. Their numbers are in Tuning (#1309).
+const SLEEP_HOURS: int = Tuning.SLEEP_HOURS
+const BEDTIME_SPREAD: int = Tuning.BEDTIME_SPREAD
 ## A cathemeral monster's bouts of sleep: one of BOUT_HOURS somewhere in every BOUT_SPAN hours of
 ## the
-## day, a quarter of it. Placeholders to tune (#960).
-const BOUT_HOURS: int = 2
-const BOUT_SPAN: int = 6
-## The activity each need fills its hours with, and how many hours a day it takes. Placeholders to
-## tune (#960).
+## day, a quarter of it. Their numbers are in Tuning (#1309).
+const BOUT_HOURS: int = Tuning.BOUT_HOURS
+const BOUT_SPAN: int = Tuning.BOUT_SPAN
+## The activity each need fills its hours with, and how many hours a day it takes (its
+## number is in Tuning, #1309).
 const NEED_ACTIVITIES: Dictionary[String, int] = {
 	SpeciesBehaviour.GRAZER: GRAZE,
 	SpeciesBehaviour.DRINKER: DRINK,
 	SpeciesBehaviour.PREDATOR: HUNT,
 }
 const NEED_HOURS: Dictionary[String, int] = {
-	SpeciesBehaviour.GRAZER: 3,
-	SpeciesBehaviour.DRINKER: 2,
-	SpeciesBehaviour.PREDATOR: 3,
+	SpeciesBehaviour.GRAZER: Tuning.GRAZE_HOURS,
+	SpeciesBehaviour.DRINKER: Tuning.DRINK_HOURS,
+	SpeciesBehaviour.PREDATOR: Tuning.HUNT_HOURS,
 }
 
 

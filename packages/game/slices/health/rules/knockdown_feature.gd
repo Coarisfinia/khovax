@@ -9,11 +9,11 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "knockdown"
 ## How near an ally has to be for a fallen player to be knocked down rather than sent back.
-const ALLY_RANGE: int = 200
+const ALLY_RANGE: int = Tuning.ALLY_RANGE
 ## How long an ally stands beside a knocked-down player to revive them.
-const REVIVE_TICKS: int = 3 * Simulation.TICKS_PER_SECOND
+const REVIVE_TICKS: int = Tuning.REVIVE_TICKS
 ## How long a knocked-down player waits before going back to the spawn.
-const DOWN_TICKS: int = 30 * Simulation.TICKS_PER_SECOND
+const DOWN_TICKS: int = Tuning.DOWN_TICKS
 
 ## Each knocked-down player's ticks down and ticks of reviving so far, by entity id.
 var _down: Dictionary[int, Vector2i] = {}

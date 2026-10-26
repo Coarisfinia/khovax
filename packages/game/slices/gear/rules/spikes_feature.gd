@@ -17,7 +17,7 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "spikes"
 ## The ticks between two hurts of the spikes, as between two auto attacks.
-const STRIKE_TICKS: int = Simulation.TICKS_PER_SECOND
+const STRIKE_TICKS: int = Tuning.SPIKES_STRIKE_TICKS
 ## The key of the trap's code (code_of) in a player's store entry: none for an empty trap slot.
 const TRAP: String = "trap"
 

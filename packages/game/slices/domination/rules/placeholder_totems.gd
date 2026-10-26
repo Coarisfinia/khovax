@@ -5,8 +5,8 @@ extends RefCounted
 ## spends one. Its charges don't refill yet (#424). DominationFeature keeps it per instance, so a
 ## player arriving in another instance holds a full one there.
 
-## The charges a placeholder totem starts with. A placeholder to tune (#960).
-const CHARGES: int = 3
+## The charges a placeholder totem starts with. Its number is in Tuning (#1309).
+const CHARGES: int = Tuning.TOTEM_CHARGES
 
 ## Charges left, by the player's entity id.
 var charges: Dictionary[int, int] = {}

@@ -16,12 +16,12 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "health"
-## A player's HP. A placeholder to tune (#960): a few wild hits' worth (#455).
-const PLAYER_HP: int = 500
+## A player's HP. Its number is in Tuning (#1309).
+const PLAYER_HP: int = Tuning.PLAYER_HP
 ## The HP of an entity of a species the feature wasn't given one for.
 const UNKNOWN_HP: int = 100
 ## How much of their HP a revived player gets back, in thousandths (Fixed): half (#479).
-const REVIVED_HP: int = 500
+const REVIVED_HP: int = Tuning.REVIVED_HP
 ## What an invincible player's entry in their world store (#724) holds (`make_invincible`).
 const INVINCIBLE: String = "invincible"
 

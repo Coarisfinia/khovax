@@ -25,10 +25,10 @@ extends Feature
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "hunts"
 ## How far a hunter sees prey, how far from its home it roams, and how long it stalks one prey
-## before it gives up. Placeholders to tune (#960).
-const SIGHT: int = 4
-const ROAM_RADIUS: int = 4
-const GIVE_UP_TICKS: int = 20 * Simulation.TICKS_PER_SECOND
+## before it gives up. Their numbers are in Tuning (#1309).
+const SIGHT: int = Tuning.HUNT_SIGHT
+const ROAM_RADIUS: int = Tuning.HUNT_ROAM_RADIUS
+const GIVE_UP_TICKS: int = Tuning.HUNT_GIVE_UP_TICKS
 
 ## Each hunter's home, by entity id: where it stood when the instance began. A hunter is a wild
 ## monster of a `predator` species.
