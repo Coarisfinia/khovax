@@ -177,21 +177,22 @@ func _prey_for(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Ve
 	var nearest: int = 0
 	var gap: int = SIGHT + 1
 	# The distance first: it's cheap and rules out most monsters, and only a nearer one than the
-	# nearest so far can replace it, so asking `_is_prey` of the rest changes nothing (#1335).
+	# nearest so far can replace it, so asking `_is_candidate` of the rest changes nothing (#1335).
+	# Each is one of `wild.monsters` already, which `_is_prey` would check again.
 	for monster: int in wild.monsters:
 		var standing: Entity = state.entity(monster)
 		if standing == null:
 			continue
 		var distance: int = Hex.distance(standing.tile, tile)
-		if distance >= gap or not _is_prey(state, wild, hunter, monster, tile):
+		if distance >= gap or not _is_candidate(state, wild, hunter, standing, tile):
 			continue
 		nearest = monster
 		gap = distance
 	return nearest
 
 
-## Whether the wild monster `monster` is prey for `hunter` on `tile`: standing within SIGHT, free,
-## not yet beaten, and weaker than the hunter or of a grazer species.
+## Whether the wild monster `monster` is prey for `hunter` on `tile`: one of the wild monsters,
+## standing within SIGHT, free, not yet beaten, and weaker than the hunter or of a grazer species.
 func _is_prey(
 	state: GameState,
 	wild: WildMonsterFeature,
@@ -199,11 +200,23 @@ func _is_prey(
 	monster: int,
 	tile: Vector2i,
 ) -> bool:
-	# The cheap checks first: the costlier ones go through every ring (#1335).
-	if monster == hunter or not wild.monsters.has(monster):
+	if not wild.monsters.has(monster):
 		return false
 	var standing: Entity = state.entity(monster)
-	if standing == null or Hex.distance(standing.tile, tile) > SIGHT:
+	return standing != null and _is_candidate(state, wild, hunter, standing, tile)
+
+
+## Whether `standing`, one of the wild monsters, is prey for `hunter` on `tile` (`_is_prey`).
+func _is_candidate(
+	state: GameState,
+	wild: WildMonsterFeature,
+	hunter: int,
+	standing: Entity,
+	tile: Vector2i,
+) -> bool:
+	var monster: int = standing.id
+	# The cheap checks first: the costlier ones go through every ring (#1335).
+	if monster == hunter or Hex.distance(standing.tile, tile) > SIGHT:
 		return false
 	if not _free(state, wild, monster) or _beaten(state, monster):
 		return false
