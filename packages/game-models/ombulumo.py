@@ -65,7 +65,7 @@ TOAD = quadruped.Proportions(
         (0.47, 0.20, 0.05),
     ],
 )
-# Its proportions as first built (#1271): a change that drifts from them fails the build
+# Its proportions as first built (#1271), with the eyes, mouth, throat and fronds of #1294: a change that drifts from them fails the build
 # (lib/metrics.py), so a derpy edit shows as numbers. A toad's: a head as long as the body is
 # deep and wider than it is long, short legs, eyes far apart on top, a short, deep, blunt muzzle.
 REFERENCE = {
@@ -74,7 +74,7 @@ REFERENCE = {
     "head width/length": 1.203,
     "leg/body": 0.719,
     # The leaf fronds behind the eyes, on the ears' bones.
-    "ear/head": 0.410,
+    "ear/head": 0.301,
     # The stub of a tail and the round rump it moves.
     "tail/body": 0.799,
     "eye spacing/head width": 0.625,
@@ -82,10 +82,10 @@ REFERENCE = {
     "eye.R/eye.L height": 0.0,
     "eye.R/eye.L depth": 0.0,
     "eye.R/eye.L sides": 0.0,
-    "muzzle/head": 0.609,
-    "muzzle depth/length": 1.072,
-    "muzzle width/head width": 0.725,
-    "nose width/muzzle width": 0.409,
+    "muzzle/head": 0.567,
+    "muzzle depth/length": 1.147,
+    "muzzle width/head width": 0.673,
+    "nose width/muzzle width": 0.435,
 }
 
 # A wide, blunt muzzle across the whole front of the head. Its mouth is a line drawn round the
@@ -122,7 +122,7 @@ WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 # The throat sac booms (#1271): it swells from the back of the throat on its own bone
 # (lib/pulse.py), twice in a resting loop, once as it leaps, and on every beat of its long attack,
 # a boom every BOOM frames. A loop takes the beats either side of its seam.
-THROAT, THROAT_BONE = (0.0, -0.46, 0.42), pulse.PREFIX + "throat"
+THROAT, THROAT_BONE = (0.0, -0.44, 0.44), pulse.PREFIX + "throat"
 BOOM, BOOM_SWELL, BOOM_RISE, BOOM_FALL = 20, 1.55, 6, 14
 CHANNEL_FRAMES = 60
 
@@ -192,21 +192,26 @@ def leaf(name, base, toward, length, width, mat, bone=None):
 def head_parts(skin, mats):
     """The mouth, two nostrils, the leaf fronds and the round, bulging eyes."""
     # The mouth, a dark line from cheek to cheek round the front of the head, and two nostrils.
-    made = [surface.vein(skin, "Mouth", MOUTH, 0.012, mats["dark"])]
+    # Its left half, from the chin's middle out, narrowing to a point at the cheek, and its mirror
+    # image: a fine line, not a stuck-on band ending bluntly (#1294).
+    mouth = surface.vein(skin, "Mouth.L", MOUTH[len(MOUTH) // 2:], 0.009, mats["dark"], lift=0.009, taper=0.35, smooth=4)
+    made = [mouth, parts.mirrored(mouth, "Mouth.R")]
     for sign in (1, -1):
         side = "L" if sign == 1 else "R"
         made.append(parts.part("uv_sphere", "Nostril." + side, (0.07 * sign, -0.855, 0.655), (0.018, 0.012, 0.012), mat=mats["dark"],
                                bone="head", segments=8, ring_count=5))
         base, tip = (mirror(p, sign) for p in TOAD.ear)
         out = tuple(t - b for t, b in zip(tip, base))
-        for index, (share, length, width) in enumerate(((0.0, 0.30, 0.10), (0.15, 0.22, 0.08))):
+        for index, (share, length, width) in enumerate(((0.0, 0.22, 0.10), (0.15, 0.16, 0.08))):
             spot = tuple(b + o * share for b, o in zip(base, out))
             toward = (out[0] + 0.12 * index * sign, out[1] + 0.1 * index, out[2] + 0.08 * index)
             made.append(leaf("Frond.%d.%s" % (index, side), spot, toward, length, width, mats["moss"], "ear." + side))
     # The left eye, set into the skin, and its mirror image on the right. Its turret is its lid:
     # a brow ridge would float over a bulging eye.
     left = []
-    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.57, 0.90), (0.25, -1.0, 0.2), 0.09,
+    # Set forward and low on its turret, looking level ahead: from the top camera it shows as an
+    # eye, not a ring facing the sky, and from the front its rings sit round its pupil (#1294).
+    for piece in eyes.eye(skin, "Eye.L", (0.27, -0.60, 0.88), (0.25, -1.0, 0.0), 0.09,
                           {"dark": mats["dark"], "glow": mats["glow"], "light": mats["light"], "skin": mats["skin"]},
                           "head", almond=0.95, pupil=(0.42, 0.34)):
         if piece.name.endswith(".brow"):
@@ -218,8 +223,9 @@ def head_parts(skin, mats):
 
 
 def throat(mats):
-    """The pale throat sac under the chin, on a bone of its own so it swells as it booms."""
-    return [parts.part("uv_sphere", "Throat", (0.0, -0.58, 0.36), (0.20, 0.16, 0.11), mat=mats["light"],
+    """The pale throat sac tucked back under the chin, on a bone of its own so it swells as it
+    booms: at rest the head hides it, so it doesn't read as a second mouth (#1294)."""
+    return [parts.part("uv_sphere", "Throat", (0.0, -0.52, 0.39), (0.17, 0.13, 0.09), mat=mats["light"],
                        bone=THROAT_BONE, segments=16, ring_count=8)]
 
 
