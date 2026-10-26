@@ -111,4 +111,5 @@ jobs:
             files+=("${file}#web: $(basename "$file")")
           done
           gh release create "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "$GITHUB_REF_NAME" --generate-notes
+            --title "$GITHUB_REF_NAME" --generate-notes \
+            --notes 'The Linux file needs `chmod +x` after downloading, which drops the executable bit.'

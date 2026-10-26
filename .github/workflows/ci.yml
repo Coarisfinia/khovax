@@ -843,10 +843,14 @@ jobs:
             exit 1
           fi
           tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
-          # A rerun of this run finds its release already made.
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          # A rerun of this run finds its release already published, or the draft a failed upload
+          # left, which has no tag yet and is made again.
+          draft=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || true)
+          if [ "$draft" = false ]; then
             echo "${tag} already exists"
             exit 0
+          elif [ "$draft" = true ]; then
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes
           fi
           # Named after the game's display name, as release.yml names its files.
           name=$(godot_setting name | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
@@ -864,10 +868,14 @@ jobs:
           notes="Dev build of ${GITHUB_SHA}, made by [this CI run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
           The Android APK is signed with a throwaway debug key: uninstall an older build before installing it. The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
           # The changes since the previous dev release; the very first lists none, not the whole history.
-          previous=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 100 --json tagName \
+            --jq '[.[] | select(.tagName | test("^v[0-9]+[.][0-9]+[.][0-9]+-dev[.][0-9]+$"))][0].tagName // empty')
           start=()
           if [ -n "$previous" ]; then
             start=(--generate-notes --notes-start-tag "$previous")
           fi
+          # A draft until every file is up: the tag, which can't be moved or deleted, comes with
+          # publishing it.
           gh release create "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --prerelease --title "$tag" --notes "$notes" "${start[@]}"
+            --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
