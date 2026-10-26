@@ -1,0 +1,28 @@
+// The Sorn Lumawenai (#1323, #1310), the faction of the harmony path: a league of kin who live
+// alongside wild monsters as equals. Its name sounds soft (l, m, w, n), as a harmony faction's does
+// (#909). Neutral to the Amvrel Velmarai, the Story guild, and the enemy of the Odun Kragothai until
+// the postgame (#1310). Its ranks stay in Trade Speech (#484, #909).
+{
+	"id": "sorn_lumawenai",
+	"name": "Sorn Lumawenai",
+	"codex": {
+		"entry": "A league of families who walk beside wild monsters rather than ahead of them, and who count a monster's trust as kinship. They shelter the hurt, keep the old herding paths open and turn away anyone who rules by fear. Its name is Oath-speech: Sorn, the oath word of a league of bound kin, then Lumawenai, those who walk together.",
+		"gloss": "the league of those who walk together"
+	},
+	"symbol": "~", // a wave (#68)
+	"enemies": ["odun_kragothai"],
+	"ranks_up": [
+		"Kindred Guest",
+		"Bound Friend",
+		"Hearthkeeper",
+		"Elder of the Bond",
+		"Heart of the League"
+	],
+	"ranks_down": [
+		"Stranger at the Gate",
+		"Unwelcome",
+		"Bondbreaker",
+		"Shunned",
+		"Cast Out"
+	]
+}

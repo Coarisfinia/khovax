@@ -1374,14 +1374,17 @@ func _check_faction_territory(content: FactionContent) -> String:
 
 
 ## The Amvrel Velmarai, the Story guild, is allied until the postgame and has no enemies,
-## so none names it (#1310, #1324). A faction whose enemies aren't a list of faction ids, each
-## once and never its own, or that is allied until the postgame and has enemies, is refused,
-## and so is an enemy that isn't a faction naming it back; two factions naming each other load
-## as enemies.
+## so none names it, and the Odun Kragothai and the Sorn Lumawenai are each other's (#1310,
+## #1324, #1323). A faction whose enemies aren't a list of faction ids, each once and never its
+## own, or that is allied until the postgame and has enemies, is refused, and so is an enemy
+## that isn't a faction naming it back; two factions naming each other load as enemies.
 func _check_faction_enemies(content: FactionContent) -> String:
 	var guild: Faction = content.factions["amvrel_velmarai"]
 	if not guild.enemies.is_empty() or not guild.allied_until_postgame:
 		return "the Story guild has enemies, or isn't allied until the postgame (#1324)"
+	if (not content.factions.has("odun_kragothai")
+			or " ".join(content.factions["odun_kragothai"].enemies) != "sorn_lumawenai"):
+		return "the Odun Kragothai and the Sorn Lumawenai aren't enemies (#1323)"
 	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
 	var enemies: String = faction.trim_suffix("}") + ", \"enemies\": %s}"
 	var refused: String = _factions_refused({
