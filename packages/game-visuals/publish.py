@@ -74,7 +74,8 @@ def main() -> int:
         return 1
 
     for file in args.files:
-        log.info(f"![{file.stem}]({URL.format(quote(file.name))})")
+        label = file.stem.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+        log.info(f"![{label}]({URL.format(quote(file.name))})")
     return 0
 
 
