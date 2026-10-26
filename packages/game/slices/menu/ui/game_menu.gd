@@ -292,7 +292,8 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 func _add_difficulty() -> void:
 	if driver == null:
 		return
-	var difficulty: DifficultyChoice = DifficultyChoice.new(driver)
+	var names: Array[String] = ["Easy", "Standard", "Hard"]
+	var difficulty: HostChoice = HostChoice.new(driver, HostSettings.DIFFICULTY, names)
 	difficulty.name = "Difficulty"
 	add_child(difficulty)
 	var _row: HBoxContainer = settings.add_row(
