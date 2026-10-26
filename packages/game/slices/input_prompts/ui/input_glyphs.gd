@@ -7,6 +7,11 @@ extends RefCounted
 ## gestures that press an action too (GESTURES). Pointing at the screen, a click or a tap, has its
 ## own glyph (pointing).
 
+## The left stick, which walks the player whichever way it's pushed (MoveHint, #1222). The right
+## stick has no glyph while nothing is bound to it.
+const STICK_LEFT: Texture2D = preload("res://assets/kenney-input-prompts/controller_stick_left.svg")
+## A drag on the screen, which steers the touch stick and so walks the player (TouchStick, #1222).
+const DRAG: Texture2D = preload("res://assets/kenney-input-prompts/touch_drag.svg")
 const KEYS: Dictionary[Key, Texture2D] = {
 	KEY_1: preload("res://assets/kenney-input-prompts/keyboard_1.svg"),
 	KEY_2: preload("res://assets/kenney-input-prompts/keyboard_2.svg"),
@@ -21,6 +26,10 @@ const KEYS: Dictionary[Key, Texture2D] = {
 	KEY_R: preload("res://assets/kenney-input-prompts/keyboard_r.svg"),
 	KEY_T: preload("res://assets/kenney-input-prompts/keyboard_t.svg"),
 	KEY_V: preload("res://assets/kenney-input-prompts/keyboard_v.svg"),
+	KEY_W: preload("res://assets/kenney-input-prompts/keyboard_w.svg"),
+	KEY_A: preload("res://assets/kenney-input-prompts/keyboard_a.svg"),
+	KEY_S: preload("res://assets/kenney-input-prompts/keyboard_s.svg"),
+	KEY_D: preload("res://assets/kenney-input-prompts/keyboard_d.svg"),
 	KEY_X: preload("res://assets/kenney-input-prompts/keyboard_x.svg"),
 }
 const BUTTONS: Dictionary[JoyButton, Texture2D] = {
@@ -41,14 +50,20 @@ const BUTTONS: Dictionary[JoyButton, Texture2D] = {
 }
 ## A trigger or stick, by its axis.
 const AXES: Dictionary[JoyAxis, Texture2D] = {
+	JOY_AXIS_LEFT_X: STICK_LEFT,
+	JOY_AXIS_LEFT_Y: STICK_LEFT,
 	JOY_AXIS_TRIGGER_LEFT:
 	preload("res://assets/kenney-input-prompts/controller_trigger_left.svg"),
 	JOY_AXIS_TRIGGER_RIGHT:
 	preload("res://assets/kenney-input-prompts/controller_trigger_right.svg"),
 }
 ## Touch gestures that press an action, by the action: a pinch on the Survey zooms it in or out
-## (SurveyPinch, #1221).
+## (SurveyPinch, #1221), and a drag walks the player (DRAG).
 const GESTURES: Dictionary[StringName, Texture2D] = {
+	&"move_up": DRAG,
+	&"move_left": DRAG,
+	&"move_down": DRAG,
+	&"move_right": DRAG,
 	&"survey_zoom_in": preload("res://assets/kenney-input-prompts/touch_zoom_in.svg"),
 	&"survey_zoom_out": preload("res://assets/kenney-input-prompts/touch_zoom_out.svg"),
 }

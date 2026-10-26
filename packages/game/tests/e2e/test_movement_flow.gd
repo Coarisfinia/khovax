@@ -113,19 +113,21 @@ func run(tree: SceneTree) -> String:
 	var _connected: int = _driver.ticked.connect(_forget_worn)
 	_walked = { _tile(): true }
 
-	var result: String = _check_bindings()
-	if result.is_empty():
-		result = _check_special_key()
-	if result.is_empty():
-		result = _check_gamepad_bindings()
-	if result.is_empty():
-		result = _check_paths()
-	if result.is_empty():
-		result = _check_forest_and_water()
-	if result.is_empty():
-		result = _check_blocked_by_wild_monster()
-	if result.is_empty():
-		result = _check_stick_walk()
+	var steps: Array[Callable] = [
+		_check_bindings,
+		_check_special_key,
+		_check_gamepad_bindings,
+		_check_paths,
+		_check_forest_and_water,
+		_check_blocked_by_wild_monster,
+		_check_stick_walk,
+		_check_move_hint,
+	]
+	var result: String = ""
+	for step: Callable in steps:
+		result = step.call()
+		if not result.is_empty():
+			break
 	_release_all()
 	_main.queue_free()
 	await tree.process_frame
@@ -310,6 +312,67 @@ func _check_stick_walk() -> String:
 		_send_stick.bind(Vector2.ZERO),
 	)
 	return "pushing the stick right: " + result if not result.is_empty() else ""
+
+
+## The move hint (#1222): until the player first walks, the glyphs that walk them stand just under
+## them, W over S with A and D beside it with a keyboard, the left stick alone with a controller and
+## a drag alone on touch. The first step notes the walk in their profile, and the hint fades.
+func _check_move_hint() -> String:
+	var hint: MoveHint = _main.get_node("Hud/MoveHint") as MoveHint
+	hint.set_process(false)
+	# Whatever this flow walked before, the hint starts here as a new game's does.
+	hint.keeper.started()
+	hint.alpha = 1.0
+	var shown: Array = FlowInput.glyphs_by_device(func() -> Array: return _move_hint_shown(hint))
+	var expected: Array = [
+		[
+			InputGlyphs.KEYS[KEY_W],
+			InputGlyphs.KEYS[KEY_A],
+			InputGlyphs.KEYS[KEY_S],
+			InputGlyphs.KEYS[KEY_D],
+		],
+		[InputGlyphs.AXES[JOY_AXIS_LEFT_X]],
+		[InputGlyphs.GESTURES[&"move_up"]],
+	]
+	if shown != expected:
+		return "the move hint didn't show W, A, S and D, the left stick and a drag"
+	var kept: DeviceInUse.Device = DeviceInUse.device
+	DeviceInUse.device = DeviceInUse.Device.KEYBOARD
+	hint.show_state()
+	DeviceInUse.device = kept
+	var up: Rect2 = hint.shown[&"move_up"]
+	var down: Rect2 = hint.shown[&"move_down"]
+	var keys_lie: bool = up.position.x == down.position.x and up.end.y < down.position.y
+	keys_lie = keys_lie and hint.shown[&"move_left"].end.x < down.position.x
+	keys_lie = keys_lie and hint.shown[&"move_right"].position.x > down.end.x
+	var feet: Vector2 = hint.camera.unproject_position(hint.figure.global_position)
+	var under: bool = up.position.y > feet.y and up.position.x < feet.x and up.end.x > feet.x
+	if not keys_lie or not under:
+		return "the move hint's keys didn't lie as on a keyboard, just under the player"
+	Input.action_press(_open_side())
+	for _i: int in ceili(MOVE_SECONDS / STEP):
+		_step()
+		hint.show_state()
+	_release_all()
+	_finish_step()
+	if not hint.keeper.walked or hint.keeper.beside() != { MoveHintKeeper.KEY: true }:
+		return "the player's first walk wasn't kept in their profile"
+	hint.fade(MoveHint.FADE_SECONDS / 2.0)
+	if hint.alpha <= 0.0 or hint.alpha >= 1.0:
+		return "the move hint didn't fade once the player walked"
+	hint.fade(MoveHint.FADE_SECONDS)
+	hint.show_state()
+	return "" if hint.shown.is_empty() else "the move hint still showed after fading"
+
+
+## The move hint's glyphs, in its actions' order.
+func _move_hint_shown(hint: MoveHint) -> Array:
+	hint.show_state()
+	var glyphs: Array = []
+	for action: StringName in MoveHint.CELLS:
+		if hint.glyphs.has(action):
+			glyphs.append(hint.glyphs[action])
+	return glyphs
 
 
 ## Moves the left stick to `to`, as a real joypad's events would: one event per axis.
