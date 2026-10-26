@@ -76,6 +76,45 @@ def _between(a, b):
     return tuple((x + y) / 2 for x, y in zip(a, b))
 
 
+def bind_torso(skin, rig, bottom, top):
+    """Keeps the upper trunk with its spine rather than the legs' automatic weights. Between
+    `bottom` and `top` (rest height in rig space), smoothly transfers the legs' influence to
+    the hips and spine, blended along their length. Below it the legs keep their weights;
+    head, jaw and tail weights are untouched. Runs before pieces join the skin (weights.bind's
+    `reweigh`), so markings on the torso inherit its corrected weights too."""
+    roots = [rig.data.bones[name + "." + side]
+             for name in ("scapula", "thigh") for side in ("L", "R")]
+    limbs = {bone.name for root in roots for bone in [root, *root.children_recursive]}
+    sources = {group.index for group in skin.vertex_groups if group.name in limbs}
+    spine = []
+    for name in ("hips", "spine_01", "spine_02"):
+        group = skin.vertex_groups.get(name) or skin.vertex_groups.new(name=name)
+        spine.append((rig.data.bones[name].head_local.y, group))
+    spine.sort(key=lambda item: item[0])
+    to_rig = rig.matrix_world.inverted() @ skin.matrix_world
+    for vertex in skin.data.vertices:
+        point = to_rig @ vertex.co
+        share = max(0.0, min(1.0, (point.z - bottom) / (top - bottom)))
+        share = share * share * (3.0 - 2.0 * share)
+        if share == 0.0:
+            continue
+        taken = 0.0
+        for index, weight in [(group.group, group.weight) for group in vertex.groups if group.group in sources]:
+            moved = weight * share
+            skin.vertex_groups[index].add([vertex.index], weight - moved, "REPLACE")
+            taken += moved
+        if taken == 0.0:
+            continue
+        for (start, first), (end, second) in zip(spine, spine[1:]):
+            if point.y <= end:
+                along = max(0.0, min(1.0, (point.y - start) / (end - start)))
+                first.add([vertex.index], taken * (1.0 - along), "ADD")
+                second.add([vertex.index], taken * along, "ADD")
+                break
+        else:
+            spine[-1][1].add([vertex.index], taken, "ADD")
+
+
 def _chain(out, names, points, parent, side):
     for index, name in enumerate(names):
         out.append((name + "." + side, points[index], points[index + 1], parent))

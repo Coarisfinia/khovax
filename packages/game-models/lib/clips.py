@@ -339,7 +339,7 @@ BRACE = {"front_paw": (0.06, 0.0, 0.18), "hind_paw": (0.04, 0.0, -0.08)}
 CHANNEL_START = 24
 
 
-def _braced(t):
+def _braced(t, brace=BRACE):
     """The braced stance at `t` (0..1) of the held loop: low and leaning in, the jaw wide and the
     ears flat, the body pushed back and the jaw working as it holds the attack, the head swaying
     once. Every wave leaves the stance at t=0 with no speed, so the wind-up's still
@@ -361,31 +361,32 @@ def _braced(t):
         "tail_01": (0.3, 0.0, 0.0),
     }
     _both(pose, "ear", (0.5, 0.0, 0.0))
-    for paw, (side, up, forward) in BRACE.items():
+    for paw, (side, up, forward) in brace.items():
         pose["plant." + paw + ".L"] = (side, up, forward)
         pose["plant." + paw + ".R"] = (-side, up, forward)
     return pose
 
 
-def _brace_steps(out, front, hind):
-    """Each paw's step out to its BRACE spot (`out`) or back to rest, the forepaws from frame
+def _brace_steps(out, front, hind, brace=BRACE):
+    """Each paw's step out to its `brace` spot (`out`) or back to rest, the forepaws from frame
     `front` and the hind paws from `hind`, the right one a frame after the left."""
     steps = []
     for paw, start, height in (("front_paw", front, 0.08), ("hind_paw", hind, 0.05)):
-        side, up, forward = BRACE[paw] if out else (0.0, 0.0, 0.0)
+        side, up, forward = brace[paw] if out else (0.0, 0.0, 0.0)
         for name, sign, late in (("L", 1.0, 0), ("R", -1.0, 1)):
             steps.append(legs.Step(paw + "." + name, start + late, start + late + 8, (sign * side, up, forward),
                                    height))
     return steps
 
 
-def channel(frames=60):
+def channel(frames=60, brace=BRACE):
     """A long attack, held for as long as it lasts (#1158), as three clips the game plays in turn
     (name: Clip): ChannelStart rears back with the jaw opening and snaps into the braced stance,
-    the forepaws stepping out wide and ahead and the hind paws back; Channel holds the stance, a
+    the forepaws stepping out wide and ahead and the hind paws back (to `brace`, as BRACE: a body
+    plan's own on shorter legs); Channel holds the stance, a
     loop of `frames`, for as long as the attack lasts; ChannelEnd snaps the jaw shut, recoils,
     steps back to stand and settles. The start ends and the end starts on the loop's first pose."""
-    braced = _braced(0.0)
+    braced = _braced(0.0, brace)
     rear = {"root_loc": (0.0, -0.06, -0.12), "hips": (-0.1, 0.0, 0.0), "neck": (-0.25, 0.0, 0.0),
             "head": (-0.2, 0.0, 0.0), "jaw": (0.25, 0.0, 0.0), "tail_01": (-0.15, 0.0, 0.0)}
     _both(rear, "ear", (0.3, 0.0, 0.0))
@@ -394,8 +395,8 @@ def channel(frames=60):
     reared = dict(rear, root_loc=(0.0, -0.065, -0.135), neck=(-0.28, 0.0, 0.0))
     lunge = dict(braced, root_loc=(0.0, -0.09, 0.07), jaw=(0.65, 0.0, 0.0))
     start = Clip([(1, {}), (9, rear), (11, reared), (17, lunge, {"*": "quart", "jaw": "back"}), (CHANNEL_START, braced)],
-                 steps=_brace_steps(True, 6, 3))
-    held = Clip([(step + 1, _braced(step / frames)) for step in range(frames + 1)], loop=True)
+                 steps=_brace_steps(True, 6, 3, brace))
+    held = Clip([(step + 1, _braced(step / frames, brace)) for step in range(frames + 1)], loop=True)
     # The jaw snaps shut and the head jerks up while the body holds the stance; it rises and
     # steps back only once the snap is over, so the legs can reach their paws all along.
     snap = dict(braced, neck=(-0.1, 0.0, 0.0), head=(-0.12, 0.0, 0.0), jaw=(0.0, 0.0, 0.0))
@@ -405,7 +406,7 @@ def channel(frames=60):
             "head": (-0.03, 0.0, 0.0), "tail_01": (0.06, 0.0, 0.0)}
     _both(past, "ear", (-0.08, 0.0, 0.0))
     end = Clip([(1, braced), (6, snap, {"*": "quart", "jaw": "expo"}), (20, past), (28, {})],
-               steps=_brace_steps(False, 7, 10))
+               steps=_brace_steps(False, 7, 10, brace))
     return {"ChannelStart": start, "Channel": held, "ChannelEnd": end}
 
 
@@ -413,10 +414,10 @@ def channel(frames=60):
 FOREARM_FLAT = 0.8
 
 
-def faint(body_height):
+def faint(body_height, forepaws=0.45):
     """The legs give way (#1074): it staggers, catches itself once, then sinks onto its belly,
     `body_height` down, the hind legs folding under it where they stood and the forepaws stepping
-    out in front; the head hits the ground and bounces once, the tail lying out behind (a
+    out `forepaws` (unscaled metres) in front; the head hits the ground and bounces once, the tail lying out behind (a
     hanging tail would hold the body off the ground once animate grounds the clip), and it keeps
     sinking into the ground's hold as its ears droop, rather than freezing there."""
     stagger = {"root_loc": (0, -body_height * 0.08, 0), "spine_02": (0, 0, 0.06), "neck": (0.15, 0, 0),
@@ -441,7 +442,7 @@ def faint(body_height):
     # One after the other, so it lies on its forearms rather than propped up on folded forelegs.
     steps = []
     for side, sign, late in (("L", 1.0, 0), ("R", -1.0, 2)):
-        steps.append(legs.Step("front_paw." + side, 14 + late, 28 + late, (0.0, 0.0, 0.45), 0.1))
+        steps.append(legs.Step("front_paw." + side, 14 + late, 28 + late, (0.0, 0.0, forepaws), 0.1))
         # The hind paws splay out and back, so the knees fold beside the belly, not under it.
         steps.append(legs.Step("hind_paw." + side, 17 + late, 30 + late, (0.12 * sign, 0.0, -0.12), 0.06))
     return Clip([(1, {}), (6, stagger), (10, caught), (19, sinking), (32, lying), (35, bounce, "quart"),

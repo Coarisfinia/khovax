@@ -210,6 +210,10 @@ background; only wait in the foreground for a result the very next step needs.
   published on the `assets` branch like a screenshot.
 - **If a pull request has something to see, its description shows it, test replays included**
   (owner's ground rule, #887).
+- **A model pull request shows its animation clips in its description** (owner's ground rule,
+  #1331): a GIF of each clip it builds or changes, in game, before and after, the same set
+  earlier model pull requests showed. They're essential, so they go in the description, not only
+  in a comment.
 
 ### After every push
 
