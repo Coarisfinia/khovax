@@ -1,0 +1,10 @@
+// The mana pups' quest (#1348, source 4 of #1260): a side quest that starts once the player first
+// enters Ivenwhal Wudhen, the Vynakiir's home, and asks them to dominate one of the pups there.
+// Finishing it hands over the arcane crystal a pup needs to ascend into a Vynakiir (#1252).
+{
+	"id": "pup_crystal",
+	"name": "A crystal for a ${MONSTER:vynnimu}",
+	"starts_on": { "condition": "entered", "instance": "ivenwhal_wudhen" },
+	"steps": [{ "condition": "dominated", "species": "vynnimu", "instance": "ivenwhal_wudhen", "ends": "pup_crystal" }],
+	"materials": { "arcane_crystal": 1 }
+}

@@ -131,6 +131,7 @@ func run(tree: SceneTree) -> String:
 		_check_model_refused,
 		_check_ascensions.bind(content),
 		_check_ascension_habitats.bind(content),
+		_check_ascension_quests.bind(content),
 		_check_ascensions_refused,
 		_check_loot_rolls,
 		_check_harvest_tables,
@@ -1014,6 +1015,39 @@ func _check_ascension_habitats(content: SpeciesContent) -> String:
 				ascension.into,
 			]
 	return ""
+
+
+## Every species' ascension material is a quest's reward too (#1348): some quest gives it when it
+## finishes, and its steps count where the species it ascends into lives.
+func _check_ascension_quests(content: SpeciesContent) -> String:
+	var quests: QuestContent = QuestContent.load_quests()
+	if not quests.problem.is_empty():
+		return "the quests didn't load: " + quests.problem
+	for species_id: String in content.ascensions:
+		var ascension: SpeciesAscension = content.ascensions[species_id]
+		var found: bool = false
+		for quest: QuestDefinition in quests.quests.values():
+			found = found or (
+				quest.materials.has(ascension.material)
+				and _counts_where_lives(quest, ascension.into)
+			)
+		if not found:
+			return "no quest gives %s's ascension material %s where %s lives" % [
+				species_id,
+				ascension.material,
+				ascension.into,
+			]
+	return ""
+
+
+## Whether every step of `quest` counts in an instance whose wild monsters roll `species_id`.
+func _counts_where_lives(quest: QuestDefinition, species_id: String) -> bool:
+	for step: QuestStep in quest.steps:
+		for trigger: QuestStep in step.triggers():
+			var named: Blueprint = InstanceBlueprints.blueprint(trigger.instance)
+			if named == null or not named.wild_species.has(species_id):
+				return false
+	return true
 
 
 ## Whether an instance of `instance_name` has chests and loot on its ground, and both its chest

@@ -91,6 +91,7 @@ const AFTER_BEACON: String = (
 const BETRAYAL: String = (
 	"{\"id\": \"betrayal\", \"name\": \"Betray the guild\", "
 	+ "\"standing\": {\"faction\": \"amvrel_velmarai\", \"change\": -10}, "
+	+ "\"materials\": {\"moss\": 2}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"betrayal\"}]}"
 )
 ## A quest asking for feathers twice over (#686): five, then three more.
@@ -1427,7 +1428,8 @@ func _check_counted() -> String:
 
 
 ## Finishing a quest moves the standing with the faction it names (#532): the first domination
-## raised the guild by one, and a quest lowering it further than its scale holds it at the lowest.
+## raised the guild by one, and a quest lowering it further than its scale holds it at the lowest;
+## that quest also gives two moss, which land in the player's materials (#1348).
 ## Finishing a path-marked quest leans the player toward its path (#658): the toads' quest, marked
 ## supremacy, leans them one toward it, and the unmarked ones toward neither.
 func _check_standing(profile: Profile, quests: QuestTracker) -> String:
@@ -1439,6 +1441,8 @@ func _check_standing(profile: Profile, quests: QuestTracker) -> String:
 	var _unbooked: bool = quests.book.erase(betrayal.id)
 	if not applied.is_empty() or profile.standings.of(GUILD) != Standings.LOWEST:
 		return "a quest lowering the guild past its scale didn't hold it at the lowest: " + applied
+	if profile.materials.get("moss", 0) != 2:
+		return "finishing a quest giving two moss gave %d" % profile.materials.get("moss", 0)
 	var leaning: PathLeaning = profile.leaning
 	if leaning.supremacy != 1 or leaning.harmony != 0 or leaning.toward() != PathMark.SUPREMACY:
 		return "the quests finished didn't lean the player one toward supremacy: %d, %d" % [
@@ -1585,6 +1589,21 @@ func _check_broken_data() -> String:
 	content = _load_written({ "a_good": in_forest.replace("\"steps\"", astray + ", \"steps\"") })
 	if not content.problem.ends_with("its territory's faction must be one that exists"):
 		return "a quest handing its territory to no faction that exists wasn't refused (#638)"
+	var cases: Dictionary[String, String] = {
+		"{\"mose\": 1}": "it gives mose, which is no material",
+		"{\"moss\": 0}": "its materials must give each id a whole count from 1",
+		"{\"moss\": 1.5}": "its materials must give each id a whole count from 1",
+		"{}": "its materials must name one or more materials",
+	}
+	for given: String in cases:
+		var rewarding: String = good.replace("\"steps\"", "\"materials\": %s, \"steps\"" % given)
+		content = _load_written({ "a_good": rewarding })
+		if not content.problem.ends_with(cases[given]):
+			return "a quest giving %s was refused with %s, not %s (#1348)" % [
+				given,
+				content.problem,
+				cases[given],
+			]
 	return _check_dialog_ids()
 
 

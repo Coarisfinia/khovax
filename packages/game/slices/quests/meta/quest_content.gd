@@ -87,6 +87,8 @@ func add(file_id: String, text: String) -> String:
 		quest.problem = _answers_problem(quest, _dialogs)
 	if quest.problem.is_empty():
 		quest.problem = _items_problem(quest, _tables)
+	if quest.problem.is_empty():
+		quest.problem = _materials_problem(quest)
 	if quest.problem.is_empty() and quest.territory != null:
 		quest.problem = _code_territory(quest.territory)
 	if quest.problem.is_empty():
@@ -127,6 +129,14 @@ static func _items_problem(quest: QuestDefinition, tables: Array[LootContent]) -
 		for trigger: QuestStep in quest.steps[index].triggers():
 			if trigger.condition == QuestStep.OBTAINED and not _drops(trigger.item, tables):
 				return "step %d: no loot or harvest table drops the item %s" % [index, trigger.item]
+	return ""
+
+
+## Why `quest` gives a material (#1348) that isn't one (MaterialContent), or "".
+static func _materials_problem(quest: QuestDefinition) -> String:
+	for material: String in quest.materials:
+		if not MaterialContent.cached().ids.has(material):
+			return "it gives %s, which is no material" % material
 	return ""
 
 
