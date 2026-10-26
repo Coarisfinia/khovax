@@ -11,17 +11,21 @@ from . import scene
 # The custom property `root` keeps a rooted piece's spot in until weights.bind weights it: as
 # shares of the piece's bounds, which hold through scene.apply_scale.
 ROOT = "weights_root"
+ROOT_BONES = "weights_root_bones"
 
 
-def root(piece, spot):
+def root(piece, spot, bones):
     """Marks `piece` (a part with no bone) to move whole as the body's skin at `spot`, its root
     on the body (#1303): weights.bind gives every vertex of it the body's weights there. A
     crystal grown from the skin over two bones (the neck's root, where the spine's and the neck's
     shares meet) then stays on the skin as they bend, while a piece weighted to one of them lifts
     off it, and taking each vertex's own nearest weights would bend a stiff piece with the skin.
-    Returns `piece`."""
+    It takes only the shares of `bones` there, scaled up to a whole: the skin on a back also
+    follows the shoulder blades, which would rock a crest crystal at every step (the owner, on
+    #1413). Returns `piece`."""
     low, high = _bounds(piece)
     piece[ROOT] = [(c - a) / (b - a) if b > a else 0.0 for c, a, b in zip(spot, low, high)]
+    piece[ROOT_BONES] = list(bones)
     return piece
 
 
@@ -80,7 +84,7 @@ def _take_weights(piece, body):
 def _take_root_weights(pieces, body):
     """Every vertex of each piece takes the body's weights at the piece's root (`root`): those
     of the corners of the body's face nearest it, blended by where the point nearest the root
-    lies on it."""
+    lies on it, only its `bones`' shares."""
     world = body.matrix_world
     corners = [world @ vertex.co for vertex in body.data.vertices]
     faces = [list(polygon.vertices) for polygon in body.data.polygons]
@@ -89,7 +93,9 @@ def _take_root_weights(pieces, body):
     for piece in pieces:
         low, high = _bounds(piece)
         spot = Vector([a + share * (b - a) for share, a, b in zip(piece[ROOT], low, high)])
+        bones = set(piece[ROOT_BONES])
         del piece[ROOT]
+        del piece[ROOT_BONES]
         # The root lies a little under the skin (a crystal grows from inside it): its weights are
         # those of the nearest point on the skin.
         location, _normal, face, _distance = tree.find_nearest(spot)
@@ -99,8 +105,18 @@ def _take_root_weights(pieces, body):
         for index, share in zip(indices, shares):
             for group in body.data.vertices[index].groups:
                 name = names[group.group]
-                weights[name] = weights.get(name, 0.0) + share * group.weight
+                if name in bones:
+                    weights[name] = weights.get(name, 0.0) + share * group.weight
+        # A pair's sides share evenly: in a walk the shoulder blades swing in turn, and a piece
+        # following one more than the other would rock at every step; bowing, they move as one.
+        for side in {name[:-2] for name in bones if name.endswith((".L", ".R"))}:
+            left, right = side + ".L", side + ".R"
+            if left in bones and right in bones:
+                weights[left] = weights[right] = (weights.get(left, 0.0) + weights.get(right, 0.0)) / 2
+        whole = sum(weights.values())
+        if whole <= 0.0:
+            raise ValueError("%s: none of %s moves the skin at its root" % (piece.name, sorted(bones)))
         everything = range(len(piece.data.vertices))
         for name, weight in sorted(weights.items()):
             if weight > 0.0:
-                piece.vertex_groups.new(name=name).add(everything, weight, "REPLACE")
+                piece.vertex_groups.new(name=name).add(everything, weight / whole, "REPLACE")

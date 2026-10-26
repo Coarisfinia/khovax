@@ -221,6 +221,13 @@ def paws(mats):
     return made
 
 
+# The bones a rooted piece follows of the skin it grows from (weights.root): the trunk's and the
+# shoulder blades' for the crest, which the back's skin rides on, and the throat's for the ruff,
+# never a leg's below them, which would swing them at every step (the owner, on #1413).
+TRUNK = ("hips", "spine_01", "spine_02", "neck", "scapula.L", "scapula.R")
+THROAT = ("spine_02", "neck", "head", "scapula.L", "scapula.R")
+
+
 def fur(mats):
     """A pale ruff under the throat and tufts on the cheeks."""
     made = []
@@ -228,7 +235,7 @@ def fur(mats):
     # alone hung off as it bowed.
     for index, x in enumerate((-0.1, -0.04, 0.04, 0.1)):
         made.append(weights.root(parts.tuft("Ruff.%d" % index, (x, -0.55, 0.95), (x, 0.35, -1.0), 0.2, 0.08, 0.5,
-                                            mats["light"], up=(0.0, -1.0, 0.0)), (x, -0.55, 0.95)))
+                                            mats["light"], up=(0.0, -1.0, 0.0)), (x, -0.55, 0.95), THROAT))
     for sign in (1, -1):
         for index, z in enumerate((1.42, 1.36)):
             made.append(parts.tuft("Cheek.%d.%d" % (sign, index), (0.15 * sign, -0.80, z),
@@ -279,11 +286,11 @@ def magic(skin, mats, brow):
              ((0.0, 0.48, 1.24), 0.24, 2))
     for index, (guess, height, rune) in enumerate(crest):
         base = surface.onto(skin, guess, -0.03)
-        made.append(weights.root(parts.crystal("Crest.%d" % index, base, (0.0, 0.35, 1.0), height, glow), base))
+        made.append(weights.root(parts.crystal("Crest.%d" % index, base, (0.0, 0.35, 1.0), height, glow), base, TRUNK))
         for sign in (1, -1):
             side_base = surface.onto(skin, (0.13 * sign, guess[1] + 0.06, guess[2] - 0.06), -0.02)
             made.append(weights.root(parts.crystal("Flank.%d.%d" % (index, sign), side_base, (0.6 * sign, 0.3, 1.0),
-                                                   height * 0.45, glow), side_base))
+                                                   height * 0.45, glow), side_base, TRUNK))
             made += flank_veins(skin, "Vein.%d.%d" % (index, sign), guess, sign,
                                 None if rune is None else RUNES[rune], glow)
     made.append(parts.crystal("Brow", brow, (0.0, 0.45, 1.0), 0.17, glow, BROW_BONE))
