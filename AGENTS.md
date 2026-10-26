@@ -360,7 +360,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   hand-kept number** (owner, #801): a save names the format changes it was written with
   (`FormatChanges`), and a format change adds its `<issue>-<slug>.md` to its format's
   `format_changes/` folder (append-only, checked by CI) instead of bumping a `FORMAT`; the formats
-  still on a number move to names in #1409, #1410 and #1411. **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
+  still on a number (the replay and the profile) move to names in #1410 and #1411. **`core/io/`** (#506) holds the readers and writers the core needs (the saves,
   the content reader, JSONC): the core's edge, which reads files and JSON's numbers. Only
   `Content` (reading files and JSON), `SaveStore` (writing them), through which every other reader
   and writer there goes (#591, #1177), and `JsonNumbers`, the one place JSON's floats become whole
