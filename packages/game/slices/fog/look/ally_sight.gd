@@ -19,9 +19,13 @@ static func sees(fog: FogFeature, tile: Vector2i) -> bool:
 		for slot: int in GameState.MAX_PLAYERS:
 			_sets.append({})
 	for slot: int in GameState.MAX_PLAYERS:
-		var tiles: Variant = fog.visible.get(slot)
-		if tiles == null:
+		if not fog.visible.has(slot):
+			# A player who left lets their old sight go.
+			if _built_from[slot] != null:
+				_built_from[slot] = null
+				_sets[slot] = {}
 			continue
+		var tiles: Array = fog.visible[slot]
 		if not is_same(tiles, _built_from[slot]):
 			_built_from[slot] = tiles
 			_sets[slot] = _set_of(tiles)
