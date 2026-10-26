@@ -5,7 +5,9 @@ extends RefCounted
 ## "the instance <id>", naming an instance blueprint, "the instance <id>, where the players start"
 ## for the instance the world starts in, or "no instance", which fills the picture between them.
 ## Under `## Codex`, its codex entry (#959) is the item "- Entry: <text>" and its name's meaning
-## the item "- Gloss: <text>"; a realm without both is refused.
+## the item "- Gloss: <text>"; a realm without both is refused. Under `## Day and night`, its look
+## by day and at night (#1247) is the items "- Day light: #rrggbb", "- Day ambience: #rrggbb",
+## "- Night light: #rrggbb" and "- Night ambience: #rrggbb"; a realm without all four is refused.
 ## The realms are the files in DIR, found by listing it (Realms).
 
 const INSTANCE: String = "the instance "
@@ -14,6 +16,11 @@ const NO_INSTANCE: String = "no instance"
 const CODEX: String = "## Codex"
 const ENTRY: String = "- Entry: "
 const GLOSS: String = "- Gloss: "
+const DAY_AND_NIGHT: String = "## Day and night"
+const DAY_LIGHT: String = "- Day light: "
+const DAY_AMBIENCE: String = "- Day ambience: "
+const NIGHT_LIGHT: String = "- Night light: "
+const NIGHT_AMBIENCE: String = "- Night ambience: "
 
 
 ## Notes each instance `grid` draws on `realm`, by its tile; returns why it can't, or "".
@@ -48,24 +55,46 @@ static func parse(text: String) -> Realm:
 		if not realm.has(realm.start):
 			realm.problem = "the players start in %s, which isn't drawn" % realm.start
 	if realm.problem.is_empty():
-		_read_codex(realm, text)
+		var codex: Dictionary[String, String] = _items(text, CODEX)
+		realm.codex_entry = codex.get(ENTRY, "")
+		realm.codex_gloss = codex.get(GLOSS, "")
 		if realm.codex_entry.is_empty() or realm.codex_gloss.is_empty():
 			realm.problem = "its codex entry and gloss are missing under %s (#959)" % CODEX
+	if realm.problem.is_empty():
+		realm.problem = _read_day_and_night(realm, _items(text, DAY_AND_NIGHT))
 	return realm
 
 
-## Notes the codex entry and gloss listed in `text`'s `## Codex` section (up to its next heading) on
-## `realm`.
-static func _read_codex(realm: Realm, text: String) -> void:
+## Notes the look by day and at night listed in `items` on `realm`; returns why it can't, or "".
+static func _read_day_and_night(realm: Realm, items: Dictionary[String, String]) -> String:
+	var colors: Array[int] = []
+	for item: String in [DAY_LIGHT, DAY_AMBIENCE, NIGHT_LIGHT, NIGHT_AMBIENCE]:
+		var color: String = items.get(item, "")
+		if (color.length() != 7
+				or not color.begins_with("#")
+				or not color.substr(1).is_valid_hex_number()):
+			return "its day and night look needs %s#rrggbb under %s (#1247)" % [item, DAY_AND_NIGHT]
+		colors.append(color.substr(1).hex_to_int())
+	realm.day_light = colors[0]
+	realm.day_ambience = colors[1]
+	realm.night_light = colors[2]
+	realm.night_ambience = colors[3]
+	return ""
+
+
+## The items listed in `text`'s section under `heading` (up to its next heading): each item's
+## lead-in ("- Entry: ") to the text after it.
+static func _items(text: String, heading: String) -> Dictionary[String, String]:
+	var items: Dictionary[String, String] = {}
 	var inside: bool = false
 	for line: String in text.split("\n"):
 		var clean: String = line.strip_edges()
 		if clean.begins_with("#"):
-			inside = clean == CODEX
-		elif inside and clean.begins_with(ENTRY):
-			realm.codex_entry = clean.trim_prefix(ENTRY)
-		elif inside and clean.begins_with(GLOSS):
-			realm.codex_gloss = clean.trim_prefix(GLOSS)
+			inside = clean == heading
+		elif inside and clean.begins_with("- ") and clean.contains(": "):
+			var lead: String = clean.substr(0, clean.find(": ") + 2)
+			items[lead] = clean.trim_prefix(lead)
+	return items
 
 
 ## Each legend symbol's instance id, or "" where it draws none, with the instances it marks as the
