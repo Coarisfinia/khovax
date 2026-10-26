@@ -6,8 +6,7 @@ extends RefCounted
 ## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
 ## that ascends (#1252) ascends into another species, never in a loop, with a material the tables
 ## drop; and broken entries are refused. Every species has a development web (#677), whose nodes
-## open as the ones next to them are taken, and broken webs are refused; a level-up offers three
-## open nodes by the monster's seed (#678). Loot tables (#90) load,
+## open as the ones next to them are taken, and broken webs are refused. Loot tables (#90) load,
 ## roll the same for the same stream, and a blank rolls on the instance's table; every item a table
 ## names is a piece of gear or a material (#774).
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
@@ -1199,7 +1198,7 @@ func _check_development_webs(content: SpeciesContent) -> String:
 	var heavy: DevelopmentLeaning = web.leanings["heavy_3"]
 	if web.nodes.size() != 12 or heavy.strength != 80 or heavy.speed != -30 or heavy.hp != 0:
 		return "the toad's web didn't load as written"
-	return _check_development_offers(web)
+	return ""
 
 
 ## Webs a schema might let through, or whose links don't fit a web, are refused with a reason.
@@ -1235,40 +1234,6 @@ func _check_development_refused() -> String:
 				cases[text],
 				text,
 			]
-	return ""
-
-
-## DevelopmentOffer.of, the draw a level-up's choice will offer (#678), picks three of `web`'s open
-## nodes, the same each time for the same monster and the same nodes taken, and all of them when
-## fewer are open. A skipped node weighs a tenth of one never offered: with the toad's four first
-## nodes open and one of them skipped, it's offered with the chance 1 - 3000/3100 * 2000/2100 *
-## 1000/1100, about 162 in 1000 monsters. The bounds lie over three standard deviations off it, and
-## a skipped weight of half or double the tenth falls outside them.
-func _check_development_offers(web: DevelopmentWeb) -> String:
-	var none: Array[String] = []
-	var monster: String = ShortId.stand_in(1)
-	var offer: Array[String] = DevelopmentOffer.of(web, monster, none, none)
-	if offer != DevelopmentOffer.of(web, monster, none, none):
-		return "the same monster offered %s, then something else" % [offer]
-	var open: Array[String] = web.open_nodes(none)
-	for node: String in offer:
-		if not open.has(node) or offer.count(node) != 1:
-			return "the toad offered %s, not three of its open nodes %s" % [offer, open]
-	if offer.size() != DevelopmentOffer.SIZE:
-		return "the toad offered %s, not three of its open nodes %s" % [offer, open]
-	var taken: Array[String] = web.nodes.duplicate()
-	taken.erase("deep_3")
-	if DevelopmentOffer.of(web, monster, taken, none) != ["deep_3"]:
-		return "with only deep_3 open, the toad didn't offer just it"
-	var skipped: int = 0
-	var differs: bool = false
-	var deep: Array[String] = ["deep_1"]
-	for number: int in 1000:
-		var other: String = ShortId.stand_in(number + 2)
-		differs = differs or DevelopmentOffer.of(web, other, none, none) != offer
-		skipped += int(DevelopmentOffer.of(web, other, none, deep).has("deep_1"))
-	if not differs or skipped < 120 or skipped > 205:
-		return "a skipped node came back for %d of 1000 monsters, not 120 to 205" % skipped
 	return ""
 
 

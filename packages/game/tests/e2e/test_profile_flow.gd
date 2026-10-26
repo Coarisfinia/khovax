@@ -8,7 +8,8 @@ extends RefCounted
 ## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
 ## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
 ## monster keeps its short id (#700) and grows in levels from the dominations it's carried through
-## (#1251); the outbox's requests to the world are saved until the world
+## (#1251), each letting it take a node of its development web (#1417); the outbox's requests to the
+## world are saved until the world
 ## acknowledges them (#771); and a damaged save falls back to the newest intact generation
 ## before it (#179).
 
@@ -502,12 +503,57 @@ func _check_levels_saved(profile: Profile) -> String:
 	var monster: String = "{\"species\": \"ombulumo\", \"short_id\": \"%s\", " % (
 		ShortId.stand_in(1)
 	)
-	var held: Profile = _parse(text % (monster + "\"level\": 1, \"progress\": 2}"))
+	var held: Profile = _parse(text % (monster + "\"level\": 1, \"progress\": 2, \"taken\": []}"))
 	if not held.problem.is_empty() or held.dominated_monsters[0].progress != 2:
 		return "a save with progress its level holds was refused: " + held.problem
 	return _unrefused({
 		text % (monster + "\"level\": 1, \"progress\": 3}"): "a dominated",
 		text % (monster + "\"level\": 2, \"progress\": -1}"): "a dominated",
+	})
+
+
+## Development (#1417): each level a dominated monster gained lets it take one node of its
+## species' web, any one revealed (DevelopmentWeb.open_nodes) and not taken yet, never one still in
+## fog, and the nodes it took are saved.
+func _check_development() -> String:
+	var profile: Profile = Profile.new()
+	var _dominated: String = profile.apply(_result(["ombulumo"], {}))
+	var monster: DominatedMonster = profile.dominated_monsters[0]
+	var short_id: String = monster.short_id
+	var refused: Array[String] = [profile.take_node(short_id, "sturdy_1")]
+	monster.level = 3
+	refused.append(profile.take_node(short_id, "sturdy_3"))
+	refused.append(profile.take_node("zzzzzzz", "sturdy_1"))
+	var took: String = profile.take_node(short_id, "sturdy_1")
+	refused.append(profile.take_node(short_id, "sturdy_1"))
+	took += profile.take_node(short_id, "sturdy_2")
+	refused.append(profile.take_node(short_id, "heavy_1"))
+	if not took.is_empty() or refused.has("") or monster.taken != ["sturdy_1", "sturdy_2"]:
+		return "taking nodes gave %s, %s and refused %s" % [monster.taken, took, refused]
+	return _check_development_saved(profile)
+
+
+## `profile`'s first monster's nodes taken (#1417) are kept through saving and loading, start at
+## none in a save from before them, and a save with more than its levels allow, or one twice, is
+## refused.
+func _check_development_saved(profile: Profile) -> String:
+	var monster: DominatedMonster = profile.dominated_monsters[0]
+	var loaded: Profile = _parse(_text(profile))
+	if not loaded.problem.is_empty() or loaded.dominated_monsters[0].taken != monster.taken:
+		return "the nodes taken weren't kept through saving: " + loaded.problem
+	var old: Dictionary = JSON.parse_string(_text(profile))
+	var changes: Array = old[FormatChanges.KEY]
+	changes.erase("1417-development-taken")
+	var entry: Dictionary = old["dominated_monsters"][0]
+	var _dropped: bool = entry.erase("taken")
+	var migrated: Profile = _parse(JSON.stringify(old))
+	if not migrated.problem.is_empty() or not migrated.dominated_monsters[0].taken.is_empty():
+		return "an older save's monster didn't start with no nodes taken: " + migrated.problem
+	var text: String = _text(profile)
+	return _unrefused({
+		text.replace("\"level\": 3", "\"level\": 2"): "a dominated",
+		text.replace("\"sturdy_2\"", "\"sturdy_1\""): "a dominated",
+		text.replace("\"taken\": [", "\"taken\": 1, \"was\": ["): "a dominated",
 	})
 
 
@@ -527,6 +573,8 @@ func _check_named() -> String:
 	var problem: String = _check_might()
 	if problem.is_empty():
 		problem = _check_levels()
+	if problem.is_empty():
+		problem = _check_development()
 	return problem if not problem.is_empty() else _check_standings()
 
 

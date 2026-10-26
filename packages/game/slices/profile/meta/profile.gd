@@ -101,6 +101,23 @@ func spend(item: String) -> String:
 	return ""
 
 
+## Takes the node `node` of its species' development web for the dominated monster `short_id`
+## (#1417): the player picks any node revealed on it and not taken yet (DevelopmentWeb.open_nodes),
+## one for each level it gained. Returns why it can't, or "", and changes nothing when it can't.
+func take_node(short_id: String, node: String) -> String:
+	var monster: DominatedMonster = monster_of(short_id)
+	if monster == null:
+		return "no dominated monster %s to develop" % short_id
+	if monster.picks_left() < 1:
+		return "%s has no level left to take a node with" % short_id
+	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.cached().webs
+	if (not webs.has(monster.species)
+			or not webs[monster.species].open_nodes(monster.taken).has(node)):
+		return "%s can't take %s: it isn't revealed on its web, or is taken" % [short_id, node]
+	monster.taken.append(node)
+	return ""
+
+
 ## Every dominated monster's short id in the player's order (#430): the carried ones first, in
 ## their order, then the rest in the order dominated.
 func order() -> Array[String]:
