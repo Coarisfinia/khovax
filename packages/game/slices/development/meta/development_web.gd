@@ -137,9 +137,10 @@ func _read_links(raw: Variant, bridges: bool) -> String:
 	return ""
 
 
+## Puts `one` and `other` next to each other. A packed array is a value, so each is stored anew.
 func _link(one: String, other: String) -> void:
-	links[one].append(other)
-	links[other].append(one)
+	links[one] = links[one] + PackedStringArray([other])
+	links[other] = links[other] + PackedStringArray([one])
 
 
 ## The place of `node_id`'s direction in the web's order.
