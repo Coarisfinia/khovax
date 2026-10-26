@@ -8,7 +8,7 @@
 		"entry": "The call the first dominators shouted to send their beast leaping onto a foe. It mimics the landing: a deep thud, then the wet slap of moss settling.",
 		"gloss": "thud, then splash"
 	},
-	"power": 4000,
+	"power": 800,
 	"cooldown_seconds": 12,
 	"strike_type": "might" // all weight, none of its moss (#626: a strike's type is its own)
 }
