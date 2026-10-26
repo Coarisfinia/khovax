@@ -60,6 +60,7 @@ func current() -> int:
 	return HostSettings.chosen(host.stored(HostSettings.FEATURE_ID), setting)
 
 
-## Posts the request `data` to `profile`'s outbox.
-func _post(data: int, profile: Profile) -> void:
+## Posts the request `data` to `profile`'s outbox (the change hands the profile first, then the
+## bound data).
+func _post(profile: Profile, data: int) -> void:
 	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.HOST_SETTING, data)
