@@ -41,23 +41,33 @@ func _ready() -> void:
 
 
 ## Shows the fog over `region` from each tile's brightness (FogView's scale), or hides it when
-## `brightness` is empty (no fog in this instance).
-func show_fog(region: Region, brightness: Dictionary[Vector2i, float]) -> void:
+## `brightness` is empty (no fog in this instance). Only the tiles in `changed` are drawn again
+## (#1361), unless `everything` is set or the region is new: then every tile is.
+func show_fog(
+		region: Region,
+		brightness: Dictionary[Vector2i, float],
+		changed: Array[Vector2i],
+		everything: bool,
+) -> void:
 	visible = region != null and not brightness.is_empty()
 	if not visible:
 		return
+	var tiles: Array = changed
 	if region != _region:
 		_fit(region)
+		tiles = brightness.keys()
+	elif everything:
+		tiles = brightness.keys()
 	# Only texels whose value changed are written, and the texture is uploaded only then: once the
 	# fog has settled, a frame costs nothing.
-	var changed: bool = false
-	for tile: Vector2i in brightness:
+	var written: bool = false
+	for tile: Vector2i in tiles:
 		var fog: Color = _fog_of(brightness[tile])
 		var texel: Vector2i = tile + _offset
 		if not fog_image.get_pixel(texel.x, texel.y).is_equal_approx(fog):
 			fog_image.set_pixel(texel.x, texel.y, fog)
-			changed = true
-	if changed:
+			written = true
+	if written:
 		_texture.update(fog_image)
 
 

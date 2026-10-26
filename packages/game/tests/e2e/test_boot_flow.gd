@@ -1158,7 +1158,8 @@ func _check_music(main: Node) -> String:
 
 ## The fog (#137), drawn from the fog feature's state: a tile an ally sees is bright, one seen
 ## before dimmed, one never seen dark, and the cloud (#156) lies on each that thick; brightness
-## eases rather than jumps; and a wild monster out of every ally's sight is hidden.
+## eases rather than jumps, and a settled fog eases no tile; and a wild monster out of every
+## ally's sight is hidden.
 func _check_fog(main: Node) -> String:
 	var driver: GameDriver = main.get_node("Driver") as GameDriver
 	var view: FogView = main.get_node("FogView") as FogView
@@ -1171,6 +1172,8 @@ func _check_fog(main: Node) -> String:
 	var result: String = _fog_levels(view, own, far)
 	if result.is_empty():
 		result = _check_circle(view, fog, own)
+	if result.is_empty():
+		result = _fog_settles(view, fog, everything)
 	var wild: WildMonsterView = main.get_node("Instance/WildMonsterView") as WildMonsterView
 	wild.show_state()
 	var figure: HexPiece = wild.figures.values()[0]
@@ -1215,6 +1218,26 @@ func _check_circle(view: FogView, fog: FogFeature, own: Vector2i) -> String:
 	view.show_state(10.0)
 	if not opening or not waiting or not cleared:
 		return "the fog didn't draw back in a circle around the player"
+	return ""
+
+
+## A settled fog eases no tile, here or next door (#1361); when an ally's sight widens to
+## `everything`, only tiles in it start to move, and once they arrive none moves again.
+func _fog_settles(view: FogView, fog: FogFeature, everything: Array) -> String:
+	if not view.moving.is_empty():
+		return "a settled fog still eases %d tiles" % view.moving.size()
+	var narrow: Array = fog.visible[0]
+	fog.visible[0] = everything
+	view.show_state(0.01)
+	var started: bool = not view.moving.is_empty()
+	for tile: Vector2i in view.moving:
+		started = started and everything.has(tile)
+	view.show_state(10.0)
+	var settled: bool = view.moving.is_empty()
+	fog.visible[0] = narrow
+	view.show_state(10.0)
+	if not started or not settled:
+		return "the fog eased tiles whose sight didn't change, or didn't settle"
 	return ""
 
 
