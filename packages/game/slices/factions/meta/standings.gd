@@ -61,10 +61,12 @@ func change(faction: String, by: int) -> String:
 ## the rank gained with each of its enemies (#1310), counting halves in `half_lost`: two halves
 ## lost with a faction make one rank. Losing rank costs nothing with its enemies. A faction allied
 ## until the postgame (#1324) the player has joined (a rank above neutral) keeps them at its first
-## rank at least; nothing marks the postgame yet (#1333), so that holds for now.
-func align(faction: Faction, by: int) -> void:
+## rank at least, until the player is in the `postgame` (Profile.postgame, #1333): then all bets
+## are off.
+func align(faction: Faction, by: int, postgame: bool) -> void:
 	var before: int = of(faction.id)
-	var lowest: int = 1 if faction.allied_until_postgame and before >= 1 else LOWEST
+	var locked: bool = faction.allied_until_postgame and before >= 1 and not postgame
+	var lowest: int = 1 if locked else LOWEST
 	var _moved: String = change(faction.id, maxi(by, lowest - before))
 	var gained: int = of(faction.id) - before
 	if gained <= 0:

@@ -29,6 +29,9 @@ var starts_on: QuestStep = null
 var standing: QuestStanding = null
 ## The territory finishing it hands over (#638); null for a quest that isn't a territory quest.
 var territory: QuestTerritory = null
+## Whether finishing it ends the main story (#1333), which puts the player in the postgame
+## (Profile.postgame).
+var ends_story: bool = false
 ## The materials finishing it gives (#1348), by id: how many of each; none when it gives none.
 var materials: Dictionary[String, int] = {}
 ## Why the quest couldn't be read, or "" when it could.
@@ -51,7 +54,7 @@ static func parse(
 	quest.id = Content.text_of(data.get("id"))
 	quest.name = Content.text_of(data.get("name"))
 	quest.path = PathMark.read(data)
-	quest.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	quest.problem = quest._read_fields(data)
 	if quest.problem.is_empty():
 		quest.problem = quest._check(file_id, data.get("steps"), known_species)
 	if quest.problem.is_empty() and data.has("starts_on"):
@@ -69,6 +72,17 @@ static func parse(
 		else:
 			quest.problem = quest._territory_steps_problem()
 	return quest
+
+
+## Reads the marks `data` gives this quest, its end of the main story (#1333); returns why the
+## data has a field a quest's schema doesn't, or a mark isn't true or false, or "".
+func _read_fields(data: Dictionary) -> String:
+	var unknown: String = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	var ends: Variant = data.get("ends_story", false)
+	ends_story = ends is bool and ends
+	if unknown.is_empty() and not ends is bool:
+		return "its ends_story must be true or false"
+	return unknown
 
 
 ## Why a step or choice of this territory quest doesn't happen in its territory, or "": each names
