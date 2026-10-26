@@ -91,7 +91,9 @@ func show_state(delta: float) -> void:
 	var next_door: NeighbourView = cloud.neighbours
 	if next_door != null:
 		next_door.show_state()
-	var redraw_all: bool = _stale
+	# New neighbour tiles may start at their target, so they never ease: they're drawn with the
+	# rest.
+	var redraw_all: bool = _stale or _inputs.next_door_moved(next_door)
 	if _stale or _inputs.changed(fog, next_door):
 		_retarget(fog, next_door)
 	var eased: Array[Vector2i] = _ease(delta)
