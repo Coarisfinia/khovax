@@ -1091,16 +1091,36 @@ func _check_daylight(main: Node) -> String:
 	for index: int in looks.size():
 		if not looks[index].is_equal_approx(TileLooks.rgb(colors[index])):
 			return "the glade's realm shows %s, not its colours by day and at night" % [looks]
-	# The unshaded cloud dims at night with the realm's light (#1360).
-	var night_cloud: Color = Daylight.cloud_light(looks[2], looks[3])
-	if night_cloud.v >= 1.0 or not Daylight.cloud_light(looks[0], looks[1]).is_equal_approx(
-		Color.WHITE
-	):
-		return "the fog's cloud doesn't dim at night, or isn't white by day (#1360)"
+	var lit: String = _check_lit_by_hour(daylight, realm, [noon, midnight], looks)
+	if not lit.is_empty():
+		return lit
 	var half_past_dusk: float = (DayClock.DUSK - DayClock.DAWN + 0.5) * DayClock.TICKS_PER_HOUR
 	if (Daylight.day_share(0.0) != 1.0
 			or not is_equal_approx(Daylight.day_share(half_past_dusk), 0.5)):
 		return "dawn doesn't start the world by day, or dusk doesn't blend into night"
+	return ""
+
+
+## Shown in `realm` at each of `hours` (noon, then midnight), `daylight` lights the sun and the
+## ambience in `looks` (each hour's light, then its ambience) and the unshaded fog's cloud follows:
+## white by day, dimmer at night (#1360). Back to the playground's look after.
+static func _check_lit_by_hour(
+	daylight: Daylight, realm: Realm, hours: Array[float], looks: Array[Color]
+) -> String:
+	var cloud: ShaderMaterial = daylight.cloud.material_override as ShaderMaterial
+	var shown: Array[Color] = []
+	var clouds: Array[Color] = []
+	for ticks: float in hours:
+		daylight.light_up(realm, ticks)
+		shown.append(daylight.sun.light_color)
+		shown.append(daylight.world_environment.environment.ambient_light_color)
+		clouds.append(cloud.get_shader_parameter("daylight"))
+	daylight._process(0.0)
+	for index: int in looks.size():
+		if not shown[index].is_equal_approx(looks[index]):
+			return "the glade's realm lights the scene in %s, not %s" % [shown, looks]
+	if not clouds[0].is_equal_approx(Color.WHITE) or clouds[1].v >= 1.0:
+		return "the fog's cloud isn't white by day or doesn't dim at night (#1360): %s" % [clouds]
 	return ""
 
 

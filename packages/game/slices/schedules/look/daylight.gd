@@ -26,8 +26,15 @@ func _process(_delta: float) -> void:
 	var state: GameState = driver.state
 	if state == null:
 		return
-	var realm: Realm = Realms.holding(driver.local_instance_name())
-	var ticks: float = state.world_tick + driver.tick_fraction()
+	light_up(
+		Realms.holding(driver.local_instance_name()),
+		state.world_tick + driver.tick_fraction(),
+	)
+
+
+## Lights the sun, the ambience and the fog's cloud as `realm` (null for none) looks at the world's
+## tick `ticks`.
+func light_up(realm: Realm, ticks: float) -> void:
 	sun.light_color = light_of(realm, ticks)
 	world_environment.environment.ambient_light_color = ambience_of(realm, ticks)
 	cloud.light_by(cloud_light(sun.light_color, world_environment.environment.ambient_light_color))
