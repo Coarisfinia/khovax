@@ -1085,12 +1085,38 @@ func _check_companion_strikes() -> String:
 	(state.feature(HidingFeature.ID) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
-	var result: String = _check_no_special(spots, hemmed)
+	var result: String = _check_grown_strikes(spots, hemmed)
+	if result.is_empty():
+		result = _check_no_special(spots, hemmed)
 	if result.is_empty():
 		result = _check_special(state, first, spots)
 	if result.is_empty():
 		result = _check_bind()
 	return result if not result.is_empty() else _check_broken_bind()
+
+
+## A level 3 companion hemmed in the same way (#1255) strikes for 110% of its strength, and its
+## wait between strikes is shorter by the same share: three strikes where level 1 strikes twice.
+func _check_grown_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
+	var state: GameState = _strike_state(spots)
+	FlowSteps.carry(state, 0, [WEAK])
+	state.stores[0].entry(CompanionFeature.ID)["levels"] = [3]
+	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	var _joined: Array[CompanionStruck] = _strikes_over(state, 1)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	state.entity(companion_id).tile = hemmed
+	var grown: int = Fixed.scale(WEAK_STRENGTH, CompanionGrowth.share(3))
+	var wait: int = CompanionGrowth.ticks(CompanionAttackFeature.STRIKE_TICKS, 3)
+	var damages: Array[int] = []
+	for strike: CompanionStruck in _strikes_over(state, 2 * wait + 1):
+		damages.append(strike.damage)
+	if wait >= CompanionAttackFeature.STRIKE_TICKS or damages != [grown, grown, grown]:
+		return "a level 3 companion's strikes were %s every %d ticks, not three of %d" % [
+			damages,
+			wait,
+			grown,
+		]
+	return ""
 
 
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all
