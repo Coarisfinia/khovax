@@ -89,6 +89,8 @@ func _ready() -> void:
 	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
 	_build_sheet(more_tabs)
+	# Once the sheet is in the tree, so the Settings tab has its submenus.
+	_add_difficulty()
 
 
 func _process(_delta: float) -> void:
@@ -274,7 +276,6 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
-	_add_difficulty()
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
 	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)

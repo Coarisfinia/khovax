@@ -12,7 +12,8 @@ extends RefCounted
 ## strength (what their hits deal and how hard they push on a ring), their HP (as the damage they
 ## take, divided by it, so a wound in progress keeps its share whatever the difficulty), their pace
 ## (their steps and strikes come that much more often) and the ring's power against them (divided by
-## it).
+## it). A ring already sealing keeps the power it was drawn with, and the seal time it worked out
+## then; the monsters inside push at the difficulty of each tick.
 
 ## The slot of the host, the player whose world it is.
 const HOST: int = 0
