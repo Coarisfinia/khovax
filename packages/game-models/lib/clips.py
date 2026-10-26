@@ -506,7 +506,9 @@ def on_back(height, roll=2.9, tongue=(-0.25, 0.0, 0.5)):
     (sleep's `planted=False`): no paw stands on anything."""
     def pose(chest):
         lying = {
-            "root_loc": (0.0, height, 0.0),
+            # The root turns about its foot, `height` below the back it rolls onto: the shift
+            # sideways keeps the rolled body over the spot it stood on.
+            "root_loc": (height * math.sin(roll), height, 0.0),
             "root": (0.0, 0.0, roll),
             "hips": (0.0, 0.0, 0.0),
             "spine_01": (-0.06 - 0.02 * chest, 0.0, 0.0),
