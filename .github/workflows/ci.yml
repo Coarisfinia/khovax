@@ -458,12 +458,50 @@ jobs:
     defaults:
       run:
         working-directory: packages/game
+    outputs:
+      # The version the builds carry, which dev-release tags them with (#744).
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: "📥 Check out the code"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # No token left in .git/config while the branch's own code runs (#928).
           persist-credentials: false
+
+      - name: "🏷️ Stamp the build's version"
+        # v<next>-dev.<run number> (#747), <next> being the patch after the last prod release (a
+        # full release, never a prerelease), or config/version while there is none. Every run's
+        # builds carry it, though only a push to main publishes it, as dev-release's tag. It goes
+        # into its own setting, which CreditsTab.VERSION_SETTING reads: Godot refuses anything but
+        # numbers in config/version for the Windows and Android version fields (#744).
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The last prod release's tag, or nothing when there is none (#1329). Any other error (a
+          # rate limit, an outage) fails the job, so it is never mistaken for "none", which could put
+          # an immutable tag on the wrong version.
+          if ! last=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName \
+            2> "$RUNNER_TEMP/release-view.err"); then
+            if [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
+              cat "$RUNNER_TEMP/release-view.err" >&2
+              exit 1
+            fi
+            last=
+          fi
+          if [[ "$last" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+          else
+            next=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' project.godot)
+          fi
+          if ! [[ "$next" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::no x.y.z version to build on: last prod release \"${last}\", config/version \"${next}\""
+            exit 1
+          fi
+          tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
+          printf '\n[khovax]\n\nbuild_version="%s"\n' "$tag" >> project.godot
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Builds carry ${tag}"
 
       - name: "🤖 Android: point Godot at the SDK and Java"
         run: |
@@ -859,10 +897,10 @@ jobs:
   dev-release:
     # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per
     # build), with the builds the export job just made attached as plain files, never zips: the
-    # Android APK, the Windows .exe, the Linux executable and the web build's files. Its tag is
-    # v<next>-dev.<run number>, where <next> follows the last prod release (#747), or is the game's
-    # config/version while there is none. It checks out only project.godot, for the version and the
-    # name, and runs nothing from the repository. Pull requests and the merge queue never release.
+    # Android APK, the Windows .exe, the Linux executable and the web build's files. Its tag is the
+    # version the export job stamped into them (#744). It checks out only project.godot, for the
+    # game's name, and runs nothing from the repository. Pull requests and the merge queue never
+    # release.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, linux-e2e, web-e2e]
     runs-on: ubuntu-26.04
@@ -888,39 +926,22 @@ jobs:
       - name: "🚀 Create the dev release"
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.export.outputs.tag }}
         run: |
-          godot_setting() {
-            awk -F'"' -v key="$1" '/^\[/ { section = $0 } section == "[application]" && $0 ~ "^config/" key "=\"" { print $2 }' \
-              packages/game/project.godot
-          }
-          # A release's field by jq (the latest full release without a tag), or nothing when there is
-          # no such release (#1329). Any other error (a rate limit, an outage) fails the job, so it is
-          # never mistaken for "none", which could put an immutable tag on the wrong version.
-          release_field() {
-            local found
-            if found=$(gh release view ${2:+"$2"} --repo "$GITHUB_REPOSITORY" --json tagName,isDraft \
-              --jq "$1" 2> "$RUNNER_TEMP/release-view.err"); then
-              echo "$found"
-            elif [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
-              cat "$RUNNER_TEMP/release-view.err" >&2
-              return 1
-            fi
-          }
-          # The next version after the last prod release (a full release, never a prerelease).
-          last=$(release_field .tagName)
-          if [[ "$last" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            next="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
-          else
-            next=$(godot_setting version)
-          fi
-          if ! [[ "$next" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::no x.y.z version to build on: last prod release \"${last}\", config/version \"${next}\""
-            exit 1
-          fi
-          tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
+          # The tag is the version the export job stamped into these builds (#744).
+          tag="$TAG"
           # A rerun of this run finds its release already published, or the draft a failed upload
-          # left, which has no tag yet and is made again.
-          draft=$(release_field .isDraft "$tag")
+          # left, which has no tag yet and is made again. Any error but "release not found" (a rate
+          # limit, an outage) fails the job, so it is never mistaken for "none".
+          if draft=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft \
+            2> "$RUNNER_TEMP/release-view.err"); then
+            :
+          elif [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
+            cat "$RUNNER_TEMP/release-view.err" >&2
+            exit 1
+          else
+            draft=
+          fi
           if [ "$draft" = false ]; then
             echo "${tag} already exists"
             exit 0
@@ -928,7 +949,8 @@ jobs:
             gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes
           fi
           # Named after the game's display name, as release.yml names its files.
-          name=$(godot_setting name | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
+          name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' \
+            packages/game/project.godot | tr ' ' '-' | tr -cd 'A-Za-z0-9._-' | sed 's/^[-.]*//')
           name=${name:-khovax}
           mkdir upload
           cp builds/khovax-debug-apk/khovax.apk "upload/${name}-${tag}-android.apk"
