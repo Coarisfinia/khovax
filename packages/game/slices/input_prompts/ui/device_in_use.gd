@@ -4,16 +4,13 @@ extends Node
 ## show its keys or buttons (InputGlyphs). The keyboard and the mouse count as one device, since
 ## they're used together. The node stands last in the main scene, so it hears every event before
 ## any other node can take it; Godot's own touch and mouse stand-ins (a touch made from a click, a
-## click made from a touch) don't count, nor does a stick barely off its rest.
+## click made from a touch) don't count, nor does a stick or trigger that presses no action yet.
 
 enum Device {
 	KEYBOARD,
 	CONTROLLER,
 	TOUCH,
 }
-
-## How far a stick or trigger has to move to count as the controller being used.
-const DEADZONE: float = 0.5
 
 ## The device in use: touch on phones and tablets, the keyboard elsewhere, until another is used.
 static var device: Device = Device.TOUCH if _touch_first() else Device.KEYBOARD
@@ -37,8 +34,17 @@ static func heard(event: InputEvent) -> void:
 	elif event is InputEventJoypadButton:
 		device = Device.CONTROLLER
 	elif event is InputEventJoypadMotion:
-		if absf((event as InputEventJoypadMotion).axis_value) > DEADZONE:
+		if _presses_an_action(event):
 			device = Device.CONTROLLER
+
+
+## Whether `event` is past the deadzone of an action it presses (#1423): a push that walks the
+## player counts, drift inside every deadzone doesn't.
+static func _presses_an_action(event: InputEvent) -> bool:
+	for action: StringName in InputMap.get_actions():
+		if event.is_action_pressed(action):
+			return true
+	return false
 
 
 ## Whether this build runs where touch is the usual input: phones and tablets, natively or in a
