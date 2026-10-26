@@ -244,9 +244,10 @@ func _read_factions(data: Dictionary) -> String:
 ## Reads the alignment `entries` it enforces (#1326) into `alignment`; returns why they can't be
 ## read (not a list, an empty one, an entry that doesn't read, or a faction named twice), or "".
 func _read_alignment(entries: Variant) -> String:
-	if not entries is Array or (entries as Array).is_empty():
+	var listed: Array = entries if entries is Array else []
+	if listed.is_empty():
 		return "its alignment must be a list of at least one faction"
-	for entry: Variant in entries:
+	for entry: Variant in listed:
 		var read: QuestAlignment = QuestAlignment.parse(entry)
 		if not read.problem.is_empty():
 			return "its alignment: " + read.problem
