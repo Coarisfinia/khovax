@@ -221,11 +221,11 @@ def paws(mats):
     return made
 
 
-# The bones a rooted piece follows of the skin it grows from (weights.root): the trunk's and the
-# shoulder blades' for the crest, which the back's skin rides on, and the throat's for the ruff,
-# never a leg's below them, which would swing them at every step (the owner, on #1413).
-TRUNK = ("hips", "spine_01", "spine_02", "neck", "scapula.L", "scapula.R")
-THROAT = ("spine_02", "neck", "head", "scapula.L", "scapula.R")
+# The bones a rooted piece follows of the skin it grows from (weights.root): the trunk's for the
+# crest, the throat's for the ruff. The shoulder blades' share there stays with the spine, or they
+# would rock them at every step (the owner, on #1413).
+TRUNK = ("hips", "spine_01", "spine_02", "neck")
+THROAT = ("spine_02", "neck", "head")
 
 
 def fur(mats):

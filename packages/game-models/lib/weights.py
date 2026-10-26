@@ -20,9 +20,10 @@ def root(piece, spot, bones):
     crystal grown from the skin over two bones (the neck's root, where the spine's and the neck's
     shares meet) then stays on the skin as they bend, while a piece weighted to one of them lifts
     off it, and taking each vertex's own nearest weights would bend a stiff piece with the skin.
-    It takes only the shares of `bones` there, scaled up to a whole: the skin on a back also
-    follows the shoulder blades, which would rock a crest crystal at every step (the owner, on
-    #1413). Returns `piece`."""
+    It follows only `bones` there: the share of any other bone goes to the nearest of its
+    parents among them. The skin on a back also follows the shoulder blades, which would rock a
+    crest crystal at every step (the owner, on #1413), and the share it takes from them stays with
+    the spine they hang from instead. Returns `piece`."""
     low, high = _bounds(piece)
     piece[ROOT] = [(c - a) / (b - a) if b > a else 0.0 for c, a, b in zip(spot, low, high)]
     piece[ROOT_BONES] = list(bones)
@@ -56,7 +57,7 @@ def bind(body, rig, pieces, rigid_bones=(), reweigh=None):
         reweigh(body)
     rooted = [piece for piece in pieces if ROOT in piece]
     if rooted:
-        _take_root_weights(rooted, body)
+        _take_root_weights(rooted, body, rig)
     for piece in pieces:
         if not piece.vertex_groups:
             _take_weights(piece, body)
@@ -81,10 +82,10 @@ def _take_weights(piece, body):
     bpy.ops.object.modifier_apply(modifier=transfer.name)
 
 
-def _take_root_weights(pieces, body):
+def _take_root_weights(pieces, body, rig):
     """Every vertex of each piece takes the body's weights at the piece's root (`root`): those
     of the corners of the body's face nearest it, blended by where the point nearest the root
-    lies on it, only its `bones`' shares."""
+    lies on it, each share given to the nearest of its bone and its parents among `bones`."""
     world = body.matrix_world
     corners = [world @ vertex.co for vertex in body.data.vertices]
     faces = [list(polygon.vertices) for polygon in body.data.polygons]
@@ -104,15 +105,11 @@ def _take_root_weights(pieces, body):
         weights = {}
         for index, share in zip(indices, shares):
             for group in body.data.vertices[index].groups:
-                name = names[group.group]
-                if name in bones:
-                    weights[name] = weights.get(name, 0.0) + share * group.weight
-        # A pair's sides share evenly: in a walk the shoulder blades swing in turn, and a piece
-        # following one more than the other would rock at every step; bowing, they move as one.
-        for side in {name[:-2] for name in bones if name.endswith((".L", ".R"))}:
-            left, right = side + ".L", side + ".R"
-            if left in bones and right in bones:
-                weights[left] = weights[right] = (weights.get(left, 0.0) + weights.get(right, 0.0)) / 2
+                bone = rig.data.bones.get(names[group.group])
+                while bone is not None and bone.name not in bones:
+                    bone = bone.parent
+                if bone is not None:
+                    weights[bone.name] = weights.get(bone.name, 0.0) + share * group.weight
         whole = sum(weights.values())
         if whole <= 0.0:
             raise ValueError("%s: none of %s moves the skin at its root" % (piece.name, sorted(bones)))
