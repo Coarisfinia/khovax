@@ -1862,6 +1862,23 @@ func _check_neighbour_cloud(main: Node) -> String:
 	for tile: Vector2i in far:
 		if fog.cloud.fog_on(tile) != Vector2(1.0, 0.0):
 			return "neighbour tile %s isn't under thick cloud: %s" % [tile, fog.cloud.fog_on(tile)]
+	return _check_neighbour_gone(view, fog)
+
+
+## A neighbour drawn anew elsewhere (a purge rearranges it) leaves no fog behind where its tiles
+## lay (#1388): a tile lit next door, then no neighbour's any more, goes back under thick cloud.
+func _check_neighbour_gone(view: NeighbourView, fog: FogView) -> String:
+	# Beyond the region and every neighbour, still on the cloud's margin.
+	var drawn: Array[Vector2i] = view.placed_tiles().duplicate()
+	drawn.append_array(view.driver.state.region.sorted_tiles())
+	var last: Vector2i = drawn.max()
+	var left: Vector2i = last + Vector2i(1, 0)
+	fog.brightness[left] = FogView.VISIBLE
+	fog.cloud.show_fog(view.driver.state.region, fog.brightness, [left], false)
+	view.rebuilds += 1
+	fog.show_state(10.0)
+	if fog.brightness.has(left) or fog.cloud.fog_on(left) != Vector2(1.0, 0.0):
+		return "a neighbour's old tile %s keeps its fog: %s" % [left, fog.cloud.fog_on(left)]
 	return ""
 
 
