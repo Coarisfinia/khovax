@@ -660,7 +660,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   ```sh
   agent-gh api "repos/Coarisfinia/khovax/issues/<n>/comments?per_page=100" --paginate | jq -rs 'add
     | [.[] | select(.user.login == "coderabbitai[bot]" and (.body | contains("final_review_risk_coverage")))]
-    | sort_by(.updated_at) | last | .body
+    | sort_by(.updated_at) | last | (.body // error("no CodeRabbit risk assessment: the owner approves"))
     | [(capture("final_review_risk_label\\s*\\*\\*Merge Risk:\\*\\* \\*\\*\\S+ (?<r>[A-Za-z]+)\\*\\*").r),
        ((capture("architecture_review_label[^>]*Security architecture risk:\\*\\* \\*\\*\\S+ (?<s>[A-Za-z]+)\\*\\*").s) // "none"),
        (capture("final_review_risk_coverage:(?<c>\\{[^}]*\\})").c | fromjson | .coveredCommitId)] | join(" ")'
