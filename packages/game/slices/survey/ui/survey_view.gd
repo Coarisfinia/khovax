@@ -47,6 +47,8 @@ const FOLLOWED_ARROW_COLOR: Color = QuestMarkerView.COLOR
 const SYMBOL_SHARE: float = 1.1
 const SYMBOL_MIN_PIXELS: int = 8
 const SYMBOL_COLOR: Color = Color.WHITE
+## The ink outline round a tile's symbol, in pixels: twice INK_PIXELS.
+const SYMBOL_OUTLINE: int = 4
 const BORDER_PIXELS: float = 2.0
 ## An exit's chevron, in shares of the way from one tile to the next: its half width, how far its
 ## tip reaches past the exit's middle, across the side into the ground next door, and how far its
@@ -216,9 +218,13 @@ func _draw_tiles() -> void:
 
 
 ## Where each tile shown is drawn, by tile, of those in view: the ones outside, which the clipping
-## would hide anyway, are left out.
+## would hide anyway, are left out. A tile counts while anything of it could show: its symbol, as
+## wide as two tile radii plus its ink outline, or its ink ring, which reaches half the ink past its
+## corners (#1365).
 func _tiles_in_view() -> Dictionary[Vector2i, Vector2]:
-	var seen: Rect2 = Rect2(Vector2.ZERO, size).grow(zoom())
+	var symbol_reach: float = zoom() + SYMBOL_OUTLINE
+	var reach: float = maxf(symbol_reach, zoom() * TILE_SHARE + INK_PIXELS / 2.0)
+	var seen: Rect2 = Rect2(Vector2.ZERO, size).grow(reach)
 	var shown: Dictionary[Vector2i, Vector2] = {}
 	for tile: Vector2i in tiles:
 		var at: Vector2 = to_view(tile)
@@ -262,8 +268,16 @@ func _draw_symbols(shown: Dictionary[Vector2i, Vector2], font_size: int, inked: 
 		var baseline: Vector2 = shown[tile] + Vector2(-width / 2.0, middle)
 		var symbol: String = tiles[tile].symbol
 		if inked:
-			var outline: int = roundi(INK_PIXELS * 2.0)
-			draw_string_outline(font, baseline, symbol, center, width, font_size, outline, Toon.INK)
+			draw_string_outline(
+				font,
+				baseline,
+				symbol,
+				center,
+				width,
+				font_size,
+				SYMBOL_OUTLINE,
+				Toon.INK,
+			)
 		else:
 			draw_string(font, baseline, symbol, center, width, font_size, SYMBOL_COLOR)
 
