@@ -7,13 +7,39 @@ extends RefCounted
 ## the rules, features and checkpoints a recorded one holds, which this build works out by playing
 ## it (Replay.rehash). The fields a replay leaves out are left out of its text too.
 
-## The file format (21 since every command says whether its machine still waits for content,
-## #816); a replay in another format is refused, not misread.
-## A replay records the id of the rules it was played by, and Replay refuses one recorded under
-## other rules, so an older format, which always came with other rules, could never play anyway
-## (#819): like WorldData, only this format is read.
-const FORMAT: int = 21
-const REQUIRED: Array[String] = ["format", "instance", "seed", "players", "ticks"]
+## The format's changes (FormatChanges, #801), one file each, kept under FORMAT_KEY, since a
+## replay's `changes` are its commands. A replay is read only with every one of them and no other:
+## it
+## records the id of the rules it was played by, and Replay refuses one recorded under other rules,
+## so an older format, which always came with other rules, could never play anyway (#819).
+const CHANGES: String = "res://game/format_changes/"
+const FORMAT_KEY: String = "format_changes"
+## The changes of the numbered formats before names (#801), in the order they were numbered: format
+## n had the first n - 1. Only the last, format 21, which had them all, is still read, as the
+## reference replays are (tests/replays/).
+const NUMBERED: Array[String] = [
+	"214-starting-world",
+	"338-companions",
+	"410-special-attack",
+	"423-totem",
+	"436-focus",
+	"495-back-to-spawn",
+	"53-carried-monsters",
+	"635-dialog-answer",
+	"638-territory",
+	"700-short-ids",
+	"656-revive-item",
+	"692-trap-gear",
+	"771-outbox-request",
+	"784-named-features",
+	"780-revive-short-id",
+	"818-request-fields",
+	"876-rules-id",
+	"818-trap-request",
+	"942-acknowledged-request",
+	"816-waits-for-content",
+]
+const REQUIRED: Array[String] = ["instance", "seed", "players", "ticks"]
 
 
 ## The replay as file text.
@@ -28,7 +54,7 @@ static func to_text(replay: Replay) -> String:
 	for tick: int in sorted:
 		hashes[str(tick)] = str(replay.checkpoints[tick])
 	var data: Dictionary[String, Variant] = {
-		"format": FORMAT,
+		FORMAT_KEY: FormatChanges.names_in(CHANGES),
 		"rules": replay.rules,
 		"instance": replay.instance,
 		"seed": str(replay.seed_value),
@@ -68,13 +94,8 @@ static func parse(text: String) -> Replay:
 	replay.problem = _shape_problem(data)
 	if not replay.problem.is_empty():
 		return replay
-	var format: int = _int(data["format"])
-	if format != FORMAT:
-		var build: String = "an older" if format < FORMAT else "a newer"
-		replay.problem = (
-			"replay format %d was recorded by %s build, this build reads format %d"
-			% [format, build, FORMAT]
-		)
+	replay.problem = _format_problem(data)
+	if not replay.problem.is_empty():
 		return replay
 	# Checked after the format: an older format recorded the rules as a number (#876).
 	if not data.get("rules", "") is String:
@@ -100,6 +121,17 @@ static func parse(text: String) -> Replay:
 	for tick: Variant in by_tick:
 		replay.checkpoints[str(tick).to_int()] = str(by_tick[tick]).to_int()
 	return replay
+
+
+## Why the replay's `data` isn't in this build's format, or "": it lacks one of its changes (an
+## older build's) or names one this build doesn't know (a newer build's).
+static func _format_problem(data: Dictionary) -> String:
+	var read: DataReader = DataReader.new(data)
+	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED, FORMAT_KEY)
+	for change: String in FormatChanges.names_in(CHANGES):
+		if not read.failed() and not changes.has(change):
+			read.fail("without change %s: an older build recorded it" % change)
+	return "replay format: " + read.problem if read.failed() else ""
 
 
 ## Each slot's carried monsters in the replay's `data`, null for a slot whose list isn't one.
@@ -137,7 +169,7 @@ static func _start_world(saved: Variant) -> Dictionary:
 static func _shape_problem(data: Dictionary) -> String:
 	if not data.has_all(REQUIRED):
 		return "not a replay: it lacks one of %s" % [REQUIRED]
-	for key: String in ["format", "players", "ticks"]:
+	for key: String in ["players", "ticks"]:
 		if not _is_number(data[key]):
 			return "not a replay: its %s isn't a number" % key
 	if not data["seed"] is String or not str(data["seed"]).is_valid_int():

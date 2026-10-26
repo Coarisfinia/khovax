@@ -706,6 +706,12 @@ func _check_replay_round_trip() -> String:
 		return "a saved and loaded replay didn't play back: " + problem
 	if loaded.played.state_hash() != recorded.played.state_hash():
 		return "the played-back session ended in another state than the recorded one"
+	# A replay from before format change names (#801) still plays: format 21 had them all.
+	var text: String = ReplayFile.to_text(recorded)
+	var numbered: Replay = ReplayFile.parse(_reformatted(text, "format", 21))
+	problem = numbered.play()
+	if not problem.is_empty() or numbered.played.state_hash() != recorded.played.state_hash():
+		return "a format 21 replay didn't play back as recorded: " + problem
 	var tampered: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 	# The first change is tick 1, slot 0: walking another way changes the game from there.
 	tampered.changes[2] = (tampered.changes[2] + 2) % Hex.DIRECTIONS.size()
@@ -725,15 +731,18 @@ func _check_replay_round_trip() -> String:
 ## Playback refuses, with a clear message, what this build can't play as recorded.
 func _check_replay_refusals() -> String:
 	var text: String = ReplayFile.to_text(_recorded_run())
+	var newer: Array[String] = FormatChanges.names_in(ReplayFile.CHANGES)
+	newer.append("9999-newer")
+	var older: Array[String] = FormatChanges.names_in(ReplayFile.CHANGES)
+	older.pop_back()
 	var cases: Dictionary[String, String] = {
 		"not json": "not a replay",
 		"{}": "not a replay",
-		text.replace("\"format\": %d" % ReplayFile.FORMAT, "\"format\": 99"): "replay format 99",
-		# An older format came with older rules, so it's refused rather than read (#819).
-		text.replace(
-			"\"format\": %d" % ReplayFile.FORMAT,
-			"\"format\": %d" % (ReplayFile.FORMAT - 1),
-		): "replay format %d was recorded by an older build" % (ReplayFile.FORMAT - 1),
+		_reformatted(text, "format", 99): "replay format: format isn't a whole number",
+		# An older format came with older rules, so it's refused rather than read (#819, #801).
+		_reformatted(text, "format", ReplayFile.NUMBERED.size()): "replay format: without change",
+		_reformatted(text, ReplayFile.FORMAT_KEY, newer): "replay format: format change 9999-newer",
+		_reformatted(text, ReplayFile.FORMAT_KEY, older): "replay format: without change",
 		# Another digest of the rule changes (#876).
 		text.replace(
 			"\"rules\": \"%s\"" % RulesChanges.id(),
@@ -755,6 +764,15 @@ func _check_replay_refusals() -> String:
 		if not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
+
+
+## The replay `text` with its format under `key` instead of its format change names: "format" for
+## a number, as replays held before names (#801), or ReplayFile.FORMAT_KEY for other names.
+func _reformatted(text: String, key: String, format: Variant) -> String:
+	var data: Dictionary = JSON.parse_string(text)
+	var _named: bool = data.erase(ReplayFile.FORMAT_KEY)
+	data[key] = format
+	return JSON.stringify(data)
 
 
 ## Playback refuses replays it can't verify or whose values are malformed, rather than reading
@@ -814,8 +832,9 @@ func _check_rehash() -> String:
 	return ""
 
 
-## Every golden replay in tests/replays/ holds only its inputs (#876), and plays under this
-## build's rules; playing it twice gives the same game. Whether it plays as on the parent commit is
+## Every golden replay in tests/replays/ holds only its inputs (#876), still as a format 21 replay
+## from before format change names (#801), and plays under this build's rules; playing it twice
+## gives the same game. Whether it plays as on the parent commit is
 ## the rules-compare job's (packages/game-replays/rules_compare.py).
 func _check_golden_replays() -> String:
 	var folder: String = "res://tests/replays/"
