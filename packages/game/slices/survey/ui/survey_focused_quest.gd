@@ -1,5 +1,5 @@
 class_name SurveyFocusedQuest
-extends Control
+extends SurveyLayer
 ## The quest this machine's player follows on the Survey (QuestTracker.focused, #1298), over the
 ## SurveyView it's a child of: its arrows bright yellow, drawn above everything else the Survey
 ## shows (tiles, exits, the players' circles, the held marks), and above each a small card naming
@@ -32,18 +32,6 @@ var arrows: Dictionary[String, Vector2i] = {}
 ## Each label shown, by the key its arrow has in SurveyView.quest_targets. Kept so tests can read
 ## them.
 var labels: Dictionary[String, QuestMarkerLabel] = {}
-
-
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-
-
-func _process(_delta: float) -> void:
-	# After the Survey, its parent, which processes first.
-	if is_visible_in_tree():
-		show_state()
-		queue_redraw()
 
 
 func _draw() -> void:
