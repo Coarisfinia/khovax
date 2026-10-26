@@ -39,6 +39,17 @@ static var boot_covering: bool = false
 
 ## Each tile's brightness as drawn now.
 var brightness: Dictionary[Vector2i, float] = {}
+## The tiles whose brightness hasn't reached its target yet, in the region and next door: the only
+## ones a frame eases and redraws (#1361), so a settled fog costs a frame almost nothing.
+var moving: Dictionary[Vector2i, bool] = {}
+## Each tile's target brightness, in the region and next door (in the region's coordinates). Worked
+## out again only when what it depends on changed (FogInputs), not every frame.
+var _targets: Dictionary[Vector2i, float] = {}
+## What the targets were worked out from.
+var _inputs: FogInputs = FogInputs.new()
+## Whether the targets must be worked out afresh and every tile redrawn: a new instance, or the fog
+## coming back after an instance without it.
+var _stale: bool = true
 ## Every tile an ally has seen, per instance, in the world shown. It's what this machine's player
 ## has seen, not the world's state: the keeper's `explored_in`.
 var _seen_in: ExploredGround = ExploredGround.new()
@@ -56,15 +67,17 @@ func _process(delta: float) -> void:
 	show_state(delta)
 
 
-## Eases every tile `delta` seconds towards how bright the fog makes it, and draws it. Tests call
-## it with a long `delta` to let it settle.
+## Eases the tiles still moving `delta` seconds towards how bright the fog makes them, and draws
+## them. Tests call it with a long `delta` to let it settle.
 func show_state(delta: float) -> void:
 	if driver == null or driver.state == null or cloud == null:
 		return
 	var fog: FogFeature = driver.state.feature(FogFeature.ID) as FogFeature
 	if fog == null:
 		brightness.clear()
-		cloud.show_fog(null, brightness)
+		moving.clear()
+		_stale = true
+		cloud.show_fog(null, brightness, [], true)
 		return
 	if driver.world != _world:
 		# Another world: what was seen in it before, saved with it if it was resumed.
@@ -75,14 +88,60 @@ func show_state(delta: float) -> void:
 		_switch_to(driver.state)
 	if not boot_covering:
 		_since_switch += delta
+	var next_door: NeighbourView = cloud.neighbours
+	if next_door != null:
+		next_door.show_state()
+	# New neighbour tiles may start at their target, so they never ease: they're drawn with the
+	# rest.
+	var redraw_all: bool = _stale or _inputs.next_door_moved(next_door)
+	if _stale or _inputs.changed(fog, _seen.size(), next_door):
+		_retarget(fog, next_door)
+	var eased: Array[Vector2i] = _ease(delta)
+	cloud.show_fog(_region, brightness, eased, redraw_all)
+
+
+## Works out every tile's target again, in the region and next door, and marks the tiles not at
+## theirs as moving. Remembers what it was worked out from.
+func _retarget(fog: FogFeature, next_door: NeighbourView) -> void:
+	_stale = false
+	var lit: Dictionary[Vector2i, bool] = {}
+	for slot: int in fog.visible:
+		for tile: Vector2i in fog.visible[slot]:
+			lit[tile] = true
+	var shown: Dictionary[Vector2i, bool] = {}
+	for tile: Vector2i in fog.revealed:
+		shown[tile] = true
+	_targets.clear()
+	moving.clear()
 	for tile: Vector2i in _region.sorted_tiles():
-		var target: float = _target(fog, tile)
-		var now: float = brightness.get(tile, UNSEEN)
-		if _since_switch >= Hex.distance(tile, _middle) * RING_SECONDS:
-			now = move_toward(now, target, EASE_PER_SECOND * delta)
-		brightness[tile] = now
-	_remember_next_door(fog, delta)
-	cloud.show_fog(_region, brightness)
+		_aim(tile, _target(fog, tile, lit, shown), UNSEEN)
+	if next_door != null:
+		_remember_next_door(fog, next_door, lit)
+	_inputs.remember(fog, _seen.size(), next_door)
+
+
+## Sets `tile`'s target, drawn at `start` until it first eases, and marks it moving if it isn't
+## there yet.
+func _aim(tile: Vector2i, target: float, start: float) -> void:
+	_targets[tile] = target
+	if not brightness.has(tile):
+		brightness[tile] = start
+	if brightness[tile] != target:
+		moving[tile] = true
+
+
+## Eases every moving tile `delta` seconds towards its target: a tile of the region only once the
+## circle has reached it. Returns the tiles it changed; those that arrived stop moving.
+func _ease(delta: float) -> Array[Vector2i]:
+	var eased: Array[Vector2i] = []
+	for tile: Vector2i in moving.keys():
+		if _region.has_tile(tile) and _since_switch < Hex.distance(tile, _middle) * RING_SECONDS:
+			continue
+		brightness[tile] = move_toward(brightness[tile], _targets[tile], EASE_PER_SECOND * delta)
+		eased.append(tile)
+		if brightness[tile] == _targets[tile]:
+			var _arrived: bool = moving.erase(tile)
+	return eased
 
 
 ## What was seen in `world` before: the keeper's, or nothing yet without one.
@@ -96,6 +155,8 @@ func _explored_in(world: World) -> ExploredGround:
 func _switch_to(state: GameState) -> void:
 	_region = state.region
 	brightness.clear()
+	moving.clear()
+	_stale = true
 	_since_switch = 0.0
 	var slot: int = driver.input.slot if driver.input != null else 0
 	var player: Entity = state.player(slot)
@@ -108,28 +169,28 @@ func _memory_of(instance_name: String) -> Dictionary[Vector2i, bool]:
 	return _seen_in.tiles_of(instance_name, _world.generation(instance_name))
 
 
-## Draws the ground next door: clear where an ally sees across the seam (#191), which then counts
+## Aims the ground next door: clear where an ally sees across the seam (#191), which then counts
 ## as explored there, light fog where it was explored before, from here or from inside that
 ## instance, and the thick cloud FogCloud starts with elsewhere. Remembered tiles show so from the
-## moment they are drawn; sight across the seam eases in and out like any other.
-func _remember_next_door(fog: FogFeature, delta: float) -> void:
-	var next_door: NeighbourView = cloud.neighbours
-	if next_door == null:
-		return
-	next_door.show_state()
+## moment they are drawn; sight across the seam eases in and out like any other. `lit` holds every
+## tile an ally sees.
+func _remember_next_door(
+		fog: FogFeature,
+		next_door: NeighbourView,
+		lit: Dictionary[Vector2i, bool],
+) -> void:
 	for neighbour_name: String in next_door.shifts:
 		var shift: Vector2i = next_door.shifts[neighbour_name]
 		var seen: Dictionary[Vector2i, bool] = _memory_of(neighbour_name)
 		for tile: Vector2i in next_door.region_of(neighbour_name).sorted_tiles():
 			var here: Vector2i = tile + shift
-			var sighted: bool = ally_sees(driver.state, here)
-			# Only real sight explores: with the fog switched off, everything shows, as it does
-			# here.
+			# With the fog switched off, everything shows, as it does here, but only real sight
+			# explores.
+			var sighted: bool = not fog.enabled or lit.has(here)
 			if sighted and fog.enabled:
 				seen[tile] = true
-			var target: float = VISIBLE if sighted else (REMEMBERED if seen.has(tile) else UNSEEN)
-			var now: float = brightness.get(here, REMEMBERED if seen.has(tile) else UNSEEN)
-			brightness[here] = move_toward(now, target, EASE_PER_SECOND * delta)
+			var remembered: float = REMEMBERED if seen.has(tile) else UNSEEN
+			_aim(here, VISIBLE if sighted else remembered, remembered)
 
 
 ## How far the thick cloud over `tile` of the instance shown has thinned as drawn now, from 0 (never
@@ -157,14 +218,18 @@ static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 	return false
 
 
-## How bright `tile` should be, remembering it once an ally sees it or an event reveals it (#177). A
-## switched-off fog keeps its last sight, so it lifts instead, easing like any other change (a rule
-## switches it, #30).
-func _target(fog: FogFeature, tile: Vector2i) -> float:
+## How bright `tile` should be, remembering it once an ally sees it (it's in `lit`) or an event
+## reveals it (#177, in `shown`). A switched-off fog keeps its last sight, so it lifts instead,
+## easing like any other change (a rule switches it, #30).
+func _target(
+		fog: FogFeature,
+		tile: Vector2i,
+		lit: Dictionary[Vector2i, bool],
+		shown: Dictionary[Vector2i, bool],
+) -> float:
 	if not fog.enabled:
 		return VISIBLE
-	for slot: int in fog.visible:
-		if fog.sees(slot, tile):
-			_seen[tile] = true
-			return VISIBLE
-	return REMEMBERED if _seen.has(tile) or fog.revealed.has(tile) else UNSEEN
+	if lit.has(tile):
+		_seen[tile] = true
+		return VISIBLE
+	return REMEMBERED if _seen.has(tile) or shown.has(tile) else UNSEEN

@@ -18,6 +18,9 @@ extends Node3D
 var grids: Dictionary[String, HexGrid] = {}
 ## How far each neighbour's tiles are shifted into the local instance's coordinates, by name.
 var shifts: Dictionary[String, Vector2i] = {}
+## How many times the neighbours were found and drawn anew: a neighbour read again can bring other
+## tiles at the same shift (#1361).
+var rebuilds: int = 0
 ## The instance the neighbours were found for.
 var _state: GameState
 ## Every neighbour tile in the local instance's coordinates.
@@ -51,6 +54,7 @@ func show_state() -> void:
 				grid.show_changes()
 		return
 	_state = state
+	rebuilds += 1
 	for old: HexGrid in grids.values():
 		remove_child(old)
 		old.queue_free()
