@@ -212,10 +212,7 @@ static func ally_sees(state: GameState, tile: Vector2i) -> bool:
 	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
 	if fog == null or not fog.enabled:
 		return true
-	for slot: int in GameState.MAX_PLAYERS:
-		if fog.sees(slot, tile):
-			return true
-	return false
+	return AllySight.sees(fog, tile)
 
 
 ## How bright `tile` should be, remembering it once an ally sees it (it's in `lit`) or an event
