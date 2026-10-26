@@ -273,9 +273,13 @@ func _check_marked(driver: GameDriver, markers: QuestMarkerView, quests: QuestTr
 	if (nearest < 0 or not targets.has("first_domination")
 			or Hex.distance(targets["first_domination"], from) != nearest):
 		return "the first domination isn't marked over the starting instance's nearest beach tile"
+	quests.focus = "first_domination"
 	markers.show_quests()
 	if not markers.markers.has("first_domination"):
 		return "the open first domination has no marker"
+	for id: String in markers.followed:
+		if markers.followed[id] != (id == "first_domination"):
+			return "the world's marker of %s isn't drawn as followed or not as it is (#1328)" % id
 	return ""
 
 
