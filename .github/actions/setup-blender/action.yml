@@ -45,7 +45,8 @@ runs:
 
     - name: "🐳 Blender's container: Ubuntu 24.04 with the libraries Blender loads"
       # The image has no CA certificates, so the runner's are lent to apt for the snapshot's HTTPS.
-      # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
+      # A snapshot's metadata is old by design, so only its expiry check is disabled; the live
+      # fallback keeps HTTPS and metadata-expiration checks. Both use Ubuntu's signing key.
       # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
       # delay, and if the snapshot's index still can't be fetched, the libraries come from Ubuntu's
       # live archive, signed by the same key, with a warning, rather than failing the run. A failed
@@ -58,13 +59,13 @@ runs:
           use_mirror() {
             printf "%s\n" "Types: deb" "URIs: $1" \
               "Suites: noble noble-updates noble-security" "Components: main" \
-              "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: no" \
+              "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: $2" \
               > /etc/apt/sources.list.d/ubuntu.sources
           }
-          use_mirror "https://snapshot.ubuntu.com/ubuntu/$0"
+          use_mirror "https://snapshot.ubuntu.com/ubuntu/$0" no
           if ! apt-get update --error-on=any -qq; then
             echo "::warning::Updating from Ubuntu snapshot $0 failed: Blender'"'"'s libraries come from the live archive, maybe newer."
-            use_mirror "http://archive.ubuntu.com/ubuntu"
+            use_mirror "https://archive.ubuntu.com/ubuntu" yes
             apt-get update --error-on=any -qq
           fi
           DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
