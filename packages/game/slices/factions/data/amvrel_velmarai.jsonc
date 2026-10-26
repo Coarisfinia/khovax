@@ -10,6 +10,8 @@
 		"entry": "A guild of mapmakers and wayfinders who walk the wild places and bring back what they saw, and who pay well for anyone who does the same. Its name is Oath-speech: Amvrel, the oath word of a fellowship of a craft, then Velmarai, those who chart.",
 		"gloss": "the guild of those who chart"
 	},
+	// The Story guild stays allied with the player until the postgame (#1310, #1324).
+	"allied_until_postgame": true,
 	"symbol": "+", // a compass's cross, which marks its territory (#68)
 	"ranks_up": [
 		"Apprentice Charter",

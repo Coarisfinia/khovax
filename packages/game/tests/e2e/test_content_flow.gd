@@ -1373,15 +1373,15 @@ func _check_faction_territory(content: FactionContent) -> String:
 	return _check_faction_enemies(content)
 
 
-## The Amvrel Velmarai, the Story guild, is no faction's enemy (#1310). A faction whose enemies
-## aren't a list of faction ids, each once and never its own, is refused, and so is an enemy that
-## isn't a faction naming it back; two factions naming each other load as enemies.
+## The Amvrel Velmarai, the Story guild, is allied until the postgame and has no enemies,
+## so none names it (#1310, #1324). A faction whose enemies aren't a list of faction ids, each
+## once and never its own, or that is allied until the postgame and has enemies, is refused,
+## and so is an enemy that isn't a faction naming it back; two factions naming each other load
+## as enemies.
 func _check_faction_enemies(content: FactionContent) -> String:
-	for each: Faction in content.factions.values():
-		if each.enemies.has("amvrel_velmarai"):
-			return "the Story guild is an enemy of %s" % each.id
-	if not content.factions["amvrel_velmarai"].enemies.is_empty():
-		return "the Story guild has enemies"
+	var guild: Faction = content.factions["amvrel_velmarai"]
+	if not guild.enemies.is_empty() or not guild.allied_until_postgame:
+		return "the Story guild has enemies, or isn't allied until the postgame (#1324)"
 	var faction: String = FACTION_TEXT % [FIVE_RANKS, FIVE_RANKS]
 	var enemies: String = faction.trim_suffix("}") + ", \"enemies\": %s}"
 	var refused: String = _factions_refused({
@@ -1389,6 +1389,10 @@ func _check_faction_enemies(content: FactionContent) -> String:
 		enemies % "[\"x\"]": "its enemies must",
 		enemies % "[\"y\", \"y\"]": "its enemies must",
 		enemies % "[\"Y\"]": "its enemies must",
+		(enemies % "[\"y\"]").trim_suffix("}") + ", \"allied_until_postgame\": true}": (
+			"a faction allied until the postgame has no enemies"
+		),
+		faction.trim_suffix("}") + ", \"allied_until_postgame\": 1}": "its allied_until_postgame",
 	})
 	if not refused.is_empty():
 		return refused
@@ -1396,8 +1400,10 @@ func _check_faction_enemies(content: FactionContent) -> String:
 	var x_start: String = "\"x\", \"name\": \"X\", \"symbol\": \"+"
 	var y_start: String = "\"y\", \"name\": \"Y\", \"symbol\": \"-"
 	var y: String = (enemies % "[\"x\"]").replace(x_start, y_start)
-	var x: String = enemies % "[\"y\"]"
-	var texts: Dictionary[String, String] = { "x": x, "y": y.replace(", \"enemies\": [\"x\"]", "") }
+	var texts: Dictionary[String, String] = {
+		"x": enemies % "[\"y\"]",
+		"y": y.replace(", \"enemies\": [\"x\"]", ""),
+	}
 	var one_way: String = FlowSteps.written_content(FactionContent.load_factions, texts).problem
 	if not one_way.contains("its enemy y isn't a faction naming it back"):
 		return "an enemy not naming its enemy back gave %s" % one_way

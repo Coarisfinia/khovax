@@ -1451,8 +1451,9 @@ func _check_counted() -> String:
 
 
 ## Finishing a quest moves the standing with the faction it names (#532): the first domination
-## raised the guild by one, and a quest lowering it further than its scale holds it at the lowest;
-## that quest also gives two moss, which land in the player's materials (#1348).
+## raised the guild by one, and a quest lowering it holds it at its first rank, since the guild
+## stays allied until the postgame (#1324); that quest also gives two moss, which land in the
+## player's materials (#1348).
 ## Finishing a path-marked quest leans the player toward its path (#658): the toads' quest, marked
 ## supremacy, leans them one toward it, and the unmarked ones toward neither.
 func _check_standing(profile: Profile, quests: QuestTracker) -> String:
@@ -1462,8 +1463,10 @@ func _check_standing(profile: Profile, quests: QuestTracker) -> String:
 	quests.book[betrayal.id] = betrayal
 	var applied: String = betrayal.problem + _count(quests, _gain([], 1), profile)
 	var _unbooked: bool = quests.book.erase(betrayal.id)
-	if not applied.is_empty() or profile.standings.of(GUILD) != Standings.LOWEST:
-		return "a quest lowering the guild past its scale didn't hold it at the lowest: " + applied
+	# The guild stays allied until the postgame (#1324): once joined, it never drops below its first
+	# rank.
+	if not applied.is_empty() or profile.standings.of(GUILD) != 1:
+		return "a quest lowering the guild, joined, didn't hold it at its first rank: " + applied
 	if profile.materials.get("moss", 0) != 2:
 		return "finishing a quest giving two moss gave %d" % profile.materials.get("moss", 0)
 	var leaning: PathLeaning = profile.leaning
