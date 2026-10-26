@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.14.8"
 
 [manifest]
@@ -10,6 +10,7 @@ members = [
     "khovax-game-offscreen",
     "khovax-game-replays",
     "khovax-game-shared",
+    "khovax-game-visuals",
     "khovax-game-web-e2e",
     "khovax-tools",
 ]
@@ -88,6 +89,17 @@ requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared
 name = "khovax-game-shared"
 version = "0.0.0"
 source = { editable = "packages/game-shared" }
+
+[[package]]
+name = "khovax-game-visuals"
+version = "0.0.0"
+source = { virtual = "packages/game-visuals" }
+dependencies = [
+    { name = "khovax-game-shared" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "khovax-game-shared", editable = "packages/game-shared" }]
 
 [[package]]
 name = "khovax-game-web-e2e"
