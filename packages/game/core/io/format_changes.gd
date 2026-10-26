@@ -9,7 +9,8 @@ extends RefCounted
 ## name their files. Saves from before names held a `format` number instead, which each reader maps
 ## to the changes it meant.
 
-## The key a save keeps its format change names under.
+## The key a save keeps its format change names under, unless its format already used it for
+## something else (a replay's commands, ReplayFile).
 const KEY: String = "changes"
 
 ## The names in each folder read so far, by folder.
@@ -29,20 +30,26 @@ static func names_in(folder: String) -> Array[String]:
 	return names
 
 
-## The format changes the save `read` was written with, each one in `folder`. A save from before
+## The format changes the save `read` was written with (under `key`), each one in `folder`. A save
+## from before
 ## names (#801) holds a `format` number from 1 to one past `numbered`'s size instead, and had the
 ## first `format - 1` of `numbered`: the changes in the order they were numbered. Notes the problem
 ## in `read` and gives none when they don't hold, a change this build doesn't know (a newer
 ## build's) included.
-static func read_from(read: DataReader, folder: String, numbered: Array[String]) -> Array[String]:
+static func read_from(
+	read: DataReader,
+	folder: String,
+	numbered: Array[String],
+	key: String = KEY,
+) -> Array[String]:
 	var changes: Array[String] = []
-	if not read.data.has(KEY):
+	if not read.data.has(key):
 		var format: int = read.whole("format", 1, numbered.size() + 1)
 		changes.assign(numbered.slice(0, format - 1))
 		return changes
-	var value: Variant = read.data[KEY]
+	var value: Variant = read.data[key]
 	if not value is Array:
-		read.fail("%s isn't a list" % KEY)
+		read.fail("%s isn't a list" % key)
 		return changes
 	var known: Array[String] = names_in(folder)
 	var items: Array = value
