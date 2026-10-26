@@ -9,7 +9,9 @@ script = ExtResource("1_controls")
 
 [node name="Middle" type="CenterContainer" parent="."]
 layout_mode = 2
+mouse_filter = 1
 size_flags_horizontal = 3
 
 [node name="Rows" type="VBoxContainer" parent="Middle"]
 layout_mode = 2
+mouse_filter = 1
