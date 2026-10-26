@@ -247,10 +247,11 @@ jobs:
         # timeout guards against a script error in the runner leaving the SceneTree running forever
         run: timeout 300 ~/godot/godot --headless --path . -s res://tests/e2e/run_e2e.gd -- --seed=0
 
-      - name: "⏱️ Load test: the simulation isn't slower than the base's"
+      - name: "⏱️ Load test: a tick is within its budget and no slower than the base's"
         # The load test (tools/godot/load_test.gd, #101) times every tick and every feature headless. On a
         # pull request it runs on the base branch too, in this job on this runner, so the two
-        # compare fairly (#303); the numbers go into the job's summary either way.
+        # compare fairly (#303); the numbers go into the job's summary either way. A tick over its fixed
+        # budget fails with or without a base (#1337, load_test_compare.py).
         run: |
           set -o pipefail
           timeout 120 ~/godot/godot --headless --path . -s res://tools/godot/load_test.gd -- ticks=2000 \
