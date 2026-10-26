@@ -117,20 +117,7 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), backdrop)
-	var corners: PackedVector2Array = _hexagon(zoom() * TILE_SHARE)
-	var font: Font = get_theme_default_font()
-	var font_size: int = symbol_size()
-	for tile: Vector2i in tiles:
-		var at: Vector2 = to_view(tile)
-		var shape: PackedVector2Array = PackedVector2Array()
-		for corner: Vector2 in corners:
-			var _added: bool = shape.append(at + corner)
-		draw_colored_polygon(shape, TileLooks.color_of(tiles[tile]))
-		if blocking.has(tile):
-			var _closed: bool = shape.append(shape[0])
-			draw_polyline(shape, Toon.INK, INK_PIXELS)
-		if font_size > 0:
-			_draw_symbol(font, font_size, at, tiles[tile].symbol)
+	_draw_tiles()
 	for arrow: SurveyExitArrow in exit_arrows():
 		_draw_exit(on_view(arrow.at), arrow.side)
 	# The followed quest's arrows are FocusedQuest's, drawn above everything here.
@@ -215,15 +202,70 @@ func symbol_size() -> int:
 	return pixels if pixels >= SYMBOL_MIN_PIXELS else 0
 
 
-## `symbol` in `font` at `font_size`, centered on `at`: white outlined in ink.
-func _draw_symbol(font: Font, font_size: int, at: Vector2, symbol: String) -> void:
+## Every tile shown that lies in view, in as few draw calls as their count allows (#1311): all the
+## hexagons as one triangle list, then every ink ring of a tile that blocks the way as one line
+## list, then every symbol's ink and over it every symbol, so the calls stay the same however much
+## ground has been explored.
+func _draw_tiles() -> void:
+	var shown: Dictionary[Vector2i, Vector2] = _tiles_in_view()
+	_draw_hexagons(shown)
+	var font_size: int = symbol_size()
+	if font_size > 0:
+		_draw_symbols(shown, font_size, true)
+		_draw_symbols(shown, font_size, false)
+
+
+## Where each tile shown is drawn, by tile, of those in view: the ones outside, which the clipping
+## would hide anyway, are left out.
+func _tiles_in_view() -> Dictionary[Vector2i, Vector2]:
+	var seen: Rect2 = Rect2(Vector2.ZERO, size).grow(zoom())
+	var shown: Dictionary[Vector2i, Vector2] = {}
+	for tile: Vector2i in tiles:
+		var at: Vector2 = to_view(tile)
+		if seen.has_point(at):
+			shown[tile] = at
+	return shown
+
+
+## The hexagons of the tiles `shown` (where each is drawn) as one triangle list in their kinds'
+## colors, and the ink rings of those that block the way as one line list.
+func _draw_hexagons(shown: Dictionary[Vector2i, Vector2]) -> void:
+	var corners: PackedVector2Array = _hexagon(zoom() * TILE_SHARE)
+	var points: PackedVector2Array = PackedVector2Array()
+	var colors: PackedColorArray = PackedColorArray()
+	var indices: PackedInt32Array = PackedInt32Array()
+	var ink: PackedVector2Array = PackedVector2Array()
+	for tile: Vector2i in shown:
+		var first: int = points.size()
+		for i: int in corners.size():
+			var _point: bool = points.append(shown[tile] + corners[i])
+			var _color: bool = colors.append(TileLooks.color_of(tiles[tile]))
+			if i >= 2:
+				indices.append_array(PackedInt32Array([first, first + i - 1, first + i]))
+			if blocking.has(tile):
+				var next: Vector2 = shown[tile] + corners[(i + 1) % corners.size()]
+				ink.append_array(PackedVector2Array([points[-1], next]))
+	if not indices.is_empty():
+		RenderingServer.canvas_item_add_triangle_array(get_canvas_item(), indices, points, colors)
+	if not ink.is_empty():
+		draw_multiline(ink, Toon.INK, INK_PIXELS)
+
+
+## The symbols of the tiles `shown` (where each is drawn), white, or with `inked` their ink
+## outline, which goes under them all.
+func _draw_symbols(shown: Dictionary[Vector2i, Vector2], font_size: int, inked: bool) -> void:
+	var font: Font = get_theme_default_font()
 	var width: float = zoom() * 2.0
 	var middle: float = (font.get_ascent(font_size) - font.get_descent(font_size)) / 2.0
-	var baseline: Vector2 = at + Vector2(-width / 2.0, middle)
-	var outline: int = roundi(INK_PIXELS * 2.0)
 	var center: HorizontalAlignment = HORIZONTAL_ALIGNMENT_CENTER
-	draw_string_outline(font, baseline, symbol, center, width, font_size, outline, Toon.INK)
-	draw_string(font, baseline, symbol, center, width, font_size, SYMBOL_COLOR)
+	for tile: Vector2i in shown:
+		var baseline: Vector2 = shown[tile] + Vector2(-width / 2.0, middle)
+		var symbol: String = tiles[tile].symbol
+		if inked:
+			var outline: int = roundi(INK_PIXELS * 2.0)
+			draw_string_outline(font, baseline, symbol, center, width, font_size, outline, Toon.INK)
+		else:
+			draw_string(font, baseline, symbol, center, width, font_size, SYMBOL_COLOR)
 
 
 ## Shows the tile `tile` of `region` at `at`, in its kind's color, and whether it blocks the way.

@@ -27,10 +27,8 @@ func forget() -> void:
 
 ## The tiles a wild monster may not step onto: the trail, so it never walks into a ring, and every
 ## tile something stands on.
-static func blocked(state: GameState) -> Dictionary[Vector2i, bool]:
-	var tiles: Dictionary[Vector2i, bool] = {}
-	for tile: Vector2i in (state.feature(TrailFeature.ID) as TrailFeature).shared.tiles:
-		tiles[tile] = true
+static func blocked(state: GameState) -> WildBlocked:
+	var taken: Dictionary[Vector2i, bool] = {}
 	for entity: Entity in state.entities:
-		tiles[entity.tile] = true
-	return tiles
+		taken[entity.tile] = true
+	return WildBlocked.new((state.feature(TrailFeature.ID) as TrailFeature).shared.tiles, taken)

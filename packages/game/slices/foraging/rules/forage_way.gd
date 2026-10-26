@@ -14,7 +14,7 @@ extends RefCounted
 static func target(
 	region: Region,
 	stuck: Dictionary[Vector2i, bool],
-	blocked: Dictionary[Vector2i, bool],
+	blocked: WildBlocked,
 	from: Vector2i,
 	activity: int,
 ) -> Vector2i:
