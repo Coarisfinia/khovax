@@ -597,7 +597,11 @@ func _menu_submenus(menu: GameMenu) -> String:
 func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> String:
 	if anti_aliasing.is_visible_in_tree():
 		return "a submenu's rows show over the list"
+	# A controller's focus on the Graphics button moves onto its Back button, and back after B.
+	tab.opener(SettingsTab.GRAPHICS).grab_focus()
 	tab.opener(SettingsTab.GRAPHICS).pressed.emit()
+	if tab.get_viewport().gui_get_focus_owner() != tab.back_button(SettingsTab.GRAPHICS):
+		return "opening a submenu doesn't move the focus onto its Back button"
 	if (tab.open_submenu() != SettingsTab.GRAPHICS or not anti_aliasing.is_visible_in_tree()
 			or tab.opener(SettingsTab.GRAPHICS).is_visible_in_tree()
 			or tab.button(GameMenu.PAUSE_SETTING, "Next").is_visible_in_tree()):
@@ -605,6 +609,8 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 	_press_b(menu)
 	if tab.open_submenu() != SettingsTab.LIST or not menu.is_open():
 		return "a controller's B in a submenu doesn't go back to the list, or closes the menu"
+	if tab.get_viewport().gui_get_focus_owner() != tab.opener(SettingsTab.GRAPHICS):
+		return "going back doesn't move the focus onto the submenu's button"
 	tab.opener(SettingsTab.GAME).pressed.emit()
 	tab.back_button(SettingsTab.GAME).pressed.emit()
 	if (tab.open_submenu() != SettingsTab.LIST
