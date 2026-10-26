@@ -301,6 +301,42 @@ jobs:
           path: /tmp/rebuilt/
           if-no-files-found: ignore
 
+  soak:
+    # The soak test (#1311, tests/soak/run_soak.gd): the player explores a whole instance for
+    # minutes, and the game must not be slower back at the start than it was there at first, in
+    # frame time or in draw calls. It takes minutes, so it runs on its own runner, beside the
+    # others, under a virtual display with Mesa's software OpenGL so the renderer really draws.
+    # Not a required check.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/game
+    steps:
+      - name: "📥 Check out the code"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No token left in .git/config while the branch's own code runs (#928).
+          persist-credentials: false
+
+      - name: "🤖 Set up Godot and import the project"
+        uses: ./.github/actions/setup-godot
+
+      - name: "🐢 Soak test: explore an instance, no slower at the end"
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          set -o pipefail
+          timeout 900 xvfb-run -a -s "-screen 0 1280x720x24" ~/godot/godot --path . \
+            --rendering-driver opengl3 --audio-driver Dummy -s res://tests/soak/run_soak.gd 2>&1 \
+            | tee soak.log
+
+      - name: "📋 Soak test: its measures into the run's summary"
+        if: always()
+        run: |
+          { echo '```'; grep -E "^ *[0-9]+ s:|^the |times|PASS|FAIL" soak.log || true; echo '```'; } \
+            >> "$GITHUB_STEP_SUMMARY"
+
   rules-compare:
     # Compares how this commit plays with how its parent plays (#876): both are built, each plays
     # the reference replays and the APK flow (tests/replays/outcomes.gd), and a difference needs a
