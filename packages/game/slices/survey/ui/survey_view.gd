@@ -38,9 +38,9 @@ const INK_PIXELS: float = 2.0
 const ARROW_INK: float = INK_PIXELS * 1.5
 ## The arrows of the quests not followed, as a share of the followed one's, and their color (#1298).
 const OTHER_ARROW_SHARE: float = 0.6
-const OTHER_ARROW_COLOR: Color = Color(0.66, 0.66, 0.66)
-## The followed quest's arrow: bright yellow.
-const FOLLOWED_ARROW_COLOR: Color = Color(1.0, 0.9, 0.1)
+const OTHER_ARROW_COLOR: Color = QuestMarkerView.OTHER_COLOR
+## The followed quest's arrow: bright yellow, as its markers in the world (#1328).
+const FOLLOWED_ARROW_COLOR: Color = QuestMarkerView.COLOR
 ## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
 ## Below the pixels here it wouldn't read, so it's left out at far zooms in a corner; the color and
 ## the ink ring remain.
