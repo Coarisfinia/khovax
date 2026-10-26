@@ -4,9 +4,9 @@ extends RefCounted
 ## who does only what the quests point at. Until a tutorial line exists, these stand in for it
 ## (owner, #1320). The player plays a fresh world alone, without companions, follows the quest
 ## their quest list follows (QuestTracker.focused) to the tile it's marked at (QuestTargets), and
-## walks onto it. A domination step's marked monster must be one a ring of one closes round where it
-## stands (#1379): a player following the marker rings it by walking once round it and placing their
-## totem, and the quests count what the world raises.
+## walks onto it. A domination step's marked monster must be one that a ring of one can close round
+## where it stands (#1379): a player following the marker rings it by walking once round it and
+## placing their totem, and the quests count what the world raises.
 
 ## The world's seed: the same world every run, so the check is deterministic.
 const WORLD_SEED: int = 0
