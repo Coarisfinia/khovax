@@ -64,7 +64,10 @@ a second model could use goes into the library or a generic tool, never into one
     reach as parameters.
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
     four-bone legs, `.L`/`.R`).
-  - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised).
+  - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised), and
+    `root`, which moves a stiff piece (a crystal, a tuft) whole as the skin at its root, so it
+    stays on the skin where two bones share it (#1303), following only the bones it names (a
+    crest the trunk's: the shoulder blades' share stays with the spine, so a walk doesn't rock it).
   - `clips`: `Clip` (a clip's keys, whether it loops, its paws' steps and whether its paws are
     planted), `cycle_frames` (gait timing from the game's speed), `gait` (every frame posed:
     paws planted for `duty` of the cycle and running back at the game's speed, lifting and
