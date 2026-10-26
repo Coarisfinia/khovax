@@ -655,8 +655,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   approval. So does every pull request that changes this rule or the merge rules around it in this
   file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
   **Model pull requests always wait for the owner** (owner, #1381), however low CodeRabbit rates
-  them: any that changes what the model skill covers, a `.glb`, its rig, its clips or its textures
-  (a model's script or the shared library in `packages/game-models/` included). CodeRabbit can't
+  them: any that changes a model the model skill builds, meaning a `.glb`, its rig, its clips, its
+  textures, a model's script or the shared library in `packages/game-models/`. CodeRabbit can't
   judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
   (#1376).
   This prints the newest assessment's merge risk, security risk (`none` when not given) and
