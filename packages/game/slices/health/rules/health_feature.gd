@@ -164,8 +164,7 @@ func hp_of(state: GameState, entity_id: int) -> int:
 	return max_hp_of(state, entity_id) - taken
 
 
-## The HP `entity_id` has when unhurt: its species' for a tracked one, else a player's. A tracked
-## one is looked up first: a ring asks every tick, and finding an entity goes through them all.
+## The HP `entity_id` has when unhurt: its species' for a tracked one, else a player's.
 func max_hp_of(state: GameState, entity_id: int) -> int:
 	if _species.has(entity_id):
 		return max_hps.get(_species[entity_id], UNKNOWN_HP)
