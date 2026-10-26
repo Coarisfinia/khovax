@@ -622,6 +622,10 @@ func _check_starting_standing() -> String:
 	)
 	if not _parse(at_start).problem.begins_with("the standing with faction " + odun):
 		return "a save holding a faction's starting standing wasn't refused"
+	# A format 22 save could hold it; it loads at the start, as nothing kept.
+	var old: Profile = _parse(at_start.replace(_format(ProfileSave.FORMAT), _format(22)))
+	if not old.problem.is_empty() or not old.standings.by_faction.is_empty():
+		return "a format 22 save at a faction's starting standing didn't load: " + old.problem
 	return _check_standings_refused()
 
 

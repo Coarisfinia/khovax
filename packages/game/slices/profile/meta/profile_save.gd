@@ -297,9 +297,15 @@ static func _migrate_to_22(data: Dictionary) -> void:
 
 
 ## Format 22 to 23: a faction can start off neutral (#1378), so a standing at neutral can be
-## saved, and one at its faction's start never is; no save before held either.
-static func _migrate_to_23(_data: Dictionary) -> void:
-	return
+## saved, and one at its faction's start never is: a saved standing equal to its faction's start is
+## dropped, leaving it at the start. A faction the save holds no standing with takes its start, as
+## for every player (owner, B1 on #1310).
+static func _migrate_to_23(data: Dictionary) -> void:
+	var stored: Variant = data.get("standings")
+	var by_faction: Dictionary = stored if stored is Dictionary else {}
+	for faction: Variant in by_faction.keys():
+		if _standing(by_faction[faction]) == Standings.start_of(str(faction)):
+			var _at_start: bool = by_faction.erase(faction)
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
