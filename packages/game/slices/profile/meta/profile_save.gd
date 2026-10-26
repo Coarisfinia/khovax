@@ -111,7 +111,11 @@ static func parse(text: String, companions: Array[ProfileCompanion] = []) -> Pro
 		profile.problem = "not a profile save"
 		return profile
 	var data: Dictionary = parsed
-	var read: DataReader = DataReader.new(data)
+	# JSON's numbers are floats here, and DataReader takes whole numbers only (JsonNumbers, #589).
+	var saved: Dictionary = { "format": _int(data.get("format")) }
+	if data.has(FormatChanges.KEY):
+		saved[FormatChanges.KEY] = data[FormatChanges.KEY]
+	var read: DataReader = DataReader.new(saved)
 	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED)
 	if read.failed():
 		profile.problem = "save format: " + read.problem
