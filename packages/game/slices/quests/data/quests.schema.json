@@ -83,6 +83,13 @@
 				"change": { "type": "integer", "minimum": -10, "maximum": 10, "not": { "const": 0 } }
 			}
 		},
+		"materials": {
+			"description": "The materials finishing it gives the player (#1348), by id, each a whole count from 1: such as a species' ascension material (#1260).",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
+		},
 		"territory": {
 			"description": "Makes it a territory quest (#638): finishing it hands the instance named here to the faction named here, whoever held it before. Every territory quest keeps to the ground rules in AGENTS.md.",
 			"type": "object",

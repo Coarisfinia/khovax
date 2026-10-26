@@ -29,6 +29,8 @@ var starts_on: QuestStep = null
 var standing: QuestStanding = null
 ## The territory finishing it hands over (#638); null for a quest that isn't a territory quest.
 var territory: QuestTerritory = null
+## The materials finishing it gives (#1348), by id: how many of each; none when it gives none.
+var materials: Dictionary[String, int] = {}
 ## Why the quest couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -58,6 +60,8 @@ static func parse(
 		quest.standing = QuestStanding.parse(data.get("standing"))
 		if not quest.standing.problem.is_empty():
 			quest.problem = "its standing: " + quest.standing.problem
+	if quest.problem.is_empty() and data.has("materials"):
+		quest.problem = quest._read_materials(data.get("materials"))
 	if quest.problem.is_empty() and data.has("territory"):
 		quest.territory = QuestTerritory.parse(data.get("territory"))
 		if not quest.territory.problem.is_empty():
@@ -76,6 +80,21 @@ func _territory_steps_problem() -> String:
 				return "step %d: a territory quest's steps name its instance %s" % [
 					index, territory.instance,
 				]
+	return ""
+
+
+## Why the materials finishing it gives, read from `entry`, are wrong, or "": at least one, each
+## named by an id and given a whole count from 1 to what a profile can hold.
+func _read_materials(entry: Variant) -> String:
+	var given: Dictionary = entry if entry is Dictionary else {}
+	if given.is_empty():
+		return "its materials must name one or more materials, each with a count"
+	for key: Variant in given:
+		var material: String = str(key) if key is String else ""
+		var count: int = JsonNumbers.whole(given[key], 1, Profile.MAX_NUMBER, 0)
+		if not Content.is_id(material) or count == 0:
+			return "its materials must give each id a whole count from 1"
+		materials[material] = count
 	return ""
 
 
