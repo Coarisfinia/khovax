@@ -37,7 +37,11 @@ static func give(quest: QuestDefinition, profile: Profile) -> void:
 ## a player who joined it at (#1324): the lock wins. One entry's gain can lower another entry's
 ## faction below its floor, never raise one past its ceiling, so the floors are held once more,
 ## without that cost: each holds whatever the entries' order.
-static func _enforce(alignment: Array[QuestAlignment], standings: Standings, postgame: bool) -> void:
+static func _enforce(
+	alignment: Array[QuestAlignment],
+	standings: Standings,
+	postgame: bool,
+) -> void:
 	for aligned: QuestAlignment in alignment:
 		# Its faction was checked when the quest was read, so it's there.
 		var faction: Faction = FactionContent.cached().factions[aligned.faction]

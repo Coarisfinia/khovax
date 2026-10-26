@@ -116,6 +116,12 @@ const TRUCE: String = (
 	+ "{\"faction\": \"sorn_lumawenai\", \"at_least\": 1}], "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"truce\"}]}"
 )
+## A ceiling on the Story guild (#1326): at most neutral.
+const PARTED: String = (
+	"{\"id\": \"parted\", \"name\": \"Parted\", \"alignment\": ["
+	+ "{\"faction\": \"amvrel_velmarai\", \"at_most\": 0}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"parted\"}]}"
+)
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
@@ -1574,6 +1580,26 @@ func _check_enforced() -> String:
 			held.standings.of("sorn_lumawenai"),
 			truce.problem,
 		]
+	return _check_enforced_lock()
+
+
+## A ceiling never breaks an alliance until the postgame (#1324, #1326): a player who joined the
+## Story guild stays at its first rank against a quest holding it at most neutral, until they're in
+## the postgame (#1333), when the ceiling holds.
+func _check_enforced_lock() -> String:
+	var parted: QuestDefinition = QuestDefinition.parse("parted", PARTED, {})
+	var profile: Profile = Profile.new()
+	var _joined: String = profile.standings.change(GUILD, 1)
+	QuestRewards.give(parted, profile)
+	if profile.standings.of(GUILD) != 1:
+		return "a quest's ceiling lowered a joined ally to %d: %s" % [
+			profile.standings.of(GUILD),
+			parted.problem,
+		]
+	profile.postgame = true
+	QuestRewards.give(parted, profile)
+	if profile.standings.of(GUILD) != 0:
+		return "a quest's ceiling didn't hold in the postgame: %d" % profile.standings.of(GUILD)
 	return ""
 
 
