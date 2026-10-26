@@ -9,7 +9,8 @@ extends RefCounted
 ## color (#233), which only views read, is kept here too, and so are their standings with the
 ## factions (#483), which finishing a quest can move (#532), their gear (#690), and their leaning
 ## toward the story's paths (#658), which finishing a path-marked quest moves, and its outbox
-## (#771): what it asks the world to do, like the hand-over of a territory quest it finished (#638).
+## (#771): what it asks the world to do, like the hand-over of a territory quest it finished (#638),
+## and whether the main story has ended for the player (#1333).
 ## The active slots a player starts with, and the most they can have. Unlocking the others (a lore
 ## quest, then a Might threshold and another lore quest) is #654.
 const START_SLOTS: int = 1
@@ -53,6 +54,10 @@ var outbox: Outbox = Outbox.new()
 ## The personal color the player chose (#391), as 0xRRGGBB, or AUTO_COLOR. A view's, never the
 ## simulation's (#233).
 var personal_color: int = AUTO_COLOR
+## Whether the player is in the postgame (#1333): set for good once they finish the quest that ends
+## the main story (QuestDefinition.ends_story). From then on, a faction allied until the postgame
+## no longer holds them (Standings.align).
+var postgame: bool = false
 ## The character's name (#399), the player's own; "" until they name them. Never in the simulation.
 var character_name: String = ""
 ## Why the save couldn't be read, or "" when it could.

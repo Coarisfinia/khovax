@@ -1675,6 +1675,23 @@ func _check_broken_data() -> String:
 				content.problem,
 				cases[given],
 			]
+	return _check_ends_story(good)
+
+
+## A quest marked as ending the main story (#1333) reads with the mark; one whose mark isn't true or
+## false is refused.
+func _check_ends_story(good: String) -> String:
+	var ending: QuestDefinition = QuestDefinition.parse(
+		"a_good",
+		good.replace("\"steps\"", "\"ends_story\": true, \"steps\""),
+		{},
+	)
+	var unmarked: QuestDefinition = QuestDefinition.parse("a_good", good, {})
+	if not ending.problem.is_empty() or not ending.ends_story or unmarked.ends_story:
+		return "a quest's ends_story mark wasn't read: " + ending.problem
+	var bad: String = good.replace("\"steps\"", "\"ends_story\": 1, \"steps\"")
+	if QuestDefinition.parse("a_good", bad, {}).problem != "its ends_story must be true or false":
+		return "a quest whose ends_story isn't true or false wasn't refused"
 	return _check_dialog_ids()
 
 

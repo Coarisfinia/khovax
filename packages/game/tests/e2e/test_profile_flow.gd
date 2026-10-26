@@ -13,8 +13,8 @@ extends RefCounted
 ## before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
-## The keys a newer save format added (#184, #53, #391, #399, #483, #658, #771, #1298), which older
-## saves lack.
+## The keys a newer save format added (#184, #53, #391, #399, #483, #658, #771, #1298, #1333), which
+## older saves lack.
 const ADDED_KEYS: Array[String] = [
 	"quest_progress",
 	"quests_done",
@@ -25,6 +25,7 @@ const ADDED_KEYS: Array[String] = [
 	"character_name",
 	"standings",
 	"standings_half_lost",
+	"postgame",
 	"gear",
 	"equipped",
 	"path_leaning",
@@ -556,18 +557,18 @@ func _check_alignment() -> String:
 	var harmony: Faction = Faction.new()
 	harmony.id = "harmony"
 	harmony.enemies.assign(["supremacy"])
-	standings.align(harmony, 1)
+	standings.align(harmony, 1, false)
 	var half: Array[String] = ["supremacy"]
 	if standings.of("supremacy") != 0 or standings.half_lost != half:
 		return "a gain of one didn't lose half a rank with the enemy: %s" % [standings.half_lost]
-	standings.align(harmony, 1)
+	standings.align(harmony, 1, false)
 	if standings.of("supremacy") != -1 or not standings.half_lost.is_empty():
 		return "two halves didn't make a whole rank lost with the enemy"
-	standings.align(harmony, 3)
+	standings.align(harmony, 3, false)
 	if standings.of("supremacy") != -2 or standings.half_lost != half:
 		return "a gain of three didn't lose one and a half ranks with the enemy"
-	standings.align(harmony, -2)
-	standings.align(harmony, 4)
+	standings.align(harmony, -2, false)
+	standings.align(harmony, 4, false)
 	if standings.of(harmony.id) != Standings.HIGHEST or standings.of("supremacy") != -3:
 		return "only the rank gained up to the top should cost the enemy: %s" % [
 			standings.by_faction,
@@ -579,20 +580,52 @@ func _check_alignment() -> String:
 
 
 ## A faction allied until the postgame (#1324) can be lowered below neutral before the player joins
-## it, and once they have, never below its first rank, however far a change pushes it.
+## it, and once they have, never below its first rank, however far a change pushes it, until the
+## player is in the postgame (#1333).
 func _check_allied() -> String:
 	var standings: Standings = Standings.new()
 	var guild: Faction = Faction.new()
 	guild.id = "guild"
 	guild.allied_until_postgame = true
-	standings.align(guild, -1)
+	standings.align(guild, -1, false)
 	if standings.of(guild.id) != -1:
 		return "a faction allied until the postgame, not joined, wasn't lowered"
-	standings.align(guild, 4)
-	standings.align(guild, -(1 << 62))
+	standings.align(guild, 4, false)
+	standings.align(guild, -(1 << 62), false)
 	if standings.of(guild.id) != 1:
 		return "a joined faction allied until the postgame dropped below its first rank"
-	return _check_starting_standing()
+	standings.align(guild, -3, true)
+	if standings.of(guild.id) != -2:
+		return "in the postgame, a joined faction allied until it still held its first rank"
+	return _check_postgame()
+
+
+## Finishing the quest that ends the main story puts the player in the postgame (#1333), after its
+## own standing moved, and the mark survives saving; finishing another quest doesn't set it. A save
+## whose mark isn't true or false is refused.
+func _check_postgame() -> String:
+	var profile: Profile = Profile.new()
+	var quest: QuestDefinition = QuestDefinition.new()
+	QuestRewards.give(quest, profile)
+	if profile.postgame:
+		return "a quest that doesn't end the main story put the player in the postgame"
+	quest.ends_story = true
+	QuestRewards.give(quest, profile)
+	var loaded: Profile = _parse(_text(profile))
+	if not profile.postgame or not loaded.problem.is_empty() or not loaded.postgame:
+		return "finishing the story's end didn't put the player in the postgame for good: " + (
+			loaded.problem
+		)
+	var text: String = _text(Profile.new())
+	var mark: String = "\"postgame\": false"
+	var refused: String = "the save's postgame mark"
+	var cases: Dictionary[String, String] = {
+		text.replace(mark, "\"postgame\": 1"): refused,
+		text.replace(mark, "\"postgame\": \"true\""): refused,
+		text.replace(mark + ",", ""): refused,
+	}
+	var problem: String = _unrefused(cases)
+	return problem if not problem.is_empty() else _check_starting_standing()
 
 
 ## A faction's starting standing (#1378): a new profile stands one rank below neutral with the Odun
@@ -766,8 +799,8 @@ func _check_outbox_refused(text: String, request: Dictionary) -> String:
 ## starts on Auto; formats before 7 had no character name (#399), which starts empty; formats
 ## before 8 had no standings with factions (#483), which start neutral; formats before 10 had no
 ## gear (#690): none is owned, and every gear slot starts empty; formats before 11 had no leaning
-## toward the paths (#658), which starts even; and formats before 13 had no outbox (#771), which
-## starts empty.
+## toward the paths (#658), which starts even; formats before 13 had no outbox (#771), which
+## starts empty; and formats before 24 had no postgame mark (#1333): no player is in it.
 func _check_migrated() -> String:
 	var text: String = _text(Profile.new())
 	var current: Dictionary = _as_captured(text)

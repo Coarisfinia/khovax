@@ -73,6 +73,11 @@
 				}
 			]
 		},
+		"ends_story": {
+			"description": "Whether finishing it ends the main story (#1333): the player is in the postgame from then on, and a faction allied until the postgame no longer holds them.",
+			"type": "boolean",
+			"default": false
+		},
 		"standing": {
 			"description": "How finishing it moves the player's standing with a faction (#532): the faction's id, and the change, up when positive and down when negative, held on the standing's scale from -5 to 5.",
 			"type": "object",

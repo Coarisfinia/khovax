@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 23
+const FORMAT: int = 24
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -46,6 +46,7 @@ static func to_text(profile: Profile, companions: Array[ProfileCompanion] = []) 
 		"character_name": profile.character_name,
 		"standings": _sorted(profile.standings.by_faction),
 		"standings_half_lost": profile.standings.half_lost,
+		"postgame": profile.postgame,
 		"gear": _sorted(profile.gear.owned),
 		"equipped": _sorted(profile.gear.equipped),
 		"path_leaning": {
@@ -119,6 +120,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_21,
 		_migrate_to_22,
 		_migrate_to_23,
+		_migrate_to_24,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -308,6 +310,11 @@ static func _migrate_to_23(data: Dictionary) -> void:
 			var _at_start: bool = by_faction.erase(faction)
 
 
+## Format 23 to 24: the profile marks the postgame (#1333), which no player is in yet.
+static func _migrate_to_24(data: Dictionary) -> void:
+	data["postgame"] = false
+
+
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
 ## code it maps to.
 static func _recode_territories(data: Dictionary, recoded: Dictionary[int, int]) -> void:
@@ -356,6 +363,7 @@ static func _read(profile: Profile, data: Dictionary) -> String:
 	for reader: Callable in [
 		_read_carried,
 		_read_standings,
+		_read_postgame,
 		_read_leaning,
 		_read_gear,
 		_read_outbox,
@@ -413,6 +421,16 @@ static func _read_standings(profile: Profile, data: Dictionary) -> String:
 			return "the save's half ranks lost with factions are invalid"
 		profile.standings.half_lost.append(id)
 	profile.standings.half_lost.sort()
+	return ""
+
+
+## Reads the save's postgame mark (#1333) into this profile; returns why it can't (it isn't true or
+## false), or "".
+static func _read_postgame(profile: Profile, data: Dictionary) -> String:
+	var postgame: Variant = data.get("postgame")
+	if not postgame is bool:
+		return "the save's postgame mark isn't true or false"
+	profile.postgame = postgame
 	return ""
 
 
