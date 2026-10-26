@@ -176,13 +176,17 @@ func _prey_for(state: GameState, wild: WildMonsterFeature, hunter: int, tile: Ve
 		return stalked
 	var nearest: int = 0
 	var gap: int = SIGHT + 1
+	# The distance first: it's cheap and rules out most monsters, and only a nearer one than the
+	# nearest so far can replace it, so asking `_is_prey` of the rest changes nothing (#1335).
 	for monster: int in wild.monsters:
-		if not _is_prey(state, wild, hunter, monster, tile):
+		var standing: Entity = state.entity(monster)
+		if standing == null:
 			continue
-		var distance: int = Hex.distance(state.entity(monster).tile, tile)
-		if distance < gap:
-			nearest = monster
-			gap = distance
+		var distance: int = Hex.distance(standing.tile, tile)
+		if distance >= gap or not _is_prey(state, wild, hunter, monster, tile):
+			continue
+		nearest = monster
+		gap = distance
 	return nearest
 
 
@@ -195,9 +199,13 @@ func _is_prey(
 	monster: int,
 	tile: Vector2i,
 ) -> bool:
-	if monster == hunter or not wild.monsters.has(monster) or not _free(state, wild, monster):
+	# The cheap checks first: the costlier ones go through every ring (#1335).
+	if monster == hunter or not wild.monsters.has(monster):
 		return false
-	if Hex.distance(state.entity(monster).tile, tile) > SIGHT or _beaten(state, monster):
+	var standing: Entity = state.entity(monster)
+	if standing == null or Hex.distance(standing.tile, tile) > SIGHT:
+		return false
+	if not _free(state, wild, monster) or _beaten(state, monster):
 		return false
 	var schedules: ScheduleFeature = state.feature(ScheduleFeature.ID) as ScheduleFeature
 	var traits: Array = schedules.traits.get(wild.species_of(monster), [])
