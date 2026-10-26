@@ -154,6 +154,7 @@ static func _migrate(data: Dictionary, changes: Array[String]) -> void:
 		"1322-half-ranks-lost": _migrate_to_22,
 		"1378-standings-from-start": _migrate_to_23,
 		"1333-postgame": _migrate_to_24,
+		"1417-development-taken": _migrate_development_taken,
 	}
 	for change: String in steps:
 		if not changes.has(change):
@@ -319,6 +320,12 @@ static func _migrate_to_23(data: Dictionary) -> void:
 ## Format 23 to 24: the profile marks the postgame (#1333), which no player is in yet.
 static func _migrate_to_24(data: Dictionary) -> void:
 	data["postgame"] = false
+
+
+## Dominated monsters take nodes of their development web (#1417), none yet.
+static func _migrate_development_taken(data: Dictionary) -> void:
+	for fields: Dictionary in _monster_entries(data):
+		fields["taken"] = []
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
@@ -490,7 +497,16 @@ static func _monster(entry: Variant) -> DominatedMonster:
 	# Progress always stays below what its level needs.
 	if monster.progress < 0 or monster.progress >= DominatedMonster.progress_needed(monster.level):
 		return null
-	return monster
+	var taken: Variant = data.get("taken")
+	if not taken is Array:
+		return null
+	for node: Variant in taken:
+		var node_id: String = Content.text_of(node)
+		if not Content.is_id(node_id) or monster.taken.has(node_id):
+			return null
+		monster.taken.append(node_id)
+	# A node is taken with a level gained, never more.
+	return monster if monster.picks_left() >= 0 else null
 
 
 ## A personal color from save data: Profile.AUTO_COLOR, or a color as 0xRRGGBB; below AUTO_COLOR

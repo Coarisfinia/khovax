@@ -5,7 +5,9 @@ extends RefCounted
 ## line of nodes from its middle outward, and they're interwoven: bridges connect directions
 ## sideways, portals connect one side of the web to the other. What's taken decides what can be
 ## chosen: a node is open once a node next to it is taken, and every direction's first node is
-## open from the start. Each node is a stat leaning so far (DevelopmentLeaning, #1358).
+## open from the start. The rest lies in fog (#1417): a player sees the taken and the open nodes
+## and picks any open one (Profile.take_node). Each node is a stat leaning so far
+## (DevelopmentLeaning, #1358).
 
 ## Its schema, which says the fields a web file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/development/data/development.schema.json"
