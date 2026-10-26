@@ -108,6 +108,14 @@ const CHOSEN: String = (
 	+ "{\"faction\": \"sorn_lumawenai\", \"at_most\": -1}], "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"chosen\"}]}"
 )
+## Floors for two factions that are enemies of each other (#1326): both at least at their first
+## rank.
+const TRUCE: String = (
+	"{\"id\": \"truce\", \"name\": \"Truce\", \"alignment\": ["
+	+ "{\"faction\": \"odun_kragothai\", \"at_least\": 1}, "
+	+ "{\"faction\": \"sorn_lumawenai\", \"at_least\": 1}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"truce\"}]}"
+)
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
@@ -1555,6 +1563,17 @@ func _check_enforced() -> String:
 			or standings.of("sorn_lumawenai") != -2
 			or standings.half_lost != half):
 		return "finishing a quest enforcing alignment again moved a standing within its bounds"
+	# Floors for two enemies of each other: the second's gain costs the first rank, which the quest
+	# then holds at its floor again, so both bounds hold whatever their order.
+	var truce: QuestDefinition = QuestDefinition.parse("truce", TRUCE, {})
+	var held: Profile = Profile.new()
+	QuestRewards.give(truce, held)
+	if held.standings.of("odun_kragothai") != 1 or held.standings.of("sorn_lumawenai") != 1:
+		return "a quest enforcing floors for two enemies left %d and %d: %s" % [
+			held.standings.of("odun_kragothai"),
+			held.standings.of("sorn_lumawenai"),
+			truce.problem,
+		]
 	return ""
 
 
