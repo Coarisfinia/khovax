@@ -1865,21 +1865,25 @@ func _check_neighbour_cloud(main: Node) -> String:
 	return _check_neighbour_gone(view, fog)
 
 
-## A neighbour drawn anew elsewhere (a purge rearranges it) leaves no fog behind where its tiles
-## lay (#1388): a tile lit next door, then no neighbour's any more, goes back under thick cloud.
+## A neighbour that goes (a purge rearranges the instances, #212) leaves no fog behind where its
+## tiles lay (#1388): a tile of a neighbour lit next door goes back under thick cloud once that
+## neighbour is no longer drawn there. The neighbour comes back after.
 func _check_neighbour_gone(view: NeighbourView, fog: FogView) -> String:
-	# Beyond the region and every neighbour, still on the cloud's margin.
-	var drawn: Array[Vector2i] = []
-	drawn.append_array(view.placed_tiles())
-	drawn.append_array(view.driver.state.region.sorted_tiles())
-	var last: Vector2i = drawn.max()
-	var left: Vector2i = last + Vector2i(1, 0)
-	fog.brightness[left] = FogView.VISIBLE
-	fog.cloud.show_fog(view.driver.state.region, fog.brightness, [left], false)
-	view.rebuilds += 1
+	var gone: String = view.shifts.keys()[0]
+	var shift: Vector2i = view.shifts[gone]
+	var tile: Vector2i = view.region_of(gone).sorted_tiles()[0] + shift
+	if not fog.brightness.has(tile):
+		return "the neighbour %s's tile %s has no fog drawn" % [gone, tile]
+	fog.brightness[tile] = FogView.VISIBLE
+	fog.cloud.show_fog(view.driver.state.region, fog.brightness, [tile], false)
+	var _dropped: bool = view.shifts.erase(gone)
 	fog.show_state(10.0)
-	if fog.brightness.has(left) or fog.cloud.fog_on(left) != Vector2(1.0, 0.0):
-		return "a neighbour's old tile %s keeps its fog: %s" % [left, fog.cloud.fog_on(left)]
+	var left: Vector2 = fog.cloud.fog_on(tile)
+	var kept: bool = fog.brightness.has(tile)
+	view.shifts[gone] = shift
+	fog.show_state(10.0)
+	if kept or left != Vector2(1.0, 0.0):
+		return "the neighbour %s's old tile %s keeps its fog: %s" % [gone, tile, left]
 	return ""
 
 
