@@ -1,13 +1,14 @@
 class_name SettingsTab
 extends ScrollContainer
-## The menu's Settings tab (#362, once #355's settings menu): the player's settings (#161), one row
-## per setting with its name and what it's on now, "Auto (…)" while Auto picks it, and buttons to
-## step to the previous or next choice or to hand it back to Auto. The settings' owners (Graphics,
-## SurveyChoice, DamageNumbersChoice, the menu's pause) know each setting's choices and keep the
-## player's; the tab only shows them and passes the player's picks on. It says everything in words,
-## never by color alone (#68). It scrolls when the screen is too short for every row. Its layout
-## lives in its scene, settings_tab.tscn (#437): the rows sit in the middle of the tab, as wide as
-## `fit` makes them.
+## The menu's Settings tab (#362, once #355's settings menu): the player's settings (#161), in
+## submenus (#1314). It opens on a list of them; each shows its own rows, one per setting with its
+## name and what it's on now, "Auto (…)" while Auto picks it, and buttons to step to the previous
+## or next choice or to hand it back to Auto, and a Back button (or `ui_cancel`, a controller's B)
+## back to the list. The settings' owners (Graphics, SurveyChoice, DamageNumbersChoice, the menu's
+## pause) know each setting's choices and keep the player's; the tab only shows them and passes the
+## player's picks on. It says everything in words, never by color alone (#68). It scrolls when the
+## screen is too short for every row. Its layout lives in its scene, settings_tab.tscn (#437): the
+## rows sit in the middle of the tab, as wide as `fit` makes them.
 
 ## After a pick changed a setting, so what follows it (the menu's pause) follows at once.
 signal changed
@@ -17,6 +18,12 @@ const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-le
 const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
 const PREVIOUS_TIP: String = "Previous choice"
 const NEXT_TIP: String = "Next choice"
+## The submenus, in the order the list shows them.
+const GRAPHICS: String = "Graphics"
+const INTERFACE: String = "Interface"
+const GAME: String = "Game"
+## The list of submenus, as `open_submenu` names it while none is open.
+const LIST: String = ""
 
 ## Whose settings the graphics rows show; it keeps every setting's choice (Settings' one owner).
 var graphics: Graphics
@@ -33,30 +40,46 @@ var shown: Dictionary[String, String] = {}
 var _labels: Dictionary[String, Callable] = {}
 var _steps: Dictionary[String, Callable] = {}
 var _values: Dictionary[String, Label] = {}
+## Each submenu's rows, and the button in the list that opens it, by the submenu's name.
+var _submenus: Dictionary[String, VBoxContainer] = {}
+var _openers: Dictionary[String, Button] = {}
+var _open: String = LIST
 
 @onready var _rows: VBoxContainer = $Middle/Rows
+@onready var _list: VBoxContainer = $Middle/Rows/List
 
 
 func _ready() -> void:
+	for submenu: String in [GRAPHICS, INTERFACE, GAME]:
+		_add_submenu(submenu)
 	if graphics != null:
 		_add_row(
+			GRAPHICS,
 			Graphics.ANTI_ALIASING,
 			"Anti-aliasing",
 			graphics.anti_aliasing_label,
 			graphics.step_anti_aliasing,
 		)
 	if survey != null:
-		_add_row(SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
-		_add_row(SurveyChoice.ZOOM_SETTING, "Survey zoom", survey.zoom_label, survey.zoom_by)
+		_add_row(INTERFACE, SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
+		_add_row(
+			INTERFACE,
+			SurveyChoice.ZOOM_SETTING,
+			"Survey zoom",
+			survey.zoom_label,
+			survey.zoom_by,
+		)
 	if graphics != null:
 		damage_numbers = DamageNumbersChoice.new(graphics)
 		_add_row(
+			INTERFACE,
 			DamageNumbersChoice.SHOWN_SETTING,
 			"Damage numbers",
 			damage_numbers.shown_label,
 			damage_numbers.step_shown,
 		)
 		_add_row(
+			INTERFACE,
 			DamageNumbersChoice.SIZE_SETTING,
 			"Damage number size",
 			damage_numbers.size_label,
@@ -64,11 +87,62 @@ func _ready() -> void:
 		)
 	if menu != null and graphics != null:
 		_add_row(
+			GAME,
 			GameMenu.PAUSE_SETTING,
 			"Pause in single player",
 			menu.pause_label,
 			menu.step_pause,
 		)
+
+
+## A controller's B in a submenu goes back to the list, before the menu hears it and closes.
+func _unhandled_input(event: InputEvent) -> void:
+	if _open != LIST and is_visible_in_tree() and event.is_action_pressed("ui_cancel"):
+		back()
+		get_viewport().set_input_as_handled()
+
+
+## Shows the rows of `submenu` in place of the list; a controller's focus moves onto them if it
+## was on the tab.
+func open(submenu: String) -> void:
+	var focused: bool = _has_focus()
+	_open = submenu
+	_show_open()
+	if focused:
+		back_button(submenu).grab_focus()
+
+
+## Goes back from a submenu to the list; a controller's focus moves onto the submenu's button.
+func back() -> void:
+	var left: String = _open
+	var focused: bool = _has_focus()
+	_open = LIST
+	_show_open()
+	if focused and _openers.has(left):
+		_openers[left].grab_focus()
+
+
+## The submenu open now, or LIST while the list shows.
+func open_submenu() -> String:
+	return _open
+
+
+## The button in the list that opens `submenu`.
+func opener(submenu: String) -> Button:
+	return _openers[submenu]
+
+
+## The Back button at the top of `submenu`.
+func back_button(submenu: String) -> Button:
+	return _submenus[submenu].get_child(0).get_child(0) as Button
+
+
+## The submenu `setting`'s row is in.
+func submenu_of(setting: String) -> String:
+	for submenu: String in _submenus:
+		if _values[setting].get_parent().get_parent() == _submenus[submenu]:
+			return submenu
+	return LIST
 
 
 ## Steps `setting` `steps` choices on (back for fewer), as the row's buttons do.
@@ -105,22 +179,68 @@ func button(setting: String, which: String) -> Button:
 	return _values[setting].get_parent().get_node(which) as Button
 
 
-## A row for `setting`, named `title`: what `label` says it's on, and buttons that `stepper` steps
-## it with (back and on) and one back to Auto.
-func _add_row(setting: String, title: String, label: Callable, stepper: Callable) -> void:
+## A submenu named `submenu`, hidden until it's opened: a Back button and its name at its top,
+## and a button in the list that opens it.
+func _add_submenu(submenu: String) -> void:
+	var opens: Button = GameMenu.button(submenu, open.bind(submenu))
+	opens.name = submenu
+	_list.add_child(opens)
+	_openers[submenu] = opens
+	var box: VBoxContainer = VBoxContainer.new()
+	box.name = submenu
+	box.visible = false
+	box.add_theme_constant_override("separation", _rows.get_theme_constant("separation"))
+	var top: HBoxContainer = HBoxContainer.new()
+	var leave: Button = GameMenu.button("Back", back)
+	leave.icon = PREVIOUS_ICON
+	# A controller's B goes back too (_unhandled_input), and the button shows it.
+	var _glyph: ActionGlyph = ActionGlyph.badge(leave, &"ui_cancel")
+	top.add_child(_named(leave, "Back"))
+	var title: Label = GameMenu.label(submenu)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	top.add_child(title)
+	box.add_child(top)
+	_rows.add_child(box)
+	_submenus[submenu] = box
+
+
+## Shows the list or the open submenu, and hides the rest.
+func _show_open() -> void:
+	_list.visible = _open == LIST
+	for submenu: String in _submenus:
+		_submenus[submenu].visible = submenu == _open
+
+
+## Whether a controller's focus is on something in the tab.
+func _has_focus() -> bool:
+	var focused: Control = get_viewport().gui_get_focus_owner()
+	return focused != null and is_ancestor_of(focused)
+
+
+## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
+## `stepper` steps it with (back and on) and one back to Auto.
+func _add_row(
+		submenu: String,
+		setting: String,
+		title: String,
+		label: Callable,
+		stepper: Callable,
+) -> void:
 	_labels[setting] = label
 	_steps[setting] = stepper
-	_rows.add_child(GameMenu.label(title))
+	var rows: VBoxContainer = _submenus[submenu]
+	rows.add_child(GameMenu.label(title))
 	var row: HBoxContainer = HBoxContainer.new()
 	var value: Label = GameMenu.label("")
 	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(value)
 	_values[setting] = value
-	var back: Button = GameMenu.icon_button(PREVIOUS_ICON, PREVIOUS_TIP, step.bind(setting, -1))
-	row.add_child(_named(back, "Previous"))
+	var previous: Button = GameMenu.icon_button(PREVIOUS_ICON, PREVIOUS_TIP, step.bind(setting, -1))
+	row.add_child(_named(previous, "Previous"))
 	row.add_child(_named(GameMenu.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1)), "Next"))
 	row.add_child(_named(GameMenu.button("Auto", choose_auto.bind(setting)), "Auto"))
-	_rows.add_child(row)
+	rows.add_child(row)
 
 
 func _named(node: Node, node_name: String) -> Node:
