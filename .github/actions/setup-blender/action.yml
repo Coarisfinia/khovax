@@ -47,8 +47,8 @@ runs:
       # The image has no CA certificates, so the runner's are lent to apt for the snapshot's HTTPS.
       # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
       # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
-      # delay, and if the snapshot still fails, the libraries come from Ubuntu's live archive,
-      # signed by the same key, with a warning, rather than failing the run.
+      # delay, and if the snapshot's index still can't be fetched, the libraries come from Ubuntu's
+      # live archive, signed by the same key, with a warning, rather than failing the run.
       shell: bash
       run: |
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
@@ -60,16 +60,14 @@ runs:
               "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" "Check-Valid-Until: no" \
               > /etc/apt/sources.list.d/ubuntu.sources
           }
-          install_libraries() {
-            apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
-              libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
-          }
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0"
-          if ! install_libraries; then
+          if ! apt-get update -qq; then
             echo "::warning::Ubuntu snapshot $0 unreachable: Blender'"'"'s libraries come from the live archive."
             use_mirror "http://archive.ubuntu.com/ubuntu"
-            install_libraries
+            apt-get update -qq
           fi
+          DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+            libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
           ldd --version | head -1' "$BLENDER_APT_SNAPSHOT"
         docker commit blender-setup blender > /dev/null
         docker rm -f blender-setup > /dev/null
