@@ -46,7 +46,7 @@ func pick(at: Vector2) -> bool:
 func _hover(at: Vector2) -> void:
 	var view: SurveyView = _view_at(at)
 	for each: SurveyView in _views():
-		each.quest_hover().hovered = each.quest_at(_on(each, at)) if each == view else ""
+		each.quest_hover().pointer = _on(each, at) if each == view else Vector2.INF
 
 
 ## The Surveys the pointer can rest on: the one in the menu's Survey tab while the menu is open,

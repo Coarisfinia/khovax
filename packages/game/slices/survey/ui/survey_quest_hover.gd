@@ -15,18 +15,24 @@ const WIDTH_FONTS: float = 15.0
 ## The room between the card and the arrow, in pixels.
 const GAP: float = 4.0
 
-## The key in SurveyView.quest_targets of the grey arrow the pointer rests on, or "".
+## Where the pointer rests on the Survey, in its own pixels, as SurveyQuestPicker last saw it; not
+## finite while it's elsewhere.
+var pointer: Vector2 = Vector2.INF
+## The key in SurveyView.quest_targets of the grey arrow under `pointer`, or "": worked out anew
+## each frame, so a Survey that glides or zooms under a resting pointer drops the card.
 var hovered: String = ""
 ## The card shown, or null while none is.
 var card: QuestCard = null
 
 
-## Shows the card of the arrow `hovered`, or none when it's no grey arrow the Survey shows.
+## Shows the card of the grey arrow under `pointer`, or none when there's none.
 func show_state() -> void:
 	var survey: SurveyView = get_parent() as SurveyView
 	var quests: QuestTracker = null
+	hovered = ""
 	if survey != null and survey.quest_keeper != null:
 		quests = survey.quest_keeper.quests()
+		hovered = survey.quest_at(pointer) if pointer.is_finite() else ""
 	var shown: bool = quests != null and survey.quest_targets.has(hovered)
 	shown = shown and not survey.focused_quest().arrows.has(hovered)
 	var step: QuestStep = null

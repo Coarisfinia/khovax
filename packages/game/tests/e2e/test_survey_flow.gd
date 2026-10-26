@@ -558,7 +558,13 @@ func _survey_picks(survey: SurveyView, quests: QuestTracker, id: String) -> Stri
 			or card.name_label().text != quests.book[quest].shown_name()
 			or not Rect2(Vector2.ZERO, survey.size).encloses(card.get_rect())
 			or card.get_rect().intersects(survey.grey_arrow_box(key))):
-		return "resting on %s's grey arrow doesn't show its card beside it: %s" % [id, key]
+		return "resting on %s's grey arrow doesn't show %s's card beside it: %s, card %s, box %s" % [
+			id,
+			key,
+			hover.hovered,
+			card.get_rect() if card != null else Rect2(),
+			survey.grey_arrow_box(key),
+		]
 	var click: InputEventMouseButton = InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
