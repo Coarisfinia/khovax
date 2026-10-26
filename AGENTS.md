@@ -239,8 +239,9 @@ background; only wait in the foreground for a result the very next step needs.
   the owner's approval (or CodeRabbit's low-risk approval, which counts as it, below), never
   enable auto-merge. **If it doesn't merge** although the PR is
   approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
-  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The approval stays valid through
-  later pushes (owner's rule), so check the comments again before enabling auto-merge after a fix.
+  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The owner's approval stays valid
+  through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
+  fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below).
 - **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
@@ -638,7 +639,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
   #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
   approval fills the "protect main" ruleset's required review. An agent may queue on it only when
-  all of these hold, read from CodeRabbit's summary comment (its issue comment on the pull request):
+  all of these hold, read from CodeRabbit's newest summary comment (its issue comment on the pull
+  request that carries the risk) and its reviews:
+  - CodeRabbit's latest review is **APPROVED** (not CHANGES_REQUESTED or a comment);
   - its **Merge Risk** is **Minimal** or **Low**;
   - where it gives a **Security architecture risk**, that is Minimal or Low too;
   - the assessment covers the pull request's **head commit**: `coveredCommitId` in its
@@ -647,17 +650,22 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   - the owner hasn't asked for changes or left a comment still unanswered: the owner's comments
     and change requests always win.
 
-  Anything higher, or no assessment of the head commit, needs the owner's own approval. A pull
-  request that changes these rules needs it too. This prints the merge risk, the security risk
-  (`none` when not given) and the assessed commit:
+  Anything higher, no assessment of the head commit, or conflicting ones, needs the owner's own
+  approval. So does every pull request that changes this rule or the merge rules around it in this
+  file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
+  This prints the newest assessment's merge risk, security risk (`none` when not given) and
+  assessed commit, then the head commit and CodeRabbit's latest review:
 
   ```sh
-  agent-gh api "repos/Coarisfinia/khovax/issues/<n>/comments?per_page=100" --paginate --jq '.[]
-    | select(.user.login == "coderabbitai[bot]") | .body | select(contains("final_review_risk_coverage"))
+  agent-gh api "repos/Coarisfinia/khovax/issues/<n>/comments?per_page=100" --paginate | jq -rs 'add
+    | [.[] | select(.user.login == "coderabbitai[bot]" and (.body | contains("final_review_risk_coverage")))]
+    | sort_by(.updated_at) | last | .body
     | [(capture("final_review_risk_label\\s*\\*\\*Merge Risk:\\*\\* \\*\\*\\S+ (?<r>[A-Za-z]+)\\*\\*").r),
        ((capture("architecture_review_label[^>]*Security architecture risk:\\*\\* \\*\\*\\S+ (?<s>[A-Za-z]+)\\*\\*").s) // "none"),
        (capture("final_review_risk_coverage:(?<c>\\{[^}]*\\})").c | fromjson | .coveredCommitId)] | join(" ")'
   agent-gh pr view <n> --json headRefOid --jq .headRefOid
+  agent-gh api "repos/Coarisfinia/khovax/pulls/<n>/reviews?per_page=100" --paginate | jq -rs 'add
+    | [.[] | select(.user.login == "coderabbitai[bot]")] | last | "\(.state) \(.commit_id)"'
   ```
 
   CodeRabbit's Triage rule "Merge low-risk changes" (in its app, not `.coderabbit.yml`) may queue
