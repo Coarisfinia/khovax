@@ -68,8 +68,8 @@ static func book_of(content: QuestContent) -> Dictionary[String, QuestDefinition
 	return book
 
 
-func migrate(data: Dictionary, format: int) -> void:
-	QuestSave.migrate(data, format)
+func migrate(data: Dictionary, changes: Array[String]) -> void:
+	QuestSave.migrate(data, changes)
 
 
 func read(data: Dictionary) -> String:

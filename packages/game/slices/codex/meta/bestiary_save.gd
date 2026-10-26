@@ -3,10 +3,10 @@ extends RefCounted
 ## The player's bestiary's part of the profile's save (#1173): what they've learned about each
 ## species (`bestiary`), kept in the profile's file by BestiaryKeeper, its companion. Ids and
 ## integers only, every value checked as it's read, and brought up to date from older formats at
-## the profile's save format (ProfileSave.FORMAT), like the quests' part (QuestSave).
+## the profile's format changes (ProfileSave.CHANGES), like the quests' part (QuestSave).
 
-## The save format that brought the bestiary: older saves start with an empty one.
-const SINCE_FORMAT: int = 17
+## The profile's format change that brought the bestiary: older saves start with an empty one.
+const SINCE: String = "1173-bestiary"
 const KEY: String = "bestiary"
 
 
@@ -21,10 +21,11 @@ static func beside(bestiary: Bestiary) -> Dictionary:
 	return { KEY: by_id }
 
 
-## Brings the save `data`, in save format `format`, up to the current one.
-static func migrate(data: Dictionary, format: int) -> void:
-	# Format 16 to 17: the player has learned nothing about any species yet (#1173).
-	if format < SINCE_FORMAT:
+## Brings the save `data`, written with the profile's format changes `changes`, up to the current
+## format.
+static func migrate(data: Dictionary, changes: Array[String]) -> void:
+	# The player has learned nothing about any species yet (#1173).
+	if not changes.has(SINCE):
 		data[KEY] = {}
 
 

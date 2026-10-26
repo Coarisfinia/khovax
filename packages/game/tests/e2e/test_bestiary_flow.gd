@@ -165,7 +165,9 @@ func _check_refused() -> String:
 	keeper.bestiary.learn("ombulumo", Bestiary.KNOWN, "")
 	var text: String = ProfileSave.to_text(Profile.new(), [keeper])
 	var old: Dictionary = JSON.parse_string(text)
-	old["format"] = BestiarySave.SINCE_FORMAT - 1
+	# Written before the bestiary's format change (#801).
+	var changes: Array = old[FormatChanges.KEY]
+	changes.erase(BestiarySave.SINCE)
 	var _dropped: bool = old.erase(BestiarySave.KEY)
 	var problem: String = ProfileSave.parse(JSON.stringify(old), [keeper]).problem
 	var learned: int = keeper.bestiary.levels.size()

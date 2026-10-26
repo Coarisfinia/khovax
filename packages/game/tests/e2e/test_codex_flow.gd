@@ -255,7 +255,10 @@ static func _refuse_malformed() -> String:
 		if keeper.read({ CodexKeeper.KEY: met }).is_empty():
 			result = "names met %s were read" % [met]
 	var older: Dictionary = {}
-	keeper.migrate(older, CodexKeeper.SINCE_FORMAT - 1)
+	# A save written before the book's format change (#801).
+	var numbered: Array[String] = ProfileSave.NUMBERED
+	var before: Array[String] = numbered.slice(0, numbered.find(CodexKeeper.SINCE))
+	keeper.migrate(older, before)
 	if result.is_empty() and (not keeper.read(older).is_empty() or not keeper.met.is_empty()):
 		result = "an older save didn't start with no names met"
 	keeper.free()
