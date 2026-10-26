@@ -139,6 +139,7 @@ func run(_tree: SceneTree) -> String:
 		_check_prey_escapes,
 		_check_prey_asleep_or_enraged,
 		_check_hunt_spares_stronger,
+		_check_hunt_picks_nearest,
 		_check_hunt_given_up,
 		_check_hunt_saved,
 		_check_content_hunters,
@@ -898,6 +899,39 @@ func _check_hunt_spares_stronger() -> String:
 		roamed = roamed or tile != home
 	if not roamed:
 		return "the predator didn't roam in its hunt hours"
+	return ""
+
+
+## Of two prey in sight, the predator goes for the nearer one, whichever comes first by id; of two
+## equally near, for the one with the lower id (#1335).
+func _check_hunt_picks_nearest() -> String:
+	var cases: Array[Dictionary] = [
+		{ "hun": Vector2i(-2, 0), "gra": Vector2i(2, 0), "wea": Vector2i(0, 0) },
+		{ "hun": Vector2i(-2, 0), "gra": Vector2i(0, 0), "wea": Vector2i(-2, 2) },
+	]
+	for spots: Dictionary in cases:
+		var typed: Dictionary[String, Vector2i] = {}
+		typed.assign(spots)
+		var state: GameState = _hunt_state(typed)
+		var hunter: int = _monster_of(state, "hun")
+		var tile: Vector2i = state.entity(hunter).tile
+		var expected: int = 0
+		var gap: int = HuntFeature.SIGHT + 1
+		for species: String in ["gra", "wea"]:
+			var monster: int = _monster_of(state, species)
+			var distance: int = Hex.distance(state.entity(monster).tile, tile)
+			if distance < gap or (distance == gap and monster < expected):
+				expected = monster
+				gap = distance
+		_to_hunt_hours(state, hunter)
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+		var chosen: int = (state.feature(HuntFeature.ID) as HuntFeature).prey.get(hunter, 0)
+		if chosen != expected:
+			return "with prey at %s, the predator went for %d, not the nearest, %d" % [
+				spots,
+				chosen,
+				expected,
+			]
 	return ""
 
 
