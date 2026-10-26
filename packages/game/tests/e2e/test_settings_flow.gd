@@ -810,7 +810,8 @@ func _menu_on_screens(menu: GameMenu) -> String:
 	return _menu_credits(menu)
 
 
-## The Credits tab (#462) shows every pack CREDITS.md credits, each heading in bold, with its
+## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's
+## export alone stamps), then shows every pack CREDITS.md credits, each heading in bold, with its
 ## fields' names in bold and no Markdown marks or repository paths left over.
 func _menu_credits(menu: GameMenu) -> String:
 	var tab: CreditsTab = menu.find_child("Credits", true, false) as CreditsTab
@@ -818,6 +819,8 @@ func _menu_credits(menu: GameMenu) -> String:
 	if not tab.bbcode_enabled or tab.focus_mode != Control.FOCUS_ALL:
 		return "the Credits tab's scene doesn't render BBCode or take the focus"
 	var shown: String = tab.text
+	if not shown.begins_with("[b]Version:[/b] " + CreditsTab.LOCAL_BUILD + "\n"):
+		return "the Credits tab doesn't name the build's version first: " + shown.left(80)
 	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
 	for line: String in markdown.split("\n"):
 		var heading: String = CreditsTab.to_bbcode(line).strip_edges()

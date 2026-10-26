@@ -32,14 +32,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: "🏷️ Check the tag matches the game's version"
-        # The version is read from [application] only, and must be a plain x.y.z.
+      - name: "🏷️ Check the tag matches the game's version, and stamp it into the builds"
+        # The version is read from [application] only, and must be a plain x.y.z. The builds carry
+        # the tag in their own setting, as ci.yml's export job stamps a dev build's (#744).
         run: |
           version=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/version="/ { print $2 }' project.godot)
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
             echo "::error::tag ${GITHUB_REF_NAME} doesn't match config/version \"${version}\" (x.y.z) in project.godot"
             exit 1
           fi
+          printf '\n[khovax]\n\nbuild_version="%s"\n' "$GITHUB_REF_NAME" >> project.godot
 
       - name: "🧰 Install uv (the Python tooling's runner)"
         run: |

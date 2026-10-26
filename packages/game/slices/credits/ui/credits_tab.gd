@@ -5,7 +5,8 @@ extends RichTextLabel
 ## shown where players can see it, as CC BY asks (#461). It shows each pack's heading and fields,
 ## but not the file's own note on how it's made nor the repository paths. It scrolls itself, with
 ## touch, a wheel, the keys or a controller once focused. Its look and layout live in its scene,
-## credits_tab.tscn (#437): this script keeps only what it does.
+## credits_tab.tscn (#437): this script keeps only what it does. Above the credits it names the
+## build's version (#744), so a player reporting a bug can say which build they play.
 
 const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
@@ -14,11 +15,23 @@ const FILES: String = "- **Files:**"
 ## What starts a pack's field.
 const FIELD: String = "- **"
 const UNREADABLE: String = "The credits couldn't be read."
+## The setting CI stamps the build's version into (ci.yml's export job, release.yml), its own
+## rather than config/version, which Godot wants as plain numbers for Windows and Android (#744).
+const VERSION_SETTING: String = "khovax/build_version"
+## The version a build CI didn't make shows: one run from the editor or a local export.
+const LOCAL_BUILD: String = "local build"
 
 
 func _ready() -> void:
 	var markdown: String = FileAccess.get_file_as_string(PATH)
-	text = to_bbcode(markdown) if not markdown.is_empty() else UNREADABLE
+	var credits: String = to_bbcode(markdown) if not markdown.is_empty() else UNREADABLE
+	text = "[b]Version:[/b] %s\n%s" % [version(), credits]
+
+
+## The build's version, as CI stamped it: v<next>-dev.<run> for a dev build, the tag for a
+## release, or LOCAL_BUILD.
+static func version() -> String:
+	return str(ProjectSettings.get_setting(VERSION_SETTING, LOCAL_BUILD))
 
 
 ## CREDITS.md's packs as BBCode: a bold heading each, then its fields as bullets with their bold
