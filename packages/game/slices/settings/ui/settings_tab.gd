@@ -19,9 +19,10 @@ const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-le
 const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
 const PREVIOUS_TIP: String = "Previous choice"
 const NEXT_TIP: String = "Next choice"
-## The submenus, in the order the list shows them. The difficulty's rows, the world's own (#1315),
-## come from the menu (`add_row`).
+## The submenus, in the order the list shows them. The difficulty's and the world's rows, the
+## world's own settings (#1315, #1316), come from the menu (`add_row`).
 const DIFFICULTY: String = "Difficulty"
+const WORLD: String = "World"
 const GRAPHICS: String = "Graphics"
 const INTERFACE: String = "Interface"
 const GAME: String = "Game"
@@ -60,7 +61,7 @@ var _open: String = LIST
 
 
 func _ready() -> void:
-	for submenu: String in [DIFFICULTY, GRAPHICS, INTERFACE, GAME]:
+	for submenu: String in [DIFFICULTY, WORLD, GRAPHICS, INTERFACE, GAME]:
 		_add_submenu(submenu)
 	readme_button = GameMenu.button(README_TEXT, open_readme)
 	_list.add_child(readme_button)

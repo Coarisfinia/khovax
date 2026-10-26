@@ -14,6 +14,11 @@ extends RefCounted
 ## (their steps and strikes come that much more often) and the ring's power against them (divided by
 ## it). A ring already sealing keeps the power it was drawn with, and the seal time it worked out
 ## then; the monsters inside push at the difficulty of each tick.
+##
+## The world settings (#1316) are apart from the difficulty, which never changes them: the drop rate
+## scales how many loot rolls a domination, a harvest, a chest or loot on the ground gives, and the
+## instance reset delay is how long an instance nobody is in stays loaded before it's purged
+## (World, through BlueprintSource).
 
 ## The slot of the host, the player whose world it is.
 const HOST: int = 0
@@ -27,11 +32,24 @@ const EASY: int = 700
 const STANDARD: int = Fixed.ONE
 const HARD: int = 1300
 const DIFFICULTIES: Array[int] = [EASY, STANDARD, HARD]
+## The drop rate's key, and its choices: a factor on the loot rolls, in thousandths (owner, #1316).
+const DROP_RATE: String = "drop_rate"
+const DROP_RATES: Array[int] = [500, STANDARD, 1500, 2000]
+## The instance reset delay's key, and its choices in minutes of play (owner, #1316); Tuning's is
+## the default.
+const RESET_DELAY: String = "reset_delay"
+const RESET_DELAYS: Array[int] = [15, 30, 60, 120, 240]
 ## Each setting's choices, by its key: a request for any other is refused.
-const CHOICES: Dictionary[String, Array] = { DIFFICULTY: DIFFICULTIES }
+const CHOICES: Dictionary[String, Array] = {
+	DIFFICULTY: DIFFICULTIES,
+	DROP_RATE: DROP_RATES,
+	RESET_DELAY: RESET_DELAYS,
+}
 ## Each setting's code in a request's data (`request_data`), by its key; never changed once
 ## shipped. The data is the code times CODE_SPAN plus the choice.
-const CODES: Dictionary[String, int] = { DIFFICULTY: 1 }
+const CODES: Dictionary[String, int] = { DIFFICULTY: 1, DROP_RATE: 2, RESET_DELAY: 3 }
+## The ticks of a minute of play.
+const MINUTE_TICKS: int = 60 * Simulation.TICKS_PER_SECOND
 const CODE_SPAN: int = 1_000_000
 
 
@@ -49,7 +67,9 @@ static func chosen(entry: Dictionary, setting: String) -> int:
 
 
 ## The choice `setting` has while the host chose none.
-static func default_of(_setting: String) -> int:
+static func default_of(setting: String) -> int:
+	if setting == RESET_DELAY:
+		return Fixed.div_floor(Tuning.INSTANCE_RESET_TICKS, MINUTE_TICKS)
 	return STANDARD
 
 
@@ -70,6 +90,21 @@ static func setting_of(data: int) -> String:
 ## The choice a request's `data` sets its setting to.
 static func value_of(data: int) -> int:
 	return data - Fixed.div_floor(data, CODE_SPAN) * CODE_SPAN
+
+
+## `rolls` loot rolls at the drop rate of `state`, rounded down, but at least one where there
+## were any.
+static func drops(state: GameState, rolls: int) -> int:
+	if rolls <= 0:
+		return rolls
+	var rate: int = chosen(state.stored(HOST, FEATURE_ID), DROP_RATE)
+	return maxi(Fixed.scale(rolls, rate), 1)
+
+
+## How many ticks an instance nobody is in stays loaded, by the host's world store `host`: their
+## reset delay.
+static func reset_ticks(host: PlayerStore) -> int:
+	return chosen(host.stored(FEATURE_ID), RESET_DELAY) * MINUTE_TICKS
 
 
 ## A wild monster's `strength` at the difficulty of `state`.

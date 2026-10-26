@@ -4,7 +4,9 @@ extends RefCounted
 ## the kind is acknowledged and changes nothing, and so is a choice there is none of. The difficulty
 ## (#1315): Standard plays Tuning's numbers as they are; Easy makes the wild monsters weaker by
 ## ×0.70 and Hard stronger by ×1.30: their strength, the damage they take (their HP), their pace and
-## the ring's power against them.
+## the ring's power against them. The world settings (#1316), which the difficulty leaves alone:
+## the drop rate scales the loot rolls, at least one where there were any, and the instance reset
+## delay is how long the world keeps an instance nobody is in.
 
 ## A species the flow makes up, with round numbers.
 const BEAST: String = "test_beast"
@@ -40,6 +42,35 @@ func run(_tree: SceneTree) -> String:
 	Simulation.step(state, [hard, null])
 	if HostSettings.difficulty(state) != HostSettings.STANDARD:
 		return "a request sent again was applied twice"
+	return _check_drops(state)
+
+
+## The drop rate halves and doubles the loot rolls, never below one where there were any; the
+## difficulty doesn't change them.
+func _check_drops(state: GameState) -> String:
+	var _asked: Array[RefCounted] = _ask(state, 0, HostSettings.HARD)
+	var rolls: Array[int] = [HostSettings.drops(state, 0), HostSettings.drops(state, 3)]
+	_asked = _ask_for(state, HostSettings.DROP_RATE, 500)
+	rolls.append_array([HostSettings.drops(state, 1), HostSettings.drops(state, 3)])
+	_asked = _ask_for(state, HostSettings.DROP_RATE, 2000)
+	rolls.append_array([HostSettings.drops(state, 0), HostSettings.drops(state, 3)])
+	if rolls != [0, 3, 1, 1, 0, 6] or HostSettings.difficulty(state) != HostSettings.HARD:
+		return "the drop rate gives rolls %s, or changed the difficulty" % [rolls]
+	return _check_reset_delay()
+
+
+## A fresh world keeps an instance nobody is in for Tuning's delay; once the host chooses 15
+## minutes, for 15 minutes.
+func _check_reset_delay() -> String:
+	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.BASIC)
+	var before: int = world.purge_ticks()
+	world.step([_command_for(0, HostSettings.RESET_DELAY, 15)])
+	var after: int = world.purge_ticks()
+	if before != World.PURGE_TICKS or after != 15 * 60 * Simulation.TICKS_PER_SECOND:
+		return "the world keeps a left instance %d ticks, then %d after 15 minutes" % [
+			before,
+			after,
+		]
 	return ""
 
 
@@ -95,10 +126,23 @@ func _ask(state: GameState, slot: int, value: int) -> Array[RefCounted]:
 	return state.events
 
 
+## Steps `state` one tick with the host asking for `setting` to be `value`; returns the tick's
+## events.
+func _ask_for(state: GameState, setting: String, value: int) -> Array[RefCounted]:
+	Simulation.step(state, [_command_for(0, setting, value), null])
+	return state.events
+
+
 ## A command of the player in `slot` carrying a new request from their outbox for the difficulty
 ## `value`.
 func _command(slot: int, value: int) -> Command:
-	var data: int = HostSettings.request_data(HostSettings.DIFFICULTY, value)
+	return _command_for(slot, HostSettings.DIFFICULTY, value)
+
+
+## A command of the player in `slot` carrying a new request from their outbox for `setting` to be
+## `value`.
+func _command_for(slot: int, setting: String, value: int) -> Command:
+	var data: int = HostSettings.request_data(setting, value)
 	var command: Command = Command.new()
 	_outboxes[slot].post(OutboxEntry.HOST_SETTING, data).fill(command)
 	return command

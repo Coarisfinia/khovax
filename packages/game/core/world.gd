@@ -2,7 +2,7 @@ class_name World
 extends RefCounted
 ## The world (#139, #148): every instance it has loaded, by blueprint name, each a GameState of
 ## its own. Each tick it steps every instance a player is in, in name order, and leaves the others
-## loaded but still, until one has been left behind for PURGE_TICKS: then it is purged (#212).
+## loaded but still, until one has been left behind for `purge_ticks`: then it is purged (#212).
 ## Every instance's seed comes from the world's seed, its name and its generation, which goes up
 ## with each purge, so the same world loads the same instance the same way however and whenever
 ## it's reached, and a purged one comes back arranged anew. There are no runs (#183): the players
@@ -15,8 +15,9 @@ extends RefCounted
 ## each blueprint's variant and which named events set and replace (WorldFlags, #541, #638).
 ## Deterministic, like everything in core/.
 
-## How long an instance nobody is in stays loaded (#212), counted in the world's ticks, which only
-## pass while the game is played, never while it's closed. Its number is in Tuning (#1309).
+## How long an instance nobody is in stays loaded by default (#212), counted in the world's ticks,
+## which only pass while the game is played, never while it's closed. Its number is in Tuning
+## (#1309); the host can choose another (`purge_ticks`, #1316).
 const PURGE_TICKS: int = Tuning.INSTANCE_RESET_TICKS
 
 ## The world's seed, which every instance's own seed is drawn from.
@@ -94,6 +95,12 @@ func seed_for(instance_name: String) -> int:
 	for _purged: int in generation(instance_name):
 		drawn = stream.next_u32()
 	return drawn
+
+
+## How long an instance nobody is in stays loaded now: the host's reset delay (#1316), which its
+## source reads from the world stores, or PURGE_TICKS.
+func purge_ticks() -> int:
+	return source.reset_ticks(stores) if source != null else PURGE_TICKS
 
 
 ## How often the instance of `instance_name` has been purged (#212).
@@ -252,7 +259,7 @@ func _hand_changed_ground(stepped: Array[String]) -> void:
 
 ## Notes when each instance was left behind, and purges every one nobody is in that a flag
 ## outdated (#529; the starting instance too, #727), and every one but the starting instance that
-## nobody has been in for PURGE_TICKS (#212).
+## nobody has been in for `purge_ticks` (#212).
 ## Anyone entering it before then resets the count. Each instance is purged at most once a tick.
 func _purge_left_behind() -> void:
 	for instance_name: String in sorted_names():
@@ -262,7 +269,7 @@ func _purge_left_behind() -> void:
 			_purge(instance_name)
 		elif not left_at.has(instance_name):
 			left_at[instance_name] = tick
-		elif instance_name != start_name and tick - left_at[instance_name] >= PURGE_TICKS:
+		elif instance_name != start_name and tick - left_at[instance_name] >= purge_ticks():
 			_purge(instance_name)
 
 

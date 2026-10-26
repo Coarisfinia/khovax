@@ -34,7 +34,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			continue
 		var loot: Dictionary[int, Dictionary] = {}
 		for slot: int in GameState.MAX_PLAYERS:
-			var rolls: int = rolls_for(dominated, slot)
+			var rolls: int = HostSettings.drops(state, rolls_for(dominated, slot))
 			if rolls > 0:
 				loot[slot] = roll_species(dominated.species, rolls)
 		if not loot.is_empty():

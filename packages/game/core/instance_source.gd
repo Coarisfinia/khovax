@@ -42,6 +42,12 @@ func create(
 	return null
 
 
+## How many ticks an instance nobody is in stays loaded before it's purged (#212), by the world's
+## player `stores` (#1316: the host chooses it): Tuning's here.
+func reset_ticks(_stores: Array[PlayerStore]) -> int:
+	return Tuning.INSTANCE_RESET_TICKS
+
+
 ## The region of the named instance's `variant` for `seed_value`, without loading the instance;
 ## its `problem` says what's wrong.
 func region_of(instance_name: String, _seed_value: int, _variant: String) -> Region:

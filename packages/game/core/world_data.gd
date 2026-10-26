@@ -138,7 +138,9 @@ static func _load_state(world: World, entry: DataReader) -> void:
 	var left: int = entry.whole("left_at", -1, world.tick)
 	if World.has_player(loaded) != (left < 0):
 		entry.fail("instance %s's left_at %d doesn't fit who is in it" % [instance_name, left])
-	elif left >= 0 and instance_name != world.start_name and world.tick - left >= World.PURGE_TICKS:
+	elif (left >= 0
+			and instance_name != world.start_name
+			and world.tick - left >= world.purge_ticks()):
 		entry.fail("instance %s was left behind long enough to be purged" % instance_name)
 	elif left >= 0:
 		world.left_at[instance_name] = left

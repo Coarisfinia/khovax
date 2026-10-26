@@ -121,5 +121,5 @@ func _roll_for_players(state: GameState, rolled: LootTable) -> Dictionary[int, D
 	for slot: int in GameState.MAX_PLAYERS:
 		if state.player(slot) == null:
 			continue
-		loot[slot] = rolled.roll_times(_rng, ROLLS_PER_PLAYER, null)
+		loot[slot] = rolled.roll_times(_rng, HostSettings.drops(state, ROLLS_PER_PLAYER), null)
 	return loot

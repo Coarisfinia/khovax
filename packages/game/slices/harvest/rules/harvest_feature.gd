@@ -45,7 +45,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		var loot: Dictionary[int, Dictionary] = {}
 		for slot: int in GameState.MAX_PLAYERS:
 			if state.player(slot) != null:
-				loot[slot] = roll_species(species, ROLLS_PER_PLAYER)
+				loot[slot] = roll_species(species, HostSettings.drops(state, ROLLS_PER_PLAYER))
 		state.events.append(_dropped(state, struck.monster_id, species, loot))
 
 

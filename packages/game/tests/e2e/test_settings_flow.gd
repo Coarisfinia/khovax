@@ -174,13 +174,20 @@ func _open_menu(menu: GameMenu) -> String:
 		DamageNumbersChoice.SIZE_SETTING,
 		GameMenu.PAUSE_SETTING,
 		HostSettings.DIFFICULTY,
+		HostSettings.DROP_RATE,
+		HostSettings.RESET_DELAY,
 	]
 	if listed != settings:
 		return "the Settings tab lists %s, not every setting" % [listed]
-	# The difficulty has no Auto: the world starts at Standard (#1315).
-	if shown[HostSettings.DIFFICULTY] != "Standard":
-		return "the difficulty isn't Standard at first: %s" % shown[HostSettings.DIFFICULTY]
-	for setting: String in settings.slice(0, -1):
+	# The world's settings have no Auto: the world starts at Standard (#1315, #1316).
+	var hosts: Array[String] = [
+		shown[HostSettings.DIFFICULTY],
+		shown[HostSettings.DROP_RATE],
+		shown[HostSettings.RESET_DELAY],
+	]
+	if hosts != ["Standard", "Standard (100%)", "Standard (1 hour)"]:
+		return "the world's settings aren't Standard at first: %s" % [hosts]
+	for setting: String in settings.slice(0, -3):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
@@ -585,6 +592,8 @@ func _menu_submenus(menu: GameMenu) -> String:
 		DamageNumbersChoice.SIZE_SETTING: SettingsTab.INTERFACE,
 		GameMenu.PAUSE_SETTING: SettingsTab.GAME,
 		HostSettings.DIFFICULTY: SettingsTab.DIFFICULTY,
+		HostSettings.DROP_RATE: SettingsTab.WORLD,
+		HostSettings.RESET_DELAY: SettingsTab.WORLD,
 	}
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
