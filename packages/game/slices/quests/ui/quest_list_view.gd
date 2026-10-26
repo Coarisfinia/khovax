@@ -236,8 +236,7 @@ func _lay_out(glide: float) -> void:
 		var card: QuestCard = cards[id]
 		if font_changed:
 			card.fit(font)
-		card.custom_minimum_size.x = width
-		card.size = Vector2(width, 0.0)
+		card.lay_out(width)
 		card.position = card.position.lerp(Vector2(0.0, y), glide)
 		y += card.size.y + GAP
 

@@ -234,6 +234,12 @@ func _follow() -> void:
 	if pinch != null:
 		pinch.let_go()
 		pinch.in_menu = survey_tab.view if _open else null
+	# The pointer that rested on the tab's Survey is gone with it (#1298): a reopened menu shows no
+	# quest card until the pointer moves onto an arrow again.
+	if not _open and survey_tab != null and survey_tab.view != null:
+		var hover: SurveyQuestHover = survey_tab.view.quest_hover()
+		hover.pointer = Vector2.INF
+		hover.show_state()
 
 
 ## The sheet: the tabs over the whole screen, `more_tabs` after the gameplay ones, and the button
