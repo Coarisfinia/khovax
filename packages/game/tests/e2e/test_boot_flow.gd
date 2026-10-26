@@ -1065,7 +1065,7 @@ func _check_toon_look(main: Node) -> String:
 
 ## The day and night look (#1247): the main scene's Daylight lights the instance by the hour of the
 ## world's one clock, in its realm's colours by day and at night, and keeps the playground, which no
-## realm draws, always lit.
+## realm draws, always lit; the fog's cloud with it (#1360).
 func _check_daylight(main: Node) -> String:
 	var daylight: Daylight = main.get_node_or_null("Daylight") as Daylight
 	if daylight == null or daylight.world_environment.environment == null:
@@ -1073,6 +1073,11 @@ func _check_daylight(main: Node) -> String:
 	daylight._process(0.0)
 	if daylight.sun.light_color != Daylight.UNREALMED_LIGHT:
 		return "the playground isn't always lit"
+	var cloud: ShaderMaterial = daylight.cloud.material_override as ShaderMaterial
+	var tint: Color = cloud.get_shader_parameter("daylight")
+	if (daylight.cloud != main.get_node("Instance/FogCloud")
+			or not tint.is_equal_approx(Color.WHITE)):
+		return "the fog's cloud isn't seen in the playground's light (#1360)"
 	var realm: Realm = Realms.holding(FlowSteps.GLADE)
 	var noon: float = float((12 - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
 	var midnight: float = float((DayClock.HOURS - DayClock.DAWN) * DayClock.TICKS_PER_HOUR)
@@ -1086,6 +1091,12 @@ func _check_daylight(main: Node) -> String:
 	for index: int in looks.size():
 		if not looks[index].is_equal_approx(TileLooks.rgb(colors[index])):
 			return "the glade's realm shows %s, not its colours by day and at night" % [looks]
+	# The unshaded cloud dims at night with the realm's light (#1360).
+	var night_cloud: Color = Daylight.cloud_light(looks[2], looks[3])
+	if night_cloud.v >= 1.0 or not Daylight.cloud_light(looks[0], looks[1]).is_equal_approx(
+		Color.WHITE
+	):
+		return "the fog's cloud doesn't dim at night, or isn't white by day (#1360)"
 	var half_past_dusk: float = (DayClock.DUSK - DayClock.DAWN + 0.5) * DayClock.TICKS_PER_HOUR
 	if (Daylight.day_share(0.0) != 1.0
 			or not is_equal_approx(Daylight.day_share(half_past_dusk), 0.5)):

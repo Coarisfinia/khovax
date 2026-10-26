@@ -6,7 +6,9 @@ extends Node
 ## Only the look is the realm's own, from its file (Realm.day_light and the rest): a realm whose
 ## day and night look alike hides the hour, though its monsters still keep it. Dawn and dusk blend
 ## over TWILIGHT_HOURS: the hour before dawn brightens into day, the hour after dusk darkens into
-## night. Presentation only: it reads the state and never writes it.
+## night. The fog's cloud, drawn unshaded, is tinted by the sun's and the ambient light together
+## (#1360), so it dims with the night too. Presentation only: it reads the state and never writes
+## it.
 
 ## How many hours dawn and dusk take to blend one look into the other.
 const TWILIGHT_HOURS: float = 1.0
@@ -17,6 +19,7 @@ const UNREALMED_AMBIENCE: Color = Color.BLACK
 @export var driver: Session
 @export var sun: DirectionalLight3D
 @export var world_environment: WorldEnvironment
+@export var cloud: FogCloud
 
 
 func _process(_delta: float) -> void:
@@ -27,6 +30,14 @@ func _process(_delta: float) -> void:
 	var ticks: float = state.world_tick + driver.tick_fraction()
 	sun.light_color = light_of(realm, ticks)
 	world_environment.environment.ambient_light_color = ambience_of(realm, ticks)
+	cloud.light_by(cloud_light(sun.light_color, world_environment.environment.ambient_light_color))
+
+
+## The light the unshaded cloud is seen in under the sun's `light` and the `ambience`: both
+## together, as a lit surface facing the sun gets, at most white.
+static func cloud_light(light: Color, ambience: Color) -> Color:
+	var sum: Color = light + ambience
+	return Color(minf(sum.r, 1.0), minf(sum.g, 1.0), minf(sum.b, 1.0))
 
 
 ## The sun's light in `realm` (null for none) at the world's tick `ticks`.
