@@ -239,6 +239,12 @@ background; only wait in the foreground for a result the very next step needs.
   description what was addressed. Four review rounds is the soft cap.
 - **Every comment gets an answer.** Fix what is asked in one push, then reply saying what changed. If
   a comment needs the owner's decision, say so and leave it open.
+- **A review thread is settled with a reply that starts exactly `Resolved: <reason>`** (owner's
+  rule, #1433): `Resolved: fixed in <sha>, …` or `Resolved: not changing, because …`. That one
+  reply answers the comment and asks for the thread to be resolved, and the project watcher
+  resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
+  included, except one that waits on the owner's decision: that one is answered and left open
+  (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
@@ -651,8 +657,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   GitHub blocks merging while any reviewer's latest review is CHANGES_REQUESTED, even with the
   owner's approval. "protect main" doesn't dismiss reviews on a push, which keeps the owner's
   approval across rebases but keeps CodeRabbit's old change requests too. So:
-  1. Answer or fix every CodeRabbit comment, then resolve its thread with `resolve-review-thread
-     PRRT_<id>` (owner, #1363): only once it is fixed or answered. The unresolved threads' ids:
+  1. Answer or fix every CodeRabbit comment, and settle its thread with a `Resolved: <reason>`
+     reply (above), only once it is fixed or answered. When no watcher runs, resolve it with
+     `resolve-review-thread PRRT_<id>` (owner, #1363). The unresolved threads' ids:
      `agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved}}}}}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id'`.
   2. Rebase when needed.
   3. Once the owner has approved, run `dismiss-stale-coderabbit <n>` (owner, #1390). It dismisses
