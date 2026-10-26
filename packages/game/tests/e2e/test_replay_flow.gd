@@ -346,18 +346,11 @@ func _check_instance_without_trail() -> String:
 ## read it but don't need it still load and step (#884): the basic blueprint's rules on a plain
 ## disc, with a companion, closing a ring and pressing the special and the totem.
 func _check_instance_without_wild_monsters() -> String:
-	var basic: Blueprint = InstanceBlueprints.blueprint(FlowSteps.BASIC)
-	var setup: FeatureSetup = FeatureSetup.new()
-	setup.instance = FlowSteps.BASIC
-	setup.region = Region.disc(RADIUS)
-	setup.wild_species = basic.wild_species
-	var listed: Array[String] = basic.features.duplicate()
-	listed.append_array(RegionFeatures.of(setup.region))
-	if listed.has(WildMonsterFeature.ID):
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, Region.disc(RADIUS), 42)
+	if state == null:
+		return "an instance without wild monsters doesn't load"
+	if state.feature(WildMonsterFeature.ID) != null:
 		return "a region without wild monster spots brought the wild monsters"
-	var state: GameState = GameState.new(setup.region, 42, FeatureFactories.build(listed, setup))
-	if not state.problem.is_empty():
-		return "an instance without wild monsters doesn't load: " + state.problem
 	FlowSteps.carry(state, 0, ["ombulumo"])
 	var _player: Entity = state.add_entity(0, START)
 	var _events: Array[RefCounted] = FlowSteps.walk(state, FlowSteps.BASIC_RING)
