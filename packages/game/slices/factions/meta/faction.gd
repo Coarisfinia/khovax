@@ -27,6 +27,9 @@ var territory: Array[String] = []
 ## The factions it is an enemy of, by id, each once (#1310); FactionContent checks that each is a
 ## faction naming it back.
 var enemies: Array[String] = []
+## Whether it stays allied with the player until the postgame once they've joined it (#1324): their
+## standing with it never drops below the first rank (Standings.align). It is no faction's enemy.
+var allied_until_postgame: bool = false
 ## Its codex entry (#959): a short text about it and where its name comes from.
 var codex_entry: String = ""
 ## What its name means, hand-written (#959), e.g. "the guild of those who chart".
@@ -47,12 +50,20 @@ static func parse(file_id: String, text: String) -> Faction:
 	faction.name = Content.text_of(data.get("name"))
 	faction.symbol = Content.text_of(data.get("symbol"))
 	faction.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
+	var allied: Variant = data.get("allied_until_postgame", false)
+	if faction.problem.is_empty() and not allied is bool:
+		faction.problem = "its allied_until_postgame must be true or false"
+	faction.allied_until_postgame = allied is bool and allied
 	if faction.problem.is_empty():
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
 	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):
 		faction.problem = "its territory must list instance ids, each once"
 	if faction.problem.is_empty() and not faction._read_enemies(data.get("enemies", [])):
 		faction.problem = "its enemies must list faction ids, each once, never its own"
+	if (faction.problem.is_empty()
+			and faction.allied_until_postgame
+			and not faction.enemies.is_empty()):
+		faction.problem = "a faction allied until the postgame has no enemies (#1324)"
 	if faction.problem.is_empty() and not faction._read_codex(data.get("codex")):
 		faction.problem = "it needs a codex entry and gloss (#959)"
 	return faction

@@ -39,10 +39,13 @@ func change(faction: String, by: int) -> String:
 
 ## Moves the standing with `faction` by `by`, as `change` does, and when that gains rank, loses half
 ## the rank gained with each of its enemies (#1310), counting halves in `half_lost`: two halves
-## lost with a faction make one rank. Losing rank costs nothing with its enemies.
+## lost with a faction make one rank. Losing rank costs nothing with its enemies. A faction allied
+## until the postgame (#1324) the player has joined (a rank above neutral) keeps them at its first
+## rank at least; nothing marks the postgame yet (#1333), so that holds for now.
 func align(faction: Faction, by: int) -> void:
 	var before: int = of(faction.id)
-	var _moved: String = change(faction.id, by)
+	var lowest: int = 1 if faction.allied_until_postgame and before >= 1 else LOWEST
+	var _moved: String = change(faction.id, maxi(by, lowest - before))
 	var gained: int = of(faction.id) - before
 	if gained <= 0:
 		return

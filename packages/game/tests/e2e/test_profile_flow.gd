@@ -575,6 +575,23 @@ func _check_alignment() -> String:
 	var loaded: Profile = _parse(_text(profile))
 	if not loaded.problem.is_empty() or loaded.standings.half_lost != half:
 		return "the half rank lost didn't survive saving: %s" % loaded.problem
+	return _check_allied()
+
+
+## A faction allied until the postgame (#1324) can be lowered below neutral before the player joins
+## it, and once they have, never below its first rank, however far a change pushes it.
+func _check_allied() -> String:
+	var standings: Standings = Standings.new()
+	var guild: Faction = Faction.new()
+	guild.id = "guild"
+	guild.allied_until_postgame = true
+	standings.align(guild, -1)
+	if standings.of(guild.id) != -1:
+		return "a faction allied until the postgame, not joined, wasn't lowered"
+	standings.align(guild, 4)
+	standings.align(guild, -(1 << 62))
+	if standings.of(guild.id) != 1:
+		return "a joined faction allied until the postgame dropped below its first rank"
 	return _check_standings_refused()
 
 

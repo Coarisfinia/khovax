@@ -50,6 +50,10 @@
 			"uniqueItems": true,
 			"items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
 		},
+		"allied_until_postgame": {
+			"description": "Whether it stays allied with the player until the postgame once they've joined it (#1324): their standing with it never drops below the first rank. Such a faction is neutral to every other, so it is no faction's enemy and has none.",
+			"type": "boolean"
+		},
 		"ranks_up": {
 			"description": "The ranks' names above neutral, from standing +1 up to +5.",
 			"$ref": "#/$defs/ranks"
