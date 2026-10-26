@@ -1,7 +1,13 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# Keep every other setting from the CodeRabbit UI.
-inheritance: true
 reviews:
-  # CodeRabbit only comments. A CHANGES_REQUESTED review from it blocks the merge
-  # queue until someone dismisses it, even after its findings are fixed or answered.
-  request_changes_workflow: false
+  profile: assertive
+  review_details: true
+  fail_commit_status: true
+  auto_apply_labels: true
+  suggested_reviewers: false
+  slop_detection:
+    include_all_authors: true
+    label: slop
+  auto_approvals:
+    enabled: true
+    max_merge_risk: low

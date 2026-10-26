@@ -43,7 +43,7 @@ ENDINGS: dict[str, str] = {
     ".toml": "the uv project and gdstyle's settings",
     ".lock": "locked dependencies",
     ".ts": "the web e2e (#1041 moves it to Python)",
-    ".yml": "the GitHub Actions workflows and the CodeRabbit config",
+    ".yml": "the GitHub Actions workflows and the CodeRabbit config (kept identical to its organization settings)",
     ".gitignore": "what git leaves untracked",
     ".gitattributes": "how git treats files",
 }
