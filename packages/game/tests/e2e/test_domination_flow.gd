@@ -54,8 +54,9 @@ extends RefCounted
 ## An early wild monster (#1321), one of the starting instance's own species, the first a player
 ## meets, can be dominated by a small ring around it, and defeated by a companion of its kind (the
 ## monster a player carries after their first domination) and its special, within EARLY_SECONDS,
-## on every difficulty the host can choose (#1315): under the starting instance's own rules and
-## its species' own numbers, so a change to either that makes one of them impossible fails here.
+## on every difficulty the host can choose (#1315), its special alone taking EARLY_SPECIALS hits by
+## the difficulty (owner, #1375): under the starting instance's own rules and its species' own
+## numbers, so a change to either that makes one of them impossible fails here.
 ##
 ## A wild monster in a tile that hides (#202), the glade pond's in its shrubs, starts hidden and
 ## jumps out once the player comes next to it, not a step before. A legend can only hide one in a
@@ -91,6 +92,13 @@ const WILD_MONSTER_TILE: Vector2i = Vector2i(-2, 0)
 const MOST_SEAL_TICKS: int = 400
 ## How long the early monster check gives a companion to defeat an early wild monster.
 const EARLY_SECONDS: int = 60
+## How many of its companion's specials an early wild monster takes, by the host's difficulty
+## (owner, #1375).
+const EARLY_SPECIALS: Dictionary[int, int] = {
+	HostSettings.EASY: 2,
+	HostSettings.STANDARD: 3,
+	HostSettings.HARD: 4,
+}
 ## The companion the first player brings into the saved world.
 const COMPANION: String = "ombulumo"
 ## The outcome tests' species, in a disc region of radius OUTCOME_RADIUS: a weak and a strong one,
@@ -1066,6 +1074,8 @@ func _outcome_state(
 func _check_early_monster() -> String:
 	for difficulty: int in HostSettings.DIFFICULTIES:
 		var state: GameState = _early_state(difficulty, false)
+		if HostSettings.difficulty(state) != difficulty:
+			return "the host's request for difficulty %d wasn't taken" % difficulty
 		_close(state, Hex.ring(SMALL_RING).slice(1))
 		var dominated: int = _dominated(_settle(state)).size()
 		if dominated != 1:
@@ -1075,16 +1085,38 @@ func _check_early_monster() -> String:
 			]
 		state = _early_state(difficulty, true)
 		var monster: int = _wild(state).monsters[0]
+		var specials: int = 0
+		var played: int = 0
 		for _tick: int in EARLY_SECONDS * Simulation.TICKS_PER_SECOND:
 			if _wild(state).is_fainted(monster):
 				break
-			Simulation.step(state, _fire())
+			var struck: Array[SpecialStruck] = _specials_in(state, _fire())
+			played += struck.size()
+			if specials == 0 and not struck.is_empty():
+				specials = _specials_to_defeat(state, monster, struck[0].damage)
+		# The specials that hit can be fewer, as the companion's auto strikes help, never more.
+		if specials != EARLY_SPECIALS[difficulty] or played > specials:
+			return "at difficulty %d, an early wild monster takes %d specials (%d hit), not %d" % [
+				difficulty,
+				specials,
+				played,
+				EARLY_SPECIALS[difficulty],
+			]
 		if not _wild(state).is_fainted(monster):
 			return "at difficulty %d, a companion didn't defeat an early wild monster in %d s" % [
 				difficulty,
 				EARLY_SECONDS,
 			]
 	return ""
+
+
+## How many specials dealing `damage` (before the host's difficulty) the wild monster with this id
+## takes from full HP, the special alone: the companion's auto strikes come only when it happens to
+## stand next to it.
+func _specials_to_defeat(state: GameState, monster: int, damage: int) -> int:
+	var taken: int = HostSettings.enemy_damage(state, damage)
+	var full: int = _health(state).max_hp_of(state, monster)
+	return Fixed.div_floor(full + taken - 1, taken)
 
 
 ## A disc under the starting instance's rules with one wild monster of its first species in the
