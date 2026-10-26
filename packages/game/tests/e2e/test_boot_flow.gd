@@ -1114,7 +1114,8 @@ static func _check_lit_by_hour(
 		daylight.light_up(realm, ticks)
 		shown.append(daylight.sun.light_color)
 		shown.append(daylight.world_environment.environment.ambient_light_color)
-		clouds.append(cloud.get_shader_parameter("daylight"))
+		var tint: Color = cloud.get_shader_parameter("daylight")
+		clouds.append(tint)
 	daylight._process(0.0)
 	for index: int in looks.size():
 		if not shown[index].is_equal_approx(looks[index]):
