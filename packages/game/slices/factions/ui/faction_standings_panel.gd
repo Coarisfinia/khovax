@@ -49,7 +49,9 @@ func refresh() -> void:
 		ids.assign(standings.keys())
 		ids.sort()
 		for id: String in ids:
-			lines.append(line_of(id, standings[id]))
+			# A standing moved back to neutral from another start (#1378) is kept, not listed.
+			if standings[id] != 0:
+				lines.append(line_of(id, standings[id]))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines == shown:

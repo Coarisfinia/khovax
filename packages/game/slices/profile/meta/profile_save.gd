@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 22
+const FORMAT: int = 23
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -118,6 +118,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_20,
 		_migrate_to_21,
 		_migrate_to_22,
+		_migrate_to_23,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -295,6 +296,12 @@ static func _migrate_to_22(data: Dictionary) -> void:
 	data["standings_half_lost"] = []
 
 
+## Format 22 to 23: a faction can start off neutral (#1378), so a standing at neutral can be
+## saved, and one at its faction's start never is; no save before held either.
+static func _migrate_to_23(_data: Dictionary) -> void:
+	return
+
+
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
 ## code it maps to.
 static func _recode_territories(data: Dictionary, recoded: Dictionary[int, int]) -> void:
@@ -388,9 +395,9 @@ static func _read_standings(profile: Profile, data: Dictionary) -> String:
 		return "the save lacks its standings"
 	var by_faction: Dictionary = stored
 	for faction: Variant in by_faction:
+		# A standing at its faction's start is never saved, so it is as wrong as one off the scale.
 		var standing: int = _standing(by_faction[faction])
-		# Neutral is never saved, so a 0 is as wrong as a standing out of range.
-		if standing == 0 or not profile.standings.change(str(faction), standing).is_empty():
+		if not profile.standings.restore(str(faction), standing).is_empty():
 			return "the standing with faction %s in the save is invalid" % faction
 	var halves: Variant = data.get("standings_half_lost")
 	var half_lost: Array = halves if halves is Array else [""]
@@ -464,9 +471,9 @@ static func _color(value: Variant) -> int:
 
 
 ## A standing from save data: a whole JSON number from Standings.LOWEST to Standings.HIGHEST;
-## 0, which a save never holds, for anything else.
+## one below the scale, which Standings.restore refuses, for anything else.
 static func _standing(value: Variant) -> int:
-	return JsonNumbers.whole(value, Standings.LOWEST, Standings.HIGHEST, 0)
+	return JsonNumbers.whole(value, Standings.LOWEST, Standings.HIGHEST, Standings.LOWEST - 1)
 
 
 ## A whole JSON number from 0 to Profile.MAX_NUMBER as an integer; -1 for anything else, so a

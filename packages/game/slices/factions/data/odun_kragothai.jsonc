@@ -10,6 +10,8 @@
 		"gloss": "the order of those who bend"
 	},
 	"symbol": "^", // a spearhead (#68)
+	// Every player starts hostile to it, one rank below neutral (owner, B1 on #1310; #1378).
+	"starting_standing": -1,
 	"enemies": ["sorn_lumawenai"],
 	"ranks_up": [
 		"Sworn Initiate",

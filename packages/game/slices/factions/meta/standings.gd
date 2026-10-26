@@ -2,13 +2,14 @@ class_name Standings
 extends RefCounted
 ## The player's standing with each faction (#483, named in #482): how the faction sees them, from
 ## LOWEST to HIGHEST, each step but neutral (0) a rank the faction names itself (Faction.rank_name).
-## Neutral with every faction until something moves it. Part of the profile, saved by ProfileSave.
+## Each faction's starting standing (Faction.starting_standing, #1378) until something moves it:
+## neutral for most. Part of the profile, saved by ProfileSave.
 ## Gaining rank with a faction costs half that gain with each of its enemies (#1310, `align`).
 
 const LOWEST: int = -5
 const HIGHEST: int = 5
 
-## The standing with each faction the player isn't neutral with, by faction id.
+## The standing with each faction where it differs from its start (`start_of`), by faction id.
 var by_faction: Dictionary[String, int] = {}
 ## The factions the player has lost half a rank with and not yet a whole one (#1310): a gain costs
 ## half of it with each enemy, and the half left over waits here until a second half makes a whole
@@ -16,9 +17,28 @@ var by_faction: Dictionary[String, int] = {}
 var half_lost: Array[String] = []
 
 
-## The standing with `faction`: neutral (0) when nothing has moved it.
+## The standing with `faction`: its start (`start_of`) when nothing has moved it.
 func of(faction: String) -> int:
-	return by_faction.get(faction, 0)
+	return by_faction.get(faction, start_of(faction))
+
+
+## The standing every player starts at with `faction` (#1378): its content's starting standing, or
+## neutral (0) for a faction the content doesn't have.
+static func start_of(faction: String) -> int:
+	var known: Faction = FactionContent.cached().factions.get(faction)
+	return known.starting_standing if known != null else 0
+
+
+## Sets the standing with `faction` to `standing` as a save holds it; returns why it can't (the
+## faction's id isn't one, the standing is off the scale, or it is the start, which is never
+## saved), or "", and changes nothing when it can't.
+func restore(faction: String, standing: int) -> String:
+	if not Content.is_id(faction) or standing < LOWEST or standing > HIGHEST:
+		return "faction %s has no valid id, or standing %d is off the scale" % [faction, standing]
+	if standing == start_of(faction):
+		return "the standing with %s is its start, which is never saved" % faction
+	by_faction[faction] = standing
+	return ""
 
 
 ## Moves the standing with `faction` by `by`, held between LOWEST and HIGHEST, so going past an end
@@ -30,8 +50,8 @@ func change(faction: String, by: int) -> String:
 	# Clamped first too, so no change is large enough to overflow.
 	var step: int = clampi(by, LOWEST - HIGHEST, HIGHEST - LOWEST)
 	var standing: int = clampi(of(faction) + step, LOWEST, HIGHEST)
-	if standing == 0:
-		var _neutral: bool = by_faction.erase(faction)
+	if standing == start_of(faction):
+		var _at_start: bool = by_faction.erase(faction)
 	else:
 		by_faction[faction] = standing
 	return ""

@@ -27,6 +27,9 @@ var territory: Array[String] = []
 ## The factions it is an enemy of, by id, each once (#1310); FactionContent checks that each is a
 ## faction naming it back.
 var enemies: Array[String] = []
+## The standing every player starts at with it (#1378), from Standings.LOWEST to
+## Standings.HIGHEST: neutral (0) unless its data says otherwise.
+var starting_standing: int = 0
 ## Whether it stays allied with the player until the postgame once they've joined it (#1324): their
 ## standing with it never drops below the first rank (Standings.align). It is no faction's enemy.
 var allied_until_postgame: bool = false
@@ -54,6 +57,16 @@ static func parse(file_id: String, text: String) -> Faction:
 	if faction.problem.is_empty() and not allied is bool:
 		faction.problem = "its allied_until_postgame must be true or false"
 	faction.allied_until_postgame = allied is bool and allied
+	# Anything but a whole number on the scale reads as one below it, which is refused.
+	var start: Variant = data.get("starting_standing", 0)
+	faction.starting_standing = JsonNumbers.whole(
+		start, Standings.LOWEST, Standings.HIGHEST, Standings.LOWEST - 1
+	)
+	if faction.problem.is_empty() and faction.starting_standing < Standings.LOWEST:
+		faction.problem = "its starting_standing must be a whole number from %d to %d" % [
+			Standings.LOWEST,
+			Standings.HIGHEST,
+		]
 	if faction.problem.is_empty():
 		faction.problem = faction._check(file_id, data.get("ranks_up"), data.get("ranks_down"))
 	if faction.problem.is_empty() and not faction._read_territory(data.get("territory", [])):

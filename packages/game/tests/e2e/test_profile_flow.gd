@@ -592,6 +592,36 @@ func _check_allied() -> String:
 	standings.align(guild, -(1 << 62))
 	if standings.of(guild.id) != 1:
 		return "a joined faction allied until the postgame dropped below its first rank"
+	return _check_starting_standing()
+
+
+## A faction's starting standing (#1378): a new profile stands one rank below neutral with the Odun
+## Kragothai, saving nothing for it; raised to neutral, the 0 is saved and loaded back; back at its
+## start, nothing is saved again. A save holding a faction's start is refused.
+func _check_starting_standing() -> String:
+	var profile: Profile = Profile.new()
+	var standings: Standings = profile.standings
+	var odun: String = "odun_kragothai"
+	if standings.of(odun) != -1 or standings.of("sorn_lumawenai") != -1 or standings.of("a") != 0:
+		return "a new profile doesn't start one rank below neutral with Supremacy and Harmony"
+	if not standings.by_faction.is_empty() or not standings.change(odun, 1).is_empty():
+		return "a starting standing was kept as a change, or raising it was refused"
+	var loaded: Profile = _parse(_text(profile))
+	var raised: Dictionary[String, int] = { odun: 0 }
+	if not loaded.problem.is_empty() or loaded.standings.by_faction != raised:
+		return "a standing raised to neutral from its start didn't survive saving: %s %s" % [
+			loaded.problem,
+			loaded.standings.by_faction,
+		]
+	var _lowered: String = loaded.standings.change(odun, -1)
+	if not loaded.standings.by_faction.is_empty() or loaded.standings.of(odun) != -1:
+		return "a standing back at its start was still kept"
+	var at_start: String = _text(Profile.new()).replace(
+		"\"standings\": {}",
+		"\"standings\": {\"%s\": -1}" % odun,
+	)
+	if not _parse(at_start).problem.begins_with("the standing with faction " + odun):
+		return "a save holding a faction's starting standing wasn't refused"
 	return _check_standings_refused()
 
 
