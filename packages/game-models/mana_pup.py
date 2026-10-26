@@ -112,6 +112,8 @@ HIP_HEIGHT = 0.48
 FOREPAWS_LYING = 0.38
 CURLED = dict(clips.CURLED, front_paw=(0.0, 0.0, FOREPAWS_LYING))
 BRACE = {"front_paw": (0.06, 0.0, 0.14), "hind_paw": (0.04, 0.0, -0.06)}
+# The low trunk sits close to the leg bones: its belly must follow the spine when they fold.
+TORSO_WEIGHT_HEIGHTS = (0.45, 0.75)
 
 # The game's speeds at the model's size (metres a second), as for the wolf: a wild monster glides a
 # tile (sqrt(3) apart) in 0.8 s, a companion follows at a tile every 0.3 s. It trots where the wolf
@@ -275,8 +277,13 @@ def build(out):
     points(rig, pieces)
     drifting = wisps.Wisps(rig, WISPS, [CROWN, *CHANNEL_CROWN])
     scene.apply_scale([rig, skin] + pieces, SCALE)
+
+    def reweigh(body):
+        quadruped.bind_torso(body, rig, *(height * SCALE for height in TORSO_WEIGHT_HEIGHTS))
+        SNOUT.bind_jaw(body, "jaw", SCALE)
+
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", *drifting.names),
-                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
+                 reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
         # With the shorter forearm (#1299), its paws stay down a little longer and the forearm folds a
