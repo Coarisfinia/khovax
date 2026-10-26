@@ -59,10 +59,13 @@ static func advance(profile: Profile, kept: QuestTracker, facts: Array[QuestFact
 
 
 ## The quests the player advances from `content`: none when any quest file couldn't be read, so
-## progress waits for whole, sound data rather than advancing on part of it.
+## progress waits for whole, sound data rather than advancing on part of it. A copy (#1385), so
+## quests added to one tracker's book never reach the session's cached content or another tracker.
 static func book_of(content: QuestContent) -> Dictionary[String, QuestDefinition]:
-	var none: Dictionary[String, QuestDefinition] = {}
-	return content.quests if content.problem.is_empty() else none
+	var book: Dictionary[String, QuestDefinition] = {}
+	if content.problem.is_empty():
+		book.assign(content.quests)
+	return book
 
 
 func migrate(data: Dictionary, format: int) -> void:

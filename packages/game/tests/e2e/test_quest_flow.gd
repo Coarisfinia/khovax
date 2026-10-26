@@ -152,6 +152,7 @@ func run(tree: SceneTree) -> String:
 	result = result if not result.is_empty() else _check_instances()
 	if result.is_empty():
 		result = await _check_tracked(tree)
+	result = result if not result.is_empty() else _check_cache_untouched()
 	SaveStore.remove(SAVE_PATH)
 	return result
 
@@ -1630,6 +1631,16 @@ static func _unknown_instance(quest: QuestDefinition) -> String:
 	for step: QuestStep in named:
 		if not step.instance.is_empty() and not InstanceBlueprints.exists(step.instance):
 			return step.instance
+	return ""
+
+
+## The quests this flow added to its player's book stay theirs (#1385): the session's cached quest
+## content, which every other tracker's book is copied from, has only the quest files' quests.
+func _check_cache_untouched() -> String:
+	var cached: Dictionary[String, QuestDefinition] = QuestContent.cached().quests
+	for id: String in ["old_toad", "reach_beach", "enter_thicket", "enter_glade"]:
+		if cached.has(id):
+			return "the flow's quest %s reached the session's cached quest content" % id
 	return ""
 
 
