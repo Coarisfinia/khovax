@@ -145,6 +145,7 @@ func _check_menu() -> String:
 
 ## The `menu` action opens the menu, easing in, and its Settings tab lists every setting, each on
 ## Auto. Before, its open button on a touch screen shows the glyph of the menu's key or button.
+## Then its submenus.
 func _open_menu(menu: GameMenu) -> String:
 	if menu.is_open() or menu.opacity() > 0.0:
 		return "the menu shows before it's opened"
@@ -177,7 +178,7 @@ func _open_menu(menu: GameMenu) -> String:
 	for setting: String in listed:
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
-	return ""
+	return _menu_submenus(menu)
 
 
 ## Why the menu's open button, shown as on a touch screen, doesn't show Escape after a key and
@@ -555,6 +556,66 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 			"do" if walks else "don't",
 			"do" if ticked else "don't",
 		]
+	return ""
+
+
+## The Settings tab opens on its list of submenus (#1314), each setting's row in its own: a
+## submenu's button shows its rows in place of the list, and its Back button or a controller's B
+## goes back to the list, the menu still open. Left on a submenu, it's back on its list the next
+## time it shows.
+func _menu_submenus(menu: GameMenu) -> String:
+	var tab: SettingsTab = menu.settings
+	if tab.open_submenu() != SettingsTab.LIST:
+		return "the Settings tab opens on %s, not its list" % tab.open_submenu()
+	var homes: Dictionary[String, String] = {
+		Graphics.ANTI_ALIASING: SettingsTab.GRAPHICS,
+		SurveyChoice.PLACE_SETTING: SettingsTab.INTERFACE,
+		SurveyChoice.ZOOM_SETTING: SettingsTab.INTERFACE,
+		DamageNumbersChoice.SHOWN_SETTING: SettingsTab.INTERFACE,
+		DamageNumbersChoice.SIZE_SETTING: SettingsTab.INTERFACE,
+		GameMenu.PAUSE_SETTING: SettingsTab.GAME,
+	}
+	for setting: String in homes:
+		if tab.submenu_of(setting) != homes[setting]:
+			return "%s is in the submenu %s" % [setting, tab.submenu_of(setting)]
+	var tabs: TabContainer = tab.get_parent() as TabContainer
+	var was_on: int = tabs.current_tab
+	tabs.current_tab = tab.get_index()
+	var anti_aliasing: Button = tab.button(Graphics.ANTI_ALIASING, "Next")
+	var problem: String = _submenus_open(menu, tab, anti_aliasing)
+	tab.opener(SettingsTab.GRAPHICS).pressed.emit()
+	tabs.current_tab = was_on
+	tabs.current_tab = tab.get_index()
+	if problem.is_empty() and tab.open_submenu() != SettingsTab.LIST:
+		problem = "the Settings tab, shown again, is still on %s" % tab.open_submenu()
+	tabs.current_tab = was_on
+	return problem
+
+
+## Opening the Graphics submenu shows its rows only, B goes back, and so does the Game submenu's
+## Back button.
+func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> String:
+	if anti_aliasing.is_visible_in_tree():
+		return "a submenu's rows show over the list"
+	# A controller's focus on the Graphics button moves onto its Back button, and back after B.
+	tab.opener(SettingsTab.GRAPHICS).grab_focus()
+	tab.opener(SettingsTab.GRAPHICS).pressed.emit()
+	if tab.get_viewport().gui_get_focus_owner() != tab.back_button(SettingsTab.GRAPHICS):
+		return "opening a submenu doesn't move the focus onto its Back button"
+	if (tab.open_submenu() != SettingsTab.GRAPHICS or not anti_aliasing.is_visible_in_tree()
+			or tab.opener(SettingsTab.GRAPHICS).is_visible_in_tree()
+			or tab.button(GameMenu.PAUSE_SETTING, "Next").is_visible_in_tree()):
+		return "the Graphics button doesn't show only its rows in place of the list"
+	_press_b(menu)
+	if tab.open_submenu() != SettingsTab.LIST or not menu.is_open():
+		return "a controller's B in a submenu doesn't go back to the list, or closes the menu"
+	if tab.get_viewport().gui_get_focus_owner() != tab.opener(SettingsTab.GRAPHICS):
+		return "going back doesn't move the focus onto the submenu's button"
+	tab.opener(SettingsTab.GAME).pressed.emit()
+	tab.back_button(SettingsTab.GAME).pressed.emit()
+	if (tab.open_submenu() != SettingsTab.LIST
+			or not tab.opener(SettingsTab.GAME).is_visible_in_tree()):
+		return "a submenu's Back button doesn't go back to the list"
 	return ""
 
 
