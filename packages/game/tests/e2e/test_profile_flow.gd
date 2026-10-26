@@ -534,8 +534,8 @@ func _check_development() -> String:
 
 
 ## `profile`'s first monster's nodes taken (#1417) are kept through saving and loading, start at
-## none in a save from before them, and a save with more than its levels allow, or one twice, is
-## refused.
+## none in a save from before them, and a save with more than its levels allow, one twice, or one
+## that isn't an id, is refused.
 func _check_development_saved(profile: Profile) -> String:
 	var monster: DominatedMonster = profile.dominated_monsters[0]
 	var loaded: Profile = _parse(_text(profile))
@@ -553,6 +553,7 @@ func _check_development_saved(profile: Profile) -> String:
 	return _unrefused({
 		text.replace("\"level\": 3", "\"level\": 2"): "a dominated",
 		text.replace("\"sturdy_2\"", "\"sturdy_1\""): "a dominated",
+		text.replace("\"sturdy_2\"", "\"Bad id\""): "a dominated",
 		text.replace("\"taken\": [", "\"taken\": 1, \"was\": ["): "a dominated",
 	})
 

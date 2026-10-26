@@ -502,7 +502,7 @@ static func _monster(entry: Variant) -> DominatedMonster:
 		return null
 	for node: Variant in taken:
 		var node_id: String = Content.text_of(node)
-		if node_id.is_empty() or monster.taken.has(node_id):
+		if not Content.is_id(node_id) or monster.taken.has(node_id):
 			return null
 		monster.taken.append(node_id)
 	# A node is taken with a level gained, never more.
