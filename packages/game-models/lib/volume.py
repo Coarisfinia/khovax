@@ -86,17 +86,19 @@ def frame(rig, station, rest=False):
         along = (along + _direction(rig, neighbour, rest)).normalized()
     # The bone's turn from rest, which carries the world's up with it, laid into the cross
     # section's plane, whose normal at a joint isn't the bone's.
-    turn = Matrix.Identity(3) if rest else (_matrix(rig, name).to_3x3() @ _rest(rig, name).to_3x3().inverted())
+    # Only its rotation: a bone's scale (a pulsing part's parent) mustn't skew the axes.
+    turn = Matrix.Identity(3) if rest else (_matrix(rig, name).to_quaternion()
+                                            @ _rest(rig, name).to_quaternion().inverted()).to_matrix()
     up = turn @ Vector((0.0, 0.0, 1.0))
     up = (up - along * up.dot(along)).normalized()
     return centre, along, up, up.cross(along).normalized()
 
 
 def body(meshes):
-    """The body's skin: the largest piece of connected faces among the skinned meshes, and that
-    mesh. The parts joined into the skin (crystals, a ruff, the jaw) are pieces of their own whose
+    """The body's skin: the largest piece of connected faces among the skinned meshes, by area,
+    and that mesh. The parts joined into the skin (crystals, a ruff, the jaw) are pieces of their own whose
     faces lie partly inside the body, where a ray from a station would stop on them."""
-    best = (0, None, [])
+    best = (0.0, None, [])
     for obj in meshes:
         polygons = obj.data.polygons
         parent = list(range(len(obj.data.vertices)))
@@ -111,12 +113,14 @@ def body(meshes):
             first = find(polygon.vertices[0])
             for index in polygon.vertices[1:]:
                 parent[find(index)] = first
-        pieces = {}
+        pieces, areas = {}, {}
         for polygon in polygons:
-            pieces.setdefault(find(polygon.vertices[0]), []).append(list(polygon.vertices))
-        faces = max(pieces.values(), key=len, default=[])
-        if len(faces) > best[0]:
-            best = (len(faces), obj, faces)
+            piece = find(polygon.vertices[0])
+            pieces.setdefault(piece, []).append(list(polygon.vertices))
+            areas[piece] = areas.get(piece, 0.0) + polygon.area * obj.matrix_world.median_scale ** 2
+        piece = max(areas, key=areas.get, default=None)
+        if piece is not None and areas[piece] > best[0]:
+            best = (areas[piece], obj, pieces[piece])
     return best[1], best[2]
 
 
@@ -133,7 +137,8 @@ def _tree(skin):
 
 def _reaches(tree, centre, directions):
     """How far each ray from `centre` runs to the skin; None where it meets none."""
-    return [tree.ray_cast(centre, direction, REACH)[3] for direction in directions]
+    hits = [tree.ray_cast(centre, direction, REACH) for direction in directions]
+    return [None if hit[0] is None else hit[3] for hit in hits]
 
 
 def measure(rig, skin, stations, rest=False):
@@ -148,7 +153,7 @@ def measure(rig, skin, stations, rest=False):
         if rest and None in reaches:
             found[station] = None
             continue
-        reaches = [reach or 0.0 for reach in reaches]
+        reaches = [0.0 if reach is None else reach for reach in reaches]
         found[station] = (reaches[0] + reaches[1], reaches[2] + reaches[3])
     return found
 
