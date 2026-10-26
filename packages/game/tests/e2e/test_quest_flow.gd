@@ -100,6 +100,14 @@ const SWORN: String = (
 	+ "\"standing\": {\"faction\": \"odun_kragothai\", \"change\": 1}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"sworn\"}]}"
 )
+## A story choice enforcing alignment (#1326): the Odun Kragothai at least at their second rank,
+## the Sorn Lumawenai at most hostile.
+const CHOSEN: String = (
+	"{\"id\": \"chosen\", \"name\": \"Chosen\", \"alignment\": ["
+	+ "{\"faction\": \"odun_kragothai\", \"at_least\": 2}, "
+	+ "{\"faction\": \"sorn_lumawenai\", \"at_most\": -1}], "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"chosen\"}]}"
+)
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
@@ -1521,6 +1529,32 @@ func _check_enemy_loss() -> String:
 	QuestRewards.give(sworn, profile)
 	if profile.standings.of("sorn_lumawenai") != -2 or not profile.standings.half_lost.is_empty():
 		return "two quests raising the Odun Kragothai didn't lose a rank with its enemy"
+	return _check_enforced()
+
+
+## A story choice enforces alignment (#1326): a quest raising the Odun Kragothai to at least their
+## second rank and holding the Sorn Lumawenai at most hostile sets both from their start (-1), the
+## gain of three ranks costing one and a half with the Sorn Lumawenai; finishing it again changes
+## nothing, as both are within their bounds by then.
+func _check_enforced() -> String:
+	var chosen: QuestDefinition = QuestDefinition.parse("chosen", CHOSEN, {})
+	var profile: Profile = Profile.new()
+	QuestRewards.give(chosen, profile)
+	var half: Array[String] = ["sorn_lumawenai"]
+	var standings: Standings = profile.standings
+	if (standings.of("odun_kragothai") != 2
+			or standings.of("sorn_lumawenai") != -2
+			or standings.half_lost != half):
+		return "a quest enforcing alignment set %d and %d: %s" % [
+			standings.of("odun_kragothai"),
+			standings.of("sorn_lumawenai"),
+			chosen.problem,
+		]
+	QuestRewards.give(chosen, profile)
+	if (standings.of("odun_kragothai") != 2
+			or standings.of("sorn_lumawenai") != -2
+			or standings.half_lost != half):
+		return "finishing a quest enforcing alignment again moved a standing within its bounds"
 	return ""
 
 
