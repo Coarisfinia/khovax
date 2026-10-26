@@ -1240,7 +1240,7 @@ func _check_development_refused() -> String:
 
 ## A level-up's choice offers three of `web`'s open nodes (#678), the same each time for the same
 ## monster and the same nodes taken, and all of them when fewer are open. One offered before and
-## skipped comes back far less often than one never offered.
+## skipped still comes back, but far less often than one never offered.
 func _check_development_offers(web: DevelopmentWeb) -> String:
 	var none: Array[String] = []
 	var monster: String = ShortId.stand_in(1)
@@ -1266,7 +1266,7 @@ func _check_development_offers(web: DevelopmentWeb) -> String:
 		differs = differs or DevelopmentOffer.of(web, other, none, none) != offer
 		fresh += int(DevelopmentOffer.of(web, other, none, none).has("deep_1"))
 		skipped += int(DevelopmentOffer.of(web, other, none, deep).has("deep_1"))
-	if not differs or skipped * 2 >= fresh:
+	if not differs or skipped == 0 or skipped * 2 >= fresh:
 		return "a skipped node came back %d times in 200, one never offered %d" % [skipped, fresh]
 	return ""
 
