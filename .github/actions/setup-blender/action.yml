@@ -48,7 +48,8 @@ runs:
       # A snapshot's metadata is old by design, so apt doesn't refuse it once its validity ends.
       # The snapshot mirror sometimes answers 503 (#1429): apt retries each download with a growing
       # delay, and if the snapshot's index still can't be fetched, the libraries come from Ubuntu's
-      # live archive, signed by the same key, with a warning, rather than failing the run.
+      # live archive, signed by the same key, with a warning, rather than failing the run. A failed
+      # index fetch is only a warning to apt-get update, so --error-on=any makes it an error.
       shell: bash
       run: |
         docker run --name blender-setup -v /etc/ssl/certs:/etc/ssl/certs:ro "$BLENDER_IMAGE" bash -euc '
@@ -61,10 +62,10 @@ runs:
               > /etc/apt/sources.list.d/ubuntu.sources
           }
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0"
-          if ! apt-get update -qq; then
+          if ! apt-get update --error-on=any -qq; then
             echo "::warning::Ubuntu snapshot $0 unreachable: Blender'"'"'s libraries come from the live archive."
             use_mirror "http://archive.ubuntu.com/ubuntu"
-            apt-get update -qq
+            apt-get update --error-on=any -qq
           fi
           DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
             libx11-6 libxi6 libxrender1 libxfixes3 libxext6 libxkbcommon0 libsm6 libgl1 > /dev/null
