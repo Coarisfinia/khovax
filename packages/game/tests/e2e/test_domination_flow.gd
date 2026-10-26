@@ -1086,16 +1086,20 @@ func _check_early_monster() -> String:
 		state = _early_state(difficulty, true)
 		var monster: int = _wild(state).monsters[0]
 		var specials: int = 0
+		var played: int = 0
 		for _tick: int in EARLY_SECONDS * Simulation.TICKS_PER_SECOND:
 			if _wild(state).is_fainted(monster):
 				break
 			var struck: Array[SpecialStruck] = _specials_in(state, _fire())
+			played += struck.size()
 			if specials == 0 and not struck.is_empty():
 				specials = _specials_to_defeat(state, monster, struck[0].damage)
-		if specials != EARLY_SPECIALS[difficulty]:
-			return "at difficulty %d, an early wild monster takes %d specials, not %d" % [
+		# The specials that hit can be fewer, as the companion's auto strikes help, never more.
+		if specials != EARLY_SPECIALS[difficulty] or played > specials:
+			return "at difficulty %d, an early wild monster takes %d specials (%d hit), not %d" % [
 				difficulty,
 				specials,
+				played,
 				EARLY_SPECIALS[difficulty],
 			]
 		if not _wild(state).is_fainted(monster):
