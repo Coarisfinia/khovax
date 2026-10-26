@@ -1,0 +1,13 @@
+# Publishes a pull request's pictures on the assets branch: a member of the repository's uv
+# workspace (the root pyproject.toml).
+[project]
+name = "khovax-game-visuals"
+version = "0.0.0"
+requires-python = "==3.14.8"
+dependencies = ["khovax-game-shared"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+khovax-game-shared = { workspace = true }

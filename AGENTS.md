@@ -74,7 +74,7 @@ is assigned to the owner (`--assignee "$OWNER"`, the login looked up as above).
 
 **Every branch is a worktree next to `main/`** (owner's rule, the same layout as the owner's other
 repositories). The container folder `project-khovax/` holds `main/` (the primary checkout, always on
-`main`), `assets/` (the `assets` branch) and one `<issue>-<slug>/` worktree per open branch, created
+`main`) and one `<issue>-<slug>/` worktree per open branch, created
 with `git -C main worktree add ../<branch> -b <branch>` and removed once its pull request is merged.
 Never create or switch branches inside `main/`.
 
@@ -200,8 +200,12 @@ background; only wait in the foreground for a result the very next step needs.
   `override.cfg`). Never `--display-driver wayland`, never the desktop's `DISPLAY`. The script runs
   the main scene inside a `SubViewport` (`UPDATE_ALWAYS`, its own `msaa_3d`) and saves
   `get_texture().get_image()` as a PNG after enough frames for the camera to settle. Publish it on
-  the `assets` branch (an orphan branch that is never merged), through the
-  `assets/` worktree next to `main/`: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
+  the `assets` branch (an orphan branch that is never merged) with `uv run --locked --package
+  khovax-game-visuals packages/game-visuals/publish.py pr-<n>-<what>.png ...`, which prints the
+  link for the description: `![what it shows](https://github.com/Coarisfinia/khovax/blob/assets/pr-<n>-<what>.png?raw=true)`.
+  **Never publish through a shared checkout of `assets`, and never reset one** (#1428): agents
+  publish at the same time, and a reset drops another agent's pictures. The script commits without
+  a checkout and starts over on the newer `origin/assets` when another publish got there first.
   When the change has no visible part, say so instead. **Before and after pictures always go in
   that order** (owner's rule): the before first, then the after.
 - **Show the flow as a replay whenever sensible** (owner's rule, #214): a pull request that
@@ -708,7 +712,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   project (open it in the editor; its `.godot/` cache is per worktree); the others are the Python
   tooling, one workspace member per job: `game-checks/` (CI's checks of the game), `game-replays/`
   (comparing replays, load tests and the APK flow), `game-build/` (export helpers), `game-models/`
-  (the Blender model scripts), `game-offscreen/` (Godot on a private display), `game-web-e2e/`
+  (the Blender model scripts), `game-offscreen/` (Godot on a private display), `game-visuals/`
+  (publishing a pull request's pictures on the `assets` branch, #1428), `game-web-e2e/`
   (the web build's e2e in headless Chrome, #1041) and `game-shared/` (what the others share, #1115:
   the one member that is built, as `game_shared`, so the ones depending on it can import it). **The
   tools report through `game_shared.log`** (#1115), which writes GitHub's annotations in CI and plain
