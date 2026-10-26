@@ -91,18 +91,27 @@ def vein(body, name, guide, radius, mat, lift=None, taper=0.0, smooth=0):
     lift = radius * 0.6 if lift is None else lift
     points = [onto(body, point, lift) for point in _dense(guide, radius * 6)]
     if not taper:
-        return tube(name, _smoothed(points, smooth), radius, mat)
+        return tube(name, _smoothed(body, points, [lift] * len(points), smooth), radius, mat)
     # A narrowing end sinks with its width, so its tip lies on the skin rather than above it.
     shares = _tapering(points, taper)
     points = [onto(body, point, lift * share) for point, share in zip(points, shares)]
-    return tube(name, _smoothed(points, smooth), radius, mat, shares)
+    return tube(name, _smoothed(body, points, [lift * share for share in shares], smooth), radius, mat, shares)
 
 
-def _smoothed(points, passes):
-    """`points` evened out `passes` times, each toward its two neighbours; the ends stay put."""
+def _smoothed(body, points, lifts, passes):
+    """`points` evened out `passes` times, each toward its two neighbours; the ends stay put. A
+    point the evening pulls in below its lift off the body (on a curve) goes back out to it, along
+    the body's normal, so the line stays on the skin; the others keep their smooth course."""
+    if not passes:
+        return points
     for _pass in range(passes):
         points = points[:1] + [(a + b * 2.0 + c) / 4.0 for a, b, c in zip(points, points[1:], points[2:])] + points[-1:]
-    return points
+    kept = []
+    for point, lift in zip(points, lifts):
+        found, location, normal, _index = body.closest_point_on_mesh(point)
+        gap = (point - location).dot(normal) if found else lift
+        kept.append(point + normal * (lift - gap) if gap < lift else point)
+    return kept
 
 
 def rune(body, name, glyph, center, right, up, size, radius, mat):
