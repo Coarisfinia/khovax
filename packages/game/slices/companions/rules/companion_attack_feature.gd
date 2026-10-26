@@ -71,7 +71,8 @@ func _strike(
 	var struck: String = wild.species_of(target)
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var level: int = CompanionGrowth.level_of(state, companions, companion_id)
-	var strength: int = CompanionGrowth.stat(wild.strengths.get(species, 1), level)
+	var species_strength: int = wild.strengths.get(species, 1)
+	var strength: int = CompanionGrowth.stat(species_strength, level)
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
 	wild.wound(state, target, damage)
 	_waits[companion_id] = CompanionGrowth.ticks(STRIKE_TICKS, level)

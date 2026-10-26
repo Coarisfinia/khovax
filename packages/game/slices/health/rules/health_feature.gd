@@ -183,7 +183,8 @@ func hp_of(state: GameState, entity_id: int) -> int:
 func max_hp_of(state: GameState, entity_id: int) -> int:
 	if _species.has(entity_id):
 		var species_hp: int = max_hps.get(_species[entity_id], UNKNOWN_HP)
-		return Fixed.scale(species_hp, _shares.get(entity_id, Fixed.ONE))
+		var share: int = _shares.get(entity_id, Fixed.ONE)
+		return Fixed.scale(species_hp, share)
 	var entity: Entity = state.entity(entity_id)
 	if entity != null and entity.slot != Entity.NO_SLOT:
 		return PLAYER_HP
