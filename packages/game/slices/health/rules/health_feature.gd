@@ -36,6 +36,9 @@ var _species: Dictionary[int, String] = {}
 ## The entities a later rule shields, by entity id. The rule shields them again at the start of
 ## every tick from its own state, so this is neither hashed nor saved.
 var _shielded: Dictionary[int, bool] = {}
+## The wild monsters among the tracked, by entity id. Tracked again on loading, like `_species`, so
+## neither hashed nor saved.
+var _wild: Dictionary[int, bool] = {}
 
 
 func _init(species_max_hps: Dictionary[String, int] = {}) -> void:
@@ -60,9 +63,13 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			_damage[revived.entity_id] = full_hp - Fixed.scale(full_hp, REVIVED_HP)
 
 
-## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it.
-func track(entity_id: int, species: String) -> void:
+## Gives `entity_id` its species' HP: its feature calls this when it adds or restores it. A wild
+## one (`wild`) takes the damage of a hit at the host's difficulty (HostSettings.enemy_damage,
+## #1315).
+func track(entity_id: int, species: String, wild: bool = false) -> void:
 	_species[entity_id] = species
+	if wild:
+		_wild[entity_id] = true
 
 
 ## Shields `entity_id` from every hit, or lets hits hurt it again: a later rule's (a player a
@@ -99,10 +106,13 @@ func is_invincible(state: GameState, entity_id: int) -> bool:
 
 
 ## Takes `damage` off the HP of `entity_id`, one still standing, not shielded and not invincible:
-## never below 0, or 1 unless the hit is `lethal`. Whether this hit made it fall.
+## never below 0, or 1 unless the hit is `lethal`. A wild monster takes it at the host's difficulty.
+## Whether this hit made it fall.
 func hurt(state: GameState, entity_id: int, damage: int, lethal: bool = true) -> bool:
 	if _shielded.has(entity_id) or is_invincible(state, entity_id):
 		return false
+	if _wild.has(entity_id):
+		damage = HostSettings.enemy_damage(state, damage)
 	var full: int = max_hp_of(state, entity_id)
 	var taken: int = _damage.get(entity_id, 0)
 	var most: int = full if lethal else full - 1
@@ -145,6 +155,7 @@ func entity_removed(_state: GameState, removed_id: int) -> void:
 	var _dropped: bool = _damage.erase(removed_id)
 	_dropped = _species.erase(removed_id)
 	_dropped = _shielded.erase(removed_id)
+	_dropped = _wild.erase(removed_id)
 
 
 ## The damage a follower has taken (#716), so it arrives next door as hurt as it left.

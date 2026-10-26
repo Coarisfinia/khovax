@@ -18,7 +18,9 @@ const PREVIOUS_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-le
 const NEXT_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-right.svg")
 const PREVIOUS_TIP: String = "Previous choice"
 const NEXT_TIP: String = "Next choice"
-## The submenus, in the order the list shows them.
+## The submenus, in the order the list shows them. The difficulty's rows, the world's own (#1315),
+## come from the menu (`add_row`).
+const DIFFICULTY: String = "Difficulty"
 const GRAPHICS: String = "Graphics"
 const INTERFACE: String = "Interface"
 const GAME: String = "Game"
@@ -50,10 +52,10 @@ var _open: String = LIST
 
 
 func _ready() -> void:
-	for submenu: String in [GRAPHICS, INTERFACE, GAME]:
+	for submenu: String in [DIFFICULTY, GRAPHICS, INTERFACE, GAME]:
 		_add_submenu(submenu)
 	if graphics != null:
-		_add_row(
+		_auto_row(
 			GRAPHICS,
 			Graphics.ANTI_ALIASING,
 			"Anti-aliasing",
@@ -61,8 +63,8 @@ func _ready() -> void:
 			graphics.step_anti_aliasing,
 		)
 	if survey != null:
-		_add_row(INTERFACE, SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
-		_add_row(
+		_auto_row(INTERFACE, SurveyChoice.PLACE_SETTING, "Survey", survey.place_label, survey.cycle)
+		_auto_row(
 			INTERFACE,
 			SurveyChoice.ZOOM_SETTING,
 			"Survey zoom",
@@ -71,14 +73,14 @@ func _ready() -> void:
 		)
 	if graphics != null:
 		damage_numbers = DamageNumbersChoice.new(graphics)
-		_add_row(
+		_auto_row(
 			INTERFACE,
 			DamageNumbersChoice.SHOWN_SETTING,
 			"Damage numbers",
 			damage_numbers.shown_label,
 			damage_numbers.step_shown,
 		)
-		_add_row(
+		_auto_row(
 			INTERFACE,
 			DamageNumbersChoice.SIZE_SETTING,
 			"Damage number size",
@@ -86,7 +88,7 @@ func _ready() -> void:
 			damage_numbers.step_size,
 		)
 	if menu != null and graphics != null:
-		_add_row(
+		_auto_row(
 			GAME,
 			GameMenu.PAUSE_SETTING,
 			"Pause in single player",
@@ -227,13 +229,27 @@ func _has_focus() -> bool:
 
 ## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
 ## `stepper` steps it with (back and on) and one back to Auto.
-func _add_row(
+func _auto_row(
 		submenu: String,
 		setting: String,
 		title: String,
 		label: Callable,
 		stepper: Callable,
 ) -> void:
+	var row: HBoxContainer = add_row(submenu, setting, title, label, stepper)
+	row.add_child(_named(GameMenu.button("Auto", choose_auto.bind(setting)), "Auto"))
+
+
+## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
+## `stepper` steps it with (back and on), for a setting without Auto, like the difficulty the menu
+## adds; returns the row.
+func add_row(
+		submenu: String,
+		setting: String,
+		title: String,
+		label: Callable,
+		stepper: Callable,
+) -> HBoxContainer:
 	_labels[setting] = label
 	_steps[setting] = stepper
 	var rows: VBoxContainer = _submenus[submenu]
@@ -246,8 +262,8 @@ func _add_row(
 	var previous: Button = GameMenu.icon_button(PREVIOUS_ICON, PREVIOUS_TIP, step.bind(setting, -1))
 	row.add_child(_named(previous, "Previous"))
 	row.add_child(_named(GameMenu.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1)), "Next"))
-	row.add_child(_named(GameMenu.button("Auto", choose_auto.bind(setting)), "Auto"))
 	rows.add_child(row)
+	return row
 
 
 func _named(node: Node, node_name: String) -> Node:

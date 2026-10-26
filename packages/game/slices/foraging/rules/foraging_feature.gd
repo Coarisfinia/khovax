@@ -43,7 +43,7 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	for monster: int in wild.monsters:
 		# Its calm pace (an enraged one doesn't forage), so the costly search runs only when chase
 		# would take the step.
-		if (state.tick + monster) % WildMonsterFeature.STEP_TICKS != 0:
+		if (state.tick + monster) % WildPace.paced(state, WildMonsterFeature.STEP_TICKS, 0) != 0:
 			continue
 		var activity: int = schedules.activity_of(state, monster)
 		if activity != Schedule.GRAZE and activity != Schedule.DRINK:

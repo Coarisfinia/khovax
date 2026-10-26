@@ -837,10 +837,10 @@ func _check_enraged() -> String:
 	if wild.monsters.size() != 1:
 		return "the strong monster didn't break out of the small ring"
 	var monster: int = wild.monsters[0]
-	if wild.rage_of(monster) != 1 or wild.strength_of(monster) <= STRONG_STRENGTH:
+	if wild.rage_of(monster) != 1 or wild.strength_of(state, monster) <= STRONG_STRENGTH:
 		return "a broken ring didn't enrage the monster inside: rage %d, strength %d" % [
 			wild.rage_of(monster),
-			wild.strength_of(monster),
+			wild.strength_of(state, monster),
 		]
 	return _enraged_further(state, monster)
 
@@ -858,7 +858,7 @@ func _check_enraged_chase() -> String:
 	var _far: Entity = state.add_entity(1, Vector2i(0, -4))
 	var paces: Array[int] = []
 	for rage: int in WildMonsterFeature.MOST_RAGE + 1:
-		paces.append(WildPace.paced(WildMonsterFeature.STEP_TICKS, rage))
+		paces.append(WildPace.paced(state, WildMonsterFeature.STEP_TICKS, rage))
 	for rage: int in WildMonsterFeature.MOST_RAGE:
 		if paces[rage + 1] >= paces[rage]:
 			return "rage doesn't make a wild monster faster: its paces are %s" % [paces]
@@ -888,7 +888,7 @@ func _check_enraged_strikes() -> String:
 	_wild(state).enrage(state, monster, 0)
 	# The companion joins its player first, away from the monster.
 	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
-	var pace: int = WildPace.paced(WildAttackFeature.STRIKE_TICKS, 1)
+	var pace: int = WildPace.paced(state, WildAttackFeature.STRIKE_TICKS, 1)
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, pace, Vector2i(-1, 0))
 	if strikes.size() != 1 or strikes[0].target_id != player.id:
 		return "the enraged monster didn't strike the player first, once in %d ticks" % pace
@@ -933,11 +933,11 @@ func _enraged_further(state: GameState, monster: int) -> String:
 	var enrage: EnrageFeature = state.feature(EnrageFeature.ID) as EnrageFeature
 	var broken: Array[RefCounted] = [_broken_around(monster)]
 	for stack: int in range(2, WildMonsterFeature.MOST_RAGE + 3):
-		var before: int = wild.strength_of(monster)
+		var before: int = wild.strength_of(state, monster)
 		state.events = broken
 		enrage.step(state, [])
 		# Past the most rage, it grows no stronger.
-		var stronger: bool = wild.strength_of(monster) > before
+		var stronger: bool = wild.strength_of(state, monster) > before
 		stronger = stronger or stack > WildMonsterFeature.MOST_RAGE
 		var rage: int = mini(stack, WildMonsterFeature.MOST_RAGE)
 		var healed: int = mini(
@@ -948,7 +948,7 @@ func _enraged_further(state: GameState, monster: int) -> String:
 			return "broken ring %d left rage %d, strength %d, HP %d" % [
 				stack,
 				wild.rage_of(monster),
-				wild.strength_of(monster),
+				wild.strength_of(state, monster),
 				_hp(state, monster),
 			]
 	return ""

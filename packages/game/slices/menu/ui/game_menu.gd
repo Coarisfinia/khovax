@@ -274,6 +274,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
+	_add_difficulty()
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
 	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
@@ -283,6 +284,23 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	row.add_child(close)
 	_sheet.add_child(row)
 	add_child(_sheet)
+
+
+## The world's difficulty, which the host chooses (#1315), in the Settings tab's Difficulty
+## submenu: a child of the menu, so its row's callables stay bound to it.
+func _add_difficulty() -> void:
+	if driver == null:
+		return
+	var difficulty: DifficultyChoice = DifficultyChoice.new(driver)
+	difficulty.name = "Difficulty"
+	add_child(difficulty)
+	var _row: HBoxContainer = settings.add_row(
+		SettingsTab.DIFFICULTY,
+		HostSettings.DIFFICULTY,
+		"Difficulty",
+		difficulty.label,
+		difficulty.step,
+	)
 
 
 ## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.

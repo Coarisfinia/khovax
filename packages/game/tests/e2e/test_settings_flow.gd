@@ -172,10 +172,14 @@ func _open_menu(menu: GameMenu) -> String:
 		DamageNumbersChoice.SHOWN_SETTING,
 		DamageNumbersChoice.SIZE_SETTING,
 		GameMenu.PAUSE_SETTING,
+		HostSettings.DIFFICULTY,
 	]
 	if listed != settings:
 		return "the Settings tab lists %s, not every setting" % [listed]
-	for setting: String in listed:
+	# The difficulty has no Auto: the world starts at Standard (#1315).
+	if shown[HostSettings.DIFFICULTY] != "Standard":
+		return "the difficulty isn't Standard at first: %s" % shown[HostSettings.DIFFICULTY]
+	for setting: String in settings.slice(0, -1):
 		if not shown[setting].begins_with("Auto ("):
 			return "%s isn't on Auto at first: %s" % [setting, shown[setting]]
 	return _menu_submenus(menu)
@@ -574,6 +578,7 @@ func _menu_submenus(menu: GameMenu) -> String:
 		DamageNumbersChoice.SHOWN_SETTING: SettingsTab.INTERFACE,
 		DamageNumbersChoice.SIZE_SETTING: SettingsTab.INTERFACE,
 		GameMenu.PAUSE_SETTING: SettingsTab.GAME,
+		HostSettings.DIFFICULTY: SettingsTab.DIFFICULTY,
 	}
 	for setting: String in homes:
 		if tab.submenu_of(setting) != homes[setting]:
@@ -611,11 +616,32 @@ func _submenus_open(menu: GameMenu, tab: SettingsTab, anti_aliasing: Button) -> 
 		return "a controller's B in a submenu doesn't go back to the list, or closes the menu"
 	if tab.get_viewport().gui_get_focus_owner() != tab.opener(SettingsTab.GRAPHICS):
 		return "going back doesn't move the focus onto the submenu's button"
+	var difficulty: String = _menu_difficulty(menu, tab)
+	if not difficulty.is_empty():
+		return difficulty
 	tab.opener(SettingsTab.GAME).pressed.emit()
 	tab.back_button(SettingsTab.GAME).pressed.emit()
 	if (tab.open_submenu() != SettingsTab.LIST
 			or not tab.opener(SettingsTab.GAME).is_visible_in_tree()):
 		return "a submenu's Back button doesn't go back to the list"
+	return ""
+
+
+## The host steps the difficulty to Hard (#1315): it has no Auto button, the row says Hard at once
+## and the request waits in the profile's outbox for the world; stepping back says Standard again.
+func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
+	var next: Button = tab.button(HostSettings.DIFFICULTY, "Next")
+	if next.get_parent().has_node("Auto"):
+		return "the difficulty has an Auto button"
+	next.pressed.emit()
+	var outbox: Outbox = menu.driver.holder.keeper.profile.outbox
+	var asked: bool = false
+	for request: OutboxEntry in outbox.entries:
+		asked = asked or request.kind == OutboxEntry.HOST_SETTING
+	var said: String = tab.shown[HostSettings.DIFFICULTY]
+	tab.button(HostSettings.DIFFICULTY, "Previous").pressed.emit()
+	if said != "Hard" or not asked or tab.shown[HostSettings.DIFFICULTY] != "Standard":
+		return "stepping the difficulty shows %s, asking the world: %s" % [said, asked]
 	return ""
 
 
