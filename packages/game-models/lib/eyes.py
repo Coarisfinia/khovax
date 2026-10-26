@@ -11,7 +11,6 @@ lids in its clips: asleep, fainted and blinking now and then while it stands."""
 
 import math
 
-import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
@@ -83,18 +82,16 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
 
 
 def _lid(name, center, turn, size, almond, mat, bone):
-    """The lid: the front half of a dome over the eye, closed flat across its back, turned OPEN up
+    """The lid: the front half of a dome over the eye, flat across its back, turned OPEN up
     and back about the eye's sideways axis. Remembers its hinge and that axis (Lids)."""
     width, height, depth = LID_SIZE
     depth = max(depth, DEEP * almond)
     made = parts.part("uv_sphere", name, (0.0, 0.0, 0.0), (width * size, height * almond * size, depth * size),
                       mat=mat, bone=bone, segments=16, ring_count=8)
-    mesh = bmesh.new()
-    mesh.from_mesh(made.data)
-    bmesh.ops.delete(mesh, geom=[vertex for vertex in mesh.verts if vertex.co.z < -1e-6 * size], context="VERTS")
-    bmesh.ops.holes_fill(mesh, edges=[edge for edge in mesh.edges if edge.is_boundary])
-    mesh.to_mesh(made.data)
-    mesh.free()
+    # The back half pressed flat onto the front's rim: one closed piece, its faces as built, so
+    # every build gives the same mesh (a filled hole's faces didn't, check_rebuild.py).
+    for vertex in made.data.vertices:
+        vertex.co.z = max(vertex.co.z, 0.0)
     made.data.transform(Matrix.Translation(center) @ (turn @ Matrix.Rotation(-OPEN, 3, "X")).to_4x4())
     made.data.update()
     made["hinge"], made["axis"] = tuple(center), tuple(turn @ Vector((1.0, 0.0, 0.0)))
@@ -143,14 +140,15 @@ class Lids:
             bone.parent = rig.data.edit_bones[parent]
         bpy.ops.object.mode_set(mode="OBJECT")
 
-    def share(self, name, index, frames):
-        """How far shut (0..1) the lids are `index` frames into clip `name`, `frames` frames long."""
+    def share(self, name, index, frame, frames):
+        """How far shut (0..1) the lids are on `frame` of clip `name`, `index` frames into it,
+        `frames` frames long."""
         if name == "Sleep":
             return 1.0
         if name == "Faint":
             start, end = self.faint
             # Smooth at both ends: a lid snapping shut at speed is a pop the motion check fails.
-            done = max(0.0, min(1.0, (index + 1 - start) / (end - start)))
+            done = max(0.0, min(1.0, (frame - start) / (end - start)))
             return done * done * (3.0 - 2.0 * done)
         if name == "Idle":
             shut = 0.0
@@ -164,8 +162,8 @@ class Lids:
     def shut(self, name, poses, loop):
         """Keys the lids on every frame of `poses` ([(frame, pose)], every frame)."""
         frames = len(poses) - 1 if loop else len(poses)
-        for index, (_frame, pose) in enumerate(poses):
-            closed = self.share(name, index, frames)
+        for index, (frame, pose) in enumerate(poses):
+            closed = self.share(name, index, frame, frames)
             for bone in self.names:
                 pose[bone] = (0.0, OPEN * closed, 0.0)
 
