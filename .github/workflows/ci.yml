@@ -839,7 +839,7 @@ jobs:
             if found=$(gh release view ${2:+"$2"} --repo "$GITHUB_REPOSITORY" --json tagName,isDraft \
               --jq "$1" 2> "$RUNNER_TEMP/release-view.err"); then
               echo "$found"
-            elif ! grep -qx 'release not found' "$RUNNER_TEMP/release-view.err"; then
+            elif [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
               cat "$RUNNER_TEMP/release-view.err" >&2
               return 1
             fi
