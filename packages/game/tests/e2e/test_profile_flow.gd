@@ -13,11 +13,13 @@ extends RefCounted
 ## before it (#179).
 
 const SAVE_PATH: String = "user://test_profile.json"
-## The keys a newer save format added (#184, #53, #391, #399, #483, #658, #771), which older saves
-## lack.
+## The keys a newer save format added (#184, #53, #391, #399, #483, #658, #771, #1298), which older
+## saves lack.
 const ADDED_KEYS: Array[String] = [
 	"quest_progress",
 	"quests_done",
+	"quests_started",
+	"quest_focus",
 	"carried",
 	"personal_color",
 	"character_name",
@@ -350,6 +352,9 @@ func _check_refused() -> String:
 		),
 		text.replace(progress, "\"quest_progress\": {\"a\": {\"step\": 0}}"): "quest a's",
 		text.replace(progress, "\"quest_progress\": []"): "the save lacks its quest",
+		text.replace("\"quests_started\": []", "\"quests_started\": [\"a\"]"): "a quest started",
+		text.replace("\"quest_focus\": \"\"", "\"quest_focus\": 7"): "the save lacks the quests",
+		text.replace("\"quest_focus\": \"\"", "\"quest_focus\": \"Bad id\""): "the quest followed",
 		text.replace("\"unlocked_slots\": 1", "\"unlocked_slots\": 7"): "the save's slots",
 		text.replace(
 			"\"dominated_monsters\": []",

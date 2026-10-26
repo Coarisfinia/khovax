@@ -1,5 +1,5 @@
 class_name SurveyHeldMarks
-extends Control
+extends SurveyLayer
 ## The Survey's marks of faction territory (#637), drawn over the SurveyView it's a child of: every
 ## instance the Survey shows that a faction holds (Territory) carries its holder's symbol
 ## (TerritoryText) in ink on a light disc ringed in ink, so only the symbol tells the factions
@@ -20,18 +20,6 @@ const MARGIN: float = 6.0
 var held_by: Dictionary[String, String] = {}
 ## Where each held instance next door has its mark, by instance name, in the Survey's pixels.
 var held_at: Dictionary[String, Vector2] = {}
-
-
-func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-
-
-func _process(_delta: float) -> void:
-	# After the Survey, its parent, which processes first.
-	if is_visible_in_tree():
-		show_state()
-		queue_redraw()
 
 
 func _draw() -> void:

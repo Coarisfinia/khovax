@@ -10,6 +10,12 @@ extends RefCounted
 var progress: Dictionary[String, QuestProgress] = {}
 ## The ids of the quests finished, in the order finished.
 var finished: Array[String] = []
+## The side quests (#473) started and not finished, in the order started: the newest last, which
+## the player follows unless they picked another (`focused`, #1298).
+var started: Array[String] = []
+## The quest the player picked to follow (#1298), or "" when they follow the newest one. Kept while
+## it's open; once it's finished, they follow the newest again.
+var focus: String = ""
 ## The quests facts advance, by id (QuestContent.cached): content, not saved. Progress for a
 ## quest that isn't here is kept untouched, on purpose: a quest missing from one build's data
 ## (dropped by mistake, or not shipped yet) picks up where the player left it once it's back.
@@ -76,6 +82,7 @@ func _advance(fact: QuestFact, done: Array[QuestDefinition]) -> Array[String]:
 	for id: String in ids:
 		if not _started(id) and book[id].starts_on.counts(fact.condition, fact.what, fact.where):
 			progress[id] = progress_of(id)
+			started.append(id)
 	for id: String in ids:
 		var quest: QuestDefinition = book[id]
 		var at: QuestProgress = progress_of(id)
@@ -91,6 +98,8 @@ func _advance(fact: QuestFact, done: Array[QuestDefinition]) -> Array[String]:
 		progress[id] = at
 		if at.step >= quest.steps.size():
 			var _ended: bool = progress.erase(id)
+			started.erase(id)
+			focus = "" if focus == id else focus
 			finished.append(id)
 			done.append(quest)
 	return emitted
@@ -120,6 +129,22 @@ func open_steps() -> Dictionary[String, QuestStep]:
 		if step != null and not finished.has(id) and _started(id):
 			steps[id] = step
 	return steps
+
+
+## The open quest the player follows (#1298), the only one the quest list and the Survey show
+## large: the one they picked (`focus`) while it's open, else the side quest they started last
+## that's still open, else the first open quest in id order; "" when none is open.
+func focused() -> String:
+	var steps: Dictionary[String, QuestStep] = open_steps()
+	if steps.has(focus):
+		return focus
+	for at: int in range(started.size() - 1, -1, -1):
+		# A save from before the order was kept lists every quest with progress (QuestSave).
+		if steps.has(started[at]) and book[started[at]].starts_on != null:
+			return started[at]
+	for id: String in steps:
+		return id
+	return ""
 
 
 ## The progress of quest `id`: a fresh one when it hasn't started.

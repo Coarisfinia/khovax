@@ -7,9 +7,11 @@ extends RefCounted
 ## step asks for counts toward it. Quests finished together are listed in id order;
 ## saved progress that no longer fits its quest settles at the next fact; and quest data with a
 ## broken file advances no quest at all. Every open quest has a marker over the nearest thing it
-## asks for (#300), and a finished one has none. The list at the side of the screen (#340) shows
-## each open quest's step and count, follows a step counting up, and drops a finished quest once
-## it has faded out; the menu's Quests tab (#388) shows the same quests with every step, done,
+## asks for (#300), and a finished one has none. The player follows one open quest (#1298): the
+## one they picked, else the side quest they started last, else the first open one, kept through
+## saving and loading. The list at the side of the screen (#340) shows only the followed quest's
+## step and count, follows a step counting up, and drops a finished quest once it has faded out;
+## the menu's Quests tab (#388) shows the same quests with every step, done,
 ## current or later. A player stepping into a place from outside it raises that the place was
 ## reached, for that player only (#339); it finishes this player's quest to reach it, not another
 ## player's arrival, and the quest's marker points at the place's nearest tile. In the glade, a
@@ -320,12 +322,19 @@ func _check_unmarked(state: GameState, wild: WildMonsterFeature, quests: QuestTr
 	return ""
 
 
-## The list shows each of `expected`'s quests with the line under its name, by quest id.
+## The list shows each of `expected`'s quests with the line under its name, by quest id, while
+## the player follows it (#1298), and no other open quest.
 func _check_listed(list: QuestListView, expected: Dictionary[String, String]) -> String:
-	list.show_quests()
+	var quests: QuestTracker = list.keeper.quests()
 	for id: String in expected:
+		quests.focus = id
+		list.show_quests()
 		if list.shown.get(id, "") != expected[id] or not list.cards.has(id):
 			return "the quest list shows %s for %s, not %s" % [list.shown.get(id), id, expected[id]]
+		for other: String in list.shown:
+			var open: bool = quests.open_steps().has(other)
+			if other != quests.focused() and open and not list.leaving.has(other):
+				return "the quest list shows %s while %s is followed" % [other, quests.focused()]
 	return ""
 
 
@@ -417,8 +426,13 @@ func _check_finds(
 	list.show_quests()
 	if result.is_empty() and list.cards.has("pond_chest"):
 		result = "the pond's side quest is listed before this player entered the pond"
+	# Following the newest quest, which the pond's side quest is once it starts (#1298).
+	quests.focus = ""
 	if result.is_empty():
 		result = _check_entered(driver, bus, quests)
+	list.show_quests()
+	if result.is_empty() and (quests.focused() != "pond_chest" or not list.cards.has("pond_chest")):
+		result = "the pond's side quest, started last, isn't followed and listed"
 	if result.is_empty():
 		result = _check_listed(list, { "pond_chest": "Open a chest" })
 	if result.is_empty():
@@ -590,29 +604,35 @@ func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> Str
 	var tab: QuestsTab = (list.get_parent().get_node("GameMenu") as GameMenu).quests_tab()
 	var glade: String = FlowSteps.GLADE
 	var forest: String = FlowSteps.FOREST
-	list.show_quests()
 	tab.refresh()
-	var result: String = _check_pill(list.pill(quest), forest, false)
+	var result: String = _check_pill(_list_pill(list, quest), forest, false)
 	result = result if not result.is_empty() else _check_pill(tab.pills[quest], forest, false)
-	result = result if not result.is_empty() else _check_pill(list.pill("pond_chest"), glade, true)
+	if result.is_empty():
+		result = _check_pill(_list_pill(list, "pond_chest"), glade, true)
 	if result.is_empty():
 		result = _check_pill(tab.pills["pond_chest"], glade, true)
 	var there: Elsewhere = Elsewhere.new()
 	there.where = FlowSteps.FOREST
 	list.driver = there
 	tab.driver = there
-	list.show_quests()
 	tab.refresh()
-	result = result if not result.is_empty() else _check_pill(list.pill(quest), forest, true)
+	result = result if not result.is_empty() else _check_pill(_list_pill(list, quest), forest, true)
 	result = result if not result.is_empty() else _check_pill(tab.pills[quest], forest, true)
 	if result.is_empty():
-		result = _check_pill(list.pill("pond_chest"), glade, false)
+		result = _check_pill(_list_pill(list, "pond_chest"), glade, false)
 	if result.is_empty():
 		result = _check_pill(tab.pills["pond_chest"], glade, false)
 	list.driver = driver
 	tab.driver = driver
 	there.free()
 	return result
+
+
+## The pill on the list's card of quest `id`, once the player follows it (#1298).
+static func _list_pill(list: QuestListView, id: String) -> QuestPill:
+	list.keeper.quests().focus = id
+	list.show_quests()
+	return list.pill(id)
 
 
 ## Why `pill` doesn't name the instance `where` as `here` says (filled, or outlined with its
@@ -994,6 +1014,39 @@ func _check_side_quest() -> String:
 	applied = _count(at_once, _entering("pond"))
 	if not applied.is_empty() or at_once.finished != ["in_one"]:
 		return "entering the pond didn't both start and finish a side quest asking for it"
+	return _check_followed()
+
+
+## The player follows one open quest (#1298): with no side quest started and none picked, the
+## first open one; the side quest started last, the pond's, once it starts, kept through saving and
+## loading; the one they pick, kept too, but not one that isn't open. Once the side quest followed
+## finishes, the first open one is followed again.
+func _check_followed() -> String:
+	var quests: QuestTracker = QuestTracker.new()
+	quests.book = QuestContent.load_quests().quests
+	var applied: String = _count(quests, _entering("thicket"))
+	if quests.focused() != "first_domination":
+		return "with no side quest started, %s is followed, not the first open one" % [
+			quests.focused(),
+		]
+	applied += _count(quests, _entering("pond"))
+	var loaded: QuestTracker = _reloaded(quests)
+	if loaded == null or loaded.focused() != "pond_chest" or loaded.started != ["pond_chest"]:
+		return "the side quest started last isn't followed, kept through loading: " + applied
+	loaded.focus = "three_ombulumo"
+	var picked: QuestTracker = _reloaded(loaded)
+	if picked == null or picked.focused() != "three_ombulumo":
+		return "the quest picked to follow isn't followed, or not kept through loading"
+	loaded.focus = "first_domination_done"
+	if loaded.focused() != "pond_chest":
+		return "a quest picked that isn't open is followed over the side quest started last"
+	loaded.focus = "pond_chest"
+	applied = _count(loaded, _gain([], 1))
+	if (not applied.is_empty() or not loaded.started.is_empty() or not loaded.focus.is_empty()
+			or loaded.focused() != "first_domination"):
+		return "the finished side quest followed is still started or followed: %s" % [
+			loaded.started,
+		]
 	return ""
 
 

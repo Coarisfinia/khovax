@@ -7,7 +7,7 @@ extends RefCounted
 ## companions (ProfileCompanion, #855) bring up to date, read and write, keyed to the same format.
 
 ## The save format. Bump it with a migration from the format before.
-const FORMAT: int = 20
+const FORMAT: int = 21
 ## The species ids before format 14, each to its id since: a species' id is its name (#763).
 const OLD_SPECIES: Dictionary[String, String] = {
 	"moss_toad": "ombulumo",
@@ -115,6 +115,7 @@ static func _migrate(data: Dictionary, format: int) -> void:
 		_migrate_to_18,
 		_migrate_to_19,
 		_migrate_to_20,
+		_migrate_to_21,
 	]
 	for step: int in range(format - 1, steps.size()):
 		steps[step].call(data)
@@ -278,6 +279,12 @@ static func _migrate_to_20(data: Dictionary) -> void:
 	for place: int in numbers.size():
 		numbers[place] = short_ids.get(_int(numbers[place]), numbers[place])
 	var _next: bool = data.erase("next_monster_id")
+
+
+## Format 20 to 21: the quests keep the one the player follows (#1298) and the order side quests
+## started in, their own keys (QuestSave).
+static func _migrate_to_21(_data: Dictionary) -> void:
+	return
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
