@@ -239,7 +239,8 @@ background; only wait in the foreground for a result the very next step needs.
   rule, #1433): `Resolved: fixed in <sha>, …` or `Resolved: not changing, because …`. That one
   reply answers the comment and asks for the thread to be resolved, and the project watcher
   resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
-  included. Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
+  included, except one that waits on the owner's decision: that one is answered and left open
+  (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
