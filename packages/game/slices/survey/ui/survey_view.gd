@@ -216,9 +216,11 @@ func _draw_tiles() -> void:
 
 
 ## Where each tile shown is drawn, by tile, of those in view: the ones outside, which the clipping
-## would hide anyway, are left out.
+## would hide anyway, are left out. A tile counts while anything of it could show: its symbol, as
+## wide as two tile radii, or its ink ring, which reaches half the ink past its corners (#1365).
 func _tiles_in_view() -> Dictionary[Vector2i, Vector2]:
-	var seen: Rect2 = Rect2(Vector2.ZERO, size).grow(zoom())
+	var reach: float = maxf(zoom(), zoom() * TILE_SHARE + INK_PIXELS / 2.0)
+	var seen: Rect2 = Rect2(Vector2.ZERO, size).grow(reach)
 	var shown: Dictionary[Vector2i, Vector2] = {}
 	for tile: Vector2i in tiles:
 		var at: Vector2 = to_view(tile)
