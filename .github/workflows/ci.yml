@@ -847,10 +847,10 @@ jobs:
       - name: "📦 Install Mesa's software renderer"
         # WebGL 2 comes from Mesa's llvmpipe (#252): on Chrome's own SwiftShader the page sometimes
         # froze for good. From the named runner image's signed Ubuntu archive, so its version
-        # follows the image's Mesa.
+        # follows the image's Mesa. apt retries a mirror's passing errors (#1429).
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri libgbm1
+          sudo apt-get -o Acquire::Retries=5 update -q
+          sudo apt-get -o Acquire::Retries=5 install -y -q --no-install-recommends libegl1 libegl-mesa0 libgl1-mesa-dri libgbm1
 
       - name: "🌐 Web test build: run the e2e flow in headless Chrome"
         run: |
