@@ -223,9 +223,11 @@ def paws(mats):
 
 # The bones a rooted piece follows of the skin it grows from (weights.root): the trunk's for the
 # crest, the throat's for the ruff. The shoulder blades' share there stays with the spine, or they
-# would rock them at every step (the owner, on #1413).
+# would rock them at every step (the owner, on #1413). The ruff's skin is the neck's (#1422), but
+# a ruff turning with the neck as it bows would sweep its tips back into the chest: the neck's
+# share stays with the chest, and the head's moves it.
 TRUNK = ("hips", "spine_01", "spine_02", "neck")
-THROAT = ("spine_02", "neck", "head")
+THROAT = ("spine_02", "head")
 
 
 def fur(mats):
