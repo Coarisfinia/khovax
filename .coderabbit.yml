@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+reviews:
+  profile: assertive
+  review_details: true
+  fail_commit_status: true
+  auto_apply_labels: true
+  suggested_reviewers: false
+  slop_detection:
+    include_all_authors: true
+    label: slop
+  auto_approvals:
+    enabled: true
+    max_merge_risk: low

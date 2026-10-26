@@ -629,6 +629,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   A wrong release gets a new version, never a moved tag.
 - **Pull requests opened with the owner's account can't be approved by the owner.** The bot opens
   them.
+- **`.coderabbit.yml` is a copy of the organization's CodeRabbit settings** (owner's rule, #1340):
+  both are kept identical by hand, so a change to one goes into the other in the same step (the
+  organization's side is the YAML editor in CodeRabbit's organization settings, with the owner's
+  browser login). Automatic approvals have no security-risk limit, so a stale CHANGES_REQUESTED
+  from CodeRabbit doesn't hold an approved, green pull request out of the merge queue.
 
 ### Toolchain
 
