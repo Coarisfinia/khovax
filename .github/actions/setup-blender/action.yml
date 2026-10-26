@@ -63,7 +63,7 @@ runs:
           }
           use_mirror "https://snapshot.ubuntu.com/ubuntu/$0"
           if ! apt-get update --error-on=any -qq; then
-            echo "::warning::Ubuntu snapshot $0 unreachable: Blender'"'"'s libraries come from the live archive."
+            echo "::warning::Updating from Ubuntu snapshot $0 failed: Blender'"'"'s libraries come from the live archive, maybe newer."
             use_mirror "http://archive.ubuntu.com/ubuntu"
             apt-get update --error-on=any -qq
           fi
