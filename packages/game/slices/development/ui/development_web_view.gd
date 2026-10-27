@@ -28,6 +28,13 @@ const STAT_NAMES: Dictionary[String, String] = {
 	"strength": "Strength",
 	"speed": "Speed",
 }
+## The same, shortened, for a screen too narrow for the whole words even with the spokes at their
+## steepest (#1442).
+const SHORT_STAT_NAMES: Dictionary[String, String] = {
+	"hp": "HP",
+	"strength": "Str",
+	"speed": "Spd",
+}
 ## A node's smallest side, in font sizes, so a finger can hit it: the same as the menu's buttons
 ## (GameMenu.BUTTON_FONTS), which the menu sets only when the font changes, not on nodes built
 ## after.
@@ -41,6 +48,15 @@ const GAP_FONTS: float = 0.5
 ## The width of a link to a taken node and of one between two taken nodes, in font sizes.
 const OPEN_LINK_FONTS: float = 0.1
 const TAKEN_LINK_FONTS: float = 0.3
+## How finely the spokes steepen to fit a narrow screen: the share of a step out that may go across
+## is tried in steps of one over this.
+const SQUEEZE_STEPS: int = 20
+## How far a link between two directions bows out from the web's middle, in the buttons' widths with
+## their gap: steepened spokes stack a direction's nodes, and a straight bridge would pass behind
+## the nodes between its ends, as if they were linked instead (#1442).
+const BOW_ROOMS: float = 0.75
+## How many straight pieces draw a bowed link.
+const BOW_PIECES: int = 16
 
 ## What the view says above the web, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
@@ -55,11 +71,16 @@ var _lines: VBoxContainer
 var _web: Control
 ## What scrolls the web sideways.
 var _across: ScrollContainer
+## The buttons' width with the gap between two nodes: how far a link between two directions bows.
+var _room_across: float = 0.0
 ## The web shown, or null.
 var _shown_web: DevelopmentWeb
 var _taken: Array[String] = []
 ## How far a step out along a spoke goes, across and down, from the buttons' size.
 var _ring: Vector2 = Vector2.ZERO
+## How much of its share across each step out past the first still goes, from 0 to 1: 1 spaces the
+## spokes out evenly, less steepens them so the web fits a narrow screen's width (#1442).
+var _squeeze: float = 1.0
 
 
 func _ready() -> void:
@@ -68,12 +89,15 @@ func _ready() -> void:
 	_web = Control.new()
 	var _drawn: int = _web.draw.connect(_draw_links)
 	var _resized: int = _web.resized.connect(_place)
-	# The web scrolls sideways on its own: the Character tab doesn't, and a web wider than a phone
-	# held upright would cut off its outer nodes otherwise (#1442 fits it to the screen). A
-	# controller's focus scrolls it to the focused node.
+	# The web steepens its spokes to fit the screen's width (#1442). Should it still be wider, as
+	# with a spoke lying flat, it scrolls sideways on its own: the Character tab doesn't, and its
+	# outer nodes would be cut off otherwise. A controller's focus scrolls it to the focused node.
 	_across = ScrollContainer.new()
 	_across.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_across.follow_focus = true
+	# A narrower screen leaves the web's own size alone, as it's at least its minimum: it's laid out
+	# again for the room it has.
+	var _narrowed: int = _across.resized.connect(_place)
 	_web.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_across.add_child(_web)
 	add_child(_across)
@@ -113,8 +137,10 @@ func show_monster(monster: DominatedMonster) -> void:
 	_build(monster)
 
 
-## The words on a node's button: what its leaning shifts, one stat a line, after "Taken" once taken.
-static func node_text(leaning: DevelopmentLeaning, taken: bool) -> String:
+## The words on a node's button: what its leaning shifts, one stat a line, after "Taken" once taken;
+## each stat's name `short`ened for a narrow screen.
+static func node_text(leaning: DevelopmentLeaning, taken: bool, short: bool = false) -> String:
+	var names: Dictionary[String, String] = SHORT_STAT_NAMES if short else STAT_NAMES
 	var parts: Array[String] = []
 	if taken:
 		parts.append(TAKEN_TEXT)
@@ -123,7 +149,7 @@ static func node_text(leaning: DevelopmentLeaning, taken: bool) -> String:
 		if shift != 0:
 			# Thousandths of the species' stat, as a percentage.
 			var percent: String = ("%.1f" % (shift / 10.0)).trim_suffix(".0")
-			parts.append("%s %s%s%%" % [STAT_NAMES[stat], "+" if shift > 0 else "", percent])
+			parts.append("%s %s%s%%" % [names[stat], "+" if shift > 0 else "", percent])
 	return "\n".join(parts)
 
 
@@ -197,12 +223,40 @@ func _place() -> void:
 	if _shown_web == null:
 		_web.custom_minimum_size = Vector2.ZERO
 		return
+	var biggest: Vector2 = _space_out(false)
+	# Still too wide with the spokes at their steepest: the words are shortened (#1442).
+	if _width(_squeeze, biggest.x) > _across.size.x:
+		biggest = _space_out(true)
+	var font: int = get_theme_default_font_size()
+	var reach: Vector2 = Vector2.ZERO
+	for node: String in buttons:
+		reach = reach.max(_offset(node, _squeeze).abs())
+	var needed: Vector2 = 2.0 * reach + biggest
+	# A link bowing up or down needs the height, as the web can't scroll that way; across, a bow
+	# keeps inside the web's width instead (_link_line).
+	for link: PackedStringArray in _links():
+		for point: Vector2 in _link_line(link[0], link[1], INF):
+			needed.y = maxf(needed.y, 2.0 * absf(point.y) + font * TAKEN_LINK_FONTS)
+	_web.custom_minimum_size = needed
+	for node: String in buttons:
+		var button: Button = buttons[node]
+		button.size = button.get_combined_minimum_size()
+		button.position = _spot(node) - button.size * 0.5
+	_web.queue_redraw()
+
+
+## Sizes the buttons, with their words `short`ened or not, and spaces the spokes for them, as
+## steep as the width the web has needs; returns the biggest button's size.
+func _space_out(short: bool) -> Vector2:
 	var biggest: Vector2 = Vector2.ZERO
 	var font: int = get_theme_default_font_size()
-	for button: Button in buttons.values():
+	for node: String in buttons:
+		var button: Button = buttons[node]
+		button.text = node_text(_shown_web.leanings[node], _taken.has(node), short)
 		button.custom_minimum_size = Vector2.ONE * font * TOUCH_FONTS
 		biggest = biggest.max(button.get_combined_minimum_size())
 	var room: Vector2 = biggest + Vector2.ONE * font * GAP_FONTS
+	_room_across = room.x
 	# The smallest share of a step that goes across, and down, on any spoke that has some.
 	var least: Vector2 = Vector2.ONE
 	var flat: bool = false
@@ -214,25 +268,60 @@ func _place() -> void:
 	# A step down clears a node's height. Across, spokes on either side only need half a width
 	# apart, but a spoke lying flat needs a whole one between its own nodes.
 	_ring = Vector2(room.x * (1.0 if flat else 0.5) / least.x, room.y / least.y)
-	var reach: Vector2 = Vector2.ZERO
-	for node: String in buttons:
-		reach = reach.max((_spot(node, Vector2.ZERO) - _spot("", Vector2.ZERO)).abs())
-	_web.custom_minimum_size = 2.0 * reach + biggest
-	for node: String in buttons:
-		var button: Button = buttons[node]
-		button.size = button.get_combined_minimum_size()
-		button.position = _spot(node) - button.size * 0.5
-	_web.queue_redraw()
+	_squeeze = _fitting_squeeze(room, biggest.x)
+	return biggest
 
 
-## Where `node`'s middle goes in the web, or the middle's for "", around `middle` (the web's own
-## middle when it's left out).
-func _spot(node: String, middle: Vector2 = Vector2.INF) -> Vector2:
-	var at: Vector2 = _web.size * 0.5 if middle == Vector2.INF else middle
+## How much each step out past the first may go across, from 1 down, for the web to fit the width
+## its scrolling area has: the spokes stay as even as that allows, and never steepen so far that two
+## nodes `room` apart would cover each other; then the web scrolls instead (#1442).
+func _fitting_squeeze(room: Vector2, biggest: float) -> float:
+	var squeeze: float = 1.0
+	for step: int in range(SQUEEZE_STEPS - 1, -1, -1):
+		if _width(squeeze, biggest) <= _across.size.x:
+			break
+		var steeper: float = float(step) / SQUEEZE_STEPS
+		if _covers(steeper, room):
+			break
+		squeeze = steeper
+	return squeeze
+
+
+## How wide the web is with its spokes steepened to `squeeze`, its widest node `biggest` across.
+func _width(squeeze: float, biggest: float) -> float:
+	var reach: float = 0.0
+	for node: String in buttons:
+		reach = maxf(reach, absf(_offset(node, squeeze).x))
+	return 2.0 * reach + biggest
+
+
+## Whether two nodes come closer than `room` both across and down with the spokes at `squeeze`.
+func _covers(squeeze: float, room: Vector2) -> bool:
+	var nodes: Array[String] = []
+	nodes.assign(buttons.keys())
+	for first: int in nodes.size():
+		var at: Vector2 = _offset(nodes[first], squeeze)
+		for second: int in range(first + 1, nodes.size()):
+			var apart: Vector2 = (at - _offset(nodes[second], squeeze)).abs()
+			# A pixel's leeway for rounding, as neighbours on a spoke sit exactly `room` apart.
+			if apart.x < room.x - 1.0 and apart.y < room.y - 1.0:
+				return true
+	return false
+
+
+## Where `node`'s middle goes in the web, or the web's middle for "".
+func _spot(node: String) -> Vector2:
+	return _web.size * 0.5 + _offset(node, _squeeze)
+
+
+## How far `node` sits from the web's middle with the spokes at `squeeze`: a whole step down for
+## each step out, and across the first step whole and each one past it `squeeze` of one.
+func _offset(node: String, squeeze: float) -> Vector2:
 	if node.is_empty():
-		return at
-	var spoke: Vector2 = _spoke(_directions().find(node.get_slice("_", 0)))
-	return at + spoke * _ring * node.get_slice("_", 1).to_int()
+		return Vector2.ZERO
+	var spoke: Vector2 = _spoke(_directions().find(node.get_slice("_", 0))) * _ring
+	var steps: int = node.get_slice("_", 1).to_int()
+	return Vector2(spoke.x * (1.0 + (steps - 1) * squeeze), spoke.y * steps)
 
 
 ## Which way the direction in place `direction` of the web's order runs out from the middle:
@@ -248,19 +337,50 @@ func _draw_links() -> void:
 		return
 	var font: int = get_theme_default_font_size()
 	var color: Color = get_theme_color("font_color", "Label")
+	for link: PackedStringArray in _links():
+		var both: bool = _taken.has(link[0]) and (link[1].is_empty() or _taken.has(link[1]))
+		var width: float = font * (TAKEN_LINK_FONTS if both else OPEN_LINK_FONTS)
+		var side: float = _web.size.x * 0.5 - font * TAKEN_LINK_FONTS
+		var line: PackedVector2Array = _link_line(link[0], link[1], side)
+		_web.draw_polyline(Transform2D(0.0, _web.size * 0.5) * line, color, width, true)
+
+
+## Each link the web draws, as its two nodes ("" for the middle): from every direction's first
+## node to the middle, and each pair of shown nodes next to each other where one is taken, once.
+func _links() -> Array[PackedStringArray]:
+	var links: Array[PackedStringArray] = []
 	for node: String in buttons:
-		var ends: Array[String] = []
 		if node.get_slice("_", 1).to_int() == 1:
-			ends.append("")
+			links.append(PackedStringArray([node, ""]))
 		for next_to: String in _shown_web.links[node]:
 			# Each pair once, from the node earlier in the web, and only where the fog lifts.
 			if buttons.has(next_to) and (_taken.has(node) or _taken.has(next_to)):
 				if _shown_web.nodes.find(next_to) < _shown_web.nodes.find(node):
-					ends.append(next_to)
-		for end: String in ends:
-			var both: bool = _taken.has(node) and (end.is_empty() or _taken.has(end))
-			var width: float = font * (TAKEN_LINK_FONTS if both else OPEN_LINK_FONTS)
-			_web.draw_line(_spot(node), _spot(end), color, width, true)
+					links.append(PackedStringArray([node, next_to]))
+	return links
+
+
+## The line from `node` to `end` ("" for the middle), around the web's middle: straight along a
+## direction, and bowed out from the middle between two directions, so it passes around the nodes
+## between its ends rather than behind them, as if those were linked. Its bow reaches no further
+## across than `side`, where the web's edge would cut it off. A link whose middle is the web's,
+## like a portal straight across, stays straight.
+func _link_line(node: String, end: String, side: float) -> PackedVector2Array:
+	var from: Vector2 = _offset(node, _squeeze)
+	var to: Vector2 = _offset(end, _squeeze)
+	var out: Vector2 = (from + to) * 0.5
+	if end.is_empty() or node.get_slice("_", 0) == end.get_slice("_", 0) or out.length() < 1.0:
+		return PackedVector2Array([from, to])
+	# Both ends leave outward, so the line runs around the outside like a bracket; its farthest
+	# point lies three quarters of the bow beyond the middle of its ends.
+	var bow: Vector2 = out.normalized() * _room_across * BOW_ROOMS
+	if absf(bow.x) > 0.0:
+		bow *= clampf((side - absf(out.x)) / (0.75 * absf(bow.x)), 0.0, 1.0)
+	var line: PackedVector2Array = PackedVector2Array()
+	for piece: int in BOW_PIECES + 1:
+		var along: float = float(piece) / BOW_PIECES
+		var _added: bool = line.append(from.bezier_interpolate(from + bow, to + bow, to, along))
+	return line
 
 
 ## Each direction's id, in the web's order.

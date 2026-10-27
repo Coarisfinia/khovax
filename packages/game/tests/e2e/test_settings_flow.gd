@@ -621,8 +621,9 @@ func _menu_development(tab: CharacterTab) -> String:
 	return ""
 
 
-## On a phone held upright the web is wider than the tab: taking a node a step further out keeps the
-## focus on it and scrolls it into sight, so a controller never loses it off the edge (#1441).
+## On a phone held upright the web steepens its spokes to fit the tab's width, its nodes never
+## covering each other (#1442): taking a node a step further out keeps the focus on it and in sight,
+## so a controller never loses it off the edge (#1441).
 func _menu_development_scroll(menu: GameMenu) -> String:
 	var tab: CharacterTab = menu.character
 	var view: DevelopmentWebView = tab.find_children("*", "DevelopmentWebView", true, false)[0]
@@ -652,9 +653,20 @@ func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
 	var shown: Rect2 = button.get_global_rect()
 	var web: Control = button.get_parent()
 	var across: Rect2 = (web.get_parent() as Control).get_global_rect()
-	if web.size.x <= across.size.x:
-		return "the web fits the narrow screen, so it needn't scroll to %s: %s" % [node, web.size]
-	# A pixel's leeway for rounding.
+	# A pixel's leeway for rounding, here and below.
+	if web.size.x > across.size.x + 1.0:
+		return "the web doesn't fit the narrow screen with %s taken: %s in %s" % [
+			node,
+			web.size,
+			across.size,
+		]
+	var rects: Array[Rect2] = []
+	for each: Button in view.buttons.values():
+		rects.append(each.get_global_rect().grow(-1.0))
+	for first: int in rects.size():
+		for second: int in range(first + 1, rects.size()):
+			if rects[first].intersects(rects[second]):
+				return "two nodes cover each other on the narrow screen: %s" % [rects]
 	var inside: bool = shown.position.x >= across.position.x and shown.end.x <= across.end.x + 1.0
 	if not button.has_focus() or not inside:
 		return "taking %s didn't keep it focused and in sight: %s in %s" % [node, shown, across]
