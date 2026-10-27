@@ -145,8 +145,8 @@ func _show(lines: Array[String], ids: Array[String], marks: Array[bool] = []) ->
 		_rows.add_child(_row(lines[place], short_id, place, place < marks.size() and marks[place]))
 
 
-## A monster's row: its line, which can be dragged onto another row, the knot mark if `with_mark`,
-## and its up and down buttons. Without a monster (`short_id` ""), the line alone.
+## A monster's row: its line, which can be dragged onto another row, the knot mark below it if
+## `with_mark`, and its up and down buttons. Without a monster (`short_id` ""), the line alone.
 func _row(line: String, short_id: String, place: int, with_mark: bool) -> Control:
 	var text: Label = GameMenu.label(line)
 	if short_id.is_empty():
@@ -155,13 +155,20 @@ func _row(line: String, short_id: String, place: int, with_mark: bool) -> Contro
 	# A tap or a click shows it in the detail pane, and so does a controller's focus (#438).
 	text.focus_mode = Control.FOCUS_ALL
 	var _focused: int = text.focus_entered.connect(select.bind(short_id))
+	var parts: Array[Control] = [text]
 	var row: HBoxContainer = HBoxContainer.new()
-	row.add_child(text)
 	if with_mark:
-		# After its line, so the line trims first on a narrow screen and the mark stays whole.
-		row.add_child(KnotMark.new())
+		# Below its line, so the line keeps its width and still says which monster it is.
+		var column: VBoxContainer = VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_child(text)
+		parts.append(KnotMark.new())
+		column.add_child(parts[1])
+		row.add_child(column)
+	else:
+		row.add_child(text)
 	# The mark takes a tap, a click or a drag as its line does, so it never leaves a dead spot.
-	for part: Control in row.get_children():
+	for part: Control in parts:
 		part.mouse_filter = Control.MOUSE_FILTER_STOP
 		var _tapped: int = part.gui_input.connect(_on_row_input.bind(short_id))
 		part.set_drag_forwarding(

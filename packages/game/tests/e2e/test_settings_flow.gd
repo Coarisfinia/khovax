@@ -629,7 +629,8 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 	tab.monsters.refresh()
 	var wanted: Array[bool] = [waits, false, false, false]
 	var row: Node = tab.monsters.get_child(1).get_child(0)
-	var mark: KnotMark = row.get_child(1) as KnotMark
+	var marks: Array[Node] = row.find_children("*", "KnotMark", true, false)
+	var mark: KnotMark = marks[0] as KnotMark if not marks.is_empty() else null
 	if tab.monsters.marked != wanted or (mark != null) != waits:
 		return "the monsters' rows carry the knot mark %s, not %s" % [tab.monsters.marked, wanted]
 	if mark != null and (mark.get_child(1) as Label).text != KnotMark.TEXT:
