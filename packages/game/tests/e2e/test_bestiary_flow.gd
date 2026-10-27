@@ -5,7 +5,9 @@ extends RefCounted
 ## the model its monsters wear (#1190). Every wild monster drawn on their screen is seen, in the
 ## instance they're in, and one not drawn isn't. A wild monster that strikes the player is met: its
 ## page then shows its types, its abilities by name and where they came across it; one striking the
-## trail isn't. Their own domination of one teaches its lore, which the page shows; another player's
+## trail isn't. A realm's instance in that habitat line is a link, and selecting it turns the page
+## to that place's (#1175); the playground, which no realm draws, is plain words. Their own
+## domination of one teaches its lore, which the page shows; another player's
 ## doesn't. What they learned goes into the profile's file with its next save, never asking for one
 ## itself (so a domination's gain is still saved at once), and reads back as it was. A save whose
 ## bestiary is malformed is refused, and one from before the bestiary starts with nothing learned.
@@ -33,6 +35,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_seen()
 	if result.is_empty():
 		result = _check_met()
+	if result.is_empty():
+		result = _check_habitat_link()
 	if result.is_empty():
 		result = _check_known()
 	if result.is_empty():
@@ -108,6 +112,31 @@ func _check_met() -> String:
 	]
 	var problem: String = _page_problem(species, expected)
 	return "a met species' page: " + problem if not problem.is_empty() else ""
+
+
+## A species met in a realm's instance too names it as a link in its habitat line, after the
+## playground in plain words; selecting the link turns the page to that place's.
+func _check_habitat_link() -> String:
+	var species: Species = _species_of(_shown_monster())
+	var place: String = Realms.start()
+	_keeper.known().learn(species.id, Bestiary.MET, place)
+	if not _page.open(TextTags.MONSTER, species.id):
+		return "a met species' page didn't open"
+	var line: NameLinks = _page.beast.habitat_line
+	var link: String = TextTags.PLACE + NameLinks.META_SEPARATOR + place
+	var read: String = HABITAT + ", " + Realms.name_of(place)
+	if (line == null
+			or line.links.size() != 1
+			or line.links[0] != link
+			or line.get_parsed_text() != read):
+		var links: Array[String] = line.links if line != null else []
+		_page.close()
+		return "the habitat line linked %s, not %s" % [links, link]
+	line.select(link)
+	var turned: bool = (_page.is_open() and _page.heading.text == CodexPage.PLACES_TEXT
+			and _page.title.text == Realms.name_of(place))
+	_page.close()
+	return "" if turned else "selecting %s showed %s" % [place, _page.title.text]
 
 
 ## Another player's domination teaches this player nothing; their own teaches its lore.
