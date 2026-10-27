@@ -42,15 +42,16 @@ func run(_tree: SceneTree) -> String:
 	return ""
 
 
-## No instance of the game's own is a battle yet: none has control points.
+## An instance has control points exactly when its region marks them, so ordinary instances have
+## none and one made for a battle has its own.
 func _check_ordinary_instances() -> String:
 	for instance_name: String in InstanceBlueprints.names():
-		if InstanceBlueprints.create(
-			instance_name,
-			SEED,
-			0,
-		).feature(ControlPointFeature.ID) != null:
-			return "%s, an ordinary instance, has control points" % instance_name
+		var state: GameState = InstanceBlueprints.create(instance_name, SEED, 0)
+		var marked: bool = not state.region.placed(ControlPointPlacements.KIND).is_empty()
+		if (state.feature(ControlPointFeature.ID) != null) != marked:
+			return "%s has control points without its region marking them, or the reverse" % (
+				instance_name
+			)
 	return ""
 
 
@@ -76,10 +77,13 @@ func _check_marked() -> String:
 	return ""
 
 
-## A control point naming a side there is none of is refused.
+## A control point naming a side there is none of is refused, on a grid that reads with a known one.
 func _check_unknown_side() -> String:
-	var legend: String = "- `🚩`: a control point, held by the wanderers\n"
-	if FlowSteps.region("🔴🚩", legend).problem.is_empty():
+	var known: String = "- `🚩`: a control point, held by the attackers\n"
+	if not FlowSteps.region("🔴🚩🟫", known).problem.is_empty():
+		return "a control point held by the attackers wasn't read"
+	var unknown: String = "- `🚩`: a control point, held by the wanderers\n"
+	if FlowSteps.region("🔴🚩🟫", unknown).problem.is_empty():
 		return "a control point held by an unknown side was read"
 	return ""
 
