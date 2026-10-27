@@ -14,6 +14,9 @@ var quests: Dictionary[String, QuestDefinition] = {}
 ## Every territory a quest hands over (#638), by the code a command hands it over by
 ## (Territory.code): the instance's name and the faction's id.
 var handovers: Dictionary[int, PackedStringArray] = {}
+## Every event a quest emits (#575), by the code a command raises it in the world by (#755,
+## CommandCodes.of).
+var events: Dictionary[int, String] = {}
 var _factions: FactionContent
 var _dialogs: DialogContent
 ## The loot tables, chests' included, and the harvest tables.
@@ -95,6 +98,8 @@ func add(file_id: String, text: String) -> String:
 	if quest.problem.is_empty() and quest.territory != null:
 		quest.problem = _code_territory(quest.territory)
 	if quest.problem.is_empty():
+		quest.problem = _code_events(quest)
+	if quest.problem.is_empty():
 		quests[quest.id] = quest
 	return quest.problem
 
@@ -161,4 +166,18 @@ func _code_territory(territory: QuestTerritory) -> String:
 	var by: int = Territory.code(territory.instance, territory.faction)
 	if not CommandCodes.file(handovers, by, handed):
 		return "its territory's code is taken: hand over another instance or faction"
+	return ""
+
+
+## Files every event `quest`'s steps and choices emit by its code (#755); why one can't be, or "":
+## a command couldn't tell it from none, or from another event with the same code.
+func _code_events(quest: QuestDefinition) -> String:
+	for step: QuestStep in quest.steps:
+		var emitters: Array[QuestStep] = [step]
+		emitters.append_array(step.choices)
+		for emitter: QuestStep in emitters:
+			var event: String = emitter.emits
+			if (not event.is_empty()
+					and not CommandCodes.file(events, CommandCodes.of(event), event)):
+				return "the code of its event %s is taken: name the event otherwise" % event
 	return ""

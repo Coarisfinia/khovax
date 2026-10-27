@@ -89,6 +89,17 @@ const AFTER_BEACON: String = (
 	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"beacon_lit\"}, "
 	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_beacon\"}]}"
 )
+## A quest whose step emits that the bell rang (#755), once this player enters the bell tower.
+const RING_BELL: String = (
+	"{\"id\": \"ring_bell\", \"name\": \"Ring the bell\", \"steps\": [{\"condition\": \"entered\", "
+	+ "\"piece\": \"bell_tower\", \"emits\": \"bell_rung\", \"ends\": \"ring_bell\"}]}"
+)
+## A side quest that starts once the bell rang (#755).
+const AFTER_BELL: String = (
+	"{\"id\": \"after_bell\", \"name\": \"After the bell\", "
+	+ "\"starts_on\": {\"condition\": \"emitted\", \"event\": \"bell_rung\"}, "
+	+ "\"steps\": [{\"condition\": \"opened\", \"ends\": \"after_bell\"}]}"
+)
 ## A quest whose chest turns the player against the Amvrel Velmarai, further than its scale.
 const BETRAYAL: String = (
 	"{\"id\": \"betrayal\", \"name\": \"Betray the guild\", "
@@ -517,6 +528,8 @@ func _check_finds(
 		result = _check_answered(driver, bus, quests)
 	if result.is_empty():
 		result = _check_territory(driver, bus, profile, quests, list)
+	if result.is_empty():
+		result = _check_quest_event(driver, bus, profile, quests)
 	return result if not result.is_empty() else _check_world_event(driver, bus, quests)
 
 
@@ -848,6 +861,49 @@ func _tick(driver: GameDriver, bus: EventBus) -> void:
 	for _step: int in 3:
 		driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
 	bus.flush()
+
+
+## A quest's event goes into the world (#755): the step that emits it is done, but the event counts
+## nothing yet and waits in the outbox; this player's next command carries it, which the replay
+## records, the world raises it and sets its flag, the outbox drops it once acknowledged, and the
+## side quest waiting on it starts on the world raising it back (WorldChanged).
+func _check_quest_event(
+	driver: GameDriver,
+	bus: EventBus,
+	profile: Profile,
+	quests: QuestTracker,
+) -> String:
+	var ringing: QuestDefinition = QuestDefinition.parse("ring_bell", RING_BELL, {})
+	var after: QuestDefinition = QuestDefinition.parse("after_bell", AFTER_BELL, {})
+	quests.book[ringing.id] = ringing
+	quests.book[after.id] = after
+	# The content's quests emit no event this one does, so the world learns its code here, as its
+	# feature learns every content quest's (QuestEventFactory).
+	var code: int = CommandCodes.of("bell_rung")
+	var here: GameState = driver.world.instance(driver.local_instance_name())
+	(here.feature(QuestEventFeature.ID) as QuestEventFeature).events[code] = "bell_rung"
+	_emit(driver, bus, PieceEntered.new("bell_tower", 1, 0))
+	var entries: Array[OutboxEntry] = profile.outbox.entries
+	var posted: bool = entries.size() == 1 and entries[0].kind == OutboxEntry.QUEST_EVENT
+	var result: String = ringing.problem + after.problem
+	if not result.is_empty() or not posted or entries[0].data != code:
+		result = "the bell tower's step didn't post its event to the outbox: " + result
+	elif not quests.finished.has(ringing.id) or quests.open_steps().has(after.id):
+		result = "the bell's event counted before the world raised it"
+	else:
+		_tick(driver, bus)
+		if not driver.world.flags.has(WorldFlags.EVENT_FLAG + "bell_rung"):
+			result = "the world didn't raise the bell's event"
+		elif not quests.open_steps().has(after.id) or not profile.outbox.entries.is_empty():
+			result = "the world raising the bell's event didn't start the side quest waiting on it"
+		elif not driver.recording.changes.has(code):
+			result = "the replay didn't record the bell's event"
+	for id: String in [ringing.id, after.id]:
+		var _unbooked: bool = quests.book.erase(id)
+		var _dropped: bool = quests.progress.erase(id)
+		quests.started.erase(id)
+		quests.finished.erase(id)
+	return result
 
 
 ## An event that changed the world (#707) reaches this player's profile, wherever they are, and
@@ -1243,7 +1299,9 @@ func _check_branch_standing() -> String:
 ## Steps and choices emit events (#575): taking the thicket's way, which leads to the same end as
 ## the pond's, emits its own event, which starts the side quest waiting on it but not the one
 ## waiting on the pond's; the end emits its own, which starts another side quest only once the
-## chain ends. A step can't wait on an event itself.
+## chain ends. An event counts only once the world raises it back (#755): it goes to the outbox
+## first, and the side quest waiting on it starts on the world's echo. A step can't wait on an event
+## itself.
 func _check_emitted() -> String:
 	var text: String = "{\"id\": \"fork\", \"name\": \"N\", \"steps\": [{\"choices\": ["
 	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\", "
@@ -1267,13 +1325,17 @@ func _check_emitted() -> String:
 	var applied: String = ""
 	for id: String in quests.book:
 		applied += quests.book[id].problem
-	applied += _count(quests, _entering("thicket"))
+	var profile: Profile = Profile.new()
+	applied += _count(quests, _entering("thicket"), profile)
+	if not applied.is_empty() or quests.open_steps().keys() != ["fork"]:
+		return "taking the thicket's way counted its event before the world raised it: " + applied
+	applied = _echo(quests, profile, ["took_thicket"])
 	if not applied.is_empty() or quests.open_steps().keys() != ["after_thicket", "fork"]:
 		return "taking the thicket's way didn't start just its side quest: " + applied
-	applied = _count(quests, _gain([], 1))
+	applied = _count(quests, _gain([], 1), profile) + _echo(quests, profile, ["won"])
 	if not applied.is_empty() or quests.open_steps().keys() != ["after_won"]:
 		return "the chain's end didn't start the side quest waiting on it: " + applied
-	applied = _count(quests, _gain(["ombulumo"], 0))
+	applied = _count(quests, _gain(["ombulumo"], 0), profile)
 	if not applied.is_empty() or quests.finished != ["after_thicket", "fork", "after_won"]:
 		return "the side quests an event started didn't go on: %s" % quests.finished
 	var step_waits: String = text.replace("\"condition\": \"opened\"", "\"condition\": \"emitted\"")
@@ -1281,6 +1343,30 @@ func _check_emitted() -> String:
 	if QuestDefinition.parse("fork", step_waits, {}).problem.is_empty():
 		return "a step waiting on an event wasn't refused"
 	return _check_answered_choice()
+
+
+## Plays the world's part for the events `profile`'s outbox holds (#755): they must be `events`,
+## in order, each as the request a quest's event is (OutboxEntry.QUEST_EVENT); it drops them, as
+## the world acknowledging them would, and counts each on `quests` as the world raising it back
+## (WorldChanged). Returns why the outbox held others, or "".
+static func _echo(quests: QuestTracker, profile: Profile, events: Array[String]) -> String:
+	var held: Array[int] = []
+	for request: OutboxEntry in profile.outbox.entries:
+		held.append(request.data if request.kind == OutboxEntry.QUEST_EVENT else -1)
+	var expected: Array[int] = []
+	for event: String in events:
+		expected.append(CommandCodes.of(event))
+	if held != expected:
+		return "the outbox held %s, not the events %s" % [held, events]
+	profile.outbox.entries.clear()
+	for event: String in events:
+		var _counted: String = _count(quests, QuestFacts.of(_changed(event), 0, ""), profile)
+	return ""
+
+
+## The world's event that the event `event_name` changed it (#707).
+static func _changed(event_name: String) -> WorldChanged:
+	return WorldChanged.new(event_name, WorldFlags.EVENT_FLAG + event_name)
 
 
 ## A choice taken by an answer (#636): leaving the scout takes the way to a domination, past the
