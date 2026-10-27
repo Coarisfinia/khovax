@@ -141,7 +141,9 @@ def gap(tree, part, points, vertices):
     once the part lies wholly inside them, as an ear the skin bulges over does.
     Both ways round: from the part's vertices to the faces, and from the faces' vertices near the
     part to its faces, since a lip's edge can come closer to a fang's side than any of the fang's
-    corners comes to the lip."""
+    corners comes to the lip. Measured at points, never between two faces' insides, it can read a
+    little long (never short), far below the tolerance for the small parts this checks. `overlap`
+    tests the faces themselves, not only their boxes."""
     if tree.overlap(part) or clearance.inside(tree, points[vertices[0]]):
         return 0.0
     low = float("inf")
