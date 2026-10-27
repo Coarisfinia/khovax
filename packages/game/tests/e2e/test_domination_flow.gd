@@ -1206,6 +1206,10 @@ func _check_leaning_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 			wait,
 			leaned,
 		]
+	# The most a leaning raises the strongest stat a species may have keeps it within what Fixed
+	# scales.
+	if CompanionGrowth.stat(Fixed.MAX_AMOUNT, CompanionLeaning.MOST) != Fixed.MAX_AMOUNT:
+		return "the most leaning stat went beyond Fixed.MAX_AMOUNT"
 	return ""
 
 
