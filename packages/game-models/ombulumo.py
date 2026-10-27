@@ -381,7 +381,9 @@ def _booming(t):
         "head": (-0.10 - 0.012 * wave(booms), 0.0, -0.04 * sway),
         "tail_01": (0.15, 0.0, 0.0),
     }
-    clips._both(pose, "ear", (-0.25 - 0.03 * wave(booms), 0.0, 0.0))
+    # The fronds rise off the head and flare with each boom; turned the other way, they sink
+    # wholly into it (#1440).
+    clips._both(pose, "ear", (0.25 + 0.05 * wave(booms), 0.0, 0.0))
     return pose
 
 
