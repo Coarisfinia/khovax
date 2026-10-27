@@ -951,20 +951,19 @@ func _menu_on_screens(menu: GameMenu) -> String:
 
 
 ## The open button stands at the top's middle on a landscape screen, and on a screen held upright
-## at the top of the quest list's side, the list making room for it below (#1465). The Survey is
-## in the top left corner here, so the list and the button are on the right.
+## at the top of the quest list's side, the list starting below the room it leaves for it, and at
+## its side's top while the button is hidden (#1465). The Survey is in the top left corner here, so
+## the list and the button are on the right.
 func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var button: Button = menu.open_button()
 	var shown: bool = button.visible
-	button.visible = true
-	menu.lay_out(screen)
+	var hidden_top: float = _list_top(menu, screen, false)
+	var hidden_room: float = menu.quest_list.room_above
+	var list_top: float = _list_top(menu, screen, true)
+	var room: float = menu.quest_list.room_above
 	var at: Rect2 = button.get_rect()
 	var badged: Rect2 = GameMenu.with_badge(button)
 	badged.position += at.position
-	var room: float = menu.quest_list.room_above
-	button.visible = false
-	menu.lay_out(screen)
-	var hidden_room: float = menu.quest_list.room_above
 	button.visible = shown
 	menu.lay_out(screen)
 	var column: Rect2 = menu.quest_list.column_in(screen)
@@ -974,15 +973,28 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 		placed = (is_equal_approx(badged.end.x, column.end.x)
 				and is_equal_approx(at.position.y, column.position.y)
 				and room >= badged.end.y - at.position.y + QuestListView.GAP)
-	if not placed or hidden_room != 0.0:
-		return "the open button is at %s on a %s screen, the list's side at %s, room %s/%s" % [
+	placed = (placed and hidden_room == 0.0 and is_equal_approx(hidden_top, column.position.y)
+			and is_equal_approx(list_top, column.position.y + room))
+	if not placed:
+		return "open button %s on %s, list side %s, room %s/%s, list top %s/%s" % [
 			at,
 			screen,
 			column,
 			room,
 			hidden_room,
+			list_top,
+			hidden_top,
 		]
 	return ""
+
+
+## Where the quest list starts on a screen of `screen` pixels, the menu's open button `shown` or
+## not.
+static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
+	menu.open_button().visible = shown
+	menu.lay_out(screen)
+	menu.quest_list.lay_out_in(screen, 1.0)
+	return menu.quest_list.position.y
 
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's

@@ -232,7 +232,12 @@ func pill(id: String) -> QuestPill:
 ## Puts the list on the Survey's other side and glides each card the share `glide` of the way to
 ## its place, the text sized to the screen.
 func _lay_out(glide: float) -> void:
-	var screen: Vector2 = get_viewport_rect().size
+	lay_out_in(get_viewport_rect().size, glide)
+
+
+## Lays the list out as `_lay_out` does, for a screen of `screen` pixels (tests lay it out for other
+## screens than their own this way).
+func lay_out_in(screen: Vector2, glide: float) -> void:
 	var font: int = _font_for(screen)
 	var font_changed: bool = font != _font_size
 	_font_size = font
