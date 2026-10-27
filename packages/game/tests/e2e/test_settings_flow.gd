@@ -959,6 +959,8 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	button.visible = true
 	menu.lay_out(screen)
 	var at: Rect2 = button.get_rect()
+	var badged: Rect2 = GameMenu.with_badge(button)
+	badged.position += at.position
 	var room: float = menu.quest_list.room_above
 	button.visible = false
 	menu.lay_out(screen)
@@ -969,9 +971,9 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var placed: bool = (is_equal_approx(at.get_center().x, screen.x / 2.0)
 			and is_equal_approx(at.position.y, GameMenu.MARGIN) and room == 0.0)
 	if screen.y > screen.x:
-		placed = (is_equal_approx(at.end.x, column.end.x)
+		placed = (is_equal_approx(badged.end.x, column.end.x)
 				and is_equal_approx(at.position.y, column.position.y)
-				and room >= at.size.y + QuestListView.GAP)
+				and room >= badged.end.y - at.position.y + QuestListView.GAP)
 	if not placed or hidden_room != 0.0:
 		return "the open button is at %s on a %s screen, the list's side at %s, room %s/%s" % [
 			at,

@@ -239,22 +239,24 @@ func lay_out(screen: Vector2) -> void:
 	if screen.y > screen.x:
 		var column: Rect2 = quest_list.column_in(screen)
 		var left: bool = column.get_center().x < screen.x / 2.0
+		# On the right, its glyph's badge hanging past its corner stays on the screen too.
+		var extent: Rect2 = with_badge(_open_button)
 		_open_button.position = Vector2(
-			column.position.x if left else column.end.x - _open_button.size.x,
+			column.position.x if left else column.end.x - extent.end.x,
 			column.position.y,
 		)
 		if _open_button.visible:
-			list_room = _reach(_open_button) + QuestListView.GAP
+			list_room = extent.end.y + QuestListView.GAP
 	quest_list.room_above = list_room
 
 
-## How far down `shown` reaches, from its top: its own height or its glyph's badge hanging below it.
-static func _reach(shown: Control) -> float:
-	var lowest: float = shown.size.y
+## What `shown` covers, from its top left: itself and its glyph's badge hanging past its corner.
+static func with_badge(shown: Control) -> Rect2:
+	var covered: Rect2 = Rect2(Vector2.ZERO, shown.size)
 	for child: Node in shown.get_children():
 		if child is Control and (child as Control).visible:
-			lowest = maxf(lowest, (child as Control).get_rect().end.y)
-	return lowest
+			covered = covered.merge((child as Control).get_rect())
+	return covered
 
 
 ## How far the menu has faded in: 0 while hidden, 1 when fully shown.
