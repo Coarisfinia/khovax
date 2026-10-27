@@ -43,6 +43,7 @@ func _enter_tree() -> void:
 		else:
 			_gear_ids.assign(gear.items.keys())
 		keeper = ProfileKeeper.new(profile, save_path, companions)
+		_drop_lost_nodes()
 	else:
 		push_warning("the profile save can't be read, so nothing is saved: " + profile.problem)
 
@@ -56,6 +57,16 @@ func _notification(what: int) -> void:
 	var leaving: bool = what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE
 	if leaving or what == NOTIFICATION_APPLICATION_PAUSED:
 		flush()
+
+
+## Gives back the picks of the development nodes a later web dropped (#1435). Unread webs drop
+## nothing: a monster's nodes are never given back over a web that couldn't be read.
+func _drop_lost_nodes() -> void:
+	var development: DevelopmentContent = DevelopmentContent.cached()
+	if not development.problem.is_empty():
+		push_warning("the development webs can't be read: " + development.problem)
+		return
+	keeper.drop_lost_nodes(development.webs)
 
 
 ## Saves whatever is pending now.

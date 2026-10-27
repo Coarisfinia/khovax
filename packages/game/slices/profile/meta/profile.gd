@@ -118,6 +118,25 @@ func take_node(short_id: String, node: String) -> String:
 	return ""
 
 
+## Gives back the picks of the nodes a later web no longer has (#1435): each dominated monster
+## drops the taken nodes its species' web in `webs` (by species id) lacks, so the player picks
+## again. A monster whose species has no web there keeps its nodes. Returns whether any was
+## dropped. A renamed node isn't dropped here: the change that renames it migrates the saved id
+## forward with a format change (ProfileSave), as a renamed species' id does (#763).
+func drop_lost_nodes(webs: Dictionary[String, DevelopmentWeb]) -> bool:
+	var dropped: bool = false
+	for monster: DominatedMonster in dominated_monsters:
+		if not webs.has(monster.species):
+			continue
+		var kept: Array[String] = []
+		for node: String in monster.taken:
+			if webs[monster.species].nodes.has(node):
+				kept.append(node)
+		dropped = dropped or kept.size() != monster.taken.size()
+		monster.taken = kept
+	return dropped
+
+
 ## Every dominated monster's short id in the player's order (#430): the carried ones first, in
 ## their order, then the rest in the order dominated.
 func order() -> Array[String]:

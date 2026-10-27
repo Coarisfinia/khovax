@@ -61,6 +61,13 @@ func note(changing: Callable) -> void:
 	_noted = true
 
 
+## Gives back the picks of the development nodes the webs `webs` no longer have, as the profile is
+## loaded (Profile.drop_lost_nodes, #1435); the next save takes it, like `note`.
+func drop_lost_nodes(webs: Dictionary[String, DevelopmentWeb]) -> void:
+	if profile.drop_lost_nodes(webs):
+		_noted = true
+
+
 ## Takes over the player's choice of personal color (#391), `color` as 0xRRGGBB or
 ## Profile.AUTO_COLOR, at time `now_msec`, saved debounced like a gain; returns why it couldn't be
 ## taken or saved, or "". A color the save can't hold changes nothing.
