@@ -977,7 +977,7 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	if screen.y > screen.x:
 		placed = (_at_side(at, badged, column, screen)
 				and is_equal_approx(at.position.y, column.position.y)
-				and room >= badged.end.y - at.position.y + QuestListView.GAP)
+				and is_equal_approx(room, badged.end.y - at.position.y + QuestListView.GAP))
 	placed = (placed and hidden_room == 0.0 and is_equal_approx(hidden_top, column.position.y)
 			and is_equal_approx(list_top, column.position.y + room))
 	if not placed:
