@@ -2,38 +2,47 @@ class_name CompanionLeaning
 extends RefCounted
 ## How a carried monster's stats lean (#1358): what the stat nodes it took on its development web
 ## add up to (DevelopmentLeaning, read in its player's profile), each stat's shift in thousandths of
-## its species' own (Fixed.ONE is the whole stat), up or down. A monster's stats rise through these,
-## never by its level alone. Each shift is kept between LEAST and MOST, so a companion keeps at
-## least some of every stat, and a whole leaning fits in one value of a carry request (`code`).
+## its species' own (Fixed.ONE is the whole stat), up or down, and how much stronger the special
+## nodes it took make its special (#1453, DevelopmentWeb.specials), in thousandths of the special's
+## power. A monster's stats rise through these, never by its level alone. Each shift is kept between
+## LEAST and MOST, so a companion keeps at least some of every stat, and a whole leaning fits in one
+## value of a carry request (`code`).
 
 ## How far a leaning shifts a stat down at most, and up at most, in thousandths. Its numbers are in
 ## Tuning.
 const LEAST: int = Tuning.COMPANION_LEAST_LEANING
 const MOST: int = Tuning.COMPANION_MOST_LEANING
-## The stats a leaning shifts, in the order its data and its code hold them.
-const STATS: Array[String] = ["hp", "strength", "speed"]
+## The stats a leaning shifts, its special's power last (#1453), in the order its data and its code
+## hold them.
+const STATS: Array[String] = ["hp", "strength", "speed", "special"]
 ## How many bits one stat's shift takes in a leaning's code: enough for MOST - LEAST.
 const SHIFT_BITS: int = 11
 
 var hp: int = 0
 var strength: int = 0
 var speed: int = 0
+var special: int = 0
 
 
-## A leaning shifting HP by `hp_shift`, strength by `strength_shift` and speed by `speed_shift`,
-## each
-## kept between LEAST and MOST.
-static func of(hp_shift: int, strength_shift: int, speed_shift: int) -> CompanionLeaning:
+## A leaning shifting HP by `hp_shift`, strength by `strength_shift`, speed by `speed_shift` and its
+## special's power by `special_shift`, each kept between LEAST and MOST.
+static func of(
+	hp_shift: int,
+	strength_shift: int,
+	speed_shift: int,
+	special_shift: int = 0,
+) -> CompanionLeaning:
 	var leaning: CompanionLeaning = CompanionLeaning.new()
 	leaning.hp = clampi(hp_shift, LEAST, MOST)
 	leaning.strength = clampi(strength_shift, LEAST, MOST)
 	leaning.speed = clampi(speed_shift, LEAST, MOST)
+	leaning.special = clampi(special_shift, LEAST, MOST)
 	return leaning
 
 
 ## Whether it shifts no stat.
 func is_none() -> bool:
-	return hp == 0 and strength == 0 and speed == 0
+	return hp == 0 and strength == 0 and speed == 0 and special == 0
 
 
 func same_as(other: CompanionLeaning) -> bool:
@@ -42,13 +51,16 @@ func same_as(other: CompanionLeaning) -> bool:
 
 ## As data: each stat's shift, in STATS' order.
 func to_data() -> Array[int]:
-	return [hp, strength, speed]
+	return [hp, strength, speed, special]
 
 
 ## The leaning `to_data` gave, or null when `data` isn't a shift for each stat, each from LEAST to
-## MOST.
+## MOST. Data from before specials (#1453) has none for the special, which it doesn't shift.
 static func of_data(data: Variant) -> CompanionLeaning:
-	var listed: Array = data if data is Array else []
+	var given: Array = data if data is Array else []
+	var listed: Array = given.duplicate()
+	if listed.size() == STATS.size() - 1:
+		listed.append(0)
 	if listed.size() != STATS.size():
 		return null
 	var shifts: Array[int] = []
@@ -57,7 +69,7 @@ static func of_data(data: Variant) -> CompanionLeaning:
 		if shift < LEAST or shift > MOST:
 			return null
 		shifts.append(shift)
-	return of(shifts[0], shifts[1], shifts[2])
+	return of(shifts[0], shifts[1], shifts[2], shifts[3])
 
 
 ## The leaning as one whole number for a carry request (CarryRequest.VALUE_BITS): each stat's shift
@@ -81,4 +93,4 @@ static func of_code(packed: int) -> CompanionLeaning:
 		if shift > MOST:
 			return null
 		shifts.append(shift)
-	return of(shifts[0], shifts[1], shifts[2])
+	return of(shifts[0], shifts[1], shifts[2], shifts[3])

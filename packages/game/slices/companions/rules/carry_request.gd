@@ -10,8 +10,8 @@ extends RefCounted
 ## run brings, so the world knows where a run starts and ends; a run of none is one request.
 
 ## How many bits a value takes in a request's data: a short id's code, a species' code, or a
-## leaning's (CompanionLeaning.SHIFT_BITS for each of its stats).
-const VALUE_BITS: int = 35
+## leaning's (CompanionLeaning.SHIFT_BITS for each of its stats, its special's included, #1453).
+const VALUE_BITS: int = 44
 ## How many dominated monsters a player carries (#53): always three, never more. The profile's
 ## limit (Profile.CARRY_LIMIT) and the swap keys (LocalInput.SWAP_ACTIONS) follow it.
 const MOST_CARRIED: int = 3

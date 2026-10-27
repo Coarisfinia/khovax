@@ -151,15 +151,16 @@ func catch_up_party(
 
 
 ## How `monster` leans: what the stat nodes it took on its species' web in `webs` add up to (#1358),
-## or nowhere without a web.
+## with how much stronger its special nodes make its special (#1453), or nowhere without a web.
 static func _leaning_of(
 	monster: DominatedMonster,
 	webs: Dictionary[String, DevelopmentWeb],
 ) -> CompanionLeaning:
 	if not webs.has(monster.species):
 		return CompanionLeaning.new()
-	var sum: DevelopmentLeaning = webs[monster.species].leaning_of(monster.taken)
-	return CompanionLeaning.of(sum.hp, sum.strength, sum.speed)
+	var web: DevelopmentWeb = webs[monster.species]
+	var sum: DevelopmentLeaning = web.leaning_of(monster.taken)
+	return CompanionLeaning.of(sum.hp, sum.strength, sum.speed, web.stronger_of(monster.taken))
 
 
 ## Spends one of the item `item` the player holds and posts a request of `kind` (OutboxEntry.KINDS)

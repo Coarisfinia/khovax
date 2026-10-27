@@ -139,7 +139,8 @@ func _fire(state: GameState, slot: int, focus: int) -> void:
 
 
 ## The companion `companion_id` strikes the wild monster `target` for its special's power times its
-## species' strength as it leans (#1358), after the type chart; `lethal` (#410) or not (a bind
+## species' strength, both as it leans (#1358, #1453), after the type chart; `lethal` (#410) or not
+## (a bind
 ## letting go, #1167).
 ## Returns the strike's event.
 func _strike(
@@ -154,7 +155,8 @@ func _strike(
 	var leaning: CompanionLeaning = CompanionGrowth.leaning_of(state, companions, companion_id)
 	var species_strength: int = wild.strengths.get(species, 1)
 	var strength: int = CompanionGrowth.stat(species_strength, leaning.strength)
-	var damage: int = Fixed.scale(strength, powers[species])
+	var power: int = CompanionGrowth.stat(powers[species], leaning.special)
+	var damage: int = Fixed.scale(strength, power)
 	var struck: String = wild.species_of(target)
 	damage = TypeEffectivenessFeature.scaled(state, damage, species, true, struck)
 	wild.wound(state, target, damage, lethal)

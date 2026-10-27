@@ -3,8 +3,9 @@ extends RefCounted
 ## What a companion's leaning does in the world (#1358): the stat nodes its player took for it on
 ## its development web raise or lower its HP, its strength and its speed by their shares of its
 ## species' (CompanionLeaning). Its speed is how often it strikes, so its wait between two strikes
-## shrinks as its speed rises. Its leaning comes from its player's profile, with its party
-## (`leaning_of`). Everything rounds down through Fixed, so it composes with what scales a hit
+## shrinks as its speed rises. The special nodes it took make its special's power stronger by
+## their share (#1453, SpecialAttackFeature). Its leaning comes from its player's profile, with its
+## party (`leaning_of`). Everything rounds down through Fixed, so it composes with what scales a hit
 ## later (the type chart, the host's difficulty on the wild monster it strikes, HostSettings).
 
 

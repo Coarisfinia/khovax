@@ -1186,11 +1186,12 @@ func _check_companion_strikes() -> String:
 
 ## A companion hemmed in the same way whose taken nodes lean it +20% strength and +50% speed
 ## (#1358) strikes for 120% of its strength, and its wait between strikes is two thirds as long:
-## three strikes where one leaning nowhere strikes twice.
+## three strikes where one leaning nowhere strikes twice. Its special nodes make its special +50%
+## stronger (#1453), so its special strikes for 150% of its power times its leaning strength.
 func _check_leaning_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	var state: GameState = _strike_state(spots)
 	FlowSteps.carry(state, 0, [WEAK])
-	state.stores[0].entry(CompanionFeature.ID)["leanings"] = [[0, 200, 500]]
+	state.stores[0].entry(CompanionFeature.ID)["leanings"] = [[0, 200, 500, 500]]
 	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
 	var _joined: Array[CompanionStruck] = _strikes_over(state, 1)
 	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
@@ -1210,6 +1211,12 @@ func _check_leaning_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	# scales.
 	if CompanionGrowth.stat(Fixed.MAX_AMOUNT, CompanionLeaning.MOST) != Fixed.MAX_AMOUNT:
 		return "the most leaning stat went beyond Fixed.MAX_AMOUNT"
+	var power: int = Fixed.scale(SPECIAL_POWER, CompanionGrowth.share(500))
+	var special: Array[SpecialStruck] = _specials_in(state, _fire())
+	if special.size() != 1 or special[0].damage != Fixed.scale(leaned, power):
+		return "a companion's special nodes didn't make its special strike for %d" % [
+			Fixed.scale(leaned, power),
+		]
 	return ""
 
 

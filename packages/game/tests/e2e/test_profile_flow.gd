@@ -557,12 +557,33 @@ func _check_development_carried(profile: Profile) -> String:
 	var migrated: Profile = _parse(JSON.stringify(old))
 	if not migrated.problem.is_empty() or not migrated.outbox.entries.is_empty():
 		return "an older save's carry requests weren't dropped: " + migrated.problem
+	problem = _check_special_carried(profile, keeper)
+	if not problem.is_empty():
+		return problem
 	entries.clear()
 	problem = keeper.catch_up_party({}, 0, {})
 	value = CarryRequest.value_of(entries[2].data) if entries.size() > 2 else -1
 	var none: CompanionLeaning = CompanionLeaning.of_code(value)
 	if not problem.is_empty() or none == null or not none.is_none():
 		return "a monster without its web leaned in its run: " + problem
+	return ""
+
+
+## A special node `profile`'s first monster took (#1453), Ombulumo's heavy_4 (+20% of its special's
+## power), rides to the world in its leaning beside its stat nodes, through `keeper`.
+func _check_special_carried(profile: Profile, keeper: ProfileKeeper) -> String:
+	var monster: DominatedMonster = profile.dominated_monsters[0]
+	var entries: Array[OutboxEntry] = profile.outbox.entries
+	entries.clear()
+	monster.taken.append("heavy_4")
+	var problem: String = keeper.catch_up_party({}, 0, DevelopmentContent.cached().webs)
+	monster.taken.erase("heavy_4")
+	var value: int = CarryRequest.value_of(entries[2].data) if entries.size() > 2 else -1
+	var leaning: CompanionLeaning = CompanionLeaning.of_code(value)
+	if not problem.is_empty() or leaning == null:
+		return "the run of a monster with a special node had no leaning: " + problem
+	if not leaning.same_as(CompanionLeaning.of(110, 0, 0, 200)):
+		return "the run's leaning wasn't +11%% HP and a +20%% special: %s" % [leaning.to_data()]
 	return ""
 
 
@@ -621,9 +642,10 @@ func _check_development_lost(loaded: Profile) -> String:
 ## reads as none (#1358).
 func _leaning_codes_read_back() -> bool:
 	var least: int = CompanionLeaning.LEAST
-	var wide: CompanionLeaning = CompanionLeaning.of(least, 7, CompanionLeaning.MOST)
+	var wide: CompanionLeaning = CompanionLeaning.of(least, 7, CompanionLeaning.MOST, 300)
 	var read: CompanionLeaning = CompanionLeaning.of_code(wide.code())
-	return read != null and read.same_as(wide) and CompanionLeaning.of_code(1 << 40) == null
+	var too_wide: int = 1 << (CompanionLeaning.STATS.size() * CompanionLeaning.SHIFT_BITS)
+	return read != null and read.same_as(wide) and CompanionLeaning.of_code(too_wide) == null
 
 
 ## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an

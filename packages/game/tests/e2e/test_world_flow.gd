@@ -588,7 +588,8 @@ func _check_carried_leanings(world: World, outbox: Outbox) -> String:
 	var leant_hp: int = Fixed.scale(health.max_hp_of(forest, companion_id), 1200)
 	var _fell: bool = health.hurt(forest, companion_id, 1)
 	outbox.entries.clear()
-	var leaning: CompanionLeaning = CompanionLeaning.of(200, 0, 0)
+	# Its special the strongest special nodes make it (#1453), which rides the run too.
+	var leaning: CompanionLeaning = CompanionLeaning.of(200, 0, 0, CompanionLeaning.MOST)
 	var leant: CarriedMonsters = CarriedMonsters.new().add(party.short_ids[0], "tikazzir", leaning)
 	if not _carry_posted(leant, outbox, world):
 		return "a monster's leaning taken since wasn't sent to the world"
@@ -606,7 +607,18 @@ func _check_carried_leanings(world: World, outbox: Outbox) -> String:
 	party = CarriedMonsters.of_data(leant.to_data())
 	if party == null or not party.same_as(leant):
 		return "a leaning monster didn't go through a replay's data and back"
+	if not _older_leaning_reads(leant):
+		return "a leaning saved before specials didn't read as its stats and no special"
 	return _check_leaning_keeps_standing(world, health.hp_of(forest, companion_id) - 1)
+
+
+## Whether `leant`'s first monster, its leaning saved before specials (#1453) as +20% HP, reads
+## back leaning its HP and no special.
+static func _older_leaning_reads(leant: CarriedMonsters) -> bool:
+	var before: Dictionary = leant.to_data()[0]
+	before["leaning"] = [200, 0, 0]
+	var older: CarriedMonsters = CarriedMonsters.of_data([before])
+	return older != null and older.leanings[0].same_as(CompanionLeaning.of(200, 0, 0))
 
 
 ## A companion of player 0 in `world` hurt by `damage` more, then brought leaning -50% HP, which
