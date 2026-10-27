@@ -6,7 +6,8 @@ extends ScrollContainer
 ## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
 ## MightPanel) and their standing with each faction (#533, FactionStandingsPanel), then their
 ## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
-## them, or below them on a phone held upright (MonsterDetails, #430), then their gear slots (#690,
+## them, or below them on a phone held upright (MonsterDetails, #430), and its development web,
+## where the player takes its nodes (DevelopmentWebView, #679), then their gear slots (#690,
 ## GearPanel) and their materials (MaterialsList, #295). Above them all, the character's name
 ## (#399): typed into a field and kept once confirmed (Enter, or leaving the field), with a line
 ## that says in words why a name was refused. It scrolls when the screen is too short. Its layout
@@ -71,6 +72,11 @@ func _ready() -> void:
 	monsters.details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pair.add_child(monsters.details)
 	_column.add_child(_pair)
+	# The selected monster's development web, below the monsters (#679).
+	var development: DevelopmentWebView = DevelopmentWebView.new()
+	_column.add_child(development)
+	var _followed: int = monsters.monster_shown.connect(development.show_monster)
+	var _chosen: int = development.node_chosen.connect(take_node)
 	gear = GearPanel.new()
 	gear.driver = driver
 	gear.holder = holder
@@ -95,6 +101,13 @@ func choose(color: Color) -> void:
 	if holder != null:
 		holder.choose_color(PersonalColor.number_of(color))
 	_show_state()
+
+
+## Takes the node `node` of the monster `short_id`'s development web, as pressing it does.
+func take_node(short_id: String, node: String) -> void:
+	if holder != null:
+		holder.take_node(short_id, node)
+	monsters.refresh()
 
 
 ## Hands the color back to the world's default, as the Auto button does.

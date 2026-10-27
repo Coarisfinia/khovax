@@ -6,6 +6,11 @@ extends VBoxContainer
 ## and where, never by color alone (#68). It keeps up with the profile while shown. The player
 ## orders them (#430): a row dragged onto another takes its place, and each row's up and down
 ## buttons move it one place, which a controller reaches too (#438). The first three are carried.
+## Whatever else shows the selected monster, like its development web (#679), follows
+## `monster_shown`.
+
+## The selected monster as it is now, or null: told each time the list refreshes.
+signal monster_shown(monster: DominatedMonster)
 
 const TITLE: String = "Monsters"
 const NONE_TEXT: String = "No dominated monsters yet"
@@ -81,11 +86,12 @@ func select(short_id: String) -> void:
 
 
 func _show_details() -> void:
-	if details == null:
-		return
 	var monster: DominatedMonster = null
 	if holder != null and holder.keeper != null:
 		monster = holder.keeper.profile.monster_of(selected)
+	monster_shown.emit(monster)
+	if details == null:
+		return
 	var species: Species = null
 	if monster != null:
 		species = _species.get(monster.species)
