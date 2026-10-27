@@ -6,7 +6,8 @@ extends Feature
 ## pace (WildMonsterFeature.chase). On sighting prey within SIGHT, a standing wild monster weaker
 ## than itself (WildMonsterFeature.strength_of) or of a `grazer` species, it stalks it, a step at
 ## a time, and next to it attacks it by the wild monsters' rules: a strike for its strength once
-## every Tuning.WILD_STRIKE_TICKS, never lethal, so it never takes the prey below 1 HP
+## every Tuning.WILD_STRIKE_TICKS at its pace (WildPace.paced, like the wild monsters' strikes),
+## never lethal, so it never takes the prey below 1 HP
 ## (WildMonsterFeature.wound, which wakes a sleeping one). A tick it strikes a player, a companion
 ## or the trail (WildAttackFeature, earlier), it doesn't strike its prey too.
 ##
