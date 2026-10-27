@@ -4,7 +4,7 @@ extends RefCounted
 ## dominated monster of it ascends once it has reached `level` and is given the ascension material
 ## `material` (the owner's pick on #1235: a level and a material together). The material is a
 ## material like any other, held in the profile's materials; the game's tables drop it (the content
-## flow checks one does). Giving it and the ascension itself are #1235.
+## flow checks one does). Giving it ascends the monster (Profile.ascend, #1235).
 
 ## The species it ascends into, by id.
 var into: String = ""

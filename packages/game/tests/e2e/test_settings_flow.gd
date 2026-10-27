@@ -15,8 +15,10 @@ extends RefCounted
 ## kept in their profile, and its Auto button hands the world's default back. It lists the player's
 ## dominated monsters (#400): none at first, then each by its species' name and level, which the
 ## monsters carried through a domination earn progress toward (#1251), the three
-## they carry first, in order, the first their companion, each marked in words. Its gear slots
-## (#690) change with a press outside a fight and are kept in the profile, and stay put during one.
+## they carry first, in order, the first their companion, each marked in words. A Vynnimu there
+## ascends into a Vynakiir with its Ascend button (#1235) once it has reached its level and the
+## player holds an arcane crystal. Its gear slots (#690) change with a press outside a fight and
+## are kept in the profile, and stay put during one.
 ## Its Controls tab (#1414) lists every action with the glyphs that press it on the device in use.
 
 const SETTINGS_PATH: String = "user://test_settings.json"
@@ -129,6 +131,7 @@ func _check_menu() -> String:
 	if result.is_empty():
 		result = _menu_monsters(menu, main)
 		result = result if not result.is_empty() else await _menu_development_scroll(menu)
+		result = result if not result.is_empty() else _menu_ascension(menu)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
@@ -672,6 +675,42 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 			"shown" if button.visible else "hidden",
 			"to take" if waits else "taken",
 		]
+	return ""
+
+
+## A dominated Vynnimu's details say into what, at which level and with which material it ascends
+## (#1235), and its Ascend button can't be pressed below that level or without the material. With
+## both, pressing it makes it a Vynakiir, spends the arcane crystal, says so below its details, and
+## the bestiary knows the Vynakiir.
+func _menu_ascension(menu: GameMenu) -> String:
+	var tab: CharacterTab = menu.character
+	var profile: Profile = tab.holder.keeper.profile
+	var gain: Gain = Gain.new()
+	gain.dominated_species.assign(["vynnimu"])
+	tab.holder.take(gain)
+	var pup: DominatedMonster = profile.dominated_monsters[profile.dominated_monsters.size() - 1]
+	tab.monsters.select(pup.short_id)
+	var details: MonsterDetails = tab.monsters.details
+	var line: String = MonsterDetails.ASCENSION_TEXT % ["Vynakiir", 43]
+	var given: String = MonsterDetails.MATERIAL_TEXT % ["arcane crystal", 0]
+	var told: bool = details.shown.has(line) and details.shown.has(given)
+	if not told or not details.ascend_button.disabled:
+		return "a level 1 Vynnimu's ascension isn't shown, or can be pressed: %s" % [details.shown]
+	pup.level = 43
+	profile.materials["arcane_crystal"] = 1
+	tab.monsters.refresh()
+	if details.ascend_button.disabled:
+		return "a level 43 Vynnimu with a crystal can't press Ascend"
+	details.ascend_button.pressed.emit()
+	var known: Bestiary = BestiaryKeeper.of(tab.holder)
+	if pup.species != "vynakiir" or profile.materials.has("arcane_crystal"):
+		return "pressing Ascend didn't make it a Vynakiir, or kept the crystal"
+	if details.notice != MonsterDetails.ASCENDED_TEXT % ["Vynnimu", "Vynakiir"]:
+		return "no line says it ascended: %s" % details.notice
+	if details.ascend_button.visible or not details.shown[0].begins_with("Vynakiir, level 43"):
+		return "the details don't show the Vynakiir: %s" % [details.shown]
+	if known == null or known.level_of("vynakiir") != Bestiary.KNOWN:
+		return "the bestiary didn't learn the Vynakiir it ascended into"
 	return ""
 
 

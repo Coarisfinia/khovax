@@ -11,6 +11,9 @@ extends Node
 ## A change (`change`), like finishing a quest, changing gear or a session's start posted a
 ## request to the profile's outbox (#771, #818), for the session to send.
 signal outbox_posted
+## The player's dominated monster `short_id` ascends into `species` (#1235): told just before the
+## profile takes it, once it's sure to.
+signal ascended(short_id: String, species: String)
 
 ## What later slices keep in the profile's file, beside it.
 @export var companions: Array[ProfileCompanion] = []
@@ -181,6 +184,18 @@ func move_monster(short_id: String, place: int) -> void:
 func take_node(short_id: String, node: String) -> void:
 	if keeper != null:
 		_report(keeper.take_node(short_id, node, Time.get_ticks_msec()))
+
+
+## Ascends this player's dominated monster `short_id` into its species' grown form (#1235), as the
+## Character tab offers it. Who learns of it (the bestiary) is told first, so what it notes goes to
+## disk with the same save as the ascension: a crash between two saves never keeps one without the
+## other.
+func ascend(short_id: String) -> void:
+	if keeper == null or not keeper.profile.ascension_problem(short_id).is_empty():
+		return
+	var species: String = keeper.profile.monster_of(short_id).species
+	ascended.emit(short_id, SpeciesContent.cached().ascensions[species].into)
+	_report(keeper.ascend(short_id, Time.get_ticks_msec()))
 
 
 ## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690), and tells when

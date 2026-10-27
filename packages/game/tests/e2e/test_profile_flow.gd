@@ -8,7 +8,8 @@ extends RefCounted
 ## (#483); gear goes into a slot only while the player owns it, and is saved (#690); the leaning
 ## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
 ## monster keeps its short id (#700) and grows in levels from the dominations it's carried through
-## (#1251), each letting it take a node of its development web (#1417); the outbox's requests to the
+## (#1251), each letting it take a node of its development web (#1417), and ascends into its
+## species' grown form at its level with its material (#1235); the outbox's requests to the
 ## world are saved until the world
 ## acknowledges them (#771); and a damaged save falls back to the newest intact generation
 ## before it (#179).
@@ -666,7 +667,41 @@ func _check_named() -> String:
 		problem = _check_levels()
 	if problem.is_empty():
 		problem = _check_development()
+	if problem.is_empty():
+		problem = _check_ascension()
 	return problem if not problem.is_empty() else _check_standings()
+
+
+## Ascension (#1235): a dominated Vynnimu ascends into a Vynakiir only once it has reached its
+## species' level and the player holds an arcane crystal, which it spends. It keeps its short id,
+## level and progress, its taken nodes are given back for its new web, and it's saved so. A species
+## that doesn't ascend, or a monster that isn't there, is refused, and a refusal changes nothing.
+func _check_ascension() -> String:
+	var profile: Profile = Profile.new()
+	var _dominated: String = profile.apply(_result(["vynnimu", "ombulumo"], {}))
+	var pup: DominatedMonster = profile.dominated_monsters[0]
+	var refused: Array[String] = [profile.ascend(pup.short_id)]
+	pup.level = 43
+	pup.progress = 5
+	pup.taken.assign(["playful_1"])
+	refused.append(profile.ascend(pup.short_id))
+	profile.materials["arcane_crystal"] = 2
+	refused.append(profile.ascend(profile.dominated_monsters[1].short_id))
+	refused.append(profile.ascend("zzzzzzz"))
+	if refused.has("") or pup.species != "vynnimu" or profile.materials["arcane_crystal"] != 2:
+		return "an ascension that can't be was taken, or changed something: %s" % [refused]
+	var short_id: String = pup.short_id
+	var ascended: String = profile.ascend(short_id)
+	if not ascended.is_empty() or pup.species != "vynakiir" or pup.short_id != short_id:
+		return "a level 43 Vynnimu with a crystal didn't ascend: " + ascended
+	if pup.level != 43 or pup.progress != 5 or not pup.taken.is_empty():
+		return "the ascended monster lost its level or progress, or kept its old web's nodes"
+	if profile.materials["arcane_crystal"] != 1 or profile.ascend(short_id).is_empty():
+		return "the ascension didn't spend one crystal, or a Vynakiir ascended further"
+	var loaded: Profile = _parse(_text(profile))
+	if not loaded.problem.is_empty() or loaded.monster_of(short_id).species != "vynakiir":
+		return "the ascension wasn't kept through saving: " + loaded.problem
+	return ""
 
 
 ## Standing with a faction (#483): neutral until something moves it, held between the lowest and

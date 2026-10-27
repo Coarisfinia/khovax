@@ -3,7 +3,9 @@ extends Node
 ## Ties what this machine's player learns about each species (#1173) to the running session: a
 ## wild monster drawn on their screen (WildMonsterView.is_shown) is seen, in the instance they're
 ## in; one that strikes them or their companion, or that their companion strikes, is met; one they
-## dominate is known. The keeper keeps it in their profile; this only watches the session.
+## dominate is known, and so is the species one of their dominated monsters ascends into (#1235).
+## The
+## keeper keeps it in their profile; this only watches the session.
 
 ## The session, whose ticks show what's on screen.
 @export var driver: Session
@@ -20,6 +22,8 @@ func _ready() -> void:
 	bus.subscribe(WildMonsterDominated, _on_dominated)
 	for struck: Script in [WildMonsterStruck, CompanionStruck, SpecialStruck]:
 		bus.subscribe(struck, _on_struck)
+	# The scene sets the keeper's holder, as it does the driver and the bus.
+	var _ascended: int = keeper.holder.ascended.connect(_on_ascended)
 
 
 ## Every wild monster on screen after a tick is seen, where the player is.
@@ -39,6 +43,12 @@ func _on_dominated(event: RefCounted) -> void:
 	var dominated: WildMonsterDominated = event as WildMonsterDominated
 	if dominated.dominator_slot == input.slot:
 		_learn(dominated.species, Bestiary.KNOWN, bus.instance_of(event))
+
+
+## The player's dominated monster ascended into `species`: they know it now, though not where it
+## lives.
+func _on_ascended(_short_id: String, species: String) -> void:
+	_learn(species, Bestiary.KNOWN, "")
 
 
 ## A strike between a wild monster and this player or their companion meets its species.
