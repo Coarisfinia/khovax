@@ -16,8 +16,9 @@ const ID: String = "quest_events"
 var events: Dictionary[int, String] = {}
 
 
+## A copy of `by_code`, so a feature never changes the quests' cached content.
 func _init(by_code: Dictionary[int, String] = {}) -> void:
-	events = by_code
+	events.assign(by_code)
 
 
 func id() -> String:
