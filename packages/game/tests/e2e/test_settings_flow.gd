@@ -616,11 +616,14 @@ func _menu_development(tab: CharacterTab) -> String:
 		return looks
 	view.buttons["sturdy_1"].pressed.emit()
 	var _flushed: String = tab.holder.keeper.flush()
-	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
-	if kept.monster_of(first).taken != (["sturdy_1"] as Array[String]):
-		return "pressing a node didn't take it, or it isn't kept: %s" % [
-			kept.monster_of(first).taken,
-		]
+	var kept: Array[String] = ProfileStore.load_from(PROFILE_PATH).monster_of(first).taken
+	var outbox: Outbox = tab.holder.keeper.profile.outbox
+	var problem: String = _sent_at_once(outbox) if kept == (["sturdy_1"] as Array[String]) else (
+		"pressing a node didn't take it, or it isn't kept: %s" % [kept]
+	)
+	if not problem.is_empty():
+		return problem
+	var posted: int = outbox.entries.size()
 	nodes = view.buttons.keys()
 	nodes.sort()
 	if nodes != ["deep_1", "heavy_1", "sturdy_1", "sturdy_2", "swift_1"]:
@@ -630,8 +633,9 @@ func _menu_development(tab: CharacterTab) -> String:
 	# With no level left, pressing an open node takes nothing.
 	view.buttons["heavy_1"].pressed.emit()
 	if (tab.holder.keeper.profile.monster_of(first).taken.size() != 1
+			or outbox.entries.size() != posted
 			or view.buttons["heavy_1"].focus_mode != Control.FOCUS_ALL):
-		return "a node was taken with no level left, or can't take the focus"
+		return "a node was taken or sent with no level left, or can't take the focus"
 	if view.shown[1] != DevelopmentWebView.NO_PICKS_TEXT:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
@@ -711,6 +715,23 @@ func _menu_ascension(menu: GameMenu) -> String:
 		return "the details don't show the Vynakiir: %s" % [details.shown]
 	if known == null or known.level_of("vynakiir") != Bestiary.KNOWN:
 		return "the bestiary didn't learn the Vynakiir it ascended into"
+	return ""
+
+
+## Ombulumo's sturdy_1 taken mid-session goes to the world at once, not at the next session
+## (#1459): the newest run of carry requests waiting in `outbox` has the companion leaning +5% HP.
+static func _sent_at_once(outbox: Outbox) -> String:
+	var start: int = -1
+	for at: int in outbox.entries.size():
+		var request: OutboxEntry = outbox.entries[at]
+		if request.kind == OutboxEntry.CARRY and CarryRequest.place_of(request.data) == 0:
+			start = at
+	var at_leaning: int = start + CarryRequest.VALUES_PER_MONSTER - 1
+	var leaning: CompanionLeaning = null
+	if start >= 0 and at_leaning < outbox.entries.size():
+		leaning = CompanionLeaning.of_code(CarryRequest.value_of(outbox.entries[at_leaning].data))
+	if leaning == null or not leaning.same_as(CompanionLeaning.of(50, 0, 0)):
+		return "the node taken didn't send the companion leaning +5% HP to the world at once"
 	return ""
 
 

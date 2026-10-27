@@ -14,6 +14,10 @@ signal outbox_posted
 ## The player's dominated monster `short_id` ascends into `species` (#1235): told just before the
 ## profile takes it, once it's sure to.
 signal ascended(short_id: String, species: String)
+## Who the player carries, in which order, or a carried monster's taken nodes may have changed
+## (#1459): the session catches the world up with the party then (catch_up_party), not only as the
+## next one starts.
+signal party_changed
 
 ## What later slices keep in the profile's file, beside it.
 @export var companions: Array[ProfileCompanion] = []
@@ -177,6 +181,7 @@ func choose_color(color: int) -> void:
 func move_monster(short_id: String, place: int) -> void:
 	if keeper != null:
 		_report(keeper.move_monster(short_id, place, Time.get_ticks_msec()))
+		party_changed.emit()
 
 
 ## Takes the node `node` of the dominated monster `short_id`'s development web for this player
@@ -184,6 +189,7 @@ func move_monster(short_id: String, place: int) -> void:
 func take_node(short_id: String, node: String) -> void:
 	if keeper != null:
 		_report(keeper.take_node(short_id, node, Time.get_ticks_msec()))
+		party_changed.emit()
 
 
 ## Ascends this player's dominated monster `short_id` into its species' grown form (#1235), as the
@@ -218,9 +224,10 @@ func catch_up_gear(stored: Dictionary) -> void:
 	_tell_posted(posted)
 
 
-## Catches the world up with who this player carries as a session starts (#818): `stored` is their
-## party's entry in its store (CompanionFeature), and a run of requests goes to the outbox if it's
-## behind. Each carried monster leans as its taken nodes say (#1358); unread webs lean none.
+## Catches the world up with who this player carries as a session starts (#818), and whenever the
+## party changes during it (party_changed, #1459): `stored` is their party's entry in its store
+## (CompanionFeature), and a run of requests goes to the outbox if it's behind. Each carried monster
+## leans as its taken nodes say (#1358); unread webs lean none.
 func catch_up_party(stored: Dictionary) -> void:
 	if keeper == null:
 		return
