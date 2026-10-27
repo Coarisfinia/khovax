@@ -253,9 +253,13 @@ func _lay_out(glide: float) -> void:
 		y += card.size.y + GAP
 
 
-## How far down the screen the cards reach, or 0 while there are none (#1465).
+## How far down the screen the cards reach where they are now, gliding ones too, or 0 while there
+## are none (#1465).
 func bottom() -> float:
-	return position.y + _bottom() - GAP if not order.is_empty() else 0.0
+	var lowest: float = 0.0
+	for id: String in order:
+		lowest = maxf(lowest, position.y + cards[id].position.y + cards[id].size.y)
+	return lowest
 
 
 ## Where a new card starts: under the last one.
