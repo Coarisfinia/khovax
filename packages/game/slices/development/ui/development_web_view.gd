@@ -28,6 +28,10 @@ const STAT_NAMES: Dictionary[String, String] = {
 	"strength": "Strength",
 	"speed": "Speed",
 }
+## A node's smallest side, in font sizes, so a finger can hit it: the same as the menu's buttons
+## (GameMenu.BUTTON_FONTS), which the menu sets only when the font changes, not on nodes built
+## after.
+const TOUCH_FONTS: float = 2.2
 ## How little of a step may go across, or down, before a spoke counts as lying along the other.
 const SLANT: float = 0.1
 ## How opaque an open node is while the monster has no level left to take it with.
@@ -62,7 +66,15 @@ func _ready() -> void:
 	_web = Control.new()
 	var _drawn: int = _web.draw.connect(_draw_links)
 	var _resized: int = _web.resized.connect(_place)
-	add_child(_web)
+	# The web scrolls sideways on its own: the Character tab doesn't, and a web wider than a phone
+	# held upright would cut off its outer nodes otherwise (#1442 fits it to the screen). A
+	# controller's focus scrolls it to the focused node.
+	var across: ScrollContainer = ScrollContainer.new()
+	across.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	across.follow_focus = true
+	_web.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	across.add_child(_web)
+	add_child(across)
 	show_monster(null)
 
 
@@ -175,9 +187,11 @@ func _place() -> void:
 		_web.custom_minimum_size = Vector2.ZERO
 		return
 	var biggest: Vector2 = Vector2.ZERO
+	var font: int = get_theme_default_font_size()
 	for button: Button in buttons.values():
+		button.custom_minimum_size = Vector2.ONE * font * TOUCH_FONTS
 		biggest = biggest.max(button.get_combined_minimum_size())
-	var room: Vector2 = biggest + Vector2.ONE * get_theme_default_font_size() * GAP_FONTS
+	var room: Vector2 = biggest + Vector2.ONE * font * GAP_FONTS
 	# The smallest share of a step that goes across, and down, on any spoke that has some.
 	var least: Vector2 = Vector2.ONE
 	var flat: bool = false

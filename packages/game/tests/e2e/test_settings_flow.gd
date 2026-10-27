@@ -592,8 +592,9 @@ func _menu_development(tab: CharacterTab) -> String:
 	var picks: Array[String] = [DevelopmentWebView.TITLE, DevelopmentWebView.PICKS_TEXT % 1]
 	if view.shown != picks or nodes != ["deep_1", "heavy_1", "sturdy_1", "swift_1"]:
 		return "the web doesn't show each direction's first node only: %s %s" % [view.shown, nodes]
-	if view.buttons["sturdy_1"].text != "HP +5%":
-		return "an open node doesn't say in words what it shifts: " + view.buttons["sturdy_1"].text
+	var looks: String = _development_looks(view)
+	if not looks.is_empty():
+		return looks
 	view.buttons["sturdy_1"].pressed.emit()
 	var _flushed: String = tab.holder.keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
@@ -616,6 +617,20 @@ func _menu_development(tab: CharacterTab) -> String:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
 		return "the focus didn't stay on the node just taken, for a controller"
+	return ""
+
+
+## An open node of the web says what it shifts in words, is finger-sized, and stays reachable on a
+## narrow screen: the web scrolls sideways on its own (#1441).
+func _development_looks(view: DevelopmentWebView) -> String:
+	var web: Control = view.buttons["sturdy_1"].get_parent()
+	var across: ScrollContainer = web.get_parent() as ScrollContainer
+	if across == null or across.horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_DISABLED:
+		return "the development web doesn't scroll sideways on its own"
+	if view.buttons["sturdy_1"].custom_minimum_size.y <= 0.0:
+		return "a node isn't finger-sized"
+	if view.buttons["sturdy_1"].text != "HP +5%":
+		return "an open node doesn't say in words what it shifts: " + view.buttons["sturdy_1"].text
 	return ""
 
 
