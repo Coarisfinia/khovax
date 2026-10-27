@@ -108,7 +108,7 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
 	for entry: DataReader in read.entries("generations"):
-		_load_generation(world, entry)
+		_load_generation(world, entry, fresh)
 	_load_flags(world, read)
 	if fresh:
 		_load_fresh(world, read)
@@ -155,7 +155,9 @@ static func _load_fresh(world: World, read: DataReader) -> void:
 				stood[slot] = [entry.text("name"), Vector2i(flat[i + 2], flat[i + 3])]
 	for slot: int in GameState.MAX_PLAYERS:
 		if stood.has(slot):
-			_put_back(world, slot, stood[slot][0], stood[slot][1])
+			var instance_name: String = stood[slot][0]
+			var tile: Vector2i = stood[slot][1]
+			_put_back(world, slot, instance_name, tile)
 	for instance_name: String in world.sorted_names():
 		if World.has_player(world.instances[instance_name]):
 			var _entered: bool = world.left_at.erase(instance_name)
@@ -232,9 +234,11 @@ static func _load_stores(world: World, read: DataReader) -> void:
 
 ## Restores the generation of the purged blueprint `entry` names, the starting one's too (#727).
 ## An instance is purged only inside a step, at most once a tick, which also keeps `seed_for`'s
-## draws bounded.
-static func _load_generation(world: World, entry: DataReader) -> void:
+## draws bounded. Loading `fresh` under other rules (#796), one whose blueprint is gone is dropped.
+static func _load_generation(world: World, entry: DataReader, fresh: bool) -> void:
 	var instance_name: String = entry.text("name")
+	if fresh and not entry.failed() and not world.source.exists(instance_name):
+		return
 	if not world.source.exists(instance_name) or world.generations.has(instance_name):
 		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return
