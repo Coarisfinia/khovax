@@ -21,10 +21,14 @@ func _init() -> void:
 	_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	# White in its file, in ink like the menu's button icons.
 	_icon.self_modulate = Toon.INK
+	# A tap, a click or a drag reaches the mark itself, which its row hands on
+	# (DominatedMonstersList).
+	_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_icon)
 	var words: Label = Label.new()
 	words.text = TEXT
 	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(words)
 
 

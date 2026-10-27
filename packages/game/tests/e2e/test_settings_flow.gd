@@ -649,9 +649,10 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 		return "the menu doesn't see that a carried monster has a knot to take"
 	menu.show_knot(menu.knot_waits())
 	var button: Button = menu.open_button()
-	var marked: bool = button.text == GameMenu.KNOT_TEXT and button.icon == KnotMark.ICON
+	var text: String = GameMenu.KNOT_TEXT if waits else GameMenu.OPEN_TEXT
+	var icon: Texture2D = KnotMark.ICON if waits else GameMenu.OPEN_ICON
 	# Headless has no touch screen: without a knot, the button hides again.
-	if marked != waits or button.visible != waits:
+	if button.text != text or button.icon != icon or button.visible != waits:
 		return "the menu's open button is %s, %s with a knot %s" % [
 			button.text,
 			"shown" if button.visible else "hidden",
