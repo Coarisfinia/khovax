@@ -50,10 +50,22 @@
 						"items": {
 							"type": "object",
 							"additionalProperties": false,
-							"required": ["leaning"],
+							"description": "What taking it grants (#1404): exactly one of a stat leaning, a stronger special or a passive.",
+							"oneOf": [{ "required": ["leaning"] }, { "required": ["special"] }, { "required": ["passive"] }],
 							"properties": {
+								"special": {
+									"description": "How much stronger it makes its species' special (#410), in thousandths of the special's power (#33): 200 is +20%.",
+									"type": "integer",
+									"minimum": 1,
+									"maximum": 1000
+								},
+								"passive": {
+									"description": "A passive it grants (#222), by its ability's id: one its species doesn't have, which no other node grants.",
+									"type": "string",
+									"pattern": "^[a-z][a-z0-9_]*$"
+								},
 								"leaning": {
-									"description": "What taking it does: a stat leaning (#1358), raising some of the species' stats and maybe lowering others.",
+									"description": "A stat leaning (#1358), raising some of the species' stats and maybe lowering others.",
 									"type": "object",
 									"additionalProperties": false,
 									"minProperties": 1,

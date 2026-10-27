@@ -1,5 +1,6 @@
 // Ombulumo's development web (#677): it leans into its sturdy bulk, but may learn to move. Its
-// shifts are placeholders to tune (#960).
+// shifts and its stronger special are placeholders to tune (#960); its deepest nodes grant a
+// stronger special and a passive of its own (#1404).
 {
 	"species": "ombulumo",
 	// Around the web: each direction sits beside the ones before and after it, the last beside the
@@ -13,7 +14,8 @@
 		{ "id": "heavy", "nodes": [
 			{ "leaning": { "strength": 50 } },
 			{ "leaning": { "strength": 60, "hp": 20 } },
-			{ "leaning": { "strength": 80, "speed": -30 } }
+			{ "leaning": { "strength": 80, "speed": -30 } },
+			{ "special": 200 }
 		] },
 		{ "id": "swift", "nodes": [
 			{ "leaning": { "speed": 60 } },
@@ -23,7 +25,8 @@
 		{ "id": "deep", "nodes": [
 			{ "leaning": { "hp": 30, "strength": 30 } },
 			{ "leaning": { "hp": 40, "strength": 40, "speed": -20 } },
-			{ "leaning": { "hp": 60, "strength": 60, "speed": -40 } }
+			{ "leaning": { "hp": 60, "strength": 60, "speed": -40 } },
+			{ "passive": "ombulumo_lombu_bombu" }
 		] }
 	],
 	"bridges": [["sturdy_2", "heavy_2"], ["swift_1", "deep_1"]],

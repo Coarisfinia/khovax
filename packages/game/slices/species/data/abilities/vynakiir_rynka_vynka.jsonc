@@ -1,0 +1,12 @@
+// A placeholder: a passive its development web grants (#1404); its effect comes once passives work
+// while the monster is out (#616).
+{
+	"id": "vynakiir_rynka_vynka",
+	"kind": "player_passive",
+	"name": "Rynka-vynka",
+	"description": "While the ${MONSTER:vynakiir} is out, the player takes a little less harm.",
+	"codex": {
+		"entry": "The low growl a pack leader keeps up while it stands over its own. Dominators heard it at their side and held their ground.",
+		"gloss": "stand, I am here"
+	}
+}

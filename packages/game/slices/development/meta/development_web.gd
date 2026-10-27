@@ -6,8 +6,9 @@ extends RefCounted
 ## sideways, portals connect one side of the web to the other. What's taken decides what can be
 ## chosen: a node is open once a node next to it is taken, and every direction's first node is
 ## open from the start. The rest lies in fog (#1417): a player sees the taken and the open nodes
-## and picks any open one (Profile.take_node). Each node is a stat leaning so far
-## (DevelopmentLeaning, #1358).
+## and picks any open one (Profile.take_node). Each node grants one thing (#1404): a stat leaning
+## (DevelopmentLeaning, #1358), a stronger special, or a passive its species doesn't have
+## (DevelopmentPassives checks that against the abilities).
 
 ## Its schema, which says the fields a web file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/development/data/development.schema.json"
@@ -15,14 +16,25 @@ const SCHEMA: String = "res://slices/development/data/development.schema.json"
 const DIRECTION: String = "/properties/directions/items"
 ## Where a node's fields are in the schema.
 const NODE: String = DIRECTION + "/properties/nodes/items"
+## What a node may grant, one each, as its data names them.
+const GRANTS: Array[String] = ["leaning", "special", "passive"]
+## How much stronger one special node makes a special at most: its power once more.
+const MOST_STRONGER: int = 1000
 
 ## The species whose web it is, by id.
 var species: String = ""
 ## Every node's id (its direction's id, then its step from 1, e.g. sturdy_2), direction by
 ## direction in the web's order, each from the middle outward.
 var nodes: Array[String] = []
-## Each node's leaning, by node id.
+## Each node's leaning, by node id: an empty one, shifting nothing, for a node that grants
+## something else.
 var leanings: Dictionary[String, DevelopmentLeaning] = {}
+## How much stronger a special node makes its species' special, in thousandths of the special's
+## power (Fixed.ONE doubles it), by node id; only the special nodes are here.
+var specials: Dictionary[String, int] = {}
+## The passive each passive node grants, by node id (an ability's id, #222); only the passive nodes
+## are here.
+var passives: Dictionary[String, String] = {}
 ## The nodes next to each node, by node id: along its direction, a bridge or a portal.
 var links: Dictionary[String, PackedStringArray] = {}
 ## Why the web couldn't be read, or "" when it could.
@@ -98,7 +110,7 @@ func _read_node(raw: Variant, node_id: String) -> String:
 	if not unknown.is_empty():
 		return "node %s's %s" % [node_id, unknown]
 	var leaning: DevelopmentLeaning = DevelopmentLeaning.new()
-	var why: String = DevelopmentLeaning.read(data.get("leaning"), leaning)
+	var why: String = _read_grant(data, node_id, leaning)
 	if not why.is_empty():
 		return "node %s: %s" % [node_id, why]
 	links[node_id] = PackedStringArray()
@@ -107,6 +119,29 @@ func _read_node(raw: Variant, node_id: String) -> String:
 	nodes.append(node_id)
 	leanings[node_id] = leaning
 	return ""
+
+
+## Reads what the node `node_id` grants from its object `data`: exactly one of a leaning (into
+## `leaning`), a stronger special or a passive. Returns why it can't, or "".
+func _read_grant(data: Dictionary, node_id: String, leaning: DevelopmentLeaning) -> String:
+	var grants: int = 0
+	for kind: String in GRANTS:
+		grants += 1 if data.has(kind) else 0
+	if grants != 1:
+		return "it grants one of %s" % ", ".join(GRANTS)
+	if data.has("special"):
+		var stronger: int = JsonNumbers.whole(data["special"], 1, MOST_STRONGER, 0)
+		if stronger == 0:
+			return "its special grows by whole thousandths from 1 to %d" % MOST_STRONGER
+		specials[node_id] = stronger
+		return ""
+	if data.has("passive"):
+		var passive: String = Content.text_of(data["passive"])
+		if not Content.is_id(passive):
+			return "its passive is an ability's id"
+		passives[node_id] = passive
+		return ""
+	return DevelopmentLeaning.read(data["leaning"], leaning)
 
 
 ## Reads the bridges (`bridges` true) or the portals: each links two nodes of the web in two
