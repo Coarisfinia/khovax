@@ -592,8 +592,8 @@ func _menu_development(tab: CharacterTab) -> String:
 	var picks: Array[String] = [DevelopmentWebView.TITLE, DevelopmentWebView.PICKS_TEXT % 1]
 	if view.shown != picks or nodes != ["deep_1", "heavy_1", "sturdy_1", "swift_1"]:
 		return "the web doesn't show each direction's first node only: %s %s" % [view.shown, nodes]
-	if view.buttons["sturdy_1"].disabled or view.buttons["sturdy_1"].text != "HP +5%":
-		return "an open node can't be pressed, or doesn't say what it shifts in words"
+	if view.buttons["sturdy_1"].text != "HP +5%":
+		return "an open node doesn't say in words what it shifts: " + view.buttons["sturdy_1"].text
 	view.buttons["sturdy_1"].pressed.emit()
 	var _flushed: String = tab.holder.keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
@@ -607,9 +607,11 @@ func _menu_development(tab: CharacterTab) -> String:
 		return "taking a node didn't reveal the one beyond it alone: %s" % [nodes]
 	if not view.buttons["sturdy_1"].text.begins_with(DevelopmentWebView.TAKEN_TEXT):
 		return "a taken node doesn't say so in words: %s" % view.buttons["sturdy_1"].text
-	for button: Button in view.buttons.values():
-		if not button.disabled:
-			return "a node can still be pressed with no level left: %s" % button.text
+	# With no level left, pressing an open node takes nothing.
+	view.buttons["heavy_1"].pressed.emit()
+	if (tab.holder.keeper.profile.monster_of(first).taken.size() != 1
+			or view.buttons["heavy_1"].focus_mode != Control.FOCUS_ALL):
+		return "a node was taken with no level left, or can't take the focus"
 	if view.shown[1] != DevelopmentWebView.NO_PICKS_TEXT:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():

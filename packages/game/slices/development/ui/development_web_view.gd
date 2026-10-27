@@ -6,7 +6,8 @@ extends VBoxContainer
 ## and so do the links that don't start at a taken node. Each node is a button saying in words what
 ## it shifts, a taken one saying so too, never by color alone (#68). While the monster has a level
 ## left to spend (DominatedMonster.picks_left), pressing an open node asks to take it (node_chosen);
-## what keeps the profile takes it (Profile.take_node). The buttons sit where they show, so a
+## what keeps the profile takes it (Profile.take_node); otherwise pressing it does nothing. The
+## buttons sit where they show, so a
 ## controller's directions move the focus between neighbours (#438), and the focus stays on a node
 ## once it's taken. It only reads what it's shown.
 
@@ -27,6 +28,10 @@ const STAT_NAMES: Dictionary[String, String] = {
 	"strength": "Strength",
 	"speed": "Speed",
 }
+## How little of a step may go across, or down, before a spoke counts as lying along the other.
+const SLANT: float = 0.1
+## How opaque an open node is while the monster has no level left to take it with.
+const WAITING_ALPHA: float = 0.6
 ## The gap between two nodes of a direction, in font sizes, beyond the buttons' own size.
 const GAP_FONTS: float = 0.5
 ## The width of a link to a taken node and of one between two taken nodes, in font sizes.
@@ -47,8 +52,8 @@ var _web: Control
 ## The web shown, or null.
 var _shown_web: DevelopmentWeb
 var _taken: Array[String] = []
-## How far apart two nodes of a direction are, from the buttons' size.
-var _ring: float = 0.0
+## How far a step out along a spoke goes, across and down, from the buttons' size.
+var _ring: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -96,12 +101,14 @@ func show_monster(monster: DominatedMonster) -> void:
 
 ## The words on a node's button: what its leaning shifts, one stat a line, after "Taken" once taken.
 static func node_text(leaning: DevelopmentLeaning, taken: bool) -> String:
-	var parts: Array[String] = [TAKEN_TEXT] if taken else []
+	var parts: Array[String] = []
+	if taken:
+		parts.append(TAKEN_TEXT)
 	for stat: String in DevelopmentLeaning.STATS:
 		var shift: int = leaning.get(stat)
 		if shift != 0:
 			# Thousandths of the species' stat, as a percentage.
-			var percent: String = String.num(shift / 10.0)
+			var percent: String = ("%.1f" % (shift / 10.0)).trim_suffix(".0")
 			parts.append("%s %s%s%%" % [STAT_NAMES[stat], "+" if shift > 0 else "", percent])
 	return "\n".join(parts)
 
@@ -124,8 +131,13 @@ func _build(monster: DominatedMonster) -> void:
 		if not taken and not open.has(node):
 			continue
 		var button: Button = _node_button(_shown_web.leanings[node], taken)
-		button.disabled = taken or not can_take
-		var _pressed: int = button.pressed.connect(_choose.bind(monster.short_id, node))
+		# Never disabled, which would keep a controller's focus off it: a node that can't be taken
+		# just does nothing when pressed. One that waits for a level fades, beside what the words
+		# say (#68).
+		if not taken and can_take:
+			var _pressed: int = button.pressed.connect(_choose.bind(monster.short_id, node))
+		elif not taken:
+			button.modulate.a = WAITING_ALPHA
 		_web.add_child(button)
 		buttons[node] = button
 	_place()
@@ -156,32 +168,52 @@ func _choose(short_id: String, node: String) -> void:
 
 
 ## Puts each button on its direction's spoke, a step further out for each step, and sizes the web
-## to hold them all.
+## to hold them all. Across and down are spaced apart on their own, so a node never covers the next
+## one out, however wide its words.
 func _place() -> void:
+	if _shown_web == null:
+		_web.custom_minimum_size = Vector2.ZERO
+		return
 	var biggest: Vector2 = Vector2.ZERO
 	for button: Button in buttons.values():
 		biggest = biggest.max(button.get_combined_minimum_size())
-	var font: int = get_theme_default_font_size()
-	_ring = maxf(biggest.x, biggest.y) + font * GAP_FONTS
-	var reach: float = _ring * _most_steps() + maxf(biggest.x, biggest.y) * 0.5
-	_web.custom_minimum_size = Vector2.ONE * 2.0 * reach
+	var room: Vector2 = biggest + Vector2.ONE * get_theme_default_font_size() * GAP_FONTS
+	# The smallest share of a step that goes across, and down, on any spoke that has some.
+	var least: Vector2 = Vector2.ONE
+	var flat: bool = false
+	for direction: int in _directions().size():
+		var spoke: Vector2 = _spoke(direction).abs()
+		least.x = minf(least.x, spoke.x) if spoke.x > SLANT else least.x
+		least.y = minf(least.y, spoke.y) if spoke.y > SLANT else least.y
+		flat = flat or spoke.y <= SLANT
+	# A step down clears a node's height. Across, spokes on either side only need half a width
+	# apart, but a spoke lying flat needs a whole one between its own nodes.
+	_ring = Vector2(room.x * (1.0 if flat else 0.5) / least.x, room.y / least.y)
+	var reach: Vector2 = Vector2.ZERO
+	for node: String in buttons:
+		reach = reach.max((_spot(node, Vector2.ZERO) - _spot("", Vector2.ZERO)).abs())
+	_web.custom_minimum_size = 2.0 * reach + biggest
 	for node: String in buttons:
 		var button: Button = buttons[node]
 		button.size = button.get_combined_minimum_size()
-		button.position = _spot(node, _ring) - button.size * 0.5
+		button.position = _spot(node) - button.size * 0.5
 	_web.queue_redraw()
 
 
-## Where `node`'s middle goes in the web, `ring` apart from the next node of its direction.
-func _spot(node: String, ring: float) -> Vector2:
-	var middle: Vector2 = _web.size * 0.5
+## Where `node`'s middle goes in the web, or the middle's for "", around `middle` (the web's own
+## middle when it's left out).
+func _spot(node: String, middle: Vector2 = Vector2.INF) -> Vector2:
+	var at: Vector2 = _web.size * 0.5 if middle == Vector2.INF else middle
 	if node.is_empty():
-		return middle
-	var directions: Array[String] = _directions()
-	var turn: float = TAU * directions.find(node.get_slice("_", 0)) / directions.size()
-	# The first direction points up, the rest follow clockwise.
-	var spoke: Vector2 = Vector2.UP.rotated(turn)
-	return middle + spoke * ring * node.get_slice("_", 1).to_int()
+		return at
+	var spoke: Vector2 = _spoke(_directions().find(node.get_slice("_", 0)))
+	return at + spoke * _ring * node.get_slice("_", 1).to_int()
+
+
+## Which way the direction in place `direction` of the web's order runs out from the middle:
+## clockwise from the top, each half a turn's share off it, so four directions run diagonally.
+func _spoke(direction: int) -> Vector2:
+	return Vector2.UP.rotated(TAU * (direction + 0.5) / _directions().size())
 
 
 ## Draws each link that starts at a taken node: from the middle to every direction's first node,
@@ -203,7 +235,7 @@ func _draw_links() -> void:
 		for end: String in ends:
 			var both: bool = _taken.has(node) and (end.is_empty() or _taken.has(end))
 			var width: float = font * (TAKEN_LINK_FONTS if both else OPEN_LINK_FONTS)
-			_web.draw_line(_spot(node, _ring), _spot(end, _ring), color, width, true)
+			_web.draw_line(_spot(node), _spot(end), color, width, true)
 
 
 ## Each direction's id, in the web's order.
@@ -213,11 +245,3 @@ func _directions() -> Array[String]:
 		if not directions.has(node.get_slice("_", 0)):
 			directions.append(node.get_slice("_", 0))
 	return directions
-
-
-## How many steps out the furthest node shown is.
-func _most_steps() -> int:
-	var most: int = 0
-	for node: String in buttons:
-		most = maxi(most, node.get_slice("_", 1).to_int())
-	return most
