@@ -143,7 +143,7 @@ def bind_torso(skin, rig, bottom, top):
 INNER, OUTER = 0.4, 0.8
 
 
-def bind_underside(skin, rig, inner=INNER, outer=OUTER):
+def bind_underside(skin, rig, inner=INNER, outer=OUTER, brisket=False):
     """Keeps the skin between the legs with the trunk (#1422): the chest's and throat's underside
     between the forelegs, the belly between the hind legs and the back between the shoulder
     blades. Automatic weights give that skin to the nearest leg bones, so it rose with a foreleg
@@ -152,7 +152,9 @@ def bind_underside(skin, rig, inner=INNER, outer=OUTER):
     stands) and off the leg itself (`_Limb`), the legs' share goes to the spine and neck, blended
     along the body (not to the head, whose skin is the head's measure in `metrics`), and the
     shoulder blades' to the chest they hang from (`_blade`). The legs keep the skin at their own
-    sides. The change is smoothed over the skin around it (`_smooth_weights`). Runs as
+    sides. The change is smoothed over the skin around it (`_smooth_weights`). With `brisket`,
+    the neck and the chest share the brisket by `_Brisket` (a deep chest whose forelegs fold
+    against it as the neck bows: the wolf's; the pup's keeps more of its volume without). Runs as
     `bind_torso` does, before pieces join the skin."""
     legs = {}
     for root, chain in (("scapula", ("upper_arm", "forearm", "front_paw")), ("thigh", ("thigh", "shin", "hock"))):
@@ -167,6 +169,7 @@ def bind_underside(skin, rig, inner=INNER, outer=OUTER):
                     legs[group.index] = (reach, limb, _blade(skin, rig, name))
     # Each bone takes the skin around its middle, and two share it where they meet.
     trunk = _trunk(skin, rig, ("hips", "spine_01", "spine_02", "neck"), middle=True)
+    under_chest = _Brisket(skin, rig) if brisket else None
     to_rig = rig.matrix_world.inverted() @ skin.matrix_world
     touched = set()
     for vertex in skin.data.vertices:
@@ -185,9 +188,47 @@ def bind_underside(skin, rig, inner=INNER, outer=OUTER):
             else:
                 taken += moved
         if taken > 0.0:
-            _hand_to_trunk(trunk, vertex.index, point, taken)
+            if under_chest is None or not under_chest.hand(vertex.index, point, taken):
+                _hand_to_trunk(trunk, vertex.index, point, taken)
             touched.add(vertex.index)
     _smooth_weights(skin, touched)
+
+
+class _Brisket:
+    """How the neck and the chest bone share the skin before the chest's middle (#1437). By how
+    far forward it lies alone (_hand_to_trunk), the brisket low between the forelegs took much of
+    the neck's share. The neck turns about its root high in the chest, so as it bowed (Feed) it
+    swung that skin back into the forelegs: a crease under the chest behind the elbows. Behind
+    the shoulder joints they share it by where it lies on the line between their middles, which
+    gives the brisket, far under the neck's root, to the chest; before them by how far forward
+    it lies, as the rest of the trunk, which keeps the throat with the bowing neck (the volume
+    check). The two are eased into each other over EASE of the upper arm's length either side of
+    the shoulder joint."""
+
+    EASE = 0.25
+
+    def __init__(self, skin, rig):
+        neck, chest = rig.data.bones["neck"], rig.data.bones["spine_02"]
+        self.front = (neck.head_local + neck.tail_local) / 2.0
+        self.back = (chest.head_local + chest.tail_local) / 2.0
+        self.neck, self.chest = skin.vertex_groups["neck"], skin.vertex_groups["spine_02"]
+        arm = rig.data.bones["upper_arm.L"]
+        self.shoulder, self.ease = arm.head_local.y, self.EASE * arm.length
+
+    def hand(self, index, point, taken):
+        """Gives the vertex `index` at `point` (rig space) a `taken` weight on the neck and the
+        chest bone if it lies before the chest's middle, and says whether it did."""
+        if point.y > self.back.y:
+            return False
+        forward = (point.y - self.front.y) / (self.back.y - self.front.y)
+        span = self.back - self.front
+        line = (point - self.front).dot(span) / span.length_squared
+        behind = _smooth((point.y - self.shoulder + self.ease) / (2.0 * self.ease))
+        forward, line = (max(0.0, min(1.0, value)) for value in (forward, line))
+        along = forward + behind * (line - forward)
+        self.neck.add([index], taken * (1.0 - along), "ADD")
+        self.chest.add([index], taken * along, "ADD")
+        return True
 
 
 def _blade(skin, rig, name):
