@@ -50,7 +50,7 @@ func _ready() -> void:
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	_species = species.species
-	_abilities = MonsterDetails.ability_names()
+	_abilities = MonsterDetails.all_ability_names()
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)

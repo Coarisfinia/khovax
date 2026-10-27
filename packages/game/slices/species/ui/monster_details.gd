@@ -29,7 +29,7 @@ func _ready() -> void:
 
 ## Each ability's name as the player reads it, with its path mark in words (#471), by id: what
 ## `show_monster` names abilities from, and the development web its passive nodes (#1452).
-static func ability_names() -> Dictionary[String, String]:
+static func all_ability_names() -> Dictionary[String, String]:
 	var names: Dictionary[String, String] = {}
 	var abilities: AbilityContent = AbilityContent.cached()
 	for id: String in abilities.abilities:

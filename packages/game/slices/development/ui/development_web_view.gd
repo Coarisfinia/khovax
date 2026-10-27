@@ -92,7 +92,7 @@ var _squeeze: float = 1.0
 
 
 func _ready() -> void:
-	_abilities = MonsterDetails.ability_names()
+	_abilities = MonsterDetails.all_ability_names()
 	_lines = VBoxContainer.new()
 	add_child(_lines)
 	_web = Control.new()
