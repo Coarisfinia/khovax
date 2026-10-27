@@ -339,7 +339,7 @@ def build(out):
     scene.apply_scale([rig, skin] + pieces, SCALE)
 
     def reweigh(body):
-        quadruped.bind_underside(body, rig)
+        quadruped.bind_underside(body, rig, brisket=True)
         SNOUT.bind_jaw(body, "jaw", SCALE)
 
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", BROW_BONE, *drifting.names, *lids.names),
