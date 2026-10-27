@@ -8,17 +8,15 @@ extends RefCounted
 const SEED: int = 3
 ## A battle ground: the attackers start with one control point, the defenders hold two and one
 ## more is held by nobody.
-const GRID: String = """\
-🟫🚩🟫🟫
-🟫🔴🟫⚪🟫
-🏯🟫🏯🟫"""
+## Written with \n, as the formatter strips a multi-line string's leading spaces.
+const GRID: String = " 🟫🚩🟫🟫\n🟫🔴🟫⚪🟫\n 🏯🟫🏯🟫"
 const LEGEND: String = """- `🚩`: a control point, held by the attackers
 - `🏯`: a control point, held by the defenders
 - `⚪`: a control point, held by nobody
 """
-const ATTACKERS: int = ControlPointFeature.ATTACKERS
-const DEFENDERS: int = ControlPointFeature.DEFENDERS
-const NOBODY: int = ControlPointFeature.NOBODY
+const ATTACKERS: int = ControlPointSides.ATTACKERS
+const DEFENDERS: int = ControlPointSides.DEFENDERS
+const NOBODY: int = ControlPointSides.NOBODY
 ## Who holds each of GRID's control points at the start.
 const HELD: Dictionary[Vector2i, int] = {
 	Vector2i(0, -1): ATTACKERS,

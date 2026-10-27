@@ -3,7 +3,7 @@ extends RefCounted
 ## Event: a side of a control point battle (#643) holds no control point any more, so it lost the
 ## battle. Raised once per battle.
 
-## The side that lost (ControlPointFeature.ATTACKERS or DEFENDERS).
+## The side that lost (ControlPointSides.ATTACKERS or DEFENDERS).
 var side: int
 
 

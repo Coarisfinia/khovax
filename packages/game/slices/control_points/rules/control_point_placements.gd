@@ -11,9 +11,9 @@ const KIND: String = "control_point"
 const HELD_BY: String = "a control point, held by "
 ## Who holds a control point at the start, by the words naming them.
 const SIDES: Dictionary[String, int] = {
-	"the attackers": ControlPointFeature.ATTACKERS,
-	"the defenders": ControlPointFeature.DEFENDERS,
-	"nobody": ControlPointFeature.NOBODY,
+	"the attackers": ControlPointSides.ATTACKERS,
+	"the defenders": ControlPointSides.DEFENDERS,
+	"nobody": ControlPointSides.NOBODY,
 }
 ## A side no legend names.
 const UNKNOWN: int = -2

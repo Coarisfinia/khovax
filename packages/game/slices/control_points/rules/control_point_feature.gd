@@ -9,18 +9,13 @@ extends Feature
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "control_points"
-## The sides of a battle, and a point nobody holds.
-const NOBODY: int = -1
-const ATTACKERS: int = 0
-const DEFENDERS: int = 1
-const BATTLE_SIDES: Array[int] = [ATTACKERS, DEFENDERS]
 
 ## Every control point, in the region's tile order.
 var points: Array[Vector2i] = []
-## The side holding each control point, in the order of `points`.
+## The side holding each control point (ControlPointSides), in the order of `points`.
 var holders: Array[int] = []
-## The side that lost the battle, or NOBODY while it goes on.
-var loser: int = NOBODY
+## The side that lost the battle (ControlPointSides), or NOBODY while it goes on.
+var loser: int = ControlPointSides.NOBODY
 
 
 func id() -> String:
@@ -38,13 +33,13 @@ func start(state: GameState) -> void:
 
 ## Ends the battle once a side holds no control point: that side lost.
 func step(state: GameState, _commands: Array[Command]) -> void:
-	if loser != NOBODY:
+	if loser != ControlPointSides.NOBODY:
 		return
-	for side: int in BATTLE_SIDES:
+	for side: int in ControlPointSides.FIGHTING:
 		if not holders.has(side):
 			loser = side
 			break
-	if loser != NOBODY:
+	if loser != ControlPointSides.NOBODY:
 		state.events.append(BattleLost.new(loser))
 
 
@@ -62,11 +57,12 @@ func save_values() -> Dictionary:
 
 
 func load_values(_state: GameState, values: DataReader) -> void:
-	var held: Array[int] = values.wholes("holders", NOBODY, DEFENDERS)
+	var nobody: int = ControlPointSides.NOBODY
+	var held: Array[int] = values.wholes("holders", nobody, ControlPointSides.DEFENDERS)
 	if held.size() != points.size():
 		values.fail("the saved control points aren't the region's")
 		return
-	var lost: int = values.whole("loser", NOBODY, DEFENDERS)
+	var lost: int = values.whole("loser", nobody, ControlPointSides.DEFENDERS)
 	if values.failed():
 		return
 	holders = held
