@@ -46,8 +46,8 @@ func _ready() -> void:
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
-	# Deferred: whoever relays the names it shows connects once it's ready, before the first rows.
-	refresh.call_deferred()
+	# No rows until it's shown (_process): showing a row meets its faction (#1447), which a row
+	# built while the menu is closed would do before the player sees the name.
 
 
 func _process(_delta: float) -> void:

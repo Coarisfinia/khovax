@@ -1824,7 +1824,14 @@ func _check_text_tags() -> String:
 	for text: String in cases:
 		if not tags.problem_in(text).contains(cases[text]):
 			return "the broken tag %s wasn't refused: %s" % [text, tags.problem_in(text)]
-	return ""
+	return _check_nested_tag(tags)
+
+
+## A tag in a name shows its name too, as when a faction's name is a link (#1447).
+static func _check_nested_tag(tags: TextTags) -> String:
+	tags.names[TextTags.FACTION]["zz_nested"] = "${MONSTER:ombulumo} kin"
+	var shown: String = tags.resolve("the ${FACTION:zz_nested}")
+	return "" if shown == "the Ombulumo kin" else "a tag in a faction's name shows as " + shown
 
 
 ## Text tags whose content can't be read are warned about, and show as written (#949).
