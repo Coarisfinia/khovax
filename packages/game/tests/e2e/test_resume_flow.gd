@@ -664,10 +664,11 @@ func _boots_fresh(tree: SceneTree, content: String, enveloped: bool) -> String:
 	var result: String = ""
 	if driver.world.state_hash() != fresh.state_hash() or driver.recording.start_world.size() > 0:
 		result = "a world file that can't be resumed didn't start a fresh world: " + content
-	# The player brings the companion their profile carries into the fresh world too: its species
-	# and its short id, as requests from their profile's outbox (#818), for the first ticks.
+	# The player brings the companion their profile carries into the fresh world too: its species,
+	# its short id and its leaning (#1358), as requests from their profile's outbox (#818), for the
+	# first ticks.
 	var holder: ProfileHolder = main.get_node("ProfileHolder") as ProfileHolder
-	if result.is_empty() and _carry_requests(holder) != 2:
+	if result.is_empty() and _carry_requests(holder) != CarryRequest.VALUES_PER_MONSTER:
 		result = "the fresh world wasn't sent the profile's companion: " + content
 	# A fresh world is no new game for the player: their profile kept their first walk (#1222).
 	var hint: MoveHint = main.get_node("Hud/MoveHint") as MoveHint

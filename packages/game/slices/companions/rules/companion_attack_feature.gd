@@ -107,13 +107,18 @@ func save_values() -> Dictionary:
 	return { "waits": DataReader.flat_pairs(_waits) }
 
 
+## The longest wait between two strikes: a companion's that leans its speed down the most (#1358).
+static func longest_wait() -> int:
+	return CompanionGrowth.ticks(STRIKE_TICKS, CompanionLeaning.LEAST)
+
+
 func load_values(state: GameState, values: DataReader) -> void:
 	_waits.clear()
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var saved: Dictionary[int, int] = values.pairs("waits", 0, DataReader.MOST)
 	for companion_id: int in saved:
 		var wait: int = saved[companion_id]
-		if not companions.owners.has(companion_id) or wait < 1 or wait > STRIKE_TICKS:
+		if not companions.owners.has(companion_id) or wait < 1 or wait > longest_wait():
 			values.fail("wait of %d isn't one companion's" % companion_id)
 			return
 		_waits[companion_id] = saved[companion_id]
