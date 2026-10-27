@@ -254,13 +254,30 @@ def _smooth_weights(skin, touched):
     head = skin.vertex_groups.get("head")
     heads = set() if head is None else {vertex.index for vertex in skin.data.vertices
                                         if any(group.group == head.index for group in vertex.groups)}
-    for vertex in skin.data.vertices:
-        vertex.select = vertex.index in region and vertex.index not in heads
-    scene.select_only(skin)
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_mode(type="VERT")
-    bpy.ops.object.vertex_group_smooth(group_select_mode="ALL", factor=0.5, repeat=SMOOTH_REPEAT)
-    bpy.ops.object.mode_set(mode="OBJECT")
+    region = sorted(region - heads)
+    neighbours = {index: [] for index in range(len(skin.data.vertices))}
+    for a, b in edges:
+        neighbours[a].append(b)
+        neighbours[b].append(a)
+    # In plain Python floats, the same on every machine: Blender's own smoothing operator gave
+    # weights a last bit apart on CI's machine, and the rebuild check compares bytes.
+    weights = [{group.group: group.weight for group in vertex.groups} for vertex in skin.data.vertices]
+    for _repeat in range(SMOOTH_REPEAT):
+        smoothed = {}
+        for index in region:
+            around = neighbours[index]
+            if not around:
+                continue
+            groups = sorted(set(weights[index]).union(*(weights[other] for other in around)))
+            smoothed[index] = {group: 0.5 * weights[index].get(group, 0.0)
+                               + 0.5 * sum(weights[other].get(group, 0.0) for other in around) / len(around)
+                               for group in groups}
+        for index, values in smoothed.items():
+            weights[index] = values
+    for index in region:
+        for group, weight in weights[index].items():
+            if weight > 0.0:
+                skin.vertex_groups[group].add([index], weight, "REPLACE")
 
 
 def _chain(out, names, points, parent, side):
