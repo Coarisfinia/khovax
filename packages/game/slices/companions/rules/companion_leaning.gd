@@ -70,9 +70,15 @@ func code() -> int:
 	return packed
 
 
-## The leaning `code` gave for `packed`, each shift kept between LEAST and MOST.
+## The leaning `code` gave for `packed`, or null when `code` gives none for it: bits past its
+## stats', or a shift out of LEAST to MOST.
 static func of_code(packed: int) -> CompanionLeaning:
+	if packed < 0 or packed >> (STATS.size() * SHIFT_BITS) != 0:
+		return null
 	var shifts: Array[int] = []
 	for place: int in STATS.size():
-		shifts.append(((packed >> (place * SHIFT_BITS)) & ((1 << SHIFT_BITS) - 1)) + LEAST)
+		var shift: int = ((packed >> (place * SHIFT_BITS)) & ((1 << SHIFT_BITS) - 1)) + LEAST
+		if shift > MOST:
+			return null
+		shifts.append(shift)
 	return of(shifts[0], shifts[1], shifts[2])

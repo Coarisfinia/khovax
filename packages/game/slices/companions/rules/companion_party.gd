@@ -103,7 +103,7 @@ static func bring(
 ## in `slot` (CarryRequest, #818), inside a tick. Once the run is whole, its monsters, of the
 ## species `species_by_code` names by their codes, are the party, like `bring`'s with the chosen
 ## one kept, leaning as the run says. A request out of its run's order changes nothing, and a
-## monster of a species no code names, or without a short id, isn't brought.
+## monster of a species no code names, without a short id or leaning, isn't brought.
 static func take_request(
 	state: GameState,
 	slot: int,
@@ -127,8 +127,8 @@ static func take_request(
 
 
 ## The monsters a whole run's values `incoming` bring (CarryRequest.values_of), of the species
-## `species_by_code` names: one of a species no code names, without a short id, or brought before
-## in the run, isn't.
+## `species_by_code` names: one of a species no code names, without a short id, with a value that
+## is no leaning's (CompanionLeaning.of_code), or brought before in the run, isn't.
 static func _run_party(
 	incoming: Array,
 	species_by_code: Dictionary[int, String],
@@ -141,9 +141,9 @@ static func _run_party(
 		var leaning_code: int = incoming[at + 2] if incoming[at + 2] is int else 0
 		var species_id: String = species_by_code.get(species_code, "")
 		var short_id: String = ShortId.of_code(id_code)
-		if not species_id.is_empty() and not short_id.is_empty():
+		var leaning: CompanionLeaning = CompanionLeaning.of_code(leaning_code)
+		if not species_id.is_empty() and not short_id.is_empty() and leaning != null:
 			if not party.short_ids.has(short_id):
-				var leaning: CompanionLeaning = CompanionLeaning.of_code(leaning_code)
 				party = party.add(short_id, species_id, leaning)
 	return party
 

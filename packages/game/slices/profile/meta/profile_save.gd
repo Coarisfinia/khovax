@@ -155,6 +155,7 @@ static func _migrate(data: Dictionary, changes: Array[String]) -> void:
 		"1378-standings-from-start": _migrate_to_23,
 		"1333-postgame": _migrate_to_24,
 		"1417-development-taken": _migrate_development_taken,
+		"1358-carry-leanings": _migrate_carry_leanings,
 	}
 	for change: String in steps:
 		if not changes.has(change):
@@ -326,6 +327,21 @@ static func _migrate_to_24(data: Dictionary) -> void:
 static func _migrate_development_taken(data: Dictionary) -> void:
 	for fields: Dictionary in _monster_entries(data):
 		fields["taken"] = []
+
+
+## A run of carry requests holds each monster's leaning too (#1358), in other places, so the carry
+## requests still in the save `data`'s outbox are dropped: the next session sends the party anew
+## (PartyRequests.catch_up).
+static func _migrate_carry_leanings(data: Dictionary) -> void:
+	var outbox: Variant = data.get("outbox")
+	var requests: Array = outbox if outbox is Array else []
+	var kept: Array = []
+	for entry: Variant in requests:
+		var fields: Dictionary = entry if entry is Dictionary else {}
+		if JsonNumbers.whole(fields.get("kind"), 0, DataReader.MOST, -1) != OutboxEntry.CARRY:
+			kept.append(entry)
+	if outbox is Array:
+		data["outbox"] = kept
 
 
 ## Gives each territory hand-over still in the save `data`'s outbox whose code `recoded` names the
