@@ -4,10 +4,15 @@ extends RefCounted
 ## WorldSave keeps in a file, replays start from and co-op will resync from. World holds the
 ## instances and runs them; this writes and reads them.
 
-## The format's changes (FormatChanges, #801), one file each. A world is read only with every one of
-## them and no other: the older formats were all played by older rules, which `to_world` refuses
-## anyway.
+## The format's changes (FormatChanges, #801), one file each. A world is read with every one of them
+## and no other, or without only some of INSTANCES_ONLY.
 const CHANGES: String = "res://core/format_changes/"
+## The format changes that changed only how an instance's state is saved, never the world's own
+## data: a save without them is read like one played by other rules (#796), its instances loaded
+## fresh, so their states are never read. A change to the world's own data instead gets a step that
+## brings an older save's data forward, like the profile's (ProfileSave), or older saves are
+## refused.
+const INSTANCES_ONLY: Array[String] = ["1137-dominator"]
 ## The changes of the numbered formats before names (#801), in the order they were numbered: format
 ## n had the first n - 1. Only the last, format 14, which had them all, is still read.
 const NUMBERED: Array[String] = [
@@ -71,18 +76,21 @@ static func of(world: World) -> Dictionary:
 
 
 ## The world that `of` saved, loading its instances from `source`, or an empty one whose `problem`
-## says why it's refused, whole: data in another format, or played by other rules (a world can only
-## go on deterministically under the rules it was played by), or that doesn't hash as it did when
-## saved (its content changed since).
+## says why it's refused, whole: data in another format, or that doesn't hash as it did when saved
+## (its content changed since). One played by other rules (#796) keeps the world's own data (its
+## tick, flags, generations and the players' world stores) and loads its instances fresh, as after
+## a purge: an instance can only go on deterministically under the rules it was played by, and is
+## arranged anew from its blueprint and seed anyway (`_load_fresh`).
 static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	var read: DataReader = DataReader.new(data)
 	var changes: Array[String] = FormatChanges.read_from(read, CHANGES, NUMBERED)
+	var lacking: bool = false
 	for change: String in FormatChanges.names_in(CHANGES):
 		if not read.failed() and not changes.has(change):
-			read.fail("world format without change %s: an older build saved it" % change)
-	var rules: String = read.text("rules")
-	if not read.failed() and rules != RulesChanges.id():
-		read.fail("played by rules %s, this build has %s" % [rules, RulesChanges.id()])
+			lacking = true
+			if not INSTANCES_ONLY.has(change):
+				read.fail("world format without change %s: an older build saved it" % change)
+	var fresh: bool = read.text("rules") != RulesChanges.id() or lacking
 	var halves: Array[int] = read.wholes("seed", 0, 0xffff_ffff)
 	var start: String = read.text("start")
 	if not read.failed() and (halves.size() != 2 or not source.exists(start)):
@@ -100,8 +108,11 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	world.tick = read.whole("tick", 0, DataReader.MOST)
 	# Generations first: they decide the seeds the instances are loaded with.
 	for entry: DataReader in read.entries("generations"):
-		_load_generation(world, entry)
+		_load_generation(world, entry, fresh)
 	_load_flags(world, read)
+	if fresh:
+		_load_fresh(world, read)
+		return world if not read.failed() else World.refused(read.problem)
 	# Every saved variant before any instance loads: an instance's neighbours are read from theirs.
 	for entry: DataReader in read.entries("instances"):
 		world.variants[entry.text("name")] = entry.text("variant")
@@ -119,6 +130,56 @@ static func to_world(data: Dictionary, source: InstanceSource) -> World:
 	if not read.failed() and world.state_hash() != saved_hash:
 		read.fail("the world doesn't hash as it did when saved: its content changed since")
 	return world if not read.failed() else World.refused(read.problem)
+
+
+## Loads the instances of `world`, saved in `read` under other rules, fresh (#796): the starting
+## one,
+## and the one each player was in, with them in it again. A player stands on the tile they stood on
+## while it's still ground nothing stands on, else on their start in the starting instance, as do
+## the players of an instance that no longer exists. Their companions join them by themselves.
+static func _load_fresh(world: World, read: DataReader) -> void:
+	if world.instance(world.start_name) == null:
+		read.fail("the starting instance %s doesn't load" % world.start_name)
+		return
+	var stood: Dictionary[int, Array] = {}
+	for entry: DataReader in read.entries("instances"):
+		var flat: Array[int] = entry.read("state").wholes(
+			"entities",
+			-DataReader.MOST,
+			DataReader.MOST,
+		)
+		# Each entity is its id, slot, q and r.
+		for i: int in range(0, flat.size() - 3, 4):
+			var slot: int = flat[i + 1]
+			if slot >= 0 and slot < GameState.MAX_PLAYERS and not stood.has(slot):
+				stood[slot] = [entry.text("name"), Vector2i(flat[i + 2], flat[i + 3])]
+	for slot: int in GameState.MAX_PLAYERS:
+		if stood.has(slot):
+			var instance_name: String = stood[slot][0]
+			var tile: Vector2i = stood[slot][1]
+			_put_back(world, slot, instance_name, tile)
+	for instance_name: String in world.sorted_names():
+		if World.has_player(world.instances[instance_name]):
+			var _entered: bool = world.left_at.erase(instance_name)
+
+
+## Puts the player in `slot` back into the freshly loaded instance `instance_name` on `tile`, or on
+## their start in the starting instance when it no longer exists or `tile` isn't free ground there.
+static func _put_back(world: World, slot: int, instance_name: String, tile: Vector2i) -> void:
+	var target: GameState = null
+	if world.source.exists(instance_name):
+		target = world.instance(instance_name)
+	if target != null and target.region.is_walkable(tile):
+		var taken: bool = false
+		for each: Entity in target.entities:
+			taken = taken or each.tile == tile
+		if not taken:
+			var _back: Entity = target.add_entity(slot, tile)
+			return
+	var spawn: GameState = world.instances[world.start_name]
+	var starts: Array[Vector2i] = spawn.region.starts
+	if not starts.is_empty():
+		var _spawned: Entity = spawn.add_entity(slot, starts[mini(slot, starts.size() - 1)])
 
 
 ## Loads the instance `entry` names from its blueprint and restores its tiles changed in place.
@@ -173,9 +234,11 @@ static func _load_stores(world: World, read: DataReader) -> void:
 
 ## Restores the generation of the purged blueprint `entry` names, the starting one's too (#727).
 ## An instance is purged only inside a step, at most once a tick, which also keeps `seed_for`'s
-## draws bounded.
-static func _load_generation(world: World, entry: DataReader) -> void:
+## draws bounded. Loading `fresh` under other rules (#796), one whose blueprint is gone is dropped.
+static func _load_generation(world: World, entry: DataReader, fresh: bool) -> void:
 	var instance_name: String = entry.text("name")
+	if fresh and not entry.failed() and not world.source.exists(instance_name):
+		return
 	if not world.source.exists(instance_name) or world.generations.has(instance_name):
 		entry.fail("purged instance %s can't be, or is saved twice" % instance_name)
 		return

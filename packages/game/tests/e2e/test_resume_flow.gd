@@ -3,8 +3,9 @@ extends RefCounted
 ## monster dominated in the forest, then out through the exit into the glade, its lookout
 ## and a chest) turns into save data and back with the same hash, and both go on alike, tick for
 ## tick. Saved to its own file next to the profile, the main scene resumes it where the player
-## stood, its recording plays back from it, and its keeper saves it debounced; a damaged world file,
-## one in a newer format or one played by other rules is refused and a fresh world starts. The
+## stood, its recording plays back from it, and its keeper saves it debounced; a damaged world file
+## or one in a newer format is refused and a fresh world starts. One played by other rules (#796)
+## keeps the world's own data and the instance the player is in, and loads its instances fresh. The
 ## profile is never touched by world saves. The ground explored is saved with the world (#215):
 ## resumed, it lies under light fog, next door too; bad memory is dropped whole, a fresh world
 ## starts with none, and what was seen in an instance purged since (#212) isn't restored. The
@@ -62,6 +63,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_round_trip(world)
 	if result.is_empty():
 		result = _check_refused(world)
+	if result.is_empty():
+		result = _check_rules_changed(world)
 	if result.is_empty():
 		result = await _check_resumes(tree, world)
 	if result.is_empty():
@@ -140,7 +143,7 @@ func _check_round_trip(world: World) -> String:
 
 
 ## Save data the build can't go on from is refused whole: another format (a newer build's change,
-## an older numbered format, or one without a change this build needs, #801), other rules, a seed or
+## an older numbered format, or one without a change this build needs, #801), a seed or
 ## tile tampered with (the hash notices), numbers that aren't whole, text that isn't a world, and
 ## purging that doesn't add up (#212): a blueprint purged that doesn't exist, an instance left
 ## behind while someone is in it or not left behind while nobody is, or one left long enough to be
@@ -159,10 +162,8 @@ func _check_refused(world: World) -> String:
 			WorldData.NUMBERED + ["9999-newer"],
 		): "format change 9999",
 		_changed(data, FormatChanges.KEY, WorldData.NUMBERED.slice(1)): "world format without",
-		_numbered(data, WorldData.NUMBERED.size()): "world format without change 1137",
+		_numbered(data, WorldData.NUMBERED.size() - 1): "world format without change 876",
 		_numbered(data, WorldData.NUMBERED.size() + 2): "format isn't",
-		# Another digest of the rule changes (#876).
-		_changed(data, "rules", "0000000000000000"): "played by rules 0000000000000000",
 		_changed(data, "tick", world.tick + 1): "the world doesn't hash",
 		# Another seed arranges other regions, which the saved tiles may not even fit.
 		_changed(data, "seed", [0, SEED + 1]): "",
@@ -189,6 +190,85 @@ func _check_refused(world: World) -> String:
 		if problem.is_empty() or not problem.begins_with(cases[case]):
 			return "expected a refusal starting %s, got: %s" % [cases[case], problem]
 	return ""
+
+
+## A world saved under other rules (#796), or without a format change that only an instance's state
+## had (`WorldData.INSTANCES_ONLY`), is read with its world-level data (tick, flags, generations,
+## world stores) and its player back in the glade on their tile, but with its instances loaded
+## fresh: only the forest, where the world starts, and the glade, whose lookout and chests are
+## untouched again, and the forest's wild monster is back. It goes on from there. A player whose
+## tile is gone is put on their start in the forest.
+func _check_rules_changed(world: World) -> String:
+	var data: Dictionary = JsonNumbers.wholes(JSON.parse_string(WorldSave.to_text(world)))
+	var saves: Array[String] = [
+		# Another digest of the rule changes (#876).
+		_changed(data, "rules", "0000000000000000"),
+		_numbered(data, WorldData.NUMBERED.size()),
+	]
+	var source: BlueprintSource = BlueprintSource.new()
+	for text: String in saves:
+		var loaded: World = WorldSave.parse(text, source)
+		var result: String = _check_loaded_fresh(world, loaded)
+		if not result.is_empty():
+			return result
+	return _check_tile_gone(data)
+
+
+## `loaded`, `world` read back under other rules, kept its world-level data and its player, loaded
+## its instances fresh, and goes on.
+func _check_loaded_fresh(world: World, loaded: World) -> String:
+	if not loaded.problem.is_empty():
+		return "a world saved under other rules was refused: " + loaded.problem
+	if (loaded.tick != world.tick
+			or loaded.flags != world.flags
+			or loaded.generations != world.generations
+			or not loaded.stores[0].same_as(world.stores[0])):
+		return "a world saved under other rules lost its world-level data"
+	if loaded.sorted_names() != StateHash.sorted([FlowSteps.FOREST, FlowSteps.GLADE]):
+		return "a world saved under other rules loaded %s" % [loaded.sorted_names()]
+	if loaded.instance_of(0) != FlowSteps.GLADE or loaded.player(0).tile != world.player(0).tile:
+		return "a world saved under other rules didn't put the player back where they stood"
+	var fresh: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
+	var glade: GameState = loaded.instances[FlowSteps.GLADE]
+	var triggers: TriggerFeature = glade.feature(TriggerFeature.ID) as TriggerFeature
+	var chests: ChestFeature = glade.feature(ChestFeature.ID) as ChestFeature
+	var fresh_chests: ChestFeature = fresh.instance(FlowSteps.GLADE).feature(
+		ChestFeature.ID,
+	) as ChestFeature
+	if not triggers.fired.is_empty() or chests.chests != fresh_chests.chests:
+		return "a world saved under other rules kept the glade's lookout or chests"
+	var wild: int = _wild(loaded.instances[FlowSteps.FOREST]).monsters.size()
+	if wild != _wild(fresh.instances[FlowSteps.FOREST]).monsters.size():
+		return "a world saved under other rules kept the forest's dominated wild monster"
+	for _tick: int in MovementFeature.MOVE_TICKS + 1:
+		loaded.step(FlowSteps.command(Command.NO_MOVE))
+	if loaded.instance_of(0) != FlowSteps.GLADE:
+		return "a world saved under other rules didn't go on in the glade"
+	return ""
+
+
+## A player whose tile is gone from their instance, in a world saved under other rules (`data`
+## with another rules id), is put on their start in the forest.
+static func _check_tile_gone(data: Dictionary) -> String:
+	var gone: Dictionary = data.duplicate(true)
+	gone["rules"] = "0000000000000000"
+	for entry: Dictionary in gone["instances"]:
+		var entities: Array = entry["state"]["entities"]
+		for i: int in range(0, entities.size(), 4):
+			if entities[i + 1] == 0:
+				entities[i + 2] = 99
+	var spawned: World = WorldData.to_world(gone, BlueprintSource.new())
+	if not spawned.problem.is_empty():
+		return "a world whose player's tile is gone was refused: " + spawned.problem
+	var start: Vector2i = spawned.instances[FlowSteps.FOREST].region.starts[0]
+	if spawned.instance_of(0) != FlowSteps.FOREST or spawned.player(0).tile != start:
+		return "a player whose tile is gone wasn't put on their start"
+	return ""
+
+
+## The wild monster feature of `state`.
+static func _wild(state: GameState) -> WildMonsterFeature:
+	return state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 
 
 ## `data` as text, with the saved instance `instance_name` left behind at `left`.
@@ -593,7 +673,7 @@ func _explored_numbered(numbered: int) -> Dictionary:
 	return data
 
 
-## A world file the build can't go on from (damaged, in a newer format, played by other rules) is
+## A world file the build can't go on from (damaged, in a newer format, for another player count) is
 ## refused at boot, and a fresh world starts in the starting instance, with nothing explored.
 func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	var text: String = WorldSave.to_text(world, ExploredSave.beside(_explored))
@@ -602,8 +682,6 @@ func _check_boot_refuses(tree: SceneTree, world: World) -> String:
 	if result.is_empty():
 		var newer: Array = WorldData.NUMBERED + ["9999-newer"]
 		result = await _boots_fresh(tree, _changed(data, FormatChanges.KEY, newer), true)
-	if result.is_empty():
-		result = await _boots_fresh(tree, _changed(data, "rules", "0000000000000000"), true)
 	if result.is_empty():
 		# A world with a second player, while the session has one: their commands would be missing.
 		var pair: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST, 2)
