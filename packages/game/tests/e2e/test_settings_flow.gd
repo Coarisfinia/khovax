@@ -629,6 +629,8 @@ func _menu_development_scroll(menu: GameMenu) -> String:
 	var first: String = tab.monsters.shown_ids[0]
 	# Two more levels: two nodes to take, beside the one taken already.
 	tab.holder.keeper.profile.monster_of(first).level += 2
+	# The menu lays itself out for the window every frame: it rests, so the phone's layout holds.
+	menu.set_process(false)
 	menu.lay_out(Vector2(360.0, 640.0))
 	tab.monsters.select(first)
 	await _tree.process_frame
@@ -636,6 +638,7 @@ func _menu_development_scroll(menu: GameMenu) -> String:
 	var problem: String = await _taken_in_sight(view, "sturdy_2")
 	if problem.is_empty():
 		problem = await _taken_in_sight(view, "sturdy_3")
+	menu.set_process(true)
 	menu.lay_out(Vector2(1920.0, 1080.0))
 	return problem
 
@@ -647,7 +650,10 @@ func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
 	await _tree.process_frame
 	var button: Button = view.buttons[node]
 	var shown: Rect2 = button.get_global_rect()
-	var across: Rect2 = (button.get_parent().get_parent() as Control).get_global_rect()
+	var web: Control = button.get_parent()
+	var across: Rect2 = (web.get_parent() as Control).get_global_rect()
+	if web.size.x <= across.size.x:
+		return "the web fits the narrow screen, so it needn't scroll to %s: %s" % [node, web.size]
 	# A pixel's leeway for rounding.
 	var inside: bool = shown.position.x >= across.position.x and shown.end.x <= across.end.x + 1.0
 	if not button.has_focus() or not inside:
