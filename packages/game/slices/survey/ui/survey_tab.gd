@@ -7,7 +7,9 @@ extends VBoxContainer
 ## (SurveyChoice): while the tab shows, the zoom keys, a controller's triggers (#779) and a pinch on
 ## it (SurveyPinch) step it, and so do its buttons below it, which say what they do in words, never
 ## by color alone (#68). One more cycles where the Survey shows. Above them, a line says which
-## faction holds the instance the player is in, by its symbol and name (#637), or that none does.
+## faction holds the instance the player is in, by its symbol and name (#637), or that none does;
+## the name is a link to its codex page (NameLinks, #1447), whose `name_selected` and `name_shown`
+## the tab raises as its own.
 ## The buttons always show here, with no cogwheel (#438): this tab is where a controller reaches
 ## them, since the cogwheel on the screen hides with a controller. Each shows the glyph of the key
 ## or controller button that presses it too (ActionGlyph, #1192): - or the left trigger, = or the
@@ -15,15 +17,22 @@ extends VBoxContainer
 ## row's width, so their words leave the glyph room.
 ## Its layout lives in its scene, survey_tab.tscn (#437): this script keeps only what it does.
 
+## The faction's name in the line saying who holds the instance was selected (NameLinks).
+signal name_selected(kind: String, id: String)
+## The line showed a faction's name: the player met it (#1174).
+signal name_shown(kind: String, id: String)
+
 ## The Survey's choices, whose zoom the tab follows and steps, and whose Survey it reads from.
 var survey: SurveyChoice
+## Who holds the instance the player is in, as the line shows it now: a text with text tags.
+var held: String = ""
 
 ## The Survey drawn in the tab.
 @onready var view: SurveyView = $View
 ## What the zoom is on now, in words.
 @onready var zoom_text: Label = $Row/ZoomText
-## Who holds the instance the player is in, in words.
-@onready var held_text: Label = $Held
+## Who holds the instance the player is in, in words, the holder's name a link.
+@onready var held_text: NameLinks = $Held
 ## The button cycling where the Survey shows, which says where it shows now.
 @onready var place_button: Button = $Row/Place
 
@@ -46,13 +55,18 @@ func _ready() -> void:
 	var _out_glyph: ActionGlyph = ActionGlyph.badge(farther, &"survey_zoom_out")
 	var _in_glyph: ActionGlyph = ActionGlyph.badge(closer, &"survey_zoom_in")
 	var _place_glyph: ActionGlyph = ActionGlyph.badge(place_button, &"survey")
+	_relay_held_names()
 
 
 func _process(_delta: float) -> void:
 	if survey != null and is_visible_in_tree():
 		view.across = SurveyChoice.ZOOMS[survey.zoom_step()]
 		zoom_text.text = survey.zoom_label()
-		held_text.text = view.held_marks().here_text()
+		# Shown anew only when it changes: showing resets the controller's chosen name.
+		var now_held: String = view.held_marks().here_text()
+		if now_held != held:
+			held = now_held
+			held_text.show_tagged(held)
 		place_button.text = "Shows: " + survey.place_label()
 
 
@@ -66,6 +80,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _pressed(event, &"survey_zoom_out"):
 		zoom_by(-1)
 		get_viewport().set_input_as_handled()
+
+
+## Raises the names the holder's line selects and shows as the tab's own.
+func _relay_held_names() -> void:
+	var _selected: int = held_text.name_selected.connect(name_selected.emit)
+	var _met: int = held_text.name_shown.connect(name_shown.emit)
 
 
 ## Whether `event` newly presses `action`. A controller's trigger (#779) sends motion events all the

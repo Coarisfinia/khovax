@@ -51,6 +51,26 @@ static func quests(main: Node) -> QuestKeeper:
 	return main.get_node("QuestKeeper") as QuestKeeper
 
 
+## Why `line`, a menu's text (#1447), doesn't link the faction `faction_id` as its only name, or
+## selecting it doesn't open its codex page over the menu, or showing it didn't meet it, or "".
+static func faction_link_problem(main: Node, line: NameLinks, faction_id: String) -> String:
+	var link: String = TextTags.FACTION + NameLinks.META_SEPARATOR + faction_id
+	if line == null:
+		return "there is no line to link %s" % link
+	if line.links != ([link] as Array[String]):
+		return "the line links %s, not %s" % [line.links, link]
+	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
+	if not keeper.has_met(TextTags.FACTION, faction_id):
+		return "showing %s's name didn't meet it" % faction_id
+	var page: CodexPage = main.get_node("Hud/CodexPage") as CodexPage
+	line.select(link)
+	var faction: Faction = FactionContent.cached().factions[faction_id]
+	var opened: bool = (page.is_open() and page.heading.text == CodexPage.LEXICON_TEXT
+			and page.title.text == TextTags.shown(faction.name))
+	page.close()
+	return "" if opened else "selecting %s showed %s" % [faction_id, page.title.text]
+
+
 ## The main scene, not in the tree yet. With a profile path, its profile is a fresh save there.
 static func _instantiate(profile_path: String) -> Node:
 	var main: Node = (load(Boot.GAME) as PackedScene).instantiate()

@@ -502,3 +502,5 @@ page = NodePath("../Hud/CodexPage")
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]
 [connection signal="name_selected" from="Hud/QuestList" to="Hud/CodexPage" method="open"]
+[connection signal="name_selected" from="Hud/GameMenu" to="Hud/CodexPage" method="open"]
+[connection signal="name_shown" from="Hud/GameMenu" to="CodexKeeper" method="meet"]

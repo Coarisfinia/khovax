@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dclj8ywpstpjx" path="res://slices/survey/ui/survey_tab.gd" id="1_tab"]
 [ext_resource type="Script" uid="uid://mow7d5fmfrcn" path="res://slices/survey/ui/survey_view.gd" id="2_view"]
+[ext_resource type="Script" uid="uid://ci75po3gui48u" path="res://slices/texts/ui/name_links.gd" id="3_links"]
 
 [node name="Survey" type="VBoxContainer"]
 script = ExtResource("1_tab")
@@ -11,9 +12,10 @@ layout_mode = 2
 size_flags_vertical = 3
 script = ExtResource("2_view")
 
-[node name="Held" type="Label" parent="."]
+[node name="Held" type="RichTextLabel" parent="."]
 layout_mode = 2
 horizontal_alignment = 1
+script = ExtResource("3_links")
 
 [node name="Row" type="HBoxContainer" parent="."]
 layout_mode = 2
