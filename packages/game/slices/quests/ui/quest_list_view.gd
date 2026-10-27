@@ -12,6 +12,15 @@ extends Control
 ## with the screen, so it stays readable on a phone. It only reads the quests.
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn
 ## (QuestCard); this script keeps only what it does.
+## The people and places its step and its pill name are links to their codex pages (NameLinks,
+## #1446): a mouse click or a long press on touch selects one, raising `name_selected`. A
+## controller never focuses them here (NameLinks.focusable), so the HUD stays out of its way while
+## playing: it reaches them in the menu's Quests tab.
+## A name shown here isn't met (CodexKeeper): the player meets it where they come across it, in the
+## dialog that gave the quest or by entering the place (#1209), so a new player's book stays empty.
+
+## A name on a card was selected (NameLinks): the kind of its tag and its id.
+signal name_selected(kind: String, id: String)
 
 ## A quest's card: its name above its step, both wrapping, the pill between them, starting faded
 ## out.
@@ -80,23 +89,30 @@ func show_quests() -> void:
 		if leaving.has(id):
 			_come_back(id)
 		var progress: QuestProgress = quests.progress.get(id)
-		var line: String = step_line(steps[id], progress.count if progress != null else 0)
+		var line: String = step_tagged(steps[id], progress.count if progress != null else 0)
 		if not cards.has(id):
 			_add_card(id, quests.book[id].shown_name())
-		shown[id] = line
+		shown[id] = TextTags.shown(line)
 		cards[id].show_line(line)
 		var where: String = steps[id].counts_in()
 		pill(id).show_instance(where, where == here)
 
 
-## What `step` asks, worded for the player, with `count` of its count where it counts up; a step
-## with choices (#573) offers each of them, joined by "or". A new condition gets its own wording
-## here; one without any shows only the count.
+## What `step` asks, worded for the player, with `count` of its count where it counts up, as the
+## player reads it (step_tagged).
 static func step_line(step: QuestStep, count: int) -> String:
+	return TextTags.shown(step_tagged(step, count))
+
+
+## What `step` asks with `count`, a text with text tags (#733): the people and the places it names
+## are tags, so a NameLinks shows them as links to their codex pages (#1446). A step with choices
+## (#573) offers each of them, joined by "or". A new condition gets its own wording here; one
+## without any shows only the count.
+static func step_tagged(step: QuestStep, count: int) -> String:
 	if not step.choices.is_empty():
 		var ways: Array[String] = []
 		for choice: QuestStep in step.choices:
-			var way: String = step_line(choice, 0)
+			var way: String = step_tagged(choice, 0)
 			ways.append(way if ways.is_empty() else way.left(1).to_lower() + way.substr(1))
 		return " or ".join(ways)
 	var asks: String = ""
@@ -114,7 +130,7 @@ static func step_line(step: QuestStep, count: int) -> String:
 			asks = "Go to the " + _words(step.place)
 		QuestStep.ENTERED:
 			if step.enters_instance():
-				asks = "Enter " + _instance_name(step.instance)
+				asks = "Enter " + QuestPill.place_tagged(step.instance)
 			else:
 				asks = "Enter the " + _words(step.piece)
 		QuestStep.ANSWERED:
@@ -127,25 +143,19 @@ static func step_line(step: QuestStep, count: int) -> String:
 
 
 ## What an answered `step` asks (#636): the answer's text to its dialog's speaker, by the person's
-## name (#1005) without an article (#977), or the answer's id in words when the dialogs weren't
+## tag (#1005) without an article (#977), or the answer's id in words when the dialogs weren't
 ## read with it.
 static func _answer_line(step: QuestStep) -> String:
 	if step.answer.text.is_empty():
 		return "Answer " + _words(step.answer.id)
 	var speaker: String = TextTags.tag(TextTags.PERSON, step.answer.speaker)
-	return TextTags.shown("Tell %s: \"%s\"" % [speaker, step.answer.text])
+	return "Tell %s: \"%s\"" % [speaker, step.answer.text]
 
 
 ## An id (a place, a region piece, an item or a quest target) as words: they have no
 ## player-facing names yet.
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
-
-
-## An instance's player-facing name (#909, #975): its id in words, each capitalised, a proper noun
-## needing no article ("Lumwen Hoal").
-static func _instance_name(id: String) -> String:
-	return id.replace("_", " ").capitalize()
 
 
 ## A species' player-facing name (#351), after "a" or "an" by its first letter.
@@ -158,6 +168,8 @@ func _add_card(id: String, quest_name: String) -> void:
 	var card: QuestCard = QUEST_CARD.instantiate() as QuestCard
 	card.name_label().text = quest_name
 	add_child(card)
+	card.links_on(false)
+	var _selected: int = card.name_selected.connect(name_selected.emit)
 	card.fit(maxi(MIN_FONT, _font_size))
 	card.position = Vector2(0.0, _bottom())
 	cards[id] = card

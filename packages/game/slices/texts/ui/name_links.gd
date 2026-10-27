@@ -7,7 +7,8 @@ extends RichTextLabel
 ## a long press selects it, so a plain tap never does; a controller or the keyboard focuses the
 ## text, where the d-pad's left and right step through its names, the chosen one in bold on a
 ## shade (never color alone, #68), and A or Enter selects it. Up and down leave it as from any
-## other control.
+## other control. A text on the HUD isn't `focusable` (#1446): the mouse and touch select its names,
+## but it never takes the focus, so it stays out of the controller's way while playing.
 
 ## A name was selected: the kind of its tag (TextTags.FACTION) and its id.
 signal name_selected(kind: String, id: String)
@@ -21,6 +22,8 @@ const CHOSEN_SHADE: Color = Color(0.74, 0.76, 0.82)
 ## What separates a link's kind from its id in its meta: "FACTION:amvrel_velmarai".
 const META_SEPARATOR: String = ":"
 
+## Whether a controller or the keyboard can focus the text, while it shows a link.
+var focusable: bool = true
 ## The links in the text shown, in order, each as its meta ("FACTION:amvrel_velmarai").
 var links: Array[String] = []
 ## The link a controller has chosen, its index in `links`.
@@ -72,7 +75,7 @@ func show_tagged(tagged: String) -> void:
 	_tagged = tagged
 	chosen = 0
 	_render()
-	focus_mode = Control.FOCUS_NONE if links.is_empty() else Control.FOCUS_ALL
+	focus_mode = Control.FOCUS_ALL if focusable and not links.is_empty() else Control.FOCUS_NONE
 	for meta: String in links:
 		_raise(name_shown, meta)
 
