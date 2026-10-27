@@ -5,6 +5,10 @@ extends Control
 ## and closes it, and on touch screens a small button does, showing the glyph of that key or button
 ## while a keyboard or a controller is in use there (#1192); the close button at its top right and
 ## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
+## While a carried monster has a knot of its development web to take (KnotMark, #1443), that button
+## shows on every device, saying so in words and with the knot's shape in place of its own icon:
+## clicked, tapped or with the `menu` action, whose glyph it shows, it opens the menu, whose
+## Character tab marks the monster's row and takes the knot on its web.
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
 ## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows
@@ -40,6 +44,7 @@ const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest side, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = 2.2
 const OPEN_TEXT: String = "Menu"
+const KNOT_TEXT: String = "Menu: " + KnotMark.TEXT
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
 const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
 const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
@@ -96,6 +101,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	show_knot(knot_waits())
 	lay_out(get_viewport_rect().size)
 	if _sheet.visible:
 		settings.refresh()
@@ -338,7 +344,27 @@ func controls_tab() -> ControlsTab:
 	return _sheet.find_child("Controls", true, false) as ControlsTab
 
 
-## The button at the top that opens the menu on touch screens.
+## Whether a monster the player carries has a knot to take (#1443).
+func knot_waits() -> bool:
+	if driver == null or driver.holder == null or driver.holder.keeper == null:
+		return false
+	var profile: Profile = driver.holder.keeper.profile
+	for short_id: String in profile.carried:
+		if KnotMark.waits(profile.monster_of(short_id)):
+			return true
+	return false
+
+
+## Marks the open button while a knot `waits` (#1443): it shows then on every device, in words and
+## with the knot's shape.
+func show_knot(waits: bool) -> void:
+	_open_button.text = KNOT_TEXT if waits else OPEN_TEXT
+	_open_button.icon = KnotMark.ICON if waits else OPEN_ICON
+	_open_button.visible = waits or DisplayServer.is_touchscreen_available()
+
+
+## The button at the top that opens the menu on touch screens, and on every device while a knot
+## waits.
 func open_button() -> Button:
 	return _open_button
 
