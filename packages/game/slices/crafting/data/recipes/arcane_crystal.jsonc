@@ -1,0 +1,6 @@
+// The arcane crystal (#1349), a mana pup's ascension material (#1260, source 3), made from the
+// crystals mana monsters give and moss. A placeholder, to tune (#960).
+{
+	"id": "arcane_crystal",
+	"needs": { "crystal": 5, "moss": 3 }
+}

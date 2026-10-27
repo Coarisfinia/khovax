@@ -9,7 +9,8 @@ extends RefCounted
 ## toward the story's paths counts the path-marked choices and is saved (#658); every dominated
 ## monster keeps its short id (#700) and grows in levels from the dominations it's carried through
 ## (#1251), each letting it take a node of its development web (#1417), and ascends into its
-## species' grown form at its level with its material (#1235); the outbox's requests to the
+## species' grown form at its level with its material (#1235), which crafting makes from other
+## materials (#1349); the outbox's requests to the
 ## world are saved until the world
 ## acknowledges them (#771); and a damaged save falls back to the newest intact generation
 ## before it (#179).
@@ -669,6 +670,8 @@ func _check_named() -> String:
 		problem = _check_development()
 	if problem.is_empty():
 		problem = _check_ascension()
+	if problem.is_empty():
+		problem = _check_crafting()
 	return problem if not problem.is_empty() else _check_standings()
 
 
@@ -701,6 +704,30 @@ func _check_ascension() -> String:
 	var loaded: Profile = _parse(_text(profile))
 	if not loaded.problem.is_empty() or loaded.monster_of(short_id).species != "vynakiir":
 		return "the ascension wasn't kept through saving: " + loaded.problem
+	return ""
+
+
+## Crafting (#1349): an arcane crystal is made only while the player holds all its recipe needs,
+## which it spends, the last of a material dropping it from the profile; a material without a
+## recipe is refused, and a refusal changes nothing.
+func _check_crafting() -> String:
+	var profile: Profile = Profile.new()
+	var needs: Dictionary[String, int] = RecipeContent.cached().recipes["arcane_crystal"].needs
+	profile.materials.assign(needs)
+	profile.materials["crystal"] -= 1
+	var held: Dictionary[String, int] = {}
+	held.assign(profile.materials)
+	var refused: Array[String] = [
+		Crafting.craft(profile, "arcane_crystal"),
+		Crafting.craft(profile, "moss"),
+	]
+	if refused.has("") or profile.materials != held:
+		return "a craft that can't be was made, or changed something: %s" % [refused]
+	profile.materials["crystal"] += 2
+	var crafted: String = Crafting.craft(profile, "arcane_crystal")
+	var expected: Dictionary[String, int] = { "crystal": 1, "arcane_crystal": 1 }
+	if not crafted.is_empty() or profile.materials != expected:
+		return "crafting an arcane crystal left %s: %s" % [profile.materials, crafted]
 	return ""
 
 

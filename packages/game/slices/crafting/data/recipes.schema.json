@@ -1,0 +1,23 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/Coarisfinia/khovax/slices/crafting/data/recipes.schema.json",
+	"title": "Recipe",
+	"description": "A crafting recipe (#1349): one of the material it's named after, made at the base (#695) from the materials it needs, which crafting spends from the player's profile. One file per recipe, named after the material it makes.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["id", "needs"],
+	"properties": {
+		"id": {
+			"description": "The material it makes, by its id (the loot slice's data/materials/).",
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"needs": {
+			"description": "The materials it's made from, by id, each a whole count from 1, never the material it makes.",
+			"type": "object",
+			"minProperties": 1,
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]*$" },
+			"additionalProperties": { "type": "integer", "minimum": 1, "maximum": 1000000000 }
+		}
+	}
+}
