@@ -33,7 +33,9 @@ extends RefCounted
 ## Choosing an answer in a dialog finishes this player's quest asking for it, not another player's
 ## choice nor another answer, and takes the way on of a choice asking for it (#636); a quest naming
 ## a dialog or an answer that no dialog file has is refused, and one that names an existing answer
-## words it as the dialog does.
+## words it as the dialog does, the speaker's name a link to their codex page (#1446).
+## A quest's pill names its place as a link, on the list and the Quests tab alike: selecting it
+## opens the place's codex page, and only the tab's takes a controller's focus (#1446).
 ## Finishing a territory quest hands its instance to its faction in the world (#638). A step asking
 ## for an item counts each one this player obtains (#686), one gain finishing a step and counting on
 ## toward the next, and has no marker; one asking for an item no loot or harvest table drops is
@@ -699,7 +701,26 @@ func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> Str
 	list.driver = driver
 	tab.driver = driver
 	there.free()
-	return result
+	return result if not result.is_empty() else _check_pill_opens(list, tab, quest)
+
+
+## Selecting the place in a quest's pill opens its codex page (#1446): on the list at the side of
+## the screen, which never takes a controller's focus, and on the Quests tab, which does.
+func _check_pill_opens(list: QuestListView, tab: QuestsTab, quest: String) -> String:
+	var page: CodexPage = list.get_parent().get_node("CodexPage") as CodexPage
+	var listed: QuestPill = _list_pill(list, quest)
+	for pill: QuestPill in [listed, tab.pills[quest]]:
+		var meta: String = pill.place_links().links[0]
+		pill.place_links().select(meta)
+		var opened: bool = (page.is_open() and page.heading.text == CodexPage.PLACES_TEXT
+				and page.title.text == Realms.name_of(FlowSteps.FOREST))
+		page.close()
+		if not opened:
+			return "selecting %s in a quest's pill showed %s" % [meta, page.title.text]
+	var focusable: bool = tab.pills[quest].place_links().focus_mode == Control.FOCUS_ALL
+	if listed.place_links().focus_mode != Control.FOCUS_NONE or not focusable:
+		return "the HUD's quest pill takes a controller's focus, or the Quests tab's doesn't"
+	return ""
 
 
 ## The pill on the list's card of quest `id`, once the player follows it (#1298).
@@ -713,12 +734,12 @@ static func _list_pill(list: QuestListView, id: String) -> QuestPill:
 ## arrow), or "".
 func _check_pill(pill: QuestPill, where: String, here: bool) -> String:
 	var style: StyleBoxFlat = pill.get_theme_stylebox("panel") as StyleBoxFlat
-	var label: Label = pill.get_node("Row/Name") as Label
 	if (not pill.visible or pill.instance_id != where or pill.here != here
-			or label.text != Realms.name_of(where) or style.draw_center != here
+			or pill.shown_name() != Realms.name_of(where) or style.draw_center != here
+			or pill.place_links().links != [TextTags.PLACE + NameLinks.META_SEPARATOR + where]
 			or (pill.get_node("Row/Arrow") as Control).visible == here):
 		return "a quest's pill shows %s (here: %s), not %s, here: %s" % [
-			label.text,
+			pill.shown_name(),
 			pill.here,
 			where,
 			here,
@@ -1803,9 +1824,14 @@ func _check_dialog_ids() -> String:
 		return "a quest counting an uncommitted answer wasn't refused: " + uncommitted.problem
 	var content: QuestContent = _load_written({ "promise": PROMISE % [SCOUT, "promise_to_look"] })
 	var line: String = ""
+	var tagged: String = ""
 	if content.problem.is_empty():
 		line = QuestListView.step_line(content.quests["promise"].steps[0], 0)
-	if line != "Tell Teska na Amvrel: \"I'll take a look.\"":
+		tagged = QuestListView.step_tagged(content.quests["promise"].steps[0], 0)
+	# The scout is a tag (#1446), so the list shows her name as a link to her codex page.
+	var person: String = "Tell %s%s:" % [TextTags.TAG_START, TextTags.PERSON]
+	var scout_tagged: bool = tagged.begins_with(person)
+	if line != "Tell Teska na Amvrel: \"I'll take a look.\"" or not scout_tagged:
 		return "the scout's promise didn't read as the dialog words it: %s %s" % [
 			content.problem,
 			line,

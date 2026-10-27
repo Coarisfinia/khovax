@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://slices/quests/ui/quest_pill.tscn" id="1_pill"]
 [ext_resource type="Script" path="res://slices/quests/ui/quest_card.gd" id="2_card"]
+[ext_resource type="Script" path="res://slices/texts/ui/name_links.gd" id="3_links"]
 
 [node name="Card" type="PanelContainer"]
 modulate = Color(1, 1, 1, 0)
@@ -18,6 +19,7 @@ autowrap_mode = 3
 [node name="Where" parent="Lines" instance=ExtResource("1_pill")]
 layout_mode = 2
 
-[node name="Step" type="Label" parent="Lines"]
+[node name="Step" type="RichTextLabel" parent="Lines"]
 layout_mode = 2
-autowrap_mode = 3
+mouse_filter = 2
+script = ExtResource("3_links")

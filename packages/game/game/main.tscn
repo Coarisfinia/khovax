@@ -71,6 +71,7 @@
 [ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/meta/move_hint_keeper.gd" id="63_move_hint_keeper"]
 [ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
+[ext_resource type="Script" path="res://slices/codex/ui/quest_names_tie.gd" id="66_quest_names_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
@@ -493,5 +494,13 @@ script = ExtResource("62_faction_met_tie")
 menu = NodePath("../Hud/GameMenu")
 keeper = NodePath("../CodexKeeper")
 
+[node name="QuestNamesTie" type="Node" parent="." node_paths=PackedStringArray("menu", "page", "keeper")]
+script = ExtResource("66_quest_names_tie")
+menu = NodePath("../Hud/GameMenu")
+page = NodePath("../Hud/CodexPage")
+keeper = NodePath("../CodexKeeper")
+
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]
+[connection signal="name_selected" from="Hud/QuestList" to="Hud/CodexPage" method="open"]
+[connection signal="name_shown" from="Hud/QuestList" to="CodexKeeper" method="meet"]

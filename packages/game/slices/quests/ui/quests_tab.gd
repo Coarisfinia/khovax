@@ -11,6 +11,14 @@ extends ScrollContainer
 ## up with them while
 ## shown, and scrolls when the screen is too short for every quest. Its layout lives in its scene,
 ## quests_tab.tscn (#437): this script keeps only what it does.
+## The people and places its steps and its pills name are links to their codex pages (NameLinks,
+## #1446): a mouse click, a long press on touch, or a controller focusing the text and stepping
+## through its names selects one, raising `name_selected`; each shown raises `name_shown`.
+
+## A name in a step or a pill was selected (NameLinks): the kind of its tag and its id.
+signal name_selected(kind: String, id: String)
+## A name with a codex page was shown in a step or a pill: the player met it (#1174).
+signal name_shown(kind: String, id: String)
 
 ## The gap between rows, as the scene sets it.
 const GAP: float = 8.0
@@ -66,7 +74,7 @@ func refresh() -> void:
 	if quests != null:
 		for id: String in quests.open_steps():
 			names[id] = quests.book[id].shown_name()
-			lines[id] = "\n".join(quest_lines(quests, id))
+			lines[id] = "\n".join(quest_lines(quests, id, true))
 			var step: QuestStep = quests.book[id].step_at(quests.progress_of(id).step)
 			wheres[id] = step.counts_in() if step != null else ""
 	var here: String = driver.local_instance_name() if driver != null else ""
@@ -88,16 +96,20 @@ func fit(width: float) -> void:
 
 ## The steps of the open quest `id` of `quests` on the player's way, worded: the ones done, in the
 ## order done, the one it's on with its count, and the ones sure to come later, up to its next
-## choice (#573), whose way on isn't known yet.
-static func quest_lines(quests: QuestTracker, id: String) -> Array[String]:
+## choice (#573), whose way on isn't known yet. As the player reads them, or with their text tags
+## (#733) when `tagged`.
+static func quest_lines(quests: QuestTracker, id: String, tagged: bool = false) -> Array[String]:
 	var progress: QuestProgress = quests.progress_of(id)
 	var quest: QuestDefinition = quests.book[id]
 	var lines: Array[String] = _done_lines(quest, progress)
 	var current: QuestStep = quest.step_at(progress.step)
 	if current != null:
-		lines.append(CURRENT_STEP + QuestListView.step_line(current, progress.count))
+		lines.append(CURRENT_STEP + QuestListView.step_tagged(current, progress.count))
 	for index: int in quest.steps_after(progress.step):
-		lines.append(LATER_STEP + QuestListView.step_line(quest.steps[index], 0))
+		lines.append(LATER_STEP + QuestListView.step_tagged(quest.steps[index], 0))
+	if not tagged:
+		for at: int in lines.size():
+			lines[at] = TextTags.shown(lines[at])
 	return lines
 
 
@@ -112,7 +124,7 @@ static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Arra
 		if step != null:
 			var taken: QuestStep = quest.choice_to(way[at], way[at + 1])
 			var shown_step: QuestStep = taken if taken != null else step
-			lines.append(DONE_STEP + QuestListView.step_line(shown_step, shown_step.count))
+			lines.append(DONE_STEP + QuestListView.step_tagged(shown_step, shown_step.count))
 	return lines
 
 
@@ -158,13 +170,29 @@ func _add_quest(quest_name: String, lines: String, id: String, followed: bool) -
 	follow_buttons[id] = follow
 	_rows.add_child(heading)
 	var pill: QuestPill = PILL.instantiate() as QuestPill
+	_forward(pill)
 	_rows.add_child(pill)
 	pill.fit(get_theme_default_font_size())
+	pill.links_on(true)
 	var steps: MarginContainer = MarginContainer.new()
 	steps.add_theme_constant_override("margin_left", roundi(GAP * STEP_INDENT))
 	var column: VBoxContainer = VBoxContainer.new()
 	for line: String in lines.split("\n", false):
-		column.add_child(GameMenu.label(line))
+		column.add_child(_step_links(line))
 	steps.add_child(column)
 	_rows.add_child(steps)
 	return pill
+
+
+## The text of a step's `line`, a text with text tags, its names links raised as the tab's own.
+func _step_links(line: String) -> NameLinks:
+	var step: NameLinks = NameLinks.new()
+	_forward(step)
+	step.show_tagged(line)
+	return step
+
+
+## Raises the names `links` (a NameLinks or a QuestPill) selects and shows as the tab's own.
+func _forward(links: Control) -> void:
+	var _selected: int = links.connect(&"name_selected", name_selected.emit)
+	var _shown: int = links.connect(&"name_shown", name_shown.emit)
