@@ -494,13 +494,11 @@ script = ExtResource("62_faction_met_tie")
 menu = NodePath("../Hud/GameMenu")
 keeper = NodePath("../CodexKeeper")
 
-[node name="QuestNamesTie" type="Node" parent="." node_paths=PackedStringArray("menu", "page", "keeper")]
+[node name="QuestNamesTie" type="Node" parent="." node_paths=PackedStringArray("menu", "page")]
 script = ExtResource("66_quest_names_tie")
 menu = NodePath("../Hud/GameMenu")
 page = NodePath("../Hud/CodexPage")
-keeper = NodePath("../CodexKeeper")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]
 [connection signal="name_selected" from="Hud/QuestList" to="Hud/CodexPage" method="open"]
-[connection signal="name_shown" from="Hud/QuestList" to="CodexKeeper" method="meet"]

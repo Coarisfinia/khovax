@@ -396,7 +396,7 @@ func _check_listed(list: QuestListView, expected: Dictionary[String, String]) ->
 func _check_card_scene(list: QuestListView, quest_name: String) -> String:
 	var card: PanelContainer = list.cards["first_domination"]
 	var name_label: Label = card.get_node("Lines/Name") as Label
-	var step: Label = card.get_node("Lines/Step") as Label
+	var step: NameLinks = card.get_node("Lines/Step") as NameLinks
 	if (list.mouse_filter != Control.MOUSE_FILTER_IGNORE
 			or card.mouse_filter != Control.MOUSE_FILTER_IGNORE
 			or name_label.get_index() != 0 or name_label.text != quest_name

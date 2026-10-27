@@ -13,12 +13,12 @@ extends ScrollContainer
 ## quests_tab.tscn (#437): this script keeps only what it does.
 ## The people and places its steps and its pills name are links to their codex pages (NameLinks,
 ## #1446): a mouse click, a long press on touch, or a controller focusing the text and stepping
-## through its names selects one, raising `name_selected`; each shown raises `name_shown`.
+## through its names selects one, raising `name_selected`.
+## A name shown here isn't met (CodexKeeper): the player meets it where they come across it, in the
+## dialog that gave the quest or by entering the place (#1209), so a new player's book stays empty.
 
 ## A name in a step or a pill was selected (NameLinks): the kind of its tag and its id.
 signal name_selected(kind: String, id: String)
-## A name with a codex page was shown in a step or a pill: the player met it (#1174).
-signal name_shown(kind: String, id: String)
 
 ## The gap between rows, as the scene sets it.
 const GAP: float = 8.0
@@ -38,13 +38,16 @@ var keeper: QuestKeeper
 ## The running session, which says the instance this machine's player is in, for the pills.
 var driver: Session
 ## What the tab shows for each open quest, by quest id: its steps' lines, one per line. Kept here
-## so tests can read it.
+## so tests can read it. As the player reads them; `_tagged` keeps them with their text tags.
 var shown: Dictionary[String, String] = {}
 ## Each open quest's pill, by quest id, while the tab shows it. Kept so tests can read them.
 var pills: Dictionary[String, QuestPill] = {}
 ## Each open quest's button following it, by quest id, while the tab shows it. Kept so tests can
 ## press them.
 var follow_buttons: Dictionary[String, Button] = {}
+## Each open quest's steps' lines with their text tags (#733), by quest id, when the rows were
+## built.
+var _tagged: Dictionary[String, String] = {}
 ## The quest followed when the rows were built.
 var _followed: String = ""
 ## The instance this machine's player was in when the rows were built.
@@ -79,7 +82,7 @@ func refresh() -> void:
 			wheres[id] = step.counts_in() if step != null else ""
 	var here: String = driver.local_instance_name() if driver != null else ""
 	var followed: String = quests.focused() if quests != null else ""
-	if lines != shown or wheres != _wheres or here != _here or followed != _followed:
+	if lines != _tagged or wheres != _wheres or here != _here or followed != _followed:
 		_show(names, lines, wheres, here, followed)
 
 
@@ -128,9 +131,10 @@ static func _done_lines(quest: QuestDefinition, progress: QuestProgress) -> Arra
 	return lines
 
 
-## Builds the rows: each quest's name from `names` and its `lines` below it, by quest id, the pill
-## naming its instance from `wheres` between them, filled when that's `here`, the instance this
-## machine's player is in, and the button following it beside its name, saying so for `followed`.
+## Builds the rows: each quest's name from `names` and its `lines` (with text tags) below it, by
+## quest id, the pill naming its instance from `wheres` between them, filled when that's `here`, the
+## instance this machine's player is in, and the button following it beside its name, saying so for
+## `followed`.
 func _show(
 	names: Dictionary[String, String],
 	lines: Dictionary[String, String],
@@ -138,7 +142,10 @@ func _show(
 	here: String,
 	followed: String,
 ) -> void:
-	shown = lines
+	_tagged = lines
+	shown = {}
+	for id: String in lines:
+		shown[id] = TextTags.shown(lines[id])
 	_wheres = wheres
 	_here = here
 	_followed = followed
@@ -192,7 +199,6 @@ func _step_links(line: String) -> NameLinks:
 	return step
 
 
-## Raises the names `links` (a NameLinks or a QuestPill) selects and shows as the tab's own.
+## Raises the names `links` (a NameLinks or a QuestPill) selects as the tab's own.
 func _forward(links: Control) -> void:
 	var _selected: int = links.connect(&"name_selected", name_selected.emit)
-	var _shown: int = links.connect(&"name_shown", name_shown.emit)

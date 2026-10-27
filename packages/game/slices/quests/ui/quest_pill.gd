@@ -5,15 +5,13 @@ extends PanelContainer
 ## size smaller than the step. While this machine's player is in that instance it's filled, as
 ## "here"; elsewhere it's only outlined, with an arrow pointing on, as "there": fill and shape tell
 ## the two apart, never color alone (#68). Hidden while the step counts anywhere. Once `links_on`, a
-## place a realm draws is a link to its codex page (NameLinks, #1446), raising `name_selected` and
-## `name_shown`; a controller reaches it only in the menu (`links_on`), never on the HUD,
-## where it stays out of the way while playing. Its layout lives in quest_pill.tscn (#437); this
+## place a realm draws is a link to its codex page (NameLinks, #1446), raising `name_selected`; a
+## controller reaches it only in the menu (`links_on`), never on the HUD, where it stays out of the
+## way while playing. Its layout lives in quest_pill.tscn (#437); this
 ## script keeps only what it does.
 
 ## The place in it was selected (NameLinks): TextTags.PLACE and its id.
 signal name_selected(kind: String, id: String)
-## The place in it was shown: the player met it (#1174).
-signal name_shown(kind: String, id: String)
 
 ## How big its text is next to the step's.
 const FONT_SCALE: float = 0.85
@@ -38,7 +36,6 @@ func _ready() -> void:
 	_name.focusable = false
 	var _drawn: int = _arrow.draw.connect(_draw_arrow)
 	var _selected: int = _name.name_selected.connect(name_selected.emit)
-	var _shown: int = _name.name_shown.connect(name_shown.emit)
 
 
 ## Shows the instance `id`, filled when `is_here`, or hides the pill when `id` is "".

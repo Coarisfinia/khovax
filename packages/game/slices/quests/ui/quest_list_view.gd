@@ -13,14 +13,14 @@ extends Control
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn
 ## (QuestCard); this script keeps only what it does.
 ## The people and places its step and its pill name are links to their codex pages (NameLinks,
-## #1446): a mouse click or a long press on touch selects one, raising `name_selected`, and each
-## shown raises `name_shown`. A controller never focuses them here (NameLinks.focusable), so the HUD
-## stays out of its way while playing: it reaches them in the menu's Quests tab.
+## #1446): a mouse click or a long press on touch selects one, raising `name_selected`. A
+## controller never focuses them here (NameLinks.focusable), so the HUD stays out of its way while
+## playing: it reaches them in the menu's Quests tab.
+## A name shown here isn't met (CodexKeeper): the player meets it where they come across it, in the
+## dialog that gave the quest or by entering the place (#1209), so a new player's book stays empty.
 
 ## A name on a card was selected (NameLinks): the kind of its tag and its id.
 signal name_selected(kind: String, id: String)
-## A name with a codex page was shown on a card: the player met it (#1174).
-signal name_shown(kind: String, id: String)
 
 ## A quest's card: its name above its step, both wrapping, the pill between them, starting faded
 ## out.
@@ -170,7 +170,6 @@ func _add_card(id: String, quest_name: String) -> void:
 	add_child(card)
 	card.links_on(false)
 	var _selected: int = card.name_selected.connect(name_selected.emit)
-	var _shown: int = card.name_shown.connect(name_shown.emit)
 	card.fit(maxi(MIN_FONT, _font_size))
 	card.position = Vector2(0.0, _bottom())
 	cards[id] = card

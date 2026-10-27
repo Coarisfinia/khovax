@@ -5,13 +5,11 @@ extends PanelContainer
 ## ink on a card. The quest list at the side of the screen shows the followed quest's, and the
 ## Survey one quest's while the pointer rests on its arrow (#1298). The people and places its step
 ## and its pill name are links to their codex pages once `links_on` (NameLinks, #1446): the list's
-## card raises `name_selected` and `name_shown` for them; the Survey's shows them as plain words.
+## card raises `name_selected` for them; the Survey's shows them as plain words.
 ## Its layout lives in quest_card.tscn (#437); this script keeps only what it does.
 
 ## A name in its step or its pill was selected (NameLinks): the kind of its tag and its id.
 signal name_selected(kind: String, id: String)
-## A name with a codex page was shown in its step or its pill: the player met it (#1174).
-signal name_shown(kind: String, id: String)
 
 ## How much bigger a quest's name is than its step.
 const NAME_SCALE: float = 1.15
@@ -27,9 +25,7 @@ func _ready() -> void:
 	# Inert until links_on: the Survey's card takes no focus either.
 	step_label().focusable = false
 	var _selected: int = step_label().name_selected.connect(name_selected.emit)
-	var _shown: int = step_label().name_shown.connect(name_shown.emit)
 	var _picked: int = pill().name_selected.connect(name_selected.emit)
-	var _met: int = pill().name_shown.connect(name_shown.emit)
 
 
 ## Shows `line` under its name, what the step asks, a text with text tags (#733), or nothing when
