@@ -15,6 +15,7 @@ static func readers() -> Array[PlacementReader]:
 		NpcPlacements.new(),
 		WildSpotPlacements.new(),
 		ChestPlacements.new(),
+		ControlPointPlacements.new(),
 	]
 	return all
 
