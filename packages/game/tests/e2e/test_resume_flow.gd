@@ -67,9 +67,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = await _check_bad_explored(tree, world)
 	if result.is_empty():
-		result = await _check_purged_explored(tree, false)
-	if result.is_empty():
-		result = await _check_purged_explored(tree, true)
+		result = await _check_purged_explored(tree)
 	if result.is_empty():
 		result = await _check_boot_refuses(tree, world)
 	# Its outbox aside, where a fresh world's session posts the party for the world (#818).
@@ -538,32 +536,61 @@ func _resumes_forgetting(tree: SceneTree, world: World, bad: Variant) -> String:
 ## Saved an hour after the glade was left behind, so it was purged (#212), the world resumes
 ## without what was seen in the glade before: it comes back arranged anew, and only what is seen of
 ## it from next door now (#191) is remembered, at its new generation. What was seen in the forest
-## is kept. The same holds for a save from before format changes had names (#801, `numbered`): its
-## format number 2 had the generations.
-func _check_purged_explored(tree: SceneTree, numbered: bool) -> String:
+## is kept, at generation 0. The same holds for a save from before format changes had names
+## (#801): its format number 2 had the generations, and format 1 had none, so all it saw is read at
+## generation 0 (#1415).
+func _check_purged_explored(tree: SceneTree) -> String:
+	var result: String = await _check_purged_explored_in(tree, 0)
+	if result.is_empty():
+		result = await _check_purged_explored_in(tree, 2)
+	if result.is_empty():
+		result = await _check_purged_explored_in(tree, 1)
+	return result
+
+
+## `_check_purged_explored` with the explored ground saved in the numbered format `numbered` (0:
+## names).
+func _check_purged_explored_in(tree: SceneTree, numbered: int) -> String:
 	var world: World = World.new(BlueprintSource.new(), SEED, FlowSteps.FOREST)
 	for direction: int in FlowSteps.INTO_GLADE + [FlowSteps.OUT_OF_GLADE]:
 		_walk_in(world, direction)
 	var left: int = world.left_at.get(FlowSteps.GLADE, 0)
 	while world.tick <= left + World.PURGE_TICKS:
 		world.step(FlowSteps.command(Command.NO_MOVE))
-	var explored_data: Dictionary = ExploredSave.explored_data(_explored)
-	if numbered:
-		var _unnamed: bool = explored_data.erase(FormatChanges.KEY)
-		explored_data["format"] = 2
-	var problem: String = WorldSave.save(world, WORLD_PATH, { WorldSave.EXPLORED: explored_data })
+	var problem: String = WorldSave.save(
+		world,
+		WORLD_PATH,
+		{ WorldSave.EXPLORED: _explored_numbered(numbered) },
+	)
 	if world.generation(FlowSteps.GLADE) != 1 or not problem.is_empty():
 		return "the glade wasn't purged an hour after it was left, or not saved: " + problem
 	var main: Node = _boot(tree)
 	await tree.process_frame
 	var explored: ExploredGround = (main.get_node("ExploredKeeper") as ExploredKeeper).explored
 	var glade_generation: int = explored.generations.get(FlowSteps.GLADE, 1)
+	var forest_generation: int = explored.generations.get(FlowSteps.FOREST, -1)
 	var forest: Dictionary = explored.tiles_in.get(FlowSteps.FOREST, {})
 	main.queue_free()
 	await tree.process_frame
-	if glade_generation != 1 or forest.is_empty():
-		return "resumed, the purged glade's old ground came back, or the forest's didn't"
+	if glade_generation != 1 or forest_generation != 0 or forest.is_empty():
+		return (
+			"resumed from format %d, the purged glade's old ground came back, or the forest's"
+			+ " didn't at generation 0"
+		) % numbered
 	return ""
+
+
+## The ground player 0 explored as save data, in the numbered format `numbered` from before format
+## changes had names (#801), or naming them with 0. Format 1 had no generations.
+func _explored_numbered(numbered: int) -> Dictionary:
+	var data: Dictionary = ExploredSave.explored_data(_explored)
+	if numbered > 0:
+		var _unnamed: bool = data.erase(FormatChanges.KEY)
+		data["format"] = numbered
+	if numbered == 1:
+		for instance: Dictionary in data["instances"]:
+			var _ungenerated: bool = instance.erase("generation")
+	return data
 
 
 ## A world file the build can't go on from (damaged, in a newer format, played by other rules) is
