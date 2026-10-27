@@ -519,20 +519,22 @@ func _check_swaps() -> String:
 
 
 ## Who a player carries comes from their profile as a run of requests from its outbox (#818): a
-## world with no party gets one, the species and the short id of each monster, and nothing more
-## while it waits. The party is theirs once the run is whole, the first joining them; a run in
-## another order keeps the companion they chose, a request sent again changes nothing, and a run of
-## none empties the party. A request's place has room for a run of the most monsters a player
+## world with no party gets one, the species, the short id and the leaning of each monster (#1358),
+## and nothing more while it waits. The party is theirs once the run is whole, the first joining
+## them; a run in another order keeps the companion they chose, a request sent again changes
+## nothing, and a run of none empties the party. A request's place has room for a run of the most
+## monsters a player
 ## carries (#936), which the profile's limit follows.
 func _check_carry_requests() -> String:
-	if (2 * CarryRequest.MOST_CARRIED > 1 << CarryRequest.PLACE_BITS
+	var most_values: int = CarryRequest.VALUES_PER_MONSTER * CarryRequest.MOST_CARRIED
+	if (most_values > 1 << CarryRequest.PLACE_BITS
 			or Profile.CARRY_LIMIT != CarryRequest.MOST_CARRIED):
 		return "a run of the most carried monsters doesn't fit a request's place"
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	var outbox: Outbox = Outbox.new()
 	var party: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])
-	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 4:
-		return "a world with no party wasn't sent the two carried monsters as four requests"
+	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 6:
+		return "a world with no party wasn't sent the two carried monsters as six requests"
 	if _carry_posted(party, outbox, world):
 		return "a party already on its way was sent again"
 	var companions: CompanionFeature = (
@@ -566,6 +568,69 @@ func _check_carry_requests() -> String:
 	_carry_in(world, outbox.entries[0])
 	if outbox.entries.size() != 1 or CompanionParty.carried_in(world)[0].size() != 0:
 		return "a run of none didn't empty the party"
+	return _check_carried_leanings(world, outbox)
+
+
+## A monster's leaning rides to the world with its party (#1358): a new leaning sends the party
+## again, the same companion stays, its HP shifts with it, damage taken kept, and a party leaning
+## goes through a replay's data and back. A leaning that would leave a standing companion no HP
+## leaves it 1.
+func _check_carried_leanings(world: World, outbox: Outbox) -> String:
+	var party: CarriedMonsters = FlowSteps.party(["tikazzir"])
+	outbox.entries.clear()
+	var _posted: bool = _carry_posted(party, outbox, world)
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
+	var health: HealthFeature = forest.feature(HealthFeature.ID) as HealthFeature
+	var companion_id: int = companions.companion_of(0)
+	var leant_hp: int = Fixed.scale(health.max_hp_of(forest, companion_id), 1200)
+	var _fell: bool = health.hurt(forest, companion_id, 1)
+	outbox.entries.clear()
+	var leaning: CompanionLeaning = CompanionLeaning.of(200, 0, 0)
+	var leant: CarriedMonsters = CarriedMonsters.new().add(party.short_ids[0], "tikazzir", leaning)
+	if not _carry_posted(leant, outbox, world):
+		return "a monster's leaning taken since wasn't sent to the world"
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	if (not CompanionParty.leaning_of(forest, 0, party.short_ids[0]).same_as(leaning)
+			or companions.companion_of(0) != companion_id
+			or health.max_hp_of(forest, companion_id) != leant_hp
+			or health.hp_of(forest, companion_id) != leant_hp - 1
+			or not CompanionParty.carried_in(world)[0].same_as(leant)):
+		return "a companion leaning +20%% HP didn't stay, with its HP, damage kept: %d of %d" % [
+			health.hp_of(forest, companion_id),
+			health.max_hp_of(forest, companion_id),
+		]
+	party = CarriedMonsters.of_data(leant.to_data())
+	if party == null or not party.same_as(leant):
+		return "a leaning monster didn't go through a replay's data and back"
+	return _check_leaning_keeps_standing(world, health.hp_of(forest, companion_id) - 1)
+
+
+## A companion of player 0 in `world` hurt by `damage` more, then brought leaning -50% HP, which
+## would leave it no HP, stays standing with 1 HP.
+func _check_leaning_keeps_standing(world: World, damage: int) -> String:
+	var forest: GameState = world.instances[FlowSteps.FOREST]
+	var companions: CompanionFeature = forest.feature(CompanionFeature.ID) as CompanionFeature
+	var health: HealthFeature = forest.feature(HealthFeature.ID) as HealthFeature
+	var companion_id: int = companions.companion_of(0)
+	var _fell: bool = health.hurt(forest, companion_id, damage)
+	var outbox: Outbox = Outbox.new()
+	var party: CarriedMonsters = CompanionParty.carried_in(world)[0]
+	var weak: CarriedMonsters = CarriedMonsters.new().add(
+		party.short_ids[0],
+		"tikazzir",
+		CompanionLeaning.of(CompanionLeaning.LEAST, 0, 0),
+	)
+	var _posted: bool = _carry_posted(weak, outbox, world)
+	for request: OutboxEntry in outbox.entries:
+		_carry_in(world, request)
+	if companions.companion_of(0) != companion_id or health.hp_of(forest, companion_id) != 1:
+		return "a companion leaning its HP below its damage didn't keep 1 HP: %d" % [
+			health.hp_of(forest, companion_id),
+		]
 	return ""
 
 

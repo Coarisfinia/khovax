@@ -1174,12 +1174,39 @@ func _check_companion_strikes() -> String:
 	(state.feature(HidingFeature.ID) as HidingFeature).hidden.append_array(_wild(state).monsters)
 	if not _strikes_over(state, 2 * CompanionAttackFeature.STRIKE_TICKS).is_empty():
 		return "the companion struck a wild monster hiding in its tile"
-	var result: String = _check_no_special(spots, hemmed)
+	var result: String = _check_leaning_strikes(spots, hemmed)
+	if result.is_empty():
+		result = _check_no_special(spots, hemmed)
 	if result.is_empty():
 		result = _check_special(state, first, spots)
 	if result.is_empty():
 		result = _check_bind()
 	return result if not result.is_empty() else _check_broken_bind()
+
+
+## A companion hemmed in the same way whose taken nodes lean it +20% strength and +50% speed
+## (#1358) strikes for 120% of its strength, and its wait between strikes is two thirds as long:
+## three strikes where one leaning nowhere strikes twice.
+func _check_leaning_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
+	var state: GameState = _strike_state(spots)
+	FlowSteps.carry(state, 0, [WEAK])
+	state.stores[0].entry(CompanionFeature.ID)["leanings"] = [[0, 200, 500]]
+	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	var _joined: Array[CompanionStruck] = _strikes_over(state, 1)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	state.entity(companion_id).tile = hemmed
+	var leaned: int = Fixed.scale(WEAK_STRENGTH, CompanionGrowth.share(200))
+	var wait: int = CompanionGrowth.ticks(CompanionAttackFeature.STRIKE_TICKS, 500)
+	var damages: Array[int] = []
+	for strike: CompanionStruck in _strikes_over(state, 2 * wait + 1):
+		damages.append(strike.damage)
+	if wait >= CompanionAttackFeature.STRIKE_TICKS or damages != [leaned, leaned, leaned]:
+		return "a leaning companion's strikes were %s every %d ticks, not three of %d" % [
+			damages,
+			wait,
+			leaned,
+		]
+	return ""
 
 
 ## The player fires their companion's special, hemmed in by the wild monsters on `spots`, all

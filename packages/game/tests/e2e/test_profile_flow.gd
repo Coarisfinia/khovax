@@ -530,7 +530,29 @@ func _check_development() -> String:
 	refused.append(profile.take_node(short_id, "heavy_1"))
 	if not took.is_empty() or refused.has("") or monster.taken != ["sturdy_1", "sturdy_2"]:
 		return "taking nodes gave %s, %s and refused %s" % [monster.taken, took, refused]
-	return _check_development_saved(profile)
+	var problem: String = _check_development_carried(_parse(_text(profile)))
+	return problem if not problem.is_empty() else _check_development_saved(profile)
+
+
+## The stat nodes `profile`'s first monster took (#1358), Ombulumo's sturdy_1 and sturdy_2 (+5% and
+## +6% HP), ride to the world with its party: the run of carry requests says its leaning, summed
+## from its web, and a monster without a web leans nowhere.
+func _check_development_carried(profile: Profile) -> String:
+	var keeper: ProfileKeeper = ProfileKeeper.new(profile, SAVE_PATH)
+	var problem: String = keeper.catch_up_party({}, 0, DevelopmentContent.cached().webs)
+	var entries: Array[OutboxEntry] = profile.outbox.entries
+	if not problem.is_empty() or entries.size() != CarryRequest.VALUES_PER_MONSTER:
+		return "the monster's party wasn't sent as one monster's run: " + problem
+	var value: int = CarryRequest.value_of(entries[2].data)
+	var leaning: CompanionLeaning = CompanionLeaning.of_code(value)
+	if not leaning.same_as(CompanionLeaning.of(110, 0, 0)):
+		return "the run's leaning was %s, not +11%% HP" % [leaning.to_data()]
+	entries.clear()
+	problem = keeper.catch_up_party({}, 0, {})
+	value = CarryRequest.value_of(entries[2].data) if entries.size() > 2 else -1
+	if not problem.is_empty() or not CompanionLeaning.of_code(value).is_none():
+		return "a monster without its web leaned in its run: " + problem
+	return ""
 
 
 ## `profile`'s first monster's nodes taken (#1417) are kept through saving and loading, start at

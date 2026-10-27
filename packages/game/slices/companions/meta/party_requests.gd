@@ -38,6 +38,6 @@ static func _values_after(outbox: Outbox, stored: Dictionary) -> Array[int]:
 		if run.size() != CarryRequest.place_of(request.data):
 			continue
 		run.append(CarryRequest.value_of(request.data))
-		if run.size() >= 2 * CarryRequest.count_of(request.data):
+		if run.size() >= CarryRequest.VALUES_PER_MONSTER * CarryRequest.count_of(request.data):
 			last = run.duplicate()
 	return last
