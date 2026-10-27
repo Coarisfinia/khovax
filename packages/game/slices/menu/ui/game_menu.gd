@@ -12,7 +12,14 @@ extends Control
 ## While it's open the game hears no input: the player stands, the touch stick rests, and the
 ## Survey's keys and pinch zoom only the Survey tab's Survey. By default it pauses single player
 ## (#302), a setting the player can change; co-op never pauses (GameDriver.pause). Its text grows
-## with the screen, so it stays readable on a phone.
+## with the screen, so it stays readable on a phone. The names its tabs show as links (NameLinks:
+## the Character tab's factions, the Survey tab's holder, #1447) raise its `name_selected` and
+## `name_shown`, which the main scene ties to the codex, a slice after this one.
+
+## A name with a codex page was selected in a tab: the kind of its tag and its id.
+signal name_selected(kind: String, id: String)
+## A tab showed a name with a codex page: the player met it (#1174).
+signal name_shown(kind: String, id: String)
 
 ## The pause setting and its choices, saved by number: never reorder.
 const PAUSE_SETTING: String = "pause_in_menu"
@@ -98,6 +105,9 @@ func _ready() -> void:
 	_build_sheet(more_tabs)
 	# Once the sheet is in the tree, so the Settings tab has its submenus.
 	_add_host_settings()
+	# Once the sheet is in the tree too: the Character tab builds its panels when it's ready.
+	for named: Control in [character.factions, survey_tab]:
+		_relay_names(named)
 
 
 func _process(_delta: float) -> void:
@@ -301,6 +311,12 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	row.add_child(close)
 	_sheet.add_child(row)
 	add_child(_sheet)
+
+
+## Raises the names `named` (a tab or a panel with NameLinks) selects and shows as the menu's own.
+func _relay_names(named: Control) -> void:
+	var _selected: int = named.connect(&"name_selected", name_selected.emit)
+	var _met: int = named.connect(&"name_shown", name_shown.emit)
 
 
 ## The world's settings, which the host chooses (#1309), in the Settings tab: the difficulty in its

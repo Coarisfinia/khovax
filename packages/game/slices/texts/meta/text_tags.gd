@@ -125,13 +125,18 @@ static func read_species_from(directory: String) -> void:
 
 
 ## `text` with every tag replaced by the name it stands for; a tag that stands for nothing stays as
-## written, which the content flow never lets through.
-func resolve(text: String) -> String:
+## written, which the content flow never lets through. A name's own tags are resolved too
+## (`nested`), one level deep.
+func resolve(text: String, nested: bool = true) -> String:
 	var resolved: String = ""
 	var from: int = 0
 	for found: RegExMatch in _pattern.search_all(text):
 		var kind_names: Dictionary = names.get(found.get_string(1), {})
 		var tag_name: String = kind_names.get(found.get_string(2), found.get_string())
+		# A name may hold tags itself, like a faction's (#1447): resolved one level deep, so a name
+		# naming itself can't loop.
+		if nested:
+			tag_name = resolve(tag_name, false)
 		resolved += text.substr(from, found.get_start() - from) + tag_name
 		from = found.get_end()
 	return resolved + text.substr(from)

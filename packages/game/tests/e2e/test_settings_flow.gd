@@ -330,11 +330,25 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	]
 	if not changed.is_empty() or panel.shown != listed:
 		return "the Character tab's factions are %s, not %s" % [panel.shown, listed]
+	var links: String = _menu_faction_links(panel, main, faction.id)
+	if not links.is_empty():
+		return links
 	changed = standings.change(faction.id, -2) + standings.change("zz_vanished", 1)
 	panel.refresh()
 	if not changed.is_empty() or panel.shown != neutral:
 		return "a faction back at neutral stays listed: %s" % [panel.shown]
 	return _menu_met_factions(tab, main)
+
+
+## Why the listed faction's name isn't a link to its codex page that showing it met (#1447), or the
+## vanished one's, which the content no longer has, is one, or "".
+func _menu_faction_links(panel: FactionStandingsPanel, main: Node, faction_id: String) -> String:
+	var rows: Array[Node] = panel.get_child(1).get_children()
+	var vanished: NameLinks = rows[rows.size() - 1] as NameLinks
+	if vanished == null or not vanished.links.is_empty():
+		return "the Character tab links a faction the content doesn't have"
+	var problem: String = FlowGame.faction_link_problem(main, rows[0] as NameLinks, faction_id)
+	return "the Character tab's faction line: " + problem if not problem.is_empty() else ""
 
 
 ## A faction whose name the player has met is listed at its standing before anything moves it

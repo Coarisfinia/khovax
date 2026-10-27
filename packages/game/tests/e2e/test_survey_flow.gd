@@ -354,7 +354,7 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 	marks.show_state()
 	if marks.held_by.get(here, "") != guild:
 		return "the Survey doesn't mark the instance here once the guild holds it"
-	if marks.here_text() != TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]:
+	if TextTags.shown(marks.here_text()) != TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]:
 		return "the Survey says %s about the instance the guild holds" % marks.here_text()
 	# The forest north of the glade's start shows on the Survey there; the outpost to the southeast
 	# may not, and a neighbour that doesn't show isn't marked.
@@ -979,7 +979,8 @@ func _survey_pinched(survey: SurveyView, stick: TouchStick, pinch: PackedFloat32
 ## Why the menu's Survey tab (#392) doesn't show what the Survey shows, over the tab, with a line
 ## saying the Amvrel Velmarai holds the glade, where the player starts (#637, #712), or its
 ## zoom key, its buttons, a controller's triggers or a pinch on it don't step the one zoom it
-## follows, or a trigger zooms the Survey once the menu is closed, or "".
+## follows, or a trigger zooms the Survey once the menu is closed, or the guild's name isn't a link
+## to its codex page (#1447), or "".
 func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> String:
 	var menu: GameMenu = main.get_node("Hud/GameMenu") as GameMenu
 	var tab: SurveyTab = menu.survey_tab
@@ -998,12 +999,15 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	await main.get_tree().process_frame
 	survey.show_state()
 	tab.view.show_state()
+	var held: String = TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]
 	var same: bool = (tab.view.tiles.keys() == survey.tiles.keys()
 			and tab.view.circles.keys() == survey.circles.keys()
 			and tab.view.quest_targets == survey.quest_targets
-			and tab.held_text.text == TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"])
+			and tab.held_text.get_parsed_text() == held)
 	if problem.is_empty() and (not same or tab.view.size.y < tab.size.y / 2.0):
 		problem = "the menu's Survey doesn't show what the Survey shows, over the tab"
+	if problem.is_empty():
+		problem = FlowGame.faction_link_problem(main, tab.held_text, "amvrel_velmarai")
 	problem += _survey_tab_glyphs(tab)
 	problem += _survey_tab_zooms(tab, choice)
 	var place: int = choice.place_shown()

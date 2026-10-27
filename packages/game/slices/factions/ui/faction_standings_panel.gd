@@ -6,8 +6,15 @@ extends VBoxContainer
 ## the rank the faction names it (Faction.rank_name), all in words, their text tags showing
 ## the names they stand for (#752), never in color alone (#68).
 ## Only the current rank's name, never the other ranks' (#484: they would spoil what's ahead). A
-## faction the content no longer has shows by its id in words, without a rank. It only reads the
-## profile, and keeps up with it while shown.
+## faction the content no longer has shows by its id in words, without a rank. Each line is a
+## NameLinks (#1447): a known faction's name is a link to its codex page, whose `name_selected` and
+## `name_shown` the panel raises as its own. It only reads the profile, and keeps up with it while
+## shown.
+
+## A faction's name in a line was selected (NameLinks): TextTags.FACTION and its id.
+signal name_selected(kind: String, id: String)
+## A line showed a faction's name: the player met it (#1174).
+signal name_shown(kind: String, id: String)
 
 const TITLE: String = "Factions"
 ## Shown while no standing has moved from its start: not "neutral", since some factions start off it
@@ -20,8 +27,10 @@ const UNKNOWN_TEXT: String = "%s: %+d"
 
 ## Whose standings are shown: this machine's player's profile.
 var holder: ProfileHolder
-## What the panel shows, one line per faction. Kept here so tests can read it.
+## What the panel shows, one line per faction, in words. Kept here so tests can read it.
 var shown: Array[String] = []
+## The lines as text with text tags, the faction's name tagged, as the rows show them.
+var tagged: Array[String] = []
 ## The ids of the factions whose names this machine's player has met (#1383), as an Array[String]:
 ## handed in by the codex (FactionMetTie), whose slice comes after this one; none without it.
 var met: Callable = Callable()
@@ -37,7 +46,8 @@ func _ready() -> void:
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
-	refresh()
+	# No rows until it's shown (_process): showing a row meets its faction (#1447), which a row
+	# built while the menu is closed would do before the player sees the name.
 
 
 func _process(_delta: float) -> void:
@@ -64,17 +74,31 @@ func refresh() -> void:
 				lines.append(line_of(id, standings.of(id)))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
-	if lines == shown:
+	if lines == tagged:
 		return
-	shown = lines
-	GameMenu.show_lines(_rows, lines)
+	tagged = lines
+	shown.clear()
+	for old: Node in _rows.get_children():
+		_rows.remove_child(old)
+		old.queue_free()
+	for line: String in lines:
+		shown.append(TextTags.shown(line))
+		_add_row(line)
 
 
-## The line for the standing `standing` with the faction `id`.
+## Adds a row showing `line`, a text with text tags, its names as links.
+func _add_row(line: String) -> void:
+	var row: NameLinks = NameLinks.new()
+	var _selected: int = row.name_selected.connect(name_selected.emit)
+	var _met: int = row.name_shown.connect(name_shown.emit)
+	_rows.add_child(row)
+	row.show_tagged(line)
+
+
+## The line for the standing `standing` with the faction `id`: a text with text tags, the
+## faction's name tagged.
 func line_of(id: String, standing: int) -> String:
 	var faction: Faction = _factions.get(id)
 	if faction == null:
 		return UNKNOWN_TEXT % [id.capitalize(), standing]
-	return LINE_TEXT % [
-		TextTags.shown(faction.name), standing, TextTags.shown(faction.rank_name(standing)),
-	]
+	return LINE_TEXT % [TextTags.tag(TextTags.FACTION, id), standing, faction.rank_name(standing)]

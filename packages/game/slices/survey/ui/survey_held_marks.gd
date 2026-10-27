@@ -60,7 +60,8 @@ func show_state() -> void:
 			held_at[target] = middle
 
 
-## Who holds the instance this machine's player is in, in words (TerritoryText), shown or not.
+## Who holds the instance this machine's player is in, in words with text tags (TerritoryText),
+## shown or not.
 func here_text() -> String:
 	var survey: SurveyView = get_parent() as SurveyView
 	if survey == null or survey.driver == null or survey.driver.world == null:
