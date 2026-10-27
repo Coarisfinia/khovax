@@ -945,6 +945,11 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
 			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
 		var problem: String = _open_button_placed(menu, screen)
+		if problem.is_empty():
+			# The Survey in the top right corner too, the list and the button then on the left.
+			var _right: String = menu.survey.cycle(1)
+			problem = _open_button_placed(menu, screen)
+			var _back: String = menu.survey.cycle(-1)
 		if not problem.is_empty():
 			return problem
 	return _menu_credits(menu)
@@ -952,8 +957,8 @@ func _menu_on_screens(menu: GameMenu) -> String:
 
 ## The open button stands at the top's middle on a landscape screen, and on a screen held upright
 ## at the top of the quest list's side, the list starting below the room it leaves for it, and at
-## its side's top while the button is hidden (#1465). The Survey is in the top left corner here, so
-## the list and the button are on the right.
+## its side's top while the button is hidden (#1465): the left, or the right while the Survey is
+## in the top left corner.
 func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var button: Button = menu.open_button()
 	var shown: bool = button.visible
@@ -970,7 +975,7 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var placed: bool = (is_equal_approx(at.get_center().x, screen.x / 2.0)
 			and is_equal_approx(at.position.y, GameMenu.MARGIN) and room == 0.0)
 	if screen.y > screen.x:
-		placed = (is_equal_approx(badged.end.x, column.end.x)
+		placed = (_at_side(at, badged, column, screen)
 				and is_equal_approx(at.position.y, column.position.y)
 				and room >= badged.end.y - at.position.y + QuestListView.GAP)
 	placed = (placed and hidden_room == 0.0 and is_equal_approx(hidden_top, column.position.y)
@@ -986,6 +991,14 @@ func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 			hidden_top,
 		]
 	return ""
+
+
+## Whether the button at `at`, with its badge `badged`, stands on the edge of the list's `column`
+## on a screen of `screen` pixels: its left edge on the left, its badge's right edge on the right.
+static func _at_side(at: Rect2, badged: Rect2, column: Rect2, screen: Vector2) -> bool:
+	if column.get_center().x < screen.x / 2.0:
+		return is_equal_approx(at.position.x, column.position.x)
+	return is_equal_approx(badged.end.x, column.end.x)
 
 
 ## Where the quest list starts on a screen of `screen` pixels, the menu's open button `shown` or
