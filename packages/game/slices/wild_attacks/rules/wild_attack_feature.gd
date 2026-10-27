@@ -26,6 +26,9 @@ extends Feature
 ## It runs right after domination, which it breaks waiting rings through, and before enrage, which
 ## enrages the wild monsters of a ring that broke this tick. So it strikes companions where they
 ## stood at the end of the last tick, as they step later.
+##
+## It has a slice of its own, after the wild monsters' (#851): it reads the domination and the
+## companions, which come after them.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "wild_attacks"
@@ -67,12 +70,14 @@ func after() -> Array[String]:
 
 
 ## Hiding, the companions and the type chart, which an instance may lack, step later: a wild
-## monster strikes from where they stood at the end of the last tick.
+## monster strikes from where they stood at the end of the last tick. So do the companions'
+## specials, whose binds its strikes break (#1167).
 func before() -> Array[String]:
 	var later: Array[String] = [
 		HidingFeature.ID,
 		CompanionFeature.ID,
 		TypeEffectivenessFeature.ID,
+		SpecialAttackFeature.ID,
 	]
 	return later
 
