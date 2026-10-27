@@ -776,7 +776,8 @@ func _wild_species_problem(instance_name: String, species: Dictionary[String, Sp
 ## and codex entry (#1175). What its region holds brings the rest (#879): its people only to the
 ## glade itself, its chests to its corrupted variant too, through its chest table. A blueprint file
 ## with a wrong id, an unknown field, no species, a weight below 1, a chest table without a loot
-## table, a variant without its region, or without a codex entry and gloss is refused.
+## table, a variant without its region, a variant's region of its own without a codex entry and
+## gloss or its own region with one (#1448), or without a codex entry and gloss is refused.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(FlowSteps.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
@@ -800,11 +801,11 @@ func _check_blueprints() -> String:
 		or corrupted.feature(ChestFeature.ID) == null
 	):
 		return "the glade's region didn't bring its people and chests"
-	var first: PackedStringArray = (
-		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
-	)
-	if first != PackedStringArray([WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED, ""]):
-		return "the glade's variants read %s" % [glade.variants]
+	var variants: String = _glade_variants_problem(glade)
+	if not variants.is_empty():
+		return variants
+	var variant: String = ", \"variants\": [{\"flag\": \"f\", \"region\": \"%s\"%s}]"
+	var codex: String = ", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}"
 	return _blueprints_refused({
 		BLUEPRINT.replace("\"x\"", "\"y\"") % "": "its id must",
 		BLUEPRINT % ", \"z\": 1": "field z",
@@ -812,12 +813,33 @@ func _check_blueprints() -> String:
 		BLUEPRINT.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
 		BLUEPRINT % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
 		BLUEPRINT % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
+		BLUEPRINT % (variant % ["r", ""]): "its variants",
+		BLUEPRINT % (variant % ["", codex]): "its variants",
 		BLUEPRINT % ", \"turned\": 1": "turned must",
 		BLUEPRINT.replace("\"g\"", "\" \"") % "": "it needs a codex entry",
 		BLUEPRINT.replace(", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}", "") % "": (
 			"it needs a codex entry"
 		),
 	})
+
+
+## Why the glade's variants don't read in their order, or its corrupted variant's region without
+## its codex entry (#1448), or "".
+func _glade_variants_problem(glade: Blueprint) -> String:
+	var first: PackedStringArray = (
+		glade.variants[0] if not glade.variants.is_empty() else PackedStringArray()
+	)
+	if first != PackedStringArray([WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED, ""]):
+		return "the glade's variants read %s" % [glade.variants]
+	var corrupted: PackedStringArray = glade.variant_codex.get(
+		FlowSteps.CORRUPTED_GLADE,
+		PackedStringArray(),
+	)
+	if (glade.variant_codex.size() != 1
+			or corrupted.size() != 2
+			or corrupted[1] != "the soft clearing, gone wild"):
+		return "the glade's variants' codex entries read %s" % [glade.variant_codex]
+	return ""
 
 
 ## A blueprint's rules are its rule set's, less the ones it drops, then the ones it adds (#941). A
@@ -1806,9 +1828,11 @@ func _check_text_tags() -> String:
 		return "the scout's Lumwen Hoal line shows %s" % TextTags.shown(ahead)
 	var shown: String = tags.resolve(
 		"${PERSON:teska_na_amvrel} of the ${FACTION:amvrel_velmarai} sells ${GEAR:berry_pouch}"
-		+ " in ${PLACE:edhra_tewk} of ${REALM:ardvaun}",
+		# A variant's region of its own is a place too (#1448).
+		+ " in ${PLACE:edhra_tewk} of ${REALM:ardvaun}, by ${PLACE:lymwen_hoall}",
 	)
-	if shown != "Teska na Amvrel of the Amvrel Velmarai sells Berry pouch in Edhra Tewk of Ardvaun":
+	var expected: String = "in Edhra Tewk of Ardvaun, by Lymwen Hoall"
+	if shown != "Teska na Amvrel of the Amvrel Velmarai sells Berry pouch " + expected:
 		return "person, faction, gear, place and realm tags show %s" % shown
 	var fang: GearItem = GearItem.new()
 	fang.name = "${MONSTER:ombulumo} fang"

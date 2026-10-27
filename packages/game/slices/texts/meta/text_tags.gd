@@ -10,7 +10,8 @@ extends RefCounted
 ## around it.
 
 ## Each kind of tag, by the word that names it in a tag: a species, a faction, a piece of gear, a
-## person (#1005), a realm and a place, an instance a realm draws (#1175).
+## person (#1005), a realm and a place, an instance a realm draws (#1175) or a variant's region of
+## its own (#1448).
 const MONSTER: String = "MONSTER"
 const FACTION: String = "FACTION"
 const GEAR: String = "GEAR"
@@ -75,14 +76,21 @@ static func load_tags(
 	return tags
 
 
-## The names of the realms and of the places they draw (#1175), by their kinds' words and ids.
+## The names of the realms and of the places they draw (#1175), by their kinds' words and ids: an
+## instance a realm draws, and each region of its own that one of its blueprint's variants loads
+## (#1448), such as a corrupted instance.
 static func _realm_names() -> Dictionary[String, Dictionary]:
 	var realm_names: Dictionary[String, String] = {}
 	var place_names: Dictionary[String, String] = {}
 	for realm: Realm in Realms.all():
 		realm_names[realm.id] = Realms.name_of(realm.id)
 		for tile: Vector2i in realm.instances:
-			place_names[realm.instances[tile]] = Realms.name_of(realm.instances[tile])
+			var instance_name: String = realm.instances[tile]
+			place_names[instance_name] = Realms.name_of(instance_name)
+			var blueprint: Blueprint = InstanceBlueprints.blueprint(instance_name)
+			if blueprint != null:
+				for variant: String in blueprint.variant_codex:
+					place_names[variant] = Realms.name_of(variant)
 	return { REALM: realm_names, PLACE: place_names }
 
 

@@ -7,8 +7,9 @@ extends Control
 ## line saying what its name means, and only what this machine's player has learned about it
 ## (BestiaryEntry), where selecting a place it was found in turns the page to that place's (#1175).
 ## A person's (#1005) is their name, its meaning and their entry, under the heading People. A
-## realm's and a place's (#1175), an instance a realm draws, are the same, under the headings
-## Realms and Places. The close button at its top right, `ui_cancel` (Escape,
+## realm's and a place's (#1175), an instance a realm draws or a variant's region of its own
+## (#1448), are the same, under the headings Realms and Places. The close button at its top right,
+## `ui_cancel` (Escape,
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
@@ -131,7 +132,7 @@ func open(kind: String, id: String) -> bool:
 	elif kind == TextTags.REALM:
 		shown = _show_realm(Realms.named(id))
 	elif kind == TextTags.PLACE:
-		shown = _show_place(id, InstanceBlueprints.blueprint(id))
+		shown = _show_place(id)
 	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
@@ -180,13 +181,20 @@ func _show_realm(realm: Realm) -> bool:
 	return true
 
 
-## Shows the page of the place `id`, an instance read from `blueprint`; whether there is one: a
-## realm must draw it, as the tags that name it say (TextTags.PLACE).
-func _show_place(id: String, blueprint: Blueprint) -> bool:
-	if blueprint == null or Realms.holding(id) == null:
+## Shows the page of the place `id`; whether there is one: an instance a realm draws, its entry
+## from its blueprint, or a region of its own one of that instance's variants loads (#1448), its
+## entry from that variant, as the tags that name a place say (TextTags.PLACE).
+func _show_place(id: String) -> bool:
+	var drawn: String = InstanceBlueprints.variant_owner(id)
+	var blueprint: Blueprint = InstanceBlueprints.blueprint(id if drawn.is_empty() else drawn)
+	if blueprint == null or Realms.holding(blueprint.id) == null:
 		return false
-	_show_name(PLACES_TEXT, Realms.name_of(id), blueprint.codex_gloss)
-	entry.text = blueprint.codex_entry
+	var codex: PackedStringArray = blueprint.variant_codex.get(
+		id,
+		PackedStringArray([blueprint.codex_entry, blueprint.codex_gloss]),
+	)
+	_show_name(PLACES_TEXT, Realms.name_of(id), codex[1])
+	entry.text = codex[0]
 	return true
 
 

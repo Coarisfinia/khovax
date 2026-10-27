@@ -64,7 +64,7 @@ SLICE_EXEMPT: dict[str, int] = {
     "settings>damage_numbers": 851, "settings>menu": 851, "settings>survey": 851,
     "species>menu": 851, "species>profile": 851, "species>texts": 851,
     "survey>quests": 851,
-    "texts>factions": 851, "texts>gear": 851,
+    "texts>blueprints": 851, "texts>factions": 851, "texts>gear": 851,
     "wild_monsters>companions": 851, "wild_monsters>domination": 851,
 }  # fmt: skip
 
