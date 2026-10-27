@@ -44,6 +44,15 @@ static func variant(instance_name: String, flags: Array[String]) -> String:
 	return ""
 
 
+## The name of the blueprint one of whose variants loads the region of its own `region_id`
+## (Blueprint.variant_codex, #1448), or "" when none does.
+static func variant_owner(region_id: String) -> String:
+	for instance_name: String in names():
+		if blueprint(instance_name).variant_codex.has(region_id):
+			return instance_name
+	return ""
+
+
 ## A new instance from the named blueprint, as its state, with `players` players in slots 0 and
 ## up (none for an instance loaded before anyone walks in, #148), from its `variant_name`'s region
 ## ("" for its own), starting at the world's tick `world_tick` (#1215), or null (with an error) for

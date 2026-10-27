@@ -5,8 +5,8 @@ extends RefCounted
 ## lists them under "People" (#1005), and its second line the Amvrel Velmarai's, which lists the
 ## guild under "Lexicon", and the realm Ardvaun's, listed under "Realms" (#1175); a species seen is
 ## listed under "Bestiary" (#1173), and a place met under "Places", whose entry opens its page.
-## Entering a place a realm draws meets its name and its realm's; the playground, which no realm
-## draws, meets nothing. The
+## Entering a place a realm draws meets its name and its realm's, and a corrupted variant's name
+## too while it's corrupted (#1448); the playground, which no realm draws, meets nothing. The
 ## names met are kept
 ## in the profile's file beside the profile, so a new session finds them there. The guild's entry
 ## opens its lexicon page over the menu, with a controller's A, a click or a tap, and B, Escape or
@@ -203,6 +203,21 @@ static func _open_place(book: CodexBook, page: CodexPage) -> String:
 	FlowInput.press_pad(book, JOY_BUTTON_B)
 	if page.is_open() or entry.get_viewport().gui_get_focus_owner() != entry:
 		return "B didn't close Lumwen Hoal's page back to its entry"
+	return _open_corrupted_place(page)
+
+
+## The corrupted glade, Lymwen Hoall, a region of its own one of Lumwen Hoal's variants loads, has
+## a place's page too (#1448): its name, and what it means and its entry from that variant.
+static func _open_corrupted_place(page: CodexPage) -> String:
+	if not page.open(TextTags.PLACE, FlowSteps.CORRUPTED_GLADE):
+		return "the corrupted glade has no codex page"
+	var gloss: String = page.gloss.get_parsed_text()
+	page.close()
+	if (page.heading.text != CodexPage.PLACES_TEXT
+			or page.title.text != "Lymwen Hoall"
+			or gloss != "Lymwen Hoall: the soft clearing, gone wild"
+			or not page.entry.text.begins_with("Lumwen Hoal, corrupted.")):
+		return "the corrupted glade's page showed %s, %s" % [page.title.text, gloss]
 	return ""
 
 
@@ -221,10 +236,30 @@ static func _enter_a_place(tree: SceneTree) -> String:
 		result = "entering Lumwen Hoal didn't meet it"
 	elif keeper.met_ids(TextTags.REALM) != ["ardvaun"]:
 		result = "entering Lumwen Hoal met the realms %s" % [keeper.met_ids(TextTags.REALM)]
+	elif keeper.has_met(TextTags.PLACE, FlowSteps.CORRUPTED_GLADE):
+		result = "entering Lumwen Hoal met its corrupted variant"
+	if result.is_empty():
+		result = await _enter_corrupted(tree, driver, keeper)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(ENTERING_PROFILE)
 	return result
+
+
+## A world where the glade is corrupted from the start (#1448): its next tick meets the corrupted
+## glade, Lymwen Hoall, as a place of its own.
+static func _enter_corrupted(tree: SceneTree, driver: GameDriver, keeper: CodexKeeper) -> String:
+	var corrupted: World = World.new(CorruptedGladeSource.new(), 3, FlowSteps.GLADE)
+	if WorldFlags.variant_of(corrupted, FlowSteps.GLADE) != FlowSteps.CORRUPTED_GLADE:
+		return "the glade didn't start corrupted"
+	var resumed: String = driver.resume(corrupted)
+	if not resumed.is_empty():
+		return "the corrupted world didn't resume: " + resumed
+	driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+	await tree.process_frame
+	if not keeper.has_met(TextTags.PLACE, FlowSteps.CORRUPTED_GLADE):
+		return "entering the corrupted glade didn't meet it"
+	return ""
 
 
 ## The guild stays met in the profile's file: a new session's keeper reads it from there.
@@ -275,3 +310,13 @@ static func _escape(book: CodexBook) -> void:
 	cancel.action = "ui_cancel"
 	cancel.pressed = true
 	book.get_viewport().push_input(cancel)
+
+
+## The game's instance blueprints, its world starting with the glade's corrupting flag set.
+class CorruptedGladeSource:
+	extends BlueprintSource
+
+	func starting_flags() -> Array[String]:
+		var flags: Array[String] = super()
+		flags.append(FlowSteps.CORRUPTED_GLADE_FLAG)
+		return flags

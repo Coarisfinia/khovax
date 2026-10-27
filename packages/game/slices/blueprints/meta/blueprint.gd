@@ -28,6 +28,9 @@ var wild_species: Dictionary[String, int] = {}
 ## Its variants (#529, #541), in the order written: each a world flag and the region it chooses,
 ## "" for the blueprint's own; the first whose flag the world has set chooses.
 var variants: Array[PackedStringArray] = []
+## The codex entry and gloss of each variant's region of its own (#1448), by that region's id: a
+## place of its own, named by its id in words like an instance (Lymwen Hoall).
+var variant_codex: Dictionary[String, PackedStringArray] = {}
 ## Its codex entry (#959, #1175): a short text about the place and where its name comes from.
 var codex_entry: String = ""
 ## What its name means, hand-written (#959), e.g. "the soft clearing".
@@ -85,7 +88,10 @@ func _check(file_id: String, data: Dictionary) -> String:
 	if not _read_species(data.get("wild_species")):
 		return "its wild_species must give one or more species ids a whole weight of 1 or more"
 	if not _read_variants(data.get("variants", [])):
-		return "its variants must each be a flag and a region id, or \"\" for its own"
+		return (
+			"its variants must each be a flag and a region id, or \"\" for its own, a region of"
+			+ " its own with a codex entry and gloss"
+		)
 	return ""
 
 
@@ -126,7 +132,8 @@ func _read_species(raw: Variant) -> bool:
 	return not wild_species.is_empty()
 
 
-## Whether `raw` lists variants, each a flag and a region; reads them into `variants`.
+## Whether `raw` lists variants, each a flag and a region, a region of its own with a codex entry
+## and gloss (#1448) and its own with none; reads them into `variants` and `variant_codex`.
 func _read_variants(raw: Variant) -> bool:
 	if not raw is Array:
 		return false
@@ -139,12 +146,16 @@ func _read_variants(raw: Variant) -> bool:
 		var flag: String = Content.text_of(variant.get("flag"))
 		var raw_region: Variant = variant.get("region")
 		var region: String = Content.text_of(raw_region)
+		var codex: Array[String] = Content.codex_of(variant.get("codex"))
 		if (
 			not Content.unknown_field(variant, fields).is_empty()
 			or flag.strip_edges().is_empty()
 			or not raw_region is String
 			or not (region.is_empty() or Content.is_id(region))
+			or (variant.has("codex") if region.is_empty() else codex.is_empty())
 		):
 			return false
 		variants.append(PackedStringArray([flag, region]))
+		if not region.is_empty():
+			variant_codex[region] = PackedStringArray(codex)
 	return true
