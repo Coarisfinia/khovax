@@ -6,6 +6,7 @@ extends VBoxContainer
 ## and where, never by color alone (#68). It keeps up with the profile while shown. The player
 ## orders them (#430): a row dragged onto another takes its place, and each row's up and down
 ## buttons move it one place, which a controller reaches too (#438). The first three are carried.
+## A monster with a knot of its development web to take carries a mark in its row (KnotMark, #1443).
 ## Whatever else shows the selected monster, like its development web (#679), follows
 ## `monster_shown`.
 
@@ -30,6 +31,8 @@ var holder: ProfileHolder
 var shown: Array[String] = []
 ## The monster each row shows, by short id (#754), in the rows' order.
 var shown_ids: Array[String] = []
+## Whether each row carries the knot mark (#1443), in the rows' order.
+var marked: Array[bool] = []
 ## The monster whose stats the detail pane shows, by short id: the first one until the player
 ## taps, clicks or moves the focus onto another (#430).
 var selected: String = ""
@@ -67,13 +70,16 @@ func _process(_delta: float) -> void:
 func refresh() -> void:
 	var lines: Array[String] = []
 	var ids: Array[String] = []
+	var marks: Array[bool] = []
 	if holder != null and holder.keeper != null:
 		ids = holder.keeper.profile.order()
 		lines = _lines_of(holder.keeper.profile, ids)
+		for short_id: String in ids:
+			marks.append(KnotMark.waits(holder.keeper.profile.monster_of(short_id)))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
-	if lines != shown or ids != shown_ids:
-		_show(lines, ids)
+	if lines != shown or ids != shown_ids or marks != marked:
+		_show(lines, ids, marks)
 	if not shown_ids.has(selected):
 		selected = shown_ids[0] if not shown_ids.is_empty() else ""
 	_show_details()
@@ -124,21 +130,24 @@ func _described(monster: DominatedMonster) -> String:
 	return "%s, level %d" % [known.name if known != null else monster.species, monster.level]
 
 
-## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any.
-func _show(lines: Array[String], ids: Array[String]) -> void:
+## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any, with
+## the knot mark where `marks` says so.
+func _show(lines: Array[String], ids: Array[String], marks: Array[bool] = []) -> void:
 	shown = lines
 	shown_ids = ids
+	marked = marks
 	# Out of the list at once, so its buttons and places are only ever the current ones.
 	for row: Node in _rows.get_children():
 		_rows.remove_child(row)
 		row.queue_free()
 	for place: int in lines.size():
-		_rows.add_child(_row(lines[place], ids[place] if place < ids.size() else "", place))
+		var short_id: String = ids[place] if place < ids.size() else ""
+		_rows.add_child(_row(lines[place], short_id, place, place < marks.size() and marks[place]))
 
 
-## A monster's row: its line, which can be dragged onto another row, and its up and down buttons.
-## Without a monster (`short_id` ""), the line alone.
-func _row(line: String, short_id: String, place: int) -> Control:
+## A monster's row: its line, which can be dragged onto another row, the knot mark if `with_mark`,
+## and its up and down buttons. Without a monster (`short_id` ""), the line alone.
+func _row(line: String, short_id: String, place: int, with_mark: bool) -> Control:
 	var text: Label = GameMenu.label(line)
 	if short_id.is_empty():
 		return text
@@ -155,6 +164,9 @@ func _row(line: String, short_id: String, place: int) -> Control:
 	)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_child(text)
+	if with_mark:
+		# After its line, so the line trims first on a narrow screen and the mark stays whole.
+		row.add_child(KnotMark.new())
 	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
 	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
 	return row

@@ -18,8 +18,8 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** Lorc (http://lorcblog.blogspot.com): `cog.svg`, `evil-moon.svg`, `fist.svg`,
   `magic-shield.svg`, `magic-swirl.svg`, `magnifying-glass.svg`, `spiky-explosion.svg`,
   `sprout.svg`, `tornado.svg`, `wolf-trap.svg`; Delapouite (http://delapouite.com):
-  `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `resize.svg`,
-  `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
+  `berries-bowl.svg`, `exit-door.svg`, `hamburger-menu.svg`, `herbs-bundle.svg`, `knot.svg`,
+  `resize.svg`, `totem.svg`, `plain-arrow-up.svg`, `plain-arrow-down.svg`, `plain-arrow-left.svg`,
   `plain-arrow-right.svg`; Sbed (http://opengameart.org/content/95-game-icons): `cancel.svg`
 - **Source:** https://game-icons.net (the SVGs from https://github.com/game-icons/icons, `lorc/`,
   `delapouite/` and `sbed/`), with each icon's black square background removed so only its white

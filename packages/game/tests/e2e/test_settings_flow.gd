@@ -531,7 +531,8 @@ func _type_badges(tab: CharacterTab) -> String:
 		icons[icon] = true
 	if icons.size() != TypeChart.FAMILIES.size() or TypeBadge.COLORS.size() != icons.size():
 		return "not every family has its own icon and a color"
-	return _menu_development(tab)
+	var marks: String = _knot_marks(tab, true)
+	return marks if not marks.is_empty() else _menu_development(tab)
 
 
 ## The detail pane (#430) shows the first monster until another is selected, then that one's
@@ -618,6 +619,34 @@ func _menu_development(tab: CharacterTab) -> String:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
 		return "the focus didn't stay on the node just taken, for a controller"
+	return _knot_marks(tab, false)
+
+
+## Why the knot mark (#1443) isn't on the level 2 Ombulumo's row alone, in words and with the
+## knot's shape, and on the menu's open button, shown then on every device, while it has a knot to
+## take (`waits`), or is still there once it hasn't; or "".
+func _knot_marks(tab: CharacterTab, waits: bool) -> String:
+	tab.monsters.refresh()
+	var wanted: Array[bool] = [waits, false, false, false]
+	var row: Node = tab.monsters.get_child(1).get_child(0)
+	var mark: KnotMark = row.get_child(1) as KnotMark
+	if tab.monsters.marked != wanted or (mark != null) != waits:
+		return "the monsters' rows carry the knot mark %s, not %s" % [tab.monsters.marked, wanted]
+	if mark != null and (mark.get_child(1) as Label).text != KnotMark.TEXT:
+		return "the knot mark doesn't say so in words"
+	var menu: GameMenu = tab.get_parent().get_parent().get_parent().get_parent() as GameMenu
+	if menu.knot_waits() != waits:
+		return "the menu doesn't see that a carried monster has a knot to take"
+	menu.show_knot(menu.knot_waits())
+	var button: Button = menu.open_button()
+	var marked: bool = button.text == GameMenu.KNOT_TEXT and button.icon == KnotMark.ICON
+	# Headless has no touch screen: without a knot, the button hides again.
+	if marked != waits or button.visible != waits:
+		return "the menu's open button is %s, %s with a knot %s" % [
+			button.text,
+			"shown" if button.visible else "hidden",
+			"to take" if waits else "taken",
+		]
 	return ""
 
 
