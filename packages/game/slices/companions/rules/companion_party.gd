@@ -6,7 +6,8 @@ extends RefCounted
 ## companions' entry in the player's world store (PlayerStore, #724), so the world carries it across
 ## exits, instances and sessions: `carried` (short ids) with their `species` and `leanings` (#1358,
 ## each a CompanionLeaning's data) in the same order, `companion` and `fainted`; a party saved
-## before leanings has none, so none of its monsters leans. Every monster is kept by its short id
+## before leanings has none, so none of its monsters leans, and one saved before specials (#1453)
+## leans no special. Every monster is kept by its short id
 ## (ShortId, #700), so two of one species are two monsters. Who a player brings comes from their
 ## profile, as a run of requests from its outbox (#818, CarryRequest), which the world takes
 ## (`take_request`); a replay starts with who its players bring (`bring`). The rules choose, faint
@@ -175,7 +176,7 @@ static func _entry_of(before: Dictionary, party: CarriedMonsters, keep_chosen: b
 static func _leanings_data(party: CarriedMonsters) -> Array:
 	var listed: Array = []
 	for leaning: CompanionLeaning in party.leanings:
-		listed.append([leaning.hp, leaning.strength, leaning.speed])
+		listed.append([leaning.hp, leaning.strength, leaning.speed, leaning.special])
 	return listed
 
 

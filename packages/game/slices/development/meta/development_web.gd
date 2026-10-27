@@ -93,6 +93,17 @@ func leaning_of(taken: Array[String]) -> DevelopmentLeaning:
 	return sum
 
 
+## How much stronger the special nodes among `taken` make the special (#1453): their shares
+## summed, in thousandths of its power. A node the web doesn't have, or one that grants something
+## else, adds nothing.
+func stronger_of(taken: Array[String]) -> int:
+	var sum: int = 0
+	for node: String in taken:
+		if specials.has(node):
+			sum += specials[node]
+	return sum
+
+
 ## Reads the directions and their nodes, each linked to the one before it along its direction.
 func _read_directions(raw: Variant) -> String:
 	var directions: Array = raw if raw is Array else []
