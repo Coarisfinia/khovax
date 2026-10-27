@@ -50,10 +50,7 @@ func _ready() -> void:
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	_species = species.species
-	var abilities: AbilityContent = AbilityContent.cached()
-	for id: String in abilities.abilities:
-		var ability: Ability = abilities.abilities[id]
-		_abilities[id] = PathMark.tagged(TextTags.shown(ability.name), ability.path)
+	_abilities = MonsterDetails.all_ability_names()
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)

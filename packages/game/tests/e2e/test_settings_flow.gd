@@ -728,7 +728,8 @@ func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
 
 
 ## An open node of the web says what it shifts in words, is finger-sized, and stays reachable on a
-## narrow screen: the web scrolls sideways on its own (#1441).
+## narrow screen: the web scrolls sideways on its own (#1441). A special or a passive node says what
+## it grants (#1452).
 func _development_looks(view: DevelopmentWebView) -> String:
 	var web: Control = view.buttons["sturdy_1"].get_parent()
 	var across: ScrollContainer = web.get_parent() as ScrollContainer
@@ -738,6 +739,10 @@ func _development_looks(view: DevelopmentWebView) -> String:
 		return "a node isn't finger-sized"
 	if view.buttons["sturdy_1"].text != "HP +5%":
 		return "an open node doesn't say in words what it shifts: " + view.buttons["sturdy_1"].text
+	# The deepest nodes, still in fog here, grant a stronger special and a passive, by name (#1452).
+	var grants: Array[String] = [view.node_text("heavy_4"), view.node_text("deep_4")]
+	if grants != (["Special +20%", "Passive\nLombu-bombu"] as Array[String]):
+		return "a special or a passive node doesn't say what it grants: %s" % [grants]
 	return ""
 
 

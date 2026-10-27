@@ -27,6 +27,17 @@ func _ready() -> void:
 	show_monster(null, null, {})
 
 
+## Each ability's name as the player reads it, with its path mark in words (#471), by id: what
+## `show_monster` names abilities from, and the development web its passive nodes (#1452).
+static func all_ability_names() -> Dictionary[String, String]:
+	var names: Dictionary[String, String] = {}
+	var abilities: AbilityContent = AbilityContent.cached()
+	for id: String in abilities.abilities:
+		var ability: Ability = abilities.abilities[id]
+		names[id] = PathMark.tagged(TextTags.shown(ability.name), ability.path)
+	return names
+
+
 ## Shows `monster`, of `species`, naming its abilities from `ability_names` (by id); with no
 ## monster, says none is selected.
 func show_monster(

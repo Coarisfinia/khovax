@@ -4,7 +4,8 @@ extends VBoxContainer
 ## run out from the middle like spokes, each node a step further out, and only the nodes it has
 ## taken and the ones open next to them show (DevelopmentWeb.open_nodes); the rest stays hidden,
 ## and so do the links that don't start at a taken node. Each node is a button saying in words what
-## it shifts, a taken one saying so too, never by color alone (#68). While the monster has a level
+## it grants (#1452): what it shifts, how much stronger the special grows, or the passive by name; a
+## taken one saying so too, never by color alone (#68). While the monster has a level
 ## left to spend (DominatedMonster.picks_left), pressing an open node asks to take it (node_chosen);
 ## what keeps the profile takes it (Profile.take_node); otherwise pressing it does nothing. The
 ## buttons sit where they show, so a
@@ -35,6 +36,10 @@ const SHORT_STAT_NAMES: Dictionary[String, String] = {
 	"strength": "Str",
 	"speed": "Spd",
 }
+## A special node's line: how much stronger it makes the species' special.
+const SPECIAL_TEXT: String = "Special +%s%%"
+## The first line of a passive node's button, the passive's name below it.
+const PASSIVE_TEXT: String = "Passive"
 ## A node's smallest side, in font sizes, so a finger can hit it: the same as the menu's buttons
 ## (GameMenu.BUTTON_FONTS), which the menu sets only when the font changes, not on nodes built
 ## after.
@@ -75,6 +80,9 @@ var _across: ScrollContainer
 var _room_across: float = 0.0
 ## The web shown, or null.
 var _shown_web: DevelopmentWeb
+## Each ability's name with its path mark in words, by id, as the detail pane names it: a passive
+## node's words.
+var _abilities: Dictionary[String, String] = {}
 var _taken: Array[String] = []
 ## How far a step out along a spoke goes, across and down, from the buttons' size.
 var _ring: Vector2 = Vector2.ZERO
@@ -84,6 +92,7 @@ var _squeeze: float = 1.0
 
 
 func _ready() -> void:
+	_abilities = MonsterDetails.all_ability_names()
 	_lines = VBoxContainer.new()
 	add_child(_lines)
 	_web = Control.new()
@@ -137,20 +146,30 @@ func show_monster(monster: DominatedMonster) -> void:
 	_build(monster)
 
 
-## The words on a node's button: what its leaning shifts, one stat a line, after "Taken" once taken;
-## each stat's name `short`ened for a narrow screen.
-static func node_text(leaning: DevelopmentLeaning, taken: bool, short: bool = false) -> String:
-	var names: Dictionary[String, String] = SHORT_STAT_NAMES if short else STAT_NAMES
+## The words on the button of the shown web's `node`, after "Taken" once taken: what its leaning
+## shifts, one stat a line, each stat's name `short`ened for a narrow screen; how much stronger it
+## makes the special; or "Passive" and the passive's name (#1452).
+func node_text(node: String, short: bool = false) -> String:
 	var parts: Array[String] = []
-	if taken:
+	if _taken.has(node):
 		parts.append(TAKEN_TEXT)
+	if _shown_web.specials.has(node):
+		parts.append(SPECIAL_TEXT % _percent(_shown_web.specials[node]))
+	if _shown_web.passives.has(node):
+		var passive: String = _shown_web.passives[node]
+		parts.append_array([PASSIVE_TEXT, _abilities.get(passive, passive)])
+	var names: Dictionary[String, String] = SHORT_STAT_NAMES if short else STAT_NAMES
+	var leaning: DevelopmentLeaning = _shown_web.leanings[node]
 	for stat: String in DevelopmentLeaning.STATS:
 		var shift: int = leaning.get(stat)
 		if shift != 0:
-			# Thousandths of the species' stat, as a percentage.
-			var percent: String = ("%.1f" % (shift / 10.0)).trim_suffix(".0")
-			parts.append("%s %s%s%%" % [names[stat], "+" if shift > 0 else "", percent])
+			parts.append("%s %s%s%%" % [names[stat], "+" if shift > 0 else "", _percent(shift)])
 	return "\n".join(parts)
+
+
+## Thousandths, as a percentage: a tenth shows only when there is one.
+static func _percent(thousandths: int) -> String:
+	return ("%.1f" % (thousandths / 10.0)).trim_suffix(".0")
 
 
 ## Builds a button for each node of the shown web that the fog reveals for `monster`.
@@ -170,7 +189,7 @@ func _build(monster: DominatedMonster) -> void:
 		var taken: bool = _taken.has(node)
 		if not taken and not open.has(node):
 			continue
-		var button: Button = _node_button(_shown_web.leanings[node], taken)
+		var button: Button = _node_button()
 		# Never disabled, which would keep a controller's focus off it: a node that can't be taken
 		# just does nothing when pressed. One that waits for a level fades, beside what the words
 		# say (#68).
@@ -195,10 +214,9 @@ static func _label(text: String) -> Label:
 	return made
 
 
-## A node's button, saying what `leaning` shifts and whether it's `taken`.
-static func _node_button(leaning: DevelopmentLeaning, taken: bool) -> Button:
+## A node's button, its words set where it's sized (_space_out).
+static func _node_button() -> Button:
 	var made: Button = Button.new()
-	made.text = node_text(leaning, taken)
 	# Taken or not, a node takes the focus, so a controller reaches every one to read it.
 	made.focus_mode = Control.FOCUS_ALL
 	return made
@@ -252,7 +270,7 @@ func _space_out(short: bool) -> Vector2:
 	var font: int = get_theme_default_font_size()
 	for node: String in buttons:
 		var button: Button = buttons[node]
-		button.text = node_text(_shown_web.leanings[node], _taken.has(node), short)
+		button.text = node_text(node, short)
 		button.custom_minimum_size = Vector2.ONE * font * TOUCH_FONTS
 		biggest = biggest.max(button.get_combined_minimum_size())
 	var room: Vector2 = biggest + Vector2.ONE * font * GAP_FONTS
