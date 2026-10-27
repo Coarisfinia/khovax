@@ -21,5 +21,4 @@ mouse_filter = 2
 [node name="Name" type="RichTextLabel" parent="Row"]
 layout_mode = 2
 mouse_filter = 2
-autowrap_mode = 0
 script = ExtResource("2_links")

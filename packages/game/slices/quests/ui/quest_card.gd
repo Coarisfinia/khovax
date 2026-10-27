@@ -24,6 +24,8 @@ func _ready() -> void:
 	add_theme_stylebox_override("panel", UiTheme.card())
 	name_label().add_theme_color_override("font_color", Toon.INK)
 	step_label().add_theme_color_override("default_color", Toon.INK)
+	# Inert until links_on: the Survey's card takes no focus either.
+	step_label().focusable = false
 	var _selected: int = step_label().name_selected.connect(name_selected.emit)
 	var _shown: int = step_label().name_shown.connect(name_shown.emit)
 	var _picked: int = pill().name_selected.connect(name_selected.emit)

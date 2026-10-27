@@ -32,6 +32,10 @@ var here: bool = false
 
 func _ready() -> void:
 	_name.add_theme_color_override("default_color", Toon.INK)
+	# One line as wide as the name: wrapping, it would shrink to a letter's width in its row.
+	_name.autowrap_mode = TextServer.AUTOWRAP_OFF
+	# Inert until links_on: the Survey's pills take no focus either.
+	_name.focusable = false
 	var _drawn: int = _arrow.draw.connect(_draw_arrow)
 	var _selected: int = _name.name_selected.connect(name_selected.emit)
 	var _shown: int = _name.name_shown.connect(name_shown.emit)
