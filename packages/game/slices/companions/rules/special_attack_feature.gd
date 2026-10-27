@@ -60,14 +60,14 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The wild monsters it strikes, their strikes that break a bind (#1167), what spares one from the
-## auto attack (CompanionAttackFeature.can_strike), whose targets it strikes, and the type chart,
-## where the instance has them: without wild monster spots (#884), a special finds nothing to
-## strike.
+## The wild monsters it strikes, what spares one from the auto attack
+## (CompanionAttackFeature.can_strike), whose targets it strikes, and the type chart, where the
+## instance has them: without wild monster spots (#884), a special finds nothing to strike. The wild
+## monsters' strikes that break a bind (#1167) step earlier too: WildAttackFeature declares that
+## (its `before`), since its slice comes after this one (#851).
 func after() -> Array[String]:
 	var earlier: Array[String] = [
 		WildMonsterFeature.ID,
-		WildAttackFeature.ID,
 		HidingFeature.ID,
 		DominationFeature.ID,
 		TypeEffectivenessFeature.ID,

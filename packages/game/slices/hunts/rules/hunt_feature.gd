@@ -6,7 +6,7 @@ extends Feature
 ## pace (WildMonsterFeature.chase). On sighting prey within SIGHT, a standing wild monster weaker
 ## than itself (WildMonsterFeature.strength_of) or of a `grazer` species, it stalks it, a step at
 ## a time, and next to it attacks it by the wild monsters' rules: a strike for its strength once
-## every WildAttackFeature.STRIKE_TICKS, never lethal, so it never takes the prey below 1 HP
+## every Tuning.WILD_STRIKE_TICKS, never lethal, so it never takes the prey below 1 HP
 ## (WildMonsterFeature.wound, which wakes a sleeping one). A tick it strikes a player, a companion
 ## or the trail (WildAttackFeature, earlier), it doesn't strike its prey too.
 ##
@@ -157,7 +157,7 @@ func _hunt(state: GameState, wild: WildMonsterFeature, hunter: int, struck: bool
 	if Hex.distance(tile, prey_tile) > 1:
 		wild.chase(state, hunter, prey_tile)
 		return
-	if struck or state.tick % WildPace.paced(state, WildAttackFeature.STRIKE_TICKS, 0) != 0:
+	if struck or state.tick % WildPace.paced(state, Tuning.WILD_STRIKE_TICKS, 0) != 0:
 		return
 	# What the strike deals: never the prey's last HP, which a non-lethal strike leaves it.
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature

@@ -47,7 +47,8 @@ SLICE_ORDER: tuple[str, ...] = (
     "wild_monsters", "schedules", "packs", "tiles", "controls",
     "settings", "texts", "factions",
     "survey", "menu",
-    "domination", "enrage", "hunts", "foraging", "domination_loot", "companions", "gear", "chests",
+    "domination", "enrage", "hunts", "foraging", "domination_loot", "companions",
+    "wild_attacks", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",
     "profile", "quests", "revive_items", "blueprints", "might", "codex",
     "move_hint",
@@ -65,7 +66,6 @@ SLICE_EXEMPT: dict[str, int] = {
     "species>menu": 851, "species>profile": 851, "species>texts": 851,
     "survey>quests": 851,
     "texts>blueprints": 851, "texts>factions": 851, "texts>gear": 851,
-    "wild_monsters>companions": 851, "wild_monsters>domination": 851,
 }  # fmt: skip
 
 THIS = "packages/game-checks/import_rules.py"
