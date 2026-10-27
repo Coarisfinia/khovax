@@ -59,10 +59,10 @@ def main():
         rig = next((obj for obj in bpy.data.objects if obj.type == "ARMATURE"), None)
         if rig is None or rig.animation_data is None:
             # A prop: no rig, no clips, nothing moves off anything.
-            log.info("CONNECTIVITY %s no rig: nothing to check" % model)
-            continue
-        rig.animation_data.use_nla = False
-        lines, _passed = connectivity.report(rig, ground.skinned(bpy.data.objects), tolerance)
+            lines = ["no rig: nothing to check"]
+        else:
+            rig.animation_data.use_nla = False
+            lines, _passed = connectivity.report(rig, ground.skinned(bpy.data.objects), tolerance)
         for line in lines:
             text, fails = known.judge(KNOWN, model, line)
             passed = passed and not fails
@@ -70,6 +70,14 @@ def main():
                 log.error("CONNECTIVITY %s %s" % (model, text), glb)
             else:
                 log.info("CONNECTIVITY %s %s" % (model, text))
+        # A KNOWN entry no clip line judged (a model of one piece, a clip renamed or gone) can't
+        # pass, so it would stay listed forever: it fails until it's taken off.
+        judged = {line.split(" ", 2)[1].rstrip(":") for line in lines if line.split(" ", 1)[0] in ("ok", "FAIL")}
+        for (name, clip), issue in sorted(KNOWN.items()):
+            if name == model and clip not in judged:
+                passed = False
+                log.error("CONNECTIVITY %s FAIL %s, which KNOWN still lists (#%d), wasn't checked: take it off" % (
+                    model, clip, issue), glb)
     log.info("CONNECTIVITY CHECK: %s (tolerance %.1f mm)" % ("PASS" if passed and glbs else "FAIL", tolerance * 1000))
     sys.exit(0 if passed and glbs else 1)
 

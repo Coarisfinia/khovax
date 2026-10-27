@@ -19,6 +19,8 @@ smallest of its lifts to each; only larger pieces count, so a cluster of parts c
 holding on to one another. A clip fails when a part lifts more than the tolerance in any frame
 (#1303: the wolf's crest crystal lifted 16 to 36 mm before its fix)."""
 
+import itertools
+
 import bpy
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
@@ -67,10 +69,16 @@ class Model:
                 index = parent[index]
             return index
 
-        welded = {}
+        # Cells WELD wide: two vertices within WELD of each other lie in the same cell or
+        # neighbouring ones, wherever a cell's edge falls between them.
+        cells = {}
         for index, point in enumerate(rest):
-            key = tuple(round(value / WELD) for value in point)
-            parent[find(index)] = find(welded.setdefault(key, index))
+            cell = tuple(int(value // WELD) for value in point)
+            for offset in itertools.product((-1, 0, 1), repeat=3):
+                for other in cells.get(tuple(c + o for c, o in zip(cell, offset)), ()):
+                    if (rest[other] - point).length <= WELD:
+                        parent[find(index)] = find(other)
+            cells.setdefault(cell, []).append(index)
         for corners in faces:
             first = find(corners[0])
             for corner in corners[1:]:
