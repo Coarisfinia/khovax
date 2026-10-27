@@ -79,6 +79,20 @@ func open_nodes(taken: Array[String]) -> Array[String]:
 	return open
 
 
+## What the stat nodes among `taken` add up to (#1358): each stat's shifts summed. A node the web
+## doesn't have, or one that grants something else, shifts nothing.
+func leaning_of(taken: Array[String]) -> DevelopmentLeaning:
+	var sum: DevelopmentLeaning = DevelopmentLeaning.new()
+	for node: String in taken:
+		if not leanings.has(node):
+			continue
+		var leaning: DevelopmentLeaning = leanings[node]
+		sum.hp += leaning.hp
+		sum.strength += leaning.strength
+		sum.speed += leaning.speed
+	return sum
+
+
 ## Reads the directions and their nodes, each linked to the one before it along its direction.
 func _read_directions(raw: Variant) -> String:
 	var directions: Array = raw if raw is Array else []

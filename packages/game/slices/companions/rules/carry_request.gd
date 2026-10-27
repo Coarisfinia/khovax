@@ -5,26 +5,32 @@ extends RefCounted
 ## into the player's party (CompanionParty.take_request). A request's data holds one whole number,
 ## too few bits for a monster's short id and its species together, so a party is a run of
 ## requests: each monster's species' code (species_code), then its short id's code (ShortId.code),
-## in carried order. Each request's data also says its place in the run and how many monsters the
+## then its leaning's (CompanionLeaning.code, #1358), in carried order. Each request's data also
+## says its place in the run and how many monsters the
 ## run brings, so the world knows where a run starts and ends; a run of none is one request.
 
-## How many bits a value takes in a request's data: a short id's code, or a species' code.
+## How many bits a value takes in a request's data: a short id's code, a species' code, or a
+## leaning's (CompanionLeaning.SHIFT_BITS for each of its stats).
 const VALUE_BITS: int = 35
 ## How many dominated monsters a player carries (#53): always three, never more. The profile's
 ## limit (Profile.CARRY_LIMIT) and the swap keys (LocalInput.SWAP_ACTIONS) follow it.
 const MOST_CARRIED: int = 3
+## How many requests a run takes for each monster: its species, its short id and its leaning.
+const VALUES_PER_MONSTER: int = 3
 ## How many bits a request's place in its run takes: enough for a run of MOST_CARRIED monsters,
-## two requests each, so a place never wraps to 0 and restarts the run (the world flow checks it).
-const PLACE_BITS: int = 3
+## VALUES_PER_MONSTER requests each, so a place never wraps to 0 and restarts the run (the world
+## flow checks it).
+const PLACE_BITS: int = 4
 
 
-## The values a run of requests for `party` carries, in order: each monster's species' code and
-## its short id's code; one value, 0, for none.
+## The values a run of requests for `party` carries, in order: each monster's species' code, its
+## short id's code and its leaning's code; one value, 0, for none.
 static func values_of(party: CarriedMonsters) -> Array[int]:
 	var values: Array[int] = []
 	for place: int in party.size():
 		values.append(species_code(party.species[place]))
 		values.append(ShortId.code(party.short_ids[place]))
+		values.append(party.leanings[place].code())
 	if values.is_empty():
 		values.append(0)
 	return values

@@ -40,6 +40,10 @@ const COMPANION_STATS_PER_TILE: int = 120
 ## species has, in tiles (#338).
 const COMPANION_LEAST_REACH: int = 1
 const COMPANION_MOST_REACH: int = 5
+## How far the stat nodes a companion took can shift each of its stats in all, down and up, in
+## thousandths of its species' (#1358): it keeps at least half of each, and at most doubles it.
+const COMPANION_LEAST_LEANING: int = -500
+const COMPANION_MOST_LEANING: int = 1000
 ## The shortest and longest rest between a companion's two roaming steps, in ticks (#338).
 const COMPANION_LEAST_REST: int = 10
 const COMPANION_MOST_REST: int = 40

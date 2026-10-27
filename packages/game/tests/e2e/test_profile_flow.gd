@@ -530,7 +530,40 @@ func _check_development() -> String:
 	refused.append(profile.take_node(short_id, "heavy_1"))
 	if not took.is_empty() or refused.has("") or monster.taken != ["sturdy_1", "sturdy_2"]:
 		return "taking nodes gave %s, %s and refused %s" % [monster.taken, took, refused]
-	return _check_development_saved(profile)
+	var problem: String = _check_development_carried(_parse(_text(profile)))
+	return problem if not problem.is_empty() else _check_development_saved(profile)
+
+
+## The stat nodes `profile`'s first monster took (#1358), Ombulumo's sturdy_1 and sturdy_2 (+5% and
+## +6% HP), ride to the world with its party: the run of carry requests says its leaning, summed
+## from its web, and a monster without a web leans nowhere. An older save's carry requests, from
+## before runs held leanings, are dropped; a leaning's code reads back every stat in its place, and
+## a code with bits past them is none.
+func _check_development_carried(profile: Profile) -> String:
+	if not _leaning_codes_read_back():
+		return "a leaning's code didn't read back as itself, or one too wide was read"
+	var keeper: ProfileKeeper = ProfileKeeper.new(profile, SAVE_PATH)
+	var problem: String = keeper.catch_up_party({}, 0, DevelopmentContent.cached().webs)
+	var entries: Array[OutboxEntry] = profile.outbox.entries
+	if not problem.is_empty() or entries.size() != CarryRequest.VALUES_PER_MONSTER:
+		return "the monster's party wasn't sent as one monster's run: " + problem
+	var value: int = CarryRequest.value_of(entries[2].data)
+	var leaning: CompanionLeaning = CompanionLeaning.of_code(value)
+	if leaning == null or not leaning.same_as(CompanionLeaning.of(110, 0, 0)):
+		return "the run's leaning wasn't +11%% HP: %d" % value
+	var old: Dictionary = JSON.parse_string(_text(profile))
+	var changes: Array = old[FormatChanges.KEY]
+	changes.erase("1358-carry-leanings")
+	var migrated: Profile = _parse(JSON.stringify(old))
+	if not migrated.problem.is_empty() or not migrated.outbox.entries.is_empty():
+		return "an older save's carry requests weren't dropped: " + migrated.problem
+	entries.clear()
+	problem = keeper.catch_up_party({}, 0, {})
+	value = CarryRequest.value_of(entries[2].data) if entries.size() > 2 else -1
+	var none: CompanionLeaning = CompanionLeaning.of_code(value)
+	if not problem.is_empty() or none == null or not none.is_none():
+		return "a monster without its web leaned in its run: " + problem
+	return ""
 
 
 ## `profile`'s first monster's nodes taken (#1417) are kept through saving and loading, start at
@@ -582,6 +615,15 @@ func _check_development_lost(loaded: Profile) -> String:
 			saved.dominated_monsters[0].taken,
 		]
 	return "" if monster.picks_left() == 1 else "the dropped node's pick wasn't given back"
+
+
+## Whether a leaning's code reads back every stat in its place, and a code with bits past them
+## reads as none (#1358).
+func _leaning_codes_read_back() -> bool:
+	var least: int = CompanionLeaning.LEAST
+	var wide: CompanionLeaning = CompanionLeaning.of(least, 7, CompanionLeaning.MOST)
+	var read: CompanionLeaning = CompanionLeaning.of_code(wide.code())
+	return read != null and read.same_as(wide) and CompanionLeaning.of_code(1 << 40) == null
 
 
 ## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an

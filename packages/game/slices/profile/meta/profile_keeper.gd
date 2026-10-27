@@ -133,16 +133,33 @@ func choose_name(typed: String, now_msec: int) -> String:
 
 
 ## Posts the run of requests that tells a world whose party entry `stored` (CompanionFeature) isn't
-## who the player carries (PartyRequests.catch_up, #818), saved like any change; returns why it
-## couldn't be saved, or "".
-func catch_up_party(stored: Dictionary, now_msec: int) -> String:
+## who the player carries (PartyRequests.catch_up, #818), each leaning as the stat nodes it took on
+## its species' web in `webs` add up to (#1358; none without a web), saved like any change; returns
+## why it couldn't be saved, or "".
+func catch_up_party(
+	stored: Dictionary,
+	now_msec: int,
+	webs: Dictionary[String, DevelopmentWeb],
+) -> String:
 	var party: CarriedMonsters = CarriedMonsters.new()
 	for monster: DominatedMonster in profile.carried_monsters():
-		party = party.add(monster.short_id, monster.species)
+		party = party.add(monster.short_id, monster.species, _leaning_of(monster, webs))
 	if not PartyRequests.catch_up(party, profile.outbox, stored):
 		return ""
 	_pending = true
 	return save_if_due(now_msec)
+
+
+## How `monster` leans: what the stat nodes it took on its species' web in `webs` add up to (#1358),
+## or nowhere without a web.
+static func _leaning_of(
+	monster: DominatedMonster,
+	webs: Dictionary[String, DevelopmentWeb],
+) -> CompanionLeaning:
+	if not webs.has(monster.species):
+		return CompanionLeaning.new()
+	var sum: DevelopmentLeaning = webs[monster.species].leaning_of(monster.taken)
+	return CompanionLeaning.of(sum.hp, sum.strength, sum.speed)
 
 
 ## Spends one of the item `item` the player holds and posts a request of `kind` (OutboxEntry.KINDS)

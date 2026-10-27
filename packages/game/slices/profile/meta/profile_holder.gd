@@ -205,12 +205,13 @@ func catch_up_gear(stored: Dictionary) -> void:
 
 ## Catches the world up with who this player carries as a session starts (#818): `stored` is their
 ## party's entry in its store (CompanionFeature), and a run of requests goes to the outbox if it's
-## behind.
+## behind. Each carried monster leans as its taken nodes say (#1358); unread webs lean none.
 func catch_up_party(stored: Dictionary) -> void:
 	if keeper == null:
 		return
 	var posted: int = keeper.profile.outbox.entries.size()
-	_report(keeper.catch_up_party(stored, Time.get_ticks_msec()))
+	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.cached().webs
+	_report(keeper.catch_up_party(stored, Time.get_ticks_msec(), webs))
 	_tell_posted(posted)
 
 
