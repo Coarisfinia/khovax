@@ -46,7 +46,8 @@ func _ready() -> void:
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
-	refresh()
+	# Deferred: whoever relays the names it shows connects once it's ready, before the first rows.
+	refresh.call_deferred()
 
 
 func _process(_delta: float) -> void:
