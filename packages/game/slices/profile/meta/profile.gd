@@ -118,6 +118,39 @@ func take_node(short_id: String, node: String) -> String:
 	return ""
 
 
+## Ascends the dominated monster `short_id` into its species' grown form (#1235): once it has
+## reached the level its species sets (SpeciesAscension), the player gives it one of the
+## ascension material they hold, and it takes the new species, keeping its short id, level and
+## progress. Its new species has a web of its own, so the nodes it took are given back to pick
+## again on that web. Returns why it can't, or "", and changes nothing when it can't.
+func ascend(short_id: String) -> String:
+	var refusal: String = ascension_problem(short_id)
+	if not refusal.is_empty():
+		return refusal
+	var monster: DominatedMonster = monster_of(short_id)
+	var ascension: SpeciesAscension = SpeciesContent.cached().ascensions[monster.species]
+	var _spent: String = spend(ascension.material)
+	monster.species = ascension.into
+	monster.taken.clear()
+	return ""
+
+
+## Why the dominated monster `short_id` can't ascend now (#1235), or "": its species ascends, it
+## has reached the level, and the player holds the material.
+func ascension_problem(short_id: String) -> String:
+	var monster: DominatedMonster = monster_of(short_id)
+	if monster == null:
+		return "no dominated monster %s to ascend" % short_id
+	var ascension: SpeciesAscension = SpeciesContent.cached().ascensions.get(monster.species)
+	if ascension == null:
+		return "%s doesn't ascend" % monster.species
+	if monster.level < ascension.level:
+		return "%s ascends at level %d" % [short_id, ascension.level]
+	if materials.get(ascension.material, 0) < 1:
+		return "no %s to ascend %s with" % [ascension.material, short_id]
+	return ""
+
+
 ## Gives back the picks of the nodes a later web no longer has (#1435): each dominated monster
 ## drops the taken nodes its species' web in `webs` (by species id) lacks, so the player picks
 ## again. A monster whose species has no web there keeps its nodes. Returns whether any was

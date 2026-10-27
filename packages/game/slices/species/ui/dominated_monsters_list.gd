@@ -42,6 +42,8 @@ var details: MonsterDetails
 ## missing from the data shows its id.
 var _species: Dictionary[String, Species] = {}
 var _abilities: Dictionary[String, String] = {}
+## What each species ascends into (#1235), by id.
+var _ascensions: Dictionary[String, SpeciesAscension] = {}
 var _rows: VBoxContainer
 
 
@@ -50,6 +52,7 @@ func _ready() -> void:
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so monsters show their ids: " + species.problem)
 	_species = species.species
+	_ascensions = species.ascensions
 	_abilities = MonsterDetails.all_ability_names()
 	add_child(GameMenu.label(TITLE))
 	_rows = VBoxContainer.new()
@@ -96,9 +99,14 @@ func _show_details() -> void:
 	if details == null:
 		return
 	var species: Species = null
+	var ascension: SpeciesAscension = null
+	var holds: int = 0
 	if monster != null:
 		species = _species.get(monster.species)
-	details.show_monster(monster, species, _abilities)
+		ascension = _ascensions.get(monster.species)
+	if ascension != null:
+		holds = holder.keeper.profile.materials.get(ascension.material, 0)
+	details.show_monster(monster, species, _abilities, ascension, holds)
 
 
 ## A line for each of `profile`'s dominated monsters in `ids`, the player's order: the carried

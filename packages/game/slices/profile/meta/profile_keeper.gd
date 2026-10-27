@@ -99,6 +99,16 @@ func take_node(short_id: String, node: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Ascends the dominated monster `short_id` (Profile.ascend, #1235), spending its material, and
+## saves it like any choice; returns why it can't, or "".
+func ascend(short_id: String, now_msec: int) -> String:
+	var problem: String = profile.ascend(short_id)
+	if not problem.is_empty():
+		return problem
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Puts the gear `gear_id` into the player's `slot`, or empties it with "" (#690), and posts the
 ## request that tells the world, if it needs to know (GearRequests, #818), in one change, saved like
 ## any choice; returns why it can't, or "".

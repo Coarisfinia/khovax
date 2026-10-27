@@ -6,9 +6,10 @@ extends ScrollContainer
 ## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
 ## MightPanel) and their standing with each faction (#533, FactionStandingsPanel), then their
 ## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
-## them, or below them on a phone held upright (MonsterDetails, #430), and its development web,
-## where the player takes its nodes (DevelopmentWebView, #679), then their gear slots (#690,
-## GearPanel) and their materials (MaterialsList, #295). Above them all, the character's name
+## them, or below them on a phone held upright (MonsterDetails, #430), where it ascends (#1235),
+## and its development web, where the player takes its nodes (DevelopmentWebView, #679), then their
+## gear slots (#690, GearPanel) and their materials (MaterialsList, #295). Above them all, the
+## character's name
 ## (#399): typed into a field and kept once confirmed (Enter, or leaving the field), with a line
 ## that says in words why a name was refused. It scrolls when the screen is too short. Its layout
 ## lives in its scene, character_tab.tscn (#437): this script keeps only what it does, and adds the
@@ -72,6 +73,7 @@ func _ready() -> void:
 	monsters.details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pair.add_child(monsters.details)
 	_column.add_child(_pair)
+	var _ascend: int = monsters.details.ascend_chosen.connect(ascend)
 	# The selected monster's development web, below the monsters (#679).
 	var development: DevelopmentWebView = DevelopmentWebView.new()
 	_column.add_child(development)
@@ -107,6 +109,23 @@ func choose(color: Color) -> void:
 func take_node(short_id: String, node: String) -> void:
 	if holder != null:
 		holder.take_node(short_id, node)
+	monsters.refresh()
+
+
+## Ascends the monster `short_id` into its species' grown form (#1235), as its Ascend button does,
+## and says so below its details once it has.
+func ascend(short_id: String) -> void:
+	if holder == null or holder.keeper == null:
+		return
+	var monster: DominatedMonster = holder.keeper.profile.monster_of(short_id)
+	var before: String = monster.species if monster != null else ""
+	holder.ascend(short_id)
+	if monster != null and monster.species != before:
+		var known: Dictionary[String, Species] = SpeciesContent.cached().species
+		var from: String = known[before].name if known.has(before) else before
+		var now: String = monster.species
+		var into: String = known[now].name if known.has(now) else now
+		monsters.details.tell_ascended(MonsterDetails.ASCENDED_TEXT % [from, into])
 	monsters.refresh()
 
 
