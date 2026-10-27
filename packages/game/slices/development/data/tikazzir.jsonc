@@ -1,5 +1,6 @@
 // Tikazzir's development web (#677): a quick hunter, it leans into speed and sharp strikes, and
-// may toughen up. Its shifts are placeholders to tune (#960).
+// may toughen up. Its shifts and its stronger special are placeholders to tune (#960); its deepest
+// nodes grant a stronger special and a passive of its own (#1404).
 {
 	"species": "tikazzir",
 	// Around the web: each direction sits beside the ones before and after it, the last beside the
@@ -13,7 +14,8 @@
 		{ "id": "keen", "nodes": [
 			{ "leaning": { "strength": 50 } },
 			{ "leaning": { "strength": 60, "speed": 20 } },
-			{ "leaning": { "strength": 80, "hp": -30 } }
+			{ "leaning": { "strength": 80, "hp": -30 } },
+			{ "special": 200 }
 		] },
 		{ "id": "hardy", "nodes": [
 			{ "leaning": { "hp": 60 } },
@@ -23,7 +25,8 @@
 		{ "id": "reckless", "nodes": [
 			{ "leaning": { "strength": 30, "speed": 30 } },
 			{ "leaning": { "strength": 40, "speed": 40, "hp": -20 } },
-			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } }
+			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } },
+			{ "passive": "tikazzir_kazri_tazri" }
 		] }
 	],
 	"bridges": [["swift_2", "keen_2"], ["hardy_1", "reckless_1"]],

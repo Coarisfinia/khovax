@@ -1,0 +1,13 @@
+// A placeholder: a passive its development web grants (#1404); its effect comes once passives work
+// while the monster is out (#616).
+{
+	"id": "tikazzir_kazri_tazri",
+	"kind": "self_passive",
+	"name": "Kazri-tazri",
+	"description": "The ${MONSTER:tikazzir} strikes faster the more it's hurt.",
+	"codex": {
+		"entry": "The scrape of talons on stone as a cornered beast readies to spring. Dominators said it of anything that fights hardest once it bleeds.",
+		"gloss": "cornered, and quicker"
+	},
+	"path": "supremacy"
+}

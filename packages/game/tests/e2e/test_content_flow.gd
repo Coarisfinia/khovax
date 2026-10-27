@@ -6,7 +6,8 @@ extends RefCounted
 ## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
 ## that ascends (#1252) ascends into another species, never in a loop, with a material the tables
 ## drop; and broken entries are refused. Every species has a development web (#677), whose nodes
-## open as the ones next to them are taken, and broken webs are refused. Loot tables (#90) load,
+## open as the ones next to them are taken and grant a leaning, a stronger special or a passive no
+## species has (#1404), and broken webs are refused. Loot tables (#90) load,
 ## roll the same for the same stream, and a blank rolls on the instance's table; every item a table
 ## names is a piece of gear or a material (#774).
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
@@ -1169,7 +1170,8 @@ func _pair_ascension_problem(into: String) -> String:
 
 ## Every species has a development web (#677) and every web is a species'. In the toad's, its four
 ## directions' first nodes are open from the start; taking one opens the next along its direction,
-## and a bridge or a portal opens the node it leads to; its nodes lean as written (#1358).
+## and a bridge or a portal opens the node it leads to; its nodes lean as written (#1358), and two
+## grant a stronger special and a passive (#1404).
 func _check_development_webs(content: SpeciesContent) -> String:
 	var loaded: DevelopmentContent = DevelopmentContent.load_webs()
 	if not loaded.problem.is_empty():
@@ -1196,8 +1198,39 @@ func _check_development_webs(content: SpeciesContent) -> String:
 		if open != cases[taken]:
 			return "with %s taken, the toad's web opened %s, not %s" % [taken, open, cases[taken]]
 	var heavy: DevelopmentLeaning = web.leanings["heavy_3"]
-	if web.nodes.size() != 12 or heavy.strength != 80 or heavy.speed != -30 or heavy.hp != 0:
+	if web.nodes.size() != 14 or heavy.strength != 80 or heavy.speed != -30 or heavy.hp != 0:
 		return "the toad's web didn't load as written"
+	var granting: DevelopmentLeaning = web.leanings["heavy_4"]
+	if (web.specials != { "heavy_4": 200 } or web.passives != { "deep_4": "ombulumo_lombu_bombu" }
+			or granting.hp != 0 or granting.strength != 0 or granting.speed != 0):
+		return "the toad's web's special and passive nodes didn't load as written"
+	return _check_development_passives(loaded.webs, content)
+
+
+## Every passive a web grants (#1404) is a passive in the ability data that no species has yet and
+## no other node grants; a special, an unknown ability, a species' own passive or one granted twice
+## is refused.
+func _check_development_passives(
+	webs: Dictionary[String, DevelopmentWeb],
+	content: SpeciesContent,
+) -> String:
+	var abilities: Dictionary[String, Ability] = AbilityContent.load_abilities().abilities
+	var problem: String = DevelopmentPassives.problem(webs, content.species, abilities)
+	if not problem.is_empty():
+		return "the development webs' passives don't hold together: " + problem
+	var toad: DevelopmentWeb = webs["ombulumo"]
+	var cases: Dictionary[String, String] = {
+		"ombulumo_bulum_bolom": "isn't a passive",
+		"no_such_ability": "isn't a passive",
+		"ombulumo_bolmu_wolmu": "a passive a species already has",
+		"tikazzir_kazri_tazri": "both grant",
+	}
+	for passive: String in cases:
+		toad.passives["deep_4"] = passive
+		problem = DevelopmentPassives.problem(webs, content.species, abilities)
+		if not problem.contains(cases[passive]):
+			return "a web granting %s was refused with \"%s\"" % [passive, problem]
+	toad.passives["deep_4"] = "ombulumo_lombu_bombu"
 	return ""
 
 
@@ -1225,6 +1258,13 @@ func _check_development_refused() -> String:
 		web % [node, "", "[\"a_1\", \"b_1\"]"]: "portal a_1-b_1 links two directions' outermost",
 		web.replace(", \"portals\": [%s]", "") % [node, ""]: "its web lists its portals",
 		web.replace(", {\"id\": \"c\"", ", {\"id\": \"a\"") % [node, "", ""]: "each direction's id",
+		web % ["{\"special\": 200}", "", ""]: "",
+		web % ["{\"passive\": \"xo_ab_cd\"}", "", ""]: "",
+		web % ["{}", "", ""]: "node a_1: it grants one of",
+		web % ["{\"special\": 200, \"leaning\": {\"hp\": 1}}", "", ""]: "node a_1: it grants one",
+		web % ["{\"special\": 0}", "", ""]: "node a_1: its special grows",
+		web % ["{\"special\": 1001}", "", ""]: "node a_1: its special grows",
+		web % ["{\"passive\": \"Not an id\"}", "", ""]: "node a_1: its passive is",
 	}
 	for text: String in cases:
 		var problem: String = _add_web(text)

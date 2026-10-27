@@ -139,6 +139,10 @@ static func collected() -> ContentTerms:
 		terms.add("species", species.id, species.name, species.types[0])
 		for ability: String in [species.special, species.player_passive, species.self_passive]:
 			species_of[ability] = species.id
+	# A passive a development web grants (#1404) is its web's species' too.
+	for web: DevelopmentWeb in DevelopmentContent.load_webs().webs.values():
+		for passive: String in web.passives.values():
+			species_of[passive] = web.species
 	for ability: Ability in AbilityContent.load_abilities().abilities.values():
 		var kind: String = "special" if ability.kind == Ability.SPECIAL else "passive"
 		var owner: String = species_of.get(ability.id, "")

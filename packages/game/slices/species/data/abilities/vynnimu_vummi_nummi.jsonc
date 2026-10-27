@@ -1,0 +1,13 @@
+// A placeholder: a passive its development web grants (#1404); its effect comes once passives work
+// while the monster is out (#616).
+{
+	"id": "vynnimu_vummi_nummi",
+	"kind": "player_passive",
+	"name": "Vummi-nummi",
+	"description": "While the ${MONSTER:vynnimu} is out, the player's steps wake sleeping monsters less often.",
+	"codex": {
+		"entry": "The soft huffing of a pup sniffing at the dark. Dominators said it as they crept past sleeping beasts behind a nose that knew the way.",
+		"gloss": "sniff, hush, on"
+	},
+	"path": "harmony"
+}
