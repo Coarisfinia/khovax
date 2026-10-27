@@ -8,7 +8,8 @@ extends Control
 ## stops following fades out at once, while the card of the one followed next fades in under it
 ## and glides up into its place; nothing snaps.
 ## It keeps to the side of the screen the Survey's corner isn't on (#301), below the roster on
-## the left (#540). Quests are told apart by their words, never by color (#68), and the text grows
+## the left (#540), and below the menu's open button on a screen held upright (#1465). Quests are
+## told apart by their words, never by color (#68), and the text grows
 ## with the screen, so it stays readable on a phone. It only reads the quests.
 ## Its layout lives in scenes (#437): the list's node in main.tscn, each card in quest_card.tscn
 ## (QuestCard); this script keeps only what it does.
@@ -61,6 +62,8 @@ var order: Array[String] = []
 ## The quests whose cards fade out, by quest id: finished, or no longer followed. Each with the
 ## tween fading it, which stops when the player follows the quest again before it's gone.
 var leaving: Dictionary[String, Tween] = {}
+## How much room the cards leave above them for the menu's open button, which the menu sets.
+var room_above: float = 0.0
 var _font_size: int = 0
 
 
@@ -230,19 +233,12 @@ func pill(id: String) -> QuestPill:
 ## its place, the text sized to the screen.
 func _lay_out(glide: float) -> void:
 	var screen: Vector2 = get_viewport_rect().size
-	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
-	var width: float = minf(font * WIDTH_FONTS, screen.x * MAX_WIDTH_SHARE)
+	var font: int = _font_for(screen)
 	var font_changed: bool = font != _font_size
 	_font_size = font
-	var place: SurveyChoice.Place = SurveyChoice.AUTO_PLACE
-	if survey != null:
-		place = survey.place_shown()
-	var survey_left: bool = (place == SurveyChoice.Place.TOP_LEFT
-			or place == SurveyChoice.Place.BOTTOM_LEFT)
-	position = Vector2(
-		screen.x - width - MARGIN if survey_left else MARGIN,
-		MARGIN if survey_left or roster == null else roster.bottom(),
-	)
+	var column: Rect2 = column_in(screen)
+	var width: float = column.size.x
+	position = column.position + Vector2(0.0, room_above)
 	var y: float = 0.0
 	for id: String in order:
 		var card: QuestCard = cards[id]
@@ -253,13 +249,27 @@ func _lay_out(glide: float) -> void:
 		y += card.size.y + GAP
 
 
-## How far down the screen the cards reach where they are now, gliding ones too, or 0 while there
-## are none (#1465).
-func bottom() -> float:
-	var lowest: float = 0.0
-	for id: String in order:
-		lowest = maxf(lowest, position.y + cards[id].position.y + cards[id].size.y)
-	return lowest
+## Where the list's side starts at the top of a screen of `screen` pixels and how wide it is, before
+## the room above it (no height): the menu's open button stands there on a screen held upright
+## (#1465).
+func column_in(screen: Vector2) -> Rect2:
+	var width: float = minf(_font_for(screen) * WIDTH_FONTS, screen.x * MAX_WIDTH_SHARE)
+	var place: SurveyChoice.Place = SurveyChoice.AUTO_PLACE
+	if survey != null:
+		place = survey.place_shown()
+	var survey_left: bool = (place == SurveyChoice.Place.TOP_LEFT
+			or place == SurveyChoice.Place.BOTTOM_LEFT)
+	return Rect2(
+		screen.x - width - MARGIN if survey_left else MARGIN,
+		MARGIN if survey_left or roster == null else roster.bottom(),
+		width,
+		0.0,
+	)
+
+
+## The text's size on a screen of `screen` pixels.
+static func _font_for(screen: Vector2) -> int:
+	return maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 
 
 ## Where a new card starts: under the last one.

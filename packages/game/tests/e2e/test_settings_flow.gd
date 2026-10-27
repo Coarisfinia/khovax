@@ -951,21 +951,34 @@ func _menu_on_screens(menu: GameMenu) -> String:
 
 
 ## The open button stands at the top's middle on a landscape screen, and on a screen held upright
-## below the quest card and the Survey's top corner, which leave it no room between them (#1465).
+## at the top of the quest list's side, the list making room for it below (#1465). The Survey is
+## in the top left corner here, so the list and the button are on the right.
 func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
 	var button: Button = menu.open_button()
-	var top: float = GameMenu.MARGIN
+	var shown: bool = button.visible
+	button.visible = true
+	menu.lay_out(screen)
+	var at: Rect2 = button.get_rect()
+	var room: float = menu.quest_list.room_above
+	button.visible = false
+	menu.lay_out(screen)
+	var hidden_room: float = menu.quest_list.room_above
+	button.visible = shown
+	menu.lay_out(screen)
+	var column: Rect2 = menu.quest_list.column_in(screen)
+	var placed: bool = (is_equal_approx(at.get_center().x, screen.x / 2.0)
+			and is_equal_approx(at.position.y, GameMenu.MARGIN) and room == 0.0)
 	if screen.y > screen.x:
-		var above: float = maxf(menu.survey.top_corner_bottom(screen), menu.quest_list.bottom())
-		if above <= GameMenu.MARGIN:
-			return "neither the Survey's corner nor a quest card stands at the top to test against"
-		top = above + GameMenu.MARGIN
-	var middle: float = button.position.x + button.size.x / 2.0
-	if not is_equal_approx(button.position.y, top) or not is_equal_approx(middle, screen.x / 2.0):
-		return "the open button is at %s on a %s screen, not centred at %d from the top" % [
-			button.position,
+		placed = (is_equal_approx(at.end.x, column.end.x)
+				and is_equal_approx(at.position.y, column.position.y)
+				and room >= at.size.y + QuestListView.GAP)
+	if not placed or hidden_room != 0.0:
+		return "the open button is at %s on a %s screen, the list's side at %s, room %s/%s" % [
+			at,
 			screen,
-			top,
+			column,
+			room,
+			hidden_room,
 		]
 	return ""
 

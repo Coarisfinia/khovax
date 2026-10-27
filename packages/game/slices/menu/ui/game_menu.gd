@@ -2,11 +2,10 @@ class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it, gameplay
 ## first, then system (_build_sheet). The `menu` action (Escape, a controller's Start, #779) opens
-## and closes it, and on touch screens a small button does, at the top's middle, or below the quest
-## card and the Survey's top corner on a screen held upright (#1465), showing the glyph of that key
+## and closes it, and on touch screens a small button does, at the top's middle, or at the top of
+## the quest list's side above it on a screen held upright (#1465), showing the glyph of that key
 ## or button while a keyboard or a controller is in use there (#1192); the close button at its top
-## right and
-## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
+## right and `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While a carried monster has a knot of its development web to take (KnotMark, #1443), that button
 ## shows on every device, saying so in words and with the knot's shape in place of its own icon:
 ## clicked, tapped or with the `menu` action, whose glyph it shows, it opens the menu, whose
@@ -69,7 +68,7 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## The quest card at the top's side, which the open button stays below on a screen held upright;
+## The quest list at the top's side, which the open button stands above on a screen held upright;
 ## its keeper keeps the quests the Quests tab shows too. The Character tab shows the profile the
 ## driver holds.
 @export var quest_list: QuestListView
@@ -91,6 +90,9 @@ var _font_size: int = 0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Laid out before the quest list, which makes room for the open button in the same frame
+	# (#1465).
+	process_priority = -1
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	var more_tabs: Array[Node] = get_children()
@@ -207,9 +209,9 @@ func step_pause(steps: int) -> String:
 
 
 ## Sizes the text to a screen of `screen` pixels, the open button at the top's middle (tests lay
-## it out for other screens than their own this way). On a screen held upright the quest card and
-## the Survey's corner leave no room between them there, so the button goes below the taller of
-## the two (#1465).
+## it out for other screens than their own this way). On a screen held upright the quest list and
+## the Survey's corner leave no room between them there, so the button goes at the top of the
+## list's side and the list makes room for it below (#1465).
 func lay_out(screen: Vector2) -> void:
 	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 	if font != _font_size:
@@ -230,15 +232,29 @@ func lay_out(screen: Vector2) -> void:
 	quests_tab().fit(width)
 	controls_tab().fit(width)
 	_open_button.size = Vector2.ZERO
-	var top: float = MARGIN
+	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
+	if quest_list == null:
+		return
+	var list_room: float = 0.0
 	if screen.y > screen.x:
-		var above: float = 0.0
-		if survey != null:
-			above = survey.top_corner_bottom(screen)
-		if quest_list != null:
-			above = maxf(above, quest_list.bottom())
-		top = maxf(top, above + MARGIN)
-	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, top)
+		var column: Rect2 = quest_list.column_in(screen)
+		var left: bool = column.get_center().x < screen.x / 2.0
+		_open_button.position = Vector2(
+			column.position.x if left else column.end.x - _open_button.size.x,
+			column.position.y,
+		)
+		if _open_button.visible:
+			list_room = _reach(_open_button) + QuestListView.GAP
+	quest_list.room_above = list_room
+
+
+## How far down `shown` reaches, from its top: its own height or its glyph's badge hanging below it.
+static func _reach(shown: Control) -> float:
+	var lowest: float = shown.size.y
+	for child: Node in shown.get_children():
+		if child is Control and (child as Control).visible:
+			lowest = maxf(lowest, (child as Control).get_rect().end.y)
+	return lowest
 
 
 ## How far the menu has faded in: 0 while hidden, 1 when fully shown.
