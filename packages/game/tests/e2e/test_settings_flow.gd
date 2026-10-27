@@ -344,7 +344,7 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 ## vanished one's, which the content no longer has, is one, or "".
 func _menu_faction_links(panel: FactionStandingsPanel, main: Node, faction_id: String) -> String:
 	var rows: Array[Node] = panel.get_child(1).get_children()
-	var vanished: NameLinks = rows.back() as NameLinks
+	var vanished: NameLinks = rows[rows.size() - 1] as NameLinks
 	if vanished == null or not vanished.links.is_empty():
 		return "the Character tab links a faction the content doesn't have"
 	var problem: String = FlowGame.faction_link_problem(main, rows[0] as NameLinks, faction_id)
