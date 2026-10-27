@@ -550,12 +550,38 @@ func _check_development_saved(profile: Profile) -> String:
 	if not migrated.problem.is_empty() or not migrated.dominated_monsters[0].taken.is_empty():
 		return "an older save's monster didn't start with no nodes taken: " + migrated.problem
 	var text: String = _text(profile)
+	var problem: String = _check_development_lost(_parse(text.replace("sturdy_2", "sturdy_99")))
+	if not problem.is_empty():
+		return problem
 	return _unrefused({
 		text.replace("\"level\": 3", "\"level\": 2"): "a dominated",
 		text.replace("\"sturdy_2\"", "\"sturdy_1\""): "a dominated",
 		text.replace("\"sturdy_2\"", "\"Bad id\""): "a dominated",
 		text.replace("\"taken\": [", "\"taken\": 1, \"was\": ["): "a dominated",
 	})
+
+
+## A node a later web dropped (#1435), like `loaded`'s first monster's second, is loaded but gives
+## its pick back as the keeper takes the webs over, and the next save holds it no longer; a web
+## that isn't there drops nothing.
+func _check_development_lost(loaded: Profile) -> String:
+	var monster: DominatedMonster = loaded.dominated_monsters[0]
+	var keeper: ProfileKeeper = ProfileKeeper.new(loaded, SAVE_PATH)
+	keeper.drop_lost_nodes({})
+	if not loaded.problem.is_empty() or monster.taken != ["sturdy_1", "sturdy_99"]:
+		return "a node dropped from its web wasn't loaded, or went without its web: %s %s" % [
+			loaded.problem,
+			monster.taken,
+		]
+	keeper.drop_lost_nodes(DevelopmentContent.cached().webs)
+	var problem: String = keeper.flush()
+	var saved: Profile = ProfileStore.load_from(SAVE_PATH)
+	if not problem.is_empty() or saved.dominated_monsters[0].taken != ["sturdy_1"]:
+		return "a node dropped from its web kept its pick: %s %s" % [
+			problem,
+			saved.dominated_monsters[0].taken,
+		]
+	return "" if monster.picks_left() == 1 else "the dropped node's pick wasn't given back"
 
 
 ## Naming the character (#399): a name with its spaces at either end dropped is kept and saved; an
