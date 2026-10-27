@@ -128,6 +128,7 @@ func _check_menu() -> String:
 		result = _menu_character(menu, main)
 	if result.is_empty():
 		result = _menu_monsters(menu, main)
+		result = result if not result.is_empty() else await _menu_development_scroll(menu)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
 	if result.is_empty():
@@ -617,6 +618,40 @@ func _menu_development(tab: CharacterTab) -> String:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
 		return "the focus didn't stay on the node just taken, for a controller"
+	return ""
+
+
+## On a phone held upright the web is wider than the tab: taking a node a step further out keeps the
+## focus on it and scrolls it into sight, so a controller never loses it off the edge (#1441).
+func _menu_development_scroll(menu: GameMenu) -> String:
+	var tab: CharacterTab = menu.character
+	var view: DevelopmentWebView = tab.find_children("*", "DevelopmentWebView", true, false)[0]
+	var first: String = tab.monsters.shown_ids[0]
+	# Two more levels: two nodes to take, beside the one taken already.
+	tab.holder.keeper.profile.monster_of(first).level += 2
+	menu.lay_out(Vector2(360.0, 640.0))
+	tab.monsters.select(first)
+	await _tree.process_frame
+	await _tree.process_frame
+	var problem: String = await _taken_in_sight(view, "sturdy_2")
+	if problem.is_empty():
+		problem = await _taken_in_sight(view, "sturdy_3")
+	menu.lay_out(Vector2(1920.0, 1080.0))
+	return problem
+
+
+## Takes `node` on `view`'s web; returns why it isn't focused and fully in sight after, or "".
+func _taken_in_sight(view: DevelopmentWebView, node: String) -> String:
+	view.buttons[node].pressed.emit()
+	await _tree.process_frame
+	await _tree.process_frame
+	var button: Button = view.buttons[node]
+	var shown: Rect2 = button.get_global_rect()
+	var across: Rect2 = (button.get_parent().get_parent() as Control).get_global_rect()
+	# A pixel's leeway for rounding.
+	var inside: bool = shown.position.x >= across.position.x and shown.end.x <= across.end.x + 1.0
+	if not button.has_focus() or not inside:
+		return "taking %s didn't keep it focused and in sight: %s in %s" % [node, shown, across]
 	return ""
 
 

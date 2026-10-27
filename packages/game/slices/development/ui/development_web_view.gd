@@ -53,6 +53,8 @@ var _key: Array = []
 var _focus_next: String = ""
 var _lines: VBoxContainer
 var _web: Control
+## What scrolls the web sideways.
+var _across: ScrollContainer
 ## The web shown, or null.
 var _shown_web: DevelopmentWeb
 var _taken: Array[String] = []
@@ -69,12 +71,12 @@ func _ready() -> void:
 	# The web scrolls sideways on its own: the Character tab doesn't, and a web wider than a phone
 	# held upright would cut off its outer nodes otherwise (#1442 fits it to the screen). A
 	# controller's focus scrolls it to the focused node.
-	var across: ScrollContainer = ScrollContainer.new()
-	across.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	across.follow_focus = true
+	_across = ScrollContainer.new()
+	_across.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_across.follow_focus = true
 	_web.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	across.add_child(_web)
-	add_child(across)
+	_across.add_child(_web)
+	add_child(_across)
 	show_monster(null)
 
 
@@ -155,6 +157,9 @@ func _build(monster: DominatedMonster) -> void:
 	_place()
 	if buttons.has(focused) and is_visible_in_tree():
 		buttons[focused].grab_focus()
+		# The web built anew is laid out over this frame, and following the focus at once would
+		# scroll to where the node was: it's scrolled into sight on the next frame instead.
+		var _next: int = get_tree().process_frame.connect(_reveal.bind(focused), CONNECT_ONE_SHOT)
 
 
 ## A line of words above the web.
@@ -171,6 +176,12 @@ static func _node_button(leaning: DevelopmentLeaning, taken: bool) -> Button:
 	# Taken or not, a node takes the focus, so a controller reaches every one to read it.
 	made.focus_mode = Control.FOCUS_ALL
 	return made
+
+
+## Scrolls `node`'s button into sight, if the web still shows it.
+func _reveal(node: String) -> void:
+	if buttons.has(node):
+		_across.ensure_control_visible(buttons[node])
 
 
 ## Asks to take `node` for the monster `short_id`, keeping the focus on it once it's taken.
