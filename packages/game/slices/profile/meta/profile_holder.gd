@@ -165,6 +165,13 @@ func move_monster(short_id: String, place: int) -> void:
 		_report(keeper.move_monster(short_id, place, Time.get_ticks_msec()))
 
 
+## Takes the node `node` of the dominated monster `short_id`'s development web for this player
+## (#679), as its development web on the Character tab offers it.
+func take_node(short_id: String, node: String) -> void:
+	if keeper != null:
+		_report(keeper.take_node(short_id, node, Time.get_ticks_msec()))
+
+
 ## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690), and tells when
 ## that posted a request to the outbox for the world (GearRequests, #818).
 func equip(slot: String, gear_id: String) -> void:

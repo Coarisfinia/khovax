@@ -82,6 +82,16 @@ func move_monster(short_id: String, place: int, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
+## Takes the node `node` of the dominated monster `short_id`'s development web (Profile.take_node,
+## #679) and saves it like any choice; returns why it can't, or "".
+func take_node(short_id: String, node: String, now_msec: int) -> String:
+	var problem: String = profile.take_node(short_id, node)
+	if not problem.is_empty():
+		return problem
+	_pending = true
+	return save_if_due(now_msec)
+
+
 ## Puts the gear `gear_id` into the player's `slot`, or empties it with "" (#690), and posts the
 ## request that tells the world, if it needs to know (GearRequests, #818), in one change, saved like
 ## any choice; returns why it can't, or "".

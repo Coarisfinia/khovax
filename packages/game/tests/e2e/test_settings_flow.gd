@@ -516,9 +516,9 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 
 ## Each type shows after its family's badge (#627): breeze in the last family, mana in the first.
 ## Every family has its own icon, so the badges never tell families apart by color alone (#68).
-func _type_badges(details: MonsterDetails) -> String:
+func _type_badges(tab: CharacterTab) -> String:
 	var families: Array[int] = []
-	for row: Node in details.find_children("*", "HBoxContainer", true, false):
+	for row: Node in tab.monsters.details.find_children("*", "HBoxContainer", true, false):
 		for part: Node in row.get_children():
 			if part is TypeBadge:
 				families.append((part as TypeBadge).family)
@@ -530,7 +530,7 @@ func _type_badges(details: MonsterDetails) -> String:
 		icons[icon] = true
 	if icons.size() != TypeChart.FAMILIES.size() or TypeBadge.COLORS.size() != icons.size():
 		return "not every family has its own icon and a color"
-	return ""
+	return _menu_development(tab)
 
 
 ## The detail pane (#430) shows the first monster until another is selected, then that one's
@@ -576,7 +576,45 @@ func _menu_details(tab: CharacterTab) -> String:
 	menu.lay_out(Vector2(360.0, 640.0))
 	if paired <= column.custom_minimum_size.x:
 		return "the column doesn't widen for the detail pane beside the monsters"
-	return _type_badges(details)
+	return _type_badges(tab)
+
+
+## The selected monster's development web (#679), under fog of war (#1417): the level 2 Ombulumo
+## sees each direction's first node and none further out, and has one to take. Pressing one takes it
+## and keeps it in the profile on disk; then the node beyond it and its links show, the taken one
+## says so in words, and with no level left no node can be pressed.
+func _menu_development(tab: CharacterTab) -> String:
+	var first: String = tab.monsters.shown_ids[0]
+	tab.monsters.select(first)
+	var view: DevelopmentWebView = tab.find_children("*", "DevelopmentWebView", true, false)[0]
+	var nodes: Array = view.buttons.keys()
+	nodes.sort()
+	var picks: Array[String] = [DevelopmentWebView.TITLE, DevelopmentWebView.PICKS_TEXT % 1]
+	if view.shown != picks or nodes != ["deep_1", "heavy_1", "sturdy_1", "swift_1"]:
+		return "the web doesn't show each direction's first node only: %s %s" % [view.shown, nodes]
+	if view.buttons["sturdy_1"].disabled or view.buttons["sturdy_1"].text != "HP +5%":
+		return "an open node can't be pressed, or doesn't say what it shifts in words"
+	view.buttons["sturdy_1"].pressed.emit()
+	var _flushed: String = tab.holder.keeper.flush()
+	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
+	if kept.monster_of(first).taken != (["sturdy_1"] as Array[String]):
+		return "pressing a node didn't take it, or it isn't kept: %s" % [
+			kept.monster_of(first).taken,
+		]
+	nodes = view.buttons.keys()
+	nodes.sort()
+	if nodes != ["deep_1", "heavy_1", "sturdy_1", "sturdy_2", "swift_1"]:
+		return "taking a node didn't reveal the one beyond it alone: %s" % [nodes]
+	if not view.buttons["sturdy_1"].text.begins_with(DevelopmentWebView.TAKEN_TEXT):
+		return "a taken node doesn't say so in words: %s" % view.buttons["sturdy_1"].text
+	for button: Button in view.buttons.values():
+		if not button.disabled:
+			return "a node can still be pressed with no level left: %s" % button.text
+	if view.shown[1] != DevelopmentWebView.NO_PICKS_TEXT:
+		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
+	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
+		return "the focus didn't stay on the node just taken, for a controller"
+	return ""
 
 
 ## While the menu is open (`open`), the player's keys don't walk and no tick runs; once it's
