@@ -1,7 +1,7 @@
-"""A check's known failures (check_clearance.py, check_volume.py): a clip that still fails today
-waits in the check's KNOWN dict, {(model, clip): the issue that fixes it}, prints its numbers and
-doesn't fail the check. The list only shrinks: a clip on it that passes fails the check until it's
-taken off."""
+"""A check's known failures (check_clearance.py, check_volume.py, check_connectivity.py): a clip
+that still fails today waits in the check's KNOWN dict, {(model, clip): the issue that fixes it},
+prints its numbers and doesn't fail the check. The list only shrinks: a clip on it that passes
+fails the check until it's taken off."""
 
 
 def judge(known, model, line):
