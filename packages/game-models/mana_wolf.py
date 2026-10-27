@@ -223,9 +223,11 @@ def paws(mats):
 
 # The bones a rooted piece follows of the skin it grows from (weights.root): the trunk's for the
 # crest, the throat's for the ruff. The shoulder blades' share there stays with the spine, or they
-# would rock them at every step (the owner, on #1413).
+# would rock them at every step (the owner, on #1413). The ruff's skin is the neck's (#1422), but
+# a ruff turning with the neck as it bows would sweep its tips back into the chest: the neck's
+# share stays with the chest, and the head's moves it.
 TRUNK = ("hips", "spine_01", "spine_02", "neck")
-THROAT = ("spine_02", "neck", "head")
+THROAT = ("spine_02", "head")
 
 
 def fur(mats):
@@ -335,8 +337,13 @@ def build(out):
              for crown in CHANNEL_CROWN}
     flaring = pulse.Pulse(rig, "brow", brow, "head", beats, BROW_PULSE, BROW_RISE, BROW_FALL)
     scene.apply_scale([rig, skin] + pieces, SCALE)
+
+    def reweigh(body):
+        quadruped.bind_underside(body, rig)
+        SNOUT.bind_jaw(body, "jaw", SCALE)
+
     weights.bind(skin, rig, pieces, rigid_bones=("jaw", "ear.L", "ear.R", BROW_BONE, *drifting.names, *lids.names),
-                 reweigh=lambda body: SNOUT.bind_jaw(body, "jaw", SCALE))
+                 reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=0.4, fold=0.6, lift=0.2, curl=0.6,

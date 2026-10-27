@@ -66,7 +66,10 @@ a second model could use goes into the library or a generic tool, never into one
     nose pad and the fangs; length, taper, stop depth, lips, jaw depth and width and the chin's
     reach as parameters.
   - `quadruped`: `Proportions` and `armature` (spine, neck, head, jaw, ears, tail, four
-    four-bone legs, `.L`/`.R`).
+    four-bone legs, `.L`/`.R`), and the trunk's weights: `bind_underside` keeps the skin between
+    the legs (the chest's and throat's underside, the belly, the back between the shoulder blades)
+    with the spine and neck rather than the legs, so the body keeps its volume as a leg swings or
+    folds (#1422, the volume check); `bind_torso` does the same by height for a low trunk.
   - `weights`: `bind` (automatic weights, pieces joined in, at most four bones, normalised), and
     `root`, which moves a stiff piece (a crystal, a tuft) whole as the skin at its root, so it
     stays on the skin where two bones share it (#1303), following only the bones it names (a

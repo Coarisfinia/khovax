@@ -30,15 +30,7 @@ from game_shared import log  # noqa: E402
 from lib import ground, imported, known, volume  # noqa: E402
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
-KNOWN = {
-    ("mana_pup", "Attack"): 1422,
-    ("mana_pup", "Faint"): 1422,
-    ("mana_pup", "Feed"): 1422,
-    ("mana_pup", "Walk"): 1422,
-    ("mana_wolf", "Attack"): 1422,
-    ("mana_wolf", "Faint"): 1422,
-    ("mana_wolf", "Feed"): 1422,
-}
+KNOWN = {}
 
 
 def main():
