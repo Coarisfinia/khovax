@@ -302,6 +302,16 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_volume.py --
 
+      - name: "💎 Check every attached part stays on the skin"
+        # Every frame of every clip of every .glb, each part's gap to the piece it sits on against
+        # its gap at rest (#1403, split off #1303); a model of one piece passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_connectivity.py --
+
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
         if: failure() && steps.models.outputs.changed == 'true'

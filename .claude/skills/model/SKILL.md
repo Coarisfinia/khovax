@@ -153,6 +153,12 @@ a second model could use goes into the library or a generic tool, never into one
   width the body keeps at a station on the spine or neck, the frame, the station and which; it
   fails below the share (`lib/volume.py`). Its `KNOWN` list and `check_clearance.py`'s are judged
   alike (`lib/known.py`).
+- **The connectivity check (#1403):** `packages/game-models/check_connectivity.py -- <model.glb> [tolerance]`
+  cuts the mesh into pieces (welded by position), gives each part (a crystal, a claw, a tuft) the
+  nearest larger piece at rest as the skin it sits on, samples every frame of every clip and prints,
+  per clip, the most a part's gap to it grows beyond its gap at rest, the frame, the part and that
+  piece; it fails past the tolerance (`lib/connectivity.py`). Wisps are exempt. Its `KNOWN` list is
+  judged like the volume check's.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
@@ -364,6 +370,14 @@ a second model could use goes into the library or a generic tool, never into one
    without spine or neck bones passes. A clip that still fails waits in its `KNOWN` list with the
    issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it on every
    `.glb` with the rebuild check (step 14).
+
+19. **Connectivity (#1403):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_connectivity.py -- <model.glb>` must print
+   `CONNECTIVITY CHECK: PASS`: in every frame of every clip, every attached part (crystals, gems,
+   horns, claws, tufts) stays on the skin it sits on, its gap there growing no more than the
+   tolerance beyond its gap at rest (`lib/connectivity.py`). Wisps are meant to float and are exempt.
+   A clip that still fails waits in its `KNOWN` list with the issue that fixes it, and a fix takes it
+   off. Its lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
