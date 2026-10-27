@@ -118,14 +118,31 @@ func place_in(screen: Vector2) -> void:
 		view.position = Vector2.ZERO
 		view.size = screen
 		return
+	var corner: Rect2 = corner_in(screen, shown)
+	view.size = corner.size
+	view.position = corner.position
+
+
+## Where the Survey shows in its corner `shown` on a screen of `screen` pixels.
+static func corner_in(screen: Vector2, shown: Place) -> Rect2:
 	var side: float = minf(screen.x, screen.y) * CORNER_SHARE
 	var left: bool = shown == Place.TOP_LEFT or shown == Place.BOTTOM_LEFT
 	var top: bool = shown == Place.TOP_LEFT or shown == Place.TOP_RIGHT
-	view.size = Vector2(side, side)
-	view.position = Vector2(
+	return Rect2(
 		MARGIN if left else screen.x - side - MARGIN,
 		MARGIN if top else screen.y - side - MARGIN,
+		side,
+		side,
 	)
+
+
+## How far down a screen of `screen` pixels the Survey reaches from its top corner, or 0 while it
+## shows anywhere else (#1465).
+func top_corner_bottom(screen: Vector2) -> float:
+	var shown: Place = place_shown()
+	if view == null or (shown != Place.TOP_LEFT and shown != Place.TOP_RIGHT):
+		return 0.0
+	return corner_in(screen, shown).end.y
 
 
 ## Where the Survey shows, by the place's number; Auto while there's no Graphics to keep it.

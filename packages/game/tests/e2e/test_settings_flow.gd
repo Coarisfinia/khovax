@@ -944,7 +944,30 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		var width: float = menu.settings.rows_width()
 		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
 			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
+		var problem: String = _open_button_placed(menu, screen)
+		if not problem.is_empty():
+			return problem
 	return _menu_credits(menu)
+
+
+## The open button stands at the top's middle on a landscape screen, and on a screen held upright
+## below the quest card and the Survey's top corner, which leave it no room between them (#1465).
+func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
+	var button: Button = menu.open_button()
+	var top: float = GameMenu.MARGIN
+	if screen.y > screen.x:
+		var above: float = maxf(menu.survey.top_corner_bottom(screen), menu.quest_list.bottom())
+		if above <= GameMenu.MARGIN:
+			return "neither the Survey's corner nor a quest card stands at the top to test against"
+		top = above + GameMenu.MARGIN
+	var middle: float = button.position.x + button.size.x / 2.0
+	if not is_equal_approx(button.position.y, top) or not is_equal_approx(middle, screen.x / 2.0):
+		return "the open button is at %s on a %s screen, not centred at %d from the top" % [
+			button.position,
+			screen,
+			top,
+		]
+	return ""
 
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's

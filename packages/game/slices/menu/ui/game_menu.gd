@@ -2,8 +2,10 @@ class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it, gameplay
 ## first, then system (_build_sheet). The `menu` action (Escape, a controller's Start, #779) opens
-## and closes it, and on touch screens a small button does, showing the glyph of that key or button
-## while a keyboard or a controller is in use there (#1192); the close button at its top right and
+## and closes it, and on touch screens a small button does, at the top's middle, or below the quest
+## card and the Survey's top corner on a screen held upright (#1465), showing the glyph of that key
+## or button while a keyboard or a controller is in use there (#1192); the close button at its top
+## right and
 ## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While a carried monster has a knot of its development web to take (KnotMark, #1443), that button
 ## shows on every device, saying so in words and with the knot's shape in place of its own icon:
@@ -67,9 +69,10 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## Who keeps the quests the Quests tab shows. The Character tab shows the profile the driver
-## holds.
-@export var quest_keeper: QuestKeeper
+## The quest card at the top's side, which the open button stays below on a screen held upright;
+## its keeper keeps the quests the Quests tab shows too. The Character tab shows the profile the
+## driver holds.
+@export var quest_list: QuestListView
 
 ## The Character tab.
 var character: CharacterTab
@@ -204,7 +207,9 @@ func step_pause(steps: int) -> String:
 
 
 ## Sizes the text to a screen of `screen` pixels, the open button at the top's middle (tests lay
-## it out for other screens than their own this way).
+## it out for other screens than their own this way). On a screen held upright the quest card and
+## the Survey's corner leave no room between them there, so the button goes below the taller of
+## the two (#1465).
 func lay_out(screen: Vector2) -> void:
 	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 	if font != _font_size:
@@ -225,7 +230,15 @@ func lay_out(screen: Vector2) -> void:
 	quests_tab().fit(width)
 	controls_tab().fit(width)
 	_open_button.size = Vector2.ZERO
-	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
+	var top: float = MARGIN
+	if screen.y > screen.x:
+		var above: float = 0.0
+		if survey != null:
+			above = survey.top_corner_bottom(screen)
+		if quest_list != null:
+			above = maxf(above, quest_list.bottom())
+		top = maxf(top, above + MARGIN)
+	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, top)
 
 
 ## How far the menu has faded in: 0 while hidden, 1 when fully shown.
@@ -275,7 +288,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
 	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
-	quests_tab_shown.keeper = quest_keeper
+	quests_tab_shown.keeper = quest_list.keeper if quest_list != null else null
 	quests_tab_shown.driver = driver
 	tabs.add_child(quests_tab_shown)
 	# The tabs later slices add, like the codex book (#1174): game/ hands them over as the menu's

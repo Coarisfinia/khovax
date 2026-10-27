@@ -253,6 +253,11 @@ func _lay_out(glide: float) -> void:
 		y += card.size.y + GAP
 
 
+## How far down the screen the cards reach, or 0 while there are none (#1465).
+func bottom() -> float:
+	return position.y + _bottom() - GAP if not order.is_empty() else 0.0
+
+
 ## Where a new card starts: under the last one.
 func _bottom() -> float:
 	var y: float = 0.0
