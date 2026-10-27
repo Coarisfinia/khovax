@@ -30,7 +30,18 @@ from game_shared import log  # noqa: E402
 from lib import connectivity, ground, imported, known  # noqa: E402
 
 # (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
-KNOWN = {}
+KNOWN = {
+    ("mana_pup", "Attack"): 1444,
+    ("mana_pup", "Channel"): 1444,
+    ("mana_pup", "ChannelEnd"): 1444,
+    ("mana_pup", "ChannelStart"): 1444,
+    ("mana_pup", "Faint"): 1444,
+    ("mana_pup", "Feed"): 1444,
+    ("mana_pup", "Hit"): 1444,
+    ("mana_pup", "Idle"): 1444,
+    ("mana_pup", "Sleep"): 1444,
+    ("mana_wolf", "Faint"): 1445,
+}
 
 
 def main():
