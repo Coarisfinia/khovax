@@ -27,9 +27,12 @@ static func share(shift: int) -> int:
 	return Fixed.ONE + shift
 
 
-## A stat (HP, strength) of `value` for its species, shifted by `shift`; at least 1.
+## A stat (HP, strength) of `value` for its species, shifted by `shift`; at least 1, and at most
+## Fixed.MAX_AMOUNT: a leaning raises a species' stat beyond its own, and what scales it next (a
+## special's
+## power, a hit) refuses an amount beyond that.
 static func stat(value: int, shift: int) -> int:
-	return maxi(Fixed.scale(value, share(shift)), 1)
+	return clampi(Fixed.scale(value, share(shift)), 1, Fixed.MAX_AMOUNT)
 
 
 ## The wait `wait` between two strikes, for a companion whose speed is shifted by `shift`: shorter
