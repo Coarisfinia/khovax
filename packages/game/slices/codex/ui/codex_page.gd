@@ -5,9 +5,10 @@ extends Control
 ## Velmarai: *the guild of those who chart*"), its entry, and this machine's player's standing
 ## with it, its current rank only (#484). A species' is its bestiary entry (#1173): its name, the
 ## line saying what its name means, and only what this machine's player has learned about it
-## (BestiaryEntry). A person's (#1005) is their name, its meaning and their entry, under the
-## heading People. A realm's and a place's (#1175), an instance a realm draws, are the same, under
-## the headings Realms and Places. The close button at its top right, `ui_cancel` (Escape,
+## (BestiaryEntry), where selecting a place it was found in turns the page to that place's (#1175).
+## A person's (#1005) is their name, its meaning and their entry, under the heading People. A
+## realm's and a place's (#1175), an instance a realm draws, are the same, under the headings
+## Realms and Places. The close button at its top right, `ui_cancel` (Escape,
 ## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
@@ -86,6 +87,7 @@ func _ready() -> void:
 	entry.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	standing = GameMenu.label("")
 	beast = BestiaryEntry.new()
+	var _turned: int = beast.name_selected.connect(open)
 	for shown: Control in [heading, title, gloss, entry, standing, beast]:
 		_column.add_child(shown)
 	# Only the sheet takes clicks, and only while open: fading out, the page lets them through.

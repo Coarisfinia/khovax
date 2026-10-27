@@ -6,7 +6,12 @@ extends VBoxContainer
 ## they've met one in a fight, its types (each after its family's badge, TypeBadge), its special
 ## attack and two passives by name, and the instances they've come across it in; once they've
 ## dominated one, its lore. What's still to learn is said in words, so the player knows how to learn
-## it.
+## it. The instances a realm draws are links in the habitat line (NameLinks, #1175): selecting one
+## raises `name_selected`, which opens its place's page. They need no `name_shown`: the player met
+## each when they entered it (#1209), which is where they came across the species.
+
+## A place in the habitat line was selected (NameLinks): TextTags.PLACE and its id.
+signal name_selected(kind: String, id: String)
 
 const NOT_SEEN_TEXT: String = "You haven't seen one yet."
 const NOT_MET_TEXT: String = "Fight one to learn its types, abilities and haunts."
@@ -22,6 +27,8 @@ const HABITAT_TEXT: String = "Found in: %s"
 var shown: Array[String] = []
 ## The species' picture, or null while the player hasn't seen one: kept here so tests can read it.
 var picture: SpeciesPicture
+## The habitat line, or null while the entry shows none: kept here so tests can read it.
+var habitat_line: NameLinks
 
 
 ## Shows what `bestiary` (null for nothing learned) knows about `species`.
@@ -31,6 +38,7 @@ func show_species(species: Species, bestiary: Bestiary) -> void:
 		old.queue_free()
 	shown.clear()
 	picture = null
+	habitat_line = null
 	var level: int = bestiary.level_of(species.id) if bestiary != null else 0
 	if level < Bestiary.SEEN:
 		_add_line(NOT_SEEN_TEXT)
@@ -53,9 +61,20 @@ func _show_met(species: Species, habitat: Array[String]) -> void:
 	_add_line(SELF_PASSIVE_TEXT % _ability_name(species.self_passive))
 	var places: Array[String] = []
 	for where: String in habitat:
-		places.append(where.capitalize())
+		# Only a realm's instance has a place page (TextTags.PLACE); the playground has none.
+		var tagged: bool = Realms.holding(where) != null
+		places.append(TextTags.tag(TextTags.PLACE, where) if tagged else Realms.name_of(where))
 	if not places.is_empty():
-		_add_line(HABITAT_TEXT % ", ".join(places))
+		_add_habitat(HABITAT_TEXT % ", ".join(places))
+
+
+## Adds the habitat line `tagged`, a text with text tags, its places as links.
+func _add_habitat(tagged: String) -> void:
+	habitat_line = NameLinks.new()
+	var _selected: int = habitat_line.name_selected.connect(name_selected.emit)
+	add_child(habitat_line)
+	habitat_line.show_tagged(tagged)
+	shown.append(TextTags.shown(tagged))
 
 
 func _add_line(text: String) -> void:
