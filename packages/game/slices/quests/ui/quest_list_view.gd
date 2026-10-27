@@ -130,7 +130,7 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 			asks = "Go to the " + _words(step.place)
 		QuestStep.ENTERED:
 			if step.enters_instance():
-				asks = "Enter " + place_tagged(step.instance)
+				asks = "Enter " + QuestPill.place_tagged(step.instance)
 			else:
 				asks = "Enter the " + _words(step.piece)
 		QuestStep.ANSWERED:
@@ -156,13 +156,6 @@ static func _answer_line(step: QuestStep) -> String:
 ## player-facing names yet.
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
-
-
-## The instance `id` as a text with text tags: a place's tag where a realm draws it, which has a
-## codex page (TextTags.PLACE, #1175), else its player-facing name (#909, #975) in plain words, a
-## proper noun needing no article ("Lumwen Hoal").
-static func place_tagged(id: String) -> String:
-	return TextTags.tag(TextTags.PLACE, id) if Realms.holding(id) != null else Realms.name_of(id)
 
 
 ## A species' player-facing name (#351), after "a" or "an" by its first letter.

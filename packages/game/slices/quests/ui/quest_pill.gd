@@ -48,7 +48,7 @@ func show_instance(id: String, is_here: bool) -> void:
 		return
 	instance_id = id
 	here = is_here
-	_name.show_tagged(QuestListView.place_tagged(id) if visible else "")
+	_name.show_tagged(place_tagged(id) if visible else "")
 	_arrow.visible = not is_here
 	add_theme_stylebox_override("panel", UiTheme.pill(is_here))
 
@@ -58,7 +58,7 @@ func show_instance(id: String, is_here: bool) -> void:
 func links_on(by_controller: bool) -> void:
 	_name.mouse_filter = Control.MOUSE_FILTER_STOP
 	_name.focusable = by_controller
-	_name.show_tagged(QuestListView.place_tagged(instance_id) if visible else "")
+	_name.show_tagged(place_tagged(instance_id) if visible else "")
 
 
 ## The place's name as the player reads it, "" while hidden. Kept so tests can read it.
@@ -90,3 +90,11 @@ func _draw_arrow() -> void:
 		Vector2(0.0, bottom),
 	])
 	_arrow.draw_colored_polygon(corners, Toon.INK)
+
+
+## The instance `id` as a text with text tags: a place's tag where a realm draws it, which has a
+## codex page (TextTags.PLACE, #1175), else its player-facing name (#909, #975) in plain words, a
+## proper noun needing no article ("Lumwen Hoal"). Here, not in QuestListView, whose card scene
+## holds this pill: the pill naming the list would load in a cycle.
+static func place_tagged(id: String) -> String:
+	return TextTags.tag(TextTags.PLACE, id) if Realms.holding(id) != null else Realms.name_of(id)
