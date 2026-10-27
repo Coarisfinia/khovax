@@ -634,6 +634,14 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 		return "the monsters' rows carry the knot mark %s, not %s" % [tab.monsters.marked, wanted]
 	if mark != null and (mark.get_child(1) as Label).text != KnotMark.TEXT:
 		return "the knot mark doesn't say so in words"
+	if mark != null:
+		# A click on the mark selects its monster, as one on its line does.
+		var click: InputEventMouseButton = InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.pressed = true
+		mark.gui_input.emit(click)
+		if tab.monsters.selected != tab.monsters.shown_ids[0]:
+			return "a click on the knot mark doesn't select its monster"
 	var menu: GameMenu = tab.get_parent().get_parent().get_parent().get_parent() as GameMenu
 	if menu.knot_waits() != waits:
 		return "the menu doesn't see that a carried monster has a knot to take"

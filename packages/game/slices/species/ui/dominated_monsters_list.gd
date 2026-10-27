@@ -152,21 +152,23 @@ func _row(line: String, short_id: String, place: int, with_mark: bool) -> Contro
 	if short_id.is_empty():
 		return text
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	text.mouse_filter = Control.MOUSE_FILTER_STOP
 	# A tap or a click shows it in the detail pane, and so does a controller's focus (#438).
 	text.focus_mode = Control.FOCUS_ALL
 	var _focused: int = text.focus_entered.connect(select.bind(short_id))
-	var _tapped: int = text.gui_input.connect(_on_row_input.bind(short_id))
-	text.set_drag_forwarding(
-		func(_at: Vector2) -> Variant: return short_id,
-		func(_at: Vector2, data: Variant) -> bool: return data is String,
-		func(_at: Vector2, data: Variant) -> void: _dropped(data, place),
-	)
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_child(text)
 	if with_mark:
 		# After its line, so the line trims first on a narrow screen and the mark stays whole.
 		row.add_child(KnotMark.new())
+	# The mark takes a tap, a click or a drag as its line does, so it never leaves a dead spot.
+	for part: Control in row.get_children():
+		part.mouse_filter = Control.MOUSE_FILTER_STOP
+		var _tapped: int = part.gui_input.connect(_on_row_input.bind(short_id))
+		part.set_drag_forwarding(
+			func(_at: Vector2) -> Variant: return short_id,
+			func(_at: Vector2, data: Variant) -> bool: return data is String,
+			func(_at: Vector2, data: Variant) -> void: _dropped(data, place),
+		)
 	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
 	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
 	return row
