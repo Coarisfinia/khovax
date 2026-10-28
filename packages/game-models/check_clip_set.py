@@ -20,6 +20,7 @@ from lib import clip_set
 # Skinned figures that aren't creatures, from the game's folder, each with why.
 NOT_CREATURES = {
     "assets/kaykit-adventurers/Rogue.glb": "the players' and NPCs' humanoid figure, with clips of its own",
+    "assets/tentacle_gate/tentacle_gate.glb": "a gate, a prop of the world that only idles (#1634)",
 }
 
 
