@@ -5,7 +5,7 @@
 	"kind": "player_passive",
 	"name": "Mynu-vynu",
 	"description": "While the ${MONSTER:vynnimu} is out, it keeps close at the player's heels, and they take a little less harm.",
-	"guard": 100, // a tenth of every hit on the player
+	"guard": 100, // a tenth off every hit on the player, rounded down; a hit that lands still deals at least 1 (#702)
 	"codex": {
 		"entry": "The whimper of a pup that keeps close at its packmate's heels. Dominators hummed it to a beast that stays at their side and takes the edge off every blow meant for them.",
 		"gloss": "close, keep close"
