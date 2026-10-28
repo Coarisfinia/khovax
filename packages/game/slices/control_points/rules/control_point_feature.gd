@@ -85,13 +85,31 @@ func _place_totems(state: GameState, commands: Array[Command]) -> void:
 		var command: Command = Command.of(commands, entity.slot)
 		if command == null or command.totem != Command.PLACE_TOTEM:
 			continue
-		var index: int = _ringed_under(state, trail.shared, entity.tile)
-		var needed: Dictionary[Vector2i, bool] = domination.ring_walls(state)
-		if index < 0 or needed.has(entity.tile) or not domination.spend_totem(entity.id):
+		var index: int = _taken_by(state, entity)
+		if index < 0 or not domination.spend_totem(entity.id):
 			continue
-		_take(state, index, entity.id, trail, needed)
+		_take(state, index, entity.id, trail, domination.ring_walls(state))
 		if _side_without_points() != ControlPointSides.NOBODY:
 			return
+
+
+## Whether the player `player_id` placing their totem now would take or ward a control point
+## (#1503, the totem's button asks this too, as its own step does).
+func can_place_totem(state: GameState, player_id: int) -> bool:
+	var player: Entity = state.entity(player_id)
+	return player != null and loser == ControlPointSides.NOBODY and _taken_by(state, player) >= 0
+
+
+## The control point the totem of `player` would take or ward, or -1: they have a charge left and
+## stand on the ring around a point their side hasn't warded, on no wall a domination's ring needs.
+func _taken_by(state: GameState, player: Entity) -> int:
+	var trail: TrailFeature = state.feature(TrailFeature.ID) as TrailFeature
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
+	if trail == null or domination == null or domination.totems.charges_of(player.id) == 0:
+		return -1
+	if domination.ring_walls(state).has(player.tile):
+		return -1
+	return _ringed_under(state, trail.shared, player.tile)
 
 
 ## The player `player_id`'s totem takes the control point at `index` for the players' side and

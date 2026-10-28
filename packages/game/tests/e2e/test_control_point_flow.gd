@@ -149,7 +149,7 @@ func _check_saved() -> String:
 
 ## A ring with a gap around a point takes nothing, and no charge; placing a totem on a closed ring
 ## around the players' own point wards it, spending a charge, and a warded point takes no second
-## totem.
+## totem. The totem's button agrees each time (#1503): faded where the totem takes nothing.
 func _check_warded() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
@@ -157,20 +157,27 @@ func _check_warded() -> String:
 	var own_ring: Array[Vector2i] = _ring(points.points[own])
 	var fort_ring: Array[Vector2i] = _ring(points.points[_inner_point(state, DEFENDERS)])
 	_color(state, fort_ring.slice(0, 5), state.player(0))
+	if FlowSteps.usable(TotemButton.new(), state, 0):
+		return "the totem's button shows usable on a ring with a gap"
 	if _taken(state, _totem(state, 0)) != -1 or _charges(state, 0) != PlaceholderTotems.CHARGES:
 		return "a ring with a gap took a control point or spent a charge"
 	_color(state, own_ring, state.player(1))
+	if not FlowSteps.usable(TotemButton.new(), state, 1):
+		return "the totem's button is faded on a ring around the players' own unwarded point"
 	var warded: int = _taken(state, _totem(state, 1))
 	if warded != own or not points.warded[own] or points.holders[own] != ATTACKERS:
 		return "a totem on a ring around the players' own point didn't ward it"
 	_color(state, own_ring, state.player(1))
+	if FlowSteps.usable(TotemButton.new(), state, 1):
+		return "the totem's button shows usable on a ring around a warded point"
 	if _taken(state, _totem(state, 1)) != -1 or _charges(state, 1) != PlaceholderTotems.CHARGES - 1:
 		return "a warded control point took a second totem"
 	return ""
 
 
 ## A closed ring around the defenders' point takes it for the players' side and wards it, spending
-## one charge; the ring comes off the trail, and the defenders, left without a point, lose.
+## one charge; the ring comes off the trail, and the defenders, left without a point, lose. The
+## totem's button shows usable on that ring (#1503).
 func _check_taken() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
@@ -181,6 +188,8 @@ func _check_taken() -> String:
 		if index != fort and points.holders[index] == DEFENDERS:
 			points.holders[index] = ATTACKERS
 	_color(state, fort_ring, state.player(0))
+	if not FlowSteps.usable(TotemButton.new(), state, 0):
+		return "the totem's button is faded on a closed ring around the defenders' point"
 	var events: Array[RefCounted] = _totem(state, 0)
 	if _taken(
 		state,
