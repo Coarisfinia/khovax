@@ -12,9 +12,9 @@ var needs: Dictionary[String, int] = {}
 ## Reads a recipe file's `needs` object `raw` into this; returns why it can't, or "": at least one
 ## material, each named by its id with a whole count from 1, and never the material it makes.
 func read_needs(raw: Variant) -> String:
-	if not raw is Dictionary or (raw as Dictionary).is_empty():
+	var data: Dictionary = raw if raw is Dictionary else {}
+	if data.is_empty():
 		return "its needs name one or more materials, each with a count"
-	var data: Dictionary = raw
 	for key: Variant in data:
 		var need: String = Content.text_of(key)
 		var count: int = JsonNumbers.whole(data[key], 1, Profile.MAX_NUMBER, 0)
