@@ -54,7 +54,7 @@ func _ready() -> void:
 	_species = species.species
 	_ascensions = species.ascensions
 	_abilities = MonsterDetails.all_ability_names()
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
 	_show([NONE_TEXT], [])
@@ -153,7 +153,7 @@ func _show(lines: Array[String], ids: Array[String], marks: Array[bool] = []) ->
 ## A monster's row: its line, which can be dragged onto another row, the knot mark below it if
 ## `with_mark`, and its up and down buttons. Without a monster (`short_id` ""), the line alone.
 func _row(line: String, short_id: String, place: int, with_mark: bool) -> Control:
-	var text: Label = GameMenu.label(line)
+	var text: Label = MenuWidgets.label(line)
 	if short_id.is_empty():
 		return text
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -181,8 +181,8 @@ func _row(line: String, short_id: String, place: int, with_mark: bool) -> Contro
 			func(_at: Vector2, data: Variant) -> bool: return data is String,
 			func(_at: Vector2, data: Variant) -> void: _dropped(data, place),
 		)
-	row.add_child(GameMenu.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
-	row.add_child(GameMenu.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
+	row.add_child(MenuWidgets.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
+	row.add_child(MenuWidgets.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
 	return row
 
 

@@ -327,4 +327,7 @@ func _size_buttons() -> void:
 		button.custom_minimum_size.y = _font_size * BUTTON_FONTS
 	var side: float = _font_size * BUTTON_FONTS
 	_leave.custom_minimum_size = Vector2(side, side)
-	_leave.add_theme_constant_override("icon_max_width", roundi(_font_size * GameMenu.ICON_FONTS))
+	_leave.add_theme_constant_override(
+		"icon_max_width",
+		roundi(_font_size * MenuWidgets.ICON_FONTS),
+	)

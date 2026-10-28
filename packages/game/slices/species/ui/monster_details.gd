@@ -41,12 +41,12 @@ var _short_id: String = ""
 
 
 func _ready() -> void:
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	_lines = VBoxContainer.new()
 	add_child(_lines)
-	ascend_button = GameMenu.button(ASCEND_TEXT, func() -> void: ascend_chosen.emit(_short_id))
+	ascend_button = MenuWidgets.button(ASCEND_TEXT, func() -> void: ascend_chosen.emit(_short_id))
 	add_child(ascend_button)
-	_notice = GameMenu.label("")
+	_notice = MenuWidgets.label("")
 	add_child(_notice)
 	show_monster(null, null, {})
 
@@ -111,7 +111,7 @@ func show_monster(
 	if lines == shown:
 		return
 	shown = lines
-	GameMenu.show_lines(_lines, lines)
+	MenuWidgets.show_lines(_lines, lines)
 	if monster != null and species != null:
 		_badge_types(species.types)
 

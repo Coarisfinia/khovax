@@ -22,7 +22,7 @@ func _ready() -> void:
 	if not species.problem.is_empty():
 		push_warning("the species can't be read, so Might counts no monsters: " + species.problem)
 	_species = species.species
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	_lines = VBoxContainer.new()
 	add_child(_lines)
 	refresh()
@@ -46,4 +46,4 @@ func refresh() -> void:
 	if lines == shown:
 		return
 	shown = lines
-	GameMenu.show_lines(_lines, lines)
+	MenuWidgets.show_lines(_lines, lines)

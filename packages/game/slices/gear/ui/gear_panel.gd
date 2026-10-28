@@ -41,10 +41,10 @@ func _ready() -> void:
 	if not content.problem.is_empty():
 		push_warning("the gear can't be read, so gear shows its ids: " + content.problem)
 	_items = content.items
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	for slot: String in GearSlots.SLOTS:
 		_add_slot(slot)
-	_note = GameMenu.label("")
+	_note = MenuWidgets.label("")
 	add_child(_note)
 	refresh()
 
@@ -57,7 +57,7 @@ func _process(_delta: float) -> void:
 
 ## Adds the row of `slot`: the picture of its gear, then its button.
 func _add_slot(slot: String) -> void:
-	var button: Button = GameMenu.button("", change.bind(slot))
+	var button: Button = MenuWidgets.button("", change.bind(slot))
 	button.icon = ICONS[slot]
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -71,7 +71,7 @@ func _add_slot(slot: String) -> void:
 
 ## Sizes the slots' icons for text of `font` pixels, a little larger than the text.
 func fit(font: int) -> void:
-	var width: int = roundi(font * GameMenu.ICON_FONTS)
+	var width: int = roundi(font * MenuWidgets.ICON_FONTS)
 	for slot: String in buttons:
 		buttons[slot].add_theme_constant_override("icon_max_width", width)
 

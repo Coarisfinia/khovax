@@ -56,9 +56,6 @@ const KNOT_TEXT: String = "Menu: " + KnotMark.TEXT
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
 const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
 const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
-## How wide the menu's icons are, in font sizes: a little larger than the text, so they read as
-## clearly.
-const ICON_FONTS: float = 1.3
 ## The close button's words on hover: it shows only its icon, and its glyph the key (#583).
 const CLOSE_TIP: String = "Close the menu"
 const CLOSE_NAME: String = "Close"
@@ -103,7 +100,7 @@ func _ready() -> void:
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	var more_tabs: Array[Node] = get_children()
-	_open_button = _with_icon(button(OPEN_TEXT, toggle), OPEN_ICON)
+	_open_button = MenuWidgets.with_icon(MenuWidgets.button(OPEN_TEXT, toggle), OPEN_ICON)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
@@ -130,49 +127,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _open:
 		# The game's own keys rest while the menu is open; the Survey tab took the zoom's first.
 		get_viewport().set_input_as_handled()
-
-
-## A label with `text` on one line, cut short with an ellipsis rather than wrapped: a wrapped
-## label's height depends on a width its container only gives it later, so the menu's size would
-## lag.
-static func label(text: String) -> Label:
-	var made: Label = Label.new()
-	made.text = text
-	made.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	made.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	return made
-
-
-## Replaces what `box` shows with one label per line of `lines`. The old labels leave it at once,
-## so it never shows both.
-static func show_lines(box: Container, lines: Array[String]) -> void:
-	for old: Node in box.get_children():
-		box.remove_child(old)
-		old.queue_free()
-	for line: String in lines:
-		box.add_child(label(line))
-
-
-## A button saying `text` that calls `pressed`.
-static func button(text: String, pressed: Callable) -> Button:
-	var made: Button = Button.new()
-	made.text = text
-	var _connected: int = made.pressed.connect(pressed)
-	return made
-
-
-## A button showing only the icon `shown` (#459), with `tip` as its words on hover, that calls
-## `pressed`.
-static func icon_button(shown: Texture2D, tip: String, pressed: Callable) -> Button:
-	var made: Button = _with_icon(button("", pressed), shown)
-	made.tooltip_text = tip
-	return made
-
-
-## Gives `made` the icon `shown`, beside its text, if any; lay_out sizes it with the font.
-static func _with_icon(made: Button, shown: Texture2D) -> Button:
-	made.icon = shown
-	return made
 
 
 func is_open() -> bool:
@@ -229,7 +183,7 @@ func lay_out(screen: Vector2) -> void:
 		theme.default_font_size = font
 		_size_buttons(self)
 		# Every button's icon in the menu, those of rows it builds later too (#584).
-		theme.set_constant("icon_max_width", "Button", roundi(font * ICON_FONTS))
+		theme.set_constant("icon_max_width", "Button", roundi(font * MenuWidgets.ICON_FONTS))
 		character.fit(font)
 	# The close button stands beside the tabs, so they have its width less.
 	var room: float = screen.x - 4.0 * MARGIN - font * BUTTON_FONTS
@@ -335,7 +289,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_child(CONTROLS_TAB.instantiate())
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
-	var close: Button = icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
+	var close: Button = MenuWidgets.icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
 	close.name = CLOSE_NAME
 	var _glyph: ActionGlyph = ActionGlyph.badge(close, &"ui_cancel")
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN

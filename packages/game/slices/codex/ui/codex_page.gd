@@ -81,14 +81,14 @@ func _ready() -> void:
 	var middle: CenterContainer = CenterContainer.new()
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_column = VBoxContainer.new()
-	heading = GameMenu.label(LEXICON_TEXT)
-	title = GameMenu.label("")
+	heading = MenuWidgets.label(LEXICON_TEXT)
+	title = MenuWidgets.label("")
 	gloss = RichTextLabel.new()
 	gloss.bbcode_enabled = true
 	gloss.fit_content = true
 	entry = Label.new()
 	entry.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	standing = GameMenu.label("")
+	standing = MenuWidgets.label("")
 	beast = BestiaryEntry.new()
 	var _turned: int = beast.name_selected.connect(open)
 	for shown: Control in [heading, title, gloss, entry, standing, beast]:
@@ -98,7 +98,7 @@ func _ready() -> void:
 		passive.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	middle.add_child(_column)
 	row.add_child(middle)
-	close_button = GameMenu.button("", close)
+	close_button = MenuWidgets.button("", close)
 	close_button.icon = GameMenu.CLOSE_ICON
 	close_button.tooltip_text = CLOSE_TIP
 	close_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -258,7 +258,7 @@ func lay_out(screen: Vector2) -> void:
 		close_button.custom_minimum_size = Vector2(side, side)
 		close_button.add_theme_constant_override(
 			"icon_max_width",
-			roundi(font * GameMenu.ICON_FONTS),
+			roundi(font * MenuWidgets.ICON_FONTS),
 		)
 	var room: float = screen.x - 4.0 * MARGIN - font * GameMenu.BUTTON_FONTS
 	_column.custom_minimum_size.x = minf(font * WIDTH_FONTS, room)

@@ -43,7 +43,7 @@ func _ready() -> void:
 	if not content.problem.is_empty():
 		push_warning("the factions can't be read, so their ranks aren't named: " + content.problem)
 	_factions = content.factions
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
 	# No rows until it's shown (_process): showing a row meets its faction (#1447), which a row
