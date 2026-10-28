@@ -3,12 +3,12 @@ extends ScrollContainer
 ## The codex book (#1174): the menu's Codex tab, listing every entry the player has unlocked, a
 ## section for each kind of name under its own heading (SECTIONS), each entry's name a button that
 ## opens its page (CodexPage) over the menu, by a click, a tap, or a controller's A on it. A
-## faction, a person, a realm or a place is unlocked once the player has met its name
-## (CodexKeeper), a faction also once they have a standing with it, and a species once they have
-## seen it (BestiaryKeeper). The book only reads them, keeps up with them while shown, and scrolls
-## when the screen is too short for every entry. Its layout lives in its
-## scene, codex_book.tscn (#437); the menu shows it among its gameplay tabs, as game/ hands it over
-## (a child of the menu's node).
+## faction, a person, a realm, a place or a unique item is unlocked once the player has met its
+## name (CodexKeeper; a unique item's once they've held it, UniqueItemTie, #1449), a faction also
+## once they have a standing with it, and a species once they have seen it (BestiaryKeeper). The
+## book only reads them, keeps up with them while shown, and scrolls when the screen is too short
+## for every entry. Its layout lives in its scene, codex_book.tscn (#437); the menu shows it among
+## its gameplay tabs, as game/ hands it over (a child of the menu's node).
 
 ## Each kind's section, in the order shown: its kind's word (TextTags) and its heading. A kind that
 ## gets a codex page gets its section here.
@@ -18,6 +18,7 @@ const SECTIONS: Dictionary[String, String] = {
 	TextTags.PERSON: CodexPage.PEOPLE_TEXT,
 	TextTags.REALM: CodexPage.REALMS_TEXT,
 	TextTags.PLACE: CodexPage.PLACES_TEXT,
+	TextTags.UNIQUE_ITEM: CodexPage.UNIQUE_ITEMS_TEXT,
 }
 const NONE_TEXT: String = "No names met yet"
 
@@ -64,9 +65,9 @@ func entry_button(kind: String, id: String) -> Button:
 
 
 ## The ids of the kind `kind` unlocked, in the order of their names: a faction's, a person's, a
-## realm's or a place's once met, a faction's also once the player has a standing with it, a
-## species' once seen (the bestiary, #1173). A name that stands for nothing (its content is gone)
-## is left out.
+## realm's, a place's or a unique item's once met, a faction's also once the player has a standing
+## with it, a species' once seen (the bestiary, #1173). A name that stands for nothing (its content
+## is gone) is left out.
 func _unlocked(kind: String) -> Array[String]:
 	var ids: Array[String] = []
 	if keeper == null:

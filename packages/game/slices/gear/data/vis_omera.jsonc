@@ -1,10 +1,15 @@
 // The first unique item (#617): a ward charm, bound to the player who holds it (#291). In the ward
 // slot, it keeps the passives of every monster they carry on, out or not. Its name is Rune-speech
-// (#909): Vis, the ward rune, then its own name, round for a charm.
+// (#909): Vis, the ward rune, then its own name, round for a charm. Its codex page (#1449) opens
+// once the player has held it.
 {
 	"id": "vis_omera",
 	"name": "Vis'omera",
 	"slot": "ward",
 	"rarity": "bound",
-	"keeps_passives": true
+	"keeps_passives": true,
+	"codex": {
+		"entry": "A ward charm that binds itself to whoever holds it. Worn in the ward slot, it keeps every monster its bearer carries close, so their passives help even while they wait in reserve, as long as they still stand. The name is Rune-speech, the tongue of unique things: the ward rune Vis, then omera, the charm's own name.",
+		"gloss": "the ward that keeps them near"
+	}
 }

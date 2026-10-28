@@ -8,9 +8,9 @@ extends Control
 ## (BestiaryEntry), where selecting a place it was found in turns the page to that place's (#1175).
 ## A person's (#1005) is their name, its meaning and their entry, under the heading People. A
 ## realm's and a place's (#1175), an instance a realm draws or a variant's region of its own
-## (#1448), are the same, under the headings Realms and Places. The close button at its top right,
-## `ui_cancel` (Escape,
-## or a controller's B) and the `menu` action close it, and the focus goes back to where it was.
+## (#1448), are the same, under the headings Realms and Places, and so is a unique item's (#1449),
+## under the heading Unique items. The close button at its top right, `ui_cancel` (Escape, or a
+## controller's B) and the `menu` action close it, and the focus goes back to where it was.
 ## While it's open the game hears no input, as under the menu, but it doesn't pause: reading a
 ## dialog's line doesn't either. It eases in and out, never snaps, and its text grows with the
 ## screen. The codex book (CodexBook, #1174) opens it over the menu, which stays open under it.
@@ -24,6 +24,8 @@ const PEOPLE_TEXT: String = "People"
 ## The page's heading over a realm's name, and over a place's (#1175).
 const REALMS_TEXT: String = "Realms"
 const PLACES_TEXT: String = "Places"
+## The page's heading over a unique item's name (#1449).
+const UNIQUE_ITEMS_TEXT: String = "Unique items"
 ## The standing line: neutral, or the standing with its sign and the rank the faction names it.
 const NEUTRAL_TEXT: String = "Your standing: neutral"
 const STANDING_TEXT: String = "Your standing: %+d, %s"
@@ -122,6 +124,7 @@ func open(kind: String, id: String) -> bool:
 	var faction: Faction = FactionContent.cached().factions.get(id)
 	var species: Species = SpeciesContent.cached().species.get(id)
 	var person: Person = PeopleContent.cached().people.get(id)
+	var item: GearItem = GearContent.cached().items.get(id)
 	var shown: bool = false
 	if kind == TextTags.FACTION:
 		shown = _show_faction(faction)
@@ -133,6 +136,8 @@ func open(kind: String, id: String) -> bool:
 		shown = _show_realm(Realms.named(id))
 	elif kind == TextTags.PLACE:
 		shown = _show_place(id)
+	elif kind == TextTags.UNIQUE_ITEM:
+		shown = _show_unique_item(item)
 	if not shown:
 		push_warning("%s %s has no codex page" % [kind, id])
 		return false
@@ -195,6 +200,15 @@ func _show_place(id: String) -> bool:
 	)
 	_show_name(PLACES_TEXT, Realms.name_of(id), codex[1])
 	entry.text = codex[0]
+	return true
+
+
+## Shows the unique item `item`'s page (#1449); whether there is one: other gear has none.
+func _show_unique_item(item: GearItem) -> bool:
+	if item == null or not item.is_unique():
+		return false
+	_show_name(UNIQUE_ITEMS_TEXT, TextTags.shown(item.name), item.codex[1])
+	entry.text = item.codex[0]
 	return true
 
 

@@ -5,6 +5,8 @@ extends RefCounted
 ## lists them under "People" (#1005), and its second line the Amvrel Velmarai's, which lists the
 ## guild under "Lexicon", and the realm Ardvaun's, listed under "Realms" (#1175); a species seen is
 ## listed under "Bestiary" (#1173), and a place met under "Places", whose entry opens its page.
+## Holding a unique item for the first time lists it under "Unique items" (#1449), and its entry
+## opens its page: its name, what it means and its entry.
 ## Entering a place a realm draws meets its name and its realm's, and a corrupted variant's name
 ## too while it's corrupted (#1448); the playground, which no realm draws, meets nothing. The
 ## names met are kept
@@ -19,6 +21,7 @@ const ENTERING_PROFILE: String = "user://test_codex_entering_profile.json"
 const GREETING: String = "teska_na_amvrel_greeting"
 const GUILD: String = "amvrel_velmarai"
 const SCOUT: String = "teska_na_amvrel"
+const UNIQUE_ITEM: String = "vis_omera"
 const SCREEN: Vector2i = Vector2i(1152, 648)
 
 
@@ -36,6 +39,8 @@ func run(tree: SceneTree) -> String:
 		result = await _meet_the_guild(tree, main, book)
 	if result.is_empty():
 		result = _see_a_species(main, book)
+	if result.is_empty():
+		result = await _hold_unique_item(tree, main, book)
 	if result.is_empty():
 		result = await _open_from_book(tree, main, driver, menu, book)
 	if result.is_empty():
@@ -128,6 +133,43 @@ static func _see_a_species(main: Node, book: CodexBook) -> String:
 		"Lumwen Hoal",
 	]
 	return "" if rows == expected else "the book showed %s" % [rows]
+
+
+## Owning a unique item meets its name once a frame has passed, which lists it last, under
+## "Unique items" (#1449); its page shows its name, what it means and its entry, with no standing.
+## Owning other gear meets nothing.
+static func _hold_unique_item(tree: SceneTree, main: Node, book: CodexBook) -> String:
+	var keeper: CodexKeeper = main.get_node("CodexKeeper") as CodexKeeper
+	var owned: Dictionary[String, int] = FlowGame.holder(main).keeper.profile.gear.owned
+	await tree.process_frame
+	if keeper.has_met(TextTags.UNIQUE_ITEM, UNIQUE_ITEM):
+		return "Vis'omera was met before the player held it"
+	owned["warding_charm"] = 1
+	owned[UNIQUE_ITEM] = 1
+	await tree.process_frame
+	if keeper.met_ids(TextTags.UNIQUE_ITEM) != [UNIQUE_ITEM]:
+		return "holding Vis'omera met %s" % [keeper.met_ids(TextTags.UNIQUE_ITEM)]
+	book.refresh()
+	var rows: Array[String] = []
+	for row: Node in book.get_node("Middle/Rows").get_children():
+		rows.append(str(row.get("text")))
+	if rows.slice(-2) != [CodexPage.UNIQUE_ITEMS_TEXT, "Vis'omera"]:
+		return "the book showed %s after holding Vis'omera" % [rows]
+	var page: CodexPage = main.get_node("Hud/CodexPage") as CodexPage
+	tree.call("expect_warning", "UNIQUE_ITEM warding_charm has no codex page")
+	if page.open(TextTags.UNIQUE_ITEM, "warding_charm"):
+		return "a piece of gear that isn't unique has a codex page"
+	if not page.open(TextTags.UNIQUE_ITEM, UNIQUE_ITEM):
+		return "Vis'omera has no codex page"
+	var gloss: String = page.gloss.get_parsed_text()
+	page.close()
+	if (page.heading.text != CodexPage.UNIQUE_ITEMS_TEXT
+			or page.title.text != "Vis'omera"
+			or gloss != "Vis'omera: the ward that keeps them near"
+			or not page.entry.text.begins_with("A ward charm")
+			or page.standing.visible):
+		return "Vis'omera's page showed %s, %s" % [page.title.text, gloss]
+	return ""
 
 
 ## With the menu open on the book, A on the guild's entry opens its page and B closes it; a click
