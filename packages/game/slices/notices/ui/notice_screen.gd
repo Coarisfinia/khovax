@@ -5,7 +5,9 @@ extends Control
 ## or keeps them from walking, and it can tell them of something that happened out of their sight,
 ## like a guide who went ahead without them (GuideNoticeTie). A notice shown while another is up
 ## takes its place. Its text tags show the names they stand for (#733), and its text grows with the
-## screen. Its layout lives in notice_screen.tscn.
+## screen. It stays clear of the menu's open button at the top (GameMenu.open_button), which shows
+## on touch screens and while a knot waits: below it whenever it shows and they'd meet. Its layout
+## lives in notice_screen.tscn.
 
 ## How long the card takes to ease in and out, and how long it stays in between.
 const FADE_SECONDS: float = 0.4
@@ -18,6 +20,9 @@ const TITLE_SCALE: float = 1.15
 ## How wide the card is at most, in font sizes, and at most the screen's width less the margins.
 const WIDTH_FONTS: float = 22.0
 const MARGIN: float = SurveyChoice.MARGIN
+
+## The menu, whose open button the notice keeps clear of; none in tests that build it alone.
+@export var menu: GameMenu
 
 var _shown: Tween
 var _font_size: int = 0
@@ -67,7 +72,13 @@ func shown_text() -> String:
 	return _text.text
 
 
-## Sizes the text to a screen of `screen` pixels and keeps the card at its top's middle.
+## Where the card is on screen now.
+func card_rect() -> Rect2:
+	return _card.get_rect()
+
+
+## Sizes the text to a screen of `screen` pixels and keeps the card at its top's middle, below the
+## menu's open button when that shows there.
 func _fit(screen: Vector2) -> void:
 	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 	if font != _font_size:
@@ -77,4 +88,18 @@ func _fit(screen: Vector2) -> void:
 	var width: float = minf(font * WIDTH_FONTS, screen.x - 2.0 * MARGIN)
 	_card.custom_minimum_size.x = width
 	_card.size = Vector2(width, 0.0)
-	_card.position = Vector2((screen.x - width) / 2.0, MARGIN)
+	var left: float = (screen.x - width) / 2.0
+	_card.position = Vector2(left, _top(left, left + width))
+
+
+## The card's top between `left` and `right`: under the menu's open button when it shows over any
+## of that width, else at the margin.
+func _top(left: float, right: float) -> float:
+	var button: Button = menu.open_button() if menu != null else null
+	if button == null or not button.is_visible_in_tree():
+		return MARGIN
+	var covered: Rect2 = GameMenu.with_badge(button)
+	covered.position += button.position
+	if covered.end.x <= left or covered.position.x >= right:
+		return MARGIN
+	return covered.end.y + MARGIN

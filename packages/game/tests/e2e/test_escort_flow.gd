@@ -8,7 +8,8 @@ extends RefCounted
 ## there and open it. Either way the rules raise that the guide went ahead for the player who left.
 ## The player who left is told (#1589): a short notice at the top of their screen shows the guide's
 ## name and the guide's own line from their content, then eases out on its own; a guide went ahead
-## for another player tells this one nothing, and a guide with no line says the plain one.
+## for another player tells this one nothing, and a guide with no line says the plain one. It sits
+## below the menu's open button while that shows.
 ## A seal on a tile anyone walks, one whose person the region piece doesn't place, or one its guide
 ## can't walk to, is refused.
 
@@ -55,6 +56,8 @@ static func _told(tree: SceneTree) -> String:
 	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
 	var result: String = _notice_follows(driver, notice)
 	if result.is_empty():
+		result = await _clear_of_menu(tree, main.get_node("Hud/GameMenu") as GameMenu, notice)
+	if result.is_empty():
 		var shown_for: float = NoticeScreen.SHOW_SECONDS + 2.0 * NoticeScreen.FADE_SECONDS
 		await tree.create_timer(shown_for + 0.5).timeout
 		if notice.is_showing():
@@ -63,6 +66,18 @@ static func _told(tree: SceneTree) -> String:
 	await tree.process_frame
 	SaveStore.remove(PROFILE)
 	return result
+
+
+## While the menu's open button shows at the top's middle (a knot waits), the notice sits below it.
+static func _clear_of_menu(tree: SceneTree, menu: GameMenu, notice: NoticeScreen) -> String:
+	var waited: bool = menu.knot_waits()
+	menu.show_knot(true)
+	await tree.process_frame
+	await tree.process_frame
+	var button: Button = menu.open_button()
+	var below: bool = notice.card_rect().position.y >= button.position.y + button.size.y
+	menu.show_knot(waited)
+	return "" if below else "the notice sat under the menu's open button: %s" % notice.card_rect()
 
 
 static func _notice_follows(driver: GameDriver, notice: NoticeScreen) -> String:

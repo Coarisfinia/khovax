@@ -474,7 +474,8 @@ survey = NodePath("../../SurveyChoice")
 input = NodePath("../../LocalInput")
 driver = NodePath("../../Driver")
 
-[node name="NoticeScreen" parent="Hud" instance=ExtResource("69_notice")]
+[node name="NoticeScreen" parent="Hud" node_paths=PackedStringArray("menu") instance=ExtResource("69_notice")]
+menu = NodePath("../GameMenu")
 
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_list") unique_id=3550355035]
 layout_mode = 3
