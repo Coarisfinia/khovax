@@ -59,6 +59,8 @@ REACH = 0.12
 # BLEED_WEIGHT or more of each, farther than REACH from both chains' starts: next to a fork, mixed
 # weights only smooth the joint.
 BLEED, BLEED_WEIGHT = 0.2, 0.1
+# How long (seconds) Blender may take before the report gives up on it: far above a large download's.
+TIMEOUT = 300
 
 
 # What the report finds left to do, printed last as its verdict.
@@ -107,6 +109,8 @@ def read_glb(path):
 
 
 def image_bytes(gltf, binary, index):
+    if index is None:  # a texture whose source sits in an extension (WebP, Basis)
+        return None
     image = gltf["images"][index]
     if "bufferView" not in image:
         return None
@@ -118,7 +122,7 @@ def image_bytes(gltf, binary, index):
 def image_info(data):
     """The image's format, size and the metadata blocks it carries (EXIF, XMP, C2PA, comments)."""
     if data is None:
-        return "external", None, []
+        return "not embedded", None, []
     if data[:8] == b"\x89PNG\r\n\x1a\n":
         width, height = struct.unpack_from(">II", data, 16)
         meta, offset = [], 8
@@ -514,6 +518,8 @@ def report_rig(mesh, positions, low, high):
         armature.name, len(armature.data.bones), len(found), weighted.sum(), len(positions),
         "no clips" if not bpy.data.actions else "%d clips" % len(bpy.data.actions)))
     out("  chain                      bones  bones z    moves  centroid             z range     flag")
+    strong = weight >= BLEED_WEIGHT
+    away = np.stack([np.linalg.norm(positions - heads[0], axis=1) > REACH * tall for heads, _tails in segments], axis=1)
     flagged = 0
     for number, chain in enumerate(found):
         mine = owner == number
@@ -531,10 +537,9 @@ def report_rig(mesh, positions, low, high):
         for other in range(len(found)):
             if other == number:
                 continue
-            shared = ((weight[:, number] >= BLEED_WEIGHT) & (weight[:, other] >= BLEED_WEIGHT)
-                      & (np.linalg.norm(positions - segments[number][0][0], axis=1) > REACH * tall)
-                      & (np.linalg.norm(positions - segments[other][0][0], axis=1) > REACH * tall))
-            if shared.sum() >= BLEED * min(mine.sum(), max((owner == other).sum(), 1)):
+            shared = strong[:, number] & strong[:, other] & away[:, number] & away[:, other]
+            smaller = min(mine.sum(), (owner == other).sum())
+            if smaller and shared.sum() >= BLEED * smaller:
                 flags.append("BLEEDS with %s: %d vertices, z %s..%s" % (
                     found[other][0].name, shared.sum(), num(positions[shared, 2].min()), num(positions[shared, 2].max())))
         flagged += bool(flags)
@@ -573,7 +578,12 @@ def main():
         return 2
     command = [sys.executable, os.path.join(HERE, "blender.py"), "--background", "--factory-startup",
                "--python", os.path.abspath(__file__), "--", os.path.abspath(sys.argv[1])]
-    run = subprocess.run(command, capture_output=True, text=True)
+    try:
+        run = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                             timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        print("inspect_meshy.py: Blender didn't finish within %d s" % TIMEOUT, file=sys.stderr)
+        return 1
     lines = [line[len(PREFIX):] for line in run.stdout.splitlines() if line.startswith(PREFIX)]
     print("\n".join(lines))
     if run.returncode != 0:
