@@ -427,6 +427,27 @@ func _check_hold_walk() -> String:
 	return ""
 
 
+## A click dragged past a click's reach and let go before the next frame is no click: the walk to
+## its tile, two steps away, stops before its first step.
+func _check_drag_let_go_at_once() -> String:
+	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
+	var target: Vector2i = _tap_target()
+	picker.wild_view.visible = false
+	_place(Vector2i.ZERO)
+	var press: InputEventMouseButton = _click_on(picker, target)
+	picker._unhandled_input(press)
+	var drag: InputEventMouseMotion = InputEventMouseMotion.new()
+	drag.position = press.position + Vector2(FocusPicker.TAP_PIXELS * 4.0, 0.0)
+	picker._input(drag)
+	press.pressed = false
+	picker._input(press)
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 3 + 2)
+	picker.wild_view.visible = true
+	if _tile() == target or _driver.input.tap_walk.walking:
+		return "a click dragged off and let go before the next frame still walked to its tile"
+	return ""
+
+
 ## Whether the held left mouse button walks no more once the menu opened and closed over it, until
 ## it's let go with `release`.
 func _check_hold_over_menu(picker: FocusPicker, release: InputEventMouseButton) -> bool:
@@ -936,7 +957,9 @@ func _check_blocked_by_wild_monster() -> String:
 	if not result.is_empty():
 		return "walking toward the wild monster: " + result
 	result = _check_tap_walk()
-	return result if not result.is_empty() else _check_hold_walk()
+	if result.is_empty():
+		result = _check_hold_walk()
+	return result if not result.is_empty() else _check_drag_let_go_at_once()
 
 
 ## Tile kinds (#116): walking right from (0, 0) goes through a forest on (1, 0) and stops there,
