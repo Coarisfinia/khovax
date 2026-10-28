@@ -1829,7 +1829,7 @@ func _check_unique_items() -> String:
 		return "Vis'omera didn't load as a unique item with a codex entry"
 	if charm.codex[1] != "the ward that keeps them near" or not charm.codex[0].begins_with("A "):
 		return "Vis'omera's codex entry reads %s" % [charm.codex]
-	var tags: TextTags = TextTags.load_tags()
+	var tags: TextTags = TextNames.load_tags()
 	if (tags.resolve("${UNIQUE_ITEM:vis_omera}") != "Vis'omera"
 			or tags.problem_in("${UNIQUE_ITEM:warding_charm}").is_empty()):
 		return "the unique item tags name %s" % [tags.names.get(TextTags.UNIQUE_ITEM)]
@@ -1901,7 +1901,7 @@ func _check_command_codes() -> String:
 ## name, #752) names content that exists, and shows its current name;
 ## a tag of an unknown kind, with an id that doesn't exist, or written wrong is refused.
 func _check_text_tags() -> String:
-	var tags: TextTags = TextTags.load_tags()
+	var tags: TextTags = TextNames.load_tags()
 	if not tags.problem.is_empty():
 		return "the text tags' names didn't load: " + tags.problem
 	var texts: Array[String] = []
@@ -1961,10 +1961,10 @@ static func _check_nested_tag(tags: TextTags) -> String:
 ## Text tags whose content can't be read are warned about, and show as written (#949).
 func _check_text_tags_unread(tree: SceneTree) -> String:
 	# The factions' files, read as species, are a species directory that can't be read.
-	TextTags.read_species_from(FactionContent.DIR)
+	TextTags.read_names_with(func() -> TextTags: return TextNames.load_tags(FactionContent.DIR))
 	tree.call("expect_warning", "the text tags' names can't be read")
 	var unread: String = TextTags.shown("${MONSTER:ombulumo}")
-	TextTags.read_species_from(SpeciesContent.DIR)
+	TextNames.wire()
 	if unread != "${MONSTER:ombulumo}":
 		return "a tag shows %s when its content can't be read" % unread
 	return ""

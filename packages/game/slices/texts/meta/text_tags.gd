@@ -29,8 +29,9 @@ const CODEX_KINDS: Array[String] = [FACTION, MONSTER, PERSON, REALM, PLACE, UNIQ
 
 ## The tags read from the game's content, read the first time one is shown.
 static var _shown: TextTags = null
-## Where `shown` reads the species from; the content flow points it at one that can't be read.
-static var _species_directory: String = SpeciesContent.DIR
+## What reads the names `shown` shows, handed in once at start (#1612): the content slices come
+## after this one, so `TextNames` (slices/text_names/) reads them, and game/ hands it in.
+static var _reader: Callable = Callable()
 ## Finds the tags in a text, for `tags_in`.
 static var _finder: RegEx = RegEx.create_from_string(TAG_PATTERN)
 
@@ -41,70 +42,13 @@ var problem: String = ""
 var _pattern: RegEx = RegEx.create_from_string(TAG_PATTERN)
 
 
-## The names every kind of tag shows, read from the content in the given directories.
-static func load_tags(
-	species_directory: String = SpeciesContent.DIR,
-	faction_directory: String = FactionContent.DIR,
-	gear_directory: String = GearContent.DIR,
-	people_directory: String = PeopleContent.DIR,
-) -> TextTags:
-	var tags: TextTags = TextTags.new()
-	var species: SpeciesContent = SpeciesContent.load_species(species_directory)
-	var factions: FactionContent = FactionContent.load_factions(faction_directory)
-	var gear: GearContent = GearContent.load_gear(gear_directory)
-	var people: PeopleContent = PeopleContent.load_people(people_directory)
-	tags.problem = species.problem + factions.problem + gear.problem + people.problem
-	var monsters: Dictionary[String, String] = {}
-	for id: String in species.species:
-		monsters[id] = species.species[id].name
-	var faction_names: Dictionary[String, String] = {}
-	for id: String in factions.factions:
-		faction_names[id] = factions.factions[id].name
-	var gear_names: Dictionary[String, String] = {}
-	var unique_names: Dictionary[String, String] = {}
-	for id: String in gear.items:
-		gear_names[id] = gear.items[id].name
-		if gear.items[id].is_unique():
-			unique_names[id] = gear.items[id].name
-	var person_names: Dictionary[String, String] = {}
-	for id: String in people.people:
-		person_names[id] = people.people[id].name
-	tags.names = {
-		MONSTER: monsters,
-		FACTION: faction_names,
-		GEAR: gear_names,
-		PERSON: person_names,
-		UNIQUE_ITEM: unique_names,
-	}
-	tags.names.merge(_realm_names())
-	return tags
-
-
-## The names of the realms and of the places they draw (#1175), by their kinds' words and ids: an
-## instance a realm draws, and each region of its own that one of its blueprint's variants loads
-## (#1448), such as a corrupted instance.
-static func _realm_names() -> Dictionary[String, Dictionary]:
-	var realm_names: Dictionary[String, String] = {}
-	var place_names: Dictionary[String, String] = {}
-	for realm: Realm in Realms.all():
-		realm_names[realm.id] = Realms.name_of(realm.id)
-		for tile: Vector2i in realm.instances:
-			var instance_name: String = realm.instances[tile]
-			place_names[instance_name] = Realms.name_of(instance_name)
-			var blueprint: Blueprint = InstanceBlueprints.blueprint(instance_name)
-			if blueprint != null:
-				for variant: String in blueprint.variant_codex:
-					place_names[variant] = Realms.name_of(variant)
-	return { REALM: realm_names, PLACE: place_names }
-
-
 ## `text` as the player reads it, every tag in it showing the current name it stands for. The
 ## content's names are read once, the first time: they don't change while the game runs.
 static func shown(text: String) -> String:
 	if not text.contains(TAG_START):
 		return text
 	if _shown == null:
-		_shown = load_tags(_species_directory)
+		_shown = _read_names()
 		# Warned once, when read (#949): every tag then shows as written.
 		if not _shown.problem.is_empty():
 			var why: String = _shown.problem
@@ -122,10 +66,21 @@ static func tags_in(text: String) -> Array[RegExMatch]:
 	return _finder.search_all(text)
 
 
-## Makes `shown` read the species from `directory` the next time a tag is shown.
-static func read_species_from(directory: String) -> void:
-	_species_directory = directory
+## Makes `shown` read its names with `reader`, which returns a TextTags, the next time a tag is
+## shown (#1612).
+static func read_names_with(reader: Callable) -> void:
+	_reader = reader
 	_shown = null
+
+
+## The names `shown` shows, read with the reader handed in; without one, none, and why.
+static func _read_names() -> TextTags:
+	if not _reader.is_valid():
+		var none: TextTags = TextTags.new()
+		none.problem = "no reader of the names was handed in (TextTags.read_names_with)"
+		return none
+	var tags: TextTags = _reader.call()
+	return tags
 
 
 ## `text` with every tag replaced by the name it stands for; a tag that stands for nothing stays as

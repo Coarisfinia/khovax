@@ -43,15 +43,16 @@ from game_shared.git_files import git_files
 SLICE_ORDER: tuple[str, ...] = (
     "emoji_grid", "realms", "camera", "music", "credits", "hiding", "movement", "entering",
     "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons", "triggers",
-    "species", "development", "outbox", "host_settings", "health", "players", "npcs", "trail",
+    "texts", "species", "development", "outbox", "host_settings", "health", "players", "npcs",
+    "trail",
     "wild_monsters", "schedules", "packs", "tiles", "controls",
-    "settings", "texts", "factions",
+    "settings", "factions",
     "survey", "menu", "notices",
     "domination", "control_points", "totems", "enrage", "hunts", "foraging", "domination_loot",
     "companions", "wild_attacks", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",
     "profile", "quests", "revive_items", "crafting", "blueprints", "might", "codex",
-    "move_hint",
+    "move_hint", "text_names",
 )  # fmt: skip
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
 SLICE_EXEMPT: dict[str, int] = {
@@ -63,9 +64,8 @@ SLICE_EXEMPT: dict[str, int] = {
     "loot>menu": 851, "loot>profile": 851,
     "menu>gear": 851, "menu>might": 851, "menu>profile": 851, "menu>quests": 851,
     "settings>damage_numbers": 851, "settings>menu": 851, "settings>survey": 851,
-    "species>menu": 851, "species>profile": 851, "species>texts": 851,
+    "species>menu": 851, "species>profile": 851,
     "survey>quests": 851,
-    "texts>blueprints": 851, "texts>factions": 851, "texts>gear": 851,
 }  # fmt: skip
 
 THIS = "packages/game-checks/import_rules.py"
