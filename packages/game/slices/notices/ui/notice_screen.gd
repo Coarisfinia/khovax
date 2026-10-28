@@ -39,7 +39,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	_fit(get_viewport_rect().size)
+	lay_out(get_viewport_rect().size)
 
 
 ## Shows `text` under `title` (none when ""), both with text tags, easing in, staying SHOW_SECONDS
@@ -78,8 +78,8 @@ func card_rect() -> Rect2:
 
 
 ## Sizes the text to a screen of `screen` pixels and keeps the card at its top's middle, below the
-## menu's open button when that shows there.
-func _fit(screen: Vector2) -> void:
+## menu's open button when that shows there (tests lay it out this way at once).
+func lay_out(screen: Vector2) -> void:
 	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 	if font != _font_size:
 		_font_size = font

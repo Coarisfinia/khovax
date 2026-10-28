@@ -56,7 +56,7 @@ static func _told(tree: SceneTree) -> String:
 	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
 	var result: String = _notice_follows(driver, notice)
 	if result.is_empty():
-		result = await _clear_of_menu(tree, main.get_node("Hud/GameMenu") as GameMenu, notice)
+		result = _clear_of_menu(main.get_node("Hud/GameMenu") as GameMenu, notice)
 	if result.is_empty():
 		var shown_for: float = NoticeScreen.SHOW_SECONDS + 2.0 * NoticeScreen.FADE_SECONDS
 		await tree.create_timer(shown_for + 0.5).timeout
@@ -68,16 +68,23 @@ static func _told(tree: SceneTree) -> String:
 	return result
 
 
-## While the menu's open button shows at the top's middle (a knot waits), the notice sits below it.
-static func _clear_of_menu(tree: SceneTree, menu: GameMenu, notice: NoticeScreen) -> String:
-	var waited: bool = menu.knot_waits()
-	menu.show_knot(true)
-	await tree.process_frame
-	await tree.process_frame
+## While the menu's open button shows at the top's middle (on touch screens, or while a knot
+## waits), the notice sits below it, and back at the top once it's gone.
+static func _clear_of_menu(menu: GameMenu, notice: NoticeScreen) -> String:
 	var button: Button = menu.open_button()
+	var shown: bool = button.visible
+	var screen: Vector2 = notice.get_viewport_rect().size
+	button.visible = true
+	menu.lay_out(screen)
+	notice.lay_out(screen)
 	var below: bool = notice.card_rect().position.y >= button.position.y + button.size.y
-	menu.show_knot(waited)
-	return "" if below else "the notice sat under the menu's open button: %s" % notice.card_rect()
+	button.visible = false
+	notice.lay_out(screen)
+	var back: bool = notice.card_rect().position.y == NoticeScreen.MARGIN
+	button.visible = shown
+	if not below or not back:
+		return "the notice didn't keep clear of the menu's open button: %s" % notice.card_rect()
+	return ""
 
 
 static func _notice_follows(driver: GameDriver, notice: NoticeScreen) -> String:
