@@ -1,4 +1,4 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
+// A placeholder: its effect comes with #1501.
 {
 	"id": "vynnimu_mynu_vynu",
 	"kind": "player_passive",

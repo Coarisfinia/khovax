@@ -16,6 +16,9 @@ extends Feature
 ## the trail (TrailFeature.clear), so a ring drawn beside a wild monster must close before it breaks
 ## open. A hit on a companion or a player comes off their HP at once (HealthFeature.hurt, #455); one
 ## on a companion follows the type chart where the instance has it (TypeEffectivenessFeature, #626).
+## A passive that guards takes its share off every hit on whom it helps (#616), only while its
+## monster is out (CompanionPassives): a self passive off its
+## companion, a player passive off its player. A hit that lands still deals at least 1 (#702).
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -37,6 +40,8 @@ const ID: String = "wild_attacks"
 const STRIKE_TICKS: int = Tuning.WILD_STRIKE_TICKS
 const TILE_INTEGRITY: int = Tuning.TILE_INTEGRITY
 
+## Each passive's guard (Ability.guard), by its id, for the passives that guard.
+var guards: Dictionary[String, int] = {}
 ## The damage each trail tile has taken, by tile; one never hit isn't here.
 var _wear: Dictionary[Vector2i, int] = {}
 ## The trail's feature, which the wear is read against (set in `start`).
@@ -47,6 +52,10 @@ var _companion_at: Dictionary[Vector2i, int] = {}
 var _player_at: Dictionary[Vector2i, int] = {}
 var _ring_walls: Dictionary[Vector2i, bool] = {}
 var _ring_walls_found: bool = false
+
+
+func _init(passive_guards: Dictionary[String, int] = {}) -> void:
+	guards = passive_guards
 
 
 func id() -> String:
@@ -215,6 +224,7 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, dealt)
 		if on_companion:
 			struck = _on_companion(state, struck)
+		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
 		state.events.append(struck)
 		var _fell: bool = health.hurt(state, target_id, struck.damage)
 		return
@@ -241,6 +251,25 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 		TypeEffectivenessFeature.scaled(state, struck.damage, attacker, false, defender),
 		TypeEffectivenessFeature.strong_against(state, attacker, false, defender),
 	)
+
+
+## `damage` on the companion or player `target_id`, less the guards of the passives working for them
+## now (#616): a companion's own, or the player's companion's while it's out. All of them together
+## take off less than a whole hit, and a hit that deals anything deals at least 1 (#702).
+func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	if companions == null or damage == 0 or guards.is_empty():
+		return damage
+	var passives: Array[String] = []
+	if on_companion:
+		passives = CompanionPassives.of_companion(companions, target_id)
+	else:
+		passives = CompanionPassives.of_player(companions, state.entity(target_id).slot)
+	var guard: int = 0
+	for passive: String in passives:
+		guard += guards.get(passive, 0)
+	guard = mini(guard, Fixed.ONE - 1)
+	return maxi(Fixed.scale(damage, Fixed.ONE - guard), 1)
 
 
 ## Adds `damage` to the wear on the trail tile `tile`; whether it's worn through now.

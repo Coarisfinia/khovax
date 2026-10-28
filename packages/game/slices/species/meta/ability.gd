@@ -6,7 +6,8 @@ extends RefCounted
 ## itself. Each species names one of each; what they do comes with the systems that use them. A
 ## special attack is one species' own (owner, #228): no two species share one. A special has a power
 ## and a cooldown (SpecialAttackFeature, #410) and a strike type (TypeEffectivenessFeature, #626),
-## and may be held for some seconds (#1163); a passive has none of them.
+## and may be held for some seconds (#1163); a passive has none of them. A passive works only while
+## its monster is out (#616, CompanionFeature): a passive may guard (`guard`).
 
 const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"
@@ -31,6 +32,10 @@ var cooldown_seconds: int = 0
 var channel_seconds: int = 0
 ## A special's type, from the chart, whatever fits it (owner on #626); "" for a passive.
 var strike_type: String = ""
+## A passive's: the share of every hit it takes off, in thousandths (#616, WildAttackFeature): a
+## self passive's off its own monster, a player passive's off its player, while its monster is out;
+## 0 for none, and for a special.
+var guard: int = 0
 ## Its path mark (#471): PathMark.NONE, HARMONY, SUPREMACY or BOTH.
 var path: String = PathMark.NONE
 ## Why the ability couldn't be read, or "" when it could.
@@ -53,6 +58,7 @@ static func parse(file_id: String, text: String) -> Ability:
 	ability.cooldown_seconds = Content.amount(data.get("cooldown_seconds"))
 	ability.channel_seconds = Content.amount(data.get("channel_seconds"))
 	ability.strike_type = Content.text_of(data.get("strike_type"))
+	ability.guard = Content.amount(data.get("guard"))
 	ability.path = PathMark.read(data)
 	ability.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if ability.problem.is_empty():
@@ -68,8 +74,8 @@ static func parse(file_id: String, text: String) -> Ability:
 	return ability
 
 
-## Why its power, cooldown, strike type and hold don't fit its kind, or "": a special has the first
-## three and may be held, a passive has none.
+## Why its power, cooldown, strike type, hold and guard don't fit its kind, or "": a special has the
+## first three and may be held, a passive has none and may guard, taking off less than a whole hit.
 func _strike_problem(data: Dictionary) -> String:
 	if kind == SPECIAL and (power < 1 or cooldown_seconds < 1):
 		return "a special has a power and a cooldown, whole numbers from 1"
@@ -80,4 +86,6 @@ func _strike_problem(data: Dictionary) -> String:
 	for field: String in ["power", "cooldown_seconds", "strike_type", "channel_seconds"]:
 		if kind != SPECIAL and data.has(field):
 			return "a special has a power, a cooldown and a strike type, a passive none"
+	if data.has("guard") and (kind == SPECIAL or guard < 1 or guard >= Fixed.ONE):
+		return "a passive's guard is whole thousandths from 1 to 999, a special has none"
 	return ""

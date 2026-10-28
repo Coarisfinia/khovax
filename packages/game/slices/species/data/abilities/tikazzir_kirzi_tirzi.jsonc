@@ -1,4 +1,4 @@
-// A placeholder: its effect comes once passives work while the monster is out (#616).
+// A placeholder: its effect comes with #1497.
 {
 	"id": "tikazzir_kirzi_tirzi",
 	"kind": "player_passive",
