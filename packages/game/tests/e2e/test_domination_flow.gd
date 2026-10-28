@@ -1608,9 +1608,10 @@ func _check_guards() -> String:
 		return struck
 	state = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
+	# The party's store is written through its player, so they come first.
+	player = state.add_entity(0, Vector2i(1, 0))
 	for short_id: String in CompanionParty.carried(state, 0):
 		CompanionParty.faint(state, 0, short_id)
-	player = state.add_entity(0, Vector2i(1, 0))
 	_joined = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-3, 0))
 	return _struck_for(strikes, player.id, WEAK_STRENGTH, "the player with none out")
