@@ -5,7 +5,12 @@
 # The reference is the last approved version of the model (a .glb, e.g. from
 # `git show <commit>:packages/game/assets/<name>/<name>.glb`), rendered the same way, or a concept image (.png:
 # its alpha, else everything unlike its corners, is the figure; one view only). `views` is a
-# comma-separated list of front, back, left, right and top (default left,front,top).
+# comma-separated list of front, back, left, right, top and three_quarter (default left,front,top).
+# `three_quarter` is the in-game renders' three-quarter view (`render_in_game.gd`: from the
+# model's front left, from above), the angle generated concept images are usually drawn from.
+# Its camera can be tilted and turned to the image's: `three_quarter:<tilt>[:<turn>]`, in degrees,
+# the tilt above the ground (default 31.7) and the turn from the front towards the model's left
+# (default 45; 90 is the left side), e.g. `three_quarter:20:60`.
 # Per view, a row of the sheet: the reference | ours | the two silhouettes overlaid | both at the
 # in-game size (128 px). It prints and saves (compare.json) the silhouette match (intersection over
 # union of the two silhouettes: a reference model where the shared camera puts it, a reference
@@ -38,10 +43,34 @@ VIEWS = {
 	"right": Vector((-1, 0, 0)),
 	"top": Vector((0, -0.001, 1)),
 }
+# render_in_game.gd's three_quarter, Vector3(0.8, 0.7, 0.8) in Godot's axes (y up, the model
+# facing +z), is (0.8, -0.8, 0.7) in Blender's after the glTF import: tilted 31.7 degrees above the
+# ground, turned 45 degrees from the front towards the model's left.
+THREE_QUARTER = (math.degrees(math.atan2(0.7, math.hypot(0.8, 0.8))), 45.0)
+
+
+def direction(view):
+	"""Where the camera stands, seen from the model, for `view`: a name in VIEWS, or
+	`three_quarter[:<tilt>[:<turn>]]`."""
+	name, *angles = view.split(":")
+	if name in VIEWS and not angles:
+		return VIEWS[name]
+	if name != "three_quarter" or len(angles) > 2:
+		sys.exit("not a view: %r (%s, three_quarter or three_quarter:<tilt>[:<turn>])" % (view, ", ".join(VIEWS)))
+	try:
+		tilt, turn = [float(angle) for angle in angles] + list(THREE_QUARTER[len(angles):])
+	except ValueError:
+		sys.exit("a three_quarter view's tilt and turn are degrees: %r" % view)
+	if not -90 < tilt < 90:
+		sys.exit("a tilt lies between -90 and 90 degrees: %r" % view)
+	tilt, turn = math.radians(tilt), math.radians(turn)
+	return Vector((math.sin(turn) * math.cos(tilt), -math.cos(turn) * math.cos(tilt), math.sin(tilt)))
+
 
 args = sys.argv[sys.argv.index("--") + 1:]
 model_path, reference_path, out_dir = args[0], args[1], args[2]
 views = (args[3] if len(args) > 3 else "left,front,top").split(",")
+directions = {view: direction(view) for view in views}  # checked before Blender loads anything
 reference_is_model = reference_path.lower().endswith((".glb", ".gltf"))
 if not reference_is_model and len(views) != 1:
 	sys.exit("a reference image shows one view: name it, e.g. `left`")
@@ -55,14 +84,16 @@ def load(path):
 	before = set(bpy.data.objects)
 	bpy.ops.import_scene.gltf(filepath=path)
 	added = [obj for obj in bpy.data.objects if obj not in before]
+	shapes = set()  # the importer's bone shape (a hidden icosphere): not the model, so not framed
 	for obj in added:
 		if obj.type == "ARMATURE":
+			shapes.update(bone.custom_shape for bone in obj.pose.bones if bone.custom_shape)
 			if obj.animation_data:
 				obj.animation_data.action = None
 				obj.animation_data.use_nla = False
 			for bone in obj.pose.bones:
 				bone.matrix_basis = Matrix.Identity(4)
-	return [obj for obj in added if obj.type == "MESH"]
+	return [obj for obj in added if obj.type == "MESH" and obj not in shapes]
 
 
 def bounds(meshes):
@@ -94,9 +125,12 @@ def render(meshes, others, view, name):
 		obj.hide_render = True
 	for obj in meshes:
 		obj.hide_render = False
-	camera.location = center + VIEWS[view].normalized() * reach * 4
+	# A slanted camera sees the bounding box's corners spread wider than its longest side: it frames
+	# the whole diagonal, so no part leaves the frame.
+	camera_data.ortho_scale = (reach if view in VIEWS else (hi - lo).length) * 1.1
+	camera.location = center + directions[view].normalized() * reach * 4
 	camera.rotation_euler = (center - camera.location).to_track_quat("-Z", "Y").to_euler()
-	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view)
+	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view.replace(":", "_"))
 	bpy.ops.render.render(write_still=True)
 	return read(scene.render.filepath)
 
@@ -245,7 +279,6 @@ scene.render.resolution_x = scene.render.resolution_y = SIZE
 scene.render.film_transparent = True
 camera_data = bpy.data.cameras.new("compare")
 camera_data.type = "ORTHO"
-camera_data.ortho_scale = reach * 1.1
 camera = bpy.data.objects.new("compare", camera_data)
 scene.collection.objects.link(camera)
 scene.camera = camera

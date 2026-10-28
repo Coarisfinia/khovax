@@ -299,7 +299,9 @@ a second model could use goes into the library or a generic tool, never into one
    --factory-startup --python .claude/skills/model/scripts/compare_sheet.py -- <model.glb>
    <reference> <out_dir> [views]`, the reference being the last approved `.glb` (`git show
    origin/main:packages/game/assets/<name>/<name>.glb > <scratch>/reference.glb`) or, for a new
-   model, its concept image. It writes `compare.png`
+   model, its concept image. A concept image drawn from front three-quarter (as generated ones
+   usually are) is compared in the `three_quarter` view, tilted and turned to the image's angle
+   when it differs: `three_quarter:<tilt>:<turn>` (#1517). It writes `compare.png`
    (reference | ours | overlay | 128 px) and prints the silhouette match and the ten-band width
    profile per view, ending in `COMPARE CHECK: PASS` or `FAIL`. A fail is either a bug or an
    intended change of shape, which the PR names band by band.
