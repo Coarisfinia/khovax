@@ -1,2 +1,2 @@
 // Stone (#1546), a crafting supply that harvesting cracked rock by hand gives.
-{ "id": "stone", "model": "res://assets/kaykit-hexagon/rock_single_B.gltf" }
+{ "id": "stone", "model": "res://assets/quaternius-pebble/pebble.glb" }

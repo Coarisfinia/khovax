@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dtd5xugxj1lr0"
-path="res://.godot/imported/rock_single_B.gltf-9f9ef9805bf793319ca8931253e85c5e.scn"
+uid="uid://cq0t3lto68e2e"
+path="res://.godot/imported/pebble.glb-505d932d49e2da94debc620a520fcdae.scn"
 
 [deps]
 
-source_file="res://assets/kaykit-hexagon/rock_single_B.gltf"
-dest_files=["res://.godot/imported/rock_single_B.gltf-9f9ef9805bf793319ca8931253e85c5e.scn"]
+source_file="res://assets/quaternius-pebble/pebble.glb"
+dest_files=["res://.godot/imported/pebble.glb-505d932d49e2da94debc620a520fcdae.scn"]
 
 [params]
 
