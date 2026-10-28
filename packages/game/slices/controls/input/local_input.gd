@@ -217,12 +217,17 @@ func command(state: GameState) -> Command:
 	return given
 
 
-## The screen-space steering of the player on `tile`: the stick's or the keys' while one is pressed,
-## even two opposite ones that cancel out, else the held left mouse button's (#1567).
+## The screen-space steering of the player on `tile`: the stick's or the keys', also while two
+## opposite ones pressed together cancel out, else the held left mouse button's (#1567). The vector
+## comes first: a slight diagonal stick passes get_vector's round dead zone while neither of its
+## actions counts as pressed.
 func _steering(tile: Vector2i) -> Vector2:
+	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
+	if not vector.is_zero_approx():
+		return vector
 	for action: StringName in MOVE_ACTIONS:
 		if Input.is_action_pressed(action):
-			return Input.get_vector("move_left", "move_right", "move_down", "move_up")
+			return vector
 	return held_walk.steering(tile)
 
 
