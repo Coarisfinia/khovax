@@ -6,8 +6,9 @@ either side of the X axis. A pose's **reach** is the largest projection of any v
 deformed meshes onto those six edge normals, over the hex's inradius: 1.00 touches an edge, below
 it stays inside.
 
-A regular monster keeps 5 % padding inside its hex (`REGULAR`, 0.95); a boss, enraged or stronger
-one may reach 5 % past it (`LARGE`, 1.05): the owner, on #1514."""
+Standing in its rest pose, a regular monster keeps 5 % padding inside its hex and a boss, enraged
+or stronger one may reach 5 % past it (the owner, on #1514); during its clips each may reach 5 %
+further (the owner, on #1533). `REGULAR` and `LARGE` hold the (rest, clips) limits."""
 
 import math
 
@@ -21,8 +22,8 @@ SIZE = 1.0
 INRADIUS = SIZE * math.sqrt(3.0) / 2.0
 # The six edge normals on the ground plane, the first straight ahead (-Y).
 NORMALS = numpy.array([(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(270, 630, 60)])
-REGULAR = 0.95
-LARGE = 1.05
+REGULAR = (0.95, 1.05)
+LARGE = (1.05, 1.10)
 
 
 def meshes(rig, objects):
@@ -50,14 +51,20 @@ def reach(meshes):
     return far / INRADIUS
 
 
-def report(rig, meshes, limit):
-    """For every clip, every frame: the largest reach and the frame it's on. A clip fails past
-    `limit`. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
+def report(rig, meshes, limits):
+    """The reach in the rig's rest pose, then for every clip, every frame: the largest reach and
+    the frame it's on. The rest pose fails past the first of `limits` (rest, clips), a clip past
+    the second. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
     if not meshes:
         return ["FAIL no mesh to measure"], False
+    rest_limit, clip_limit = limits
     scene = bpy.context.scene
-    passed = True
-    lines = []
+    rig.data.pose_position = "REST"
+    scene.frame_set(scene.frame_current)
+    far = reach(meshes)
+    rig.data.pose_position = "POSE"
+    passed = far <= rest_limit
+    lines = ["%s rest: reach %.3f of the hex (limit %.2f)" % ("ok" if passed else "FAIL", far, rest_limit)]
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
         far, at = 0.0, start
@@ -66,7 +73,8 @@ def report(rig, meshes, limit):
             value = reach(meshes)
             if value > far:
                 far, at = value, number
-        fails = far > limit
+        fails = far > clip_limit
         passed = passed and not fails
-        lines.append("%s %s: reach %.3f of the hex (frame %d)" % ("FAIL" if fails else "ok", action.name, far, at))
+        lines.append("%s %s: reach %.3f of the hex (frame %d, limit %.2f)" % (
+            "FAIL" if fails else "ok", action.name, far, at, clip_limit))
     return lines, passed

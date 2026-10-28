@@ -4,9 +4,10 @@ deformed mesh reaches across the hex the game stands it on, seen from above, fro
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
 
-A regular monster keeps 5 % padding inside its hex; a model in LARGE (a boss, an enraged or
-stronger monster) may reach 5 % past it. It prints a line per clip (the largest reach, 1.00 at the
-hex's edge, and its frame) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
+In its rest pose a regular monster keeps 5 % padding inside its hex, and a model in LARGE (a boss,
+an enraged or stronger monster) may reach 5 % past it; during its clips each may reach 5 % further
+(lib/footprint.py). It prints a line for the rest pose and one per clip (the largest reach, 1.00
+at the hex's edge, and its frame) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb. It checks the models built by a
 script here (the monsters); a pack's model, or a prop without a rig, passes, so CI runs it on
 every .glb. The clip rate comes from the .glb's .import, as the game imports it.
@@ -31,9 +32,11 @@ from lib import footprint, imported, known  # noqa: E402
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = set()
 
-# (model, clip) that fails today, with the issue that fixes it; that issue takes its entries off.
+# (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
+# issue takes its entries off.
 KNOWN = {
     ("mana_pup", "Attack"): 1529,
+    ("mana_wolf", "rest"): 1527,
     ("mana_wolf", "Attack"): 1527,
     ("mana_wolf", "Channel"): 1527,
     ("mana_wolf", "ChannelEnd"): 1527,
@@ -45,6 +48,7 @@ KNOWN = {
     ("mana_wolf", "Run"): 1527,
     ("mana_wolf", "Sleep"): 1527,
     ("mana_wolf", "Walk"): 1527,
+    ("ombulumo", "rest"): 1528,
     ("ombulumo", "Attack"): 1528,
     ("ombulumo", "Channel"): 1528,
     ("ombulumo", "ChannelEnd"): 1528,
@@ -79,9 +83,8 @@ def main():
             log.info("FOOTPRINT %s no rig: nothing to check" % model)
             continue
         rig.animation_data.use_nla = False
-        limit = footprint.LARGE if model in LARGE else footprint.REGULAR
-        log.info("FOOTPRINT %s limit %.2f of the hex" % (model, limit))
-        lines, _passed = footprint.report(rig, footprint.meshes(rig, bpy.data.objects), limit)
+        limits = footprint.LARGE if model in LARGE else footprint.REGULAR
+        lines, _passed = footprint.report(rig, footprint.meshes(rig, bpy.data.objects), limits)
         for line in lines:
             text, fails = known.judge(KNOWN, model, line)
             passed = passed and not fails

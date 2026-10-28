@@ -161,10 +161,11 @@ a second model could use goes into the library or a generic tool, never into one
   piece; it fails past the tolerance (`lib/connectivity.py`). Wisps are exempt. Its `KNOWN` list is
   judged like the volume check's.
 - **The footprint check (#1520):** `packages/game-models/check_footprint.py -- <model.glb>`
-  samples every frame of every clip and prints, per clip, how far the deformed mesh reaches across
-  the hex the game stands it on, seen from above (1.00 at the hex's edge), and its frame; a regular
-  monster fails past 0.95 (5 % padding inside), one in its `LARGE` set (a boss, an enraged or
-  stronger monster) past 1.05 (`lib/footprint.py`). Its `KNOWN` list is judged like the volume
+  measures the rest pose and every frame of every clip and prints how far the model's meshes reach
+  across the hex the game stands it on, seen from above (1.00 at the hex's edge), and the frame; a
+  regular monster fails past 0.95 at rest (5 % padding inside) and 1.05 during a clip, one in its
+  `LARGE` set (a boss, an enraged or stronger monster) past 1.05 at rest and 1.10 during a clip
+  (`lib/footprint.py`). Its `KNOWN` list is judged like the volume
   check's.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
@@ -388,9 +389,9 @@ a second model could use goes into the library or a generic tool, never into one
 
 20. **Footprint (#1520):** `uv run --locked packages/game-models/blender.py --background
    --factory-startup --python packages/game-models/check_footprint.py -- <model.glb>` must print
-   `FOOTPRINT CHECK: PASS`: in every frame of every clip the monster stays within its hex, seen
-   from above, with 5 % padding (a boss, enraged or stronger one may reach 5 % past it; the owner,
-   on #1514). Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
+   `FOOTPRINT CHECK: PASS`: seen from above, the monster stands within its hex with 5 % padding in
+   its rest pose (a boss, enraged or stronger one may reach 5 % past it; the owner, on #1514), and
+   its clips reach at most 5 % further (the owner, on #1533). Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
    list with the issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it
    on every `.glb` with the rebuild check (step 14).
 
