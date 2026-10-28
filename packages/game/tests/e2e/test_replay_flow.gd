@@ -706,12 +706,12 @@ func _check_replay_round_trip() -> String:
 		return "a saved and loaded replay didn't play back: " + problem
 	if loaded.played.state_hash() != recorded.played.state_hash():
 		return "the played-back session ended in another state than the recorded one"
-	# A replay from before format change names (#801) still plays: format 21 had them all.
+	# A replay from before format change names (#801) is refused, not misread: even format 21,
+	# the last numbered one, lacks the interact press every command carries since #696.
 	var text: String = ReplayFile.to_text(recorded)
 	var numbered: Replay = ReplayFile.parse(_reformatted(text, "format", 21))
-	problem = numbered.play()
-	if not problem.is_empty() or numbered.played.state_hash() != recorded.played.state_hash():
-		return "a format 21 replay didn't play back as recorded: " + problem
+	if not numbered.problem.contains("696-interact"):
+		return "a format 21 replay wasn't refused for its commands: " + numbered.problem
 	var tampered: Replay = ReplayFile.parse(ReplayFile.to_text(recorded))
 	# The first change is tick 1, slot 0: walking another way changes the game from there.
 	tampered.changes[2] = (tampered.changes[2] + 2) % Hex.DIRECTIONS.size()
@@ -832,8 +832,8 @@ func _check_rehash() -> String:
 	return ""
 
 
-## Every golden replay in tests/replays/ holds only its inputs (#876), still as a format 21 replay
-## from before format change names (#801), and plays under this build's rules; playing it twice
+## Every golden replay in tests/replays/ holds only its inputs (#876), in this build's format, and
+## plays under this build's rules; playing it twice
 ## gives the same game. Whether it plays as on the parent commit is
 ## the rules-compare job's (packages/game-replays/rules_compare.py).
 func _check_golden_replays() -> String:

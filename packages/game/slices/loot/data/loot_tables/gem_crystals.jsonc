@@ -1,0 +1,9 @@
+// What harvesting gems by hand drops (#696): the mana crystals they hold. A placeholder, to tune
+// (#960).
+{
+	"id": "gem_crystals",
+	"kind": "tile",
+	"entries": [
+		{ "item": "crystal", "chance": 1000, "min": 1, "max": 2 } // 100 %
+	]
+}

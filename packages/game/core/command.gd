@@ -19,7 +19,7 @@ const NO_REQUEST: int = 0
 ## No kind of request this tick (#818): a command without a request.
 const NO_REQUEST_KIND: int = 0
 ## How many integers a command is in a replay (to_values).
-const VALUE_COUNT: int = 12
+const VALUE_COUNT: int = 13
 
 ## An index into Hex.DIRECTIONS, or NO_MOVE.
 var move: int = NO_MOVE
@@ -64,6 +64,9 @@ var acknowledged: int = NO_REQUEST
 ## command of a tick says so, nobody walks through an exit (ExitFeature): the walk holds at the
 ## edge for every player alike, and no instance ever loads content that isn't there yet.
 var waiting: bool = false
+## Whether the player presses the interact action this tick (#696): harvesting the tile they stand
+## on or next to by hand (TileHarvestFeature). A press, like the special.
+var interact: bool = false
 
 
 func _init(
@@ -84,7 +87,7 @@ func _init(
 func to_values() -> Array[int]:
 	var values: Array[int] = [
 		move, 1 if special else 0, totem, focus, 1 if respawn else 0, swap, answer, request,
-		request_kind, request_data, acknowledged, 1 if waiting else 0,
+		request_kind, request_data, acknowledged, 1 if waiting else 0, 1 if interact else 0,
 	]
 	return values
 
@@ -105,6 +108,7 @@ static func from_values(values: Array[int]) -> Command:
 	command.request_data = values[9]
 	command.acknowledged = values[10]
 	command.waiting = values[11] == 1
+	command.interact = values[12] == 1
 	return command
 
 
@@ -126,8 +130,8 @@ func is_valid() -> bool:
 static func is_valid_values(values: Array[int]) -> bool:
 	if values.size() != VALUE_COUNT:
 		return false
-	# The presses (the special and going back to the spawn) and the wait for content.
-	var presses: Array[int] = [values[1], values[4], values[11]]
+	# The presses (the special, going back to the spawn and interacting) and the wait for content.
+	var presses: Array[int] = [values[1], values[4], values[11], values[12]]
 	for press: int in presses:
 		if press != 0 and press != 1:
 			return false

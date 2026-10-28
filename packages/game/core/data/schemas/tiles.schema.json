@@ -45,6 +45,28 @@
 			"minimum": 0,
 			"maximum": 1000
 		},
+		"harvest": {
+			"description": "What harvesting a tile of this kind gives and leaves (#696): a player next to it, or on it, presses the interact action, and a few ticks later every player in the instance rolls their own on its yield table and the tile turns into its depleted kind, which lasts until the instance is purged (#212). Left out, it can't be harvested.",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["yields", "becomes", "takes"],
+			"properties": {
+				"yields": {
+					"description": "The id of the tile table it drops (a loot table of kind tile, in the loot slice's data/loot_tables/).",
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9_]*$"
+				},
+				"becomes": {
+					"description": "The id of its depleted kind, another tile blueprint, which can't be harvested by hand.",
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9_]*$"
+				},
+				"takes": {
+					"description": "What can harvest it: bare hands (#696). Gear (#697) and a species' skill (#698) come later.",
+					"enum": ["hands"]
+				}
+			}
+		},
 		"traits": {
 			"description": "What the kind does in the game.",
 			"type": "object",

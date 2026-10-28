@@ -18,6 +18,7 @@ const ROWS: Dictionary[String, Array] = {
 	"Swap to monster 1, 2 or 3": [&"swap_1", &"swap_2", &"swap_3"],
 	"Revive a fainted monster": [&"revive_monster"],
 	"Respawn when knocked down": [&"respawn"],
+	"Harvest a tile by hand": [&"interact"],
 	"Move the Survey": [&"survey"],
 	"Zoom the Survey in or out": [&"survey_zoom_in", &"survey_zoom_out"],
 	"Open or close the menu": [&"menu"],

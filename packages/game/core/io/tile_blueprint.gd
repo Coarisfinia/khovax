@@ -8,6 +8,10 @@ extends RefCounted
 ## Its schema, which says the fields a tile blueprint file and its traits may have (SchemaFields,
 ## #825).
 const SCHEMA: String = "res://core/data/schemas/tiles.schema.json"
+## What can harvest a tile (#696): bare hands, the only way so far (gear, #697, and a species'
+## skill, #698, come later).
+const HANDS: String = "hands"
+const TAKES: Array[String] = [HANDS]
 ## The largest clearance (hundredths of a tile's radius) and reach (rings) a blueprint may give, so
 ## a typo can't make one tile overshadow the region.
 const MAX_HEIGHT: int = PieceLooks.MAX_HEIGHT
@@ -41,6 +45,11 @@ var hides: bool = false
 ## Whether it's grass a grazing wild monster eats, and water a drinking one drinks from (#1203).
 var grazable: bool = false
 var drinkable: bool = false
+## What harvesting it drops, as a tile table's id (#696), or "" when it can't be harvested; the kind
+## it turns into then, and what can harvest it (TAKES).
+var harvest_yields: String = ""
+var harvest_becomes: String = ""
+var harvest_takes: String = ""
 ## Why the blueprint couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -81,7 +90,30 @@ static func parse(file_id: String, text: String) -> TileBlueprint:
 		blueprint.problem = "its hides trait is true or false"
 	if blueprint.problem.is_empty() and not (grass is bool and water is bool):
 		blueprint.problem = "its grazable and drinkable traits are true or false"
+	if blueprint.problem.is_empty() and data.has("harvest"):
+		blueprint.problem = blueprint._read_harvest(data.get("harvest"))
 	return blueprint
+
+
+## Reads what harvesting it gives and leaves (#696) from its `harvest` field; returns what's wrong,
+## or "".
+func _read_harvest(raw: Variant) -> String:
+	var harvest: Dictionary = raw if raw is Dictionary else {}
+	var unknown: String = Content.unknown_field(
+		harvest,
+		SchemaFields.at(SCHEMA, "/properties/harvest"),
+	)
+	if not unknown.is_empty():
+		return unknown
+	harvest_yields = Content.text_of(harvest.get("yields"))
+	harvest_becomes = Content.text_of(harvest.get("becomes"))
+	harvest_takes = Content.text_of(harvest.get("takes"))
+	var ids: bool = Content.is_id(harvest_yields) and Content.is_id(harvest_becomes)
+	if not ids or harvest_becomes == id or not TAKES.has(harvest_takes):
+		return "its harvest names a table it yields, another kind it becomes and one of %s" % [
+			TAKES,
+		]
+	return ""
 
 
 ## Why the read fields are wrong, or "", and the color read from `data` when they aren't.

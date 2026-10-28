@@ -122,6 +122,10 @@ const POINTS_PER_ROLL: int = 3
 const FULL_ROLLS: int = 3
 ## The rolls each player gets on a harvested monster's table (#629).
 const HARVEST_ROLLS_PER_PLAYER: int = 1
+## How long harvesting a tile by hand takes (#696), and the rolls each player gets on its tile
+## table then.
+const TILE_HARVEST_TICKS: int = Simulation.TICKS_PER_SECOND
+const TILE_HARVEST_ROLLS_PER_PLAYER: int = 1
 ## The rolls each player gets on the table when a chest opens or they find loot on the ground
 ## (#446, #203).
 const CHEST_ROLLS_PER_PLAYER: int = 1

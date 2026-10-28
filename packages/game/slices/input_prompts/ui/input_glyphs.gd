@@ -22,6 +22,7 @@ const KEYS: Dictionary[Key, Texture2D] = {
 	KEY_ENTER: preload("res://assets/kenney-input-prompts/keyboard_enter.svg"),
 	KEY_ESCAPE: preload("res://assets/kenney-input-prompts/keyboard_escape.svg"),
 	KEY_E: preload("res://assets/kenney-input-prompts/keyboard_e.svg"),
+	KEY_F: preload("res://assets/kenney-input-prompts/keyboard_f.svg"),
 	KEY_Q: preload("res://assets/kenney-input-prompts/keyboard_q.svg"),
 	KEY_R: preload("res://assets/kenney-input-prompts/keyboard_r.svg"),
 	KEY_T: preload("res://assets/kenney-input-prompts/keyboard_t.svg"),

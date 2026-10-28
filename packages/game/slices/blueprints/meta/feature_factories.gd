@@ -105,6 +105,9 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		SpecialAttackFeature.ID: SpecialAttackFactory.build,
 		# The harvest after the specials, whose strikes fell what it drops materials for.
 		HarvestFeature.ID: HarvestFactory.build,
+		# Harvesting tiles by hand (#696), after the knockdowns, whose downed players harvest
+		# nothing.
+		TileHarvestFeature.ID: TileHarvestFactory.build,
 		DialogFeature.ID: DialogFactory.build,
 		TerritoryFeature.ID: TerritoryFactory.build,
 	}
