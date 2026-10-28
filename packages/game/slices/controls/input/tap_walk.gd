@@ -40,7 +40,7 @@ func steer(given: Command, state: GameState, at: Vector2i) -> void:
 		var _aimed: bool = aim(state, at, _tapped)
 	if walking:
 		given.move = move(state, at)
-		given.interact = harvests(at) or given.interact
+		given.interact = harvests(state, at) or given.interact
 
 
 ## Starts a walk from `from` to `tile` on `state`'s region; returns whether one started. A walk
@@ -86,12 +86,13 @@ func move(state: GameState, at: Vector2i) -> int:
 	return step
 
 
-## Whether to press interact now: once, on arrival beside or on the tile to harvest. A walk with
-## nothing to harvest ends on arrival.
-func harvests(at: Vector2i) -> bool:
+## Whether to press interact now: once, on arrival, and only while a harvest from `at` still takes
+## the tapped tile (another player may have harvested it, and the press would take a neighbour). A
+## walk with nothing to harvest ends on arrival.
+func harvests(state: GameState, at: Vector2i) -> bool:
 	if not walking or not _way.is_empty():
 		return false
-	var pressing: bool = _harvest != NO_TILE and Hex.distance(at, _harvest) <= 1
+	var pressing: bool = _harvest != NO_TILE and _takes(state.region, at, _harvest)
 	stop()
 	return pressing
 
@@ -105,23 +106,27 @@ func stop() -> void:
 	walking = false
 
 
-## The tiles beside `tile` from which a harvest takes it, not another one beside them: the first
-## tile bare hands can harvest of where the player stands and its neighbours in Hex.DIRECTIONS'
-## order, as TileHarvestFeature.target_of picks it. None when every such tile takes another one:
+## The tiles beside `tile` from which a harvest takes it (`_takes`), not another one beside them.
+## None when every such tile takes another one:
 ## the tap walks nowhere then, rather than harvest a tile it wasn't on.
 static func _beside(region: Region, tile: Vector2i) -> Dictionary[Vector2i, bool]:
 	var taking: Dictionary[Vector2i, bool] = {}
 	for direction: Vector2i in Hex.DIRECTIONS:
-		var at: Vector2i = tile + direction
-		var around: Array[Vector2i] = [at]
-		for step: Vector2i in Hex.DIRECTIONS:
-			around.append(at + step)
-		for each: Vector2i in around:
-			if region.has_tile(each) and TileKinds.harvested_by_hand(region.terrain[each]):
-				if each == tile:
-					taking[at] = true
-				break
+		if _takes(region, tile + direction, tile):
+			taking[tile + direction] = true
 	return taking
+
+
+## Whether a harvest begun on `at` takes `tile`: it's the first tile bare hands can harvest of `at`
+## and its neighbours in Hex.DIRECTIONS' order, as TileHarvestFeature.target_of picks it.
+static func _takes(region: Region, at: Vector2i, tile: Vector2i) -> bool:
+	var around: Array[Vector2i] = [at]
+	for direction: Vector2i in Hex.DIRECTIONS:
+		around.append(at + direction)
+	for each: Vector2i in around:
+		if region.has_tile(each) and TileKinds.harvested_by_hand(region.terrain[each]):
+			return each == tile
+	return false
 
 
 ## The way from `from` to the nearest of `goals`, without `from`; empty when none can be reached,

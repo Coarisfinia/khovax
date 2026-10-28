@@ -181,7 +181,7 @@ func _check_tapped() -> String:
 	for _tick: int in MovementFeature.MOVE_TICKS * 3 + TileHarvestFeature.HARVEST_TICKS + 2:
 		var at: Vector2i = state.player(0).tile
 		var commands: Array[Command] = FlowSteps.commands([walk.move(state, at), Command.NO_MOVE])
-		commands[0].interact = walk.harvests(at)
+		commands[0].interact = walk.harvests(state, at)
 		Simulation.step(state, commands)
 		events.append_array(state.events)
 	var harvested: Array[TileHarvested] = _harvested(events)

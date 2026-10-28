@@ -324,10 +324,9 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 
 ## A click on a walkable tile two steps east of (0, 0) walks the player there on their own, through
-## the focus picker as the mouse gives it, and the walk ends there. A key pressed on the way stops
-## it
-## at once. A touch's emulated click, a click while the menu is open and a tap off the region walk
-## nowhere.
+## the focus picker as the mouse gives it, and the walk ends there. A short, still touch walks there
+## too, and a key pressed on the way stops it at once. A touch's emulated click, a click while the
+## menu is open and a tap off the region walk nowhere.
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
 	var input: LocalInput = _driver.input
@@ -350,21 +349,22 @@ func _check_tap_walk() -> String:
 	if _tile() != target or input.tap_walk.walking:
 		return "a click on %s walked the player to %s" % [target, _tile()]
 	_place(Vector2i.ZERO)
-	picker._unhandled_input(click)
+	_tap(picker, click.position)
 	_step()
 	var started: bool = input.tap_walk.walking
 	Input.action_press("move_left")
 	_step()
 	Input.action_release("move_left")
 	if not started or input.tap_walk.walking:
-		return "a key pressed on the way didn't stop the walk to a clicked tile"
+		return "a tap didn't walk, or a key pressed on the way didn't stop the walk"
 	_finish_step()
 	_place(Vector2i.ZERO)
-	click.device = InputEvent.DEVICE_ID_EMULATION
-	picker._unhandled_input(click)
 	input.blocked = true
+	picker._unhandled_input(click)
 	input.tap_tile(target)
 	input.blocked = false
+	click.device = InputEvent.DEVICE_ID_EMULATION
+	picker._unhandled_input(click)
 	_step()
 	var still: bool = not input.tap_walk.walking
 	input.tap_tile(Vector2i(1000, 1000))
@@ -372,6 +372,17 @@ func _check_tap_walk() -> String:
 	if not still or _tile() != Vector2i.ZERO or input.tap_walk.walking:
 		return "an emulated click, a click in the menu or one off the region walked the player"
 	return ""
+
+
+## A short, still touch on `point` through `picker`: down and up on the same point.
+func _tap(picker: FocusPicker, point: Vector2) -> void:
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.index = FINGER
+	touch.position = point
+	touch.pressed = true
+	picker._unhandled_input(touch)
+	touch.pressed = false
+	picker._unhandled_input(touch)
 
 
 ## The left stick walks too: a slight drift inside the dead zone doesn't, and pushed right from

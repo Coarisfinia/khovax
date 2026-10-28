@@ -4,8 +4,9 @@ extends Node
 ## where it touched down, or a left click, focuses the wild monster whose figure shows nearest the
 ## point on the screen, within PICK_PIXELS. A tap still reaches the touch stick, but it lifts before
 ## it steers anywhere; a touch a button took doesn't pick. It sets the local input's focus, which
-## the next command carries (#436). A tap or click that focuses nothing walks the player to the tile
-## under it instead (#1508, LocalInput.tap_tile); a touch's emulated click doesn't, or the start of
+## the next command carries (#436), and, as any new tap, stops a walk to a tapped tile. A tap or
+## click that focuses nothing walks the player to the tile under it instead (#1508,
+## LocalInput.tap_tile); a touch's emulated click doesn't, or the start of
 ## a
 ## drag on the stick would walk too.
 
@@ -33,7 +34,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
-		if not pick(click.position) and click.device != InputEvent.DEVICE_ID_EMULATION:
+		if pick(click.position):
+			input.tap_walk.stop()
+		elif click.device != InputEvent.DEVICE_ID_EMULATION:
 			walk_to(click.position)
 
 
@@ -79,5 +82,9 @@ func _on_touch(touch: InputEventScreenTouch) -> void:
 	var down: Vector3 = _downs[touch.index]
 	var _dropped: bool = _downs.erase(touch.index)
 	var still: bool = Vector2(down.x, down.y).distance_to(touch.position) <= TAP_PIXELS
-	if not touch.canceled and still and now - down.z <= TAP_SECONDS and not pick(touch.position):
+	if touch.canceled or not still or now - down.z > TAP_SECONDS:
+		return
+	if pick(touch.position):
+		input.tap_walk.stop()
+	else:
 		walk_to(touch.position)
