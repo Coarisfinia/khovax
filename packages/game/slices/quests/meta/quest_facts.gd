@@ -6,8 +6,8 @@ extends RefCounted
 ## got loot from (#124), which counts even when it rolled nothing, and the items they obtained from
 ## it, from the ground (#203), from a domination (#86) or from a felled wild monster (#629, #686); a
 ## place they stepped into (#339), a region piece or an instance they entered (#350, #370), an
-## answer they chose in a dialog (#636), or an event that changed the world (#707), which is every
-## player's and happened everywhere.
+## answer they chose in a dialog (#636), a person they talked to (#1592), or an event that changed
+## the world (#707), which is every player's and happened everywhere.
 
 
 ## The events quests count, each a class the bus delivers by.
@@ -19,6 +19,7 @@ static func events() -> Array[Script]:
 		PieceEntered,
 		InstanceEntered,
 		DialogAnswered,
+		NpcTalkedTo,
 		WorldChanged,
 	]
 	counted.append_array(others)
@@ -60,7 +61,8 @@ static func of_world_flags(world_flags: Array[String]) -> Array[QuestFact]:
 
 ## The fact `event`, in the instance `where`, is for the player in `slot` when it's neither a
 ## domination nor loot, or null: a place reached, a region piece or an instance entered (which
-## happened in that instance), an answer chosen, or an event that changed the world.
+## happened in that instance), an answer chosen, a person talked to, or an event that changed the
+## world.
 static func _single_fact_of(event: RefCounted, slot: int, where: String) -> QuestFact:
 	if event is PlaceReached and (event as PlaceReached).slot == slot:
 		return QuestFact.new(QuestStep.REACHED, (event as PlaceReached).place, where)
@@ -73,6 +75,8 @@ static func _single_fact_of(event: RefCounted, slot: int, where: String) -> Ques
 		var answered: DialogAnswered = event as DialogAnswered
 		var answer: String = QuestStep.answer_key(answered.dialog, answered.answer)
 		return QuestFact.new(QuestStep.ANSWERED, answer, where)
+	if event is NpcTalkedTo and (event as NpcTalkedTo).slot == slot:
+		return QuestFact.new(QuestStep.TALKED, (event as NpcTalkedTo).npc, where)
 	if event is WorldChanged:
 		return _emitted((event as WorldChanged).event_name)
 	return null

@@ -11,7 +11,9 @@ extends RefCounted
 ## step on it finds it, every player rolls their own, it's gone after, it reaches this machine's
 ## player's profile, and it shows as a gem that bursts the same way. Chests hold crafting supplies
 ## and basic gear (#694), a piece for every slot, while the loot on the ground holds no gear; gear
-## from a chest lands in the profile's gear, not its materials.
+## from a chest lands in the profile's gear, not its materials. A chest whose legend names the item
+## it holds (#1592), like Hrovumel Stolm's at its shrine, rolls nothing: every player in the
+## instance gets one Vis'omera from it, and a unique item reaches a profile once, never twice.
 
 const SEED: int = 7
 ## Where the flow's profile is saved, apart from the player's own.
@@ -22,6 +24,9 @@ const OWN_LOOT: Dictionary[String, int] = { "moss": 2 }
 const FOUND_LOOT: Dictionary[String, int] = { "berry": 3 }
 ## Slot 0's gear from another chest the save step opens.
 const OWN_GEAR: Dictionary[String, int] = { "warding_charm": 1 }
+## The dungeon whose shrine holds a chest with the unique item UNIQUE in it (#1592).
+const DUNGEON: String = "hrovumel_stolm"
+const UNIQUE: String = "vis_omera"
 
 ## The direction the last _open_first_chest walked in.
 var _direction: int = 0
@@ -62,7 +67,7 @@ func _check_placed() -> String:
 				return "seed %d put loot on %s, which isn't free ground" % [seed_value, spot]
 		if chests.loot_spots.is_empty():
 			return "seed %d's glade has no loot on the ground" % seed_value
-	return ""
+	return _check_held()
 
 
 ## The glade's chests hold crafting supplies and a loose piece of gear for every slot (#694); the
@@ -104,6 +109,51 @@ func _check_opened() -> String:
 	var back: int = posmod(_direction + 3, Hex.DIRECTIONS.size())
 	if not _walk(state, back).is_empty() or not _walk(state, _direction).is_empty():
 		return "a chest opened twice"
+	return ""
+
+
+## The dungeon's one chest, for every seed, holds Vis'omera without a chest table to roll on: two
+## players, the first walks onto it, and each gets one Vis'omera.
+func _check_held() -> String:
+	for seed_value: int in 6:
+		var state: GameState = InstanceBlueprints.create(DUNGEON, seed_value, 2)
+		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
+		if chests == null or chests.chests.size() != 1 or chests.table != null:
+			return "seed %d's %s has no one chest of its own, or a chest table" % [
+				seed_value,
+				DUNGEON,
+			]
+		if chests.held.get(chests.chests[0], "") != UNIQUE:
+			return "seed %d's %s chest holds %s, not %s" % [
+				seed_value,
+				DUNGEON,
+				chests.held,
+				UNIQUE,
+			]
+		var opened: ChestOpened = _open_first_chest(state)
+		var one: Dictionary = { UNIQUE: 1 }
+		var each: bool = opened != null and opened.loot.size() == 2
+		if not each or opened.loot[0] != one or opened.loot[1] != one:
+			return "seed %d's %s chest gave %s" % [
+				seed_value,
+				DUNGEON,
+				"nothing" if opened == null else str(opened.loot),
+			]
+	return _check_held_items()
+
+
+## Every chest that holds its own item, in every instance, holds a piece of gear or a material.
+func _check_held_items() -> String:
+	var gear: GearContent = GearContent.load_gear()
+	for instance_name: String in InstanceBlueprints.names():
+		var state: GameState = InstanceBlueprints.create(instance_name, 0, 1)
+		var chests: ChestFeature = state.feature(ChestFeature.ID) as ChestFeature
+		var held: Array[String] = []
+		if chests != null:
+			held.assign(chests.held.values())
+		for item: String in held:
+			if not gear.items.has(item) and not MaterialContent.cached().ids.has(item):
+				return "a chest in %s holds %s, which is no item" % [instance_name, item]
 	return ""
 
 
@@ -202,6 +252,7 @@ func _check_saved(tree: SceneTree) -> String:
 	var gear_loot: Dictionary[int, Dictionary] = { 0: OWN_GEAR }
 	var gear_chest: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, gear_loot)]
 	driver.ticked.emit(driver.state.tick, gear_chest)
+	_open_unique_twice(driver)
 	driver.ticked.emit(driver.state.tick, _loot_found())
 	(main.get_node("EventBus") as EventBus).flush()
 	# The chest's gain is saved at once; the loot's, coming right after, waits for the debounce.
@@ -214,10 +265,11 @@ func _check_saved(tree: SceneTree) -> String:
 			saved.materials,
 			expected,
 		]
-	if result.is_empty() and saved.gear.owned != OWN_GEAR:
-		result = "the profile saved the gear %s from the chest, not %s" % [
+	var own_gear: Dictionary[String, int] = OWN_GEAR.merged({ UNIQUE: 1 })
+	if result.is_empty() and saved.gear.owned != own_gear:
+		result = "the profile saved the gear %s from the chests, not %s" % [
 			saved.gear.owned,
-			OWN_GEAR,
+			own_gear,
 		]
 	if result.is_empty():
 		result = _check_shown(main.get_node("Instance/ChestView") as ChestView, driver)
@@ -225,6 +277,15 @@ func _check_saved(tree: SceneTree) -> String:
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
+
+
+## Raises a chest giving slot 0 two of UNIQUE, twice: a unique item comes once, however many a
+## chest gives and however often it's opened (#1592).
+func _open_unique_twice(driver: GameDriver) -> void:
+	var unique_loot: Dictionary[int, Dictionary] = { 0: { UNIQUE: 2 } }
+	var unique_chest: Array[RefCounted] = [ChestOpened.new(Vector2i.ZERO, 1, unique_loot)]
+	driver.ticked.emit(driver.state.tick, unique_chest)
+	driver.ticked.emit(driver.state.tick, unique_chest)
 
 
 ## The chest view (#135): in the glade, a chest on every closed chest's tile. An opened chest

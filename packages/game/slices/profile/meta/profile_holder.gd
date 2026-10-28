@@ -29,6 +29,8 @@ var save_path: String = ProfileStore.PATH
 var keeper: ProfileKeeper
 ## Every piece of gear's id (#694): loot with one of these ids is gear, the rest materials.
 var _gear_ids: Array[String] = []
+## Every unique item's id (GearItem.UNIQUE, #291): a player holds one of each at most (#1592).
+var _unique_ids: Array[String] = []
 
 
 ## Loads the profile on entering the tree, before any node's _ready: the driver starts the session
@@ -50,6 +52,9 @@ func _enter_tree() -> void:
 			])
 		else:
 			_gear_ids.assign(gear.items.keys())
+			for item: GearItem in gear.items.values():
+				if item.rarity == GearItem.UNIQUE:
+					_unique_ids.append(item.id)
 		keeper = ProfileKeeper.new(profile, save_path, companions)
 		_drop_lost_nodes()
 	else:
@@ -83,12 +88,14 @@ func flush() -> void:
 		_report(keeper.flush())
 
 
-## Takes `gain` into the profile (#73), and tells when a domination in it joined the monsters the
-## player carries (#1478), so the world brings it in this session.
+## Takes `gain` into the profile (#73), a unique item in it once (#1592), and tells when a
+## domination in it joined the monsters the player carries (#1478), so the world brings it in this
+## session.
 func take(gain: Gain) -> void:
 	if keeper == null:
 		return
 	var carried: Array[String] = keeper.profile.carried.duplicate()
+	_once_unique(gain)
 	_report(keeper.take(gain, Time.get_ticks_msec()))
 	if keeper.profile.carried != carried:
 		party_changed.emit()
@@ -255,3 +262,15 @@ func _tell_posted(posted: int) -> void:
 func _report(problem: String) -> void:
 	if not problem.is_empty():
 		push_warning("the profile couldn't be saved: " + problem)
+
+
+## Keeps a unique item (#291) in `gain` once (#1592): one, and none when the player owns it already,
+## since a chest holding one fills again once its instance is purged.
+func _once_unique(gain: Gain) -> void:
+	for item: String in gain.gear.keys():
+		if not _unique_ids.has(item):
+			continue
+		if keeper.profile.gear.owned.get(item, 0) > 0:
+			var _dropped: bool = gain.gear.erase(item)
+		else:
+			gain.gear[item] = 1

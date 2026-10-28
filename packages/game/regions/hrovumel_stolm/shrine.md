@@ -1,6 +1,6 @@
 # Hrovumel Stolm: shrine
 
-The shrine of Hrovumel Stolm (#1591), its end: a closed chamber whose inner floor is marked as the place inner_shrine, where Vis'omera is found (#1592), with a Tikazzir guarding the way to it. It joins Hrovumel Stolm on its west edge only, so it's always placed last, at the end of the way (RegionArranger).
+The shrine of Hrovumel Stolm (#1591), its end: a closed chamber whose inner floor is marked as the place inner_shrine, around the chest that holds Vis'omera (#1592), found there once per player, never handed over (#1553), with a Tikazzir guarding the way to it. It joins Hrovumel Stolm on its west edge only, so it's always placed last, at the end of the way (RegionArranger).
 
 ## Tiles
 
@@ -9,7 +9,7 @@ The shrine of Hrovumel Stolm (#1591), its end: a closed chamber whose inner floo
     ⬛⬛⬛⬛⬛⬛⬛
    ⬛⬛⬛🟫🟫🟫⬛⬛
   ⬛⬛🟫🟫🌟🌟🟫⬛⬛
- 🟫⬛🟫🟫🌟🌟🌟🟫⬛⬛
+ 🟫⬛🟫🟫🌟🧰🌟🟫⬛⬛
 🟫🟫🟫🐦🟫🌟🌟🟫🟫⬛⬛
  🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛
   🟫🟫🟫⬛🟫🟫🟫⬛⬛
@@ -25,3 +25,4 @@ The shrine of Hrovumel Stolm (#1591), its end: a closed chamber whose inner floo
 - `🔗`: joins another piece to the west
 - `🌟`: ground; stepping here reaches the place inner_shrine
 - `🐦`: a wild monster, always tikazzir
+- `🧰`: a treasure chest holding vis_omera on the ground

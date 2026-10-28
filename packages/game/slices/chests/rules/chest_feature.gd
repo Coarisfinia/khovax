@@ -8,13 +8,16 @@ extends Feature
 ## what, and each player's loot goes into their own profile (#74). Loot on the ground (#203) is
 ## found the same way, by the first player to step on it, with every player rolling their own on the
 ## instance's loot table (#90), which holds no gear; a LootFound event says so, as it's no chest.
+## A chest whose legend names the one item it holds (ChestPlacements.held, #1592) rolls nothing:
+## every player in the instance gets one of that item, like a unique item found at a dungeon's end.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "chests"
 ## How many times each player rolls on the table when a chest opens.
 const ROLLS_PER_PLAYER: int = Tuning.CHEST_ROLLS_PER_PLAYER
 
-## The instance's chest table (#694), which the chests roll on.
+## The instance's chest table (#694), which the chests roll on; null for an instance whose chests
+## all hold their own item.
 var table: LootTable
 ## The instance's loot table (#90), which the loot on the ground rolls on.
 var ground_table: LootTable
@@ -22,6 +25,8 @@ var ground_table: LootTable
 var chests: Array[Vector2i] = []
 ## Every loot spot still lying on the ground, in the region's order.
 var loot_spots: Array[Vector2i] = []
+## The item each chest that holds its own holds, by tile. It follows from the region.
+var held: Dictionary[Vector2i, String] = {}
 var _rng: Rng
 
 
@@ -40,7 +45,13 @@ func requires() -> Array[String]:
 
 
 func start(state: GameState) -> void:
-	chests.assign(state.region.placed(ChestPlacements.CHEST).keys())
+	var placed: Dictionary[Vector2i, String] = state.region.placed(ChestPlacements.CHEST)
+	chests.assign(placed.keys())
+	held.clear()
+	for chest: Vector2i in chests:
+		var item: String = ChestPlacements.held(placed[chest])
+		if not item.is_empty():
+			held[chest] = item
 	loot_spots.assign(state.region.placed(ChestPlacements.LOOT).keys())
 	_rng = Rng.new(state.rng_seed, stream())
 
@@ -103,9 +114,16 @@ func load_values(state: GameState, values: DataReader) -> void:
 	_rng = restored
 
 
-## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event.
+## Opens the chest on `tile` for the player `opener_id`: every player's loot from it, as the event:
+## one of the item it holds each, or their roll on the chest table.
 func _open(state: GameState, tile: Vector2i, opener_id: int) -> ChestOpened:
-	return ChestOpened.new(tile, opener_id, _roll_for_players(state, table))
+	if not held.has(tile):
+		return ChestOpened.new(tile, opener_id, _roll_for_players(state, table))
+	var loot: Dictionary[int, Dictionary] = {}
+	for slot: int in GameState.MAX_PLAYERS:
+		if state.player(slot) != null:
+			loot[slot] = { held[tile]: 1 }
+	return ChestOpened.new(tile, opener_id, loot)
 
 
 ## Finds the loot on `tile` for the player `finder_id`: every player's roll from it, as the event.

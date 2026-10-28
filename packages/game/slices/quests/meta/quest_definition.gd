@@ -113,8 +113,8 @@ func _read_materials(entry: Variant) -> String:
 	return ""
 
 
-## Why the side quest's start, read from `entry`, is wrong, or "": a reached, entered or emitted
-## condition with the place, piece, instance or event it names, met once.
+## Why the side quest's start, read from `entry`, is wrong, or "": a reached, entered, emitted or
+## talked condition with the place, piece, instance, event or person it names, met once.
 func _check_start(entry: Variant) -> String:
 	starts_on = QuestStep.parse(entry, {})
 	# A start that read is an object: QuestStep.parse refuses anything else.
@@ -153,6 +153,8 @@ func _check(
 			return "step %d: %s" % [index, step.problem]
 		if step.condition == QuestStep.EMITTED:
 			return "step %d: only a side quest's start waits on an event" % index
+		if step.condition == QuestStep.TALKED:
+			return "step %d: only a side quest's start waits on talking to a person" % index
 		steps.append(step)
 	var links: String = _check_links()
 	return links if not links.is_empty() else QuestPaths.problem(self)
