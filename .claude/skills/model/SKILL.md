@@ -209,11 +209,14 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    anything by hand.
 2. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
    builds from (`packages/game-models/sources/<name>.glb`): only the base colour, opaque,
-   single-sided and matte (#1476), Meshy's rig adopted where it has one (#1516).
+   single-sided and matte (#1476). Once #1516 is in, it keeps and adopts Meshy's rig where the
+   download has one; until then it drops the rig, and the script rigs the source itself.
 3. **Scale to the hex, first:** settle the model's size before any clip, gait or render
    (#1522). The gait's limits depend on the size, and Drakkudor's late rescale redid its gait and
-   every render. Until the import step computes it, size the rest pose with the footprint check
-   (step 20 below), leaving a margin for the widest clip (the attack's lunge).
+   every render. Until the import step computes it (#1522), set the scale in the model script
+   (`SCALE`, applied with `scene.apply_scale`, as `drakkudor.py` does) so the rest pose reaches no
+   further than the footprint check allows (step 20 below), leaving a margin for the widest clip
+   (the attack's lunge), and confirm it with the check once the clips exist.
 4. **Rig:** start from Meshy's rig (the owner rigs in Meshy first, #1514), checking that every
    chain covers its part (#1519), then rename the bones to the library's scheme.
 5. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
@@ -229,11 +232,14 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   with one material on that path (`lib/brows.py`); eye points still go on the painted eyes. Eyes
   that blink need lids, so they must be ours (`lib.eyes`), not Meshy's: ask for a face without
   eyes and add them in the script (#1463's note on the eyelid slug).
-- **Custom normals:** the import keeps the file's normals as custom ones, and `scene.sort_faces`
-  refuses them: clear them (`bpy.ops.mesh.customdata_custom_splitnormals_clear()`) and shade
-  smooth.
-- **Material:** `doubleSided` and alpha blending off, the material matte (no metal or roughness
-  map); `import_source.py` does it, and `inspect_meshy.py` shows what the download had.
+- **Custom normals:** Blender's glTF import keeps a file's normals as custom ones, the model
+  script's import of its source too, and `scene.sort_faces` (in `scene.export_glb`) refuses them:
+  right after importing the source, clear them
+  (`bpy.ops.mesh.customdata_custom_splitnormals_clear()`) and shade smooth, as `drakkudor.py`
+  does.
+- **Material:** single-sided (backface culling on), opaque (no alpha link, alpha 1) and matte
+  (no metal or roughness map, roughness 1); `import_source.py` does it, and `inspect_meshy.py`
+  shows what the download had (its `doubleSided` and alpha mode).
 - **A new body plan** (such as six legs) needs its plan in `lib/dimensions.py` first (its ranges
   and their reasons, as `hexapod` has), or the dimensions check has nothing to measure.
 - **Meshy's auto-rig** is scaled to a person's height (1.7 tall) and has no clips; its chains can
