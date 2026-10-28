@@ -42,17 +42,27 @@ class Misses:
         return {clip for clip, *_rest in self.found}
 
 
+def shown(value, limit):
+    """`value` and `limit` with two decimals, or as many more as tell a value just past its limit
+    from it."""
+    for digits in range(2, 7):
+        if round(value, digits) != round(limit, digits):
+            break
+    return "%.*f" % (digits, value), "%.*f" % (digits, limit), "%.*f" % (digits, abs(value - limit))
+
+
 def lines(misses, clips):
     """The summary, for its check to print after its name: a line per miss, then the clips that
-    miss nothing on one line."""
+    miss nothing on one line, unless a miss of the whole model (a wisp that can't be measured)
+    kept the clips from being checked at all."""
     out = []
     for clip, measure, value, side, limit, unit in misses.found:
         if value is None:
             out.append("FAIL %s %s" % (clip, measure))
         else:
-            out.append("FAIL %s %s %.2f %s %.2f %s (by %.2f)" % (
-                clip, measure, value, side, limit, unit, abs(value - limit)))
+            value_text, limit_text, by = shown(value, limit)
+            out.append("FAIL %s %s %s %s %s %s (by %s)" % (clip, measure, value_text, side, limit_text, unit, by))
     passing = sorted(set(clips) - misses.clips())
-    if passing:
+    if passing and misses.clips() <= set(clips):
         out.append("ok: " + " ".join(passing))
     return out

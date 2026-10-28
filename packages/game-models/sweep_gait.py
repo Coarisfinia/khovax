@@ -33,12 +33,18 @@ from lib import summary  # noqa: E402
 BLENDER = MODELS / "blender.py"
 CHECKS = ("check_motion.py", "check_ground.py", "check_clearance.py")
 SPEEDS = re.compile(r"^SPEEDS (.*)$", re.MULTILINE)
+# Seconds a Blender run may take before it counts as hung, well above a build's: a hung run fails
+# its combination rather than holding back the whole table.
+TIMEOUT = 1200
 
 
 def blender(script: Path, args: list[str]) -> subprocess.CompletedProcess:
     command = [sys.executable, str(BLENDER), "--background", "--factory-startup", "--python", str(script),
                "--", *args]
-    return subprocess.run(command, capture_output=True, text=True)
+    try:
+        return subprocess.run(command, capture_output=True, text=True, timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(command, 1, "", "Error: timed out after %d s" % TIMEOUT)
 
 
 def failure(output: str) -> str:
@@ -110,8 +116,14 @@ def grid(specs: list[str]) -> tuple[list[str], list[tuple[str, ...]]]:
         name, _, values = spec.partition("=")
         if not values:
             raise SystemExit("expected NAME=value,value,..., not %r" % spec)
+        # A name or value given twice would build the same thing twice, into the same folder.
+        if name in names:
+            raise SystemExit("%s is given twice" % name)
+        choice = tuple(values.split(","))
+        if len(set(choice)) != len(choice):
+            raise SystemExit("%s repeats a value: %s" % (name, values))
         names.append(name)
-        choices.append(tuple(values.split(",")))
+        choices.append(choice)
     return names, list(itertools.product(*choices))
 
 
