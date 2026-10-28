@@ -363,8 +363,9 @@ def names(every, leaves, skin):
                 bones = [pair + part + side for part in LEG_PARTS]
             else:
                 bones = ["%s%s_%02d%s" % (pair, kind, number + 1, side) for number in range(len(chain.bones))]
-                if kind == "leg":
-                    # Its last bone is its paw, named as every leg's, which the clips plant.
+                if kind == "leg" and len(bones) > len(LEG_PARTS):
+                    # Its last bone is its paw, named as every leg's, which the clips plant. A
+                    # leg of two bones or one has too few above a paw to bend (adopted.limbs).
                     bones[-1] = pair + LEG_PARTS[-1] + side
             out.update(zip(chain.bones, bones))
     for number, chain in enumerate(chain for chain in every if chain not in leaves or chain.part is None):
