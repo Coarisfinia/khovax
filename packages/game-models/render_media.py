@@ -22,12 +22,12 @@ first, post its block, then run without it for the rest.
 
 Every picture is published as `pr-<n>[-<tag>]-<what>`: the tag is the version (`v2` once the model
 was rebuilt), so a later round never overwrites the pictures an earlier description links. The
-Godot project is imported first, so the renders never show a stale import (#1164). Each job's log
-is in `<out>/logs/`; a job that fails stops the run before anything is published."""
+Godot project is imported first, so the renders never show a stale import (#1164). It renders
+into a fresh folder, never deleting anything; each job's log is in `<out>/logs/`, and a job that
+fails stops the run before anything is published."""
 
 import argparse
 import concurrent.futures
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -72,7 +72,7 @@ def main() -> int:
     parser.add_argument("--pr", type=int, required=True, help="the pull request the pictures are for")
     parser.add_argument("--tag", default="", help="the version in the names, e.g. v2")
     parser.add_argument("--quick", action="store_true", help="only the fast-feedback pictures")
-    parser.add_argument("--out", type=Path, help="where to render (a temporary folder by default)")
+    parser.add_argument("--out", type=Path, help="an empty or new folder to render into (a new temporary one by default)")
     parser.add_argument("--jobs", type=int, default=3, help="Godot renders at once")
     parser.add_argument("--no-publish", action="store_true", help="render only, print local paths")
     args = parser.parse_args()
@@ -84,7 +84,15 @@ def main() -> int:
         log.error(f"{args.model}: no .glb inside {GAME.relative_to(ROOT)}, where Godot can load it")
         return 1
     prefix = f"pr-{args.pr}" + (f"-{args.tag}" if args.tag else "")
-    out = (args.out or Path(tempfile.gettempdir()) / f"khovax-media-{prefix}").resolve()
+    # Always a fresh folder, so no frames from an earlier render join a clip's GIF, and nothing
+    # already there is ever deleted: a new private one by default, or an empty or new `--out`.
+    if args.out is None:
+        out = Path(tempfile.mkdtemp(prefix=f"khovax-media-{prefix}-"))
+    else:
+        out = args.out.resolve()
+        if out.exists() and (not out.is_dir() or any(out.iterdir())):
+            log.error(f"{args.out} isn't an empty folder: name a new one, or leave --out out")
+            return 1
     (out / "logs").mkdir(parents=True, exist_ok=True)
     clips = [] if args.quick else clips_of(model)
     resource = "res://" + model.relative_to(GAME).as_posix()
@@ -172,8 +180,6 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int) -> bool
         if stagger:
             with starting:
                 time.sleep(STAGGER)
-        # A fresh folder: frames left from an earlier, longer render would join a clip's GIF.
-        shutil.rmtree(job.out, ignore_errors=True)
         began = time.monotonic()
         log.info(f"{job.name}: rendering into {job.out}")
         code = run(job.command, logs / f"{job.name}.log")
