@@ -6,10 +6,27 @@ extends RefCounted
 
 
 ## The ring's wall around the monsters on `spots`: every trail tile next to a tile enclosed with
-## them, found by a flood from their spots that stops at the trail. Sorted.
+## them (enclosed_with). Sorted.
 static func wall_around(region: Region, trail: Trail, spots: Array[Vector2i]) -> Array[Vector2i]:
-	var seen: Dictionary[Vector2i, bool] = {}
 	var wall: Dictionary[Vector2i, bool] = {}
+	for inside: Vector2i in enclosed_with(region, trail, spots):
+		for direction: Vector2i in Hex.DIRECTIONS:
+			if trail.tiles.has(inside + direction):
+				wall[inside + direction] = true
+	var sorted: Array[Vector2i] = []
+	sorted.assign(wall.keys())
+	sorted.sort()
+	return sorted
+
+
+## Every tile enclosed with the `spots` (them included): a flood from them over the region's tiles
+## that stops at the trail.
+static func enclosed_with(
+	region: Region,
+	trail: Trail,
+	spots: Array[Vector2i],
+) -> Dictionary[Vector2i, bool]:
+	var seen: Dictionary[Vector2i, bool] = {}
 	var open: Array[Vector2i] = spots.duplicate()
 	for spot: Vector2i in spots:
 		seen[spot] = true
@@ -17,15 +34,10 @@ static func wall_around(region: Region, trail: Trail, spots: Array[Vector2i]) ->
 		var current: Vector2i = open.pop_back()
 		for direction: Vector2i in Hex.DIRECTIONS:
 			var next: Vector2i = current + direction
-			if trail.tiles.has(next):
-				wall[next] = true
-			elif region.has_tile(next) and not seen.has(next):
+			if region.has_tile(next) and not seen.has(next) and not trail.tiles.has(next):
 				seen[next] = true
 				open.append(next)
-	var sorted: Array[Vector2i] = []
-	sorted.assign(wall.keys())
-	sorted.sort()
-	return sorted
+	return seen
 
 
 ## The index of the wall segment nearest to `spot` by hex distance; of equally near ones, the

@@ -4,6 +4,8 @@ extends RefCounted
 ## the region brings the feature that runs them (#879), so ordinary instances have none. Who holds
 ## each point is state, hashed and saved. A side holding no control point loses the battle, once.
 ## The sides hold their points together, never a player alone, so co-op players share them (#74).
+## A player takes a point by closing a ring around it and placing their totem on it (#644), which
+## wards it: one totem per point.
 
 const SEED: int = 3
 ## A battle ground: the attackers start with one control point, the defenders hold two and one
@@ -14,6 +16,11 @@ const LEGEND: String = """- `🚩`: a control point, held by the attackers
 - `🏯`: a control point, held by the defenders
 - `⚪`: a control point, held by nobody
 """
+## A battle ground with room for rings: the attackers' point and one of the defenders' inside,
+## each with a ring of ground around it, and the defenders' other point on the edge.
+const RING_GRID: String = (
+	" 🟫🟫🟫🟫🟫🟫🟫\n🟫🔴🟫🟫🟫🟫🟫\n 🟫🚩🟫🟫🏯🟫🟫\n🟫🟫🟫🟫🟫🟫🟫\n 🟫🟫🟫🟫🟫🟫🏯"
+)
 const ATTACKERS: int = ControlPointSides.ATTACKERS
 const DEFENDERS: int = ControlPointSides.DEFENDERS
 const NOBODY: int = ControlPointSides.NOBODY
@@ -34,6 +41,8 @@ func run(_tree: SceneTree) -> String:
 		_check_hashed,
 		_check_lost,
 		_check_saved,
+		_check_warded,
+		_check_taken,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -127,11 +136,128 @@ func _check_saved() -> String:
 	_points(loaded).load_values(loaded, DataReader.new(_points(state).save_values()))
 	if loaded.state_hash() != state.state_hash():
 		return "a saved battle didn't load as it was"
-	var bad: DataReader = DataReader.new({ "holders": [ATTACKERS], "loser": NOBODY })
+	var wards: Array[int] = []
+	var _sized: int = wards.resize(HELD.size())
+	wards.fill(0)
+	var short: Dictionary = { "holders": [ATTACKERS], "warded": wards, "loser": NOBODY }
+	var bad: DataReader = DataReader.new(short)
 	_points(_battle()).load_values(loaded, bad)
 	if not bad.failed():
 		return "a save with the wrong number of control points was read"
 	return ""
+
+
+## A ring with a gap around a point takes nothing, and no charge; placing a totem on a closed ring
+## around the players' own point wards it, spending a charge, and a warded point takes no second
+## totem.
+func _check_warded() -> String:
+	var state: GameState = _ring_battle()
+	var points: ControlPointFeature = _points(state)
+	var own: int = _inner_point(state, ATTACKERS)
+	var own_ring: Array[Vector2i] = _ring(points.points[own])
+	var fort_ring: Array[Vector2i] = _ring(points.points[_inner_point(state, DEFENDERS)])
+	_color(state, fort_ring.slice(0, 5), state.player(0))
+	if _taken(state, _totem(state, 0)) != -1 or _charges(state, 0) != PlaceholderTotems.CHARGES:
+		return "a ring with a gap took a control point or spent a charge"
+	_color(state, own_ring, state.player(1))
+	var warded: int = _taken(state, _totem(state, 1))
+	if warded != own or not points.warded[own] or points.holders[own] != ATTACKERS:
+		return "a totem on a ring around the players' own point didn't ward it"
+	_color(state, own_ring, state.player(1))
+	if _taken(state, _totem(state, 1)) != -1 or _charges(state, 1) != PlaceholderTotems.CHARGES - 1:
+		return "a warded control point took a second totem"
+	return ""
+
+
+## A closed ring around the defenders' point takes it for the players' side and wards it, spending
+## one charge; the ring comes off the trail, and the defenders, left without a point, lose.
+func _check_taken() -> String:
+	var state: GameState = _ring_battle()
+	var points: ControlPointFeature = _points(state)
+	var fort: int = _inner_point(state, DEFENDERS)
+	var fort_ring: Array[Vector2i] = _ring(points.points[fort])
+	# The defenders' point on the edge goes to the attackers, so the fort is the defenders' last.
+	for index: int in points.holders.size():
+		if index != fort and points.holders[index] == DEFENDERS:
+			points.holders[index] = ATTACKERS
+	_color(state, fort_ring, state.player(0))
+	var events: Array[RefCounted] = _totem(state, 0)
+	if _taken(
+		state,
+		events,
+	) != fort or points.holders[fort] != ATTACKERS or not points.warded[fort]:
+		return "a totem on a closed ring around the defenders' point didn't take and ward it"
+	if not events.any(func(event: RefCounted) -> bool: return event is BattleLost):
+		return "the defenders lost their last control point but not the battle"
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
+	for tile: Vector2i in fort_ring.slice(1):
+		if trail.tiles.has(tile):
+			return "the ring around a taken control point stayed on the trail"
+	if _charges(state, 0) != PlaceholderTotems.CHARGES - 1:
+		return "taking a control point didn't spend one charge"
+	return ""
+
+
+## A battle on RING_GRID with the playground's rules: player 1 on the ring around the defenders'
+## inner point, player 2 on the one around the attackers' point.
+func _ring_battle() -> GameState:
+	var ground: Region = FlowSteps.region(RING_GRID, LEGEND)
+	var state: GameState = FlowSteps.rules_on(FlowSteps.BASIC, ground, SEED)
+	var points: ControlPointFeature = _points(state)
+	var _taker: Entity = state.add_entity(
+		0,
+		_ring(points.points[_inner_point(state, DEFENDERS)])[0],
+	)
+	var _warder: Entity = state.add_entity(
+		1,
+		_ring(points.points[_inner_point(state, ATTACKERS)])[0],
+	)
+	return state
+
+
+## The charges left on the totem of the player in `slot`.
+static func _charges(state: GameState, slot: int) -> int:
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
+	return domination.totems.charges_of(state.player(slot).id)
+
+
+## The index of GRID's control point held by `side` away from the region's edge.
+static func _inner_point(state: GameState, side: int) -> int:
+	var points: ControlPointFeature = _points(state)
+	for index: int in points.points.size():
+		var inner: bool = not RingShape.on_edge(state.region, points.points[index])
+		if points.holders[index] == side and inner:
+			return index
+	return -1
+
+
+## The six tiles around `point`.
+static func _ring(point: Vector2i) -> Array[Vector2i]:
+	var ring: Array[Vector2i] = []
+	for direction: Vector2i in Hex.DIRECTIONS:
+		ring.append(point + direction)
+	return ring
+
+
+## Colors `tiles` into the trail as `player`'s.
+static func _color(state: GameState, tiles: Array[Vector2i], player: Entity) -> void:
+	var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
+	for tile: Vector2i in tiles:
+		var _colored: bool = trail.color(tile, player.id)
+
+
+## The events of a tick the player in `slot` of two places their totem in.
+static func _totem(state: GameState, slot: int) -> Array[RefCounted]:
+	Simulation.step(state, FlowSteps.totem(slot, 2))
+	return state.events.duplicate()
+
+
+## The index of the control point a ControlPointTaken event in `events` says was taken, or -1.
+static func _taken(state: GameState, events: Array[RefCounted]) -> int:
+	for event: RefCounted in events:
+		if event is ControlPointTaken:
+			return _points(state).points.find((event as ControlPointTaken).point)
+	return -1
 
 
 ## A battle on GRID with the playground's rules and one player.
