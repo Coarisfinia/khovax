@@ -6,7 +6,8 @@ extends RefCounted
 ## without the press nothing happens. A harvest going on survives a save. Every tile kind that can
 ## be harvested names a tile table and a depleted kind that exist, and an instance without such
 ## tiles has no harvesting. In a session, this machine's player's crystals burst from the tile and
-## land in their profile; another player's don't.
+## land in their profile; another player's don't. On a touch screen the interact button (#1488)
+## shows only while a press would begin a harvest, and the Controls tab shows a tap for it.
 
 const SEED: int = 7
 ## The mana forest, ringed by gems (#1218).
@@ -28,6 +29,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_stopped()
 	if result.is_empty():
 		result = _check_kept()
+	if result.is_empty():
+		result = _check_button_shows()
 	if result.is_empty() and _first_loot() != _first_loot():
 		result = "the same seed harvested the gems with different rolls"
 	if result.is_empty():
@@ -141,6 +144,8 @@ func _check_kept() -> String:
 func _check_taken(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var result: String = _check_burst(main)
+	if result.is_empty():
+		result = _check_button(main)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
@@ -170,6 +175,58 @@ func _check_burst(main: Node) -> String:
 	var gained: int = holder.keeper.profile.materials.get("crystal", 0) - had
 	if gained != OWN_LOOT["crystal"]:
 		return "the profile took %d crystals from the harvested tile, not %s" % [gained, OWN_LOOT]
+	return ""
+
+
+## The interact button shows for a player beside gems, and not while harvesting is off, once
+## they're knocked down, nor in an instance without harvesting.
+func _check_button_shows() -> String:
+	var state: GameState = _beside_gems()
+	if not InteractButton.shows_in(state, 0):
+		return "the interact button didn't show beside the gems"
+	state.set_enabled(TileHarvestFeature.ID, false)
+	if InteractButton.shows_in(state, 0):
+		return "the interact button showed while harvesting was off"
+	state.set_enabled(TileHarvestFeature.ID, true)
+	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
+	if knockdown == null:
+		return "the mana forest has no knocking down to check the interact button with"
+	knockdown.knock_down(state.player(0).id)
+	if InteractButton.shows_in(state, 0):
+		return "the interact button showed for a knocked-down player"
+	if InteractButton.shows_in(FlowSteps.basic(SEED), 0):
+		return "the interact button showed in an instance without harvesting"
+	return ""
+
+
+## In the session `main`, the interact button on a touch screen presses interact and shows beside
+## gems only: hidden in an instance without harvesting, shown once this machine's player stands
+## beside gems, hidden again once they're knocked down. The Controls tab shows a tap for it.
+func _check_button(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var button: InteractButton = main.get_node("Hud/InteractButton") as InteractButton
+	var screen: Vector2 = button.get_viewport_rect().size
+	button.touch = true
+	button.lay_out_in(screen)
+	var hidden_without: bool = not button.visible
+	var here: String = driver.local_instance_name()
+	var own: GameState = driver.world.instances[here]
+	var forest: GameState = _beside_gems()
+	driver.world.instances[here] = forest
+	button.lay_out_in(screen)
+	var shown_beside: bool = button.visible
+	(forest.feature(KnockdownFeature.ID) as KnockdownFeature).knock_down(forest.player(0).id)
+	button.lay_out_in(screen)
+	var hidden_down: bool = not button.visible
+	driver.world.instances[here] = own
+	button.touch = false
+	if not hidden_without or not shown_beside or not hidden_down:
+		return "the interact button didn't show only beside gems while standing"
+	if button.button.action != &"interact" or button.icon == null:
+		return "the interact button presses another action, or has no icon"
+	var tap: Array[Texture2D] = [InputGlyphs.pointing(DeviceInUse.Device.TOUCH)]
+	if ControlsTab.glyphs_of([&"interact"], DeviceInUse.Device.TOUCH) != tap:
+		return "the Controls tab didn't show a tap for harvesting by hand"
 	return ""
 
 
