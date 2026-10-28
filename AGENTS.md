@@ -50,7 +50,8 @@ way; add to it when something bites.
 - **The owner's login is looked up, never written down:** the repository's one human admin (the
   repository's own owner is the organisation, not a person). The lookup fails unless there is
   exactly one:
-  `export OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end')`.
+  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end') && export OWNER`
+  (assigned first, so a failed lookup isn't hidden behind `export`'s success).
 - **Pull requests and comments:** `agent-gh pr create --assignee "$OWNER" …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
@@ -258,7 +259,8 @@ background; only wait in the foreground for a result the very next step needs.
   description (renders, screenshots, a before and after) is opened with `agent-gh pr create
   --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>` and queue it
   as usual. Every other pull request is not a draft: CodeRabbit reviews it, and its "Merge low-risk
-  changes" rule may merge it (wanted).
+  changes" rule may merge it (wanted), except a model pull request, which still waits for the
+  owner's approval (below).
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
