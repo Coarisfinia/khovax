@@ -19,10 +19,11 @@ func lay_out_in(screen: Vector2) -> void:
 
 
 ## Whether slot `player_slot`'s player in `game` would begin a harvest by pressing interact: the
-## instance has harvesting, they stand on or next to a tile bare hands can harvest
+## instance has harvesting and it's on, they stand on or next to a tile bare hands can harvest
 ## (TileHarvestFeature.target_of), and they aren't knocked down.
 static func shows_in(game: GameState, player_slot: int) -> bool:
-	if game == null or game.feature(TileHarvestFeature.ID) == null:
+	var harvest: Feature = game.feature(TileHarvestFeature.ID) if game != null else null
+	if harvest == null or not harvest.enabled:
 		return false
 	var harvester: Entity = game.player(player_slot)
 	if harvester == null:

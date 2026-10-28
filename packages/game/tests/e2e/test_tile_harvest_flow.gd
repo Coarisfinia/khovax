@@ -178,12 +178,16 @@ func _check_burst(main: Node) -> String:
 	return ""
 
 
-## The interact button shows for a player beside gems, and not once they're knocked down, nor in
-## an instance without harvesting.
+## The interact button shows for a player beside gems, and not while harvesting is off, once
+## they're knocked down, nor in an instance without harvesting.
 func _check_button_shows() -> String:
 	var state: GameState = _beside_gems()
 	if not InteractButton.shows_in(state, 0):
 		return "the interact button didn't show beside the gems"
+	state.set_enabled(TileHarvestFeature.ID, false)
+	if InteractButton.shows_in(state, 0):
+		return "the interact button showed while harvesting was off"
+	state.set_enabled(TileHarvestFeature.ID, true)
 	var knockdown: KnockdownFeature = state.feature(KnockdownFeature.ID) as KnockdownFeature
 	if knockdown == null:
 		return "the mana forest has no knocking down to check the interact button with"
@@ -195,15 +199,31 @@ func _check_button_shows() -> String:
 	return ""
 
 
-## In the session `main`, in an instance without harvesting, the interact button stays hidden on a
-## touch screen, presses interact, and the Controls tab shows a tap for harvesting.
+## In the session `main`, the interact button on a touch screen presses interact and shows beside
+## gems only: hidden in an instance without harvesting, shown once this machine's player stands
+## beside gems, hidden again once they're knocked down. The Controls tab shows a tap for it.
 func _check_button(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
 	var button: InteractButton = main.get_node("Hud/InteractButton") as InteractButton
+	var screen: Vector2 = button.get_viewport_rect().size
 	button.touch = true
-	button.lay_out_in(button.get_viewport_rect().size)
+	button.lay_out_in(screen)
+	var hidden_without: bool = not button.visible
+	var here: String = driver.local_instance_name()
+	var own: GameState = driver.world.instances[here]
+	var forest: GameState = _beside_gems()
+	driver.world.instances[here] = forest
+	button.lay_out_in(screen)
+	var shown_beside: bool = button.visible
+	(forest.feature(KnockdownFeature.ID) as KnockdownFeature).knock_down(forest.player(0).id)
+	button.lay_out_in(screen)
+	var hidden_down: bool = not button.visible
+	driver.world.instances[here] = own
 	button.touch = false
-	if button.visible or button.button.action != &"interact" or button.icon == null:
-		return "the interact button showed with nothing to harvest, or presses another action"
+	if not hidden_without or not shown_beside or not hidden_down:
+		return "the interact button didn't show only beside gems while standing"
+	if button.button.action != &"interact" or button.icon == null:
+		return "the interact button presses another action, or has no icon"
 	var tap: Array[Texture2D] = [InputGlyphs.pointing(DeviceInUse.Device.TOUCH)]
 	if ControlsTab.glyphs_of([&"interact"], DeviceInUse.Device.TOUCH) != tap:
 		return "the Controls tab didn't show a tap for harvesting by hand"
