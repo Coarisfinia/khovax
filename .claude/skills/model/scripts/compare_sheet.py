@@ -271,6 +271,8 @@ def fit(pixels):
 # models), so a generated model, whose colours are all in its texture, shows them too.
 model = load(model_path)
 reference = load(reference_path) if reference_is_model else []
+for image in bpy.data.images:  # a texture's alpha would cut holes into the silhouette: opaque
+	image.alpha_mode = "NONE"
 lo, hi = bounds(model + reference)
 center = (lo + hi) / 2
 reach = max(hi - lo)
