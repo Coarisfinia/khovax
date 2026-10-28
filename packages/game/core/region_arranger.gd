@@ -2,10 +2,10 @@ class_name RegionArranger
 extends RefCounted
 ## Arranges a blueprint's region pieces into one region (#57). The first piece is laid down as it
 ## is, holding the players' starts. Every other piece is placed once, in an order the seed
-## shuffles: turned and attached so one of its connectors meets an open connector of the region so
-## far, without overlapping it, the seed picking among all the fits. Connectors left open at the
-## end are plain edge. Then the seed turns the whole region, unless the blueprint keeps its
-## orientation (#120).
+## shuffles, a piece that ends a way (one connector) after those that lead on: turned and attached
+## so one of its connectors meets an open connector of the region so far, without overlapping it,
+## the seed picking among all the fits. Connectors left open at the end are plain edge. Then the
+## seed turns the whole region, unless the blueprint keeps its orientation (#120).
 
 ## The region's own random stream (#32), apart from the features' streams, which are their ids.
 const STREAM: int = 0x5245_4749
@@ -19,7 +19,7 @@ static func arrange(pieces: Array[Region], seed_value: int, turning: bool) -> Re
 	var order: Array[int] = []
 	order.assign(range(1, pieces.size()))
 	_shuffle(order, rng)
-	for index: int in order:
+	for index: int in _ends_last(order, pieces):
 		var fits: Array[Vector3i] = _fits(region, pieces[index])
 		if fits.is_empty():
 			region.problem = "region piece %d fits nowhere" % index
@@ -30,6 +30,22 @@ static func arrange(pieces: Array[Region], seed_value: int, turning: bool) -> Re
 		region = region.turned(rng.below(Hex.DIRECTIONS.size()))
 	region.connectors.clear()
 	return region
+
+
+## `order`, the shuffled indexes into `pieces`, with every piece that ends a way (one connector,
+## like a dungeon's end, #1591) moved behind the pieces that lead on, each kind keeping its shuffled
+## order. Placed earlier, an end could close the last open connector and leave the rest nowhere to
+## fit; placed last, it caps the way. Without ends the order stays as it is.
+static func _ends_last(order: Array[int], pieces: Array[Region]) -> Array[int]:
+	var leading: Array[int] = []
+	var ends: Array[int] = []
+	for index: int in order:
+		if pieces[index].connectors.size() == 1:
+			ends.append(index)
+		else:
+			leading.append(index)
+	leading.append_array(ends)
+	return leading
 
 
 ## Every way `piece` fits onto an open connector of `region`, in a fixed order: (open connector's

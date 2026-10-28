@@ -950,7 +950,7 @@ func _check_arranged_regions() -> String:
 		var problem: String = _check_glade(seed_value, pieces)
 		if not problem.is_empty():
 			return problem
-	for check: Callable in [_check_connector_fit, _check_turning]:
+	for check: Callable in [_check_connector_fit, _check_end_last, _check_turning]:
 		var misfit: String = check.call()
 		if not misfit.is_empty():
 			return misfit
@@ -1001,6 +1001,23 @@ func _check_connector_fit() -> String:
 		var placed: bool = region.sorted_tiles() == expected and region.starts == first.starts
 		if not placed or not region.connectors.is_empty():
 			return "a piece opening to side %d landed on %s" % [side, region.sorted_tiles()]
+	return ""
+
+
+## A piece that ends a way, with one connector (#1591), is placed after the pieces that lead on,
+## whatever order the seed shuffles: placed first, it would close the start's only connector and
+## leave the piece with two nowhere to fit.
+func _check_end_last() -> String:
+	var start: Region = FlowSteps.region("🔗", "- `🔗`: joins another piece to the east\n")
+	start.starts.append(Vector2i.ZERO)
+	var through: String = "- `🔗`: joins another piece to the west\n"
+	var end: Region = FlowSteps.region("🔗", through)
+	var way: Region = FlowSteps.region("🔗🧷", through + "- `🧷`: joins another piece to the east\n")
+	var pieces: Array[Region] = [start, end, way]
+	for seed_value: int in 12:
+		var region: Region = RegionArranger.arrange(pieces, seed_value, false)
+		if not region.problem.is_empty() or region.terrain.size() != 4:
+			return "a way's end didn't go last for seed %d: %s" % [seed_value, region.problem]
 	return ""
 
 
