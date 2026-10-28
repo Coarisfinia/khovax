@@ -413,24 +413,30 @@ def flatten(rig, skin):
     for obj in (rig, skin):
         matrix = obj.matrix_world.copy()
         obj.parent = None
-        obj.data.transform(matrix)
+        if obj is skin:
+            obj.data.transform(matrix, shape_keys=True)
+        else:
+            obj.data.transform(matrix)
         obj.matrix_world = Matrix.Identity(4)
     skin.parent = rig
 
 
 def place(rig, skin, legs, scale):
     """Moves the model so its feet stand on the ground with the origin between them (the middle
-    of every leg's lowest point, or of the whole mesh without legs), sized by `scale`, and hangs
-    the rig from a new root there. Returns the shift."""
+    of every leg's lowest point, or of the whole mesh without legs), sized by `scale` (a number,
+    or a function of the placed skin returning one, as import_source.py fits it to its hex), and
+    hangs the rig from a new root there. Returns the shift and the scale."""
     points = [vertex.co for vertex in skin.data.vertices]
     feet = [min((skin.data.vertices[index].co for index in chain.part.vertices), key=lambda point: point.z)
             for chain in legs]
     feet = feet or points
     shift = Vector((-sum(point.x for point in feet) / len(feet), -sum(point.y for point in feet) / len(feet),
                     -min(point.z for point in points)))
-    matrix = Matrix.Scale(scale, 4) @ Matrix.Translation(shift)
-    skin.data.transform(matrix)
-    rig.data.transform(matrix)
+    skin.data.transform(Matrix.Translation(shift), shape_keys=True)
+    rig.data.transform(Matrix.Translation(shift))
+    scale = scale(skin) if callable(scale) else scale
+    skin.data.transform(Matrix.Scale(scale, 4), shape_keys=True)
+    rig.data.transform(Matrix.Scale(scale, 4))
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
     tops = [bone for bone in rig.data.edit_bones if bone.parent is None]
@@ -440,12 +446,13 @@ def place(rig, skin, legs, scale):
     for bone in tops:
         bone.parent = root
     bpy.ops.object.mode_set(mode="OBJECT")
-    return shift
+    return shift, scale
 
 
 def adopt(rig, skin, scale=1.0):
     """Fixes, names and places the rig `skin` is bound to, printing a line for each thing it
-    kept, fixed or renamed. `scale` sizes the model (1: as the download is)."""
+    kept, fixed or renamed. `scale` sizes the model (1: as the download is), or is a function of
+    the skin placed on its feet that returns the scale."""
     flatten(rig, skin)
     bones = rig.data.bones
     every = chains(rig)
@@ -499,7 +506,7 @@ def adopt(rig, skin, scale=1.0):
     rename(rig, skin, renamed)
     roll(rig)
     legs = [chain for chain in leaves if chain.part is not None and labels[chain.name].split(".")[0].endswith("leg")]
-    shift = place(rig, skin, legs, scale)
+    shift, scale = place(rig, skin, legs, scale)
     print("PLACE moved by (%.3f, %.3f, %.3f), scaled by %g; a non-deforming root at the origin"
           % (*shift, scale))
     scene.select_only(skin)

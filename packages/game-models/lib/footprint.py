@@ -9,7 +9,10 @@ it stays inside.
 Standing in its rest pose, a regular monster keeps 5 % padding inside its hex and a boss, enraged
 or stronger one may reach 5 % past it (the owner, on #1514); during its clips each may reach 5 %
 further (the owner, on #1533), and an attack may lunge 30 % past it, whatever the monster (`ATTACK`:
-the owner, on #1528). `REGULAR` and `LARGE` hold the (rest, clips) limits."""
+the owner, on #1528). `REGULAR` and `LARGE` hold the (rest, clips) limits.
+
+`fit` sizes a model to its hex before any clip exists (#1522), from its rest pose alone: the
+scale the gait and every render are made at, settled first, since a later rescale redoes them."""
 
 import math
 
@@ -28,6 +31,12 @@ LARGE = (1.05, 1.10)
 # The clips that strike, and how far past the hex they may reach.
 ATTACKS = ("Attack",)
 ATTACK = 1.30
+# How much further than its rest pose a model's widest clip (an attack aside) reaches, assumed
+# before the clips exist: Drakkudor's lunge reached 0.923 against 0.878 at rest (#1522).
+# check_footprint.py confirms the fit once they're built.
+CLIP_MARGIN = 0.923 / 0.878
+# The share of a limit `fit` aims at, so a rounding in the export never tips it over.
+SLACK = 0.99
 
 
 def meshes(rig, objects):
@@ -50,9 +59,22 @@ def reach(meshes):
         if not len(coords):
             continue
         world = numpy.array(evaluated.matrix_world)
-        points = coords.reshape(-1, 3) @ world[:3, :3].T + world[:3, 3]
-        far = max(far, float((points[:, :2] @ NORMALS.T).max()))
-    return far / INRADIUS
+        far = max(far, spread(coords.reshape(-1, 3) @ world[:3, :3].T + world[:3, 3]))
+    return far
+
+
+def spread(points):
+    """The reach of `points`, an (n, 3) array in world space, as the hex's centre at the origin
+    sees it (see the module's notes)."""
+    return float((points[:, :2] @ NORMALS.T).max()) / INRADIUS
+
+
+def fit(rest, limits):
+    """The scale that sizes a model whose rest pose reaches `rest` to its hex: its rest pose within
+    the first of `limits` (rest, clips) and its widest clip, `CLIP_MARGIN` further, within the
+    second, each aimed at `SLACK` of its limit."""
+    rest_limit, clip_limit = limits
+    return SLACK * min(rest_limit / rest, clip_limit / (rest * CLIP_MARGIN))
 
 
 def report(rig, meshes, limits):

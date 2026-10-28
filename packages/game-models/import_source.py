@@ -13,9 +13,16 @@ An unrigged download's source keeps its axes and origin: the model script places
 A download the generator has already rigged (#1516) keeps its skin and its rig, adopted by
 lib/rigged.py: its chains checked against the parts they move and fixed, its bones named to the
 library's scheme and the model placed on its feet, hung from a root between them. It prints
-what it kept, fixed and renamed. `scale` sizes it (1: as the download is; #1522 fits it to its hex).
+what it kept, fixed and renamed.
 
-    ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=1]
+`scale` sizes it before any clip exists (#1522), since the gait's limits depend on the size and a
+later rescale redoes the gait and every render: `hex` (the default) fits it to its hex as a regular
+monster, `hex-large` as a boss, enraged or stronger one (lib/footprint.py's `fit`: its rest pose
+seen from above, with a margin for its widest clip), and a number scales it by that (1: as the
+download is). It prints the scale and how far the rest pose and the widest clip reach across the
+hex; check_footprint.py confirms the fit once the clips are built.
+
+    ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=hex]
 """
 
 import math
@@ -26,14 +33,45 @@ import bpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import rigged  # noqa: E402
+from lib import footprint, rigged  # noqa: E402
+
+# The hex's limits (rest, clips) each `scale` word fits the model to.
+HEX = {"hex": footprint.REGULAR, "hex-large": footprint.LARGE}
+
+
+def to_hex(limits, rig):
+    """The scale that fits the skin, placed on its feet, to its hex within `limits`, printed with
+    how far it reaches across the hex before and after."""
+
+    def fitted(skin):
+        pose = rig.data.pose_position
+        rig.data.pose_position = "REST"
+        try:
+            # Evaluated and in world space, as check_footprint.py measures it: shape keys at
+            # their weights count.
+            rest = footprint.reach([skin])
+        finally:
+            rig.data.pose_position = pose
+        fit = footprint.fit(rest, limits)
+        print("HEX rest pose reaches %.3f of the hex as downloaded; scaled by %.4f: rest %.3f (limit %.2f), "
+              "widest clip about %.3f (limit %.2f)" % (rest, fit, rest * fit, limits[0],
+                                                     rest * fit * footprint.CLIP_MARGIN, limits[1]))
+        return fit
+
+    return fitted
+
 
 args = sys.argv[sys.argv.index("--") + 1:]
 download, source = args[0], args[1]
 size = int(args[2]) if len(args) > 2 else 1024
-scale = float(args[3]) if len(args) > 3 else 1.0
-if not math.isfinite(scale) or scale <= 0.0:
-    sys.exit("scale must be a positive number, not %g" % scale)
+scale = args[3] if len(args) > 3 else "hex"
+if scale not in HEX:
+    try:
+        scale = float(scale)
+    except ValueError:
+        sys.exit("scale must be %s or a positive number, not %s" % (" or ".join(HEX), scale))
+    if not math.isfinite(scale) or scale <= 0.0:
+        sys.exit("scale must be a positive number, not %g" % scale)
 # The colour's JPEG quality: the cel look's flat bands hide its artefacts well below lossless.
 QUALITY = 90
 
@@ -86,7 +124,9 @@ if mesh.data.has_custom_normals:
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
 bpy.ops.object.shade_smooth()
 if rig is not None:
-    rigged.adopt(rig, mesh, scale)
+    rigged.adopt(rig, mesh, to_hex(HEX[scale], rig) if scale in HEX else scale)
+elif len(args) > 3:
+    print("SOURCE unrigged: scale not applied; the model script places and sizes it")
 bpy.ops.export_scene.gltf(
     filepath=source,
     export_format="GLB",
