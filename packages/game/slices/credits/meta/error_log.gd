@@ -12,7 +12,8 @@ extends Logger
 ## Where the log is, and where the launch before's is kept.
 const PATH: String = "user://logs/errors.log"
 const PREVIOUS: String = "user://logs/errors.previous.log"
-## How long the log grows at most, so an error repeated every frame can't fill the disk.
+## How long the log grows at most, so an error repeated every frame can't fill the disk; the cut
+## counts characters, so text beyond ASCII may take it a little past.
 const MAX_BYTES: int = 1 << 20
 const CUT: String = "[The log stops here: it reached its size limit.]\n"
 ## How each kind of error is headed, by Logger's ErrorType.
@@ -25,7 +26,8 @@ var _file: FileAccess
 ## The absolute folders written as their stand-ins, in order: the user folder lies in the home one.
 var _stand_ins: Dictionary[String, String] = {}
 var _bytes: int = 0
-## Godot logs from any thread, and a failing write may log again from inside one.
+## Godot logs from any thread, and a failing write may log again from inside one: Godot's Mutex
+## is reentrant, so that nested call gets through the lock and `_writing` skips it.
 var _mutex: Mutex = Mutex.new()
 var _writing: bool = false
 
@@ -105,20 +107,23 @@ func _write(text: String) -> void:
 	if not _writing and _bytes < MAX_BYTES:
 		_writing = true
 		var shown: String = scrubbed(text)
-		_bytes += shown.to_utf8_buffer().size()
-		if _bytes >= MAX_BYTES:
-			shown += CUT
+		var size: int = shown.to_utf8_buffer().size()
+		if _bytes + size >= MAX_BYTES:
+			shown = shown.left(MAX_BYTES - _bytes) + CUT
+		_bytes += size
 		var _stored: bool = _file.store_string(shown)
 		_file.flush()
 		_writing = false
 	_mutex.unlock()
 
 
-## `text` with every absolute folder that could name the player replaced by its stand-in.
+## `text` with every absolute folder that could name the player replaced by its stand-in, in any
+## case: Windows and macOS spell a path in any case, and elsewhere a few more hidden letters harm
+## nothing.
 func scrubbed(text: String) -> String:
 	var shown: String = text
 	for folder: String in _stand_ins:
-		shown = shown.replace(folder, _stand_ins[folder])
+		shown = shown.replacen(folder, _stand_ins[folder])
 	return shown
 
 
