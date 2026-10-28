@@ -43,6 +43,14 @@ func show_model(shown: Node3D) -> void:
 	if model == null:
 		return
 	add_child(model)
+	frame()
+
+
+## Points the camera at the model shown so it's framed whole, as it stands now: a view that poses
+## it (an idle clip) frames it again after.
+func frame() -> void:
+	if model == null:
+		return
 	var bounds: AABB = _bounds(model)
 	# A model without meshes still gets a camera that looks at something.
 	var reach: float = maxf(bounds.size.length() * 0.5 * ROOM, 0.1)
@@ -53,15 +61,14 @@ func show_model(shown: Node3D) -> void:
 	).looking_at(centre)
 
 
-## The box around every mesh of `root`, at rest, in its own space.
+## The box around every mesh of `root`, at rest, in the stage's space, where the camera stands: a
+## model whose root is moved or scaled is framed where it shows.
 static func _bounds(root: Node3D) -> AABB:
 	var bounds: AABB = AABB()
 	var first: bool = true
 	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
 		var meshes: MeshInstance3D = node as MeshInstance3D
-		var box: AABB = (root.global_transform.affine_inverse() * meshes.global_transform) * (
-			meshes.get_aabb()
-		)
+		var box: AABB = meshes.global_transform * meshes.get_aabb()
 		bounds = box if first else bounds.merge(box)
 		first = false
 	return bounds

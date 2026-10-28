@@ -17,3 +17,4 @@ func _ready() -> void:
 	EyeGlow.of(shown).color = TypeGlow.of(_species_id)
 	show_model(shown)
 	WildMonsterView.idle(shown)
+	frame()
