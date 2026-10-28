@@ -30,7 +30,6 @@ import os
 import sys
 
 import bpy
-import numpy
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -48,16 +47,11 @@ def to_hex(limits, rig):
         pose = rig.data.pose_position
         rig.data.pose_position = "REST"
         try:
-            evaluated = skin.evaluated_get(bpy.context.evaluated_depsgraph_get())
-            mesh = evaluated.to_mesh()
-            try:
-                coords = numpy.empty(len(mesh.vertices) * 3)
-                mesh.vertices.foreach_get("co", coords)
-            finally:
-                evaluated.to_mesh_clear()
+            # Evaluated and in world space, as check_footprint.py measures it: shape keys at
+            # their weights count.
+            rest = footprint.reach([skin])
         finally:
             rig.data.pose_position = pose
-        rest = footprint.spread(coords.reshape(-1, 3))
         fit = footprint.fit(rest, limits)
         print("HEX rest pose reaches %.3f of the hex as downloaded; scaled by %.4f: rest %.3f (limit %.2f), "
               "widest clip about %.3f (limit %.2f)" % (rest, fit, rest * fit, limits[0],
