@@ -154,6 +154,7 @@ func run(_tree: SceneTree) -> String:
 		_check_flight_shuns_dead_end,
 		_check_light_sleeper_wakes,
 		_check_hushed_steps,
+		_check_hush_off,
 		_check_packs_band,
 		_check_pack_follows,
 		_check_pack_leader_lost,
@@ -525,6 +526,28 @@ func _check_hushed_steps() -> String:
 	_walked = FlowSteps.walk(state, [around[1]])
 	if wild.asleep.has(monster):
 		return "a barely hushed player stepped next to a light sleeper without waking it"
+	return ""
+
+
+## Hushes switched off (#1572): a player hushed all but one step in a thousand wakes a light sleeper
+## by coming next to it at once, and so does one who joins while hushes are off.
+func _check_hush_off() -> String:
+	var state: GameState = _hushed_state(Fixed.ONE - 1)
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var monster: int = wild.monsters[0]
+	var next_to: Vector2i = Hex.ring(1, state.entity(monster).tile)[0]
+	state.set_enabled(HushFeature.ID, false)
+	state.player(0).tile = next_to
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if wild.asleep.has(monster):
+		return "a player unhushed by switching hushes off didn't wake a light sleeper"
+	wild.sleep(monster, true)
+	state.remove_entity(state.player(0).id)
+	var _joined: Entity = state.add_entity(0, Vector2i(2, 0))
+	state.player(0).tile = next_to
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if wild.asleep.has(monster):
+		return "a player who joined while hushes were off didn't wake a light sleeper"
 	return ""
 
 

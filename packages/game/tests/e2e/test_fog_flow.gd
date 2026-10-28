@@ -114,6 +114,26 @@ func _check_sight_trait() -> String:
 	state.remove_entity(player.id)
 	if fog.radius_of(0) != FogFeature.SIGHT_RADIUS:
 		return "a player who left kept their wider sight"
+	return _check_sight_trait_off(state, traits, fog)
+
+
+## Sight traits switched off (#1572): every player's sight narrows back at once, and a player who
+## joins while they're off isn't widened; switched on again, the next tick widens it.
+func _check_sight_trait_off(state: GameState, traits: SightTraitFeature, fog: FogFeature) -> String:
+	var player: Entity = state.add_entity(0, START)
+	if fog.radius_of(0) == FogFeature.SIGHT_RADIUS:
+		return "a returning player carrying a tikazzir wasn't widened"
+	state.set_enabled(SightTraitFeature.ID, false)
+	if fog.radius_of(0) != FogFeature.SIGHT_RADIUS:
+		return "switching sight traits off left the player's wider sight"
+	state.remove_entity(player.id)
+	var _joined: Entity = state.add_entity(0, START)
+	if fog.radius_of(0) != FogFeature.SIGHT_RADIUS:
+		return "a player joining while sight traits are off was widened"
+	state.set_enabled(SightTraitFeature.ID, true)
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if fog.radius_of(0) == FogFeature.SIGHT_RADIUS or traits.sight_of(state, 0) < 1:
+		return "switching sight traits back on didn't widen the player's sight"
 	return ""
 
 
