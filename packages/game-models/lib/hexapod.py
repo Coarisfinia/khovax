@@ -105,45 +105,6 @@ def crouch(height):
     return lower
 
 
-def gait(frames, stride, body, phases, duty, lift=0.2, bob=0.02, roll=0.03, sway=0.15):
-    """A looping gait, posed on every frame: each paw is planted for `duty` of the cycle, running
-    back `stride` x `duty` at the body's speed (`stride`: unscaled metres the body moves in one
-    cycle) about the spot under its hip, then lifts (`lift` of its leg's reach at the top) and
-    swings forward at its phase;
-    the legs reach for their paws (legs.plant). The body sinks `bob` (unscaled metres) as each
-    group of legs takes its weight, rolls `roll` (radians) toward the side bearing more of it,
-    the head countering the roll, and the tail sways `sway` radians once a cycle."""
-    reaches = {pair: clips._leg(body.legs[pair])[0] for pair in PAIRS}
-    # How far each paw stands ahead of its hip at rest: its steps sweep about the spot under the
-    # hip instead, so a leg leaning forward doesn't reach past straight at the front of its step.
-    leans = {pair: body.legs[pair][0][1] - body.legs[pair][-1][1] for pair in PAIRS}
-    sweep = stride * duty
-    beats = round(1.0 / min(abs(a - b) or 1.0 for a in phases.values() for b in phases.values()))
-    poses = []
-    for step in range(frames + 1):
-        t = step / frames
-        pose, bearing = {}, 0.0
-        for (pair, side), phase in phases.items():
-            u = (t - phase) % 1.0
-            ahead, up = clips._step(u, duty, sweep, clips.MATCHED * duty / (1.0 - duty))
-            pose["plant." + bone(pair, "paw", side)] = (0.0, lift * reaches[pair] * up, ahead - leans[pair])
-            if u < duty:
-                bearing += (1.0 if side == "L" else -1.0) * math.sin(math.pi * u / duty)
-        lap = 2.0 * math.pi * t
-        tilt = roll * bearing / 3.0
-        pose.update({
-            "root_loc": (0.0, -bob * (0.5 - 0.5 * math.cos(beats * lap)), 0.0),
-            "hips": (0.0, -tilt, 0.0),
-            "spine_02": (0.0, -0.5 * tilt, 0.0),
-            "neck": (0.0, 0.0, 0.5 * tilt),
-            "head": (0.0, 1.2 * tilt, 0.0),
-            "tail_01": (0.05, 0.0, sway * math.sin(lap)),
-            "tail_02": (0.0, 0.0, sway * math.sin(lap - 0.8)),
-        })
-        poses.append((step + 1, pose))
-    return clips.Clip(poses, loop=True)
-
-
 def scurry(frames, phases, swing, lift, skim, bounce=0.02, roll=0.03, sway=0.2):
     """A run too fast for planted paws (#1073), posed on every frame as smooth waves: each leg
     swings from its hip, back `swing` radians and forward as far, at its phase, raised `lift`

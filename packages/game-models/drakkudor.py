@@ -27,9 +27,9 @@ from lib import attachments, clips, hexapod, legs, metrics, scene  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "drakkudor.glb")
 FPS = 30
-# A titan: it stands taller than the mana wolf and about twice its length. Its legs stand nearly
-# straight, so they only reach so far: at the game's speeds a smaller body would scurry.
-SCALE = 2.0
+# Its footprint from above, in every pose of every clip, stays inside its hex with a twentieth of
+# the hex to spare, as a regular monster's does (the owner, on #1514).
+SCALE = 0.7
 # Moves the source onto its feet: its soles on the ground, the origin midway between its front
 # and hind feet.
 OFFSET = (0.0, 0.125, 0.566)
@@ -79,19 +79,17 @@ CROUCH = 0.1
 BELLY_HEIGHT = 0.30
 
 # The game's speeds at the model's size (metres a second): a wild monster glides a tile (sqrt(3)
-# apart) in 0.8 s, a companion follows at a tile every 0.3 s. Its walk is a wave up each side,
-# a tile a cycle, each paw down two fifths of it, so its legs swing as slowly as they can reach.
-# Its run is a tripod too fast for planted paws (hexapod.scurry), its paws skimming the ground, a
-# cycle as long as the game takes to carry it a tile and a half.
+# apart) in 0.8 s, a companion follows at a tile every 0.3 s: at its size both are too fast for
+# planted paws, which would stay down a frame or two. So it scurries (hexapod.scurry), its paws
+# skimming the ground: walking, a wave up each side; running, a tripod with longer swings.
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE, FPS)
-RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.5, FPS)
-WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
-# How far (radians) its legs swing either way in its run and lift as they swing forward, and how
-# high (unscaled metres) its paws skim the ground.
-RUN_SWING, RUN_LIFT, RUN_SKIM = 0.35, 0.3, 0.035
+# Each gait's frames a cycle, how far (radians) its legs swing either way and lift as they swing
+# forward, and how high (unscaled metres) its paws skim the ground.
+WALK_FRAMES, WALK_SWING, WALK_LIFT = 16, 0.25, 0.25
+RUN_FRAMES, RUN_SWING, RUN_LIFT = 12, 0.35, 0.3
+SKIM = 0.08
 
 # Where its paws stand braced for its long attack, and where they lie once it has fainted or
 # sleeps (the left one's shift from rest; the right mirrors it).
@@ -155,9 +153,9 @@ def build(out):
     hexapod.bind(skin, rig, SCALE)
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": hexapod.gait(WALK_FRAMES, WALK_STRIDE, RIBWALKER, hexapod.WAVE, duty=0.4, lift=0.1),
         # Its legs hang from a body raised back out of its crouch, its paws skimming the ground.
-        "Run": hexapod.scurry(RUN_FRAMES, hexapod.TRIPOD, RUN_SWING, RUN_LIFT, CROUCH + RUN_SKIM),
+        "Walk": hexapod.scurry(WALK_FRAMES, hexapod.WAVE, WALK_SWING, WALK_LIFT, CROUCH + SKIM),
+        "Run": hexapod.scurry(RUN_FRAMES, hexapod.TRIPOD, RUN_SWING, RUN_LIFT, CROUCH + SKIM),
         "Attack": ram(),
         "Hit": hexapod.softened(clips.hit(), 0.5),
         "Faint": hexapod.faint(BELLY_HEIGHT, SPLAYED),

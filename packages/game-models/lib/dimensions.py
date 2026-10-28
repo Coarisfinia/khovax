@@ -90,7 +90,7 @@ def report(rig):
     if plan is None:
         return ["no limbs of a known body plan: nothing to measure"], True
     if isinstance(plan, list):
-        return ["FAIL quadruped limbs lacking the joints " + ", ".join(plan)], False
+        return ["FAIL limbs lacking the joints " + ", ".join(plan)], False
     lines, passed = [], True
     for name, (low, high) in BOUNDS[plan].items():
         value = measure(rig, name)
