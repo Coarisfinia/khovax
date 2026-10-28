@@ -1,4 +1,4 @@
-// A placeholder: a passive its development web grants (#1404); its effect comes with #1499.
+// A passive its development web grants (#1404). Its hush (#1563) is a placeholder to tune (#960).
 {
 	"id": "vynnimu_vummi_nummi",
 	"kind": "player_passive",
@@ -8,5 +8,6 @@
 		"entry": "The soft huffing of a pup sniffing at the dark. Dominators said it as they crept past sleeping beasts behind a nose that knew the way.",
 		"gloss": "sniff, hush, on"
 	},
+	"hush": 500,
 	"path": "harmony"
 }

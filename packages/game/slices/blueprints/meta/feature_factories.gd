@@ -97,6 +97,8 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		# (#716).
 		CompanionFeature.ID: CompanionFactory.build,
 		SightTraitFeature.ID: SightTraitFactory.build,
+		# After the companions, whose passives hush their players for the sleep earlier (#1563).
+		HushFeature.ID: HushFactory.build,
 		# After the companions, so a swap can't pick a monster that fainted (#597).
 		CompanionSwapFeature.ID: _plain(CompanionSwapFeature),
 		# After the companions too, whose fainted ones a revive item brings back (#656).

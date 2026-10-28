@@ -19,7 +19,11 @@ extends RefCounted
 ## it had stepped all along. Asleep, it strikes nobody, not even a player standing right next to
 ## it, whom it doesn't wake for; a strike or rage wakes it, and then it strikes again. A light
 ## sleeper (#1230), like the content's Tikazzir, does wake as soon as a player comes next to it,
-## though not for one two tiles away.
+## though not for one two tiles away. A player whose companion is out with a passive that hushes
+## (#1563), like the content's Vummi-nummi, doesn't wake it standing beside it, and wakes it with a
+## step only on a roll: a step that a hush sparing all but one in a thousand makes never does, and
+## one that a hush sparing one in a thousand makes does. Once the companion faints, the hush is
+## gone and the player wakes it at once.
 ##
 ## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
@@ -50,6 +54,9 @@ const TEST_TRAITS: Dictionary[String, Array] = {
 	"sle": ["sleepless", "drinker", "predator"],
 }
 const SEED: int = 42
+## The hush flow's companion species (#1563) and its player passive, which hushes.
+const HUSHER: String = "hus"
+const HUSH: String = "test_hush"
 ## How far the hunt flow's wall of rock (#1259) runs each way from the middle of its disc.
 const WALL_HALF: int = 1
 ## The content species the flow checks, which the blueprints' basic instance places.
@@ -146,6 +153,7 @@ func run(_tree: SceneTree) -> String:
 		_check_hunt_round_wall,
 		_check_flight_shuns_dead_end,
 		_check_light_sleeper_wakes,
+		_check_hushed_steps,
 		_check_packs_band,
 		_check_pack_follows,
 		_check_pack_leader_lost,
@@ -468,6 +476,67 @@ func _check_light_sleeper_wakes() -> String:
 	if wild.asleep.has(monster):
 		return "a player next to a sleeping light sleeper didn't wake it"
 	return ""
+
+
+## A light sleeper wakes for a hushed player (#1563) only on a step, and only on the roll: one
+## hushed all but one step in a thousand stands next to it and walks round it without waking it,
+## and wakes it as their companion faints; one hushed one step in a thousand wakes it with a step.
+func _check_hushed_steps() -> String:
+	if HushFactory.build(null).hushes.get("vynnimu_vummi_nummi", 0) < 1:
+		return "the content's Vummi-nummi doesn't hush"
+	var state: GameState = _hushed_state(Fixed.ONE - 1)
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	var monster: int = wild.monsters[0]
+	var around: Array[Vector2i] = Hex.ring(1, state.entity(monster).tile)
+	state.player(0).tile = around[0]
+	for _tick: int in MovementFeature.MOVE_TICKS:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not wild.asleep.has(monster):
+		return "a hushed player standing next to a sleeping light sleeper woke it"
+	var round_trip: Array[Vector2i] = around.slice(1)
+	round_trip.append(around[0])
+	var _walked: Array[RefCounted] = FlowSteps.walk(state, round_trip)
+	if not wild.asleep.has(monster):
+		return "a hushed player walking round a light sleeper woke it, though most steps are spared"
+	CompanionParty.faint(state, 0, CompanionParty.companion(state, 0))
+	for _tick: int in 2:
+		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if wild.asleep.has(monster):
+		return "a light sleeper slept on beside a player whose hushing companion fainted"
+	state = _hushed_state(1)
+	wild = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	monster = wild.monsters[0]
+	state.player(0).tile = around[0]
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	if not wild.asleep.has(monster):
+		return "a barely hushed player standing next to a sleeping light sleeper woke it"
+	_walked = FlowSteps.walk(state, [around[1]])
+	if wild.asleep.has(monster):
+		return "a barely hushed player stepped next to a light sleeper without waking it"
+	return ""
+
+
+## A disc with a sleeping light sleeper in its middle and the player of slot 0 two tiles from it,
+## whose companion is out with a passive that hushes them by `share` (#1563).
+static func _hushed_state(share: int) -> GameState:
+	var traits: Dictionary[String, Array] = { "diu": TEST_TRAITS["diu"].duplicate() }
+	traits["diu"].append(SpeciesBehaviour.LIGHT_SLEEPER)
+	var ordered: Array[Feature] = _wild_features({ "diu": 10, HUSHER: 10 }, traits)
+	ordered.append_array([
+		SleepFeature.new(),
+		CompanionFeature.new({}, { HUSHER: HUSH }, {}),
+		HushFeature.new({ HUSH: share }),
+	])
+	var region: Region = Region.disc(2)
+	region.wild_monsters.append(Vector2i.ZERO)
+	region.add_placement(WildSpotPlacements.KIND, Vector2i.ZERO, WildSpot.NAMED + "diu")
+	var state: GameState = GameState.new(region, SEED, ordered)
+	FlowSteps.carry(state, 0, [HUSHER])
+	var _player: Entity = state.add_entity(0, Vector2i(2, 0))
+	Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	wild.sleep(wild.monsters[0], true)
+	return state
 
 
 ## Puts the player of slot 0 on a free walkable tile `distance` tiles from `tile`; whether there
