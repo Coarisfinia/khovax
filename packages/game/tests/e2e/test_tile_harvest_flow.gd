@@ -5,7 +5,8 @@ extends RefCounted
 ## in its changed tiles until it's purged (#212). Walking off in between stops the harvest, and
 ## without the press nothing happens. A harvest going on survives a save. Every tile kind that can
 ## be harvested names a tile table and a depleted kind that exist, and an instance without such
-## tiles has no harvesting. In a session, this machine's player's crystals burst from the tile and
+## tiles has no harvesting. A moss patch (#1490) harvested by a player standing on it drops moss and
+## leaves plain mana moss. In a session, this machine's player's crystals burst from the tile and
 ## land in their profile; another player's don't. On a touch screen the interact button (#1488)
 ## shows only while a press would begin a harvest, and the Controls tab shows a tap for it.
 
@@ -13,6 +14,7 @@ const SEED: int = 7
 ## The mana forest, ringed by gems (#1218).
 const FOREST: String = "ivenwhal_wudhen"
 const GEMS: String = "gems"
+const MOSS_PATCH: String = "moss_patch"
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_tile_harvest_profile.json"
 ## This machine's player's crystals from the gems the session step harvests.
@@ -25,6 +27,8 @@ func run(tree: SceneTree) -> String:
 		result = _check_features()
 	if result.is_empty():
 		result = _check_harvested()
+	if result.is_empty():
+		result = _check_moss_patch()
 	if result.is_empty():
 		result = _check_stopped()
 	if result.is_empty():
@@ -56,8 +60,8 @@ func _check_content() -> String:
 	for table: LootTable in LootContent.load_loot_tables().loot_tables.values():
 		if table.kind == LootTable.TILE and not yielded.has(table.id):
 			return "no tile kind yields the tile table %s" % table.id
-	if not TileKinds.harvested_by_hand(GEMS):
-		return "gems can't be harvested by hand"
+	if not TileKinds.harvested_by_hand(GEMS) or not TileKinds.harvested_by_hand(MOSS_PATCH):
+		return "gems or moss patches can't be harvested by hand"
 	return ""
 
 
@@ -97,6 +101,36 @@ func _check_harvested() -> String:
 			return "player %d's loot isn't a roll on the gems' table: %s" % [slot, loot[slot]]
 	if LootRolls.of(harvested[0]) != loot:
 		return "the harvested gems' loot doesn't reach the profiles and quests"
+	return ""
+
+
+## A player standing on a moss patch harvests it: once the ticks are up it turns into plain mana
+## moss the instance keeps, and both players get their moss.
+func _check_moss_patch() -> String:
+	var state: GameState = InstanceBlueprints.create(FOREST, SEED, 2)
+	var patches: Array[Vector2i] = []
+	for tile: Vector2i in state.region.terrain:
+		if state.region.terrain[tile] == MOSS_PATCH:
+			patches.append(tile)
+	if patches.is_empty():
+		return "the mana forest has no moss patch"
+	patches.sort()
+	var patch: Vector2i = patches[0]
+	state.player(0).tile = patch
+	var events: Array[RefCounted] = _press(state)
+	for _tick: int in TileHarvestFeature.HARVEST_TICKS:
+		events.append_array(_stand(state))
+	var harvested: Array[TileHarvested] = _harvested(events)
+	if harvested.size() != 1 or harvested[0].tile != patch or harvested[0].kind != MOSS_PATCH:
+		return "the moss patch under the player wasn't harvested: %s" % [events]
+	if state.region.terrain[patch] != "mana_moss" or not state.changed_tiles.has(patch):
+		return "the harvested moss patch didn't turn into mana moss the instance keeps"
+	var loot: Dictionary[int, Dictionary] = harvested[0].loot
+	for slot: int in [0, 1]:
+		var rolled: Dictionary = loot.get(slot, {})
+		var amount: int = rolled.get("moss", 0)
+		if rolled.size() != 1 or amount < 1 or amount > 2:
+			return "player %d's loot isn't a roll on the moss patch's table: %s" % [slot, loot]
 	return ""
 
 
@@ -231,7 +265,8 @@ func _check_button(main: Node) -> String:
 
 
 ## A two-player mana forest from SEED with player 0 on a free tile beside gems, on which nothing can
-## be harvested, or null when there's none.
+## be harvested and from which the gems are what a press harvests (not a moss patch beside it), or
+## null when there's none.
 func _beside_gems() -> GameState:
 	var state: GameState = InstanceBlueprints.create(FOREST, SEED, 2)
 	for tile: Vector2i in state.region.terrain:
@@ -239,8 +274,11 @@ func _beside_gems() -> GameState:
 			continue
 		for direction: Vector2i in Hex.DIRECTIONS:
 			var beside: Vector2i = tile + direction
-			if FlowSteps.walkable_for_players(state, beside):
-				state.player(0).tile = beside
+			if not FlowSteps.walkable_for_players(state, beside):
+				continue
+			state.player(0).tile = beside
+			var target: Vector2i = TileHarvestFeature.target_of(state, state.player(0))
+			if state.region.terrain.get(target, "") == GEMS:
 				return state
 	return null
 

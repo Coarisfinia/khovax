@@ -1,0 +1,10 @@
+// Moss patch: a thick cushion of mana moss, placed by hand in a region piece (#1490) so the mana
+// forest's floor isn't one endless field to scrape. Walkable, and sight passes over it, like the
+// mana moss around it. A player harvests its moss by hand, which leaves plain mana moss.
+{
+	"id": "moss_patch",
+	"color": "#9580d6",
+	"symbol": ",", // tells it apart without its color (#68)
+	"harvest": { "yields": "moss_tufts", "becomes": "mana_moss", "takes": "hands" },
+	"traits": { "walkable": true }
+}
