@@ -144,8 +144,8 @@ func choose_name(typed: String, now_msec: int) -> String:
 
 ## Posts the run of requests that tells a world whose party entry `stored` (CompanionFeature) isn't
 ## who the player carries (PartyRequests.catch_up, #818), each leaning as the stat nodes it took on
-## its species' web in `webs` add up to (#1358; none without a web), saved like any change; returns
-## why it couldn't be saved, or "".
+## its species' web in `webs` add up to (#1358; none without a web) and with the passive its passive
+## node grants (#1472), saved like any change; returns why it couldn't be saved, or "".
 func catch_up_party(
 	stored: Dictionary,
 	now_msec: int,
@@ -153,7 +153,9 @@ func catch_up_party(
 ) -> String:
 	var party: CarriedMonsters = CarriedMonsters.new()
 	for monster: DominatedMonster in profile.carried_monsters():
-		party = party.add(monster.short_id, monster.species, _leaning_of(monster, webs))
+		var web: DevelopmentWeb = webs.get(monster.species)
+		var passive: String = web.passive_of(monster.taken) if web != null else ""
+		party = party.add(monster.short_id, monster.species, _leaning_of(monster, webs), passive)
 	if not PartyRequests.catch_up(party, profile.outbox, stored):
 		return ""
 	_pending = true

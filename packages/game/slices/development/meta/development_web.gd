@@ -104,6 +104,16 @@ func stronger_of(taken: Array[String]) -> int:
 	return sum
 
 
+## The passive the passive node among `taken` grants (#1472), or "" for none: a web has one
+## passive node at most (DevelopmentPassives), since a monster carries one web passive to the
+## world. A node the web doesn't have adds nothing.
+func passive_of(taken: Array[String]) -> String:
+	for node: String in taken:
+		if passives.has(node):
+			return passives[node]
+	return ""
+
+
 ## Reads the directions and their nodes, each linked to the one before it along its direction.
 func _read_directions(raw: Variant) -> String:
 	var directions: Array = raw if raw is Array else []

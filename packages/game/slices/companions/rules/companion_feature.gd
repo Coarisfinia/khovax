@@ -28,7 +28,7 @@ extends Feature
 ## (a wild monster) stops it. Its rolls come from the feature's own stream. It attacks through
 ## CompanionAttackFeature (#221).
 ## A monster's passives (#222) work only while it is out, as its player's companion here (#616,
-## CompanionPassives).
+## CompanionPassives): its species' own, and the one its web grants it (#1472, from its party).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companions"
@@ -60,8 +60,13 @@ var _rest: Dictionary[int, int] = {}
 ## the content data (Ability, #222), which CompanionPassives reads.
 var player_passives: Dictionary[String, String] = {}
 var self_passives: Dictionary[String, String] = {}
+## Whether each passive helps its monster's player (true) or the monster itself (false), by its
+## id, from the content data (Ability's kind): a monster's web passive (#1472) works by it.
+var helps_player: Dictionary[String, bool] = {}
 ## Each species with a reach, by its code in a carry request (CarryRequest.species_code, #818).
 var _species_by_code: Dictionary[int, String] = {}
+## Each passive, by its code in a carry request (CarryRequest.passive_code, #1472).
+var _passives_by_code: Dictionary[int, String] = {}
 var _rng: Rng
 
 
@@ -69,10 +74,16 @@ func _init(
 	species_reaches: Dictionary[String, int] = {},
 	species_player_passives: Dictionary[String, String] = {},
 	species_self_passives: Dictionary[String, String] = {},
+	passives_helping_player: Dictionary[String, bool] = {},
 ) -> void:
 	reaches = species_reaches
 	player_passives = species_player_passives
 	self_passives = species_self_passives
+	helps_player = passives_helping_player
+	for passive: String in helps_player:
+		var code: int = CarryRequest.passive_code(passive)
+		if not CommandCodes.file(_passives_by_code, code, passive):
+			push_error("passive %s's code is no passive's or another's" % passive)
 	for species_id: String in reaches:
 		if not CommandCodes.file(
 			_species_by_code,
@@ -144,7 +155,13 @@ func _take_parties(state: GameState, commands: Array[Command]) -> void:
 		var carrying: bool = command != null and command.request_kind == OutboxEntry.CARRY
 		if carrying and state.player(slot) != null:
 			if OutboxReceipts.take(state, slot, ID, command):
-				CompanionParty.take_request(state, slot, command.request_data, _species_by_code)
+				CompanionParty.take_request(
+					state,
+					slot,
+					command.request_data,
+					_species_by_code,
+					_passives_by_code,
+				)
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance

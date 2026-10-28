@@ -157,6 +157,7 @@ static func _migrate(data: Dictionary, changes: Array[String]) -> void:
 		"1417-development-taken": _migrate_development_taken,
 		"1358-carry-leanings": _migrate_carry_leanings,
 		"1453-carry-specials": _migrate_carry_leanings,
+		"1472-carry-passives": _migrate_carry_leanings,
 	}
 	for change: String in steps:
 		if not changes.has(change):
@@ -331,8 +332,9 @@ static func _migrate_development_taken(data: Dictionary) -> void:
 
 
 ## A run of carry requests holds each monster's leaning too (#1358), in other places, and later its
-## special's share in it (#1453), in wider values, so the carry requests still in the save `data`'s
-## outbox are dropped: the next session sends the party anew (PartyRequests.catch_up).
+## special's share in it (#1453), in wider values, and then each one's web passive (#1472), in one
+## more value, so the carry requests still in the save `data`'s outbox are dropped: the next
+## session sends the party anew (PartyRequests.catch_up).
 static func _migrate_carry_leanings(data: Dictionary) -> void:
 	var outbox: Variant = data.get("outbox")
 	var requests: Array = outbox if outbox is Array else []
