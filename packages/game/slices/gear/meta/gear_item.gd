@@ -12,6 +12,8 @@ const SCHEMA: String = "res://slices/gear/data/gear.schema.json"
 const TRAP: String = "trap"
 ## The slot whose gear may keep the passives on (#617).
 const WARD: String = "ward"
+## The rarity of uniques and artifacts (#291): only such gear keeps the passives on (#617).
+const UNIQUE: String = "bound"
 ## The rarities (#291), lowest to highest, then bound for uniques and artifacts.
 const RARITIES: Array[String] = ["loose", "knotted", "warded", "sealed", "unbroken", "bound"]
 
@@ -74,6 +76,6 @@ func _check(file_id: String) -> String:
 		return "its rarity must be one of %s" % [RARITIES]
 	if (damage > 0) != (slot == TRAP):
 		return "spikes, in the trap slot, need damage, and no other gear has any"
-	if keeps_passives and slot != WARD:
-		return "only ward gear keeps the passives on"
+	if keeps_passives and (slot != WARD or rarity != UNIQUE):
+		return "only unique ward gear, of rarity %s, keeps the passives on" % UNIQUE
 	return ""

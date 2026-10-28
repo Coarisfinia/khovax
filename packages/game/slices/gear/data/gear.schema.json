@@ -28,7 +28,7 @@
 			"maximum": 1000000000
 		},
 		"keeps_passives": {
-			"description": "Ward gear only (#617): while it's in the ward slot, the passives of every monster the player carries that hasn't fainted work, out or not, instead of only the out companion's.",
+			"description": "Unique ward gear only, of rarity bound (#617): while it's in the ward slot, the passives of every monster the player carries that hasn't fainted work, out or not, instead of only the out companion's.",
 			"const": true
 		}
 	},
@@ -40,7 +40,7 @@
 		},
 		{
 			"if": { "required": ["keeps_passives"] },
-			"then": { "properties": { "slot": { "const": "ward" } } }
+			"then": { "properties": { "slot": { "const": "ward" }, "rarity": { "const": "bound" } } }
 		}
 	]
 }
