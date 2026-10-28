@@ -1,0 +1,10 @@
+// Ausvren vo Tormaesk (#1590), the guide who waits in Brekhal Varn's sealed passage and opens their
+// seal, the boulders blocking the way into Hrovumel Stolm, once a player leads them there (#1588).
+{
+	"id": "ausvren_vo_tormaesk",
+	"name": "Ausvren vo Tormaesk",
+	"codex": {
+		"entry": "A guide of Brekhal Varn, of the Tormaesk kin, who keep the old ways through the rock. Only a Tormaesk can shift the boulders sealing the passage into Hrovumel Stolm, and Ausvren waits on the pass for someone to walk there with. The name is Hearth-speech, the everyday tongue: the given name Ausvren, soft as breath, then vo Tormaesk, of their kin, a name as hard as the stone they keep.",
+		"gloss": "Ausvren, of the Tormaesk kin"
+	}
+}

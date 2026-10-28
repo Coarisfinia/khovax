@@ -781,8 +781,9 @@ func _wild_species_problem(instance_name: String, species: Dictionary[String, Sp
 ## and codex entry (#1175). What its region holds brings the rest (#879): its people only to the
 ## glade itself, its chests to its corrupted variant too, through its chest table. A blueprint file
 ## with a wrong id, an unknown field, no species, a weight below 1, a chest table without a loot
-## table, a variant without its region, a variant's region of its own without a codex entry and
-## gloss or its own region with one (#1448), or without a codex entry and gloss is refused.
+## table, a variant without its region, a variant's region with a codex entry but no gloss or its
+## own region with one (#1448), or without a codex entry and gloss is refused. A variant's region
+## without a codex entry is the instance changed (#1590), which the world flow loads.
 func _check_blueprints() -> String:
 	var glade: Blueprint = InstanceBlueprints.blueprint(FlowSteps.GLADE)
 	if glade == null or glade.loot_table != "glade" or glade.chest_table != "glade_chest":
@@ -818,7 +819,7 @@ func _check_blueprints() -> String:
 		BLUEPRINT.replace("\"a\": 1", "\"a\": 0") % "": "its wild_species",
 		BLUEPRINT % ", \"chest_table\": \"c\"": "a blueprint with a chest table",
 		BLUEPRINT % ", \"variants\": [{\"flag\": \"f\"}]": "its variants",
-		BLUEPRINT % (variant % ["r", ""]): "its variants",
+		BLUEPRINT % (variant % ["r", ", \"codex\": {\"entry\": \"e\"}"]): "its variants",
 		BLUEPRINT % (variant % ["", codex]): "its variants",
 		BLUEPRINT % ", \"turned\": 1": "turned must",
 		BLUEPRINT.replace("\"g\"", "\" \"") % "": "it needs a codex entry",

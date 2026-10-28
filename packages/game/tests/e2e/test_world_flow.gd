@@ -45,6 +45,11 @@ const SEAM_WIDTH: int = 3
 const DUNGEON: String = "hrovumel_stolm"
 const DUNGEON_END: String = "shrine"
 const DUNGEON_END_PLACE: String = "inner_shrine"
+## The pass whose sealed passage leads into the dungeon (#1590), its guide, and the variant their
+## opening chooses, which keeps the passage open.
+const PASS: String = "brekhal_varn"
+const PASS_GUIDE: String = "ausvren_vo_tormaesk"
+const PASS_OPENED: String = "brekhal_varn_opened"
 ## Where _check_documents' region document has its stump, turned and set lower (#232) by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
@@ -89,6 +94,7 @@ func run(tree: SceneTree) -> String:
 		_check_start_variants,
 		_check_pieces_connected,
 		_check_dungeon_end,
+		_check_pass_seal,
 		_check_room,
 		_check_web_connected,
 		_check_world,
@@ -1621,7 +1627,7 @@ func _check_start_variants() -> String:
 
 ## Every region file and region piece (regions/ and its folders) has its walkable tiles in one
 ## connected part, its starts, connectors and exits among them (#205): a blocking tile (rock, water,
-## a boulder) never cuts part of a piece off.
+## a boulder) never cuts part of a piece off, but for a guide's seal, which they open (#1590).
 func _check_pieces_connected() -> String:
 	for path: String in _region_files():
 		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))
@@ -1755,7 +1761,8 @@ static func _room_problem(region: Region, look: Callable) -> String:
 
 ## Whether some walkable tile, start, connector or exit of `region` can't be walked to from its
 ## first walkable tile.
-func _disconnected(region: Region) -> bool:
+func _disconnected(sealed: Region) -> bool:
+	var region: Region = _opened(sealed)
 	var walkable: Array[Vector2i] = []
 	for tile: Vector2i in region.sorted_tiles():
 		if region.is_walkable(tile):
@@ -1773,12 +1780,65 @@ func _disconnected(region: Region) -> bool:
 	return false
 
 
-## The first exit of `region` its first player can't walk to, as text, or "".
+## The first exit of `region` its first player can't walk to, as text, or "": one behind a guide's
+## seal counts, since the guide opens it (#1588, #1590).
 func _unreachable_exit(region: Region) -> String:
-	var walkable: Array[Vector2i] = region.reachable(region.starts[0])
+	var walkable: Array[Vector2i] = _opened(region).reachable(region.starts[0])
 	for exit: Vector3i in region.exits:
 		if not walkable.has(Vector2i(exit.x, exit.y)):
 			return str(exit)
+	return ""
+
+
+## `region` with every guide's seal on it opened (#1588), as the guide opens it: its tiles turned to
+## ground in place.
+static func _opened(region: Region) -> Region:
+	var sealed: Dictionary[Vector2i, String] = region.placed(SealPlacements.KIND)
+	for tile: Vector2i in sealed:
+		var _changed: bool = region.change(tile, Region.GROUND)
+	return region
+
+
+## The pass's sealed passage (#1590): for every seed its exit into the dungeon lies behind its
+## guide's seal, so it can't be walked to until the guide is led there and opens it, which raises
+## the
+## flag that chooses the pass's opened variant. That variant changes only the sealed passage, so it
+## arranges like the pass itself, the same tiles and the same exits, with the way in open and no
+## seal left, and its guide still there.
+func _check_pass_seal() -> String:
+	var flag: String = WorldFlags.EVENT_FLAG + PASS_GUIDE + EscortFeature.OPENED_SUFFIX
+	if InstanceBlueprints.variant(PASS, [flag]) != PASS_OPENED:
+		return "the pass's guide opening their seal doesn't choose its opened variant"
+	for seed_value: int in INSTANCE_SEEDS:
+		var sealed: Region = InstanceBlueprints.region_of(PASS, seed_value)
+		var opened: Region = InstanceBlueprints.region_of(PASS, seed_value, PASS_OPENED)
+		var way_in: Array[Vector2i] = []
+		for i: int in sealed.exits.size():
+			if sealed.exit_blueprints[i] == DUNGEON:
+				way_in.append(Vector2i(sealed.exits[i].x, sealed.exits[i].y))
+		var shut: Array[Vector2i] = sealed.reachable(sealed.starts[0])
+		var open: Array[Vector2i] = opened.reachable(opened.starts[0])
+		if (
+			way_in.size() < SEAM_WIDTH
+			or way_in.any(func(tile: Vector2i) -> bool: return shut.has(tile))
+			or not way_in.all(func(tile: Vector2i) -> bool: return open.has(tile))
+		):
+			return "seed %d's pass doesn't hold its way into the dungeon behind its seal: %s" % [
+				seed_value,
+				way_in,
+			]
+		var guide_there: bool = false
+		for meaning: String in opened.placed(NpcPlacements.KIND).values():
+			guide_there = guide_there or NpcSpot.read(meaning).id == PASS_GUIDE
+		if (
+			opened.sorted_tiles() != sealed.sorted_tiles()
+			or opened.exits != sealed.exits
+			or not opened.placed(SealPlacements.KIND).is_empty()
+			or not guide_there
+		):
+			return "seed %d's opened pass doesn't arrange like the pass, open, with its guide" % [
+				seed_value,
+			]
 	return ""
 
 
