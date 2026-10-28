@@ -10,8 +10,6 @@ const SCHEMA: String = "res://slices/species/data/species.schema.json"
 ## A species' name is one invented word (owner, #717), never a description like "Moss Toad": a
 ## capital, then small letters. Its schema has the same pattern.
 const NAME_PATTERN: String = "^[A-Z][a-z]+$"
-## Where the models its monsters wear live (#1223).
-const MODELS: String = "res://assets/"
 
 var id: String = ""
 ## What the player reads (#351); code and saves use the id.
@@ -151,9 +149,6 @@ func _read_codex_behaviour_and_model(data: Dictionary) -> String:
 ## assets/ that exists.
 func _read_model(raw: Variant) -> String:
 	model = Content.text_of(raw)
-	# Simplified, a path that climbs out of assets/ (`..`) would change.
-	var named: bool = model.begins_with(MODELS) and model.simplify_path() == model
-	named = named and model.get_extension() in ["glb", "gltf"]
-	if not named or not ResourceLoader.exists(model):
-		return "it needs a model: a glTF model under %s that exists (#1223)" % MODELS
+	if not Content.is_model(model):
+		return "it needs a model: a glTF model under %s that exists (#1223)" % Content.MODELS
 	return ""

@@ -1,7 +1,8 @@
 class_name GearPanel
 extends VBoxContainer
 ## The player's gear slots on the menu's Character tab (#690): a button for each slot (GearSlots),
-## showing the slot's icon and, in words, the gear in it with its rarity, or that it's empty.
+## showing the slot's icon and, in words, the gear in it with its rarity, or that it's empty, with
+## the gear's model beside it (ItemPicture, #1581).
 ## Pressing one, with a tap, a click or a controller (#438), puts the next piece of the player's
 ## gear for that slot into it, in id order, and empties it after the last. Gear changes anywhere
 ## outside a fight (owner, #223, Fight): during one, the buttons still show the slots but don't
@@ -28,6 +29,8 @@ var holder: ProfileHolder
 var shown: Array[String] = []
 ## Each slot's button, by slot.
 var buttons: Dictionary[String, Button] = {}
+## Each slot's picture of the gear in it, by slot.
+var pictures: Dictionary[String, ItemPicture] = {}
 ## Every piece of gear's data, by id; a piece missing from the data shows its id.
 var _items: Dictionary[String, GearItem] = {}
 var _note: Label
@@ -40,11 +43,7 @@ func _ready() -> void:
 	_items = content.items
 	add_child(GameMenu.label(TITLE))
 	for slot: String in GearSlots.SLOTS:
-		var button: Button = GameMenu.button("", change.bind(slot))
-		button.icon = ICONS[slot]
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		buttons[slot] = button
-		add_child(button)
+		_add_slot(slot)
 	_note = GameMenu.label("")
 	add_child(_note)
 	refresh()
@@ -54,6 +53,20 @@ func _process(_delta: float) -> void:
 	# Only while it's shown: the menu is open on the Character tab.
 	if is_visible_in_tree():
 		refresh()
+
+
+## Adds the row of `slot`: the picture of its gear, then its button.
+func _add_slot(slot: String) -> void:
+	var button: Button = GameMenu.button("", change.bind(slot))
+	button.icon = ICONS[slot]
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons[slot] = button
+	pictures[slot] = ItemPicture.new()
+	var row: HBoxContainer = HBoxContainer.new()
+	row.add_child(pictures[slot])
+	row.add_child(button)
+	add_child(row)
 
 
 ## Sizes the slots' icons for text of `font` pixels, a little larger than the text.
@@ -72,6 +85,7 @@ func refresh() -> void:
 		var line: String = SLOT_TEXT % [slot.capitalize(), _described(gear_id)]
 		lines.append(line)
 		buttons[slot].text = line
+		pictures[slot].show_model(_model_of(gear_id))
 		buttons[slot].disabled = fighting
 	_note.text = FIGHT_TEXT if fighting else FREE_TEXT
 	lines.append(_note.text)
@@ -112,6 +126,12 @@ func _next(slot: String) -> String:
 	choices.sort()
 	choices.append("")
 	return choices[(choices.find(_equipped().get(slot, "")) + 1) % choices.size()]
+
+
+## The model of the gear `gear_id`, or "" for none or gear the data lacks.
+func _model_of(gear_id: String) -> String:
+	var item: GearItem = _items.get(gear_id)
+	return item.model if item != null else ""
 
 
 ## The gear `gear_id`, in words: its name and rarity, its id where the data lacks it, or EMPTY_TEXT.

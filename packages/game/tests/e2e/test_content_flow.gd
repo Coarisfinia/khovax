@@ -10,7 +10,8 @@ extends RefCounted
 ## open as the ones next to them are taken and grant a leaning, a stronger special or a passive no
 ## species has (#1404), and broken webs are refused. Loot tables (#90) load,
 ## roll the same for the same stream, and a blank rolls on the instance's table; every item a table
-## names is a piece of gear or a material (#774).
+## names is a piece of gear or a material (#774). Every piece of gear has a model that exists
+## (#1581).
 ## Tile blueprints (#116) load, the built-in ones with the traits regions always had, and broken
 ## ones are refused. Quests (#184) load with the steps they're written with, name only
 ## species that exist, side quests name the area they start in (#473), choices lead to steps of
@@ -1467,7 +1468,7 @@ func _check_loot_refused() -> String:
 
 ## Every item a loot, harvest or chest table names exists (#774): a piece of gear or a material,
 ## each read from its own data. A table naming an item that's neither is refused, and so is a
-## material file with a wrong id or a field it can't have.
+## material file with a wrong id or a field it can't have; then the gear's models (#1581).
 func _check_loot_items() -> String:
 	var materials: MaterialContent = MaterialContent.load_materials()
 	if not materials.problem.is_empty():
@@ -1498,7 +1499,27 @@ func _check_loot_items() -> String:
 		problem = refusing.add("x", refused)
 		if not problem.begins_with(cases[refused]):
 			return "a material file was refused with %s, not %s" % [problem, cases[refused]]
-	return ""
+	return _check_gear_models()
+
+
+## Every piece of gear loads with a model that exists (#1581): every item has one. A gear file
+## without one, or naming one that isn't a glTF model under assets/, is refused.
+func _check_gear_models() -> String:
+	var gear: GearContent = GearContent.load_gear()
+	if not gear.problem.is_empty() or gear.items.is_empty():
+		return "the gear didn't load: " + gear.problem
+	for item: GearItem in gear.items.values():
+		if not ResourceLoader.exists(item.model):
+			return "%s's model %s doesn't exist" % [item.id, item.model]
+	var text: String = (
+		"{\"id\": \"x\", \"name\": \"X\", \"slot\": \"throw\", \"rarity\": \"loose\"%s}"
+	)
+	for model: String in ["", ", \"model\": \"res://assets/none.glb\"", ", \"model\": 5"]:
+		var refused: GearItem = GearItem.parse("x", text % model)
+		if not refused.problem.begins_with("it needs a model"):
+			return "gear with the model \"%s\" was refused with %s" % [model, refused.problem]
+	var kept: GearItem = GearItem.parse("x", text % (", \"model\": \"%s\"" % MODEL))
+	return "" if kept.problem.is_empty() else "gear with a model was refused: " + kept.problem
 
 
 ## Why one of `tables` names an item that's neither a piece of `gear` nor one of `materials`, or "".

@@ -3,5 +3,6 @@
 	"id": "berry_pouch",
 	"name": "Berry pouch",
 	"slot": "throw",
-	"rarity": "loose"
+	"rarity": "loose",
+	"model": "res://assets/quaternius-items/coin_pouch.glb"
 }

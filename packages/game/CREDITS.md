@@ -3,6 +3,15 @@
 The assets this game uses, with their authors and licenses. Generated from each pack's
 `assets/<pack>/SOURCE.md` by `tools/godot/credits.gd`; don't edit it by hand.
 
+## Pearl bracelet
+
+- **Files:** `assets/armory3d-pearl-bracelet/`
+- **Author:** Armory_3D (https://poly.pizza/u/Armory_3D)
+- **Source:** "Pearl bracelet" on Poly Pizza (https://poly.pizza/m/9zb8mXYP6J), the site's `.glb`
+  download, renamed `pearl_bracelet.glb`
+- **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
+  its legal text). Credit is welcome, not required.
+
 ## Drakkudor
 
 - **Files:** `assets/drakkudor/`
@@ -116,3 +125,14 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Source:** `packages/game-models/ombulumo.py` on the shared model library `packages/game-models/lib/`, Blender
   script that builds, rigs, animates and exports `ombulumo.glb` (#1271)
 - **License:** The Unlicense, the repository's own license, see `LICENSE.md` next to this file.
+
+## Quaternius items
+
+- **Files:** `assets/quaternius-items/`
+- **Author:** Quaternius (https://quaternius.com)
+- **Source:** Poly Pizza, which hosts the author's models: `necklace.glb` is "Necklace"
+  (https://poly.pizza/m/Jvhs8DCNDZ), `coin_pouch.glb` is "Coin Pouch"
+  (https://poly.pizza/m/pTZyPTMH88) and `spikes.glb` is "Spikes" (https://poly.pizza/m/wGAKoYCOVK),
+  each the site's `.glb` download, renamed
+- **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
+  its legal text). Credit is welcome, not required.

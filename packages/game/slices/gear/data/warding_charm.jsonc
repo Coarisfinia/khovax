@@ -3,5 +3,6 @@
 	"id": "warding_charm",
 	"name": "Warding charm",
 	"slot": "ward",
-	"rarity": "loose"
+	"rarity": "loose",
+	"model": "res://assets/armory3d-pearl-bracelet/pearl_bracelet.glb"
 }

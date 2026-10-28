@@ -589,6 +589,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
     the model from them.
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, do A.
+- **Every item has a 3D model** (owner, #1579, #1581): gear, unique items, anything the player
+  holds, named in its data (`model`, which the content flow checks). For now each comes from a
+  free source whose license allows it here (B above), like the trees and other non-monster models.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
