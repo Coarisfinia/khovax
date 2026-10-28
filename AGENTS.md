@@ -556,8 +556,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   checked from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender
   5.2.2 headless from a committed script in `packages/game-models/`, then Godot).
 - **New models come only from the owner** (owner's base rule, #1568): agents never make a new model
-  from scratch. Its source (the mesh, and the rig if it has one) comes from the owner; agents
-  import, rig, animate, check and fix it, and work on the model tooling.
+  from scratch. Its source (the mesh, and the rig if it has one) comes from the owner, or for a
+  prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
+  work on the model tooling.
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner with its vibe, its type and 20 or
     more base prompts for the image generator, as diverse and weird as possible. The owner makes

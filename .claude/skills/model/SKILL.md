@@ -6,8 +6,9 @@ description: Import, rig, animate, texture and verify a 3D model (monster, NPC, 
 # Modeling playbook (owner's way)
 
 **New models come only from the owner** (owner's base rule, #1568): agents never make a new model
-from scratch. The owner gives its source (the mesh, and the rig if it has one); agents import,
-rig, animate, check and fix it, and work on the tooling. Needing a new model goes as AGENTS.md
+from scratch. The owner gives its source (the mesh, and the rig if it has one), or for a prop or
+scenery it comes from a free licensed source; agents import, rig, animate, check and fix it, and
+work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
 anything else.
 
@@ -198,7 +199,7 @@ a second model could use goes into the library or a generic tool, never into one
 - **The renders:** `scripts/render_views.py` (every side in Blender) and
   `packages/game/tools/models/render_in_game.gd` (any `.glb` in the real game scene: six sides,
   the game camera, the codex close-ups `portrait` and `face`, or a clip's frames; usage in its header).
-- **A new model** starts from the owner's source, never from scratch (#1568): turn it into the
+- **A new model** starts from its source (above), never from scratch (#1568): turn it into the
   source the script builds from with `packages/game-models/import_source.py` (usage in its
   header; it adopts a rig the source already has), then place, rig and animate it like the
   existing scripts (`attachments.add`, `weights.bind`, `clips.animate`, `scene.export_glb`). The
