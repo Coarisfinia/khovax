@@ -10,7 +10,8 @@ extends RefCounted
 ## land in their profile; another player's don't. On a touch screen the interact button (#1488)
 ## shows only while a press would begin a harvest, and the Controls tab shows a tap for it. A tap
 ## on gems a few tiles off (#1508, TapWalk) walks the player beside them and harvests them; a tap on
-## the bare rock left behind, which can't be stood on nor harvested, walks nowhere.
+## the bare rock left behind, which can't be stood on nor harvested, walks nowhere. The tap's mark
+## stays on the gems through the final glide beside them, then hides (#1554).
 
 const SEED: int = 7
 ## The mana forest, ringed by gems (#1218).
@@ -160,31 +161,51 @@ func _check_stopped() -> String:
 
 
 ## A tap on gems from a few tiles off walks player 0 beside them, the moves and the interact press
-## sent only as their commands, and the gems are harvested once there.
-func _check_tapped() -> String:
-	var state: GameState = _beside_gems()
+## sent only as their commands. The session's marker reads the walk on the forest fixture.
+func _check_tapped(main: Node) -> String:
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var here: String = driver.local_instance_name()
+	var own: GameState = driver.state
+	driver.world.instances[here] = _beside_gems()
+	var mark: TapWalkMark = main.get_node("Instance/TapWalkMark") as TapWalkMark
+	var result: String = _walk_to_gems(mark)
+	driver.input.tap_walk.stop()
+	driver.world.instances[here] = own
+	mark.show_state()
+	return result
+
+
+## The tapped gems stay marked on every tick through the last glide to the adjacent harvest tile;
+## at least one such tick must be seen. The gems are harvested once and the marker hides on arrival.
+func _walk_to_gems(mark: TapWalkMark) -> String:
+	var state: GameState = mark.driver.state
 	var gems: Vector2i = TileHarvestFeature.target_of(state, state.player(0))
-	var start: Vector2i = TileHarvestFeature.NO_TILE
-	for tile: Vector2i in state.region.reachable(state.player(0).tile):
-		if Hex.distance(tile, gems) == 3 and FlowSteps.walkable_for_players(state, tile):
-			start = tile
-			break
+	var start: Vector2i = _tap_start(state, gems)
 	if start == TileHarvestFeature.NO_TILE:
 		return "no free tile three steps off the mana forest's gems"
 	state.player(0).tile = start
-	var walk: TapWalk = TapWalk.new()
+	var walk: TapWalk = mark.driver.input.tap_walk
 	if not walk.aim(state, start, gems):
 		return "a tap on gems three steps off didn't walk there"
 	var events: Array[RefCounted] = []
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	var gliding: int = 0
 	for _tick: int in MovementFeature.MOVE_TICKS * 3 + TileHarvestFeature.HARVEST_TICKS + 2:
-		var at: Vector2i = state.player(0).tile
-		var commands: Array[Command] = FlowSteps.commands([walk.move(state, at), Command.NO_MOVE])
-		commands[0].interact = walk.harvests(state, at)
+		var commands: Array[Command] = FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE])
+		walk.steer(commands[0], state, state.player(0).tile)
 		Simulation.step(state, commands)
 		events.append_array(state.events)
+		var moving: bool = movement.walk(state.player(0).id).is_moving()
+		if not walk.walking and moving:
+			gliding += 1
+		mark.show_state()
+		if mark.piece.visible != (walk.walking or moving):
+			return "the gems' tap-walk mark didn't stay through the final glide and hide on arrival"
+		if mark.piece.visible and mark.piece.tile != gems:
+			return "the tap-walk mark left the tapped gems for the harvest position"
 	var harvested: Array[TileHarvested] = _harvested(events)
-	if Hex.distance(state.player(0).tile, gems) != 1 or walk.walking:
-		return "the tapped walk didn't end beside the gems, but on %s" % state.player(0).tile
+	if Hex.distance(state.player(0).tile, gems) != 1 or walk.walking or gliding == 0:
+		return "the tapped walk didn't glide to a stop beside the gems: %s" % state.player(0).tile
 	if harvested.size() != 1 or harvested[0].tile != gems:
 		return "the gems the tap walked to weren't harvested on arrival: %s" % [events]
 	if walk.aim(state, state.player(0).tile, gems):
@@ -192,8 +213,15 @@ func _check_tapped() -> String:
 	return ""
 
 
+## A free tile three steps off `gems`, from which the tap can walk beside them.
+func _tap_start(state: GameState, gems: Vector2i) -> Vector2i:
+	for tile: Vector2i in state.region.reachable(state.player(0).tile):
+		if Hex.distance(tile, gems) == 3 and FlowSteps.walkable_for_players(state, tile):
+			return tile
+	return TileHarvestFeature.NO_TILE
+
+
 ## A harvest going on is saved and restored: a forest loaded from the save goes on with it alike.
-## Then a tap on gems from a few tiles off.
 func _check_kept() -> String:
 	var state: GameState = _beside_gems()
 	var _events: Array[RefCounted] = _press(state)
@@ -206,7 +234,7 @@ func _check_kept() -> String:
 	restored.load_values(fresh, values)
 	if values.failed() or restored.hash_values() != harvest.hash_values():
 		return "the harvest going on didn't survive a save: %s" % values.problem
-	return _check_tapped()
+	return ""
 
 
 ## A session: the driver's ticked events bring this machine's player (slot 0) their own crystals,
@@ -216,6 +244,8 @@ func _check_taken(tree: SceneTree) -> String:
 	var result: String = _check_burst(main)
 	if result.is_empty():
 		result = _check_button(main)
+	if result.is_empty():
+		result = _check_tapped(main)
 	main.queue_free()
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)

@@ -14,6 +14,14 @@ const NO_TILE: Vector2i = Vector2i(-DataReader.MOST, -DataReader.MOST)
 
 ## Whether a walk is under way: the way still has steps, or the harvest is still to press.
 var walking: bool = false
+## The tile the walk under way was tapped on (TapWalkMark marks it), or NO_TILE.
+var goal: Vector2i = NO_TILE
+## The tapped tile of a walk that just ended by arriving, or NO_TILE: the walk ends as the last
+## step starts, so TapWalkMark keeps marking it while the player still glides there (#1554). Any
+## stop clears it, and so does the first command after that step's MOVE_TICKS.
+var landing: Vector2i = NO_TILE
+## The last tick `landing` holds for.
+var _landing_until: int = 0
 ## The tile tapped since the last command, or NO_TILE.
 var _tapped: Vector2i = NO_TILE
 ## Where the player stands on the way: where the walk began, then the last tile reached.
@@ -33,6 +41,8 @@ func tap(tile: Vector2i) -> void:
 ## it stops the walk; else a new tap starts one, and a walk under way gives the move and, on
 ## arrival, the interact press.
 func steer(given: Command, state: GameState, at: Vector2i) -> void:
+	if state.tick > _landing_until:
+		landing = NO_TILE
 	if given.move != Command.NO_MOVE:
 		stop()
 		return
@@ -64,6 +74,7 @@ func aim(state: GameState, from: Vector2i, tile: Vector2i) -> bool:
 	_way = found
 	_at = from
 	_harvest = tile if harvestable else NO_TILE
+	goal = tile
 	walking = true
 	return true
 
@@ -93,7 +104,10 @@ func harvests(state: GameState, at: Vector2i) -> bool:
 	if not walking or not _way.is_empty():
 		return false
 	var pressing: bool = _harvest != NO_TILE and _takes(state.region, at, _harvest)
+	var reached: Vector2i = goal
 	stop()
+	landing = reached
+	_landing_until = state.tick + MovementFeature.MOVE_TICKS
 	return pressing
 
 
@@ -110,6 +124,8 @@ func stop() -> void:
 	_way.clear()
 	_harvest = NO_TILE
 	_at = NO_TILE
+	goal = NO_TILE
+	landing = NO_TILE
 	walking = false
 
 

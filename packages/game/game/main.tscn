@@ -75,6 +75,7 @@
 [ext_resource type="Script" path="res://slices/codex/ui/quest_names_tie.gd" id="66_quest_names_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 [ext_resource type="Script" path="res://slices/harvest/ui/interact_button.gd" id="67_interact_button"]
+[ext_resource type="Script" path="res://slices/controls/look/tap_walk_mark.gd" id="68_tap_walk_mark"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -207,6 +208,10 @@ driver = NodePath("../../Driver")
 
 [node name="FocusMark" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
 script = ExtResource("35_focus_mark")
+driver = NodePath("../../Driver")
+
+[node name="TapWalkMark" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]
+script = ExtResource("68_tap_walk_mark")
 driver = NodePath("../../Driver")
 
 [node name="ReviveRing" type="Node3D" parent="Instance" node_paths=PackedStringArray("driver")]

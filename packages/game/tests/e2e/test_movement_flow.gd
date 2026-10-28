@@ -8,9 +8,9 @@ extends RefCounted
 ## local player's next command, once per press, and so does the interact key (#696), and so do the
 ## swap keys and the d-pad (#540), which
 ## moves nothing. Every action has a controller binding (#779). A click on a tile walks the player
-## there on their own (#1508); a key stops that walk, and a touch's emulated click, a tile off the
-## region or a click while the menu is open walks nowhere. Time is stepped by hand, so the flow is
-## deterministic.
+## there on their own (#1508), with a mark on it on the way (#1554); a key stops that walk, and a
+## touch's emulated click, a tile off the region or a click while the menu is open walks nowhere.
+## Time is stepped by hand, so the flow is deterministic.
 
 const STEP: float = 1.0 / 60.0
 ## Seconds to walk from one tile to the next.
@@ -325,9 +325,10 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 ## A click on a walkable tile two steps east of (0, 0) walks the player there on their own, through
 ## the focus picker as the mouse gives it, with the instance shifted off the world's origin, and the
-## walk ends there. A short, still touch walks there too, and a key pressed on the way stops it at
-## once. A touch's emulated click, a click while the menu is open and a tap off the region walk
-## nowhere.
+## walk ends there; a mark stands on that tile on the way, through the last step's glide, and goes
+## on arrival (#1554). A short, still touch walks there too, and a key pressed on the way stops it
+## and its mark at once. A touch's emulated click, a click while the menu is open and a tap off the
+## region walk nowhere.
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
 	var input: LocalInput = _driver.input
@@ -344,10 +345,10 @@ func _check_tap_walk() -> String:
 	if click.position == Vector2(-1.0, -1.0):
 		return "the tile to click, %s, isn't on the screen" % target
 	click = _click_on(picker, target)
-	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
-		_step()
-	if _tile() != target or input.tap_walk.walking:
-		return "a click on %s walked the player to %s" % [target, _tile()]
+	_one_tick()
+	var marked: bool = _mark_on() == target and _glide_marked(target)
+	if _tile() != target or input.tap_walk.walking or not marked or _mark_on() != TapWalk.NO_TILE:
+		return "a click on %s walked to %s, unmarked or marked on arrival" % [target, _tile()]
 	_place(Vector2i.ZERO)
 	_tap(picker, click.position)
 	_one_tick()
@@ -355,8 +356,8 @@ func _check_tap_walk() -> String:
 	Input.action_press("move_left")
 	_one_tick()
 	Input.action_release("move_left")
-	if not started or input.tap_walk.walking:
-		return "a tap didn't walk, or a key pressed on the way didn't stop the walk"
+	if not started or input.tap_walk.walking or _mark_on() != TapWalk.NO_TILE:
+		return "a tap didn't walk, or a key pressed on the way didn't stop the walk and its mark"
 	_finish_step()
 	_place(Vector2i.ZERO)
 	input.blocked = true
@@ -479,6 +480,35 @@ func _hold_frames(picker: FocusPicker, frames: int) -> void:
 ## How far east the player stands, on the screen's x.
 func _shown_x() -> float:
 	return HexLayout.to_world(_tile()).x
+
+
+## The tile the mark of a walk to a tapped tile stands on (#1554), or TapWalk.NO_TILE when hidden.
+func _mark_on() -> Vector2i:
+	var mark: TapWalkMark = _main.get_node("Instance/TapWalkMark") as TapWalkMark
+	mark.show_state()
+	return mark.piece.tile if mark.piece.visible else TapWalk.NO_TILE
+
+
+## Steps a walk to `target` through to its end; the mark must stand on `target` in every frame of
+## the final glide after the walk ends, and at least one such frame must be checked (#1554).
+func _glide_marked(target: Vector2i) -> bool:
+	var gliding: int = 0
+	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
+		_step()
+		if _driver.input.tap_walk.walking or not _glides():
+			continue
+		gliding += 1
+		if _mark_on() != target:
+			return false
+	return gliding > 0
+
+
+## Whether the local player is still gliding onto its tile.
+func _glides() -> bool:
+	var player: Entity = _driver.state.player(_driver.input.slot)
+	var movement: MovementFeature = _driver.state.feature(MovementFeature.ID) as MovementFeature
+	var walk: Walk = movement.walk(player.id)
+	return walk != null and walk.is_moving()
 
 
 ## The walkable tile two steps east of (0, 0) to click: (2, 0) unless it's closed.
