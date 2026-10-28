@@ -149,7 +149,14 @@ const NO_TRAP_CHANGE: int = -1
 const SELF_GUARD: String = "test_hide"
 const PLAYER_GUARD: String = "test_ward"
 const STRONG_GUARD: String = "test_strong_ward"
-const GUARDS: Dictionary[String, int] = { SELF_GUARD: 250, PLAYER_GUARD: 500, STRONG_GUARD: 900 }
+## A player passive a development web grants (#1472), which guards the player beside the species'.
+const WEB_GUARD: String = "test_web_ward"
+const GUARDS: Dictionary[String, int] = {
+	SELF_GUARD: 250,
+	PLAYER_GUARD: 500,
+	STRONG_GUARD: 900,
+	WEB_GUARD: 200,
+}
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -1587,8 +1594,9 @@ func _check_least_damage() -> String:
 
 ## A monster's passives work only while it is out (#616): with the weak species out and the strong
 ## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
-## alone, and one on the companion less its own guard; with every carried monster fainted, none is
-## out, and the hit on the player comes in whole.
+## alone, and one on the companion less its own guard; the out one's web passive (#1472) takes its
+## guard off the hit on the player as well; with every carried monster fainted, none is out, and
+## the hit on the player comes in whole.
 func _check_guards() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
@@ -1604,6 +1612,13 @@ func _check_guards() -> String:
 	guarded = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[SELF_GUARD])
 	struck = _struck_for(
 		_wild_strikes_over(state, ticks, Vector2i(-1, 0)), companion_id, guarded, "the companion")
+	if not struck.is_empty():
+		return struck
+	# The out monster's web passive (#1472) guards its player too, beside its species' own.
+	state.stores[0].entry(CompanionFeature.ID)["passives"] = [WEB_GUARD, ""]
+	guarded = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[PLAYER_GUARD] - GUARDS[WEB_GUARD])
+	struck = _struck_for(
+		_wild_strikes_over(state, ticks, Vector2i(-3, 0)), player.id, guarded, "the player")
 	if not struck.is_empty():
 		return struck
 	state = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
@@ -1899,6 +1914,7 @@ func _strike_state(
 			{},
 			{ WEAK: PLAYER_GUARD, STRONG: STRONG_GUARD },
 			{ WEAK: SELF_GUARD },
+			{ SELF_GUARD: false, PLAYER_GUARD: true, STRONG_GUARD: true, WEB_GUARD: true },
 		),
 		CompanionSwapFeature.new(),
 	]

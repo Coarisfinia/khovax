@@ -539,7 +539,8 @@ func _check_development() -> String:
 ## The stat nodes `profile`'s first monster took (#1358), Ombulumo's sturdy_1 and sturdy_2 (+5% and
 ## +6% HP), ride to the world with its party: the run of carry requests says its leaning, summed
 ## from its web, and a monster without a web leans nowhere. An older save's carry requests, from
-## before runs held leanings, are dropped; a leaning's code reads back every stat in its place, and
+## before runs held web passives (#1472), are dropped; a leaning's code reads back every stat in its
+## place, and
 ## a code with bits past them is none.
 func _check_development_carried(profile: Profile) -> String:
 	if not _leaning_codes_read_back():
@@ -555,11 +556,14 @@ func _check_development_carried(profile: Profile) -> String:
 		return "the run's leaning wasn't +11%% HP: %d" % value
 	var old: Dictionary = JSON.parse_string(_text(profile))
 	var changes: Array = old[FormatChanges.KEY]
-	changes.erase("1358-carry-leanings")
+	changes.erase("1472-carry-passives")
 	var migrated: Profile = _parse(JSON.stringify(old))
 	if not migrated.problem.is_empty() or not migrated.outbox.entries.is_empty():
 		return "an older save's carry requests weren't dropped: " + migrated.problem
 	problem = _check_special_carried(profile, keeper)
+	if not problem.is_empty():
+		return problem
+	problem = _check_passive_carried(profile, keeper)
 	if not problem.is_empty():
 		return problem
 	entries.clear()
@@ -586,6 +590,32 @@ func _check_special_carried(profile: Profile, keeper: ProfileKeeper) -> String:
 		return "the run of a monster with a special node had no leaning: " + problem
 	if not leaning.same_as(CompanionLeaning.of(110, 0, 0, 200)):
 		return "the run's leaning wasn't +11%% HP and a +20%% special: %s" % [leaning.to_data()]
+	return ""
+
+
+## The passive node `profile`'s first monster took (#1472), Ombulumo's deep_4, rides to the world
+## as its run's last value, Lombu-bombu's code, through `keeper`; without it, that value is none.
+func _check_passive_carried(profile: Profile, keeper: ProfileKeeper) -> String:
+	var monster: DominatedMonster = profile.dominated_monsters[0]
+	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.cached().webs
+	var at_passive: int = CarryRequest.VALUES_PER_MONSTER - 1
+	var sent: Array[int] = []
+	for taking: bool in [true, false]:
+		profile.outbox.entries.clear()
+		if taking:
+			monster.taken.append("deep_4")
+		var problem: String = keeper.catch_up_party({}, 0, webs)
+		monster.taken.erase("deep_4")
+		var values: Array[int] = FlowSteps.carry_sent(profile.outbox)
+		if not problem.is_empty() or values.size() <= at_passive:
+			return "the run of a monster with a passive node wasn't sent: " + problem
+		sent.append(values[at_passive])
+	var expected: Array[int] = [
+		CarryRequest.passive_code("ombulumo_lombu_bombu"),
+		CommandCodes.NONE,
+	]
+	if sent != expected:
+		return "the run's passive wasn't Lombu-bombu with the node and none without: %s" % [sent]
 	return ""
 
 

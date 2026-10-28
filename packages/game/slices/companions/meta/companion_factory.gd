@@ -1,7 +1,8 @@
 class_name CompanionFactory
 extends RefCounted
 ## Builds an instance's companion feature (#338, #823) with every species' reach, from its stats,
-## and its two passives (#616).
+## and its two passives (#616), and whom every passive helps, for the passives the webs grant
+## (#1472).
 
 
 static func build(_setup: FeatureSetup) -> CompanionFeature:
@@ -14,4 +15,8 @@ static func build(_setup: FeatureSetup) -> CompanionFeature:
 		reaches[species_id] = CompanionFeature.reach_of(stats.hp, stats.strength, stats.speed)
 		player_passives[species_id] = stats.player_passive
 		self_passives[species_id] = stats.self_passive
-	return CompanionFeature.new(reaches, player_passives, self_passives)
+	var helps_player: Dictionary[String, bool] = {}
+	for ability: Ability in AbilityContent.cached().abilities.values():
+		if ability.kind != Ability.SPECIAL:
+			helps_player[ability.id] = ability.kind == Ability.PLAYER_PASSIVE
+	return CompanionFeature.new(reaches, player_passives, self_passives, helps_player)

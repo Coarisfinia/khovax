@@ -254,7 +254,8 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 
 
 ## `damage` on the companion or player `target_id`, less the guards of the passives working for them
-## now (#616): a companion's own, or the player's companion's while it's out. All of them together
+## now (#616): a companion's own, or the player's companion's while it's out, its web's included
+## (#1472). All of them together
 ## take off less than a whole hit, and a hit that deals anything deals at least 1 (#702).
 func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
@@ -262,9 +263,10 @@ func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int)
 		return damage
 	var passives: Array[String] = []
 	if on_companion:
-		passives = CompanionPassives.of_companion(companions, target_id)
+		passives = CompanionPassives.of_companion(state, companions, target_id)
 	else:
-		passives = CompanionPassives.of_player(companions, state.entity(target_id).slot)
+		var slot: int = state.entity(target_id).slot
+		passives = CompanionPassives.of_player(state, companions, slot)
 	var guard: int = 0
 	for passive: String in passives:
 		guard += guards.get(passive, 0)

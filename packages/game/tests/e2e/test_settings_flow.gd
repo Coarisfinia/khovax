@@ -739,7 +739,8 @@ static func _sent_ascended(outbox: Outbox, posted: int, short_id: String) -> boo
 ## (#1459): the newest run of carry requests waiting in `outbox` has the companion leaning +5% HP.
 static func _sent_at_once(outbox: Outbox) -> String:
 	var values: Array[int] = FlowSteps.carry_sent(outbox)
-	var at_leaning: int = CarryRequest.VALUES_PER_MONSTER - 1
+	# Its species, its short id, then its leaning (CarryRequest.values_of).
+	var at_leaning: int = 2
 	var leaning: CompanionLeaning = null
 	if values.size() > at_leaning:
 		leaning = CompanionLeaning.of_code(values[at_leaning])

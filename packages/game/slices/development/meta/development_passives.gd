@@ -2,7 +2,9 @@ class_name DevelopmentPassives
 extends RefCounted
 ## Whether the passives the development webs grant hold together with the abilities (#1404): each
 ## is a passive in the ability data, none is a passive a species already has (#222) or a special,
-## and no two nodes grant the same one, so each is one web's own. Checked by the content flow, like
+## and no two nodes grant the same one, so each is one web's own. A web grants one passive at most
+## (#1472): a carried monster brings one web passive to the world, in one value of its run of
+## carry requests. Checked by the content flow, like
 ## SpeciesKit.
 
 
@@ -18,6 +20,8 @@ static func problem(
 		kits.append_array([entry.player_passive, entry.self_passive])
 	var granted_by: Dictionary[String, String] = {}
 	for web: DevelopmentWeb in webs.values():
+		if web.passives.size() > 1:
+			return "%s's web grants %d passives, one at most" % [web.species, web.passives.size()]
 		for node: String in web.passives:
 			var passive: String = web.passives[node]
 			var where: String = "%s's %s" % [web.species, node]

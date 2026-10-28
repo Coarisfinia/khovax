@@ -51,6 +51,8 @@ const BASE_LEGEND: String = "- `🔴`: where player 1 starts\n- `🟫`: ground\n
 const CROWN_KIND: String = "test_crown"
 ## The feature id _check_store_kept keeps its world store entry under: one no feature has.
 const STORE_FEATURE: String = "test_store"
+## The passive the carried Tikazzir's development web grants it in the leaning check (#1472).
+const WEB_PASSIVE: String = "tikazzir_kazri_tazri"
 ## The screen _check_roster lays the roster out for.
 const ROSTER_SCREEN: Vector2 = Vector2(1280.0, 720.0)
 ## Where _check_roster's profile is saved, apart from the player's own: it spends a revive item.
@@ -519,8 +521,9 @@ func _check_swaps() -> String:
 
 
 ## Who a player carries comes from their profile as a run of requests from its outbox (#818): a
-## world with no party gets one, the species, the short id and the leaning of each monster (#1358),
-## and nothing more while it waits. The party is theirs once the run is whole, the first joining
+## world with no party gets one, the species, the short id, the leaning (#1358) and the web passive
+## (#1472) of each monster, and nothing more while it waits. The party is theirs once the run is
+## whole, the first joining
 ## them; a run in another order keeps the companion they chose, a request sent again changes
 ## nothing, and a run of none empties the party. A request's place has room for a run of the most
 ## monsters a player
@@ -533,8 +536,8 @@ func _check_carry_requests() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	var outbox: Outbox = Outbox.new()
 	var party: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])
-	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 6:
-		return "a world with no party wasn't sent the two carried monsters as six requests"
+	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 8:
+		return "a world with no party wasn't sent the two carried monsters as eight requests"
 	if _carry_posted(party, outbox, world):
 		return "a party already on its way was sent again"
 	var companions: CompanionFeature = (
@@ -573,7 +576,8 @@ func _check_carry_requests() -> String:
 
 ## A monster's leaning rides to the world with its party (#1358): a new leaning sends the party
 ## again, the same companion stays, its HP shifts with it, damage taken kept, and a party leaning
-## goes through a replay's data and back. A leaning that would leave a standing companion no HP
+## goes through a replay's data and back. Its web passive rides along (#1472) and works for it
+## while it's out, beside its species' own. A leaning that would leave a standing companion no HP
 ## leaves it 1.
 func _check_carried_leanings(world: World, outbox: Outbox) -> String:
 	var party: CarriedMonsters = FlowSteps.party(["tikazzir"])
@@ -590,7 +594,12 @@ func _check_carried_leanings(world: World, outbox: Outbox) -> String:
 	outbox.entries.clear()
 	# Its special the strongest special nodes make it (#1453), which rides the run too.
 	var leaning: CompanionLeaning = CompanionLeaning.of(200, 0, 0, CompanionLeaning.MOST)
-	var leant: CarriedMonsters = CarriedMonsters.new().add(party.short_ids[0], "tikazzir", leaning)
+	var leant: CarriedMonsters = CarriedMonsters.new().add(
+		party.short_ids[0],
+		"tikazzir",
+		leaning,
+		WEB_PASSIVE,
+	)
 	if not _carry_posted(leant, outbox, world):
 		return "a monster's leaning taken since wasn't sent to the world"
 	for request: OutboxEntry in outbox.entries:
@@ -604,12 +613,26 @@ func _check_carried_leanings(world: World, outbox: Outbox) -> String:
 			health.hp_of(forest, companion_id),
 			health.max_hp_of(forest, companion_id),
 		]
+	if not _web_passive_works(forest, companions, companion_id):
+		return "the companion's web passive didn't work beside its own"
 	party = CarriedMonsters.of_data(leant.to_data())
 	if party == null or not party.same_as(leant):
 		return "a leaning monster didn't go through a replay's data and back"
 	if not _older_leaning_reads(leant):
 		return "a leaning saved before specials didn't read as its stats and no special"
 	return _check_leaning_keeps_standing(world, health.hp_of(forest, companion_id) - 1)
+
+
+## Whether the Tikazzir companion `companion_id` of `companions` in `forest` has its web passive
+## working for it beside its species' own (#1472).
+static func _web_passive_works(
+	forest: GameState,
+	companions: CompanionFeature,
+	companion_id: int,
+) -> bool:
+	var working: Array[String] = CompanionPassives.of_companion(forest, companions, companion_id)
+	var expected: Array[String] = [companions.self_passives["tikazzir"], WEB_PASSIVE]
+	return working == expected
 
 
 ## Whether `leant`'s first monster, its leaning saved before specials (#1453) as +20% HP, reads
