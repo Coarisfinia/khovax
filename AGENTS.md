@@ -231,8 +231,12 @@ background; only wait in the foreground for a result the very next step needs.
   `REPO=Coarisfinia/khovax`, `OWNER="$OWNER"` (the owner's login, whose reviews count, looked up
   as above),
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
-  no default) and `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
-  change request itself, below). `.claude/watcher.env` holds them all but `OWNER`, for the plugin's
+  no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
+  change request itself, below), `REVIEW_BOTS=coderabbitai` (`Flixbox/household-brain#299`: it
+  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head) and
+  `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
+  settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
+  risk, and reports `BOT_RESOLVE_ASKED`). `.claude/watcher.env` holds them all but `OWNER`, for the plugin's
   own monitor and for
   `bun --env-file=.claude/watcher.env <watcher>/src/watch-project.ts --follow`; the environment
   still wins. **Export `OWNER` before the watcher starts** (looked up as above): without it the
@@ -253,20 +257,25 @@ background; only wait in the foreground for a result the very next step needs.
   resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
   included, except one that waits on the owner's decision: that one is answered and left open
   (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
+  The watcher's `reply-review-thread <pr> <comment-id|PRRT_id> <body>` helper
+  (`Flixbox/household-brain#307`) sends such a reply through GraphQL (below) and waits out a rate
+  limit once: `bun --env-file=.claude/watcher.env <watcher>/src/reply-review-thread.ts …`.
 - **A draft only when there is something to see** (owner, #1566, #1569): a pull request that
   changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model skill)
   or UI (anything the player sees or touches on screen) **and** shows the owner something in its
   description (renders, screenshots, a before and after) is opened with `agent-gh pr create
-  --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>` and queue it
-  as usual. Every other pull request is not a draft: CodeRabbit reviews it, and its "Merge low-risk
-  changes" rule may merge it (wanted), except a model pull request or one that changes the merge
-  rules, which still wait for the owner's approval (below).
+  --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>`, and queue
+  it once CodeRabbit has reviewed the head (the watcher holds `READY_TO_MERGE` until then,
+  `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its
+  "Merge low-risk changes" rule may merge it (wanted), except a model pull request or one that
+  changes the merge rules, which still wait for the owner's approval (below).
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
   agents and the watcher share the one installation, and a short-window limit (GitHub's secondary
   limits count REST points per minute) refuses a burst. GraphQL has its own quota and went
-  through. Find the thread's id from the comment's id, then reply:
+  through. The `reply-review-thread` helper (above) does this; by hand, find the thread's id from
+  the comment's id, then reply:
 
   ```sh
   T=$(agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id comments(first:100){nodes{databaseId}}}}}}}' \
@@ -291,7 +300,10 @@ background; only wait in the foreground for a result the very next step needs.
   the owner's approval (or CodeRabbit's low-risk approval, which counts as it, below), never
   enable auto-merge. **If it doesn't merge** although the PR is
   approved, CI is green and it shows as clean and mergeable (GitHub's auto-merge sometimes stalls),
-  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The owner's approval stays valid
+  merge it yourself: `agent-gh pr merge <n> --squash` (owner, #99). The watcher reports such a
+  pull request as `NOT_QUEUED` (`Flixbox/household-brain#311`: auto-merge on, approved, clean and
+  green, yet outside the queue after 5 minutes); run the `enqueuePullRequest` mutation the event
+  names, with `agent-gh`, which queues it at once. The owner's approval stays valid
   through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
   fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below).
 - **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
@@ -508,6 +520,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   `grazer`, `drinker`, `predator`); the content flow refuses a species that hasn't. A sleeping
   monster wakes only when struck or enraged, unless its species is a `light_sleeper` (owner, #1230):
   then a player coming next to it wakes it too.
+- **Randomness sparingly** (owner's ground rule, #1602): random rolls feel unsatisfying,
+  especially on enemies. Prefer deterministic, readable rules (counters, thresholds, every Nth
+  time, cooldowns) over chance; a new chance-based mechanic needs a reason in its issue.
 - **Territory quests keep to ground rules** (draft for the owner's review, #638): a territory
   quest (`territory` in its quest data) names one instance and one faction, and finishing it hands
   that instance to that faction, whoever held it. It's written for its territory: its steps happen
@@ -742,7 +757,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   Fix what a change request on the head commit asks, then settle each of its threads with a
   `Resolved:` reply: CodeRabbit's review of the fix push replaces it, or the watcher dismisses it
   once the owner has approved. A person's change request is never dismissed. Never post
-  `@coderabbitai` commands. `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
+  `@coderabbitai` commands yourself: the watcher posts `@coderabbitai resolve` when it is due
+  (`RESOLVE_BOT_REVIEWS`, above). `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
   not in the repository.
 - **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
   #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
