@@ -32,6 +32,7 @@ const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 ## The actions whose press counts once, in the next command, even when it lifts between two ticks:
 ## the special attack, respawn (#495: going back to the spawn when down) and interact (#696).
 const PRESSED_ONCE: Array[StringName] = [&"special_attack", &"respawn", &"interact"]
+const MOVE_ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down"]
 
 ## The player slot this machine's player controls.
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
@@ -87,6 +88,11 @@ func _hear() -> void:
 	for action: StringName in PRESSED_ONCE:
 		if Input.is_action_just_pressed(action):
 			_pressed[action] = true
+	# A key tapped between two commands stops a walk to a tapped tile too, though the next command
+	# sees it let go.
+	for action: StringName in MOVE_ACTIONS:
+		if Input.is_action_just_pressed(action):
+			tap_walk.stop()
 	_hear_totem()
 	if Input.is_action_just_pressed("focus_next"):
 		_focus_steps += 1

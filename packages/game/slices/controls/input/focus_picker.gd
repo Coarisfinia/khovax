@@ -66,9 +66,11 @@ func pick(point: Vector2) -> bool:
 
 
 ## Walks the player to the tile shown at `point` on the screen, where the camera's ray through it
-## meets the ground (#1508).
+## meets the tiles' tops (#1508): with the camera tilted, a ray to the plane under them would cross
+## into the next hex near a tile's edge.
 func walk_to(point: Vector2) -> void:
-	var ground: Variant = Plane(Vector3.UP).intersects_ray(
+	var tops: Plane = Plane(Vector3.UP, instance.global_position.y + HexGrid.TILE_HEIGHT)
+	var ground: Variant = tops.intersects_ray(
 		camera.project_ray_origin(point),
 		camera.project_ray_normal(point),
 	)
