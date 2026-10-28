@@ -12,8 +12,7 @@ extends Logger
 ## Where the log is, and where the launch before's is kept.
 const PATH: String = "user://logs/errors.log"
 const PREVIOUS: String = "user://logs/errors.previous.log"
-## How long the log grows at most, so an error repeated every frame can't fill the disk; the cut
-## counts characters, so text beyond ASCII may take it a little past.
+## How long the log grows at most, in bytes, so an error repeated every frame can't fill the disk.
 const MAX_BYTES: int = 1 << 20
 const CUT: String = "[The log stops here: it reached its size limit.]\n"
 ## How each kind of error is headed, by Logger's ErrorType.
@@ -47,17 +46,29 @@ static func start() -> bool:
 	if _started != null or OS.has_feature("web"):
 		return _started != null
 	var _made: Error = DirAccess.make_dir_recursive_absolute(_absolute(PATH.get_base_dir()))
-	if FileAccess.file_exists(PATH):
-		# Removed first: a rename doesn't replace an existing file everywhere.
-		var _removed: Error = DirAccess.remove_absolute(_absolute(PREVIOUS))
-		var _kept: Error = DirAccess.rename_absolute(_absolute(PATH), _absolute(PREVIOUS))
-	var file: FileAccess = FileAccess.open(PATH, FileAccess.WRITE)
+	var file: FileAccess = _opened()
 	if file == null:
 		return false
 	_started = ErrorLog.new(file)
+	_started._bytes = file.get_position()
 	_started._write(header())
 	OS.add_logger(_started)
 	return true
+
+
+## The log's file, fresh with the launch before's kept as PREVIOUS; or, where that can't be moved
+## aside, the launch before's own, written on at its end rather than lost.
+static func _opened() -> FileAccess:
+	if not FileAccess.file_exists(PATH):
+		return FileAccess.open(PATH, FileAccess.WRITE)
+	# Removed first: a rename doesn't replace an existing file everywhere.
+	var _removed: Error = DirAccess.remove_absolute(_absolute(PREVIOUS))
+	if DirAccess.rename_absolute(_absolute(PATH), _absolute(PREVIOUS)) == OK:
+		return FileAccess.open(PATH, FileAccess.WRITE)
+	var file: FileAccess = FileAccess.open(PATH, FileAccess.READ_WRITE)
+	if file != null:
+		file.seek_end()
+	return file
 
 
 ## Where the log is on this device, for the player to find it, or "" when there's none.
@@ -106,15 +117,24 @@ func _write(text: String) -> void:
 	_mutex.lock()
 	if not _writing and _bytes < MAX_BYTES:
 		_writing = true
-		var shown: String = scrubbed(text)
-		var size: int = shown.to_utf8_buffer().size()
-		if _bytes + size >= MAX_BYTES:
-			shown = shown.left(MAX_BYTES - _bytes) + CUT
-		_bytes += size
-		var _stored: bool = _file.store_string(shown)
+		var shown: PackedByteArray = scrubbed(text).to_utf8_buffer()
+		if _bytes + shown.size() >= MAX_BYTES:
+			shown = _cut(shown, MAX_BYTES - _bytes - CUT.length())
+			shown.append_array(CUT.to_utf8_buffer())
+		_bytes += shown.size()
+		var _stored: bool = _file.store_buffer(shown)
 		_file.flush()
 		_writing = false
 	_mutex.unlock()
+
+
+## The first `budget` bytes of `utf8` at most, ending on a whole character.
+static func _cut(utf8: PackedByteArray, budget: int) -> PackedByteArray:
+	var end: int = clampi(budget, 0, utf8.size())
+	# A byte 10xxxxxx continues a character, so the cut moves back to where one starts.
+	while end > 0 and end < utf8.size() and utf8[end] & 0xc0 == 0x80:
+		end -= 1
+	return utf8.slice(0, end)
 
 
 ## `text` with every absolute folder that could name the player replaced by its stand-in, in any
