@@ -506,6 +506,8 @@ func _gear_locked_by_seal(panel: GearPanel, state: GameState, monster_id: int) -
 ## second one up again. The order is kept in their profile on disk.
 func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var ids: Array[String] = tab.monsters.shown_ids.duplicate()
+	var outbox: Outbox = FlowGame.holder(main).keeper.profile.outbox
+	var posted: int = outbox.entries.size()
 	tab.monsters.move(ids[3], 0)
 	var moved: Array[String] = [
 		"Carried 1, companion: Ombulumo, level 1",
@@ -514,8 +516,11 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 		"Not carried: Tikazzir, level 1",
 	]
 	var reordered: Array[String] = [ids[3], ids[0], ids[1], ids[2]]
-	if tab.monsters.shown != moved or tab.monsters.shown_ids != reordered:
+	# The world hears of the new companion at once (#1459), in a new run of carry requests.
+	if (tab.monsters.shown != moved or tab.monsters.shown_ids != reordered
+			or not _companion_sent(outbox, posted, ids[3])):
 		return "moving a monster first didn't make it the companion: %s" % [tab.monsters.shown]
+	posted = outbox.entries.size()
 	# The second row's up button: its line, then up, then down, each showing its arrow (#584).
 	var second: HBoxContainer = tab.monsters.get_child(1).get_child(1) as HBoxContainer
 	var up: Button = second.get_child(1) as Button
@@ -523,12 +528,11 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	if up.icon != DominatedMonstersList.UP_ICON or down.icon != DominatedMonstersList.DOWN_ICON:
 		return "a row's up and down buttons don't show their arrows"
 	up.pressed.emit()
-	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
-	var _flushed: String = keeper.flush()
-	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
-	var expected: Array[String] = [ids[0], ids[3], ids[1]]
-	if tab.monsters.shown_ids[0] != ids[0] or kept.carried != expected:
-		return "a row's up button didn't move it, or the order isn't kept: %s" % [kept.carried]
+	var _flushed: String = FlowGame.holder(main).keeper.flush()
+	var kept: Array[String] = ProfileStore.load_from(PROFILE_PATH).carried
+	if (tab.monsters.shown_ids[0] != ids[0] or kept != [ids[0], ids[3], ids[1]]
+			or not _companion_sent(outbox, posted, ids[0])):
+		return "a row's up button didn't move it, or the order isn't kept or sent: %s" % [kept]
 	return _menu_details(tab)
 
 
@@ -616,11 +620,14 @@ func _menu_development(tab: CharacterTab) -> String:
 		return looks
 	view.buttons["sturdy_1"].pressed.emit()
 	var _flushed: String = tab.holder.keeper.flush()
-	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
-	if kept.monster_of(first).taken != (["sturdy_1"] as Array[String]):
-		return "pressing a node didn't take it, or it isn't kept: %s" % [
-			kept.monster_of(first).taken,
-		]
+	var kept: Array[String] = ProfileStore.load_from(PROFILE_PATH).monster_of(first).taken
+	var outbox: Outbox = tab.holder.keeper.profile.outbox
+	var problem: String = _sent_at_once(outbox) if kept == (["sturdy_1"] as Array[String]) else (
+		"pressing a node didn't take it, or it isn't kept: %s" % [kept]
+	)
+	if not problem.is_empty():
+		return problem
+	var posted: int = outbox.entries.size()
 	nodes = view.buttons.keys()
 	nodes.sort()
 	if nodes != ["deep_1", "heavy_1", "sturdy_1", "sturdy_2", "swift_1"]:
@@ -630,8 +637,9 @@ func _menu_development(tab: CharacterTab) -> String:
 	# With no level left, pressing an open node takes nothing.
 	view.buttons["heavy_1"].pressed.emit()
 	if (tab.holder.keeper.profile.monster_of(first).taken.size() != 1
+			or outbox.entries.size() != posted
 			or view.buttons["heavy_1"].focus_mode != Control.FOCUS_ALL):
-		return "a node was taken with no level left, or can't take the focus"
+		return "a node was taken or sent with no level left, or can't take the focus"
 	if view.shown[1] != DevelopmentWebView.NO_PICKS_TEXT:
 		return "the web doesn't say it takes a node at its next level: %s" % [view.shown]
 	if view.is_visible_in_tree() and not view.buttons["sturdy_1"].has_focus():
@@ -712,6 +720,36 @@ func _menu_ascension(menu: GameMenu) -> String:
 	if known == null or known.level_of("vynakiir") != Bestiary.KNOWN:
 		return "the bestiary didn't learn the Vynakiir it ascended into"
 	return ""
+
+
+## Ombulumo's sturdy_1 taken mid-session goes to the world at once, not at the next session
+## (#1459): the newest run of carry requests waiting in `outbox` has the companion leaning +5% HP.
+static func _sent_at_once(outbox: Outbox) -> String:
+	var at_leaning: int = _newest_run(outbox) + CarryRequest.VALUES_PER_MONSTER - 1
+	var leaning: CompanionLeaning = null
+	if at_leaning >= CarryRequest.VALUES_PER_MONSTER - 1 and at_leaning < outbox.entries.size():
+		leaning = CompanionLeaning.of_code(CarryRequest.value_of(outbox.entries[at_leaning].data))
+	if leaning == null or not leaning.same_as(CompanionLeaning.of(50, 0, 0)):
+		return "the node taken didn't send the companion leaning +5% HP to the world at once"
+	return ""
+
+
+## Whether a run of carry requests posted to `outbox` past its first `posted` entries names
+## `short_id` as the companion (#1459): a monster reordered mid-session goes to the world at once.
+static func _companion_sent(outbox: Outbox, posted: int, short_id: String) -> bool:
+	var start: int = _newest_run(outbox)
+	return (start >= posted and start + 1 < outbox.entries.size()
+			and CarryRequest.value_of(outbox.entries[start + 1].data) == ShortId.code(short_id))
+
+
+## Where the newest run of carry requests in `outbox` starts, or -1 without one.
+static func _newest_run(outbox: Outbox) -> int:
+	var start: int = -1
+	for at: int in outbox.entries.size():
+		var request: OutboxEntry = outbox.entries[at]
+		if request.kind == OutboxEntry.CARRY and CarryRequest.place_of(request.data) == 0:
+			start = at
+	return start
 
 
 ## On a phone held upright the web steepens its spokes to fit the tab's width, its nodes never
