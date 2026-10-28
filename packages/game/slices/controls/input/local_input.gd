@@ -13,7 +13,8 @@ extends Node
 ## profile, outside the simulation, which posts the use as a request to its outbox (#818,
 ## revive_chosen) that goes in the next command. While picking, the player stands. interact (F, or
 ## a controller's A) harvests the tile the player stands on or next to by hand (#696): one press
-## starts it once.
+## starts it once. A tap or click on a tile (FocusPicker) walks there on the player's own, and
+## harvests it on arrival when bare hands can (#1508, TapWalk); the stick or a key stops that walk.
 
 ## A revive item is used on the fainted monster `short_id` (#818): the profile spends it and posts
 ## the request, sent back here (`send`) for the next command.
@@ -28,6 +29,10 @@ enum TotemPress {
 
 ## The swap actions, in the carried order's places from 1.
 const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
+## The actions whose press counts once, in the next command, even when it lifts between two ticks:
+## the special attack, respawn (#495: going back to the spawn when down) and interact (#696).
+const PRESSED_ONCE: Array[StringName] = [&"special_attack", &"respawn", &"interact"]
+const MOVE_ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down"]
 
 ## The player slot this machine's player controls.
 @export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
@@ -44,10 +49,8 @@ var _deaf_through: int = -1
 ## the stick and A choose on the dialog screen instead. Its own flag, so the menu opening and
 ## closing over a dialog doesn't let the player walk off.
 var in_dialog: bool = false
-## Whether the special attack was pressed since the last command.
-var _special_pressed: bool = false
-## Whether interact was pressed since the last command (#696).
-var _interact_pressed: bool = false
+## The PRESSED_ONCE actions pressed since the last command.
+var _pressed: Dictionary[StringName, bool] = {}
 ## place_totem since the last command: TAPPED when pressed, or HELD_OVER while it has been held
 ## since the game last heard no input (#1509): held on over the menu or a dialog, it places nothing
 ## until it's let go or pressed again.
@@ -57,8 +60,6 @@ var _totem: TotemPress = TotemPress.NONE
 var focus: int = Command.NO_FOCUS
 ## How far focus_next (+1) and focus_previous (-1) stepped the focus since the last command.
 var _focus_steps: int = 0
-## Whether respawn was pressed since the last command (#495): going back to the spawn when down.
-var _respawn_pressed: bool = false
 ## The place in the carried order chosen since the last command (#540), from 1, or Command.NO_SWAP.
 var _swap_to: int = Command.NO_SWAP
 ## The code of the dialog answer chosen since the last command (#635), or Command.NO_ANSWER.
@@ -66,6 +67,8 @@ var _answer: int = Command.NO_ANSWER
 ## The requests from this player's profile's outbox (#771), waiting for the next commands, one
 ## each.
 var _requests: Array[OutboxEntry] = []
+## The walk to a tapped or clicked tile (#1508), and the tap the next command walks to.
+var tap_walk: TapWalk = TapWalk.new()
 ## Which fainted monster the next revive item brings back (#780); views read its `picked`.
 var revive_pick: RevivePick = RevivePick.new()
 
@@ -82,17 +85,20 @@ func _process(_delta: float) -> void:
 
 ## Keeps the presses of this frame for the next command.
 func _hear() -> void:
-	if Input.is_action_just_pressed("special_attack"):
-		_special_pressed = true
+	for action: StringName in PRESSED_ONCE:
+		if Input.is_action_just_pressed(action):
+			_pressed[action] = true
+	# A key tapped between two commands stops a walk to a tapped tile too, though the next command
+	# sees it let go. A tap queued this frame stays: the touch stick presses these actions for a
+	# tap's slight wiggle too.
+	for action: StringName in MOVE_ACTIONS:
+		if Input.is_action_just_pressed(action):
+			tap_walk.halt()
 	_hear_totem()
 	if Input.is_action_just_pressed("focus_next"):
 		_focus_steps += 1
 	if Input.is_action_just_pressed("focus_previous"):
 		_focus_steps -= 1
-	if Input.is_action_just_pressed("respawn"):
-		_respawn_pressed = true
-	if Input.is_action_just_pressed("interact"):
-		_interact_pressed = true
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
@@ -111,13 +117,25 @@ func _hear_totem() -> void:
 ## Drops every press heard since the last command (#1509): while the game hears no input, the
 ## driver may be paused (the menu's pause), and a press kept until the menu closes would fire then.
 func _drop_presses() -> void:
-	_special_pressed = false
+	_pressed.clear()
 	_totem = TotemPress.HELD_OVER
 	_focus_steps = 0
-	_respawn_pressed = false
-	_interact_pressed = false
 	_swap_to = Command.NO_SWAP
 	revive_pick.drop()
+	tap_walk.stop()
+
+
+## Walks to `tile` on the player's own from the next command, as a tap or click on it does (#1508).
+## A tap while the game hears no input (the menu or a dialog is open, #1509) walks nowhere.
+func tap_tile(tile: Vector2i) -> void:
+	if hears():
+		tap_walk.tap(tile)
+
+
+## Whether the game hears input now: not while the menu or a dialog is open, nor in the frame after
+## one closed (#1509). Taps and clicks on the world (FocusPicker) ask it too.
+func hears() -> bool:
+	return not (blocked or in_dialog) and Engine.get_process_frames() > _deaf_through
 
 
 ## Swaps to the monster at `place` in the carried order, from 1, in the next command, as a tap on
@@ -149,27 +167,27 @@ func command(state: GameState) -> Command:
 	# closed (a roster tap during the dialog's fade) is dropped here too.
 	if Engine.get_process_frames() <= _deaf_through:
 		_drop_presses()
-	var fires: bool = _special_pressed
-	_special_pressed = false
+	var fires: bool = _pressed.has(&"special_attack")
 	var placing: bool = _placing()
-	var gives_up: bool = _respawn_pressed
-	_respawn_pressed = false
+	var gives_up: bool = _pressed.has(&"respawn")
+	var interacting: bool = _pressed.has(&"interact")
+	_pressed.clear()
 	var swap: int = _swap_to
 	_swap_to = Command.NO_SWAP
 	var answering: int = _answer
 	_answer = Command.NO_ANSWER
-	var interacting: bool = _interact_pressed
-	_interact_pressed = false
 	if blocked or in_dialog:
 		# Presses while the game hears no input don't move the focus or use an item afterwards.
 		_focus_steps = 0
 		revive_pick.drop()
+		tap_walk.stop()
 		return _standing(answering)
 	_revive(state)
 	# While picking a fainted monster to revive (#780), the arrows move the pick, not the player,
 	# and other presses are dropped.
 	if not revive_pick.picked.is_empty():
 		_focus_steps = 0
+		tap_walk.stop()
 		return _standing(answering)
 	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
@@ -187,6 +205,10 @@ func command(state: GameState) -> Command:
 	given.swap = swap
 	given.answer = answering
 	given.interact = interacting
+	if player != null:
+		tap_walk.steer(given, state, tile)
+	else:
+		tap_walk.stop()
 	_send_next(given)
 	return given
 
