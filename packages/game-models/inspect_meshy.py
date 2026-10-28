@@ -84,18 +84,25 @@ def fmt(vector):
 def read_glb(path):
     with open(path, "rb") as stream:
         data = stream.read()
-    magic, _version, _length = struct.unpack_from("<4sII", data, 0)
-    if magic != b"glTF":
+    if len(data) < 20 or data[:4] != b"glTF":
         sys.exit("not a binary glTF: %s" % path)
     offset, gltf, binary = 12, None, b""
-    while offset < len(data):
+    while offset + 8 <= len(data):
         size, kind = struct.unpack_from("<I4s", data, offset)
+        if offset + 8 + size > len(data):
+            sys.exit("truncated glTF: %s" % path)
         chunk = data[offset + 8:offset + 8 + size]
         if kind == b"JSON":
             gltf = json.loads(chunk)
         elif kind == b"BIN\x00":
             binary = chunk
         offset += 8 + size
+    if gltf is None:
+        sys.exit("no JSON chunk: %s" % path)
+    # A download is one self-contained file: a path to another file would have the importer read
+    # whatever it names on this machine.
+    if any("uri" in item for item in gltf.get("images", []) + gltf.get("buffers", [])):
+        sys.exit("refused: %s points to external files" % path)
     return gltf, binary, len(data)
 
 
@@ -142,11 +149,21 @@ def image_info(data):
     return "unknown", None, []
 
 
-def has_extras(node):
+# Words that mark a text as an AI-generation marker.
+MARKER_WORDS = ("meshy", " ai", "ai-", "generated", "generator", "c2pa", "trainedalgorithmic")
+
+
+def marked(text):
+    return any(word in " " + text.lower() for word in MARKER_WORDS)
+
+
+def marked_extras(node):
+    """Whether any `extras` in the glTF names AI generation."""
     if isinstance(node, dict):
-        return "extras" in node or any(has_extras(value) for value in node.values())
+        return ("extras" in node and marked(json.dumps(node["extras"]))) or any(
+            marked_extras(value) for value in node.values())
     if isinstance(node, list):
-        return any(has_extras(value) for value in node)
+        return any(marked_extras(value) for value in node)
     return False
 
 
@@ -155,10 +172,9 @@ def report_file(path, gltf, binary, size):
     out("%s: %.1f MB, generator %r" % (os.path.basename(path), size / 1e6, asset.get("generator", "none")))
     markers = []
     for key in ("generator", "copyright"):
-        text = str(asset.get(key, "")).lower()
-        if any(word in text for word in ("meshy", " ai", "generated")):
+        if key in asset and marked(str(asset[key])):
             markers.append("asset.%s" % key)
-    if has_extras(gltf):
+    if marked_extras(gltf):
         markers.append("extras")
     for index in range(len(gltf.get("images", []))):
         meta = image_info(image_bytes(gltf, binary, index))[2]
@@ -270,9 +286,15 @@ def scene_mesh():
     # The importer adds a shape to draw the bones with: not part of the download's mesh.
     shapes = {bone.custom_shape for obj in bpy.context.scene.objects if obj.type == "ARMATURE" for bone in obj.pose.bones}
     meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH" and obj not in shapes]
-    if len(meshes) != 1:
-        out("MESH     %d meshes: expected one, reporting the largest" % len(meshes))
-    return max(meshes, key=lambda obj: len(obj.data.vertices))
+    if not meshes:
+        sys.exit("no mesh in the download")
+    largest = max(meshes, key=lambda obj: len(obj.data.vertices))
+    if len(meshes) > 1:
+        # One mesh to report on, with every part's vertices, materials and weights.
+        out("MESH     %d meshes, joined into one for this report" % len(meshes))
+        with bpy.context.temp_override(active_object=largest, selected_editable_objects=meshes):
+            bpy.ops.object.join()
+    return largest
 
 
 def report_mesh(gltf, mesh):
@@ -299,10 +321,8 @@ def report_mesh(gltf, mesh):
     centre = (low + high) / 2
     out("BOUNDS   x %.2f..%.2f  y %.2f..%.2f  z %.2f..%.2f  (%.2f wide, %.2f long, %.2f tall)" % (
         low[0], high[0], low[1], high[1], low[2], high[2], size[0], size[1], size[2]))
-    top = mesh
-    while top.parent is not None:
-        top = top.parent
-    origin = np.array(top.matrix_world.translation)
+    # The download's origin is its scene's: the positions are in the scene's space.
+    origin = np.zeros(3)
     out("ORIGIN   %s above the soles, %s off centre in x, %s in y%s" % (
         num(origin[2] - low[2]), num(origin[0] - centre[0]), num(origin[1] - centre[1]),
         "" if abs(origin[2] - low[2]) < 0.01 * size[2] else ": not on its feet"))
@@ -316,7 +336,13 @@ def report_mesh(gltf, mesh):
 def _matrix_turns(matrix):
     if not matrix:
         return False
-    return any(abs(matrix[i * 4 + j] - (1.0 if i == j else 0.0)) > 1e-6 for i in range(3) for j in range(3))
+    # glTF's matrices are column-major: each of the first three columns is an axis, scaled.
+    axes = [matrix[i * 4:i * 4 + 3] for i in range(3)]
+    for i, axis in enumerate(axes):
+        length = sum(value * value for value in axis) ** 0.5 or 1.0
+        if any(abs(axis[j] / length - (1.0 if i == j else 0.0)) > 1e-6 for j in range(3)):
+            return True
+    return False
 
 
 def uv_islands(data):
@@ -333,30 +359,30 @@ def uv_islands(data):
     return len(groups.members(list(groups.parent)))
 
 
-def base_image(mesh):
-    for material in mesh.data.materials:
-        if material is None or not material.node_tree:
-            continue
-        shader = next((node for node in material.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
-        if shader and shader.inputs["Base Color"].links:
-            node = shader.inputs["Base Color"].links[0].from_node
-            if node.type == "TEX_IMAGE" and node.image:
-                return node.image
-    return None
+def base_pixels(material):
+    """The material's base colour texture as a (height, width, 3) array, or None."""
+    if material is None or not material.node_tree:
+        return None
+    shader = next((node for node in material.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    if shader is None or not shader.inputs["Base Color"].links:
+        return None
+    node = shader.inputs["Base Color"].links[0].from_node
+    if node.type != "TEX_IMAGE" or node.image is None:
+        return None
+    width, height = node.image.size
+    pixels = np.empty(width * height * 4, dtype=np.float32)
+    node.image.pixels.foreach_get(pixels)
+    return pixels.reshape(height, width, 4)[:, :, :3]
 
 
 def report_eyes(mesh, positions, low, high):
     """Samples the base colour across every triangle, keeps the bright saturated samples and groups
     them where they sit."""
-    image = base_image(mesh)
     data = mesh.data
-    if image is None or not data.uv_layers:
+    images = [base_pixels(material) for material in data.materials]
+    if not data.uv_layers or all(image is None for image in images):
         out("EYES     no base colour texture to search")
         return
-    width, height = image.size
-    pixels = np.empty(width * height * 4, dtype=np.float32)
-    image.pixels.foreach_get(pixels)
-    pixels = pixels.reshape(height, width, 4)[:, :, :3]
     data.calc_loop_triangles()
     loops = np.empty(len(data.loop_triangles) * 3, dtype=np.int64)
     data.loop_triangles.foreach_get("loops", loops)
@@ -366,17 +392,28 @@ def report_eyes(mesh, positions, low, high):
     data.uv_layers.active.data.foreach_get("uv", uv)
     uv = uv.reshape(-1, 2)
     loops = loops.reshape(-1, 3)
+    slots = np.empty(len(data.loop_triangles), dtype=np.int64)
+    data.loop_triangles.foreach_get("material_index", slots)
     # Barycentric points over each triangle, fine enough to land on a painted spot smaller than it.
     steps = 6
     weights = np.array([(i, j, steps - i - j) for i in range(steps + 1) for j in range(steps + 1 - i)],
                        dtype=np.float64) / steps
-    tri_uv = uv[loops]
-    tri_pos = positions[corner_vertex[loops]]
-    sample_uv = np.einsum("ws,tsk->twk", weights, tri_uv).reshape(-1, 2)
-    sample_pos = np.einsum("ws,tsk->twk", weights, tri_pos).reshape(-1, 3)
-    x = np.clip((sample_uv[:, 0] % 1.0) * width, 0, width - 1).astype(np.int64)
-    y = np.clip((sample_uv[:, 1] % 1.0) * height, 0, height - 1).astype(np.int64)
-    colour = pixels[y, x]
+    # Each triangle samples its own material's texture.
+    sample_pos, colour = [], []
+    for slot, pixels in enumerate(images):
+        mine = slots == slot
+        if pixels is None or not mine.any():
+            continue
+        height, width = pixels.shape[:2]
+        sample_uv = np.einsum("ws,tsk->twk", weights, uv[loops[mine]]).reshape(-1, 2)
+        sample_pos.append(np.einsum("ws,tsk->twk", weights, positions[corner_vertex[loops[mine]]]).reshape(-1, 3))
+        x = np.clip((sample_uv[:, 0] % 1.0) * width, 0, width - 1).astype(np.int64)
+        y = np.clip((sample_uv[:, 1] % 1.0) * height, 0, height - 1).astype(np.int64)
+        colour.append(pixels[y, x])
+    if not colour:
+        out("EYES     no textured faces to search")
+        return
+    sample_pos, colour = np.concatenate(sample_pos), np.concatenate(colour)
     value = colour.max(axis=1)
     saturation = (value - colour.min(axis=1)) / np.maximum(value, 1e-6)
     glowing = (value >= EYE_VALUE) & (saturation >= EYE_SATURATION)
