@@ -82,12 +82,15 @@ static func _world_rules() -> Dictionary[String, Callable]:
 static func _region_and_party_rules() -> Dictionary[String, Callable]:
 	var rules: Dictionary[String, Callable] = {
 		# What the region holds (RegionFeatures): exits, triggers, region pieces to enter, wild
-		# monsters in hiding, people to talk to.
+		# monsters in hiding, people to talk to and the guides among them.
 		ExitFeature.ID: _plain(ExitFeature),
 		TriggerFeature.ID: _plain(TriggerFeature),
 		EnteringFeature.ID: _plain(EnteringFeature),
 		HidingFeature.ID: _plain(HidingFeature),
 		NpcFeature.ID: _plain(NpcFeature),
+		# Right after the people, whose talks start an escort (#1588), and after the exits and the
+		# health, whose events say a guide's player leaves.
+		EscortFeature.ID: _plain(EscortFeature),
 		ChestFeature.ID: ChestFactory.build,
 		# The control points of a battle (#643), after domination, which places a totem on a ring
 		# with wild monsters inside first and holds the totems a point is taken with (#644).

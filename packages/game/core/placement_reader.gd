@@ -31,6 +31,13 @@ func tile_of(_meaning: String) -> String:
 	return ""
 
 
+## Whether its things stand on ground (#824), as most do, rather than on a tile nobody walks, like a
+## seal a guide opens (#1588): the region refuses one on a tile that isn't walkable unless it says
+## no.
+func on_ground() -> bool:
+	return true
+
+
 ## Whether a wild monster stands where this reader's things are placed: the core keeps every wild
 ## monster's spot (Region.wild_monsters), which it hashes and the wild monster feature fills.
 func places_wild_monster() -> bool:

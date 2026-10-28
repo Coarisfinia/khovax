@@ -3,13 +3,15 @@ extends Node3D
 ## The people's look (#557): a person standing idle on every person's tile, hidden in the fog until
 ## an ally sees them, like a chest. The figure is the players' placeholder character, without the
 ## circle that marks a player; what says "someone to talk to" is the speech mark floating over
-## them, a shape and not a color (#68). It only reads the state.
+## them, a shape and not a color (#68). A guide who walks (EscortFeature, #1588) glides from tile to
+## tile like a companion, running and turning toward where they walk. It only reads the state.
 
 ## The placeholder person until the game's own people exist: the players' character, unarmed.
 const MODEL: PackedScene = preload("res://assets/kaykit-adventurers/Rogue.glb")
 const IDLE: StringName = &"Idle"
+const MOVE: StringName = PlayerView.MOVE
 ## Every clip the view plays, which the boot flow checks its model has (#992).
-const CLIPS: Array[StringName] = [IDLE]
+const CLIPS: Array[StringName] = [IDLE, MOVE]
 ## The speech mark over a person's head, and how high above their tile's top it floats.
 const MARK: String = "..."
 const MARK_HEIGHT: float = 2.3
@@ -40,7 +42,34 @@ func show_state() -> void:
 		var tile: Vector2i = driver.state.entity(person).tile
 		if not figures.has(person):
 			figures[person] = _add_figure(tile)
+		_place(person)
 		figures[person].visible = FogView.ally_sees(driver.state, tile)
+
+
+## Puts the person's figure on their tile, or between tiles while they walk, facing where they walk
+## and running.
+func _place(person: int) -> void:
+	var figure: HexPiece = figures[person]
+	figure.tile = driver.state.entity(person).tile
+	var movement: MovementFeature = driver.state.feature(MovementFeature.ID) as MovementFeature
+	var walk: Walk = movement.walk(person) if movement != null else null
+	var moving: bool = walk != null and walk.is_moving()
+	var animations: AnimationPlayer = figure.find_child(
+		"AnimationPlayer",
+		true,
+		false,
+	) as AnimationPlayer
+	var clip: StringName = MOVE if moving else IDLE
+	if (animations != null
+			and animations.has_animation(clip)
+			and animations.current_animation != clip):
+		animations.play(clip, 0.15)
+	if not moving:
+		return
+	var from: Vector3 = figure.position_on(walk.from)
+	figure.position = from.lerp(figure.tile_position(), driver.walk_progress(driver.state, person))
+	var heading: Vector3 = figure.tile_position() - from
+	(figure.get_child(0) as Node3D).rotation.y = atan2(heading.x, heading.z)
 
 
 ## A person standing idle on `tile`, with the speech mark over them.

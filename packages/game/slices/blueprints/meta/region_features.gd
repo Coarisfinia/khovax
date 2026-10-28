@@ -14,6 +14,7 @@ static func readers() -> Array[PlacementReader]:
 	var all: Array[PlacementReader] = [
 		TriggerPlacements.new(),
 		NpcPlacements.new(),
+		SealPlacements.new(),
 		WildSpotPlacements.new(),
 		ChestPlacements.new(),
 		ControlPointPlacements.new(),
