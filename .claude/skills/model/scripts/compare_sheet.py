@@ -10,7 +10,10 @@
 # model's front left, from above), the angle generated concept images are usually drawn from.
 # Its camera can be tilted and turned to the image's: `three_quarter:<tilt>[:<turn>]`, in degrees,
 # the tilt above the ground (default 31.7) and the turn from the front towards the model's left
-# (default 45; 90 is the left side), e.g. `three_quarter:20:60`.
+# (default 45; 90 is the left side), e.g. `three_quarter:20:60`. Against a concept image,
+# `three_quarter:fit` finds the angle itself (#1531): it renders a coarse grid of tilts and turns, then
+# a finer one around the best, all in this one Blender start, and keeps the angle whose silhouette
+# matches the image best; it prints that angle (`COMPARE FIT`) for the PR to name.
 # Per view, a row of the sheet: the reference | ours | the two silhouettes overlaid | both at the
 # in-game size (128 px). It prints and saves (compare.json) the silhouette match (intersection over
 # union of the two silhouettes: a reference model where the shared camera puts it, a reference
@@ -21,6 +24,7 @@ import json
 import math
 import os
 import sys
+import tempfile
 
 import blf
 import bpy
@@ -47,24 +51,38 @@ VIEWS = {
 # facing +z), is (0.8, -0.8, 0.7) in Blender's after the glTF import: tilted 31.7 degrees above the
 # ground, turned 45 degrees from the front towards the model's left.
 THREE_QUARTER = (math.degrees(math.atan2(0.7, math.hypot(0.8, 0.8))), 45.0)
+# `three_quarter:fit`'s search, in degrees: a coarse grid over the angles concept images are drawn
+# from (level to nearly straight down, either side of the front), then a finer one around the best.
+FIT_TILT_STEP, FIT_TILTS = 10, range(0, 90, 10)
+FIT_TURN_STEP, FIT_TURNS = 15, range(-75, 90, 15)
+FIT_FINE_STEP = 2.5  # the fine grid reaches half a coarse step each way, to its neighbours' share
+
+
+def angled(tilt, turn):
+	"""Where the camera stands for a tilt above the ground and a turn from the front towards the
+	model's left, in degrees."""
+	tilt, turn = math.radians(tilt), math.radians(turn)
+	return Vector((math.sin(turn) * math.cos(tilt), -math.cos(turn) * math.cos(tilt), math.sin(tilt)))
 
 
 def direction(view):
 	"""Where the camera stands, seen from the model, for `view`: a name in VIEWS, or
-	`three_quarter[:<tilt>[:<turn>]]`."""
+	`three_quarter[:<tilt>[:<turn>]]`; None for `three_quarter:fit`, whose angle is searched."""
 	name, *angles = view.split(":")
 	if name in VIEWS and not angles:
 		return VIEWS[name]
+	if name == "three_quarter" and angles == ["fit"]:
+		return None
 	if name != "three_quarter" or len(angles) > 2:
-		sys.exit("not a view: %r (%s, three_quarter or three_quarter:<tilt>[:<turn>])" % (view, ", ".join(VIEWS)))
+		sys.exit("not a view: %r (%s, three_quarter, three_quarter:<tilt>[:<turn>] or three_quarter:fit)" % (
+			view, ", ".join(VIEWS)))
 	try:
 		tilt, turn = [float(angle) for angle in angles] + list(THREE_QUARTER[len(angles):])
 	except ValueError:
 		sys.exit("a three_quarter view's tilt and turn are degrees: %r" % view)
 	if not -90 < tilt < 90:
 		sys.exit("a tilt lies between -90 and 90 degrees: %r" % view)
-	tilt, turn = math.radians(tilt), math.radians(turn)
-	return Vector((math.sin(turn) * math.cos(tilt), -math.cos(turn) * math.cos(tilt), math.sin(tilt)))
+	return angled(tilt, turn)
 
 
 args = sys.argv[sys.argv.index("--") + 1:]
@@ -74,6 +92,8 @@ directions = {view: direction(view) for view in views}  # checked before Blender
 reference_is_model = reference_path.lower().endswith((".glb", ".gltf"))
 if not reference_is_model and len(views) != 1:
 	sys.exit("a reference image shows one view: name it, e.g. `left`")
+if reference_is_model and None in directions.values():
+	sys.exit("three_quarter:fit finds a concept image's angle: a reference model shares our camera")
 os.makedirs(out_dir, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -119,7 +139,7 @@ def read(path):
 	return pixels.reshape(h, w, 4)[::-1]
 
 
-def render(meshes, others, view, name):
+def render(meshes, others, view, name, folder=None):
 	"""Our flat studio render of `meshes` from `view` (the others hidden), on a clear background."""
 	for obj in others:
 		obj.hide_render = True
@@ -130,7 +150,7 @@ def render(meshes, others, view, name):
 	camera_data.ortho_scale = (reach if view in VIEWS else (hi - lo).length) * 1.1
 	camera.location = center + directions[view].normalized() * reach * 4
 	camera.rotation_euler = (center - camera.location).to_track_quat("-Z", "Y").to_euler()
-	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view.replace(":", "_"))
+	scene.render.filepath = "%s/%s_%s.png" % (folder or out_dir, name, view.replace(":", "_"))
 	bpy.ops.render.render(write_still=True)
 	return read(scene.render.filepath)
 
@@ -265,6 +285,45 @@ def fit(pixels):
 	return tile
 
 
+def fit_angle(reference_mask):
+	"""`three_quarter:fit`: the tilt and turn whose render matches the reference image best, a
+	coarse grid first, then a finer one around its best. Returns the view, named by its angle."""
+	best = (-1.0, None)
+	tried = set()
+	# The search's renders go to a folder of their own, so none can overwrite a file in out_dir
+	# (the reference image may sit there).
+	scratch = tempfile.TemporaryDirectory()
+
+	def search(tilts, turns):
+		nonlocal best
+		for tilt in tilts:
+			for turn in turns:
+				view = "three_quarter:%g:%g" % (tilt, turn)
+				if view in tried:
+					continue
+				tried.add(view)
+				directions[view] = angled(tilt, turn)
+				ours = render(model, [], view, "fit", scratch.name)
+				match = measure(reference_mask, figure(ours))["match"]
+				if match > best[0]:
+					best = (match, (tilt, turn))
+		return best[1]
+
+	tilt, turn = search(FIT_TILTS, FIT_TURNS)
+	def around(angle, coarse_step):
+		steps = int(coarse_step / 2 // FIT_FINE_STEP)
+		return [angle + FIT_FINE_STEP * step for step in range(-steps, steps + 1)]
+
+	tilt, turn = search([t for t in around(tilt, FIT_TILT_STEP) if 0 <= t < 90], around(turn, FIT_TURN_STEP))
+	scratch.cleanup()
+	view = "three_quarter:%g:%g" % (tilt, turn)
+	print("COMPARE FIT %s: tilt %g, turn %g, silhouette match %.3f, the best of %d angles. The image is"
+		  " a perspective shot and our render orthographic, so the angle also absorbs some of its lens"
+		  " distortion: it is the closest orthographic angle, not necessarily the one it was drawn"
+		  " from." % (view, tilt, turn, best[0], len(tried)))
+	return view
+
+
 # The scene: both models at rest, framed by one orthographic camera over both, so their sizes
 # compare; a flat studio render (Workbench: shapes and colours, fast) on a clear background. Its
 # colours are each material's image texture, or its base colour where it has none (the hand-built
@@ -290,6 +349,8 @@ scene.camera = camera
 rows = []
 results = {}
 for view in views:
+	if directions[view] is None:  # three_quarter:fit: the view is named by the angle it found
+		view = fit_angle(figure(read(reference_path)))
 	ours = render(model, reference, view, "model")
 	if reference_is_model:
 		theirs = render(reference, model, view, "reference")
