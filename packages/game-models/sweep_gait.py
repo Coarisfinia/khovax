@@ -66,6 +66,16 @@ def describe(miss: dict) -> str:
     return text
 
 
+def counts(miss: dict, clips: set[str]) -> bool:
+    """Whether a miss counts with only `clips` chosen: one of theirs, a join of one of them to its
+    lead-in or lead-out (named after the lead, `WalkStart`), or one of the whole model's (its
+    wisps)."""
+    clip = miss["clip"].split("/")[-1]
+    if not clips or clip in clips or clip == "wisps":
+        return True
+    return miss["measure"].startswith("join-") and any(clip.startswith(name) for name in clips)
+
+
 def run(script: Path, glb: Path, values: dict, folder: Path, clips: set[str]) -> str:
     """Builds one combination into `folder` and checks it: `PASS`, or what fails."""
     folder.mkdir(parents=True, exist_ok=True)
@@ -75,14 +85,17 @@ def run(script: Path, glb: Path, values: dict, folder: Path, clips: set[str]) ->
     if built.returncode != 0:
         return "build fails: " + failure(built.stdout + built.stderr)
     speeds = SPEEDS.search(built.stdout)
+    if not speeds:
+        # Without the game's speeds, the motion check would measure sliding against standing still.
+        return "build prints no SPEEDS for the motion check"
     misses, broken = [], []
     for check in CHECKS:
-        args = [str(out), *(speeds.group(1).split() if speeds and check == "check_motion.py" else []), "--summary"]
+        args = [str(out), *(speeds.group(1).split() if check == "check_motion.py" else []), "--summary"]
         done = blender(MODELS / check, args)
         found = [match.groupdict() for match in map(summary.LINE.match, done.stdout.splitlines()) if match]
         if done.returncode != 0 and not found:
             broken.append("%s: %s" % (check, failure(done.stdout + done.stderr)))
-        misses += [miss for miss in found if not clips or miss["clip"].split("/")[-1] in clips]
+        misses += [miss for miss in found if counts(miss, clips)]
     if broken:
         return "check fails: " + "; ".join(broken)
     if not misses:
