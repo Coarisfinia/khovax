@@ -200,6 +200,48 @@ a second model could use goes into the library or a generic tool, never into one
   never in the agent's foreground: keep working and answering messages, check the output files,
   and react when it finishes. Independent renders run in parallel (owner, #1047).
 
+## Generated models (Meshy): the order and the traps (#1526)
+A model whose mesh and colour come from the owner's Meshy download (as Drakkudor's do,
+`packages/game-models/drakkudor.py`) goes through these steps, in this order:
+
+1. **Inspect:** `uv run --locked packages/game-models/inspect_meshy.py <download.glb>` (#1523),
+   one report on its mesh, material, painted eyes, body columns and rig. Read it before measuring
+   anything by hand.
+2. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
+   builds from (`packages/game-models/sources/<name>.glb`): only the base colour, opaque,
+   single-sided and matte (#1476), Meshy's rig adopted where it has one (#1516).
+3. **Scale to the hex, first:** settle the model's size before any clip, gait or render
+   (#1522). The gait's limits depend on the size, and Drakkudor's late rescale redid its gait and
+   every render. Until the import step computes it, size the rest pose with the footprint check
+   (step 20 below), leaving a margin for the widest clip (the attack's lunge).
+4. **Rig:** start from Meshy's rig (the owner rigs in Meshy first, #1514), checking that every
+   chain covers its part (#1519), then rename the bones to the library's scheme.
+5. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
+   with the gait sweep, not by hand.
+6. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
+   section 5.
+
+**The traps found on Drakkudor (#1476, #1514):**
+- **Seam splits:** the export splits a vertex wherever its UVs part, which broke the volume
+  check's body detection; `lib/volume.py` handles it now. A new check reading the mesh welds by
+  position too.
+- **Painted eyes:** the eyes are painted on the texture, not built. The brow check passes a model
+  with one material on that path (`lib/brows.py`); eye points still go on the painted eyes. Eyes
+  that blink need lids, so they must be ours (`lib.eyes`), not Meshy's: ask for a face without
+  eyes and add them in the script (#1463's note on the eyelid slug).
+- **Custom normals:** the import keeps the file's normals as custom ones, and `scene.sort_faces`
+  refuses them: clear them (`bpy.ops.mesh.customdata_custom_splitnormals_clear()`) and shade
+  smooth.
+- **Material:** `doubleSided` and alpha blending off, the material matte (no metal or roughness
+  map); `import_source.py` does it, and `inspect_meshy.py` shows what the download had.
+- **A new body plan** (such as six legs) needs its plan in `lib/dimensions.py` first (its ranges
+  and their reasons, as `hexapod` has), or the dimensions check has nothing to measure.
+- **Meshy's auto-rig** is scaled to a person's height (1.7 tall) and has no clips; its chains can
+  stop short of their part or bleed into a neighbour's (#1519), so check every chain's coverage.
+- **Weights:** automatic weights fail on thin parts over a hollow (ribs over a ribcage): they
+  can't tell a leg from the rib beside it. Weight by where each vertex lies instead, as
+  `hexapod.bind` does.
+
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
   `packages/game/assets/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
