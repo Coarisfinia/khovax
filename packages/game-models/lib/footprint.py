@@ -8,7 +8,8 @@ it stays inside.
 
 Standing in its rest pose, a regular monster keeps 5 % padding inside its hex and a boss, enraged
 or stronger one may reach 5 % past it (the owner, on #1514); during its clips each may reach 5 %
-further (the owner, on #1533). `REGULAR` and `LARGE` hold the (rest, clips) limits."""
+further (the owner, on #1533), and an attack may lunge 30 % past it, whatever the monster (`ATTACK`:
+the owner, on #1528). `REGULAR` and `LARGE` hold the (rest, clips) limits."""
 
 import math
 
@@ -24,6 +25,9 @@ INRADIUS = SIZE * math.sqrt(3.0) / 2.0
 NORMALS = numpy.array([(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(270, 630, 60)])
 REGULAR = (0.95, 1.05)
 LARGE = (1.05, 1.10)
+# The clips that strike, and how far past the hex they may reach.
+ATTACKS = ("Attack",)
+ATTACK = 1.30
 
 
 def meshes(rig, objects):
@@ -54,7 +58,7 @@ def reach(meshes):
 def report(rig, meshes, limits):
     """The reach in the rig's rest pose, then for every clip, every frame: the largest reach and
     the frame it's on. The rest pose fails past the first of `limits` (rest, clips), a clip past
-    the second. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
+    the second, an attack past `ATTACK`. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
     if not meshes:
         return ["FAIL no mesh to measure"], False
     rest_limit, clip_limit = limits
@@ -67,14 +71,15 @@ def report(rig, meshes, limits):
     lines = ["%s rest: reach %.3f of the hex (limit %.2f)" % ("ok" if passed else "FAIL", far, rest_limit)]
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
+        limit = ATTACK if action.name in ATTACKS else clip_limit
         far, at = 0.0, start
         for number in range(start, end + 1):
             scene.frame_set(number)
             value = reach(meshes)
             if value > far:
                 far, at = value, number
-        fails = far > clip_limit
+        fails = far > limit
         passed = passed and not fails
         lines.append("%s %s: reach %.3f of the hex (frame %d, limit %.2f)" % (
-            "FAIL" if fails else "ok", action.name, far, at, clip_limit))
+            "FAIL" if fails else "ok", action.name, far, at, limit))
     return lines, passed

@@ -5,8 +5,8 @@ deformed mesh reaches across the hex the game stands it on, seen from above, fro
         --python packages/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
 
 In its rest pose a regular monster keeps 5 % padding inside its hex, and a model in LARGE (a boss,
-an enraged or stronger monster) may reach 5 % past it; during its clips each may reach 5 % further
-(lib/footprint.py). It prints a line for the rest pose and one per clip (the largest reach, 1.00
+an enraged or stronger monster) may reach 5 % past it; during its clips each may reach 5 % further,
+and an attack 30 % past the hex (lib/footprint.py). It prints a line for the rest pose and one per clip (the largest reach, 1.00
 at the hex's edge, and its frame) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
 game_shared.log (#1115): a failing line is an error on the .glb. It checks the models built by a
 script here (the monsters); a pack's model, or a prop without a rig, passes, so CI runs it on
@@ -35,7 +35,6 @@ LARGE = set()
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
 KNOWN = {
-    ("mana_pup", "Attack"): 1529,
     ("mana_wolf", "rest"): 1527,
     ("mana_wolf", "Attack"): 1527,
     ("mana_wolf", "Channel"): 1527,

@@ -164,8 +164,8 @@ a second model could use goes into the library or a generic tool, never into one
   measures the rest pose and every frame of every clip and prints how far the model's meshes reach
   across the hex the game stands it on, seen from above (1.00 at the hex's edge), and the frame; a
   regular monster fails past 0.95 at rest (5 % padding inside) and 1.05 during a clip, one in its
-  `LARGE` set (a boss, an enraged or stronger monster) past 1.05 at rest and 1.10 during a clip
-  (`lib/footprint.py`). Its `KNOWN` list is judged like the volume
+  `LARGE` set (a boss, an enraged or stronger monster) past 1.05 at rest and 1.10 during a clip;
+  any monster's Attack fails past 1.30 (`lib/footprint.py`). Its `KNOWN` list is judged like the volume
   check's.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
@@ -391,7 +391,8 @@ a second model could use goes into the library or a generic tool, never into one
    --factory-startup --python packages/game-models/check_footprint.py -- <model.glb>` must print
    `FOOTPRINT CHECK: PASS`: seen from above, the monster stands within its hex with 5 % padding in
    its rest pose (a boss, enraged or stronger one may reach 5 % past it; the owner, on #1514), and
-   its clips reach at most 5 % further (the owner, on #1533). Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
+   its clips reach at most 5 % further (the owner, on #1533), and its attack at most 30 % past the
+   hex (the owner, on #1528). Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
    list with the issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it
    on every `.glb` with the rebuild check (step 14).
 
