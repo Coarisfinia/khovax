@@ -225,18 +225,28 @@ static func written_content(loader: Callable, files: Dictionary[String, String])
 
 
 ## The values of the newest run of carry requests posted to `outbox` past its first `posted`
-## entries (CarryRequest.values_of), or none without one: what a change to the party mid-session
+## entries (CarryRequest.values_of), or none unless it ends whole, taken in order the way the
+## world takes it (CompanionParty.take_request, #1507): a request out of order is skipped, and one
+## after the run is whole starts nothing new but a place 0 does. It's what a change to the party
+## mid-session
 ## sends the world at once (#1459, #1478, #1485).
 static func carry_sent(outbox: Outbox, posted: int = 0) -> Array[int]:
 	var values: Array[int] = []
+	var whole: bool = false
 	for at: int in range(posted, outbox.entries.size()):
 		var request: OutboxEntry = outbox.entries[at]
 		if request.kind != OutboxEntry.CARRY:
 			continue
-		if CarryRequest.place_of(request.data) == 0:
+		var place: int = CarryRequest.place_of(request.data)
+		if place == 0:
 			values = []
+			whole = false
+		if whole or values.size() != place:
+			continue
 		values.append(CarryRequest.value_of(request.data))
-	return values
+		var count: int = CarryRequest.count_of(request.data)
+		whole = values.size() >= CarryRequest.VALUES_PER_MONSTER * count
+	return values if whole else []
 
 
 ## Whether a run of carry requests posted to `outbox` past its first `posted` entries names
