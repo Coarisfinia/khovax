@@ -15,6 +15,8 @@ extends Node
 ## a controller's A) harvests the tile the player stands on or next to by hand (#696): one press
 ## starts it once. A tap or click on a tile (FocusPicker) walks there on the player's own, and
 ## harvests it on arrival when bare hands can (#1508, TapWalk); the stick or a key stops that walk.
+## The left mouse button held on the world walks toward the cursor while it's held (#1567,
+## HeldWalk), as a held stick does; the stick or a key steers over it while pressed.
 
 ## A revive item is used on the fainted monster `short_id` (#818): the profile spends it and posts
 ## the request, sent back here (`send`) for the next command.
@@ -71,6 +73,8 @@ var _requests: Array[OutboxEntry] = []
 var tap_walk: TapWalk = TapWalk.new()
 ## Which fainted monster the next revive item brings back (#780); views read its `picked`.
 var revive_pick: RevivePick = RevivePick.new()
+## The walk toward the cursor while the left mouse button is held on the world (#1567).
+var held_walk: HeldWalk = HeldWalk.new()
 
 
 func _process(_delta: float) -> void:
@@ -123,6 +127,7 @@ func _drop_presses() -> void:
 	_swap_to = Command.NO_SWAP
 	revive_pick.drop()
 	tap_walk.stop()
+	held_walk.let_go()
 
 
 ## Walks to `tile` on the player's own from the next command, as a tap or click on it does (#1508).
@@ -189,14 +194,13 @@ func command(state: GameState) -> Command:
 		_focus_steps = 0
 		tap_walk.stop()
 		return _standing(answering)
-	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
 	var player: Entity = state.player(slot)
 	# Only the tie between two directions depends on the tile; without a player nothing walks.
 	var tile: Vector2i = player.tile if player != null else Vector2i.ZERO
 	focus = FocusChoice.stepped(state, tile, focus, _focus_steps)
 	_focus_steps = 0
 	var given: Command = Command.new(
-		HexInput.direction_toward(vector, tile),
+		HexInput.direction_toward(_steering(tile), tile),
 		fires,
 		Command.PLACE_TOTEM if placing else Command.NO_TOTEM,
 		focus,
@@ -211,6 +215,13 @@ func command(state: GameState) -> Command:
 		tap_walk.stop()
 	_send_next(given)
 	return given
+
+
+## The screen-space steering of the player on `tile`: the stick's or the keys', else the held left
+## mouse button's (#1567).
+func _steering(tile: Vector2i) -> Vector2:
+	var vector: Vector2 = Input.get_vector("move_left", "move_right", "move_down", "move_up")
+	return held_walk.steering(tile) if vector.is_zero_approx() else vector
 
 
 ## Whether the next command places the totem: tapped since the last one, or held, unless held on
