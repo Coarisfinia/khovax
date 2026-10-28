@@ -5,7 +5,7 @@ extends Feature
 ## companions in the order, so it can't read their passives: this feature hushes each player in it
 ## (SleepFeature.hush) every tick and as they join, by their companion's passives now
 ## (CompanionPassives), whichever source a passive comes from, so a hush lasts only while its
-## monster is out.
+## monster is out. Switched off, it unhushes every player (`disabled`).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "hushes"
@@ -43,10 +43,19 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	_hush(state)
 
 
-## A player is hushed as their companion lets them from the moment they join.
+## A player is hushed as their companion lets them from the moment they join, while hushes are on.
 func entity_added(state: GameState, added: Entity) -> void:
-	if added.slot != Entity.NO_SLOT:
+	if enabled and added.slot != Entity.NO_SLOT:
 		_hush(state)
+
+
+## Switched off (#1572), no player is hushed any more.
+func disabled(state: GameState) -> void:
+	var sleep: SleepFeature = state.feature(SleepFeature.ID) as SleepFeature
+	if sleep == null:
+		return
+	for slot: int in GameState.MAX_PLAYERS:
+		sleep.hush(slot, 0)
 
 
 ## The hush the player in `slot` has now: the most any of their working passives gives, 0 for none.
