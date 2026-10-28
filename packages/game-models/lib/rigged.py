@@ -107,7 +107,8 @@ def forks(every, bones):
         below = children(chain, every)
         if len(below) < 2:
             continue
-        centre = bones[chain.bones[-1]].tail_local
+        # A copy: regrow's edit mode reallocates the bones, and a wrapped vector would go stale.
+        centre = bones[chain.bones[-1]].tail_local.copy()
         out.append((centre, statistics.median((bones[other.bones[0]].tail_local - centre).length for other in below)))
     return out
 

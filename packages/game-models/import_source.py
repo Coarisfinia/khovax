@@ -31,6 +31,8 @@ args = sys.argv[sys.argv.index("--") + 1:]
 download, source = args[0], args[1]
 size = int(args[2]) if len(args) > 2 else 1024
 scale = float(args[3]) if len(args) > 3 else 1.0
+if scale <= 0.0:
+    sys.exit("scale must be positive, not %g" % scale)
 # The colour's JPEG quality: the cel look's flat bands hide its artefacts well below lossless.
 QUALITY = 90
 
