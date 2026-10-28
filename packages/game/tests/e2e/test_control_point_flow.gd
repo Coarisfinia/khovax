@@ -43,6 +43,7 @@ func run(_tree: SceneTree) -> String:
 		_check_saved,
 		_check_warded,
 		_check_taken,
+		_check_button_follows,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -204,6 +205,32 @@ func _check_taken() -> String:
 			return "the ring around a taken control point stayed on the trail"
 	if _charges(state, 0) != PlaceholderTotems.CHARGES - 1:
 		return "taking a control point didn't spend one charge"
+	return ""
+
+
+## One totem button keeps its answer only for its state, tick and player (#1503): it asks the rules
+## again once the tick moves on, the player is another, or the session shows another state.
+func _check_button_follows() -> String:
+	var state: GameState = _ring_battle()
+	var points: ControlPointFeature = _points(state)
+	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	var button: TotemButton = TotemButton.new()
+	var answers: Array[bool] = [FlowSteps.usable(button, state, 1, true)]
+	var session: Session = button.driver
+	session.input.slot = 0
+	answers.append(button.usable())
+	session.input.slot = 1
+	answers.append(button.usable())
+	var _events: Array[RefCounted] = _totem(state, 1)
+	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	answers.append(button.usable())
+	var other: GameState = _ring_battle()
+	session.world.instances[session.local_instance_name()] = other
+	_color(other, _ring(_points(other).points[_inner_point(other, ATTACKERS)]), other.player(1))
+	answers.append(button.usable())
+	button.free()
+	if answers != [true, false, true, false, true]:
+		return "the totem button's answers %s didn't follow the player, tick and state" % [answers]
 	return ""
 
 

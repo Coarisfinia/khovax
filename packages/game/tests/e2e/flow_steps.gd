@@ -154,19 +154,21 @@ static func totem(slot: int = 0, slots: int = 1) -> Array[Command]:
 	return made
 
 
-## Whether `button`, on a session showing `state` to the player in `slot`, shows usable; it and the
-## session are freed.
-static func usable(button: ActionButton, state: GameState, slot: int) -> bool:
+## Whether `button`, on a session showing `state` to the player in `slot`, shows usable. The session
+## hangs under the button, so freeing the button frees it; the button is freed unless `keep`, for a
+## flow that reads it again.
+static func usable(button: ActionButton, state: GameState, slot: int, keep: bool = false) -> bool:
 	var session: Session = Session.new()
 	session.world = World.new(BlueprintSource.new(), 0, "")
 	session.world.instances[session.local_instance_name()] = state
 	session.input = LocalInput.new()
 	session.input.slot = slot
+	session.add_child(session.input)
+	button.add_child(session)
 	button.driver = session
 	var shown: bool = button.usable()
-	button.free()
-	session.input.free()
-	session.free()
+	if not keep:
+		button.free()
 	return shown
 
 
