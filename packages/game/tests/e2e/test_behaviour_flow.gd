@@ -480,7 +480,8 @@ func _check_light_sleeper_wakes() -> String:
 
 ## A light sleeper wakes for a hushed player (#1563) only on a step, and only on the roll: one
 ## hushed all but one step in a thousand stands next to it and walks round it without waking it,
-## and wakes it as their companion faints; one hushed one step in a thousand wakes it with a step.
+## a save of that walk plays on the same, and the player wakes it as their companion faints; one
+## hushed one step in a thousand wakes it with a step.
 func _check_hushed_steps() -> String:
 	if HushFactory.build(null).hushes.get("vynnimu_vummi_nummi", 0) < 1:
 		return "the content's Vummi-nummi doesn't hush"
@@ -498,6 +499,16 @@ func _check_hushed_steps() -> String:
 	var _walked: Array[RefCounted] = FlowSteps.walk(state, round_trip)
 	if not wild.asleep.has(monster):
 		return "a hushed player walking round a light sleeper woke it, though most steps are spared"
+	var loaded: GameState = _hushed_state(Fixed.ONE - 1)
+	loaded.load_data(DataReader.new(state.to_data()))
+	# The world's time isn't the instance's to save: the World hands it to a loaded one (#1215).
+	loaded.world_tick = state.world_tick
+	if loaded.state_hash() != state.state_hash():
+		return "a save of a hushed player's walk didn't load the same"
+	_walked = FlowSteps.walk(state, round_trip)
+	_walked = FlowSteps.walk(loaded, round_trip)
+	if loaded.state_hash() != state.state_hash():
+		return "a loaded hushed walk played on otherwise"
 	CompanionParty.faint(state, 0, CompanionParty.companion(state, 0))
 	for _tick: int in 2:
 		Simulation.step(state, FlowSteps.command(Command.NO_MOVE))
