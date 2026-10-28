@@ -14,7 +14,8 @@ the .glb's .import, as the game imports it.
 
 A clip that still fails today waits in KNOWN with the issue that fixes it: it prints its numbers
 and doesn't fail the check. The list only shrinks: a clip on it that passes fails the check
-until it's taken off."""
+until it's taken off. KNOWN holds at the default share only: a custom share judges every clip
+as it is."""
 
 import os
 import sys
@@ -44,6 +45,8 @@ def main():
     glbs = [arg for arg in args if arg.endswith(".glb")]
     rest = [arg for arg in args if not arg.endswith(".glb")]
     share = float(rest[0]) if rest else volume.SHARE
+    # The known failures were measured at the default share; another share judges every clip.
+    waiting = KNOWN if share == volume.SHARE else {}
     passed = True
     for glb in glbs:
         model = os.path.splitext(os.path.basename(glb))[0]
@@ -59,7 +62,7 @@ def main():
         rig.animation_data.use_nla = False
         lines, _passed = volume.report(rig, ground.skinned(bpy.data.objects), share)
         for line in lines:
-            text, fails = known.judge(KNOWN, model, line)
+            text, fails = known.judge(waiting, model, line)
             passed = passed and not fails
             if fails:
                 log.error("VOLUME %s %s" % (model, text), glb)
