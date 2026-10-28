@@ -1163,6 +1163,8 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		if not problem.is_empty():
 			return problem
 	var saving: String = _credits_log_button(menu)
+	if saving.is_empty():
+		saving = _credits_bug_report(menu)
 	return saving if not saving.is_empty() else _menu_credits(menu)
 
 
@@ -1230,6 +1232,31 @@ func _credits_log_button(menu: GameMenu) -> String:
 		return "the Credits tab's button saving the error log shows other than only on the web"
 	if not ErrorLog.saved().get_string_from_utf8().begins_with(ErrorLog.header().left(20)):
 		return "the error log saved as a file doesn't start with its header"
+	return ""
+
+
+## The Credits tab's "Report a bug" button (#1405) opens, through the link opener the test swaps
+## in, a new issue whose body names the build's version and the platform, as the error log's header
+## does, and where the log is, but no folder of the device.
+func _credits_bug_report(menu: GameMenu) -> String:
+	var report: BugReportButton = (
+		menu.find_child("Credits", true, false).get_node("BugReport") as BugReportButton
+	)
+	if report == null or not report.visible:
+		return "the Credits tab has no Report a bug button"
+	var opened: Array[String] = []
+	report.open_link = func(url: String) -> Error:
+		opened.append(url)
+		return OK
+	report.pressed.emit()
+	if opened.size() != 1 or not opened[0].begins_with(BugReportButton.NEW_ISSUE_URL):
+		return "the Report a bug button opened %s" % [opened]
+	var body: String = opened[0].trim_prefix(BugReportButton.NEW_ISSUE_URL).uri_decode()
+	if (not body.contains(ErrorLog.header().strip_edges())
+			or not body.contains(BuildVersion.LOCAL_BUILD)
+			or not body.contains(BugReportButton.DEVICE_LOG)
+			or body.contains(OS.get_user_data_dir())):
+		return "the bug report's body doesn't name the version, platform and log: " + body
 	return ""
 
 
