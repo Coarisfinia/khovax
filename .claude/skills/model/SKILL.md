@@ -270,6 +270,26 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   can't tell a leg from the rib beside it. Weight by where each vertex lies instead, as
   `hexapod.bind` does.
 
+**The traps found on Fohossa (#1619)**, a four-legged Meshy auto-rig with a long trunk:
+- **One piece for every leg:** with a long spine between the hips' fork and the withers' fork,
+  the belly joins all four legs into one piece outside the forks' balls, and `rigged.adopt` took
+  it for one leg's part (it stripped the other legs' weights as bleeds). `rigged.split` now parts a
+  piece that several chains call home by their weights (`SPLIT` line).
+- **An empty toe bone:** the auto-rig ends each leg with a bone below the sole that weighs almost
+  nothing; the hoof is on the bone before it. It is folded (`FOLDED ... moved almost none`), so the
+  hoof's bone is the paw the clips plant and the ground checks leave to the legs.
+- **Names the clips key:** `rigged` names only legs and stalks; the model script renames the rest
+  to the quadruped's scheme (`spine_NN`, `neck`, `head`, `tail_NN`, the legs' `scapula`,
+  `upper_arm`, `forearm`, `thigh`, `shin`, `hock`), so the clips, the volume check's stations and
+  the dimensions check find them. A trunk bone pointing back to the tail (the pelvis) must not be
+  `spine_01`: the volume check's station between two bones pointing apart has no plane. A bone
+  weighing almost nothing (a short one under the skull) goes into its neighbour.
+- **Shoulders and belly:** the forelegs hang from the withers, not the neck, and the legs' tops
+  give up their weights near the midline to the trunk (`keep_trunk`), or a swinging leg drags the
+  chest's underside and a bowing neck pinches between the shoulders (the volume check).
+- **Reach:** its legs are short against its body, so the wolf's clips' body shifts, paw steps and
+  tail swings are scaled down (`lesser`); the footprint and the legs' reach show by how much.
+
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
   `packages/game/assets/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
