@@ -228,8 +228,14 @@ background; only wait in the foreground for a result the very next step needs.
   Set it up as the owner's laptop-wide agent notes describe, with this repository's values:
   `REPO=Coarisfinia/khovax`, `OWNER="$OWNER"` (the owner's login, whose reviews count, looked up
   as above),
-  `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh` and `SELF='coarisfinia-ai-agent[bot]'` (it has
-  no default). On a failing CI run, read the job with
+  `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
+  no default) and `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
+  change request itself, below). `.claude/watcher.env` holds them all but `OWNER`, for the plugin's
+  own monitor and for
+  `bun --env-file=.claude/watcher.env <watcher>/src/watch-project.ts --follow`; the environment
+  still wins. **Export `OWNER` before the watcher starts** (looked up as above): without it the
+  watcher takes the repository's owner, the organisation, and no approval counts, so nothing is
+  dismissed. On a failing CI run, read the job with
   `agent-gh run view <run-id> --log-failed`, reproduce it locally, fix it, and push once.
 
 ### Review and merge
@@ -669,15 +675,18 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
      `resolve-review-thread PRRT_<id>` (owner, #1363). The unresolved threads' ids:
      `agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id isResolved}}}}}' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id'`.
   2. Rebase when needed.
-  3. Once the owner has approved, run `dismiss-stale-coderabbit <n>` (owner, #1390). It dismisses
-     CodeRabbit's change request only when the owner's latest review is APPROVED, CodeRabbit's
-     latest review is CHANGES_REQUESTED on a commit other than the head, and no review thread is
-     unresolved; otherwise it says why and does nothing.
+  3. Keep auto-merge on and wait: the project watcher dismisses it itself
+     (`DISMISS_STALE_BOT_REVIEWS=1`, owner, #1551) once the owner has approved, CI is green and
+     every review thread is settled, whether it was left on an older commit or is on the head and
+     was settled with `Resolved:` replies, and reports `REVIEW_DISMISSED`. Agents don't run
+     `dismiss-stale-coderabbit` (#1390) any more. If the watcher reports `REVIEW_DISMISS_FAILED`
+     again and again, tell the owner on the pull request.
 
-  A change request on the head commit isn't stale, and answering it doesn't clear it: fix what it
-  asks, and CodeRabbit's review of that push replaces it (or, once the owner has approved, the next
-  push makes it stale). Never post `@coderabbitai` commands. Both tools live in `~/.local/bin` on the
-  owner's machine, not in the repository.
+  Fix what a change request on the head commit asks, then settle each of its threads with a
+  `Resolved:` reply: CodeRabbit's review of the fix push replaces it, or the watcher dismisses it
+  once the owner has approved. A person's change request is never dismissed. Never post
+  `@coderabbitai` commands. `resolve-review-thread` lives in `~/.local/bin` on the owner's machine,
+  not in the repository.
 - **CodeRabbit's low-risk approval counts as the owner's approval for merging** (owner's rule,
   #1363): CodeRabbit approves (its automatic approvals, at most `max_merge_risk: low`) and that
   approval fills the "protect main" ruleset's required review. An agent may queue on it only when
