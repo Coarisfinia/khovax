@@ -5,8 +5,9 @@ extends Control
 ## follows the owner's ground rule (#429): it always shows its item's or attack's icon, with its
 ## charges or its cooldown, and never vanishes when empty or cooling down; it shows 0, or a
 ## cooldown circle with the seconds left. One it can't be used on right now is drawn faded, never
-## hidden. It shows only where touch input exists, and a touch that lands on it is taken, so the
-## touch stick doesn't start under it. While a keyboard or a controller is in use instead
+## hidden. It shows only where touch input exists and while the game hears input (#1509): hidden
+## behind the open menu or a dialog, it takes no touch there. A touch that lands on it is taken, so
+## the touch stick doesn't start under it. While a keyboard or a controller is in use instead
 ## (DeviceInUse), its top left corner shows the key or button that presses it too (#1185).
 ## Subclasses set its icon and say the numbers, reading the
 ## game through the lookups below (#934).
@@ -100,7 +101,8 @@ func _draw_numbers(area: Rect2, ink: Color) -> void:
 
 ## Lays the button out for a screen of `screen` pixels: in a column at the bottom right corner.
 func lay_out_in(screen: Vector2) -> void:
-	visible = touch
+	# Godot's TouchScreenButton presses its action whatever GUI lies over it, unless it's hidden.
+	visible = touch and hears_input()
 	_side = maxf(MIN_SIDE, minf(screen.x, screen.y) * SIDE_SHARE)
 	var from_bottom: float = MARGIN + _side / 2.0 + (_side + GAP) * column_index
 	button.position = Vector2(screen.x - MARGIN - _side / 2.0, screen.y - from_bottom)
@@ -140,6 +142,15 @@ func cooldown_share() -> float:
 ## Whether the action would do anything right now; the button is drawn faded when not.
 func usable() -> bool:
 	return true
+
+
+## Whether the game hears this machine's player's input now: not while the menu is open over it or
+## a dialog shows (LocalInput.blocked, in_dialog). Without a session's input, as in some tests, it
+## does.
+func hears_input() -> bool:
+	if driver == null or driver.input == null:
+		return true
+	return not driver.input.blocked and not driver.input.in_dialog
 
 
 ## This machine's player's slot; the first while there is no input.

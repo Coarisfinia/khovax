@@ -134,6 +134,7 @@ func _check_menu() -> String:
 		result = result if not result.is_empty() else _menu_ascension(menu)
 	if result.is_empty():
 		result = await _menu_holds_game(driver, true)
+		result = result if not result.is_empty() else await _menu_takes_no_presses(menu, main)
 	if result.is_empty():
 		result = await _menu_choices(menu, graphics, main.get_node("SurveyChoice") as SurveyChoice)
 	if result.is_empty():
@@ -831,6 +832,46 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 			"do" if walks else "don't",
 			"do" if ticked else "don't",
 		]
+	return ""
+
+
+## Behind the open menu the action buttons hide and take no touch, and presses made while it's
+## open (the special's key) or in the frame it closes (interact, a controller's A that may close
+## it) never reach the first command after it closes (#1509). Closed, the buttons show again; then
+## the menu opens again for the next steps.
+func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
+	var special: SpecialButton = main.get_node("Hud/SpecialButton") as SpecialButton
+	var input: LocalInput = main.get_node("LocalInput") as LocalInput
+	special.touch = true
+	special.lay_out_in(special.get_viewport_rect().size)
+	var shown_open: bool = special.visible
+	var touch: InputEventScreenTouch = InputEventScreenTouch.new()
+	touch.position = special.rect().get_center()
+	touch.pressed = true
+	special.get_viewport().push_input(touch)
+	var touched: bool = Input.is_action_pressed(&"special_attack")
+	var lift: InputEventScreenTouch = touch.duplicate() as InputEventScreenTouch
+	lift.pressed = false
+	special.get_viewport().push_input(lift)
+	Input.action_press(&"special_attack")
+	input._process(0.0)
+	Input.action_release(&"special_attack")
+	menu.toggle()
+	Input.action_press(&"interact")
+	input._process(0.0)
+	Input.action_release(&"interact")
+	var first: Command = input.command(FlowGame.driver(main).state)
+	special.lay_out_in(special.get_viewport_rect().size)
+	var shown_closed: bool = special.visible
+	special.touch = false
+	menu.toggle()
+	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
+	if shown_open or touched:
+		return "the special's button shows or takes a touch behind the open menu"
+	if first.special or first.interact:
+		return "a press made while the menu was open, or as it closed, reached the next command"
+	if not shown_closed:
+		return "the special's button doesn't show again once the menu closes"
 	return ""
 
 

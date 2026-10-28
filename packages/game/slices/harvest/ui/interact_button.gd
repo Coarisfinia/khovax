@@ -15,7 +15,7 @@ func _init() -> void:
 
 func lay_out_in(screen: Vector2) -> void:
 	super(screen)
-	visible = touch and shows_in(state(), slot())
+	visible = visible and shows_in(state(), slot())
 
 
 ## Whether slot `player_slot`'s player in `game` would begin a harvest by pressing interact: the
