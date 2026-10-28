@@ -209,16 +209,20 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    anything by hand.
 2. **Import and strip:** `packages/game-models/import_source.py` makes the source the script
    builds from (`packages/game-models/sources/<name>.glb`): only the base colour, opaque,
-   single-sided and matte (#1476). Once #1516 is in, it keeps and adopts Meshy's rig where the
-   download has one; until then it drops the rig, and the script rigs the source itself.
+   single-sided and matte (#1476). A download Meshy has rigged keeps its skin and rig, adopted
+   by `lib/rigged.py` (#1516): its chains checked against the parts they move, a short one
+   regrown and one bleeding into another's part cleaned, its bones named to the library's scheme,
+   and the model placed on its feet under a `root`. Read what it prints (`KEEP`, `FIX`,
+   `RENAME`).
 3. **Scale to the hex, first:** settle the model's size before any clip, gait or render
    (#1522). The gait's limits depend on the size, and Drakkudor's late rescale redid its gait and
-   every render. Until the import step computes it (#1522), set the scale in the model script
-   (`SCALE`, applied with `scene.apply_scale`, as `drakkudor.py` does) so the rest pose reaches no
-   further than the footprint check allows (step 20 below), leaving a margin for the widest clip
-   (the attack's lunge), and confirm it with the check once the clips exist.
-4. **Rig:** start from Meshy's rig (the owner rigs in Meshy first, #1514), checking that every
-   chain covers its part (#1519), then rename the bones to the library's scheme.
+   every render. `import_source.py`'s `scale` is the hook for it. Until the import step computes
+   it (#1522), pick it by hand (or set `SCALE` in the model script, as `drakkudor.py` does) so the
+   rest pose reaches no further than the footprint check allows (step 20 below), leaving a margin
+   for the widest clip (the attack's lunge), and confirm it with the check once the clips exist.
+4. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
+   check its fixes bend right (bend each chain and see that it moves only its own part). An
+   unrigged download is rigged by the model script, as `drakkudor.py` does with `lib/hexapod.py`.
 5. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
    with the gait sweep, not by hand.
 6. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
@@ -242,8 +246,10 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   shows what the download had (its `doubleSided` and alpha mode).
 - **A new body plan** (such as six legs) needs its plan in `lib/dimensions.py` first (its ranges
   and their reasons, as `hexapod` has), or the dimensions check has nothing to measure.
-- **Meshy's auto-rig** is scaled to a person's height (1.7 tall) and has no clips; its chains can
-  stop short of their part or bleed into a neighbour's (#1519), so check every chain's coverage.
+- **Meshy's auto-rig** is scaled to a person's height (1.7 tall) and has no clips. Its chains can
+  stop short of their part or bleed into a neighbour's (#1519); `lib/rigged.py` fixes both, but
+  check its `FIX` lines. Its legs have more bones than the library's three-bone `legs.Leg` plants
+  (#1539).
 - **Weights:** automatic weights fail on thin parts over a hollow (ribs over a ribcage): they
   can't tell a leg from the rib beside it. Weight by where each vertex lies instead, as
   `hexapod.bind` does.
