@@ -3,7 +3,7 @@ seam and jitter, as numbers with limits that fail the build.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_motion.py -- \
-        <model.glb> [<Clip>=<speed> ...]
+        <model.glb> [<Clip>=<speed> ...] [--summary]
 
 - **Foot sliding:** how fast a paw moves over the ground while it stands on it (its lowest point
   within CONTACT of the ground), in metres a second. The ground runs back under the model at the
@@ -26,7 +26,8 @@ seam and jitter, as numbers with limits that fail the build.
   pause at every loop's seam.
 
 It prints a line per clip and `MOTION CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
-game_shared.log (#1115): a failing line is an error on the .glb. The clip rate and the loops come
+game_shared.log (#1115): a failing line is an error on the .glb. With `--summary` (#1524) it prints
+only each limit a clip misses and by how much, one line each (lib/summary.py). The clip rate and the loops come
 from the .glb's .import, as the game imports it."""
 
 import math
@@ -41,7 +42,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import ground, imported  # noqa: E402
+from lib import ground, imported, summary  # noqa: E402
 
 # A paw this close to the ground (metres) stands on it.
 CONTACT = 0.02
@@ -156,9 +157,10 @@ def apart(a, b):
     return pose, shift, shifted
 
 
-def joins(ends, loops):
+def joins(ends, loops, misses):
     """Each loop's joins to its lead-in (<loop>Start) and lead-out (<loop>End), from `ends` (each
-    clip's first and last frame): lines and whether they pass."""
+    clip's first and last frame): lines and whether they pass; `misses` collects the limits a join
+    misses."""
     lines, passed = [], True
     for loop in sorted(name for name in loops if name in ends):
         first = ends[loop][0]
@@ -170,13 +172,17 @@ def joins(ends, loops):
         for lead, before, after in pairs:
             pose, shift, shifted = apart(before, after)
             fails = pose > SEAM_POSE_LIMIT or shift > SEAM_SHIFT_LIMIT
+            misses.above(lead, "join-pose", pose, SEAM_POSE_LIMIT, "deg")
+            misses.above(lead, "join-shift", shift, SEAM_SHIFT_LIMIT, "mm", 1000)
             passed = passed and not fails
             lines.append("%s %s join: %.2f deg, shift %.1f mm (%s)" % (
                 "FAIL" if fails else "ok", lead, pose, shift * 1000, shifted))
     return lines, passed
 
 
-def check(rig, meshes, fps, loops, speeds):
+def check(rig, meshes, fps, loops, speeds, misses):
+    """Lines per clip and join, and whether every one passes; `misses` (summary.Misses) collects
+    each limit a clip misses."""
     feet = ground.foot_bones(rig)
     lines, passed, ends = [], True, {}
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
@@ -191,11 +197,17 @@ def check(rig, meshes, fps, loops, speeds):
         rough = roughness(spins(frames), loop)
         shake, shaking, at = jitter(rough, start)
         fails = late or shake > JITTER_LIMIT or slide > SLIDE_LIMIT
+        if late:
+            misses.flag(action.name, "late-start")
+        misses.above(action.name, "slide", slide, SLIDE_LIMIT, "m/s")
+        misses.above(action.name, "jitter", shake, JITTER_LIMIT, "deg/frame^2")
         text = "slide %.2f m/s (mean %.2f; %s)" % (
             slide, mean, ", ".join("%s %.2f" % (name, value) for name, value in sorted(fastest.items())))
         if loop:
             pose, shift, shifted, speed, jumping = seam(frames, rough)
             fails = fails or pose > SEAM_POSE_LIMIT or shift > SEAM_SHIFT_LIMIT
+            misses.above(action.name, "seam-pose", pose, SEAM_POSE_LIMIT, "deg")
+            misses.above(action.name, "seam-shift", shift, SEAM_SHIFT_LIMIT, "mm", 1000)
             text += "; seam %.2f deg, shift %.1f mm (%s), rough %.2f deg/frame^2 (%s)" % (
                 pose, shift * 1000, shifted, speed, jumping)
         text += "; jitter %.2f deg/frame^2 (%s, frame %d)" % (shake, shaking, at)
@@ -203,17 +215,24 @@ def check(rig, meshes, fps, loops, speeds):
             text += "; starts at frame %d, not 0: the game holds its first pose until then" % start
         passed = passed and not fails
         lines.append("%s %s%s: %s" % ("FAIL" if fails else "ok", action.name, " (loop)" if loop else "", text))
-    joined, joins_pass = joins(ends, loops)
+    joined, joins_pass = joins(ends, loops, misses)
     return lines + joined, passed and joins_pass
 
 
 def main():
     args = sys.argv[sys.argv.index("--") + 1:]
+    short = "--summary" in args
+    args = [arg for arg in args if arg != "--summary"]
     glb = args[0]
     speeds = {name: float(value) for name, value in (arg.split("=", 1) for arg in args[1:])}
     fps, loops = imported.settings(glb)
     rig = imported.load(glb, fps)
-    lines, passed = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds)
+    misses = summary.Misses()
+    lines, passed = check(rig, ground.skinned(bpy.data.objects), fps, loops, speeds, misses)
+    if short:
+        for line in summary.lines(misses, [action.name for action in bpy.data.actions]):
+            log.info("MOTION " + line)
+        lines = []
     for line in lines:
         if line.startswith("FAIL"):
             log.error("MOTION " + line, glb)

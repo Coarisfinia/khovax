@@ -104,11 +104,12 @@ def measure(model):
     return found
 
 
-def report(rig, meshes, tolerance):
+def report(rig, meshes, tolerance, misses=None):
     """For every clip, every frame: the smallest gap between any wisp and the body, the frame and
     the wisp and body bone it's between, and the frames a wisp crosses the body (the first one's
     wisp and body bone). A clip fails when one does, or when the gap falls below `tolerance`.
-    Returns (lines, passed); a model without wisps has nothing to check and passes."""
+    Returns (lines, passed); a model without wisps has nothing to check and passes. `misses`
+    (summary.Misses), when given, collects each clip's misses, for the summary mode (#1524)."""
     wisps = wisp_bones(rig)
     if not wisps:
         return ["no wisp bones: nothing to check"], True
@@ -119,6 +120,8 @@ def report(rig, meshes, tolerance):
     if unweighted or model.joined:
         problems = ["%s moves no part of the mesh" % name for name in unweighted]
         problems += ["%s shares a face with the body" % name for name in sorted(model.joined)]
+        if misses is not None:
+            misses.flag("wisps", "unmeasured-or-joined")
         return ["FAIL wisps: " + "; ".join(problems)], False
     scene = bpy.context.scene
     lines, passed = [], True
@@ -137,6 +140,9 @@ def report(rig, meshes, tolerance):
                     low, at = gap, (frame, name, near)
         fails = bool(crossing) or low < tolerance
         passed = passed and not fails
+        if misses is not None:
+            misses.above(action.name, "crossing-frames", len(crossing), 0, "frames")
+            misses.below(action.name, "gap", low, tolerance, "mm", 1000)
         if at is None:
             text = "no wisp clear of the body on any frame"
         else:
