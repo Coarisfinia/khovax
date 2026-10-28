@@ -160,6 +160,12 @@ a second model could use goes into the library or a generic tool, never into one
   per clip, the most a part's gap to it grows beyond its gap at rest, the frame, the part and that
   piece; it fails past the tolerance (`lib/connectivity.py`). Wisps are exempt. Its `KNOWN` list is
   judged like the volume check's.
+- **The footprint check (#1520):** `packages/game-models/check_footprint.py -- <model.glb>`
+  samples every frame of every clip and prints, per clip, how far the deformed mesh reaches across
+  the hex the game stands it on, seen from above (1.00 at the hex's edge), and its frame; a regular
+  monster fails past 0.95 (5 % padding inside), one in its `LARGE` set (a boss, an enraged or
+  stronger monster) past 1.05 (`lib/footprint.py`). Its `KNOWN` list is judged like the volume
+  check's.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
@@ -379,6 +385,14 @@ a second model could use goes into the library or a generic tool, never into one
    tolerance beyond its gap at rest (`lib/connectivity.py`). Wisps are meant to float and are exempt.
    A clip that still fails waits in its `KNOWN` list with the issue that fixes it, and a fix takes it
    off. Its lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14).
+
+20. **Footprint (#1520):** `uv run --locked packages/game-models/blender.py --background
+   --factory-startup --python packages/game-models/check_footprint.py -- <model.glb>` must print
+   `FOOTPRINT CHECK: PASS`: in every frame of every clip the monster stays within its hex, seen
+   from above, with 5 % padding (a boss, enraged or stronger one may reach 5 % past it; the owner,
+   on #1514). Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
+   list with the issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it
+   on every `.glb` with the rebuild check (step 14).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**

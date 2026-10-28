@@ -312,6 +312,16 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_connectivity.py --
 
+      - name: "⬡ Check every monster stays within its hex"
+        # Every frame of every clip of every .glb, how far the mesh reaches across the hex the game
+        # stands it on, seen from above (#1520); a prop without a rig passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_footprint.py --
+
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
         if: failure() && steps.models.outputs.changed == 'true'
