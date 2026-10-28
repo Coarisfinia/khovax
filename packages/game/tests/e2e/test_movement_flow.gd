@@ -489,15 +489,26 @@ func _mark_on() -> Vector2i:
 	return mark.piece.tile if mark.piece.visible else TapWalk.NO_TILE
 
 
-## Steps a walk to `target` through to its end; whether the mark stood on `target` after the walk
-## had ended, while the player still glided onto it (#1554).
+## Steps a walk to `target` through to its end; the mark must stand on `target` in every frame of
+## the final glide after the walk ends, and at least one such frame must be checked (#1554).
 func _glide_marked(target: Vector2i) -> bool:
-	var marked: bool = false
+	var gliding: int = 0
 	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
 		_step()
-		if not _driver.input.tap_walk.walking and _mark_on() == target:
-			marked = true
-	return marked
+		if _driver.input.tap_walk.walking or not _glides():
+			continue
+		gliding += 1
+		if _mark_on() != target:
+			return false
+	return gliding > 0
+
+
+## Whether the local player is still gliding onto its tile.
+func _glides() -> bool:
+	var player: Entity = _driver.state.player(_driver.input.slot)
+	var movement: MovementFeature = _driver.state.feature(MovementFeature.ID) as MovementFeature
+	var walk: Walk = movement.walk(player.id)
+	return walk != null and walk.is_moving()
 
 
 ## The walkable tile two steps east of (0, 0) to click: (2, 0) unless it's closed.
