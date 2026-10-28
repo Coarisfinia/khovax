@@ -18,6 +18,7 @@ what it kept, fixed and renamed. `scale` sizes it (1: as the download is; #1522 
     ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=1]
 """
 
+import math
 import os
 import sys
 
@@ -31,8 +32,8 @@ args = sys.argv[sys.argv.index("--") + 1:]
 download, source = args[0], args[1]
 size = int(args[2]) if len(args) > 2 else 1024
 scale = float(args[3]) if len(args) > 3 else 1.0
-if scale <= 0.0:
-    sys.exit("scale must be positive, not %g" % scale)
+if not math.isfinite(scale) or scale <= 0.0:
+    sys.exit("scale must be a positive number, not %g" % scale)
 # The colour's JPEG quality: the cel look's flat bands hide its artefacts well below lossless.
 QUALITY = 90
 
