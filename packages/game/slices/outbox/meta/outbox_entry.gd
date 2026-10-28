@@ -19,8 +19,11 @@ const CARRY: int = 4
 ## Set one of the world's settings, from its host (#1309, HostSettings): its data is the
 ## setting's code and its choice (HostSettings.request_data).
 const HOST_SETTING: int = 5
+## Raise an event a quest emitted in the world (#755, QuestEventFeature): its data is the event's
+## code (CommandCodes.of).
+const QUEST_EVENT: int = 6
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING]
+const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING, QUEST_EVENT]
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the
 ## world records the ids it applied.

@@ -113,6 +113,7 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		TileHarvestFeature.ID: TileHarvestFactory.build,
 		DialogFeature.ID: DialogFactory.build,
 		TerritoryFeature.ID: TerritoryFactory.build,
+		QuestEventFeature.ID: QuestEventFactory.build,
 	}
 	return rules
 

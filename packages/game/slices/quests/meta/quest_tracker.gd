@@ -23,37 +23,33 @@ var book: Dictionary[String, QuestDefinition] = {}
 
 
 ## Counts `fact`: an item obtained as many times as obtained (`count_obtained`), any other fact
-## once (`count`). Returns the quests it finished, in the order finished.
-func advance(fact: QuestFact) -> Array[QuestDefinition]:
+## once (`count`), adding the events the quests it advanced emitted (#575) to `emitted`, in the
+## order emitted. Returns the quests it finished, in the order finished.
+func advance(fact: QuestFact, emitted: Array[String] = []) -> Array[QuestDefinition]:
 	if fact.condition == QuestStep.OBTAINED:
-		return count_obtained(fact, fact.amount)
-	return count(fact)
+		return count_obtained(fact, fact.amount, emitted)
+	return count(fact, emitted)
 
 
-## Counts `fact`, then every event the quests it advanced emitted (#575), in the order emitted:
-## each as a fact of its own, which can start side quests waiting on it. Only a side quest's start
-## waits on an event, and each starts once, so the events always run out. An event happens in the
-## whole world, so it counts nowhere in particular. Returns the quests it finished, in the order
-## finished.
-func count(fact: QuestFact) -> Array[QuestDefinition]:
+## Counts `fact`, adding the events the quests it advanced emitted (#575) to `emitted`, in the
+## order emitted. They don't count here: they go into the world (QuestEventFeature), and count
+## once it raises them back (WorldChanged, owner, #755), on every player's quests alike, so none
+## counts twice. Returns the quests it finished, in the order finished.
+func count(fact: QuestFact, emitted: Array[String] = []) -> Array[QuestDefinition]:
 	var done: Array[QuestDefinition] = []
-	var pending: Array[String] = _advance(fact, done)
-	while not pending.is_empty():
-		var event: String = pending.pop_front()
-		pending.append_array(_advance_event(event, done))
+	emitted.append_array(_advance(fact, done))
 	return done
-
-
-## Counts the event `event` a quest emitted as a fact of its own (`_advance`).
-func _advance_event(event: String, done: Array[QuestDefinition]) -> Array[String]:
-	return _advance(QuestFact.new(QuestStep.EMITTED, event), done)
 
 
 ## Counts `amount` of the item `fact` names as obtained (#686), one at a time, so one gain can
 ## finish a step and count toward the next; it stops once no open step asks for the item, so a
-## large amount costs no more than the steps asking for it. Returns the quests it finished, in the
-## order finished.
-func count_obtained(fact: QuestFact, amount: int) -> Array[QuestDefinition]:
+## large amount costs no more than the steps asking for it. Adds the events emitted to `emitted`;
+## returns the quests it finished, in the order finished.
+func count_obtained(
+	fact: QuestFact,
+	amount: int,
+	emitted: Array[String] = [],
+) -> Array[QuestDefinition]:
 	var done: Array[QuestDefinition] = []
 	for _counted: int in amount:
 		var asked: bool = false
@@ -61,7 +57,7 @@ func count_obtained(fact: QuestFact, amount: int) -> Array[QuestDefinition]:
 			asked = asked or step.counts(fact.condition, fact.what, fact.where)
 		if not asked:
 			break
-		done.append_array(count(fact))
+		done.append_array(count(fact, emitted))
 	return done
 
 

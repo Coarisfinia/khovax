@@ -51,11 +51,17 @@ static func _follow(_profile: Profile, kept: QuestTracker, id: String) -> void:
 
 
 ## Counts `facts` on the quests `kept`, in order, and gives `profile` what finishing each quest
-## they finish gives (QuestRewards), in the same change.
+## they finish gives (QuestRewards), in the same change. Every event the quests emit goes to the
+## outbox for the world to raise (#755, QuestEventFeature), posted in the same change, so a save
+## never has a step done without the event it emits on its way.
 static func advance(profile: Profile, kept: QuestTracker, facts: Array[QuestFact]) -> void:
 	for fact: QuestFact in facts:
-		for quest: QuestDefinition in kept.advance(fact):
+		var emitted: Array[String] = []
+		for quest: QuestDefinition in kept.advance(fact, emitted):
 			QuestRewards.give(quest, profile)
+		for event: String in emitted:
+			var code: int = CommandCodes.of(event)
+			var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.QUEST_EVENT, code)
 
 
 ## The quests the player advances from `content`: none when any quest file couldn't be read, so

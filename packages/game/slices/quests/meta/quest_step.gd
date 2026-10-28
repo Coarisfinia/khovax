@@ -6,7 +6,8 @@ extends RefCounted
 ## obtains (its QuestFacts), never inside the simulation. A step naming an instance counts only
 ## there (#769), as every step of a territory quest does.
 ## A step, a choice or a step that ends the chain can emit an event once it's done or taken (#575),
-## which can start a side quest (`QuestDefinition.starts_on`).
+## which goes into the world (#755, QuestEventFeature) and, once the world raises it back, can start
+## a side quest (`QuestDefinition.starts_on`) for every player.
 
 ## Where a step is in the quest schema (QuestDefinition.SCHEMA), which says the fields it may have
 ## (SchemaFields, #825); a side quest's start, read like a step, is beside it, and so is a choice.
@@ -40,8 +41,9 @@ const ANSWERED: String = "answered"
 ## The conditions a choice can have: being somewhere, which a marker points at (stepping into a
 ## place, or entering a region piece or an instance), or an answer chosen.
 const CHOICE_CONDITIONS: Array[String] = [REACHED, ENTERED, ANSWERED]
-## The condition met by an event a quest emitted (#575), or one that changed the world (#707, such
-## as glade_purified), named by `event`: only a side quest's start waits on one, since a step
+## The condition met by an event that changed the world (#707), raised there by a rule (such as
+## glade_purified) or by a quest that emitted it (#575, #755), named by `event`: only a side quest's
+## start waits on one, since a step
 ## waiting on it would have nothing to show the player.
 const EMITTED: String = "emitted"
 ## The conditions a side quest's start can have: being somewhere, or an event emitted.
