@@ -19,6 +19,13 @@ extends Node
 ## the request, sent back here (`send`) for the next command.
 signal revive_chosen(short_id: String)
 
+## What place_totem did since the last command (_totem).
+enum TotemPress {
+	NONE,
+	TAPPED,
+	HELD_OVER,
+}
+
 ## The swap actions, in the carried order's places from 1.
 const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 
@@ -41,8 +48,10 @@ var in_dialog: bool = false
 var _special_pressed: bool = false
 ## Whether interact was pressed since the last command (#696).
 var _interact_pressed: bool = false
-## Whether place_totem was pressed since the last command.
-var _totem_tapped: bool = false
+## place_totem since the last command: TAPPED when pressed, or HELD_OVER while it has been held
+## since the game last heard no input (#1509): held on over the menu or a dialog, it places nothing
+## until it's let go or pressed again.
+var _totem: TotemPress = TotemPress.NONE
 ## The wild monster the player focuses (#436), by entity id, or Command.NO_FOCUS; the special
 ## attack strikes it. Views read it to mark it.
 var focus: int = Command.NO_FOCUS
@@ -75,8 +84,7 @@ func _process(_delta: float) -> void:
 func _hear() -> void:
 	if Input.is_action_just_pressed("special_attack"):
 		_special_pressed = true
-	if Input.is_action_just_pressed("place_totem"):
-		_totem_tapped = true
+	_hear_totem()
 	if Input.is_action_just_pressed("focus_next"):
 		_focus_steps += 1
 	if Input.is_action_just_pressed("focus_previous"):
@@ -91,11 +99,20 @@ func _hear() -> void:
 	revive_pick.hear()
 
 
+## Keeps a tap of place_totem for the next command, and ends a hold kept over from while the game
+## heard no input once it's let go or pressed anew.
+func _hear_totem() -> void:
+	if Input.is_action_just_pressed("place_totem"):
+		_totem = TotemPress.TAPPED
+	elif _totem == TotemPress.HELD_OVER and not Input.is_action_pressed("place_totem"):
+		_totem = TotemPress.NONE
+
+
 ## Drops every press heard since the last command (#1509): while the game hears no input, the
 ## driver may be paused (the menu's pause), and a press kept until the menu closes would fire then.
 func _drop_presses() -> void:
 	_special_pressed = false
-	_totem_tapped = false
+	_totem = TotemPress.HELD_OVER
 	_focus_steps = 0
 	_respawn_pressed = false
 	_interact_pressed = false
@@ -128,10 +145,13 @@ func send(request: OutboxEntry) -> void:
 
 
 func command(state: GameState) -> Command:
+	# The driver may ask before this frame's _process ran: what came in as the menu or a dialog
+	# closed (a roster tap during the dialog's fade) is dropped here too.
+	if Engine.get_process_frames() <= _deaf_through:
+		_drop_presses()
 	var fires: bool = _special_pressed
 	_special_pressed = false
-	var placing: bool = _totem_tapped or Input.is_action_pressed("place_totem")
-	_totem_tapped = false
+	var placing: bool = _placing()
 	var gives_up: bool = _respawn_pressed
 	_respawn_pressed = false
 	var swap: int = _swap_to
@@ -169,6 +189,16 @@ func command(state: GameState) -> Command:
 	given.interact = interacting
 	_send_next(given)
 	return given
+
+
+## Whether the next command places the totem: tapped since the last one, or held, unless held on
+## from while the game heard no input. A tap counts once.
+func _placing() -> bool:
+	var held: bool = Input.is_action_pressed("place_totem") and _totem != TotemPress.HELD_OVER
+	var tapped: bool = _totem == TotemPress.TAPPED
+	if tapped:
+		_totem = TotemPress.NONE
+	return tapped or held
 
 
 ## A command that stands still, with the dialog `answering` chosen: the dialog screen's answers are
