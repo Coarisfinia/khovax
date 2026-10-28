@@ -8,9 +8,9 @@ extends RefCounted
 ## The ring rules' constants (#219). Their numbers are in Tuning (#1309).
 ## Players have no level yet: every player draws rings at this level until they do.
 const PLAYER_LEVEL: int = Tuning.PLAYER_LEVEL
-## Ring power is BASE + level × PER_LEVEL (+ companion passives, #1496): the issue's 100 + 20 ×
-## level scaled up, so a monster's pressure each tick (its strength) wears a wall down over a
-## whole seal rather than in one tick.
+## Ring power is BASE + level × PER_LEVEL (+ the players' warded control points, #1492, + companion
+## passives, #1496): the issue's 100 + 20 × level scaled up, so a monster's pressure each tick (its
+## strength) wears a wall down over a whole seal rather than in one tick.
 const RING_POWER_BASE: int = Tuning.RING_POWER_BASE
 const RING_POWER_PER_LEVEL: int = Tuning.RING_POWER_PER_LEVEL
 ## A seal takes this many ticks, plus one per SEAL_PRESSURE_PER_TICK of pressure inside
@@ -41,8 +41,14 @@ static func pressure(
 	return wild.strength_of(state, monster_id) * left
 
 
-## A new seal of the ring `trail` closed around the wild monsters `inside`.
-static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSeal:
+## A new seal of the ring `trail` closed around the wild monsters `inside`, its power raised by
+## `ward_power` (DominationFeature.strengthen, #1492), which the seal keeps.
+static func build(
+		state: GameState,
+		trail: Trail,
+		inside: Array[int],
+		ward_power: int,
+) -> RingSeal:
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	var seal: RingSeal = RingSeal.new()
@@ -53,7 +59,8 @@ static func build(state: GameState, trail: Trail, inside: Array[int]) -> RingSea
 	var _sized: int = seal.damage.resize(seal.walls.size())
 	seal.damage.fill(0)
 	# Against the wild monsters at the host's difficulty (HostSettings, #1315).
-	var power: int = HostSettings.ring_power(state, ring_power(PLAYER_LEVEL))
+	var power: int = HostSettings.ring_power(state, ring_power(PLAYER_LEVEL) + ward_power)
+	seal.ward_power = ward_power
 	seal.integrity = Fixed.mul_div(power, Fixed.ONE, seal.walls.size())
 	seal.monsters = inside
 	var total: int = 0

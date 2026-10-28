@@ -460,10 +460,7 @@ func _check_seal_saved() -> String:
 		waited = _check_strikes_in_ring(world, false)
 	if not waited.is_empty():
 		return waited
-	world.step(FlowSteps.totem(0, 2))
-	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 4):
-		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
-	var struck: String = _check_strikes_in_ring(world, true)
+	var struck: String = _check_warded_seal(world)
 	if not struck.is_empty():
 		return struck
 	var basic: GameState = world.instances[FlowSteps.BASIC]
@@ -484,6 +481,23 @@ func _check_seal_saved() -> String:
 	if _wild(resumed.instances[FlowSteps.BASIC]).monsters.size() != 1:
 		return "the resumed seal didn't dominate the wild monster"
 	return ""
+
+
+## The first player places their totem on the world's basic instance's waiting ring while warded
+## control points strengthen the players' rings (#1492): the seal keeps that power once they no
+## longer do, and through a save, as nothing in the resumed world strengthens it. Then it seals a
+## while, and the companion never strikes the monster inside.
+func _check_warded_seal(world: World) -> String:
+	var domination: DominationFeature = _domination(world.instances[FlowSteps.BASIC])
+	domination.strengthen(Tuning.WARDED_POINT_RING_POWER)
+	world.step(FlowSteps.totem(0, 2))
+	domination.strengthen(0)
+	var seal: RingSeal = domination.seals.get(world.player(0).id)
+	if seal == null or seal.ward_power != Tuning.WARDED_POINT_RING_POWER:
+		return "the sealing ring didn't keep the power warded control points gave it"
+	for _tick: int in Fixed.div_floor(RingSealing.SEAL_BASE_TICKS, 4):
+		world.step(FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+	return _check_strikes_in_ring(world, true)
 
 
 ## A world saved while its basic instance's ring waits for a totem resumes as it was, and a save

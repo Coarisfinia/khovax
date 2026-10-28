@@ -104,6 +104,9 @@ const PLAYER_LEVEL: int = 1
 ## whole seal rather than in one tick.
 const RING_POWER_BASE: int = 30_000
 const RING_POWER_PER_LEVEL: int = 6_000
+## The ring power each control point the players' side has warded adds to their rings (#1492):
+## one level's worth.
+const WARDED_POINT_RING_POWER: int = 6_000
 ## A seal takes this many ticks, plus one per SEAL_PRESSURE_PER_TICK of pressure inside
 ## (thousandths): more resistance seals slower.
 const SEAL_BASE_TICKS: int = 40
