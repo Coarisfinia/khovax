@@ -7,12 +7,15 @@ extends RefCounted
 ## companion, `strong` says for each of its types on the type chart whether the strike was strong
 ## against it (weak otherwise); it's empty otherwise and while the chart is off
 ## (TypeEffectivenessFeature.strong_against, #701), and only the damage numbers read it (#764).
+## `dodged` says the hit missed a companion that dodged it (#1499): it deals nothing, and the damage
+## numbers show it as a miss (#1564).
 
 var monster_id: int
 var target_id: int
 var tile: Vector2i
 var damage: int
 var strong: Array[bool]
+var dodged: bool = false
 
 
 func _init(
