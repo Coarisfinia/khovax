@@ -20,7 +20,7 @@ static func rest(
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	if health == null or rest_heals.is_empty() or state.tick % Simulation.TICKS_PER_SECOND != 0:
 		return
-	var heal: int = _share(companions, companion_id, rest_heals)
+	var heal: int = _share(state, companions, companion_id, rest_heals)
 	if heal > 0:
 		# At least 1 HP, so a small share of a low HP still heals.
 		var amount: int = maxi(Fixed.scale(health.max_hp_of(state, companion_id), heal), 1)
@@ -39,20 +39,21 @@ static func hastened(
 	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
 	if health == null or hastes.is_empty():
 		return wait
-	var haste: int = _share(companions, companion_id, hastes)
+	var haste: int = _share(state, companions, companion_id, hastes)
 	var full: int = health.max_hp_of(state, companion_id)
 	var lost: int = clampi(full - health.hp_of(state, companion_id), 0, full)
 	return maxi(Fixed.scale(wait, Fixed.ONE - Fixed.mul_div(haste, lost, full)), 1)
 
 
-## The shares `by_passive` gives the passives working for the companion `companion_id` now
-## (CompanionPassives), together: less than a whole.
+## The shares `by_passive` gives the passives working for the companion `companion_id` in `state`
+## now (CompanionPassives: its species' own and its web's), together: less than a whole.
 static func _share(
+	state: GameState,
 	companions: CompanionFeature,
 	companion_id: int,
 	by_passive: Dictionary[String, int],
 ) -> int:
 	var total: int = 0
-	for passive: String in CompanionPassives.of_companion(companions, companion_id):
+	for passive: String in CompanionPassives.of_companion(state, companions, companion_id):
 		total += by_passive.get(passive, 0)
 	return mini(total, Fixed.ONE - 1)
