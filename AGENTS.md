@@ -266,9 +266,9 @@ background; only wait in the foreground for a result the very next step needs.
   description (renders, screenshots, a before and after) is opened with `agent-gh pr create
   --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>`, and queue
   it once CodeRabbit has reviewed the head (the watcher holds `READY_TO_MERGE` until then,
-  `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its "Merge low-risk
-  changes" rule may merge it (wanted), except a model pull request or one that changes the merge
-  rules, which still wait for the owner's approval (below).
+  `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its
+  "Merge low-risk changes" rule may merge it (wanted), except a model pull request or one that
+  changes the merge rules, which still wait for the owner's approval (below).
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
