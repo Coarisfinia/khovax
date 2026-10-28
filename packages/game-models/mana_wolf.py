@@ -5,7 +5,9 @@ are the shared library in packages/game-models/lib/ (model skill).
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/mana_wolf.py -- packages/game/assets/mana-wolf/mana_wolf.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes.
+It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
+(sweep_gait.py).
 
 Blender is Z-up and the wolf faces -Y (the game's +Z). Sizes are a large wolf's, in metres,
 shrunk by SCALE at the end to stand on one hex tile.
@@ -17,7 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, weights, wisps  # noqa: E402
+from lib import attachments, body, clips, eyes, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights, wisps  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -104,8 +106,19 @@ SLEEP_TURN = 0.3
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 2 / 3, FPS)
-RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 1.25, FPS)
+WALK_TILES, RUN_TILES = 2 / 3, 1.25
+# Each gait's shape (clips.gait): the share of the cycle a paw is down, how far (radians) a
+# foreleg folds as it swings, how high a paw lifts (a share of its leg's reach), how far its toes
+# tip down, how far (radians) the body rolls and the spine flexes, and how much of a straight
+# leg's sink the body bobs by.
+WALK_DUTY, WALK_FOLD, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.4, 0.6, 0.2, 0.6, 0.06, 0.4
+RUN_DUTY, RUN_FOLD, RUN_SPINE_FLEX, RUN_ROLL, RUN_BOB = 0.3, 0.5, 0.06, 0.0, 0.4
+# The values above that the gait sweep may set; what follows from them is worked out after it has.
+GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_FOLD", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES",
+        "RUN_DUTY", "RUN_FOLD", "RUN_SPINE_FLEX", "RUN_ROLL", "RUN_BOB")
+OUT = tuning.arguments(globals(), GAIT)
+WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
+RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * RUN_TILES, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 RUN_STRIDE = RUN_SPEED * RUN_FRAMES / FPS / SCALE
 
@@ -346,10 +359,10 @@ def build(out):
                  reweigh=reweigh)
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=0.4, fold=0.6, lift=0.2, curl=0.6,
-                          roll=0.06),
-        "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, WOLF, clips.GALLOP, duty=0.3, fold=0.5, spine_flex=0.06,
-                         planted=False),
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, WOLF, clips.WALK, duty=WALK_DUTY, fold=WALK_FOLD,
+                          lift=WALK_LIFT, curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
+        "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, WOLF, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
+                         spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
         "Attack": clips.attack(),
         "Hit": clips.hit(),
         "Faint": clips.faint(HIP_HEIGHT),
@@ -368,4 +381,4 @@ def build(out):
         sys.exit(1)
 
 
-build(sys.argv[sys.argv.index("--") + 1])
+build(OUT)

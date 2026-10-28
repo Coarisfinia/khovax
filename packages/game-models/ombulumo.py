@@ -8,7 +8,9 @@ its own parts live here; the building blocks are the shared library in packages/
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/ombulumo.py -- packages/game/assets/ombulumo/ombulumo.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes.
+It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
+(sweep_gait.py).
 
 Blender is Z-up and it faces -Y (the game's +Z). Sizes are in metres, shrunk by SCALE at the end
 to sit on one hex tile.
@@ -23,7 +25,7 @@ from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import attachments, body, clips, eyes, legs, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, weights  # noqa: E402
+from lib import attachments, body, clips, eyes, legs, metrics, muzzle, parts, pulse, quadruped, scene, surface, symmetry, tuning, weights  # noqa: E402
 from lib.materials import palette  # noqa: E402
 
 FPS = 30
@@ -115,8 +117,22 @@ BELLY_HEIGHT = 0.16
 TILE = math.sqrt(3.0)
 WALK_SPEED = TILE / 0.8
 RUN_SPEED = TILE / 0.3
-WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * 2 / 3, FPS)
-RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * 2, FPS)
+WALK_TILES, RUN_TILES = 2 / 3, 2.0
+# Its walk's shape (clips.gait): the share of the cycle a paw is down, how far (radians) a foreleg
+# folds as it swings, how high a paw lifts (a share of its leg's reach), how far its toes tip
+# down, how far (radians) the body rolls, and how much of a straight leg's sink the body bobs by.
+WALK_DUTY, WALK_FOLD, WALK_LIFT, WALK_CURL, WALK_ROLL, WALK_BOB = 0.35, 0.5, 0.25, 0.25, 0.08, 0.4
+# Its run is a string of long, low hops (#1271): a run is longer hops, not quicker legs. Each hop
+# arcs HOP_HEIGHT up, its feet skimming HOP_SKIM over the ground where it comes down, so they never
+# drag along it; its hind legs kick back as it takes off and its forelegs reach for the landing.
+HOP_HEIGHT, HOP_SKIM = 0.18, 0.06
+HOP_KICK, HOP_REACH, HOP_FOLD = 0.45, 0.35, 0.3
+# The values above that the gait sweep may set; what follows from them is worked out after it has.
+GAIT = ("WALK_TILES", "WALK_DUTY", "WALK_FOLD", "WALK_LIFT", "WALK_CURL", "WALK_ROLL", "WALK_BOB", "RUN_TILES",
+        "HOP_HEIGHT", "HOP_SKIM", "HOP_KICK", "HOP_REACH", "HOP_FOLD")
+OUT = tuning.arguments(globals(), GAIT)
+WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
+RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * RUN_TILES, FPS)
 WALK_STRIDE = WALK_SPEED * WALK_FRAMES / FPS / SCALE
 
 # The throat sac booms (#1271): it swells from the back of the throat on its own bone
@@ -287,13 +303,6 @@ def leap():
                       steps=steps)
 
 
-# Its run is a string of long, low hops (#1271): a run is longer hops, not quicker legs. Each hop
-# arcs HOP_HEIGHT up, its feet skimming HOP_SKIM over the ground where it comes down, so they never
-# drag along it; its hind legs kick back as it takes off and its forelegs reach for the landing.
-HOP_HEIGHT, HOP_SKIM = 0.18, 0.06
-HOP_KICK, HOP_REACH, HOP_FOLD = 0.45, 0.35, 0.3
-
-
 def hop():
     """A run of hops, posed on every frame as smooth waves, one hop a loop: the body rises and
     falls (lowest as it lands, t=0), pitching nose up as it takes off and down as it lands, the
@@ -435,8 +444,8 @@ def build(out):
                  reweigh=turrets)
     clips.animate(rig, {
         "Idle": clips.idle(),
-        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=0.35, fold=0.5, lift=0.25, curl=0.25,
-                          roll=0.08),
+        "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, TOAD, clips.WALK, duty=WALK_DUTY, fold=WALK_FOLD,
+                          lift=WALK_LIFT, curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
         "Run": hop(),
         "Attack": leap(),
         "Hit": clips.hit(),
@@ -455,4 +464,4 @@ def build(out):
         sys.exit(1)
 
 
-build(sys.argv[sys.argv.index("--") + 1])
+build(OUT)
