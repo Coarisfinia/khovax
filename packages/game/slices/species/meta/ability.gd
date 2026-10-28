@@ -7,14 +7,9 @@ extends RefCounted
 ## special attack is one species' own (owner, #228): no two species share one. A special has a power
 ## and a cooldown (SpecialAttackFeature, #410) and a strike type (TypeEffectivenessFeature, #626),
 ## and may be held for some seconds (#1163); a passive has none of them. A passive works only while
-<<<<<<< HEAD
-## its monster is out (#616, CompanionFeature): a passive may guard (`guard`), and one that helps
-## its monster itself may hasten it when hurt (`hurt_haste`) or heal it at rest (`rest_heal`,
-## #1500).
-=======
-## its monster is out (#616, CompanionFeature): a passive may guard (`guard`), and a player passive
-## may hush its player's steps (`hush`).
->>>>>>> b82c8bee (Vummi-nummi: a light sleeper wakes only on a roll when a player with an out Vynnimu steps next to it (#1563))
+## its monster is out (#616, CompanionFeature): a passive may guard (`guard`), one that helps its
+## monster itself may hasten it when hurt (`hurt_haste`) or heal it at rest (`rest_heal`, #1500),
+## and a player passive may hush its player's steps (`hush`, #1563).
 
 const SPECIAL: String = "special"
 const PLAYER_PASSIVE: String = "player_passive"
@@ -43,19 +38,16 @@ var strike_type: String = ""
 ## self passive's off its own monster, a player passive's off its player, while its monster is out;
 ## 0 for none, and for a special.
 var guard: int = 0
-<<<<<<< HEAD
 ## A self passive's: how much shorter its monster's wait between strikes is at its last HP, in
 ## thousandths, less as it has more HP left (#1500, CompanionAttackFeature); 0 for none.
 var hurt_haste: int = 0
 ## A self passive's: the share of its monster's full HP it gets back each second it rests, waiting
 ## for no strike, in thousandths (#1500, CompanionAttackFeature); 0 for none.
 var rest_heal: int = 0
-=======
 ## A player passive's: the share of its player's steps next to a sleeping light sleeper that don't
 ## wake it, in thousandths (#1563, SleepFeature), while its monster is out; 0 for none, and for a
 ## special or a self passive.
 var hush: int = 0
->>>>>>> b82c8bee (Vummi-nummi: a light sleeper wakes only on a roll when a player with an out Vynnimu steps next to it (#1563))
 ## Its path mark (#471): PathMark.NONE, HARMONY, SUPREMACY or BOTH.
 var path: String = PathMark.NONE
 ## Why the ability couldn't be read, or "" when it could.
@@ -79,12 +71,9 @@ static func parse(file_id: String, text: String) -> Ability:
 	ability.channel_seconds = Content.amount(data.get("channel_seconds"))
 	ability.strike_type = Content.text_of(data.get("strike_type"))
 	ability.guard = Content.amount(data.get("guard"))
-<<<<<<< HEAD
 	ability.hurt_haste = Content.amount(data.get("hurt_haste"))
 	ability.rest_heal = Content.amount(data.get("rest_heal"))
-=======
 	ability.hush = Content.amount(data.get("hush"))
->>>>>>> b82c8bee (Vummi-nummi: a light sleeper wakes only on a roll when a player with an out Vynnimu steps next to it (#1563))
 	ability.path = PathMark.read(data)
 	ability.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if ability.problem.is_empty():
@@ -100,15 +89,10 @@ static func parse(file_id: String, text: String) -> Ability:
 	return ability
 
 
-<<<<<<< HEAD
-## Why its power, cooldown, strike type, hold, guard, haste and heal don't fit its kind, or "": a
-## special has the first three and may be held, a passive has none and may guard, taking off less
-## than a whole hit, and a self passive may hasten or heal its monster by less than a whole.
-=======
-## Why its power, cooldown, strike type, hold, guard and hush don't fit its kind, or "": a special
-## has the first three and may be held, a passive has none and may guard, taking off less than a
-## whole hit, and a player passive may hush, sparing less than every step.
->>>>>>> b82c8bee (Vummi-nummi: a light sleeper wakes only on a roll when a player with an out Vynnimu steps next to it (#1563))
+## Why its power, cooldown, strike type, hold, guard, haste, heal and hush don't fit its kind, or
+## "": a special has the first three and may be held, a passive has none and may guard, taking off
+## less than a whole hit, a self passive may hasten or heal its monster by less than a whole, and a
+## player passive may hush, sparing less than every step.
 func _strike_problem(data: Dictionary) -> String:
 	if kind == SPECIAL and (power < 1 or cooldown_seconds < 1):
 		return "a special has a power and a cooldown, whole numbers from 1"
@@ -121,13 +105,10 @@ func _strike_problem(data: Dictionary) -> String:
 			return "a special has a power, a cooldown and a strike type, a passive none"
 	if data.has("guard") and (kind == SPECIAL or guard < 1 or guard >= Fixed.ONE):
 		return "a passive's guard is whole thousandths from 1 to 999, a special has none"
-<<<<<<< HEAD
 	for field: String in ["hurt_haste", "rest_heal"]:
 		var share: int = Content.amount(data.get(field))
 		if data.has(field) and (kind != SELF_PASSIVE or share < 1 or share >= Fixed.ONE):
 			return "a self passive's %s is thousandths from 1 to 999, others have none" % field
-=======
 	if data.has("hush") and (kind != PLAYER_PASSIVE or hush < 1 or hush >= Fixed.ONE):
 		return "a player passive's hush is whole thousandths from 1 to 999, no other ability's"
->>>>>>> b82c8bee (Vummi-nummi: a light sleeper wakes only on a roll when a player with an out Vynnimu steps next to it (#1563))
 	return ""
