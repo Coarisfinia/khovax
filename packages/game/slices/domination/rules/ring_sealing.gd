@@ -8,7 +8,7 @@ extends RefCounted
 ## The ring rules' constants (#219). Their numbers are in Tuning (#1309).
 ## Players have no level yet: every player draws rings at this level until they do.
 const PLAYER_LEVEL: int = Tuning.PLAYER_LEVEL
-## Ring power is BASE + level × PER_LEVEL (+ companion passives, none yet): the issue's 100 + 20 ×
+## Ring power is BASE + level × PER_LEVEL (+ companion passives, #1496): the issue's 100 + 20 ×
 ## level scaled up, so a monster's pressure each tick (its strength) wears a wall down over a
 ## whole seal rather than in one tick.
 const RING_POWER_BASE: int = Tuning.RING_POWER_BASE

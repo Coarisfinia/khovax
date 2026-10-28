@@ -144,6 +144,12 @@ const SPIKES_DAMAGE: int = 7
 const SPIKES: String = "test_spikes"
 ## No request to change the trap (_spiked_over).
 const NO_TRAP_CHANGE: int = -1
+## The guard check's passives (#616): the weak species' own, which guards it, and the one for its
+## player; the strong species' for its player, which guards far more.
+const SELF_GUARD: String = "test_hide"
+const PLAYER_GUARD: String = "test_ward"
+const STRONG_GUARD: String = "test_strong_ward"
+const GUARDS: Dictionary[String, int] = { SELF_GUARD: 250, PLAYER_GUARD: 500, STRONG_GUARD: 900 }
 ## Where many weak monsters stand in the big ring.
 const CROWD: Array[Vector2i] = [
 	Vector2i(0, 0),
@@ -1574,7 +1580,53 @@ func _check_least_damage() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [chart])
 	state.set_enabled(TypeEffectivenessFeature.ID, true)
 	var damage: int = TypeEffectivenessFeature.scaled(state, 1, WEAK, false, "greater")
-	return "" if damage == 1 else "a strike of 1 at ×0.5 dealt %d, not 1" % damage
+	if damage != 1:
+		return "a strike of 1 at ×0.5 dealt %d, not 1" % damage
+	return _check_guards()
+
+
+## A monster's passives work only while it is out (#616): with the weak species out and the strong
+## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
+## alone, and one on the companion less its own guard; with every carried monster fainted, none is
+## out, and the hit on the player comes in whole.
+func _check_guards() -> String:
+	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
+	FlowSteps.carry(state, 0, [WEAK, STRONG])
+	var player: Entity = state.add_entity(0, Vector2i(1, 0))
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var guarded: int = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[PLAYER_GUARD])
+	var struck: String = _struck_for(
+		_wild_strikes_over(state, ticks, Vector2i(-3, 0)), player.id, guarded, "the player")
+	if not struck.is_empty():
+		return struck
+	guarded = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[SELF_GUARD])
+	struck = _struck_for(
+		_wild_strikes_over(state, ticks, Vector2i(-1, 0)), companion_id, guarded, "the companion")
+	if not struck.is_empty():
+		return struck
+	state = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
+	FlowSteps.carry(state, 0, [WEAK, STRONG])
+	# The party's store is written through its player, so they come first.
+	player = state.add_entity(0, Vector2i(1, 0))
+	for short_id: String in CompanionParty.carried(state, 0):
+		CompanionParty.faint(state, 0, short_id)
+	_joined = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-3, 0))
+	return _struck_for(strikes, player.id, WEAK_STRENGTH, "the player with none out")
+
+
+## Why `strikes` weren't one strike on `target_id` (`what`) for `damage`, or "".
+static func _struck_for(
+		strikes: Array[WildMonsterStruck],
+		target_id: int,
+		damage: int,
+		what: String,
+) -> String:
+	if strikes.size() != 1 or strikes[0].target_id != target_id or strikes[0].damage != damage:
+		return "the wild monster didn't strike %s once for %d" % [what, damage]
+	return ""
 
 
 ## Why the weak species' strikes, with the type chart `on` or off, weren't for their damage after
@@ -1822,11 +1874,13 @@ func _wild_strikes_over(
 ## A disc with a weak wild monster on each of `spots`, hiding, companions and their attacks and
 ## specials, and the wild monsters' attacks, with the `extra` features (a type chart) before the
 ## companions' attacks, which read them (#822). A species has one HP (#835), a companion's here: the
-## wild monsters are worn down to OUTCOME_HP first, so their companion outlasts them.
+## wild monsters are worn down to OUTCOME_HP first, so their companion outlasts them. The weak and
+## strong species have the guard check's passives, which guard by `guards` (#616): none by default.
 func _strike_state(
 		spots: Array[Vector2i],
 		extra: Array[Feature] = [],
 		held: int = 0,
+		guards: Dictionary[String, int] = {},
 ) -> GameState:
 	var region: Region = _outcome_state(WEAK, spots).region
 	var channels: Dictionary[String, int] = {}
@@ -1839,9 +1893,13 @@ func _strike_state(
 		HealthFeature.new({ WEAK: COMPANION_HP }),
 		WildMonsterFeature.new([], [], { WEAK: WEAK_STRENGTH }),
 		DominationFeature.new(),
-		WildAttackFeature.new(),
+		WildAttackFeature.new(guards),
 		HidingFeature.new(),
-		CompanionFeature.new(),
+		CompanionFeature.new(
+			{},
+			{ WEAK: PLAYER_GUARD, STRONG: STRONG_GUARD },
+			{ WEAK: SELF_GUARD },
+		),
 		CompanionSwapFeature.new(),
 	]
 	ordered.append_array(extra)

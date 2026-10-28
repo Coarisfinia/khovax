@@ -32,6 +32,7 @@
 			"description": "A special's: its type from the type chart (#626), whatever fits it, not necessarily one of its species'.",
 			"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
 		},
+		"guard": { "description": "A passive's, optional: the share of every hit it takes off, in thousandths (#616): a self passive's off its own monster, a player passive's off its player. A passive works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
 		"path": {
 			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
 			"enum": ["none", "harmony", "supremacy", "both"],
@@ -39,6 +40,6 @@
 		}
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
-	"then": { "required": ["power", "cooldown_seconds", "strike_type"] },
+	"then": { "required": ["power", "cooldown_seconds", "strike_type"], "not": { "required": ["guard"] } },
 	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] } }
 }

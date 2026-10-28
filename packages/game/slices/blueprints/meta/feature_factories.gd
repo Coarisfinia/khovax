@@ -60,7 +60,7 @@ static func _world_rules() -> Dictionary[String, Callable]:
 		DominationFeature.ID: _plain(DominationFeature),
 		# After domination, whose waiting rings it breaks, and before enrage, which enrages the
 		# wild monsters of a ring that broke.
-		WildAttackFeature.ID: _plain(WildAttackFeature),
+		WildAttackFeature.ID: WildAttackFactory.build,
 		# After domination, whose rings' wild monsters it hurts (#692).
 		SpikesFeature.ID: SpikesFactory.build,
 		DominationLootFeature.ID: DominationLootFactory.build,

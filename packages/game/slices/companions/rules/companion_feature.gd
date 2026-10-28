@@ -27,6 +27,8 @@ extends Feature
 ## and companions pass through each other, so it never traps its own player, and what doesn't walk
 ## (a wild monster) stops it. Its rolls come from the feature's own stream. It attacks through
 ## CompanionAttackFeature (#221).
+## A monster's passives (#222) work only while it is out, as its player's companion here (#616,
+## CompanionPassives).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companions"
@@ -54,13 +56,23 @@ var _species: Dictionary[int, String] = {}
 var _short_ids: Dictionary[int, String] = {}
 ## The ticks each companion still rests before its next roaming step, by entity id.
 var _rest: Dictionary[int, int] = {}
+## Each species' passive that helps its player, and the one that helps itself, by species id, from
+## the content data (Ability, #222), which CompanionPassives reads.
+var player_passives: Dictionary[String, String] = {}
+var self_passives: Dictionary[String, String] = {}
 ## Each species with a reach, by its code in a carry request (CarryRequest.species_code, #818).
 var _species_by_code: Dictionary[int, String] = {}
 var _rng: Rng
 
 
-func _init(species_reaches: Dictionary[String, int] = {}) -> void:
+func _init(
+	species_reaches: Dictionary[String, int] = {},
+	species_player_passives: Dictionary[String, String] = {},
+	species_self_passives: Dictionary[String, String] = {},
+) -> void:
 	reaches = species_reaches
+	player_passives = species_player_passives
+	self_passives = species_self_passives
 	for species_id: String in reaches:
 		if not CommandCodes.file(
 			_species_by_code,
