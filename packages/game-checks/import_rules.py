@@ -41,10 +41,10 @@ from game_shared.git_files import git_files
 
 # The slices, each after every slice it names (#821).
 SLICE_ORDER: tuple[str, ...] = (
-    "emoji_grid", "realms", "camera", "music", "credits", "hiding", "movement", "entering",
-    "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons", "triggers",
-    "texts", "species", "development", "outbox", "host_settings", "health", "players", "npcs",
-    "trail",
+    "emoji_grid", "menu_widgets", "realms", "camera", "music", "credits", "hiding", "movement",
+    "entering", "paths", "loot", "board", "exits", "fog", "input_prompts", "action_buttons",
+    "triggers", "texts", "species", "development", "outbox", "host_settings", "health", "players",
+    "npcs", "trail",
     "wild_monsters", "schedules", "packs", "tiles", "controls",
     "settings", "factions",
     "survey", "menu", "notices",
@@ -58,13 +58,13 @@ SLICE_ORDER: tuple[str, ...] = (
 SLICE_EXEMPT: dict[str, int] = {
     "board>blueprints": 851, "board>controls": 851, "board>profile": 851,
     "controls>profile": 851, "controls>revive_items": 851,
-    "factions>menu": 851, "factions>profile": 851,
+    "factions>profile": 851,
     "gear>profile": 851,
     "hiding>wild_monsters": 851,
-    "loot>menu": 851, "loot>profile": 851,
+    "loot>profile": 851,
     "menu>gear": 851, "menu>might": 851, "menu>profile": 851, "menu>quests": 851,
     "settings>damage_numbers": 851, "settings>menu": 851, "settings>survey": 851,
-    "species>menu": 851, "species>profile": 851,
+    "species>profile": 851,
     "survey>quests": 851,
 }  # fmt: skip
 

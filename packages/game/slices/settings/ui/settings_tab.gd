@@ -63,7 +63,7 @@ var _open: String = LIST
 func _ready() -> void:
 	for submenu: String in [DIFFICULTY, WORLD, GRAPHICS, INTERFACE, GAME]:
 		_add_submenu(submenu)
-	readme_button = GameMenu.button(README_TEXT, open_readme)
+	readme_button = MenuWidgets.button(README_TEXT, open_readme)
 	_list.add_child(readme_button)
 	if graphics != null:
 		_auto_row(
@@ -209,7 +209,7 @@ func button(setting: String, which: String) -> Button:
 ## A submenu named `submenu`, hidden until it's opened: a Back button and its name at its top,
 ## and a button in the list that opens it.
 func _add_submenu(submenu: String) -> void:
-	var opens: Button = GameMenu.button(submenu, open.bind(submenu))
+	var opens: Button = MenuWidgets.button(submenu, open.bind(submenu))
 	opens.name = submenu
 	_list.add_child(opens)
 	_openers[submenu] = opens
@@ -218,12 +218,12 @@ func _add_submenu(submenu: String) -> void:
 	box.visible = false
 	box.add_theme_constant_override("separation", _rows.get_theme_constant("separation"))
 	var top: HBoxContainer = HBoxContainer.new()
-	var leave: Button = GameMenu.button("Back", back)
+	var leave: Button = MenuWidgets.button("Back", back)
 	leave.icon = PREVIOUS_ICON
 	# A controller's B goes back too (_unhandled_input), and the button shows it.
 	var _glyph: ActionGlyph = ActionGlyph.badge(leave, &"ui_cancel")
 	top.add_child(_named(leave, "Back"))
-	var title: Label = GameMenu.label(submenu)
+	var title: Label = MenuWidgets.label(submenu)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	top.add_child(title)
@@ -255,7 +255,7 @@ func _auto_row(
 		stepper: Callable,
 ) -> void:
 	var row: HBoxContainer = add_row(submenu, setting, title, label, stepper)
-	row.add_child(_named(GameMenu.button("Auto", choose_auto.bind(setting)), "Auto"))
+	row.add_child(_named(MenuWidgets.button("Auto", choose_auto.bind(setting)), "Auto"))
 
 
 ## A row in `submenu` for `setting`, named `title`: what `label` says it's on, and buttons that
@@ -271,15 +271,20 @@ func add_row(
 	_labels[setting] = label
 	_steps[setting] = stepper
 	var rows: VBoxContainer = _submenus[submenu]
-	rows.add_child(GameMenu.label(title))
+	rows.add_child(MenuWidgets.label(title))
 	var row: HBoxContainer = HBoxContainer.new()
-	var value: Label = GameMenu.label("")
+	var value: Label = MenuWidgets.label("")
 	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(value)
 	_values[setting] = value
-	var previous: Button = GameMenu.icon_button(PREVIOUS_ICON, PREVIOUS_TIP, step.bind(setting, -1))
+	var previous: Button = MenuWidgets.icon_button(
+		PREVIOUS_ICON,
+		PREVIOUS_TIP,
+		step.bind(setting, -1),
+	)
 	row.add_child(_named(previous, "Previous"))
-	row.add_child(_named(GameMenu.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1)), "Next"))
+	var next: Button = MenuWidgets.icon_button(NEXT_ICON, NEXT_TIP, step.bind(setting, 1))
+	row.add_child(_named(next, "Next"))
 	rows.add_child(row)
 	return row
 

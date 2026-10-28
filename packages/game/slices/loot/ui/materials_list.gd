@@ -16,7 +16,7 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	add_child(GameMenu.label(TITLE))
+	add_child(MenuWidgets.label(TITLE))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
 	refresh()
@@ -43,4 +43,4 @@ func refresh() -> void:
 	if lines == shown:
 		return
 	shown = lines
-	GameMenu.show_lines(_rows, lines)
+	MenuWidgets.show_lines(_rows, lines)

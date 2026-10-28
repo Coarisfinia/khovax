@@ -106,11 +106,11 @@ func _show(unlocked: Dictionary[String, Array]) -> void:
 		_rows.remove_child(row)
 		row.queue_free()
 	if unlocked.is_empty():
-		_rows.add_child(GameMenu.label(NONE_TEXT))
+		_rows.add_child(MenuWidgets.label(NONE_TEXT))
 	for kind: String in unlocked:
-		_rows.add_child(GameMenu.label(SECTIONS[kind]))
+		_rows.add_child(MenuWidgets.label(SECTIONS[kind]))
 		for id: String in unlocked[kind]:
-			var entry: Button = GameMenu.button(_name_of(kind, id), _open.bind(kind, id))
+			var entry: Button = MenuWidgets.button(_name_of(kind, id), _open.bind(kind, id))
 			entry.name = "%s_%s" % [kind, id]
 			entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			entry.custom_minimum_size = Vector2.ONE * _font_size * GameMenu.BUTTON_FONTS

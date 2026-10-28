@@ -7,8 +7,6 @@ extends HBoxContainer
 
 const ICON: Texture2D = preload("res://assets/game-icons/knot.svg")
 const TEXT: String = "Knot to take"
-## The icon's side, in the menu's font sizes, as the menu's button icons have.
-const ICON_FONTS: float = 1.3
 
 var _icon: TextureRect
 
@@ -35,7 +33,8 @@ func _init() -> void:
 func _notification(what: int) -> void:
 	# The menu scales its font with the screen; the icon follows it, as the words beside it do.
 	if what == NOTIFICATION_THEME_CHANGED or what == NOTIFICATION_ENTER_TREE:
-		_icon.custom_minimum_size = Vector2.ONE * get_theme_default_font_size() * ICON_FONTS
+		var side: float = get_theme_default_font_size() * MenuWidgets.ICON_FONTS
+		_icon.custom_minimum_size = Vector2.ONE * side
 
 
 ## Whether `monster` has a knot to take: a level gained that no knot was taken for yet, as its web

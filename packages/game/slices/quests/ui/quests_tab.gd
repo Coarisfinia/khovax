@@ -154,7 +154,7 @@ func _show(
 	for row: Node in _rows.get_children():
 		row.queue_free()
 	if names.is_empty():
-		_rows.add_child(GameMenu.label(NONE_TEXT))
+		_rows.add_child(MenuWidgets.label(NONE_TEXT))
 	for id: String in names:
 		pills[id] = _add_quest(names[id], lines[id], id, id == followed)
 		pills[id].show_instance(wheres[id], wheres[id] == here)
@@ -164,11 +164,11 @@ func _show(
 ## so when it's `followed`, its pill, and its steps' `lines` set in below it; returns the pill.
 func _add_quest(quest_name: String, lines: String, id: String, followed: bool) -> QuestPill:
 	var heading: HBoxContainer = HBoxContainer.new()
-	var title: Label = GameMenu.label(quest_name)
+	var title: Label = MenuWidgets.label(quest_name)
 	# Fills the row, its button at the end: trimmed to nothing otherwise.
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(title)
-	var follow: Button = GameMenu.button(
+	var follow: Button = MenuWidgets.button(
 		FOLLOWED_TEXT if followed else FOLLOW_TEXT,
 		_follow.bind(id),
 	)
