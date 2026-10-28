@@ -89,8 +89,8 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		HidingFeature.ID: _plain(HidingFeature),
 		NpcFeature.ID: _plain(NpcFeature),
 		ChestFeature.ID: ChestFactory.build,
-		# The control points of a battle (#643), after domination, whose rings will take them
-		# (#644).
+		# The control points of a battle (#643), after domination, which places a totem on a ring
+		# with wild monsters inside first and holds the totems a point is taken with (#644).
 		ControlPointFeature.ID: _plain(ControlPointFeature),
 		# The companions and the features built on them. A companion whose player walks out
 		# through an exit goes with them whatever the order: the world moves it after the tick

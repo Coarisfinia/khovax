@@ -102,6 +102,12 @@ func can_place_totem(state: GameState, player_id: int) -> bool:
 	return _waiting_under(state, player.tile) != 0
 
 
+## Spends one of the player `player_id`'s totem charges for a ring of another feature's, like a
+## control point's (#644); returns whether they had one to spend.
+func spend_totem(player_id: int) -> bool:
+	return totems.spend(player_id)
+
+
 ## The dominator, lowest id first, whose ring waiting for a totem has a tile on `tile`, or 0.
 func _waiting_under(state: GameState, tile: Vector2i) -> int:
 	for dominator_id: int in _waiting_players():
