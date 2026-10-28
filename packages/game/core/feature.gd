@@ -54,6 +54,14 @@ func step(_state: GameState, _commands: Array[Command]) -> void:
 	return
 
 
+## Called once when a rule switches the feature off (#1572, GameState.set_enabled), inside the tick:
+## a feature that pushes values into an earlier one through its public methods (it can't be read
+## from there) takes them back here, since it won't step to keep them up to date while it's off.
+## What it pushes in `entity_added` it pushes only while it's on, for the same reason.
+func disabled(_state: GameState) -> void:
+	return
+
+
 ## Called when an entity is added, also while the feature is off: sets up the feature's data for
 ## it, like a component. Data kept per entity id stays in step with the entities that way.
 func entity_added(_state: GameState, _entity: Entity) -> void:

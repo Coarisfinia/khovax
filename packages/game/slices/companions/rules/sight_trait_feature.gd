@@ -4,7 +4,7 @@ extends Feature
 ## species has a sight trait, by the most steps any of their carried monsters gives (content data,
 ## the species' `sight`), fainted or not. It widens their sight in the fog (FogFeature.widen) every
 ## tick, as their party changes, and as they join an instance, so the fog follows at once; the fog's
-## view eases it open and closed.
+## view eases it open and closed. Switched off, it narrows every player's sight back (`disabled`).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "sight_traits"
@@ -41,10 +41,18 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 	_widen(state)
 
 
-## A player sees as far as their monsters let them from the moment they join.
+## A player sees as far as their monsters let them from the moment they join, while sight traits
+## are on.
 func entity_added(state: GameState, added: Entity) -> void:
-	if added.slot != Entity.NO_SLOT:
+	if enabled and added.slot != Entity.NO_SLOT:
 		_widen(state)
+
+
+## Switched off (#1572), every player's sight narrows back to the fog's own.
+func disabled(state: GameState) -> void:
+	var fog: FogFeature = state.feature(FogFeature.ID) as FogFeature
+	for slot: int in GameState.MAX_PLAYERS:
+		fog.widen(state, slot, 0)
 
 
 ## The most steps any monster the player in `slot` carries widens their sight by, in `state`.

@@ -167,11 +167,15 @@ func feature(id: String) -> Feature:
 
 
 ## Switches a feature on or off. Only rules call this, inside a tick; it applies from the
-## feature's next step on. Does nothing for a feature the instance doesn't have.
+## feature's next step on. Does nothing for a feature the instance doesn't have. A feature going
+## off hears of it at once (Feature.disabled), to take back what it pushed into others.
 func set_enabled(id: String, on: bool) -> void:
 	var target: Feature = feature(id)
-	if target != null:
-		target.enabled = on
+	if target == null or target.enabled == on:
+		return
+	target.enabled = on
+	if not on:
+		target.disabled(self)
 
 
 ## Changes the kind of `tile` to `kind` in place (#530), e.g. boulders cleared from a path, keeping
