@@ -136,7 +136,11 @@ func _check_saved() -> String:
 	_points(loaded).load_values(loaded, DataReader.new(_points(state).save_values()))
 	if loaded.state_hash() != state.state_hash():
 		return "a saved battle didn't load as it was"
-	var bad: DataReader = DataReader.new({ "holders": [ATTACKERS], "loser": NOBODY })
+	var wards: Array[int] = []
+	var _sized: int = wards.resize(HELD.size())
+	wards.fill(0)
+	var short: Dictionary = { "holders": [ATTACKERS], "warded": wards, "loser": NOBODY }
+	var bad: DataReader = DataReader.new(short)
 	_points(_battle()).load_values(loaded, bad)
 	if not bad.failed():
 		return "a save with the wrong number of control points was read"

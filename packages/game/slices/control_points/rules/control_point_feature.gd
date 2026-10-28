@@ -34,10 +34,11 @@ func id() -> String:
 	return ID
 
 
-## The trail its rings are drawn with and the domination whose totems ward its points (#644), which
-## an instance may lack: then no point changes hands.
+## The trail its rings are drawn with, the wild monsters that make a ring a domination's, and the
+## domination whose totems ward its points (#644), which an instance may lack: then no point
+## changes hands (and without wild monsters, no ring holds one).
 func after() -> Array[String]:
-	var earlier: Array[String] = [TrailFeature.ID, DominationFeature.ID]
+	var earlier: Array[String] = [TrailFeature.ID, WildMonsterFeature.ID, DominationFeature.ID]
 	return earlier
 
 
@@ -58,17 +59,23 @@ func step(state: GameState, commands: Array[Command]) -> void:
 	if loser != ControlPointSides.NOBODY:
 		return
 	_place_totems(state, commands)
-	for side: int in ControlPointSides.FIGHTING:
-		if not holders.has(side):
-			loser = side
-			break
+	loser = _side_without_points()
 	if loser != ControlPointSides.NOBODY:
 		state.events.append(BattleLost.new(loser))
 
 
+## The first fighting side that holds no control point, or NOBODY.
+func _side_without_points() -> int:
+	for side: int in ControlPointSides.FIGHTING:
+		if not holders.has(side):
+			return side
+	return ControlPointSides.NOBODY
+
+
 ## Every player, in id order, whose command places their totem while they stand on the ring around
 ## a control point their side hasn't warded, and who has a charge left, spends it: their side holds
-## that point and the totem wards it, and the ring comes off the trail.
+## that point and the totem wards it, and the ring comes off the trail. A taking that leaves a side
+## without points decides the battle: no later player's totem counts that tick.
 func _place_totems(state: GameState, commands: Array[Command]) -> void:
 	var trail: TrailFeature = state.feature(TrailFeature.ID) as TrailFeature
 	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
@@ -83,6 +90,8 @@ func _place_totems(state: GameState, commands: Array[Command]) -> void:
 		if index < 0 or needed.has(entity.tile) or not domination.spend_totem(entity.id):
 			continue
 		_take(state, index, entity.id, trail, needed)
+		if _side_without_points() != ControlPointSides.NOBODY:
+			return
 
 
 ## The player `player_id`'s totem takes the control point at `index` for the players' side and
@@ -106,7 +115,8 @@ func _take(
 
 
 ## The first control point, in the order of `points`, that the players' side hasn't warded and
-## whose ring has a tile on `tile`, or -1.
+## whose ring has a tile on `tile`, or -1. A ring with a wild monster inside is a domination's
+## (#423), even one DominationFeature didn't take up because its dominator has a ring already.
 func _ringed_under(state: GameState, trail: Trail, tile: Vector2i) -> int:
 	if not trail.tiles.has(tile):
 		return -1
@@ -117,9 +127,26 @@ func _ringed_under(state: GameState, trail: Trail, tile: Vector2i) -> int:
 		var ours: bool = warded[index] and holders[index] == PLAYERS_SIDE
 		if ours or trail.tiles.has(point) or reachable.has(point):
 			continue
-		if _ring_around(state, trail, point).has(tile):
+		if _ring_around(
+			state,
+			trail,
+			point,
+		).has(tile) and not _holds_wild_monster(state, trail, point):
 			return index
 	return -1
+
+
+## Whether a wild monster stands in the pocket the trail encloses around `point`.
+static func _holds_wild_monster(state: GameState, trail: Trail, point: Vector2i) -> bool:
+	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
+	if wild == null:
+		return false
+	var spots: Array[Vector2i] = [point]
+	var pocket: Dictionary[Vector2i, bool] = RingShape.enclosed_with(state.region, trail, spots)
+	for monster_id: int in wild.monsters:
+		if pocket.has(state.entity(monster_id).tile):
+			return true
+	return false
 
 
 ## The ring around the enclosed control point on `point`: the trail tiles next to what it encloses.
