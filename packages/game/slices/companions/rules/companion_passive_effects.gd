@@ -10,7 +10,7 @@ extends RefCounted
 
 
 ## The resting companion `companion_id` gets the share of its full HP its passives heal at rest
-## (`rest_heals`, by passive id) back, at the start of each second.
+## (`rest_heals`, by passive id) back, at least 1 HP, at the start of each second.
 static func rest(
 	state: GameState,
 	companions: CompanionFeature,
@@ -22,7 +22,9 @@ static func rest(
 		return
 	var heal: int = _share(companions, companion_id, rest_heals)
 	if heal > 0:
-		health.heal(state, companion_id, Fixed.scale(health.max_hp_of(state, companion_id), heal))
+		# At least 1 HP, so a small share of a low HP still heals.
+		var amount: int = maxi(Fixed.scale(health.max_hp_of(state, companion_id), heal), 1)
+		health.heal(state, companion_id, amount)
 
 
 ## The wait `wait` of the companion `companion_id`, shortened by its passives' haste when hurt
