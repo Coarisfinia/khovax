@@ -49,6 +49,9 @@ static func parse(file_id: String, text: String) -> GearItem:
 	item.rarity = Content.text_of(data.get("rarity"))
 	item.damage = Content.amount(data.get("damage"))
 	item.keeps_passives = data.get("keeps_passives") == true
+	if data.has("keeps_passives") and not item.keeps_passives:
+		item.problem = "keeps_passives is true or left out"
+		return item
 	if data.has("damage") and item.damage == 0:
 		item.problem = "its damage must be a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 		return item
