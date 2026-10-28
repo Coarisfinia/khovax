@@ -138,19 +138,20 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	return _lead_exits(arranged, instance_name)
 
 
-## The text of each region piece of the region `region_name`, by its path: a variant's folder of
-## pieces holds only the pieces it changes (#1590), so the rest are those of the blueprint
-## `instance_name`, when its region is pieces too. A variant's pieces then arrange like the
-## blueprint's own for every seed, as long as each keeps its piece's shape and connectors.
+## The text of each region piece of the region `region_name`, by its path. A variant's folder
+## without a start piece holds only the pieces it changes (#1590), so the rest are those of the
+## blueprint `instance_name`, when its region is pieces too: its pieces then arrange like the
+## blueprint's own for every seed, as long as each keeps its piece's shape and connectors. A folder
+## with a start piece is a whole region of its own.
 static func _piece_texts(instance_name: String, region_name: String) -> Dictionary[String, String]:
 	var files: RegionFiles = RegionFiles.cached(region_name)
 	var texts: Dictionary[String, String] = files.texts.duplicate()
 	var own: RegionFiles = RegionFiles.cached(instance_name)
-	if region_name == instance_name or own.whole:
-		return texts
 	var changed: Array[String] = []
 	for path: String in files.texts:
 		changed.append(path.get_file())
+	if region_name == instance_name or own.whole or changed.has(START_PIECE):
+		return texts
 	for path: String in own.texts:
 		if not changed.has(path.get_file()):
 			texts[path] = own.texts[path]
