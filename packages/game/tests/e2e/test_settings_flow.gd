@@ -1146,7 +1146,8 @@ func _menu_on_screens(menu: GameMenu) -> String:
 			var _back: String = menu.survey.cycle(-1)
 		if not problem.is_empty():
 			return problem
-	return _menu_credits(menu)
+	var saving: String = _credits_log_button(menu)
+	return saving if not saving.is_empty() else _menu_credits(menu)
 
 
 ## The open button stands at the top's middle on a landscape screen, and on a screen held upright
@@ -1204,12 +1205,24 @@ static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
 	return menu.quest_list.position.y
 
 
+## The Credits tab's button that saves the error log as a file (#1541) shows only on the web, and
+## what it saves starts with the log's header.
+func _credits_log_button(menu: GameMenu) -> String:
+	var page: Node = menu.find_child("Credits", true, false)
+	var save: ErrorLogButton = page.get_node("ErrorLog") as ErrorLogButton
+	if save == null or save.visible != OS.has_feature("web") or not ErrorLog.written():
+		return "the Credits tab's button saving the error log shows other than only on the web"
+	if not ErrorLog.saved().get_string_from_utf8().begins_with(ErrorLog.header().left(20)):
+		return "the error log saved as a file doesn't start with its header"
+	return ""
+
+
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's
 ## export alone stamps), then where the error log is (#1510), which starts with that version, then
 ## shows every pack CREDITS.md credits, each heading in bold, with its
 ## fields' names in bold and no Markdown marks or repository paths left over.
 func _menu_credits(menu: GameMenu) -> String:
-	var tab: CreditsTab = menu.find_child("Credits", true, false) as CreditsTab
+	var tab: CreditsTab = menu.find_child("Credits", true, false).get_node("Text") as CreditsTab
 	# Laid out in its scene (#437): BBCode on, and focusable so a controller scrolls it.
 	if not tab.bbcode_enabled or tab.focus_mode != Control.FOCUS_ALL:
 		return "the Credits tab's scene doesn't render BBCode or take the focus"

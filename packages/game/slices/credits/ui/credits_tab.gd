@@ -7,7 +7,8 @@ extends RichTextLabel
 ## touch, a wheel, the keys or a controller once focused. Its look and layout live in its scene,
 ## credits_tab.tscn (#437): this script keeps only what it does. Above the credits it names the
 ## build's version (#744), so a player reporting a bug can say which build they play, and where the
-## error log is (#1510), for them to attach to the report.
+## error log is (#1510), for them to attach to the report; on the web, where the log can't be
+## found, a button above it saves the log as a file instead (ErrorLogButton, #1541).
 
 const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
@@ -24,7 +25,7 @@ func _ready() -> void:
 	text = "[b]Version:[/b] %s\n%s%s" % [BuildVersion.version(), log_line(), credits]
 
 
-## The line naming where the error log is (ErrorLog), or "" where there's none (the web).
+## The line naming where the error log is (ErrorLog), or "" where there's none to name (the web).
 static func log_line() -> String:
 	var location: String = ErrorLog.location()
 	if location.is_empty():

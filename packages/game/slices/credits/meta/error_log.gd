@@ -6,8 +6,9 @@ extends Logger
 ## logs from then on (prints, warnings and errors, with their backtraces), each launch in a fresh
 ## file, the launch before kept beside it, so a crash's log survives the restart that finds it. It
 ## holds no personal data: the folders a path could name the player by (the user folder, the
-## game's own and the home folder) are written as `user://`, `res://` and `~`. Not on the web,
-## where `user://` is the browser's storage and no player could pick the file up.
+## game's own and the home folder) are written as `user://`, `res://` and `~`. On the web,
+## `user://` is the browser's storage, where no player could pick the file up, so the Credits tab
+## saves it as a file for them instead (#1541, `saved()`).
 
 ## Where the log is, and where the launch before's is kept.
 const PATH: String = "user://logs/errors.log"
@@ -17,6 +18,8 @@ const MAX_BYTES: int = 1 << 20
 const CUT: String = "[The log stops here: it reached its size limit.]\n"
 ## How each kind of error is headed, by Logger's ErrorType.
 const KINDS: PackedStringArray = ["ERROR", "WARNING", "SCRIPT ERROR", "SHADER ERROR"]
+## What heads the launch before's log where the two are saved as one file.
+const BEFORE: String = "[The launch before:]"
 
 ## The log once started, so it's started once however often start() is called.
 static var _started: ErrorLog
@@ -29,6 +32,9 @@ var _bytes: int = 0
 ## is reentrant, so that nested call gets through the lock and `_writing` skips it.
 var _mutex: Mutex = Mutex.new()
 var _writing: bool = false
+## On the web a flushed file reaches the browser's storage only once Godot syncs it, which it does
+## when a file closes or is asked to (#1541); the log stays open, so each write asks.
+var _web: bool = OS.has_feature("web")
 
 
 func _init(file: FileAccess) -> void:
@@ -41,10 +47,10 @@ func _init(file: FileAccess) -> void:
 
 
 ## Starts the log, once, after the launch options have moved `user://` (LaunchMode). Returns
-## whether it's written: never on the web, nor where the file can't be made.
+## whether it's written: not where the file can't be made.
 static func start() -> bool:
-	if _started != null or OS.has_feature("web"):
-		return _started != null
+	if _started != null:
+		return true
 	var _made: Error = DirAccess.make_dir_recursive_absolute(_absolute(PATH.get_base_dir()))
 	var file: FileAccess = _opened()
 	if file == null:
@@ -71,9 +77,25 @@ static func _opened() -> FileAccess:
 	return file
 
 
-## Where the log is on this device, for the player to find it, or "" when there's none.
+## Whether the log is written in this launch.
+static func written() -> bool:
+	return _started != null
+
+
+## Where the log is on this device, for the player to find it, or "" when there's none, nor on
+## the web, where no player could find it in the browser's storage.
 static func location() -> String:
-	return _absolute(PATH) if _started != null else ""
+	return _absolute(PATH) if written() and not OS.has_feature("web") else ""
+
+
+## The log as the player saves it as a file: this launch's, then the launch before's, which holds
+## what went wrong before a crash, since a crashed web page is simply loaded again.
+static func saved() -> PackedByteArray:
+	var text: String = FileAccess.get_file_as_string(PATH)
+	var before: String = FileAccess.get_file_as_string(PREVIOUS)
+	if not before.is_empty():
+		text += "\n%s\n%s" % [BEFORE, before]
+	return text.to_utf8_buffer()
 
 
 ## The log's first lines: the game and the build's version, then the platform and the engine.
@@ -112,7 +134,8 @@ func _log_error(
 	_write(entry)
 
 
-## Appends `text` with the folders hidden, and flushes, so a crash right after loses nothing.
+## Appends `text` with the folders hidden, and flushes (and syncs on the web), so a crash right
+## after loses nothing.
 func _write(text: String) -> void:
 	_mutex.lock()
 	if not _writing and _bytes < MAX_BYTES:
@@ -124,6 +147,9 @@ func _write(text: String) -> void:
 		_bytes += shown.size()
 		var _stored: bool = _file.store_buffer(shown)
 		_file.flush()
+		if _web:
+			# Only marks the storage for a sync, which Godot runs once per frame at most.
+			JavaScriptBridge.force_fs_sync()
 		_writing = false
 	_mutex.unlock()
 
