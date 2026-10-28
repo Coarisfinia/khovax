@@ -36,29 +36,46 @@ func on_ground() -> bool:
 
 
 ## A seal on a tile anyone walks seals nothing, one whose person the region piece doesn't place has
-## nobody to open it, and one with no walkable tile beside it has nowhere for them to stand.
+## nobody to open it, and one its person can't walk to, past the other people standing in the way,
+## has nowhere for them to stand.
 func problem_in(region: Region) -> String:
-	var people: Array[String] = []
+	var people: Dictionary[String, Vector2i] = {}
 	var placed: Dictionary[Vector2i, String] = region.placed(NpcPlacements.KIND)
 	for tile: Vector2i in placed:
-		people.append(NpcSpot.read(placed[tile]).id)
+		people[NpcSpot.read(placed[tile]).id] = tile
 	var sealed: Dictionary[Vector2i, String] = region.placed(KIND)
-	var standing: Array[String] = []
 	for tile: Vector2i in sealed:
-		for direction: Vector2i in Hex.DIRECTIONS:
-			if region.is_walkable(tile + direction) and not standing.has(opener(sealed[tile])):
-				standing.append(opener(sealed[tile]))
-	for tile: Vector2i in sealed:
-		if not standing.has(opener(sealed[tile])):
-			return "the seal on %s has no walkable tile beside it" % tile
+		var person: String = opener(sealed[tile])
 		if region.is_walkable(tile):
 			return "the seal on %s is on a tile anyone walks" % tile
-		if not people.has(opener(sealed[tile])):
-			return "the seal on %s is %s's, who the region doesn't place" % [
-				tile,
-				opener(sealed[tile]),
-			]
+		if not people.has(person):
+			return "the seal on %s is %s's, who the region doesn't place" % [tile, person]
+		if not _reaches_seal(region, people[person], placed, sealed, person):
+			return "%s can't walk to a tile beside their seal" % person
 	return ""
+
+
+## Whether the person standing on `from` can walk to a tile beside a tile of their seal, `person`'s
+## in `sealed`, past the people `placed` stands, who don't walk.
+static func _reaches_seal(
+	region: Region,
+	from: Vector2i,
+	placed: Dictionary[Vector2i, String],
+	sealed: Dictionary[Vector2i, String],
+	person: String,
+) -> bool:
+	var open: Array[Vector2i] = [from]
+	var seen: Dictionary[Vector2i, bool] = { from: true }
+	while not open.is_empty():
+		var current: Vector2i = open.pop_front()
+		for direction: Vector2i in Hex.DIRECTIONS:
+			var next: Vector2i = current + direction
+			if sealed.has(next) and opener(sealed[next]) == person:
+				return true
+			if not seen.has(next) and region.is_walkable(next) and not placed.has(next):
+				seen[next] = true
+				open.append(next)
+	return false
 
 
 ## The id of the person who opens the seal a legend `meaning` places, or "" when it places none.

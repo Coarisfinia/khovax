@@ -6,11 +6,13 @@ extends RefCounted
 ## the same. A player who leaves through the exit first leaves the guide to go ahead: alone, the
 ## guide is at the seal and opens it in that same tick; with another player still there, they walk
 ## there and open it. Either way the rules raise that the guide went ahead for the player who left.
-## A seal on a tile anyone walks, one whose person the region piece doesn't place, or one with
-## nowhere beside it to stand, is refused.
+## A seal on a tile anyone walks, one whose person the region piece doesn't place, or one its guide
+## can't walk to, is refused.
 
 const SEED: int = 5
 const GUIDE: String = "teska_na_amvrel"
+## Another person, who stands in the corridor in a refused layout.
+const BYSTANDER: String = "someone_else"
 ## A corridor running east: the exit west of player 1's start, the guide east of it, player 2 (when
 ## there's one) further on, and the guide's seal, a boulder, with ground behind it.
 const CORRIDOR: String = "🚪🔴🧙🟫🔵🟫🟫🟫🪨🟫🟫"
@@ -49,9 +51,10 @@ static func _lead_to_seal() -> String:
 		return "talking to the guide didn't make them follow: %s" % [_escort(state).escorts]
 	events.append_array(FlowSteps.step(state, EAST))
 	events.append_array(FlowSteps.step(state, EAST))
-	var saved: String = _reloads(state)
-	if not saved.is_empty():
-		return saved
+	# The escort goes on from a save made while the guide follows.
+	state = _reloaded(state)
+	if state == null:
+		return "a world saved mid-escort didn't load back the same"
 	for _tile: int in SEAL_AT - 2 - _place_of(state.player(0).tile):
 		events.append_array(FlowSteps.step(state, EAST))
 	for _tick: int in MovementFeature.MOVE_TICKS * 6:
@@ -68,8 +71,9 @@ static func _lead_to_seal() -> String:
 	return ""
 
 
-## A world saved with the guide following loads back with the same hash.
-static func _reloads(state: GameState) -> String:
+## The world saved from `state` with the guide following, loaded back: null unless its hash is
+## the same.
+static func _reloaded(state: GameState) -> GameState:
 	var loaded: GameState = FlowSteps.rules_on(FlowSteps.BASIC, _ground(), SEED)
 	var data: DataReader = DataReader.new(state.to_data())
 	if loaded.load_changed_tiles(data):
@@ -78,9 +82,7 @@ static func _reloads(state: GameState) -> String:
 	# to a loaded one (#1215, #724).
 	loaded.world_tick = state.world_tick
 	loaded.stores = state.stores
-	if data.failed() or loaded.state_hash() != state.state_hash():
-		return "a world saved mid-escort didn't load back the same: %s" % data.problem
-	return ""
+	return loaded if not data.failed() and loaded.state_hash() == state.state_hash() else null
 
 
 ## Alone, the player who talked to the guide walks out through the exit: in that tick the rules
@@ -121,8 +123,8 @@ static func _go_ahead_seen() -> String:
 	return ""
 
 
-## A seal on ground, one whose person the corridor doesn't place, and one walled in by rock, with
-## nowhere for the guide to stand, are refused.
+## A seal on ground, one whose person the corridor doesn't place, one walled in by rock, and one
+## another person stands in the way to, with nowhere for the guide to reach, are refused.
 static func _refuse_bad_seals() -> String:
 	var on_ground: String = LEGEND.replace("boulder; sealed", "ground; sealed")
 	if FlowSteps.region(CORRIDOR, on_ground).problem.is_empty():
@@ -132,6 +134,9 @@ static func _refuse_bad_seals() -> String:
 		return "a seal of a person the corridor doesn't place was read"
 	if FlowSteps.region(CORRIDOR.replace("🟫🪨🟫", "⬛🪨⬛"), LEGEND).problem.is_empty():
 		return "a seal walled in by rock was read"
+	var blocked: String = LEGEND + "- `🧍`: a person to talk to, %s\n" % BYSTANDER
+	if FlowSteps.region(CORRIDOR.replace("🔵", "🧍"), blocked).problem.is_empty():
+		return "a seal another person stands in the way to was read"
 	return ""
 
 
@@ -185,10 +190,11 @@ static func _opened(events: Array[RefCounted]) -> int:
 	return count
 
 
-## How often `events` say the guide went ahead.
+## How often `events` say the guide went ahead for player 1.
 static func _went_ahead(events: Array[RefCounted]) -> int:
 	var count: int = 0
 	for event: RefCounted in events:
-		if event is GuideWentAhead and (event as GuideWentAhead).npc == GUIDE:
+		var ahead: GuideWentAhead = event as GuideWentAhead
+		if ahead != null and ahead.npc == GUIDE and ahead.slot == 0:
 			count += 1
 	return count
