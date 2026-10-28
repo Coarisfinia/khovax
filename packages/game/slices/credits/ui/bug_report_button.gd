@@ -10,7 +10,12 @@ extends Button
 const NEW_ISSUE_URL: String = "https://github.com/Coarisfinia/khovax/issues/new?body="
 ## On the web the log is saved as a file by the button beside this one (ErrorLogButton, #1541).
 const WEB_LOG: String = "save it with the Credits tab's error log button"
-const DEVICE_LOG: String = "the file the Credits tab names under Error log"
+## After a crash the restart moves the crashed launch's log aside (ErrorLog.PREVIOUS), so that one
+## is named too. On the web the saved file holds both already (ErrorLog.saved).
+const DEVICE_LOG: String = (
+	"the file the Credits tab names under Error log; after a crash, also errors.previous.log"
+	+ " beside it, which holds the launch that crashed"
+)
 const NO_LOG: String = "none was written"
 
 ## What opens a link in the system's browser (a new tab on the web); tests swap it so none opens.
