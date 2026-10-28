@@ -242,10 +242,11 @@ jobs:
       - name: "🔀 See whether a model or its build changed"
         id: models
         # The rebuild check below needs Blender, so it runs only where it can find something: a
-        # change to the model scripts and their library, to a .glb, or to Blender's pin, against the
-        # parent. A failing diff counts as a change, so the check runs rather than being skipped.
+        # change to the model scripts and their library, to a .glb or its .import (whose clip rate
+        # the checks sample at), or to Blender's pin, against the parent. A failing diff counts as
+        # a change, so the check runs rather than being skipped.
         run: |
-          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' \
+          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
             ':(top).github/actions/setup-blender'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
@@ -311,6 +312,16 @@ jobs:
           git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_connectivity.py --
+
+      - name: "⬡ Check every monster stays within its hex"
+        # Every frame of every clip of every .glb, how far the mesh reaches across the hex the game
+        # stands it on, seen from above (#1520); a prop without a rig passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_footprint.py --
 
       - name: "📤 Upload the models CI built"
         # On a difference, the .glb files this runner built, to compare with or commit.
