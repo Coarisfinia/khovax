@@ -377,6 +377,110 @@ func _check_tap_walk() -> String:
 	return ""
 
 
+## The left mouse button held on the world walks toward the cursor (#1567): held still on a tile
+## east of (0, 0) past a click's time, the player heads east, and with the cursor moved west of the
+## player, west; letting go stops the walk. A key steers over the held button at once. Held on
+## while the menu opens, it walks no more after the menu closes (_check_hold_over_menu). A click
+## let go at once still walks to its tile.
+func _check_hold_walk() -> String:
+	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
+	var input: LocalInput = _driver.input
+	var target: Vector2i = _tap_target()
+	picker.wild_view.visible = false
+	_place(Vector2i.ZERO)
+	_hold_on(picker, target)
+	if input.tap_walk.walking or _shown_x() <= 0.0:
+		return "a held click east of the player didn't walk toward the cursor, east"
+	var east: float = _shown_x()
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.position = _click_on(picker, _tile() + Hex.DIRECTIONS[3] * 2).position
+	picker._input(motion)
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 2)
+	if _shown_x() >= east:
+		return "moving the cursor west of the player didn't turn the held walk west"
+	var release: InputEventMouseButton = _click_on(picker, target)
+	release.pressed = false
+	picker._input(release)
+	_finish_step()
+	var stopped: Vector2i = _tile()
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 2)
+	if _tile() != stopped:
+		return "letting go of the held button didn't stop the walk"
+	_place(Vector2i.ZERO)
+	_hold_on(picker, target)
+	_finish_step()
+	var held_from: float = _shown_x()
+	Input.action_press("move_left")
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 2)
+	Input.action_release("move_left")
+	if _shown_x() >= held_from:
+		return "a key pressed while the button is held didn't take over"
+	if not _check_hold_over_menu(picker, release):
+		return "the button held on over the menu walked on after it closed"
+	_place(Vector2i.ZERO)
+	picker._unhandled_input(_click_on(picker, target))
+	picker._input(release)
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 3 + 2)
+	picker.wild_view.visible = true
+	if _tile() != target:
+		return "a click let go at once didn't walk to %s but to %s" % [target, _tile()]
+	return ""
+
+
+## A click dragged past a click's reach and let go before the next frame is no click: the walk to
+## its tile, two steps away, stops before its first step.
+func _check_drag_let_go_at_once() -> String:
+	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
+	var target: Vector2i = _tap_target()
+	picker.wild_view.visible = false
+	_place(Vector2i.ZERO)
+	var press: InputEventMouseButton = _click_on(picker, target)
+	picker._unhandled_input(press)
+	var drag: InputEventMouseMotion = InputEventMouseMotion.new()
+	drag.position = press.position + Vector2(FocusPicker.TAP_PIXELS * 4.0, 0.0)
+	picker._input(drag)
+	press.pressed = false
+	picker._input(press)
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 3 + 2)
+	picker.wild_view.visible = true
+	if _tile() == target or _driver.input.tap_walk.walking:
+		return "a click dragged off and let go before the next frame still walked to its tile"
+	return ""
+
+
+## Whether the held left mouse button walks no more once the menu opened and closed over it, until
+## it's let go with `release`.
+func _check_hold_over_menu(picker: FocusPicker, release: InputEventMouseButton) -> bool:
+	_driver.input.blocked = true
+	_hold_frames(picker, 2)
+	_driver.input.blocked = false
+	_hold_frames(picker, 2)
+	_finish_step()
+	var at_menu: Vector2i = _tile()
+	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 2)
+	picker._input(release)
+	return _tile() == at_menu
+
+
+## Presses the left mouse button on `tile` through `picker` and keeps it held past a click's time,
+## and a step's more: the player walks toward it then.
+func _hold_on(picker: FocusPicker, tile: Vector2i) -> void:
+	picker._unhandled_input(_click_on(picker, tile))
+	_hold_frames(picker, ceili(FocusPicker.TAP_SECONDS / STEP) + ceili(MOVE_SECONDS / STEP) + 2)
+
+
+## `frames` frames with the mouse button's hold followed in each, as the picker's _process does.
+func _hold_frames(picker: FocusPicker, frames: int) -> void:
+	for _frame: int in frames:
+		picker._process(STEP)
+		_step()
+
+
+## How far east the player stands, on the screen's x.
+func _shown_x() -> float:
+	return HexLayout.to_world(_tile()).x
+
+
 ## The walkable tile two steps east of (0, 0) to click: (2, 0) unless it's closed.
 func _tap_target() -> Vector2i:
 	for tile: Vector2i in [Vector2i(2, -1), Vector2i(1, 1)]:
@@ -852,7 +956,10 @@ func _check_blocked_by_wild_monster() -> String:
 	var result: String = _walk(["move_left"], [Vector2i(-1, 0)])
 	if not result.is_empty():
 		return "walking toward the wild monster: " + result
-	return _check_tap_walk()
+	result = _check_tap_walk()
+	if result.is_empty():
+		result = _check_hold_walk()
+	return result if not result.is_empty() else _check_drag_let_go_at_once()
 
 
 ## Tile kinds (#116): walking right from (0, 0) goes through a forest on (1, 0) and stops there,

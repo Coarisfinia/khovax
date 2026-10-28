@@ -6,9 +6,10 @@ extends Node
 ## it steers anywhere; a touch a button took doesn't pick. It sets the local input's focus, which
 ## the next command carries (#436), and, as any new tap, stops a walk to a tapped tile. A tap or
 ## click that focuses nothing walks the player to the tile under it instead (#1508,
-## LocalInput.tap_tile); a touch's emulated click doesn't, or the start of
-## a
-## drag on the stick would walk too.
+## LocalInput.tap_tile); a touch's emulated click doesn't, or the start of a drag on the stick
+## would walk too. A left click held past TAP_SECONDS, or moved past TAP_PIXELS, walks toward the
+## cursor instead for as long as it's held (#1567, HeldWalk), and letting go stops there; touch
+## keeps the stick for that.
 
 ## How quick and how still a touch has to be to count as a tap.
 const TAP_SECONDS: float = 0.3
@@ -25,6 +26,55 @@ const PICK_PIXELS: float = 80.0
 
 ## Where and when each finger touched down, by touch index.
 var _downs: Dictionary[int, Vector3] = {}
+## Whether a left click that walks is held (#1567), since `_held_seconds` ago, from `_pressed_at`.
+var _pressing: bool = false
+var _pressed_at: Vector2 = Vector2.ZERO
+var _held_seconds: float = 0.0
+## Whether the held click steers toward the cursor: it's no longer a click (_process).
+var _steering: bool = false
+## Where the mouse cursor is on the screen.
+var _cursor: Vector2 = Vector2.ZERO
+
+
+func _process(delta: float) -> void:
+	if not _pressing:
+		return
+	# Held on over the menu or a dialog (#1509), it walks no more until it's pressed again.
+	if not input.hears():
+		_let_go()
+		return
+	_held_seconds += delta
+	if _held_seconds > TAP_SECONDS:
+		_steer()
+	if not _steering:
+		return
+	var ground: Variant = _ground_under(_cursor)
+	if ground is Vector3:
+		var point: Vector3 = ground
+		input.held_walk.hold(instance.to_local(point))
+	else:
+		input.held_walk.let_go()
+
+
+# Every move and release, even one over the HUD, which takes them before _unhandled_input.
+func _input(event: InputEvent) -> void:
+	if event.device == InputEvent.DEVICE_ID_EMULATION:
+		return
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null:
+		_cursor = motion.position
+		# Latched at once: a click moved off and back, or let go before the next frame, isn't one.
+		if _pressing and _cursor.distance_to(_pressed_at) > TAP_PIXELS:
+			_steer()
+	var click: InputEventMouseButton = event as InputEventMouseButton
+	if click != null and not click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+		_let_go()
+
+
+func _notification(what: int) -> void:
+	# The release may never come once the window lost the focus.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_let_go()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -43,6 +93,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				input.tap_walk.stop()
 		elif click.device != InputEvent.DEVICE_ID_EMULATION:
 			walk_to(click.position)
+			_pressing = true
+			_pressed_at = click.position
+			_cursor = click.position
+			_held_seconds = 0.0
 
 
 ## Focuses the wild monster whose figure shows nearest `point` on the screen, within PICK_PIXELS;
@@ -69,17 +123,34 @@ func pick(point: Vector2) -> bool:
 ## meets the tiles' tops (#1508): with the camera tilted, a ray to the plane under them would cross
 ## into the next hex near a tile's edge.
 func walk_to(point: Vector2) -> void:
-	var tops: Plane = Plane(Vector3.UP, instance.global_position.y + HexGrid.TILE_HEIGHT)
-	var ground: Variant = tops.intersects_ray(
-		camera.project_ray_origin(point),
-		camera.project_ray_normal(point),
-	)
+	var ground: Variant = _ground_under(point)
 	if ground is Vector3:
 		var hit: Vector3 = ground
 		input.tap_tile(HexLayout.to_tile(instance.to_local(hit)))
 	else:
 		# A tap off the ground (the sky) is a new tap all the same: it stops the walk.
 		input.tap_walk.stop()
+
+
+## Where the camera's ray through `point` on the screen meets the tiles' tops, in the world, or
+## null when it misses them (the sky).
+func _ground_under(point: Vector2) -> Variant:
+	var tops: Plane = Plane(Vector3.UP, instance.global_position.y + HexGrid.TILE_HEIGHT)
+	return tops.intersects_ray(camera.project_ray_origin(point), camera.project_ray_normal(point))
+
+
+## Turns the held left click into a walk toward the cursor: it's no longer a click.
+func _steer() -> void:
+	if not _steering:
+		_steering = true
+		input.tap_walk.stop()
+
+
+## Ends a held left click: a walk toward the cursor stops, a click's walk to its tile goes on.
+func _let_go() -> void:
+	_pressing = false
+	_steering = false
+	input.held_walk.let_go()
 
 
 func _on_touch(touch: InputEventScreenTouch) -> void:
