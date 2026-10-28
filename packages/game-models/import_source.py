@@ -8,27 +8,45 @@ animates the source.
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/import_source.py -- <download.glb> <source.glb> [size=1024]
 
-The source keeps the download's axes and origin: the model script places it on its feet.
+An unrigged download's source keeps its axes and origin: the model script places it on its feet.
+
+A download the generator has already rigged (#1516) keeps its skin and its rig, adopted by
+lib/rigged.py: its chains checked against the parts they move and fixed, its bones named to the
+library's scheme and the model placed on its feet, hung from a root between them. It prints
+what it kept, fixed and renamed. `scale` sizes it (1: as the download is; #1522 fits it to its hex).
+
+    ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=1]
 """
 
+import os
 import sys
 
 import bpy
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from lib import rigged  # noqa: E402
+
 args = sys.argv[sys.argv.index("--") + 1:]
 download, source = args[0], args[1]
 size = int(args[2]) if len(args) > 2 else 1024
+scale = float(args[3]) if len(args) > 3 else 1.0
 # The colour's JPEG quality: the cel look's flat bands hide its artefacts well below lossless.
 QUALITY = 90
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=download)
-meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+# The importer puts the shapes it draws bones with in a collection of its own, never exported.
+shown = [obj for obj in bpy.context.scene.objects if "glTF_not_exported" not in obj.users_collection[0].name]
+meshes = [obj for obj in shown if obj.type == "MESH"]
 if len(meshes) != 1:
     sys.exit("expected one mesh in %s, found %d" % (download, len(meshes)))
 mesh = meshes[0]
+modifier = next((modifier for modifier in mesh.modifiers if modifier.type == "ARMATURE"), None)
+rig = modifier.object if modifier is not None else None
 for obj in list(bpy.context.scene.objects):
-    if obj is not mesh:
+    if obj not in (mesh, rig):
+        print("SOURCE dropped", obj.name)
         bpy.data.objects.remove(obj, do_unlink=True)
 
 for material in mesh.data.materials:
@@ -63,11 +81,13 @@ mesh.select_set(True)
 if mesh.data.has_custom_normals:
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
 bpy.ops.object.shade_smooth()
+if rig is not None:
+    rigged.adopt(rig, mesh, scale)
 bpy.ops.export_scene.gltf(
     filepath=source,
     export_format="GLB",
     export_animations=False,
-    export_skins=False,
+    export_skins=rig is not None,
     export_yup=True,
     export_image_format="JPEG",
     export_jpeg_quality=QUALITY,

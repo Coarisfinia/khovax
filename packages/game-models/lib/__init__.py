@@ -5,6 +5,7 @@ here: the scene and the glTF export (scene), materials (materials), soft metabal
 rigid parts such as crystals and fur tufts (parts), patterns laid on a body's surface, runes and
 veins (surface), detailed eyes (eyes), the quadruped armature (quadruped), skin weights (weights),
 clips (clips), the motion between their keys (motion), wisps floating beside a body (wisps), a
-built model read back for the checks (imported), the checks' summary mode (summary) and a model
-script's gait values from its arguments (tuning). Import it from a model script with `sys.path.insert(0, <packages/game-models>)`.
+generated model's own rig adopted (rigged), a built model read back for the checks (imported), the
+checks' summary mode (summary) and a model script's gait values from its arguments (tuning). Import it
+from a model script with `sys.path.insert(0, <packages/game-models>)`.
 """
