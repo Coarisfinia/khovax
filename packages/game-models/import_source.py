@@ -37,7 +37,8 @@ QUALITY = 90
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=download)
 # The importer puts the shapes it draws bones with in a collection of its own, never exported.
-shown = [obj for obj in bpy.context.scene.objects if "glTF_not_exported" not in obj.users_collection[0].name]
+shown = [obj for obj in bpy.context.scene.objects
+         if not any("glTF_not_exported" in collection.name for collection in obj.users_collection)]
 meshes = [obj for obj in shown if obj.type == "MESH"]
 if len(meshes) != 1:
     sys.exit("expected one mesh in %s, found %d" % (download, len(meshes)))

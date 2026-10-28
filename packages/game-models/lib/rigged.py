@@ -211,6 +211,8 @@ def regrow(rig, skin, chain, count):
     joints = []
     for band in range(count - 1):
         inside = [index for index, distance in far.items() if low + band * width <= distance < low + (band + 1) * width]
+        # A band with no vertex (a sparse part) takes the nearest vertex to its middle distance.
+        inside = inside or [min(far, key=lambda index: abs(far[index] - low - (band + 0.5) * width))]
         joints.append(_middle(skin, inside))
     joints.append(_middle(skin, [index for index, distance in far.items() if distance >= high - width / 4]))
     old = list(chain.bones)
@@ -334,13 +336,20 @@ def names(every, leaves, skin):
     return out, labels
 
 
-def rename(rig, renamed):
-    """Renames the bones, and with them the skin's vertex groups (Blender renames those with
-    their bones), in two passes so no new name collides with an old one."""
+def rename(rig, skin, renamed):
+    """Renames the bones and the skin's vertex groups with them, in two passes so no new name
+    collides with an old one. Blender renames the groups of a mesh bound to the rig itself; the
+    groups are renamed here too, so the skin never keeps a name its bone has lost."""
     for old in renamed:
         rig.data.bones[old].name = "_" + old
+        group = skin.vertex_groups.get(old)
+        if group is not None:
+            group.name = "_" + old
     for old, new in renamed.items():
         rig.data.bones["_" + old].name = new
+        group = skin.vertex_groups.get("_" + old)
+        if group is not None:
+            group.name = new
 
 
 def roll(rig):
@@ -398,7 +407,9 @@ def adopt(rig, skin, scale=1.0):
     bones = rig.data.bones
     every = chains(rig)
     leaves = [chain for chain in every if not children(chain, every)]
-    found = parts(skin, forks(every, bones))
+    balls = forks(every, bones)
+    # A rig without a fork (one chain) has no parts to tell apart: it is only named and placed.
+    found = parts(skin, balls) if balls else []
     match(leaves, found, skin, bones)
     print("RIG %d bones in %d chains; %d parts outside the forks" % (len(bones), len(every), len(found)))
     for part in found:
@@ -433,7 +444,7 @@ def adopt(rig, skin, scale=1.0):
         first, last = renamed[chain.bones[0]], renamed[chain.bones[-1]]
         span = first if first == last else first + ".." + last
         print("RENAME %s (%s) -> %s" % (chain.name, labels[chain.name], span))
-    rename(rig, renamed)
+    rename(rig, skin, renamed)
     roll(rig)
     legs = [chain for chain in leaves if chain.part is not None and labels[chain.name].split(".")[0].endswith("leg")]
     shift = place(rig, skin, legs, scale)
