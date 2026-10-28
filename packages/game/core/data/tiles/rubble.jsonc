@@ -5,5 +5,7 @@
 	"id": "rubble",
 	"color": "#ada393",
 	"symbol": "+", // tells it apart without its color (#68)
+	"model": "res://assets/kaykit-hexagon/rock_single_A.gltf", // a low broken stone (#68)
+	"scale": 400, // in hundredths: the pack's stone is too small to read from the camera
 	"traits": { "walkable": false }
 }
