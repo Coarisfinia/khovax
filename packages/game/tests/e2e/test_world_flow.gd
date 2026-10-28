@@ -41,6 +41,10 @@ const BESIDE_WILD_TICKS: int = WildAttackFeature.STRIKE_TICKS * 60
 const INSTANCE_SEEDS: int = 6
 ## How many tiles wide every join between region pieces and every exit is at least (#689).
 const SEAM_WIDTH: int = 3
+## The dungeon behind the escort guide's seal (#1591), its end piece and the place marked there.
+const DUNGEON: String = "hrovumel_stolm"
+const DUNGEON_END: String = "shrine"
+const DUNGEON_END_PLACE: String = "inner_shrine"
 ## Where _check_documents' region document has its stump, turned and set lower (#232) by hand.
 const STUMP: Vector2i = Vector2i(0, -1)
 ## Where it has its water, made walkable by hand.
@@ -84,6 +88,7 @@ func run(tree: SceneTree) -> String:
 		_check_exits_reachable,
 		_check_start_variants,
 		_check_pieces_connected,
+		_check_dungeon_end,
 		_check_room,
 		_check_web_connected,
 		_check_world,
@@ -1622,6 +1627,35 @@ func _check_pieces_connected() -> String:
 		var piece: Region = InstanceBlueprints.read_region(FileAccess.get_file_as_string(path))
 		if not piece.problem.is_empty() or _disconnected(piece):
 			return "%s has walkable tiles cut off from the rest: %s" % [path, piece.problem]
+	return ""
+
+
+## The dungeon's end (#1591) is the end of its way for every seed: its last piece meets just one
+## other, and every tile of the place marked there lies in it.
+func _check_dungeon_end() -> String:
+	for seed_value: int in INSTANCE_SEEDS:
+		var region: Region = InstanceBlueprints.region_of(DUNGEON, seed_value)
+		var met: Array[String] = []
+		for tile: Vector2i in region.sorted_tiles():
+			if region.piece_of.get(tile, "") != DUNGEON_END:
+				continue
+			for direction: Vector2i in Hex.DIRECTIONS:
+				var other: String = region.piece_of.get(tile + direction, DUNGEON_END)
+				if other != DUNGEON_END and not met.has(other):
+					met.append(other)
+		var marked: int = 0
+		for trigger: TileTrigger in TileTrigger.all_in(region):
+			if trigger.place == DUNGEON_END_PLACE:
+				marked += 1
+				if region.piece_of.get(trigger.tile, "") != DUNGEON_END:
+					return "%s's place %s lies outside its end" % [DUNGEON, DUNGEON_END_PLACE]
+		if met.size() != 1 or marked == 0:
+			return "%s's end meets %s and marks %d tiles for seed %d" % [
+				DUNGEON,
+				met,
+				marked,
+				seed_value,
+			]
 	return ""
 
 
