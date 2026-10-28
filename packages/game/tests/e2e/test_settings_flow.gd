@@ -1052,7 +1052,70 @@ func _menu_on_screens(menu: GameMenu) -> String:
 		var width: float = menu.settings.rows_width()
 		if width <= 0.0 or width > screen.x - 2.0 * GameMenu.MARGIN:
 			return "the settings' rows are %d pixels wide on a %s screen" % [width, screen]
+		var problem: String = _open_button_placed(menu, screen)
+		if problem.is_empty():
+			# The Survey in the top right corner too, the list and the button then on the left.
+			var _right: String = menu.survey.cycle(1)
+			problem = _open_button_placed(menu, screen)
+			var _back: String = menu.survey.cycle(-1)
+		if not problem.is_empty():
+			return problem
 	return _menu_credits(menu)
+
+
+## The open button stands at the top's middle on a landscape screen, and on a screen held upright
+## at the top of the quest list's side, the list starting below the room it leaves for it, and at
+## its side's top while the button is hidden (#1465): the left, or the right while the Survey is
+## in the top left corner.
+func _open_button_placed(menu: GameMenu, screen: Vector2) -> String:
+	var button: Button = menu.open_button()
+	var shown: bool = button.visible
+	var hidden_top: float = _list_top(menu, screen, false)
+	var hidden_room: float = menu.quest_list.room_above
+	var list_top: float = _list_top(menu, screen, true)
+	var room: float = menu.quest_list.room_above
+	var at: Rect2 = button.get_rect()
+	var badged: Rect2 = GameMenu.with_badge(button)
+	badged.position += at.position
+	button.visible = shown
+	menu.lay_out(screen)
+	var column: Rect2 = menu.quest_list.column_in(screen)
+	var placed: bool = (is_equal_approx(at.get_center().x, screen.x / 2.0)
+			and is_equal_approx(at.position.y, GameMenu.MARGIN) and room == 0.0)
+	if screen.y > screen.x:
+		placed = (_at_side(at, badged, column, screen)
+				and is_equal_approx(at.position.y, column.position.y)
+				and is_equal_approx(room, badged.end.y - at.position.y + QuestListView.GAP))
+	placed = (placed and hidden_room == 0.0 and is_equal_approx(hidden_top, column.position.y)
+			and is_equal_approx(list_top, column.position.y + room))
+	if not placed:
+		return "open button %s on %s, list side %s, room %s/%s, list top %s/%s" % [
+			at,
+			screen,
+			column,
+			room,
+			hidden_room,
+			list_top,
+			hidden_top,
+		]
+	return ""
+
+
+## Whether the button at `at`, with its badge `badged`, stands on the edge of the list's `column`
+## on a screen of `screen` pixels: its left edge on the left, its badge's right edge on the right.
+static func _at_side(at: Rect2, badged: Rect2, column: Rect2, screen: Vector2) -> bool:
+	if column.get_center().x < screen.x / 2.0:
+		return is_equal_approx(at.position.x, column.position.x)
+	return is_equal_approx(badged.end.x, column.end.x)
+
+
+## Where the quest list starts on a screen of `screen` pixels, the menu's open button `shown` or
+## not.
+static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
+	menu.open_button().visible = shown
+	menu.lay_out(screen)
+	menu.quest_list.lay_out_in(screen, 1.0)
+	return menu.quest_list.position.y
 
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's

@@ -2,9 +2,10 @@ class_name GameMenu
 extends Control
 ## The game's one menu (#362): fullscreen and opaque, with a tab for each part of it, gameplay
 ## first, then system (_build_sheet). The `menu` action (Escape, a controller's Start, #779) opens
-## and closes it, and on touch screens a small button does, showing the glyph of that key or button
-## while a keyboard or a controller is in use there (#1192); the close button at its top right and
-## `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
+## and closes it, and on touch screens a small button does, at the top's middle, or at the top of
+## the quest list's side above it on a screen held upright (#1465), showing the glyph of that key
+## or button while a keyboard or a controller is in use there (#1192); the close button at its top
+## right and `ui_cancel` (a controller's B) close it (#554). It eases in and out, never snaps.
 ## While a carried monster has a knot of its development web to take (KnotMark, #1443), that button
 ## shows on every device, saying so in words and with the knot's shape in place of its own icon:
 ## clicked, tapped or with the `menu` action, whose glyph it shows, it opens the menu, whose
@@ -74,9 +75,10 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## Who keeps the quests the Quests tab shows. The Character tab shows the profile the driver
-## holds.
-@export var quest_keeper: QuestKeeper
+## The quest list at the top's side, which the open button stands above on a screen held upright;
+## its keeper keeps the quests the Quests tab shows too. The Character tab shows the profile the
+## driver holds.
+@export var quest_list: QuestListView
 
 ## The Character tab.
 var character: CharacterTab
@@ -95,6 +97,9 @@ var _font_size: int = 0
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Laid out before the quest list, which makes room for the open button in the same frame
+	# (#1465).
+	process_priority = -1
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	var more_tabs: Array[Node] = get_children()
@@ -214,7 +219,9 @@ func step_pause(steps: int) -> String:
 
 
 ## Sizes the text to a screen of `screen` pixels, the open button at the top's middle (tests lay
-## it out for other screens than their own this way).
+## it out for other screens than their own this way). On a screen held upright the quest list and
+## the Survey's corner leave no room between them there, so the button goes at the top of the
+## list's side and the list makes room for it below (#1465).
 func lay_out(screen: Vector2) -> void:
 	var font: int = maxi(MIN_FONT, roundi(minf(screen.x, screen.y) * FONT_SHARE))
 	if font != _font_size:
@@ -236,6 +243,30 @@ func lay_out(screen: Vector2) -> void:
 	controls_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
+	if quest_list == null:
+		return
+	var list_room: float = 0.0
+	if screen.y > screen.x:
+		var column: Rect2 = quest_list.column_in(screen)
+		var left: bool = column.get_center().x < screen.x / 2.0
+		# On the right, its glyph's badge hanging past its corner stays on the screen too.
+		var extent: Rect2 = with_badge(_open_button)
+		_open_button.position = Vector2(
+			column.position.x if left else column.end.x - extent.end.x,
+			column.position.y,
+		)
+		if _open_button.visible:
+			list_room = extent.end.y + QuestListView.GAP
+	quest_list.room_above = list_room
+
+
+## What `shown` covers, from its top left: itself and its glyph's badge hanging past its corner.
+static func with_badge(shown: Control) -> Rect2:
+	var covered: Rect2 = Rect2(Vector2.ZERO, shown.size)
+	for child: Node in shown.get_children():
+		if child is Control and (child as Control).visible:
+			covered = covered.merge((child as Control).get_rect())
+	return covered
 
 
 ## How far the menu has faded in: 0 while hidden, 1 when fully shown.
@@ -285,7 +316,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
 	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
-	quests_tab_shown.keeper = quest_keeper
+	quests_tab_shown.keeper = quest_list.keeper if quest_list != null else null
 	quests_tab_shown.driver = driver
 	tabs.add_child(quests_tab_shown)
 	# The tabs later slices add, like the codex book (#1174): game/ hands them over as the menu's

@@ -453,7 +453,7 @@ survey = NodePath("../../SurveyChoice")
 input = NodePath("../../LocalInput")
 driver = NodePath("../../Driver")
 
-[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_keeper") unique_id=3550355035]
+[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_list") unique_id=3550355035]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -468,7 +468,7 @@ graphics = NodePath("../../Graphics")
 survey = NodePath("../../SurveyChoice")
 stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
-quest_keeper = NodePath("../../QuestKeeper")
+quest_list = NodePath("../QuestList")
 
 [node name="Codex" parent="Hud/GameMenu" node_paths=PackedStringArray("keeper", "page") instance=ExtResource("56_codex_book")]
 keeper = NodePath("../../../CodexKeeper")
