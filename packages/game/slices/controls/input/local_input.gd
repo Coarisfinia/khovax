@@ -29,6 +29,10 @@ const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 
 ## Whether the game hears no input, as while the menu is open over it (#362): the player stands.
 var blocked: bool = false
+## The last frame whose presses are dropped (#1509): the frame after the game last heard no input
+## too, since the key or button that closed the menu or a dialog (a controller's A is interact as
+## well) still reads as just pressed in the frame it closed.
+var _deaf_through: int = -1
 ## Whether a dialog is open on screen (#635): the player stands, as while blocked, and the d-pad,
 ## the stick and A choose on the dialog screen instead. Its own flag, so the menu opening and
 ## closing over a dialog doesn't let the player walk off.
@@ -58,6 +62,17 @@ var revive_pick: RevivePick = RevivePick.new()
 
 
 func _process(_delta: float) -> void:
+	var frame: int = Engine.get_process_frames()
+	if blocked or in_dialog:
+		_deaf_through = frame + 1
+	if frame <= _deaf_through:
+		_drop_presses()
+	else:
+		_hear()
+
+
+## Keeps the presses of this frame for the next command.
+func _hear() -> void:
 	if Input.is_action_just_pressed("special_attack"):
 		_special_pressed = true
 	if Input.is_action_just_pressed("place_totem"):
@@ -74,6 +89,18 @@ func _process(_delta: float) -> void:
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
 	revive_pick.hear()
+
+
+## Drops every press heard since the last command (#1509): while the game hears no input, the
+## driver may be paused (the menu's pause), and a press kept until the menu closes would fire then.
+func _drop_presses() -> void:
+	_special_pressed = false
+	_totem_tapped = false
+	_focus_steps = 0
+	_respawn_pressed = false
+	_interact_pressed = false
+	_swap_to = Command.NO_SWAP
+	revive_pick.drop()
 
 
 ## Swaps to the monster at `place` in the carried order, from 1, in the next command, as a tap on

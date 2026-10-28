@@ -13,7 +13,7 @@ func _init() -> void:
 
 func lay_out_in(screen: Vector2) -> void:
 	super(screen)
-	visible = touch and is_down()
+	visible = visible and is_down()
 
 
 ## Whether this machine's player is knocked down.
