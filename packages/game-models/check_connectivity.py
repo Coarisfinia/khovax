@@ -1,13 +1,15 @@
 """Checks that every part attached to the skin stays on it (#1403): every frame of every clip,
 how far each part (a crystal, a gem, a horn, a claw, a tuft) moves off the piece it sits on,
-against its gap there at rest, from lib/connectivity.py, where the pieces, their anchors and the
-tolerance are documented.
+against its gap there at rest, and how far it sinks into it (#1458), from lib/connectivity.py,
+where the pieces, their anchors, the tolerance and the sink are documented. test_connectivity.py
+tests it.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_connectivity.py -- <model.glb> [<model.glb> ...] [tolerance=0.005]
 
-It prints how many parts the model has, a line per clip (the most a part lifts off its anchor, the
-frame, the part and its anchor, each named after the bone that moves it most) and
+It prints how many parts the model has, a line per clip (the most a part lifts off its anchor and
+the most one sinks into it, each with the frame, the part and its anchor, named after the bone
+that moves it most) and
 `CONNECTIVITY CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log (#1115): a
 failing line is an error on the .glb. A model of one piece, or without a rig, passes, so CI runs
 it on every .glb. The clip rate comes from the .glb's .import, as the game imports it.

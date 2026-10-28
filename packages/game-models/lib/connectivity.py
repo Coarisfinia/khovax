@@ -17,7 +17,17 @@ much it grew. What a part sits on is any piece larger than itself that lies near
 an eye in its lid). A part stays on when it keeps its rest gap to one of them, so its lift is the
 smallest of its lifts to each; only larger pieces count, so a cluster of parts can't drift off
 holding on to one another. A clip fails when a part lifts more than the tolerance in any frame
-(#1303: the wolf's crest crystal lifted 16 to 36 mm before its fix)."""
+(#1303: the wolf's crest crystal lifted 16 to 36 mm before its fix).
+
+The gap can't see a part sink into the skin, which is no coming loose to it: Ombulumo's fronds
+vanished into its head while it channelled (#1440) and passed. So a part's **sink** into a piece
+it sits on is how much more of its vertices lie inside that piece than at rest, as a share of
+them (clearance.inside), since some parts start half sunk (a frond's base, a crystal's) and
+only sinking further is news. A part sinks only as far as it does into the piece it sinks least
+into, as it lifts only when it does off every one (an eye inside its closing lid stays in its
+head as at rest), and a clip fails when a part sinks by more than SINK in any frame (#1458). A
+part most of whose vertices lie inside at rest can't sink by that much: a share of vertices says
+little about one that is mostly hidden anyway, and a vertex or two more inside isn't sinking."""
 
 import itertools
 
@@ -37,6 +47,9 @@ TOLERANCE = 0.005
 # How much farther than the nearest larger piece (metres) another one may lie at rest and still
 # count as what a part sits on: an eye between its lid and the head, a tuft between two ears.
 NEAR = 0.01
+# How much larger a share of a part's vertices may lie inside what it sits on than at rest: a jaw
+# closing tucks into the head, a frond vanishing into it (#1440) sinks more.
+SINK = 0.5
 
 
 class Model:
@@ -140,6 +153,8 @@ class Model:
                     for candidate in range(number)}
             nearest = min(gaps.values())
             piece["anchors"] = {candidate: value for candidate, value in gaps.items() if value <= nearest + NEAR}
+            piece["inside"] = {candidate: inside(trees[candidate], points, piece["vertices"])
+                               for candidate in piece["anchors"]}
         return self.pieces[1:]
 
 
@@ -166,6 +181,23 @@ def gap(tree, part, points, vertices):
         if face is not None:
             low = min(low, distance)
     return low
+
+
+def inside(tree, points, vertices):
+    """The share of `vertices` that lie inside the faces in `tree`."""
+    return sum(1 for index in vertices if clearance.inside(tree, points[index])) / len(vertices)
+
+
+def sink(model, part, points, trees):
+    """How far `part` sinks into what it sits on where `points` poses the meshes: how much larger a
+    share of its vertices lies inside than at rest, the least into any of its anchors, and that
+    anchor's name."""
+    best, name = float("inf"), None
+    for anchor, rest in part["inside"].items():
+        sunk = inside(tree(model, anchor, points, trees), points, part["vertices"]) - rest
+        if sunk < best:
+            best, name = sunk, model.pieces[anchor]["name"]
+    return best, name
 
 
 def lift(model, part, points, trees):
@@ -200,8 +232,9 @@ def rest_points(rig, model):
 
 def report(rig, meshes, tolerance=TOLERANCE):
     """For every clip, every frame: the most any part lifts off what it sits on, with the frame,
-    the part and the piece it stays nearest. A clip fails beyond `tolerance`. Returns (lines,
-    passed); a model of one piece has nothing to check and passes."""
+    the part and the piece it stays nearest, and the most any part sinks into it, likewise. A
+    clip fails when a part lifts beyond `tolerance` or sinks beyond SINK. Returns
+    (lines, passed); a model of one piece has nothing to check and passes."""
     model = Model(meshes)
     if len(model.pieces) < 2:
         return ["one piece: nothing to check"], True
@@ -212,6 +245,7 @@ def report(rig, meshes, tolerance=TOLERANCE):
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
         high, at = -float("inf"), None
+        deep, sunk_at = -float("inf"), None
         for frame in range(start, end + 1):
             scene.frame_set(frame)
             points, trees = model.points(), {}
@@ -219,8 +253,11 @@ def report(rig, meshes, tolerance=TOLERANCE):
                 grown, anchor = lift(model, part, points, trees)
                 if grown > high:
                     high, at = grown, (frame, part["name"], anchor)
-        fails = high > tolerance
+                sunk, anchor = sink(model, part, points, trees)
+                if sunk > deep:
+                    deep, sunk_at = sunk, (frame, part["name"], anchor)
+        fails = high > tolerance or deep > SINK
         passed = passed and not fails
-        lines.append("%s %s: max lift %.1f mm (frame %d, %s off %s)" % (
-            "FAIL" if fails else "ok", action.name, max(high, 0.0) * 1000, *at))
+        lines.append("%s %s: max lift %.1f mm (frame %d, %s off %s); max sink %d %% (frame %d, %s into %s)" % (
+            "FAIL" if fails else "ok", action.name, max(high, 0.0) * 1000, *at, round(max(deep, 0.0) * 100), *sunk_at))
     return lines, passed

@@ -165,8 +165,10 @@ a second model could use goes into the library or a generic tool, never into one
   cuts the mesh into pieces (welded by position), gives each part (a crystal, a claw, a tuft) the
   nearest larger piece at rest as the skin it sits on, samples every frame of every clip and prints,
   per clip, the most a part's gap to it grows beyond its gap at rest, the frame, the part and that
-  piece; it fails past the tolerance (`lib/connectivity.py`). Wisps are exempt. Its `KNOWN` list is
-  judged like the volume check's.
+  piece, and likewise the most a part sinks into it (the share of its vertices inside beyond the
+  share at rest, #1458); it fails past the tolerance or `SINK` (`lib/connectivity.py`). Wisps are
+  exempt. Its `KNOWN` list is judged like the volume check's. `test_connectivity.py` tests it on a
+  box with a part that stays, dips, lifts off and sinks in.
 - **The footprint check (#1520):** `packages/game-models/check_footprint.py -- <model.glb>`
   measures the rest pose and every frame of every clip and prints how far the model's meshes reach
   across the hex the game stands it on, seen from above (1.00 at the hex's edge), and the frame. It
@@ -466,7 +468,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    --factory-startup --python packages/game-models/check_connectivity.py -- <model.glb>` must print
    `CONNECTIVITY CHECK: PASS`: in every frame of every clip, every attached part (crystals, gems,
    horns, claws, tufts) stays on the skin it sits on, its gap there growing no more than the
-   tolerance beyond its gap at rest (`lib/connectivity.py`). Wisps are meant to float and are exempt.
+   tolerance beyond its gap at rest, and doesn't sink into it (`lib/connectivity.py`). Wisps are
+   meant to float and are exempt.
    A clip that still fails waits in its `KNOWN` list with the issue that fixes it, and a fix takes it
    off. Its lines go into the PR. CI runs it on every `.glb` with the rebuild check (step 14).
 
