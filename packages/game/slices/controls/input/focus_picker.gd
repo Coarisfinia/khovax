@@ -75,6 +75,9 @@ func walk_to(point: Vector2) -> void:
 	if ground is Vector3:
 		var hit: Vector3 = ground
 		input.tap_tile(HexLayout.to_tile(instance.to_local(hit)))
+	else:
+		# A tap off the ground (the sky) is a new tap all the same: it stops the walk.
+		input.tap_walk.stop()
 
 
 func _on_touch(touch: InputEventScreenTouch) -> void:

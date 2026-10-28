@@ -324,9 +324,10 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 
 ## A click on a walkable tile two steps east of (0, 0) walks the player there on their own, through
-## the focus picker as the mouse gives it, and the walk ends there. A short, still touch walks there
-## too, and a key pressed on the way stops it at once. A touch's emulated click, a click while the
-## menu is open and a tap off the region walk nowhere.
+## the focus picker as the mouse gives it, with the instance shifted off the world's origin, and the
+## walk ends there. A short, still touch walks there too, and a key pressed on the way stops it at
+## once. A touch's emulated click, a click while the menu is open and a tap off the region walk
+## nowhere.
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
 	var input: LocalInput = _driver.input
@@ -336,14 +337,15 @@ func _check_tap_walk() -> String:
 			target = tile
 			break
 	_place(Vector2i.ZERO)
-	var shown: Vector3 = picker.instance.to_global(HexLayout.to_world(target))
-	if not picker.camera.is_position_in_frustum(shown):
-		return "the tile to click, %s, isn't on the screen" % target
-	var click: InputEventMouseButton = InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	click.position = picker.camera.unproject_position(shown)
+	# The instance shifted by a tile, as one beyond an exit is: the click is read in its own
+	# coordinates.
+	picker.instance.position = HexLayout.to_world(Vector2i(1, 0))
+	var click: InputEventMouseButton = _click_on(picker, target)
 	picker._unhandled_input(click)
+	(picker.instance as InstanceRoot).show_state()
+	if click.position == Vector2(-1.0, -1.0):
+		return "the tile to click, %s, isn't on the screen" % target
+	click = _click_on(picker, target)
 	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
 		_step()
 	if _tile() != target or input.tap_walk.walking:
@@ -374,6 +376,19 @@ func _check_tap_walk() -> String:
 	if not still or _tile() != Vector2i.ZERO or input.tap_walk.walking:
 		return "an emulated click, a click in the menu or one off the region walked the player"
 	return ""
+
+
+## A left click, as the mouse gives it, where `picker`'s camera shows `tile` of the instance now;
+## at (-1, -1), off the screen, when the camera doesn't show it.
+func _click_on(picker: FocusPicker, tile: Vector2i) -> InputEventMouseButton:
+	var shown: Vector3 = picker.instance.to_global(HexLayout.to_world(tile))
+	var click: InputEventMouseButton = InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = Vector2(-1.0, -1.0)
+	if picker.camera.is_position_in_frustum(shown):
+		click.position = picker.camera.unproject_position(shown)
+	return click
 
 
 ## Frames enough for the driver to run one tick, and not two: each check after it sees the input
