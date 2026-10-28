@@ -44,10 +44,8 @@ func _process(delta: float) -> void:
 		_let_go()
 		return
 	_held_seconds += delta
-	if (not _steering
-			and (_held_seconds > TAP_SECONDS or _cursor.distance_to(_pressed_at) > TAP_PIXELS)):
-		_steering = true
-		input.tap_walk.stop()
+	if _held_seconds > TAP_SECONDS:
+		_steer()
 	if not _steering:
 		return
 	var ground: Variant = _ground_under(_cursor)
@@ -65,6 +63,9 @@ func _input(event: InputEvent) -> void:
 	var motion: InputEventMouseMotion = event as InputEventMouseMotion
 	if motion != null:
 		_cursor = motion.position
+		# Latched at once: a click moved off and back, or let go before the next frame, isn't one.
+		if _pressing and _cursor.distance_to(_pressed_at) > TAP_PIXELS:
+			_steer()
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click != null and not click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
 		_let_go()
@@ -136,6 +137,13 @@ func walk_to(point: Vector2) -> void:
 func _ground_under(point: Vector2) -> Variant:
 	var tops: Plane = Plane(Vector3.UP, instance.global_position.y + HexGrid.TILE_HEIGHT)
 	return tops.intersects_ray(camera.project_ray_origin(point), camera.project_ray_normal(point))
+
+
+## Turns the held left click into a walk toward the cursor: it's no longer a click.
+func _steer() -> void:
+	if not _steering:
+		_steering = true
+		input.tap_walk.stop()
 
 
 ## Ends a held left click: a walk toward the cursor stops, a click's walk to its tile goes on.
