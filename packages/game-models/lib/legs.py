@@ -14,7 +14,9 @@ while the leg turns over it.
   stays near parallel to its thigh (a pantograph), or swings as far as the whole leg does, as a
   foreleg's forearm stays in line with its swing while the shoulder takes up its length. Either
   way every leg is a closed-form solve. The follower's own rotation in a pose folds it further
-  (about the leg's side axis: positive swings its end back).
+  (about the leg's side axis: positive swings its end back). A leg bends in the plane that faces
+  the body's side, unless it names its own (`plane`, the normal of the plane its bones lie in at
+  rest): a leg whose knee bends out to the side, as a rib walking on its tip (#1476).
 - `steps`: a one-shot clip's steps, each an eased arc from where the paw stands to a new spot,
   lifted on the way, laid over the clip's frames as plant channels.
 - `plant`: solves every leg on every frame of a clip and writes the bones' rotations into it.
@@ -34,8 +36,9 @@ STRETCH = 0.92
 
 
 class Leg:
-    def __init__(self, upper, lower, paw, follower=None, follows=True):
+    def __init__(self, upper, lower, paw, follower=None, follows=True, plane=None):
         self.upper, self.lower, self.paw, self.follower, self.follows = upper, lower, paw, follower, follows
+        self.plane = plane
 
 
 class Step:
@@ -110,6 +113,16 @@ def _flat(vector):
     return Vector((-vector.z, vector.y)).normalized() * vector.length
 
 
+def _in_plane(normal):
+    """`_flat` for a leg in its own plane (Leg's `plane`): a rest bone as (down, back) in that
+    plane, down being straight down seen in it and back across it from the plane's normal."""
+    normal = normal.normalized()
+    down = Vector((0.0, 0.0, -1.0))
+    down = (down - down.project(normal)).normalized()
+    back = normal.cross(down)
+    return lambda vector: Vector((vector.dot(down), vector.dot(back)))
+
+
 def _turned(vector, angle):
     c, s = math.cos(angle), math.sin(angle)
     return Vector((c * vector.x - s * vector.y, s * vector.x + c * vector.y))
@@ -167,8 +180,10 @@ def _solve(rig, pose, leg, scale, cache, rise):
     tip = rig.matrix[leg.paw].translation + rig.vector[leg.paw]
     target = tip + Vector((side, -forward, up)) * scale - tilt @ rig.vector[leg.paw] + Vector((0.0, 0.0, rise))
     reach = target - top
-    # The leg bends in the plane through its top and its target that faces the body's side.
-    normal = turn @ Vector((1.0, 0.0, 0.0))
+    # The leg bends in the plane through its top and its target that faces the body's side, or
+    # its own plane's, turned with the body.
+    flatten = _flat if leg.plane is None else _in_plane(Vector(leg.plane))
+    normal = turn @ Vector((1.0, 0.0, 0.0) if leg.plane is None else leg.plane)
     normal = (normal - normal.project(reach)).normalized()
     down = turn @ Vector((0.0, 0.0, -1.0))
     down = (down - down.project(normal)).normalized()
@@ -177,7 +192,7 @@ def _solve(rig, pose, leg, scale, cache, rise):
     def solid(flat):
         return down * flat.x + back * flat.y
 
-    upper, lower = _flat(rig.vector[leg.upper]), _flat(rig.vector[leg.lower])
+    upper, lower = flatten(rig.vector[leg.upper]), flatten(rig.vector[leg.lower])
     flat = Vector((reach.dot(down), reach.dot(back)))
     follower = Vector((0.0, 0.0))
     if leg.follower:
@@ -186,11 +201,11 @@ def _solve(rig, pose, leg, scale, cache, rise):
             # It swings as far as the whole leg does from its rest, toward where its paw is over
             # the ground (a lifted paw comes up close under the leg, where the way to it turns
             # fast: the lift is the other bones' to take up).
-            still = _flat(rig.matrix[leg.paw].translation - rig.matrix[leg.upper].translation)
+            still = flatten(rig.matrix[leg.paw].translation - rig.matrix[leg.upper].translation)
             over = reach - Vector((0.0, 0.0, up * scale))
             toward = Vector((over.dot(down), over.dot(back)))
             fold += math.atan2(toward.y, toward.x) - math.atan2(still.y, still.x)
-        follower = _turned(_flat(rig.vector[leg.follower]), fold)
+        follower = _turned(flatten(rig.vector[leg.follower]), fold)
     if leg.follows:
         angle, shin = _bend(flat, upper, lower, follower)
         held = _turned(follower, angle)

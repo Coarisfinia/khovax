@@ -9,6 +9,9 @@ extends RefCounted
 
 ## Where the views live: every slice's look/ folder.
 const SLICES: String = "res://slices/"
+## Creature models built before the species that wears them (#1476): checked like the models the
+## species name, so each is ready to wear, until its species names it and it leaves this list.
+const UNWORN_MODELS: Array[String] = ["res://assets/drakkudor/drakkudor.glb"]
 
 
 func run(tree: SceneTree) -> String:
@@ -340,8 +343,8 @@ func _check_scene(scene: PackedScene, clips: Array, attacks: bool) -> String:
 	return result
 
 
-## Whether every species' model (SpeciesModels, #1223) has `clips` and, when the view `attacks`, a
-## centre of attack (_check_rig).
+## Whether every species' model (SpeciesModels, #1223), and every model waiting for its species
+## (UNWORN_MODELS), has `clips` and, when the view `attacks`, a centre of attack (_check_rig).
 func _check_species_models(clips: Array, attacks: bool) -> String:
 	var species: Dictionary[String, Species] = SpeciesContent.cached().species
 	if species.is_empty():
@@ -353,6 +356,13 @@ func _check_species_models(clips: Array, attacks: bool) -> String:
 		)
 		if not result.is_empty():
 			return "%s's model: %s" % [species_id, result]
+	for path: String in UNWORN_MODELS:
+		var unworn: PackedScene = load(path) as PackedScene
+		var checked: String = (
+			_check_scene(unworn, clips, attacks) if unworn != null else "it doesn't load"
+		)
+		if not checked.is_empty():
+			return "%s: %s" % [path, checked]
 	return ""
 
 

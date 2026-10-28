@@ -17,6 +17,9 @@ long-legged wolf to a squat toad, and narrow enough to catch a limb that reads a
   stands. A straight leg under the shoulder is about as long as the shoulder is high, less the
   paw; much longer and the leg must bend at rest, much shorter and it can't reach the ground.
 
+A hexapod (`hexapod.armature`, #1476) measures each pair's shin against its thigh: a leg whose
+lower half is a stub or a stilt against its upper half reads as wrong on six legs as on four.
+
 A measure is written as a number against its range ("forearm/upper arm 1.09, range 0.55 to
 1.05"), never an adjective."""
 
@@ -27,6 +30,8 @@ MEASURES = {
     "forearm/upper arm": (("forearm.L", "front_paw.L"), ("upper_arm.L", "forearm.L")),
     "shin/thigh": (("shin.L", "hock.L"), ("thigh.L", "shin.L")),
     "foreleg/shoulder height": ((("upper_arm.L", "forearm.L"), ("forearm.L", "front_paw.L")), "upper_arm.L"),
+    **{"%s shin/thigh" % pair: (("%s_shin.L" % pair, "%s_paw.L" % pair), ("%s_thigh.L" % pair, "%s_shin.L" % pair))
+       for pair in ("front", "mid", "hind")},
 }
 BOUNDS = {
     "quadruped": {
@@ -34,9 +39,11 @@ BOUNDS = {
         "shin/thigh": (0.8, 1.3),
         "foreleg/shoulder height": (0.6, 1.0),
     },
+    "hexapod": {"%s shin/thigh" % pair: (0.6, 1.4) for pair in ("front", "mid", "hind")},
 }
-# The joints that make a rig a quadruped (quadruped.armature).
+# The joints that make a rig a quadruped (quadruped.armature), and a hexapod (hexapod.armature).
 QUADRUPED = ("upper_arm.L", "forearm.L", "front_paw.L", "thigh.L", "shin.L", "hock.L")
+HEXAPOD = tuple("%s_%s.L" % (pair, part) for pair in ("front", "mid", "hind") for part in ("thigh", "shin", "paw"))
 
 
 def _head(rig, name):
@@ -63,6 +70,8 @@ def body_plan(rig):
     """The body plan whose BOUNDS hold for `rig`, None when it has none of its limbs, or the
     joints a quadruped's limbs lack when it has only some of them (a renamed or missing bone)."""
     names = rig.data.bones.keys()
+    if all(name in names for name in HEXAPOD):
+        return "hexapod"
     lacking = [name for name in QUADRUPED if name not in names]
     if not lacking:
         return "quadruped"
