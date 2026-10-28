@@ -225,6 +225,8 @@ func _check_button_follows() -> String:
 	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
 	answers.append(button.usable())
 	var other: GameState = _ring_battle()
+	# At the same tick as `state`, so only the state differs.
+	Simulation.step(other, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
 	session.world.instances[session.local_instance_name()] = other
 	_color(other, _ring(_points(other).points[_inner_point(other, ATTACKERS)]), other.player(1))
 	answers.append(button.usable())
