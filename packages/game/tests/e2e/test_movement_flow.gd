@@ -336,7 +336,7 @@ func _check_tap_walk() -> String:
 			target = tile
 			break
 	_place(Vector2i.ZERO)
-	var shown: Vector3 = HexLayout.to_world(target)
+	var shown: Vector3 = picker.instance.to_global(HexLayout.to_world(target))
 	if not picker.camera.is_position_in_frustum(shown):
 		return "the tile to click, %s, isn't on the screen" % target
 	var click: InputEventMouseButton = InputEventMouseButton.new()
@@ -350,10 +350,10 @@ func _check_tap_walk() -> String:
 		return "a click on %s walked the player to %s" % [target, _tile()]
 	_place(Vector2i.ZERO)
 	_tap(picker, click.position)
-	_step()
+	_one_tick()
 	var started: bool = input.tap_walk.walking
 	Input.action_press("move_left")
-	_step()
+	_one_tick()
 	Input.action_release("move_left")
 	if not started or input.tap_walk.walking:
 		return "a tap didn't walk, or a key pressed on the way didn't stop the walk"
@@ -363,15 +363,24 @@ func _check_tap_walk() -> String:
 	picker._unhandled_input(click)
 	input.tap_tile(target)
 	input.blocked = false
+	_one_tick()
+	var still: bool = not input.tap_walk.walking
 	click.device = InputEvent.DEVICE_ID_EMULATION
 	picker._unhandled_input(click)
-	_step()
-	var still: bool = not input.tap_walk.walking
+	_one_tick()
+	still = still and not input.tap_walk.walking
 	input.tap_tile(Vector2i(1000, 1000))
 	_finish_step()
 	if not still or _tile() != Vector2i.ZERO or input.tap_walk.walking:
 		return "an emulated click, a click in the menu or one off the region walked the player"
 	return ""
+
+
+## Frames enough for the driver to run one tick, and not two: each check after it sees the input
+## sent before it in a command.
+func _one_tick() -> void:
+	for _frame: int in ceili(1.0 / Simulation.TICKS_PER_SECOND / STEP):
+		_step()
 
 
 ## A short, still touch on `point` through `picker`: down and up on the same point.

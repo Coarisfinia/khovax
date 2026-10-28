@@ -19,6 +19,9 @@ const PICK_PIXELS: float = 80.0
 @export var input: LocalInput
 @export var camera: Camera3D
 @export var wild_view: WildMonsterView
+## The local instance's views, shifted to its place in the world (InstanceRoot): a tapped point is
+## turned back into the instance's own coordinates through it.
+@export var instance: Node3D
 
 ## Where and when each finger touched down, by touch index.
 var _downs: Dictionary[int, Vector3] = {}
@@ -35,7 +38,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
 		if pick(click.position):
-			input.tap_walk.stop()
+			# A touch's emulated click comes at touch-down, before it's known to be a tap.
+			if click.device != InputEvent.DEVICE_ID_EMULATION:
+				input.tap_walk.stop()
 		elif click.device != InputEvent.DEVICE_ID_EMULATION:
 			walk_to(click.position)
 
@@ -69,7 +74,7 @@ func walk_to(point: Vector2) -> void:
 	)
 	if ground is Vector3:
 		var hit: Vector3 = ground
-		input.tap_tile(HexLayout.to_tile(hit))
+		input.tap_tile(HexLayout.to_tile(instance.to_local(hit)))
 
 
 func _on_touch(touch: InputEventScreenTouch) -> void:

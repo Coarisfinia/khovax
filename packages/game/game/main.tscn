@@ -93,11 +93,12 @@ holder = NodePath("../ProfileHolder")
 script = ExtResource("2_input")
 holder = NodePath("../ProfileHolder")
 
-[node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view")]
+[node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view", "instance")]
 script = ExtResource("36_focus_picker")
 input = NodePath("../LocalInput")
 camera = NodePath("../Camera3D")
 wild_view = NodePath("../Instance/WildMonsterView")
+instance = NodePath("../Instance")
 
 [node name="EventBus" type="Node" parent="." node_paths=PackedStringArray("driver") unique_id=1841841841]
 script = ExtResource("18_bus")
