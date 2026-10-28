@@ -68,8 +68,9 @@ static func _told(tree: SceneTree) -> String:
 	return result
 
 
-## While the menu's open button shows at the top's middle (on touch screens, or while a knot
-## waits), the notice sits below it, and back at the top once it's gone.
+## While the menu's open button shows (on touch screens, or while a knot waits), the notice doesn't
+## overlap it or its badge, wherever the screen's shape puts it, and goes back to the top once it's
+## gone.
 static func _clear_of_menu(menu: GameMenu, notice: NoticeScreen) -> String:
 	var button: Button = menu.open_button()
 	var shown: bool = button.visible
@@ -77,12 +78,14 @@ static func _clear_of_menu(menu: GameMenu, notice: NoticeScreen) -> String:
 	button.visible = true
 	menu.lay_out(screen)
 	notice.lay_out(screen)
-	var below: bool = notice.card_rect().position.y >= button.position.y + button.size.y
+	var covered: Rect2 = GameMenu.with_badge(button)
+	covered.position += button.position
+	var clear: bool = not notice.card_rect().intersects(covered)
 	button.visible = false
 	notice.lay_out(screen)
 	var back: bool = notice.card_rect().position.y == NoticeScreen.MARGIN
 	button.visible = shown
-	if not below or not back:
+	if not clear or not back:
 		return "the notice didn't keep clear of the menu's open button: %s" % notice.card_rect()
 	return ""
 
