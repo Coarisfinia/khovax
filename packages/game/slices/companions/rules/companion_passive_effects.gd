@@ -42,7 +42,9 @@ static func hastened(
 	var haste: int = _share(state, companions, companion_id, hastes)
 	var full: int = health.max_hp_of(state, companion_id)
 	var lost: int = clampi(full - health.hp_of(state, companion_id), 0, full)
-	return maxi(Fixed.scale(wait, Fixed.ONE - Fixed.mul_div(haste, lost, full)), 1)
+	# Multiplied out first and divided once, so only the whole result rounds down.
+	var whole: int = Fixed.ONE * full
+	return maxi(Fixed.div_floor(wait * (whole - haste * lost), whole), 1)
 
 
 ## The shares `by_passive` gives the passives working for the companion `companion_id` in `state`

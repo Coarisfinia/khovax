@@ -1265,11 +1265,18 @@ func _check_passive_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	health.shield(companion_id, true)
 	state.entity(companion_id).tile = hemmed
 	var wait: int = Fixed.scale(CompanionAttackFeature.STRIKE_TICKS, 750)
-	var strikes: Array[CompanionStruck] = _strikes_over(state, 2 * wait + 1)
-	if strikes.size() != 3 or _hp(state, companion_id) != Fixed.scale(COMPANION_HP, 500):
-		return "a hurt, hastened companion struck %d times in %d ticks, not 3, at %d HP" % [
-			strikes.size(),
-			2 * wait + 1,
+	var struck_at: Array[int] = []
+	for tick: int in 2 * wait + 1:
+		if not _strikes_over(state, 1).is_empty():
+			struck_at.append(tick)
+	if struck_at != [
+		0,
+		wait,
+		2 * wait,
+	] or _hp(state, companion_id) != Fixed.scale(COMPANION_HP, 500):
+		return "a hurt, hastened companion struck on ticks %s, not every %d, at %d HP" % [
+			struck_at,
+			wait,
 			_hp(state, companion_id),
 		]
 	return _check_passive_data()
