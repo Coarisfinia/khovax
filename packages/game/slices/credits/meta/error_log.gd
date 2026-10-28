@@ -32,6 +32,9 @@ var _bytes: int = 0
 ## is reentrant, so that nested call gets through the lock and `_writing` skips it.
 var _mutex: Mutex = Mutex.new()
 var _writing: bool = false
+## On the web a flushed file reaches the browser's storage only once Godot syncs it, which it does
+## when a file closes or is asked to (#1541); the log stays open, so each write asks.
+var _web: bool = OS.has_feature("web")
 
 
 func _init(file: FileAccess) -> void:
@@ -131,7 +134,8 @@ func _log_error(
 	_write(entry)
 
 
-## Appends `text` with the folders hidden, and flushes, so a crash right after loses nothing.
+## Appends `text` with the folders hidden, and flushes (and syncs on the web), so a crash right
+## after loses nothing.
 func _write(text: String) -> void:
 	_mutex.lock()
 	if not _writing and _bytes < MAX_BYTES:
@@ -143,6 +147,9 @@ func _write(text: String) -> void:
 		_bytes += shown.size()
 		var _stored: bool = _file.store_buffer(shown)
 		_file.flush()
+		if _web:
+			# Only marks the storage for a sync, which Godot runs once per frame at most.
+			JavaScriptBridge.force_fs_sync()
 		_writing = false
 	_mutex.unlock()
 
