@@ -7,8 +7,9 @@ extends RefCounted
 ##   species rolled from the instance blueprint's list` (on ground)
 ## - what a slice places on ground, as its PlacementReader reads it (#824): a person to talk to
 ##   (NpcSpot), a treasure chest or loot on the ground (ChestPlacements), a tile trigger
-##   (TileTrigger) or a wild monster of a named species (WildSpot); a reader may also name the tile
-##   kind it stands on, which is read like a tile kind's meaning (below)
+##   (TileTrigger), a wild monster of a named species (WildSpot) or a guide's seal (SealPlacements,
+##   #1588); a reader may also name the tile kind it stands on, which is read like a tile kind's
+##   meaning (below), and say it stands on a tile nobody walks (PlacementReader.on_ground)
 ## - `joins another piece to the <side>`: a connector (#57)
 ## - `exit to the <side>`: an exit to another instance (#140), the one its realm draws beside this
 ##   one on that side (#865), which the blueprints fill in (Region.exit_blueprints)
@@ -56,6 +57,8 @@ var wild_monster: bool = false
 ## The kind of thing a slice places here (#824, PlacementReader), or "", and the meaning it reads.
 var placement: String = ""
 var meaning_said: String = ""
+## Whether that thing must stand on ground (PlacementReader.on_ground).
+var on_ground: bool = true
 ## The tile kind (its id in TileKinds) it names, or "", with each turn, walkable override and height
 ## its clauses say, refused when one is said twice or is out of range.
 var kind: String = ""
@@ -119,11 +122,12 @@ func place(region: Region, tile: Vector2i) -> String:
 	return _place_on_ground(region, tile)
 
 
-## Places what a slice places on `tile`, which must be ground. Returns why it can't, or "".
+## Places what a slice places on `tile`, which must be ground unless its reader says otherwise.
+## Returns why it can't, or "".
 func _place_on_ground(region: Region, tile: Vector2i) -> String:
 	if placement.is_empty():
 		return ""
-	if not region.is_walkable(tile):
+	if on_ground and not region.is_walkable(tile):
 		return "%s on %s isn't on ground" % [placement, tile]
 	region.add_placement(placement, tile, meaning_said)
 	return ""
@@ -160,6 +164,7 @@ func _read_slices(meaning: String, readers: Array[PlacementReader]) -> bool:
 		if not placement.is_empty():
 			meaning_said = meaning
 			wild_monster = reader.places_wild_monster()
+			on_ground = reader.on_ground()
 			var stands_on: String = reader.tile_of(meaning)
 			return stands_on.is_empty() or _read_kind(stands_on)
 	return false

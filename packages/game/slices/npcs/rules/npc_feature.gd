@@ -3,7 +3,8 @@ extends Feature
 ## People to talk to (#557): when the instance loads, one stands on every tile the region names a
 ## person on, as an entity no player controls. They never fight (owner's worldbuilding rules): no
 ## rule strikes, rings or dominates them, as none of those take them for a wild monster. They don't
-## walk, so walkers can't step onto their tile (MovementFeature). A player who stands next to one
+## walk, so walkers can't step onto their tile (MovementFeature), except a guide at work, who walks
+## like a companion (EscortFeature, #1588). A player who stands next to one
 ## and walks into them talks to them, raising NpcTalkedTo: walking is the one input every device
 ## gives already, a controller's stick and d-pad too. Walking on into them doesn't talk again; the
 ## player has to stop or turn away first, so a held direction talks once.
