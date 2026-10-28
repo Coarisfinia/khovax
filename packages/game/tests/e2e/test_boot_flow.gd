@@ -19,6 +19,9 @@ const UNWORN_MODELS: Array[String] = [
 const UNPLACED_PROPS: Dictionary[String, Array] = {
 	"res://assets/tentacle_gate/tentacle_gate.glb": [&"Idle"],
 }
+## Static models built before anything places them in the world (#1635): each must load and show
+## a mesh, until what places it names it and it leaves this list.
+const UNPLACED_MODELS: Array[String] = ["res://assets/starry-egg/starry_egg.glb"]
 
 
 func run(tree: SceneTree) -> String:
@@ -346,6 +349,23 @@ func _check_view_models(main: Node) -> String:
 		)
 		if not checked.is_empty():
 			return "%s: %s" % [path, checked]
+	return _check_unplaced_models()
+
+
+## Whether every model waiting for its place (UNPLACED_MODELS) loads and shows a mesh.
+func _check_unplaced_models() -> String:
+	for path: String in UNPLACED_MODELS:
+		var unplaced: PackedScene = load(path) as PackedScene
+		if unplaced == null:
+			return "%s doesn't load" % path
+		var shown: Node = unplaced.instantiate()
+		var meshes: int = 0
+		for mesh: MeshInstance3D in shown.find_children("*", "MeshInstance3D", true, false):
+			if mesh.mesh != null and mesh.visible:
+				meshes += 1
+		shown.free()
+		if meshes == 0:
+			return "%s shows no mesh" % path
 	return ""
 
 

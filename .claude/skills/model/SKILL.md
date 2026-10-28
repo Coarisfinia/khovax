@@ -120,6 +120,11 @@ a second model could use goes into the library or a generic tool, never into one
   - `pulse` (#1224): a part that swells and settles on beats (a crystal flaring in step with the
     wisps' ring, `wisps.Gather.frames_at`), on a bone of its own whose scale an `animate` overlay
     keys in every clip (a `scale.<bone>` channel); `metrics` counts its bone as its parent's.
+  - `starfield` (#1635): our own starry sky as an equirectangular texture from a fixed seed,
+    every star one of two fixed shapes (a soft dot, or a four-pointed sparkle for the brightest),
+    a steep brightness falloff, faint tints and a deep gradient with a haze band; `uv` maps a
+    surface around its middle onto it, and `disc` paints a spot (an eye). Never a generated
+    (AI) sky: its stars each have a different number of points.
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
@@ -269,6 +274,14 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 - **Weights:** automatic weights fail on thin parts over a hollow (ribs over a ribcage): they
   can't tell a leg from the rib beside it. Weight by where each vertex lies instead, as
   `hexapod.bind` does.
+
+**The traps found on the starry egg (#1635)**, a static prop the generator rigged anyway:
+- **A rig on a prop:** `import_source.py`'s `static` drops it, and the model script exports the
+  mesh without a rig or clips (as `mana_gems.py`). `check_glb.gd` and `check_ground.py` expect a
+  rigged creature and don't apply.
+- **Shading in patches:** clearing the custom normals leaves the seam splits apart, so a smooth
+  surface shades island by island. Weld by position (`bmesh.ops.remove_doubles`, UVs stay on the
+  corners) and shade smooth by angle, keeping a crack's rim sharp.
 
 **The traps found on Fohossa (#1619)**, a four-legged Meshy auto-rig with a long trunk:
 - **One piece for every leg:** with a long spine between the hips' fork and the withers' fork,

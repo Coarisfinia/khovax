@@ -178,7 +178,9 @@ func _place() -> void:
 	if OS.get_cmdline_user_args().has("points"):
 		_piece.add_child(PointMarks.new(model, _bounds.size.y))
 	if _clip.is_empty():
-		animations.play(&"Idle")
+		# A static model (a prop, #1635) has no clips to idle in.
+		if animations != null:
+			animations.play(&"Idle")
 		_add_shot("game", _game_camera.make_current)
 		for side: String in VIEWS:
 			_add_shot(side, _pose_side.bind(side))

@@ -23,6 +23,10 @@ download is). It prints the scale and how far the rest pose and the widest clip 
 hex; check_footprint.py confirms the fit once the clips are built.
 
     ... --python packages/game-models/import_source.py -- <rigged.glb> <source.glb> [size=1024] [scale=hex]
+
+`static` instead of a scale drops a download's rig (#1635): a prop the generator rigged anyway
+(an egg given a figure's skeleton) keeps its mesh as it stands at rest and is sourced like an
+unrigged one.
 """
 
 import math
@@ -65,7 +69,7 @@ args = sys.argv[sys.argv.index("--") + 1:]
 download, source = args[0], args[1]
 size = int(args[2]) if len(args) > 2 else 1024
 scale = args[3] if len(args) > 3 else "hex"
-if scale not in HEX:
+if scale not in HEX and scale != "static":
     try:
         scale = float(scale)
     except ValueError:
@@ -86,6 +90,12 @@ if len(meshes) != 1:
 mesh = meshes[0]
 modifier = next((modifier for modifier in mesh.modifiers if modifier.type == "ARMATURE"), None)
 rig = modifier.object if modifier is not None else None
+if scale == "static" and modifier is not None:
+    # The mesh's rest shape is its vertices as stored: dropping the modifier leaves it there.
+    mesh.modifiers.remove(modifier)
+    mesh.vertex_groups.clear()
+    print("SOURCE static: rig", rig.name, "dropped")
+    rig = None
 for obj in list(bpy.context.scene.objects):
     if obj not in (mesh, rig):
         print("SOURCE dropped", obj.name)
@@ -125,7 +135,7 @@ if mesh.data.has_custom_normals:
 bpy.ops.object.shade_smooth()
 if rig is not None:
     rigged.adopt(rig, mesh, to_hex(HEX[scale], rig) if scale in HEX else scale)
-elif len(args) > 3:
+elif len(args) > 3 and scale != "static":
     print("SOURCE unrigged: scale not applied; the model script places and sizes it")
 bpy.ops.export_scene.gltf(
     filepath=source,
