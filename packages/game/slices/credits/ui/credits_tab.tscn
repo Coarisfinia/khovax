@@ -1,8 +1,18 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" uid="uid://bdrj0d8so1a7f" path="res://slices/credits/ui/credits_tab.gd" id="1_credits"]
+[ext_resource type="Script" uid="uid://dabbkiqjwraij" path="res://slices/credits/ui/error_log_button.gd" id="2_log"]
 
-[node name="Credits" type="RichTextLabel"]
+[node name="Credits" type="VBoxContainer"]
+
+[node name="ErrorLog" type="Button" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Error log: save it as a file"
+script = ExtResource("2_log")
+
+[node name="Text" type="RichTextLabel" parent="."]
+layout_mode = 2
 focus_mode = 2
 size_flags_vertical = 3
 bbcode_enabled = true
