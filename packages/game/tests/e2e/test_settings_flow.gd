@@ -1210,8 +1210,8 @@ static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
 func _credits_log_button(menu: GameMenu) -> String:
 	var page: Node = menu.find_child("Credits", true, false)
 	var save: ErrorLogButton = page.get_node("ErrorLog") as ErrorLogButton
-	if save == null or save.visible or not ErrorLog.written():
-		return "the Credits tab's button saving the error log shows off the web"
+	if save == null or save.visible != OS.has_feature("web") or not ErrorLog.written():
+		return "the Credits tab's button saving the error log shows other than only on the web"
 	if not ErrorLog.saved().get_string_from_utf8().begins_with(ErrorLog.header().left(20)):
 		return "the error log saved as a file doesn't start with its header"
 	return ""
