@@ -26,7 +26,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import footprint, ground, imported, known  # noqa: E402
+from lib import footprint, imported, known  # noqa: E402
 
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = set()
@@ -81,7 +81,7 @@ def main():
         rig.animation_data.use_nla = False
         limit = footprint.LARGE if model in LARGE else footprint.REGULAR
         log.info("FOOTPRINT %s limit %.2f of the hex" % (model, limit))
-        lines, _passed = footprint.report(rig, ground.skinned(bpy.data.objects), limit)
+        lines, _passed = footprint.report(rig, footprint.meshes(rig, bpy.data.objects), limit)
         for line in lines:
             text, fails = known.judge(KNOWN, model, line)
             passed = passed and not fails

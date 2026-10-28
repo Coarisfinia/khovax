@@ -3,7 +3,7 @@ check_footprint.py. The game stands a wild monster at its tile's centre at scale
 hexes `SIZE` from centre to corner (HexLayout.SIZE), turned to face a neighbour, so across an
 edge. The model faces -Y, so the hex's six edges face -Y, +Y and the four directions 30 degrees
 either side of the X axis. A pose's **reach** is the largest projection of any vertex of the
-deformed mesh onto those six edge normals, over the hex's inradius: 1.00 touches an edge, below
+deformed meshes onto those six edge normals, over the hex's inradius: 1.00 touches an edge, below
 it stays inside.
 
 A regular monster keeps 5 % padding inside its hex (`REGULAR`, 0.95); a boss, enraged or stronger
@@ -23,6 +23,13 @@ INRADIUS = SIZE * math.sqrt(3.0) / 2.0
 NORMALS = numpy.array([(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(270, 630, 60)])
 REGULAR = 0.95
 LARGE = 1.05
+
+
+def meshes(rig, objects):
+    """Every mesh of the model, skinned or riding on a bone (a horn, a gem), but not the
+    importer's bone display shapes."""
+    shapes = {bone.custom_shape for bone in rig.pose.bones if bone.custom_shape is not None}
+    return [obj for obj in objects if obj.type == "MESH" and obj not in shapes]
 
 
 def reach(meshes):
@@ -45,9 +52,9 @@ def reach(meshes):
 
 def report(rig, meshes, limit):
     """For every clip, every frame: the largest reach and the frame it's on. A clip fails past
-    `limit`. Returns (lines, passed); a model without a skinned mesh has nothing to check."""
+    `limit`. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
     if not meshes:
-        return ["no skinned mesh: nothing to check"], True
+        return ["FAIL no mesh to measure"], False
     scene = bpy.context.scene
     passed = True
     lines = []
