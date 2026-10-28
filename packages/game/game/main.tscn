@@ -76,6 +76,8 @@
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 [ext_resource type="Script" path="res://slices/harvest/ui/interact_button.gd" id="67_interact_button"]
 [ext_resource type="Script" path="res://slices/controls/look/tap_walk_mark.gd" id="68_tap_walk_mark"]
+[ext_resource type="PackedScene" path="res://slices/notices/ui/notice_screen.tscn" id="69_notice"]
+[ext_resource type="Script" path="res://slices/notices/ui/guide_notice_tie.gd" id="70_guide_notice_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -472,6 +474,9 @@ survey = NodePath("../../SurveyChoice")
 input = NodePath("../../LocalInput")
 driver = NodePath("../../Driver")
 
+[node name="NoticeScreen" parent="Hud" node_paths=PackedStringArray("menu") instance=ExtResource("69_notice")]
+menu = NodePath("../GameMenu")
+
 [node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_list") unique_id=3550355035]
 layout_mode = 3
 anchors_preset = 15
@@ -517,6 +522,12 @@ keeper = NodePath("../CodexKeeper")
 script = ExtResource("66_quest_names_tie")
 menu = NodePath("../Hud/GameMenu")
 page = NodePath("../Hud/CodexPage")
+
+[node name="GuideNoticeTie" type="Node" parent="." node_paths=PackedStringArray("driver", "input", "notice")]
+script = ExtResource("70_guide_notice_tie")
+driver = NodePath("../Driver")
+input = NodePath("../LocalInput")
+notice = NodePath("../Hud/NoticeScreen")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]

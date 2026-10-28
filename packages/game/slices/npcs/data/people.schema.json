@@ -22,6 +22,11 @@
 				"entry": { "description": "A short text about them and where their name comes from.", "type": "string", "pattern": "\\S" },
 				"gloss": { "description": "What their name means, hand-written (#959), e.g. \"Teska, sworn to the guild\".", "type": "string", "pattern": "\\S" }
 			}
+		},
+		"went_ahead": {
+			"description": "What they say when they guide a player to their seal and go ahead alone because that player left (#1588, #1589), shown to the player as a short notice. Left out, they say the game's plain line.",
+			"type": "string",
+			"pattern": "\\S"
 		}
 	}
 }

@@ -14,6 +14,9 @@ var name: String = ""
 var codex_entry: String = ""
 ## What their name means, hand-written (#959), e.g. "Teska, sworn to the guild".
 var codex_gloss: String = ""
+## What they say when they go ahead to their seal without their player (#1589), shown as a notice
+## (GuideNoticeTie); "" for a person who guides nobody, or one who says the plain line.
+var went_ahead: String = ""
 ## Why the person couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -31,6 +34,7 @@ static func parse(file_id: String, text: String) -> Person:
 	var codex: Dictionary = data.get("codex") if data.get("codex") is Dictionary else {}
 	person.codex_entry = Content.text_of(codex.get("entry"))
 	person.codex_gloss = Content.text_of(codex.get("gloss"))
+	person.went_ahead = Content.text_of(data.get("went_ahead"))
 	person.problem = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if person.problem.is_empty():
 		person.problem = Content.id_problem(person.id, file_id)
