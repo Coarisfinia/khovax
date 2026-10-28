@@ -20,6 +20,7 @@ boot_splash/show_image=false
 [autoload]
 
 LaunchMode="*res://game/launch_mode.gd"
+ErrorLogging="*res://game/error_logging.gd"
 TestMode="*res://game/test_mode.gd"
 
 [debug]
