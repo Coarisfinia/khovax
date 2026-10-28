@@ -331,14 +331,12 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
 	var input: LocalInput = _driver.input
-	var target: Vector2i = Vector2i(2, 0)
-	for tile: Vector2i in [Vector2i(2, 0), Vector2i(2, -1), Vector2i(1, 1)]:
-		if _driver.state.region.is_walkable(tile):
-			target = tile
-			break
+	var target: Vector2i = _tap_target()
 	_place(Vector2i.ZERO)
 	# The instance shifted by a tile, as one beyond an exit is: the click is read in its own
 	# coordinates.
+	# Headless, the screen is tiny: every wild monster's figure would show within a pick's reach.
+	picker.wild_view.visible = false
 	picker.instance.position = HexLayout.to_world(Vector2i(1, 0))
 	var click: InputEventMouseButton = _click_on(picker, target)
 	picker._unhandled_input(click)
@@ -373,9 +371,19 @@ func _check_tap_walk() -> String:
 	still = still and not input.tap_walk.walking
 	input.tap_tile(Vector2i(1000, 1000))
 	_finish_step()
+	picker.wild_view.visible = true
 	if not still or _tile() != Vector2i.ZERO or input.tap_walk.walking:
 		return "an emulated click, a click in the menu or one off the region walked the player"
 	return ""
+
+
+## The walkable tile two steps east of (0, 0) to click: (2, 0) unless it's closed.
+func _tap_target() -> Vector2i:
+	for tile: Vector2i in [Vector2i(2, -1), Vector2i(1, 1)]:
+		if (not _driver.state.region.is_walkable(Vector2i(2, 0))
+				and _driver.state.region.is_walkable(tile)):
+			return tile
+	return Vector2i(2, 0)
 
 
 ## A left click, as the mouse gives it, where `picker`'s camera shows `tile` of the instance now;
