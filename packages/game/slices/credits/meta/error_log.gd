@@ -56,18 +56,18 @@ static func start() -> bool:
 	return true
 
 
-## The log's file, fresh with the launch before's kept as PREVIOUS; or, where that can't be moved
-## aside, the launch before's own, written on at its end rather than lost.
+## The log's file, fresh with the launch before's kept as PREVIOUS (a rename replaces the
+## older one); or, where it can't be moved aside, the launch before's own, written on at its end
+## rather than lost, unless that one is full: then there's no log, not one that takes no lines.
 static func _opened() -> FileAccess:
 	if not FileAccess.file_exists(PATH):
 		return FileAccess.open(PATH, FileAccess.WRITE)
-	# Removed first: a rename doesn't replace an existing file everywhere.
-	var _removed: Error = DirAccess.remove_absolute(_absolute(PREVIOUS))
 	if DirAccess.rename_absolute(_absolute(PATH), _absolute(PREVIOUS)) == OK:
 		return FileAccess.open(PATH, FileAccess.WRITE)
 	var file: FileAccess = FileAccess.open(PATH, FileAccess.READ_WRITE)
-	if file != null:
-		file.seek_end()
+	if file == null or file.get_length() >= MAX_BYTES:
+		return null
+	file.seek_end()
 	return file
 
 
