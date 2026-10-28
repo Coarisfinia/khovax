@@ -27,14 +27,16 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		var harvested: Harvested = event as Harvested
 		var by_hand: TileHarvested = event as TileHarvested
 		if harvested != null:
-			_burst(harvested.tile, harvested.loot.get(input.slot, {}), DamageNumbersView.SECONDS)
+			_burst(harvested.tile, harvested.loot, DamageNumbersView.SECONDS)
 		elif by_hand != null:
-			_burst(by_hand.tile, by_hand.loot.get(input.slot, {}), 0.0)
+			_burst(by_hand.tile, by_hand.loot, 0.0)
 
 
-## Shows this machine's player's `loot` on `tile` after `wait` seconds (a special's damage there
-## fading first), then lets it rise and fade; nothing for no loot or a tile in the fog.
-func _burst(tile: Vector2i, loot: Dictionary, wait: float) -> void:
+## Shows this machine's player's own of `by_slot`'s loot on `tile` after `wait` seconds (a
+## special's damage there fading first), then lets it rise and fade; nothing for no loot or a tile
+## in the fog.
+func _burst(tile: Vector2i, by_slot: Dictionary[int, Dictionary], wait: float) -> void:
+	var loot: Dictionary = by_slot.get(input.slot, {})
 	if loot.is_empty() or not FogView.ally_sees(driver.state, tile):
 		return
 	var label: Label3D = RisingText.make(tile, ChestView.loot_text(loot))
