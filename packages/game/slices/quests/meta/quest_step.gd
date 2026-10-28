@@ -26,6 +26,7 @@ const CONDITION_FIELDS: Array[String] = [
 	"dialog",
 	"answer",
 	"event",
+	"person",
 	"count",
 ]
 ## The conditions of a step, each counted from the facts QuestFacts makes of events (CONDITIONS says
@@ -46,8 +47,12 @@ const CHOICE_CONDITIONS: Array[String] = [REACHED, ENTERED, ANSWERED]
 ## start waits on one, since a step
 ## waiting on it would have nothing to show the player.
 const EMITTED: String = "emitted"
-## The conditions a side quest's start can have: being somewhere, or an event emitted.
-const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED]
+## The condition met by talking to a person (NpcTalkedTo, #1592), named by `person`, as the people's
+## files name them: only a side quest's start waits on one, such as a guide's escort quest.
+const TALKED: String = "talked"
+## The conditions a side quest's start can have: being somewhere, an event emitted, or a person
+## talked to.
+const START_CONDITIONS: Array[String] = [REACHED, ENTERED, EMITTED, TALKED]
 ## The conditions a step can have, each counted from the facts QuestFacts makes of events:
 ## `dominated`, a wild monster this player dominated (the `quarry`: of `species`, or any, or the one
 ## quest target `target` a region's legend marks, #625); `opened`, a treasure chest this player got
@@ -83,8 +88,9 @@ var choices: Array[QuestStep] = []
 var next: String = ""
 ## The event it emits once it's done, or once it's taken on a choice (#575), or "" for none.
 var emits: String = ""
-## The event an `emitted` condition asks for.
-var event: String = ""
+## What a side quest's start waits on: the event an `emitted` condition asks for, or the id of the
+## person a `talked` one asks for (#1592).
+var awaited: String = ""
 ## What the step asks for, or "" on a step with choices.
 var condition: String = ""
 ## The wild monster a `dominated` step asks for (#625): any, on any other step.
@@ -203,9 +209,9 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 	instance = Content.text_of(data.get("instance"))
 	answer.dialog = Content.text_of(data.get("dialog"))
 	answer.id = Content.text_of(data.get("answer"))
-	event = Content.text_of(data.get("event"))
+	awaited = Content.text_of(data.get("person" if condition == TALKED else "event"))
 	count = Content.amount(data.get("count", 1))
-	if not CONDITIONS.has(condition) and condition != EMITTED:
+	if not CONDITIONS.has(condition) and condition != EMITTED and condition != TALKED:
 		problem = "its condition must be one of %s" % [CONDITIONS]
 	elif data.has("species") and (condition != DOMINATED or not known_species.has(species_id)):
 		problem = "its species must be one that exists, on a dominated step"
@@ -222,15 +228,19 @@ func _read_condition(data: Dictionary, known_species: Dictionary[String, Species
 ## Why `step`'s place, piece, instance, dialog and answer, event or item, read from `data`, doesn't
 ## fit, or "": a reached step names a place, an entered step a piece (#350) or an instance (#370),
 ## or both for a piece in that instance, an answered step a dialog and its answer (#636), an
-## emitted condition an event (#575) and an obtained step an item (#686), each as an id, and no
+## emitted condition an event (#575), a talked condition a person (#1592) and an obtained step an
+## item (#686), each as an id, and no
 ## other step names any; a dominated step's quest target is an id too (#625). Every step but an
 ## emitted condition, which happens in the whole world, may name the instance it counts in (#769).
-## Whether the dialog has the answer is QuestContent's check, which reads the dialogs. Whether the
+## Whether the dialog has the answer, and whether the person exists, is QuestContent's check, which
+## reads the dialogs and the people. Whether the
 ## instance is a blueprint that exists is the quest flow's check (CI), since the blueprints come
 ## after the quests (#851).
 static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 	if (step.condition == EMITTED) != data.has("event"):
 		return "its event is what an emitted condition asks for, and only that"
+	if (step.condition == TALKED) != data.has("person"):
+		return "its person is what a talked condition asks for, and only that"
 	if (step.condition == OBTAINED) != data.has("item"):
 		return "its item is what an obtained step asks for, and only that"
 	if (step.condition == REACHED) != data.has("place"):
@@ -247,7 +257,8 @@ static func _where_problem(data: Dictionary, step: QuestStep) -> String:
 		"instance": step.instance,
 		"dialog": step.answer.dialog,
 		"answer": step.answer.id,
-		"event": step.event,
+		"event": step.awaited,
+		"person": step.awaited,
 		"item": step.item,
 		"target": step.quarry.target,
 	}
@@ -286,10 +297,11 @@ func choice_for(fact_condition: String, what: String, where: String) -> QuestSte
 
 
 ## Whether one fact of `fact_condition` (a domination of a species, a TARGET_DOMINATED, a chest, a
-## place reached, a piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED or an
-## item obtained) counts here, toward any of its choices on a branching step; `what` is the species
-## or the quest target dominated, the place reached, the piece or instance entered, the answer
-## chosen as `answer_key` names it, the event emitted or the item obtained; `where` is the instance
+## place reached, a piece entered, an INSTANCE_ENTERED, an answer ANSWERED, an event EMITTED, a
+## person TALKED to or an item obtained) counts here, toward any of its choices on a branching
+## step; `what` is the species or the quest target dominated, the place reached, the piece or
+## instance entered, the answer chosen as `answer_key` names it, the event emitted, the person's id
+## or the item obtained; `where` is the instance
 ## it happened in, by blueprint name, which a step naming an instance asks for (#769), or "" for
 ## none.
 func counts(fact_condition: String, what: String, where: String) -> bool:
@@ -303,8 +315,8 @@ func counts(fact_condition: String, what: String, where: String) -> bool:
 ## Whether one fact of `fact_condition`, `what` as `counts` reads them, is what its own condition
 ## asks for, wherever it happened.
 func _asks_for(fact_condition: String, what: String) -> bool:
-	if condition == EMITTED:
-		return fact_condition == condition and event == what
+	if condition == EMITTED or condition == TALKED:
+		return fact_condition == condition and awaited == what
 	if condition == ANSWERED:
 		return fact_condition == condition and answer.key() == what
 	if condition == REACHED:

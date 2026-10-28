@@ -3,7 +3,7 @@ extends Content
 ## The quests' content data (#184), which the quests slice owns (#412): one JSONC file per quest
 ## directly in its data/ (its own kind, so no folder repeats the slice's name, #442), checked
 ## against quests.schema.json beside them in CI, and here against the species, the factions, the
-## dialogs and the loot. Everything else reads the quests through this.
+## dialogs, the loot and the people. Everything else reads the quests through this.
 
 const DIR: String = "res://slices/quests/data/"
 
@@ -95,6 +95,7 @@ func add(file_id: String, text: String) -> String:
 		quest.problem = _items_problem(quest, _tables)
 	if quest.problem.is_empty():
 		quest.problem = _materials_problem(quest)
+		quest.problem = quest.problem if not quest.problem.is_empty() else person_problem(quest)
 	if quest.problem.is_empty() and quest.territory != null:
 		quest.problem = _code_territory(quest.territory)
 	if quest.problem.is_empty():
@@ -145,6 +146,15 @@ static func _materials_problem(quest: QuestDefinition) -> String:
 	for material: String in quest.materials:
 		if not MaterialContent.cached().ids.has(material):
 			return "it gives %s, which is no material" % material
+	return ""
+
+
+## Why `quest` starts on talking to a person (#1592) who isn't one (PeopleContent), or "".
+static func person_problem(quest: QuestDefinition) -> String:
+	var start: QuestStep = quest.starts_on
+	if start != null and start.condition == QuestStep.TALKED:
+		if not PeopleContent.cached().people.has(start.awaited):
+			return "it starts on talking to %s, who is no person" % start.awaited
 	return ""
 
 

@@ -1193,6 +1193,7 @@ func _holds_in_chests(instance_name: String, material: String) -> bool:
 		chests != null
 		and not chests.chests.is_empty()
 		and not chests.loot_spots.is_empty()
+		and chests.table != null
 		and chests.table.items.has(material)
 		and chests.ground_table.items.has(material)
 	)

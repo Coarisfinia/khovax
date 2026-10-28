@@ -1,0 +1,16 @@
+// The escort to Hrovumel Stolm (#1592, #1553): a side quest that starts once the player talks to
+// Ausvren vo Tormaesk in Brekhal Varn. They lead the guide to the boulders sealing the passage
+// (#1588, #1590), go through the dungeon behind it (#1591), and end in its inner shrine, around the
+// chest that holds Vis'omera: found in the world, never handed over (owner, #1553). It ends on
+// reaching the shrine rather than on opening the chest, since in co-op another player may have
+// opened it already, giving every player there their own Vis'omera (#124).
+{
+	"id": "tormaesk_escort",
+	"name": "The way into ${PLACE:hrovumel_stolm}",
+	"starts_on": { "condition": "talked", "person": "ausvren_vo_tormaesk", "instance": "brekhal_varn" },
+	"steps": [
+		{ "condition": "reached", "place": "sealed_passage", "instance": "brekhal_varn" },
+		{ "condition": "entered", "instance": "hrovumel_stolm" },
+		{ "condition": "reached", "place": "inner_shrine", "instance": "hrovumel_stolm", "ends": "tormaesk_escort" }
+	]
+}

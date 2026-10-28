@@ -67,6 +67,11 @@ const REACH_BEACH: String = (
 	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
 	+ "{\"condition\": \"reached\", \"place\": \"beach\", \"ends\": \"reach_beach\"}]}"
 )
+## The escort's quest (#1592), its guide, the guide's pass and the dungeon behind their seal.
+const ESCORT: String = "tormaesk_escort"
+const ESCORT_GUIDE: String = "ausvren_vo_tormaesk"
+const ESCORT_PASS: String = "brekhal_varn"
+const ESCORT_DUNGEON: String = "hrovumel_stolm"
 ## The dialog the answered steps ask about (#636).
 const SCOUT: String = "teska_na_amvrel_greeting"
 ## A quest that asks to promise the scout to look at the glade, in the scout's dialog; its dialog
@@ -1180,7 +1185,49 @@ func _check_side_quest() -> String:
 	applied = _count(at_once, _entering("pond"))
 	if not applied.is_empty() or at_once.finished != ["in_one"]:
 		return "entering the pond didn't both start and finish a side quest asking for it"
-	return _check_followed()
+	var escort: String = _check_escort()
+	return escort if not escort.is_empty() else _check_followed()
+
+
+## The escort's quest (#1592) starts on talking to its guide in their pass, not to someone else nor
+## elsewhere, and goes on to their seal, through the dungeon, and ends in its inner shrine, around
+## the chest that holds Vis'omera, whoever opened it. Only a side quest's start waits on talking to
+## a person, who must be one.
+func _check_escort() -> String:
+	var quests: QuestTracker = QuestTracker.new()
+	quests.book = QuestContent.load_quests().quests
+	var applied: String = _count(quests, [
+		QuestFact.new(QuestStep.TALKED, "teska_na_amvrel", ESCORT_PASS),
+		QuestFact.new(QuestStep.TALKED, ESCORT_GUIDE, FlowSteps.GLADE),
+	])
+	if quests.progress.has(ESCORT) or quests.started.has(ESCORT):
+		return "the escort's quest started on talking to another, or elsewhere" + applied
+	applied = _count(quests, [QuestFact.new(QuestStep.TALKED, ESCORT_GUIDE, ESCORT_PASS)])
+	var step: QuestStep = quests.open_steps().get(ESCORT)
+	if step == null or step.place != "sealed_passage" or step.instance != ESCORT_PASS:
+		return "talking to the guide didn't start the escort's quest at their seal" + applied
+	applied = _count(quests, [
+		QuestFact.new(QuestStep.REACHED, "sealed_passage", ESCORT_PASS),
+		QuestFact.new(QuestStep.INSTANCE_ENTERED, ESCORT_DUNGEON, ESCORT_DUNGEON),
+		QuestFact.new(QuestStep.REACHED, "inner_shrine", ESCORT_DUNGEON),
+	])
+	if not quests.finished.has(ESCORT):
+		return "the escort's quest didn't end in the dungeon's inner shrine" + applied
+	var text: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
+	var talk: String = "{\"condition\": \"talked\", \"person\": \"%s\"}"
+	var end: String = "{\"condition\": \"opened\", \"ends\": \"x\"}"
+	var stepped: String = talk.replace("}", ", \"ends\": \"x\"}") % ESCORT_GUIDE
+	var as_step: QuestDefinition = QuestDefinition.parse(
+		"x",
+		text % [talk % ESCORT_GUIDE, stepped],
+		{},
+	)
+	if as_step.problem.is_empty():
+		return "a quest step waiting on talking to a person read"
+	var nobody: QuestDefinition = QuestDefinition.parse("x", text % [talk % "nobody_here", end], {})
+	if not nobody.problem.is_empty() or QuestContent.person_problem(nobody).is_empty():
+		return "a quest starting on talking to nobody wasn't refused: " + nobody.problem
+	return ""
 
 
 ## The player follows one open quest (#1298): with no side quest started and none picked, the
@@ -1433,6 +1480,8 @@ func _check_facts() -> String:
 		ChestOpened.new(Vector2i.ZERO, 1, loot),
 		InstanceEntered.new(FlowSteps.FOREST, 1, 0),
 		PlaceReached.new("beach", 2, 1),
+		NpcTalkedTo.new(ESCORT_GUIDE, "", 1, 0),
+		NpcTalkedTo.new(ESCORT_GUIDE, "", 2, 1),
 		WorldChanged.new(
 			FlowSteps.GLADE_PURIFIED,
 			WorldFlags.EVENT_FLAG + FlowSteps.GLADE_PURIFIED,
@@ -1453,6 +1502,7 @@ func _check_facts() -> String:
 		"opened  %s 1" % FlowSteps.GLADE,
 		"obtained feather %s 2" % FlowSteps.GLADE,
 		"entered_instance %s %s 1" % [FlowSteps.FOREST, FlowSteps.FOREST],
+		"talked %s %s 1" % [ESCORT_GUIDE, FlowSteps.GLADE],
 		"emitted %s  1" % FlowSteps.GLADE_PURIFIED,
 		"emitted beacon_lit  1",
 	]

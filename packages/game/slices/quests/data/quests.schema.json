@@ -59,7 +59,7 @@
 			"default": "none"
 		},
 		"starts_on": {
-			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count, or until a quest emits the event named here (#575) or it changes the world (#707, such as lumwen_hoal_purified). Left out, the quest is open from the start.",
+			"description": "Makes it a side quest (#473), hidden until the player first reaches the place or enters the region piece or instance named here, written like a reached or entered step without a count, or until a quest emits the event named here (#575) or it changes the world (#707, such as lumwen_hoal_purified), or until the player talks to the person named here (#1592). Left out, the quest is open from the start.",
 			"oneOf": [
 				{ "$ref": "#/$defs/somewhere", "unevaluatedProperties": false },
 				{
@@ -69,6 +69,16 @@
 					"properties": {
 						"condition": { "const": "emitted" },
 						"event": { "description": "The event it waits on.", "$ref": "#/$defs/id" }
+					}
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": ["condition", "person"],
+					"properties": {
+						"condition": { "const": "talked" },
+						"person": { "description": "The id of the person the player talks to (#1592), as the people's files name them.", "$ref": "#/$defs/id" },
+						"instance": { "description": "The instance it counts in only (#769).", "$ref": "#/$defs/id" }
 					}
 				}
 			]
