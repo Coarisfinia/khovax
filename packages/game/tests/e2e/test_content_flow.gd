@@ -5,7 +5,8 @@ extends RefCounted
 ## player (#351), one invented word (#717), behaviour traits that can form a daily schedule
 ## (#1200: exactly one sleep rhythm, at least one need) and a model that exists (#1223), and one
 ## that ascends (#1252) ascends into another species, never in a loop, with a material the tables
-## drop; and broken entries are refused. Every species has a development web (#677), whose nodes
+## drop and a recipe makes (#1349); and broken entries are refused, broken recipes too. Every
+## species has a development web (#677), whose nodes
 ## open as the ones next to them are taken and grant a leaning, a stronger special or a passive no
 ## species has (#1404), and broken webs are refused. Loot tables (#90) load,
 ## roll the same for the same stream, and a blank rolls on the instance's table; every item a table
@@ -1104,7 +1105,7 @@ func _check_ascension_habitats(content: SpeciesContent) -> String:
 
 
 ## Every species' ascension material is a quest's reward too (#1348): some quest gives it when it
-## finishes, and its steps count where the species it ascends into lives.
+## finishes, and its steps count where the species it ascends into lives. Then its recipe's check.
 func _check_ascension_quests(content: SpeciesContent) -> String:
 	var quests: QuestContent = QuestContent.load_quests()
 	if not quests.problem.is_empty():
@@ -1123,6 +1124,47 @@ func _check_ascension_quests(content: SpeciesContent) -> String:
 				ascension.material,
 				ascension.into,
 			]
+	return _check_ascension_recipes(content)
+
+
+## Every species' ascension material can be crafted too (#1349, the owner's pick 3 on #1260): a
+## recipe makes it. Then the broken recipes' check.
+func _check_ascension_recipes(content: SpeciesContent) -> String:
+	var recipes: RecipeContent = RecipeContent.load_recipes()
+	if not recipes.problem.is_empty():
+		return "the recipes didn't load: " + recipes.problem
+	for species_id: String in content.ascensions:
+		var material: String = content.ascensions[species_id].material
+		if not recipes.recipes.has(material):
+			return "no recipe makes %s's ascension material %s" % [species_id, material]
+	return _check_recipes_refused()
+
+
+## A recipe file (#1349) is refused when its id isn't its file's, it has a field it can't, it needs
+## nothing, a count that isn't whole from 1, the material it makes, or something that's no
+## material, or it makes something that's no material.
+func _check_recipes_refused() -> String:
+	var cases: Dictionary[String, String] = {
+		"{\"id\": \"y\", \"needs\": {\"moss\": 1}}": "its id must",
+		"{\"id\": \"bone\", \"needs\": {\"moss\": 1}, \"x\": 1}": "field x",
+		"{\"id\": \"bone\", \"needs\": {}}": "its needs name",
+		"{\"id\": \"bone\"}": "its needs name",
+		"{\"id\": \"bone\", \"needs\": {\"moss\": 0}}": "its needs give",
+		"{\"id\": \"bone\", \"needs\": {\"moss\": 1.5}}": "its needs give",
+		"{\"id\": \"bone\", \"needs\": {\"bone\": 2}}": "it needs bone",
+		"{\"id\": \"bone\", \"needs\": {\"mos\": 2}}": "it makes or needs mos",
+		"[\"bone\"]": Content.NOT_AN_OBJECT,
+	}
+	var refusing: RecipeContent = RecipeContent.new()
+	for text: String in cases:
+		var file_id: String = "x" if cases[text] == "its id must" else "bone"
+		var problem: String = refusing.add(file_id, text)
+		if not problem.begins_with(cases[text]):
+			return "a recipe was refused with %s, not %s" % [problem, cases[text]]
+	var making: String = "{\"id\": \"mos\", \"needs\": {\"moss\": 1}}"
+	var made_up: String = refusing.add("mos", making)
+	if not made_up.begins_with("it makes or needs mos"):
+		return "a recipe making no material was refused with " + made_up
 	return ""
 
 

@@ -87,17 +87,17 @@ func apply(result: Gain) -> String:
 	return ""
 
 
-## Spends one of the item `item` the player holds, as using a revive item does (#656); returns why
-## it can't (they hold none), or "", and changes nothing when it can't. The last one spent is gone
-## from their materials.
-func spend(item: String) -> String:
-	var count: int = materials.get(item, 0)
-	if count <= 0:
-		return "no %s to spend" % item
-	if count == 1:
+## Spends `count` of the item `item` the player holds, one as using a revive item does (#656), or
+## what a recipe needs (Crafting, #1349); returns why it can't (they hold fewer), or "", and
+## changes nothing when it can't. The last one spent is gone from their materials.
+func spend(item: String, count: int = 1) -> String:
+	var held: int = materials.get(item, 0)
+	if count < 1 or held < count:
+		return "not %d %s to spend" % [count, item]
+	if held == count:
 		var _erased: bool = materials.erase(item)
 	else:
-		materials[item] = count - 1
+		materials[item] = held - count
 	return ""
 
 
