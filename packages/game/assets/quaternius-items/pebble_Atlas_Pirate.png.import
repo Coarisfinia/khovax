@@ -2,8 +2,8 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bnhlcpog1drt"
-path="res://.godot/imported/pebble_Atlas_Pirate.png-6003630d159b314982ba8f97dd712107.ctex"
+uid="uid://d2fp65jc34tcq"
+path="res://.godot/imported/pebble_Atlas_Pirate.png-9e5ac5c9f131878a608205dcbf066ff2.ctex"
 metadata={
 "vram_texture": false
 }
@@ -13,8 +13,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://assets/quaternius-pebble/pebble_Atlas_Pirate.png"
-dest_files=["res://.godot/imported/pebble_Atlas_Pirate.png-6003630d159b314982ba8f97dd712107.ctex"]
+source_file="res://assets/quaternius-items/pebble_Atlas_Pirate.png"
+dest_files=["res://.godot/imported/pebble_Atlas_Pirate.png-9e5ac5c9f131878a608205dcbf066ff2.ctex"]
 
 [params]
 

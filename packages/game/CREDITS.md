@@ -132,7 +132,9 @@ The assets this game uses, with their authors and licenses. Generated from each 
 - **Author:** Quaternius (https://quaternius.com)
 - **Source:** Poly Pizza, which hosts the author's models: `necklace.glb` is "Necklace"
   (https://poly.pizza/m/Jvhs8DCNDZ), `coin_pouch.glb` is "Coin Pouch"
-  (https://poly.pizza/m/pTZyPTMH88) and `spikes.glb` is "Spikes" (https://poly.pizza/m/wGAKoYCOVK),
-  each the site's `.glb` download, renamed
+  (https://poly.pizza/m/pTZyPTMH88), `spikes.glb` is "Spikes" (https://poly.pizza/m/wGAKoYCOVK)
+  and `pebble.glb` is "Rock" (https://poly.pizza/m/KvXSMwoftt; inside the file its mesh is named
+  `Prop_CannonBall`, from the author's pirate kit, and its texture is that kit's atlas), each the
+  site's `.glb` download, renamed
 - **License:** CC0 1.0, see `LICENSE.md` next to this file (the site names the license; the file is
   its legal text). Credit is welcome, not required.

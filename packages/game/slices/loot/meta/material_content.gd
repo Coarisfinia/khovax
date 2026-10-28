@@ -8,8 +8,6 @@ extends Content
 const DIR: String = "res://slices/loot/data/materials/"
 ## Its schema, which says the fields a material file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/loot/data/materials.schema.json"
-## Where a material's model lies (#1579).
-const MODELS: String = "res://assets/"
 
 ## Every material's id, in file name order.
 var ids: Array[String] = []
@@ -36,20 +34,10 @@ func add(file_id: String, text: String) -> String:
 	var why: String = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if why.is_empty():
 		why = Content.id_problem(id, file_id)
-	if why.is_empty() and data.has("model"):
-		why = _model_problem(Content.text_of(data.get("model")))
+	if (why.is_empty()
+			and data.has("model")
+			and not Content.is_model(Content.text_of(data["model"]))):
+		why = "its model is no glTF model under %s that exists (#1579)" % Content.MODELS
 	if why.is_empty():
 		ids.append(id)
 	return why
-
-
-## Why `model` isn't a glTF model under assets/ that exists, or "". Optional until every material
-## has a model (#1585, #1586).
-static func _model_problem(model: String) -> String:
-	# Simplified, a path that climbs out of assets/ (`..`) would change.
-	var named: bool = model.begins_with(MODELS) and model.simplify_path() == model
-	if (not named
-			or model.get_extension() not in ["glb", "gltf"]
-			or not ResourceLoader.exists(model)):
-		return "its model is no glTF model under %s that exists (#1579)" % MODELS
-	return ""

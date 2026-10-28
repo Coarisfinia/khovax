@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cq0t3lto68e2e"
-path="res://.godot/imported/pebble.glb-505d932d49e2da94debc620a520fcdae.scn"
+uid="uid://cl2qimlgoshfe"
+path="res://.godot/imported/pebble.glb-d6ec30318dc0fd0eb21b5d7ebcc495a3.scn"
 
 [deps]
 
-source_file="res://assets/quaternius-pebble/pebble.glb"
-dest_files=["res://.godot/imported/pebble.glb-505d932d49e2da94debc620a520fcdae.scn"]
+source_file="res://assets/quaternius-items/pebble.glb"
+dest_files=["res://.godot/imported/pebble.glb-d6ec30318dc0fd0eb21b5d7ebcc495a3.scn"]
 
 [params]
 
