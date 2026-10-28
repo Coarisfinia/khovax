@@ -35,15 +35,22 @@ func on_ground() -> bool:
 	return false
 
 
-## A seal on a tile anyone walks seals nothing, and one whose person the region piece doesn't place
-## has nobody to open it.
+## A seal on a tile anyone walks seals nothing, one whose person the region piece doesn't place has
+## nobody to open it, and one with no walkable tile beside it has nowhere for them to stand.
 func problem_in(region: Region) -> String:
 	var people: Array[String] = []
 	var placed: Dictionary[Vector2i, String] = region.placed(NpcPlacements.KIND)
 	for tile: Vector2i in placed:
 		people.append(NpcSpot.read(placed[tile]).id)
 	var sealed: Dictionary[Vector2i, String] = region.placed(KIND)
+	var standing: Array[String] = []
 	for tile: Vector2i in sealed:
+		for direction: Vector2i in Hex.DIRECTIONS:
+			if region.is_walkable(tile + direction) and not standing.has(opener(sealed[tile])):
+				standing.append(opener(sealed[tile]))
+	for tile: Vector2i in sealed:
+		if not standing.has(opener(sealed[tile])):
+			return "the seal on %s has no walkable tile beside it" % tile
 		if region.is_walkable(tile):
 			return "the seal on %s is on a tile anyone walks" % tile
 		if not people.has(opener(sealed[tile])):

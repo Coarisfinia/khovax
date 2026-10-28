@@ -73,6 +73,18 @@ func try_step(state: GameState, walker: Entity, direction: int) -> bool:
 	return _start_move(state, walker, current, direction)
 
 
+## Puts `walker`, which has a walk, standing on `tile` at once, ending a step under way: for a rule
+## that moves it where nobody sees it walk (a guide gone ahead in an instance everybody left,
+## #1588).
+func place(walker: Entity, tile: Vector2i) -> void:
+	var current: Walk = walks.get(walker.id)
+	if current == null:
+		return
+	walker.tile = tile
+	current.from = tile
+	current.ticks_left = 0
+
+
 ## The entity's walk, or null when it doesn't walk.
 func walk(entity_id: int) -> Walk:
 	return walks.get(entity_id)

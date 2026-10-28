@@ -4,10 +4,10 @@ extends RefCounted
 ## through them, and opens their seal once led near it: its boulders turn to ground and the guide
 ## raises `<their id>_opened`, so the player walks on through. A world saved mid-escort comes back
 ## the same. A player who leaves through the exit first leaves the guide to go ahead: alone, the
-## guide
-## is at the seal and opens it in that same tick; with another player still there, they walk there
-## and open it. Either way the rules raise that the guide went ahead for the player who left. A seal
-## on a tile anyone walks, or one whose person the region piece doesn't place, is refused.
+## guide is at the seal and opens it in that same tick; with another player still there, they walk
+## there and open it. Either way the rules raise that the guide went ahead for the player who left.
+## A seal on a tile anyone walks, one whose person the region piece doesn't place, or one with
+## nowhere beside it to stand, is refused.
 
 const SEED: int = 5
 const GUIDE: String = "teska_na_amvrel"
@@ -117,7 +117,8 @@ static func _go_ahead_seen() -> String:
 	return ""
 
 
-## A seal on ground, and one whose person the corridor doesn't place, are refused.
+## A seal on ground, one whose person the corridor doesn't place, and one walled in by rock, with
+## nowhere for the guide to stand, are refused.
 static func _refuse_bad_seals() -> String:
 	var on_ground: String = LEGEND.replace("boulder; sealed", "ground; sealed")
 	if FlowSteps.region(CORRIDOR, on_ground).problem.is_empty():
@@ -125,6 +126,8 @@ static func _refuse_bad_seals() -> String:
 	var nobody: String = LEGEND.replace("until teska_na_amvrel", "until nobody_here")
 	if FlowSteps.region(CORRIDOR, nobody).problem.is_empty():
 		return "a seal of a person the corridor doesn't place was read"
+	if FlowSteps.region(CORRIDOR.replace("🟫🪨🟫", "⬛🪨⬛"), LEGEND).problem.is_empty():
+		return "a seal walled in by rock was read"
 	return ""
 
 

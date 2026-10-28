@@ -109,10 +109,19 @@ func _start_following(state: GameState, movement: MovementFeature, npcs: NpcFeat
 ## Lets the guide `guide`, standing, open their seal beside them, or take their next step: after
 ## their player, or to their seal once led near it or on their own.
 func _lead(state: GameState, movement: MovementFeature, guide: int, leaving: Array[int]) -> void:
-	var walker: Entity = state.entity(guide)
-	if escorts[guide] == OPENED or movement.walk(guide).is_moving():
+	if escorts[guide] == OPENED:
 		return
+	var walker: Entity = state.entity(guide)
 	var beside: Array[Vector2i] = _beside_seal(state, movement, guide)
+	if escorts[guide] == AHEAD and _nobody_stays(state, leaving):
+		# Nobody is left to see them walk, and the instance won't step again until someone comes:
+		# they're there at once, unseen, even mid-step.
+		var there: bool = beside.is_empty() or beside.has(walker.tile)
+		movement.place(walker, walker.tile if there else beside[0])
+		_open(state, guide)
+		return
+	if movement.walk(guide).is_moving():
+		return
 	if beside.has(walker.tile):
 		_open(state, guide)
 		return
@@ -127,13 +136,6 @@ func _lead(state: GameState, movement: MovementFeature, guide: int, leaving: Arr
 				)
 			return
 		escorts[guide] = AHEAD
-	if _nobody_stays(state, leaving):
-		# Nobody is left to see them walk, and the instance won't step again until someone comes:
-		# they're there at once, unseen.
-		if not beside.is_empty():
-			walker.tile = beside[0]
-		_open(state, guide)
-		return
 	var _went: bool = movement.try_step(
 		state,
 		walker,
