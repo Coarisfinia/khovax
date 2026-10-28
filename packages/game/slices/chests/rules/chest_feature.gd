@@ -78,6 +78,9 @@ func hash_values() -> Array[int]:
 	for chest: Vector2i in chests:
 		values.append(chest.x)
 		values.append(chest.y)
+		# What it gives: the item it holds, or 0 for a roll on the chest table; the region's own
+		# hash doesn't cover what its legend places.
+		values.append(StateHash.name_code(held[chest]) if held.has(chest) else 0)
 	values.append(loot_spots.size())
 	for spot: Vector2i in loot_spots:
 		values.append_array([spot.x, spot.y])

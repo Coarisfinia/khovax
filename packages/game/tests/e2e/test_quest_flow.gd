@@ -1190,8 +1190,9 @@ func _check_side_quest() -> String:
 
 
 ## The escort's quest (#1592) starts on talking to its guide in their pass, not to someone else nor
-## elsewhere, and goes on to their seal, through the dungeon to its shrine, and ends at the chest
-## there. Only a side quest's start waits on talking to a person, who must be one.
+## elsewhere, and goes on to their seal, through the dungeon, and ends in its inner shrine, around
+## the chest that holds Vis'omera, whoever opened it. Only a side quest's start waits on talking to
+## a person, who must be one.
 func _check_escort() -> String:
 	var quests: QuestTracker = QuestTracker.new()
 	quests.book = QuestContent.load_quests().quests
@@ -1209,10 +1210,9 @@ func _check_escort() -> String:
 		QuestFact.new(QuestStep.REACHED, "sealed_passage", ESCORT_PASS),
 		QuestFact.new(QuestStep.INSTANCE_ENTERED, ESCORT_DUNGEON, ESCORT_DUNGEON),
 		QuestFact.new(QuestStep.REACHED, "inner_shrine", ESCORT_DUNGEON),
-		QuestFact.new(QuestStep.OPENED, "", ESCORT_DUNGEON),
 	])
 	if not quests.finished.has(ESCORT):
-		return "the escort's quest didn't end at the dungeon's chest" + applied
+		return "the escort's quest didn't end in the dungeon's inner shrine" + applied
 	var text: String = "{\"id\": \"x\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
 	var talk: String = "{\"condition\": \"talked\", \"person\": \"%s\"}"
 	var end: String = "{\"condition\": \"opened\", \"ends\": \"x\"}"
