@@ -359,7 +359,10 @@ func _check_unplaced_models() -> String:
 		if unplaced == null:
 			return "%s doesn't load" % path
 		var shown: Node = unplaced.instantiate()
-		var meshes: int = shown.find_children("*", "MeshInstance3D", true, false).size()
+		var meshes: int = 0
+		for mesh: MeshInstance3D in shown.find_children("*", "MeshInstance3D", true, false):
+			if mesh.mesh != null and mesh.visible:
+				meshes += 1
 		shown.free()
 		if meshes == 0:
 			return "%s shows no mesh" % path

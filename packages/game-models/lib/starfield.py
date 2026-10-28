@@ -27,7 +27,8 @@ import numpy
 DEEP = numpy.array((0.010, 0.014, 0.050))
 HIGH = numpy.array((0.060, 0.030, 0.120))
 HAZE = numpy.array((0.140, 0.100, 0.220))
-# The haze band's great circle (its normal) and its half width, as the sine of an angle.
+# The haze band's great circle (its normal, in the texture's frame: see Sky) and its half width,
+# as the sine of an angle.
 HAZE_NORMAL = (0.35, 0.20, 0.915)
 HAZE_WIDTH = 0.28
 
@@ -64,7 +65,9 @@ class Sky:
         cos_lat = numpy.array([math.cos(lat) for lat in self.lats])
         sin_lat = numpy.array([math.sin(lat) for lat in self.lats])
         # Every texel's direction on the unit sphere, in the texture's own frame (x toward
-        # longitude 0, y toward longitude 90 degrees, z up).
+        # longitude 0, y toward longitude 90 degrees, z up): the model's frame turned about its
+        # up axis (`lonlat`: longitude 0 is the model's front, -Y), so every star and the haze are
+        # placed and drawn by longitude and latitude alike, and keep their shapes on the model.
         self.x = numpy.outer(cos_lat, cos_lon)
         self.y = numpy.outer(cos_lat, sin_lon)
         self.z = numpy.outer(sin_lat, numpy.ones(width))
