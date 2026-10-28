@@ -31,6 +31,9 @@ extends RefCounted
 
 ## A model a species can wear (#1223).
 const MODEL: String = "res://assets/mana-wolf/mana_wolf.glb"
+## The tile blueprints whose pack's model is drawn larger, in hundredths: too small to read
+## from the camera as the pack made it.
+const SCALED: Dictionary[String, int] = { "stump": 400, "cracked_rock": 350, "rubble": 400 }
 ## A species file's speed, abilities (#222), name (#351), strike type (#626), codex entry (#1173),
 ## behaviour traits (#1200) and model (#1223), as a valid species ends.
 const KIT: String = (
@@ -678,7 +681,7 @@ func _check_tiles() -> String:
 			return "tile blueprints %s and %s share one symbol" % [symbols[tile.symbol], tile.id]
 		symbols[tile.symbol] = tile.id
 		var missing: bool = not tile.model.is_empty() and not ResourceLoader.exists(tile.model)
-		if missing or tile.scale != (400 if tile.id == "stump" else TileBlueprint.FULL_SCALE):
+		if missing or tile.scale != SCALED.get(tile.id, TileBlueprint.FULL_SCALE):
 			return "tile blueprint %s's model %s doesn't exist, or it's drawn at scale %s" % [
 				tile.id,
 				tile.model,

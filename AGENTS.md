@@ -590,9 +590,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, do A.
 - **Every item has a 3D model** (owner, #1579, #1581): gear, unique items, anything the player
-  holds, named in its data (`model`). The content flow checks the gear's; the materials still lack
-  theirs (#1585, #1586). For now each comes from a free source whose license allows it here (B
-  above), like the trees and other non-monster models.
+  holds, named in its data (`model`). The content flow checks the gear's; a material's is optional
+  until every material has one (#1585, #1586). For now each comes from a free source whose license
+  allows it here (B above), like the trees and other non-monster models.
+- **Item models look held** (owner's ground rule, #1596): an item's model (gear, unique items,
+  materials, anything the player holds or carries) looks like something a hand holds or a player
+  carries, such as a pebble for stone. A model with a flat base, made to stand on the ground, is a
+  prop or a tile's decoration, never an item in the inventory.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it

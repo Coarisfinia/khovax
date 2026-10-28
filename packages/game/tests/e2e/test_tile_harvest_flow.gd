@@ -6,7 +6,9 @@ extends RefCounted
 ## without the press nothing happens. A harvest going on survives a save. Every tile kind that can
 ## be harvested names a tile table and a depleted kind that exist, and an instance without such
 ## tiles has no harvesting. A moss patch (#1490) harvested by a player standing on it drops moss and
-## leaves plain mana moss. In a session, this machine's player's crystals burst from the tile and
+## leaves plain mana moss; cracked rock (#1546) harvested by a player next to it drops stone, a
+## material with a model, and leaves rubble. In a session, this machine's player's crystals burst
+## from the tile and
 ## land in their profile; another player's don't. On a touch screen the interact button (#1488)
 ## shows only while a press would begin a harvest, and the Controls tab shows a tap for it. A tap
 ## on gems a few tiles off (#1508, TapWalk) walks the player beside them and harvests them; a tap on
@@ -18,6 +20,9 @@ const SEED: int = 7
 const FOREST: String = "ivenwhal_wudhen"
 const GEMS: String = "gems"
 const MOSS_PATCH: String = "moss_patch"
+## The foot of the mountain pass, with cracked rock in its east wall (#1546).
+const PASS: String = "brekhal_varn"
+const CRACKED_ROCK: String = "cracked_rock"
 ## Where the flow's profile is saved, apart from the player's own.
 const SAVE_PATH: String = "user://test_tile_harvest_profile.json"
 ## This machine's player's crystals from the gems the session step harvests.
@@ -31,7 +36,7 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_harvested()
 	if result.is_empty():
-		result = _check_moss_patch()
+		result = _check_moss_and_rock()
 	if result.is_empty():
 		result = _check_stopped()
 	if result.is_empty():
@@ -63,8 +68,14 @@ func _check_content() -> String:
 	for table: LootTable in LootContent.load_loot_tables().loot_tables.values():
 		if table.kind == LootTable.TILE and not yielded.has(table.id):
 			return "no tile kind yields the tile table %s" % table.id
-	if not TileKinds.harvested_by_hand(GEMS) or not TileKinds.harvested_by_hand(MOSS_PATCH):
-		return "gems or moss patches can't be harvested by hand"
+	for kind: String in [GEMS, MOSS_PATCH, CRACKED_ROCK]:
+		if not TileKinds.harvested_by_hand(kind):
+			return "%s can't be harvested by hand" % kind
+	if not MaterialContent.load_materials().ids.has("stone"):
+		return "stone isn't a material that loads with its model"
+	var no_model: String = '{ "id": "stone", "model": "res://assets/none.glb" }'
+	if MaterialContent.new().add("stone", no_model).is_empty():
+		return "a material whose model doesn't exist loaded"
 	return ""
 
 
@@ -107,33 +118,50 @@ func _check_harvested() -> String:
 	return ""
 
 
-## A player standing on a moss patch harvests it: once the ticks are up it turns into plain mana
-## moss the instance keeps, and both players get their moss.
-func _check_moss_patch() -> String:
-	var state: GameState = InstanceBlueprints.create(FOREST, SEED, 2)
-	var patches: Array[Vector2i] = []
+## A moss patch, stood on, and cracked rock, from the ground west of it, are harvested by hand.
+func _check_moss_and_rock() -> String:
+	var result: String = _check_by_hand(FOREST, MOSS_PATCH, "mana_moss", "moss", Vector2i.ZERO)
+	if result.is_empty():
+		result = _check_by_hand(PASS, CRACKED_ROCK, "rubble", "stone", Hex.DIRECTIONS[3])
+	return result
+
+
+## A player harvests the first tile of `kind` in `instance` by hand, standing on it, or next to it
+## when `beside` is the step from the tile to where they stand: once the ticks are up it turns into
+## `becomes`, which the instance keeps, and both players get 1 or 2 of `item`.
+func _check_by_hand(
+		instance: String,
+		kind: String,
+		becomes: String,
+		item: String,
+		beside: Vector2i,
+) -> String:
+	var state: GameState = InstanceBlueprints.create(instance, SEED, 2)
+	var tiles: Array[Vector2i] = []
 	for tile: Vector2i in state.region.terrain:
-		if state.region.terrain[tile] == MOSS_PATCH:
-			patches.append(tile)
-	if patches.is_empty():
-		return "the mana forest has no moss patch"
-	patches.sort()
-	var patch: Vector2i = patches[0]
-	state.player(0).tile = patch
+		if state.region.terrain[tile] == kind:
+			tiles.append(tile)
+	if tiles.is_empty():
+		return "%s has no %s" % [instance, kind]
+	tiles.sort()
+	var target: Vector2i = tiles[0]
+	state.player(0).tile = target + beside
+	if TileHarvestFeature.target_of(state, state.player(0)) != target:
+		return "a press where the player stands wouldn't harvest the %s" % kind
 	var events: Array[RefCounted] = _press(state)
 	for _tick: int in TileHarvestFeature.HARVEST_TICKS:
 		events.append_array(_stand(state))
 	var harvested: Array[TileHarvested] = _harvested(events)
-	if harvested.size() != 1 or harvested[0].tile != patch or harvested[0].kind != MOSS_PATCH:
-		return "the moss patch under the player wasn't harvested: %s" % [events]
-	if state.region.terrain[patch] != "mana_moss" or not state.changed_tiles.has(patch):
-		return "the harvested moss patch didn't turn into mana moss the instance keeps"
+	if harvested.size() != 1 or harvested[0].tile != target or harvested[0].kind != kind:
+		return "the %s wasn't harvested: %s" % [kind, events]
+	if state.region.terrain[target] != becomes or not state.changed_tiles.has(target):
+		return "the harvested %s didn't turn into %s the instance keeps" % [kind, becomes]
 	var loot: Dictionary[int, Dictionary] = harvested[0].loot
 	for slot: int in [0, 1]:
 		var rolled: Dictionary = loot.get(slot, {})
-		var amount: int = rolled.get("moss", 0)
+		var amount: int = rolled.get(item, 0)
 		if rolled.size() != 1 or amount < 1 or amount > 2:
-			return "player %d's loot isn't a roll on the moss patch's table: %s" % [slot, loot]
+			return "player %d's loot isn't a roll on the %s's table: %s" % [slot, kind, loot]
 	return ""
 
 

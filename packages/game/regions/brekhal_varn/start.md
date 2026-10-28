@@ -1,6 +1,6 @@
 # Brekhal Varn: foot
 
-Brekhal Varn's start piece (#689): the foot of the pass, a valley between rock walls. Its northeast edge leads back to Edhra Tewk across three tiles, its southeast edge leads on to Ivenwhal Wudhen, the mana forest, across three more (#1218), and it joins the rest of the pass to the west across a whole edge. Players 1 to 4 begin at the way in.
+Brekhal Varn's start piece (#689): the foot of the pass, a valley between rock walls. Its northeast edge leads back to Edhra Tewk across three tiles, its southeast edge leads on to Ivenwhal Wudhen, the mana forest, across three more (#1218), and it joins the rest of the pass to the west across a whole edge. Players 1 to 4 begin at the way in. Two outcrops of cracked rock stand in its east wall, where players break off stone by hand (#1546).
 
 ## Tiles
 
@@ -8,10 +8,10 @@ Brekhal Varn's start piece (#689): the foot of the pass, a valley between rock w
      🟫🚪🚪🚪🟫⬛
     ⬛🟫🟢🔴🟫🟫⬛
    ⬛🟫🟡🔵🪨🟫⬛⬛
-  ⬛⬛🟫🟫🟫🟫🟫⬛⬛
+  ⬛⬛🟫🟫🟫🟫🟫🧱⬛
  🟫⬛🟫🟫🪨🟫🟫⬛⬛⬛
 🟫🟫🟫🟫🟫🟫🟫🪨⬛⬛⬛
- 🟫🟫🟫🟫👾🟫🟫⬛⬛⬛
+ 🟫🟫🟫🟫👾🟫🟫🧱⬛⬛
   🟫🟫🟫🟫🟫🟫⬛⬛⬛
    🔗🟫🟫🟫🟫⬛⬛⬛
     🟫🟫🟫🟫🟫🟫⬛
@@ -31,3 +31,4 @@ Brekhal Varn's start piece (#689): the foot of the pass, a valley between rock w
 - `🟢`: where player 3 starts
 - `🟡`: where player 4 starts
 - `🪨`: boulder
+- `🧱`: cracked_rock

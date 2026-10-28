@@ -11,6 +11,11 @@
 			"description": "Stable, never reused: lowercase words joined by underscores.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"model": {
+			"description": "Its 3D model (every item has one, #1579): a res:// path to a glTF model under assets/ that exists. Optional until every material has one (#1585, #1586).",
+			"type": "string",
+			"pattern": "^res://assets/.+[.](gltf|glb)$"
 		}
 	}
 }

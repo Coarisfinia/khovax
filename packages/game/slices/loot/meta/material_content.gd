@@ -34,6 +34,10 @@ func add(file_id: String, text: String) -> String:
 	var why: String = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if why.is_empty():
 		why = Content.id_problem(id, file_id)
+	if (why.is_empty()
+			and data.has("model")
+			and not Content.is_model(Content.text_of(data["model"]))):
+		why = "its model is no glTF model under %s that exists (#1579)" % Content.MODELS
 	if why.is_empty():
 		ids.append(id)
 	return why
