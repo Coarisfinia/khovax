@@ -50,7 +50,8 @@ way; add to it when something bites.
 - **The owner's login is looked up, never written down:** the repository's one human admin (the
   repository's own owner is the organisation, not a person). The lookup fails unless there is
   exactly one:
-  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end')`.
+  `OWNER=$(agent-gh api "repos/Coarisfinia/khovax/collaborators?permission=admin" --jq '[.[] | select(.type == "User")] | if length == 1 then .[0].login else error("expected one human admin") end') && export OWNER`
+  (assigned first, so a failed lookup isn't hidden behind `export`'s success).
 - **Pull requests and comments:** `agent-gh pr create --assignee "$OWNER" …`, `agent-gh pr comment …`.
 - **What the bot doesn't do:** change repository settings, or merge without the owner's approval.
   After the approval it enables auto-merge, or merges itself when auto-merge stalls (below).
@@ -164,7 +165,8 @@ an existing issue is a comment there, and that issue gets the label too. Once th
 every question in an issue, remove its `question` label (owner's rule, #737).
 
 **Obvious choices aren't asked** (owner's ground rule, #806): if the choice is obvious, don't ask;
-file the task as a plain issue (no `question` label) and queue it.
+file the task as a plain issue (no `question` label) and queue it. Investigating a cause is part
+of the work, never a question.
 
 **A decision issue, once decided, is split into follow-up issues and closed** (owner's rule): one
 issue per thing to build, each carrying the decisions it needs, and the decision issue links them.
@@ -251,6 +253,36 @@ background; only wait in the foreground for a result the very next step needs.
   resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
   included, except one that waits on the owner's decision: that one is answered and left open
   (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
+- **A draft only when there is something to see** (owner, #1566, #1569): a pull request that
+  changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model skill)
+  or UI (anything the player sees or touches on screen) **and** shows the owner something in its
+  description (renders, screenshots, a before and after) is opened with `agent-gh pr create
+  --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>` and queue it
+  as usual. Every other pull request is not a draft: CodeRabbit reviews it, and its "Merge low-risk
+  changes" rule may merge it (wanted), except a model pull request or one that changes the merge
+  rules, which still wait for the owner's approval (below).
+- **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
+  `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
+  for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
+  agents and the watcher share the one installation, and a short-window limit (GitHub's secondary
+  limits count REST points per minute) refuses a burst. GraphQL has its own quota and went
+  through. Find the thread's id from the comment's id, then reply:
+
+  ```sh
+  T=$(agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id comments(first:100){nodes{databaseId}}}}}}}' \
+    --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(any(.comments.nodes[]; .databaseId == <comment-id>)) | .id')
+  agent-gh api graphql -f t="$T" -f b='Resolved: fixed in <sha>, …' --jq .data.addPullRequestReviewThreadReply.comment.url \
+    -f query='mutation($t:ID!,$b:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$t,body:$b}){comment{url}}}'
+  ```
+
+  An empty `T` means the comment wasn't found: never send the reply then. The lookup reads the
+  first 100 threads and 100 comments each; a pull request with more pages them with `after:`.
+
+  Read reviews with `agent-gh pr view <n> --json reviews` (GraphQL) too. If any call still gets a
+  403 or 429 about a rate limit, or a GraphQL error of type `RATE_LIMITED` (GraphQL reports it with
+  HTTP 200), wait the seconds its `retry-after` header gives (`agent-gh api -i`
+  shows it; without it, until `x-ratelimit-reset` when `x-ratelimit-remaining` is 0, else a minute)
+  and retry once; never retry in a loop.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
@@ -485,6 +517,13 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   the player first enters its territory, so it never shows before they've been there. It asks to
   fight monsters only: battling a humanoid's monsters in a trainer fight is fine, the humanoid
   themselves never (owner, #638). CI checks what it can (#639).
+- **Powerful unique items are found, never handed over** (owner, #1553): no person gives one to
+  the player (no gift, no shop). It's obtained in the world, possibly as a quest's reward, through
+  something tied to the quest there. How each one is obtained is decided case by case, in its own
+  issue; don't invent one. Two patterns the owner gave as examples: a person follows the player to
+  a spot and unlocks it (going there alone, and saying so, if the player leaves the instance); or a
+  boss chest in the world, a quest pointing at it until it's found, then a second piece to find and
+  a person who joins the two.
 - **The player only ever sees their current rank with a faction** (owner's rule, on #484): never
   the names of the other ranks, which would spoil what's ahead. Each faction has its own design for
   its ranks.
@@ -537,9 +576,19 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
-- **Models follow the model skill** (owner): every 3D model is built, rigged, textured and checked
-  from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender 5.2.2
-  headless from a committed script in `packages/game-models/`, then Godot).
+- **Models follow the model skill** (owner): every 3D model is placed, rigged, textured and
+  checked from all sides and in game by the playbook in `.claude/skills/model/SKILL.md` (Blender
+  5.2.2 headless from a committed script in `packages/game-models/`, then Godot).
+- **New models come only from the owner** (owner's base rule, #1568): agents never make a new model
+  from scratch. Its source (the mesh, and the rig if it has one) comes from the owner, or for a
+  prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
+  work on the model tooling.
+- **If you need a new model** (owner's ground rule, #1575):
+  - A. **A new monster:** file a `question` issue for the owner with its vibe, its type and 20 or
+    more base prompts for the image generator, as diverse and weird as possible. The owner makes
+    the model from them.
+  - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
+    if there is none, do A.
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
@@ -679,8 +728,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
      (`DISMISS_STALE_BOT_REVIEWS=1`, owner, #1551) once the owner has approved, CI is green and
      every review thread is settled, whether it was left on an older commit or is on the head and
      was settled with `Resolved:` replies, and reports `REVIEW_DISMISSED`. Agents don't run
-     `dismiss-stale-coderabbit` (#1390) any more. If the watcher reports `REVIEW_DISMISS_FAILED`
-     again and again, tell the owner on the pull request.
+     `dismiss-stale-coderabbit` (#1390) any more. The watcher reports `REVIEW_DISMISS_FAILED`
+     only once per review, so on the first one tell the owner on the pull request at once.
 
   Fix what a change request on the head commit asks, then settle each of its threads with a
   `Resolved:` reply: CodeRabbit's review of the fix push replaces it, or the watcher dismisses it
@@ -706,8 +755,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
   **Model pull requests always wait for the owner** (owner, #1381), however low CodeRabbit rates
   them: any that changes a model the model skill builds, meaning a `.glb`, its rig, its clips, its
-  textures, a model's script or the shared library in `packages/game-models/`. CodeRabbit can't
-  judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
+  textures, a model's script, the shared library in `packages/game-models/` or the model skill.
+  CodeRabbit can't judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
   (#1376).
   This prints the newest assessment's merge risk, security risk (`none` when not given) and
   assessed commit, then the head commit and CodeRabbit's latest review:
