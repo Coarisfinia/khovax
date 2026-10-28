@@ -11,7 +11,9 @@ extends RefCounted
 const SLICES: String = "res://slices/"
 ## Creature models built before the species that wears them (#1476): checked like the models the
 ## species name, so each is ready to wear, until its species names it and it leaves this list.
-const UNWORN_MODELS: Array[String] = ["res://assets/drakkudor/drakkudor.glb"]
+const UNWORN_MODELS: Array[String] = [
+	"res://assets/drakkudor/drakkudor.glb", "res://assets/fohossa/fohossa.glb",
+]
 
 
 func run(tree: SceneTree) -> String:

@@ -13,7 +13,11 @@ are fixed there:
   part along. Those weights go, and what's left is the part's own.
 - **a turned-back end** (#1539): the generator ends a chain with bones that turn back on it (a
   leg's last bones climb back up from its sole, a stalk's come back down from its tip), holding
-  few weights. Their weights go to the bone before them, and they go.
+  few weights. Their weights go to the bone before them, and they go. So does an **empty end**
+  (#1619): a last bone that weighs almost none of its part (a leg's toe bone reaching below the
+  sole), so the bone holding the end becomes the paw.
+- **a shared piece** (#1619): where a long trunk runs between two forks, its belly joins every
+  leg below it into one piece; it is split into one part per chain by the weights (`split`).
 
 Vertices inside a fork's ball keep their weights: that's where the parts blend into the body.
 Then every bone is named to the library's scheme by what its chain moves (`<pair>_leg_NN.<side>`
@@ -54,6 +58,8 @@ PAIRS = {2: ("front", "hind"), 3: ("front", "mid", "hind")}
 LEG_PARTS = ("thigh", "shin", "paw")
 # A bone turning from the one before it by more than this (radians) turns back on the chain.
 TURNED_BACK = math.pi / 2
+# A chain's last bone that weighs most fewer than this share of its part's vertices is an empty end.
+EMPTY_END = 0.1
 # The root the clips move: on the ground between the feet, pointing up, deforming nothing.
 ROOT_LENGTH = 0.3
 
@@ -152,6 +158,53 @@ def parts(skin, balls):
             continue
         fork = min(balls, key=lambda ball: min((Vector(point) - ball[0]).length for point in piece) - ball[1])
         out.append(Part(vertices, fork))
+    return out
+
+
+def _dominant(skin, leaves):
+    """{vertex index: the leaf chain whose bone weighs it most}, for vertices a leaf chain's bone
+    weighs most."""
+    owner = {name: chain for chain in leaves for name in chain.bones}
+    names = {group.index: group.name for group in skin.vertex_groups}
+    out = {}
+    for vertex in skin.data.vertices:
+        if vertex.groups:
+            chain = owner.get(names[max(vertex.groups, key=lambda group: group.weight).group])
+            if chain is not None:
+                out[vertex.index] = chain
+    return out
+
+
+def split(found, leaves, skin, bones, balls):
+    """Splits a piece that several leaf chains call home (#1619): where a long trunk runs between
+    two forks, its belly joins every leg below it into one piece outside the forks' balls. A
+    chain's home is the piece holding most of the vertices its bones weigh most; a piece that is
+    home to two chains or more becomes one part per chain, the vertices that chain weighs most,
+    each growing from the fork its chain hangs from. The piece's other vertices (the trunk's)
+    keep their weights. A piece one chain calls home stays whole, whatever weights reach into
+    it: those are bleeds, fixed in adopt."""
+    dominant = _dominant(skin, leaves)
+    homes = {}
+    for chain in leaves:
+        mine = {index for index, owner in dominant.items() if owner is chain}
+        counts = [(len(mine.intersection(part.vertices)), index) for index, part in enumerate(found)]
+        if counts and max(counts)[0] > 0:
+            homes.setdefault(max(counts)[1], []).append(chain)
+    out = []
+    for index, part in enumerate(found):
+        chains_ = homes.get(index, [])
+        if len(chains_) < 2:
+            out.append(part)
+            continue
+        for chain in chains_:
+            vertices = sorted(vertex for vertex in part.vertices if dominant.get(vertex) is chain)
+            start = bones[chain.parent.bones[-1]].tail_local if chain.parent is not None else part.fork[0]
+            fork = min(balls, key=lambda ball: (ball[0] - start).length)
+            piece = Part(vertices, fork)
+            piece.chain, chain.part = chain, piece
+            out.append(piece)
+        print("SPLIT a piece of %d vertices that %d chains call home into their parts: %s"
+              % (len(part.vertices), len(chains_), ", ".join(chain.name for chain in chains_)))
     return out
 
 
@@ -315,6 +368,17 @@ def turned_back(chain, bones):
     return 0
 
 
+def empty_end(chain, skin):
+    """Whether `chain`'s last bone weighs most fewer than EMPTY_END of its part's vertices."""
+    last = skin.vertex_groups.get(chain.bones[-1])
+    if last is None:
+        return True
+    held = sum(1 for index in chain.part.vertices
+               if skin.data.vertices[index].groups
+               and max(skin.data.vertices[index].groups, key=lambda group: group.weight).group == last.index)
+    return held < EMPTY_END * len(chain.part.vertices)
+
+
 def fold(rig, skin, chain, count):
     """Drops `chain`'s last `count` bones, their weights going to the bone before them."""
     dropped, kept = chain.bones[-count:], chain.bones[-count - 1]
@@ -459,7 +523,7 @@ def adopt(rig, skin, scale=1.0):
     leaves = [chain for chain in every if not children(chain, every)]
     balls = forks(every, bones)
     # A rig without a fork (one chain) has no parts to tell apart: it is only named and placed.
-    found = parts(skin, balls) if balls else []
+    found = split(parts(skin, balls), leaves, skin, bones, balls) if balls else []
     match(leaves, found, skin, bones)
     print("RIG %d bones in %d chains; %d parts outside the forks" % (len(bones), len(every), len(found)))
     for part in found:
@@ -475,6 +539,14 @@ def adopt(rig, skin, scale=1.0):
             folded.add(chain.name)
             fixes.append("FOLDED %s: its last %d bones turned back on it; their weights went to %s"
                          % (chain.name, loose, chain.bones[-1]))
+        elif chain.part is not None and len(chain.bones) > 2 and empty_end(chain, skin):
+            # Its last bone moves almost none of its part (a leg's toe bone reaching below the
+            # sole, #1619): the bone before it holds the end, so it becomes the paw the clips plant
+            # and whose part the ground checks leave to the legs.
+            fold(rig, skin, chain, 1)
+            folded.add(chain.name)
+            fixes.append("FOLDED %s: its last bone moved almost none of its part; its weights went to %s"
+                         % (chain.name, chain.bones[-1]))
     for chain in leaves:
         if chain.part is None:
             print("UNMATCHED %s: no part of the mesh of its own; kept as it is" % chain.name)

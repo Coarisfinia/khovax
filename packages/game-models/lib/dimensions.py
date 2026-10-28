@@ -20,6 +20,12 @@ long-legged wolf to a squat toad, and narrow enough to catch a limb that reads a
 A hexapod (`hexapod.armature`, #1476) measures each pair's shin against its thigh: a leg whose
 lower half is a stub or a stilt against its upper half reads as wrong on six legs as on four.
 
+A hoofed quadruped (a foreleg with a `cannon.L` between its forearm and its hoof, #1619, such as
+an adopted generated rig) measures the same three, with ranges of its own: the cannon (the long
+bones of the foot) runs below the forearm, so the foreleg below the elbow is longer against the
+upper arm than a canine's (a horse's about one and a half times), and the hock sits high, so the
+shin is shorter against the thigh, the cannon below the hock taking up the length.
+
 A measure is written as a number against its range ("forearm/upper arm 1.09, range 0.55 to
 1.05"), never an adjective."""
 
@@ -39,10 +45,17 @@ BOUNDS = {
         "shin/thigh": (0.8, 1.3),
         "foreleg/shoulder height": (0.6, 1.0),
     },
+    "hoofed": {
+        "forearm/upper arm": (0.9, 1.6),
+        "shin/thigh": (0.7, 1.3),
+        "foreleg/shoulder height": (0.6, 1.0),
+    },
     "hexapod": {"%s shin/thigh" % pair: (0.6, 1.4) for pair in ("front", "mid", "hind")},
 }
 # The joints that make a rig a quadruped (quadruped.armature), and a hexapod (hexapod.armature).
 QUADRUPED = ("upper_arm.L", "forearm.L", "front_paw.L", "thigh.L", "shin.L", "hock.L")
+# A hoofed quadruped is a quadruped with a cannon between its forearm and its hoof.
+HOOFED = "cannon.L"
 HEXAPOD = tuple("%s_%s.L" % (pair, part) for pair in ("front", "mid", "hind") for part in ("thigh", "shin", "paw"))
 
 
@@ -78,7 +91,7 @@ def body_plan(rig):
         return lacking
     lacking = [name for name in QUADRUPED if name not in names]
     if not lacking:
-        return "quadruped"
+        return "hoofed" if HOOFED in names else "quadruped"
     return None if len(lacking) == len(QUADRUPED) else lacking
 
 

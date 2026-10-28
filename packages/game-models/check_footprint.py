@@ -35,7 +35,7 @@ from game_shared import log  # noqa: E402
 from lib import footprint, imported, known  # noqa: E402
 
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
-LARGE = set()
+LARGE = {"fohossa"}
 
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
