@@ -2,30 +2,30 @@ class_name TextTags
 extends RefCounted
 ## Typed placeholder tags in player-facing text (#733): `${MONSTER:ombulumo}` names a species by
 ## its id and shows its current name ("Ombulumo"), so renaming one changes every text at once. A
-## tag has a kind (MONSTER, FACTION, GEAR, PERSON, REALM, PLACE) and an id of that kind; the content
-## flow refuses a text whose tag has an unknown kind or an id that doesn't exist. Tags are resolved
-## when a text is
-## shown (owner, #733), never when content loads, so saves and content keep the tags and never a
-## resolved name. A tag shows the name as written: a plural or an article is part of the text
-## around it.
+## tag has a kind (MONSTER, FACTION, GEAR, PERSON, REALM, PLACE, UNIQUE_ITEM) and an id of that
+## kind; the content flow refuses a text whose tag has an unknown kind or an id that doesn't exist.
+## Tags are resolved when a text is shown (owner, #733), never when content loads, so saves and
+## content keep the tags and never a resolved name. A tag shows the name as written: a plural or an
+## article is part of the text around it.
 
 ## Each kind of tag, by the word that names it in a tag: a species, a faction, a piece of gear, a
 ## person (#1005), a realm and a place, an instance a realm draws (#1175) or a variant's region of
-## its own (#1448).
+## its own (#1448), and a unique item, gear of rarity bound (#1449), which GEAR names too.
 const MONSTER: String = "MONSTER"
 const FACTION: String = "FACTION"
 const GEAR: String = "GEAR"
 const PERSON: String = "PERSON"
 const REALM: String = "REALM"
 const PLACE: String = "PLACE"
+const UNIQUE_ITEM: String = "UNIQUE_ITEM"
 ## A tag: `${`, its kind's word, `:`, an id, `}`.
 const TAG_PATTERN: String = "\\$\\{([A-Z_]+):([a-z][a-z0-9_]*)\\}"
 ## Where any tag starts, well formed or not.
 const TAG_START: String = "${"
 ## The kinds whose names open a codex page when the player selects them (#959): a faction's lexicon
-## entry, a species' bestiary entry (#1173), a person's page (#1005), and a realm's and a place's
-## (#1175).
-const CODEX_KINDS: Array[String] = [FACTION, MONSTER, PERSON, REALM, PLACE]
+## entry, a species' bestiary entry (#1173), a person's page (#1005), a realm's and a place's
+## (#1175), and a unique item's (#1449).
+const CODEX_KINDS: Array[String] = [FACTION, MONSTER, PERSON, REALM, PLACE, UNIQUE_ITEM]
 
 ## The tags read from the game's content, read the first time one is shown.
 static var _shown: TextTags = null
@@ -61,8 +61,11 @@ static func load_tags(
 	for id: String in factions.factions:
 		faction_names[id] = factions.factions[id].name
 	var gear_names: Dictionary[String, String] = {}
+	var unique_names: Dictionary[String, String] = {}
 	for id: String in gear.items:
 		gear_names[id] = gear.items[id].name
+		if gear.items[id].is_unique():
+			unique_names[id] = gear.items[id].name
 	var person_names: Dictionary[String, String] = {}
 	for id: String in people.people:
 		person_names[id] = people.people[id].name
@@ -71,6 +74,7 @@ static func load_tags(
 		FACTION: faction_names,
 		GEAR: gear_names,
 		PERSON: person_names,
+		UNIQUE_ITEM: unique_names,
 	}
 	tags.names.merge(_realm_names())
 	return tags

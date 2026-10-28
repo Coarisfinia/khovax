@@ -1764,7 +1764,8 @@ func _check_dialogs_refused() -> String:
 
 ## The people load (#1005): Teska na Amvrel with their name and codex entry, and every person a
 ## region's legend places is one, and speaks the dialog talking to them opens. A person file with a
-## wrong id, no name, an unknown field, or without a codex entry and gloss is refused.
+## wrong id, no name, an unknown field, or without a codex entry and gloss is refused. The unique
+## items, the other kind whose codex entry lives in its content file, are checked next (#1449).
 func _check_people() -> String:
 	var content: PeopleContent = PeopleContent.load_people()
 	var scout: Person = content.people.get("teska_na_amvrel")
@@ -1790,7 +1791,37 @@ func _check_people() -> String:
 		var refusal: String = Person.parse("x", text).problem
 		if not refusal.begins_with(cases[text]):
 			return "a broken person gave %s, not %s" % [refusal, cases[text]]
-	return ""
+	return _check_unique_items()
+
+
+## The unique items load (#1449): Vis'omera, gear of rarity bound, with its codex entry, and its
+## UNIQUE_ITEM tag shows its name; no other gear has that tag. Unique gear without a codex entry and
+## gloss is refused, and so is other gear with one.
+func _check_unique_items() -> String:
+	var gear: Dictionary[String, GearItem] = GearContent.load_gear().items
+	var charm: GearItem = gear.get("vis_omera")
+	if charm == null or not charm.is_unique() or charm.codex.size() != 2:
+		return "Vis'omera didn't load as a unique item with a codex entry"
+	if charm.codex[1] != "the ward that keeps them near" or not charm.codex[0].begins_with("A "):
+		return "Vis'omera's codex entry reads %s" % [charm.codex]
+	var tags: TextTags = TextTags.load_tags()
+	if (tags.resolve("${UNIQUE_ITEM:vis_omera}") != "Vis'omera"
+			or tags.problem_in("${UNIQUE_ITEM:warding_charm}").is_empty()):
+		return "the unique item tags name %s" % [tags.names.get(TextTags.UNIQUE_ITEM)]
+	var codex: String = ", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}"
+	var unique: String = (
+		"{\"id\": \"x\", \"name\": \"Vis'x\", \"slot\": \"ward\", \"rarity\": \"bound\"%s}"
+	)
+	var cases: Dictionary[String, String] = {
+		unique % "": "a unique item",
+		unique % codex.replace("\"g\"", "\" \""): "its codex needs",
+		(unique % codex).replace("bound", "loose"): "a unique item",
+	}
+	for text: String in cases:
+		var refusal: String = GearItem.parse("x", text).problem
+		if not refusal.begins_with(cases[text]):
+			return "a broken unique item gave %s, not %s" % [refusal, cases[text]]
+	return GearItem.parse("x", unique % codex).problem
 
 
 ## Why a person a region's legend places isn't one of `content`'s people, or doesn't speak the
