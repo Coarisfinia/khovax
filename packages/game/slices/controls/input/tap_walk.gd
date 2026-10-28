@@ -14,6 +14,8 @@ const NO_TILE: Vector2i = Vector2i(-DataReader.MOST, -DataReader.MOST)
 
 ## Whether a walk is under way: the way still has steps, or the harvest is still to press.
 var walking: bool = false
+## The tile the walk under way was tapped on (TapWalkMark marks it), or NO_TILE.
+var goal: Vector2i = NO_TILE
 ## The tile tapped since the last command, or NO_TILE.
 var _tapped: Vector2i = NO_TILE
 ## Where the player stands on the way: where the walk began, then the last tile reached.
@@ -64,6 +66,7 @@ func aim(state: GameState, from: Vector2i, tile: Vector2i) -> bool:
 	_way = found
 	_at = from
 	_harvest = tile if harvestable else NO_TILE
+	goal = tile
 	walking = true
 	return true
 
@@ -110,6 +113,7 @@ func stop() -> void:
 	_way.clear()
 	_harvest = NO_TILE
 	_at = NO_TILE
+	goal = NO_TILE
 	walking = false
 
 
