@@ -836,9 +836,9 @@ func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 
 
 ## Behind the open menu the action buttons hide and take no touch, and presses made while it's
-## open (the special's key) or in the frame it closes (interact, a controller's A that may close
-## it) never reach the first command after it closes (#1509). Closed, the buttons show again; then
-## the menu opens again for the next steps.
+## open (the special's key, place_totem held on as it closes) or in the frame it closes
+## (interact, a controller's A that may close it) never reach the first command after it closes
+## (#1509). Closed, the buttons show again; then the menu opens again for the next steps.
 func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	var special: SpecialButton = main.get_node("Hud/SpecialButton") as SpecialButton
 	var input: LocalInput = main.get_node("LocalInput") as LocalInput
@@ -854,6 +854,7 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	lift.pressed = false
 	special.get_viewport().push_input(lift)
 	Input.action_press(&"special_attack")
+	Input.action_press(&"place_totem")
 	input._process(0.0)
 	Input.action_release(&"special_attack")
 	menu.toggle()
@@ -861,6 +862,7 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	input._process(0.0)
 	Input.action_release(&"interact")
 	var first: Command = input.command(FlowGame.driver(main).state)
+	Input.action_release(&"place_totem")
 	special.lay_out_in(special.get_viewport_rect().size)
 	var shown_closed: bool = special.visible
 	special.touch = false
@@ -869,7 +871,7 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
 	if shown_open or touched:
 		return "the special's button shows or takes a touch behind the open menu"
-	if first.special or first.interact:
+	if first.special or first.interact or first.totem != Command.NO_TOTEM:
 		return "a press made while the menu was open, or as it closed, reached the next command"
 	if not shown_closed:
 		return "the special's button doesn't show again once the menu closes"
