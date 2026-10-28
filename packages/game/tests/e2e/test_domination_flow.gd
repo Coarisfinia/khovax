@@ -1272,6 +1272,24 @@ func _check_passive_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 			2 * wait + 1,
 			_hp(state, companion_id),
 		]
+	return _check_passive_data()
+
+
+## The companion attacks an instance builds read each passive's haste and heal from the ability data
+## (#1500): Kazri-tazri's haste and Lombu-bombu's heal.
+func _check_passive_data() -> String:
+	var built: CompanionAttackFeature = CompanionAttackFactory.build(null)
+	var kazri: int = AbilityContent.cached().abilities["tikazzir_kazri_tazri"].hurt_haste
+	var lombu: int = AbilityContent.cached().abilities["ombulumo_lombu_bombu"].rest_heal
+	if kazri < 1 or lombu < 1:
+		return "Kazri-tazri has no haste or Lombu-bombu no heal in the ability data"
+	if built.hastes != { "tikazzir_kazri_tazri": kazri } or built.rest_heals != {
+		"ombulumo_lombu_bombu": lombu,
+	}:
+		return "the built companion attacks have hastes %s and heals %s, not the data's" % [
+			built.hastes,
+			built.rest_heals,
+		]
 	return ""
 
 
