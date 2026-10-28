@@ -582,6 +582,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **gdstyle can accept what Godot's parser refuses**: a multi-line lambda inside a call's arguments
   passed `gdstyle check` but failed the script check ("Unindent doesn't match"). Write a loop, or a
   one-line lambda.
+- **`gdstyle fmt` strips the leading spaces inside a multi-line string** (#643): a hex grid drawn in
+  a `"""` string loses its half-tile indents and reads as another region. Write such a string on
+  one line with `\n`.
 - **A warning fails a flow too**, unless the flow expects it: before provoking one on purpose (a
   refused world save), it calls `tree.call("expect_warning", "<fragment>")`, and fails if the
   warning never comes. The device flows expect none.
