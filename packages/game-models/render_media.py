@@ -27,6 +27,7 @@ is in `<out>/logs/`; a job that fails stops the run before anything is published
 
 import argparse
 import concurrent.futures
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -75,6 +76,8 @@ def main() -> int:
     parser.add_argument("--jobs", type=int, default=3, help="Godot renders at once")
     parser.add_argument("--no-publish", action="store_true", help="render only, print local paths")
     args = parser.parse_args()
+    # Progress shows as it happens, also when the output goes to a file (a background run's).
+    sys.stdout.reconfigure(line_buffering=True)
 
     model = args.model.resolve()
     if not model.is_file() or GAME not in model.parents:
@@ -169,6 +172,8 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int) -> bool
         if stagger:
             with starting:
                 time.sleep(STAGGER)
+        # A fresh folder: frames left from an earlier, longer render would join a clip's GIF.
+        shutil.rmtree(job.out, ignore_errors=True)
         began = time.monotonic()
         log.info(f"{job.name}: rendering into {job.out}")
         code = run(job.command, logs / f"{job.name}.log")

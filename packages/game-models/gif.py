@@ -46,7 +46,13 @@ def make(frame_dir: Path, clip: str, fps: float | None = None, width: int = 640,
         if not rate.is_file():
             print(f"no rate: {rate} is missing, so pass --fps", file=sys.stderr)
             return None
-        fps = float(rate.read_text().strip())
+        try:
+            fps = float(rate.read_text().strip())
+        except ValueError:
+            fps = 0.0
+    if not 0.0 < fps < float("inf"):
+        print(f"no rate: {fps} is not a frame rate", file=sys.stderr)
+        return None
     frames = str(frame_dir / f"{clip.replace('%', '%%')}_%03d.png")
     out = out or frame_dir / f"{clip}.gif"
     # One pass makes the GIF's palette from all frames, the second maps every frame onto it.
