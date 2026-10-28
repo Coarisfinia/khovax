@@ -251,6 +251,24 @@ background; only wait in the foreground for a result the very next step needs.
   resolves it and reports `THREAD_RESOLVED`. This holds for every reviewer's thread, CodeRabbit's
   included, except one that waits on the owner's decision: that one is answered and left open
   (above). Only when no watcher runs, resolve it yourself with `resolve-review-thread PRRT_<id>`.
+- **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
+  `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
+  for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
+  agents and the watcher share the one installation, and a short-window limit (GitHub's secondary
+  limits count REST points per minute) refuses a burst. GraphQL has its own quota and went
+  through. Find the thread's id from the comment's id, then reply:
+
+  ```sh
+  T=$(agent-gh api graphql -f query='{repository(owner:"Coarisfinia",name:"khovax"){pullRequest(number:<n>){reviewThreads(first:100){nodes{id comments(first:100){nodes{databaseId}}}}}}}' \
+    --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(any(.comments.nodes[]; .databaseId == <comment-id>)) | .id')
+  agent-gh api graphql -f t="$T" -f b='Resolved: fixed in <sha>, …' --jq .data.addPullRequestReviewThreadReply.comment.url \
+    -f query='mutation($t:ID!,$b:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$t,body:$b}){comment{url}}}'
+  ```
+
+  Read reviews with `agent-gh pr view <n> --json reviews` (GraphQL) too. If any call still gets a
+  403 or 429 about a rate limit, wait the seconds its `retry-after` header gives (`agent-gh api -i`
+  shows it; without it, until `x-ratelimit-reset` when `x-ratelimit-remaining` is 0, else a minute)
+  and retry once; never retry in a loop.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
 - **Merging:** once the owner has **approved** and the PR is well reviewed, read the PR for
   unanswered comments (an approval and a comment often arrive together), then enable auto-merge:
