@@ -23,7 +23,7 @@ extends RefCounted
 ## (#1563), like the content's Vummi-nummi, doesn't wake it standing beside it, and wakes it with a
 ## step only on a roll: a step that a hush sparing all but one in a thousand makes never does, and
 ## one that a hush sparing one in a thousand makes does. Once the companion faints, the hush is
-## gone and the player wakes it at once.
+## gone and the player wakes it a tick later.
 ##
 ## In its hunt hours (#1204), a predator stalks a grazer or weaker wild monster it sights, strikes
 ## it down to 1 HP and no further, and rests; it leaves a stronger one be and roams around its
@@ -480,7 +480,8 @@ func _check_light_sleeper_wakes() -> String:
 
 ## A light sleeper wakes for a hushed player (#1563) only on a step, and only on the roll: one
 ## hushed all but one step in a thousand stands next to it and walks round it without waking it,
-## a save of that walk plays on the same, and the player wakes it as their companion faints; one
+## a save of that walk plays on the same, and the player wakes it the tick after their companion
+## faints; one
 ## hushed one step in a thousand wakes it with a step.
 func _check_hushed_steps() -> String:
 	if HushFactory.build(null).hushes.get("vynnimu_vummi_nummi", 0) < 1:

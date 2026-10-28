@@ -22,7 +22,8 @@ func id() -> String:
 	return ID
 
 
-## After the companions, whose passives it reads, so a companion brought this tick counts at once.
+## After the companions, whose passives it reads. The sleep steps earlier, so it wakes by this hush
+## from the next tick on: a companion brought, or gone, this tick counts there a tick later.
 func requires() -> Array[String]:
 	var needed: Array[String] = [CompanionFeature.ID]
 	return needed
