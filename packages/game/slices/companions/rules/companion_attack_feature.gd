@@ -8,6 +8,8 @@ extends Feature
 ## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Nor are ones
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
 ## raises CompanionStruck. A companion that just joined or has nothing to strike is ready at once.
+## Its passives that hasten it when hurt or heal it at rest work here too (#1500,
+## CompanionPassiveEffects).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companion_attacks"
@@ -17,6 +19,18 @@ const STRIKE_TICKS: int = Tuning.COMPANION_STRIKE_TICKS
 ## The ticks each companion still waits before it can strike again, by entity id; one that's
 ## ready isn't here.
 var _waits: Dictionary[int, int] = {}
+## Each passive's haste when hurt and heal at rest (Ability.hurt_haste, rest_heal), in thousandths,
+## by its id, for the passives that have one.
+var hastes: Dictionary[String, int] = {}
+var rest_heals: Dictionary[String, int] = {}
+
+
+func _init(
+	passive_hastes: Dictionary[String, int] = {},
+	passive_rest_heals: Dictionary[String, int] = {},
+) -> void:
+	hastes = passive_hastes
+	rest_heals = passive_rest_heals
 
 
 func id() -> String:
@@ -28,10 +42,12 @@ func requires() -> Array[String]:
 	return needed
 
 
-## The wild monsters it strikes, what spares one from a strike (hiding, a sealing ring) and the type
-## chart, where the instance has them: without wild monster spots (#884), nothing is struck.
+## The wild monsters it strikes, what spares one from a strike (hiding, a sealing ring), the type
+## chart, and the HP a passive reads and heals, where the instance has them: without wild monster
+## spots (#884), nothing is struck.
 func after() -> Array[String]:
 	var earlier: Array[String] = [
+		HealthFeature.ID,
 		WildMonsterFeature.ID,
 		HidingFeature.ID,
 		DominationFeature.ID,
@@ -40,7 +56,8 @@ func after() -> Array[String]:
 	return earlier
 
 
-## Lets every companion, in id order, strike a wild monster next to it once its wait is over.
+## Lets every companion, in id order, strike a wild monster next to it once its wait is over; one
+## that waits for no strike then rests.
 func step(state: GameState, _commands: Array[Command]) -> void:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var wild: WildMonsterFeature = state.feature(WildMonsterFeature.ID) as WildMonsterFeature
@@ -51,16 +68,18 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 			continue
 		var _ready: bool = _waits.erase(companion_id)
 		# Without wild monsters, the waits still run out, so a companion that walks on is ready.
-		if wild == null:
-			continue
-		var target: int = target_next_to(state, wild, state.entity(companion_id).tile)
+		var target: int = 0
+		if wild != null:
+			target = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
-			continue
-		_strike(state, wild, companion_id, companions.species_of(companion_id), target)
+			CompanionPassiveEffects.rest(state, companions, companion_id, rest_heals)
+		else:
+			_strike(state, wild, companion_id, companions.species_of(companion_id), target)
 
 
 ## The companion `companion_id`, a `species`, strikes `target` for its strength as it leans, after
-## the type chart, then waits STRIKE_TICKS, shortened or lengthened by its leaning's speed.
+## the type chart, then waits STRIKE_TICKS, shortened or lengthened by its leaning's speed, and
+## shortened by its haste when hurt.
 func _strike(
 		state: GameState,
 		wild: WildMonsterFeature,
@@ -75,7 +94,14 @@ func _strike(
 	var strength: int = CompanionGrowth.stat(species_strength, leaning.strength)
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
 	wild.wound(state, target, damage)
-	_waits[companion_id] = CompanionGrowth.ticks(STRIKE_TICKS, leaning.speed)
+	var wait: int = CompanionGrowth.ticks(STRIKE_TICKS, leaning.speed)
+	_waits[companion_id] = CompanionPassiveEffects.hastened(
+		state,
+		companions,
+		companion_id,
+		wait,
+		hastes,
+	)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, false, struck)
 	state.events.append(CompanionStruck.new(companion_id, target, damage, strong))
 

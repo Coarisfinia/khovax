@@ -33,6 +33,8 @@
 			"enum": ["mana", "arcane", "shadow", "abyss", "might", "titan", "growth", "nature", "breeze", "tempest"]
 		},
 		"guard": { "description": "A passive's, optional: the share of every hit it takes off, in thousandths (#616): a self passive's off its own monster, a player passive's off its player. A passive works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
+		"hurt_haste": { "description": "A self passive's, optional: how much shorter its monster's wait between strikes is at its last HP, in thousandths, less as it has more HP left (#1500). It works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
+		"rest_heal": { "description": "A self passive's, optional: the share of its monster's full HP it gets back each second it rests, waiting for no strike, in thousandths (#1500). It works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
 		"path": {
 			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
 			"enum": ["none", "harmony", "supremacy", "both"],
@@ -40,6 +42,10 @@
 		}
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
-	"then": { "required": ["power", "cooldown_seconds", "strike_type"], "not": { "required": ["guard"] } },
-	"else": { "not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] } }
+	"then": { "required": ["power", "cooldown_seconds", "strike_type"], "not": { "anyOf": [{ "required": ["guard"] }, { "required": ["hurt_haste"] }, { "required": ["rest_heal"] }] } },
+	"else": {
+		"not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] },
+		"if": { "properties": { "kind": { "const": "player_passive" } } },
+		"then": { "not": { "anyOf": [{ "required": ["hurt_haste"] }, { "required": ["rest_heal"] }] } }
+	}
 }
