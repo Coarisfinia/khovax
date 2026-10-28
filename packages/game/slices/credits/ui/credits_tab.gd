@@ -6,7 +6,8 @@ extends RichTextLabel
 ## but not the file's own note on how it's made nor the repository paths. It scrolls itself, with
 ## touch, a wheel, the keys or a controller once focused. Its look and layout live in its scene,
 ## credits_tab.tscn (#437): this script keeps only what it does. Above the credits it names the
-## build's version (#744), so a player reporting a bug can say which build they play.
+## build's version (#744), so a player reporting a bug can say which build they play, and where the
+## error log is (#1510), for them to attach to the report.
 
 const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
@@ -15,23 +16,20 @@ const FILES: String = "- **Files:**"
 ## What starts a pack's field.
 const FIELD: String = "- **"
 const UNREADABLE: String = "The credits couldn't be read."
-## The setting CI stamps the build's version into (ci.yml's export job, release.yml), its own
-## rather than config/version, which Godot wants as plain numbers for Windows and Android (#744).
-const VERSION_SETTING: String = "khovax/build_version"
-## The version a build CI didn't make shows: one run from the editor or a local export.
-const LOCAL_BUILD: String = "local build"
 
 
 func _ready() -> void:
 	var markdown: String = FileAccess.get_file_as_string(PATH)
 	var credits: String = to_bbcode(markdown) if not markdown.is_empty() else UNREADABLE
-	text = "[b]Version:[/b] %s\n%s" % [version(), credits]
+	text = "[b]Version:[/b] %s\n%s%s" % [BuildVersion.version(), log_line(), credits]
 
 
-## The build's version, as CI stamped it: v<next>-dev.<run> for a dev build, the tag for a
-## release, or LOCAL_BUILD.
-static func version() -> String:
-	return str(ProjectSettings.get_setting(VERSION_SETTING, LOCAL_BUILD))
+## The line naming where the error log is (ErrorLog), or "" where there's none (the web).
+static func log_line() -> String:
+	var location: String = ErrorLog.location()
+	if location.is_empty():
+		return ""
+	return "[b]Error log:[/b] %s\n" % location.replace("[", "[lb]")
 
 
 ## CREDITS.md's packs as BBCode: a bold heading each, then its fields as bullets with their bold

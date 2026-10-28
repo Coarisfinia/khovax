@@ -1114,7 +1114,8 @@ static func _list_top(menu: GameMenu, screen: Vector2, shown: bool) -> float:
 
 
 ## The Credits tab (#462) names the build's version first (#744; a local one here, which CI's
-## export alone stamps), then shows every pack CREDITS.md credits, each heading in bold, with its
+## export alone stamps), then where the error log is (#1510), which starts with that version, then
+## shows every pack CREDITS.md credits, each heading in bold, with its
 ## fields' names in bold and no Markdown marks or repository paths left over.
 func _menu_credits(menu: GameMenu) -> String:
 	var tab: CreditsTab = menu.find_child("Credits", true, false) as CreditsTab
@@ -1122,8 +1123,18 @@ func _menu_credits(menu: GameMenu) -> String:
 	if not tab.bbcode_enabled or tab.focus_mode != Control.FOCUS_ALL:
 		return "the Credits tab's scene doesn't render BBCode or take the focus"
 	var shown: String = tab.text
-	if not shown.begins_with("[b]Version:[/b] " + CreditsTab.LOCAL_BUILD + "\n"):
-		return "the Credits tab doesn't name the build's version first: " + shown.left(80)
+	var version: String = "[b]Version:[/b] " + BuildVersion.LOCAL_BUILD + "\n"
+	if not shown.begins_with(version + CreditsTab.log_line()) or ErrorLog.location().is_empty():
+		return "the Credits tab doesn't name the version and the log first: " + shown.left(160)
+	var logged: String = FileAccess.get_file_as_string(ErrorLog.PATH)
+	if not logged.begins_with(str(ProjectSettings.get_setting("application/config/name")) + " "):
+		return "the error log doesn't start with the game and its version: " + logged.left(80)
+	if not logged.contains(BuildVersion.LOCAL_BUILD):
+		return "the error log doesn't name the version: " + logged.left(80)
+	# It never names the folders a path could name the player by.
+	var hidden: String = ErrorLog.new(null).scrubbed(OS.get_user_data_dir() + "/world.json")
+	if hidden != "user://world.json":
+		return "the error log names the user folder: " + hidden
 	var markdown: String = FileAccess.get_file_as_string(CreditsTab.PATH)
 	for line: String in markdown.split("\n"):
 		var heading: String = CreditsTab.to_bbcode(line).strip_edges()
