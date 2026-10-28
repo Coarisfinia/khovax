@@ -266,15 +266,19 @@ def fit(pixels):
 
 
 # The scene: both models at rest, framed by one orthographic camera over both, so their sizes
-# compare; a flat studio render (Workbench: shapes and base colours, fast) on a clear background.
+# compare; a flat studio render (Workbench: shapes and colours, fast) on a clear background. Its
+# colours are each material's image texture, or its base colour where it has none (the hand-built
+# models), so a generated model, whose colours are all in its texture, shows them too.
 model = load(model_path)
 reference = load(reference_path) if reference_is_model else []
+for image in bpy.data.images:  # a texture's alpha would cut holes into the silhouette: opaque
+	image.alpha_mode = "NONE"
 lo, hi = bounds(model + reference)
 center = (lo + hi) / 2
 reach = max(hi - lo)
 scene.render.engine = "BLENDER_WORKBENCH"
 scene.display.shading.light = "STUDIO"
-scene.display.shading.color_type = "MATERIAL"
+scene.display.shading.color_type = "TEXTURE"
 scene.render.resolution_x = scene.render.resolution_y = SIZE
 scene.render.film_transparent = True
 camera_data = bpy.data.cameras.new("compare")
