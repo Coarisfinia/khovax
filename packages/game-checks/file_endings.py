@@ -46,6 +46,8 @@ ENDINGS: dict[str, str] = {
     ".yml": "the GitHub Actions workflows and the CodeRabbit config (kept identical to its organization settings)",
     ".gitignore": "what git leaves untracked",
     ".gitattributes": "how git treats files",
+    # The owner's sign-off: option 1 on #1559 (issuecomment-6475119084).
+    ".env": "the project watcher's settings (.claude/watcher.env, #1551)",
 }
 # The shell scripts still waiting for their port (path: the issue that ports it).
 SH_EXEMPT: dict[str, int] = {}
