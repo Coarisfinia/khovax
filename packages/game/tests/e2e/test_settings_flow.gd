@@ -864,6 +864,7 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	special.lay_out_in(special.get_viewport_rect().size)
 	var shown_closed: bool = special.visible
 	special.touch = false
+	special.lay_out_in(special.get_viewport_rect().size)
 	menu.toggle()
 	await _tree.create_timer(GameMenu.FADE_SECONDS * 2.0).timeout
 	if shown_open or touched:
