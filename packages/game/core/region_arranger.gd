@@ -4,8 +4,10 @@ extends RefCounted
 ## is, holding the players' starts. Every other piece is placed once, in an order the seed
 ## shuffles, a piece that ends a way (one connector) after those that lead on: turned and attached
 ## so one of its connectors meets an open connector of the region so far, without overlapping it,
-## the seed picking among all the fits. Connectors left open at the end are plain edge. Then the
-## seed turns the whole region, unless the blueprint keeps its orientation (#120).
+## the seed picking among all the fits. A piece with an exit isn't turned, so its exit leads out
+## the side its legend says, to the instance the realm draws there (#1590). Connectors left open at
+## the end are plain edge. Then the seed turns the whole region, unless the blueprint keeps its
+## orientation (#120).
 
 ## The region's own random stream (#32), apart from the features' streams, which are their ids.
 const STREAM: int = 0x5245_4749
@@ -49,10 +51,11 @@ static func _ends_last(order: Array[int], pieces: Array[Region]) -> Array[int]:
 
 
 ## Every way `piece` fits onto an open connector of `region`, in a fixed order: (open connector's
-## index, the piece's connector's index, turns).
+## index, the piece's connector's index, turns), never turned when it has an exit.
 static func _fits(region: Region, piece: Region) -> Array[Vector3i]:
 	var fits: Array[Vector3i] = []
-	for turns: int in Hex.DIRECTIONS.size():
+	var turnings: int = Hex.DIRECTIONS.size() if piece.exits.is_empty() else 1
+	for turns: int in turnings:
 		var turned: Region = piece.turned(turns)
 		for open: int in region.connectors.size():
 			for own: int in turned.connectors.size():

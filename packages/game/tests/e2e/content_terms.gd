@@ -47,7 +47,8 @@ const LAND_SOUNDS: String = "dh|gh|hr|wh"
 ## marks (a hyphen, an apostrophe, vo or na, a last word in -ai, a word in -vaun, a lexicon word),
 ## and its id is its name in lower case, spaces, hyphens and apostrophes made `_`, after its
 ## species' id for an ability. Trade Speech (gear, pieces, places) is plain words, so letters aren't
-## held against it. Kinds left out (tiles, materials, loot tables, quests, dialogs) are vocabulary.
+## held against it. Kinds left out (tiles, materials, loot tables, quests, dialogs, a variant that
+## only changes its instance, #1590) are vocabulary.
 const NAME_RULES: Dictionary[String, String] = {
 	"species": "one beast-call of 6 to 11 letters and at least 3 vowels, echoing itself (a vowel "
 	+ "recurring or a consonant doubled), ending in a vowel, r, s, x, k or n, with a sound of its "
@@ -371,9 +372,13 @@ static func _add_instances(terms: ContentTerms) -> void:
 	for instance_name: String in InstanceBlueprints.names():
 		terms.add("instance", instance_name)
 		var region_names: Array[String] = [""]
-		for chosen_by: PackedStringArray in InstanceBlueprints.blueprint(instance_name).variants:
+		var blueprint: Blueprint = InstanceBlueprints.blueprint(instance_name)
+		for chosen_by: PackedStringArray in blueprint.variants:
 			if not chosen_by[1].is_empty():
-				terms.add("region", chosen_by[1], "", instance_name)
+				# A region with no codex entry is the instance itself, changed (#1590): it keeps
+				# the instance's name, so its id is vocabulary.
+				var own: bool = blueprint.variant_codex.has(chosen_by[1])
+				terms.add("region" if own else "variant", chosen_by[1], "", instance_name)
 				region_names.append(chosen_by[1])
 		for region_name: String in region_names:
 			var region: Region = InstanceBlueprints.region_of(instance_name, 0, region_name)

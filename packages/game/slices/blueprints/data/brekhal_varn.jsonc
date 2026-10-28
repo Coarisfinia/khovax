@@ -1,5 +1,5 @@
-// Brekhal Varn, the mountain pass southwest of Edhra Tewk (#689), with a sealed side passage for a
-// hidden gate (#500).
+// Brekhal Varn, the mountain pass southwest of Edhra Tewk (#689), with a side passage sealed until
+// its guide, Ausvren vo Tormaesk, is led there and opens it, into Hrovumel Stolm (#1590, #1588).
 {
 	"id": "brekhal_varn",
 	"codex": {
@@ -8,5 +8,10 @@
 	},
 	"rules": "standard",
 	"loot_table": "wild_ground",
-	"wild_species": { "ombulumo": 1, "tikazzir": 2 }
+	"wild_species": { "ombulumo": 1, "tikazzir": 2 },
+	"variants": [
+		// Once its guide has opened their seal (EscortFeature), the passage stays open: its region
+		// pieces are Brekhal Varn's own, but for the sealed passage, opened.
+		{ "flag": "EVENT_EMITTED_ausvren_vo_tormaesk_opened", "region": "brekhal_varn_opened" }
+	]
 }

@@ -1,6 +1,6 @@
 # Ardvaun
 
-The realm the world plays in today (#865), named in Land-speech on #909 (#974): an assortment of instances, each built from its own region pieces. The picture shows where they lie relative to each other, and an exit leads to the instance drawn beside its own on the exit's side: Lumwen Hoal in the middle, Morwe Wudhen to its northwest with Dhorvone Stolm west of it, Edhra Tewk to Lumwen Hoal's southeast, Brekhal Varn southwest of Edhra Tewk, and Ivenwhal Wudhen, the mana forest, southeast of Brekhal Varn (#1218). The players start in Lumwen Hoal (#712).
+The realm the world plays in today (#865), named in Land-speech on #909 (#974): an assortment of instances, each built from its own region pieces. The picture shows where they lie relative to each other, and an exit leads to the instance drawn beside its own on the exit's side: Lumwen Hoal in the middle, Morwe Wudhen to its northwest with Dhorvone Stolm west of it, Edhra Tewk to Lumwen Hoal's southeast, Brekhal Varn southwest of Edhra Tewk, Ivenwhal Wudhen, the mana forest, southeast of Brekhal Varn (#1218), and Hrovumel Stolm, the dungeon behind the guide's seal, southwest of Brekhal Varn (#1590). The players start in Lumwen Hoal (#712).
 
 ## Tiles
 
@@ -11,7 +11,7 @@ The realm the world plays in today (#865), named in Land-speech on #909 (#974): 
 ⬜⬜🌼⬜⬜
  ⬜⬜⛺⬜
 ⬜⬜🗻⬜⬜
- ⬜⬜💎⬜
+ ⬜🏯💎⬜
 ```
 
 ## Legend
@@ -22,6 +22,7 @@ The realm the world plays in today (#865), named in Land-speech on #909 (#974): 
 - `⛺`: the instance edhra_tewk
 - `🗻`: the instance brekhal_varn
 - `💎`: the instance ivenwhal_wudhen
+- `🏯`: the instance hrovumel_stolm
 - `⬜`: no instance
 
 ## Codex

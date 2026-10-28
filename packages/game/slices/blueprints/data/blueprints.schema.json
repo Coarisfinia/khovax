@@ -71,12 +71,12 @@
 				"properties": {
 					"flag": { "description": "The world flag that chooses it.", "type": "string", "pattern": "\\S" },
 					"region": {
-						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A region of its own is named, its name its id in words (#909).",
+						"description": "The region it's loaded with instead, a region file or a folder of region pieces in regions/; \"\" for the blueprint's own. A folder holds only the pieces it changes, the rest are the blueprint's own (#1590). A region with a codex entry is a place of its own, named, its name its id in words (#909); one without is the instance itself, changed, under the instance's name.",
 						"type": "string",
 						"pattern": "^([a-z][a-z0-9_]*)?$"
 					},
 					"codex": {
-						"description": "The codex entry (#959) of the region it loads, which a variant with a region of its own has.",
+						"description": "The codex entry (#959) of the region it loads when that's a place of its own (a corrupted instance); a variant changing the instance itself (an opened passage) has none, and its own region never has one.",
 						"type": "object",
 						"additionalProperties": false,
 						"required": ["entry", "gloss"],
@@ -86,9 +86,8 @@
 						}
 					}
 				},
-				"if": { "properties": { "region": { "minLength": 1 } } },
-				"then": { "required": ["codex"] },
-				"else": { "not": { "required": ["codex"] } }
+				"if": { "properties": { "region": { "const": "" } } },
+				"then": { "not": { "required": ["codex"] } }
 			}
 		}
 	}

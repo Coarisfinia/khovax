@@ -29,7 +29,9 @@ var wild_species: Dictionary[String, int] = {}
 ## "" for the blueprint's own; the first whose flag the world has set chooses.
 var variants: Array[PackedStringArray] = []
 ## The codex entry and gloss of each variant's region of its own (#1448), by that region's id: a
-## place of its own, named by its id in words like an instance (Lymwen Hoall).
+## place of its own, named by its id in words like an instance (Lymwen Hoall). A variant's region
+## without one is the instance itself, changed (#1590), like a passage opened: it keeps the
+## instance's name and codex page.
 var variant_codex: Dictionary[String, PackedStringArray] = {}
 ## Its codex entry (#959, #1175): a short text about the place and where its name comes from.
 var codex_entry: String = ""
@@ -89,8 +91,8 @@ func _check(file_id: String, data: Dictionary) -> String:
 		return "its wild_species must give one or more species ids a whole weight of 1 or more"
 	if not _read_variants(data.get("variants", [])):
 		return (
-			"its variants must each be a flag and a region id, or \"\" for its own, a region of"
-			+ " its own with a codex entry and gloss"
+			"its variants must each be a flag and a region id, or \"\" for its own, without a"
+			+ " codex entry for its own"
 		)
 	return ""
 
@@ -132,8 +134,9 @@ func _read_species(raw: Variant) -> bool:
 	return not wild_species.is_empty()
 
 
-## Whether `raw` lists variants, each a flag and a region, a region of its own with a codex entry
-## and gloss (#1448) and its own with none; reads them into `variants` and `variant_codex`.
+## Whether `raw` lists variants, each a flag and a region, its own with no codex entry and another
+## with one when it's a place of its own (#1448) or none when it's the instance changed (#1590);
+## reads them into `variants` and `variant_codex`.
 func _read_variants(raw: Variant) -> bool:
 	if not raw is Array:
 		return false
@@ -152,10 +155,10 @@ func _read_variants(raw: Variant) -> bool:
 			or flag.strip_edges().is_empty()
 			or not raw_region is String
 			or not (region.is_empty() or Content.is_id(region))
-			or (variant.has("codex") if region.is_empty() else codex.is_empty())
+			or (variant.has("codex") and (region.is_empty() or codex.is_empty()))
 		):
 			return false
 		variants.append(PackedStringArray([flag, region]))
-		if not region.is_empty():
+		if not codex.is_empty():
 			variant_codex[region] = PackedStringArray(codex)
 	return true

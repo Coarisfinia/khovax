@@ -121,15 +121,10 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 	if files.whole:
 		var whole: String = files.texts.values()[0]
 		return _lead_exits(read_region(whole), instance_name)
-	var start: String = RegionFiles.key(region_name) + "/" + START_PIECE
-	var paths: Array[String] = []
-	for path: String in files.texts:
-		if path != start:
-			paths.append(path)
-	paths.push_front(start)
+	var texts: Dictionary[String, String] = _piece_texts(instance_name, region_name)
 	var pieces: Array[Region] = []
-	for path: String in paths:
-		var text: String = files.texts.get(path, "")
+	for path: String in _piece_order(texts):
+		var text: String = texts.get(path, "")
 		var piece: Region = _piece(path, text)
 		if not piece.problem.is_empty():
 			return piece
@@ -141,6 +136,39 @@ static func region_of(instance_name: String, seed_value: int, variant_name: Stri
 		named != null and named.turned,
 	)
 	return _lead_exits(arranged, instance_name)
+
+
+## The text of each region piece of the region `region_name`, by its path: a variant's folder of
+## pieces holds only the pieces it changes (#1590), so the rest are those of the blueprint
+## `instance_name`, when its region is pieces too. A variant's pieces then arrange like the
+## blueprint's own for every seed, as long as each keeps its piece's shape and connectors.
+static func _piece_texts(instance_name: String, region_name: String) -> Dictionary[String, String]:
+	var files: RegionFiles = RegionFiles.cached(region_name)
+	var texts: Dictionary[String, String] = files.texts.duplicate()
+	var own: RegionFiles = RegionFiles.cached(instance_name)
+	if region_name == instance_name or own.whole:
+		return texts
+	var changed: Array[String] = []
+	for path: String in files.texts:
+		changed.append(path.get_file())
+	for path: String in own.texts:
+		if not changed.has(path.get_file()):
+			texts[path] = own.texts[path]
+	return texts
+
+
+## The paths of the region pieces in `texts`, the start piece first and the others by file name.
+static func _piece_order(texts: Dictionary[String, String]) -> Array[String]:
+	var paths: Array[String] = []
+	var start: String = ""
+	for path: String in texts:
+		if path.get_file() == START_PIECE:
+			start = path
+		else:
+			paths.append(path)
+	paths.sort_custom(func(a: String, b: String) -> bool: return a.get_file() < b.get_file())
+	paths.push_front(start)
+	return paths
 
 
 ## `region`, the named blueprint's, with each exit leading to the instance its realm draws beside

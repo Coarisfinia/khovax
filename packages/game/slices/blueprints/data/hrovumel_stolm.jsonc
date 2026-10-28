@@ -1,6 +1,6 @@
 // Hrovumel Stolm, the dungeon behind the escort guide's seal (#1591, #1553): Vis'omera is found at
-// its end, the shrine (#1592). No realm draws it yet and its way in has no exit: #1590 places the
-// seal and hooks the two together.
+// its end, the shrine (#1592). Ardvaun draws it southwest of Brekhal Varn, and its way in leads back
+// out through the guide's seal there (#1590).
 {
 	"id": "hrovumel_stolm",
 	"codex": {
