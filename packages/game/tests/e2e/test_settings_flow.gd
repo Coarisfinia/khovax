@@ -445,6 +445,31 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 			break
 	if stored != code:
 		return "the spikes in the trap slot didn't reach the world's store: %d" % stored
+	return _gear_keeps_passives(keeper, driver)
+
+
+## The unique ward charm that keeps the passives on (#617), put into the ward slot, posts a request
+## that the next ticks carry into the world's store of the player's companions; taking it out
+## posts one that stops it.
+func _gear_keeps_passives(keeper: ProfileKeeper, driver: GameDriver) -> String:
+	keeper.profile.gear.owned["vis_omera"] = 1
+	for gear_id: String in ["vis_omera", "warding_charm"]:
+		var problem: String = keeper.equip("ward", gear_id, Time.get_ticks_msec())
+		if not problem.is_empty():
+			return "putting %s into the ward slot failed: %s" % [gear_id, problem]
+		var on: bool = gear_id == "vis_omera"
+		var kept: bool = not on
+		for _tick: int in keeper.profile.outbox.entries.size():
+			driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+			var entry: Dictionary = driver.world.stored(driver.input.slot, CompanionFeature.ID)
+			kept = CompanionPassives.kept(entry)
+			if kept == on:
+				break
+		if kept != on:
+			return "with %s in the ward slot, the world's store keeps the passives on: %s" % [
+				gear_id,
+				kept,
+			]
 	return ""
 
 

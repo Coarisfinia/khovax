@@ -2,13 +2,16 @@ class_name GearItem
 extends RefCounted
 ## A piece of gear (#690), read from content data (the gear slice's data/, #72, #412): a
 ## player-facing name, the slot it goes into (GearSlots.SLOTS), its rarity (#291) and, for spikes
-## in the trap slot, their damage (SpikesFeature, #692). The other slots' effects come with their
-## own issues.
+## in the trap slot, their damage (SpikesFeature, #692), and, for gear in the ward slot, whether it
+## keeps the player's carried monsters' passives on while they aren't out (#617,
+## CompanionPassives). The other slots' effects come with their own issues.
 
 ## Its schema, which says the fields a gear file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/gear/data/gear.schema.json"
 ## The slot whose gear, spikes, has damage (#692).
 const TRAP: String = "trap"
+## The slot whose gear may keep the passives on (#617).
+const WARD: String = "ward"
 ## The rarities (#291), lowest to highest, then bound for uniques and artifacts.
 const RARITIES: Array[String] = ["loose", "knotted", "warded", "sealed", "unbroken", "bound"]
 
@@ -23,6 +26,9 @@ var rarity: String = ""
 ## The damage spikes deal each time they hurt a wild monster pushing on the ring (#692), a whole
 ## amount; 0 for gear of another slot.
 var damage: int = 0
+## Whether, in the ward slot, it keeps the passives of every monster the player carries on, out or
+## not (#617, GearRequests tells the world); false for most gear.
+var keeps_passives: bool = false
 ## Why the gear couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -40,6 +46,7 @@ static func parse(file_id: String, text: String) -> GearItem:
 	item.slot = Content.text_of(data.get("slot"))
 	item.rarity = Content.text_of(data.get("rarity"))
 	item.damage = Content.amount(data.get("damage"))
+	item.keeps_passives = data.get("keeps_passives") == true
 	if data.has("damage") and item.damage == 0:
 		item.problem = "its damage must be a whole number from 1 to %d" % Fixed.MAX_AMOUNT
 		return item
@@ -67,4 +74,6 @@ func _check(file_id: String) -> String:
 		return "its rarity must be one of %s" % [RARITIES]
 	if (damage > 0) != (slot == TRAP):
 		return "spikes, in the trap slot, need damage, and no other gear has any"
+	if keeps_passives and slot != WARD:
+		return "only ward gear keeps the passives on"
 	return ""

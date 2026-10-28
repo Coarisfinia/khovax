@@ -22,8 +22,12 @@ const HOST_SETTING: int = 5
 ## Raise an event a quest emitted in the world (#755, QuestEventFeature): its data is the event's
 ## code (CommandCodes.of).
 const QUEST_EVENT: int = 6
+## Keep the player's carried monsters' passives on while they aren't out, or stop (#617): its data
+## is 1 while gear that keeps them (GearItem.keeps_passives) is in the ward slot, 0 otherwise
+## (CompanionPassives.keep).
+const PASSIVES_KEPT: int = 7
 ## Every kind there is.
-const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING, QUEST_EVENT]
+const KINDS: Array[int] = [TERRITORY, REVIVE, TRAP, CARRY, HOST_SETTING, QUEST_EVENT, PASSIVES_KEPT]
 
 ## The profile's id for it, a short id (ShortId, #791) no other request in the outbox has: the
 ## world records the ids it applied.

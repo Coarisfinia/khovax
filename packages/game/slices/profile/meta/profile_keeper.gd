@@ -121,11 +121,10 @@ func equip(slot: String, gear_id: String, now_msec: int) -> String:
 	return save_if_due(now_msec)
 
 
-## Posts the request that tells a world whose store entry `stored` of the player's trap
-## (SpikesFeature) isn't what's equipped (GearRequests.catch_up, #818), saved like any change;
-## returns why it couldn't be saved, or "".
-func catch_up_gear(stored: Dictionary, now_msec: int) -> String:
-	if not GearRequests.catch_up(profile.gear, profile.outbox, stored):
+## Posts the requests that tell a world whose store of the player, `store`, isn't what's equipped
+## (GearRequests.catch_up, #818), saved like any change; returns why it couldn't be saved, or "".
+func catch_up_gear(store: PlayerStore, now_msec: int) -> String:
+	if not GearRequests.catch_up(profile.gear, profile.outbox, store):
 		return ""
 	_pending = true
 	return save_if_due(now_msec)
