@@ -40,13 +40,23 @@ from lib import footprint, rigged  # noqa: E402
 HEX = {"hex": footprint.REGULAR, "hex-large": footprint.LARGE}
 
 
-def to_hex(limits):
+def to_hex(limits, rig):
     """The scale that fits the skin, placed on its feet, to its hex within `limits`, printed with
     how far it reaches across the hex before and after."""
 
     def fitted(skin):
-        coords = numpy.empty(len(skin.data.vertices) * 3)
-        skin.data.vertices.foreach_get("co", coords)
+        pose = rig.data.pose_position
+        rig.data.pose_position = "REST"
+        try:
+            evaluated = skin.evaluated_get(bpy.context.evaluated_depsgraph_get())
+            mesh = evaluated.to_mesh()
+            try:
+                coords = numpy.empty(len(mesh.vertices) * 3)
+                mesh.vertices.foreach_get("co", coords)
+            finally:
+                evaluated.to_mesh_clear()
+        finally:
+            rig.data.pose_position = pose
         rest = footprint.spread(coords.reshape(-1, 3))
         fit = footprint.fit(rest, limits)
         print("HEX rest pose reaches %.3f of the hex as downloaded; scaled by %.4f: rest %.3f (limit %.2f), "
@@ -120,7 +130,7 @@ if mesh.data.has_custom_normals:
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
 bpy.ops.object.shade_smooth()
 if rig is not None:
-    rigged.adopt(rig, mesh, to_hex(HEX[scale]) if scale in HEX else scale)
+    rigged.adopt(rig, mesh, to_hex(HEX[scale], rig) if scale in HEX else scale)
 elif len(args) > 3:
     print("SOURCE unrigged: scale not applied; the model script places and sizes it")
 bpy.ops.export_scene.gltf(

@@ -371,7 +371,10 @@ def flatten(rig, skin):
     for obj in (rig, skin):
         matrix = obj.matrix_world.copy()
         obj.parent = None
-        obj.data.transform(matrix)
+        if obj == skin:
+            obj.data.transform(matrix, shape_keys=True)
+        else:
+            obj.data.transform(matrix)
         obj.matrix_world = Matrix.Identity(4)
     skin.parent = rig
 
@@ -387,11 +390,11 @@ def place(rig, skin, legs, scale):
     feet = feet or points
     shift = Vector((-sum(point.x for point in feet) / len(feet), -sum(point.y for point in feet) / len(feet),
                     -min(point.z for point in points)))
-    for data in (skin.data, rig.data):
-        data.transform(Matrix.Translation(shift))
+    skin.data.transform(Matrix.Translation(shift), shape_keys=True)
+    rig.data.transform(Matrix.Translation(shift))
     scale = scale(skin) if callable(scale) else scale
-    for data in (skin.data, rig.data):
-        data.transform(Matrix.Scale(scale, 4))
+    skin.data.transform(Matrix.Scale(scale, 4), shape_keys=True)
+    rig.data.transform(Matrix.Scale(scale, 4))
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
     tops = [bone for bone in rig.data.edit_bones if bone.parent is None]
