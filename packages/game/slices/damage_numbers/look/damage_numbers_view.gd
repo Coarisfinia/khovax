@@ -4,13 +4,15 @@ extends Node3D
 ## type chart's marks after it (TypeMarks, #701). A companion's special shows it largest, and says
 ## in words when the wild monster fainted, never by color alone (#68); auto attacks, a companion's
 ## and a wild monster's on a companion or a player, show it smaller and quicker, so their frequent
-## hits stay calm. A wild monster's hit on the trail isn't damage to anyone, so it shows none. The
+## hits stay calm; a wild monster's hit that a companion dodged shows as a miss, in words, not as
+## a 0 (#1564). A wild monster's hit on the trail isn't damage to anyone, so it shows none. The
 ## player's DamageNumbersChoice turns them off, the fainting's words staying, and sizes them.
 ## Calm, as the camera is: no shake and no flash. It only reads the tick's events and the state.
 
 const SECONDS: float = 1.2
 const RISE: float = 0.6
 const FAINTED_TEXT: String = "fainted"
+const MISS_TEXT: String = "miss"
 ## An auto attack's number: its seconds, its rise and its size as a share of a special's.
 const AUTO_SECONDS: float = 0.7
 const AUTO_RISE: float = 0.35
@@ -46,10 +48,18 @@ func show_strike(tile: Vector2i, struck: SpecialStruck) -> void:
 		_rise(tile, text, strong, false)
 
 
-## Shows an auto attack's `damage` landing on `tile`, `strong` as the type chart had it.
-func show_auto(tile: Vector2i, damage: int, strong: Array[bool]) -> void:
+## Shows an auto attack's `damage` landing on `tile`, `strong` as the type chart had it, or a miss
+## where it was `dodged`.
+func show_auto(tile: Vector2i, damage: int, strong: Array[bool], dodged: bool = false) -> void:
 	if _shown():
-		_rise(tile, "-%d" % damage, strong, true)
+		# A miss dealt nothing, so the type chart's marks don't go with it.
+		var no_marks: Array[bool] = []
+		_rise(tile, auto_text(damage, dodged), no_marks if dodged else strong, true)
+
+
+## What an auto attack's `damage` shows: the miss's words where it was `dodged`.
+static func auto_text(damage: int, dodged: bool = false) -> String:
+	return MISS_TEXT if dodged else "-%d" % damage
 
 
 ## What `struck` shows: its damage while `numbers` show, and on a line after it that the wild
@@ -76,7 +86,7 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		elif event is WildMonsterStruck:
 			var wild: WildMonsterStruck = event as WildMonsterStruck
 			if wild.target_id != 0:
-				show_auto(wild.tile, wild.damage, wild.strong)
+				show_auto(wild.tile, wild.damage, wild.strong, wild.dodged)
 
 
 ## Lets `text` rise from `tile` with `strong`'s marks, an `auto` attack's smaller and quicker, at

@@ -21,7 +21,8 @@ extends Feature
 ## companion, a player passive off its player. A hit that lands still deals at least 1 (#702).
 ## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
 ## miss, on a roll from the feature's own random stream: a miss deals nothing, like a hit on an
-## invincible player. Only a companion with a dodge rolls, so no other hit draws from the stream.
+## invincible player, and its WildMonsterStruck says it was dodged. Only a companion with a dodge
+## rolls, so no other hit draws from the stream.
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -238,6 +239,7 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 			struck = _on_companion(state, struck)
 			if _dodges(state, target_id):
 				struck.damage = 0
+				struck.dodged = true
 		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
 		state.events.append(struck)
 		var _fell: bool = health.hurt(state, target_id, struck.damage)

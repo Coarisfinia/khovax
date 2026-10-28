@@ -1714,7 +1714,8 @@ func _check_guards() -> String:
 
 
 ## A companion whose own passive dodges half the hits (#1499), not striking back: of ten wild
-## monster hits on it some miss, dealing nothing, and the others land less its guard, off its HP;
+## monster hits on it some miss, dealing nothing and said to be dodged, which the damage numbers
+## show as a miss (#1564), and the others land less its guard, off its HP;
 ## a hit on its player beside it, which no dodge helps, always lands.
 func _check_dodges() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
@@ -1735,9 +1736,16 @@ func _check_dodges() -> String:
 	for struck: WildMonsterStruck in strikes:
 		if struck.target_id != companion_id or (struck.damage != 0 and struck.damage != guarded):
 			return "a wild monster's hit on a dodging companion dealt %d" % struck.damage
-		missed += 1 if struck.damage == 0 else 0
+		if struck.dodged != (struck.damage == 0):
+			return "a dodging companion's hit for %d says dodged: %s" % [
+				struck.damage,
+				struck.dodged,
+			]
+		missed += 1 if struck.dodged else 0
 	if missed == 0 or missed == hits:
 		return "a companion dodging half the hits dodged %d of %d" % [missed, hits]
+	if DamageNumbersView.auto_text(0, true) != DamageNumbersView.MISS_TEXT:
+		return "a dodged hit's damage number shows %s" % DamageNumbersView.auto_text(0, true)
 	if _hp(state, companion_id) != full - (hits - missed) * guarded:
 		return "a dodging companion has %d HP after %d hits landed" % [
 			_hp(state, companion_id),
