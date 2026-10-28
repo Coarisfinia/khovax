@@ -412,6 +412,14 @@ a second model could use goes into the library or a generic tool, never into one
      curve plots and the motion check's numbers too, before and after (step 13).
   4. **Close-ups:** the codex view, `portrait` and `face` from `render_in_game.gd`.
   Publish them on the `assets` branch per AGENTS.md.
+- **One command for all of them (#1525):** `uv run --locked --package khovax-game-models
+  packages/game-models/render_media.py packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2]
+  [--quick]` renders the sheet, the in-game shots (desktop, phone, close-ups, points, the six
+  sides joined into one picture) and every clip's GIF in game and close up, Blender and Godot side
+  by side and Godot off the desktop, publishes them as `pr-<n>[-<tag>]-*` and prints the
+  description's media block, ready to paste. `--quick` renders only the fast-feedback pictures.
+  It also leaves each clip's middle pose as a Blender sheet (`poses/`) and four frames of each clip
+  in a row (`tiles/`) to look at; usage in its header. Run it in the background.
 - **Fast feedback (owner's rule, #1047):** push the quick renders first (the Blender sheet and
   the game camera shot), put them in the description and post a comment tagging the owner
   (`@$OWNER`, the login looked up as AGENTS.md says, #1060). Then render the rest in parallel, as

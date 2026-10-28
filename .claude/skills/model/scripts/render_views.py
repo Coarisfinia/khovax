@@ -3,7 +3,8 @@
 #     .claude/skills/model/scripts/render_views.py -- <model.glb> <out_dir> [clips] [frames]
 # Writes <out_dir>/<view>.png for front, back, left, right, top, three_quarter and sheet.png.
 # `clips` is one clip or several (`Attack,Hit`), `frames` one frame (default 1) or several, as a
-# list and ranges (`1,8,14`, `1-14`). One pose (one clip, one frame) writes into <out_dir> itself;
+# list and ranges (`1,8,14`, `1-14`), or `mid`, each clip's middle frame (render_media.py's pose
+# sheets, #1525). One pose (one clip, one frame) writes into <out_dir> itself;
 # several write each pose's views and sheet into <out_dir>/<Clip>_<frame>/ (`Attack_008`), all from
 # one Blender start, which is most of a render's cost (#1050).
 import math
@@ -22,11 +23,13 @@ glb, out_dir = args[0], args[1]
 clips = args[2].split(",") if len(args) > 2 else [""]
 frames = []
 for part in (args[3] if len(args) > 3 else "1").split(","):
+	if part == "mid":
+		frames.append(part)  # resolved per clip once the clips are imported
+		continue
 	span = re.fullmatch(r"(-?\d+)(?:-(-?\d+))?", part)  # a frame may be negative: `-3--1`
 	if not span:
 		sys.exit(f"not a frame or a range of frames: {part!r}")
 	frames.extend(range(int(span[1]), int(span[2] or span[1]) + 1))
-poses = [(clip, frame) for clip in clips for frame in frames]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=glb)
@@ -34,6 +37,17 @@ scene = bpy.context.scene
 for clip in clips:
 	if clip and clip not in bpy.data.actions:
 		sys.exit(f"no clip {clip!r} in {glb}")
+
+
+def middle(clip):
+	"""The clip's middle frame, or frame 1 for the rest pose."""
+	if not clip:
+		return 1
+	start, end = bpy.data.actions[clip].frame_range
+	return round((start + end) / 2)
+
+
+poses = [(clip, middle(clip) if frame == "mid" else frame) for clip in clips for frame in frames]
 
 
 def pose(clip, frame):
