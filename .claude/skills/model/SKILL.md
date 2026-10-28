@@ -222,7 +222,8 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    `hex` (the default) for a regular monster and `hex-large` for a boss, enraged or stronger one,
    sizing the rest pose within the footprint check's limits (step 20 below) with a margin for the
    widest clip (`lib/footprint.py`'s `fit`). Read its `HEX` line, and confirm the fit with the
-   check once the clips exist. An unrigged download is sized by its model script (`SCALE`, as
+   check once the clips exist; a `hex-large` model goes into `LARGE` in `check_footprint.py`
+   first, or the check holds it to a regular monster's limits. An unrigged download is sized by its model script (`SCALE`, as
    `drakkudor.py` does), to the same limits.
 4. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
    check its fixes bend right (bend each chain and see that it moves only its own part). An
