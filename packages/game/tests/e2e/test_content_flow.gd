@@ -1830,8 +1830,10 @@ func _check_unique_items() -> String:
 			or tags.problem_in("${UNIQUE_ITEM:warding_charm}").is_empty()):
 		return "the unique item tags name %s" % [tags.names.get(TextTags.UNIQUE_ITEM)]
 	var codex: String = ", \"codex\": {\"entry\": \"e\", \"gloss\": \"g\"}"
+	# With a model, which every piece of gear needs (#1581).
 	var unique: String = (
-		"{\"id\": \"x\", \"name\": \"Vis'x\", \"slot\": \"ward\", \"rarity\": \"bound\"%s}"
+		"{\"id\": \"x\", \"name\": \"Vis'x\", \"slot\": \"ward\", \"rarity\": \"bound\""
+		+ ", \"model\": \"" + MODEL + "\"%s}"
 	)
 	var cases: Dictionary[String, String] = {
 		unique % "": "a unique item",
