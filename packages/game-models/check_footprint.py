@@ -4,11 +4,16 @@ deformed mesh reaches across the hex the game stands it on, seen from above, fro
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
 
-In its rest pose a regular monster keeps 5 % padding inside its hex, and a model in LARGE (a boss,
-an enraged or stronger monster) may reach 5 % past it; during its clips each may reach 5 % further,
-and an attack 30 % past the hex (lib/footprint.py). It prints a line for the rest pose and one per clip (the largest reach, 1.00
-at the hex's edge, and its frame) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through
-game_shared.log (#1115): a failing line is an error on the .glb. It checks the models built by a
+The base rules, which CI enforces (the owner, on #1514, #1533 and #1528), as the largest reach
+over the hex's inradius (1.00 at its edge; the limits are in lib/footprint.py):
+
+    regular monster             rest pose 0.95   Attack 1.30   other clips 1.05
+    boss, enraged or stronger   rest pose 1.05   Attack 1.30   other clips 1.10
+    (a model in LARGE)
+
+It prints a line for the rest pose and one per clip (the largest reach and its frame, and the
+limit) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log
+(#1115): a failing line is an error on the .glb. It checks the models built by a
 script here (the monsters); a pack's model, or a prop without a rig, passes, so CI runs it on
 every .glb. The clip rate comes from the .glb's .import, as the game imports it.
 
