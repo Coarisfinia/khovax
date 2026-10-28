@@ -19,6 +19,9 @@ extends Feature
 ## A passive that guards takes its share off every hit on whom it helps (#616), only while its
 ## monster is out (CompanionPassives): a self passive off its
 ## companion, a player passive off its player. A hit that lands still deals at least 1 (#702).
+## A self passive that dodges (#1499, Zirki-kirki) makes its share of the hits on its companion
+## miss, on a roll from the feature's own random stream: a miss deals nothing, like a hit on an
+## invincible player. Only a companion with a dodge rolls, so no other hit draws from the stream.
 ##
 ## Encircled, it attacks only its ring: in a ring waiting for a totem (#423), it strikes the wall
 ## segment nearest to it, wherever that is, and once a segment is worn through, the ring breaks
@@ -40,8 +43,10 @@ const ID: String = "wild_attacks"
 const STRIKE_TICKS: int = Tuning.WILD_STRIKE_TICKS
 const TILE_INTEGRITY: int = Tuning.TILE_INTEGRITY
 
-## Each passive's guard (Ability.guard), by its id, for the passives that guard.
+## Each passive's guard and dodge (Ability.guard, dodge), in thousandths, by its id, for the
+## passives that have one.
 var guards: Dictionary[String, int] = {}
+var dodges: Dictionary[String, int] = {}
 ## The damage each trail tile has taken, by tile; one never hit isn't here.
 var _wear: Dictionary[Vector2i, int] = {}
 ## The trail's feature, which the wear is read against (set in `start`).
@@ -52,10 +57,16 @@ var _companion_at: Dictionary[Vector2i, int] = {}
 var _player_at: Dictionary[Vector2i, int] = {}
 var _ring_walls: Dictionary[Vector2i, bool] = {}
 var _ring_walls_found: bool = false
+## The feature's own random stream, which the dodges roll on (set in `start`).
+var _rng: Rng
 
 
-func _init(passive_guards: Dictionary[String, int] = {}) -> void:
+func _init(
+	passive_guards: Dictionary[String, int] = {},
+	passive_dodges: Dictionary[String, int] = {},
+) -> void:
 	guards = passive_guards
+	dodges = passive_dodges
 
 
 func id() -> String:
@@ -93,6 +104,7 @@ func before() -> Array[String]:
 
 func start(state: GameState) -> void:
 	_trail = state.feature(TrailFeature.ID) as TrailFeature
+	_rng = Rng.new(state.rng_seed, stream())
 
 
 ## Lets every wild monster strike, in id order, once every STRIKE_TICKS. Wear on tiles that left
@@ -224,6 +236,8 @@ func _strike(state: GameState, monster: Entity, damage: int, enraged: bool) -> v
 		var struck: WildMonsterStruck = WildMonsterStruck.new(monster.id, target_id, side, dealt)
 		if on_companion:
 			struck = _on_companion(state, struck)
+			if _dodges(state, target_id):
+				struck.damage = 0
 		struck.damage = _guarded(state, target_id, on_companion, struck.damage)
 		state.events.append(struck)
 		var _fell: bool = health.hurt(state, target_id, struck.damage)
@@ -258,20 +272,37 @@ static func _on_companion(state: GameState, struck: WildMonsterStruck) -> WildMo
 ## (#1472). All of them together
 ## take off less than a whole hit, and a hit that deals anything deals at least 1 (#702).
 func _guarded(state: GameState, target_id: int, on_companion: bool, damage: int) -> int:
-	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
-	if companions == null or damage == 0 or guards.is_empty():
+	if damage == 0 or guards.is_empty():
 		return damage
-	var passives: Array[String] = []
-	if on_companion:
-		passives = CompanionPassives.of_companion(state, companions, target_id)
-	else:
-		var slot: int = state.entity(target_id).slot
-		passives = CompanionPassives.of_player(state, companions, slot)
 	var guard: int = 0
-	for passive: String in passives:
+	for passive: String in _passives(state, target_id, on_companion):
 		guard += guards.get(passive, 0)
 	guard = mini(guard, Fixed.ONE - 1)
 	return maxi(Fixed.scale(damage, Fixed.ONE - guard), 1)
+
+
+## Whether the companion `companion_id` dodges the hit on it (#1499): a roll on the feature's
+## stream, against the dodges of its passives working now together, less than a whole. One without
+## a dodge doesn't roll.
+func _dodges(state: GameState, companion_id: int) -> bool:
+	if dodges.is_empty():
+		return false
+	var dodge: int = 0
+	for passive: String in _passives(state, companion_id, true):
+		dodge += dodges.get(passive, 0)
+	return dodge > 0 and _rng.below(Fixed.ONE) < mini(dodge, Fixed.ONE - 1)
+
+
+## The passives working now (CompanionPassives) for the companion or player `target_id`: a
+## companion's own, or the player's companion's while it's out; none without companions.
+static func _passives(state: GameState, target_id: int, on_companion: bool) -> Array[String]:
+	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
+	var passives: Array[String] = []
+	if companions == null:
+		return passives
+	if on_companion:
+		return CompanionPassives.of_companion(state, companions, target_id)
+	return CompanionPassives.of_player(state, companions, state.entity(target_id).slot)
 
 
 ## Adds `damage` to the wear on the trail tile `tile`; whether it's worn through now.
@@ -343,16 +374,17 @@ func hash_values() -> Array[int]:
 	var values: Array[int] = [tiles.size()]
 	for tile: Vector2i in tiles:
 		values.append_array([tile.x, tile.y, _wear[tile]])
+	values.append_array(_rng.hash_values())
 	return values
 
 
-## The worn tiles, sorted, and the wear on each, in the same order.
+## The worn tiles, sorted, the wear on each, in the same order, and the stream's state.
 func save_values() -> Dictionary:
 	var tiles: Array[Vector2i] = _worn_tiles()
 	var wear: Array[int] = []
 	for tile: Vector2i in tiles:
 		wear.append(_wear[tile])
-	return { "tiles": DataReader.flat(tiles), "wear": wear }
+	return { "tiles": DataReader.flat(tiles), "wear": wear, "rng": _rng.hash_values() }
 
 
 ## Each worn tile must be on the restored trail, once, with less wear than gives way.
@@ -360,8 +392,13 @@ func load_values(state: GameState, values: DataReader) -> void:
 	_wear.clear()
 	var tiles: Array[Vector2i] = values.tiles("tiles", state.region)
 	var wear: Array[int] = values.wholes("wear", 1, TILE_INTEGRITY - 1)
+	var restored: Rng = Rng.restored(values.wholes("rng", 0, Rng.MASK))
 	if values.failed():
 		return
+	if restored == null:
+		values.fail("the wild attacks' random stream isn't four 32-bit words, not all zero")
+		return
+	_rng = restored
 	if wear.size() != tiles.size():
 		values.fail("the worn tiles and their wear don't match")
 		return

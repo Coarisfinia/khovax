@@ -1709,7 +1709,58 @@ func _check_guards() -> String:
 		CompanionParty.faint(state, 0, short_id)
 	_joined = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-3, 0))
-	return _struck_for(strikes, player.id, WEAK_STRENGTH, "the player with none out")
+	var result: String = _struck_for(strikes, player.id, WEAK_STRENGTH, "the player with none out")
+	return result if not result.is_empty() else _check_dodges()
+
+
+## A companion whose own passive dodges half the hits (#1499), not striking back: of ten wild
+## monster hits on it some miss, dealing nothing, and the others land less its guard, off its HP;
+## a hit on its player beside it, which no dodge helps, always lands.
+func _check_dodges() -> String:
+	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
+	(state.feature(WildAttackFeature.ID) as WildAttackFeature).dodges = { SELF_GUARD: 500 }
+	state.set_enabled(CompanionAttackFeature.ID, false)
+	FlowSteps.carry(state, 0, [WEAK])
+	var player: Entity = state.add_entity(0, Vector2i(3, 0))
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, Vector2i(-3, 0))
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var guarded: int = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[SELF_GUARD])
+	var hits: int = 10
+	var missed: int = 0
+	var full: int = _hp(state, companion_id)
+	var ticks: int = hits * WildAttackFeature.STRIKE_TICKS
+	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-1, 0))
+	if strikes.size() != hits:
+		return "a dodging companion was struck %d times, not %d" % [strikes.size(), hits]
+	for struck: WildMonsterStruck in strikes:
+		if struck.target_id != companion_id or (struck.damage != 0 and struck.damage != guarded):
+			return "a wild monster's hit on a dodging companion dealt %d" % struck.damage
+		missed += 1 if struck.damage == 0 else 0
+	if missed == 0 or missed == hits:
+		return "a companion dodging half the hits dodged %d of %d" % [missed, hits]
+	if _hp(state, companion_id) != full - (hits - missed) * guarded:
+		return "a dodging companion has %d HP after %d hits landed" % [
+			_hp(state, companion_id),
+			hits - missed,
+		]
+	return _check_undodged_player(state, player, hits)
+
+
+## `hits` wild monster hits on the player `player` of a dodging companion in `state`, moved next to
+## the wild monster: no dodge helps a player, so every one lands, less the player guard.
+func _check_undodged_player(state: GameState, player: Entity, hits: int) -> String:
+	player.tile = Vector2i(1, 0)
+	var dealt: int = Fixed.scale(WEAK_STRENGTH, Fixed.ONE - GUARDS[PLAYER_GUARD])
+	for _hit: int in hits:
+		var struck: String = _struck_for(
+			_wild_strikes_over(state, WildAttackFeature.STRIKE_TICKS, Vector2i(-3, 0)),
+			player.id,
+			dealt,
+			"the player of a dodging companion",
+		)
+		if not struck.is_empty():
+			return struck
+	return ""
 
 
 ## With the weak species out, its web passive granted, and the strong one in reserve in `state`,

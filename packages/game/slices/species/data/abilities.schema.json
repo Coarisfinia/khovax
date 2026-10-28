@@ -36,6 +36,7 @@
 		"hurt_haste": { "description": "A self passive's, optional: how much shorter its monster's wait between strikes is at its last HP, in thousandths, less as it has more HP left (#1500). It works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
 		"rest_heal": { "description": "A self passive's, optional: the share of its monster's full HP it gets back each second it rests, waiting for no strike, in thousandths (#1500). It works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
 		"hush": { "description": "A player passive's, optional: the share of its player's steps next to a sleeping light sleeper that don't wake it, in thousandths (#1563): a light sleeper next to its player wakes only when they step and a roll doesn't spare it. A passive works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
+		"dodge": { "description": "A self passive's, optional: the share of the hits on its own monster that miss, in thousandths, each one a roll (#1499). It works only while its monster is out.", "type": "integer", "minimum": 1, "maximum": 999 },
 		"path": {
 			"description": "Its path mark (#470, #471): which of the story's two paths it belongs to, none, one or both.",
 			"enum": ["none", "harmony", "supremacy", "both"],
@@ -43,11 +44,11 @@
 		}
 	},
 	"if": { "properties": { "kind": { "const": "special" } } },
-	"then": { "required": ["power", "cooldown_seconds", "strike_type"], "not": { "anyOf": [{ "required": ["guard"] }, { "required": ["hurt_haste"] }, { "required": ["rest_heal"] }] } },
+	"then": { "required": ["power", "cooldown_seconds", "strike_type"], "not": { "anyOf": [{ "required": ["guard"] }, { "required": ["hurt_haste"] }, { "required": ["rest_heal"] }, { "required": ["dodge"] }] } },
 	"else": {
 		"not": { "anyOf": [{ "required": ["power"] }, { "required": ["cooldown_seconds"] }, { "required": ["strike_type"] }, { "required": ["channel_seconds"] }] },
 		"if": { "properties": { "kind": { "const": "player_passive" } } },
-		"then": { "not": { "anyOf": [{ "required": ["hurt_haste"] }, { "required": ["rest_heal"] }] } }
+		"then": { "not": { "anyOf": [{ "required": ["hurt_haste"] }, { "required": ["rest_heal"] }, { "required": ["dodge"] }] } }
 	},
 	"dependentSchemas": { "hush": { "properties": { "kind": { "const": "player_passive" } } } }
 }

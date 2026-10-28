@@ -1,9 +1,10 @@
-// A placeholder: its effect comes with #1499.
+// Its dodge is a placeholder to tune (#960).
 {
 	"id": "tikazzir_zirki_kirki",
 	"kind": "self_passive",
 	"name": "Zirki-kirki",
 	"description": "The ${MONSTER:tikazzir} dodges more often, being so light.",
+	"dodge": 200, // a fifth of the hits on it miss
 	"codex": {
 		"entry": "The flick of wings slipping aside. Dominators called it after a beast that was never where the blow landed.",
 		"gloss": "flit, not here"
