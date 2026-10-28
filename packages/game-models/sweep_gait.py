@@ -11,8 +11,9 @@ the builds the game's clip rate and loops. Each combination is built in its own 
 motion check (at the speeds the build prints), the ground check and the clearance check run on it
 in their summary mode (lib/summary.py); `--jobs` combinations run at once. `--clips` counts only
 those clips' misses (a gait's clips; a value like CROUCH reaches every clip). `--keep` keeps each
-build in the folder, named after its values, so the passing one can be committed as it is; the
-model is then built once more from its script with the chosen values written in."""
+build in the folder, named after its values, to look at. The sweep builds nothing else: write the
+chosen values into the script's constants and build the model from it as usual, so the committed
+.glb is what its script builds (the rebuild check)."""
 
 import argparse
 import itertools
@@ -68,7 +69,9 @@ def describe(miss: dict) -> str:
     text = "%s %s %s" % (miss["check"], miss["clip"], miss["measure"])
     if miss["value"] is not None:
         by = abs(float(miss["value"]) - float(miss["limit"]))
-        text += " %s %s %s %s (by %.2f)" % (miss["value"], miss["side"], miss["limit"], miss["unit"] or "", by)
+        # As many decimals as the check printed, which tell a small miss from its limit.
+        decimals = max(len(miss["value"].partition(".")[2]), len(miss["limit"].partition(".")[2]))
+        text += " %s %s %s %s (by %.*f)" % (miss["value"], miss["side"], miss["limit"], miss["unit"] or "", decimals, by)
     return text
 
 
@@ -127,13 +130,20 @@ def grid(specs: list[str]) -> tuple[list[str], list[tuple[str, ...]]]:
     return names, list(itertools.product(*choices))
 
 
+def jobs(value: str) -> int:
+    count = int(value)
+    if count < 1:
+        raise argparse.ArgumentTypeError("--jobs takes 1 or more, not %d" % count)
+    return count
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("script", type=Path)
     parser.add_argument("glb", type=Path)
     parser.add_argument("values", nargs="+", help="NAME=value,value,...")
     parser.add_argument("--clips", default="", help="count only these clips' misses (comma-separated)")
-    parser.add_argument("--jobs", type=int, default=max(1, min(4, (os.cpu_count() or 2) // 3)))
+    parser.add_argument("--jobs", type=jobs, default=max(1, min(4, (os.cpu_count() or 2) // 3)))
     parser.add_argument("--keep", type=Path, help="keep each build in this folder")
     options = parser.parse_args()
     names, combinations = grid(options.values)
