@@ -8,10 +8,8 @@ extends Feature
 ## (#219). Wild monsters hiding in their tile (#202) aren't struck: nobody sees them. Nor are ones
 ## sealing in a ring (#409): the ring has them, and its seal was worked out from their HP. Each hit
 ## raises CompanionStruck. A companion that just joined or has nothing to strike is ready at once.
-## Two kinds of passive work here, while their monster is out (#1500, CompanionPassives): one that
-## hastens it when hurt shortens its wait by its share times the share of its HP it has lost
-## (Kazri-tazri), and one that heals it at rest gives it its share of its full HP back at the start
-## of each second it rests, waiting for no strike (Lombu-bombu).
+## Its passives that hasten it when hurt or heal it at rest work here too (#1500,
+## CompanionPassiveEffects).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companion_attacks"
@@ -74,45 +72,9 @@ func step(state: GameState, _commands: Array[Command]) -> void:
 		if wild != null:
 			target = target_next_to(state, wild, state.entity(companion_id).tile)
 		if target == 0:
-			_rest(state, companions, companion_id)
+			CompanionPassiveEffects.rest(state, companions, companion_id, rest_heals)
 		else:
 			_strike(state, wild, companion_id, companions.species_of(companion_id), target)
-
-
-## The resting companion `companion_id` gets the share of its full HP its passives heal at rest
-## back, at the start of each second.
-func _rest(state: GameState, companions: CompanionFeature, companion_id: int) -> void:
-	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	if health == null or rest_heals.is_empty() or state.tick % Simulation.TICKS_PER_SECOND != 0:
-		return
-	var heal: int = _passive_share(companions, companion_id, rest_heals)
-	if heal > 0:
-		health.heal(state, companion_id, Fixed.scale(health.max_hp_of(state, companion_id), heal))
-
-
-## The wait `wait` of the companion `companion_id`, shortened by its passives' haste when hurt
-## times the share of its HP it has lost; never below one tick.
-func _hastened(state: GameState, companions: CompanionFeature, companion_id: int, wait: int) -> int:
-	var health: HealthFeature = state.feature(HealthFeature.ID) as HealthFeature
-	if health == null or hastes.is_empty():
-		return wait
-	var haste: int = _passive_share(companions, companion_id, hastes)
-	var full: int = health.max_hp_of(state, companion_id)
-	var lost: int = clampi(full - health.hp_of(state, companion_id), 0, full)
-	return maxi(Fixed.scale(wait, Fixed.ONE - Fixed.mul_div(haste, lost, full)), 1)
-
-
-## The shares `by_passive` gives the passives working for the companion `companion_id` now
-## (CompanionPassives), together: less than a whole.
-static func _passive_share(
-	companions: CompanionFeature,
-	companion_id: int,
-	by_passive: Dictionary[String, int],
-) -> int:
-	var total: int = 0
-	for passive: String in CompanionPassives.of_companion(companions, companion_id):
-		total += by_passive.get(passive, 0)
-	return mini(total, Fixed.ONE - 1)
 
 
 ## The companion `companion_id`, a `species`, strikes `target` for its strength as it leans, after
@@ -133,7 +95,13 @@ func _strike(
 	var damage: int = TypeEffectivenessFeature.scaled(state, strength, species, false, struck)
 	wild.wound(state, target, damage)
 	var wait: int = CompanionGrowth.ticks(STRIKE_TICKS, leaning.speed)
-	_waits[companion_id] = _hastened(state, companions, companion_id, wait)
+	_waits[companion_id] = CompanionPassiveEffects.hastened(
+		state,
+		companions,
+		companion_id,
+		wait,
+		hastes,
+	)
 	var strong: Array[bool] = TypeEffectivenessFeature.strong_against(state, species, false, struck)
 	state.events.append(CompanionStruck.new(companion_id, target, damage, strong))
 
