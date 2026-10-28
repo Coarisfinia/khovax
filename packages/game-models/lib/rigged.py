@@ -11,15 +11,20 @@ are fixed there:
   and the part is weighted to them by how near each lies.
 - **a bleed**: another limb's chain holds weights in the part, so bending that limb drags this
   part along. Those weights go, and what's left is the part's own.
+- **a turned-back end** (#1539): the generator ends a chain with bones that turn back on it (a
+  leg's last bones climb back up from its sole, a stalk's come back down from its tip), holding
+  few weights. Their weights go to the bone before them, and they go.
 
 Vertices inside a fork's ball keep their weights: that's where the parts blend into the body.
-Then every bone is named to the library's scheme by what its chain moves (`<pair>_leg_NN.<side>`,
-`<pair>_thigh.L` for a three-bone leg as the hexapod has, `hips` and `spine_NN` for the trunk),
+Then every bone is named to the library's scheme by what its chain moves (`<pair>_leg_NN.<side>`
+ending in `<pair>_paw.<side>`, which the clips plant; `<pair>_thigh.L` for a three-bone leg as the
+hexapod has; `<pair>_stalk_NN.<side>`; `hips` and `spine_NN` for the trunk),
 rolled as the library's armatures are (quadruped.build), and hung from a new `root` on the ground
 between the feet, which the clips move. It prints what it kept, fixed and renamed.
 
 Blender is Z-up and the model faces -Y; a part's left is +X."""
 
+import math
 import statistics
 from collections import Counter
 
@@ -47,6 +52,8 @@ MIDLINE = 0.25
 PAIRS = {2: ("front", "hind"), 3: ("front", "mid", "hind")}
 # A three-bone leg takes the hexapod's names, so its gaits and checks apply as they are.
 LEG_PARTS = ("thigh", "shin", "paw")
+# A bone turning from the one before it by more than this (radians) turns back on the chain.
+TURNED_BACK = math.pi / 2
 # The root the clips move: on the ground between the feet, pointing up, deforming nothing.
 ROOT_LENGTH = 0.3
 
@@ -296,6 +303,37 @@ def reweight(skin, chain, bones, regrown):
         _set_weights(skin, index, kept)
 
 
+def turned_back(chain, bones):
+    """How many bones at the end of `chain` turn back on it: from the last bone turning by more
+    than TURNED_BACK from the one before it, to the end. Fewer than half the chain's: a chain
+    folding back on itself in its middle is a shape (a curl), not a generator's loose end."""
+    directions = [(bones[name].tail_local - bones[name].head_local).normalized() for name in chain.bones]
+    for index in range(len(directions) - 1, 0, -1):
+        if directions[index].angle(directions[index - 1], 0.0) > TURNED_BACK:
+            count = len(directions) - index
+            return count if 2 * count < len(directions) else 0
+    return 0
+
+
+def fold(rig, skin, chain, count):
+    """Drops `chain`'s last `count` bones, their weights going to the bone before them."""
+    dropped, kept = chain.bones[-count:], chain.bones[-count - 1]
+    for index, weights in _weights(skin).items():
+        moved = sum(weights.pop(name, 0.0) for name in dropped)
+        if moved > 0.0:
+            weights[kept] = weights.get(kept, 0.0) + moved
+            _set_weights(skin, index, weights)
+    for name in dropped:
+        if skin.vertex_groups.get(name):
+            skin.vertex_groups.remove(skin.vertex_groups[name])
+    scene.select_only(rig)
+    bpy.ops.object.mode_set(mode="EDIT")
+    for name in dropped:
+        rig.data.edit_bones.remove(rig.data.edit_bones[name])
+    bpy.ops.object.mode_set(mode="OBJECT")
+    chain.bones = chain.bones[:-count]
+
+
 def names(every, leaves, skin):
     """{old bone name: new name} for every bone, by what its chain moves; and each part's chain's
     label for the report. The trunk (the chain at the root) is `hips` and `spine_NN`; a part
@@ -325,6 +363,9 @@ def names(every, leaves, skin):
                 bones = [pair + part + side for part in LEG_PARTS]
             else:
                 bones = ["%s%s_%02d%s" % (pair, kind, number + 1, side) for number in range(len(chain.bones))]
+                if kind == "leg":
+                    # Its last bone is its paw, named as every leg's, which the clips plant.
+                    bones[-1] = pair + LEG_PARTS[-1] + side
             out.update(zip(chain.bones, bones))
     for number, chain in enumerate(chain for chain in every if chain not in leaves or chain.part is None):
         if chain.parent is None and number == 0:
@@ -416,7 +457,16 @@ def adopt(rig, skin, scale=1.0):
     for part in found:
         if part.chain is None:
             print("ORPHAN a part of %d vertices with no chain of its own: rig it by hand" % len(part.vertices))
-    fixes = []
+    fixes, folded = [], set()
+    # Every loose end goes first, so a short chain is regrown with as many bones as its siblings
+    # keep.
+    for chain in leaves:
+        loose = turned_back(chain, bones) if chain.part is not None else 0
+        if loose:
+            fold(rig, skin, chain, loose)
+            folded.add(chain.name)
+            fixes.append("FOLDED %s: its last %d bones turned back on it; their weights went to %s"
+                         % (chain.name, loose, chain.bones[-1]))
     for chain in leaves:
         if chain.part is None:
             print("UNMATCHED %s: no part of the mesh of its own; kept as it is" % chain.name)
@@ -436,7 +486,7 @@ def adopt(rig, skin, scale=1.0):
         for other, count in sorted(bled.items()):
             fixes.append("BLED %s held weights above %.1f on %d vertices of %s's part: removed"
                          % (other, BLEED, count, old))
-        if not short and not bled:
+        if not short and not bled and old not in folded:
             print("KEEP %s: %d bones, a part of %d vertices" % (old, len(chain.bones), len(chain.part.vertices)))
     for line in fixes:
         print("FIX " + line)

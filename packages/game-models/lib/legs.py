@@ -16,7 +16,9 @@ while the leg turns over it.
   way every leg is a closed-form solve. The follower's own rotation in a pose folds it further
   (about the leg's side axis: positive swings its end back). A leg bends in the plane that faces
   the body's side, unless it names its own (`plane`, the normal of the plane its bones lie in at
-  rest): a leg whose knee bends out to the side, as a rib walking on its tip (#1476).
+  rest): a leg whose knee bends out to the side, as a rib walking on its tip (#1476). The upper
+  and the lower "bone" may each be several bones in a row that turn as one (#1539): a tentacle's
+  many bones bend at the one joint between them, each keeping its rest curve.
 - `steps`: a one-shot clip's steps, each an eased arc from where the paw stands to a new spot,
   lifted on the way, laid over the clip's frames as plant channels.
 - `plant`: solves every leg on every frame of a clip and writes the bones' rotations into it.
@@ -36,9 +38,15 @@ STRETCH = 0.92
 
 
 class Leg:
+    """`upper` and `lower` are a bone's name each, or a tuple of bones in a row that turn as one."""
+
     def __init__(self, upper, lower, paw, follower=None, follows=True, plane=None):
         self.upper, self.lower, self.paw, self.follower, self.follows = upper, lower, paw, follower, follows
         self.plane = plane
+        self.uppers = (upper,) if isinstance(upper, str) else tuple(upper)
+        self.lowers = (lower,) if isinstance(lower, str) else tuple(lower)
+        if plane is None and len(self.uppers + self.lowers) > 2:
+            raise ValueError("a leg of bones in a row bends in its own plane: give it one")
 
 
 class Step:
@@ -169,10 +177,11 @@ def _solve(rig, pose, leg, scale, cache, rise):
     """The leg's bones' orientations reaching its paw's target, how far short they fall while it's
     on the ground, and how far its top would have to come down for it to reach there without
     stretching past STRETCH."""
-    parent = rig.parent[leg.upper]
+    first = leg.uppers[0]
+    parent = rig.parent[first]
     carry = posed(rig, pose, parent, scale, cache) @ rig.matrix[parent].inverted()
     turn = carry.to_3x3()
-    top = (carry @ rig.matrix[leg.upper]).translation
+    top = (carry @ rig.matrix[first]).translation
     side, up, forward = pose.get("plant." + leg.paw, (0.0, 0.0, 0.0))
     # The paw tilts about its toes' tip: tipping its toes down lifts its heel, so it peels off
     # the ground from the heel and lands toes first, never sliding.
@@ -192,7 +201,18 @@ def _solve(rig, pose, leg, scale, cache, rise):
     def solid(flat):
         return down * flat.x + back * flat.y
 
-    upper, lower = flatten(rig.vector[leg.upper]), flatten(rig.vector[leg.lower])
+    # A bone of several in a row keeps its reach out of the leg's plane, turned with the leg; the
+    # bones of each run end in the plane (Leg's `plane` runs through its top, knee and paw).
+    rest = Vector(leg.plane).normalized() if leg.plane is not None else None
+
+    def bent(names, angle):
+        if len(names) == 1:
+            return [(names[0], solid(_turned(flatten(rig.vector[names[0]]), angle)))]
+        return [(name, solid(_turned(flatten(rig.vector[name]), angle)) + normal * rig.vector[name].dot(rest))
+                for name in names]
+
+    upper = sum((flatten(rig.vector[name]) for name in leg.uppers[1:]), flatten(rig.vector[first]))
+    lower = sum((flatten(rig.vector[name]) for name in leg.lowers[1:]), flatten(rig.vector[leg.lowers[0]]))
     flat = Vector((reach.dot(down), reach.dot(back)))
     follower = Vector((0.0, 0.0))
     if leg.follower:
@@ -201,7 +221,7 @@ def _solve(rig, pose, leg, scale, cache, rise):
             # It swings as far as the whole leg does from its rest, toward where its paw is over
             # the ground (a lifted paw comes up close under the leg, where the way to it turns
             # fast: the lift is the other bones' to take up).
-            still = flatten(rig.matrix[leg.paw].translation - rig.matrix[leg.upper].translation)
+            still = flatten(rig.matrix[leg.paw].translation - rig.matrix[first].translation)
             over = reach - Vector((0.0, 0.0, up * scale))
             toward = Vector((over.dot(down), over.dot(back)))
             fold += math.atan2(toward.y, toward.x) - math.atan2(still.y, still.x)
@@ -219,7 +239,11 @@ def _solve(rig, pose, leg, scale, cache, rise):
     # Only a paw on the ground needs the body to come down to it; one in the air may fall short.
     grounded = up <= 0.0
     sink = max(0.0, -left.z - math.sqrt(max(0.0, longest * longest - across))) if grounded else 0.0
-    chain = [(leg.upper, solid(_turned(upper, angle))), (leg.lower, solid(shin))]
+    if len(leg.lowers) == 1:
+        lowered = [(leg.lowers[0], solid(shin))]
+    else:
+        lowered = bent(leg.lowers, math.atan2(shin.y, shin.x) - math.atan2(lower.y, lower.x))
+    chain = bent(leg.uppers, angle) + lowered
     if leg.follower:
         chain.append((leg.follower, solid(held)))
     # Each bone swings the shortest way from its rest under its posed parent, so it never twists.
