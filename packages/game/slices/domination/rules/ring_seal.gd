@@ -11,6 +11,9 @@ var walls: Array[Vector2i] = []
 var damage: Array[int] = []
 ## The damage a segment takes before it fails, in thousandths.
 var integrity: int = 0
+## The ring power the players' warded control points added when it closed (#1492), saved, since
+## they may ward more while it seals.
+var ward_power: int = 0
 ## The wild monsters inside, in id order, and the index in `walls` of the segment each one pushes
 ## on: the nearest, as a ring holds its wild monsters where they stand.
 var monsters: Array[int] = []
@@ -56,6 +59,7 @@ func to_data() -> Dictionary:
 		"damage": damage.duplicate(),
 		"monsters": monsters.duplicate(),
 		"ticks": ticks,
+		"ward_power": ward_power,
 		"braced": DataReader.flat_pairs(braced),
 		"braced_walls": braced_walls_flat(),
 	}

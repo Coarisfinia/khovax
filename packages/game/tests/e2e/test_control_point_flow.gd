@@ -5,7 +5,8 @@ extends RefCounted
 ## each point is state, hashed and saved. A side holding no control point loses the battle, once.
 ## The sides hold their points together, never a player alone, so co-op players share them (#74).
 ## A player takes a point by closing a ring around it and placing their totem on it (#644), which
-## wards it: one totem per point.
+## wards it: one totem per point. Every point the players' side has warded strengthens their rings
+## (#1492).
 
 const SEED: int = 3
 ## A battle ground: the attackers start with one control point, the defenders hold two and one
@@ -132,7 +133,8 @@ func _check_lost() -> String:
 
 
 ## A saved battle loads with the same holders, wards and loser, a warded point and unwarded ones
-## alike, and a save that doesn't fit the region's control points is refused.
+## alike, its players' rings as strong as their warded points make them, and a save that doesn't
+## fit the region's control points is refused.
 func _check_saved() -> String:
 	var state: GameState = _battle()
 	_points(state).holders[0] = ATTACKERS
@@ -147,6 +149,8 @@ func _check_saved() -> String:
 			_points(loaded).warded,
 			_points(state).warded,
 		]
+	if _domination(loaded).ward_power != Tuning.WARDED_POINT_RING_POWER:
+		return "a loaded battle's warded point didn't strengthen the players' rings"
 	var wards: Array[int] = []
 	var _sized: int = wards.resize(HELD.size())
 	wards.fill(0)
@@ -159,8 +163,9 @@ func _check_saved() -> String:
 
 
 ## A ring with a gap around a point takes nothing, and no charge; placing a totem on a closed ring
-## around the players' own point wards it, spending a charge, and a warded point takes no second
-## totem. The totem's button agrees each time (#1503): faded where the totem takes nothing.
+## around the players' own point wards it, spending a charge, which strengthens their rings, and a
+## warded point takes no second totem. The totem's button agrees each time (#1503): faded where the
+## totem takes nothing.
 func _check_warded() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
@@ -172,12 +177,19 @@ func _check_warded() -> String:
 		return "the totem's button shows usable on a ring with a gap"
 	if _taken(state, _totem(state, 0)) != -1 or _charges(state, 0) != PlaceholderTotems.CHARGES:
 		return "a ring with a gap took a control point or spent a charge"
+	if _domination(state).ward_power != 0:
+		return "the players' rings were strengthened before they warded a point"
 	_color(state, own_ring, state.player(1))
 	if not FlowSteps.usable(TotemButton.new(), state, 1):
 		return "the totem's button is faded on a ring around the players' own unwarded point"
 	var warded: int = _taken(state, _totem(state, 1))
 	if warded != own or not points.warded[own] or points.holders[own] != ATTACKERS:
 		return "a totem on a ring around the players' own point didn't ward it"
+	if _domination(state).ward_power != Tuning.WARDED_POINT_RING_POWER:
+		return "warding the players' point didn't strengthen their rings by %d, but by %d" % [
+			Tuning.WARDED_POINT_RING_POWER,
+			_domination(state).ward_power,
+		]
 	_color(state, own_ring, state.player(1))
 	if FlowSteps.usable(TotemButton.new(), state, 1):
 		return "the totem's button shows usable on a ring around a warded point"
@@ -265,8 +277,11 @@ func _ring_battle() -> GameState:
 
 ## The charges left on the totem of the player in `slot`.
 static func _charges(state: GameState, slot: int) -> int:
-	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
-	return domination.totems.charges_of(state.player(slot).id)
+	return _domination(state).totems.charges_of(state.player(slot).id)
+
+
+static func _domination(state: GameState) -> DominationFeature:
+	return state.feature(DominationFeature.ID) as DominationFeature
 
 
 ## The index of GRID's control point held by `side` away from the region's edge.

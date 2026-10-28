@@ -41,6 +41,10 @@ var seals: Dictionary[int, RingSeal] = {}
 var encircled: Dictionary[int, Array] = {}
 ## Every player's placeholder totem.
 var totems: PlaceholderTotems = PlaceholderTotems.new()
+## The ring power the players' warded control points add to every ring they close now (#1492), as
+## a later feature tells it (strengthen). Not hashed or saved: it follows from that feature's state,
+## and each seal keeps the power it closed with.
+var ward_power: int = 0
 ## The edge of `_edge_region`, cached by _edge_of.
 var _edge: Array[Vector2i] = []
 var _edge_region: Region = null
@@ -89,7 +93,7 @@ func _place_totems(state: GameState, commands: Array[Command]) -> void:
 		var inside: Array[int] = []
 		inside.assign(encircled[dominator_id])
 		var _dropped: bool = encircled.erase(dominator_id)
-		seals[dominator_id] = RingSealing.build(state, trail, inside)
+		seals[dominator_id] = RingSealing.build(state, trail, inside, ward_power)
 
 
 ## Whether the player `player_id` placing their totem now would seal a ring (#931, the totem's
@@ -106,6 +110,12 @@ func can_place_totem(state: GameState, player_id: int) -> bool:
 ## control point's (#644); returns whether they had one to spend.
 func spend_totem(player_id: int) -> bool:
 	return totems.spend(player_id)
+
+
+## Sets the ring power every ring the players close from now on gains from the control points their
+## side has warded (#1492). Only rules call it, inside a tick or as they load (#30).
+func strengthen(power: int) -> void:
+	ward_power = power
 
 
 ## The dominator, lowest id first, whose ring waiting for a totem has a tile on `tile`, or 0.
@@ -422,7 +432,11 @@ func load_values(state: GameState, values: DataReader) -> void:
 			values.fail("sealing ring of %d: %s" % [dominator_id, problem])
 			return
 		var trail: Trail = (state.feature(TrailFeature.ID) as TrailFeature).shared
-		var seal: RingSeal = RingSealing.build(state, trail, monsters)
+		# A save from before warded control points (#1492) has no ward power: its seals had none.
+		var ward_power_then: int = 0
+		if (entry.data as Dictionary).has("ward_power"):
+			ward_power_then = entry.whole("ward_power", 0, DataReader.MOST)
+		var seal: RingSeal = RingSealing.build(state, trail, monsters, ward_power_then)
 		if dominator_of(state, trail, seal.walls) != dominator_id:
 			values.fail("sealing ring of %d: its domination goes to someone else" % dominator_id)
 			return

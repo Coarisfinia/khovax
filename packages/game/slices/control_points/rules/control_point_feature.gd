@@ -13,6 +13,10 @@ extends Feature
 ## on their side's own point that no totem wards yet wards it. The ring comes off the trail, as a
 ## domination's does. A ring with wild monsters inside is a domination's (DominationFeature, which
 ## steps earlier and places the totem first), never a control point's.
+##
+## Every point the players' side has warded strengthens their rings (#1492): it adds
+## Tuning.WARDED_POINT_RING_POWER to the power of each ring they close
+## (DominationFeature.strengthen).
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "control_points"
@@ -124,12 +128,25 @@ func _take(
 ) -> void:
 	holders[index] = PLAYERS_SIDE
 	warded[index] = true
+	_strengthen(state)
 	state.events.append(ControlPointTaken.new(points[index], PLAYERS_SIDE, player_id))
 	var cleared: Array[Vector2i] = []
 	for wall: Vector2i in _ring_around(state, trail.shared, points[index]):
 		if not needed.has(wall):
 			cleared.append(wall)
 	trail.clear(state, cleared)
+
+
+## Tells the domination the ring power the points the players' side has warded add to their rings.
+func _strengthen(state: GameState) -> void:
+	var domination: DominationFeature = state.feature(DominationFeature.ID) as DominationFeature
+	if domination == null:
+		return
+	var ours: int = 0
+	for index: int in points.size():
+		if warded[index] and holders[index] == PLAYERS_SIDE:
+			ours += 1
+	domination.strengthen(ours * Tuning.WARDED_POINT_RING_POWER)
 
 
 ## The first control point, in the order of `points`, that the players' side hasn't warded and
@@ -191,7 +208,7 @@ func save_values() -> Dictionary:
 	return { "holders": holders.duplicate(), "warded": wards, "loser": loser }
 
 
-func load_values(_state: GameState, values: DataReader) -> void:
+func load_values(state: GameState, values: DataReader) -> void:
 	var nobody: int = ControlPointSides.NOBODY
 	var held: Array[int] = values.wholes("holders", nobody, ControlPointSides.DEFENDERS)
 	var wards: Array[int] = values.wholes("warded", 0, 1)
@@ -206,3 +223,4 @@ func load_values(_state: GameState, values: DataReader) -> void:
 	for ward: int in wards:
 		warded.append(ward == 1)
 	loser = lost
+	_strengthen(state)
