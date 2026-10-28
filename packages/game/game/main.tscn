@@ -73,6 +73,7 @@
 [ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
 [ext_resource type="Script" path="res://slices/codex/ui/quest_names_tie.gd" id="66_quest_names_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
+[ext_resource type="Script" path="res://slices/harvest/ui/interact_button.gd" id="67_interact_button"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -432,6 +433,12 @@ driver = NodePath("../../Driver")
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("38_respawn_button")
+driver = NodePath("../../Driver")
+
+[node name="InteractButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver")]
+layout_mode = 3
+mouse_filter = 2
+script = ExtResource("67_interact_button")
 driver = NodePath("../../Driver")
 
 [node name="ReviveButton" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "holder")]
