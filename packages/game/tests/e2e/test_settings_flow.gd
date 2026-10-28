@@ -862,7 +862,7 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 	input._process(0.0)
 	Input.action_release(&"interact")
 	var first: Command = input.command(FlowGame.driver(main).state)
-	Input.action_release(&"place_totem")
+	var held_over: String = await _totem_held_over(input, FlowGame.driver(main))
 	special.lay_out_in(special.get_viewport_rect().size)
 	var shown_closed: bool = special.visible
 	special.touch = false
@@ -875,6 +875,25 @@ func _menu_takes_no_presses(menu: GameMenu, main: Node) -> String:
 		return "a press made while the menu was open, or as it closed, reached the next command"
 	if not shown_closed:
 		return "the special's button doesn't show again once the menu closes"
+	return held_over
+
+
+## place_totem held on past the menu's closing (#1549) still places nothing a few frames later;
+## let go and pressed anew, it places at once, even in a command asked before the frame's
+## _process hears the press. Leaves it let go.
+func _totem_held_over(input: LocalInput, driver: GameDriver) -> String:
+	await _tree.process_frame
+	await _tree.process_frame
+	await _tree.process_frame
+	var held: Command = input.command(driver.state)
+	Input.action_release(&"place_totem")
+	Input.action_press(&"place_totem")
+	var fresh: Command = input.command(driver.state)
+	Input.action_release(&"place_totem")
+	if held.totem != Command.NO_TOTEM:
+		return "place_totem held on past the menu's closing placed the totem"
+	if fresh.totem != Command.PLACE_TOTEM:
+		return "a fresh press of place_totem after the menu closed placed no totem"
 	return ""
 
 

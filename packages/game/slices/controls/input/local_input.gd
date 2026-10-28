@@ -194,6 +194,11 @@ func command(state: GameState) -> Command:
 ## Whether the next command places the totem: tapped since the last one, or held, unless held on
 ## from while the game heard no input. A tap counts once.
 func _placing() -> bool:
+	# A fresh press ends a hold kept over even when the driver asks before this frame's _process,
+	# which would hear it only after this command.
+	var fresh: bool = Input.is_action_just_pressed("place_totem")
+	if fresh and _totem == TotemPress.HELD_OVER and Engine.get_process_frames() > _deaf_through:
+		_totem = TotemPress.NONE
 	var held: bool = Input.is_action_pressed("place_totem") and _totem != TotemPress.HELD_OVER
 	var tapped: bool = _totem == TotemPress.TAPPED
 	if tapped:
