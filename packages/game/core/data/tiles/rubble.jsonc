@@ -3,7 +3,7 @@
 // (#212), which brings the cracked rock back.
 {
 	"id": "rubble",
-	"color": "#8a8178",
+	"color": "#ada393",
 	"symbol": "+", // tells it apart without its color (#68)
 	"traits": { "walkable": false }
 }

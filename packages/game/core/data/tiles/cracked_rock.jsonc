@@ -3,7 +3,7 @@
 // boulder. A player next to it breaks its loose stones off by hand, which leaves rubble.
 {
 	"id": "cracked_rock",
-	"color": "#7d756d",
+	"color": "#8a7b6c",
 	"symbol": "x", // tells it apart without its color (#68)
 	"harvest": { "yields": "loose_stones", "becomes": "rubble", "takes": "hands" },
 	"traits": { "walkable": false }
