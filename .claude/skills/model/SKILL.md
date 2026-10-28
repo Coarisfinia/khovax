@@ -180,9 +180,11 @@ a second model could use goes into the library or a generic tool, never into one
   builds the model over the grid of gait values in parallel, runs those three checks on each in
   summary mode, and prints a Markdown table: `PASS`, or the limit each combination misses most
   and by how much. A model script offers its gait values as module constants named in its `GAIT`
-  and takes `NAME=value` after its output path (`lib/tuning.py`, as `drakkudor.py` does). Tune a
-  gait with a sweep or two rather than hand-run rounds of build and check, then write the chosen
-  values into the script.
+  and takes `NAME=value` after its output path (`lib/tuning.py`, as `drakkudor.py` and the
+  quadrupeds do). Set what follows from them (a quadruped's cycle frames and strides from its
+  `*_TILES`) after `tuning.arguments` has run, so a swept value reaches it. Tune a gait with a
+  sweep or two rather than hand-run rounds of build and check, then write the chosen values into
+  the script.
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
