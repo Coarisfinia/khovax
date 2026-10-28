@@ -36,8 +36,6 @@ func run(tree: SceneTree) -> String:
 	if result.is_empty():
 		result = _check_kept()
 	if result.is_empty():
-		result = _check_tapped()
-	if result.is_empty():
 		result = _check_button_shows()
 	if result.is_empty() and _first_loot() != _first_loot():
 		result = "the same seed harvested the gems with different rolls"
@@ -195,6 +193,7 @@ func _check_tapped() -> String:
 
 
 ## A harvest going on is saved and restored: a forest loaded from the save goes on with it alike.
+## Then a tap on gems from a few tiles off.
 func _check_kept() -> String:
 	var state: GameState = _beside_gems()
 	var _events: Array[RefCounted] = _press(state)
@@ -207,7 +206,7 @@ func _check_kept() -> String:
 	restored.load_values(fresh, values)
 	if values.failed() or restored.hash_values() != harvest.hash_values():
 		return "the harvest going on didn't survive a save: %s" % values.problem
-	return ""
+	return _check_tapped()
 
 
 ## A session: the driver's ticked events bring this machine's player (slot 0) their own crystals,
