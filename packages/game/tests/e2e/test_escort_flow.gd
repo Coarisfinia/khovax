@@ -123,8 +123,9 @@ static func _go_ahead_seen() -> String:
 	return ""
 
 
-## A seal on ground, one whose person the corridor doesn't place, one walled in by rock, and one
-## another person stands in the way to, with nowhere for the guide to reach, are refused.
+## A seal on ground, one whose person the corridor doesn't place, one walled in by rock, one
+## another person stands in the way to, with nowhere for the guide to reach, and one whose guide
+## stands in the corridor twice are refused.
 static func _refuse_bad_seals() -> String:
 	var on_ground: String = LEGEND.replace("boulder; sealed", "ground; sealed")
 	if FlowSteps.region(CORRIDOR, on_ground).problem.is_empty():
@@ -137,6 +138,9 @@ static func _refuse_bad_seals() -> String:
 	var blocked: String = LEGEND + "- `🧍`: a person to talk to, %s\n" % BYSTANDER
 	if FlowSteps.region(CORRIDOR.replace("🔵", "🧍"), blocked).problem.is_empty():
 		return "a seal another person stands in the way to was read"
+	var twice: String = LEGEND + "- `🧍`: a person to talk to, %s\n" % GUIDE
+	if FlowSteps.region(CORRIDOR.replace("🔵", "🧍"), twice).problem.is_empty():
+		return "a seal whose guide stands in the corridor twice was read"
 	return ""
 
 

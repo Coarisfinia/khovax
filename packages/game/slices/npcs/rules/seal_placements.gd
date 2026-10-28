@@ -36,13 +36,17 @@ func on_ground() -> bool:
 
 
 ## A seal on a tile anyone walks seals nothing, one whose person the region piece doesn't place has
-## nobody to open it, and one its person can't walk to, past the other people standing in the way,
-## has nowhere for them to stand.
+## nobody to open it, one whose person it places twice has two guides for one escort, and one its
+## person can't walk to, past the other people standing in the way, has nowhere for them to stand.
 func problem_in(region: Region) -> String:
 	var people: Dictionary[String, Vector2i] = {}
+	var twice: Array[String] = []
 	var placed: Dictionary[Vector2i, String] = region.placed(NpcPlacements.KIND)
 	for tile: Vector2i in placed:
-		people[NpcSpot.read(placed[tile]).id] = tile
+		var placed_id: String = NpcSpot.read(placed[tile]).id
+		if people.has(placed_id):
+			twice.append(placed_id)
+		people[placed_id] = tile
 	var sealed: Dictionary[Vector2i, String] = region.placed(KIND)
 	for tile: Vector2i in sealed:
 		var person: String = opener(sealed[tile])
@@ -50,6 +54,8 @@ func problem_in(region: Region) -> String:
 			return "the seal on %s is on a tile anyone walks" % tile
 		if not people.has(person):
 			return "the seal on %s is %s's, who the region doesn't place" % [tile, person]
+		if twice.has(person):
+			return "%s guides to a seal but stands in the region twice" % person
 		if not _reaches_seal(region, people[person], placed, sealed, person):
 			return "%s can't walk to a tile beside their seal" % person
 	return ""
