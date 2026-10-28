@@ -536,6 +536,9 @@ func _check_carry_requests() -> String:
 	var world: World = World.new(BlueprintSource.new(), 3, FlowSteps.FOREST)
 	var outbox: Outbox = Outbox.new()
 	var party: CarriedMonsters = FlowSteps.party(["tikazzir", "ombulumo"])
+	# A web passive each (#1472), so one brought on the wrong monster shows.
+	party.passives[0] = WEB_PASSIVE
+	party.passives[1] = "ombulumo_lombu_bombu"
 	if not _carry_posted(party, outbox, world) or outbox.entries.size() != 8:
 		return "a world with no party wasn't sent the two carried monsters as eight requests"
 	if _carry_posted(party, outbox, world):
