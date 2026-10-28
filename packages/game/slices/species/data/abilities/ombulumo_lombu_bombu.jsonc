@@ -1,9 +1,10 @@
-// A placeholder: a passive its development web grants (#1404); its effect comes with #1500.
+// A passive its development web grants (#1404). Its heal is a placeholder to tune (#960).
 {
 	"id": "ombulumo_lombu_bombu",
 	"kind": "self_passive",
 	"name": "Lombu-bombu",
 	"description": "The ${MONSTER:ombulumo}'s moss grows back over its wounds, and it slowly heals while it rests.",
+	"rest_heal": 20, // a fiftieth of its HP back each second it rests
 	"codex": {
 		"entry": "The slow, soft breath of a resting beast, its moss swelling with every draw. Dominators said it over a wounded beast they left to sleep it off.",
 		"gloss": "rest, and grow back"

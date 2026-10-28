@@ -104,7 +104,7 @@ static func _region_and_party_rules() -> Dictionary[String, Callable]:
 		# The features that strike monsters: the type chart (#626), which doesn't step, the
 		# companions' auto attacks, and the specials (#410).
 		TypeEffectivenessFeature.ID: TypeChartFactory.build,
-		CompanionAttackFeature.ID: _plain(CompanionAttackFeature),
+		CompanionAttackFeature.ID: CompanionAttackFactory.build,
 		SpecialAttackFeature.ID: SpecialAttackFactory.build,
 		# The harvest after the specials, whose strikes fell what it drops materials for.
 		HarvestFeature.ID: HarvestFactory.build,

@@ -1189,6 +1189,8 @@ func _check_companion_strikes() -> String:
 		return "the companion struck a wild monster hiding in its tile"
 	var result: String = _check_leaning_strikes(spots, hemmed)
 	if result.is_empty():
+		result = _check_passive_strikes(spots, hemmed)
+	if result.is_empty():
 		result = _check_no_special(spots, hemmed)
 	if result.is_empty():
 		result = _check_special(state, first, spots)
@@ -1229,6 +1231,46 @@ func _check_leaning_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	if special.size() != 1 or special[0].damage != Fixed.scale(leaned, power):
 		return "a companion's special nodes didn't make its special strike for %d" % [
 			Fixed.scale(leaned, power),
+		]
+	return ""
+
+
+## A companion whose own passive hastens it when hurt and heals it at rest (#1500), shielded from
+## the wild monsters' hits and at half its HP: away from them it gets its heal's share of its HP
+## back each second, and hemmed in by them it heals no more and strikes every three quarters of a
+## second, its haste halved by the half of its HP it has lost.
+func _check_passive_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
+	var state: GameState = _strike_state(spots)
+	var attacks: CompanionAttackFeature = (
+		state.feature(CompanionAttackFeature.ID) as CompanionAttackFeature
+	)
+	attacks.hastes = { SELF_GUARD: 500 }
+	attacks.rest_heals = { SELF_GUARD: 100 }
+	FlowSteps.carry(state, 0, [WEAK])
+	var _player: Entity = state.add_entity(0, Vector2i(-2, 0))
+	var away: Vector2i = Vector2i(-3, 0)
+	var _joined: Array[WildMonsterStruck] = _wild_strikes_over(state, 1, away)
+	var companion_id: int = (state.feature(CompanionFeature.ID) as CompanionFeature).companion_of(0)
+	var health: HealthFeature = _health(state)
+	var _hurt: bool = health.hurt(state, companion_id, Fixed.scale(COMPANION_HP, 500))
+	health.shield(companion_id, true)
+	_joined = _wild_strikes_over(state, 2 * Simulation.TICKS_PER_SECOND, away)
+	if _hp(state, companion_id) != Fixed.scale(COMPANION_HP, 700):
+		return "a resting companion healed to %d HP in two seconds, not %d" % [
+			_hp(state, companion_id),
+			Fixed.scale(COMPANION_HP, 700),
+		]
+	health.shield(companion_id, false)
+	_hurt = health.hurt(state, companion_id, Fixed.scale(COMPANION_HP, 200))
+	health.shield(companion_id, true)
+	state.entity(companion_id).tile = hemmed
+	var wait: int = Fixed.scale(CompanionAttackFeature.STRIKE_TICKS, 750)
+	var strikes: Array[CompanionStruck] = _strikes_over(state, 2 * wait + 1)
+	if strikes.size() != 3 or _hp(state, companion_id) != Fixed.scale(COMPANION_HP, 500):
+		return "a hurt, hastened companion struck %d times in %d ticks, not 3, at %d HP" % [
+			strikes.size(),
+			2 * wait + 1,
+			_hp(state, companion_id),
 		]
 	return ""
 
