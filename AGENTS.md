@@ -259,8 +259,8 @@ background; only wait in the foreground for a result the very next step needs.
   description (renders, screenshots, a before and after) is opened with `agent-gh pr create
   --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>` and queue it
   as usual. Every other pull request is not a draft: CodeRabbit reviews it, and its "Merge low-risk
-  changes" rule may merge it (wanted), except a model pull request, which still waits for the
-  owner's approval (below).
+  changes" rule may merge it (wanted), except a model pull request or one that changes the merge
+  rules, which still wait for the owner's approval (below).
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
   `pulls/<n>/comments/<id>/replies` endpoint, review reads) got HTTP 403 "API rate limit exceeded
   for installation" in bursts while `rate_limit` still showed much of the hourly quota left: many
@@ -275,8 +275,12 @@ background; only wait in the foreground for a result the very next step needs.
     -f query='mutation($t:ID!,$b:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$t,body:$b}){comment{url}}}'
   ```
 
+  An empty `T` means the comment wasn't found: never send the reply then. The lookup reads the
+  first 100 threads and 100 comments each; a pull request with more pages them with `after:`.
+
   Read reviews with `agent-gh pr view <n> --json reviews` (GraphQL) too. If any call still gets a
-  403 or 429 about a rate limit, wait the seconds its `retry-after` header gives (`agent-gh api -i`
+  403 or 429 about a rate limit, or a GraphQL error of type `RATE_LIMITED` (GraphQL reports it with
+  HTTP 200), wait the seconds its `retry-after` header gives (`agent-gh api -i`
   shows it; without it, until `x-ratelimit-reset` when `x-ratelimit-remaining` is 0, else a minute)
   and retry once; never retry in a loop.
 - **Every merge goes through the merge queue** (owner's rule): never merge around it.
@@ -751,8 +755,8 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   file, `.coderabbit.yml`, or CodeRabbit's settings (the organization's YAML or its Triage rules).
   **Model pull requests always wait for the owner** (owner, #1381), however low CodeRabbit rates
   them: any that changes a model the model skill builds, meaning a `.glb`, its rig, its clips, its
-  textures, a model's script or the shared library in `packages/game-models/`. CodeRabbit can't
-  judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
+  textures, a model's script, the shared library in `packages/game-models/` or the model skill.
+  CodeRabbit can't judge how a model looks or moves: the pup's sleep pose was queued on its approval and was wrong
   (#1376).
   This prints the newest assessment's merge risk, security risk (`none` when not given) and
   assessed commit, then the head commit and CodeRabbit's latest review:
