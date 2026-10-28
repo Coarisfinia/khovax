@@ -24,6 +24,7 @@ import json
 import math
 import os
 import sys
+import tempfile
 
 import blf
 import bpy
@@ -51,8 +52,8 @@ VIEWS = {
 # ground, turned 45 degrees from the front towards the model's left.
 THREE_QUARTER = (math.degrees(math.atan2(0.7, math.hypot(0.8, 0.8))), 45.0)
 # `three_quarter:fit`'s search, in degrees: a coarse grid over the angles concept images are drawn
-# from (level to steeply above, either side of the front), then a finer one around the best.
-FIT_TILT_STEP, FIT_TILTS = 10, range(0, 50, 10)
+# from (level to nearly straight down, either side of the front), then a finer one around the best.
+FIT_TILT_STEP, FIT_TILTS = 10, range(0, 90, 10)
 FIT_TURN_STEP, FIT_TURNS = 15, range(-75, 90, 15)
 FIT_FINE_STEP = 2.5  # the fine grid reaches half a coarse step each way, to its neighbours' share
 
@@ -138,7 +139,7 @@ def read(path):
 	return pixels.reshape(h, w, 4)[::-1]
 
 
-def render(meshes, others, view, name):
+def render(meshes, others, view, name, folder=None):
 	"""Our flat studio render of `meshes` from `view` (the others hidden), on a clear background."""
 	for obj in others:
 		obj.hide_render = True
@@ -149,7 +150,7 @@ def render(meshes, others, view, name):
 	camera_data.ortho_scale = (reach if view in VIEWS else (hi - lo).length) * 1.1
 	camera.location = center + directions[view].normalized() * reach * 4
 	camera.rotation_euler = (center - camera.location).to_track_quat("-Z", "Y").to_euler()
-	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view.replace(":", "_"))
+	scene.render.filepath = "%s/%s_%s.png" % (folder or out_dir, name, view.replace(":", "_"))
 	bpy.ops.render.render(write_still=True)
 	return read(scene.render.filepath)
 
@@ -289,6 +290,9 @@ def fit_angle(reference_mask):
 	coarse grid first, then a finer one around its best. Returns the view, named by its angle."""
 	best = (-1.0, None)
 	tried = set()
+	# The search's renders go to a folder of their own, so none can overwrite a file in out_dir
+	# (the reference image may sit there).
+	scratch = tempfile.TemporaryDirectory()
 
 	def search(tilts, turns):
 		nonlocal best
@@ -299,8 +303,7 @@ def fit_angle(reference_mask):
 					continue
 				tried.add(view)
 				directions[view] = angled(tilt, turn)
-				ours = render(model, [], view, "fit")
-				os.remove(scene.render.filepath)
+				ours = render(model, [], view, "fit", scratch.name)
 				match = measure(reference_mask, figure(ours))["match"]
 				if match > best[0]:
 					best = (match, (tilt, turn))
@@ -312,6 +315,7 @@ def fit_angle(reference_mask):
 		return [angle + FIT_FINE_STEP * step for step in range(-steps, steps + 1)]
 
 	tilt, turn = search([t for t in around(tilt, FIT_TILT_STEP) if 0 <= t < 90], around(turn, FIT_TURN_STEP))
+	scratch.cleanup()
 	view = "three_quarter:%g:%g" % (tilt, turn)
 	print("COMPARE FIT %s: tilt %g, turn %g, silhouette match %.3f, the best of %d angles. The image is"
 		  " a perspective shot and our render orthographic, so the angle also absorbs some of its lens"
