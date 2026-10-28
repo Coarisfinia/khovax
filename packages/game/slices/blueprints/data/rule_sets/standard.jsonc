@@ -3,8 +3,8 @@
 	"id": "standard",
 	"features": [
 		"host_settings", "movement", "knockdown", "trail", "health", "domination", "wild_attacks",
-		"spikes", "domination_loot", "enrage", "fog", "companions", "sight_traits", "companion_swaps",
-		"revive_items", "type_effectiveness", "companion_attacks", "specials", "harvest", "dialogs",
-		"dialog_hold", "territory", "quest_events"
+		"spikes", "domination_loot", "enrage", "fog", "companions", "sight_traits", "hushes",
+		"companion_swaps", "revive_items", "type_effectiveness", "companion_attacks", "specials",
+		"harvest", "dialogs", "dialog_hold", "territory", "quest_events"
 	]
 }
