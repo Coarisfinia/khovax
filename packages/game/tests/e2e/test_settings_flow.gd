@@ -407,9 +407,22 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 	return ""
 
 
-## Pressing the slots puts the player's gear in, and the gear is kept in their profile on disk; the
-## spikes in the trap slot (#692) post one request to the outbox in the same save (#818), which the
-## next tick carries into the world's store of the player's trap.
+## Why a slot of `panel` doesn't show the model of its gear in `equipped` beside it, or the empty
+## one shows any (#1581), or "".
+func _gear_pictured(panel: GearPanel, equipped: Dictionary[String, String]) -> String:
+	var gear: GearContent = GearContent.cached()
+	for slot: String in GearSlots.SLOTS:
+		var model: String = gear.items[equipped[slot]].model if equipped.has(slot) else ""
+		var picture: ItemPicture = panel.pictures[slot]
+		# The model loaded onto its stage too, not only named.
+		if picture.shown != model or (picture.stage.model != null) == model.is_empty():
+			return "the %s slot shows the model %s" % [slot, picture.shown]
+	return ""
+
+
+## Pressing the slots puts the player's gear in, its model beside each (#1581), and the gear is
+## kept in their profile on disk; the spikes in the trap slot (#692) post one request to the outbox
+## in the same save (#818), which the next tick carries into the world's store of the player's trap.
 func _gear_changes(panel: GearPanel, main: Node) -> String:
 	var keeper: ProfileKeeper = FlowGame.holder(main).keeper
 	keeper.profile.gear.owned.assign({ "warding_charm": 1, "thorn_spikes": 1 })
@@ -427,6 +440,9 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 	]
 	if panel.shown != lines or kept.gear.equipped != expected:
 		return "pressing the slots put in %s, kept %s" % [panel.shown, kept.gear.equipped]
+	var pictured: String = _gear_pictured(panel, expected)
+	if not pictured.is_empty():
+		return pictured
 	var code: int = SpikesFeature.code_of("thorn_spikes")
 	var traps: Array[int] = []
 	for request: OutboxEntry in kept.outbox.entries:

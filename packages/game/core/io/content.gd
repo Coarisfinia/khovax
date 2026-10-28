@@ -12,6 +12,8 @@ extends RefCounted
 
 ## What a content file's reader says when object_of finds no JSON object in it.
 const NOT_AN_OBJECT: String = "not a JSON object"
+## Where the models content names live (is_model).
+const MODELS: String = "res://assets/"
 
 ## Why the content couldn't be read, or "" when it could.
 var problem: String = ""
@@ -97,6 +99,13 @@ static func codex_of(raw: Variant) -> Array[String]:
 		if part.strip_edges().is_empty():
 			return []
 	return parts
+
+
+## Whether `path` names a model a content file may give its entry (#1223, #1581): a glTF model
+## under MODELS that exists, never one climbing out of it (`..`, which simplifying would change).
+static func is_model(path: String) -> bool:
+	var named: bool = path.begins_with(MODELS) and path.simplify_path() == path
+	return named and path.get_extension() in ["glb", "gltf"] and ResourceLoader.exists(path)
 
 
 ## A whole JSON number from 1 to Fixed.MAX_AMOUNT, or 0 for anything else.

@@ -4,8 +4,8 @@ extends RefCounted
 ## player-facing name, the slot it goes into (GearSlots.SLOTS), its rarity (#291) and, for spikes
 ## in the trap slot, their damage (SpikesFeature, #692), and, for gear in the ward slot, whether it
 ## keeps the player's carried monsters' passives on while they aren't out (#617,
-## CompanionPassives), and, for a unique item, its codex entry (#1449). The other slots' effects
-## come with their own issues.
+## CompanionPassives), for a unique item, its codex entry (#1449), and its model (#1581), which its
+## slot shows (ItemPicture). The other slots' effects come with their own issues.
 
 ## Its schema, which says the fields a gear file may have (SchemaFields, #825).
 const SCHEMA: String = "res://slices/gear/data/gear.schema.json"
@@ -35,6 +35,8 @@ var keeps_passives: bool = false
 ## A unique item's codex entry (#1449), as Content.codex_of reads it: its entry, then what its name
 ## means; empty for other gear.
 var codex: Array[String] = []
+## Its model: a glTF model under assets/ (Content.is_model).
+var model: String = ""
 ## Why the gear couldn't be read, or "" when it could.
 var problem: String = ""
 
@@ -54,6 +56,7 @@ static func parse(file_id: String, text: String) -> GearItem:
 	item.damage = Content.amount(data.get("damage"))
 	item.keeps_passives = data.get("keeps_passives") == true
 	item.codex = Content.codex_of(data.get("codex"))
+	item.model = Content.text_of(data.get("model"))
 	if data.has("keeps_passives") and not item.keeps_passives:
 		item.problem = "keeps_passives is true or left out"
 		return item
@@ -97,4 +100,6 @@ func _check(file_id: String) -> String:
 		return "only unique ward gear, of rarity %s, keeps the passives on" % UNIQUE
 	if codex.is_empty() == is_unique():
 		return "a unique item (rarity %s) needs a codex entry, and no other gear has one" % UNIQUE
+	if not Content.is_model(model):
+		return "it needs a model: a glTF model under %s that exists (#1581)" % Content.MODELS
 	return ""
