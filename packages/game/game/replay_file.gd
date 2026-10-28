@@ -15,8 +15,8 @@ extends RefCounted
 const CHANGES: String = "res://game/format_changes/"
 const FORMAT_KEY: String = "format_changes"
 ## The changes of the numbered formats before names (#801), in the order they were numbered: format
-## n had the first n - 1. Only the last, format 21, which had them all, is still read, as the
-## reference replays are (tests/replays/).
+## n had the first n - 1. None is read any more since every command carries the interact press
+## (#696): a numbered replay lacks that change, so it's refused with a clear message, not misread.
 const NUMBERED: Array[String] = [
 	"214-starting-world",
 	"338-companions",

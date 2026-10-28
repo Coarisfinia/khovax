@@ -7,14 +7,16 @@ extends RefCounted
 ## #86) and a harvest table (rolled on a felled wild monster, #687, in data/harvest_tables/) always
 ## hold one blank, which rolls on the instance's table instead, so a blank is never nothing (owner,
 ## #90). An instance table holds none, and neither does a chest table (what an instance's chests
-## hold, #694: crafting supplies and basic gear, by the gear's id). Rolls draw from the Rng they're
-## given, so the same stream rolls the same loot.
+## hold, #694: crafting supplies and basic gear, by the gear's id), nor a tile table (what a
+## harvested tile drops, #696). Rolls draw from the Rng they're given, so the same stream rolls the
+## same loot.
 
 const SPECIES: String = "species"
 const HARVEST: String = "harvest"
 const INSTANCE: String = "instance"
 const CHEST: String = "chest"
-const KINDS: Array[String] = [SPECIES, HARVEST, INSTANCE, CHEST]
+const TILE: String = "tile"
+const KINDS: Array[String] = [SPECIES, HARVEST, INSTANCE, CHEST, TILE]
 
 var id: String = ""
 var kind: String = ""

@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/loot/data/loot_tables.schema.json",
 	"title": "Loot table",
-	"description": "What a roll can give (#90). A species table's blank entry rolls again on the instance's table; an instance or chest table has no blank. Chances are thousandths and add up to 1000 (100 %). One file per table, named after its id.",
+	"description": "What a roll can give (#90). A species table's blank entry rolls again on the instance's table; an instance, chest or tile table has no blank. Chances are thousandths and add up to 1000 (100 %). One file per table, named after its id.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "kind", "entries"],
@@ -37,8 +37,8 @@
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"kind": {
-			"description": "A species table (rolled when a monster is dominated, #86), an instance table (a blank's second roll and loot on the ground, #203) or a chest table (what an instance's chests hold, #124, #694: crafting supplies and basic gear).",
-			"enum": ["species", "instance", "chest"]
+			"description": "A species table (rolled when a monster is dominated, #86), an instance table (a blank's second roll and loot on the ground, #203), a chest table (what an instance's chests hold, #124, #694: crafting supplies and basic gear) or a tile table (what a harvested tile drops, #696, named in its tile blueprint).",
+			"enum": ["species", "instance", "chest", "tile"]
 		},
 		"entries": {
 			"type": "array",

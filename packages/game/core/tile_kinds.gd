@@ -42,3 +42,23 @@ static func is_grazable(kind: String) -> bool:
 static func is_drinkable(kind: String) -> bool:
 	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
 	return tile != null and tile.drinkable
+
+
+## The id of the tile table a tile of kind `kind` drops when it's harvested (#696), or "" when it
+## can't be harvested.
+static func harvest_yields(kind: String) -> String:
+	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
+	return tile.harvest_yields if tile != null else ""
+
+
+## The kind a harvested tile of kind `kind` turns into, its depleted kind (#696), or "" when it
+## can't be harvested.
+static func harvested_into(kind: String) -> String:
+	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
+	return tile.harvest_becomes if tile != null else ""
+
+
+## Whether a tile of kind `kind` can be harvested by hand (#696, TileBlueprint.HANDS).
+static func harvested_by_hand(kind: String) -> bool:
+	var tile: TileBlueprint = TileContent.cached().tiles.get(kind)
+	return tile != null and tile.harvest_takes == TileBlueprint.HANDS

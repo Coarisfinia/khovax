@@ -61,7 +61,7 @@ The assets this game uses, with their authors and licenses. Generated from each 
   Mouse/Vector/keyboard_enter.svg`, `keyboard_escape.svg`, `keyboard_tab.svg`, `keyboard_1.svg` to
   `keyboard_3.svg`, `keyboard_equals.svg`, `keyboard_minus.svg`, `keyboard_e.svg`, `keyboard_q.svg`,
   `keyboard_r.svg`, `keyboard_t.svg`, `keyboard_v.svg`, `keyboard_w.svg`, `keyboard_a.svg`,
-  `keyboard_s.svg`, `keyboard_d.svg`, `keyboard_x.svg` and `mouse_left.svg`,
+  `keyboard_s.svg`, `keyboard_d.svg`, `keyboard_x.svg`, `keyboard_f.svg` and `mouse_left.svg`,
   `Touch/Vector/touch_tap.svg`, `touch_zoom_in.svg` and `touch_zoom_out.svg`, and
   `touch_swipe_move.svg` renamed `touch_drag.svg`, and from the `Vector/` folder of the pack's
   controller set whose face buttons read A, B, X and Y its A, B, X and Y buttons, its view and menu

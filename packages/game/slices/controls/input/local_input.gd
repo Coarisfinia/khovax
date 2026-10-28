@@ -11,7 +11,9 @@ extends Node
 ## revive_monster (V, or the d-pad's down) uses a revive item (#656) on the fainted monster the
 ## player picks (#780, RevivePick), only while this player's profile holds one: the items are in the
 ## profile, outside the simulation, which posts the use as a request to its outbox (#818,
-## revive_chosen) that goes in the next command. While picking, the player stands.
+## revive_chosen) that goes in the next command. While picking, the player stands. interact (F, or
+## a controller's A) harvests the tile the player stands on or next to by hand (#696): one press
+## starts it once.
 
 ## A revive item is used on the fainted monster `short_id` (#818): the profile spends it and posts
 ## the request, sent back here (`send`) for the next command.
@@ -33,6 +35,8 @@ var blocked: bool = false
 var in_dialog: bool = false
 ## Whether the special attack was pressed since the last command.
 var _special_pressed: bool = false
+## Whether interact was pressed since the last command (#696).
+var _interact_pressed: bool = false
 ## Whether place_totem was pressed since the last command.
 var _totem_tapped: bool = false
 ## The wild monster the player focuses (#436), by entity id, or Command.NO_FOCUS; the special
@@ -64,6 +68,8 @@ func _process(_delta: float) -> void:
 		_focus_steps -= 1
 	if Input.is_action_just_pressed("respawn"):
 		_respawn_pressed = true
+	if Input.is_action_just_pressed("interact"):
+		_interact_pressed = true
 	for place: int in SWAP_ACTIONS.size():
 		if Input.is_action_just_pressed(SWAP_ACTIONS[place]):
 			_swap_to = place + 1
@@ -105,6 +111,8 @@ func command(state: GameState) -> Command:
 	_swap_to = Command.NO_SWAP
 	var answering: int = _answer
 	_answer = Command.NO_ANSWER
+	var interacting: bool = _interact_pressed
+	_interact_pressed = false
 	if blocked or in_dialog:
 		# Presses while the game hears no input don't move the focus or use an item afterwards.
 		_focus_steps = 0
@@ -131,6 +139,7 @@ func command(state: GameState) -> Command:
 	)
 	given.swap = swap
 	given.answer = answering
+	given.interact = interacting
 	_send_next(given)
 	return given
 

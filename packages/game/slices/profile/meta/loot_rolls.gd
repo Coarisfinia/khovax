@@ -7,11 +7,12 @@ extends RefCounted
 
 ## The events that carry such loot, each a class the bus delivers by.
 static func events() -> Array[Script]:
-	return [ChestOpened, LootFound, DominationLoot, Harvested]
+	return [ChestOpened, LootFound, DominationLoot, Harvested, TileHarvested]
 
 
 ## Every player's loot from `event`, by slot, {slot: {item id: amount}}: from an opened chest
-## (#124), the ground (#203), a domination (#86) or a felled wild monster (#629). None otherwise.
+## (#124), the ground (#203), a domination (#86), a felled wild monster (#629) or a tile harvested
+## by hand (#696). None otherwise.
 static func of(event: RefCounted) -> Dictionary[int, Dictionary]:
 	var none: Dictionary[int, Dictionary] = {}
 	if event is ChestOpened:
@@ -22,4 +23,6 @@ static func of(event: RefCounted) -> Dictionary[int, Dictionary]:
 		return (event as DominationLoot).loot
 	if event is Harvested:
 		return (event as Harvested).loot
+	if event is TileHarvested:
+		return (event as TileHarvested).loot
 	return none

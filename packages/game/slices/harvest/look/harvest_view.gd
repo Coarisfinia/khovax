@@ -5,7 +5,8 @@ extends Node3D
 ## never relies on color (#68), rising calmly and fading. The special's damage (DamageNumbersView)
 ## rises from the same tile in the same tick, so the materials wait until it has faded rather than
 ## rise over it: first the blow, then what it dropped. Only for a wild monster in the instance
-## shown, and never through the fog. It only reads the tick's events and the state.
+## shown, and never through the fog. A tile harvested by hand (#696) bursts the same way, at once,
+## as no blow lands there. It only reads the tick's events and the state.
 
 @export var driver: Session
 ## Whose materials are this machine's player's.
@@ -24,22 +25,27 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 		return
 	for event: RefCounted in driver.local_events(events):
 		var harvested: Harvested = event as Harvested
-		if harvested == null:
-			continue
-		var loot: Dictionary = harvested.loot.get(input.slot, {})
-		if not loot.is_empty() and FogView.ally_sees(driver.state, harvested.tile):
-			_burst(harvested.tile, ChestView.loot_text(loot))
+		var by_hand: TileHarvested = event as TileHarvested
+		if harvested != null:
+			_burst(harvested.tile, harvested.loot, DamageNumbersView.SECONDS)
+		elif by_hand != null:
+			_burst(by_hand.tile, by_hand.loot, 0.0)
 
 
-## Shows `text` on `tile` once the special's damage there has faded, then lets it rise and fade.
-func _burst(tile: Vector2i, text: String) -> void:
-	var label: Label3D = RisingText.make(tile, text)
+## Shows this machine's player's own of `by_slot`'s loot on `tile` after `wait` seconds (a
+## special's damage there fading first), then lets it rise and fade; nothing for no loot or a tile
+## in the fog.
+func _burst(tile: Vector2i, by_slot: Dictionary[int, Dictionary], wait: float) -> void:
+	var loot: Dictionary = by_slot.get(input.slot, {})
+	if loot.is_empty() or not FogView.ally_sees(driver.state, tile):
+		return
+	var label: Label3D = RisingText.make(tile, ChestView.loot_text(loot))
 	label.visible = false
 	add_child(label)
 	bursts.append(label)
-	var wait: Tween = label.create_tween()
-	var _waited: IntervalTweener = wait.tween_interval(DamageNumbersView.SECONDS)
-	var _risen: CallbackTweener = wait.tween_callback(_rise.bind(label))
+	var waiting: Tween = label.create_tween()
+	var _waited: IntervalTweener = waiting.tween_interval(wait)
+	var _risen: CallbackTweener = waiting.tween_callback(_rise.bind(label))
 
 
 func _rise(label: Label3D) -> void:

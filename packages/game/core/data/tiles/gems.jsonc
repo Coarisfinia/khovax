@@ -1,9 +1,11 @@
 // Gems: a cluster of large mana crystals on a low rock, which ring the mana forest (#1218). Nobody
-// walks it, but sight passes over it, like a boulder.
+// walks it, but sight passes over it, like a boulder. A player harvests its crystals by hand
+// (#696), which leaves the bare rock.
 {
 	"id": "gems",
 	"color": "#4a4f7a",
 	"symbol": "&", // tells it apart without its color (#68)
 	"model": "res://assets/mana-gems/mana_gems.glb",
+	"harvest": { "yields": "gem_crystals", "becomes": "bare_rock", "takes": "hands" },
 	"traits": { "walkable": false }
 }

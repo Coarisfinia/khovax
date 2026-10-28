@@ -5,7 +5,8 @@ extends RefCounted
 ## edge, at a wild monster and at water but not in a forest, and the view glides the player between
 ## tiles without jumps.
 ## Real key and touch events reach the actions too. The special attack's key (#410) fires it in the
-## local player's next command, once per press, and so do the swap keys and the d-pad (#540), which
+## local player's next command, once per press, and so does the interact key (#696), and so do the
+## swap keys and the d-pad (#540), which
 ## moves nothing. Every action has a controller binding (#779). Time is stepped by hand, so the flow
 ## is deterministic.
 
@@ -172,6 +173,29 @@ func _check_special_key() -> String:
 	var fired: bool = input.command(state).special
 	if not fired or input.command(state).special:
 		return "a press of the special attack didn't fire it in the next command alone"
+	return _check_interact_key()
+
+
+## F and a controller's A press interact (#696), by F's physical position; a press reaches the next
+## command only.
+func _check_interact_key() -> String:
+	if not _press_reaches(KEY_F, KEY_NONE, "interact"):
+		return "a real F key event doesn't press interact"
+	var pad: bool = false
+	for event: InputEvent in InputMap.action_get_events("interact"):
+		var button: InputEventJoypadButton = event as InputEventJoypadButton
+		pad = pad or (button != null and button.button_index == JOY_BUTTON_A)
+	if not pad:
+		return "a controller's A doesn't press interact"
+	var input: LocalInput = _main.get_node("LocalInput") as LocalInput
+	var state: GameState = _driver.state
+	Input.action_press("interact")
+	input._process(STEP)
+	Input.action_release("interact")
+	input._process(STEP)
+	var interacting: bool = input.command(state).interact
+	if not interacting or input.command(state).interact:
+		return "a press of interact didn't reach the next command alone"
 	return ""
 
 
