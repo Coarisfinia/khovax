@@ -204,8 +204,9 @@ def report_materials(gltf, binary):
                 continue
             texture = textures[slot["index"]]
             source = texture.get("source")
-            for name in ("KHR_texture_basisu", "EXT_texture_webp"):  # the image sits in an extension
-                source = texture.get("extensions", {}).get(name, {}).get("source", source)
+            for name in ("KHR_texture_basisu", "EXT_texture_webp"):  # only an extension holds the image
+                if source is None:
+                    source = texture.get("extensions", {}).get(name, {}).get("source")
             form, dims, _meta = image_info(image_bytes(gltf, binary, source))
             parts.append("%s %s %s" % (kind, "%dx%d" % dims if dims else "?", form))
             if dims is None:
