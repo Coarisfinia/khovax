@@ -43,6 +43,7 @@ func run(_tree: SceneTree) -> String:
 		_check_saved,
 		_check_warded,
 		_check_taken,
+		_check_button_follows,
 	]
 	for step: Callable in steps:
 		var result: String = step.call()
@@ -159,7 +160,7 @@ func _check_saved() -> String:
 
 ## A ring with a gap around a point takes nothing, and no charge; placing a totem on a closed ring
 ## around the players' own point wards it, spending a charge, and a warded point takes no second
-## totem.
+## totem. The totem's button agrees each time (#1503): faded where the totem takes nothing.
 func _check_warded() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
@@ -167,20 +168,27 @@ func _check_warded() -> String:
 	var own_ring: Array[Vector2i] = _ring(points.points[own])
 	var fort_ring: Array[Vector2i] = _ring(points.points[_inner_point(state, DEFENDERS)])
 	_color(state, fort_ring.slice(0, 5), state.player(0))
+	if FlowSteps.usable(TotemButton.new(), state, 0):
+		return "the totem's button shows usable on a ring with a gap"
 	if _taken(state, _totem(state, 0)) != -1 or _charges(state, 0) != PlaceholderTotems.CHARGES:
 		return "a ring with a gap took a control point or spent a charge"
 	_color(state, own_ring, state.player(1))
+	if not FlowSteps.usable(TotemButton.new(), state, 1):
+		return "the totem's button is faded on a ring around the players' own unwarded point"
 	var warded: int = _taken(state, _totem(state, 1))
 	if warded != own or not points.warded[own] or points.holders[own] != ATTACKERS:
 		return "a totem on a ring around the players' own point didn't ward it"
 	_color(state, own_ring, state.player(1))
+	if FlowSteps.usable(TotemButton.new(), state, 1):
+		return "the totem's button shows usable on a ring around a warded point"
 	if _taken(state, _totem(state, 1)) != -1 or _charges(state, 1) != PlaceholderTotems.CHARGES - 1:
 		return "a warded control point took a second totem"
 	return ""
 
 
 ## A closed ring around the defenders' point takes it for the players' side and wards it, spending
-## one charge; the ring comes off the trail, and the defenders, left without a point, lose.
+## one charge; the ring comes off the trail, and the defenders, left without a point, lose. The
+## totem's button shows usable on that ring (#1503).
 func _check_taken() -> String:
 	var state: GameState = _ring_battle()
 	var points: ControlPointFeature = _points(state)
@@ -191,6 +199,8 @@ func _check_taken() -> String:
 		if index != fort and points.holders[index] == DEFENDERS:
 			points.holders[index] = ATTACKERS
 	_color(state, fort_ring, state.player(0))
+	if not FlowSteps.usable(TotemButton.new(), state, 0):
+		return "the totem's button is faded on a closed ring around the defenders' point"
 	var events: Array[RefCounted] = _totem(state, 0)
 	if _taken(
 		state,
@@ -205,6 +215,34 @@ func _check_taken() -> String:
 			return "the ring around a taken control point stayed on the trail"
 	if _charges(state, 0) != PlaceholderTotems.CHARGES - 1:
 		return "taking a control point didn't spend one charge"
+	return ""
+
+
+## One totem button keeps its answer only for its state, tick and player (#1503): it asks the rules
+## again once the tick moves on, the player is another, or the session shows another state.
+func _check_button_follows() -> String:
+	var state: GameState = _ring_battle()
+	var points: ControlPointFeature = _points(state)
+	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	var button: TotemButton = TotemButton.new()
+	var answers: Array[bool] = [FlowSteps.usable(button, state, 1, true)]
+	var session: Session = button.driver
+	session.input.slot = 0
+	answers.append(button.usable())
+	session.input.slot = 1
+	answers.append(button.usable())
+	var _events: Array[RefCounted] = _totem(state, 1)
+	_color(state, _ring(points.points[_inner_point(state, ATTACKERS)]), state.player(1))
+	answers.append(button.usable())
+	var other: GameState = _ring_battle()
+	# At the same tick as `state`, so only the state differs.
+	Simulation.step(other, FlowSteps.commands([Command.NO_MOVE, Command.NO_MOVE]))
+	session.world.instances[session.local_instance_name()] = other
+	_color(other, _ring(_points(other).points[_inner_point(other, ATTACKERS)]), other.player(1))
+	answers.append(button.usable())
+	button.free()
+	if answers != [true, false, true, false, true]:
+		return "the totem button's answers %s didn't follow the player, tick and state" % [answers]
 	return ""
 
 

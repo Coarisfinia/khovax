@@ -594,7 +594,7 @@ func _check_together() -> String:
 	# button says so (#931).
 	if not _domination(state).can_place_totem(state, second.id):
 		return "the rule doesn't let the second place their totem on their ally's ring"
-	if not _usable(TotemButton.new(), state, 1):
+	if not FlowSteps.usable(TotemButton.new(), state, 1):
 		return "the second's totem button is faded on their ally's ring, where their totem works"
 	Simulation.step(state, FlowSteps.totem(1, 2))
 	events.append_array(state.events)
@@ -1394,31 +1394,15 @@ func _check_no_special(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 	)
 	var power: int = specials.powers[WEAK]
 	var _dropped: bool = specials.powers.erase(WEAK)
-	if _usable(SpecialButton.new(), state, 0) or specials.can_fire(state, 0):
+	if FlowSteps.usable(SpecialButton.new(), state, 0) or specials.can_fire(state, 0):
 		return "the special's button or the rule says a species without a special can fire one"
 	var fired: bool = not _specials_in(state, _fire()).is_empty()
 	specials.powers[WEAK] = power
 	if fired:
 		return "a companion whose species has no special fired one"
-	if not _usable(SpecialButton.new(), state, 0):
+	if not FlowSteps.usable(SpecialButton.new(), state, 0):
 		return "the special's button is faded with a wild monster next to the companion to strike"
 	return ""
-
-
-## Whether `button`, on a session showing `state` to the player in `slot`, shows usable; it and the
-## session are freed.
-static func _usable(button: ActionButton, state: GameState, slot: int) -> bool:
-	var session: Session = Session.new()
-	session.world = World.new(BlueprintSource.new(), 0, "")
-	session.world.instances[session.local_instance_name()] = state
-	session.input = LocalInput.new()
-	session.input.slot = slot
-	button.driver = session
-	var usable: bool = button.usable()
-	button.free()
-	session.input.free()
-	session.free()
-	return usable
 
 
 ## The wild monster `first`, felled in `state`'s last tick, dropped its materials where it lies

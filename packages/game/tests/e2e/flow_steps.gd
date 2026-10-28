@@ -1,8 +1,9 @@
 class_name FlowSteps
 extends RefCounted
 ## Helpers several e2e flows use (#246, AGENTS.md: shared, never copied): one tick's commands, a
-## whole step on the grid, a shortest walk, events raised in the instance a driver shows, and
-## content read from files a flow writes. Not a flow itself: the runner runs only the `test_*.gd`
+## whole step on the grid, a shortest walk, events raised in the instance a driver shows, whether
+## an action button shows usable, and content read from files a flow writes. Not a flow itself: the
+## runner runs only the `test_*.gd`
 ## files.
 
 ## The instances the flows load by name (#915): the game names none, it reads them from the
@@ -151,6 +152,24 @@ static func totem(slot: int = 0, slots: int = 1) -> Array[Command]:
 	for each: int in slots:
 		made.append(placing if each == slot else standing)
 	return made
+
+
+## Whether `button`, on a session showing `state` to the player in `slot`, shows usable. The session
+## hangs under the button, so freeing the button frees it; the button is freed unless `keep`, for a
+## flow that reads it again.
+static func usable(button: ActionButton, state: GameState, slot: int, keep: bool = false) -> bool:
+	var session: Session = Session.new()
+	session.world = World.new(BlueprintSource.new(), 0, "")
+	session.world.instances[session.local_instance_name()] = state
+	session.input = LocalInput.new()
+	session.input.slot = slot
+	session.add_child(session.input)
+	button.add_child(session)
+	button.driver = session
+	var shown: bool = button.usable()
+	if not keep:
+		button.free()
+	return shown
 
 
 ## Raises `events` in the instance `driver` shows, as its rules would, and announces them as a
