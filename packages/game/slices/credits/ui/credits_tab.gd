@@ -8,7 +8,8 @@ extends RichTextLabel
 ## credits_tab.tscn (#437): this script keeps only what it does. Above the credits it names the
 ## build's version (#744), so a player reporting a bug can say which build they play, and where the
 ## error log is (#1510), for them to attach to the report; on the web, where the log can't be
-## found, a button above it saves the log as a file instead (ErrorLogButton, #1541).
+## found, a button above it saves the log as a file instead (ErrorLogButton, #1541). A button above
+## both opens a new bug report with the version filled in (BugReportButton, #1405).
 
 const PATH: String = "res://CREDITS.md"
 ## What starts a pack's heading, and the field that names files in the repository.
