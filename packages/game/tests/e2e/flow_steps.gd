@@ -222,3 +222,25 @@ static func written_content(loader: Callable, files: Dictionary[String, String])
 		var _removed: Error = DirAccess.remove_absolute(directory + id + ".jsonc")
 	var _gone: Error = DirAccess.remove_absolute(directory)
 	return content
+
+
+## The values of the newest run of carry requests posted to `outbox` past its first `posted`
+## entries (CarryRequest.values_of), or none without one: what a change to the party mid-session
+## sends the world at once (#1459, #1478, #1485).
+static func carry_sent(outbox: Outbox, posted: int = 0) -> Array[int]:
+	var values: Array[int] = []
+	for at: int in range(posted, outbox.entries.size()):
+		var request: OutboxEntry = outbox.entries[at]
+		if request.kind != OutboxEntry.CARRY:
+			continue
+		if CarryRequest.place_of(request.data) == 0:
+			values = []
+		values.append(CarryRequest.value_of(request.data))
+	return values
+
+
+## Whether a run of carry requests posted to `outbox` past its first `posted` entries names
+## `short_id` as the companion: the first monster it brings (#1459, #1478).
+static func companion_sent(outbox: Outbox, posted: int, short_id: String) -> bool:
+	var values: Array[int] = carry_sent(outbox, posted)
+	return values.size() > 1 and values[1] == ShortId.code(short_id)

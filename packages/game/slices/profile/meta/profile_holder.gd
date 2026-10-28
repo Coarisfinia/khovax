@@ -14,8 +14,9 @@ signal outbox_posted
 ## The player's dominated monster `short_id` ascends into `species` (#1235): told just before the
 ## profile takes it, once it's sure to.
 signal ascended(short_id: String, species: String)
-## Who the player carries, in which order, or a carried monster's taken nodes may have changed
-## (#1459): the session catches the world up with the party then (catch_up_party), not only as the
+## Who the player carries, in which order, or a carried monster's taken nodes or species may have
+## changed (#1459): a domination joining them (#1478), a reorder, a node taken or an ascension
+## (#1485). The session catches the world up with the party then (catch_up_party), not only as the
 ## next one starts.
 signal party_changed
 
@@ -82,10 +83,15 @@ func flush() -> void:
 		_report(keeper.flush())
 
 
-## Takes `gain` into the profile (#73).
+## Takes `gain` into the profile (#73), and tells when a domination in it joined the monsters the
+## player carries (#1478), so the world brings it in this session.
 func take(gain: Gain) -> void:
-	if keeper != null:
-		_report(keeper.take(gain, Time.get_ticks_msec()))
+	if keeper == null:
+		return
+	var carried: Array[String] = keeper.profile.carried.duplicate()
+	_report(keeper.take(gain, Time.get_ticks_msec()))
+	if keeper.profile.carried != carried:
+		party_changed.emit()
 
 
 ## Runs `changing` on this player's profile, a companion's part changing with it (like a quest
@@ -202,6 +208,8 @@ func ascend(short_id: String) -> void:
 	var species: String = keeper.profile.monster_of(short_id).species
 	ascended.emit(short_id, SpeciesContent.cached().ascensions[species].into)
 	_report(keeper.ascend(short_id, Time.get_ticks_msec()))
+	# A carried monster's new species goes to the world at once (#1485).
+	party_changed.emit()
 
 
 ## Puts the gear `gear_id` into this player's `slot`, or empties it with "" (#690), and tells when
