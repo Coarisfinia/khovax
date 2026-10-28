@@ -149,7 +149,7 @@ def render(meshes, others, view, name):
 	camera_data.ortho_scale = (reach if view in VIEWS else (hi - lo).length) * 1.1
 	camera.location = center + directions[view].normalized() * reach * 4
 	camera.rotation_euler = (center - camera.location).to_track_quat("-Z", "Y").to_euler()
-	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view.replace(":", "_").replace(".", "_"))
+	scene.render.filepath = "%s/%s_%s.png" % (out_dir, name, view.replace(":", "_"))
 	bpy.ops.render.render(write_still=True)
 	return read(scene.render.filepath)
 
@@ -311,7 +311,7 @@ def fit_angle(reference_mask):
 		steps = int(coarse_step / 2 // FIT_FINE_STEP)
 		return [angle + FIT_FINE_STEP * step for step in range(-steps, steps + 1)]
 
-	tilt, turn = search([t for t in around(tilt, FIT_TILT_STEP) if -90 < t < 90], around(turn, FIT_TURN_STEP))
+	tilt, turn = search([t for t in around(tilt, FIT_TILT_STEP) if 0 <= t < 90], around(turn, FIT_TURN_STEP))
 	view = "three_quarter:%g:%g" % (tilt, turn)
 	print("COMPARE FIT %s: tilt %g, turn %g, silhouette match %.3f, the best of %d angles. The image is"
 		  " a perspective shot and our render orthographic, so the angle also absorbs some of its lens"
