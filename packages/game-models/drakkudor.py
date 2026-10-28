@@ -8,7 +8,9 @@ every creature clip.
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/drakkudor.py -- packages/game/assets/drakkudor/drakkudor.glb
 
-It prints the speeds the motion check (packages/game-models/check_motion.py) takes.
+It prints the speeds the motion check (packages/game-models/check_motion.py) takes. `NAME=value`
+after the output path sets one of its GAIT values (lib/tuning.py), for the gait sweep
+(sweep_gait.py).
 
 Blender is Z-up and it faces -Y (the game's +Z). Sizes are in the source's units, placed by
 OFFSET and grown by SCALE at the end.
@@ -23,7 +25,7 @@ import bpy
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import attachments, clips, hexapod, legs, metrics, scene  # noqa: E402
+from lib import attachments, clips, hexapod, legs, metrics, scene, tuning  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "drakkudor.glb")
 FPS = 30
@@ -90,6 +92,8 @@ RUN_SPEED = TILE / 0.3
 WALK_FRAMES, WALK_SWING, WALK_LIFT = 16, 0.25, 0.25
 RUN_FRAMES, RUN_SWING, RUN_LIFT = 12, 0.35, 0.3
 SKIM = 0.08
+# The values above that the gait sweep may set.
+GAIT = ("CROUCH", "WALK_FRAMES", "WALK_SWING", "WALK_LIFT", "RUN_FRAMES", "RUN_SWING", "RUN_LIFT", "SKIM")
 
 # Where its paws stand braced for its long attack, and where they lie once it has fainted or
 # sleeps (the left one's shift from rest; the right mirrors it).
@@ -172,4 +176,4 @@ def build(out):
         sys.exit(1)
 
 
-build(sys.argv[sys.argv.index("--") + 1])
+build(tuning.arguments(globals(), GAIT))

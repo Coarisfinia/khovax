@@ -100,10 +100,11 @@ def settle(rig, meshes, root, frames, loop=False, up=1, clearance=None, spread=2
     return lifts
 
 
-def report(rig, meshes, tolerance):
+def report(rig, meshes, tolerance, misses=None):
     """For every action: the lowest mesh point and each foot's (the part of the mesh its foot bone
     moves most; an imported rig's bone tails are guesses, so the mesh is what's measured) over all
-    its frames, and whether anything sinks deeper than `tolerance`. Returns (lines, passed)."""
+    its frames, and whether anything sinks deeper than `tolerance`. Returns (lines, passed);
+    `misses` (summary.Misses), when given, collects what sinks, for the summary mode (#1524)."""
     scene = bpy.context.scene
     feet_names = foot_bones(rig)
     rig.animation_data.use_nla = False
@@ -127,6 +128,14 @@ def report(rig, meshes, tolerance):
         # passing unseen.
         unmeasured = any(z == float("inf") for z in feet_low.values())
         sinks = unmeasured or mesh_low < -tolerance or any(z < -tolerance for z in feet_low.values())
+        if misses is not None:
+            # One line a clip: what sinks deepest, a foot before the mesh it is part of.
+            for name in sorted(name for name, z in feet_low.items() if z == float("inf")):
+                misses.flag(action.name, name + "-unmeasured")
+            deepest = min(((z, name) for name, z in feet_low.items() if z != float("inf")),
+                          default=(mesh_low, "mesh"))
+            misses.below(action.name, deepest[1] if deepest[0] <= mesh_low else "mesh",
+                         min(mesh_low, deepest[0]), -tolerance, "mm", 1000)
         passed = passed and not sinks
         feet_text = ", ".join("%s %.3f" % (name, z) for name, z in sorted(feet_low.items()))
         lines.append("%s %s: mesh %.3f; %s" % ("SINKS" if sinks else "ok", action.name, mesh_low, feet_text))

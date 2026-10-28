@@ -164,6 +164,18 @@ a second model could use goes into the library or a generic tool, never into one
   measures each limb at rest per body plan (forearm against upper arm, shin against thigh, the
   foreleg against the shoulder's height) and fails a measure outside its range
   (`lib/dimensions.py`, where the ranges and their reasons are).
+- **Short check output (#1524):** the motion, ground and clearance checks take `--summary`: one
+  line per clip and limit it misses, with the value, the limit and by how much, and the passing
+  clips on one line (`lib/summary.py`). Read those while tuning, not the full logs.
+- **The gait sweep (#1524):** `uv run --locked --package khovax-game-models
+  packages/game-models/sweep_gait.py packages/game-models/<name>.py
+  packages/game/assets/<name>/<name>.glb NAME=a,b,c ... [--clips Walk,Run] [--keep <folder>]`
+  builds the model over the grid of gait values in parallel, runs those three checks on each in
+  summary mode, and prints a Markdown table: `PASS`, or the limit each combination misses most
+  and by how much. A model script offers its gait values as module constants named in its `GAIT`
+  and takes `NAME=value` after its output path (`lib/tuning.py`, as `drakkudor.py` does). Tune a
+  gait with a sweep or two rather than hand-run rounds of build and check, then write the chosen
+  values into the script.
 - **The curve plots (#1071):** `packages/game-models/plot_motion.py -- <out.png> <Clip> <model.glb>
   [<before.glb>]` draws each bone's turn over a clip, a loop twice through with its seam
   marked, the previous build faint behind: stiffness, overlap and a stop at the seam read better
