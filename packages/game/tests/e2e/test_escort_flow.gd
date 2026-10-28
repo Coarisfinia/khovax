@@ -13,7 +13,7 @@ const SEED: int = 5
 const GUIDE: String = "teska_na_amvrel"
 ## A corridor running east: the exit west of player 1's start, the guide east of it, player 2 (when
 ## there's one) further on, and the guide's seal, a boulder, with ground behind it.
-const CORRIDOR: String = "🚪🔴🧙🟫🔵🟫🟫🟫🪨🟫"
+const CORRIDOR: String = "🚪🔴🧙🟫🔵🟫🟫🟫🪨🟫🟫"
 const LEGEND: String = """- `🔵`: where player 2 starts
 - `🚪`: exit to the west
 - `🧙`: a person to talk to, teska_na_amvrel
@@ -74,6 +74,10 @@ static func _reloads(state: GameState) -> String:
 	var data: DataReader = DataReader.new(state.to_data())
 	if loaded.load_changed_tiles(data):
 		loaded.load_data(data)
+	# The world's time and its players' stores aren't the instance's to save: the World hands them
+	# to a loaded one (#1215, #724).
+	loaded.world_tick = state.world_tick
+	loaded.stores = state.stores
 	if data.failed() or loaded.state_hash() != state.state_hash():
 		return "a world saved mid-escort didn't load back the same: %s" % data.problem
 	return ""
