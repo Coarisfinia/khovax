@@ -191,7 +191,8 @@ def report(rig, meshes, tolerance, every=2):
     """At rest, and in every clip on every `every`th frame and its last: how much of any eye shows
     above a cover crossing it, the worst view and frame. Each fails past `tolerance` (a share of
     the eye's disc).
-    Returns (lines, passed); a model without eyes has nothing to check and passes."""
+    Returns (lines, passed); a model without eyes, or with its eyes painted on its one material, has
+    nothing to check and passes."""
     eyes = eye_bones(rig)
     if not eyes:
         return ["no eye points: nothing to check"], True
@@ -202,6 +203,10 @@ def report(rig, meshes, tolerance, every=2):
     for bone in rig.pose.bones:
         bone.matrix_basis.identity()
     scene.frame_set(scene.frame_current)
+    if len(set(model.material)) == 1:
+        # Its eyes are painted on its skin (a generated model's one textured material, #1476):
+        # no eye pieces, so nothing can show above a brow.
+        return ["eyes painted on the skin, no eye pieces: nothing to check"], True
     rest = model.points()
     found = {}
     for bone in eyes:

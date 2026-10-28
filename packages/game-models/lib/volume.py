@@ -96,7 +96,7 @@ def frame(rig, station, rest=False):
 
 def body(meshes):
     """The body's skin: the largest piece of connected faces among the skinned meshes, by area,
-    and that mesh. The parts joined into the skin (crystals, a ruff, the jaw) are pieces of their own whose
+    and that mesh, its vertices at one spot joined. The parts joined into the skin (crystals, a ruff, the jaw) are pieces of their own whose
     faces lie partly inside the body, where a ray from a station would stop on them."""
     best = (0.0, None, [])
     for obj in meshes:
@@ -109,6 +109,12 @@ def body(meshes):
                 index = parent[index]
             return index
 
+        # The export splits a vertex where its UVs part (a textured model's seams, #1476): the
+        # corners at one spot are one vertex of the skin.
+        spots = {}
+        for vertex in obj.data.vertices:
+            same = spots.setdefault(tuple(vertex.co), vertex.index)
+            parent[find(vertex.index)] = find(same)
         for polygon in polygons:
             first = find(polygon.vertices[0])
             for index in polygon.vertices[1:]:

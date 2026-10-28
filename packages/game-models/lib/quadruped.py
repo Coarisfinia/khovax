@@ -58,12 +58,19 @@ def bones(p):
 
 
 def armature(name, proportions):
+    return build(name, bones(proportions))
+
+
+def build(name, made):
+    """An armature named `name` from `made`'s bones, (name, head, tail, parent) each: every bone
+    rolled so its local X axis is world X, connected where it starts at its parent's tail, and
+    deforming but the root."""
     data = bpy.data.armatures.new(name)
     rig = bpy.data.objects.new(name, data)
     bpy.context.collection.objects.link(rig)
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
-    for bone_name, head, tail, parent in bones(proportions):
+    for bone_name, head, tail, parent in made:
         bone = data.edit_bones.new(bone_name)
         bone.head, bone.tail = head, tail
         direction = (Vector(tail) - Vector(head)).normalized()

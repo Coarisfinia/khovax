@@ -33,15 +33,20 @@ def owned(obj, bones):
     return found
 
 
-def lowest(rig, meshes, bones, ignore=()):
+def lowest(rig, meshes, bones, ignore=(), known=None):
     """The lowest point of the deformed `meshes` (but for the parts the bones in `ignore` move
-    most), and of the part of them each bone in `bones` moves most (a paw), in world z."""
+    most), and of the part of them each bone in `bones` moves most (a paw), in world z. `known`
+    (a dict) keeps the parts between calls on frames of the same skin: its weights don't change
+    from frame to frame, and finding the parts takes most of the time."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     low = float("inf")
     feet = {name: float("inf") for name in bones}
+    known = {} if known is None else known
     for obj in meshes:
-        parts = owned(obj, bones)
-        skipped = {index for indices in owned(obj, ignore).values() for index in indices}
+        key = (obj.name, tuple(bones), tuple(ignore))
+        if key not in known:
+            known[key] = (owned(obj, bones), {index for indices in owned(obj, ignore).values() for index in indices})
+        parts, skipped = known[key]
         evaluated = obj.evaluated_get(depsgraph)
         mesh = evaluated.to_mesh()
         world = evaluated.matrix_world
@@ -80,9 +85,10 @@ def settle(rig, meshes, root, frames, loop=False, up=1, clearance=None, spread=2
     scene = bpy.context.scene
     clearance = CLEARANCE if clearance is None else clearance
     needs = []
+    known = {}
     for frame in frames:
         scene.frame_set(frame)
-        low, _feet = lowest(rig, meshes, [], ignore)
+        low, _feet = lowest(rig, meshes, [], ignore, known)
         needs.append(max(0.0, clearance - low))
     bone = rig.pose.bones[root]
     lifts = envelope(needs, spread, loop)
@@ -103,6 +109,7 @@ def report(rig, meshes, tolerance):
     rig.animation_data.use_nla = False
     lines = []
     passed = True
+    known = {}
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         rig.animation_data.action = action
         if action.slots:
@@ -112,7 +119,7 @@ def report(rig, meshes, tolerance):
         feet_low = {name: float("inf") for name in feet_names}
         for frame in range(start, end + 1):
             scene.frame_set(frame)
-            low, feet = lowest(rig, meshes, feet_names)
+            low, feet = lowest(rig, meshes, feet_names, known=known)
             mesh_low = min(mesh_low, low)
             for name, z in feet.items():
                 feet_low[name] = min(feet_low[name], z)
