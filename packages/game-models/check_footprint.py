@@ -37,6 +37,9 @@ from lib import footprint, imported, known  # noqa: E402
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = {"fohossa"}
 
+# Animated props, which no monster stands on: a gate stands across an exit, not on one hex.
+PROPS = {"tentacle_gate"}
+
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
 KNOWN = {
@@ -76,6 +79,9 @@ def main():
             # Only the monsters the model skill builds stand on a hex alone; a pack's figure (the
             # players' and people's) has no script here.
             log.info("FOOTPRINT %s no model script: not a monster, nothing to check" % model)
+            continue
+        if model in PROPS:
+            log.info("FOOTPRINT %s an animated prop: not a monster, nothing to check" % model)
             continue
         fps, _loops = imported.settings(glb)
         bpy.ops.wm.read_factory_settings(use_empty=True)

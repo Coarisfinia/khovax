@@ -14,6 +14,11 @@ const SLICES: String = "res://slices/"
 const UNWORN_MODELS: Array[String] = [
 	"res://assets/drakkudor/drakkudor.glb", "res://assets/fohossa/fohossa.glb",
 ]
+## Animated props built before the view that places them (#1634), with the clips each plays:
+## checked like a view's model, until a view names it and it leaves this list.
+const UNPLACED_PROPS: Dictionary[String, Array] = {
+	"res://assets/tentacle_gate/tentacle_gate.glb": [&"Idle"],
+}
 
 
 func run(tree: SceneTree) -> String:
@@ -334,6 +339,13 @@ func _check_view_models(main: Node) -> String:
 				result = "it plays clips but names no model"
 			if not result.is_empty():
 				return "%s's model: %s" % [file, result]
+	for path: String in UNPLACED_PROPS:
+		var prop: PackedScene = load(path) as PackedScene
+		var checked: String = (
+			_check_scene(prop, UNPLACED_PROPS[path], false) if prop != null else "it doesn't load"
+		)
+		if not checked.is_empty():
+			return "%s: %s" % [path, checked]
 	return ""
 
 
