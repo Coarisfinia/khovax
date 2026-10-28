@@ -1,8 +1,9 @@
 class_name TapWalkMark
 extends Node3D
 ## The mark on the tile a tap or click walks this machine's player to (#1554, TapWalk): a ring of
-## ink dashes on the tapped tile while the walk is under way, gone on arrival or as soon as the walk
-## stops. It stands still, with no pulse or flash (motion sickness), and its shape tells it from
+## ink dashes on the tapped tile while the walk is under way, gone once the player has glided onto
+## the walk's last tile, or as soon as the walk stops. It stands still, with no pulse or flash
+## (motion sickness), and its shape tells it from
 ## the focus mark's solid ring and the revive ring's longer dashes, not colour (#68). It only reads
 ## the local input.
 
@@ -32,9 +33,21 @@ func _process(_delta: float) -> void:
 ## Puts the ring on the tile the walk under way goes to, or hides it. Called every frame; tests
 ## call it.
 func show_state() -> void:
-	var walk: TapWalk = null
+	var marked: Vector2i = TapWalk.NO_TILE
 	if driver != null and driver.state != null and driver.input != null:
-		walk = driver.input.tap_walk
-	piece.visible = walk != null and walk.walking
+		var walk: TapWalk = driver.input.tap_walk
+		marked = walk.goal if walk.walking else walk.landing
+		if not walk.walking and not _gliding(driver.state, driver.input.slot):
+			marked = TapWalk.NO_TILE
+	piece.visible = marked != TapWalk.NO_TILE
 	if piece.visible:
-		piece.tile = walk.goal
+		piece.tile = marked
+
+
+## Whether the player in `slot` is still on its way onto its tile.
+static func _gliding(state: GameState, slot: int) -> bool:
+	var player: Entity = state.player(slot)
+	var movement: MovementFeature = state.feature(MovementFeature.ID) as MovementFeature
+	if player == null or movement == null or movement.walk(player.id) == null:
+		return false
+	return movement.walk(player.id).is_moving()

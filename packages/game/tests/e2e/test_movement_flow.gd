@@ -325,10 +325,10 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 
 ## A click on a walkable tile two steps east of (0, 0) walks the player there on their own, through
 ## the focus picker as the mouse gives it, with the instance shifted off the world's origin, and the
-## walk ends there; a mark stands on that tile on the way and goes on arrival (#1554). A short,
-## still touch walks there too, and a key pressed on the way stops it and its mark at once. A
-## touch's emulated click, a click while the menu is open and a tap off the region walk
-## nowhere.
+## walk ends there; a mark stands on that tile on the way, through the last step's glide, and goes
+## on arrival (#1554). A short, still touch walks there too, and a key pressed on the way stops it
+## and its mark at once. A touch's emulated click, a click while the menu is open and a tap off the
+## region walk nowhere.
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
 	var input: LocalInput = _driver.input
@@ -346,9 +346,7 @@ func _check_tap_walk() -> String:
 		return "the tile to click, %s, isn't on the screen" % target
 	click = _click_on(picker, target)
 	_one_tick()
-	var marked: bool = _mark_on() == target
-	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
-		_step()
+	var marked: bool = _mark_on() == target and _glide_marked(target)
 	if _tile() != target or input.tap_walk.walking or not marked or _mark_on() != TapWalk.NO_TILE:
 		return "a click on %s walked to %s, unmarked or marked on arrival" % [target, _tile()]
 	_place(Vector2i.ZERO)
@@ -489,6 +487,17 @@ func _mark_on() -> Vector2i:
 	var mark: TapWalkMark = _main.get_node("Instance/TapWalkMark") as TapWalkMark
 	mark.show_state()
 	return mark.piece.tile if mark.piece.visible else TapWalk.NO_TILE
+
+
+## Steps a walk to `target` through to its end; whether the mark stood on `target` after the walk
+## had ended, while the player still glided onto it (#1554).
+func _glide_marked(target: Vector2i) -> bool:
+	var marked: bool = false
+	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
+		_step()
+		if not _driver.input.tap_walk.walking and _mark_on() == target:
+			marked = true
+	return marked
 
 
 ## The walkable tile two steps east of (0, 0) to click: (2, 0) unless it's closed.
