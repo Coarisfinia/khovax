@@ -218,10 +218,12 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    `RENAME`).
 3. **Scale to the hex, first:** settle the model's size before any clip, gait or render
    (#1522). The gait's limits depend on the size, and Drakkudor's late rescale redid its gait and
-   every render. `import_source.py`'s `scale` is the hook for it. Until the import step computes
-   it (#1522), pick it by hand (or set `SCALE` in the model script, as `drakkudor.py` does) so the
-   rest pose reaches no further than the footprint check allows (step 20 below), leaving a margin
-   for the widest clip (the attack's lunge), and confirm it with the check once the clips exist.
+   every render. `import_source.py` fits a rigged download to its hex by itself: its `scale` is
+   `hex` (the default) for a regular monster and `hex-large` for a boss, enraged or stronger one,
+   sizing the rest pose within the footprint check's limits (step 20 below) with a margin for the
+   widest clip (`lib/footprint.py`'s `fit`). Read its `HEX` line, and confirm the fit with the
+   check once the clips exist. An unrigged download is sized by its model script (`SCALE`, as
+   `drakkudor.py` does), to the same limits.
 4. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
    check its fixes bend right (bend each chain and see that it moves only its own part). An
    unrigged download is rigged by the model script, as `drakkudor.py` does with `lib/hexapod.py`.

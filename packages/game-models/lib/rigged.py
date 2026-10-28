@@ -371,7 +371,7 @@ def flatten(rig, skin):
     for obj in (rig, skin):
         matrix = obj.matrix_world.copy()
         obj.parent = None
-        if obj == skin:
+        if obj is skin:
             obj.data.transform(matrix, shape_keys=True)
         else:
             obj.data.transform(matrix)
