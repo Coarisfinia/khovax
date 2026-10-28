@@ -46,7 +46,7 @@ SLICE_ORDER: tuple[str, ...] = (
     "species", "development", "outbox", "host_settings", "health", "players", "npcs", "trail",
     "wild_monsters", "schedules", "packs", "tiles", "controls",
     "settings", "texts", "factions",
-    "survey", "menu",
+    "survey", "menu", "notices",
     "domination", "control_points", "totems", "enrage", "hunts", "foraging", "domination_loot",
     "companions", "wild_attacks", "gear", "chests",
     "damage_numbers", "harvest", "dialogs",

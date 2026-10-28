@@ -6,6 +6,9 @@ extends RefCounted
 ## the same. A player who leaves through the exit first leaves the guide to go ahead: alone, the
 ## guide is at the seal and opens it in that same tick; with another player still there, they walk
 ## there and open it. Either way the rules raise that the guide went ahead for the player who left.
+## The player who left is told (#1589): a short notice at the top of their screen shows the guide's
+## name and the guide's own line from their content, then eases out on its own; a guide went ahead
+## for another player tells this one nothing, and a guide with no line says the plain one.
 ## A seal on a tile anyone walks, one whose person the region piece doesn't place, or one its guide
 ## can't walk to, is refused.
 
@@ -28,17 +31,54 @@ const EXIT_AT: int = 0
 const START_AT: int = 1
 const GUIDE_AT: int = 2
 const SEAL_AT: int = 8
+const PROFILE: String = "user://test_escort_profile.json"
 
 
-func run(_tree: SceneTree) -> String:
+func run(tree: SceneTree) -> String:
 	var result: String = _lead_to_seal()
 	if result.is_empty():
 		result = _go_ahead_alone()
 	if result.is_empty():
 		result = _go_ahead_seen()
 	if result.is_empty():
+		result = await _told(tree)
+	if result.is_empty():
 		result = _refuse_bad_seals()
 	return result
+
+
+## The game shows this machine's player a guide who went ahead for them as a notice with the guide's
+## name and line, which leaves by itself; one who went ahead for another player shows nothing.
+static func _told(tree: SceneTree) -> String:
+	var main: Node = await FlowGame.start_held(tree, PROFILE)
+	var driver: GameDriver = FlowGame.held_driver(main)
+	var notice: NoticeScreen = main.get_node("Hud/NoticeScreen") as NoticeScreen
+	var result: String = _notice_follows(driver, notice)
+	if result.is_empty():
+		var shown_for: float = NoticeScreen.SHOW_SECONDS + 2.0 * NoticeScreen.FADE_SECONDS
+		await tree.create_timer(shown_for + 0.5).timeout
+		if notice.is_showing():
+			result = "the guide's notice didn't ease out on its own"
+	main.queue_free()
+	await tree.process_frame
+	SaveStore.remove(PROFILE)
+	return result
+
+
+static func _notice_follows(driver: GameDriver, notice: NoticeScreen) -> String:
+	var slot: int = driver.input.slot
+	driver.announce(1, [GuideWentAhead.new(GUIDE, 1, slot + 1)])
+	if notice.is_showing():
+		return "a guide who went ahead for another player showed this one a notice"
+	driver.announce(2, [GuideWentAhead.new(GUIDE, 1, slot)])
+	var person: Person = PeopleContent.cached().people[GUIDE]
+	if not notice.is_showing() or notice.shown_title() != person.name:
+		return "the guide who went ahead showed no notice with their name: " + notice.shown_title()
+	if person.went_ahead.is_empty() or notice.shown_text() != person.went_ahead:
+		return "the notice didn't show the guide's own line: %s" % notice.shown_text()
+	if GuideNoticeTie.line_of("nobody_at_all") != GuideNoticeTie.PLAIN_LINE:
+		return "a guide with no line of their own didn't say the plain one"
+	return ""
 
 
 ## Walking into the guide talks to them, and they follow; the player walks through them to two
