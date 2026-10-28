@@ -97,6 +97,13 @@ func harvests(state: GameState, at: Vector2i) -> bool:
 	return pressing
 
 
+## Ends the walk under way, and keeps a tap not yet walked.
+func halt() -> void:
+	var tapped: Vector2i = _tapped
+	stop()
+	_tapped = tapped
+
+
 ## Ends the walk, and drops a tap not yet walked.
 func stop() -> void:
 	_tapped = NO_TILE

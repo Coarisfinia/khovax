@@ -89,10 +89,11 @@ func _hear() -> void:
 		if Input.is_action_just_pressed(action):
 			_pressed[action] = true
 	# A key tapped between two commands stops a walk to a tapped tile too, though the next command
-	# sees it let go.
+	# sees it let go. A tap queued this frame stays: the touch stick presses these actions for a
+	# tap's slight wiggle too.
 	for action: StringName in MOVE_ACTIONS:
 		if Input.is_action_just_pressed(action):
-			tap_walk.stop()
+			tap_walk.halt()
 	_hear_totem()
 	if Input.is_action_just_pressed("focus_next"):
 		_focus_steps += 1
