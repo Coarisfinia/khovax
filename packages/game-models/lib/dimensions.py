@@ -68,10 +68,14 @@ def measure(rig, name):
 
 def body_plan(rig):
     """The body plan whose BOUNDS hold for `rig`, None when it has none of its limbs, or the
-    joints a quadruped's limbs lack when it has only some of them (a renamed or missing bone)."""
+    joints a plan's limbs lack when it has only some of them (a renamed or missing bone)."""
     names = rig.data.bones.keys()
-    if all(name in names for name in HEXAPOD):
+    lacking = [name for name in HEXAPOD if name not in names]
+    if not lacking:
         return "hexapod"
+    # A quadruped shares its paws' names with a hexapod: only the middle pair is a hexapod's own.
+    if any(name in names for name in HEXAPOD if name.startswith("mid_")):
+        return lacking
     lacking = [name for name in QUADRUPED if name not in names]
     if not lacking:
         return "quadruped"
@@ -81,7 +85,7 @@ def body_plan(rig):
 def report(rig):
     """Each measure of `rig`'s body plan against its range. Returns (lines, passed); a rig of no
     body plan in BOUNDS has nothing to measure and passes, and one with only some of a
-    quadruped's limb joints fails."""
+    quadruped's or a hexapod's limb joints fails."""
     plan = body_plan(rig)
     if plan is None:
         return ["no limbs of a known body plan: nothing to measure"], True

@@ -1,8 +1,9 @@
 """Turns a textured model from a generator's download into the source a model script builds from
-(#1476): its mesh with its UVs and only its base colour texture, shrunk to `size`, opaque,
-single-sided and matte. A generator's export carries far more than the game's cel look shows (a
-normal map, a metal and roughness map, each as large as the colour), and the game's other models
-are a small share of its size; the model script then places, rigs and animates the source.
+(#1476): its mesh with its UVs and only its base colour texture, its longer side shrunk to
+`size`, opaque, single-sided and matte. A generator's export carries far more than the game's
+cel look shows (a normal map, a metal and roughness map, each as large as the colour), and the
+game's other models are a small share of its size; the model script then places, rigs and
+animates the source.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/import_source.py -- <download.glb> <source.glb> [size=1024]
@@ -49,8 +50,10 @@ for material in mesh.data.materials:
     material.use_backface_culling = True
     if colour is not None:
         image = colour.image
-        if image.size[0] > size or image.size[1] > size:
-            image.scale(size, size)
+        # Its longer side shrinks to `size`, the other in proportion.
+        shrink = size / max(image.size)
+        if shrink < 1.0:
+            image.scale(max(1, round(image.size[0] * shrink)), max(1, round(image.size[1] * shrink)))
         image.pack()
     print("SOURCE material", material.name, "colour", None if colour is None else tuple(colour.image.size))
 

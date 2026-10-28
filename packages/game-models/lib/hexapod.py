@@ -275,7 +275,8 @@ def bind(skin, rig, scale):
     trunk = sorted(((bones[name].head_local.y + bones[name].tail_local.y) / 2.0, name)
                    for name in ("hips", "spine_01", "spine_02", "neck", "head"))
     tail = sorted((name for name in bones.keys() if name.startswith("tail_")))
-    leg_bones = [[bone(pair, part, side) for part in ("thigh", "shin", "paw")] for side, _flip in SIDES for pair in PAIRS]
+    leg_bones = [[bone(pair, part, side) for part in ("thigh", "shin", "paw")]
+                 for side, _flip in SIDES for pair in PAIRS]
     radius, blend, tail_radius = LEG_RADIUS * scale, HIP_BLEND * scale, TAIL_RADIUS * scale
     for vertex in skin.data.vertices:
         point = to_rig @ vertex.co
