@@ -222,13 +222,13 @@ func equip(slot: String, gear_id: String) -> void:
 	_tell_posted(posted)
 
 
-## Catches the world up with this player's gear as a session starts (#818): `stored` is their
-## trap's entry in its store (SpikesFeature), and a request goes to the outbox if it's behind.
-func catch_up_gear(stored: Dictionary) -> void:
+## Catches the world up with this player's gear as a session starts (#818): `store` is their world
+## store, and requests go to the outbox for what it's behind on.
+func catch_up_gear(store: PlayerStore) -> void:
 	if keeper == null:
 		return
 	var posted: int = keeper.profile.outbox.entries.size()
-	_report(keeper.catch_up_gear(stored, Time.get_ticks_msec()))
+	_report(keeper.catch_up_gear(store, Time.get_ticks_msec()))
 	_tell_posted(posted)
 
 

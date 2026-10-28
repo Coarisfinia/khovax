@@ -137,7 +137,7 @@ func _begin_session() -> void:
 	if quest_tie != null and world != null:
 		quest_tie.catch_up(world.flags)
 	if holder != null and world != null:
-		holder.catch_up_gear(world.stored(slot, SpikesFeature.ID))
+		holder.catch_up_gear(world.stores[slot])
 	_catch_up_party()
 
 

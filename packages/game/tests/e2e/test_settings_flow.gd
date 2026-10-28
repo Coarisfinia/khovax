@@ -445,6 +445,33 @@ func _gear_changes(panel: GearPanel, main: Node) -> String:
 			break
 	if stored != code:
 		return "the spikes in the trap slot didn't reach the world's store: %d" % stored
+	return _gear_keeps_passives(FlowGame.holder(main), driver)
+
+
+## The unique ward charm that keeps the passives on (#617), put into the ward slot the way the
+## panel does (ProfileHolder.equip, which tells the session a request was posted), posts a request
+## that the next ticks carry into the world's store of the player's companions; taking it out
+## posts one that stops it.
+func _gear_keeps_passives(holder: ProfileHolder, driver: GameDriver) -> String:
+	var keeper: ProfileKeeper = holder.keeper
+	keeper.profile.gear.owned["vis_omera"] = 1
+	for gear_id: String in ["vis_omera", "warding_charm"]:
+		holder.equip("ward", gear_id)
+		if keeper.profile.gear.equipped.get("ward", "") != gear_id:
+			return "%s didn't go into the ward slot" % gear_id
+		var on: bool = gear_id == "vis_omera"
+		var kept: bool = not on
+		for _tick: int in keeper.profile.outbox.entries.size():
+			driver.advance(1.0 / Simulation.TICKS_PER_SECOND)
+			var entry: Dictionary = driver.world.stored(driver.input.slot, CompanionFeature.ID)
+			kept = CompanionPassives.kept(entry)
+			if kept == on:
+				break
+		if kept != on:
+			return "with %s in the ward slot, the world's store keeps the passives on: %s" % [
+				gear_id,
+				kept,
+			]
 	return ""
 
 

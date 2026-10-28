@@ -28,7 +28,8 @@ extends Feature
 ## (a wild monster) stops it. Its rolls come from the feature's own stream. It attacks through
 ## CompanionAttackFeature (#221).
 ## A monster's passives (#222) work only while it is out, as its player's companion here (#616,
-## CompanionPassives): its species' own, and the one its web grants it (#1472, from its party).
+## CompanionPassives): its species' own, and the one its web grants it (#1472, from its party),
+## unless gear keeps them on (#617), which its player's requests say.
 
 ## The feature's stable id (#784): saved and hashed, so never changed once it shipped.
 const ID: String = "companions"
@@ -147,21 +148,29 @@ func step(state: GameState, commands: Array[Command]) -> void:
 		_roam(state, movement, state.entity(companion_id))
 
 
-## Takes the request each player here sends to bring monsters into their party (CarryRequest),
-## unless it was applied before (OutboxReceipts).
+## Takes the request each player here sends to bring monsters into their party (CarryRequest), or
+## to keep their passives on or stop (#617, CompanionPassives.keep), unless it was applied before
+## (OutboxReceipts).
 func _take_parties(state: GameState, commands: Array[Command]) -> void:
 	for slot: int in GameState.MAX_PLAYERS:
 		var command: Command = Command.of(commands, slot)
-		var carrying: bool = command != null and command.request_kind == OutboxEntry.CARRY
-		if carrying and state.player(slot) != null:
-			if OutboxReceipts.take(state, slot, ID, command):
-				CompanionParty.take_request(
-					state,
-					slot,
-					command.request_data,
-					_species_by_code,
-					_passives_by_code,
-				)
+		if command == null or state.player(slot) == null:
+			continue
+		var kind: int = command.request_kind
+		if kind != OutboxEntry.CARRY and kind != OutboxEntry.PASSIVES_KEPT:
+			continue
+		if not OutboxReceipts.take(state, slot, ID, command):
+			continue
+		if kind == OutboxEntry.CARRY:
+			CompanionParty.take_request(
+				state,
+				slot,
+				command.request_data,
+				_species_by_code,
+				_passives_by_code,
+			)
+		else:
+			CompanionPassives.keep(state, slot, command.request_data)
 
 
 ## Sends the fainted companion `companion_id` back to its player (#456): it leaves the instance

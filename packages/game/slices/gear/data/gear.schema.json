@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://github.com/Coarisfinia/khovax/slices/gear/data/gear.schema.json",
 	"title": "Gear",
-	"description": "A piece of gear (#690): a player-facing name, the slot it goes into, its rarity (#291) and, for spikes, their damage (#692). One file per piece, named after its id. Each player's gear is kept in their profile by its id, so an id is never reused or changed once shipped.",
+	"description": "A piece of gear (#690): a player-facing name, the slot it goes into, its rarity (#291), for spikes their damage (#692), and for ward gear whether it keeps the passives on (#617). One file per piece, named after its id. Each player's gear is kept in their profile by its id, so an id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
 	"required": ["id", "name", "slot", "rarity"],
@@ -26,9 +26,21 @@
 			"type": "integer",
 			"minimum": 1,
 			"maximum": 1000000000
+		},
+		"keeps_passives": {
+			"description": "Unique ward gear only, of rarity bound (#617): while it's in the ward slot, the passives of every monster the player carries that hasn't fainted work, out or not, instead of only the out companion's.",
+			"const": true
 		}
 	},
-	"if": { "properties": { "slot": { "const": "trap" } } },
-	"then": { "required": ["damage"] },
-	"else": { "not": { "required": ["damage"] } }
+	"allOf": [
+		{
+			"if": { "properties": { "slot": { "const": "trap" } } },
+			"then": { "required": ["damage"] },
+			"else": { "not": { "required": ["damage"] } }
+		},
+		{
+			"if": { "required": ["keeps_passives"] },
+			"then": { "properties": { "slot": { "const": "ward" }, "rarity": { "const": "bound" } } }
+		}
+	]
 }

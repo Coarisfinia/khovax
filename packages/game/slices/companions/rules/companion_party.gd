@@ -258,13 +258,13 @@ static func fainted_in(world: World, slot: int) -> PackedStringArray:
 
 
 ## Why the party of the player in `slot` in `state`, as a save brought it back, isn't one, or "":
-## none at all, or the short ids of the monsters they carry, each once, with a named species each
-## and a leaning each (or none saved, from before leanings) and a passive each, "" for none (or
-## none saved, from before passives, #1472), one of them their companion, and the ones that fainted
-## among them, each once.
+## none at all (their entry may hold other things, like their requests' receipts), or the short ids
+## of the monsters they carry, each once, with a named species each and a leaning each (or none
+## saved, from before leanings) and a passive each, "" for none (or none saved, from before
+## passives, #1472), one of them their companion, and the ones that fainted among them, each once.
 static func problem(state: GameState, slot: int) -> String:
 	var entry: Dictionary = state.stored(slot, CompanionFeature.ID)
-	if entry.is_empty():
+	if not _has_party(entry):
 		return ""
 	var party: PackedStringArray = _carried_of(entry)
 	var party_species: PackedStringArray = _species_of(entry)
@@ -287,6 +287,15 @@ static func problem(state: GameState, slot: int) -> String:
 		if not party.has(down[place]) or down.find(down[place]) != place:
 			return "slot %d's fainted %s isn't carried, or is listed twice" % [slot, down[place]]
 	return ""
+
+
+## Whether `entry` holds any of a party, not only what else the companions keep there (their
+## requests' receipts, CompanionPassives.KEPT).
+static func _has_party(entry: Dictionary) -> bool:
+	for key: String in PARTY_KEYS:
+		if entry.has(key):
+			return true
+	return false
 
 
 ## Whether `entry` lists only text under `key`.

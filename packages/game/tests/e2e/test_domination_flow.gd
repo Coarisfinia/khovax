@@ -145,7 +145,8 @@ const SPIKES: String = "test_spikes"
 ## No request to change the trap (_spiked_over).
 const NO_TRAP_CHANGE: int = -1
 ## The guard check's passives (#616): the weak species' own, which guards it, and the one for its
-## player; the strong species' for its player, which guards far more.
+## player; the strong species' for its player, small enough that every player guard together still
+## lets some of a hit through (#617).
 const SELF_GUARD: String = "test_hide"
 const PLAYER_GUARD: String = "test_ward"
 const STRONG_GUARD: String = "test_strong_ward"
@@ -154,7 +155,7 @@ const WEB_GUARD: String = "test_web_ward"
 const GUARDS: Dictionary[String, int] = {
 	SELF_GUARD: 250,
 	PLAYER_GUARD: 500,
-	STRONG_GUARD: 900,
+	STRONG_GUARD: 200,
 	WEB_GUARD: 200,
 }
 ## Where many weak monsters stand in the big ring.
@@ -1580,7 +1581,8 @@ func _check_least_damage() -> String:
 ## one in reserve, a wild monster's hit on the player comes in less the weak species' player guard
 ## alone, and one on the companion less its own guard; the out one's web passive (#1472) takes its
 ## guard off the hit on the player as well; with every carried monster fainted, none is out, and
-## the hit on the player comes in whole.
+## the hit on the player comes in whole. Gear that keeps the passives on (#617) lets the one in
+## reserve guard the player too, until it faints.
 func _check_guards() -> String:
 	var state: GameState = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
@@ -1605,6 +1607,9 @@ func _check_guards() -> String:
 		_wild_strikes_over(state, ticks, Vector2i(-3, 0)), player.id, guarded, "the player")
 	if not struck.is_empty():
 		return struck
+	struck = _check_kept(state, player.id)
+	if not struck.is_empty():
+		return struck
 	state = _strike_state([Vector2i.ZERO], [], 0, GUARDS)
 	FlowSteps.carry(state, 0, [WEAK, STRONG])
 	# The party's store is written through its player, so they come first.
@@ -1614,6 +1619,38 @@ func _check_guards() -> String:
 	_joined = _wild_strikes_over(state, 1, Vector2i(-3, 0))
 	var strikes: Array[WildMonsterStruck] = _wild_strikes_over(state, ticks, Vector2i(-3, 0))
 	return _struck_for(strikes, player.id, WEAK_STRENGTH, "the player with none out")
+
+
+## With the weak species out, its web passive granted, and the strong one in reserve in `state`,
+## the request (#818) that the player `player_id`'s ward gear keeps their passives on (#617,
+## OutboxEntry.PASSIVES_KEPT) lets a wild monster's hit on them come in less both species' player
+## guards and the web's; once the strong one has fainted, less the weak one's two alone again.
+func _check_kept(state: GameState, player_id: int) -> String:
+	var keep: Array[Command] = FlowSteps.command(Command.NO_MOVE)
+	# The first id a profile's outbox draws (Outbox, #942).
+	keep[0].request = ShortId.code(ShortId.of_code(1))
+	keep[0].request_kind = OutboxEntry.PASSIVES_KEPT
+	keep[0].request_data = 1
+	Simulation.step(state, keep)
+	if not CompanionPassives.kept(state.stored(0, CompanionFeature.ID)):
+		return "the request to keep the passives on wasn't kept in the player's store"
+	var ticks: int = WildAttackFeature.STRIKE_TICKS
+	var weak: int = GUARDS[PLAYER_GUARD] + GUARDS[WEB_GUARD]
+	var struck: String = _struck_for(
+		_wild_strikes_over(state, ticks, Vector2i(-3, 0)),
+		player_id,
+		Fixed.scale(WEAK_STRENGTH, Fixed.ONE - weak - GUARDS[STRONG_GUARD]),
+		"the player with the passives kept on",
+	)
+	if not struck.is_empty():
+		return struck
+	CompanionParty.faint(state, 0, CompanionParty.carried(state, 0)[1])
+	return _struck_for(
+		_wild_strikes_over(state, ticks, Vector2i(-3, 0)),
+		player_id,
+		Fixed.scale(WEAK_STRENGTH, Fixed.ONE - weak),
+		"the player with the passives kept on and the reserve fainted",
+	)
 
 
 ## Why `strikes` weren't one strike on `target_id` (`what`) for `damage`, or "".
