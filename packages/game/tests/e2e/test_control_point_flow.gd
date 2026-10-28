@@ -97,13 +97,17 @@ func _check_unknown_side() -> String:
 	return ""
 
 
-## Who holds a control point, and who lost, are in the state hash.
+## Who holds a control point, whether a totem wards it, and who lost are in the state hash.
 func _check_hashed() -> String:
 	var base: int = _battle().state_hash()
 	var changed: GameState = _battle()
 	_points(changed).holders[0] = NOBODY if _points(changed).holders[0] != NOBODY else ATTACKERS
 	if changed.state_hash() == base:
 		return "changing who holds a control point didn't change the state hash"
+	var warded: GameState = _battle()
+	_points(warded).warded[0] = true
+	if warded.state_hash() == base:
+		return "warding a control point didn't change the state hash"
 	var lost: GameState = _battle()
 	_points(lost).loser = DEFENDERS
 	if lost.state_hash() == base:
@@ -126,16 +130,22 @@ func _check_lost() -> String:
 	return ""
 
 
-## A saved battle loads with the same holders and loser, and a save that doesn't fit the region's
-## control points is refused.
+## A saved battle loads with the same holders, wards and loser, a warded point and unwarded ones
+## alike, and a save that doesn't fit the region's control points is refused.
 func _check_saved() -> String:
 	var state: GameState = _battle()
 	_points(state).holders[0] = ATTACKERS
+	_points(state).warded[0] = true
 	_points(state).loser = DEFENDERS
 	var loaded: GameState = _battle()
 	_points(loaded).load_values(loaded, DataReader.new(_points(state).save_values()))
 	if loaded.state_hash() != state.state_hash():
 		return "a saved battle didn't load as it was"
+	if _points(loaded).warded != _points(state).warded:
+		return "a saved battle's wards loaded as %s, not %s" % [
+			_points(loaded).warded,
+			_points(state).warded,
+		]
 	var wards: Array[int] = []
 	var _sized: int = wards.resize(HELD.size())
 	wards.fill(0)
