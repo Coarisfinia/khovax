@@ -52,7 +52,7 @@ func entity_added(state: GameState, added: Entity) -> void:
 func hush_of(state: GameState, slot: int) -> int:
 	var companions: CompanionFeature = state.feature(CompanionFeature.ID) as CompanionFeature
 	var most: int = 0
-	for passive: String in CompanionPassives.of_player(companions, slot):
+	for passive: String in CompanionPassives.of_player(state, companions, slot):
 		var hush: int = hushes.get(passive, 0)
 		most = maxi(most, hush)
 	return most
