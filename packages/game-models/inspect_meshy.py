@@ -55,10 +55,10 @@ PROFILE_SLICES = 9
 # A chain's vertices "reach past" it when they lie farther from its bones than this share of the
 # model's height, at their 90th percentile.
 REACH = 0.12
-# Two chains "bleed" into each other when at least this share of the smaller one's vertices carry
-# BLEED_WEIGHT or more of each, farther than REACH from both chains' starts: next to a fork, mixed
-# weights only smooth the joint.
-BLEED, BLEED_WEIGHT = 0.2, 0.1
+# Two chains "bleed" into each other when at least this share of the vertices the smaller one weighs
+# BLEED_WEIGHT or more carry that much of both, farther than REACH from both chains' starts (next to
+# a fork, mixed weights only smooth the joint), and at least BLEED_VERTICES of them.
+BLEED, BLEED_WEIGHT, BLEED_VERTICES = 0.2, 0.1, 20
 # How long (seconds) Blender may take before the report gives up on it: far above a large download's.
 TIMEOUT = 300
 
@@ -202,9 +202,14 @@ def report_materials(gltf, binary):
         for kind, slot in slots:
             if slot is None:
                 continue
-            source = textures[slot["index"]].get("source")
+            texture = textures[slot["index"]]
+            source = texture.get("source")
+            for name in ("KHR_texture_basisu", "EXT_texture_webp"):  # the image sits in an extension
+                source = texture.get("extensions", {}).get(name, {}).get("source", source)
             form, dims, _meta = image_info(image_bytes(gltf, binary, source))
             parts.append("%s %s %s" % (kind, "%dx%d" % dims if dims else "?", form))
+            if dims is None:
+                NEXT.append("check the %s texture's size by hand: its format isn't read here" % kind)
             strip = strip or (kind == "base" and dims is not None and max(dims) > 1024)
         out("MATERIAL %s: doubleSided %s, alpha %s; %s" % (
             material.get("name", number), material.get("doubleSided", False), material.get("alphaMode", "OPAQUE"),
@@ -538,8 +543,8 @@ def report_rig(mesh, positions, low, high):
             if other == number:
                 continue
             shared = strong[:, number] & strong[:, other] & away[:, number] & away[:, other]
-            smaller = min(mine.sum(), (owner == other).sum())
-            if smaller and shared.sum() >= BLEED * smaller:
+            smaller = min(strong[:, number].sum(), strong[:, other].sum())
+            if shared.sum() >= max(BLEED * smaller, BLEED_VERTICES):
                 flags.append("BLEEDS with %s: %d vertices, z %s..%s" % (
                     found[other][0].name, shared.sum(), num(positions[shared, 2].min()), num(positions[shared, 2].max())))
         flagged += bool(flags)
