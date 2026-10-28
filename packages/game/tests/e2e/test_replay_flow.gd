@@ -1012,11 +1012,11 @@ func _check_end_last() -> String:
 	start.starts.append(Vector2i.ZERO)
 	var through: String = "- `🔗`: joins another piece to the west\n"
 	var end: Region = FlowSteps.region("🔗", through)
-	var way: Region = FlowSteps.region("🔗🧷", through + "- `🧷`: joins another piece to the east\n")
+	var way: Region = FlowSteps.region("🔗🟫🧷", through + "- `🧷`: joins another piece to the east\n")
 	var pieces: Array[Region] = [start, end, way]
 	for seed_value: int in 12:
 		var region: Region = RegionArranger.arrange(pieces, seed_value, false)
-		if not region.problem.is_empty() or region.terrain.size() != 4:
+		if not region.problem.is_empty() or region.terrain.size() != 5:
 			return "a way's end didn't go last for seed %d: %s" % [seed_value, region.problem]
 	return ""
 
