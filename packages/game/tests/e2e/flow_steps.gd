@@ -246,7 +246,9 @@ static func carry_sent(outbox: Outbox, posted: int = 0) -> Array[int]:
 		values.append(CarryRequest.value_of(request.data))
 		var count: int = CarryRequest.count_of(request.data)
 		whole = values.size() >= CarryRequest.VALUES_PER_MONSTER * count
-	return values if whole else []
+	if not whole:
+		values = []
+	return values
 
 
 ## Whether a run of carry requests posted to `outbox` past its first `posted` entries names
