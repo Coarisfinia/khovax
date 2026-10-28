@@ -1,0 +1,9 @@
+// What harvesting cracked rock by hand drops (#1546): its loose stones. A placeholder, to tune
+// (#960).
+{
+	"id": "loose_stones",
+	"kind": "tile",
+	"entries": [
+		{ "item": "stone", "chance": 1000, "min": 1, "max": 2 } // 100 %
+	]
+}

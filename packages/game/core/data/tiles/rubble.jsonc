@@ -1,0 +1,9 @@
+// Rubble: the broken stone left once a player harvested cracked rock by hand (#1546). Nobody walks
+// it, and sight passes over it, like the cracked rock was. It lasts until its instance is purged
+// (#212), which brings the cracked rock back.
+{
+	"id": "rubble",
+	"color": "#8a8178",
+	"symbol": "+", // tells it apart without its color (#68)
+	"traits": { "walkable": false }
+}

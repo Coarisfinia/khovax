@@ -1,0 +1,10 @@
+// Cracked rock: a low outcrop of rock split by frost, placed by hand in a region piece (#1546) so
+// not every rock wall can be scraped away. Nobody walks it, but sight passes over it, like a
+// boulder. A player next to it breaks its loose stones off by hand, which leaves rubble.
+{
+	"id": "cracked_rock",
+	"color": "#7d756d",
+	"symbol": "x", // tells it apart without its color (#68)
+	"harvest": { "yields": "loose_stones", "becomes": "rubble", "takes": "hands" },
+	"traits": { "walkable": false }
+}
