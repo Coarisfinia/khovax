@@ -413,8 +413,10 @@ func _gear_pictured(panel: GearPanel, equipped: Dictionary[String, String]) -> S
 	var gear: GearContent = GearContent.cached()
 	for slot: String in GearSlots.SLOTS:
 		var model: String = gear.items[equipped[slot]].model if equipped.has(slot) else ""
-		if panel.pictures[slot].shown != model:
-			return "the %s slot shows the model %s" % [slot, panel.pictures[slot].shown]
+		var picture: ItemPicture = panel.pictures[slot]
+		# The model loaded onto its stage too, not only named.
+		if picture.shown != model or (picture.stage.model != null) == model.is_empty():
+			return "the %s slot shows the model %s" % [slot, picture.shown]
 	return ""
 
 

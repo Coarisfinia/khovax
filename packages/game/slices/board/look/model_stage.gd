@@ -52,13 +52,29 @@ func frame() -> void:
 	if model == null:
 		return
 	var bounds: AABB = _bounds(model)
+	var slope: float = tan(deg_to_rad(FOV_DEGREES) * 0.5)
 	# A model without meshes still gets a camera that looks at something.
 	var reach: float = maxf(bounds.size.length() * 0.5 * ROOM, 0.1)
-	var distance: float = reach / tan(deg_to_rad(FOV_DEGREES) * 0.5)
+	var distance: float = maxf(reach / slope, _fitting(bounds, slope))
 	var centre: Vector3 = bounds.get_center()
 	_camera.transform = Transform3D.IDENTITY.translated(
 		centre + VIEW_FROM.normalized() * distance
 	).looking_at(centre)
+
+
+## How far from the centre of `bounds` the camera must stand, toward VIEW_FROM, for every corner of
+## them to fall inside its square view, `slope` the tangent of half its field of view: a tall,
+## narrow model reaches past the sphere's share (ROOM) at its near top corners.
+static func _fitting(bounds: AABB, slope: float) -> float:
+	var toward: Vector3 = VIEW_FROM.normalized()
+	var right: Vector3 = (-toward).cross(Vector3.UP).normalized()
+	var up: Vector3 = right.cross(-toward)
+	var distance: float = 0.0
+	for corner: int in 8:
+		var offset: Vector3 = bounds.get_endpoint(corner) - bounds.get_center()
+		var side: float = maxf(absf(offset.dot(right)), absf(offset.dot(up)))
+		distance = maxf(distance, offset.dot(toward) + side / slope)
+	return distance
 
 
 ## The box around every mesh of `root`, at rest, in the stage's space, where the camera stands: a

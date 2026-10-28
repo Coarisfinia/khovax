@@ -8,15 +8,16 @@ const SIDE_FONTS: float = 3.0
 
 ## The model shown, or "" for none; kept here so tests can read it.
 var shown: String = ""
-var _stage: ModelStage
+## The stage it shows the model on, kept here so tests can read the model it holds.
+var stage: ModelStage
 
 
 func _init() -> void:
 	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_stage = ModelStage.new()
-	add_child(_stage)
+	stage = ModelStage.new()
+	add_child(stage)
 
 
 func _process(_delta: float) -> void:
@@ -31,6 +32,6 @@ func show_model(model: String) -> void:
 		return
 	shown = model
 	var scene: PackedScene = load(model) as PackedScene if not model.is_empty() else null
-	_stage.show_model(scene.instantiate() as Node3D if scene != null else null)
+	stage.show_model(scene.instantiate() as Node3D if scene != null else null)
 	# The space stays, so the slots' buttons line up whether they hold gear or not.
 	modulate.a = 1.0 if scene != null else 0.0
