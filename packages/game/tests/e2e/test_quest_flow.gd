@@ -652,6 +652,11 @@ func _check_territory(
 ) -> String:
 	var forest: String = FlowSteps.FOREST
 	var quest: String = "guild_charts_morwe_wudhen"
+	# The dominations above brought their monsters to the world at once (#1478): their carry runs
+	# go first, so the outbox holds only the hand-over below.
+	var settled: String = _settle_outbox(driver, bus, profile)
+	if not settled.is_empty():
+		return settled
 	WorldFlags.set_flag(driver.world, Territory.flag(forest, "rivals"))
 	_emit(driver, bus, InstanceEntered.new(forest, 1, 0))
 	var pilled: String = _check_pills(driver, list, quest)
@@ -904,6 +909,16 @@ func _check_quest_event(
 		quests.started.erase(id)
 		quests.finished.erase(id)
 	return result
+
+
+## Ticks until the world took every request waiting in `profile`'s outbox, one a command, and
+## acknowledged it; returns which are left after a while, or "".
+func _settle_outbox(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
+	for _round: int in 20:
+		if profile.outbox.entries.is_empty():
+			return ""
+		_tick(driver, bus)
+	return "the outbox kept %d requests the world never took" % profile.outbox.entries.size()
 
 
 ## An event that changed the world (#707) reaches this player's profile, wherever they are, and

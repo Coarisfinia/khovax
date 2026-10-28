@@ -142,8 +142,9 @@ func _begin_session() -> void:
 
 
 ## Catches the world up with who this machine's player carries and how each leans (#818, #1358):
-## as a session starts, and at once when the party or a carried monster's taken nodes change during
-## it (#1459), so the run goes in their next commands instead of waiting for the next session.
+## as a session starts, and at once when the party or a carried monster's taken nodes or species
+## change during it (#1459, #1478, #1485), so the run goes in their next commands instead of
+## waiting for the next session.
 func _catch_up_party() -> void:
 	if holder != null and world != null:
 		holder.catch_up_party(world.stored(input.slot if input != null else 0, CompanionFeature.ID))

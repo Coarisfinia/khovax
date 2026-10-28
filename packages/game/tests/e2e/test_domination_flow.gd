@@ -2329,7 +2329,8 @@ func _check_brace(main: Node, state: GameState) -> String:
 
 ## A domination reaches the profile through the driver's ticked events, as in a session: it's taken
 ## over and, the first gain after a quiet spell, saved at once. Another slot's domination isn't this
-## player's.
+## player's. The first monster they dominate joins them as their companion in the same session
+## (#1478): a run of carry requests naming it goes to the world at once.
 func _check_saved(tree: SceneTree) -> String:
 	var main: Node = await FlowGame.start_held(tree, SAVE_PATH)
 	var holder: ProfileHolder = FlowGame.holder(main)
@@ -2347,8 +2348,11 @@ func _check_saved(tree: SceneTree) -> String:
 	if not holder.keeper.profile.dominated_monsters.is_empty():
 		result = "another slot's domination went into this player's profile"
 	(main.get_node("LocalInput") as LocalInput).slot = 0
+	var posted: int = holder.keeper.profile.outbox.entries.size()
 	driver.ticked.emit(driver.state.tick, events)
 	(main.get_node("EventBus") as EventBus).flush()
+	if result.is_empty():
+		result = _check_joined(holder.keeper.profile.outbox, posted, events)
 	var species: Array[String] = []
 	for monster: DominatedMonster in ProfileStore.load_from(SAVE_PATH).dominated_monsters:
 		species.append(monster.species)
@@ -2362,6 +2366,15 @@ func _check_saved(tree: SceneTree) -> String:
 	await tree.process_frame
 	SaveStore.remove(SAVE_PATH)
 	return result
+
+
+## The first monster this player dominated in `events` joins them as their companion at once
+## (#1478): a run of carry requests posted to `outbox` past its first `posted` entries names it.
+func _check_joined(outbox: Outbox, posted: int, events: Array[RefCounted]) -> String:
+	var dominated: Array[WildMonsterDominated] = _dominated(events)
+	if dominated.is_empty() or not FlowSteps.companion_sent(outbox, posted, dominated[0].short_id):
+		return "the first dominated monster didn't go to the world as the companion at once"
+	return ""
 
 
 ## A wild monster felled in sight (#629): this machine's player's own materials burst from where it

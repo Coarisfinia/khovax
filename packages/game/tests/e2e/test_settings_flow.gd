@@ -518,7 +518,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var reordered: Array[String] = [ids[3], ids[0], ids[1], ids[2]]
 	# The world hears of the new companion at once (#1459), in a new run of carry requests.
 	if (tab.monsters.shown != moved or tab.monsters.shown_ids != reordered
-			or not _companion_sent(outbox, posted, ids[3])):
+			or not FlowSteps.companion_sent(outbox, posted, ids[3])):
 		return "moving a monster first didn't make it the companion: %s" % [tab.monsters.shown]
 	posted = outbox.entries.size()
 	# The second row's up button: its line, then up, then down, each showing its arrow (#584).
@@ -531,7 +531,7 @@ func _menu_reorder(tab: CharacterTab, main: Node) -> String:
 	var _flushed: String = FlowGame.holder(main).keeper.flush()
 	var kept: Array[String] = ProfileStore.load_from(PROFILE_PATH).carried
 	if (tab.monsters.shown_ids[0] != ids[0] or kept != [ids[0], ids[3], ids[1]]
-			or not _companion_sent(outbox, posted, ids[0])):
+			or not FlowSteps.companion_sent(outbox, posted, ids[0])):
 		return "a row's up button didn't move it, or the order isn't kept or sent: %s" % [kept]
 	return _menu_details(tab)
 
@@ -689,7 +689,8 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 ## A dominated Vynnimu's details say into what, at which level and with which material it ascends
 ## (#1235), and its Ascend button can't be pressed below that level or without the material. With
 ## both, pressing it makes it a Vynakiir, spends the arcane crystal, says so below its details, and
-## the bestiary knows the Vynakiir.
+## the bestiary knows the Vynakiir. Carried first, it reaches the world as a Vynakiir at once
+## (#1485).
 func _menu_ascension(menu: GameMenu) -> String:
 	var tab: CharacterTab = menu.character
 	var profile: Profile = tab.holder.keeper.profile
@@ -697,6 +698,7 @@ func _menu_ascension(menu: GameMenu) -> String:
 	gain.dominated_species.assign(["vynnimu"])
 	tab.holder.take(gain)
 	var pup: DominatedMonster = profile.dominated_monsters[profile.dominated_monsters.size() - 1]
+	tab.monsters.move(pup.short_id, 0)
 	tab.monsters.select(pup.short_id)
 	var details: MonsterDetails = tab.monsters.details
 	var line: String = MonsterDetails.ASCENSION_TEXT % ["Vynakiir", 43]
@@ -709,10 +711,13 @@ func _menu_ascension(menu: GameMenu) -> String:
 	tab.monsters.refresh()
 	if details.ascend_button.disabled:
 		return "a level 43 Vynnimu with a crystal can't press Ascend"
+	var posted: int = profile.outbox.entries.size()
 	details.ascend_button.pressed.emit()
 	var known: Bestiary = BestiaryKeeper.of(tab.holder)
 	if pup.species != "vynakiir" or profile.materials.has("arcane_crystal"):
 		return "pressing Ascend didn't make it a Vynakiir, or kept the crystal"
+	if not _sent_ascended(profile.outbox, posted, pup.short_id):
+		return "the ascended companion didn't go to the world as a Vynakiir at once"
 	if details.notice != MonsterDetails.ASCENDED_TEXT % ["Vynnimu", "Vynakiir"]:
 		return "no line says it ascended: %s" % details.notice
 	if details.ascend_button.visible or not details.shown[0].begins_with("Vynakiir, level 43"):
@@ -722,34 +727,24 @@ func _menu_ascension(menu: GameMenu) -> String:
 	return ""
 
 
+## Whether a run of carry requests posted to `outbox` past its first `posted` entries brings the
+## companion `short_id` as a Vynakiir (#1485): an ascension mid-session goes to the world at once.
+static func _sent_ascended(outbox: Outbox, posted: int, short_id: String) -> bool:
+	return (FlowSteps.companion_sent(outbox, posted, short_id)
+			and FlowSteps.carry_sent(outbox, posted)[0] == CarryRequest.species_code("vynakiir"))
+
+
 ## Ombulumo's sturdy_1 taken mid-session goes to the world at once, not at the next session
 ## (#1459): the newest run of carry requests waiting in `outbox` has the companion leaning +5% HP.
 static func _sent_at_once(outbox: Outbox) -> String:
-	var at_leaning: int = _newest_run(outbox) + CarryRequest.VALUES_PER_MONSTER - 1
+	var values: Array[int] = FlowSteps.carry_sent(outbox)
+	var at_leaning: int = CarryRequest.VALUES_PER_MONSTER - 1
 	var leaning: CompanionLeaning = null
-	if at_leaning >= CarryRequest.VALUES_PER_MONSTER - 1 and at_leaning < outbox.entries.size():
-		leaning = CompanionLeaning.of_code(CarryRequest.value_of(outbox.entries[at_leaning].data))
+	if values.size() > at_leaning:
+		leaning = CompanionLeaning.of_code(values[at_leaning])
 	if leaning == null or not leaning.same_as(CompanionLeaning.of(50, 0, 0)):
 		return "the node taken didn't send the companion leaning +5% HP to the world at once"
 	return ""
-
-
-## Whether a run of carry requests posted to `outbox` past its first `posted` entries names
-## `short_id` as the companion (#1459): a monster reordered mid-session goes to the world at once.
-static func _companion_sent(outbox: Outbox, posted: int, short_id: String) -> bool:
-	var start: int = _newest_run(outbox)
-	return (start >= posted and start + 1 < outbox.entries.size()
-			and CarryRequest.value_of(outbox.entries[start + 1].data) == ShortId.code(short_id))
-
-
-## Where the newest run of carry requests in `outbox` starts, or -1 without one.
-static func _newest_run(outbox: Outbox) -> int:
-	var start: int = -1
-	for at: int in outbox.entries.size():
-		var request: OutboxEntry = outbox.entries[at]
-		if request.kind == OutboxEntry.CARRY and CarryRequest.place_of(request.data) == 0:
-			start = at
-	return start
 
 
 ## On a phone held upright the web steepens its spokes to fit the tab's width, its nodes never
