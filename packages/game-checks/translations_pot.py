@@ -45,8 +45,10 @@ HEADER = (
 # The schema keyword that marks a player-facing text field.
 MARK = "x-translate"
 # A call whose first argument is the text: tr(text, context), tr_n(text, plural, n, context).
-CALL = re.compile(r"(?<!\w)(a?tr(?:_n)?)\(\s*$")
-COMMA = re.compile(r"\s*,\s*")
+CALL = re.compile(r"(?<!\w)(a?tr(?:_n)?)\(\s*r?$")
+# A comma alone between two string arguments; the second may be raw (r"…").
+COMMA = re.compile(r"\s*,\s*r?")
+RAW = re.compile(r"(?<!\w)r$")
 SCENE_TEXT = re.compile(
     r'^(?:[\w/]+/)?(?:text|placeholder_text|tooltip_text|title) = "((?:[^"\\]|\\.)*)"',
     re.MULTILINE | re.DOTALL,
@@ -94,7 +96,8 @@ def unescaped(text: str) -> str:
                 out.append(chr(int(digits, 16)))
                 i += 2 + len(digits)
                 continue
-            out.append(ESCAPES.get(char, "\\" + char))
+            # A backslash ending a line continues the string on the next, without a line break.
+            out.append("" if char == "\n" else ESCAPES.get(char, "\\" + char))
             i += 2
         else:
             out.append(text[i])
@@ -103,10 +106,12 @@ def unescaped(text: str) -> str:
     return "".join(out).encode("utf-16", "surrogatepass").decode("utf-16")
 
 
-def literal(token: str) -> str:
-    """A string token's text, without its quotes and escapes."""
+def literal(token: str, before: str) -> str:
+    """A string token's text, without its quotes, and without its escapes unless the code
+    `before` it ends in the raw prefix r, which Godot reads as written."""
     quote = token[:3] if token[:3] in ('"""', "'''") else token[0]
-    return unescaped(token[len(quote) : -len(quote)])
+    text = token[len(quote) : -len(quote)]
+    return text if RAW.search(before) else unescaped(text)
 
 
 def script_texts(source: str) -> Iterator[Found]:
@@ -117,7 +122,7 @@ def script_texts(source: str) -> Iterator[Found]:
         match = CALL.search(token.text) if token.kind == Kind.CODE else None
         if match is None or i + 1 >= len(runs) or runs[i + 1].kind != Kind.STRING:
             continue
-        strings = [literal(runs[i + 1].text)]
+        strings = [literal(runs[i + 1].text, token.text)]
         # The string arguments right after it, each after a comma alone.
         at = i + 2
         while (
@@ -126,7 +131,7 @@ def script_texts(source: str) -> Iterator[Found]:
             and COMMA.fullmatch(runs[at].text)
             and runs[at + 1].kind == Kind.STRING
         ):
-            strings.append(literal(runs[at + 1].text))
+            strings.append(literal(runs[at + 1].text, runs[at].text))
             at += 2
         if match[1].endswith("_n"):
             if len(strings) >= 2:
@@ -140,12 +145,15 @@ def _plural_context(runs: list[Token], at: int) -> str:
     count comes after its first comma, then a comma at the call's own depth and the string."""
     depth = 0
     commas = 0
+    before = ""
     for run in runs[at:]:
         if run.kind == Kind.STRING:
             if commas == 2 and depth == 0:
-                return literal(run.text)
+                return literal(run.text, before)
             continue
-        for char in run.text:
+        before = run.text
+        # A raw string's prefix r is part of the context argument, not code before it.
+        for char in RAW.sub("", run.text):
             if char in "([{":
                 depth += 1
             elif char in ")]}":
