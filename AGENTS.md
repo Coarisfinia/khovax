@@ -231,8 +231,9 @@ background; only wait in the foreground for a result the very next step needs.
   `WORKFLOW=ci.yml`, `GH=agent-gh`, `ACTIVITY_GH=gh`, `SELF='coarisfinia-ai-agent[bot]'` (it has
   no default), `DISMISS_STALE_BOT_REVIEWS=1` (owner, #1551: it dismisses CodeRabbit's stale
   change request itself, below), `REVIEW_BOTS=coderabbitai` (`Flixbox/household-brain#299`: it
-  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head) and
-  `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
+  holds `READY_TO_MERGE` for a draft the owner approved until CodeRabbit has reviewed its head),
+  `READY_APPROVED_DRAFTS=1` (owner, #1667: it marks a draft ready once the owner approves its head,
+  below) and `RESOLVE_BOT_REVIEWS=coderabbitai` (owner, #1603: once CodeRabbit's change request on the head is
   settled, every thread resolved and CI green, it posts `@coderabbitai resolve` whatever the merge
   risk, and reports `BOT_RESOLVE_ASKED`). `.claude/watcher.env` holds them all, for the plugin's
   own monitor and for
@@ -262,9 +263,11 @@ background; only wait in the foreground for a result the very next step needs.
   changes models (a `.glb`, its rig, clips or textures, `packages/game-models/`, the model skill)
   or UI (anything the player sees or touches on screen) **and** shows the owner something in its
   description (renders, screenshots, a before and after) is opened with `agent-gh pr create
-  --draft …` and stays a draft until the owner approves; then `agent-gh pr ready <n>`, and queue
-  it once CodeRabbit has reviewed the head (the watcher holds `READY_TO_MERGE` until then,
-  `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its
+  --draft …` and stays a draft until the owner approves. Once the owner approves its head, the
+  watcher marks it ready itself and reports `DRAFT_READIED` (`Flixbox/household-brain#301`,
+  `Flixbox/household-brain#316`); only on `APPROVED_DRAFT` (an older head approved, or marking it
+  ready failed) run `agent-gh pr ready <n>` yourself. Queue it once CodeRabbit has reviewed the
+  head (the watcher holds `READY_TO_MERGE` until then, `REVIEW_BOTS` above). Every other pull request is not a draft: CodeRabbit reviews it, and its
   "Merge low-risk changes" rule may merge it (wanted), except a model pull request or one that
   changes the merge rules, which still wait for the owner's approval (below).
 - **Reply in a review thread through GraphQL, not REST** (#1573): the bot's REST calls (the
