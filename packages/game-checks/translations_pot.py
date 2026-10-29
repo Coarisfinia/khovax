@@ -119,7 +119,15 @@ def literal(token: str, before: str) -> str:
 def script_texts(source: str) -> Iterator[Found]:
     """The literal texts a script passes to tr() and its kin; a computed one (content read at run
     time) comes from elsewhere."""
-    runs = [token for token in tokens(source) if token.kind != Kind.COMMENT]
+    runs: list[Token] = []
+    for token in tokens(source):
+        if token.kind == Kind.COMMENT:
+            continue
+        # The code on both sides of a comment is one run, so tr( # … then its string still match.
+        if token.kind == Kind.CODE and runs and runs[-1].kind == Kind.CODE:
+            runs[-1] = Token(Kind.CODE, runs[-1].text + token.text)
+        else:
+            runs.append(token)
     for i, token in enumerate(runs):
         match = CALL.search(token.text) if token.kind == Kind.CODE else None
         if match is None or i + 1 >= len(runs) or runs[i + 1].kind != Kind.STRING:

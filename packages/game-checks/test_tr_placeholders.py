@@ -22,6 +22,9 @@ class TrPlaceholdersTest(unittest.TestCase):
         self.assertEqual(placeholders("%*.*f"), 3)
         self.assertEqual(placeholders("%.f / %s"), 2)
         self.assertEqual(placeholders("%%%%s %s"), 1)
+        # Unsigned and indexed specifiers are still positional %.
+        self.assertEqual(placeholders("%ud %s"), 2)
+        self.assertEqual(placeholders("%2$s, %1$d"), 2)
 
     def test_refuses_two_positional_values(self) -> None:
         source = (
@@ -29,9 +32,12 @@ class TrPlaceholdersTest(unittest.TestCase):
             "func b() -> String:\n"
             '\treturn TranslationServer.tr("%s ascended into %s!") % ["a", "b"]\n'
             'func c(n: int) -> String:\n\treturn tr_n("%s egg", "%d eggs of %s", n) % [n, "x"]\n'
+            "func d() -> String:\n"
+            '\treturn tr(  # a comment inside the call\n\t\t"%s and %s") % ["a", "b"]\n'
         )
         self.assertEqual(
-            list(crowded(source)), ["Carried %d: %s", "%s ascended into %s!", "%d eggs of %s"]
+            list(crowded(source)),
+            ["Carried %d: %s", "%s ascended into %s!", "%d eggs of %s", "%s and %s"],
         )
 
     def test_passes_one_named_or_untranslated(self) -> None:

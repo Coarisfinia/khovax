@@ -19,9 +19,10 @@ from game_shared import log
 from game_shared.git_files import git_files
 from translations_pot import script_texts
 
-# A Godot format specifier (String's % operator): its flags, width and precision (a bare "." or a
-# "*" among them), then its conversion; or %%, a percent sign, read first so "%%s" holds no value.
-SPECIFIER = re.compile(r"%%|%[-+0-9.*]*[scdoxXfv]")
+# A Godot format specifier (String's % operator): its flags (u for unsigned), its value's index
+# (1$), width and precision (a bare "." or a "*" among them), then its conversion; or %%, a percent
+# sign, read first so "%%s" holds no value.
+SPECIFIER = re.compile(r"%%|%[-+u0-9$.*]*[scdoxXfv]")
 
 
 def placeholders(text: str) -> int:
