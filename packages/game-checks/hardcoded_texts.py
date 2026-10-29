@@ -454,7 +454,12 @@ class Flow:
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
                     self.expression(script, func, value)
-            elif target[0].text in carriers and (len(target) == 1 or target[1].text == "["):
+            elif target[0].text in carriers and (
+                len(target) == 1
+                or target[1].text == "["
+                or (len(target) == 3 and target[1].text == ".")
+            ):
+                # The carrier itself, or one of its keys (`values["name"] = …`, `values.name = …`).
                 self.expression(script, func, value)
             elif target[-1].text in TEXT_PROPERTIES and (
                 len(target) > 1
@@ -558,9 +563,13 @@ class Flow:
 
     def is_format(self, script: Script, toks: list[Tok], at: int) -> bool:
         """Whether the call opening at `at` is a text's format(), not a game function of that
-        name: its values make up its result (a dictionary's values or an array's items, #1715)."""
-        method = toks[at - 1].text == "format" and at >= 2 and toks[at - 2].text == "."
-        return method and not self.resolve(script, toks, at)
+        name: its values make up its result (a dictionary's values or an array's items, #1715).
+        A receiver that names no class of the game (a text, tr()'s result) is a text."""
+        if toks[at - 1].text != "format" or at < 2 or toks[at - 2].text != ".":
+            return False
+        receiver = toks[at - 3].text if at >= 3 else ""
+        owner = script if receiver == "self" else self.by_class.get(receiver)
+        return owner is None or not any(func.name == "format" for func in owner.funcs)
 
     @staticmethod
     def dict_values(toks: list[Tok], at: int) -> Iterator[list[Tok]]:
