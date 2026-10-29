@@ -227,6 +227,16 @@ def const_texts(toks: list[Tok]) -> list[tuple[str, int]]:
     return found
 
 
+def without_annotations(toks: list[Tok]) -> list[Tok]:
+    """A statement without its leading annotations (@export, @export_range(…), @onready)."""
+    at = 0
+    while at + 1 < len(toks) and toks[at].text == "@" and toks[at + 1].kind == "id":
+        at += 2
+        if at < len(toks) and toks[at].text == "(":
+            at = matching(toks, at) + 1
+    return toks[at:]
+
+
 def parse(path: str) -> Script:
     script = Script(path)
     lines = list(statements(Path(path).read_text(encoding="utf-8")))
@@ -255,13 +265,14 @@ def parse(path: str) -> Script:
                     func.names.add(inner_words[1])
             script.funcs.append(func)
             continue
-        member = words[1:] if words[:1] == ["static"] else words
+        toks = without_annotations(statement.toks)
+        member = [tok.text for tok in toks]
+        member = member[1:] if member[:1] == ["static"] else member
         if member[:1] == ["var"] and len(member) > 1:
-            toks = statement.toks
             assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
             script.members[member[1]] = toks[assign + 1 :]
         if member[:1] == ["const"] and len(member) > 1:
-            script.consts[member[1]] = const_texts(statement.toks)
+            script.consts[member[1]] = const_texts(toks)
         i += 1
     return script
 
