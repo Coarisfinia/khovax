@@ -7,7 +7,7 @@ An eye is what `eyes.eye` builds: its pieces are islands of the mesh in other ma
 body's, around the eye's attachment point (`eye.*`, at the iris's centre, looking out along the
 bone, attachments.add). The iris is the island nearest that point; its reach gives the eye's
 size roughly (about IRIS_SHARE of its radius), and every island in other materials than the body's whose
-centre lies within REACH of the point is the eye's: the eyeball, iris, pupil, glint and rim, never
+centre lies within REACH of the point is the eye's: the eyeball, iris, pupil and rim, never
 a brow crystal or a nose, whose centres lie further out. The eye's radius is then how far its
 pieces reach from the point.
 
