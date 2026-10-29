@@ -17,6 +17,11 @@ class TrPlaceholdersTest(unittest.TestCase):
         self.assertEqual(placeholders("%05.1f%% of %s"), 2)
         self.assertEqual(placeholders("100%% sure: %s"), 1)
         self.assertEqual(placeholders("{stat} {shift}%"), 0)
+        # A * takes a value too, a bare precision is still a specifier, and %% is read first.
+        self.assertEqual(placeholders("%*d"), 2)
+        self.assertEqual(placeholders("%*.*f"), 3)
+        self.assertEqual(placeholders("%.f / %s"), 2)
+        self.assertEqual(placeholders("%%%%s %s"), 1)
 
     def test_refuses_two_positional_values(self) -> None:
         source = (

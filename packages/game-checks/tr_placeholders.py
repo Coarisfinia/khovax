@@ -19,13 +19,15 @@ from game_shared import log
 from game_shared.git_files import git_files
 from translations_pot import script_texts
 
-# A Godot format specifier (String's % operator): flags, width, precision and its conversion.
-SPECIFIER = re.compile(r"%[-+0]*[0-9*]*(?:\.[0-9*]+)?[scdoxXfv]")
+# A Godot format specifier (String's % operator): its flags, width and precision (a bare "." or a
+# "*" among them), then its conversion; or %%, a percent sign, read first so "%%s" holds no value.
+SPECIFIER = re.compile(r"%%|%[-+0-9.*]*[scdoxXfv]")
 
 
 def placeholders(text: str) -> int:
-    """How many values the text's % fills; %% is a percent sign, not one."""
-    return len(SPECIFIER.findall(text.replace("%%", "")))
+    """How many values the text's % fills, read left to right: one per specifier, and one more for
+    each * in it, which takes its width or precision from the values too."""
+    return sum(1 + match.count("*") for match in SPECIFIER.findall(text) if match != "%%")
 
 
 def crowded(source: str) -> Iterator[str]:
