@@ -281,7 +281,8 @@ def sky(texels):
 def paint(skin, starry=True):
     """The colour and the glow textures, painted from where each texel lies at rest; not `starry`,
     without the night sky."""
-    old = marked_eyes.texture(skin)
+    # The generator's one base colour image, which every material shares.
+    (old,) = {marked_eyes.image(material) for material in skin.data.materials} - {None}
     width = old.size[0]
     before = numpy.array(old.pixels[:]).reshape(old.size[1], width, 4)[..., :3]
     texels = repaint.Texels(skin.data, TEXTURE)
