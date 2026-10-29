@@ -12,12 +12,13 @@ A text is player-facing when it flows into what a Control shows:
   by self or bare in its own script where it can, and only by name elsewhere; a shown parameter's
   default and a shown member's initializer count too, and a helper outside the presentation
   (TextTags.shown) passes on the parameters and locals handed to it, never its ids.
-In such an expression, a hit is a string literal outside tr() (formatted with %, glued with +, in
-an array of lines), a constant the expression names, even inside tr() (the extractor reads only
+In such an expression, a hit is a string literal outside tr() (formatted with % or as a value
+handed to String.format(), glued with +, in an array of lines), a constant the expression names, even inside tr() (the extractor reads only
 literals): its string, its array's strings or its dictionary's string keys, and a name made from an
 id with capitalize(). Not a hit: a literal without a letter outside its format specifiers, BBCode
 and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath (&"…", ^"…"), the
-condition of an `x if c else y`, and a literal inside another call (a key, an id).
+condition of an `x if c else y`, a dictionary's key (a format's placeholder) and a literal inside
+another call (a key, an id).
 In scenes: a text on a node whose auto_translate_mode is disabled, and a TabContainer's child,
 whose node name is its tab's title. A script that adds tabs to a TabContainer titles them with
 set_tab_title, since TabContainer titles a tab by its node's name, which no extractor sees.
@@ -122,6 +123,9 @@ class Script:
     path: str
     # Each constant's texts: a string's, an array's strings, a dictionary's string keys.
     consts: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
+    # Each constant dictionary's values that are a string or another constant's name, shown when
+    # it fills in a format() (#1715). Only dictionaries: an array's items are its texts already.
+    const_values: dict[str, list[Tok]] = field(default_factory=dict)
     # Each member variable's initializer (empty without one).
     members: dict[str, list[Tok]] = field(default_factory=dict)
     funcs: list[Func] = field(default_factory=list)
@@ -288,6 +292,23 @@ def const_texts(toks: list[Tok]) -> list[tuple[str, int]]:
     return found
 
 
+def const_values(toks: list[Tok]) -> list[Tok] | None:
+    """A constant dictionary's values that are a string or a name (a StringName or NodePath is
+    an id), one level deep; None for a constant that isn't a dictionary."""
+    assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
+    value = toks[assign + 1 :]
+    if not value or value[0].text != "{" or value[0].kind != "op":
+        return None
+    found = []
+    for entry in split_args(value, 0):
+        colon = next((i for i, tok in enumerate(entry) if tok.text in (":", "=")), None)
+        rest = entry[colon + 1 :] if colon is not None else []
+        plain = len(rest) == 1 and not rest[0].prefix
+        if plain and rest[0].kind in ("id", "str"):
+            found.append(rest[0])
+    return found
+
+
 def without_annotations(toks: list[Tok]) -> list[Tok]:
     """A statement without its leading annotations (@export, @export_range(…), @onready)."""
     at = 0
@@ -338,6 +359,9 @@ def parse(path: str) -> Script:
             script.members[member[1]] = toks[assign + 1 :]
         if member[:1] == ["const"] and len(member) > 1:
             script.consts[member[1]] = const_texts(toks)
+            values = const_values(toks)
+            if values is not None:
+                script.const_values[member[1]] = values
         i += 1
     return script
 
@@ -453,7 +477,12 @@ class Flow:
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
                     self.expression(script, func, value)
-            elif target[0].text in carriers and (len(target) == 1 or target[1].text == "["):
+            elif target[0].text in carriers and (
+                len(target) == 1
+                or target[1].text == "["
+                or (len(target) == 3 and target[1].text == ".")
+            ):
+                # The carrier itself, or one of its keys (`values["name"] = …`, `values.name = …`).
                 self.expression(script, func, value)
             elif target[-1].text in TEXT_PROPERTIES and (
                 len(target) > 1
@@ -507,6 +536,11 @@ class Flow:
                 if toks[i - 1].text in PASS_THROUGH:
                     for arg in split_args(toks, i):
                         self.expression(script, func, arg, carry_only)
+                elif self.is_format(script, toks, i):
+                    # Only its values; a second argument is the placeholder's pattern.
+                    for arg in split_args(toks, i)[:1]:
+                        if carry_only or not self.format_const(script, func, arg):
+                            self.expression(script, func, arg, carry_only)
                 elif self.outside(toks, i):
                     # Its literals and constants are ids (a tag's kind), but a parameter or
                     # local handed to it is still shown.
@@ -514,7 +548,14 @@ class Flow:
                         self.expression(script, func, arg, carry_only=True)
                 i = matching(toks, i) + 1
                 continue
-            if tok.kind == "op" and tok.text in "[{" and self.subscript_or_dict(toks, i):
+            if tok.kind == "op" and tok.text == "{":
+                # A dictionary's keys are ids (a format's placeholders), but its values are shown
+                # when String.format() fills them in (#1715), or when one is looked up.
+                for value in self.dict_values(toks, i):
+                    self.expression(script, func, value, carry_only)
+                i = matching(toks, i) + 1
+                continue
+            if tok.kind == "op" and tok.text == "[" and self.subscript(toks, i):
                 i = matching(toks, i) + 1
                 continue
             if carry_only and tok.kind != "id":
@@ -544,11 +585,54 @@ class Flow:
                 return i + 1
         return len(toks)
 
+    def is_format(self, script: Script, toks: list[Tok], at: int) -> bool:
+        """Whether the call opening at `at` is a text's format(), not a game function of that
+        name: its values make up its result (a dictionary's values or an array's items, #1715).
+        A receiver that names no class of the game (a text, tr()'s result) is a text."""
+        if toks[at - 1].text != "format" or at < 2 or toks[at - 2].text != ".":
+            return False
+        receiver = toks[at - 3].text if at >= 3 else ""
+        owner = script if receiver == "self" else self.by_class.get(receiver)
+        return owner is None or not any(func.name == "format" for func in owner.funcs)
+
+    def format_const(self, script: Script, func: Func, arg: list[Tok]) -> bool:
+        """Whether a format()'s values are a constant dictionary, whose values are then hits and
+        whose keys are its placeholders (#1715)."""
+        if len(arg) == 1 and arg[0].kind == "id" and arg[0].text not in func.names:
+            owner: Script | None = script
+        elif len(arg) == 3 and arg[1].text == "." and arg[0].kind == arg[2].kind == "id":
+            owner = self.by_class.get(arg[0].text)
+        else:
+            return False
+        word = arg[-1].text
+        if owner is None or word in owner.members or word not in owner.const_values:
+            return False
+        for value in owner.const_values[word]:
+            if value.kind == "id":
+                # Another constant of its script (`{"name": TITLE}`).
+                self.const(owner, value.text)
+            elif is_words(value.text):
+                self.hits.add(Hit(owner.path, value.text, value.line))
+        return True
+
     @staticmethod
-    def subscript_or_dict(toks: list[Tok], at: int) -> bool:
-        """A [ after a value indexes it (a key), and a { holds a dictionary's keys."""
-        if toks[at].text == "{":
-            return True
+    def dict_values(toks: list[Tok], at: int) -> Iterator[list[Tok]]:
+        """The values of the dictionary opening at `at`: each entry after its key's : (or =)."""
+        for entry in split_args(toks, at):
+            colon = next(
+                (
+                    i
+                    for i, tok in enumerate(entry)
+                    if tok.kind == "op" and tok.text in (":", "=") and Flow.depth(entry, i) == 0
+                ),
+                None,
+            )
+            if colon is not None:
+                yield entry[colon + 1 :]
+
+    @staticmethod
+    def subscript(toks: list[Tok], at: int) -> bool:
+        """A [ after a value indexes it (a key)."""
         before = toks[at - 1] if at > 0 else None
         if before is None or before.kind == "id" and is_keyword(toks, at - 1):
             return False
