@@ -2,8 +2,8 @@
 left, with one magma tail and one icy tail. Its mesh and rig come from the owner's generated
 model (`sources/frostfire_hound.glb`, made by import_source.py from the download, fitted to its
 hex as a regular monster: see the asset's SOURCE.md). The generator's paint was a patchwork, so
-this script paints the texture anew from where each texel lies on the body (lib/repaint.py), as
-the owner asked on the issue:
+this script paints the texture anew from where each texel lies on the body (lib/frostfire.py,
+which its pup, the Kavrikka, shares), as the owner asked on the issue:
 
 - **the magma side:** the whole right side is dark basalt split by glowing cracks, not just the
   shoulder;
@@ -37,44 +37,18 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import adopted, attachments, clips, metrics, repaint, rigged, scene, tuning  # noqa: E402
+from lib import adopted, attachments, clips, frostfire, metrics, repaint, rigged, scene, tuning  # noqa: E402
 
 SOURCE = os.path.join(HERE, "sources", "frostfire_hound.glb")
 FPS = 30
 SCALE = 1.0
 
 # --- The paint ---------------------------------------------------------------------------------
-# The texture's size (texels a side): the generator's atlas, at the source's size.
-TEXTURE = 1024
-# The glow's texture is coarser: only the cracks and eyes glow, and they are soft.
-GLOW_TEXTURE = 512
-# The midline between the two sides (metres along X): the generator's model stands a little to
-# its right of the origin (its legs' middle).
-MIDLINE = -0.035
-# The cracks: one cell of rock or ice about this wide (metres), from a fixed seed; a crack is this
-# wide at its middle, and the magma's glow reaches this far into the rock beside it.
-CELL = 0.09
-SEED = 1609
-CRACK = 0.0035
-GLOW_REACH = 0.006
-# Colours (sRGB): the ice in three tones by cell, its frosted cracks and its pads; the basalt in
-# three tones, its glowing cracks (hot at the middle, cooling to the rim) and its pads.
-ICE = ((0.36, 0.60, 0.88), (0.42, 0.67, 0.92), (0.31, 0.54, 0.83))
-FROST = (0.86, 0.95, 1.00)
-ICE_PAD = (0.20, 0.33, 0.55)
-BASALT = ((0.17, 0.11, 0.10), (0.21, 0.13, 0.11), (0.13, 0.09, 0.09))
-MAGMA_CORE = (1.00, 0.86, 0.42)
-MAGMA_RIM = (0.95, 0.38, 0.08)
-BASALT_PAD = (0.10, 0.07, 0.07)
-# How strongly the magma's cracks glow on their own (the glow texture's scale), and the eyes'.
-MAGMA_GLOW = (1.00, 0.45, 0.10)
-# Its eyes: the generator modelled each as a piece of its own; the magma eye burns amber and the
-# ice eye shines pale cyan.
-MAGMA_EYE = (1.00, 0.78, 0.30)
-ICE_EYE = (0.62, 0.96, 1.00)
-# A sole: a face this far off straight down at most (the cosine of the angle), this low.
-SOLE_FACING = -0.6
-SOLE_HEIGHT = 0.06
+# The paint the frost-and-fire line shares (lib/frostfire.py): the midline between the two sides
+# (metres along X) runs a little to its right of the origin (its legs' middle), where the
+# generator's model stands; cells of rock or ice about 9 cm wide; a sole no higher than 6 cm.
+LOOK = frostfire.Look("frostfire_hound", midline=-0.035, cell=0.09, seed=1609, crack=0.0035, glow_reach=0.006,
+                      sole_height=0.06)
 
 # --- The tails ---------------------------------------------------------------------------------
 # Each tail turns out to its own side about where it grows from the rump (radians about Z), so
@@ -163,68 +137,6 @@ def parts(skin):
     return {face: names[number] for face, number in piece.items()}
 
 
-def paint(skin, part):
-    """The colour and the glow textures, painted from where each texel lies at rest."""
-    texels = repaint.Texels(skin.data, TEXTURE)
-    spots = texels.spots
-    low, high = spots.min(axis=0), spots.max(axis=0)
-    cells = repaint.Cells(low, high, CELL, SEED)
-    nearest, border = cells.near(spots)
-    names = numpy.array([part[face] for face in texels.faces])
-    # Near the midline a cell is magma when its own middle lies on the right: the border between
-    # the sides runs along the cracks, so it reads as one more crack, not a line drawn down the
-    # back. Further out the side alone decides, so no stray cell crosses over onto a leg.
-    middle = numpy.abs(spots[:, 0] - MIDLINE) < CELL / 2.0
-    magma = numpy.where(middle, cells.points[nearest][:, 0] < MIDLINE, spots[:, 0] < MIDLINE)
-    magma = numpy.where(names == "tail.R", True, numpy.where(names == "tail.L", False, magma))
-    tone = nearest % 3
-    rock = numpy.array(BASALT)[tone]
-    ice = numpy.array(ICE)[tone]
-    base = numpy.where(magma[:, None], rock, ice)
-    # A crack's middle is 0 and its edge is CRACK out; the magma's rim glows a little beyond.
-    depth = numpy.clip(1.0 - border / CRACK, 0.0, 1.0)
-    rim = numpy.clip(1.0 - border / (CRACK + GLOW_REACH), 0.0, 1.0)
-    hot = numpy.array(MAGMA_RIM) + (numpy.array(MAGMA_CORE) - numpy.array(MAGMA_RIM)) * depth[:, None]
-    lava = base + (hot - base) * numpy.maximum(depth, 0.5 * rim * rim)[:, None]
-    frost = base + (numpy.array(FROST) - base) * (depth * depth)[:, None]
-    colour = numpy.where(magma[:, None], lava, frost)
-    glow = numpy.where(magma[:, None], numpy.array(MAGMA_GLOW) * numpy.maximum(depth, 0.5 * rim * rim)[:, None], 0.0)
-    # The soles: plain pads, no cracks.
-    sole = (texels.normals[:, 2] < SOLE_FACING) & (spots[:, 2] < SOLE_HEIGHT) & (names == "body")
-    colour = numpy.where(sole[:, None], numpy.where(magma[:, None], BASALT_PAD, ICE_PAD), colour)
-    glow = numpy.where(sole[:, None], 0.0, glow)
-    for name, eye in (("eye.R", MAGMA_EYE), ("eye.L", ICE_EYE)):
-        mine = names == name
-        colour[mine] = eye
-        glow[mine] = eye
-    covered = texels.covered()
-    canvas = repaint.dilate(texels.paint(texels.canvas(ICE[0]), colour), covered, 4)
-    shine = repaint.dilate(texels.paint(texels.canvas((0.0, 0.0, 0.0)), glow), covered, 4)
-    # The glow's texture at half the size: the mean of each 2x2 block.
-    step = TEXTURE // GLOW_TEXTURE
-    shine = shine.reshape(GLOW_TEXTURE, step, GLOW_TEXTURE, step, 3).mean(axis=(1, 3))
-    print("PAINT texels %d of %d, magma %.0f%%, soles %d, cells %d" % (
-        len(spots), TEXTURE * TEXTURE, 100.0 * magma[names == "body"].mean(), sole.sum(), len(set(nearest.tolist()))))
-    return repaint.image("frostfire_hound", canvas), repaint.image("frostfire_hound_glow", shine)
-
-
-def material(skin, colour, glow):
-    """One material: the painted colour, the glow, matte and single-sided."""
-    out = bpy.data.materials.new("frostfire_hound")
-    out.use_backface_culling = True
-    nodes, links = out.node_tree.nodes, out.node_tree.links
-    shader = nodes["Principled BSDF"]
-    for image, socket in ((colour, "Base Color"), (glow, "Emission Color")):
-        texture = nodes.new("ShaderNodeTexImage")
-        texture.image = image
-        links.new(texture.outputs["Color"], shader.inputs[socket])
-    shader.inputs["Emission Strength"].default_value = 1.0
-    shader.inputs["Roughness"].default_value = 1.0
-    shader.inputs["Metallic"].default_value = 0.0
-    skin.data.materials.clear()
-    skin.data.materials.append(out)
-
-
 def spread(skin, part):
     """Swings each tail out to its own side about the point where it meets the rump."""
     for name, turn in (("tail.R", -TAIL_SPREAD), ("tail.L", TAIL_SPREAD)):
@@ -242,52 +154,13 @@ def spread(skin, part):
 
 
 # --- Rig ---------------------------------------------------------------------------------------
-class Body:
-    """What clips.gait reads of a quadruped.Proportions, from the adopted rig."""
-
-    def __init__(self, rig):
-        bones = rig.data.bones
-        self.front_leg = [tuple(bones["upper_arm.L"].head_local), tuple(bones["front_paw.L"].tail_local)]
-        self.hind_leg = [tuple(bones["thigh.L"].head_local), tuple(bones["hind_paw.L"].tail_local)]
-        self.hips = tuple(bones["hips"].head_local)
-        self.chest = tuple(bones["neck"].head_local)
-        self.nose = MUZZLE
-
-
-def lesser(clip, share=SHARE):
-    """`clip` with its body's shifts, its paws' moves and its tail's swing `share` as large: the
-    wolf's clips the library's are made for reach too far for its hex."""
-    keys = []
-    for key in clip.keys:
-        pose = {name: tuple(share * value for value in values)
-                if name == "root_loc" or name.startswith(("plant.", "tail_")) else values
-                for name, values in key[1].items()}
-        keys.append((key[0], pose, *key[2:]))
-    clip.keys = keys
-    for step in clip.steps:
-        step.spot = tuple(share * value for value in step.spot)
-    return clip
-
-
-def merge(skin, weights, where=lambda vertex: True):
-    """Moves the weights of the vertices `where` holds as {from bone: to bone} says."""
-    groups = {group.index: group.name for group in skin.vertex_groups}
-    moves = [(vertex.index, groups[element.group], element.weight)
-             for vertex in skin.data.vertices if where(vertex)
-             for element in vertex.groups if groups[element.group] in weights and element.weight > 0.0]
-    for index, name, weight in moves:
-        skin.vertex_groups[name].remove([index])
-        (skin.vertex_groups.get(weights[name]) or skin.vertex_groups.new(name=weights[name])).add(
-            [index], weight, "ADD")
-
-
 def rename(rig, skin):
     rigged.rename(rig, skin, {old: new for old, new in RENAMES.items() if old in rig.data.bones})
     # Each foreleg's toe bone goes into its paw, so the paw the clips plant is the whole foot.
-    merge(skin, {"front_toe.L": "front_paw.L", "front_toe.R": "front_paw.R"})
+    rigged.merge(skin, {"front_toe.L": "front_paw.L", "front_toe.R": "front_paw.R"})
     # The throat and the nape go from the chest to the new neck.
-    merge(skin, {"spine_01": "neck"}, lambda vertex: vertex.co.z > NECK[0] and vertex.co.y < NECK[1])
-    merge(skin, {"shin.L": "thigh.L", "shin.R": "thigh.R"}, lambda vertex: vertex.co.z > KNEE[1] + KNEE_BLEND)
+    rigged.merge(skin, {"spine_01": "neck"}, lambda vertex: vertex.co.z > NECK[0] and vertex.co.y < NECK[1])
+    rigged.merge(skin, {"shin.L": "thigh.L", "shin.R": "thigh.R"}, lambda vertex: vertex.co.z > KNEE[1] + KNEE_BLEND)
     scene.select_only(rig)
     bpy.ops.object.mode_set(mode="EDIT")
     edit = rig.data.edit_bones
@@ -340,23 +213,23 @@ def build(out):
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
     part = parts(skin)
-    colour, glow = paint(skin, part)
-    material(skin, colour, glow)
+    colour, glow = frostfire.paint(skin, part, LOOK)
+    frostfire.material(skin, "frostfire_hound", colour, glow)
     spread(skin, part)
     spots = eyes(skin, part)
     rename(rig, skin)
     points(rig, spots)
-    body = Body(rig)
+    body = adopted.Body(rig, MUZZLE)
     clips.animate(rig, {
         "Idle": clips.idle(),
         "Walk": clips.gait(WALK_FRAMES, WALK_STRIDE, body, clips.WALK, duty=WALK_DUTY, fold=0.0, lift=WALK_LIFT,
                            curl=WALK_CURL, roll=WALK_ROLL, bob=WALK_BOB),
         "Run": clips.gait(RUN_FRAMES, RUN_STRIDE, body, clips.GALLOP, duty=RUN_DUTY, fold=RUN_FOLD,
                           spine_flex=RUN_SPINE_FLEX, roll=RUN_ROLL, bob=RUN_BOB, planted=False),
-        "Attack": lesser(clips.attack()),
-        "Hit": lesser(clips.hit()),
-        "Faint": lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS)),
-        **{name: lesser(clip) for name, clip in clips.channel().items()},
+        "Attack": adopted.lesser(clips.attack(), SHARE),
+        "Hit": adopted.lesser(clips.hit(), SHARE),
+        "Faint": adopted.lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS), SHARE),
+        **{name: adopted.lesser(clip, SHARE) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
         "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
     }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig))

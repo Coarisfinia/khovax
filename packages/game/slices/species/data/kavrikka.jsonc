@@ -1,0 +1,26 @@
+// The frost-and-fire pup (#1733, named on it): the Kalvrakkor's first form, wearing its own model,
+// from the owner's model. It spawns as the Kalvrakkor's baby in wild bundles (#1697) and ascends
+// into a Kalvrakkor once it has reached its level and is given a rime shard. Titan and Tempest like
+// its elder: magma on one side and ice on the other. Its level and stats are placeholders to tune
+// (#960).
+{
+	"id": "kavrikka",
+	"name": "Kavrikka",
+	"codex": {
+		"entry": "A round-headed pup of the Kalvrakkor, already split along its spine: dark basalt cracked with glowing magma on one side, pale ice cracked with frost on the other, its one short tail half of each. It tumbles after its pack over the snow of the pass and snaps at whatever moves, and in time it ascends into a Kalvrakkor. Its name is a beast-call, its yip: its elder's k, v and r and the crack of its doubled k, made short and light.",
+		"gloss": "the little crack that will growl"
+	},
+	"types": ["titan", "tempest"],
+	"strike_type": "titan", // its nip carries the magma side's weight, like its elder's bite (#626)
+	"hp": 70,
+	"strength": 40,
+	"speed": 60,
+	"special": "kavrikka_rikka_rokku",
+	"player_passive": "kavrikka_kirvu_virvu",
+	"self_passive": "kavrikka_vakku_rakku",
+	// A hound pup: it hunts with its pack and, hot on one side and cold on the other, sleeps in
+	// bouts like its elders (#1200).
+	"behaviour": ["cathemeral", "predator", "pack_species"],
+	"model": "res://assets/kavrikka/kavrikka.glb",
+	"ascension": { "into": "kalvrakkor", "level": 20, "material": "rime_shard" }
+}

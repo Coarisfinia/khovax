@@ -1,0 +1,13 @@
+// The pup's self passive (#1733): a smaller haste than the Kalvrakkor's Lakvu-rakvu. Its haste is a
+// placeholder to tune (#960).
+{
+	"id": "kavrikka_vakku_rakku",
+	"kind": "self_passive",
+	"name": "Vakku-rakku",
+	"description": "The ${MONSTER:kavrikka}'s magma flares when it's hurt, and it strikes a little faster.",
+	"hurt_haste": 200,
+	"codex": {
+		"entry": "The spit and crackle of a young flame catching. Dominators said it of a small beast that only gets bolder when struck.",
+		"gloss": "it sparks as it smarts"
+	}
+}

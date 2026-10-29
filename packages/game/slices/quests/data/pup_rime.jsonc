@@ -1,0 +1,10 @@
+// The frost-and-fire pups' quest (#1733, source 4 of #1260, as the mana pups' #1348): a side quest
+// that starts once the player first enters Brekhal Varn, where the Kalvrakkor live, and asks them to
+// dominate one of the pups there. Finishing it hands over the rime shard a pup needs to ascend.
+{
+	"id": "pup_rime",
+	"name": "A rime shard for a ${MONSTER:kavrikka}",
+	"starts_on": { "condition": "entered", "instance": "brekhal_varn" },
+	"steps": [{ "condition": "dominated", "species": "kavrikka", "instance": "brekhal_varn", "ends": "pup_rime" }],
+	"materials": { "rime_shard": 1 }
+}

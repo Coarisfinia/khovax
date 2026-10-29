@@ -13,6 +13,11 @@ calls `replace` on its adopted rig and skin, which:
   marks, mirrored across the same middle `find` paired them across (the `Marked`'s, #1735), each
   with a lid on a bone of its own (`eyes.Lids`), joined into the skin.
 
+A generator that modelled its eyes as pieces of their own (glowing balls set in the head, as the
+Frostfire Hound's and its pup's, #1733) gets them taken out first: the caller `find`s the marks,
+removes the pieces they lie on (`modelled`), paints its skin as it will, and hands the marks to
+`replace`, which then only fits ours.
+
 The lids shut in Sleep, over Faint's fall and in a blink now and then in Idle: `replace` returns
 the `eyes.Lids`, whose `shut` goes into `clips.animate`'s overlays, and the eye points for
 `attachments.add`.
@@ -26,6 +31,7 @@ import numpy
 from mathutils import Vector
 
 from . import eyes, materials, scene
+from . import repaint as _repaint
 
 # A marked eye's flat black: every channel at or below this (sRGB, 0..1).
 DARK_VALUE = 0.2
@@ -568,19 +574,70 @@ def clear(skin, pieces, size, middle=0.0):
           "either one's front" % (best[1], STEP, 100 * best[0]))
 
 
-def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, **shape):
+def modelled(skin, marks):
+    """Takes the pieces of `skin` that `marks` (left, right, from `find`) lie on out of it: eyes the
+    generator modelled as pieces of their own (a glowing ball set in the head), which no repaint
+    could hide. A piece is one `repaint.pieces` tells apart (never the largest, the body) whose
+    bounds hold a mark's middle, give or take half its width; each mark grows to its piece's width
+    and height across the head, the whole eye the generator drew, for `fit`. Returns how many
+    faces went; raises when a mark lies on no such piece."""
+    piece = _repaint.pieces(skin.data)
+    bounds = {}
+    for face, number in piece.items():
+        if number:
+            corners = numpy.array([skin.data.vertices[index].co[:] for index in skin.data.polygons[face].vertices])
+            low, high = bounds.get(number, (corners.min(axis=0), corners.max(axis=0)))
+            bounds[number] = (numpy.minimum(low, corners.min(axis=0)), numpy.maximum(high, corners.max(axis=0)))
+    gone = set()
+    for mark in marks:
+        slack = mark.width / 2.0
+        under = {number for number, (low, high) in bounds.items()
+                 if (mark.middle >= low - slack).all() and (mark.middle <= high + slack).all()}
+        if not under:
+            raise ValueError("the marked eye at %s lies on no piece of its own" % (tuple(mark.middle.round(3)),))
+        gone |= under
+        # The mark is only the glowing part of the generator's eye that `find` picked out; the
+        # piece is the whole eye it drew, so ours take its size across the head.
+        points = numpy.array([skin.data.vertices[index].co[:] for face, number in piece.items() if number in under
+                              for index in skin.data.polygons[face].vertices])
+        offset = points - mark.middle
+        mark.width = max(mark.width, numpy.ptp(offset @ mark.side))
+        mark.height = max(mark.height, numpy.ptp(offset @ mark.up))
+    faces = sorted(face for face, number in piece.items() if number in gone)
+    scene.select_only(skin)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for face in faces:
+        skin.data.polygons[face].select = True
+        for index in skin.data.polygons[face].vertices:
+            skin.data.vertices[index].select = True
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.delete(type="VERT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    print("EYES took out %d pieces of %d faces, the generator's modelled eyes" % (len(gone), len(faces)))
+    return len(faces)
+
+
+def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, marks=None, **shape):
     """Our eyes in place of the ones `marked` (a `Marked`, a beast's own from BEASTS) picks out on
     an adopted `rig` and its weighted `skin` (`find`, `repaint`, `fit`), joined into the skin,
     their lids on bones of their own hung from `bone`, `grow` times as large as the marks (fit).
+    With `marks` (left, right) the caller has found them and dealt with what showed there
+    (`modelled`): only ours are fitted.
     `mats` needs "dark" and "glow" (eyes.eye); "skin", the lids' and brows', is the
-    skin's colour around the marks unless given. `faint` is Faint's (first frame, last frame) the
-    lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose `shut` goes into clips.animate's
-    overlays, and the eye points {side: (spot, bone, look)} for attachments.add."""
-    head = Head(skin, bone, marked.weight)
-    marks = find(head, marked)
-    around = repaint(head, marks, marked)
-    if "skin" not in mats:
-        mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
+    skin's colour around the marks unless given (and must be, with `marks`). `faint` is Faint's
+    (first frame, last frame) the lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose
+    `shut` goes into clips.animate's overlays, and the eye points {side: (spot, bone, look)} for
+    attachments.add."""
+    if marks is None:
+        head = Head(skin, bone, marked.weight)
+        marks = find(head, marked)
+        around = repaint(head, marks, marked)
+        if "skin" not in mats:
+            mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
+    elif "skin" not in mats:
+        raise ValueError("found marks need the lids' colour: mats has no \"skin\"")
     pieces = fit(skin, marks, mats, bone, middle=marked.middle, grow=grow, **shape)
     points = {}
     for side in ("L", "R"):

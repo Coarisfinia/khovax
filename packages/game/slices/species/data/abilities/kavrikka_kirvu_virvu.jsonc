@@ -1,0 +1,13 @@
+// The pup's player passive (#1733): a smaller guard than the Kalvrakkor's Krivvu-vrivvu. Its guard
+// is a placeholder to tune (#960).
+{
+	"id": "kavrikka_kirvu_virvu",
+	"kind": "player_passive",
+	"name": "Kirvu-virvu",
+	"description": "While the ${MONSTER:kavrikka} is out, it circles the player's feet, warm on one side and cold on the other, and they take a little less harm.",
+	"guard": 50, // a twentieth off every hit on the player: what is left rounds down, and a hit that lands still deals at least 1 (#702)
+	"codex": {
+		"entry": "The small growl a pup keeps up as it runs rings around its own. Dominators said it of a young guard more eager than fierce.",
+		"gloss": "round and round, growling"
+	}
+}

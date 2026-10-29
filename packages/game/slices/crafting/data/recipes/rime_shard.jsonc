@@ -1,0 +1,6 @@
+// The rime shard (#1733), a Kavrikka's ascension material (#1260, source 3), made from stone and
+// crystals. A placeholder, to tune (#960).
+{
+	"id": "rime_shard",
+	"needs": { "stone": 2, "crystal": 3 }
+}

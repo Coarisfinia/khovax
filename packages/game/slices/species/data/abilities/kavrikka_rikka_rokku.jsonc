@@ -1,0 +1,14 @@
+// The pup's nip (#1733). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "kavrikka_rikka_rokku",
+	"kind": "special",
+	"name": "Rikka-rokku",
+	"description": "The ${MONSTER:kavrikka} darts at its target and nips it with its hot little jaws.",
+	"codex": {
+		"entry": "The yip of a pup, then the click of its small teeth. Dominators said it of any young beast that bites first and thinks after.",
+		"gloss": "yip, then snap"
+	},
+	"power": 1500,
+	"cooldown_seconds": 10,
+	"strike_type": "titan"
+}

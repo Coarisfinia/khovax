@@ -1,0 +1,5 @@
+// The shard of rime a Kavrikka needs to ascend into a Kalvrakkor (#1733), the frost its elder's ice
+// side grows from. It lies in the ground loot and chests of Brekhal Varn, where the Kalvrakkor live
+// (#1260), finishing the pups' quest there hands one over (#1348), and it can be made from stone and
+// crystals (#1349).
+{ "id": "rime_shard", "name": "Rime Shard" }
