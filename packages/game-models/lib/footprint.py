@@ -11,6 +11,12 @@ or stronger one may reach 5 % past it (the owner, on #1514); during its clips ea
 further (the owner, on #1533), and an attack may lunge 30 % past it, whatever the monster (`ATTACK`:
 the owner, on #1528). `REGULAR` and `LARGE` hold the (rest, clips) limits.
 
+A prop (a gate, an egg: anything that doesn't walk) stands on its hex like a monster and is
+judged against it the same way, never let off (the owner, on #1641, after a gate twice a hex's
+width slipped past through an exemption): at rest with the regular monster's padding, and in its
+clips never past the hex's edge, since it neither moves on nor strikes into the tile beside it.
+`PROP` holds its limits, and `limits` tells which a model gets.
+
 `fit` sizes a model to its hex before any clip exists (#1522), from its rest pose alone: the
 scale the gait and every render are made at, settled first, since a later rescale redoes them."""
 
@@ -28,6 +34,9 @@ INRADIUS = SIZE * math.sqrt(3.0) / 2.0
 NORMALS = numpy.array([(math.cos(math.radians(a)), math.sin(math.radians(a))) for a in range(270, 630, 60)])
 REGULAR = (0.95, 1.05)
 LARGE = (1.05, 1.10)
+PROP = (0.95, 1.00)
+# The clip every monster has (lib/clip_set.py's creature set); a model without it is a prop.
+WALK = "Walk"
 # The clips that strike, and how far past the hex they may reach.
 ATTACKS = ("Attack",)
 ATTACK = 1.30
@@ -39,10 +48,21 @@ CLIP_MARGIN = 0.923 / 0.878
 SLACK = 0.99
 
 
+def limits(rig, large):
+    """The (rest, clips) limits for a model with armature `rig` (None for a static one): a
+    prop's when it doesn't walk (no rig, or no `WALK` clip), else a boss's when `large`, else a
+    regular monster's. `PROP` is the strictest, so a monster missing its walk is held tighter,
+    never let off."""
+    if rig is None or not any(action.name == WALK for action in bpy.data.actions):
+        return PROP
+    return LARGE if large else REGULAR
+
+
 def meshes(rig, objects):
     """Every mesh of the model, skinned or riding on a bone (a horn, a gem), but not the
-    importer's bone display shapes."""
-    shapes = {bone.custom_shape for bone in rig.pose.bones if bone.custom_shape is not None}
+    importer's bone display shapes. `rig` is None for a static model."""
+    bones = rig.pose.bones if rig is not None else []
+    shapes = {bone.custom_shape for bone in bones if bone.custom_shape is not None}
     return [obj for obj in objects if obj.type == "MESH" and obj not in shapes]
 
 
@@ -80,17 +100,21 @@ def fit(rest, limits):
 def report(rig, meshes, limits):
     """The reach in the rig's rest pose, then for every clip, every frame: the largest reach and
     the frame it's on. The rest pose fails past the first of `limits` (rest, clips), a clip past
-    the second, an attack past `ATTACK`. Returns (lines, passed); a rig without a mesh fails, rather than passing unseen."""
+    the second, an attack past `ATTACK`. `rig` is None for a static model, which has only its rest
+    pose. Returns (lines, passed); a model without a mesh fails, rather than passing unseen."""
     if not meshes:
         return ["FAIL no mesh to measure"], False
     rest_limit, clip_limit = limits
     scene = bpy.context.scene
-    rig.data.pose_position = "REST"
+    if rig is not None:
+        rig.data.pose_position = "REST"
     scene.frame_set(scene.frame_current)
     far = reach(meshes)
-    rig.data.pose_position = "POSE"
     passed = far <= rest_limit
     lines = ["%s rest: reach %.3f of the hex (limit %.2f)" % ("ok" if passed else "FAIL", far, rest_limit)]
+    if rig is None or rig.animation_data is None:
+        return lines, passed
+    rig.data.pose_position = "POSE"
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
         limit = ATTACK if action.name in ATTACKS else clip_limit

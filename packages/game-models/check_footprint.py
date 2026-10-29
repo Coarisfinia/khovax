@@ -4,18 +4,20 @@ deformed mesh reaches across the hex the game stands it on, seen from above, fro
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_footprint.py -- <model.glb> [<model.glb> ...]
 
-The base rules, which CI enforces (the owner, on #1514, #1533 and #1528), as the largest reach
-over the hex's inradius (1.00 at its edge; the limits are in lib/footprint.py):
+The base rules, which CI enforces (the owner, on #1514, #1533, #1528 and #1641), as the largest
+reach over the hex's inradius (1.00 at its edge; the limits are in lib/footprint.py):
 
     regular monster             rest pose 0.95   Attack 1.30   other clips 1.05
     boss, enraged or stronger   rest pose 1.05   Attack 1.30   other clips 1.10
     (a model in LARGE)
+    prop (no rig, or no Walk)   rest pose 0.95                 every clip  1.00
 
 It prints a line for the rest pose and one per clip (the largest reach and its frame, and the
 limit) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log
-(#1115): a failing line is an error on the .glb. It checks the models built by a
-script here (the monsters); a pack's model, or a prop without a rig, passes, so CI runs it on
-every .glb. The clip rate comes from the .glb's .import, as the game imports it.
+(#1115): a failing line is an error on the .glb. It checks every model built by a script here,
+monsters and props alike, a static one by its rest pose; nothing is let off (#1641). A pack's
+model has no script here and is sized by the view that shows it, so CI runs it on every .glb.
+The clip rate comes from the .glb's .import, as the game imports it.
 
 A clip that still fails today waits in KNOWN with the issue that fixes it: it prints its numbers
 and doesn't fail the check. The list only shrinks: a clip on it that passes fails the check
@@ -37,12 +39,10 @@ from lib import footprint, imported, known  # noqa: E402
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = {"fohossa"}
 
-# Animated props, which no monster stands on: a gate stands across an exit, not on one hex.
-PROPS = {"tentacle_gate"}
-
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
 KNOWN = {
+    ("mana_gems", "rest"): 1651,
     ("mana_wolf", "rest"): 1527,
     ("mana_wolf", "Attack"): 1527,
     ("mana_wolf", "Channel"): 1527,
@@ -76,24 +76,18 @@ def main():
     for glb in glbs:
         model = os.path.splitext(os.path.basename(glb))[0]
         if not os.path.exists(os.path.join(HERE, model + ".py")):
-            # Only the monsters the model skill builds stand on a hex alone; a pack's figure (the
-            # players' and people's) has no script here.
-            log.info("FOOTPRINT %s no model script: not a monster, nothing to check" % model)
-            continue
-        if model in PROPS:
-            log.info("FOOTPRINT %s an animated prop: not a monster, nothing to check" % model)
+            # A pack's model (the players' and people's figures, the chest) has no script here: the
+            # view that shows it sets its size.
+            log.info("FOOTPRINT %s no model script: a pack's model, sized by its view" % model)
             continue
         fps, _loops = imported.settings(glb)
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.context.scene.render.fps = fps
         bpy.ops.import_scene.gltf(filepath=glb)
         rig = next((obj for obj in bpy.data.objects if obj.type == "ARMATURE"), None)
-        if rig is None or rig.animation_data is None:
-            # A prop: no rig, no clips, no monster on a hex.
-            log.info("FOOTPRINT %s no rig: nothing to check" % model)
-            continue
-        rig.animation_data.use_nla = False
-        limits = footprint.LARGE if model in LARGE else footprint.REGULAR
+        if rig is not None and rig.animation_data is not None:
+            rig.animation_data.use_nla = False
+        limits = footprint.limits(rig, model in LARGE)
         lines, _passed = footprint.report(rig, footprint.meshes(rig, bpy.data.objects), limits)
         for line in lines:
             text, fails = known.judge(KNOWN, model, line)

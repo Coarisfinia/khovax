@@ -322,9 +322,19 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_connectivity.py --
 
-      - name: "⬡ Check every monster stays within its hex"
-        # Every frame of every clip of every .glb, how far the mesh reaches across the hex the game
-        # stands it on, seen from above (#1520); a prop without a rig passes.
+      - name: "🧪 Test the hex footprint check on boxes"
+        # Monsters, props and static models that fit their hex or are too big for it (#1641): the
+        # check passes and fails them.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_footprint.py
+
+      - name: "⬡ Check every monster and prop stays within its hex"
+        # Every frame of every clip of every .glb built by a script here, how far the mesh reaches
+        # across the hex the game stands it on, seen from above (#1520); a prop is held to limits
+        # of its own, a static one by its rest pose, and none is let off (#1641).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
