@@ -1091,26 +1091,28 @@ func _check_ascensions(content: SpeciesContent) -> String:
 
 ## Every species' ascension material lies in its grown species' habitat too (#1260): some instance
 ## whose wild monsters roll that species has treasure chests and loot on the ground, and both its
-## chest table and its instance table can give the material.
+## chest table and its instance table can give the material. A middle form, which never rolls wild
+## (#1738), is followed up its line to the form that does (`_grown`).
 func _check_ascension_habitats(content: SpeciesContent) -> String:
 	for species_id: String in content.ascensions:
 		var ascension: SpeciesAscension = content.ascensions[species_id]
 		var found: bool = false
 		for instance_name: String in InstanceBlueprints.names():
 			var named: Blueprint = InstanceBlueprints.blueprint(instance_name)
-			if named.wild_species.has(ascension.into):
+			if named.wild_species.has(_grown(content, species_id)):
 				found = found or _holds_in_chests(instance_name, ascension.material)
 		if not found:
 			return "%s's ascension material %s lies in no chest and on no ground where %s lives" % [
 				species_id,
 				ascension.material,
-				ascension.into,
+				_grown(content, species_id),
 			]
 	return ""
 
 
 ## Every species' ascension material is a quest's reward too (#1348): some quest gives it when it
-## finishes, and its steps count where the species it ascends into lives. Then its recipe's check.
+## finishes, and its steps count where its line's grown species lives (`_grown`). Then its recipe's
+## check.
 func _check_ascension_quests(content: SpeciesContent) -> String:
 	var quests: QuestContent = QuestContent.load_quests()
 	if not quests.problem.is_empty():
@@ -1121,13 +1123,13 @@ func _check_ascension_quests(content: SpeciesContent) -> String:
 		for quest: QuestDefinition in quests.quests.values():
 			found = found or (
 				quest.materials.has(ascension.material)
-				and _counts_where_lives(quest, ascension.into)
+				and _counts_where_lives(quest, _grown(content, species_id))
 			)
 		if not found:
 			return "no quest gives %s's ascension material %s where %s lives" % [
 				species_id,
 				ascension.material,
-				ascension.into,
+				_grown(content, species_id),
 			]
 	return _check_ascension_recipes(content)
 
@@ -1171,6 +1173,16 @@ func _check_recipes_refused() -> String:
 	if not made_up.begins_with("it makes or needs mos"):
 		return "a recipe making no material was refused with " + made_up
 	return ""
+
+
+## The last form of `species_id`'s line (#1738): what it ascends into, and on through every later
+## form, so a tadpole's line ends at the grown species that rolls wild, past the bud between them.
+## The species are refused when they ascend in a loop (`_check_ascensions_refused`), so this ends.
+func _grown(content: SpeciesContent, species_id: String) -> String:
+	var grown: String = content.ascensions[species_id].into
+	while content.ascensions.has(grown):
+		grown = content.ascensions[grown].into
+	return grown
 
 
 ## Whether every step of `quest` counts in an instance whose wild monsters roll `species_id`.

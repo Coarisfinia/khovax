@@ -1,0 +1,6 @@
+// Dew (#1738), an Ombuwomo's ascension material (#1260, source 3), wrung from moss and berries. A
+// placeholder, to tune (#960).
+{
+	"id": "dew",
+	"needs": { "moss": 2, "berry": 3 }
+}

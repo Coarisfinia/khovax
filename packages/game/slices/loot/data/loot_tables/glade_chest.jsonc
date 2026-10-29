@@ -1,17 +1,18 @@
 // What Lumwen Hoal's chests hold (#694): mostly crafting supplies, sometimes a piece of basic gear,
 // one per slot (slices/gear/data/). Basic gear only drops: better gear is crafted from recipes
-// that are found (#294), and now and then a revive herb (#656) or the pondweed a Wobulumu needs to
-// ascend (#1737). Always something, never nothing.
+// that are found (#294), and now and then a revive herb (#656), or the pondweed a Wobulumu or the
+// dew an Ombuwomo needs to ascend (#1737, #1738). Always something, never nothing.
 {
 	"id": "glade_chest",
 	"kind": "chest",
 	"entries": [
-		{ "item": "moss", "chance": 350, "min": 1, "max": 3 },
+		{ "item": "moss", "chance": 300, "min": 1, "max": 3 },
 		{ "item": "berry", "chance": 250, "min": 1, "max": 2 },
 		{ "item": "warding_charm", "chance": 100, "min": 1, "max": 1 },
 		{ "item": "thorn_spikes", "chance": 100, "min": 1, "max": 1 },
 		{ "item": "berry_pouch", "chance": 100, "min": 1, "max": 1 },
 		{ "item": "revive_herb", "chance": 50, "min": 1, "max": 1 },
-		{ "item": "pondweed", "chance": 50, "min": 1, "max": 1 } // 5 %
+		{ "item": "pondweed", "chance": 50, "min": 1, "max": 1 }, // 5 %
+		{ "item": "dew", "chance": 50, "min": 1, "max": 1 } // 5 %
 	]
 }

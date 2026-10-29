@@ -436,21 +436,22 @@ def _spread(mask):
 
 
 def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
-        **shape):
+        grow=1.0, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
     other exactly across it (eyes.mirrored); as wide as the marks, as high against that as
-    ALMOND allows. With `upright`, a mark taller than it is wide (an upright oval, #1737) gives a
-    rounder eye, as wide as the mark's mean of width and height, since ours is never taller than
-    it is wide: as wide as the mark, it would be half the eye the generator drew (and as tall, its
-    top would show above its brow, check_brows.py). `ridge=False` leaves out the brow; `shape` goes on to
-    eyes.eye (`tilt`, `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the
-    lids' bones."""
+    ALMOND allows, `grow` times as large (for a mark smaller than the eye it stands for, as a
+    painted one under an eye the generator set on the face, #1738). With `upright`, a mark taller
+    than it is wide (an upright oval, #1737) gives a rounder eye, as wide as the mark's mean of
+    width and height, since ours is never taller than it is wide: as wide as the mark, it would be
+    half the eye the generator drew (and as tall, its top would show above its brow,
+    check_brows.py). `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
+    `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
-    width = (left.width + right.width) / 2.0
-    height = (left.height + right.height) / 2.0
+    width = grow * (left.width + right.width) / 2.0
+    height = grow * (left.height + right.height) / 2.0
     almond = min(max(height / width, ALMOND[0]), ALMOND[1])
     size = max(width, (width + height) / 2.0 if upright else width) / 2.0
     pieces = []
@@ -535,10 +536,10 @@ def clear(skin, pieces, size, middle=0.0):
           "either one's front" % (best[1], STEP, 100 * best[0]))
 
 
-def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
+def replace(rig, skin, mats, faint, bone="head", marked=DARK, grow=1.0, **shape):
     """Our eyes in place of the ones `marked` (a `Marked`, a beast's own from BEASTS) picks out on
     an adopted `rig` and its weighted `skin` (`find`, `repaint`, `fit`), joined into the skin,
-    their lids on bones of their own hung from `bone`.
+    their lids on bones of their own hung from `bone`, `grow` times as large as the marks (fit).
     `mats` needs "dark" and "glow" (eyes.eye); "skin", the lids' and brows', is the
     skin's colour around the marks unless given. `faint` is Faint's (first frame, last frame) the
     lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose `shut` goes into clips.animate's
@@ -548,7 +549,7 @@ def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
     around = repaint(head, marks, marked)
     if "skin" not in mats:
         mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
-    pieces = fit(skin, marks, mats, bone, middle=marked.middle, **shape)
+    pieces = fit(skin, marks, mats, bone, middle=marked.middle, grow=grow, **shape)
     points = {}
     for side in ("L", "R"):
         mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]

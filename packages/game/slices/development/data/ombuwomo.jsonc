@@ -1,0 +1,27 @@
+// Ombuwomo's development web (#677, #1738): a bud, it leans into its folded leaves and grows toward
+// its elders' bulk. Its shifts and its stronger special are placeholders to tune (#960).
+{
+	"species": "ombuwomo",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "folded", "nodes": [
+			{ "leaning": { "hp": 50 } },
+			{ "leaning": { "hp": 60 } },
+			{ "leaning": { "hp": 80, "speed": -30 } }
+		] },
+		{ "id": "rocking", "nodes": [
+			{ "leaning": { "speed": 50 } },
+			{ "leaning": { "speed": 60, "strength": -20 } },
+			{ "leaning": { "speed": 80, "hp": -30 } }
+		] },
+		{ "id": "heavy", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60, "hp": 20 } },
+			{ "leaning": { "strength": 80, "speed": -30 } },
+			{ "special": 200 }
+		] }
+	],
+	"bridges": [["folded_1", "rocking_1"], ["rocking_2", "heavy_2"]],
+	"portals": [["folded_3", "rocking_3"]]
+}

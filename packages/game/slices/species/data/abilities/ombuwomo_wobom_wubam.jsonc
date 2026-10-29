@@ -1,0 +1,14 @@
+// The bud's roll (#1738). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "ombuwomo_wobom_wubam",
+	"kind": "special",
+	"name": "Wobom-wubam",
+	"description": "The ${MONSTER:ombuwomo} rocks back on its round bottom and bowls into its target, leaves first.",
+	"codex": {
+		"entry": "The creak of a bud rocking back, then the dull thump of it landing on a foe. Dominators said it of any beast with no legs that still knocks things over.",
+		"gloss": "rock back, thump"
+	},
+	"power": 1200,
+	"cooldown_seconds": 10,
+	"strike_type": "growth"
+}
