@@ -6,7 +6,9 @@ own way of marking them (marked_eyes.BEASTS, #1719) finds what `DARK` and `GLOW`
 pale eyes on a head weighted under HEAD_WEIGHT, the Frostfire Hound's amber and ice ones on an ice
 blue head off the middle. And each predicate picks the colours it should, and not its neighbours'.
 A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
-(marked_eyes.fragments), while a shade only a little darker than the skin passes.
+(marked_eyes.fragments), while a shade only a little darker than the skin passes; so does a dim
+speck a few texels across that lies between the head's samples, where no sample reads it (#1764),
+while a single dim texel passes.
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -48,6 +50,11 @@ ICE, AMBER, ICE_EYE = (0.36, 0.60, 0.88), (1.0, 0.78, 0.30), (0.62, 0.96, 1.0)
 EYE, EYE_RADIUS = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS, 0.09
 FOHOSSA = "assets/fohossa/fohossa.glb"
 HOUND = "assets/frostfire_hound/frostfire_hound.glb"
+# A texture this many texels square, whose texels the ball's triangles cover far more of than the
+# head samples (#1764), and the dim specks laid between those samples, each this many texels
+# square, with whether the check passes it.
+SPECK_SIZE = 2048
+SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
@@ -127,13 +134,13 @@ def ball(name, radius, at, weight=1.0):
     return obj
 
 
-def build(paint, ours, weight, colour, middle):
+def build(paint, ours, weight, colour, middle, size=SIZE):
     """The head: a ball of `colour`, weighted `weight` to "head" and centred on x = `middle`, with
     its texture, `paint`'s left and right colours laid over the eyes' spots on it (or nothing), and
-    our eyes joined in when `ours`, their UVs on a black texel of the texture."""
+    our eyes joined in when `ours`, their UVs on a black texel of the texture (`size` texels square)."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    image = bpy.data.images.new("skin", SIZE, SIZE)
-    pixels = numpy.empty((SIZE, SIZE, 4), dtype=numpy.float32)
+    image = bpy.data.images.new("skin", size, size)
+    pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
     pixels[:, :] = colour + (1.0,)
     pixels[0, 0] = BLACK + (1.0,)
     image.pixels.foreach_set(pixels.ravel())
@@ -153,7 +160,7 @@ def build(paint, ours, weight, colour, middle):
         for piece in pieces:
             piece.data.materials.append(dark)
             for loop in piece.data.uv_layers.active.data:
-                loop.uv = (0.5 / SIZE, 0.5 / SIZE)
+                loop.uv = (0.5 / size, 0.5 / size)
         bpy.ops.object.select_all(action="DESELECT")
         for piece in pieces:
             piece.select_set(True)
@@ -161,6 +168,34 @@ def build(paint, ours, weight, colour, middle):
         bpy.context.view_layer.objects.active = skin
         bpy.ops.object.join()
     return skin
+
+
+def speck(name, across, passes):
+    """Whether the check passes a plain ball as it should with a dim speck `across` texels square
+    by the left eye, where no head sample reads it (#1764)."""
+    skin = build(None, False, 1.0, SKIN, 0.0, SPECK_SIZE)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    # A texel each speck may start at: near the eye, with no sample reading any texel of the speck.
+    sampled = numpy.zeros((SPECK_SIZE + across, SPECK_SIZE + across), dtype=numpy.int64)
+    numpy.add.at(sampled, (head.texels[0], head.texels[1]), 1)
+    seen = sum(sampled[row:row + SPECK_SIZE, column:column + SPECK_SIZE]
+               for row in range(across) for column in range(across))
+    near = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)) <= EYE_RADIUS
+    free = near & (seen[rows, columns] == 0) & (rows < SPECK_SIZE - across) & (columns < SPECK_SIZE - across)
+    if not free.any():
+        log.error("FAIL %s: no texel by the eye lies between the head's samples" % name)
+        return False
+    # The lowest such texel, row first: the head's triangles come in no fixed order.
+    row, column = min(zip(rows[free].tolist(), columns[free].tolist()))
+    head.pixels[row:row + across, column:column + across, :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    found = sorted(marked_eyes.painted(skin)) + (["FRAGMENTS"] if marked_eyes.fragments(skin) else [])
+    ok = (not found) == passes
+    (log.info if ok else log.error)("%s %s: %s at texel (%d, %d), %s" % (
+        "ok" if ok else "FAIL", name, "found " + ", ".join(found) if found else "nothing found", row, column,
+        "should pass" if passes else "should fail"))
+    return ok
 
 
 def fits(name, paint, colour, beast):
@@ -202,6 +237,8 @@ def main():
         line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found
                                   else "nothing found", "should pass" if passes else "should fail")
         (log.info if ok else log.error)(line)
+    for name, (across, passes) in SPECKS.items():
+        passed = speck(name, across, passes) and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
