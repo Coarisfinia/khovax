@@ -12,6 +12,12 @@ work on the tooling. Needing a new model goes as AGENTS.md
 says (#1575): a `question` issue with base prompts for a monster, a free licensed source for
 anything else.
 
+**Every base prompt for a monster ends with the same sentence** (the owner's pick on #1682):
+`Two small, plain, flat black oval eyes.` Word for word, in every prompt, whatever else the
+prompt says about its face. It only marks where the eyes go and how big they are: the import
+replaces them with our own eyes, which blink and shut (`lib/marked_eyes.py`, below). A monster
+designed without eyes leaves the sentence out and says so in its issue.
+
 Every model is **built by a committed Blender script**, so it can be rebuilt, reviewed and changed
 by editing code, never by hand-editing a .blend. Blender MCP (an interactive viewport) is allowed
 for look-dev with the owner, but whatever it finds goes back into the script.
@@ -67,6 +73,12 @@ a second model could use goes into the library or a generic tool, never into one
     `Lids` adds to the rig and, as an `animate` overlay, shuts in Sleep, at Faint's end and in a
     blink now and then in Idle (its bones go into `weights.bind`'s `rigid_bones`); `mirrored`
     makes a right eye from a left one, lid included.
+  - `marked_eyes` (#1683): our eyes in place of a generated model's. `replace` finds the two
+    flat black ovals the prompt's eye sentence marked on the head (`GLOW` instead of `DARK` for a
+    beast imported with glowing painted eyes), paints them over in the skin's colour around them,
+    fits `eyes.eye` with lids there by their position, size and spacing, joins them into the
+    skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
+    `attachments.add`). It prints an `EYES` line with what it found.
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
     shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the
@@ -256,6 +268,9 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 4. **Rig:** start from the rig the import adopted (the owner rigs in Meshy first, #1514), and
    check its fixes bend right (bend each chain and see that it moves only its own part). An
    unrigged download is rigged by the model script, as `drakkudor.py` does with `lib/hexapod.py`.
+   Once the head bone is named, swap in our eyes: `marked_eyes.replace(rig, skin, mats, faint)`
+   before `attachments.add` (its eye points) and `clips.animate` (its `Lids.shut` among the
+   overlays), and read its `EYES` line.
 5. **Clips:** the full creature set through `clips.animate`, as for any model; tune the gait
    with the gait sweep, not by hand.
 6. **Checks, renders, PR:** the checks of section 4, `render_media.py` for the pictures, then
@@ -265,10 +280,10 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 - **Seam splits:** the export splits a vertex wherever its UVs part, which broke the volume
   check's body detection; `lib/volume.py` handles it now. A new check reading the mesh welds by
   position too.
-- **Painted eyes:** the eyes are painted on the texture, not built. The brow check passes a model
-  with one material on that path (`lib/brows.py`); eye points still go on the painted eyes. Eyes
-  that blink need lids, so they must be ours (`lib.eyes`), not Meshy's: ask for a face without
-  eyes and add them in the script (#1463's note on the eyelid slug).
+- **Painted eyes:** the generator paints its eyes on the texture; they can't blink or shut. The
+  prompt marks them as flat black ovals (its fixed eye sentence, above), and the model script
+  swaps in ours with `marked_eyes.replace` once the bones are named (#1682): the eye check fails
+  a creature without them.
 - **Custom normals:** Blender's glTF import keeps a file's normals as custom ones, the model
   script's import of its source too, and `scene.sort_mesh` (in `scene.export_glb`) refuses them:
   right after importing the source, clear them
@@ -550,6 +565,13 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    Size the model in its script to fit. A clip that still fails waits in its `KNOWN`
    list with the issue that fixes it, and a fix takes it off. Its lines go into the PR. CI runs it
    on every `.glb` with the rebuild check (step 14).
+
+21. **Our eyes (#1683):** `uv run --locked --package khovax-game-models
+   packages/game-models/check_eyes.py` fails a creature model whose eye points have no lids, or
+   that has no eyes at all: its eyes must be ours (`lib/eyes.py`, put on a generated model by
+   `lib/marked_eyes.py`), never painted ones. A creature designed without eyes goes into its
+   `EYELESS` list with the reason, and one still waiting for ours into `KNOWN` with its issue.
+   CI runs it on every push.
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**

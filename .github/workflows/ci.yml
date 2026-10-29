@@ -131,6 +131,10 @@ jobs:
         # The set is named once, in the model library's lib/clip_set.py, which the build reads too (#1157).
         run: uv run --locked --package khovax-game-models ../game-models/check_clip_set.py
 
+      - name: "👀 Check every creature model has our own eyes, with lids"
+        # Never a generator's painted eyes (#1682): lib/marked_eyes.py swaps ours in on import (#1683).
+        run: uv run --locked --package khovax-game-models ../game-models/check_eyes.py
+
       - name: "🗃️ Check the export presets share their file filters and web loading page"
         run: uv run --locked --package khovax-game-checks ../game-checks/export_filters_check.py
 
