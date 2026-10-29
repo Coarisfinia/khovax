@@ -6,7 +6,8 @@ extends RefCounted
 ## kind; the content flow refuses a text whose tag has an unknown kind or an id that doesn't exist.
 ## Tags are resolved when a text is shown (owner, #733), never when content loads, so saves and
 ## content keep the tags and never a resolved name. A tag shows the name as written: a plural or an
-## article is part of the text around it.
+## article is part of the text around it. A text is translated before its tags are resolved, as
+## written in the template, and the name a tag puts in is translated too (#1655).
 
 ## Each kind of tag, by the word that names it in a tag: a species, a faction, a piece of gear, a
 ## person (#1005), a realm and a place, an instance a realm draws (#1175) or a variant's region of
@@ -91,7 +92,9 @@ func resolve(text: String, nested: bool = true) -> String:
 	var from: int = 0
 	for found: RegExMatch in _pattern.search_all(text):
 		var kind_names: Dictionary = names.get(found.get_string(1), {})
-		var tag_name: String = kind_names.get(found.get_string(2), found.get_string())
+		var tag_name: String = kind_names.get(found.get_string(2), "")
+		# The name is translated (#1655), before its own tags are resolved, like the text around it.
+		tag_name = TranslationServer.tr(tag_name) if not tag_name.is_empty() else found.get_string()
 		# A name may hold tags itself, like a faction's (#1447): resolved one level deep, so a name
 		# naming itself can't loop.
 		if nested:

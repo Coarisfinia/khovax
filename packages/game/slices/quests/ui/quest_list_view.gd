@@ -41,7 +41,6 @@ const MIN_FONT: int = 16
 ## How wide a card is, in font sizes, and never more than this share of the screen's width.
 const WIDTH_FONTS: float = 15.0
 const MAX_WIDTH_SHARE: float = 0.42
-const DONE_TEXT: String = "Done"
 
 ## Whose quests are listed: this machine's player's.
 @export var keeper: QuestKeeper
@@ -110,39 +109,61 @@ static func step_line(step: QuestStep, count: int) -> String:
 ## What `step` asks with `count`, a text with text tags (#733): the people and the places it names
 ## are tags, so a NameLinks shows them as links to their codex pages (#1446). A step with choices
 ## (#573) offers each of them, joined by "or". A new condition gets its own wording here; one
-## without any shows only the count.
+## without any shows only the count. Each wording is one whole sentence through `tr()`, the names
+## filled in, so a language can order it its own way (#1655): a format with more than one value
+## names them (`{count}`), since `%` fills its values in order.
 static func step_tagged(step: QuestStep, count: int) -> String:
 	if not step.choices.is_empty():
-		var ways: Array[String] = []
+		# Each way starts lower case, and the whole line upper case once joined, so the way a
+		# translation puts first is the one capitalised.
+		var ways: String = ""
 		for choice: QuestStep in step.choices:
 			var way: String = step_tagged(choice, 0)
-			ways.append(way if ways.is_empty() else way.left(1).to_lower() + way.substr(1))
-		return " or ".join(ways)
+			way = way.left(1).to_lower() + way.substr(1)
+			if ways.is_empty():
+				ways = way
+			else:
+				var joined: Dictionary[String, String] = { "ways": ways, "way": way }
+				ways = TranslationServer.tr("{ways} or {way}").format(joined)
+		return ways.left(1).to_upper() + ways.substr(1)
 	var asks: String = ""
 	match step.condition:
 		QuestStep.DOMINATED:
-			var what: String = "a monster"
-			if step.quarry.species != null:
-				what = _with_article(step.quarry.species.name)
-			elif not step.quarry.target.is_empty():
-				what = "the " + _words(step.quarry.target)
-			asks = "Dominate " + what
+			asks = _dominate_line(step.quarry)
 		QuestStep.OPENED:
-			asks = "Open a chest"
+			asks = TranslationServer.tr("Open a chest")
 		QuestStep.REACHED:
-			asks = "Go to the " + _words(step.place)
+			asks = TranslationServer.tr("Go to the %s") % _words(step.place)
 		QuestStep.ENTERED:
 			if step.enters_instance():
-				asks = "Enter " + QuestPill.place_tagged(step.instance)
+				asks = TranslationServer.tr("Enter %s") % QuestPill.place_tagged(step.instance)
 			else:
-				asks = "Enter the " + _words(step.piece)
+				asks = TranslationServer.tr("Enter the %s") % _words(step.piece)
 		QuestStep.ANSWERED:
 			asks = _answer_line(step)
 		QuestStep.OBTAINED:
-			asks = "Collect " + _words(step.item)
-	if step.count > 1:
-		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
-	return asks
+			asks = TranslationServer.tr("Collect %s") % _words(step.item)
+	if step.count <= 1:
+		return asks
+	var parts: Dictionary[String, Variant] = { "asks": asks, "count": count, "total": step.count }
+	if asks.is_empty():
+		return TranslationServer.tr("{count}/{total}").format(parts)
+	# The count after the words, as one format, so a language can put it elsewhere.
+	return TranslationServer.tr("{asks}  {count}/{total}").format(parts)
+
+
+## What a dominated step asks for, `quarry`: a species, after "a" or "an" by its English name's
+## first letter, one monster, the quest's target, or any monster.
+static func _dominate_line(quarry: QuestQuarry) -> String:
+	if quarry.species != null:
+		var species_name: String = quarry.species.name
+		var shown_name: String = TranslationServer.tr(species_name)
+		if "aeiou".contains(species_name.left(1).to_lower()):
+			return TranslationServer.tr("Dominate an %s") % shown_name
+		return TranslationServer.tr("Dominate a %s") % shown_name
+	if not quarry.target.is_empty():
+		return TranslationServer.tr("Dominate the %s") % _words(quarry.target)
+	return TranslationServer.tr("Dominate a monster")
 
 
 ## What an answered `step` asks (#636): the answer's text to its dialog's speaker, by the person's
@@ -150,20 +171,17 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 ## read with it.
 static func _answer_line(step: QuestStep) -> String:
 	if step.answer.text.is_empty():
-		return "Answer " + _words(step.answer.id)
+		return TranslationServer.tr("Answer %s") % _words(step.answer.id)
 	var speaker: String = TextTags.tag(TextTags.PERSON, step.answer.speaker)
-	return "Tell %s: \"%s\"" % [speaker, step.answer.text]
+	var answer: String = TranslationServer.tr(step.answer.text)
+	var parts: Dictionary[String, String] = { "person": speaker, "answer": answer }
+	return TranslationServer.tr("Tell {person}: \"{answer}\"").format(parts)
 
 
 ## An id (a place, a region piece, an item or a quest target) as words: they have no
 ## player-facing names yet.
 static func _words(id: String) -> String:
 	return id.replace("_", " ")
-
-
-## A species' player-facing name (#351), after "a" or "an" by its first letter.
-static func _with_article(species_name: String) -> String:
-	return ("an " if "aeiou".contains(species_name.left(1).to_lower()) else "a ") + species_name
 
 
 ## A new card for quest `id`, named `quest_name`, fading in under the others.
@@ -182,8 +200,8 @@ func _add_card(id: String, quest_name: String) -> void:
 
 ## Says quest `id` is done, fades its card out after a while, then lets the card below move up.
 func _finish(id: String) -> void:
-	shown[id] = DONE_TEXT
-	cards[id].show_line(DONE_TEXT)
+	shown[id] = tr("Done")
+	cards[id].show_line(shown[id])
 	_fade_out(id, DONE_SECONDS)
 
 

@@ -455,7 +455,7 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 func _check_tab_follows(tab: QuestsTab, quests: QuestTracker) -> String:
 	tab.refresh()
 	var followed: Button = tab.follow_buttons.get(quests.focused())
-	if followed == null or followed.text != QuestsTab.FOLLOWED_TEXT or not followed.disabled:
+	if followed == null or followed.text != "★ Following" or not followed.disabled:
 		return "the Quests tab doesn't mark the followed quest %s" % quests.focused()
 	# Another open quest's button offers to follow it, and pressing it does.
 	var other_id: String = ""
@@ -463,12 +463,12 @@ func _check_tab_follows(tab: QuestsTab, quests: QuestTracker) -> String:
 		if id != quests.focused():
 			other_id = id
 	var other: Button = tab.follow_buttons.get(other_id)
-	if other == null or other.text != QuestsTab.FOLLOW_TEXT or other.disabled:
+	if other == null or other.text != "Follow" or other.disabled:
 		return "the Quests tab doesn't offer to follow an open quest besides %s" % quests.focused()
 	other.pressed.emit()
 	tab.refresh()
 	var now: Button = tab.follow_buttons[other_id]
-	if quests.focus != other_id or now.text != QuestsTab.FOLLOWED_TEXT:
+	if quests.focus != other_id or now.text != "★ Following":
 		return "pressing %s's button in the Quests tab didn't follow it" % other_id
 	return ""
 
@@ -495,7 +495,7 @@ func _check_list_follows(
 ) -> String:
 	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "ombulumo"))
 	var result: String = _check_listed(list, {
-		"first_domination": QuestListView.DONE_TEXT,
+		"first_domination": "Done",
 		"three_ombulumo": "Dominate an Ombulumo  1/3",
 	})
 	if result.is_empty():

@@ -6,9 +6,6 @@ extends Node
 ## never holds them where they arrived. The line is the guide's own, in their content data
 ## (Person.went_ahead); one without a line says the plain one here.
 
-## What a guide with no line of their own says.
-const PLAIN_LINE: String = "I'll go on ahead and open the way."
-
 ## The session, whose ticks carry the events of the instance the player just left too.
 @export var driver: Session
 ## This machine's player, whose slot the event must name.
@@ -32,5 +29,10 @@ func _on_ticked(_tick: int, events: Array[RefCounted]) -> void:
 static func line_of(npc_id: String) -> String:
 	var person: Person = PeopleContent.cached().people.get(npc_id)
 	if person == null or person.went_ahead.is_empty():
-		return PLAIN_LINE
-	return person.went_ahead
+		return plain_line()
+	return TranslationServer.tr(person.went_ahead)
+
+
+## What a guide with no line of their own says.
+static func plain_line() -> String:
+	return TranslationServer.tr("I'll go on ahead and open the way.")

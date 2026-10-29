@@ -101,7 +101,7 @@ static func _notice_follows(driver: GameDriver, notice: NoticeScreen) -> String:
 		return "the guide who went ahead showed no notice with their name: " + notice.shown_title()
 	if person.went_ahead.is_empty() or notice.shown_text() != person.went_ahead:
 		return "the notice didn't show the guide's own line: %s" % notice.shown_text()
-	if GuideNoticeTie.line_of("nobody_at_all") != GuideNoticeTie.PLAIN_LINE:
+	if GuideNoticeTie.line_of("nobody_at_all") != "I'll go on ahead and open the way.":
 		return "a guide with no line of their own didn't say the plain one"
 	return ""
 

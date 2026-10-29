@@ -30,9 +30,6 @@ signal name_selected(kind: String, id: String)
 ## The line or the speaker showed a name that has a codex page: the kind of its tag and its id.
 signal name_shown(kind: String, id: String)
 
-## The read-on button's words: on to the next line, or the end of the dialog.
-const READ_ON_TEXT: String = "Continue"
-const END_TEXT: String = "Farewell"
 const FADE_SECONDS: float = 0.2
 ## The text's size as a share of the screen's shorter side, and never smaller than this.
 const FONT_SHARE: float = 0.03
@@ -44,8 +41,6 @@ const WIDTH_FONTS: float = 26.0
 const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest height, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = GameMenu.BUTTON_FONTS
-## The leave button's words on hover: it shows only the menu's close icon, and its glyph the key.
-const LEAVE_TIP: String = "Leave"
 
 ## This machine's player's input: it stands while a dialog is open, and takes the answers.
 @export var input: LocalInput
@@ -74,7 +69,8 @@ func _ready() -> void:
 	theme = UiTheme.theme().duplicate()
 	_card.add_theme_stylebox_override("panel", UiTheme.card())
 	_leave.icon = GameMenu.CLOSE_ICON
-	_leave.tooltip_text = LEAVE_TIP
+	# Its words on hover: it shows only the menu's close icon, and its glyph the key.
+	_leave.tooltip_text = tr("Leave")
 	var _glyph: ActionGlyph = ActionGlyph.badge(_leave, &"ui_cancel")
 	var _left: int = _leave.pressed.connect(leave)
 	var _selected: int = _line.name_selected.connect(name_selected.emit)
@@ -227,16 +223,17 @@ func _show_line(index: int) -> void:
 	line_index = index
 	var line: DialogLine = dialog.lines[index]
 	_speaker.show_tagged(TextTags.tag(TextTags.PERSON, dialog.speaker))
-	_line.show_tagged(line.text)
+	_line.show_tagged(tr(line.text))
 	# The old buttons leave at once, so the card never shows both lines' buttons.
 	for old: Button in _buttons():
 		_choices.remove_child(old)
 		old.queue_free()
 	if line.answers.is_empty():
 		var last: bool = dialog.after(index) < 0
-		_add_button(END_TEXT if last else READ_ON_TEXT, _read_on)
+		# The read-on button's words: on to the next line, or the end of the dialog.
+		_add_button(tr("Farewell") if last else tr("Continue"), _read_on)
 	for answer: DialogAnswer in line.answers:
-		_add_button(TextTags.shown(answer.text), _answer.bind(answer.id))
+		_add_button(TextTags.shown(tr(answer.text)), _answer.bind(answer.id))
 	_size_buttons()
 	_buttons()[0].grab_focus()
 
