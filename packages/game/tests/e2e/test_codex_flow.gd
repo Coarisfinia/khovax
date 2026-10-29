@@ -99,7 +99,7 @@ static func _meet_the_guild(tree: SceneTree, main: Node, book: CodexBook) -> Str
 	var entry: Button = book.entry_button(TextTags.FACTION, GUILD)
 	if book.shown.get(TextTags.FACTION, []) != [GUILD] or heading == null or entry == null:
 		return "the book listed %s" % [book.shown]
-	if heading.text != CodexPage.heading_of(TextTags.FACTION) or entry.text != "Amvrel Velmarai":
+	if heading.text != "Lexicon" or entry.text != "Amvrel Velmarai":
 		return "the book showed %s: %s" % [heading.text, entry.text]
 	if book.shown.get(TextTags.REALM, []) != ["ardvaun"]:
 		return "reading the guild's line didn't list the realm it names: %s" % [book.shown]
@@ -121,15 +121,15 @@ static func _see_a_species(main: Node, book: CodexBook) -> String:
 	if book.shown.get(TextTags.MONSTER, []) != ["ombulumo"]:
 		return "the book listed %s after seeing Ombulumo" % [book.shown]
 	var expected: Array[String] = [
-		CodexPage.heading_of(TextTags.FACTION),
+		"Lexicon",
 		"Amvrel Velmarai",
-		CodexPage.heading_of(TextTags.MONSTER),
+		"Bestiary",
 		"Ombulumo",
-		CodexPage.heading_of(TextTags.PERSON),
+		"People",
 		"Teska na Amvrel",
-		CodexPage.heading_of(TextTags.REALM),
+		"Realms",
 		"Ardvaun",
-		CodexPage.heading_of(TextTags.PLACE),
+		"Places",
 		"Lumwen Hoal",
 	]
 	return "" if rows == expected else "the book showed %s" % [rows]
@@ -153,7 +153,7 @@ static func _hold_unique_item(tree: SceneTree, main: Node, book: CodexBook) -> S
 	var rows: Array[String] = []
 	for row: Node in book.get_node("Middle/Rows").get_children():
 		rows.append(str(row.get("text")))
-	if rows.slice(-2) != [CodexPage.heading_of(TextTags.UNIQUE_ITEM), "Vis'omera"]:
+	if rows.slice(-2) != ["Unique items", "Vis'omera"]:
 		return "the book showed %s after holding Vis'omera" % [rows]
 	var page: CodexPage = main.get_node("Hud/CodexPage") as CodexPage
 	tree.call("expect_warning", "UNIQUE_ITEM warding_charm has no codex page")
@@ -163,7 +163,7 @@ static func _hold_unique_item(tree: SceneTree, main: Node, book: CodexBook) -> S
 		return "Vis'omera has no codex page"
 	var gloss: String = page.gloss.get_parsed_text()
 	page.close()
-	if (page.heading.text != CodexPage.heading_of(TextTags.UNIQUE_ITEM)
+	if (page.heading.text != "Unique items"
 			or page.title.text != "Vis'omera"
 			or gloss != "Vis'omera: the ward that keeps them near"
 			or not page.entry.text.begins_with("A ward charm")
@@ -236,7 +236,7 @@ static func _open_place(book: CodexBook, page: CodexPage) -> String:
 	FlowInput.press_pad(book, JOY_BUTTON_A)
 	var gloss: String = page.gloss.get_parsed_text()
 	if (not page.is_open()
-			or page.heading.text != CodexPage.heading_of(TextTags.PLACE)
+			or page.heading.text != "Places"
 			or page.title.text != "Lumwen Hoal"
 			or gloss != "Lumwen Hoal: the soft clearing"
 			or page.entry.text.is_empty()
@@ -255,7 +255,7 @@ static func _open_corrupted_place(page: CodexPage) -> String:
 		return "the corrupted glade has no codex page"
 	var gloss: String = page.gloss.get_parsed_text()
 	page.close()
-	if (page.heading.text != CodexPage.heading_of(TextTags.PLACE)
+	if (page.heading.text != "Places"
 			or page.title.text != "Lymwen Hoall"
 			or gloss != "Lymwen Hoall: the soft clearing, gone wild"
 			or not page.entry.text.begins_with("Lumwen Hoal, corrupted.")):
