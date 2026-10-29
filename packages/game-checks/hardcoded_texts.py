@@ -13,9 +13,11 @@ A text is player-facing when it flows into what a Control shows:
   default and a shown member's initializer count too, and a helper outside the presentation
   (TextTags.shown) passes on the parameters and locals handed to it, never its ids.
 In such an expression, a hit is a string literal outside tr() (formatted with % or as a value
-handed to String.format(), glued with +, in an array of lines), a constant the expression names, even inside tr() (the extractor reads only
-literals): its string, its array's strings or its dictionary's string keys, and a name made from an
-id with capitalize(). Not a hit: a literal without a letter outside its format specifiers, BBCode
+handed to String.format(), glued with +, in an array of lines), a constant the expression names,
+even inside tr() (the extractor reads only literals), through the constants it aliases: its
+string, its array's strings or its dictionary's string keys, and a name made from an id with
+capitalize(). A constant dictionary handed to format(), straight or through a local or member,
+counts by its values. Not a hit: a literal without a letter outside its format specifiers, BBCode
 and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath (&"…", ^"…"), the
 condition of an `x if c else y`, a dictionary's key (a format's placeholder) and a literal inside
 another call (a key, an id).
@@ -126,6 +128,8 @@ class Script:
     # Each constant dictionary's values that are a string or another constant's name, shown when
     # it fills in a format() (#1715). Only dictionaries: an array's items are its texts already.
     const_values: dict[str, list[Tok]] = field(default_factory=dict)
+    # Each constant that names another (`const TITLE = NAME`, `const TITLE = Other.NAME`, #1734).
+    aliases: dict[str, list[Tok]] = field(default_factory=dict)
     # Each member variable's initializer (empty without one).
     members: dict[str, list[Tok]] = field(default_factory=dict)
     funcs: list[Func] = field(default_factory=list)
@@ -309,6 +313,17 @@ def const_values(toks: list[Tok]) -> list[Tok] | None:
     return found
 
 
+def const_alias(toks: list[Tok]) -> list[Tok]:
+    """The constant a constant names (`NAME` or `Other.NAME`), or nothing."""
+    assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
+    value = toks[assign + 1 :]
+    if len(value) == 1 and value[0].kind == "id":
+        return value
+    if len(value) == 3 and value[1].text == "." and value[0].kind == value[2].kind == "id":
+        return value
+    return []
+
+
 def without_annotations(toks: list[Tok]) -> list[Tok]:
     """A statement without its leading annotations (@export, @export_range(…), @onready)."""
     at = 0
@@ -362,6 +377,9 @@ def parse(path: str) -> Script:
             values = const_values(toks)
             if values is not None:
                 script.const_values[member[1]] = values
+            alias = const_alias(toks)
+            if alias:
+                script.aliases[member[1]] = alias
         i += 1
     return script
 
@@ -391,6 +409,10 @@ class Flow:
         self.text_funcs: set[int] = set()
         self.text_locals: dict[int, set[str]] = {}
         self.text_members: dict[str, set[str]] = {}
+        # Locals and members that hold a format()'s values (#1734): a constant dictionary
+        # assigned to one counts by its values, not its keys.
+        self.format_locals: dict[int, set[str]] = {}
+        self.format_members: dict[str, set[str]] = {}
         self.hits: set[Hit] = set()
         self.changed = False
 
@@ -407,6 +429,8 @@ class Flow:
                         self.expression(script, func, func.defaults.get(index, []))
                 for member in sorted(self.text_members.get(script.path, set())):
                     self.expression(script, NO_FUNC, script.members[member])
+                for member in sorted(self.format_members.get(script.path, set())):
+                    self.format_values(script, NO_FUNC, script.members[member])
         return self.hits
 
     def outside(self, toks: list[Tok], at: int) -> bool:
@@ -457,7 +481,11 @@ class Flow:
         text_locals = self.locals_of(func)
         # A member that is shown carries what's assigned to it anywhere in its script.
         members = self.text_members.get(script.path, set()) - func.names
-        carriers = text_locals | members
+        format_locals = self.format_locals.setdefault(id(func), set())
+        format_carriers = format_locals | (
+            self.format_members.get(script.path, set()) - func.names
+        )
+        carriers = text_locals | members | format_carriers
         if words[:1] == ["return"] and id(func) in self.text_funcs:
             self.expression(script, func, toks[1:])
         if words[:1] == ["for"] and len(words) > 3 and words[1] in text_locals:
@@ -472,10 +500,24 @@ class Flow:
             None,
         )
         if assign is not None:
-            target = toks[2:assign] if words[:2] == ["self", "."] else toks[:assign]
+            self_target = words[:2] == ["self", "."]
+            target = toks[2:assign] if self_target else toks[:assign]
             value = toks[assign + 1 :]
+            # `self.values = …` names the member even where a local shadows it.
+            own_members = self.text_members.get(script.path, set())
+            format_targets = format_carriers
+            text_targets = text_locals | members
+            if self_target:
+                format_targets = self.format_members.get(script.path, set())
+                text_targets = own_members
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
+                    self.expression(script, func, value)
+                if words[1] in format_locals:
+                    self.format_values(script, func, value)
+            elif len(target) == 1 and target[0].text in format_targets:
+                self.format_values(script, func, value)
+                if target[0].text in text_targets:
                     self.expression(script, func, value)
             elif target[0].text in carriers and (
                 len(target) == 1
@@ -539,8 +581,7 @@ class Flow:
                 elif self.is_format(script, toks, i):
                     # Only its values; a second argument is the placeholder's pattern.
                     for arg in split_args(toks, i)[:1]:
-                        if carry_only or not self.format_const(script, func, arg):
-                            self.expression(script, func, arg, carry_only)
+                        self.format_values(script, func, arg, carry_only)
                 elif self.outside(toks, i):
                     # Its literals and constants are ids (a tag's kind), but a parameter or
                     # local handed to it is still shown.
@@ -595,6 +636,24 @@ class Flow:
         owner = script if receiver == "self" else self.by_class.get(receiver)
         return owner is None or not any(func.name == "format" for func in owner.funcs)
 
+    def format_values(
+        self, script: Script, func: Func, arg: list[Tok], carry_only: bool = False
+    ) -> None:
+        """The values a format() fills in: a constant dictionary's values (#1715), or a local or
+        member holding them, whose assignments are followed the same way (#1734)."""
+        while len(arg) > 2 and arg[0].text == "(" and matching(arg, 0) == len(arg) - 1:
+            arg = arg[1:-1]  # `(VALUES)` is VALUES
+        word =arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
+        if [tok.text for tok in arg[:2]] == ["self", "."] and len(arg) == 3:
+            word = arg[2].text if arg[2].text in script.members else ""
+        elif word in func.names and word not in func.params:
+            self.mark(self.format_locals.setdefault(id(func), set()), word)
+            return
+        if word in script.members and (len(arg) == 3 or word not in func.names):
+            self.mark(self.format_members.setdefault(script.path, set()), word)
+        elif carry_only or not self.format_const(script, func, arg):
+            self.expression(script, func, arg, carry_only)
+
     def format_const(self, script: Script, func: Func, arg: list[Tok]) -> bool:
         """Whether a format()'s values are a constant dictionary, whose values are then hits and
         whose keys are its placeholders (#1715)."""
@@ -604,8 +663,10 @@ class Flow:
             owner = self.by_class.get(arg[0].text)
         else:
             return False
-        word = arg[-1].text
-        if owner is None or word in owner.members or word not in owner.const_values:
+        if owner is None or arg[-1].text in owner.members:
+            return False
+        owner, word = self.unalias(owner, arg[-1].text)
+        if word not in owner.const_values:
             return False
         for value in owner.const_values[word]:
             if value.kind == "id":
@@ -671,7 +732,20 @@ class Flow:
         elif not carry_only:
             self.const(script, word)
 
+    def unalias(self, script: Script, word: str) -> tuple[Script, str]:
+        """The constant an alias chain ends at (`const TITLE = NAME`, #1734)."""
+        seen: set[tuple[str, str]] = set()
+        while word in script.aliases and (script.path, word) not in seen:
+            seen.add((script.path, word))
+            alias = script.aliases[word]
+            owner = script if len(alias) == 1 else self.by_class.get(alias[0].text)
+            if owner is None:
+                break
+            script, word = owner, alias[-1].text
+        return script, word
+
     def const(self, script: Script, word: str) -> None:
+        script, word = self.unalias(script, word)
         for text, line in script.consts.get(word, []):
             if is_words(text):
                 self.hits.add(Hit(script.path, text, line))
