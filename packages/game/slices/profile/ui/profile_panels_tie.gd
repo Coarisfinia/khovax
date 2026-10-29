@@ -20,7 +20,7 @@ func _ready() -> void:
 		await menu.ready
 	var tab: CharacterTab = menu.character
 	tab.name_field.max_length = Profile.NAME_LIMIT
-	if holder.keeper == null:
+	if holder == null or holder.keeper == null:
 		return
 	tab.factions.standings = _standings
 	tab.materials.materials = _materials
