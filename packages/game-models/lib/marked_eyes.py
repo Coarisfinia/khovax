@@ -44,6 +44,10 @@ MIN_SAMPLES = 8
 # How far apart the left mark and the right one mirrored may lie, as a share of their mean width,
 # and how much wider one may be than the other.
 MIRROR, WIDER = 0.6, 2.0
+# A fragment of a generator's eye (`fragments`, #1756): a spot of at least FRAGMENT_SAMPLES of the
+# head's distinct samples, each darker than FRAGMENT_RATIO of the head's median; a lone sample or two is a
+# speck of shading in the paint.
+FRAGMENT_RATIO, FRAGMENT_SAMPLES = 0.6, 3
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
@@ -387,7 +391,34 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
+def fragments(skin, bone="head", weight=HEAD_WEIGHT):
+    """What's left of the generator's eyes on `skin`'s texture over the head that `bone` moves,
+    beyond a mirrored pair (#1756): the head's samples darker than FRAGMENT_RATIO of the head's
+    median, grouped where they lie, each spot of at least FRAGMENT_SAMPLES as a `Mark` (a sliver
+    across an island's seam, a pupil on an island of its own, a dark speck by the eye). The ratio
+    is below `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under
+    its own threshold, passes. Our own eyes are plain colours, not the texture, so they never
+    count. The head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
+    as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
+    if bone not in skin.vertex_groups:
+        return []
+    try:
+        head = Head(skin, bone, weight)
+    except Unpainted:
+        return []
+    value = head.colours.max(axis=1)
+    dark = numpy.flatnonzero(value < FRAGMENT_RATIO * float(numpy.median(value)))
+    if len(dark) == 0:
+        return []
+    points, normals = head.points[dark], head.normals[dark]
+    cell = numpy.ptp(head.points, axis=0).max() / CELLS
+    # A corner is sampled once per triangle it belongs to: a spot counts its distinct samples, so
+    # one dark texel at a shared corner is no fragment.
+    return [Mark(points[group], normals[group]) for group in _spots(points, cell)
+            if len(numpy.unique(points[group], axis=0)) >= FRAGMENT_SAMPLES]
+
+
+def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weight=HEAD_WEIGHT):
     """Paints out what's left of the generator's eyes on `skin`'s head texture (#1737), for a
     creature whose own colours have no black: the generator paints its eyes over many of the
     texture's islands, and fragments `repaint` misses (a sliver across an island's seam, a pupil
@@ -395,8 +426,9 @@ def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
     Every near-black texel (its brightest channel under `below`, sRGB) goes, and so does every
     texel within `reach` of a sample of the head darker than `ratio` of the head's median, if it
     is that dark too; with `grow` texels around each, they take the colour of the texels around
-    them, filled in from the edges inward. Returns how many texels it painted."""
-    head = Head(skin, bone)
+    them, filled in from the edges inward. The head is the faces weighted at least `weight` to
+    `bone`, as `fragments` takes it. Returns how many texels it painted."""
+    head = Head(skin, bone, weight)
     pixels = head.pixels
     height, width = pixels.shape[:2]
     value = pixels[:, :, :3].max(axis=2)

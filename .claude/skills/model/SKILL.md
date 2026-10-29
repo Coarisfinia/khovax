@@ -584,7 +584,9 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    packages/game-models/check_painted_eyes.py -- <model.glb>` (#1688), fails a creature whose
    texture still shows the generator's eyes on its head: a mirrored pair of flat black or glowing
    spots that `marked_eyes.find` picks out (`DARK`, `GLOW`), left beside or under ours because
-   `replace` wasn't run or missed them. CI runs it on every `.glb`, with its test
+   `replace` wasn't run or missed them; and fragments of them left beyond a pair (#1756), spots
+   much darker than the head's median (`marked_eyes.fragments`), which `marked_eyes.scrub` paints
+   out on a head whose own colours have no dark marks. CI runs it on every `.glb`, with its test
    (`test_painted_eyes.py`).
 
 ## 5. PR

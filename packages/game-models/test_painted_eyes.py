@@ -5,6 +5,8 @@ whose texels on the texture are black too), since only the texture's own faces c
 own way of marking them (marked_eyes.BEASTS, #1719) finds what `DARK` and `GLOW` miss: Fohossa's
 pale eyes on a head weighted under HEAD_WEIGHT, the Frostfire Hound's amber and ice ones on an ice
 blue head off the middle. And each predicate picks the colours it should, and not its neighbours'.
+A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
+(marked_eyes.fragments), while a shade only a little darker than the skin passes.
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -34,6 +36,9 @@ from lib import eyes, marked_eyes  # noqa: E402
 RADIUS, SIZE = 0.5, 256
 # The skin's colour, a painted eye's flat black and its glow (sRGB).
 SKIN, BLACK, GLOW = (0.55, 0.4, 0.3), (0.05, 0.05, 0.05), (1.0, 0.6, 0.1)
+# A fragment's dim colour, darker than marked_eyes.FRAGMENT_RATIO of the skin but not `DARK`'s black,
+# and a shade of the skin only a little darker.
+DIM, SHADE = (0.3, 0.22, 0.16), (0.45, 0.33, 0.25)
 # Fohossa's: its warm grey skin and pale lantern eyes.
 GREY, PALE = (0.84, 0.81, 0.78), (0.98, 0.95, 0.9)
 # The Frostfire Hound's (frostfire_hound.py): its ice blue skin, its amber eye and its ice one.
@@ -44,7 +49,7 @@ EYE, EYE_RADIUS = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS, 0.09
 FOHOSSA = "assets/fohossa/fohossa.glb"
 HOUND = "assets/frostfire_hound/frostfire_hound.glb"
 
-# Name: (the paint on the left eye and the right one, or None, whether our eyes are joined in,
+# Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
 # adds, or None, and whether the check passes it).
 CASES = {
@@ -62,6 +67,9 @@ CASES = {
     "hound_eyes_unlisted": ((ICE_EYE, AMBER), False, 1.0, ICE, None, True),
     "hound_eyes": ((ICE_EYE, AMBER), False, 1.0, ICE, HOUND, False),
     "plain_hound": (None, False, 1.0, ICE, HOUND, True),
+    # No pair: only the fragments see a dim spot by one eye, and a shade isn't one.
+    "dim_fragment": ((DIM, None), True, 1.0, SKIN, None, False),
+    "shade": ((SHADE, None), True, 1.0, SKIN, None, True),
 }
 
 # Name: (the paint on the left eye and the right one, the skin's colour, and the beast in BEASTS
@@ -135,7 +143,7 @@ def build(paint, ours, weight, colour, middle):
     if paint is not None:
         head = marked_eyes.Head(skin, "head", weight)
         rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
-        for eye, colour in zip(spots, paint):
+        for eye, colour in ((eye, colour) for eye, colour in zip(spots, paint) if colour is not None):
             inside = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS
             head.pixels[rows[inside], columns[inside], :3] = colour
         image.pixels.foreach_set(head.pixels.ravel())
@@ -185,7 +193,10 @@ def main():
         (log.info if ok else log.error)("%s %s picks %s" % ("ok" if ok else "FAIL", name, got.tolist()))
     for name, (paint, ours, weight, colour, beast, passes) in CASES.items():
         own = marked_eyes.BEASTS[beast] if beast else None
-        found = marked_eyes.painted(build(paint, ours, weight, colour, own.middle if own else 0.0), own=own)
+        skin = build(paint, ours, weight, colour, own.middle if own else 0.0)
+        found = marked_eyes.painted(skin, own=own)
+        if marked_eyes.fragments(skin, weight=own.weight if own else marked_eyes.HEAD_WEIGHT):
+            found["FRAGMENTS"] = ()
         ok = (not found) == passes
         passed = passed and ok
         line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found
