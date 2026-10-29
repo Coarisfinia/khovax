@@ -1,5 +1,5 @@
 // The bud (#1738): the Ombulumo's middle form, wearing its own model, from the owner's model. It
-// ascends into an Ombulumo once it has reached its level and is given moss. Its level and stats are
+// ascends into an Ombulumo once it has reached its level and is given dew. Its level and stats are
 // placeholders to tune (#960).
 {
 	"id": "ombuwomo",
@@ -19,5 +19,5 @@
 	// A bud of the shallows, awake by night with its elders: it nibbles weed and keeps near water (#1200).
 	"behaviour": ["nocturnal", "grazer", "drinker"],
 	"model": "res://assets/ombuwomo/ombuwomo.glb",
-	"ascension": { "into": "ombulumo", "level": 30, "material": "moss" }
+	"ascension": { "into": "ombulumo", "level": 30, "material": "dew" }
 }

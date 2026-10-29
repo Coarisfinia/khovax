@@ -702,6 +702,10 @@ msgstr ""
 msgid "Crystal"
 msgstr ""
 
+#: slices/loot/data/materials/dew.jsonc
+msgid "Dew"
+msgstr ""
+
 #: slices/loot/data/materials/feather.jsonc
 msgid "Feather"
 msgstr ""
@@ -910,6 +914,10 @@ msgstr ""
 
 #: slices/paths/meta/path_mark.gd
 msgid "Harmony and supremacy"
+msgstr ""
+
+#: slices/quests/data/bud_dew.jsonc
+msgid "Dew for an ${MONSTER:ombuwomo}"
 msgstr ""
 
 #: slices/quests/data/first_domination.jsonc
