@@ -13,9 +13,12 @@ on:
 permissions:
   contents: read
 
-# One nightly at a time: a second waits for the first rather than racing it for the same tag.
+# One nightly at a time: a second waits for the first rather than racing it for the same tag. A
+# newer one waiting replaces an older one waiting, which loses nothing: both build main's newest
+# commit. The group is per branch, so a run started from another branch, which the check refuses,
+# never replaces one from main.
 concurrency:
-  group: nightly
+  group: nightly-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
