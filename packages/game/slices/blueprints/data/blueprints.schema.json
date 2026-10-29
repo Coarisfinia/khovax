@@ -18,8 +18,8 @@
 			"additionalProperties": false,
 			"required": ["entry", "gloss"],
 			"properties": {
-				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
-				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the soft clearing\".", "type": "string", "minLength": 1 }
+				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "x-translate": true, "minLength": 1 },
+				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the soft clearing\".", "type": "string", "x-translate": true, "minLength": 1 }
 			}
 		},
 		"rules": {
@@ -81,8 +81,8 @@
 						"additionalProperties": false,
 						"required": ["entry", "gloss"],
 						"properties": {
-							"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
-							"gloss": { "description": "What its name means, hand-written (#959).", "type": "string", "minLength": 1 }
+							"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "x-translate": true, "minLength": 1 },
+							"gloss": { "description": "What its name means, hand-written (#959).", "type": "string", "x-translate": true, "minLength": 1 }
 						}
 					}
 				},

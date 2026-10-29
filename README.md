@@ -135,3 +135,17 @@ gdstyle check .    # lint
 Every gdstyle rule is an error (`gdstyle.toml`), and so is every Godot GDScript warning
 (`project.godot`). A script with a warning fails to load. CI lints, checks the formatting, and checks
 every script with `godot --headless --path packages/game --check-only -s res://<script>`.
+
+## Translations
+
+The game's texts are translated with gettext, the English text being the key (#1608).
+`packages/game/translations/khovax.pot`, the template every language's `.po` starts from, is
+written from the texts the player reads; CI fails when it's out of date. After changing a text,
+write it again and commit it:
+
+```sh
+uv run --locked --package khovax-game-checks packages/game-checks/translations_pot.py
+```
+
+A new player-facing field in content data gets `"x-translate": true` in its schema, and a text in a
+script goes through `tr()` with a literal string, so the template picks it up.

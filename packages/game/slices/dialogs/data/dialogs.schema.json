@@ -8,7 +8,7 @@
 	"required": ["id", "speaker", "lock", "lines"],
 	"$defs": {
 		"id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-		"text": { "type": "string", "pattern": "\\S" }
+		"text": { "type": "string", "x-translate": true, "pattern": "\\S" }
 	},
 	"properties": {
 		"id": {
