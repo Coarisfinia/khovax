@@ -123,8 +123,9 @@ class Script:
     path: str
     # Each constant's texts: a string's, an array's strings, a dictionary's string keys.
     consts: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
-    # Each constant dictionary's string values, shown when it fills in a format() (#1715).
-    const_values: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
+    # Each constant dictionary's values that are a string or another constant's name, shown when
+    # it fills in a format() (#1715). Only dictionaries: an array's items are its texts already.
+    const_values: dict[str, list[Tok]] = field(default_factory=dict)
     # Each member variable's initializer (empty without one).
     members: dict[str, list[Tok]] = field(default_factory=dict)
     funcs: list[Func] = field(default_factory=list)
@@ -291,19 +292,20 @@ def const_texts(toks: list[Tok]) -> list[tuple[str, int]]:
     return found
 
 
-def const_values(toks: list[Tok]) -> list[tuple[str, int]]:
-    """A constant dictionary's string values, one level deep (a StringName or NodePath is an
-    id)."""
+def const_values(toks: list[Tok]) -> list[Tok] | None:
+    """A constant dictionary's values that are a string or a name (a StringName or NodePath is
+    an id), one level deep; None for a constant that isn't a dictionary."""
     assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
     value = toks[assign + 1 :]
     if not value or value[0].text != "{" or value[0].kind != "op":
-        return []
+        return None
     found = []
     for entry in split_args(value, 0):
         colon = next((i for i, tok in enumerate(entry) if tok.text in (":", "=")), None)
         rest = entry[colon + 1 :] if colon is not None else []
-        if len(rest) == 1 and rest[0].kind == "str" and not rest[0].prefix:
-            found.append((rest[0].text, rest[0].line))
+        plain = len(rest) == 1 and not rest[0].prefix
+        if plain and rest[0].kind in ("id", "str"):
+            found.append(rest[0])
     return found
 
 
@@ -357,7 +359,9 @@ def parse(path: str) -> Script:
             script.members[member[1]] = toks[assign + 1 :]
         if member[:1] == ["const"] and len(member) > 1:
             script.consts[member[1]] = const_texts(toks)
-            script.const_values[member[1]] = const_values(toks)
+            values = const_values(toks)
+            if values is not None:
+                script.const_values[member[1]] = values
         i += 1
     return script
 
@@ -603,9 +607,12 @@ class Flow:
         word = arg[-1].text
         if owner is None or word in owner.members or word not in owner.const_values:
             return False
-        for text, line in owner.const_values[word]:
-            if is_words(text):
-                self.hits.add(Hit(owner.path, text, line))
+        for value in owner.const_values[word]:
+            if value.kind == "id":
+                # Another constant of its script (`{"name": TITLE}`).
+                self.const(owner, value.text)
+            elif is_words(value.text):
+                self.hits.add(Hit(owner.path, value.text, value.line))
         return True
 
     @staticmethod
