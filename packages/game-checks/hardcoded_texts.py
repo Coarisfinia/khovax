@@ -8,7 +8,10 @@ A text is player-facing when it flows into what a Control shows:
   NoticeScreen.notify's title), returned by a function whose result does, or put into a local or
   a member (a line, an Array[String] of lines) that does. The flow is followed to a fixed point,
   through the presentation's scripts only (game/, ui/, look/): the rules, meta and core hand it
-  data, and their strings are ids and error messages.
+  data, and their strings are ids and error messages. A call names its function by its class,
+  by self or bare in its own script where it can, and only by name elsewhere; a shown parameter's
+  default and a shown member's initializer count too, and a helper outside the presentation
+  (TextTags.shown) passes on the parameters and locals handed to it, never its ids.
 In such an expression, a hit is a string literal outside tr() (formatted with %, glued with +, in
 an array of lines), a constant the expression names, even inside tr() (the extractor reads only
 literals): its string, its array's strings or its dictionary's string keys, and a name made from an
@@ -36,6 +39,7 @@ import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from game_shared import log
 from game_shared.gdscript_code import Kind, tokens
@@ -70,7 +74,7 @@ LEXEME = re.compile(
 OPEN, CLOSE = "([{", ")]}"
 ASSIGN = {"=", ":=", "+="}
 DISABLED = 2
-PRESENTATION = re.compile(r"(^game/|/ui/|/look/)")
+PRESENTATION = re.compile(r"(^|/)(game|ui|look)/")
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,11 @@ class Func:
     params: list[str]
     body: list[Statement]
     names: set[str] = field(default_factory=set)  # its parameters and locals
+    defaults: dict[int, list[Tok]] = field(default_factory=dict)  # by parameter
+
+
+# The context of a member's initializer, which has no parameters or locals.
+NO_FUNC = Func("", [], [])
 
 
 @dataclass(frozen=True)
@@ -107,7 +116,8 @@ class Script:
     path: str
     # Each constant's texts: a string's, an array's strings, a dictionary's string keys.
     consts: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
-    members: set[str] = field(default_factory=set)
+    # Each member variable's initializer (empty without one).
+    members: dict[str, list[Tok]] = field(default_factory=dict)
     funcs: list[Func] = field(default_factory=list)
 
 
@@ -227,13 +237,18 @@ def parse(path: str) -> Script:
         start = 1 if words[:2] == ["static", "func"] else 0
         if words[start : start + 1] == ["func"] and len(words) > start + 1:
             open_at = start + 2
-            params = [arg[0].text for arg in split_args(statement.toks, open_at)]
+            args = split_args(statement.toks, open_at)
+            params = [arg[0].text for arg in args]
             body = []
             i += 1
             while i < len(lines) and lines[i].indent > statement.indent:
                 body.append(lines[i])
                 i += 1
             func = Func(words[start + 1], params, body, set(params))
+            for index, arg in enumerate(args):
+                assign = next((i for i, tok in enumerate(arg) if tok.text in ("=", ":=")), None)
+                if assign is not None:
+                    func.defaults[index] = arg[assign + 1 :]
             for inner in body:
                 inner_words = [tok.text for tok in inner.toks]
                 if inner_words[:1] in (["var"], ["for"]) and len(inner_words) > 1:
@@ -242,7 +257,9 @@ def parse(path: str) -> Script:
             continue
         member = words[1:] if words[:1] == ["static"] else words
         if member[:1] == ["var"] and len(member) > 1:
-            script.members.add(member[1])
+            toks = statement.toks
+            assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
+            script.members[member[1]] = toks[assign + 1 :]
         if member[:1] == ["const"] and len(member) > 1:
             script.consts[member[1]] = const_texts(statement.toks)
         i += 1
@@ -262,9 +279,16 @@ class Flow:
                 self.by_class[match[1]] = script
         # Only the presentation shows texts; the rules, meta and core hand it data and errors.
         self.shown = [script for script in scripts if PRESENTATION.search(script.path)]
-        self.funcs = {func.name for script in self.shown for func in script.funcs}
-        self.text_params: dict[str, set[int]] = {}
-        self.text_funcs: set[str] = set()
+        self.owners: dict[int, Script] = {
+            id(func): script for script in self.shown for func in script.funcs
+        }
+        self.by_name: dict[str, list[Func]] = {}
+        for script in self.shown:
+            for func in script.funcs:
+                self.by_name.setdefault(func.name, []).append(func)
+        # Keyed by the function's id(): two scripts' functions of one name are told apart.
+        self.text_params: dict[int, set[int]] = {}
+        self.text_funcs: set[int] = set()
         self.text_locals: dict[int, set[str]] = {}
         self.text_members: dict[str, set[str]] = {}
         self.hits: set[Hit] = set()
@@ -278,10 +302,36 @@ class Flow:
                 for func in script.funcs:
                     for statement in func.body:
                         self.statement(script, func, statement.toks)
+                    # A shown parameter's default is shown when a call leaves it out.
+                    for index in sorted(self.text_params.get(id(func), set())):
+                        self.expression(script, func, func.defaults.get(index, []))
+                for member in sorted(self.text_members.get(script.path, set())):
+                    self.expression(script, NO_FUNC, script.members[member])
         return self.hits
 
+    def outside(self, toks: list[Tok], at: int) -> bool:
+        """Whether the call opening at `at` names a class outside the presentation (a helper such
+        as TextTags.shown), whose arguments make up its result."""
+        if at < 3 or toks[at - 2].text != ".":
+            return False
+        owner = self.by_class.get(toks[at - 3].text)
+        return owner is not None and owner not in self.shown
+
+    def resolve(self, script: Script, toks: list[Tok], at: int) -> list[Func]:
+        """The presentation's functions the call opening at `at` may reach: a class's own when it
+        names the class (or self), the script's own when it's bare, else every one of that name."""
+        name = toks[at - 1].text
+        if at >= 3 and toks[at - 2].text == ".":
+            receiver = toks[at - 3].text
+            owner = script if receiver == "self" else self.by_class.get(receiver)
+            if owner is not None:
+                return [func for func in owner.funcs if func.name == name]
+            return self.by_name.get(name, [])
+        own = [func for func in script.funcs if func.name == name]
+        return own or self.by_name.get(name, [])
+
     def mark(
-        self, found: set[str] | dict[str, set[int]], key: str, value: int | None = None
+        self, found: set[str] | set[int] | dict[int, set[int]], key: Any, value: int | None = None
     ) -> None:
         if isinstance(found, set):
             if key not in found:
@@ -300,7 +350,7 @@ class Flow:
         # A member that is shown carries what's assigned to it anywhere in its script.
         members = self.text_members.get(script.path, set()) - func.names
         carriers = text_locals | members
-        if words[:1] == ["return"] and func.name in self.text_funcs:
+        if words[:1] == ["return"] and id(func) in self.text_funcs:
             self.expression(script, func, toks[1:])
         if words[:1] == ["for"] and len(words) > 3 and words[1] in text_locals:
             in_at = words.index("in") if "in" in words else len(words)
@@ -314,18 +364,18 @@ class Flow:
             None,
         )
         if assign is not None:
-            target = toks[:assign]
+            target = toks[2:assign] if words[:2] == ["self", "."] else toks[:assign]
             value = toks[assign + 1 :]
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
                     self.expression(script, func, value)
-            elif words[0] in carriers and (len(target) == 1 or target[1].text == "["):
+            elif target[0].text in carriers and (len(target) == 1 or target[1].text == "["):
                 self.expression(script, func, value)
             elif target[-1].text in TEXT_PROPERTIES and (
                 len(target) > 1
                 and target[-2].text == "."
                 or len(target) == 1
-                and target[0].text not in func.names | script.members
+                and target[0].text not in func.names | script.members.keys()
             ):
                 self.expression(script, func, value)
         for i in range(len(toks)):
@@ -340,10 +390,11 @@ class Flow:
             elif name in APPENDS and owner in carriers:
                 for arg in args[-1:]:
                     self.expression(script, func, arg)
-            elif name in self.text_params and name in self.funcs:
-                for index in sorted(self.text_params[name]):
-                    if index < len(args):
-                        self.expression(script, func, args[index])
+            else:
+                for reached in self.resolve(script, toks, i):
+                    for index in sorted(self.text_params.get(id(reached), set())):
+                        if index < len(args):
+                            self.expression(script, func, args[index])
 
     @staticmethod
     def depth(toks: list[Tok], at: int) -> int:
@@ -355,8 +406,11 @@ class Flow:
                 depth -= 1
         return depth
 
-    def expression(self, script: Script, func: Func, toks: list[Tok]) -> None:
-        """An expression whose value a Control shows."""
+    def expression(
+        self, script: Script, func: Func, toks: list[Tok], carry_only: bool = False
+    ) -> None:
+        """An expression whose value a Control shows; with `carry_only`, only the parameters,
+        locals and members it names are followed."""
         i = 0
         while i < len(toks):
             tok = toks[i]
@@ -368,16 +422,23 @@ class Flow:
                 self.call(script, func, toks, i)
                 if toks[i - 1].text in PASS_THROUGH:
                     for arg in split_args(toks, i):
-                        self.expression(script, func, arg)
+                        self.expression(script, func, arg, carry_only)
+                elif self.outside(toks, i):
+                    # Its literals and constants are ids (a tag's kind), but a parameter or
+                    # local handed to it is still shown.
+                    for arg in split_args(toks, i):
+                        self.expression(script, func, arg, carry_only=True)
                 i = matching(toks, i) + 1
                 continue
             if tok.kind == "op" and tok.text in "[{" and self.subscript_or_dict(toks, i):
                 i = matching(toks, i) + 1
                 continue
-            if tok.kind == "str" and not tok.prefix and is_words(tok.text):
+            if carry_only and tok.kind != "id":
+                pass
+            elif tok.kind == "str" and not tok.prefix and is_words(tok.text):
                 self.hits.add(Hit(script.path, tok.text, tok.line))
             elif tok.kind == "id" and not self.attribute_or_call(toks, i):
-                self.name(script, func, toks, i)
+                self.name(script, func, toks, i, carry_only)
             i += 1
 
     @staticmethod
@@ -416,25 +477,28 @@ class Flow:
                     self.name(script, func, arg, len(arg) - 1)
         elif name == "capitalize":
             self.hits.add(Hit(script.path, FROM_ID, toks[at].line))
-        elif name in self.funcs:
-            self.mark(self.text_funcs, name)
+        else:
+            for reached in self.resolve(script, toks, at):
+                self.mark(self.text_funcs, id(reached))
 
-    def name(self, script: Script, func: Func, toks: list[Tok], at: int) -> None:
+    def name(
+        self, script: Script, func: Func, toks: list[Tok], at: int, carry_only: bool = False
+    ) -> None:
         """A name in a shown expression: a constant's text is a hit, and a parameter or local
         carries the text further."""
         word = toks[at].text
         if at >= 2 and toks[at - 1].text == ".":
             owner = self.by_class.get(toks[at - 2].text)
-            if owner is not None:
+            if owner is not None and not carry_only:
                 self.const(owner, word)
             return
         if word in func.params:
-            self.mark(self.text_params, func.name, func.params.index(word))
+            self.mark(self.text_params, id(func), func.params.index(word))
         elif word in func.names:
             self.mark(self.locals_of(func), word)
         elif word in script.members:
             self.mark(self.text_members.setdefault(script.path, set()), word)
-        else:
+        elif not carry_only:
             self.const(script, word)
 
     def const(self, script: Script, word: str) -> None:
@@ -449,7 +513,7 @@ def tab_title_hits(script: Script) -> Iterator[Hit]:
     tabs = re.findall(r"var (\w+): TabContainer\b", source)
     for name in tabs:
         added = re.search(rf"\b{name}\.add_child\(", source)
-        if added and not re.search(r"\bset_tab_title\(", source):
+        if added and not re.search(rf"\b{name}\.set_tab_title\(", source):
             line = source.count("\n", 0, added.start()) + 1
             yield Hit(script.path, "tab titles from node names", line)
 
@@ -519,7 +583,10 @@ def main() -> int:
                 key[0],
             )
             failed = True
-    for key in ALLOWED:
+    for key, reason in ALLOWED.items():
+        if not reason.strip():
+            log.error(f"{key[1]!r} is allowed without a reason: give one in {LISTS}", key[0])
+            failed = True
         if key not in found:
             log.error(f"{key[1]!r} is no longer shown: take it off ALLOWED in {LISTS}", key[0])
             failed = True
