@@ -262,10 +262,19 @@ jobs:
         # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
         # footprint check leaves out as decorations, #1651), or to the slices' look/ scripts and the
         # scenes (the views whose scale, clips and hidden parts it measures a pack's model by, read
-        # only from there, #1652), against the parent. A
+        # only from there, #1652), against the parent, or on a push to main against the commit
+        # before the push, fetched here, so a push of several commits counts them all. A
         # failing diff counts as a change, so the check runs rather than being skipped.
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
+          base=HEAD^1
+          if [ "$EVENT" = push ]; then
+            base="$BEFORE"
+            git fetch -q --depth=1 origin "$base" || true
+          fi
+          if git diff --quiet "$base" -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
             ':(top).github/actions/setup-blender' ':(top)packages/game/core/data/tiles' \
             ':(top)packages/game/slices/*/look/*' ':(top)packages/game/*.tscn'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -302,6 +311,25 @@ jobs:
           git ls-files -z ':(top)packages/game/*.glb' | xargs -0 uv run --locked --package khovax-game-models \
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_brows.py --
+
+      - name: "🧪 Test the painted-eye check on a ball"
+        # Painted black or glowing eyes fail it; a plain texture and our own eyes pass (#1688).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_painted_eyes.py
+
+      - name: "🎨 Check no generated eye is left in a creature's texture"
+        # Each creature's head, its texture sampled for a mirrored pair of flat black ovals or
+        # glowing painted eyes, as lib/marked_eyes.py finds them on import (#1688); a model without
+        # a textured head passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_painted_eyes.py --
 
       - name: "🦴 Check every model's limbs have sane dimensions"
         # Each limb's segments against each other and the body's height, at rest, per body plan

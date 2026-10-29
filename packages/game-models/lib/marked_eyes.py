@@ -71,43 +71,54 @@ def GLOW(colours):
     return (value >= GLOW_VALUE) & (saturation >= GLOW_SATURATION)
 
 
-def texture(skin):
-    """The one base colour image `skin`'s materials share (import_source.py keeps only that)."""
-    found = set()
-    for material in skin.data.materials:
-        shader = next((node for node in material.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
-        if shader is not None and shader.inputs["Base Color"].links:
-            node = shader.inputs["Base Color"].links[0].from_node
-            if node.type == "TEX_IMAGE" and node.image is not None:
-                found.add(node.image)
-    if len(found) != 1:
-        raise ValueError("%s: expected one base colour texture, found %d" % (skin.name, len(found)))
-    return found.pop()
+class Unpainted(ValueError):
+    """A skin or head without a textured face: nothing painted on it."""
+
+
+def image(material):
+    """The image `material`'s base colour comes from, or None (a plain colour, as our eyes')."""
+    if material is None or material.node_tree is None:
+        return None
+    shader = next((node for node in material.node_tree.nodes if node.type == "BSDF_PRINCIPLED"), None)
+    if shader is not None and shader.inputs["Base Color"].links:
+        node = shader.inputs["Base Color"].links[0].from_node
+        if node.type == "TEX_IMAGE":
+            return node.image
+    return None
 
 
 class Head:
-    """The faces of `skin` that `bone` moves (each corner weighted to it at least HEAD_WEIGHT),
-    sampled: every sample's spot, its colour on the base colour texture and its face's normal,
-    and the texture's pixels (rows from the bottom, as Blender's run)."""
+    """The faces of `skin` that `bone` moves (each corner weighted to it at least HEAD_WEIGHT)
+    and the base colour texture paints (not our eyes' plain colours, once joined in), sampled:
+    every sample's spot, its colour on the texture and its face's normal, and the texture's pixels
+    (rows from the bottom, as Blender's run)."""
 
     def __init__(self, skin, bone):
         data = skin.data
-        self.image = texture(skin)
-        width, height = self.image.size
-        pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
-        self.image.pixels.foreach_get(pixels)
-        self.pixels = pixels.reshape(height, width, 4)
         group = skin.vertex_groups[bone].index
         heads = numpy.array([any(item.group == group and item.weight >= HEAD_WEIGHT for item in vertex.groups)
                              for vertex in data.vertices])
         matrix = numpy.array(skin.matrix_world)
         corners = numpy.array([vertex.co[:] for vertex in data.vertices])
         corners = corners @ matrix[:3, :3].T + matrix[:3, 3]
-        uvs = data.uv_layers.active.data
         data.calc_loop_triangles()
-        mine = [triangle for triangle in data.loop_triangles if heads[list(triangle.vertices)].all()]
+        images = [image(material) for material in data.materials] or [None]
+        mine = [triangle for triangle in data.loop_triangles
+                if images[min(triangle.material_index, len(images) - 1)] is not None
+                and heads[list(triangle.vertices)].all()]
         if not mine:
-            raise ValueError("%s: no faces weighted to %s" % (skin.name, bone))
+            raise Unpainted("%s: no textured faces weighted to %s" % (skin.name, bone))
+        uvs = data.uv_layers.active.data
+        # The texture the head's own faces take (a skin's body may use others).
+        found = {images[min(triangle.material_index, len(images) - 1)] for triangle in mine}
+        if len(found) != 1:
+            raise ValueError("%s: expected one base colour texture on %s's faces, found %d" % (
+                skin.name, bone, len(found)))
+        self.image = found.pop()
+        width, height = self.image.size
+        pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
+        self.image.pixels.foreach_get(pixels)
+        self.pixels = pixels.reshape(height, width, 4)
         # Each head triangle's corners: spot and UV.
         self.spots = corners[numpy.array([triangle.vertices[:] for triangle in mine])]
         self.uvs = numpy.array([[uvs[loop].uv[:] for loop in triangle.loops] for triangle in mine])
@@ -208,6 +219,27 @@ def find(head, marked=DARK):
     if best is None:
         raise ValueError("no pair of marked eyes mirroring each other on the head (%d spots)" % len(marks))
     return best
+
+
+def painted(skin, bone="head"):
+    """The generator's eye areas still showing on `skin`'s texture over the head that `bone` moves
+    (#1688): for each way they are marked (`DARK`'s flat black ovals, `GLOW`'s painted glowing
+    eyes), the pair `find` picks out, as {"DARK" or "GLOW": (left, right)}. Our own eyes are plain
+    colours, not the texture, so they never count. Empty for a skin with no `bone` or no textured
+    face on the head: nothing painted there."""
+    if bone not in skin.vertex_groups:
+        return {}
+    try:
+        head = Head(skin, bone)
+    except Unpainted:
+        return {}
+    found = {}
+    for name, marked in (("DARK", DARK), ("GLOW", GLOW)):
+        try:
+            found[name] = find(head, marked)
+        except ValueError:
+            pass
+    return found
 
 
 def _texels(head, near):

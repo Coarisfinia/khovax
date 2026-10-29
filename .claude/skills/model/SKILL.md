@@ -580,7 +580,12 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
    that has no eyes at all: its eyes must be ours (`lib/eyes.py`, put on a generated model by
    `lib/marked_eyes.py`), never painted ones. A creature designed without eyes goes into its
    `EYELESS` list with the reason, and one still waiting for ours into `KNOWN` with its issue.
-   CI runs it on every push.
+   CI runs it on every push. Its other half, `blender.py --background --factory-startup --python
+   packages/game-models/check_painted_eyes.py -- <model.glb>` (#1688), fails a creature whose
+   texture still shows the generator's eyes on its head: a mirrored pair of flat black or glowing
+   spots that `marked_eyes.find` picks out (`DARK`, `GLOW`), left beside or under ours because
+   `replace` wasn't run or missed them. CI runs it on every `.glb`, with its test
+   (`test_painted_eyes.py`).
 
 ## 5. PR
 - **Visuals (owner's rule), in this order:**
