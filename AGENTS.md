@@ -107,8 +107,9 @@ issue.
 watcher** follow the owner's machine-wide agent notes (`~/.ai/AGENTS.md`), their single source of
 truth (owner, #441); this file only adds this repository's values.
 
-**No pull requests that only change docs.** A change to this file or the README
-rides along with the next real pull request, and that pull request's description says so.
+**Avoid pull requests that only change docs** (owner, a loose rule, #1748): by default a change to
+this file or the README rides along with the next real pull request, and that pull request's
+description says so. A docs-only pull request that exists anyway is never closed or undone for it.
 
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
@@ -575,10 +576,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   dh/gh/hr/wh, the hyphen, the apostrophe, vo/na, -ai, -vaun). `ContentTerms.NAME_RULES` holds
   each kind's rule for the content flow; a name breaking one today waits in `NAME_EXCEPTIONS` with
   its rename issue, and that list only shrinks.
-- **Every new name is searched as an exact phrase before it's used** (owner's rule, #717, #909):
-  in Claude in Chrome on Google, the name in quotes with `nfpr=1` so Google doesn't swap in its own
-  spelling, never with a web-search tool, which is unreliable for exact matches. Any real hit rules
-  it out; the results go onto its issue.
+- **Every new name is checked before it's suggested or used** (owner's rule, #717, #909; for
+  suggested names, in chat, #1743): a name offered in a question counts too. It passes its kind's
+  rule in `ContentTerms.NAME_RULES`, and it is searched as an exact phrase in Claude in Chrome on
+  Google, the name in quotes with `nfpr=1` so Google doesn't swap in its own spelling, never with a
+  web-search tool, which is unreliable for exact matches. Any real hit rules it out; the results go
+  onto its issue.
 - **Invented names use sound symbolism** (owner's rule): the bouba/kiki pattern is one tool
   (round, soft-sounding names for round, soft things, like Ombulumo; sharp, spiky-sounding names for
   sharp, quick ones, like Tikazzir), and other linguistic patterns are used alongside it, so no
@@ -615,9 +618,14 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **If you need a new model** (owner's ground rule, #1575):
   - A. **A new monster:** file a `question` issue for the owner with its vibe, its type and 20 or
     more base prompts for the image generator, as diverse and weird as possible. The owner makes
-    the model from them.
+    the model from them. One issue per beast, a baby species included, and its 20 prompts are
+    diverse and unique: no generic puppies or cute blobs (owner's ground rule, #1726).
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, do A.
+- **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt
+  suggestions, such as the brainstormed lists for A, make no beast: only the owner's vibe or model
+  does. They're never rewritten, asked about or tracked as creatures, and a rule about "every beast"
+  covers only the beasts the owner gave a vibe or a model for.
 - **Every item has a 3D model** (owner, #1579, #1581): gear, unique items, anything the player
   holds, named in its data (`model`). The content flow checks the gear's; a material's is optional
   until every material has one (#1585, #1586). For now each comes from a free source whose license
