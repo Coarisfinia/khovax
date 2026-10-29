@@ -1,0 +1,33 @@
+// Nuvvoluvvo's development web (#677, #1620): a big, soft sleeper, it leans into its bulk and its
+// roll, and may grow a little quicker. Its shifts and its stronger special are placeholders to tune
+// (#960); its roll's deepest node grants a stronger special.
+{
+	"species": "nuvvoluvvo",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "drowsy", "nodes": [
+			{ "leaning": { "hp": 60 } },
+			{ "leaning": { "hp": 60, "strength": 20 } },
+			{ "leaning": { "hp": 100, "speed": -20 } }
+		] },
+		{ "id": "heavy", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60 } },
+			{ "leaning": { "strength": 80, "speed": -30 } }
+		] },
+		{ "id": "restless", "nodes": [
+			{ "leaning": { "speed": 50 } },
+			{ "leaning": { "speed": 60, "hp": -20 } },
+			{ "leaning": { "speed": 80, "strength": -30 } }
+		] },
+		{ "id": "rolling", "nodes": [
+			{ "leaning": { "strength": 30, "hp": 30 } },
+			{ "leaning": { "strength": 40, "hp": 40, "speed": -20 } },
+			{ "leaning": { "strength": 60, "hp": 60, "speed": -40 } },
+			{ "special": 200 }
+		] }
+	],
+	"bridges": [["drowsy_2", "heavy_2"], ["restless_1", "rolling_1"]],
+	"portals": [["drowsy_3", "restless_3"]]
+}

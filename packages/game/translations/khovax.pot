@@ -1120,6 +1120,54 @@ msgstr ""
 msgid "Lakvu-rakvu"
 msgstr ""
 
+#: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
+msgid "The low hum a sleeper makes deep in its dreams. Dominators hummed it back as they walked among sleeping beasts, and the beasts slept on."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
+msgid "hum, and sleep on"
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
+msgid "While the ${MONSTER:nuvvoluvvo} is out, it hums softly, and the player's steps wake sleeping monsters less often."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
+msgid "Nollu-vollu"
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_novvi_lovvi.jsonc
+msgid "The sigh of a beast settling into sleep, a little deeper with every breath. Dominators said it of one that mends best by doing nothing at all."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_novvi_lovvi.jsonc
+msgid "sigh, and mend"
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_novvi_lovvi.jsonc
+msgid "The ${MONSTER:nuvvoluvvo} dozes off between blows, and slowly heals while it rests."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_novvi_lovvi.jsonc
+msgid "Novvi-lovvi"
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nulvo_nalvu.jsonc
+msgid "The grunt of a heavy sleeper turning over, and the soft thud as it lands. Dominators said it of a beast that wins a fight without ever quite waking up."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nulvo_nalvu.jsonc
+msgid "turn over, thud"
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nulvo_nalvu.jsonc
+msgid "The ${MONSTER:nuvvoluvvo} rolls over onto its target with all its soft, heavy weight."
+msgstr ""
+
+#: slices/species/data/abilities/nuvvoluvvo_nulvo_nalvu.jsonc
+msgid "Nulvo-nalvu"
+msgstr ""
+
 #: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
 msgid "The gurgle of a wet hide rolling off a blow. Dominators said it of anything that shrugs off harm and stays damp and whole."
 msgstr ""
@@ -1386,6 +1434,18 @@ msgstr ""
 
 #: slices/species/data/kalvrakkor.jsonc
 msgid "Kalvrakkor"
+msgstr ""
+
+#: slices/species/data/nuvvoluvvo.jsonc
+msgid "A big, round sleeper of the dream realm with long floppy ears, its whole hide a patch of night sky where small stars come and go. It floats a little above the ground and is nearly always asleep, curled up into a soft ball that rises and falls with its breath; a blow or a shout makes it roll over at most. Its name is a beast-call, its snore: the soft n and l of a breath let out, and the doubled v of the slow purr between."
+msgstr ""
+
+#: slices/species/data/nuvvoluvvo.jsonc
+msgid "the snore under the stars"
+msgstr ""
+
+#: slices/species/data/nuvvoluvvo.jsonc
+msgid "Nuvvoluvvo"
 msgstr ""
 
 #: slices/species/data/ombulumo.jsonc

@@ -1,0 +1,13 @@
+// The sleeper's lullaby (#1620). Its hush (#1563) is a placeholder to tune (#960).
+{
+	"id": "nuvvoluvvo_nollu_vollu",
+	"kind": "player_passive",
+	"name": "Nollu-vollu",
+	"description": "While the ${MONSTER:nuvvoluvvo} is out, it hums softly, and the player's steps wake sleeping monsters less often.",
+	"codex": {
+		"entry": "The low hum a sleeper makes deep in its dreams. Dominators hummed it back as they walked among sleeping beasts, and the beasts slept on.",
+		"gloss": "hum, and sleep on"
+	},
+	"hush": 400,
+	"path": "harmony"
+}

@@ -1,0 +1,12 @@
+// A placeholder harvest table (#687, #1620): what a felled Nuvvoluvvo drops, apart from what
+// dominating it gives. Mostly its soft hide, sometimes a bone, else a blank, which rolls on the
+// instance's table instead.
+{
+	"id": "nuvvoluvvo",
+	"kind": "harvest",
+	"entries": [
+		{ "item": "hide", "chance": 600, "min": 1, "max": 2 }, // 60 %
+		{ "item": "bone", "chance": 200, "min": 1, "max": 1 }, // 20 %
+		{ "blank": true, "chance": 200 }
+	]
+}

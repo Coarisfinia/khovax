@@ -1,0 +1,22 @@
+// The dream realm's big, round sleeper (#1620), named on it: it wears its own model, from the
+// owner's generated one. Arcane for the night sky it carries and the dreams it sleeps in. Slow and
+// soft, it takes a lot of waking and hits gently. Its stats are placeholders to tune (#960).
+{
+	"id": "nuvvoluvvo",
+	"name": "Nuvvoluvvo",
+	"codex": {
+		"entry": "A big, round sleeper of the dream realm with long floppy ears, its whole hide a patch of night sky where small stars come and go. It floats a little above the ground and is nearly always asleep, curled up into a soft ball that rises and falls with its breath; a blow or a shout makes it roll over at most. Its name is a beast-call, its snore: the soft n and l of a breath let out, and the doubled v of the slow purr between.",
+		"gloss": "the snore under the stars"
+	},
+	"types": ["arcane"],
+	"strike_type": "arcane",
+	"hp": 140,
+	"strength": 40,
+	"speed": 25,
+	"special": "nuvvoluvvo_nulvo_nalvu",
+	"player_passive": "nuvvoluvvo_nollu_vollu",
+	"self_passive": "nuvvoluvvo_novvi_lovvi",
+	// Nearly always asleep, it wakes in short bouts to graze before it settles again (#1200).
+	"behaviour": ["cathemeral", "grazer"],
+	"model": "res://assets/nuvvoluvvo/nuvvoluvvo.glb"
+}

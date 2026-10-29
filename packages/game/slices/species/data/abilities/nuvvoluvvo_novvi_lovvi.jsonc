@@ -1,0 +1,12 @@
+// The sleeper's rest (#1620). Its heal is a placeholder to tune (#960).
+{
+	"id": "nuvvoluvvo_novvi_lovvi",
+	"kind": "self_passive",
+	"name": "Novvi-lovvi",
+	"description": "The ${MONSTER:nuvvoluvvo} dozes off between blows, and slowly heals while it rests.",
+	"rest_heal": 25, // a fortieth of its HP back each second it rests
+	"codex": {
+		"entry": "The sigh of a beast settling into sleep, a little deeper with every breath. Dominators said it of one that mends best by doing nothing at all.",
+		"gloss": "sigh, and mend"
+	}
+}
