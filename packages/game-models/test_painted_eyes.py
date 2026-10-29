@@ -8,7 +8,9 @@ blue head off the middle. And each predicate picks the colours it should, and no
 A fragment left beyond a pair (#1756), a dim spot by one eye only, fails too
 (marked_eyes.fragments), while a shade only a little darker than the skin passes; so does a dim
 speck a few texels across that lies between the head's samples, where no sample reads it (#1764),
-while a single dim texel passes.
+while a single dim texel passes; and a dim patch two texels square on a coarse texture over a
+low ball, whose texels lie farther apart on the surface than `fragments` groups by, fails as one
+spot (#1781).
 `fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
 across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
 hound's.
@@ -55,6 +57,10 @@ HOUND = "assets/frostfire_hound/frostfire_hound.glb"
 # square, with whether the check passes it.
 SPECK_SIZE = 2048
 SPECKS = {"dim_speck": (3, False), "dim_texel": (1, True)}
+# A coarse texture this many texels square on a low ball of this many segments around and up, each
+# texel wider on the surface than two of the cells `fragments` groups by, and the dim patch this many
+# texels square on it, which must fail.
+COARSE_SIZE, COARSE_SEGMENTS, COARSE_ACROSS = 32, (8, 4), 2
 
 # Name: (the paint on the left eye and the right one (either may be None), or None, whether our eyes are joined in,
 # the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
@@ -117,14 +123,15 @@ def material(name, image=None, colour=(0.0, 0.0, 0.0)):
     return made
 
 
-def ball(name, radius, at, weight=1.0):
-    """A UV ball mesh object of `radius` at `at`, its every vertex weighted `weight` to "head".
+def ball(name, radius, at, weight=1.0, segments=(64, 32)):
+    """A UV ball mesh object of `radius` at `at`, of `segments` around and up, its every vertex
+    weighted `weight` to "head".
     The mesh itself is moved there and the object left at the origin, as an adopted skin is (the
     eyes look for the skin's surface in its own space)."""
     mesh = bpy.data.meshes.new(name)
     built = bmesh.new()
     built.loops.layers.uv.new("UVMap")
-    bmesh.ops.create_uvsphere(built, u_segments=64, v_segments=32, radius=radius, calc_uvs=True)
+    bmesh.ops.create_uvsphere(built, u_segments=segments[0], v_segments=segments[1], radius=radius, calc_uvs=True)
     built.to_mesh(mesh)
     built.free()
     mesh.transform(Matrix.Translation(at))
@@ -134,17 +141,18 @@ def ball(name, radius, at, weight=1.0):
     return obj
 
 
-def build(paint, ours, weight, colour, middle, size=SIZE):
+def build(paint, ours, weight, colour, middle, size=SIZE, segments=(64, 32)):
     """The head: a ball of `colour`, weighted `weight` to "head" and centred on x = `middle`, with
     its texture, `paint`'s left and right colours laid over the eyes' spots on it (or nothing), and
-    our eyes joined in when `ours`, their UVs on a black texel of the texture (`size` texels square)."""
+    our eyes joined in when `ours`, their UVs on a black texel of the texture (`size` texels square);
+the ball has `segments` around and up."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     image = bpy.data.images.new("skin", size, size)
     pixels = numpy.empty((size, size, 4), dtype=numpy.float32)
     pixels[:, :] = colour + (1.0,)
     pixels[0, 0] = BLACK + (1.0,)
     image.pixels.foreach_set(pixels.ravel())
-    skin = ball("Head", RADIUS, (middle, 0.0, 0.0), weight)
+    skin = ball("Head", RADIUS, (middle, 0.0, 0.0), weight, segments)
     skin.data.materials.append(material("skin", image))
     spots = [Vector((middle + EYE.x, EYE.y, EYE.z)), Vector((middle - EYE.x, EYE.y, EYE.z))]
     if paint is not None:
@@ -198,6 +206,25 @@ def speck(name, across, passes):
     return ok
 
 
+def coarse():
+    """Whether the check fails a dim patch COARSE_ACROSS texels square by the left eye on a coarse
+    texture over a low ball, whose texels lie farther apart than `fragments` groups by on the
+    surface (#1781): side by side on the texture, they are one spot."""
+    skin = build(None, False, 1.0, SKIN, 0.0, COARSE_SIZE, COARSE_SEGMENTS)
+    head = marked_eyes.Head(skin, "head")
+    rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+    nearest = numpy.sqrt(((texels - numpy.array(EYE)) ** 2).sum(axis=1)).argmin()
+    row, column = int(rows[nearest]), int(columns[nearest])
+    head.pixels[row:row + COARSE_ACROSS, column:column + COARSE_ACROSS, :3] = DIM
+    head.image.pixels.foreach_set(head.pixels.ravel())
+    found = marked_eyes.fragments(skin)
+    ok = bool(found)
+    (log.info if ok else log.error)("%s coarse_patch: %s at texel (%d, %d), should fail" % (
+        "ok" if ok else "FAIL", "found %s texels" % [mark.count for mark in found] if found else "nothing found",
+        row, column))
+    return ok
+
+
 def fits(name, paint, colour, beast):
     """Whether `fit` sets our left eye on the left mark and our right one on the right mark, on a
     ball centred on the marking's middle, painted with `paint`."""
@@ -239,6 +266,7 @@ def main():
         (log.info if ok else log.error)(line)
     for name, (across, passes) in SPECKS.items():
         passed = speck(name, across, passes) and passed
+    passed = coarse() and passed
     for name, (paint, colour, beast) in FITS.items():
         passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
