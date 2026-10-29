@@ -12,7 +12,7 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
-		"name": { "description": "The player-facing name.", "type": "string", "pattern": "\\S" },
+		"name": { "description": "The player-facing name.", "type": "string", "x-translate": true, "pattern": "\\S" },
 		"slot": {
 			"description": "The slot it goes into (owner, #223): ward (warding gear and totems), trap (spikes) or throw (berries).",
 			"enum": ["ward", "trap", "throw"]
@@ -42,8 +42,8 @@
 			"additionalProperties": false,
 			"required": ["entry", "gloss"],
 			"properties": {
-				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "pattern": "\\S" },
-				"gloss": { "description": "What its name means, hand-written (#959).", "type": "string", "pattern": "\\S" }
+				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "x-translate": true, "pattern": "\\S" },
+				"gloss": { "description": "What its name means, hand-written (#959).", "type": "string", "x-translate": true, "pattern": "\\S" }
 			}
 		}
 	},

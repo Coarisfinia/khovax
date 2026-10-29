@@ -588,6 +588,11 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   until hosting is solved (#75). Rules run in the deterministic simulation for 1–4 players, input
   reaches it only as per-player commands, nothing assumes a single player (no one "the player", no
   shared camera), and what a player obtains goes into their own profile.
+- **Every text the player reads is translatable** (owner's pick on #1608): gettext, with the
+  English text as the msgid. A script shows its texts through `tr()` with a literal string, a
+  content field the player reads is marked `"x-translate": true` in its schema, and
+  `translations/khovax.pot` is written again after a text changes (README, "Translations"); CI
+  fails when it's out of date.
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.

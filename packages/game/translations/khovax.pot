@@ -1,0 +1,702 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: khovax\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: realms/ardvaun.md
+msgid "The high land at the heart of the world, where the settlers made their first camps and named the ground in Land-speech. Every realm's name ends in -vaun, the Land-speech word for land."
+msgstr ""
+
+#: realms/ardvaun.md
+msgid "high land, heart land"
+msgstr ""
+
+#: slices/blueprints/data/brekhal_varn.jsonc
+msgid "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass."
+msgstr ""
+
+#: slices/blueprints/data/brekhal_varn.jsonc
+msgid "the broken pass"
+msgstr ""
+
+#: slices/blueprints/data/dhorvone_stolm.jsonc
+msgid "A ruined castle west of Morwe Wudhen, named in Land-speech with a harsh dh, r and v. Stolm is a stronghold. Once corruption takes it, the beast-tongue seeps into its name: Dhyrvone Stolmm."
+msgstr ""
+
+#: slices/blueprints/data/dhorvone_stolm.jsonc
+msgid "the fallen stronghold"
+msgstr ""
+
+#: slices/blueprints/data/edhra_tewk.jsonc
+msgid "A faction outpost southeast of Lumwen Hoal, named in plain middle sounds of Land-speech for a plain place. Tewk is a camp."
+msgstr ""
+
+#: slices/blueprints/data/edhra_tewk.jsonc
+msgid "the plain camp"
+msgstr ""
+
+#: slices/blueprints/data/hrovumel_stolm.jsonc
+msgid "A stronghold sunk into the rock, shut for so long that nobody living remembers its halls, until a guide opens the way. Its name is hushed: a breathy hr, then round o, u and soft m and l, like air moving through a closed hall; Stolm is a stronghold."
+msgstr ""
+
+#: slices/blueprints/data/hrovumel_stolm.jsonc
+msgid "the hushed stronghold"
+msgstr ""
+
+#: slices/blueprints/data/hrunde_orl.jsonc
+msgid "A ring where a single beast waits to be fought. Its name is blunt and drumming, hr and nd; Orl is a ring."
+msgstr ""
+
+#: slices/blueprints/data/hrunde_orl.jsonc
+msgid "the drumming ring"
+msgstr ""
+
+#: slices/blueprints/data/ivenwhal_wudhen.jsonc
+msgid "A wood southeast of the foot of Brekhal Varn, its moss soaked violet with mana and ringed by gems taller than a person, where the Vynakiir den, wolves whose mana has deepened into the arcane. Its name hums in v and n like the mana in its ground, with the breathy wh of the settlers' tongue; Wudhen is their word for a wood."
+msgstr ""
+
+#: slices/blueprints/data/ivenwhal_wudhen.jsonc
+msgid "the humming wood"
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "The clearing where the settlers first made camp, named in Land-speech, the tongue they named the ground in. Its soft sounds, l, m and w, fit a gentle home; Hoal is the Land-speech word every clearing ends in."
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "the soft clearing"
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "Lumwen Hoal, corrupted. The beast-tongue has crept into the land and into its name: a y where its first vowel was, and its last sound doubled, as only beast-calls have them. Purifying it gives the clearing back its own name."
+msgstr ""
+
+#: slices/blueprints/data/lumwen_hoal.jsonc
+msgid "the soft clearing, gone wild"
+msgstr ""
+
+#: slices/blueprints/data/morwe_wudhen.jsonc
+msgid "A deep wood north of Lumwen Hoal. The settlers gave it dark, back vowels and the breathy dh of their tongue; Wudhen is their word for a wood."
+msgstr ""
+
+#: slices/blueprints/data/morwe_wudhen.jsonc
+msgid "the dark wood"
+msgstr ""
+
+#: slices/blueprints/data/senwel_sael.jsonc
+msgid "A small, quiet ground by a still pool, where only the world's testers walk. Soft sounds for a calm place; Sael is still water."
+msgstr ""
+
+#: slices/blueprints/data/senwel_sael.jsonc
+msgid "the quiet pool"
+msgstr ""
+
+#: slices/blueprints/data/thudren_orl.jsonc
+msgid "A wide ring teeming with wild monsters, where the world's testers measure how much it can bear. Its name thuds like many feet; Orl is a ring."
+msgstr ""
+
+#: slices/blueprints/data/thudren_orl.jsonc
+msgid "the thronging ring"
+msgstr ""
+
+#: slices/credits/ui/credits_tab.tscn
+msgid "Report a bug"
+msgstr ""
+
+#: slices/credits/ui/credits_tab.tscn
+msgid "Error log: save it as a file"
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "What lies ahead?"
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "I'll find my own way."
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "I'll take a look."
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "Careful where you step. The ground here hasn't been charted yet."
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "The ${FACTION:amvrel_velmarai} pay well for anyone who walks the wild places of ${REALM:ardvaun} and comes back to tell of them."
+msgstr ""
+
+#: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
+msgid "${PLACE:lumwen_hoal}, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still."
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "A guild of mapmakers and wayfinders who walk the wild places and bring back what they saw, and who pay well for anyone who does the same. Its name is Oath-speech: Amvrel, the oath word of a fellowship of a craft, then Velmarai, those who chart."
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "the guild of those who chart"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Amvrel Velmarai"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Betrayer"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Struck from the Ledger"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Uncharted"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Marked Hazard"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Edge of the Chart"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Apprentice Charter"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Wayfinder"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Pathmaker"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Master Cartographer"
+msgstr ""
+
+#: slices/factions/data/amvrel_velmarai.jsonc
+msgid "Charted in Legend"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "An order of tamers who hold that a monster is made to serve, and that the strongest will should rule the wild. They keep their beasts in iron discipline and look down on anyone who asks a monster's leave. Its name is Oath-speech: Odun, the oath word of an order sworn to a cause, then Kragothai, those who bend."
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "the order of those who bend"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Odun Kragothai"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Defiant"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Unbroken Foe"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Marked for Breaking"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Enemy of the Order"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Sworn Nemesis"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Sworn Initiate"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Taskbearer"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Warden of Chains"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Iron Marshal"
+msgstr ""
+
+#: slices/factions/data/odun_kragothai.jsonc
+msgid "Hand of Dominion"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "A league of families who walk beside wild monsters rather than ahead of them, and who count a monster's trust as kinship. They shelter the hurt, keep the old herding paths open and turn away anyone who rules by fear. Its name is Oath-speech: Sorn, the oath word of a league of bound kin, then Lumawenai, those who walk together."
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "the league of those who walk together"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Sorn Lumawenai"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Stranger at the Gate"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Unwelcome"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Bondbreaker"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Shunned"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Cast Out"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Kindred Guest"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Bound Friend"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Hearthkeeper"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Elder of the Bond"
+msgstr ""
+
+#: slices/factions/data/sorn_lumawenai.jsonc
+msgid "Heart of the League"
+msgstr ""
+
+#: slices/gear/data/berry_pouch.jsonc
+msgid "Berry pouch"
+msgstr ""
+
+#: slices/gear/data/thorn_spikes.jsonc
+msgid "Thorn spikes"
+msgstr ""
+
+#: slices/gear/data/vis_omera.jsonc
+msgid "A ward charm that binds itself to whoever holds it. Worn in the ward slot, it keeps every monster its bearer carries close, so their passives help even while they wait in reserve, as long as they still stand. The name is Rune-speech, the tongue of unique things: the ward rune Vis, then omera, the charm's own name."
+msgstr ""
+
+#: slices/gear/data/vis_omera.jsonc
+msgid "the ward that keeps them near"
+msgstr ""
+
+#: slices/gear/data/vis_omera.jsonc
+msgid "Vis'omera"
+msgstr ""
+
+#: slices/gear/data/warding_charm.jsonc
+msgid "Warding charm"
+msgstr ""
+
+#: slices/menu/ui/character_tab.tscn
+msgid "Name"
+msgstr ""
+
+#: slices/menu/ui/character_tab.tscn
+msgid "Name your character"
+msgstr ""
+
+#: slices/menu/ui/character_tab.tscn
+msgid "Personal color"
+msgstr ""
+
+#: slices/menu/ui/character_tab.tscn
+msgid "Auto"
+msgstr ""
+
+#: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
+msgid "A guide of Brekhal Varn, of the Tormaesk kin, who keep the old ways through the rock. Only a Tormaesk can shift the boulders sealing the passage into Hrovumel Stolm, and Ausvren waits on the pass for someone to walk there with. The name is Hearth-speech, the everyday tongue: the given name Ausvren, soft as breath, then vo Tormaesk, of their kin, a name as hard as the stone they keep."
+msgstr ""
+
+#: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
+msgid "Ausvren, of the Tormaesk kin"
+msgstr ""
+
+#: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
+msgid "Ausvren vo Tormaesk"
+msgstr ""
+
+#: slices/npcs/data/people/teska_na_amvrel.jsonc
+msgid "A scout of the Amvrel Velmarai who walks the uncharted wilds ahead of their charts and greets the newcomers at the edge of Lumwen Hoal. The name is Hearth-speech, the everyday tongue: the given name Teska, then na Amvrel, sworn to the guild by its oath word."
+msgstr ""
+
+#: slices/npcs/data/people/teska_na_amvrel.jsonc
+msgid "Teska, sworn to the guild"
+msgstr ""
+
+#: slices/npcs/data/people/teska_na_amvrel.jsonc
+msgid "Teska na Amvrel"
+msgstr ""
+
+#: slices/npcs/data/people/teska_na_amvrel.jsonc
+msgid "No sense both of us waiting. I'll go on and open the way; catch up when you can."
+msgstr ""
+
+#: slices/quests/data/first_domination.jsonc
+msgid "Dominate your first monster"
+msgstr ""
+
+#: slices/quests/data/guild_charts_morwe_wudhen.jsonc
+msgid "Chart Morwe Wudhen for the ${FACTION:amvrel_velmarai}"
+msgstr ""
+
+#: slices/quests/data/guild_holds_edhra_tewk.jsonc
+msgid "Hold Edhra Tewk for the ${FACTION:amvrel_velmarai}"
+msgstr ""
+
+#: slices/quests/data/lumwen_hoal_fork.jsonc
+msgid "Pond or thicket"
+msgstr ""
+
+#: slices/quests/data/pond_chest.jsonc
+msgid "The chest by the pond"
+msgstr ""
+
+#: slices/quests/data/pup_crystal.jsonc
+msgid "A crystal for a ${MONSTER:vynnimu}"
+msgstr ""
+
+#: slices/quests/data/three_ombulumo.jsonc
+msgid "Dominate three ${MONSTER:ombulumo}"
+msgstr ""
+
+#: slices/quests/data/tormaesk_escort.jsonc
+msgid "The way into ${PLACE:hrovumel_stolm}"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
+msgid "The gurgle of a wet hide rolling off a blow. Dominators said it of anything that shrugs off harm and stays damp and whole."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
+msgid "slick, it slides off"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
+msgid "The ${MONSTER:ombulumo}'s wet skin shrugs off part of every hit."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bolmu_wolmu.jsonc
+msgid "Bolmu-wolmu"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bulum_bolom.jsonc
+msgid "The call the first dominators shouted to send their beast leaping onto a foe. It mimics the landing: a deep thud, then the wet slap of moss settling."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bulum_bolom.jsonc
+msgid "thud, then splash"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bulum_bolom.jsonc
+msgid "The ${MONSTER:ombulumo} leaps and lands on its target with all its soggy weight."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_bulum_bolom.jsonc
+msgid "Bulum-bolom"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_lombu_bombu.jsonc
+msgid "The slow, soft breath of a resting beast, its moss swelling with every draw. Dominators said it over a wounded beast they left to sleep it off."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_lombu_bombu.jsonc
+msgid "rest, and grow back"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_lombu_bombu.jsonc
+msgid "The ${MONSTER:ombulumo}'s moss grows back over its wounds, and it slowly heals while it rests."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_lombu_bombu.jsonc
+msgid "Lombu-bombu"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_mulbo_lulbo.jsonc
+msgid "A low hum the first dominators learned from their beasts, which hum it as their moss settles. Hummed back, it keeps a dominator's rings calm and slow to fade."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_mulbo_lulbo.jsonc
+msgid "hush, soft moss"
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_mulbo_lulbo.jsonc
+msgid "While the ${MONSTER:ombulumo} is out, the player's rings hold a little longer."
+msgstr ""
+
+#: slices/species/data/abilities/ombulumo_mulbo_lulbo.jsonc
+msgid "Mulbo-lulbo"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
+msgid "The scrape of talons on stone as a cornered beast readies to spring. Dominators said it of anything that fights hardest once it bleeds."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
+msgid "cornered, and quicker"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
+msgid "The ${MONSTER:tikazzir} strikes faster the more it's hurt."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kazri_tazri.jsonc
+msgid "Kazri-tazri"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kirzi_tirzi.jsonc
+msgid "The chirp a beast gives when it rides the wind at its dominator's back, and the dominators' word for a light step that walks faster than it should."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kirzi_tirzi.jsonc
+msgid "quick, quick, onward"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kirzi_tirzi.jsonc
+msgid "While the ${MONSTER:tikazzir} is out, the player walks a little faster."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_kirzi_tirzi.jsonc
+msgid "Kirzi-tirzi"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_tizik_tazak.jsonc
+msgid "The sharp two-note shriek of a diving beast: the high note as it folds its wings, the low one as it strikes. Dominators shouted it to send their beast down."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_tizik_tazak.jsonc
+msgid "fold, then strike"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_tizik_tazak.jsonc
+msgid "The ${MONSTER:tikazzir} folds its wings and drops on its target in a gust."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_tizik_tazak.jsonc
+msgid "Tizik-tazak"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_zirki_kirki.jsonc
+msgid "The flick of wings slipping aside. Dominators called it after a beast that was never where the blow landed."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_zirki_kirki.jsonc
+msgid "flit, not here"
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_zirki_kirki.jsonc
+msgid "The ${MONSTER:tikazzir} dodges more often, being so light."
+msgstr ""
+
+#: slices/species/data/abilities/tikazzir_zirki_kirki.jsonc
+msgid "Zirki-kirki"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_kynri_vynri.jsonc
+msgid "The whine a beast gives when its prey stands ringed and still. Dominators said it of a ring that closes before the beast inside can think to push."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_kynri_vynri.jsonc
+msgid "still now, still"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_kynri_vynri.jsonc
+msgid "While the ${MONSTER:vynakiir} is out, the player's rings seal a little faster."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_kynri_vynri.jsonc
+msgid "Kynri-vynri"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_nyvik_ryvik.jsonc
+msgid "The ring of a struck crystal. Dominators called it after a beast whose brow took a blow and only sang."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_nyvik_ryvik.jsonc
+msgid "it rings, and holds"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_nyvik_ryvik.jsonc
+msgid "The crystal on the ${MONSTER:vynakiir}'s brow turns aside part of every mana or arcane strike."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_nyvik_ryvik.jsonc
+msgid "Nyvik-ryvik"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_rynka_vynka.jsonc
+msgid "The low growl a pack leader keeps up while it stands over its own. Dominators heard it at their side and held their ground."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_rynka_vynka.jsonc
+msgid "stand, I am here"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_rynka_vynka.jsonc
+msgid "While the ${MONSTER:vynakiir} is out, the player takes a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_rynka_vynka.jsonc
+msgid "Rynka-vynka"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_vunnu_vinni.jsonc
+msgid "The low hum a beast gives as its crown closes on its prey, then the high snap of its jaw. Dominators hummed it to send their beast to hold a foe still while they walked their ring around it."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_vunnu_vinni.jsonc
+msgid "hum, hold, snap"
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_vunnu_vinni.jsonc
+msgid "The ${MONSTER:vynakiir} hums and closes its crown around its target, holding it still: it can't move or strike until the crown lets go with a snap of the jaw."
+msgstr ""
+
+#: slices/species/data/abilities/vynakiir_vunnu_vinni.jsonc
+msgid "Vunnu-vinni"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_mynu_vynu.jsonc
+msgid "The whimper of a pup that keeps close at its packmate's heels. Dominators hummed it to a beast that stays at their side and takes the edge off every blow meant for them."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_mynu_vynu.jsonc
+msgid "close, keep close"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_mynu_vynu.jsonc
+msgid "While the ${MONSTER:vynnimu} is out, it keeps close at the player's heels, and they take a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_mynu_vynu.jsonc
+msgid "Mynu-vynu"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nimmi_nummu.jsonc
+msgid "The yip a pup gives as it crouches, then the soft thump as it lands on what it pounced on. Dominators said it of any small beast that throws its whole weight at a foe twice its size."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nimmi_nummu.jsonc
+msgid "yip, then thump"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nimmi_nummu.jsonc
+msgid "The ${MONSTER:vynnimu} yips, crouches and pounces on its target, paws first."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nimmi_nummu.jsonc
+msgid "Nimmi-nummu"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nivvu_mivvu.jsonc
+msgid "The squeak of a pup knocked over that rolls and springs back up. Dominators said it of a beast too soft and round to be knocked down for long."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nivvu_mivvu.jsonc
+msgid "roll over, up again"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nivvu_mivvu.jsonc
+msgid "The ${MONSTER:vynnimu}'s soft, round body rolls with every might strike and takes less of it."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_nivvu_mivvu.jsonc
+msgid "Nivvu-mivvu"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_vummi_nummi.jsonc
+msgid "The soft huffing of a pup sniffing at the dark. Dominators said it as they crept past sleeping beasts behind a nose that knew the way."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_vummi_nummi.jsonc
+msgid "sniff, hush, on"
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_vummi_nummi.jsonc
+msgid "While the ${MONSTER:vynnimu} is out, the player's steps wake sleeping monsters less often."
+msgstr ""
+
+#: slices/species/data/abilities/vynnimu_vummi_nummi.jsonc
+msgid "Vummi-nummi"
+msgstr ""
+
+#: slices/species/data/ombulumo.jsonc
+msgid "A round, soggy creature of still water that sits half-sunk in the shallows and booms at dusk, slow to rouse and hard to shift once it has. Its name is a beast-call, the sound it makes: round, soft b, m and l, and its o's and u's as deep as the boom."
+msgstr ""
+
+#: slices/species/data/ombulumo.jsonc
+msgid "the low boom from the shallows"
+msgstr ""
+
+#: slices/species/data/ombulumo.jsonc
+msgid "Ombulumo"
+msgstr ""
+
+#: slices/species/data/tikazzir.jsonc
+msgid "A small, quick flier with sharp eyes that darts low between the reeds and clicks as it turns, gone before it can be struck. Its name is a beast-call, the sound it makes: the clicks of its turns in t and k, and the buzz of its wings in the doubled z."
+msgstr ""
+
+#: slices/species/data/tikazzir.jsonc
+msgid "the click and buzz in the reeds"
+msgstr ""
+
+#: slices/species/data/tikazzir.jsonc
+msgid "Tikazzir"
+msgstr ""
+
+#: slices/species/data/vynakiir.jsonc
+msgid "A lean wolf of the high passes with a crystal on its brow and a crown of wisps turning above its head: a mana pup grown, whose crystal has hardened and whose mana has deepened into the arcane. It hunts by holding its prey still: it hums low while its crown closes on it, then snaps. Its name is a beast-call, the sound it makes: the hum in v, n and y, the howl that carries in its long ii, and the snap of its jaw in the k."
+msgstr ""
+
+#: slices/species/data/vynakiir.jsonc
+msgid "the hum that holds, then the howl"
+msgstr ""
+
+#: slices/species/data/vynakiir.jsonc
+msgid "Vynakiir"
+msgstr ""
+
+#: slices/species/data/vynnimu.jsonc
+msgid "A round, soft-footed pup of the Vynakiir, with a crystal only budding on its brow and a few wisps already drifting about its head, the start of the crown it will wear. It tumbles after its packmates through the mana moss and pounces on whatever moves, and in time it ascends into a Vynakiir, its mana deepening into the arcane. Its name is a beast-call, its whimper: the hum it shares with its elders in v, n and y, gone soft and small in the doubled n and the round u."
+msgstr ""
+
+#: slices/species/data/vynnimu.jsonc
+msgid "the little hum that will howl"
+msgstr ""
+
+#: slices/species/data/vynnimu.jsonc
+msgid "Vynnimu"
+msgstr ""
+
+#: slices/survey/ui/survey_tab.tscn
+msgid "Zoom out"
+msgstr ""
+
+#: slices/survey/ui/survey_tab.tscn
+msgid "Zoom in"
+msgstr ""

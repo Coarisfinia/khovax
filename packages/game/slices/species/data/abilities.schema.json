@@ -13,16 +13,16 @@
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
 		"kind": { "enum": ["special", "player_passive", "self_passive"] },
-		"name": { "description": "What the player reads.", "type": "string", "minLength": 1 },
-		"description": { "description": "What it does, for the player; it may name content with text tags, like ${MONSTER:ombulumo} (#733, TextTags).", "type": "string", "minLength": 1 },
+		"name": { "description": "What the player reads.", "type": "string", "x-translate": true, "minLength": 1 },
+		"description": { "description": "What it does, for the player; it may name content with text tags, like ${MONSTER:ombulumo} (#733, TextTags).", "type": "string", "x-translate": true, "minLength": 1 },
 		"codex": {
 			"description": "Its codex entry (#959): what the player reads on its codex page.",
 			"type": "object",
 			"additionalProperties": false,
 			"required": ["entry", "gloss"],
 			"properties": {
-				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
-				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"thud, then splash\".", "type": "string", "minLength": 1 }
+				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "x-translate": true, "minLength": 1 },
+				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"thud, then splash\".", "type": "string", "x-translate": true, "minLength": 1 }
 			}
 		},
 		"power": { "description": "A special's: how much of its species' strength one strike deals, in thousandths (#33, #410): 3000 is three times it.", "type": "integer", "minimum": 1, "maximum": 1000000000 },

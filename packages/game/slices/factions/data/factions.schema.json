@@ -11,7 +11,7 @@
 			"type": "array",
 			"minItems": 5,
 			"maxItems": 5,
-			"items": { "type": "string", "pattern": "\\S" }
+			"items": { "type": "string", "x-translate": true, "pattern": "\\S" }
 		}
 	},
 	"properties": {
@@ -20,15 +20,15 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
 		},
-		"name": { "description": "The player-facing name.", "type": "string", "pattern": "\\S" },
+		"name": { "description": "The player-facing name.", "type": "string", "x-translate": true, "pattern": "\\S" },
 		"codex": {
 			"description": "Its codex entry (#959): what the player reads on its lexicon page.",
 			"type": "object",
 			"additionalProperties": false,
 			"required": ["entry", "gloss"],
 			"properties": {
-				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "minLength": 1 },
-				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the guild of those who chart\".", "type": "string", "minLength": 1 }
+				"entry": { "description": "A short text about it and where its name comes from.", "type": "string", "x-translate": true, "minLength": 1 },
+				"gloss": { "description": "What its name means, hand-written (#959), e.g. \"the guild of those who chart\".", "type": "string", "x-translate": true, "minLength": 1 }
 			}
 		},
 		"symbol": {
