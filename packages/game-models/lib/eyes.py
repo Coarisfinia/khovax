@@ -34,21 +34,22 @@ GROWS, MARGIN = 8, 0.03
 MIRROR = "mirrored"
 
 def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0,
-        pupil=(0.16, 0.55), lid=None):
+        pupil=(0.16, 0.55), lid=None, middle=0.0):
     """An eye on the body near `guess`, of radius `size`, looking between the surface's normal
     there and `forward`. `brow` angles the ridge over it down toward the snout (radians), and
     `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
     whose top edge stays above the eye. `pupil` is the pupil's (width, height) as shares of the
     eye: a predator's upright slit by default, wide and round for a gentler creature.
     `mats` needs "dark", "glow" and "skin" (the brow). Returns its pieces, all weighted to `bone`,
-    and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it)."""
+    and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it). An eye
+    left (+X) of the plane x = `middle`, the head's middle, is a left one."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
     normal = normal if found else Vector(forward)
     looking = (normal * 0.55 + Vector(forward).normalized() * 0.45).normalized()
     # pointing() builds a rotation, never a mirror, so the eye's own X runs toward the outer
     # corner on the left (+X) side and toward the inner corner on the right: `outer` turns every
     # sideways offset and angle around on the right, so the two eyes mirror each other exactly.
-    outer = 1.0 if location.x >= 0.0 else -1.0
+    outer = 1.0 if location.x >= middle else -1.0
     turn = parts.pointing(looking).to_matrix() @ Matrix.Rotation(tilt * outer, 3, "Z")
     center = location - normal * size * 0.35
 
@@ -160,18 +161,19 @@ def clipped(pieces):
     return worst
 
 
-def mirrored(pieces):
-    """The right eye of a left one `eyes.eye` built ("Eye.L.*"), mirrored across X (parts.mirrored),
-    its lid on the right lid's bone, hinged on the right eye's own sideways axis."""
+def mirrored(pieces, middle=0.0):
+    """The right eye of a left one `eyes.eye` built ("Eye.L.*"), mirrored across the plane
+    x = `middle`, the head's middle (parts.mirrored), its lid on the right lid's bone, hinged on
+    the right eye's own sideways axis."""
     made = []
     for piece in pieces:
-        twin = parts.mirrored(piece, piece.name.replace(".L.", ".R."))
+        twin = parts.mirrored(piece, piece.name.replace(".L.", ".R."), middle)
         if "hinge" in twin:
             # Its shape is the left lid's mirrored, which `clipped` measures there.
             twin[MIRROR] = True
             twin.vertex_groups[LID + "L"].name = LID + "R"
             x, y, z = piece["hinge"]
-            twin["hinge"] = (-x, y, z)
+            twin["hinge"] = (2.0 * middle - x, y, z)
             # The right eye's own X runs toward its inner corner (eye), so its axis is the left
             # one's mirrored and turned around.
             x, y, z = piece["axis"]

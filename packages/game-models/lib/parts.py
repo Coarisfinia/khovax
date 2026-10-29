@@ -17,10 +17,10 @@ def pointing(direction, up=(0.0, 0.0, 1.0)):
     return Matrix((side, direction.cross(side), direction)).transposed().to_euler()
 
 
-def mirrored(obj, name):
-    """A twin of `obj` (a part with its rotation and scale applied) mirrored across X, named
-    `name`, with the same material and bone weights: a part found on a body's surface on one
-    side, whose other side a reduced mesh leaves a hair off its mirror image."""
+def mirrored(obj, name, middle=0.0):
+    """A twin of `obj` (a part with its rotation and scale applied) mirrored across the plane
+    x = `middle`, named `name`, with the same material and bone weights: a part found on a body's
+    surface on one side, whose other side a reduced mesh leaves a hair off its mirror image."""
     if not _placed_only(obj):
         raise ValueError("%s: mirrored takes a part whose rotation and scale are applied" % obj.name)
     twin = obj.copy()
@@ -29,8 +29,10 @@ def mirrored(obj, name):
     bpy.context.collection.objects.link(twin)
     twin.data.transform(Matrix.Scale(-1.0, 4, (1.0, 0.0, 0.0)))
     twin.data.flip_normals()
+    # Across x = 0 as -x alone, so a part at x = 0 keeps its -0.0 and a rebuild its bytes.
+    x = 2.0 * middle - obj.location.x if middle else -obj.location.x
     # Set whole, so it holds before the scene next updates (as `location` alone wouldn't).
-    twin.matrix_world = Matrix.Translation((-obj.location.x, obj.location.y, obj.location.z))
+    twin.matrix_world = Matrix.Translation((x, obj.location.y, obj.location.z))
     return twin
 
 

@@ -321,6 +321,7 @@ jobs:
 
       - name: "🧪 Test the painted-eye check on a ball"
         # Painted black or glowing eyes fail it, and a beast's own pale or hue-bounded ones (#1719);
+        # and `fit` sets our eyes on the marks, also off the middle (#1735);
         # a plain texture and our own eyes pass (#1688).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 2

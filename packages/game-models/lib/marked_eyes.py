@@ -10,7 +10,8 @@ calls `replace` on its adopted rig and skin, which:
   the colour of the skin around it, blended from that ring by distance, so no painted eye shows
   past ours;
 - **fits our eyes** there (`fit`, lib/eyes.py): their position, size, height and spacing from the
-  marks, mirrored, each with a lid on a bone of its own (`eyes.Lids`), joined into the skin.
+  marks, mirrored across the same middle `find` paired them across (the `Marked`'s, #1735), each
+  with a lid on a bone of its own (`eyes.Lids`), joined into the skin.
 
 The lids shut in Sleep, over Faint's fall and in a blink now and then in Idle: `replace` returns
 the `eyes.Lids`, whose `shut` goes into `clips.animate`'s overlays, and the eye points for
@@ -378,43 +379,46 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, **shape):
+def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
-    position and size the mean of the left mark's and the right one's mirrored, so the two
-    mirror each other exactly (eyes.mirrored); as wide as the marks, as high against that as
+    position and size the mean of the left mark's and the right one's mirrored across the plane
+    x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
+    other exactly across it (eyes.mirrored); as wide as the marks, as high against that as
     ALMOND allows. `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
     `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
     left, right = marks
-    middle = (left.middle + right.middle * (-1.0, 1.0, 1.0)) / 2.0
+    spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
     width = (left.width + right.width) / 2.0
     height = (left.height + right.height) / 2.0
     almond = min(max(height / width, ALMOND[0]), ALMOND[1])
     pieces = []
-    for piece in eyes.eye(skin, "Eye.L", tuple(middle), forward, width / 2.0, mats, bone, almond=almond,
-                          lid=eyes.LID + "L", **shape):
+    for piece in eyes.eye(skin, "Eye.L", tuple(spot), forward, width / 2.0, mats, bone, almond=almond,
+                          lid=eyes.LID + "L", middle=middle, **shape):
         if not ridge and piece.name.endswith(".brow"):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, width / 2.0)
-    return pieces + eyes.mirrored(pieces)
+    clear(skin, pieces, width / 2.0, middle)
+    return pieces + eyes.mirrored(pieces, middle)
 
 
-def buried(skin, pieces):
+def buried(skin, pieces, middle=0.0):
     """The share of the vertices on the face of an eye's front (its iris and pupil among
     `pieces`, the halves facing the way it looks) that lie under `skin`'s surface: the head's
-    skin cutting across the eye (#1690). For a left eye, the worse of it and its mirror image on
-    the right (eyes.mirrored makes the right eye so), since a generated head is rarely symmetric."""
+    skin cutting across the eye (#1690). For a left eye (left of the plane x = `middle`), the worse
+    of it and its mirror image across that plane on the right (eyes.mirrored makes the right eye
+    so), since a generated head is rarely symmetric."""
     look = eyes.look(pieces)
     spots = []
     for piece in (piece for piece in pieces if piece.name.endswith(FRONT)):
-        middle = piece.matrix_world.translation
+        centre = piece.matrix_world.translation
         # Its face toward the way the eye looks: the side of it that shows.
         spots += [spot for spot in (piece.matrix_world @ vertex.co for vertex in piece.data.vertices)
-                  if (spot - middle).dot(look) > 0.0]
-    if middle.x <= 0.0:
+                  if (spot - centre).dot(look) > 0.0]
+    if centre.x <= middle:
         return _under(skin, spots)
-    return max(_under(skin, spots), _under(skin, [Vector((-spot.x, spot.y, spot.z)) for spot in spots]))
+    return max(_under(skin, spots),
+               _under(skin, [Vector((2.0 * middle - spot.x, spot.y, spot.z)) for spot in spots]))
 
 
 def _under(skin, spots):
@@ -426,14 +430,15 @@ def _under(skin, spots):
     return under / len(spots)
 
 
-def clear(skin, pieces, size):
+def clear(skin, pieces, size, middle=0.0):
     """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
     of its front and its mirror image's (buried): first up to OUT of its size further out along
     the way it looks, in STEPs, the nearest such spot of the least. When that still leaves more
     than BURIED covered (a head that isn't symmetric can bury the right eye), it tries up to SHIFT
     of its size across the head too (sideways and up or down), the nearest spot within BURIED.
-    So on a curved head or a sculpted socket the skin doesn't cut across either eye. Raises when
-    more than BURIED stays covered."""
+    So on a curved head or a sculpted socket the skin doesn't cut across either eye. The right
+    eye is the left one's mirror image across the plane x = `middle`. Raises when more than
+    BURIED stays covered."""
     look = eyes.look(pieces)
     side = look.cross(Vector((0.0, 0.0, 1.0))).normalized()
     up = side.cross(look).normalized()
@@ -448,7 +453,7 @@ def clear(skin, pieces, size):
             if "hinge" in piece:
                 piece["hinge"] = tuple(Vector(piece["hinge"]) + shift)
         bpy.context.view_layer.update()
-        return buried(skin, pieces)
+        return buried(skin, pieces, middle)
 
     out = range(round(OUT / STEP) + 1)
     best = min((place((step, 0, 0)), (step, 0, 0)) for step in out)
@@ -481,7 +486,7 @@ def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
     around = repaint(head, marks, marked)
     if "skin" not in mats:
         mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
-    pieces = fit(skin, marks, mats, bone, **shape)
+    pieces = fit(skin, marks, mats, bone, middle=marked.middle, **shape)
     points = {}
     for side in ("L", "R"):
         mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]
