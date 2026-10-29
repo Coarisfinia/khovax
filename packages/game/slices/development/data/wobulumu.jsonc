@@ -1,0 +1,27 @@
+// Wobulumu's development web (#677, #1737): a tadpole, it leans into its quick wriggle and grows
+// toward its elders' bulk. Its shifts and its stronger special are placeholders to tune (#960).
+{
+	"species": "wobulumu",
+	// Around the web: each direction sits beside the ones before and after it, the last beside the
+	// first.
+	"directions": [
+		{ "id": "slippery", "nodes": [
+			{ "leaning": { "speed": 50 } },
+			{ "leaning": { "speed": 60 } },
+			{ "leaning": { "speed": 80, "hp": -30 } }
+		] },
+		{ "id": "plump", "nodes": [
+			{ "leaning": { "hp": 50 } },
+			{ "leaning": { "hp": 60, "speed": -20 } },
+			{ "leaning": { "hp": 80, "strength": -30 } }
+		] },
+		{ "id": "bold", "nodes": [
+			{ "leaning": { "strength": 50 } },
+			{ "leaning": { "strength": 60, "hp": 20 } },
+			{ "leaning": { "strength": 80, "speed": -30 } },
+			{ "special": 200 }
+		] }
+	],
+	"bridges": [["slippery_1", "plump_1"], ["plump_2", "bold_2"]],
+	"portals": [["slippery_3", "bold_3"]]
+}

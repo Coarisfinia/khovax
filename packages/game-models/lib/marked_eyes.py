@@ -193,14 +193,16 @@ class Head:
                               dtype=float) / STEPS
         self.points = numpy.einsum("ws,tsk->twk", weights, self.spots).reshape(-1, 3)
         self.normals = numpy.repeat(normals, len(weights), axis=0)
-        self.colours = self.look(numpy.einsum("ws,tsk->twk", weights, self.uvs).reshape(-1, 2))
+        # Each sample's texel (rows, columns), which its colour is read from.
+        self.texels = self.texel(numpy.einsum("ws,tsk->twk", weights, self.uvs).reshape(-1, 2))
+        self.colours = self.pixels[self.texels[0], self.texels[1], :3].astype(float)
 
-    def look(self, uv):
-        """The texture's colour (sRGB) at each of `uv`, its nearest texel."""
+    def texel(self, uv):
+        """The nearest texel to each of `uv`: (rows, columns)."""
         height, width = self.pixels.shape[:2]
         columns = numpy.clip(numpy.floor(uv[:, 0] * width), 0, width - 1).astype(numpy.int64)
         rows = numpy.clip(numpy.floor(uv[:, 1] * height), 0, height - 1).astype(numpy.int64)
-        return self.pixels[rows, columns, :3].astype(float)
+        return rows, columns
 
 
 class Mark:
@@ -362,7 +364,13 @@ def repaint(head, marks, marked=DARK):
         near = (reach.reshape(len(head.spots), -1) <= RING_IN).any(axis=1)
         rows, columns, spots = _texels(head, near)
         inside = mark.radii(spots) <= FILL
-        rows, columns, spots = rows[inside], columns[inside], spots[inside]
+        # A sliver of a triangle whose UVs straddle the texture (a seam's) reads texels far from
+        # its own island, which the triangles' fill misses (#1737): the texel each sample within
+        # FILL reads is painted over too, so no sample there reads the mark any more.
+        sampled = reach <= FILL
+        rows = numpy.concatenate([rows[inside], head.texels[0][sampled]])
+        columns = numpy.concatenate([columns[inside], head.texels[1][sampled]])
+        spots = numpy.concatenate([spots[inside], head.points[sampled]])
         # A CHUNK of texels at a time, so the texels-by-ring weights stay small on a large texture.
         for start in range(0, len(spots), CHUNK):
             offset = spots[start:start + CHUNK, None, :] - ring_points[None, :, :]

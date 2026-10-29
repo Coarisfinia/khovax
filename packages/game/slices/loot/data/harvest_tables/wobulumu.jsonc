@@ -1,0 +1,11 @@
+// A placeholder harvest table (#687, #1737): what a felled Wobulumu drops, apart from what
+// dominating it gives. Now and then a little moss off its back, else a blank, which rolls on the
+// instance's table instead.
+{
+	"id": "wobulumu",
+	"kind": "harvest",
+	"entries": [
+		{ "item": "moss", "chance": 400, "min": 1, "max": 1 }, // 40 %
+		{ "blank": true, "chance": 600 }
+	]
+}
