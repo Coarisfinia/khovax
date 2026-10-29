@@ -15,7 +15,9 @@ A prop (a gate, an egg: anything that doesn't walk) stands on its hex like a mon
 judged against it the same way, never let off (the owner, on #1641, after a gate twice a hex's
 width slipped past through an exemption): at rest with the regular monster's padding, and in its
 clips never past the hex's edge, since it neither moves on nor strikes into the tile beside it.
-`PROP` holds its limits, and `limits` tells which a model gets.
+`PROP` holds its limits, and `limits` tells which a model gets. A pack's model is held to them as
+its view shows it (#1652): `report` measures only the clips the view plays, and a figure standing
+in its idle clip in place of its rest pose, a T-pose.
 
 `fit` sizes a model to its hex before any clip exists (#1522), from its rest pose alone: the
 scale the gait and every render are made at, settled first, since a later rescale redoes them."""
@@ -97,36 +99,58 @@ def fit(rest, limits):
     return SLACK * min(rest_limit / rest, clip_limit / (rest * CLIP_MARGIN))
 
 
-def report(rig, meshes, limits):
+def report(rig, meshes, limits, clips=None, standing=None):
     """The reach in the rig's rest pose, then for every clip, every frame: the largest reach and
     the frame it's on. The rest pose fails past the first of `limits` (rest, clips), a clip past
     the second, a monster's attack past `ATTACK`. `rig` is None for a static model, which has only
-    its rest pose. Returns (lines, passed); a model without a mesh fails, rather than passing unseen."""
+    its rest pose. `clips` names the clips to measure (every clip when None; one the model lacks
+    fails), and `standing` a clip measured over all its frames in place of the rest pose, for a
+    figure whose rest pose is a T-pose (#1652). Returns (lines, passed); a model without a mesh
+    fails, rather than passing unseen."""
     if not meshes:
         return ["FAIL no mesh to measure"], False
     rest_limit, clip_limit = limits
     scene = bpy.context.scene
-    if rig is not None:
-        rig.data.pose_position = "REST"
-    scene.frame_set(scene.frame_current)
-    far = reach(meshes)
+    actions = {action.name: action for action in bpy.data.actions}
+    if rig is not None and standing is not None:
+        if standing not in actions:
+            return ["FAIL rest: the standing clip %s isn't in the model" % standing], False
+        far, at = _widest(rig, actions[standing], meshes)
+        rest_how = "standing in %s, frame %d, " % (standing, at)
+    else:
+        if rig is not None:
+            rig.data.pose_position = "REST"
+        scene.frame_set(scene.frame_current)
+        far, rest_how = reach(meshes), ""
     passed = far <= rest_limit
-    lines = ["%s rest: reach %.3f of the hex (limit %.2f)" % ("ok" if passed else "FAIL", far, rest_limit)]
+    lines = ["%s rest: reach %.3f of the hex (%slimit %.2f)" % (
+        "ok" if passed else "FAIL", far, rest_how, rest_limit)]
     if rig is None or rig.animation_data is None:
         return lines, passed
-    rig.data.pose_position = "POSE"
-    for action in sorted(bpy.data.actions, key=lambda a: a.name):
-        start, end = imported.play(rig, action)
+    for name in sorted(actions if clips is None else clips):
+        if name not in actions:
+            passed = False
+            lines.append("FAIL %s: not in the model" % name)
+            continue
         # A prop strikes nothing, so a clip it calls Attack gets no lunge past its hex.
-        limit = ATTACK if action.name in ATTACKS and limits != PROP else clip_limit
-        far, at = 0.0, start
-        for number in range(start, end + 1):
-            scene.frame_set(number)
-            value = reach(meshes)
-            if value > far:
-                far, at = value, number
+        limit = ATTACK if name in ATTACKS and limits != PROP else clip_limit
+        far, at = _widest(rig, actions[name], meshes)
         fails = far > limit
         passed = passed and not fails
         lines.append("%s %s: reach %.3f of the hex (frame %d, limit %.2f)" % (
-            "FAIL" if fails else "ok", action.name, far, at, limit))
+            "FAIL" if fails else "ok", name, far, at, limit))
     return lines, passed
+
+
+def _widest(rig, action, meshes):
+    """The largest reach over every frame of `action` on `rig`, and the frame it's on."""
+    rig.data.pose_position = "POSE"
+    scene = bpy.context.scene
+    start, end = imported.play(rig, action)
+    far, at = 0.0, start
+    for number in range(start, end + 1):
+        scene.frame_set(number)
+        value = reach(meshes)
+        if value > far:
+            far, at = value, number
+    return far, at
