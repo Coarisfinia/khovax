@@ -74,6 +74,10 @@ LEXEME = re.compile(
 OPEN, CLOSE = "([{", ")]}"
 ASSIGN = {"=", ":=", "+="}
 DISABLED = 2
+# Keywords that come before a value: a ( or [ after one opens the value, not a call or index.
+KEYWORDS = {"if", "elif", "else", "and", "or", "not", "in", "is", "await", "return", "while"}
+# The statements whose header ends in a colon, with their body after it or on the next lines.
+BLOCKS = {"if", "elif", "else", "for", "while", "func"}
 PRESENTATION = re.compile(r"(^|/)(game|ui|look)/")
 
 
@@ -200,8 +204,36 @@ def split_args(toks: list[Tok], open_at: int) -> list[list[Tok]]:
 
 
 def is_call(toks: list[Tok], i: int) -> bool:
-    """Whether the ( at `i` opens a call (it follows a name)."""
-    return toks[i].text == "(" and i > 0 and toks[i - 1].kind == "id"
+    """Whether the ( at `i` opens a call (it follows a name, not a keyword)."""
+    before = toks[i - 1] if i > 0 else None
+    return (
+        toks[i].text == "(" and before is not None and before.kind == "id"
+        and before.text not in KEYWORDS
+    )  # fmt: skip
+
+
+def header_colon(toks: list[Tok]) -> int | None:
+    """Where the header of a block statement (if, elif, else, for, while, func) ends: its colon
+    at the outer level, after a for's `in` (its loop variable may be typed) and after a func's
+    parameters. None for a statement that opens no block."""
+    words = [tok.text for tok in toks]
+    if words[:1] == ["static"]:
+        words = words[1:]
+    if not words or words[0] not in BLOCKS:
+        return None
+    start = words.index("in") if words[0] == "for" and "in" in words else 0
+    if words[0] == "func":
+        opened = next((i for i, tok in enumerate(toks) if tok.text == "("), len(toks))
+        start = matching(toks, opened) + 1
+    depth = 0
+    for i in range(start, len(toks)):
+        if toks[i].kind == "op" and toks[i].text in OPEN:
+            depth += 1
+        elif toks[i].kind == "op" and toks[i].text in CLOSE:
+            depth -= 1
+        elif depth == 0 and toks[i].kind == "op" and toks[i].text == ":":
+            return i
+    return None
 
 
 def const_texts(toks: list[Tok]) -> list[tuple[str, int]]:
@@ -250,6 +282,10 @@ def parse(path: str) -> Script:
             args = split_args(statement.toks, open_at)
             params = [arg[0].text for arg in args]
             body = []
+            colon = header_colon(statement.toks)
+            if colon is not None and colon + 1 < len(statement.toks):
+                # A one-line function: its body follows the colon.
+                body.append(Statement(statement.indent + 1, statement.toks[colon + 1 :]))
             i += 1
             while i < len(lines) and lines[i].indent > statement.indent:
                 body.append(lines[i])
@@ -356,6 +392,11 @@ class Flow:
         return self.text_locals.setdefault(id(func), set())
 
     def statement(self, script: Script, func: Func, toks: list[Tok]) -> None:
+        colon = header_colon(toks)
+        if colon is not None and colon + 1 < len(toks):
+            # An inline body (`if c: shown = "x"`) is a statement of its own.
+            self.statement(script, func, toks[colon + 1 :])
+            toks = toks[: colon + 1]
         words = [tok.text for tok in toks]
         text_locals = self.locals_of(func)
         # A member that is shown carries what's assigned to it anywhere in its script.
@@ -365,7 +406,7 @@ class Flow:
             self.expression(script, func, toks[1:])
         if words[:1] == ["for"] and len(words) > 3 and words[1] in text_locals:
             in_at = words.index("in") if "in" in words else len(words)
-            self.expression(script, func, toks[in_at + 1 : -1])
+            self.expression(script, func, toks[in_at + 1 : colon])
         assign = next(
             (
                 i
@@ -477,7 +518,9 @@ class Flow:
         if toks[at].text == "{":
             return True
         before = toks[at - 1] if at > 0 else None
-        return before is not None and (before.kind in ("id", "str") or before.text in ")]")
+        if before is None or before.kind == "id" and before.text in KEYWORDS:
+            return False
+        return before.kind in ("id", "str") or before.text in ")]"
 
     def call(self, script: Script, func: Func, toks: list[Tok], at: int) -> None:
         name = toks[at - 1].text
