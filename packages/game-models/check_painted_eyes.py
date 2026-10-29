@@ -2,7 +2,9 @@
 each creature model, neither a flat black oval nor a painted glowing eye, next to or under our own
 (check_eyes.py checks those are there). It samples the texture over the head's faces and looks
 for a mirrored pair as lib/marked_eyes.py's `find` does on import, with `DARK`, with `GLOW` and
-with the beast's own way its eyes are marked, if marked_eyes.BEASTS lists it (#1719).
+with the beast's own way its eyes are marked, if marked_eyes.BEASTS lists it (#1719); and for
+fragments the repaint left beyond a pair, spots much darker than the head's median
+(marked_eyes.fragments, #1756), which `scrub` paints out.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
@@ -38,16 +40,25 @@ KNOWN = {
     "assets/frostfire_hound/frostfire_hound.glb": "#1684",
 }
 
+# How many of a head's fragments its line names, the largest first.
+SHOWN = 5
+
 
 def found(objects, path):
     """What the generator left on the head of each skin among `objects` (the model at `path`): a
-    line per mirrored pair of marked spots, with where they are and how wide."""
+    line per mirrored pair of marked spots, with where they are and how wide, and a line per skin
+    with the fragments of its eyes left beyond a pair (#1756)."""
     lines = []
     for skin in ground.skinned(objects):
         for kind, marks in marked_eyes.painted(skin, own=marked_eyes.BEASTS.get(path)).items():
             lines.append("%s: %s eyes at %s and %s, %.3f and %.3f wide" % (
                 skin.name, kind, tuple(round(float(v), 3) for v in marks[0].middle),
                 tuple(round(float(v), 3) for v in marks[1].middle), marks[0].width, marks[1].width))
+        left = sorted(marked_eyes.fragments(skin), key=lambda mark: -mark.count)
+        if left:
+            lines.append("%s: %d dark fragments, the largest at %s" % (skin.name, len(left), ", ".join(
+                "%s (%d samples)" % (tuple(round(float(v), 3) for v in mark.middle), mark.count)
+                for mark in left[:SHOWN])))
     return lines
 
 
@@ -76,7 +87,8 @@ def main():
                 log.error("PAINTED EYES no generated eyes left: take it off KNOWN (%s)" % KNOWN[path], glb)
         elif lines:
             failed += 1
-            log.error("PAINTED EYES %s: paint them over with lib/marked_eyes.py's `replace`" % "; ".join(lines), glb)
+            log.error("PAINTED EYES %s: paint them over with lib/marked_eyes.py's `replace`, and fragments with `scrub`"
+                      % "; ".join(lines), glb)
         else:
             log.info("PAINTED EYES %s: no generated eyes on the head" % path)
     verdict = "PASS" if glbs and not failed else "FAIL"

@@ -95,9 +95,6 @@ def build(out):
     rig = limbless.armature("WobulumuRig", limbless.scaled(BODY, SCALE))
     limbless.bind(skin, rig)
     lids, eyes = marked_eyes.replace(rig, skin, palette(COLORS), FAINT_LIDS, **EYE_SHAPE)
-    # Its colours have no black: every dark fragment of the generator's eyes goes too, after
-    # they've been found by it (the owner, on #1747: "those should be removed fully").
-    print("SCRUBBED", marked_eyes.scrub(skin, limbless.HEAD), "texels")
     attachments.add(rig, eyes, [(tuple(SCALE * value for value in SNOUT), limbless.HEAD)])
     clips.animate(rig, {
         "Idle": limbless.idle(TAIL),
