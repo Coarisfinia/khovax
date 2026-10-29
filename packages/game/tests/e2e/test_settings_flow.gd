@@ -1317,9 +1317,13 @@ func _menu_controls(menu: GameMenu) -> String:
 	var listed: Array[StringName] = []
 	for words: String in ControlsTab.ROWS:
 		listed.append_array(ControlsTab.ROWS[words])
-		# Each row shows its words, translated (in English, the same words).
-		if tab.words_of(words) != words:
-			return "the Controls tab's row %s shows %s" % [words, tab.words_of(words)]
+		# Each row's label shows its words, translated (in English, the same words).
+		var label: Label = tab.rows[words].get_child(0).get_child(0) as Label
+		if label == null or label.text != words or tab.words_of(words) != words:
+			return "the Controls tab's row %s shows %s" % [
+				words,
+				label.text if label else "nothing",
+			]
 	# The actions the project binds itself, not Godot's own UI actions it leaves as they are.
 	var project: ConfigFile = ConfigFile.new()
 	var _read: Error = project.load("res://project.godot")
