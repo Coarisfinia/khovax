@@ -576,9 +576,9 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   each kind's rule for the content flow; a name breaking one today waits in `NAME_EXCEPTIONS` with
   its rename issue, and that list only shrinks.
 - **Every new name is checked before it's suggested or used** (owner's rule, #717, #909; for
-  suggested names, in chat, #1743): a name offered in a question counts too. It passes its kind's rule in
-  `ContentTerms.NAME_RULES`, and it is searched as an exact phrase in Claude in Chrome on Google,
-  the name in quotes with `nfpr=1` so Google doesn't swap in its own spelling, never with a
+  suggested names, in chat, #1743): a name offered in a question counts too. It passes its kind's
+  rule in `ContentTerms.NAME_RULES`, and it is searched as an exact phrase in Claude in Chrome on
+  Google, the name in quotes with `nfpr=1` so Google doesn't swap in its own spelling, never with a
   web-search tool, which is unreliable for exact matches. Any real hit rules it out; the results go
   onto its issue.
 - **Invented names use sound symbolism** (owner's rule): the bouba/kiki pattern is one tool
