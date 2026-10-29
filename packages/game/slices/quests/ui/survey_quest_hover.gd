@@ -5,8 +5,11 @@ extends SurveyLayer
 ## naming where its step counts and what the step asks, next to the arrow's target wherever
 ## there's room on the Survey: right of it, else left, below or above, else pushed inside. A tap or
 ## a click on the arrow follows the quest (SurveyQuestPicker). It only reads what the Survey worked
-## out and this machine's player's quests, after the Survey each frame.
+## out and this machine's player's quests, after the Survey each frame. game/ hands it to each
+## Survey (SurveyQuestMarks, #1666).
 
+## Its node's name under the Survey.
+const NAME: String = "QuestHover"
 ## A quest's card.
 const CARD: PackedScene = preload("res://slices/quests/ui/quest_card.tscn")
 ## The card's font size and width, in pixels and in font sizes, never wider than the Survey.
@@ -15,6 +18,8 @@ const WIDTH_FONTS: float = 15.0
 ## The room between the card and the arrow, in pixels.
 const GAP: float = 4.0
 
+## This machine's player's quests.
+var keeper: QuestKeeper
 ## Where the pointer rests on the Survey, in its own pixels, as SurveyQuestPicker last saw it; not
 ## finite while it's elsewhere.
 var pointer: Vector2 = Vector2.INF
@@ -25,16 +30,26 @@ var hovered: String = ""
 var card: QuestCard = null
 
 
+## The layer of `survey`'s that shows the card of the quest whose grey arrow the pointer rests on.
+static func on(survey: SurveyView) -> SurveyQuestHover:
+	return survey.get_node(NAME) as SurveyQuestHover
+
+
+## Keeps where the pointer rests, for the card under it.
+func point(at: Vector2) -> void:
+	pointer = at
+
+
 ## Shows the card of the grey arrow under `pointer`, or none when there's none.
 func show_state() -> void:
 	var survey: SurveyView = get_parent() as SurveyView
 	var quests: QuestTracker = null
 	hovered = ""
-	if survey != null and survey.quest_keeper != null:
-		quests = survey.quest_keeper.quests()
+	if survey != null and keeper != null:
+		quests = keeper.quests()
 		hovered = survey.quest_at(pointer) if pointer.is_finite() else ""
 	var shown: bool = quests != null and survey.quest_targets.has(hovered)
-	shown = shown and not survey.focused_quest().arrows.has(hovered)
+	shown = shown and not survey.drawn_above(hovered)
 	var step: QuestStep = null
 	if shown:
 		step = SurveyFocusedQuest.step_of(quests.open_steps(), hovered)

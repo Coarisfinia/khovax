@@ -2,7 +2,8 @@ class_name SurveyQuestPicker
 extends Node
 ## Picks a quest to follow on the Survey (#1298): a tap or a click on a small grey arrow, a quest
 ## not followed (SurveyView.quest_at), makes this machine's player follow that quest
-## (QuestKeeper.follow), and the pointer resting on one shows its quest card (SurveyQuestHover).
+## (SurveyQuests.follow), and the pointer resting on one shows its quest card
+## (SurveyQuestHover).
 ## It works on the Survey wherever it shows, and while the menu is open (GameMenu, #362) only on
 ## its Survey tab's (#392), which SurveyPinch knows. A click picks as it's pressed. A tap picks as
 ## its finger lifts, alone and where it went down, so a pinch that starts on an arrow still zooms
@@ -66,9 +67,9 @@ func _on_touch(touch: InputEventScreenTouch) -> void:
 func pick(at: Vector2) -> bool:
 	var view: SurveyView = _view_at(at)
 	var key: String = view.quest_at(_on(view, at)) if view != null else ""
-	if key.is_empty() or view.quest_keeper == null:
+	if key.is_empty():
 		return false
-	view.quest_keeper.follow(key.get_slice("/", 0))
+	view.quests.follow(key.get_slice("/", 0))
 	return true
 
 
@@ -77,7 +78,8 @@ func pick(at: Vector2) -> bool:
 func _hover(at: Vector2) -> void:
 	var view: SurveyView = _view_at(at)
 	for each: SurveyView in _views():
-		each.quest_hover().pointer = _on(each, at) if each == view else Vector2.INF
+		for layer: SurveyLayer in each.layers():
+			layer.point(_on(each, at) if each == view else Vector2.INF)
 
 
 ## The Surveys the pointer can rest on: the one in the menu's Survey tab while the menu is open,

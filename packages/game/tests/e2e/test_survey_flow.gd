@@ -444,7 +444,7 @@ func _survey_labels(driver: GameDriver, survey: SurveyView, quests: QuestTracker
 		text += "[{\"condition\": \"dominated\", \"ends\": \"%s\"" % id
 		text += ", \"instance\": \"%s\"}]}" % where[id] if not where[id].is_empty() else "}]}"
 		quests.book[id] = QuestDefinition.parse(id, text, {})
-	var focused: SurveyFocusedQuest = survey.focused_quest()
+	var focused: SurveyFocusedQuest = SurveyFocusedQuest.on(survey)
 	quests.focus = "survey_any"
 	survey.show_state()
 	focused.show_state()
@@ -542,8 +542,8 @@ func _survey_label(
 func _survey_picks(survey: SurveyView, quests: QuestTracker, id: String) -> String:
 	quests.focus = "survey_any"
 	survey.show_state()
-	survey.focused_quest().show_state()
-	var hover: SurveyQuestHover = survey.quest_hover()
+	SurveyFocusedQuest.on(survey).show_state()
+	var hover: SurveyQuestHover = SurveyQuestHover.on(survey)
 	var box: Rect2 = survey.grey_arrow_box(id)
 	# Another quest's grey arrow may point at the same tile, drawn over it.
 	var key: String = survey.quest_at(box.get_center())
@@ -576,7 +576,7 @@ func _survey_picks(survey: SurveyView, quests: QuestTracker, id: String) -> Stri
 ## lifts, or starts the touch stick, or "" (#1298).
 func _survey_tapped(survey: SurveyView, quests: QuestTracker, id: String) -> String:
 	survey.show_state()
-	survey.focused_quest().show_state()
+	SurveyFocusedQuest.on(survey).show_state()
 	var at: Vector2 = survey.grey_arrow_box(id).get_center()
 	var key: String = survey.quest_at(at)
 	var tap: InputEventScreenTouch = InputEventScreenTouch.new()

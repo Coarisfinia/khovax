@@ -13,8 +13,10 @@ extends SurveyLayer
 ## like one in a corner, which the quest list sits beside anyway, shows the arrows bare, and an
 ## arrow off the Survey has no label. The other open quests' arrows are the Survey's own, small and
 ## grey. It only reads what the Survey worked out and this machine's player's quests, after the
-## Survey each frame.
+## Survey each frame. game/ hands it to each Survey (SurveyQuestMarks, #1666).
 
+## Its node's name under the Survey.
+const NAME: String = "FocusedQuest"
 ## A quest marker's label: the quest's name and its pill.
 const LABEL: PackedScene = preload("res://slices/quests/ui/quest_marker_label.tscn")
 ## The Survey's shorter side, in pixels, below which it shows no labels.
@@ -26,6 +28,8 @@ const MAX_FONT: int = 20
 ## The room between labels, in pixels.
 const GAP: float = 2.0
 
+## This machine's player's quests.
+var keeper: QuestKeeper
 ## The followed quest's arrows on the Survey, by their keys in SurveyView.quest_targets: the tile
 ## each points at. Kept so tests can read what is drawn.
 var arrows: Dictionary[String, Vector2i] = {}
@@ -37,7 +41,17 @@ var labels: Dictionary[String, QuestMarkerLabel] = {}
 func _draw() -> void:
 	var survey: SurveyView = get_parent() as SurveyView
 	for key: String in arrows:
-		survey.draw_quest_arrow(self, survey.to_view(arrows[key]), true)
+		survey.draw_quest_arrow(self, survey.to_view(arrows[key]), true, QuestMarkerView.COLOR)
+
+
+## The layer of `survey`'s that draws its followed quest's arrows.
+static func on(survey: SurveyView) -> SurveyFocusedQuest:
+	return survey.get_node(NAME) as SurveyFocusedQuest
+
+
+## The followed quest's arrows are its own, drawn large and bright yellow above the Survey.
+func draws_arrow(key: String) -> bool:
+	return arrows.has(key)
 
 
 ## Picks the followed quest's arrows out of those the Survey shows and labels them. Called every
@@ -46,8 +60,8 @@ func show_state() -> void:
 	var survey: SurveyView = get_parent() as SurveyView
 	arrows.clear()
 	var targets: Dictionary[String, Vector2i] = {}
-	if survey != null and survey.quest_keeper != null and survey.quest_keeper.quests() != null:
-		var followed: String = survey.quest_keeper.quests().focused()
+	if survey != null and keeper != null and keeper.quests() != null:
+		var followed: String = keeper.quests().focused()
 		for key: String in survey.quest_targets:
 			# Its id, or its id and a choice's index after a slash.
 			if key.get_slice("/", 0) == followed:
@@ -77,7 +91,7 @@ static func _on_view(
 
 ## Shows a label over each arrow of `targets`, the arrows `survey` shows, by key.
 func _show(survey: SurveyView, targets: Dictionary[String, Vector2i]) -> void:
-	var quests: QuestTracker = survey.quest_keeper.quests()
+	var quests: QuestTracker = keeper.quests()
 	var steps: Dictionary[String, QuestStep] = quests.open_steps()
 	var font: int = clampi(
 		roundi(minf(survey.size.x, survey.size.y) * FONT_SHARE),

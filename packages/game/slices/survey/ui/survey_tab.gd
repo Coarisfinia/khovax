@@ -3,7 +3,8 @@ extends VBoxContainer
 ## The menu's Survey tab (#392): the Survey (#301) over the whole tab, so the player can look over
 ## what they explored while the menu is open. It's one more SurveyView reading what the Survey on
 ## the screen reads, so it shows the same ground (what's still in the fog stays hidden), players and
-## quest targets; only its place is the tab's. Its zoom is the Survey's one zoom setting
+## quest targets (game/ hands it its quests as it does the screen's, #1666); only its place is the
+## tab's. Its zoom is the Survey's one zoom setting
 ## (SurveyChoice): while the tab shows, the zoom keys, a controller's triggers (#779) and a pinch on
 ## it (SurveyPinch) step it, and so do its buttons below it, which say what they do in words, never
 ## by color alone (#68). One more cycles where the Survey shows. Above them, a line says which
@@ -44,7 +45,6 @@ func _ready() -> void:
 		var shown: SurveyView = survey.view
 		view.driver = shown.driver
 		view.keeper = shown.keeper
-		view.quest_keeper = shown.quest_keeper
 		view.input = shown.input
 		view.neighbours = shown.neighbours
 	var farther: Button = $Row/ZoomOut as Button
