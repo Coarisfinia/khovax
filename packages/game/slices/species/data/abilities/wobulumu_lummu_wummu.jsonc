@@ -1,0 +1,14 @@
+// The tadpole's player passive (#1737): a smaller guard than the Vynnimu's. Its guard is a
+// placeholder to tune (#960).
+{
+	"id": "wobulumu_lummu_wummu",
+	"kind": "player_passive",
+	"name": "Lummu-wummu",
+	"description": "While the ${MONSTER:wobulumu} is out, it wriggles about the player's feet, and they take a little less harm.",
+	"guard": 50, // a twentieth off every hit on the player: what is left rounds down, and a hit that lands still deals at least 1 (#702)
+	"codex": {
+		"entry": "The murmur of a tadpole swirling about its elder in the shallows. Dominators hummed it to a small beast that keeps close underfoot and gets in the way of every blow.",
+		"gloss": "round and round, close"
+	},
+	"path": "harmony"
+}

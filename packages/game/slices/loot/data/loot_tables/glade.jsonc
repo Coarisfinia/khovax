@@ -1,12 +1,14 @@
 // A placeholder instance table for Lumwen Hoal: what a blank rolled there gives, and its loot on the
 // ground (#203). Always something small, never nothing (#90). Now and then a revive herb
-// (#656), which brings back a fainted carried monster.
+// (#656), which brings back a fainted carried monster, and now and then the pondweed a Wobulumu
+// needs to ascend (#1737), since its habitat holds it (#1260).
 {
 	"id": "glade",
 	"kind": "instance",
 	"entries": [
-		{ "item": "moss", "chance": 700, "min": 1, "max": 2 },
+		{ "item": "moss", "chance": 650, "min": 1, "max": 2 },
 		{ "item": "berry", "chance": 200, "min": 1, "max": 1 },
-		{ "item": "revive_herb", "chance": 100, "min": 1, "max": 1 }
+		{ "item": "revive_herb", "chance": 100, "min": 1, "max": 1 },
+		{ "item": "pondweed", "chance": 50, "min": 1, "max": 1 } // 5 %
 	]
 }

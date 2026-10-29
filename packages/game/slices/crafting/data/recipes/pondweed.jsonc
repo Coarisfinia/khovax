@@ -1,0 +1,6 @@
+// Pondweed (#1737), a Wobulumu's ascension material (#1260, source 3), grown from moss and berries.
+// A placeholder, to tune (#960).
+{
+	"id": "pondweed",
+	"needs": { "moss": 3, "berry": 2 }
+}

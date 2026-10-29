@@ -714,6 +714,10 @@ msgstr ""
 msgid "Moss"
 msgstr ""
 
+#: slices/loot/data/materials/pondweed.jsonc
+msgid "Pondweed"
+msgstr ""
+
 #: slices/loot/data/materials/revive_herb.jsonc
 msgid "Revive Herb"
 msgstr ""
@@ -932,8 +936,12 @@ msgstr ""
 msgid "A crystal for a ${MONSTER:vynnimu}"
 msgstr ""
 
+#: slices/quests/data/tadpole_pondweed.jsonc
+msgid "Pondweed for a ${MONSTER:wobulumu}"
+msgstr ""
+
 #: slices/quests/data/three_ombulumo.jsonc
-msgid "Dominate three ${MONSTER:ombulumo}"
+msgid "Dominate two ${MONSTER:ombulumo}"
 msgstr ""
 
 #: slices/quests/data/tormaesk_escort.jsonc
@@ -1424,6 +1432,54 @@ msgstr ""
 msgid "Vummi-nummi"
 msgstr ""
 
+#: slices/species/data/abilities/wobulumu_lobbu_wobbu.jsonc
+msgid "The bubbling of a tadpole slipping out of a grip. Dominators said it of anything too small and wet to be held."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lobbu_wobbu.jsonc
+msgid "slip, and away"
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lobbu_wobbu.jsonc
+msgid "The ${MONSTER:wobulumu}'s slippery little body slips out from under part of every hit."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lobbu_wobbu.jsonc
+msgid "Lobbu-wobbu"
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lummu_wummu.jsonc
+msgid "The murmur of a tadpole swirling about its elder in the shallows. Dominators hummed it to a small beast that keeps close underfoot and gets in the way of every blow."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lummu_wummu.jsonc
+msgid "round and round, close"
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lummu_wummu.jsonc
+msgid "While the ${MONSTER:wobulumu} is out, it wriggles about the player's feet, and they take a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_lummu_wummu.jsonc
+msgid "Lummu-wummu"
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_wublu_wobla.jsonc
+msgid "The wet wriggle of a tadpole gathering itself, then the soft bump of its head. Dominators said it of any small beast that throws its whole round body at a foe."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_wublu_wobla.jsonc
+msgid "wriggle, then bump"
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_wublu_wobla.jsonc
+msgid "The ${MONSTER:wobulumu} wriggles up to its target and butts it with its round head."
+msgstr ""
+
+#: slices/species/data/abilities/wobulumu_wublu_wobla.jsonc
+msgid "Wublu-wobla"
+msgstr ""
+
 #: slices/species/data/kalvrakkor.jsonc
 msgid "The frost-and-fire hound: a heavy hound split along its spine, one side dark basalt cracked with glowing magma, the other pale ice cracked with frost, and behind it a magma tail and an ice tail. Where it lies down, the snow melts on one side and freezes hard on the other. Its name is a beast-call, the sound it makes: the crack of ice in its k's, doubled where it splits, and the low growl of its molten side in l, v and r."
 msgstr ""
@@ -1494,6 +1550,18 @@ msgstr ""
 
 #: slices/species/data/vynnimu.jsonc
 msgid "Vynnimu"
+msgstr ""
+
+#: slices/species/data/wobulumu.jsonc
+msgid "A round little tadpole of the Ombulumo, all head and belly, with a soft fin on its tail and a row of pale spots along each side. It wriggles over the wet ground of the shallows and nibbles at the weed there, and in time it ascends into an Ombulumo. Its name is a beast-call, the sound of it: the Ombulumo's round b, m and l with a wobble in front, for a little thing that wriggles."
+msgstr ""
+
+#: slices/species/data/wobulumu.jsonc
+msgid "the little wobble that will boom"
+msgstr ""
+
+#: slices/species/data/wobulumu.jsonc
+msgid "Wobulumu"
 msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd

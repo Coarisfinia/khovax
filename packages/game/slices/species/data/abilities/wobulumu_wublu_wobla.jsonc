@@ -1,0 +1,14 @@
+// The tadpole's butt (#1737). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "wobulumu_wublu_wobla",
+	"kind": "special",
+	"name": "Wublu-wobla",
+	"description": "The ${MONSTER:wobulumu} wriggles up to its target and butts it with its round head.",
+	"codex": {
+		"entry": "The wet wriggle of a tadpole gathering itself, then the soft bump of its head. Dominators said it of any small beast that throws its whole round body at a foe.",
+		"gloss": "wriggle, then bump"
+	},
+	"power": 1500,
+	"cooldown_seconds": 10,
+	"strike_type": "growth"
+}

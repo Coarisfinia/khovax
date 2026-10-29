@@ -1,0 +1,10 @@
+// The tadpoles' quest (#1737, source 4 of #1260, as the mana pups' #1348): a side quest that starts
+// once the player first enters Lumwen Hoal, where the Ombulumo live, and asks them to dominate one
+// of the tadpoles there. Finishing it hands over the pondweed a tadpole needs to ascend.
+{
+	"id": "tadpole_pondweed",
+	"name": "Pondweed for a ${MONSTER:wobulumu}",
+	"starts_on": { "condition": "entered", "instance": "lumwen_hoal" },
+	"steps": [{ "condition": "dominated", "species": "wobulumu", "instance": "lumwen_hoal", "ends": "tadpole_pondweed" }],
+	"materials": { "pondweed": 1 }
+}

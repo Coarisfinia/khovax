@@ -283,7 +283,7 @@ func _check_beach_first(
 	if result.is_empty():
 		result = _check_listed(list, {
 			"first_domination": "Go to the beach",
-			"three_ombulumo": "Dominate an Ombulumo  0/3",
+			"three_ombulumo": "Dominate an Ombulumo  0/2",
 		})
 	if result.is_empty():
 		result = _check_card_scene(list, quests.book["first_domination"].shown_name())
@@ -437,7 +437,7 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 		"enter_glade": "Now: Enter Lumwen Hoal",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
-		"three_ombulumo": "Now: Dominate an Ombulumo  0/3",
+		"three_ombulumo": "Now: Dominate an Ombulumo  0/2",
 	}
 	var shown: Dictionary[String, String] = _quests_tab(menu).shown
 	# Laid out in its scene (#437): it scrolls only up and down.
@@ -496,7 +496,7 @@ func _check_list_follows(
 	_emit(driver, bus, WildMonsterDominated.new(92, 1, 0, Vector2i.ZERO, "ombulumo"))
 	var result: String = _check_listed(list, {
 		"first_domination": "Done",
-		"three_ombulumo": "Dominate an Ombulumo  1/3",
+		"three_ombulumo": "Dominate an Ombulumo  1/2",
 	})
 	if result.is_empty():
 		result = await _check_dropped(tree, list)
@@ -1638,7 +1638,7 @@ func _emit_in(driver: GameDriver, bus: EventBus, event: RefCounted, instance_nam
 
 ## Steps count up one fact at a time: only the species a step asks for counts, a step at its count
 ## hands over to the next even within one gain, and the last one finishes the quest. The toads'
-## quest counts to three. The first domination asks for the beach first (#321): dominations before
+## quest counts to two. The first domination asks for the beach first (#321): dominations before
 ## it don't count, and reaching it hands over to dominating.
 func _check_counted() -> String:
 	var content: QuestContent = QuestContent.load_quests()

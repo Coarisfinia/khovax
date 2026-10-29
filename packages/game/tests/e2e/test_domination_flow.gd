@@ -2675,9 +2675,9 @@ func _dominated_species(events: Array[RefCounted]) -> String:
 
 ## Species (#133): a spot its region piece names always has that species (the arena's boss is a
 ## Tikazzir); the others roll from their blueprint's list, the same way for the same seed, every
-## species on the list turning up over enough seeds, and the domination carries it. Every wild
-## monster gets a short id (#700), the same for the same seed and apart from the others', and the
-## domination carries it too.
+## species on the list turning up over enough seeds (or its line's first form, as a baby, #1697),
+## and the domination carries it. Every wild monster gets a short id (#700), the same for the same
+## seed and apart from the others', and the domination carries it too.
 func _check_species() -> String:
 	var rolled: Dictionary[String, bool] = {}
 	for seed_value: int in 24:
@@ -2689,7 +2689,22 @@ func _check_species() -> String:
 			return "seed %d placed two different species" % seed_value
 		rolled[basic] = true
 	var listed: Array = InstanceBlueprints.blueprint(FlowSteps.BASIC).wild_species.keys()
-	if rolled.size() != listed.size():
+	# A rolled spot may start as a baby of its line's first form (#1697): it counts as the grown
+	# species on the list.
+	var content: SpeciesContent = SpeciesContent.cached()
+	var grown: Dictionary[String, String] = {}
+	for species: String in listed:
+		grown[content.first_form(species)] = species
+		grown[species] = species
+	var seen: Dictionary[String, bool] = {}
+	for species: String in rolled:
+		if not grown.has(species):
+			return "the basic instance's spots rolled %s, which isn't on its list %s" % [
+				species,
+				listed,
+			]
+		seen[grown[species]] = true
+	if seen.size() != listed.size():
 		return "the basic instance's spots rolled %s, not every one of %s" % [rolled.keys(), listed]
 	var dominated: String = _check_short_ids()
 	if not dominated.is_empty():

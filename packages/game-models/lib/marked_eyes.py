@@ -193,14 +193,16 @@ class Head:
                               dtype=float) / STEPS
         self.points = numpy.einsum("ws,tsk->twk", weights, self.spots).reshape(-1, 3)
         self.normals = numpy.repeat(normals, len(weights), axis=0)
-        self.colours = self.look(numpy.einsum("ws,tsk->twk", weights, self.uvs).reshape(-1, 2))
+        # Each sample's texel (rows, columns), which its colour is read from.
+        self.texels = self.texel(numpy.einsum("ws,tsk->twk", weights, self.uvs).reshape(-1, 2))
+        self.colours = self.pixels[self.texels[0], self.texels[1], :3].astype(float)
 
-    def look(self, uv):
-        """The texture's colour (sRGB) at each of `uv`, its nearest texel."""
+    def texel(self, uv):
+        """The nearest texel to each of `uv`: (rows, columns)."""
         height, width = self.pixels.shape[:2]
         columns = numpy.clip(numpy.floor(uv[:, 0] * width), 0, width - 1).astype(numpy.int64)
         rows = numpy.clip(numpy.floor(uv[:, 1] * height), 0, height - 1).astype(numpy.int64)
-        return self.pixels[rows, columns, :3].astype(float)
+        return rows, columns
 
 
 class Mark:
@@ -362,7 +364,13 @@ def repaint(head, marks, marked=DARK):
         near = (reach.reshape(len(head.spots), -1) <= RING_IN).any(axis=1)
         rows, columns, spots = _texels(head, near)
         inside = mark.radii(spots) <= FILL
-        rows, columns, spots = rows[inside], columns[inside], spots[inside]
+        # A sliver of a triangle whose UVs straddle the texture (a seam's) reads texels far from
+        # its own island, which the triangles' fill misses (#1737): the texel each sample within
+        # FILL reads is painted over too, so no sample there reads the mark any more.
+        sampled = reach <= FILL
+        rows = numpy.concatenate([rows[inside], head.texels[0][sampled]])
+        columns = numpy.concatenate([columns[inside], head.texels[1][sampled]])
+        spots = numpy.concatenate([spots[inside], head.points[sampled]])
         # A CHUNK of texels at a time, so the texels-by-ring weights stay small on a large texture.
         for start in range(0, len(spots), CHUNK):
             offset = spots[start:start + CHUNK, None, :] - ring_points[None, :, :]
@@ -379,26 +387,80 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, **shape):
+def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
+    """Paints out what's left of the generator's eyes on `skin`'s head texture (#1737), for a
+    creature whose own colours have no black: the generator paints its eyes over many of the
+    texture's islands, and fragments `repaint` misses (a sliver across an island's seam, a pupil
+    on an island of its own, a dark smudge under the eye) still show where the old eyes were.
+    Every near-black texel (its brightest channel under `below`, sRGB) goes, and so does every
+    texel within `reach` of a sample of the head darker than `ratio` of the head's median, if it
+    is that dark too; with `grow` texels around each, they take the colour of the texels around
+    them, filled in from the edges inward. Returns how many texels it painted."""
+    head = Head(skin, bone)
+    pixels = head.pixels
+    height, width = pixels.shape[:2]
+    value = pixels[:, :, :3].max(axis=2)
+    dim = ratio * float(numpy.median(head.colours.max(axis=1)))
+    near = numpy.zeros((height, width), dtype=bool)
+    darker = head.colours.max(axis=1) < dim
+    near[head.texels[0][darker], head.texels[1][darker]] = True
+    for _ in range(reach):
+        near = _spread(near)
+    hole = (value < below) | (near & (value < dim))
+    for _ in range(grow):
+        hole = _spread(hole)
+    painted = int(hole.sum())
+    while hole.any():
+        known = ~hole
+        total = numpy.zeros((height, width, 3), dtype=numpy.float32)
+        count = numpy.zeros((height, width), dtype=numpy.float32)
+        for step in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            total += numpy.roll(pixels[:, :, :3] * known[:, :, None], step, axis=(0, 1))
+            count += numpy.roll(known, step, axis=(0, 1))
+        edge = hole & (count > 0)
+        if not edge.any():
+            break
+        pixels[edge, :3] = total[edge] / count[edge][:, None]
+        hole &= ~edge
+    head.image.pixels.foreach_set(pixels.ravel())
+    head.image.update()
+    return painted
+
+
+def _spread(mask):
+    """`mask` grown by one texel to each side."""
+    grown = mask.copy()
+    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        grown |= numpy.roll(mask, (dy, dx), axis=(0, 1))
+    return grown
+
+
+def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
+        **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
     other exactly across it (eyes.mirrored); as wide as the marks, as high against that as
-    ALMOND allows. `ridge=False` leaves out the brow; `shape` goes on to eyes.eye (`tilt`,
-    `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the lids' bones."""
+    ALMOND allows. With `upright`, a mark taller than it is wide (an upright oval, #1737) gives a
+    rounder eye, as wide as the mark's mean of width and height, since ours is never taller than
+    it is wide: as wide as the mark, it would be half the eye the generator drew (and as tall, its
+    top would show above its brow, check_brows.py). `ridge=False` leaves out the brow; `shape` goes on to
+    eyes.eye (`tilt`, `pupil`, `brow_size`, ...). Returns the pieces, weighted to `bone` and the
+    lids' bones."""
     left, right = marks
     spot = (left.middle + right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0)) / 2.0
     width = (left.width + right.width) / 2.0
     height = (left.height + right.height) / 2.0
     almond = min(max(height / width, ALMOND[0]), ALMOND[1])
+    size = max(width, (width + height) / 2.0 if upright else width) / 2.0
     pieces = []
-    for piece in eyes.eye(skin, "Eye.L", tuple(spot), forward, width / 2.0, mats, bone, almond=almond,
+    for piece in eyes.eye(skin, "Eye.L", tuple(spot), forward, size, mats, bone, almond=almond,
                           lid=eyes.LID + "L", middle=middle, **shape):
         if not ridge and piece.name.endswith(".brow"):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
-    clear(skin, pieces, width / 2.0, middle)
+    clear(skin, pieces, size, middle)
     return pieces + eyes.mirrored(pieces, middle)
 
 

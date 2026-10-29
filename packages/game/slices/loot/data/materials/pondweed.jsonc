@@ -1,0 +1,4 @@
+// The pondweed a Wobulumu feeds on to grow (#1737), which it needs to ascend into an Ombulumo. It
+// lies in the ground loot and chests of Lumwen Hoal, where Ombulumo live (#1260), finishing the
+// tadpoles' quest there hands some over (#1348), and it can be grown from moss and berries (#1349).
+{ "id": "pondweed", "name": "Pondweed" }

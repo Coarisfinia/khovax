@@ -1,9 +1,10 @@
-// A placeholder quest with a step that counts up, until real quests exist.
+// A placeholder quest with a step that counts up, until real quests exist. Two, not three, since
+// Lumwen Hoal's bundles hold Wobulumu babies in place of some of its Ombulumo (#1737); its id stays.
 {
 	"id": "three_ombulumo",
-	"name": "Dominate three ${MONSTER:ombulumo}",
+	"name": "Dominate two ${MONSTER:ombulumo}",
 	"path": "supremacy",
 	"steps": [
-		{ "condition": "dominated", "species": "ombulumo", "instance": "lumwen_hoal", "count": 3, "ends": "three_ombulumo" }
+		{ "condition": "dominated", "species": "ombulumo", "instance": "lumwen_hoal", "count": 2, "ends": "three_ombulumo" }
 	]
 }

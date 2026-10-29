@@ -1,0 +1,13 @@
+// The tadpole's self passive (#1737): a smaller guard than the Ombulumo's Bolmu-wolmu. Its guard is
+// a placeholder to tune (#960).
+{
+	"id": "wobulumu_lobbu_wobbu",
+	"kind": "self_passive",
+	"name": "Lobbu-wobbu",
+	"description": "The ${MONSTER:wobulumu}'s slippery little body slips out from under part of every hit.",
+	"guard": 100, // a tenth of every hit slips off its wet skin
+	"codex": {
+		"entry": "The bubbling of a tadpole slipping out of a grip. Dominators said it of anything too small and wet to be held.",
+		"gloss": "slip, and away"
+	}
+}
