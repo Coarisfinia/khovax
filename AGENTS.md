@@ -107,8 +107,9 @@ issue.
 watcher** follow the owner's machine-wide agent notes (`~/.ai/AGENTS.md`), their single source of
 truth (owner, #441); this file only adds this repository's values.
 
-**No pull requests that only change docs.** A change to this file or the README
-rides along with the next real pull request, and that pull request's description says so.
+**No pull requests that only change docs, as a loose rule** (owner, #1748). A change to this file
+or the README rides along with the next real pull request, and that pull request's description says
+so. A docs-only pull request is tolerated, though, not undone or closed.
 
 **Rules live in this file, not in an agent's memory.** When the owner states a rule for this
 repository, write it here in the next real pull request.
