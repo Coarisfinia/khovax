@@ -10,24 +10,19 @@ extends Control
 ## the rest stays the backdrop, the fog's color, so what is still in the fog stays hidden here too.
 ## Every player in the instance is a circle in their personal color with one mark per slot number,
 ## like their circle in the world (#68), gliding from tile to tile as their figure walks (#354),
-## and every open quest's target (QuestTargets.of, #300) an arrow pointing down at it, small and
+## and every open quest's target (`quests`, #300) an arrow pointing down at it, small and
 ## grey but for the quest this machine's player follows (#1298). Over it, its child HeldMarks marks
-## the instances it shows that a faction holds (SurveyHeldMarks, #637), and over that its child
-## FocusedQuest draws the followed quest's arrows, large and bright yellow, each labelled with its
-## quest's name and where its step counts (SurveyFocusedQuest, #1278): size and label, not only
-## color, tell it from the others (#68). Above all, its child QuestHover shows the quest card of a
-## grey arrow the pointer rests on (SurveyQuestHover), which a tap or a click follows
-## (SurveyQuestPicker). It's
-## centered on this machine's player, gliding after them. Where it shows and how close is
-## SurveyChoice's. It only reads the state, the explored ground, the neighbours' regions and the
-## profile.
+## the instances it shows that a faction holds (SurveyHeldMarks, #637). The quests' slice comes
+## after the Survey's, so game/ hands each Survey its quests and its layers above that
+## (SurveyQuestMarks, #1666): the followed quest's arrows, large, bright yellow and labelled
+## (SurveyFocusedQuest,
+## #1278), and the quest card of a grey arrow the pointer rests on (SurveyQuestHover), which a tap
+## or a click follows (SurveyQuestPicker). It's centered on this machine's player, gliding after
+## them. Where it shows and how close is SurveyChoice's. It only reads the state, the explored
+## ground, the neighbours' regions and the profile.
 
 ## The name of its child that marks faction territory.
 const HELD_MARKS: String = "HeldMarks"
-## The name of its child that draws the followed quest's arrows and labels them.
-const FOCUSED_QUEST: String = "FocusedQuest"
-## The name of its child that shows the card of the quest whose arrow the pointer rests on.
-const QUEST_HOVER: String = "QuestHover"
 ## How quickly the middle glides after this machine's player: the share of the way left per second.
 const GLIDE: float = 6.0
 ## A tile's hexagon is drawn a little smaller than the tile, so tiles of one kind stay apart.
@@ -40,11 +35,8 @@ const ARROW_MIN_PIXELS: float = 9.0
 const INK_PIXELS: float = 2.0
 ## The ink round a quest's arrow, in pixels.
 const ARROW_INK: float = INK_PIXELS * 1.5
-## The arrows of the quests not followed, as a share of the followed one's, and their color (#1298).
+## The arrows of the quests not followed, as a share of the followed one's (#1298).
 const OTHER_ARROW_SHARE: float = 0.6
-const OTHER_ARROW_COLOR: Color = QuestMarkerView.OTHER_COLOR
-## The followed quest's arrow: bright yellow, as its markers in the world (#1328).
-const FOLLOWED_ARROW_COLOR: Color = QuestMarkerView.COLOR
 ## How large the spot a pointer or a finger picks a grey arrow on is, at least, in pixels.
 const PICK_PIXELS: float = 32.0
 ## A tile's symbol, in tile radii, in white outlined in ink so it reads on every kind's color.
@@ -68,8 +60,6 @@ const EXIT_COLOR: Color = Color(0.98, 0.94, 0.8)
 @export var driver: Session
 ## Where the explored ground is kept with the world.
 @export var keeper: ExploredKeeper
-## Whose quests are marked: this machine's player's.
-@export var quest_keeper: QuestKeeper
 ## Which player is in the middle, and whose quests' targets are measured from.
 @export var input: LocalInput
 ## The instances next door, read as it draws them: never loaded for the Survey either.
@@ -96,6 +86,8 @@ var exits: Dictionary[Vector3i, String] = {}
 var circles: Dictionary[int, Vector2] = {}
 ## The tile each open quest points at, by quest id.
 var quest_targets: Dictionary[String, Vector2i] = {}
+## This machine's player's quests, whose targets it marks: none until game/ hands them in (#1666).
+var quests: SurveyQuests = SurveyQuests.new()
 ## The ground point in the middle, in world units on the XZ plane.
 var _middle: Vector2 = Vector2.ZERO
 var _region: Region
@@ -107,12 +99,6 @@ func _ready() -> void:
 	var marks: SurveyHeldMarks = SurveyHeldMarks.new()
 	marks.name = HELD_MARKS
 	add_child(marks)
-	var focused: SurveyFocusedQuest = SurveyFocusedQuest.new()
-	focused.name = FOCUSED_QUEST
-	add_child(focused)
-	var hover: SurveyQuestHover = SurveyQuestHover.new()
-	hover.name = QUEST_HOVER
-	add_child(hover)
 
 
 func _process(delta: float) -> void:
@@ -131,10 +117,10 @@ func _draw() -> void:
 	_draw_tiles()
 	for arrow: SurveyExitArrow in exit_arrows():
 		_draw_exit(on_view(arrow.at), arrow.side)
-	# The followed quest's arrows are FocusedQuest's, drawn above everything here.
+	# The followed quest's arrows are a layer's, drawn above everything here.
 	for key: String in quest_targets:
-		if not focused_quest().arrows.has(key):
-			draw_quest_arrow(self, to_view(quest_targets[key]), false)
+		if not drawn_above(key):
+			draw_quest_arrow(self, to_view(quest_targets[key]), false, quests.arrow_color())
 	for slot: int in circles:
 		_draw_player(on_view(circles[slot]), slot, PersonalColor.shown(driver, slot))
 	if bordered:
@@ -146,14 +132,30 @@ func held_marks() -> SurveyHeldMarks:
 	return get_node(HELD_MARKS) as SurveyHeldMarks
 
 
-## Its child drawing the followed quest's arrows and their labels (#1278, #1298).
-func focused_quest() -> SurveyFocusedQuest:
-	return get_node(FOCUSED_QUEST) as SurveyFocusedQuest
+## Its layers, in the order they're drawn: the held marks first.
+func layers() -> Array[SurveyLayer]:
+	var found: Array[SurveyLayer] = []
+	for child: Node in get_children():
+		if child is SurveyLayer:
+			found.append(child as SurveyLayer)
+	return found
 
 
-## Its child showing the card of the quest whose grey arrow the pointer rests on (#1298).
-func quest_hover() -> SurveyQuestHover:
-	return get_node(QUEST_HOVER) as SurveyQuestHover
+## Whether a layer draws the arrow `key` of `quest_targets` itself, above the Survey, as the
+## followed quest's are (#1298): the Survey then neither draws nor picks it.
+func drawn_above(key: String) -> bool:
+	for layer: SurveyLayer in layers():
+		if layer.draws_arrow(key):
+			return true
+	return false
+
+
+## Forgets where the pointer rested and has its layers show that at once (#1298): a reopened menu
+## shows no quest card until the pointer moves onto an arrow again.
+func let_go() -> void:
+	for layer: SurveyLayer in layers():
+		layer.point(Vector2.INF)
+		layer.show_state()
 
 
 ## The key in `quest_targets` of the grey arrow, a quest not followed, at `at` in the view's own
@@ -161,7 +163,7 @@ func quest_hover() -> SurveyQuestHover:
 func quest_at(at: Vector2) -> String:
 	var found: String = ""
 	for key: String in quest_targets:
-		if not focused_quest().arrows.has(key) and grey_arrow_box(key).has_point(at):
+		if not drawn_above(key) and grey_arrow_box(key).has_point(at):
 			found = key
 	return found
 
@@ -205,9 +207,7 @@ func show_state() -> void:
 		var player: Entity = state.player(slot)
 		if player != null:
 			circles[slot] = _walked_ground(state, player)
-	if quest_keeper != null and quest_keeper.quests() != null:
-		var here: String = driver.local_instance_name()
-		quest_targets = QuestTargets.of(state, quest_keeper.quests(), _slot(), here)
+	quest_targets = quests.targets(state, _slot(), driver.local_instance_name())
 
 
 ## The chevrons drawn for `exits`: one per exit, in its middle (#790), of a facing pair only the one
@@ -391,12 +391,16 @@ func _player_radius() -> float:
 	return maxf(zoom() * PLAYER_SHARE, PLAYER_MIN_PIXELS)
 
 
-## Draws a quest's arrow on `canvas` over `at`, its tip on it, in ink round its fill: the followed
-## quest's large and bright yellow, another's small and grey (#1298). The shape says what it is,
-## and the size which (#68).
-func draw_quest_arrow(canvas: CanvasItem, at: Vector2, is_followed_quest: bool) -> void:
+## Draws a quest's arrow on `canvas` over `at`, its tip on it, in ink round its `fill`: the
+## followed quest's large, another's small (#1298). The shape says what it is, and the size which
+## (#68).
+func draw_quest_arrow(
+	canvas: CanvasItem,
+	at: Vector2,
+	is_followed_quest: bool,
+	fill: Color,
+) -> void:
 	var length: float = _arrow_length() * (1.0 if is_followed_quest else OTHER_ARROW_SHARE)
-	var fill: Color = FOLLOWED_ARROW_COLOR if is_followed_quest else OTHER_ARROW_COLOR
 	canvas.draw_colored_polygon(_arrow(at, length + ARROW_INK * 2.0, ARROW_INK), Toon.INK)
 	canvas.draw_colored_polygon(_arrow(at, length, 0.0), fill)
 

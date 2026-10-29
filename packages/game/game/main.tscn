@@ -79,6 +79,7 @@
 [ext_resource type="PackedScene" path="res://slices/notices/ui/notice_screen.tscn" id="69_notice"]
 [ext_resource type="Script" path="res://slices/notices/ui/guide_notice_tie.gd" id="70_guide_notice_tie"]
 [ext_resource type="Script" path="res://slices/profile/ui/profile_panels_tie.gd" id="71_profile_panels_tie"]
+[ext_resource type="Script" path="res://game/survey_wiring.gd" id="73_survey_wiring"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -361,13 +362,12 @@ camera = NodePath("../../Camera3D")
 wild_view = NodePath("../../Instance/WildMonsterView")
 focus_keys = NodePath("../FocusKeys")
 
-[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "quest_keeper", "input", "neighbours") unique_id=3010301030]
+[node name="Survey" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "keeper", "input", "neighbours") unique_id=3010301030]
 layout_mode = 3
 mouse_filter = 2
 script = ExtResource("26_survey")
 driver = NodePath("../../Driver")
 keeper = NodePath("../../ExploredKeeper")
-quest_keeper = NodePath("../../QuestKeeper")
 input = NodePath("../../LocalInput")
 neighbours = NodePath("../../Instance/NeighbourView")
 
@@ -534,6 +534,12 @@ script = ExtResource("70_guide_notice_tie")
 driver = NodePath("../Driver")
 input = NodePath("../LocalInput")
 notice = NodePath("../Hud/NoticeScreen")
+
+[node name="SurveyWiring" type="Node" parent="." node_paths=PackedStringArray("survey", "menu", "quest_keeper")]
+script = ExtResource("73_survey_wiring")
+survey = NodePath("../Hud/Survey")
+menu = NodePath("../Hud/GameMenu")
+quest_keeper = NodePath("../QuestKeeper")
 
 [connection signal="name_selected" from="Hud/DialogScreen" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/DialogScreen" to="CodexKeeper" method="meet"]
