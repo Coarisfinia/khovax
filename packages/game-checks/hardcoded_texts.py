@@ -508,7 +508,8 @@ class Flow:
             | format_params
             | (self.format_members.get(script.path, set()) - func.names)
         )
-        carriers = text_locals | text_params | members | format_carriers
+        text_carriers = text_locals | text_params | members
+        carriers = text_carriers | format_carriers
         if words[:1] == ["return"] and id(func) in self.text_funcs:
             self.expression(script, func, toks[1:])
         if words[:1] == ["for"] and len(words) > 3 and words[1] in text_locals:
@@ -565,18 +566,24 @@ class Flow:
             args = split_args(toks, i)
             owner = toks[i - 3].text if i >= 3 and toks[i - 2].text == "." else None
             # `self.lines.append(…)` names the member even where a local shadows it (#1749).
-            appended = carriers
+            appended, appended_formats = text_carriers, format_carriers
             if i >= 5 and toks[i - 4].text == "." and toks[i - 5].text == "self":
-                appended = self.text_members.get(script.path, set()) | self.format_members.get(
-                    script.path, set()
-                )
+                appended = self.text_members.get(script.path, set())
+                appended_formats = self.format_members.get(script.path, set())
+            elif i >= 4 and toks[i - 4].text == ".":
+                appended = appended_formats = set()  # `other.lines.append(…)` is another's
             # A game function named like a Godot text method (a script's own set_text) is
             # followed as a game function; only where none is reached is it Godot's (#1749).
             if name in GODOT_TEXT_CALLS and not self.defined(script, toks, i):
                 for arg in args:
                     self.expression(script, func, arg)
-            elif name in APPENDS and owner in appended:
+            elif name in APPENDS and owner in appended | appended_formats:
                 for arg in args[-1:]:
+                    whole = arg[0].text == "[" and matching(arg, 0) == len(arg) - 1
+                    pair = split_args(arg, 0) if whole else []
+                    if owner not in appended and len(pair) == 2:
+                        # A format's [key, value] pair: the key is its placeholder (#1755).
+                        arg = pair[1]
                     self.expression(script, func, arg)
             else:
                 for reached in self.resolve(script, toks, i):
