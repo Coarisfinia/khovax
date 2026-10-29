@@ -23,5 +23,5 @@
 		] }
 	],
 	"bridges": [["folded_1", "rocking_1"], ["rocking_2", "heavy_2"]],
-	"portals": [["folded_3", "heavy_3"]]
+	"portals": [["folded_3", "rocking_3"]]
 }

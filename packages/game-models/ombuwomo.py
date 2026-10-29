@@ -55,9 +55,12 @@ FOOT_TOP = 0.3
 DISC = 100
 # The leaf copied onto its back: the lower leaf whose middle lies nearest LEAF (its back left, +X),
 # turned about the bud's middle until its middle lies straight behind it (+Y), and moved SPREAD
-# times as far out from the middle, so it lies over the leaves either side of the gap.
+# times as far out from the middle, so it lies over the leaves either side of the gap; and TUCK
+# times as tall above its foot, so its tip ends below the upper back leaves, which lie over it (the
+# owner, on #1752: overlapping leaves are offset, one over the other, not cutting through each other).
 LEAF = (0.48, 0.34, 0.76)
-SPREAD = 1.04
+SPREAD = 1.06
+TUCK = 0.92
 
 # Its joints, along the middle of the bud once it sits on the ground: the face's front, where the
 # face gives way to the body, and the body's back.
@@ -121,8 +124,11 @@ def reshape(skin):
     work.faces.ensure_lookup_table()
     cut = [work.faces[face] for number in feet + discs for face in faces[number]]
     copied = bmesh.ops.duplicate(work, geom=[work.faces[face] for face in faces[leaf]])["geom"]
-    spread = Matrix.Diagonal((SPREAD, SPREAD, 1.0, 1.0))
-    bmesh.ops.transform(work, matrix=spread @ turn, verts=[item for item in copied if isinstance(item, bmesh.types.BMVert)])
+    verts = [item for item in copied if isinstance(item, bmesh.types.BMVert)]
+    foot = min(vert.co.z for vert in verts)
+    spread = (Matrix.Translation((0.0, 0.0, foot)) @ Matrix.Diagonal((SPREAD, SPREAD, TUCK, 1.0))
+              @ Matrix.Translation((0.0, 0.0, -foot)))
+    bmesh.ops.transform(work, matrix=spread @ turn, verts=verts)
     bmesh.ops.delete(work, geom=cut, context="FACES")
     low = min(vert.co.z for vert in work.verts)
     bmesh.ops.translate(work, vec=(0.0, 0.0, -low), verts=work.verts)
