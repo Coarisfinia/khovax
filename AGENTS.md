@@ -304,8 +304,8 @@ background; only wait in the foreground for a result the very next step needs.
   names, with `agent-gh`, which queues it at once. The owner's approval stays valid
   through later pushes (owner's rule), so check the comments again before enabling auto-merge after a
   fix. CodeRabbit's doesn't: it counts only for the head commit it assessed (below). **Name every
-  change pushed after the owner's approval** (owner's pick on #1632): before queueing, post a PR
-  comment listing each such change and what it does.
+  change pushed after the owner's approval** (owner's pick on #1632): before enabling auto-merge (or
+  enqueueing), post a PR comment listing each such change and what it does.
 - **Read the reviews themselves to see an approval** (`gh api repos/Coarisfinia/khovax/pulls/<n>/reviews`),
   never `reviewDecision` or the watcher's status line: under the ruleset `reviewDecision` stays
   empty, so an approved pull request shows as "awaiting approval" (`Flixbox/household-brain#197`).
