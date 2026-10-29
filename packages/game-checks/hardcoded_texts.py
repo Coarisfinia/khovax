@@ -123,6 +123,8 @@ class Script:
     path: str
     # Each constant's texts: a string's, an array's strings, a dictionary's string keys.
     consts: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
+    # Each constant dictionary's string values, shown when it fills in a format() (#1715).
+    const_values: dict[str, list[tuple[str, int]]] = field(default_factory=dict)
     # Each member variable's initializer (empty without one).
     members: dict[str, list[Tok]] = field(default_factory=dict)
     funcs: list[Func] = field(default_factory=list)
@@ -289,6 +291,22 @@ def const_texts(toks: list[Tok]) -> list[tuple[str, int]]:
     return found
 
 
+def const_values(toks: list[Tok]) -> list[tuple[str, int]]:
+    """A constant dictionary's string values, one level deep (a StringName or NodePath is an
+    id)."""
+    assign = next((i for i, tok in enumerate(toks) if tok.text in ("=", ":=")), len(toks))
+    value = toks[assign + 1 :]
+    if not value or value[0].text != "{" or value[0].kind != "op":
+        return []
+    found = []
+    for entry in split_args(value, 0):
+        colon = next((i for i, tok in enumerate(entry) if tok.text in (":", "=")), None)
+        rest = entry[colon + 1 :] if colon is not None else []
+        if len(rest) == 1 and rest[0].kind == "str" and not rest[0].prefix:
+            found.append((rest[0].text, rest[0].line))
+    return found
+
+
 def without_annotations(toks: list[Tok]) -> list[Tok]:
     """A statement without its leading annotations (@export, @export_range(…), @onready)."""
     at = 0
@@ -339,6 +357,7 @@ def parse(path: str) -> Script:
             script.members[member[1]] = toks[assign + 1 :]
         if member[:1] == ["const"] and len(member) > 1:
             script.consts[member[1]] = const_texts(toks)
+            script.const_values[member[1]] = const_values(toks)
         i += 1
     return script
 
@@ -516,7 +535,8 @@ class Flow:
                 elif self.is_format(script, toks, i):
                     # Only its values; a second argument is the placeholder's pattern.
                     for arg in split_args(toks, i)[:1]:
-                        self.expression(script, func, arg, carry_only)
+                        if carry_only or not self.format_const(script, func, arg):
+                            self.expression(script, func, arg, carry_only)
                 elif self.outside(toks, i):
                     # Its literals and constants are ids (a tag's kind), but a parameter or
                     # local handed to it is still shown.
@@ -570,6 +590,23 @@ class Flow:
         receiver = toks[at - 3].text if at >= 3 else ""
         owner = script if receiver == "self" else self.by_class.get(receiver)
         return owner is None or not any(func.name == "format" for func in owner.funcs)
+
+    def format_const(self, script: Script, func: Func, arg: list[Tok]) -> bool:
+        """Whether a format()'s values are a constant dictionary, whose values are then hits and
+        whose keys are its placeholders (#1715)."""
+        if len(arg) == 1 and arg[0].kind == "id" and arg[0].text not in func.names:
+            owner: Script | None = script
+        elif len(arg) == 3 and arg[1].text == "." and arg[0].kind == arg[2].kind == "id":
+            owner = self.by_class.get(arg[0].text)
+        else:
+            return False
+        word = arg[-1].text
+        if owner is None or word in owner.members or word not in owner.const_values:
+            return False
+        for text, line in owner.const_values[word]:
+            if is_words(text):
+                self.hits.add(Hit(owner.path, text, line))
+        return True
 
     @staticmethod
     def dict_values(toks: list[Tok], at: int) -> Iterator[list[Tok]]:
