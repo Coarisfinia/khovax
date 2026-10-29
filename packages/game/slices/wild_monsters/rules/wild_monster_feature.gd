@@ -128,6 +128,9 @@ func start(state: GameState) -> void:
 		_wild[monster.id] = wild
 	_draw_short_ids(rng)
 	_known.sort()
+	# Already in id order, as the spots are walked in order; sorted so it stays so, as loading keeps
+	# it.
+	babies.sort()
 
 
 ## Leaves the new wild monster `entity_id` with WOUNDED_HP of its full HP, at least 1 (#389).
