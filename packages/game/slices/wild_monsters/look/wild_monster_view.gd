@@ -164,12 +164,15 @@ func _show_condition(feature: WildMonsterFeature, entity_id: int) -> void:
 
 
 ## Whether the wild monster `entity_id` in `state` is drawn: hidden in the fog until an ally sees
-## it (#137), and in its tile until it jumps out (#202). Not when it's gone.
+## it (#137), and not while a feature keeps it out of sight (GameState.concealed), like hiding in
+## its tile until it jumps out (#202). Not when it's gone.
 static func is_shown(state: GameState, entity_id: int) -> bool:
 	var monster: Entity = state.entity(entity_id)
-	var hiding: HidingFeature = state.feature(HidingFeature.ID) as HidingFeature
-	var in_hiding: bool = hiding != null and hiding.is_hidden(entity_id)
-	return monster != null and FogView.ally_sees(state, monster.tile) and not in_hiding
+	return (
+		monster != null
+		and FogView.ally_sees(state, monster.tile)
+		and not state.concealed(entity_id)
+	)
 
 
 ## Hops the figure of every wild monster that jumped out of hiding this tick, lunges and turns the

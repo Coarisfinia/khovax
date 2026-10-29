@@ -166,6 +166,15 @@ func feature(id: String) -> Feature:
 	return null
 
 
+## Whether any of the instance's features keeps the entity `entity_id` out of sight
+## (Feature.conceals, #1616), on or off.
+func concealed(entity_id: int) -> bool:
+	for candidate: Feature in features:
+		if candidate.conceals(entity_id):
+			return true
+	return false
+
+
 ## Switches a feature on or off. Only rules call this, inside a tick; it applies from the
 ## feature's next step on. Does nothing for a feature the instance doesn't have. A feature going
 ## off hears of it at once (Feature.disabled), to take back what it pushed into others.

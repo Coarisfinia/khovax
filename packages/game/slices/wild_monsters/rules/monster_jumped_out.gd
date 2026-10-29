@@ -1,7 +1,7 @@
 class_name MonsterJumpedOut
 extends RefCounted
 ## Event: a wild monster hidden in a tile that hides (#202) jumped out this tick, because a player
-## came next to it. It stays on its tile.
+## came next to it (HidingFeature, in the later hiding slice). It stays on its tile.
 
 var monster_id: int
 var tile: Vector2i
