@@ -133,12 +133,32 @@ msgstr ""
 msgid "Error log: save it as a file"
 msgstr ""
 
+#: slices/damage_numbers/look/damage_numbers_view.gd
+msgid "miss"
+msgstr ""
+
+#: slices/damage_numbers/look/damage_numbers_view.gd
+msgid "fainted"
+msgstr ""
+
 #: slices/damage_numbers/ui/damage_numbers_choice.gd
 msgid "Damage numbers"
 msgstr ""
 
 #: slices/damage_numbers/ui/damage_numbers_choice.gd
 msgid "Damage number size"
+msgstr ""
+
+#: slices/damage_numbers/ui/damage_numbers_choice.gd
+#: slices/menu/ui/game_menu.gd
+msgid "On"
+msgstr ""
+
+#: slices/damage_numbers/ui/damage_numbers_choice.gd
+#: slices/menu/ui/game_menu.gd
+#: slices/settings/look/graphics.gd
+#: slices/survey/ui/survey_choice.gd
+msgid "Off"
 msgstr ""
 
 #: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
@@ -163,6 +183,10 @@ msgstr ""
 
 #: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
 msgid "${PLACE:lumwen_hoal}, thick with ${MONSTER:ombulumo}. Something has soured it lately; they won't sit still."
+msgstr ""
+
+#: slices/exits/look/exit_hold_hint.gd
+msgid "Loading the way ahead…"
 msgstr ""
 
 #: slices/factions/data/amvrel_velmarai.jsonc
@@ -321,6 +345,30 @@ msgstr ""
 msgid "Heart of the League"
 msgstr ""
 
+#: slices/factions/ui/faction_standings_panel.gd
+msgid "Factions"
+msgstr ""
+
+#: slices/factions/ui/faction_standings_panel.gd
+msgid "No faction standings yet"
+msgstr ""
+
+#: slices/factions/ui/faction_standings_panel.gd
+msgid "{faction}: {standing}"
+msgstr ""
+
+#: slices/factions/ui/faction_standings_panel.gd
+msgid "{faction}: {standing}, {rank}"
+msgstr ""
+
+#: slices/factions/ui/territory_text.gd
+msgid "Held by no faction"
+msgstr ""
+
+#: slices/factions/ui/territory_text.gd
+msgid "Held by {symbol} {faction}"
+msgstr ""
+
 #: slices/gear/data/berry_pouch.jsonc
 msgid "Berry pouch"
 msgstr ""
@@ -345,8 +393,97 @@ msgstr ""
 msgid "Warding charm"
 msgstr ""
 
+#: slices/gear/meta/gear_item.gd
+msgid "{name} ({rarity})"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "Gear"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "{slot}: {gear}"
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "Gear can't be changed during a fight."
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "Press a slot to change its gear."
+msgstr ""
+
+#: slices/gear/ui/gear_panel.gd
+msgid "empty"
+msgstr ""
+
 #: slices/input_prompts/ui/controls_tab.gd
 msgid "Controls"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Walk"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Special attack"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Focus another wild monster"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Place a totem"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Swap to monster 1, 2 or 3"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Revive a fainted monster"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Respawn when knocked down"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Harvest a tile by hand"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Move the Survey"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Zoom the Survey in or out"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Open or close the menu"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Confirm"
+msgstr ""
+
+#: slices/input_prompts/ui/controls_tab.gd
+#: slices/settings/ui/settings_tab.gd
+msgid "Back"
+msgstr ""
+
+#: slices/loot/ui/materials_list.gd
+msgid "Materials"
+msgstr ""
+
+#: slices/loot/ui/materials_list.gd
+msgid "{material}: {count}"
+msgstr ""
+
+#: slices/loot/ui/materials_list.gd
+msgid "No materials yet"
 msgstr ""
 
 #: slices/menu/ui/character_tab.gd
@@ -380,15 +517,6 @@ msgstr ""
 
 #: slices/menu/ui/game_menu.gd
 msgid "Pause in single player"
-msgstr ""
-
-#: slices/menu/ui/game_menu.gd
-#: slices/settings/look/graphics.gd
-msgid "Off"
-msgstr ""
-
-#: slices/menu/ui/game_menu.gd
-msgid "On"
 msgstr ""
 
 #: slices/menu/ui/game_menu.gd
@@ -468,6 +596,18 @@ msgstr ""
 msgid "%s (the host chooses)"
 msgstr ""
 
+#: slices/might/ui/might_panel.gd
+msgid "Might"
+msgstr ""
+
+#: slices/might/ui/might_panel.gd
+msgid "Might: %d"
+msgstr ""
+
+#: slices/might/ui/might_panel.gd
+msgid "From your carried monsters: %d"
+msgstr ""
+
 #: slices/npcs/data/people/ausvren_vo_tormaesk.jsonc
 msgid "A guide of Brekhal Varn, of the Tormaesk kin, who keep the old ways through the rock. Only a Tormaesk can shift the boulders sealing the passage into Hrovumel Stolm, and Ausvren waits on the pass for someone to walk there with. The name is Hearth-speech, the everyday tongue: the given name Ausvren, soft as breath, then vo Tormaesk, of their kin, a name as hard as the stone they keep."
 msgstr ""
@@ -494,6 +634,22 @@ msgstr ""
 
 #: slices/npcs/data/people/teska_na_amvrel.jsonc
 msgid "No sense both of us waiting. I'll go on and open the way; catch up when you can."
+msgstr ""
+
+#: slices/paths/meta/path_mark.gd
+msgid "{name} ({path})"
+msgstr ""
+
+#: slices/paths/meta/path_mark.gd
+msgid "Harmony"
+msgstr ""
+
+#: slices/paths/meta/path_mark.gd
+msgid "Supremacy"
+msgstr ""
+
+#: slices/paths/meta/path_mark.gd
+msgid "Harmony and supremacy"
 msgstr ""
 
 #: slices/quests/data/first_domination.jsonc
@@ -566,10 +722,6 @@ msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
 msgid "Downloads and guide (README)"
-msgstr ""
-
-#: slices/settings/ui/settings_tab.gd
-msgid "Back"
 msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
@@ -945,12 +1097,44 @@ msgid "Vynnimu"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
+msgid "Top left"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Top right"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Bottom left"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Bottom right"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Over game"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "Opaque"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
+msgid "%d tiles across"
+msgstr ""
+
+#: slices/survey/ui/survey_choice.gd
 #: slices/survey/ui/survey_tab.gd
 msgid "Survey"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
 msgid "Survey zoom"
+msgstr ""
+
+#: slices/survey/ui/survey_tab.gd
+msgid "Shows: %s"
 msgstr ""
 
 #: slices/survey/ui/survey_tab.tscn

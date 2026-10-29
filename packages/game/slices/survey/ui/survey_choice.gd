@@ -67,16 +67,32 @@ func zoom_step() -> int:
 
 
 ## Where the Survey shows, as a menu (#355) shows it: "Top right", or "Auto (Top right)" while
-## Auto picks it. The words come from the place's name.
+## Auto picks it.
 func place_label() -> String:
-	var key: String = Place.keys()[place_shown()]
-	var words: String = key.to_lower().replace("_", " ")
-	return _place().label(words.left(1).to_upper() + words.substr(1))
+	return _place().label(place_words(place_shown()))
+
+
+## The place `shown` in words, as the menu shows it.
+func place_words(shown: Place) -> String:
+	match shown:
+		Place.OFF:
+			return tr("Off")
+		Place.TOP_LEFT:
+			return tr("Top left")
+		Place.TOP_RIGHT:
+			return tr("Top right")
+		Place.BOTTOM_LEFT:
+			return tr("Bottom left")
+		Place.BOTTOM_RIGHT:
+			return tr("Bottom right")
+		Place.OVER_GAME:
+			return tr("Over game")
+	return tr("Opaque")
 
 
 ## The zoom as a menu shows it: "20 tiles across", or "Auto (20 tiles across)" while Auto picks it.
 func zoom_label() -> String:
-	return _zoom().label("%d tiles across" % roundi(ZOOMS[zoom_step()]))
+	return _zoom().label(tr("%d tiles across") % roundi(ZOOMS[zoom_step()]))
 
 
 ## Shows the Survey `steps` places on (back for fewer), after the last one off again, and keeps

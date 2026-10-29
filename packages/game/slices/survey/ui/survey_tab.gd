@@ -67,7 +67,7 @@ func _process(_delta: float) -> void:
 		if now_held != held:
 			held = now_held
 			held_text.show_tagged(held)
-		place_button.text = "Shows: " + survey.place_label()
+		place_button.text = shows_text()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -80,6 +80,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _pressed(event, &"survey_zoom_out"):
 		zoom_by(-1)
 		get_viewport().set_input_as_handled()
+
+
+## What the place button says: where the Survey shows, "Shows: Top right".
+func shows_text() -> String:
+	return tr("Shows: %s") % survey.place_label()
 
 
 ## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the

@@ -8,7 +8,6 @@ extends Node3D
 ## pulses or flashes. It only reads the state and the last tick's commands
 ## (ExitFeature.pressed_out).
 
-const TEXT: String = "Loading the way ahead…"
 ## Where the words stand from the tile's centre, in world units: above the spinner, and away from
 ## the camera (which looks down from the +z side and never turns, FollowCamera), so they show above
 ## the player rather than over them.
@@ -77,6 +76,6 @@ func _add_hint() -> HexPiece:
 
 
 func _words() -> Label3D:
-	var label: Label3D = RisingText.make(Vector2i.ZERO, TEXT)
+	var label: Label3D = RisingText.make(Vector2i.ZERO, tr("Loading the way ahead…"))
 	label.position = TEXT_AT
 	return label

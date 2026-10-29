@@ -5,9 +5,6 @@ extends VBoxContainer
 ## #774),
 ## so each shows by its id in words. It only reads the profile, and keeps up with it while shown.
 
-const TITLE: String = "Materials"
-const NONE_TEXT: String = "No materials yet"
-
 ## This machine's player's materials (Dictionary[String, int], by id), handed in by the profile
 ## (ProfilePanelsTie), whose slice comes after this one; none without it.
 var materials: Callable = Callable()
@@ -17,7 +14,7 @@ var _rows: VBoxContainer
 
 
 func _ready() -> void:
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Materials")))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
 	refresh()
@@ -38,9 +35,10 @@ func refresh() -> void:
 		ids.assign(held.keys())
 		ids.sort()
 		for id: String in ids:
-			lines.append("%s: %d" % [id.capitalize(), held[id]])
+			var line: String = tr("{material}: {count}")
+			lines.append(line.format({ "material": id.capitalize(), "count": held[id] }))
 	if lines.is_empty():
-		lines.append(NONE_TEXT)
+		lines.append(tr("No materials yet"))
 	if lines == shown:
 		return
 	shown = lines

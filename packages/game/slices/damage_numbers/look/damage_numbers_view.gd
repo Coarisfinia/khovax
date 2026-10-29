@@ -11,8 +11,6 @@ extends Node3D
 
 const SECONDS: float = 1.2
 const RISE: float = 0.6
-const FAINTED_TEXT: String = "fainted"
-const MISS_TEXT: String = "miss"
 ## An auto attack's number: its seconds, its rise and its size as a share of a special's.
 const AUTO_SECONDS: float = 0.7
 const AUTO_RISE: float = 0.35
@@ -59,7 +57,7 @@ func show_auto(tile: Vector2i, damage: int, strong: Array[bool], dodged: bool = 
 
 ## What an auto attack's `damage` shows: the miss's words where it was `dodged`.
 static func auto_text(damage: int, dodged: bool = false) -> String:
-	return MISS_TEXT if dodged else "-%d" % damage
+	return TranslationServer.tr("miss") if dodged else "-%d" % damage
 
 
 ## What `struck` shows: its damage while `numbers` show, and on a line after it that the wild
@@ -67,7 +65,8 @@ static func auto_text(damage: int, dodged: bool = false) -> String:
 static func text_of(struck: SpecialStruck, numbers: bool = true) -> String:
 	var text: String = "-%d" % struck.damage if numbers and struck.damage > 0 else ""
 	if struck.felled:
-		text += ("\n" if not text.is_empty() else "") + FAINTED_TEXT
+		# The words stand on a line of their own, after the number.
+		text += ("\n" if not text.is_empty() else "") + TranslationServer.tr("fainted")
 	return text
 
 

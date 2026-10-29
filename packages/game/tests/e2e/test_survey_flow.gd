@@ -348,13 +348,13 @@ func _held_marks_follow(driver: GameDriver, survey: SurveyView, marks: SurveyHel
 	var here: String = driver.local_instance_name()
 	survey.show_state()
 	marks.show_state()
-	if not marks.held_by.is_empty() or marks.here_text() != TerritoryText.NOT_HELD_TEXT:
+	if not marks.held_by.is_empty() or marks.here_text() != "Held by no faction":
 		return "with no holder flags, the Survey still marks %s" % [marks.held_by]
 	WorldFlags.set_flag(driver.world, Territory.flag(here, guild))
 	marks.show_state()
 	if marks.held_by.get(here, "") != guild:
 		return "the Survey doesn't mark the instance here once the guild holds it"
-	if TextTags.shown(marks.here_text()) != TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]:
+	if TextTags.shown(marks.here_text()) != "Held by + Amvrel Velmarai":
 		return "the Survey says %s about the instance the guild holds" % marks.here_text()
 	# The forest north of the glade's start shows on the Survey there; the outpost to the southeast
 	# may not, and a neighbour that doesn't show isn't marked.
@@ -649,6 +649,14 @@ func _survey_choice(choice: SurveyChoice, survey: SurveyView, path: String) -> S
 			problem = "cycling the Survey skipped a place"
 		if problem.is_empty():
 			problem = _survey_placed(choice, survey)
+	# Each place in the menu's words (#1656): "Top right", "Over game", "Opaque".
+	var words: Array[String] = []
+	for at: int in places:
+		words.append(choice.place_words(at as SurveyChoice.Place))
+	if problem.is_empty() and words != ([
+		"Off", "Top left", "Top right", "Bottom left", "Bottom right", "Over game", "Opaque",
+	] as Array[String]):
+		problem = "the Survey's places read %s" % [words]
 	for _step: int in SurveyChoice.ZOOMS.size():
 		problem += choice.zoom_by(-1)
 	var farthest: bool = survey.across == SurveyChoice.ZOOMS[0]
@@ -999,7 +1007,7 @@ func _survey_in_menu(main: Node, choice: SurveyChoice, survey: SurveyView) -> St
 	await main.get_tree().process_frame
 	survey.show_state()
 	tab.view.show_state()
-	var held: String = TerritoryText.HELD_TEXT % ["+", "Amvrel Velmarai"]
+	var held: String = "Held by + Amvrel Velmarai"
 	var same: bool = (tab.view.tiles.keys() == survey.tiles.keys()
 			and tab.view.circles.keys() == survey.circles.keys()
 			and tab.view.quest_targets == survey.quest_targets

@@ -80,7 +80,10 @@ func is_unique() -> bool:
 
 ## The gear's name, its text tags showing the names they stand for (#752), and rarity, in words.
 func described() -> String:
-	return "%s (%s)" % [TextTags.shown(name), rarity.capitalize()]
+	var shown: String = TextTags.shown(TranslationServer.tr(name))
+	return TranslationServer.tr("{name} ({rarity})").format(
+		{ "name": shown, "rarity": rarity.capitalize() }
+	)
 
 
 ## Why the read fields are wrong, or "".

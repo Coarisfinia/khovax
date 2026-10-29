@@ -13,12 +13,6 @@ const BOTH: String = "both"
 const MARKS: Array[String] = [NONE, HARMONY, SUPREMACY, BOTH]
 ## Why a content file's mark can't be read.
 const PROBLEM: String = "its path is none, harmony, supremacy or both"
-## What the player reads for each mark; none shows nothing.
-const WORDS: Dictionary[String, String] = {
-	HARMONY: "Harmony",
-	SUPREMACY: "Supremacy",
-	BOTH: "Harmony and supremacy",
-}
 
 
 ## The mark in a content file's `data`: none when it has no path field, or "" when its path isn't
@@ -32,4 +26,19 @@ static func read(data: Dictionary) -> String:
 
 ## `text` (a quest's or an ability's name) with `mark` in words after it, or alone for none.
 static func tagged(text: String, mark: String) -> String:
-	return "%s (%s)" % [text, WORDS[mark]] if WORDS.has(mark) else text
+	var words: String = words_of(mark)
+	if words.is_empty():
+		return text
+	return TranslationServer.tr("{name} ({path})").format({ "name": text, "path": words })
+
+
+## What the player reads for `mark`: "" for none, or a mark that isn't one.
+static func words_of(mark: String) -> String:
+	match mark:
+		HARMONY:
+			return TranslationServer.tr("Harmony")
+		SUPREMACY:
+			return TranslationServer.tr("Supremacy")
+		BOTH:
+			return TranslationServer.tr("Harmony and supremacy")
+	return ""
