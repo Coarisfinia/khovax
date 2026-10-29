@@ -1308,14 +1308,19 @@ func _check_passive_strikes(spots: Array[Vector2i], hemmed: Vector2i) -> String:
 
 
 ## The companion attacks an instance builds read each passive's haste and heal from the ability data
-## (#1500): Kazri-tazri's haste and Lombu-bombu's heal.
+## (#1500): Kazri-tazri's and Lakvu-rakvu's hastes (#1685) and Lombu-bombu's heal.
 func _check_passive_data() -> String:
 	var built: CompanionAttackFeature = CompanionAttackFactory.build(null)
 	var kazri: int = AbilityContent.cached().abilities["tikazzir_kazri_tazri"].hurt_haste
+	var lakvu: int = AbilityContent.cached().abilities["kalvrakkor_lakvu_rakvu"].hurt_haste
 	var lombu: int = AbilityContent.cached().abilities["ombulumo_lombu_bombu"].rest_heal
-	if kazri < 1 or lombu < 1:
-		return "Kazri-tazri has no haste or Lombu-bombu no heal in the ability data"
-	if built.hastes != { "tikazzir_kazri_tazri": kazri } or built.rest_heals != {
+	if kazri < 1 or lakvu < 1 or lombu < 1:
+		return "Kazri-tazri or Lakvu-rakvu has no haste or Lombu-bombu no heal in the ability data"
+	var hastes: Dictionary[String, int] = {
+		"kalvrakkor_lakvu_rakvu": lakvu,
+		"tikazzir_kazri_tazri": kazri,
+	}
+	if built.hastes != hastes or built.rest_heals != {
 		"ombulumo_lombu_bombu": lombu,
 	}:
 		return "the built companion attacks have hastes %s and heals %s, not the data's" % [
