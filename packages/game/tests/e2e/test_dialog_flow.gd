@@ -93,7 +93,7 @@ func _read_on(tree: SceneTree, driver: GameDriver, screen: DialogScreen) -> Stri
 	if screen.choices() != [DialogScreen.READ_ON_TEXT] or _focused(screen) != 0:
 		return "the first line offered %s, focused %d" % [screen.choices(), _focused(screen)]
 	Input.action_press("move_right")
-	var standing: Command = driver.input.command(driver.state)
+	var standing: Command = (driver.input as LocalInput).command(driver.state)
 	Input.action_release("move_right")
 	if standing.move != Command.NO_MOVE:
 		return "the player walked while the dialog was open"
@@ -385,7 +385,7 @@ func _choose_with_controller(
 		return "the answer named %s for entity %d" % [answered[0].dialog, answered[0].entity_id]
 	if not driver.recording.changes.has(code):
 		return "the replay didn't record the answer"
-	driver.input.choose_answer(code + 1)
+	(driver.input as LocalInput).choose_answer(code + 1)
 	if _answered(driver).size() > 0:
 		return "an answer no dialog has was raised"
 	var page: CodexPage = screen.get_parent().get_node("CodexPage") as CodexPage
@@ -496,11 +496,12 @@ func _choose_with_click(
 ## the card still shows the first line skips to where it leads, and the last one closes the card.
 func _follow_commands(driver: GameDriver, screen: DialogScreen) -> String:
 	var _opened: bool = screen.open(GREETING)
-	driver.input.choose_answer(DialogFeature.code(GREETING, "ask_about_lumwen_hoal"))
+	var input: LocalInput = driver.input as LocalInput
+	input.choose_answer(DialogFeature.code(GREETING, "ask_about_lumwen_hoal"))
 	var _asked: Array[DialogAnswered] = _answered(driver)
 	if screen.line_index != 2:
 		return "an answer through the commands moved the card to line %d" % screen.line_index
-	driver.input.choose_answer(DialogFeature.code(GREETING, "promise_to_look"))
+	input.choose_answer(DialogFeature.code(GREETING, "promise_to_look"))
 	var _promised: Array[DialogAnswered] = _answered(driver)
 	if screen.is_open() or driver.input.in_dialog:
 		return "the last answer through the commands didn't close the card"
@@ -551,7 +552,7 @@ func _resume_open(driver: GameDriver, screen: DialogScreen) -> String:
 	if dialogs.dialog_of(0) != GREETING or dialogs.line_of(0) != 0:
 		return "the state holds %s at line %d" % [dialogs.dialog_of(0), dialogs.line_of(0)]
 	var saved: Dictionary = WorldData.of(driver.world)
-	driver.input.choose_answer(DialogFeature.code(GREETING, "leave_scout"))
+	(driver.input as LocalInput).choose_answer(DialogFeature.code(GREETING, "leave_scout"))
 	var _left: Array[DialogAnswered] = _answered(driver)
 	if screen.is_open() or not dialogs.dialog_of(0).is_empty():
 		return "leaving the scout didn't close their greeting"

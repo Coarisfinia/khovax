@@ -1011,16 +1011,16 @@ func _roster_shown(main: Node, roster: RosterHud) -> String:
 func _roster_swaps(main: Node, roster: RosterHud, driver: GameDriver) -> String:
 	var stick: TouchStick = main.get_node("Hud/TouchStick") as TouchStick
 	_tap_roster(roster, roster.rect_of(1).get_center(), false)
-	var tapped: int = driver.input.command(driver.state).swap
+	var tapped: int = (driver.input as LocalInput).command(driver.state).swap
 	if tapped != 2 or stick.is_held():
 		return "a tap on the toad's square didn't swap to it alone, or started the touch stick"
 	_tap_roster(roster, roster.rect_of(0).get_center(), true)
-	if driver.input.command(driver.state).swap != 1:
+	if (driver.input as LocalInput).command(driver.state).swap != 1:
 		return "a click on the finch's square didn't swap to it"
 	driver.input.blocked = true
 	_tap_roster(roster, roster.rect_of(1).get_center(), false)
 	driver.input.blocked = false
-	if driver.input.command(driver.state).swap != Command.NO_SWAP:
+	if (driver.input as LocalInput).command(driver.state).swap != Command.NO_SWAP:
 		return "a tap on the roster swapped while the game heard no input"
 	var _chosen: int = _swap_in(driver.world, null, 2)
 	roster.show_state()
@@ -1095,14 +1095,16 @@ func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 	var picking: Command = await _pressed(driver, &"revive_monster")
 	roster.show_state()
 	var standing: bool = picking.move == Command.NO_MOVE and _revived_by(picking).is_empty()
-	if not standing or driver.input.revive_pick.picked != _first or roster.picked_place != 0:
+	if (not standing
+			or (driver.input as LocalInput).revive_pick.picked != _first
+			or roster.picked_place != 0):
 		return "the revive key didn't pick the finch, shown on the roster, with the player standing"
 	var _right: Command = await _pressed(driver, &"ui_right")
-	var on: bool = driver.input.revive_pick.picked == _second
+	var on: bool = (driver.input as LocalInput).revive_pick.picked == _second
 	var _left: Command = await _pressed(driver, &"ui_left")
-	var back: bool = driver.input.revive_pick.picked == _first
+	var back: bool = (driver.input as LocalInput).revive_pick.picked == _first
 	var _cancel: Command = await _pressed(driver, &"ui_cancel")
-	if not on or not back or not driver.input.revive_pick.picked.is_empty():
+	if not on or not back or not (driver.input as LocalInput).revive_pick.picked.is_empty():
 		return "the arrows didn't move the pick between the fainted ones, or Escape kept it"
 	var again: Command = await _pressed(driver, &"revive_monster")
 	var _second_press: Command = await _pressed(driver, &"revive_monster")
@@ -1111,7 +1113,7 @@ func _check_revive_pick(main: Node, driver: GameDriver) -> String:
 		return "Enter didn't use the item on the toad the pick moved on to"
 	_undo(main, again)
 	_tap_roster(roster, roster.rect_of(0).get_center(), false)
-	again = driver.input.command(driver.state)
+	again = (driver.input as LocalInput).command(driver.state)
 	if _revived_by(again) != _first:
 		return "a tap on the fainted finch's square didn't use the item on it"
 	_undo(main, again)
@@ -1144,7 +1146,7 @@ static func _pressed(driver: GameDriver, action: StringName) -> Command:
 	Input.action_press(action)
 	driver.input._process(0.0)
 	Input.action_release(action)
-	return driver.input.command(driver.state)
+	return (driver.input as LocalInput).command(driver.state)
 
 
 ## Touches the roster at `at` and lifts the finger, or left clicks there with the mouse (`click`).

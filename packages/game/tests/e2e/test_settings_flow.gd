@@ -867,7 +867,7 @@ func _development_looks(view: DevelopmentWebView) -> String:
 ## closed, both go on.
 func _menu_holds_game(driver: GameDriver, open: bool) -> String:
 	Input.action_press("move_right")
-	var walks: bool = driver.input.command(driver.state).move != Command.NO_MOVE
+	var walks: bool = (driver.input as LocalInput).command(driver.state).move != Command.NO_MOVE
 	Input.action_release("move_right")
 	var ticked: bool = await _ticks_run(driver)
 	if walks == open or ticked == open:

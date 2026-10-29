@@ -2,7 +2,7 @@ class_name WorldKeeper
 extends Node
 ## Keeps the persistent world on disk (#119): at boot it hands the driver the saved world to resume,
 ## and while the game goes on it saves the world the driver hands it as each session starts (#831),
-## debounced like the profile (#73): at most once per ProfileKeeper.SAVE_INTERVAL_MSEC, and at once
+## debounced like the profile (#73): at most once per SAVE_INTERVAL_MSEC, and at once
 ## when the game quits or goes to the background. A crash loses at most one interval of play. The
 ## world file is apart from the profile (WorldSave), so saving one never touches the other. What
 ## other slices keep beside the world (its `companions`, like the ground explored in it) is saved in
@@ -10,6 +10,8 @@ extends Node
 ## world (an open dialog, #913), it isn't saved at all, not even on quitting, and once the last one
 ## lets go it's saved AFTER_HOLD_MSEC later, without waiting for the interval.
 
+## How often the world is saved at most (#73); the profile's keeper (ProfileKeeper) saves as often.
+const SAVE_INTERVAL_MSEC: int = 30_000
 ## How long after the last hold lets go the world is saved (#913).
 const AFTER_HOLD_MSEC: int = 500
 ## No hold let go with its save still waiting.
@@ -32,7 +34,7 @@ var save_path: String = ""
 ## The world last saved and its tick then, so a world that hasn't moved isn't saved again.
 var _saved_world: World = null
 var _saved_tick: int = -1
-var _last_save_msec: int = -ProfileKeeper.SAVE_INTERVAL_MSEC
+var _last_save_msec: int = -SAVE_INTERVAL_MSEC
 ## Whether a hold held the world when the keeper last looked, and when the last one let go, while
 ## its save waits, or NOT_FREED.
 var _was_held: bool = false
@@ -49,21 +51,22 @@ func _notification(what: int) -> void:
 		_report(flush(Time.get_ticks_msec()))
 
 
-## The saved world to resume, or null for a fresh one: when no world is kept, none is saved yet,
-## or the save is refused. A refused save is warned about; the fresh world's saves replace it. The
+## The saved world to resume, loading its instances from `source` (the blueprints', which the
+## driver hands in, #851), or null for a fresh one: when no world is kept, none is saved yet, or the
+## save is refused. A refused save is warned about; the fresh world's saves replace it. The
 ## companions take over what was kept beside it.
-func saved_world() -> World:
-	var saved: World = _load_saved()
+func saved_world(source: InstanceSource) -> World:
+	var saved: World = _load_saved(source)
 	for companion: WorldCompanion in companions:
 		companion.resumed(saved, path())
 	return saved
 
 
 ## The saved world, or null when there's none to resume (`saved_world`).
-func _load_saved() -> World:
+func _load_saved(source: InstanceSource) -> World:
 	if path().is_empty():
 		return null
-	var saved: World = WorldSave.load_from(BlueprintSource.new(), path())
+	var saved: World = WorldSave.load_from(source, path())
 	if saved != null and not saved.problem.is_empty():
 		push_warning("the saved world can't be resumed, so a fresh one starts: " + saved.problem)
 		return null
@@ -89,7 +92,7 @@ func save_if_due(now_msec: int) -> String:
 			return ""
 		_freed_msec = NOT_FREED
 		return flush(now_msec)
-	if now_msec - _last_save_msec < ProfileKeeper.SAVE_INTERVAL_MSEC:
+	if now_msec - _last_save_msec < SAVE_INTERVAL_MSEC:
 		return ""
 	return flush(now_msec)
 

@@ -11,7 +11,8 @@ extends Node
 ## this machine's player just left: a view of the instance they're in takes `local_events`.
 signal ticked(tick: int, events: Array[RefCounted])
 
-@export var input: LocalInput
+## This machine's player's input (the controls' LocalInput, #851): its slot, and whether it's heard.
+@export var input: SessionInput
 ## Holds this machine's player's profile, whose first carried monster is their companion (#338);
 ## none in tests that build a driver alone, whose players then bring none.
 @export var holder: ProfileHolder

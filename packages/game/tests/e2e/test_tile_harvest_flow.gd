@@ -197,7 +197,7 @@ func _check_tapped(main: Node) -> String:
 	driver.world.instances[here] = _beside_gems()
 	var mark: TapWalkMark = main.get_node("Instance/TapWalkMark") as TapWalkMark
 	var result: String = _walk_to_gems(mark)
-	driver.input.tap_walk.stop()
+	(driver.input as LocalInput).tap_walk.stop()
 	driver.world.instances[here] = own
 	mark.show_state()
 	return result
@@ -212,7 +212,7 @@ func _walk_to_gems(mark: TapWalkMark) -> String:
 	if start == TileHarvestFeature.NO_TILE:
 		return "no free tile three steps off the mana forest's gems"
 	state.player(0).tile = start
-	var walk: TapWalk = mark.driver.input.tap_walk
+	var walk: TapWalk = (mark.driver.input as LocalInput).tap_walk
 	if not walk.aim(state, start, gems):
 		return "a tap on gems three steps off didn't walk there"
 	var events: Array[RefCounted] = []
