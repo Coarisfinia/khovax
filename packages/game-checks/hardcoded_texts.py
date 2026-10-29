@@ -430,8 +430,9 @@ class Flow:
                     # A shown parameter's default is shown when a call leaves it out.
                     for index in sorted(self.text_params.get(id(func), set())):
                         self.expression(script, func, func.defaults.get(index, []))
-                    for index in sorted(self.format_params.get(id(func), set())):
-                        self.format_values(script, func, func.defaults.get(index, []))
+                    format_params = self.format_params.get(id(func), set())
+                    for index in sorted(format_params & func.defaults.keys()):
+                        self.format_values(script, func, func.defaults[index])
                 for member in sorted(self.text_members.get(script.path, set())):
                     self.expression(script, NO_FUNC, script.members[member])
                 for member in sorted(self.format_members.get(script.path, set())):
