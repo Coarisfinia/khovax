@@ -418,7 +418,7 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
             if len(numpy.unique(points[group], axis=0)) >= FRAGMENT_SAMPLES]
 
 
-def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
+def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weight=HEAD_WEIGHT):
     """Paints out what's left of the generator's eyes on `skin`'s head texture (#1737), for a
     creature whose own colours have no black: the generator paints its eyes over many of the
     texture's islands, and fragments `repaint` misses (a sliver across an island's seam, a pupil
@@ -426,8 +426,9 @@ def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
     Every near-black texel (its brightest channel under `below`, sRGB) goes, and so does every
     texel within `reach` of a sample of the head darker than `ratio` of the head's median, if it
     is that dark too; with `grow` texels around each, they take the colour of the texels around
-    them, filled in from the edges inward. Returns how many texels it painted."""
-    head = Head(skin, bone)
+    them, filled in from the edges inward. The head is the faces weighted at least `weight` to
+    `bone`, as `fragments` takes it. Returns how many texels it painted."""
+    head = Head(skin, bone, weight)
     pixels = head.pixels
     height, width = pixels.shape[:2]
     value = pixels[:, :, :3].max(axis=2)
