@@ -6,7 +6,6 @@ extends HBoxContainer
 ## knot is taken on the monster's web (DevelopmentWebView, #679).
 
 const ICON: Texture2D = preload("res://assets/game-icons/knot.svg")
-const TEXT: String = "Knot to take"
 
 var _icon: TextureRect
 
@@ -24,7 +23,7 @@ func _init() -> void:
 	_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_icon)
 	var words: Label = Label.new()
-	words.text = TEXT
+	words.text = text()
 	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	words.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(words)
@@ -35,6 +34,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_THEME_CHANGED or what == NOTIFICATION_ENTER_TREE:
 		var side: float = get_theme_default_font_size() * MenuWidgets.ICON_FONTS
 		_icon.custom_minimum_size = Vector2.ONE * side
+
+
+## The words beside the knot's shape.
+static func text() -> String:
+	return TranslationServer.tr("Knot to take")
 
 
 ## Whether `monster` has a knot to take: a level gained that no knot was taken for yet, as its web

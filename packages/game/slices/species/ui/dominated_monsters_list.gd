@@ -13,17 +13,10 @@ extends VBoxContainer
 ## The selected monster as it is now, or null: told each time the list refreshes.
 signal monster_shown(monster: DominatedMonster)
 
-const TITLE: String = "Monsters"
-const NONE_TEXT: String = "No dominated monsters yet"
-const COMPANION_TEXT: String = "Carried 1, companion: "
-const CARRIED_TEXT: String = "Carried %d: "
-const RESTING_TEXT: String = "Not carried: "
-## The buttons that move a monster one place up or down in the order: their icons (#584) and
-## their words on hover.
+## The buttons that move a monster one place up or down in the order: their icons (#584); their
+## words on hover say so (_row).
 const UP_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-up.svg")
 const DOWN_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-down.svg")
-const UP_TIP: String = "Move up"
-const DOWN_TIP: String = "Move down"
 
 ## This machine's player's monsters, handed in by the profile (ProfilePanelsTie), whose slice comes
 ## after this one; none without it: their short ids in their order and the ones they carry (each an
@@ -62,10 +55,10 @@ func _ready() -> void:
 	_species = species.species
 	_ascensions = species.ascensions
 	_abilities = MonsterDetails.all_ability_names()
-	add_child(MenuWidgets.label(TITLE))
+	add_child(MenuWidgets.label(tr("Monsters")))
 	_rows = VBoxContainer.new()
 	add_child(_rows)
-	_show([NONE_TEXT], [])
+	_show([none_text()], [])
 
 
 func _process(_delta: float) -> void:
@@ -85,12 +78,17 @@ func refresh() -> void:
 		for short_id: String in ids:
 			marks.append(KnotMark.waits(monster_by(short_id)))
 	if lines.is_empty():
-		lines.append(NONE_TEXT)
+		lines.append(none_text())
 	if lines != shown or ids != shown_ids or marks != marked:
 		_show(lines, ids, marks)
 	if not shown_ids.has(selected):
 		selected = shown_ids[0] if not shown_ids.is_empty() else ""
 	_show_details()
+
+
+## What the list says while the player has no dominated monster.
+static func none_text() -> String:
+	return TranslationServer.tr("No dominated monsters yet")
 
 
 ## Shows the monster `short_id`'s stats in the detail pane, as a tap, a click or the focus does.
@@ -136,10 +134,13 @@ func _lines_of(ids: Array[String]) -> Array[String]:
 	var lines: Array[String] = []
 	var carrying: int = carried_ids().size()
 	for place: int in ids.size():
-		var prefix: String = RESTING_TEXT
-		if place < carrying:
-			prefix = COMPANION_TEXT if place == 0 else CARRIED_TEXT % (place + 1)
-		lines.append(prefix + _described(monster_by(ids[place])))
+		var described: String = _described(monster_by(ids[place]))
+		if place == 0 and carrying > 0:
+			lines.append(tr("Carried 1, companion: %s") % described)
+		elif place < carrying:
+			lines.append(tr("Carried %d: %s") % [place + 1, described])
+		else:
+			lines.append(tr("Not carried: %s") % described)
 	return lines
 
 
@@ -154,7 +155,8 @@ func move(short_id: String, place: int) -> void:
 ## guarantees every carried one is (ProfileSave).
 func _described(monster: DominatedMonster) -> String:
 	var known: Species = _species.get(monster.species)
-	return "%s, level %d" % [known.name if known != null else monster.species, monster.level]
+	var species_name: String = tr(known.name) if known != null else monster.species
+	return tr("%s, level %d") % [species_name, monster.level]
 
 
 ## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any, with
@@ -203,8 +205,10 @@ func _row(line: String, short_id: String, place: int, with_mark: bool) -> Contro
 			func(_at: Vector2, data: Variant) -> bool: return data is String,
 			func(_at: Vector2, data: Variant) -> void: _dropped(data, place),
 		)
-	row.add_child(MenuWidgets.icon_button(UP_ICON, UP_TIP, move.bind(short_id, place - 1)))
-	row.add_child(MenuWidgets.icon_button(DOWN_ICON, DOWN_TIP, move.bind(short_id, place + 1)))
+	var up: Callable = move.bind(short_id, place - 1)
+	var down: Callable = move.bind(short_id, place + 1)
+	row.add_child(MenuWidgets.icon_button(UP_ICON, tr("Move up"), up))
+	row.add_child(MenuWidgets.icon_button(DOWN_ICON, tr("Move down"), down))
 	return row
 
 

@@ -10,17 +10,16 @@ extends ScrollContainer
 ## for every entry. Its layout lives in its scene, codex_book.tscn (#437); the menu shows it among
 ## its gameplay tabs, as game/ hands it over (a child of the menu's node).
 
-## Each kind's section, in the order shown: its kind's word (TextTags) and its heading. A kind that
-## gets a codex page gets its section here.
-const SECTIONS: Dictionary[String, String] = {
-	TextTags.FACTION: CodexPage.LEXICON_TEXT,
-	TextTags.MONSTER: CodexPage.BESTIARY_TEXT,
-	TextTags.PERSON: CodexPage.PEOPLE_TEXT,
-	TextTags.REALM: CodexPage.REALMS_TEXT,
-	TextTags.PLACE: CodexPage.PLACES_TEXT,
-	TextTags.UNIQUE_ITEM: CodexPage.UNIQUE_ITEMS_TEXT,
-}
-const NONE_TEXT: String = "No names met yet"
+## Each kind's section, in the order shown, by its kind's word (TextTags), under its page's heading
+## (CodexPage.heading_of). A kind that gets a codex page gets its section here.
+const SECTIONS: Array[String] = [
+	TextTags.FACTION,
+	TextTags.MONSTER,
+	TextTags.PERSON,
+	TextTags.REALM,
+	TextTags.PLACE,
+	TextTags.UNIQUE_ITEM,
+]
 
 ## Which names the player has met.
 @export var keeper: CodexKeeper
@@ -63,6 +62,11 @@ func refresh() -> void:
 	if unlocked != shown or font != _font_size:
 		_font_size = font
 		_show(unlocked)
+
+
+## What the book says while the player has met no name.
+static func none_text() -> String:
+	return TranslationServer.tr("No names met yet")
 
 
 ## The button of the entry of the kind `kind` with the id `id`, or null when it isn't listed.
@@ -112,11 +116,13 @@ func _show(unlocked: Dictionary[String, Array]) -> void:
 		_rows.remove_child(row)
 		row.queue_free()
 	if unlocked.is_empty():
-		_rows.add_child(MenuWidgets.label(NONE_TEXT))
+		_rows.add_child(MenuWidgets.label(none_text()))
 	for kind: String in unlocked:
-		_rows.add_child(MenuWidgets.label(SECTIONS[kind]))
+		_rows.add_child(MenuWidgets.label(CodexPage.heading_of(kind)))
 		for id: String in unlocked[kind]:
 			var entry: Button = MenuWidgets.button(_name_of(kind, id), _open.bind(kind, id))
+			# A name the text tags resolve in English (TextTags.shown): the button's own automatic
+			# translation looks it up, its one translation.
 			entry.name = "%s_%s" % [kind, id]
 			entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			entry.custom_minimum_size = Vector2.ONE * _font_size * GameMenu.BUTTON_FONTS

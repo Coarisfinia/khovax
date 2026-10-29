@@ -735,7 +735,8 @@ func _check_pill_opens(list: QuestListView, tab: QuestsTab, quest: String) -> St
 	for pill: QuestPill in [listed, tab.pills[quest]]:
 		var meta: String = pill.place_links().links[0]
 		pill.place_links().select(meta)
-		var opened: bool = (page.is_open() and page.heading.text == CodexPage.PLACES_TEXT
+		var opened: bool = (page.is_open()
+				and page.heading.text == CodexPage.heading_of(TextTags.PLACE)
 				and page.title.text == Realms.name_of(FlowSteps.FOREST))
 		page.close()
 		if not opened:

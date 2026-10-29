@@ -105,8 +105,89 @@ msgstr ""
 msgid "the thronging ring"
 msgstr ""
 
+#: slices/codex/ui/bestiary_entry.gd
+msgid "You haven't seen one yet."
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+msgid "Fight one to learn its types, abilities and haunts."
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+msgid "Dominate one to learn its lore."
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+#: slices/species/ui/monster_details.gd
+msgid "Types:"
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+#: slices/species/ui/monster_details.gd
+msgid "Special: %s"
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+#: slices/species/ui/monster_details.gd
+msgid "Passive for you: %s"
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+#: slices/species/ui/monster_details.gd
+msgid "Own passive: %s"
+msgstr ""
+
+#: slices/codex/ui/bestiary_entry.gd
+msgid "Found in: %s"
+msgstr ""
+
 #: slices/codex/ui/codex_book.gd
+#: slices/codex/ui/codex_page.gd
 msgid "Codex"
+msgstr ""
+
+#: slices/codex/ui/codex_book.gd
+msgid "No names met yet"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Close the page (Escape, or B on a controller)"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Lexicon"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Bestiary"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "People"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Realms"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Places"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Unique items"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Your standing: neutral"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "%s: [i]%s[/i]"
+msgstr ""
+
+#: slices/codex/ui/codex_page.gd
+msgid "Your standing: %+d, %s"
 msgstr ""
 
 #: slices/credits/ui/credits_page.gd
@@ -159,6 +240,67 @@ msgstr ""
 #: slices/settings/look/graphics.gd
 #: slices/survey/ui/survey_choice.gd
 msgid "Off"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+#: slices/species/ui/monster_details.gd
+msgid "No monster selected"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Its development web can't be read"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Development"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Nodes to take: %d"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "It takes a node each time it gains a level"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Taken"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Special +%s%%"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Passive"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "{stat} {shift}%"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "HP"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Str"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Strength"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Spd"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Speed"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Unknown stat"
 msgstr ""
 
 #: slices/dialogs/data/teska_na_amvrel_greeting.jsonc
@@ -1094,6 +1236,87 @@ msgstr ""
 
 #: slices/species/data/vynnimu.jsonc
 msgid "Vynnimu"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Monsters"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "No dominated monsters yet"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Carried 1, companion: %s"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Carried %d: %s"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Not carried: %s"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+#: slices/species/ui/monster_details.gd
+msgid "%s, level %d"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Move up"
+msgstr ""
+
+#: slices/species/ui/dominated_monsters_list.gd
+msgid "Move down"
+msgstr ""
+
+#: slices/species/ui/knot_mark.gd
+msgid "Knot to take"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Details"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Ascend"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Its species' stats can't be read"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "HP: %d"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Strength: %d"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Speed: %d"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Sight: you see %d steps further while you carry it"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Ascends into %s at level %d"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Given one %s: you hold %d"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "%s ascended into %s!"
+msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Progress: %d of %d to level %d"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd

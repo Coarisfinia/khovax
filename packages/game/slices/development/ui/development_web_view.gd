@@ -15,31 +15,6 @@ extends VBoxContainer
 ## Asks to take `node` of the web of the dominated monster `short_id`.
 signal node_chosen(short_id: String, node: String)
 
-const TITLE: String = "Development"
-const NONE_TEXT: String = "No monster selected"
-const NO_WEB_TEXT: String = "Its development web can't be read"
-## How many nodes it may still take, or that it takes one at its next level.
-const PICKS_TEXT: String = "Nodes to take: %d"
-const NO_PICKS_TEXT: String = "It takes a node each time it gains a level"
-## The first line of a taken node's button.
-const TAKEN_TEXT: String = "Taken"
-## Each stat a node shifts, by its name in the data, in words as the detail pane names it.
-const STAT_NAMES: Dictionary[String, String] = {
-	"hp": "HP",
-	"strength": "Strength",
-	"speed": "Speed",
-}
-## The same, shortened, for a screen too narrow for the whole words even with the spokes at their
-## steepest (#1442).
-const SHORT_STAT_NAMES: Dictionary[String, String] = {
-	"hp": "HP",
-	"strength": "Str",
-	"speed": "Spd",
-}
-## A special node's line: how much stronger it makes the species' special.
-const SPECIAL_TEXT: String = "Special +%s%%"
-## The first line of a passive node's button, the passive's name below it.
-const PASSIVE_TEXT: String = "Passive"
 ## A node's smallest side, in font sizes, so a finger can hit it: the same as the menu's buttons
 ## (GameMenu.BUTTON_FONTS), which the menu sets only when the font changes, not on nodes built
 ## after.
@@ -127,15 +102,15 @@ func show_monster(monster: DominatedMonster) -> void:
 	if key == _key and not shown.is_empty():
 		return
 	_key = key
-	var lines: Array[String] = [TITLE, NONE_TEXT]
+	var lines: Array[String] = [title_text(), tr("No monster selected")]
 	var webs: Dictionary[String, DevelopmentWeb] = DevelopmentContent.cached().webs
 	_shown_web = null
 	if monster != null:
 		_shown_web = webs.get(monster.species)
-		lines[1] = NO_WEB_TEXT
+		lines[1] = tr("Its development web can't be read")
 	if _shown_web != null:
 		var left: int = monster.picks_left()
-		lines[1] = PICKS_TEXT % left if left > 0 else NO_PICKS_TEXT
+		lines[1] = picks_text(left) if left > 0 else no_picks_text()
 		_taken = monster.taken.duplicate()
 	shown = lines
 	for old: Node in _lines.get_children():
@@ -146,25 +121,63 @@ func show_monster(monster: DominatedMonster) -> void:
 	_build(monster)
 
 
+## The view's heading.
+static func title_text() -> String:
+	return TranslationServer.tr("Development")
+
+
+## How many nodes, `left`, the monster may still take.
+static func picks_text(left: int) -> String:
+	return TranslationServer.tr("Nodes to take: %d") % left
+
+
+## That the monster has no node left to take and takes one at its next level.
+static func no_picks_text() -> String:
+	return TranslationServer.tr("It takes a node each time it gains a level")
+
+
+## The first line of a taken node's button.
+static func taken_text() -> String:
+	return TranslationServer.tr("Taken")
+
+
 ## The words on the button of the shown web's `node`, after "Taken" once taken: what its leaning
 ## shifts, one stat a line, each stat's name `short`ened for a narrow screen; how much stronger it
-## makes the special; or "Passive" and the passive's name (#1452).
+## makes the special; or "Passive" and the passive's name below it (#1452).
 func node_text(node: String, short: bool = false) -> String:
 	var parts: Array[String] = []
 	if _taken.has(node):
-		parts.append(TAKEN_TEXT)
+		parts.append(taken_text())
 	if _shown_web.specials.has(node):
-		parts.append(SPECIAL_TEXT % _percent(_shown_web.specials[node]))
+		# How much stronger it makes the species' special.
+		parts.append(tr("Special +%s%%") % _percent(_shown_web.specials[node]))
 	if _shown_web.passives.has(node):
 		var passive: String = _shown_web.passives[node]
-		parts.append_array([PASSIVE_TEXT, _abilities.get(passive, passive)])
-	var names: Dictionary[String, String] = SHORT_STAT_NAMES if short else STAT_NAMES
+		parts.append_array([tr("Passive"), _abilities.get(passive, passive)])
 	var leaning: DevelopmentLeaning = _shown_web.leanings[node]
 	for stat: String in DevelopmentLeaning.STATS:
 		var shift: int = leaning.get(stat)
 		if shift != 0:
-			parts.append("%s %s%s%%" % [names[stat], "+" if shift > 0 else "", _percent(shift)])
+			var signed: String = ("+" if shift > 0 else "") + _percent(shift)
+			# Named, so a translation can put the value first.
+			var values: Dictionary = { "stat": _stat_name(stat, short), "shift": signed }
+			parts.append(tr("{stat} {shift}%").format(values))
 	return "\n".join(parts)
+
+
+## The stat a node shifts, by its name in the data, in words as the detail pane names it, or
+## `short`ened for a screen too narrow for the whole words even with the spokes at their steepest
+## (#1442).
+func _stat_name(stat: String, short: bool) -> String:
+	match stat:
+		"hp":
+			return tr("HP")
+		"strength":
+			return tr("Str") if short else tr("Strength")
+		"speed":
+			return tr("Spd") if short else tr("Speed")
+	# A stat the view doesn't know a word for yet (DevelopmentLeaning.STATS).
+	return tr("Unknown stat")
 
 
 ## Thousandths, as a percentage: a tenth shows only when there is one.
