@@ -282,9 +282,10 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as blender_pool, \
             concurrent.futures.ThreadPoolExecutor(max_workers=max(1, jobs)) as godot_pool:
-        futures = [blender_pool.submit(blender_chain)]
-        futures += [godot_pool.submit(one, job, True) for job in godot]
+        futures: list[concurrent.futures.Future] = []
         try:
+            futures.append(blender_pool.submit(blender_chain))
+            futures += [godot_pool.submit(one, job, True) for job in godot]
             for future in futures:
                 future.result()
         except BaseException:
