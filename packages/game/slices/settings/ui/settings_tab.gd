@@ -83,6 +83,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Settings")
+
+
 ## Shows the rows of `submenu` in place of the list; a controller's focus moves onto them if it
 ## was on the tab.
 func open(submenu: String) -> void:

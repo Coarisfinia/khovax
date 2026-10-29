@@ -59,6 +59,12 @@ func _process(_delta: float) -> void:
 		refresh()
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Controls")
+
+
 ## Makes the rows `width` pixels wide, as wide as the Settings tab's, in the tab's middle.
 func fit(width: float) -> void:
 	_rows.custom_minimum_size.x = width

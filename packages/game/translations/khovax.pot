@@ -105,6 +105,14 @@ msgstr ""
 msgid "the thronging ring"
 msgstr ""
 
+#: slices/codex/ui/codex_book.gd
+msgid "Codex"
+msgstr ""
+
+#: slices/credits/ui/credits_page.gd
+msgid "Credits"
+msgstr ""
+
 #: slices/credits/ui/credits_tab.gd
 msgid "The credits couldn't be read."
 msgstr ""
@@ -337,6 +345,14 @@ msgstr ""
 msgid "Warding charm"
 msgstr ""
 
+#: slices/input_prompts/ui/controls_tab.gd
+msgid "Controls"
+msgstr ""
+
+#: slices/menu/ui/character_tab.gd
+msgid "Character"
+msgstr ""
+
 #: slices/menu/ui/character_tab.gd
 msgid "Auto: this world's color"
 msgstr ""
@@ -512,6 +528,10 @@ msgstr ""
 msgid "The way into ${PLACE:hrovumel_stolm}"
 msgstr ""
 
+#: slices/quests/ui/quests_tab.gd
+msgid "Quests"
+msgstr ""
+
 #: slices/settings/look/graphics.gd
 msgid "%d× MSAA"
 msgstr ""
@@ -522,6 +542,10 @@ msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
 msgid "Anti-aliasing"
+msgstr ""
+
+#: slices/settings/ui/settings_tab.gd
+msgid "Settings"
 msgstr ""
 
 #: slices/settings/ui/settings_tab.gd
@@ -861,6 +885,7 @@ msgid "Vynnimu"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
+#: slices/survey/ui/survey_tab.gd
 msgid "Survey"
 msgstr ""
 

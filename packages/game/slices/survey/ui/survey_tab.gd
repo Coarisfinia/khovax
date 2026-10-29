@@ -82,6 +82,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Survey")
+
+
 ## Raises the names the holder's line selects and shows as the tab's own.
 func _relay_held_names() -> void:
 	var _selected: int = held_text.name_selected.connect(name_selected.emit)

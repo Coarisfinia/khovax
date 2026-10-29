@@ -44,6 +44,12 @@ func _process(_delta: float) -> void:
 		refresh()
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Codex")
+
+
 ## Lists the entries unlocked now; builds the rows anew only when they changed, or the text's
 ## size did.
 func refresh() -> void:
