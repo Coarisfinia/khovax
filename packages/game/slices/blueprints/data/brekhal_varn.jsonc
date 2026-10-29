@@ -1,5 +1,6 @@
 // Brekhal Varn, the mountain pass southwest of Edhra Tewk (#689), with a side passage sealed until
 // its guide, Ausvren vo Tormaesk, is led there and opens it, into Hrovumel Stolm (#1590, #1588).
+// Kalvrakkor, the frost-and-fire hound, lives here (#1692): a high, broken pass of frost and stone.
 {
 	"id": "brekhal_varn",
 	"codex": {
@@ -8,7 +9,7 @@
 	},
 	"rules": "standard",
 	"loot_table": "wild_ground",
-	"wild_species": { "ombulumo": 1, "tikazzir": 2 },
+	"wild_species": { "kalvrakkor": 1, "ombulumo": 1, "tikazzir": 2 },
 	"variants": [
 		// Once its guide has opened their seal (EscortFeature), the passage stays open: its region
 		// pieces are Brekhal Varn's own, but for the sealed passage, opened.
