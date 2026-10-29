@@ -423,16 +423,17 @@ def _mirrored(point):
 
 
 def twins(leaves, skin, bones):
-    """{chain: its mirror twin}: two leaf chains off the same chain, as many bones each, whose
-    joints mirror each other across X within TWIN of the model's height, off the midline."""
+    """{chain: its mirror twin}: two leaf chains off the same chain whose starts and tips mirror
+    each other across X within TWIN of the model's height, off the midline. Their bone counts
+    may differ: the generator doesn't always give both sides as many."""
     heights = [vertex.co.z for vertex in skin.data.vertices]
     near = TWIN * (max(heights) - min(heights))
     pairs = []
     for first in leaves:
         for second in leaves:
-            if first.name >= second.name or first.parent is not second.parent or len(first.bones) != len(second.bones):
+            if first.name >= second.name or first.parent is not second.parent:
                 continue
-            ours, theirs = _joints(first, bones), _joints(second, bones)
+            ours, theirs = _joints(first, bones)[::len(first.bones)], _joints(second, bones)[::len(second.bones)]
             if sum(abs(joint.x) for joint in ours) / len(ours) <= near:
                 continue
             gap = sum((_mirrored(joint) - other).length for joint, other in zip(ours, theirs)) / len(ours)
