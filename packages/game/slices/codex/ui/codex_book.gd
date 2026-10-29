@@ -121,6 +121,8 @@ func _show(unlocked: Dictionary[String, Array]) -> void:
 		_rows.add_child(MenuWidgets.label(CodexPage.heading_of(kind)))
 		for id: String in unlocked[kind]:
 			var entry: Button = MenuWidgets.button(_name_of(kind, id), _open.bind(kind, id))
+			# A name the text tags resolve, which they translate (#1655): not looked up again.
+			entry.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 			entry.name = "%s_%s" % [kind, id]
 			entry.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			entry.custom_minimum_size = Vector2.ONE * _font_size * GameMenu.BUTTON_FONTS

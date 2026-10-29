@@ -66,6 +66,8 @@ func _ready() -> void:
 	_column = VBoxContainer.new()
 	heading = MenuWidgets.label(heading_of(TextTags.FACTION))
 	title = MenuWidgets.label("")
+	# The name shown is translated already (_show_name), so the label doesn't look it up again.
+	title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	gloss = RichTextLabel.new()
 	gloss.bbcode_enabled = true
 	gloss.fit_content = true
