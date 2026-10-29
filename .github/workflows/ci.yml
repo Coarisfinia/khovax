@@ -351,6 +351,13 @@ jobs:
           uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
             --python ../game-models/test_footprint.py
 
+      - name: "🧪 Test that render_media.py publishes what finished when a render fails"
+        # The renders and publishing stood in for (#1694): a failed or timed-out job leaves its
+        # pictures out, the rest is still published, and the run exits 1.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: uv run --locked --package khovax-game-models ../game-models/test_render_media.py
+
       - name: "⬡ Check every monster and prop stays within its hex"
         # Every frame of every clip of every .glb built by a script here, how far the mesh reaches
         # across the hex the game stands it on, seen from above (#1520); a prop is held to limits
