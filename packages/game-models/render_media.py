@@ -347,19 +347,23 @@ def collect(out: Path, clips: list[str], quick: bool,
 
     if "sides" not in missing and not ffmpeg(*[desktop / f"{side}.png" for side in SIDES],
                                              filters=sides_filter(), out=wanted["sides"][1]):
-        missing["sides"] = f"ffmpeg couldn't join the six sides from {desktop}"
+        missing["sides"] = f"ffmpeg couldn't join the six sides from {desktop}: {out / 'logs' / 'desktop.log'}"
     (out / "tiles").mkdir(exist_ok=True)
     for view, folder, label in (("game", out / "clips-game", ""), ("close", out / "clips-close", "close-")):
         for clip in clips:
             key = f"{label}{clip}"
             if key in missing:
                 continue
+            job_log = out / "logs" / f"{folder.name}.log"
             if gif.make(folder, clip, out=wanted[key][1]) is None:
-                missing[key] = f"no GIF made from {folder}"
+                missing[key] = f"no GIF made from {folder}: {job_log}"
                 continue
             frames = sorted(folder.glob(f"{clip}_[0-9][0-9][0-9].png"))
             picked = [frames[round(index * (len(frames) - 1) / 3)] for index in range(4)]
-            ffmpeg(*picked, filters="hstack=inputs=4,scale=1280:-1", out=out / "tiles" / f"{view}-{clip}.png")
+            tile = out / "tiles" / f"{view}-{clip}.png"
+            # Not published, but a missing tile still fails the run, listed with the pictures.
+            if not ffmpeg(*picked, filters="hstack=inputs=4,scale=1280:-1", out=tile):
+                missing[f"tiles/{tile.name}"] = f"ffmpeg couldn't join four frames from {folder}: {job_log}"
     for key, (job, path) in wanted.items():
         if key not in missing and not path.is_file():
             missing[key] = f"{path} wasn't made: {out / 'logs' / (job + '.log')}"

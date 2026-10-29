@@ -65,7 +65,7 @@ def fake_gif(folder: Path, clip: str, out: Path) -> Path | None:
     return out
 
 
-def render(*flags: str, failing: dict[str, int | None]) -> tuple[int, list[str], str]:
+def render(*flags: str, failing: dict[str, int | None], ffmpeg=None) -> tuple[int, list[str], str]:
     """Runs render_media with the stand-ins: its exit code, the published names and its output."""
     published: list[str] = []
 
@@ -77,7 +77,7 @@ def render(*flags: str, failing: dict[str, int | None]) -> tuple[int, list[str],
     with tempfile.TemporaryDirectory() as folder, \
             mock.patch.object(sys, "argv", ["render_media.py", str(MODEL), "--pr", "1", "--out", f"{folder}/out", *flags]), \
             mock.patch.object(render_media, "run", fake_run(failing)), \
-            mock.patch.object(render_media, "ffmpeg", fake_ffmpeg), \
+            mock.patch.object(render_media, "ffmpeg", ffmpeg or fake_ffmpeg), \
             mock.patch.object(render_media.gif, "make", fake_gif), \
             mock.patch.object(render_media, "clips_of", lambda _model: list(CLIPS)), \
             mock.patch.object(render_media, "publish", publish), \
@@ -122,6 +122,13 @@ def main() -> int:
           "| **Walk** | ![](" in block and "| *not rendered* |" in block and "![phone]" not in block)
     check(failures, "two jobs fail: the timeout and the failure are listed with their logs",
           "- close-Idle: clips-close timed out" in output and "- phone: phone failed (2): " in output)
+
+    def no_tiles(*inputs: Path, filters: str, out: Path) -> bool:
+        return "hstack=inputs=4" not in filters and fake_ffmpeg(*inputs, filters=filters, out=out)
+
+    code, published, output = render(failing={}, ffmpeg=no_tiles)
+    check(failures, "a clip's tile fails: exit 1, the GIFs still published, the tile listed",
+          code == 1 and "pr-1-Walk.gif" in published and "- tiles/game-Walk.png: " in output)
 
     code, published, output = render("--quick", failing={"sheet": 1, "desktop": 1})
     check(failures, "every job fails: exit 1, nothing published", code == 1 and not published)
