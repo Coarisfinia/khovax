@@ -37,6 +37,10 @@ KNOWN = {
     ("fohossa", "Feed"): 1628,
     ("fohossa", "Run"): 1628,
     ("fohossa", "Sleep"): 1628,
+    ("frostfire_hound", "Attack"): 1680,
+    ("frostfire_hound", "ChannelStart"): 1680,
+    ("frostfire_hound", "Faint"): 1680,
+    ("frostfire_hound", "Hit"): 1680,
 }
 
 

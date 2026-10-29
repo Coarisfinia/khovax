@@ -12,7 +12,9 @@ const SLICES: String = "res://slices/"
 ## Creature models built before the species that wears them (#1476): checked like the models the
 ## species name, so each is ready to wear, until its species names it and it leaves this list.
 const UNWORN_MODELS: Array[String] = [
-	"res://assets/drakkudor/drakkudor.glb", "res://assets/fohossa/fohossa.glb",
+	"res://assets/drakkudor/drakkudor.glb",
+	"res://assets/fohossa/fohossa.glb",
+	"res://assets/frostfire_hound/frostfire_hound.glb",
 ]
 ## Animated props built before the view that places them (#1634), with the clips each plays:
 ## checked like a view's model, until a view names it and it leaves this list.

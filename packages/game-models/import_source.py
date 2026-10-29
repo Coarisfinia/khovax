@@ -1,5 +1,5 @@
 """Turns a textured model from a generator's download into the source a model script builds from
-(#1476): its mesh with its UVs and only its base colour texture, its longer side shrunk to
+(#1476): its mesh with its UVs and only its base colour texture (no glow), its longer side shrunk to
 `size`, opaque, single-sided and matte. A generator's export carries far more than the game's
 cel look shows (a normal map, a metal and roughness map, each as large as the colour), and the
 game's other models are a small share of its size; the model script then places, rigs and
@@ -107,7 +107,7 @@ for material in mesh.data.materials:
     colour = shader.inputs["Base Color"].links[0].from_node if shader.inputs["Base Color"].links else None
     # Only the base colour stays: no normal map, no metal or roughness map, no alpha. The links
     # go first: a node removed under a link Python still holds crashes Blender.
-    for name in ("Alpha", "Metallic", "Roughness", "Normal"):
+    for name in ("Alpha", "Metallic", "Roughness", "Normal", "Emission Color"):
         for link in list(shader.inputs[name].links):
             links.remove(link)
     dropped = [node.name for node in nodes
@@ -117,6 +117,9 @@ for material in mesh.data.materials:
     shader.inputs["Metallic"].default_value = 0.0
     shader.inputs["Roughness"].default_value = 1.0
     shader.inputs["Alpha"].default_value = 1.0
+    # A download with an emissive map (#1609) keeps its emissive factor once the map goes, white,
+    # and would glow all over: no glow.
+    shader.inputs["Emission Strength"].default_value = 0.0
     material.use_backface_culling = True
     if colour is not None:
         image = colour.image
