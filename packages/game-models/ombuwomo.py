@@ -63,13 +63,15 @@ SPREAD = 1.04
 # face gives way to the body, and the body's back.
 BODY = limbless.Body(nose=(0.0, -0.86, 0.62), head_base=(0.0, -0.1, 0.66), back=(0.0, 0.86, 0.66))
 
-# Our eyes' colours: the dark eyeball and pupil, and a soft lime glow like the Ombulumo's.
+# Our eyes' colours: the dark eyeball and pupil, and a warm amber glow, which the pale lime spots
+# on its leaves don't swallow.
 COLORS = {
     "dark": ((0.02, 0.03, 0.03, 1.0), 0.0),
-    "glow": ((0.62, 1.0, 0.18, 1.0), 1.0),
+    "glow": ((1.0, 0.62, 0.12, 1.0), 1.0),
 }
-# A round, gentle bud's eyes: a wide round pupil and a soft brow.
-EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4}
+# A round, gentle bud's eyes: a wide round pupil and a soft brow, twice as large as the
+# painted marks, which are half the size of the black discs the generator set over them as its eyes.
+EYE_SHAPE = {"pupil": (0.4, 0.5), "brow_size": 0.4, "grow": 2.0}
 # It butts with its face's front.
 SNOUT = (0.0, -0.84, 0.55)
 
