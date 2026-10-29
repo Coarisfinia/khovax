@@ -303,6 +303,25 @@ jobs:
             ../game-models/blender.py --background --factory-startup \
             --python ../game-models/check_brows.py --
 
+      - name: "🧪 Test the painted-eye check on a ball"
+        # Painted black or glowing eyes fail it; a plain texture and our own eyes pass (#1688).
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 2
+        run: |
+          uv run --locked --package khovax-game-models ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/test_painted_eyes.py
+
+      - name: "🎨 Check no generated eye is left in a creature's texture"
+        # Each creature's head, its texture sampled for a mirrored pair of flat black ovals or
+        # glowing painted eyes, as lib/marked_eyes.py finds them on import (#1688); a model without
+        # a textured head passes.
+        if: steps.models.outputs.changed == 'true'
+        timeout-minutes: 5
+        run: |
+          git ls-files -z ':(top)packages/game/*.glb' | xargs -0 -r uv run --locked --package khovax-game-models \
+            ../game-models/blender.py --background --factory-startup \
+            --python ../game-models/check_painted_eyes.py --
+
       - name: "🦴 Check every model's limbs have sane dimensions"
         # Each limb's segments against each other and the body's height, at rest, per body plan
         # (the owner, on #1297); a model without limbs of a known body plan passes.
