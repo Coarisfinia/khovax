@@ -35,12 +35,17 @@ jobs:
             exit 1
           fi
           date=$(date -u +%Y%m%d)
-          # The newest nightly's date, tag and commit, from the tags, which only a published release
-          # has. Any error fails the job, so it's never mistaken for "no nightly yet".
+          # The newest nightly's date and tag, from the tags, which only a published release has, and
+          # the commit it was built from (an annotated tag's own object is peeled to its commit). Any
+          # error fails the job, so it's never mistaken for "no nightly yet".
           tags=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" \
-            --jq '.[] | select(.ref | test("^refs/tags/v[0-9]+[.][0-9]+[.][0-9]+-nightly[.][0-9]{8}$"))
-              | "\(.ref | ltrimstr("refs/tags/") | split(".") | last) \(.ref | ltrimstr("refs/tags/")) \(.object.sha)"')
-          read -r last_date last_tag last_sha <<< "$(sort -n <<< "$tags" | tail -n 1)"
+            --jq '.[].ref | ltrimstr("refs/tags/") | select(test("^v[0-9]+[.][0-9]+[.][0-9]+-nightly[.][0-9]{8}$"))
+              | "\(split(".") | last) \(.)"')
+          read -r last_date last_tag <<< "$(sort -n <<< "$tags" | tail -n 1)"
+          last_sha=
+          if [ -n "$last_tag" ]; then
+            last_sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${last_tag}" --jq .sha)
+          fi
           if [ "$last_sha" = "$GITHUB_SHA" ]; then
             echo "::notice::main hasn't changed since the last nightly, ${last_tag}: nothing to build"
           elif [ "$last_date" = "$date" ]; then
