@@ -3,7 +3,7 @@ assets branch and prints the description's media block, ready to paste.
 
     uv run --locked --package khovax-game-models packages/game-models/render_media.py \
         packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2] [--quick] [--out <folder>] \
-        [--jobs 3] [--no-publish]
+        [--jobs 3] [--timeout 900] [--no-publish]
 
 It runs what a model pull request shows (the model skill's step 5), Blender (GPU) and Godot (CPU)
 side by side, and Godot only off the desktop, through offscreen.py:
@@ -24,10 +24,14 @@ Every picture is published as `pr-<n>[-<tag>]-<what>`: the tag is the version (`
 was rebuilt), so a later round never overwrites the pictures an earlier description links. The
 Godot project is imported first, so the renders never show a stale import (#1164). It renders
 into a fresh folder, never deleting anything; each job's log is in `<out>/logs/`, and a job that
-fails stops the run before anything is published."""
+fails stops the run before anything is published. A job that runs longer than `--timeout` seconds
+is stopped and fails, naming its log (#1676): a hung render (Blender's sat at 0 % CPU for good)
+never keeps the run waiting forever."""
 
 import argparse
 import concurrent.futures
+import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -56,6 +60,16 @@ CLOSE = "three_quarter"
 # Seconds between two Godot starts: xvfb-run picks a free display by looking, and two starting at
 # once can pick the same one.
 STAGGER = 3.0
+# Seconds a job may take before it counts as hung (#1676). The slowest, a model's every clip in
+# game, takes about three minutes.
+TIMEOUT = 900
+# Seconds a timed-out job gets to end after SIGTERM before it is killed.
+GRACE = 10
+# The jobs running now: their own process groups don't get the terminal's Ctrl-C, so an interrupted
+# run stops them itself.
+RUNNING: set[subprocess.Popen] = set()
+RUNNING_LOCK = threading.Lock()
+INTERRUPTED = threading.Event()
 
 
 @dataclass
@@ -74,6 +88,8 @@ def main() -> int:
     parser.add_argument("--quick", action="store_true", help="only the fast-feedback pictures")
     parser.add_argument("--out", type=Path, help="an empty or new folder to render into (a new temporary one by default)")
     parser.add_argument("--jobs", type=int, default=3, help="Godot renders at once")
+    parser.add_argument("--timeout", type=float, default=TIMEOUT,
+                        help=f"seconds a job may take before it's stopped as hung (default {TIMEOUT})")
     parser.add_argument("--no-publish", action="store_true", help="render only, print local paths")
     args = parser.parse_args()
     # Progress shows as it happens, also when the output goes to a file (a background run's).
@@ -98,8 +114,11 @@ def main() -> int:
     resource = "res://" + model.relative_to(GAME).as_posix()
 
     log.info("importing the game project, so the renders show this build")
-    if run(["godot", "--headless", "--path", str(GAME), "--import"], out / "logs" / "import.log") != 0:
-        log.error(f"the import failed: {out / 'logs' / 'import.log'}")
+    imported = run(["godot", "--headless", "--path", str(GAME), "--import"], out / "logs" / "import.log",
+                   args.timeout)
+    if imported != 0:
+        reason = f"timed out after {args.timeout:.0f} s" if imported is None else "failed"
+        log.error(f"the import {reason}: {out / 'logs' / 'import.log'}")
         return 1
 
     blender = [blender_job("sheet", model, out / "sheet")]
@@ -118,7 +137,7 @@ def main() -> int:
                 godot_job("clips-close", resource, out / "clips-close", f"size={CLIP_SIZE}",
                           "clip=" + ",".join(clips), f"from={CLOSE}"),
             ]
-    if not run_all(blender, godot, out / "logs", args.jobs):
+    if not run_all(blender, godot, out / "logs", args.jobs, args.timeout):
         return 1
 
     pictures = collect(out, clips, args.quick)
@@ -164,14 +183,52 @@ def godot_job(name: str, resource: str, out: Path, *extra: str) -> Job:
     return Job(name, command, out)
 
 
-def run(command: list[str], log_path: Path) -> int:
+def run(command: list[str], log_path: Path, timeout: float) -> int | None:
+    """Runs the command into its log; its exit code, or None when it ran out of time. A command
+    that runs out is stopped with everything it started (uv's Blender, offscreen.py's Xvfb and
+    Godot): it runs in a process group of its own, which gets SIGTERM, then SIGKILL."""
     with log_path.open("w") as output:
-        return subprocess.run(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT, check=False).returncode
+        with RUNNING_LOCK:
+            if INTERRUPTED.is_set():
+                return 130
+            process = subprocess.Popen(command, cwd=ROOT, stdout=output, stderr=subprocess.STDOUT,
+                                       start_new_session=True)
+            RUNNING.add(process)
+        try:
+            return process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            stop(process)
+            return None
+        except BaseException:
+            stop(process)  # Ctrl-C during the import, in the main thread
+            raise
+        finally:
+            with RUNNING_LOCK:
+                RUNNING.discard(process)
 
 
-def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int) -> bool:
-    """Runs the Blender jobs one after another beside the Godot jobs, `jobs` of those at once;
-    True when every one of them succeeded."""
+def stop(process: subprocess.Popen) -> None:
+    """Ends the process's group: SIGTERM, a grace period, then SIGKILL for whatever is left, also
+    when the group's leader is already gone and a child of it isn't."""
+    signal_group(process, signal.SIGTERM)
+    try:
+        process.wait(timeout=GRACE)
+    except subprocess.TimeoutExpired:
+        pass
+    signal_group(process, signal.SIGKILL)
+    process.wait()
+
+
+def signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
+    try:
+        os.killpg(process.pid, sig)
+    except ProcessLookupError:
+        pass
+
+
+def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout: float) -> bool:
+    """Runs the Blender jobs one after another beside the Godot jobs, `jobs` of those at once,
+    each stopped after `timeout` seconds; True when every one of them succeeded."""
     failed: list[str] = []
     lock = threading.Lock()
     starting = threading.Lock()
@@ -182,9 +239,12 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int) -> bool
                 time.sleep(STAGGER)
         began = time.monotonic()
         log.info(f"{job.name}: rendering into {job.out}")
-        code = run(job.command, logs / f"{job.name}.log")
+        code = run(job.command, logs / f"{job.name}.log", timeout)
         with lock:
-            if code != 0:
+            if code is None:
+                failed.append(job.name)
+                log.error(f"{job.name} timed out after {timeout:.0f} s, stopped as hung: {logs / (job.name + '.log')}")
+            elif code != 0:
                 failed.append(job.name)
                 log.error(f"{job.name} failed ({code}): {logs / (job.name + '.log')}")
             else:
@@ -198,8 +258,19 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int) -> bool
             concurrent.futures.ThreadPoolExecutor(max_workers=max(1, jobs)) as godot_pool:
         futures = [blender_pool.submit(blender_chain)]
         futures += [godot_pool.submit(one, job, True) for job in godot]
-        for future in futures:
-            future.result()
+        try:
+            for future in futures:
+                future.result()
+        except BaseException:
+            # Ctrl-C: nothing new starts, and what runs is stopped, else the pools wait for it.
+            for future in futures:
+                future.cancel()
+            with RUNNING_LOCK:
+                INTERRUPTED.set()
+                running = list(RUNNING)
+            for process in running:
+                stop(process)
+            raise
     return not failed
 
 
