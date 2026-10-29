@@ -55,9 +55,7 @@ SLICE_ORDER: tuple[str, ...] = (
     "move_hint", "text_names",
 )  # fmt: skip
 # The back-edges still waiting ("slice>later slice": the issue that drops it).
-SLICE_EXEMPT: dict[str, int] = {
-    "board>profile": 1663,
-}  # fmt: skip
+SLICE_EXEMPT: dict[str, int] = {}
 
 THIS = "packages/game-checks/import_rules.py"
 LATER_SLICE = "a slice names only the slices before it in SLICE_ORDER"

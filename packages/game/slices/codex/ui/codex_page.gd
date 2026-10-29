@@ -164,7 +164,7 @@ func _show_species(species: Species) -> bool:
 	if species == null:
 		return false
 	_show_name(BESTIARY_TEXT, species.name, species.codex_gloss())
-	beast.show_species(species, BestiaryKeeper.of(driver.holder if driver != null else null))
+	beast.show_species(species, BestiaryKeeper.of(_holder()))
 	return true
 
 
@@ -266,7 +266,7 @@ func lay_out(screen: Vector2) -> void:
 
 ## The standing line for `faction`: this machine's player's current rank with it, never the others.
 func _standing_line(faction: Faction) -> String:
-	var holder: ProfileHolder = driver.holder if driver != null else null
+	var holder: ProfileHolder = _holder()
 	if holder == null or holder.keeper == null:
 		return NEUTRAL_TEXT
 	var value: int = holder.keeper.profile.standings.of(faction.id)
@@ -297,3 +297,8 @@ func _ease(opening: bool) -> void:
 	)
 	if not opening:
 		var _hidden: CallbackTweener = _fade.tween_callback(_sheet.hide)
+
+
+## This machine's player's profile, as the session hands it out (#1663); null without one.
+func _holder() -> ProfileHolder:
+	return driver.holder as ProfileHolder if driver != null else null
