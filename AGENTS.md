@@ -616,10 +616,16 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   prop or scenery from a free source (B below); agents import, rig, animate, check and fix it, and
   work on the model tooling.
 - **If you need a new model** (owner's ground rule, #1575):
-  - A. **A new monster:** file a `question` issue for the owner with its vibe, its type and 20 or
-    more base prompts for the image generator, as diverse and weird as possible. The owner makes
-    the model from them. One issue per beast, a baby species included, and its 20 prompts are
-    diverse and unique: no generic puppies or cute blobs (owner's ground rule, #1726).
+  - A. **A new monster:** file a `question` issue for the owner, one issue per beast (owner's
+    ground rule, #1726). The owner makes the model from it.
+    - **A brand-new beast:** its vibe, its type and 20 or more base prompts for the image
+      generator, as diverse, unique and weird as possible: no generic puppies or cute blobs.
+    - **A baby form or any other evolution** (owner, #1754): the best picture of the earlier form
+      (a clean render) and 20 variations of the evolution copypasta in the model skill, word for
+      word, each with its own `The change:` line (e.g. "it should float").
+    - **Every beast is rigged and animated by us** (owner, #1732, #1754): a model Meshy can't rig
+      ("no rig possible") gets its own skeleton and the full set of clips in Blender (the model
+      skill, "Rig").
   - B. **Anything else** (props, scenery): use a free source whose license allows it here (below);
     if there is none, do A.
 - **A beast exists only from the owner's vibe or model** (owner's ground rule, #1686): prompt

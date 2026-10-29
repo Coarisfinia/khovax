@@ -18,6 +18,21 @@ prompt says about its face. It only marks where the eyes go and how big they are
 replaces them with our own eyes, which blink and shut (`lib/marked_eyes.py`, below). A monster
 designed without eyes leaves the sentence out and says so in its issue.
 
+**Every evolution prompt is this copypasta** (owner, #1754): a baby form or any other evolution
+of an existing beast is asked for with the best picture of the earlier form attached and this
+block, word for word, only its `The change:` line differing between the issue's 20 variations. It
+ends with the eye sentence too.
+
+```text
+Generate a brand-new image of a creature. The attached picture is only a reference for it: it shows this creature's earlier form. Draw its next form: the same creature line, so keep its colours, materials, markings and character recognisable, and change only what the line below asks for.
+The change: <one of the 20 variations, e.g. "it should float">
+Body: keep the earlier form's body plan exactly. Add no legs, arms, wings, tail or other limbs it doesn't already have, and remove none it has, unless the change asks for it.
+One single creature, centred and alone, in a front three-quarter view, its whole body in frame with space all around it. The background is plain, flat light grey and continues unbroken beneath it.
+Pose: a calm, symmetrical rest pose, head level, mouth closed. No loose or floating parts, no effects such as sparks, steam or smoke.
+Style: a stylized game creature with large, readable shapes and flat matte colours, smooth like a clay 3D render and ready for cel shading: plain flat colour areas without drawn outlines, painted highlights or painted shadows. Soft, even, shadowless light. No text.
+Two small, plain, flat black oval eyes.
+```
+
 Every model is **built by a committed Blender script**, so it can be rebuilt, reviewed and changed
 by editing code, never by hand-editing a .blend. Blender MCP (an interactive viewport) is allowed
 for look-dev with the owner, but whatever it finds goes back into the script.
@@ -83,7 +98,12 @@ a second model could use goes into the library or a generic tool, never into one
     fits `eyes.eye` with lids there by their position, size and spacing (`clear` sets them out
     along the way they look where the head's skin covers least of their iris and pupil, and
     fails the build past `BURIED`), joins them into the skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
-    `attachments.add`). It prints an `EYES` line with what it found.
+    `attachments.add`). It prints an `EYES` line with what it found. Eyes the generator modelled
+    as pieces of their own (glowing balls, #1733) are `find`-ed, taken out with `modelled` (each
+    mark growing to its ball's size) and handed to `replace` as `marks`.
+  - `frostfire` (#1733): the frost-and-fire line's paint on `repaint`, magma on the right side
+    and ice on the left with cracks across both, plain soles; the Frostfire Hound and its pup,
+    the Kavrikka, share it, each with its own `Look` (size, midline, seed).
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
     shares of the upper muzzle above it, the mouth's dark lining that shows when it opens, the
@@ -352,6 +372,18 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   thigh.
 - **A messy paint:** repaint it by position with `lib/repaint.py` rather than editing the atlas.
 
+**The traps found on the Kavrikka (#1733)**, the hound's pup, a Meshy auto-rig of a puppy:
+- **Modelled eyes:** its eyes were glowing balls of their own, which no repaint hides, and its
+  magma cracks glow too: find the eyes by their hues (`marked_eyes.glow`), take the balls out
+  (`marked_eyes.modelled`), then paint and fit ours with the marks.
+- **Toes and heels:** each paw ended in one or two toe bones (one more on one side than the
+  other) and the heel's skin hung on the hock, so the heel sank into the ground as the hock
+  turned and the clips couldn't settle (`still sinking`); fold the toes into the paw and give
+  the heel's skin to it.
+- **A trunk on the legs:** the auto-rig weighted most of the trunk to the legs' tops, so a
+  swinging leg thinned the chest (the volume check): give the shoulders', haunches', belly's and
+  brisket's skin to the trunk, as Fohossa's `keep_trunk` does.
+
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
   `packages/game/assets/<name>/<name>.glb` is its output, with `SOURCE.md`, a license and a
@@ -384,6 +416,10 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   order), never something to commit whichever build came out. Step 14 checks it.
 
 ## 2. Rig
+**Every beast is rigged and beautifully animated by us** (owner, #1732, #1754): when the owner
+says "no rig possible", only Meshy can't rig the export. We build the rig ourselves in Blender: a
+custom skeleton for an odd shape (a ribbon, tentacles, a limbless body), with the full set of
+clips. Ask the owner only when it's unclear what should move how.
 - **Armature:** a full chain per limb (at least three bones per leg), spine, neck, head, jaw where
   it has one, tail and ear chains where it has them. Bones named left/right with `.L`/`.R`.
 - **Weights:** automatic weights (`ARMATURE_AUTO`) as a start, then fix by script where they

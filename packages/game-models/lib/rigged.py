@@ -26,6 +26,8 @@ hexapod has; `<pair>_stalk_NN.<side>`; `hips` and `spine_NN` for the trunk),
 rolled as the library's armatures are (quadruped.build), and hung from a new `root` on the ground
 between the feet, which the clips move. It prints what it kept, fixed and renamed.
 
+A model script names the rest (`rename`, `roll`) and moves weights between bones with `merge`.
+
 Blender is Z-up and the model faces -Y; a part's left is +X."""
 
 import math
@@ -584,3 +586,16 @@ def adopt(rig, skin, scale=1.0):
     scene.select_only(skin)
     bpy.ops.object.vertex_group_limit_total(group_select_mode="ALL", limit=4)
     bpy.ops.object.vertex_group_normalize_all(group_select_mode="ALL", lock_active=False)
+
+
+def merge(skin, weights, where=lambda vertex: True):
+    """Moves the weights of `skin`'s vertices `where` holds from one bone to another, as {from bone:
+    to bone} says, adding to what the bone it goes to already holds."""
+    groups = {group.index: group.name for group in skin.vertex_groups}
+    moves = [(vertex.index, groups[element.group], element.weight)
+             for vertex in skin.data.vertices if where(vertex)
+             for element in vertex.groups if groups[element.group] in weights and element.weight > 0.0]
+    for index, name, weight in moves:
+        skin.vertex_groups[name].remove([index])
+        (skin.vertex_groups.get(weights[name]) or skin.vertex_groups.new(name=weights[name])).add(
+            [index], weight, "ADD")

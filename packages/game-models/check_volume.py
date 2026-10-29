@@ -41,6 +41,8 @@ KNOWN = {
     ("frostfire_hound", "ChannelStart"): 1680,
     ("frostfire_hound", "Faint"): 1680,
     ("frostfire_hound", "Hit"): 1680,
+    ("kavrikka", "Attack"): 1761,
+    ("kavrikka", "Run"): 1761,
     ("nuvvoluvvo", "RollOver"): 1729,
     ("nuvvoluvvo", "Sleep"): 1729,
 }

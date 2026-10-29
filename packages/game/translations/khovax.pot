@@ -728,6 +728,10 @@ msgstr ""
 msgid "Revive Herb"
 msgstr ""
 
+#: slices/loot/data/materials/rime_shard.jsonc
+msgid "Rime Shard"
+msgstr ""
+
 #: slices/loot/data/materials/stone.jsonc
 msgid "Stone"
 msgstr ""
@@ -944,6 +948,10 @@ msgstr ""
 
 #: slices/quests/data/pup_crystal.jsonc
 msgid "A crystal for a ${MONSTER:vynnimu}"
+msgstr ""
+
+#: slices/quests/data/pup_rime.jsonc
+msgid "A rime shard for a ${MONSTER:kavrikka}"
 msgstr ""
 
 #: slices/quests/data/tadpole_pondweed.jsonc
@@ -1200,6 +1208,54 @@ msgstr ""
 
 #: slices/species/data/abilities/kalvrakkor_lakvu_rakvu.jsonc
 msgid "Lakvu-rakvu"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_kirvu_virvu.jsonc
+msgid "The small growl a pup keeps up as it runs rings around its own. Dominators said it of a young guard more eager than fierce."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_kirvu_virvu.jsonc
+msgid "round and round, growling"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_kirvu_virvu.jsonc
+msgid "While the ${MONSTER:kavrikka} is out, it circles the player's feet, warm on one side and cold on the other, and they take a little less harm."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_kirvu_virvu.jsonc
+msgid "Kirvu-virvu"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_rikka_rokku.jsonc
+msgid "The yip of a pup, then the click of its small teeth. Dominators said it of any young beast that bites first and thinks after."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_rikka_rokku.jsonc
+msgid "yip, then snap"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_rikka_rokku.jsonc
+msgid "The ${MONSTER:kavrikka} darts at its target and nips it with its hot little jaws."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_rikka_rokku.jsonc
+msgid "Rikka-rokku"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_vakku_rakku.jsonc
+msgid "The spit and crackle of a young flame catching. Dominators said it of a small beast that only gets bolder when struck."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_vakku_rakku.jsonc
+msgid "it sparks as it smarts"
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_vakku_rakku.jsonc
+msgid "The ${MONSTER:kavrikka}'s magma flares when it's hurt, and it strikes a little faster."
+msgstr ""
+
+#: slices/species/data/abilities/kavrikka_vakku_rakku.jsonc
+msgid "Vakku-rakku"
 msgstr ""
 
 #: slices/species/data/abilities/nuvvoluvvo_nollu_vollu.jsonc
@@ -1612,6 +1668,18 @@ msgstr ""
 
 #: slices/species/data/kalvrakkor.jsonc
 msgid "Kalvrakkor"
+msgstr ""
+
+#: slices/species/data/kavrikka.jsonc
+msgid "A round-headed pup of the Kalvrakkor, already split along its spine: dark basalt cracked with glowing magma on one side, pale ice cracked with frost on the other, its one short tail half of each. It tumbles after its pack over the snow of the pass and snaps at whatever moves, and in time it ascends into a Kalvrakkor. Its name is a beast-call, its yip: its elder's k, v and r and the crack of its doubled k, made short and light."
+msgstr ""
+
+#: slices/species/data/kavrikka.jsonc
+msgid "the little crack that will growl"
+msgstr ""
+
+#: slices/species/data/kavrikka.jsonc
+msgid "Kavrikka"
 msgstr ""
 
 #: slices/species/data/nuvvoluvvo.jsonc

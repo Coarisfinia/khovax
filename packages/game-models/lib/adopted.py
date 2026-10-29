@@ -8,6 +8,8 @@ three bones a leg and a four-bone tail.
   `plane`), so the clips plant its paw as they plant a quadruped's or a hexapod's.
 - `follow`: every stalk (a chain starting at a `<pair>_stalk_01.<side>`) for motion.follow, each
   bone looser than the one before it, as the quadruped's tail is (clips.FOLLOW).
+- `Body`: what clips.gait reads of a body, from a rig named to the quadruped's scheme.
+- `lesser`: one of the library's clips scaled down for shorter legs (#1609).
 
 Blender is Z-up and the model faces -Y."""
 
@@ -79,3 +81,33 @@ def follow(rig):
                               max(LOOSEST[1], damping - WOBBLIER * index), response, shift)
     return out
 
+
+
+class Body:
+    """What clips.gait reads of a quadruped.Proportions, from an adopted rig named to the
+    quadruped's scheme (`upper_arm`, `front_paw`, `thigh`, `hind_paw`, `hips`, `neck`), with
+    the tip of its nose at `nose`."""
+
+    def __init__(self, rig, nose):
+        bones = rig.data.bones
+        self.front_leg = [tuple(bones["upper_arm.L"].head_local), tuple(bones["front_paw.L"].tail_local)]
+        self.hind_leg = [tuple(bones["thigh.L"].head_local), tuple(bones["hind_paw.L"].tail_local)]
+        self.hips = tuple(bones["hips"].head_local)
+        self.chest = tuple(bones["neck"].head_local)
+        self.nose = nose
+
+
+def lesser(clip, share):
+    """`clip` with its body's shifts, its paws' moves and its tail's swing `share` as large: for a
+    body whose legs are short against the wolf's the library's clips are made for, which would
+    reach too far for its hex."""
+    keys = []
+    for key in clip.keys:
+        pose = {name: tuple(share * value for value in values)
+                if name == "root_loc" or name.startswith(("plant.", "tail_")) else values
+                for name, values in key[1].items()}
+        keys.append((key[0], pose, *key[2:]))
+    clip.keys = keys
+    for step in clip.steps:
+        step.spot = tuple(share * value for value in step.spot)
+    return clip
