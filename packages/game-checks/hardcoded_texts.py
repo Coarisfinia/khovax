@@ -16,11 +16,11 @@ In such an expression, a hit is a string literal outside tr() (formatted with % 
 handed to String.format(), glued with +, in an array of lines), a constant the expression names,
 even inside tr() (the extractor reads only literals), through the constants it aliases: its
 string, its array's strings or its dictionary's string keys, and a name made from an id with
-capitalize(). A constant dictionary handed to format(), straight or through a local or member,
-counts by its values. Not a hit: a literal without a letter outside its format specifiers, BBCode
-and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath (&"…", ^"…"), the
-condition of an `x if c else y`, a dictionary's key (a format's placeholder) and a literal inside
-another call (a key, an id).
+capitalize(). A constant dictionary handed to format(), straight or through a local, member or
+parameter, counts by its values. Not a hit: a literal without a letter outside its format
+specifiers, BBCode and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath
+(&"…", ^"…"), the condition of an `x if c else y`, a dictionary's key (a format's placeholder) and
+a literal inside another call (a key, an id).
 In scenes: a text on a node whose auto_translate_mode is disabled, and a TabContainer's child,
 whose node name is its tab's title. A script that adds tabs to a TabContainer titles them with
 set_tab_title, since TabContainer titles a tab by its node's name, which no extractor sees.
@@ -413,6 +413,9 @@ class Flow:
         # assigned to one counts by its values, not its keys.
         self.format_locals: dict[int, set[str]] = {}
         self.format_members: dict[str, set[str]] = {}
+        # Parameters that hold a format()'s values (#1741), by index: a call's argument for one
+        # (and its default) is read the same way.
+        self.format_params: dict[int, set[int]] = {}
         self.hits: set[Hit] = set()
         self.changed = False
 
@@ -427,6 +430,9 @@ class Flow:
                     # A shown parameter's default is shown when a call leaves it out.
                     for index in sorted(self.text_params.get(id(func), set())):
                         self.expression(script, func, func.defaults.get(index, []))
+                    format_params = self.format_params.get(id(func), set())
+                    for index in sorted(format_params & func.defaults.keys()):
+                        self.format_values(script, func, func.defaults[index])
                 for member in sorted(self.text_members.get(script.path, set())):
                     self.expression(script, NO_FUNC, script.members[member])
                 for member in sorted(self.format_members.get(script.path, set())):
@@ -510,6 +516,8 @@ class Flow:
             if self_target:
                 format_targets = self.format_members.get(script.path, set())
                 text_targets = own_members
+            # A keyed or attribute write names its carrier the same way (#1741).
+            targets = text_targets | format_targets
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
                     self.expression(script, func, value)
@@ -519,7 +527,7 @@ class Flow:
                 self.format_values(script, func, value)
                 if target[0].text in text_targets:
                     self.expression(script, func, value)
-            elif target[0].text in carriers and (
+            elif target[0].text in targets and (
                 len(target) == 1
                 or target[1].text == "["
                 or (len(target) == 3 and target[1].text == ".")
@@ -550,6 +558,9 @@ class Flow:
                     for index in sorted(self.text_params.get(id(reached), set())):
                         if index < len(args):
                             self.expression(script, func, args[index])
+                    for index in sorted(self.format_params.get(id(reached), set())):
+                        if index < len(args):
+                            self.format_values(script, func, args[index])
 
     @staticmethod
     def depth(toks: list[Tok], at: int) -> int:
@@ -640,13 +651,17 @@ class Flow:
         self, script: Script, func: Func, arg: list[Tok], carry_only: bool = False
     ) -> None:
         """The values a format() fills in: a constant dictionary's values (#1715), or a local or
-        member holding them, whose assignments are followed the same way (#1734)."""
+        member holding them, whose assignments are followed the same way (#1734), or a parameter
+        holding them, whose calls' arguments are (#1741)."""
         while len(arg) > 2 and arg[0].text == "(" and matching(arg, 0) == len(arg) - 1:
             arg = arg[1:-1]  # `(VALUES)` is VALUES
-        word =arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
+        word = arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
         if [tok.text for tok in arg[:2]] == ["self", "."] and len(arg) == 3:
             word = arg[2].text if arg[2].text in script.members else ""
-        elif word in func.names and word not in func.params:
+        elif word in func.params:
+            self.mark(self.format_params, id(func), func.params.index(word))
+            return
+        elif word in func.names:
             self.mark(self.format_locals.setdefault(id(func), set()), word)
             return
         if word in script.members and (len(arg) == 3 or word not in func.names):
