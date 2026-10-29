@@ -19,6 +19,13 @@ are fixed there:
 - **a shared piece** (#1619): where a long trunk runs between two forks, its belly joins every
   leg below it into one piece; it is split into one part per chain by the weights (`split`).
 
+**Mirror twins** (#1725), a left and a right chain hanging from the same chain, each the other
+mirrored across X, are fixed alike: a part of the mesh is one twin's only if its twin has one too
+(two ears on one head piece give that piece to neither), a loose end is folded only if both
+twins' are, and a short chain is regrown only where its twin goes (its new tip's direction is its
+twin's, mirrored). A short chain whose regrown bones would weigh almost none of its part (the body
+holds it) isn't regrown either: it is reported, to rig by hand.
+
 Vertices inside a fork's ball keep their weights: that's where the parts blend into the body.
 Then every bone is named to the library's scheme by what its chain moves (`<pair>_leg_NN.<side>`
 ending in `<pair>_paw.<side>`, which the clips plant; `<pair>_thigh.L` for a three-bone leg as the
@@ -60,6 +67,12 @@ LEG_PARTS = ("thigh", "shin", "paw")
 TURNED_BACK = math.pi / 2
 # A chain's last bone that weighs most fewer than this share of its part's vertices is an empty end.
 EMPTY_END = 0.1
+# Two chains are mirror twins when their joints, one side's mirrored across X, lie this share of
+# the model's height apart or less on average.
+TWIN = 0.05
+# A regrown chain goes its twin's way when its tip's direction from its start turns from its twin's,
+# mirrored, by this much (radians) or less.
+TWIN_TURN = math.pi / 4
 # The root the clips move: on the ground between the feet, pointing up, deforming nothing.
 ROOT_LENGTH = 0.3
 
@@ -258,12 +271,9 @@ def _middle(skin, indices):
     return sum((skin.data.vertices[index].co for index in indices), Vector()) / len(indices)
 
 
-def regrow(rig, skin, chain, count):
-    """Replaces `chain`'s bones with `count` bones through its part's middle: the first from where
-    the chain starts, each next one ending at the middle of the next band of the part (by
-    distance from its fork), the last at its far end. Weights the old bones held outside the
-    part, inside the fork's ball, go to the bone the chain hangs from: there the body is moved,
-    not the part. Returns the new bones' names."""
+def regrown_joints(skin, chain, count):
+    """Where `count` bones regrown through `chain`'s part's middle end: each at the middle of the
+    next band of the part (by distance from its fork), the last at its far end."""
     part = chain.part
     centre = part.fork[0]
     far = {index: (skin.data.vertices[index].co - centre).length for index in part.vertices}
@@ -276,6 +286,16 @@ def regrow(rig, skin, chain, count):
         inside = inside or [min(far, key=lambda index: abs(far[index] - low - (band + 0.5) * width))]
         joints.append(_middle(skin, inside))
     joints.append(_middle(skin, [index for index, distance in far.items() if distance >= high - width / 4]))
+    return joints
+
+
+def regrow(rig, skin, chain, joints):
+    """Replaces `chain`'s bones with bones ending at `joints` (regrown_joints), the first from where
+    the chain starts. Weights the old bones held outside the part, inside the fork's ball, go to
+    the bone the chain hangs from: there the body is moved, not the part. Returns the new bones'
+    names."""
+    part = chain.part
+    count = len(joints)
     old = list(chain.bones)
     new = ["%s_regrown_%02d" % (old[0], number + 1) for number in range(count)]
     scene.select_only(rig)
@@ -396,6 +416,45 @@ def fold(rig, skin, chain, count):
         rig.data.edit_bones.remove(rig.data.edit_bones[name])
     bpy.ops.object.mode_set(mode="OBJECT")
     chain.bones = chain.bones[:-count]
+
+
+def _mirrored(point):
+    return Vector((-point.x, point.y, point.z))
+
+
+def twins(leaves, skin, bones):
+    """{chain: its mirror twin}: two leaf chains off the same chain, as many bones each, whose
+    joints mirror each other across X within TWIN of the model's height, off the midline."""
+    heights = [vertex.co.z for vertex in skin.data.vertices]
+    near = TWIN * (max(heights) - min(heights))
+    pairs = []
+    for first in leaves:
+        for second in leaves:
+            if first.name >= second.name or first.parent is not second.parent or len(first.bones) != len(second.bones):
+                continue
+            ours, theirs = _joints(first, bones), _joints(second, bones)
+            if sum(abs(joint.x) for joint in ours) / len(ours) <= near:
+                continue
+            gap = sum((_mirrored(joint) - other).length for joint, other in zip(ours, theirs)) / len(ours)
+            if gap <= near:
+                pairs.append((gap, first.name, second.name, first, second))
+    out = {}
+    for _gap, _first, _second, first, second in sorted(pairs, key=lambda pair: pair[:3]):
+        if first not in out and second not in out:
+            out[first], out[second] = second, first
+    return out
+
+
+def _direction(start, joints):
+    return (joints[-1] - start).normalized()
+
+
+def _held(skin, chain):
+    """How many of `chain`'s part's vertices a regrown chain would weigh most: reweight lays it
+    what the chains it hangs from leave of each vertex."""
+    body = {name for other in chain.ancestors() for name in other.bones}
+    return sum(1 for index in chain.part.vertices
+               if sum(weight for name, weight in _named(skin, index).items() if name in body) < 0.5)
 
 
 def names(every, leaves, skin):
@@ -526,20 +585,44 @@ def adopt(rig, skin, scale=1.0):
     found = split(parts(skin, balls), leaves, skin, bones, balls) if balls else []
     match(leaves, found, skin, bones)
     print("RIG %d bones in %d chains; %d parts outside the forks" % (len(bones), len(every), len(found)))
+    twin = twins(leaves, skin, bones)
+    for chain, other in twin.items():
+        if chain.part is not None and other.part is None:
+            # Its twin found no part of its own, so this one's is theirs together (a head piece
+            # holding both ears): neither is fixed on it, and it keeps its weights.
+            print("TWINS %s and %s: only %s has a part of the mesh; both kept as they are"
+                  % (chain.name, other.name, chain.name))
+            chain.part.chain, chain.part = None, None
     for part in found:
         if part.chain is None:
             print("ORPHAN a part of %d vertices with no chain of its own: rig it by hand" % len(part.vertices))
     fixes, folded = [], set()
     # Every loose end goes first, so a short chain is regrown with as many bones as its siblings
     # keep.
+    loose = {}
     for chain in leaves:
-        loose = turned_back(chain, bones) if chain.part is not None else 0
-        if loose:
-            fold(rig, skin, chain, loose)
+        if chain.part is None:
+            loose[chain] = None
+        elif turned_back(chain, bones):
+            loose[chain] = ("turned", turned_back(chain, bones))
+        elif len(chain.bones) > 2 and empty_end(chain, skin):
+            loose[chain] = ("empty", 1)
+        else:
+            loose[chain] = None
+    for chain, other in twin.items():
+        if loose[chain] != loose[other] and chain.name < other.name:
+            print("TWINS %s and %s: their ends differ; neither is folded" % (chain.name, other.name))
+            loose[chain] = loose[other] = None
+    for chain in leaves:
+        if loose[chain] is None:
+            continue
+        kind, count = loose[chain]
+        if kind == "turned":
+            fold(rig, skin, chain, count)
             folded.add(chain.name)
             fixes.append("FOLDED %s: its last %d bones turned back on it; their weights went to %s"
-                         % (chain.name, loose, chain.bones[-1]))
-        elif chain.part is not None and len(chain.bones) > 2 and empty_end(chain, skin):
+                         % (chain.name, count, chain.bones[-1]))
+        else:
             # Its last bone moves almost none of its part (a leg's toe bone reaching below the
             # sole, #1619): the bone before it holds the end, so it becomes the paw the clips plant
             # and whose part the ground checks leave to the legs.
@@ -547,18 +630,47 @@ def adopt(rig, skin, scale=1.0):
             folded.add(chain.name)
             fixes.append("FOLDED %s: its last bone moved almost none of its part; its weights went to %s"
                          % (chain.name, chain.bones[-1]))
+    # Every regrowth is planned before any is made, so a twin's is measured against the other's.
+    plans = {}
+    for chain in leaves:
+        if chain.part is None:
+            continue
+        short, reached, whole = is_short(chain, skin, bones)
+        if not short:
+            continue
+        siblings = [len(other.bones) for other in children(chain.parent, every) if other is not chain]
+        count = Counter(siblings).most_common(1)[0][0] if siblings else len(chain.bones)
+        if _held(skin, chain) < EMPTY_END * len(chain.part.vertices):
+            print("WEIGHTLESS %s: short (reaching %.2f of its part's %.2f), but its part moves with the body, "
+                  "so regrown bones would weigh almost none of it; kept as it is: rig it by hand"
+                  % (chain.name, reached, whole))
+            continue
+        plans[chain] = (regrown_joints(skin, chain, count), reached, whole)
+    starts = {chain: bones[chain.bones[0]].head_local.copy() for chain in leaves}
+    ends = {chain: plans[chain][0] if chain in plans else _joints(chain, bones) for chain in leaves}
+    refused = set()
+    for chain in plans:
+        other = twin.get(chain)
+        if other is None:
+            continue
+        turn = _direction(starts[chain], ends[chain]).angle(_mirrored(_direction(starts[other], ends[other])), 0.0)
+        if turn > TWIN_TURN or (other.part is not None and is_short(other, skin, bones)[0] and other not in plans):
+            print("TWINS %s would be regrown %.0f degrees off its twin %s's way, or its twin isn't; "
+                  "neither is regrown" % (chain.name, math.degrees(turn), other.name))
+            refused.update((chain, other))
+    for chain in refused:
+        plans.pop(chain, None)
     for chain in leaves:
         if chain.part is None:
             print("UNMATCHED %s: no part of the mesh of its own; kept as it is" % chain.name)
             continue
-        short, joints, whole = is_short(chain, skin, bones)
         old, old_bones = chain.name, list(chain.bones)
+        short = chain in plans
         if short:
-            siblings = [len(other.bones) for other in children(chain.parent, every) if other is not chain]
-            count = Counter(siblings).most_common(1)[0][0] if siblings else len(chain.bones)
-            regrow(rig, skin, chain, count)
+            joints, reached, whole = plans[chain]
+            regrow(rig, skin, chain, joints)
             fixes.append("REGROWN %s: %d bones reaching %.2f of its part's %.2f from the fork; now %d bones"
-                         % (old, len(old_bones), joints, whole, count))
+                         % (old, len(old_bones), reached, whole, len(joints)))
         bled = bleeds(skin, chain, leaves)
         if short or bled:
             reweight(skin, chain, rig.data.bones, short)

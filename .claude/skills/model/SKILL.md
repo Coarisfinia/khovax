@@ -333,6 +333,13 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   the dimensions check find them. A trunk bone pointing back to the tail (the pelvis) must not be
   `spine_01`: the volume check's station between two bones pointing apart has no plane. A bone
   weighing almost nothing (a short one under the skull) goes into its neighbour.
+
+**The trap found on Nuvvoluvvo (#1620, #1725)**: both ears' chains hang from the head, whose skin
+is one piece with the ears, and `rigged.adopt` gave that piece to one ear and regrew its chain
+toward the muzzle, while the other ear stayed `UNMATCHED`. It now fixes mirror twins (a `.L` and a
+`.R` chain off one chain) alike (`TWINS` lines): a piece only one twin finds is neither's, and a
+twin is folded or regrown only as its twin is. A short chain whose part the body holds isn't
+regrown (`WEIGHTLESS`): rig it by hand, as `nuvvoluvvo.py` mirrors its right ear's rig.
 - **Shoulders and belly:** the forelegs hang from the withers, not the neck, and the legs' tops
   give up their weights near the midline to the trunk (`keep_trunk`), or a swinging leg drags the
   chest's underside and a bowing neck pinches between the shoulders (the volume check).
