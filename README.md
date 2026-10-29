@@ -148,4 +148,6 @@ uv run --locked --package khovax-game-checks packages/game-checks/translations_p
 ```
 
 A new player-facing field in content data gets `"x-translate": true` in its schema, and a text in a
-script goes through `tr()` with a literal string, so the template picks it up.
+script goes through `tr()` with a literal string, so the template picks it up. CI fails on a text shown
+to the player without it (`packages/game-checks/hardcoded_texts.py`, #1693); a deliberate
+exception goes into its `ALLOWED` list with a reason.
