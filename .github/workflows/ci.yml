@@ -6,6 +6,13 @@ on:
   pull_request:
   # The merge queue (#329) checks each pull request on top of the ones queued before it.
   merge_group:
+  # nightly.yml runs every check on main and publishes a nightly prerelease of a passing run (#747).
+  workflow_call:
+    inputs:
+      prerelease:
+        description: "The release tag's part after v<next>-, e.g. nightly.20261030"
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -458,7 +465,8 @@ jobs:
     # the reference replays and the APK flow (tests/replays/outcomes.gd), and a difference needs a
     # new file in core/rules_changes/. The parent is the base on a pull request's merge commit and
     # the queue's previous commit in the merge queue; main itself was checked in the queue, so a
-    # push only plays it, for the device jobs, which compare their flow's hash with this one's.
+    # push or a nightly (#747) only plays it, for the device jobs, which compare their flow's hash
+    # with this one's.
     runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
@@ -487,7 +495,7 @@ jobs:
           import: "false"
 
       - name: "🧰 Install uv (the Python tooling's runner)"
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: |
           curl -fsSL -o /tmp/uv.tar.gz \
             "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-x86_64-unknown-linux-gnu.tar.gz"
@@ -515,7 +523,7 @@ jobs:
       - name: "🎲 Play its parent"
         # A parent that can't be built or played fails the check: it's main or a queue entry, which
         # would be dropped anyway.
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         run: |
           git worktree add -q /tmp/parent HEAD^1
           # The parent's game: in packages/game, or at its root before the move there (#1101).
@@ -530,7 +538,7 @@ jobs:
         # entry's branch names its pull request: gh-readonly-queue/<base>/pr-<number>-<sha>. The
         # agent adds the label and says why in the pull request; the owner's approval is the gate
         # (owner, #899).
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         id: label
         env:
           GH_TOKEN: ${{ github.token }}
@@ -548,7 +556,7 @@ jobs:
         # request can't weaken its own check. Only the pull requests that add the script (#876),
         # move it (#1037, #1101, #1114) and port it to Python (#1039) run their own. It reads git
         # from the repository's root.
-        if: github.event_name != 'push'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         working-directory: .
         env:
           OUTCOMES_CHANGE: ${{ steps.label.outputs.labelled }}
@@ -585,14 +593,16 @@ jobs:
           persist-credentials: false
 
       - name: "🏷️ Stamp the build's version"
-        # v<next>-dev.<run number> (#747), <next> being the patch after the last prod release (a
-        # full release, never a prerelease), or config/version while there is none. Every run's
-        # builds carry it, though only a push to main publishes it, as dev-release's tag. It goes
+        # v<next>-dev.<run number> (#747), or v<next>-nightly.<date> in nightly.yml's run, <next> being
+        # the patch after the last prod release (a full release, never a prerelease), or
+        # config/version while there is none. Every run's builds carry it, though only a push to main
+        # or a nightly publishes it, as dev-release's tag. It goes
         # into its own setting, which BuildVersion.SETTING reads: Godot refuses anything but
         # numbers in config/version for the Windows and Android version fields (#744).
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           # The last prod release's tag, or nothing when there is none (#1329). Any other error (a
           # rate limit, an outage) fails the job, so it is never mistaken for "none", which could put
@@ -614,7 +624,7 @@ jobs:
             echo "::error::no x.y.z version to build on: last prod release \"${last}\", config/version \"${next}\""
             exit 1
           fi
-          tag="v${next}-dev.${GITHUB_RUN_NUMBER}"
+          tag="v${next}-${PRERELEASE:-dev.${GITHUB_RUN_NUMBER}}"
           printf '\n[khovax]\n\nbuild_version="%s"\n' "$tag" >> project.godot
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Builds carry ${tag}"
@@ -1012,12 +1022,12 @@ jobs:
 
   dev-release:
     # A dev release on every push to main whose checks all pass (#1312, #747: one kept prerelease per
-    # build), with the builds the export job just made attached as plain files, never zips: the
+    # build), and a nightly one for nightly.yml's passing run on main (#747), with the builds the export job just made attached as plain files, never zips: the
     # Android APK, the Windows .exe, the Linux executable and the web build's files. Its tag is the
     # version the export job stamped into them (#744). It checks out only project.godot, for the
     # game's name, and runs nothing from the repository. Pull requests and the merge queue never
     # release.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || inputs.prerelease != '') && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, linux-e2e, web-e2e]
     runs-on: ubuntu-26.04
     timeout-minutes: 30
@@ -1039,13 +1049,16 @@ jobs:
           pattern: khovax-{debug-apk,windows,linux,web}
           path: builds
 
-      - name: "🚀 Create the dev release"
+      - name: "🚀 Create the dev or nightly release"
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.export.outputs.tag }}
         run: |
-          # The tag is the version the export job stamped into these builds (#744).
+          # The tag is the version the export job stamped into these builds (#744): v<next>-dev.<run>
+          # or v<next>-nightly.<date>, whose channel names the release and finds the previous one.
           tag="$TAG"
+          channel=${tag#*-}
+          channel=${channel%%.*}
           # GitHub fails a call now and then on its own side (#1745): a 408 or a stalled upload, a 5xx,
           # a rate limit, a dropped connection. Those are tried again, four tries in all with a
           # growing wait, while the job has time left for them; any other error fails the job at
@@ -1126,11 +1139,14 @@ jobs:
             files+=("${file}#web: $(basename "$file")")
           done
           pages="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}/"
-          notes="Dev build of ${GITHUB_SHA}, made by [this CI run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
-          The Android APK is signed with a throwaway debug key: uninstall an older build before installing it. The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
-          # The changes since the previous dev release; the very first lists none, not the whole history.
-          previous=$(retry gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 100 --json tagName \
-            --jq '[.[] | select(.tagName | test("^v[0-9]+[.][0-9]+[.][0-9]+-dev[.][0-9]+$"))][0].tagName // empty')
+          notes="${channel^} build of ${GITHUB_SHA}, made by [this CI run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
+          The Android APK is signed with a throwaway debug key: uninstall an older build before installing it. The Linux file needs \`chmod +x\` after downloading. The newest web build is playable at ${pages}; this one's files here run when served from one folder."
+          # The changes since the previous release of the channel; the very first lists none, not the
+          # whole history. Read from the tags, which only a published release has: a nightly's
+          # previous one is often more than a hundred dev releases back.
+          tags=$(retry gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" \
+            --jq ".[].ref | ltrimstr(\"refs/tags/\") | select(test(\"^v[0-9]+[.][0-9]+[.][0-9]+-${channel}[.][0-9]+\$\"))")
+          previous=$(sort -t . -k 4,4n <<< "$tags" | tail -n 1)
           start=()
           if [ -n "$previous" ]; then
             start=(--generate-notes --notes-start-tag "$previous")

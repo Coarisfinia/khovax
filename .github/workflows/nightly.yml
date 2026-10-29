@@ -1,0 +1,67 @@
+name: nightly
+
+# A nightly build (#747): every night, and with the "Run workflow" button, ci.yml runs every check
+# on main's newest commit, and a passing run publishes a kept prerelease v<next>-nightly.<date>
+# with the same builds a dev release carries (its export and dev-release jobs). Nothing is built
+# when main hasn't changed since the last nightly, or when today's nightly is out already.
+on:
+  schedule:
+    # 02:00 UTC: the middle of the night in Europe.
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One nightly at a time: a second waits for the first rather than racing it for the same tag.
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    outputs:
+      prerelease: ${{ steps.check.outputs.prerelease }}
+    steps:
+      - name: "🌙 See whether main changed since the last nightly"
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::a nightly is built from main only, not ${GITHUB_REF}"
+            exit 1
+          fi
+          date=$(date -u +%Y%m%d)
+          # The newest nightly's date, tag and commit, from the tags, which only a published release
+          # has. Any error fails the job, so it's never mistaken for "no nightly yet".
+          tags=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v" \
+            --jq '.[] | select(.ref | test("^refs/tags/v[0-9]+[.][0-9]+[.][0-9]+-nightly[.][0-9]{8}$"))
+              | "\(.ref | ltrimstr("refs/tags/") | split(".") | last) \(.ref | ltrimstr("refs/tags/")) \(.object.sha)"')
+          read -r last_date last_tag last_sha <<< "$(sort -n <<< "$tags" | tail -n 1)"
+          if [ "$last_sha" = "$GITHUB_SHA" ]; then
+            echo "::notice::main hasn't changed since the last nightly, ${last_tag}: nothing to build"
+          elif [ "$last_date" = "$date" ]; then
+            echo "::notice::today's nightly, ${last_tag}, is out already: the next one comes tomorrow"
+          else
+            echo "prerelease=nightly.${date}" >> "$GITHUB_OUTPUT"
+            echo "Building nightly.${date} from ${GITHUB_SHA}"
+          fi
+
+  ci:
+    # Every check of a push to main, then the release (ci.yml's dev-release job, #1312).
+    needs: check
+    if: needs.check.outputs.prerelease != ''
+    uses: ./.github/workflows/ci.yml
+    with:
+      prerelease: ${{ needs.check.outputs.prerelease }}
+    # What ci.yml's jobs ask for, which a called workflow can't get beyond its caller's: the release's
+    # tag (dev-release), the pull request's labels (rules-compare, which reads none here) and the
+    # Pages deploy (pages, which never runs for a nightly).
+    permissions:
+      contents: write
+      pull-requests: read
+      pages: write
+      id-token: write
