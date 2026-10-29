@@ -114,16 +114,18 @@ static func step_line(step: QuestStep, count: int) -> String:
 ## names them (`{count}`), since `%` fills its values in order.
 static func step_tagged(step: QuestStep, count: int) -> String:
 	if not step.choices.is_empty():
+		# Each way starts lower case, and the whole line upper case once joined, so the way a
+		# translation puts first is the one capitalised.
 		var ways: String = ""
 		for choice: QuestStep in step.choices:
 			var way: String = step_tagged(choice, 0)
+			way = way.left(1).to_lower() + way.substr(1)
 			if ways.is_empty():
 				ways = way
 			else:
-				var lower: String = way.left(1).to_lower() + way.substr(1)
-				var joined: Dictionary[String, String] = { "ways": ways, "way": lower }
+				var joined: Dictionary[String, String] = { "ways": ways, "way": way }
 				ways = TranslationServer.tr("{ways} or {way}").format(joined)
-		return ways
+		return ways.left(1).to_upper() + ways.substr(1)
 	var asks: String = ""
 	match step.condition:
 		QuestStep.DOMINATED:
