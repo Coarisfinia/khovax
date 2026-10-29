@@ -25,8 +25,16 @@ const DOWN_ICON: Texture2D = preload("res://assets/game-icons/plain-arrow-down.s
 const UP_TIP: String = "Move up"
 const DOWN_TIP: String = "Move down"
 
-## Whose monsters are shown: this machine's player's profile.
-var holder: ProfileHolder
+## This machine's player's monsters, handed in by the profile (ProfilePanelsTie), whose slice comes
+## after this one; none without it: their short ids in their order and the ones they carry (each an
+## Array[String]), the monster of a short id (a DominatedMonster, or null), their materials
+## (Dictionary[String, int]: what an ascension costs, #1235), and what moves a monster to a place in
+## their order.
+var order: Callable = Callable()
+var carried: Callable = Callable()
+var monster_of: Callable = Callable()
+var materials: Callable = Callable()
+var reorder: Callable = Callable()
 ## What the list shows, one line per monster. Kept here so tests can read it.
 var shown: Array[String] = []
 ## The monster each row shows, by short id (#754), in the rows' order.
@@ -71,11 +79,11 @@ func refresh() -> void:
 	var lines: Array[String] = []
 	var ids: Array[String] = []
 	var marks: Array[bool] = []
-	if holder != null and holder.keeper != null:
-		ids = holder.keeper.profile.order()
-		lines = _lines_of(holder.keeper.profile, ids)
+	if order.is_valid():
+		ids = order.call()
+		lines = _lines_of(ids)
 		for short_id: String in ids:
-			marks.append(KnotMark.waits(holder.keeper.profile.monster_of(short_id)))
+			marks.append(KnotMark.waits(monster_by(short_id)))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines != shown or ids != shown_ids or marks != marked:
@@ -92,39 +100,53 @@ func select(short_id: String) -> void:
 
 
 func _show_details() -> void:
-	var monster: DominatedMonster = null
-	if holder != null and holder.keeper != null:
-		monster = holder.keeper.profile.monster_of(selected)
-	monster_shown.emit(monster)
+	var shown_monster: DominatedMonster = monster_by(selected)
+	monster_shown.emit(shown_monster)
 	if details == null:
 		return
 	var species: Species = null
 	var ascension: SpeciesAscension = null
 	var holds: int = 0
-	if monster != null:
-		species = _species.get(monster.species)
-		ascension = _ascensions.get(monster.species)
-	if ascension != null:
-		holds = holder.keeper.profile.materials.get(ascension.material, 0)
-	details.show_monster(monster, species, _abilities, ascension, holds)
+	if shown_monster != null:
+		species = _species.get(shown_monster.species)
+		ascension = _ascensions.get(shown_monster.species)
+	if ascension != null and materials.is_valid():
+		var held: Dictionary[String, int] = materials.call()
+		holds = held.get(ascension.material, 0)
+	details.show_monster(shown_monster, species, _abilities, ascension, holds)
 
 
-## A line for each of `profile`'s dominated monsters in `ids`, the player's order: the carried
-## ones first, then the rest.
-func _lines_of(profile: Profile, ids: Array[String]) -> Array[String]:
+## The player's dominated monster `short_id`, or null: none without a profile.
+func monster_by(short_id: String) -> DominatedMonster:
+	return monster_of.call(short_id) if monster_of.is_valid() else null
+
+
+## The short ids of the monsters the player carries, in their order: none without a profile.
+func carried_ids() -> Array[String]:
+	var ids: Array[String] = []
+	if carried.is_valid():
+		for short_id: String in carried.call():
+			ids.append(short_id)
+	return ids
+
+
+## A line for each of the player's dominated monsters in `ids`, their order: the carried ones
+## first, then the rest.
+func _lines_of(ids: Array[String]) -> Array[String]:
 	var lines: Array[String] = []
+	var carrying: int = carried_ids().size()
 	for place: int in ids.size():
 		var prefix: String = RESTING_TEXT
-		if place < profile.carried.size():
+		if place < carrying:
 			prefix = COMPANION_TEXT if place == 0 else CARRIED_TEXT % (place + 1)
-		lines.append(prefix + _described(profile.monster_of(ids[place])))
+		lines.append(prefix + _described(monster_by(ids[place])))
 	return lines
 
 
 ## Moves the monster `short_id` to `place` in the player's order, as its buttons and a drag do.
 func move(short_id: String, place: int) -> void:
-	if holder != null:
-		holder.move_monster(short_id, place)
+	if reorder.is_valid():
+		reorder.call(short_id, place)
 	refresh()
 
 

@@ -22,8 +22,11 @@ const ICONS: Dictionary[String, Texture2D] = {
 
 ## Where the fight is: this machine's player's instance.
 var driver: Session
-## Whose gear is shown: this machine's player's profile.
-var holder: ProfileHolder
+## This machine's player's gear (GearSlots), and what puts `gear_id` into their `slot` ("" empties
+## it): handed in by the profile (ProfilePanelsTie), whose slice comes after this one; none without
+## it.
+var slots: Callable = Callable()
+var equip: Callable = Callable()
 ## What the panel shows: a line per slot, then the line saying whether gear can change. Kept here
 ## so tests can read it.
 var shown: Array[String] = []
@@ -95,9 +98,9 @@ func refresh() -> void:
 ## Puts the next piece of the player's gear for `slot` into it, as its button does; nothing during a
 ## fight.
 func change(slot: String) -> void:
-	if holder == null or holder.keeper == null or in_fight():
+	if not slots.is_valid() or not equip.is_valid() or in_fight():
 		return
-	holder.equip(slot, _next(slot))
+	equip.call(slot, _next(slot))
 	refresh()
 
 
@@ -111,16 +114,20 @@ func in_fight() -> bool:
 ## The gear in each slot, by slot: none without a profile.
 func _equipped() -> Dictionary[String, String]:
 	var none: Dictionary[String, String] = {}
-	return holder.keeper.profile.gear.equipped if holder != null and holder.keeper != null else none
+	if not slots.is_valid():
+		return none
+	var held: GearSlots = slots.call()
+	return held.equipped
 
 
 ## The piece of gear that comes after the one in `slot`: the player's gear for that slot in id
 ## order, then none ("") after the last.
 func _next(slot: String) -> String:
 	var choices: Array[String] = []
-	for gear_id: String in holder.keeper.profile.gear.owned:
+	var held: GearSlots = slots.call()
+	for gear_id: String in held.owned:
 		var item: GearItem = _items.get(gear_id)
-		var count: int = holder.keeper.profile.gear.owned[gear_id]
+		var count: int = held.owned[gear_id]
 		if item != null and item.slot == slot and count > 0:
 			choices.append(gear_id)
 	choices.sort()

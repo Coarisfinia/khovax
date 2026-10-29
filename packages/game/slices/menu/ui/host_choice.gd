@@ -10,6 +10,11 @@ extends Node
 const HOSTS: String = "%s (the host chooses)"
 
 var session: Session
+## This player's requests waiting in their profile's outbox (an Array[OutboxEntry]), and what posts
+## one there (its kind and data): handed in by the profile (ProfilePanelsTie), whose slice comes
+## after the menu's; none without it.
+var outbox: Callable = Callable()
+var post: Callable = Callable()
 ## The setting (a key of HostSettings.CHOICES), and what each of its choices is called, in order.
 var setting: String
 var names: Array[String] = []
@@ -32,9 +37,9 @@ func label() -> String:
 func step(steps: int) -> String:
 	var choices: Array = HostSettings.CHOICES[setting]
 	var chosen: int = choices[clampi(choices.find(current()) + steps, 0, choices.size() - 1)]
-	if not is_host() or chosen == current() or session.holder == null:
+	if not is_host() or chosen == current() or not post.is_valid():
 		return ""
-	session.holder.change(_post.bind(HostSettings.request_data(setting, chosen)))
+	post.call(OutboxEntry.HOST_SETTING, HostSettings.request_data(setting, chosen))
 	return ""
 
 
@@ -45,10 +50,9 @@ func is_host() -> bool:
 
 ## The choice the host made: the newest one waiting in this player's outbox, else the world's.
 func current() -> int:
-	var holder: ProfileHolder = session.holder
-	if holder != null and holder.keeper != null and is_host():
+	if outbox.is_valid() and is_host():
 		var waiting: int = -1
-		for request: OutboxEntry in holder.keeper.profile.outbox.entries:
+		for request: OutboxEntry in outbox.call():
 			var asks: bool = HostSettings.setting_of(request.data) == setting
 			if request.kind == OutboxEntry.HOST_SETTING and asks:
 				waiting = HostSettings.value_of(request.data)
@@ -58,9 +62,3 @@ func current() -> int:
 		return HostSettings.default_of(setting)
 	var host: PlayerStore = session.world.stores[HostSettings.HOST]
 	return HostSettings.chosen(host.stored(HostSettings.FEATURE_ID), setting)
-
-
-## Posts the request `data` to `profile`'s outbox (the change hands the profile first, then the
-## bound data).
-func _post(profile: Profile, data: int) -> void:
-	var _posted: OutboxEntry = profile.outbox.post(OutboxEntry.HOST_SETTING, data)

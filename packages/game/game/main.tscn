@@ -78,6 +78,7 @@
 [ext_resource type="Script" path="res://slices/controls/look/tap_walk_mark.gd" id="68_tap_walk_mark"]
 [ext_resource type="PackedScene" path="res://slices/notices/ui/notice_screen.tscn" id="69_notice"]
 [ext_resource type="Script" path="res://slices/notices/ui/guide_notice_tie.gd" id="70_guide_notice_tie"]
+[ext_resource type="Script" path="res://slices/profile/ui/profile_panels_tie.gd" id="71_profile_panels_tie"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -517,6 +518,11 @@ script = ExtResource("54_device_in_use")
 script = ExtResource("62_faction_met_tie")
 menu = NodePath("../Hud/GameMenu")
 keeper = NodePath("../CodexKeeper")
+
+[node name="ProfilePanelsTie" type="Node" parent="." node_paths=PackedStringArray("menu", "holder")]
+script = ExtResource("71_profile_panels_tie")
+menu = NodePath("../Hud/GameMenu")
+holder = NodePath("../ProfileHolder")
 
 [node name="QuestNamesTie" type="Node" parent="." node_paths=PackedStringArray("menu", "page")]
 script = ExtResource("66_quest_names_tie")

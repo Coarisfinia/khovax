@@ -8,8 +8,9 @@ extends VBoxContainer
 const TITLE: String = "Materials"
 const NONE_TEXT: String = "No materials yet"
 
-## Whose materials are shown: this machine's player's profile.
-var holder: ProfileHolder
+## This machine's player's materials (Dictionary[String, int], by id), handed in by the profile
+## (ProfilePanelsTie), whose slice comes after this one; none without it.
+var materials: Callable = Callable()
 ## What the list shows, one line per material. Kept here so tests can read it.
 var shown: Array[String] = []
 var _rows: VBoxContainer
@@ -31,13 +32,13 @@ func _process(_delta: float) -> void:
 ## Shows the materials as they are now; builds the rows anew only when that changed.
 func refresh() -> void:
 	var lines: Array[String] = []
-	if holder != null and holder.keeper != null:
-		var materials: Dictionary[String, int] = holder.keeper.profile.materials
+	if materials.is_valid():
+		var held: Dictionary[String, int] = materials.call()
 		var ids: Array[String] = []
-		ids.assign(materials.keys())
+		ids.assign(held.keys())
 		ids.sort()
 		for id: String in ids:
-			lines.append("%s: %d" % [id.capitalize(), materials[id]])
+			lines.append("%s: %d" % [id.capitalize(), held[id]])
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines == shown:

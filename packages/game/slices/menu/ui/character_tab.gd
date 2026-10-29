@@ -22,8 +22,8 @@ const CHOSEN_TEXT: String = "Your own color"
 
 ## The driver: whose world gives the default and which slot is this machine's player's.
 var driver: Session
-## Whose profile keeps the color.
-var holder: ProfileHolder
+## What this machine's player's profile does for the tab, handed in by the profile (#1613).
+var profile: CharacterProfile = CharacterProfile.new()
 ## The player's dominated monsters.
 var monsters: DominatedMonstersList
 ## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
@@ -56,13 +56,12 @@ func _ready() -> void:
 	var _picked: int = picker.color_changed.connect(_on_picked)
 	var _auto: int = auto_button.pressed.connect(choose_auto)
 	might = MightPanel.new()
-	might.holder = holder
+	# The Might panel's slice comes after the menu's, and still finds the profile itself (#1614).
+	might.holder = driver.holder if driver != null else null
 	_column.add_child(might)
 	factions = FactionStandingsPanel.new()
-	factions.holder = holder
 	_column.add_child(factions)
 	monsters = DominatedMonstersList.new()
-	monsters.holder = holder
 	# The monsters beside their detail pane, or above it on a portrait screen (place_details, #430).
 	_pair = BoxContainer.new()
 	# Both halves share the row: the menu's labels trim rather than ask for a width, so a half that
@@ -81,10 +80,8 @@ func _ready() -> void:
 	var _chosen: int = development.node_chosen.connect(take_node)
 	gear = GearPanel.new()
 	gear.driver = driver
-	gear.holder = holder
 	_column.add_child(gear)
 	materials = MaterialsList.new()
-	materials.holder = holder
 	_column.add_child(materials)
 
 
@@ -100,26 +97,26 @@ func refresh() -> void:
 ## Keeps `color` as the player's personal color, as picking it on the wheel does. The wheel keeps
 ## what the player picked rather than the color as saved, so a drag never jitters.
 func choose(color: Color) -> void:
-	if holder != null:
-		holder.choose_color(PersonalColor.number_of(color))
+	if profile.keep_color.is_valid():
+		profile.keep_color.call(PersonalColor.number_of(color))
 	_show_state()
 
 
 ## Takes the node `node` of the monster `short_id`'s development web, as pressing it does.
 func take_node(short_id: String, node: String) -> void:
-	if holder != null:
-		holder.take_node(short_id, node)
+	if profile.keep_node.is_valid():
+		profile.keep_node.call(short_id, node)
 	monsters.refresh()
 
 
 ## Ascends the monster `short_id` into its species' grown form (#1235), as its Ascend button does,
 ## and says so below its details once it has.
 func ascend(short_id: String) -> void:
-	if holder == null or holder.keeper == null:
+	if not profile.keep_ascension.is_valid():
 		return
-	var monster: DominatedMonster = holder.keeper.profile.monster_of(short_id)
+	var monster: DominatedMonster = monsters.monster_by(short_id)
 	var before: String = monster.species if monster != null else ""
-	holder.ascend(short_id)
+	profile.keep_ascension.call(short_id)
 	if monster != null and monster.species != before:
 		var known: Dictionary[String, Species] = SpeciesContent.cached().species
 		var from: String = known[before].name if known.has(before) else before
@@ -131,24 +128,27 @@ func ascend(short_id: String) -> void:
 
 ## Hands the color back to the world's default, as the Auto button does.
 func choose_auto() -> void:
-	if holder != null:
-		holder.choose_color(Profile.AUTO_COLOR)
+	if profile.keep_auto.is_valid():
+		profile.keep_auto.call()
 	refresh()
 
 
 ## Names the character `typed`, as confirming the field does; shows why a name was refused.
 func choose_name(typed: String) -> void:
-	name_note.text = holder.choose_name(typed) if holder != null else ""
-	if name_note.text.is_empty() and holder != null and holder.keeper != null:
-		name_field.text = holder.keeper.profile.character_name
+	name_note.text = profile.keep_name.call(typed) if profile.keep_name.is_valid() else ""
+	if name_note.text.is_empty():
+		fill_name()
 
 
-## Fills the name field with the profile's name and keeps a name once it's confirmed. Its length
-## limit is the profile's (Profile.NAME_LIMIT), so it's set here rather than in the scene.
+## Fills the name field with the name the profile keeps; nothing without a profile.
+func fill_name() -> void:
+	if profile.kept_name.is_valid():
+		name_field.text = profile.kept_name.call()
+
+
+## Keeps a name once it's confirmed. Its length limit is the profile's, handed in with it
+## (ProfilePanelsTie), so it isn't set in the scene.
 func _set_up_name() -> void:
-	name_field.max_length = Profile.NAME_LIMIT
-	if holder != null and holder.keeper != null:
-		name_field.text = holder.keeper.profile.character_name
 	var _submitted: int = name_field.text_submitted.connect(choose_name)
 	var _left: int = name_field.focus_exited.connect(func() -> void: choose_name(name_field.text))
 
@@ -178,6 +178,6 @@ func _on_picked(color: Color) -> void:
 
 ## Says whether the color is the player's own or Auto's.
 func _show_state() -> void:
-	var auto: bool = holder == null or holder.personal_color() == Profile.AUTO_COLOR
+	var auto: bool = not profile.chose_color.is_valid() or not profile.chose_color.call()
 	shown = AUTO_TEXT if auto else CHOSEN_TEXT
 	_state.text = shown

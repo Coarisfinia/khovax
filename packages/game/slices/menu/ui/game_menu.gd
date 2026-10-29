@@ -73,8 +73,7 @@ const CLOSE_NAME: String = "Close"
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
 ## The quest list at the top's side, which the open button stands above on a screen held upright;
-## its keeper keeps the quests the Quests tab shows too. The Character tab shows the profile the
-## driver holds.
+## its keeper keeps the quests the Quests tab shows too.
 @export var quest_list: QuestListView
 
 ## The Character tab.
@@ -264,7 +263,6 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	character = (load(CHARACTER_TAB) as PackedScene).instantiate() as CharacterTab
 	character.driver = driver
-	character.holder = driver.holder
 	tabs.add_child(character)
 	survey_tab = SURVEY_TAB.instantiate() as SurveyTab
 	survey_tab.survey = survey
@@ -347,11 +345,10 @@ func controls_tab() -> ControlsTab:
 
 ## Whether a monster the player carries has a knot to take (#1443).
 func knot_waits() -> bool:
-	if driver == null or driver.holder == null or driver.holder.keeper == null:
+	if character == null:
 		return false
-	var profile: Profile = driver.holder.keeper.profile
-	for short_id: String in profile.carried:
-		if KnotMark.waits(profile.monster_of(short_id)):
+	for short_id: String in character.monsters.carried_ids():
+		if KnotMark.waits(character.monsters.monster_by(short_id)):
 			return true
 	return false
 
