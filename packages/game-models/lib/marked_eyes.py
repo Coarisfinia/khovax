@@ -414,11 +414,12 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     """What's left of the generator's eyes on `skin`'s texture over the head that `bone` moves,
     beyond a mirrored pair (#1756): of every texel the head's triangles touch (#1764: not only
     those its samples read, so a speck between them shows too), those darker than FRAGMENT_RATIO
-    of their median, grouped where they lie, each spot of at least FRAGMENT_TEXELS distinct texels
-    as a `Mark` whose `count` is that number (a sliver across an island's seam, a pupil on an
-    island of its own, a dark speck by the eye). The ratio is below `scrub`'s, so a head `scrub`
-    has cleaned, whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain colours, not the texture, so they never
-    count. The head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
+    of their median, grouped where they lie or sit side by side on the texture, each spot of at
+    least FRAGMENT_TEXELS distinct texels as a `Mark` whose `count` is that number (a sliver across
+    an island's seam, a pupil on an island of its own, a dark speck by the eye). The ratio is below
+    `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under its own
+    threshold, passes. Our own eyes are plain colours, not the texture, so they never count. The
+    head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
     as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
     if bone not in skin.vertex_groups:
         return []
@@ -439,13 +440,45 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     points, texels = spots[dark], texels[dark]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     marks = []
-    for group in _spots(points, cell):
+    for group in _touching(_spots(points, cell), texels, head.pixels.shape[1]):
         count = len(numpy.unique(texels[group]))
         if count >= FRAGMENT_TEXELS:
             mark = Mark(points[group], normals[group])
             mark.count = count
             marks.append(mark)
     return marks
+
+
+def _touching(groups, texels, width):
+    """`groups` (lists of indices into `texels`, keys row * `width` + column) joined wherever a texel
+    of one is the same as, or beside, a texel of another on the texture (#1781): a coarse texture's
+    texels lie farther apart on the surface than `_spots`' cells, yet a patch of them is one spot.
+    In a fixed order (by their lowest index)."""
+    parent = list(range(len(groups)))
+
+    def root(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    owners = {}
+    for number, group in enumerate(groups):
+        for key in set(texels[group].tolist()):
+            owners.setdefault(key, set()).add(number)
+    for key in sorted(owners):
+        row, column = divmod(key, width)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if 0 <= column + dx < width:
+                    for other in owners.get((row + dy) * width + column + dx, ()):
+                        for number in owners[key]:
+                            low, high = sorted((root(number), root(other)))
+                            parent[high] = low
+    joined = {}
+    for number, group in enumerate(groups):
+        joined.setdefault(root(number), []).extend(group)
+    return sorted((sorted(group) for group in joined.values()), key=lambda group: group[0])
 
 
 def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weight=HEAD_WEIGHT):
