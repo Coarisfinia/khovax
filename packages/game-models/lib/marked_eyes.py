@@ -44,10 +44,11 @@ MIN_SAMPLES = 8
 # How far apart the left mark and the right one mirrored may lie, as a share of their mean width,
 # and how much wider one may be than the other.
 MIRROR, WIDER = 0.6, 2.0
-# A fragment of a generator's eye (`fragments`, #1756): a spot of at least FRAGMENT_SAMPLES of the
-# head's distinct samples, each darker than FRAGMENT_RATIO of the head's median; a lone sample or two is a
-# speck of shading in the paint.
-FRAGMENT_RATIO, FRAGMENT_SAMPLES = 0.6, 3
+# A fragment of a generator's eye (`fragments`, #1756): a spot of at least FRAGMENT_TEXELS of the
+# texels the head touches (#1764), each darker than FRAGMENT_RATIO of their median; a lone texel or
+# a few are a speck of shading in the paint (clean heads have single ones, the generator's
+# fragments a hundred).
+FRAGMENT_RATIO, FRAGMENT_TEXELS = 0.6, 4
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
@@ -322,9 +323,17 @@ def painted(skin, bone="head", own=None):
 
 def _texels(head, near):
     """The texels the head's triangles `near` (a mask) cover: their rows, columns and spots."""
+    return _cover(head, near)[:3]
+
+
+def _cover(head, near, touching=False):
+    """The texels the head's triangles `near` (a mask) cover, as `_texels`, and the triangle (its
+    index among the head's) each belongs to. With `touching`, every texel any part of a triangle
+    lies on, not only those whose middle it holds: at an island's edge a texture's filtering reads
+    them too (#1764)."""
     height, width = head.pixels.shape[:2]
-    rows, columns, spots = [], [], []
-    for uv, corners in zip(head.uvs[near], head.spots[near]):
+    rows, columns, spots, triangles = [], [], [], []
+    for triangle, uv, corners in zip(numpy.flatnonzero(near), head.uvs[near], head.spots[near]):
         uv = uv * (width, height) - 0.5
         low = numpy.maximum(numpy.floor(uv.min(axis=0)).astype(int), 0)
         high = numpy.minimum(numpy.ceil(uv.max(axis=0)).astype(int), (width - 1, height - 1))
@@ -339,16 +348,26 @@ def _texels(head, near):
         first = ((bx - column) * (cy - row) - (cx - column) * (by - row)) / area
         second = ((cx - column) * (ay - row) - (ax - column) * (cy - row)) / area
         third = 1.0 - first - second
-        # A little slack takes in the texels the triangle's edges cross.
-        inside = (first >= -0.02) & (second >= -0.02) & (third >= -0.02)
+        if touching:
+            # Each side's half-plane pushed out by half a texel's extent across it: the texels the
+            # triangle touches.
+            reach = [0.5 * (abs(y1 - y2) + abs(x2 - x1)) / abs(area)
+                     for (x1, y1), (x2, y2) in (((bx, by), (cx, cy)), ((cx, cy), (ax, ay)), ((ax, ay), (bx, by)))]
+            inside = (first >= -reach[0]) & (second >= -reach[1]) & (third >= -reach[2])
+        else:
+            # A little slack takes in the texels the triangle's edges cross.
+            inside = (first >= -0.02) & (second >= -0.02) & (third >= -0.02)
         share = numpy.clip(numpy.stack([first, second, third], axis=1)[inside], 0.0, None)
         share = share / share.sum(axis=1, keepdims=True)
         rows.append(row[inside])
         columns.append(column[inside])
         spots.append(share @ corners)
+        triangles.append(numpy.full(int(inside.sum()), triangle))
     if not rows:
-        return numpy.zeros(0, dtype=int), numpy.zeros(0, dtype=int), numpy.zeros((0, 3))
-    return numpy.concatenate(rows), numpy.concatenate(columns), numpy.concatenate(spots)
+        return (numpy.zeros(0, dtype=int), numpy.zeros(0, dtype=int), numpy.zeros((0, 3)),
+                numpy.zeros(0, dtype=int))
+    return (numpy.concatenate(rows), numpy.concatenate(columns), numpy.concatenate(spots),
+            numpy.concatenate(triangles))
 
 
 def repaint(head, marks, marked=DARK):
@@ -393,11 +412,12 @@ def linear(colour):
 
 def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     """What's left of the generator's eyes on `skin`'s texture over the head that `bone` moves,
-    beyond a mirrored pair (#1756): the head's samples darker than FRAGMENT_RATIO of the head's
-    median, grouped where they lie, each spot of at least FRAGMENT_SAMPLES as a `Mark` (a sliver
-    across an island's seam, a pupil on an island of its own, a dark speck by the eye). The ratio
-    is below `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under
-    its own threshold, passes. Our own eyes are plain colours, not the texture, so they never
+    beyond a mirrored pair (#1756): of every texel the head's triangles touch (#1764: not only
+    those its samples read, so a speck between them shows too), those darker than FRAGMENT_RATIO
+    of their median, grouped where they lie, each spot of at least FRAGMENT_TEXELS distinct texels
+    as a `Mark` whose `count` is that number (a sliver across an island's seam, a pupil on an
+    island of its own, a dark speck by the eye). The ratio is below `scrub`'s, so a head `scrub`
+    has cleaned, whose filled texels may sit a little under its own threshold, passes. Our own eyes are plain colours, not the texture, so they never
     count. The head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
     as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
     if bone not in skin.vertex_groups:
@@ -406,16 +426,26 @@ def fragments(skin, bone="head", weight=HEAD_WEIGHT):
         head = Head(skin, bone, weight)
     except Unpainted:
         return []
-    value = head.colours.max(axis=1)
-    dark = numpy.flatnonzero(value < FRAGMENT_RATIO * float(numpy.median(value)))
+    rows, columns, spots, triangles = _cover(head, numpy.ones(len(head.spots), dtype=bool), touching=True)
+    # A texel two triangles touch (along their shared side) counts once.
+    texels = rows * head.pixels.shape[1] + columns
+    value = head.pixels[rows, columns, :3].max(axis=1)
+    distinct = numpy.unique(texels, return_index=True)[1]
+    dark = numpy.flatnonzero(value < FRAGMENT_RATIO * float(numpy.median(value[distinct])))
     if len(dark) == 0:
         return []
-    points, normals = head.points[dark], head.normals[dark]
+    # Each triangle's normal: the one its samples carry.
+    normals = head.normals[::len(head.points) // len(head.spots)][triangles[dark]]
+    points, texels = spots[dark], texels[dark]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
-    # A corner is sampled once per triangle it belongs to: a spot counts its distinct samples, so
-    # one dark texel at a shared corner is no fragment.
-    return [Mark(points[group], normals[group]) for group in _spots(points, cell)
-            if len(numpy.unique(points[group], axis=0)) >= FRAGMENT_SAMPLES]
+    marks = []
+    for group in _spots(points, cell):
+        count = len(numpy.unique(texels[group]))
+        if count >= FRAGMENT_TEXELS:
+            mark = Mark(points[group], normals[group])
+            mark.count = count
+            marks.append(mark)
+    return marks
 
 
 def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3, weight=HEAD_WEIGHT):
