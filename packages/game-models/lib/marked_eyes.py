@@ -87,16 +87,6 @@ def image(material):
     return None
 
 
-def texture(skin):
-    """The one base colour image `skin`'s materials share (import_source.py keeps only that)."""
-    found = {image(material) for material in skin.data.materials} - {None}
-    if not found:
-        raise Unpainted("%s: no base colour texture" % skin.name)
-    if len(found) != 1:
-        raise ValueError("%s: expected one base colour texture, found %d" % (skin.name, len(found)))
-    return found.pop()
-
-
 class Head:
     """The faces of `skin` that `bone` moves (each corner weighted to it at least HEAD_WEIGHT)
     and the base colour texture paints (not our eyes' plain colours, once joined in), sampled:
@@ -105,11 +95,6 @@ class Head:
 
     def __init__(self, skin, bone):
         data = skin.data
-        self.image = texture(skin)
-        width, height = self.image.size
-        pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
-        self.image.pixels.foreach_get(pixels)
-        self.pixels = pixels.reshape(height, width, 4)
         group = skin.vertex_groups[bone].index
         heads = numpy.array([any(item.group == group and item.weight >= HEAD_WEIGHT for item in vertex.groups)
                              for vertex in data.vertices])
@@ -118,11 +103,22 @@ class Head:
         corners = corners @ matrix[:3, :3].T + matrix[:3, 3]
         uvs = data.uv_layers.active.data
         data.calc_loop_triangles()
-        painted = [image(material) is not None for material in data.materials] or [False]
+        images = [image(material) for material in data.materials] or [None]
         mine = [triangle for triangle in data.loop_triangles
-                if painted[min(triangle.material_index, len(painted) - 1)] and heads[list(triangle.vertices)].all()]
+                if images[min(triangle.material_index, len(images) - 1)] is not None
+                and heads[list(triangle.vertices)].all()]
         if not mine:
             raise Unpainted("%s: no textured faces weighted to %s" % (skin.name, bone))
+        # The texture the head's own faces take (a skin's body may use others).
+        found = {images[min(triangle.material_index, len(images) - 1)] for triangle in mine}
+        if len(found) != 1:
+            raise ValueError("%s: expected one base colour texture on %s's faces, found %d" % (
+                skin.name, bone, len(found)))
+        self.image = found.pop()
+        width, height = self.image.size
+        pixels = numpy.empty(width * height * 4, dtype=numpy.float32)
+        self.image.pixels.foreach_get(pixels)
+        self.pixels = pixels.reshape(height, width, 4)
         # Each head triangle's corners: spot and UV.
         self.spots = corners[numpy.array([triangle.vertices[:] for triangle in mine])]
         self.uvs = numpy.array([[uvs[loop].uv[:] for loop in triangle.loops] for triangle in mine])
