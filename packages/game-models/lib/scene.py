@@ -128,7 +128,8 @@ def start_faces_at_lowest(mesh):
     The exporter splits a face into triangles from its first corner on, so a face whose corners
     an operator started elsewhere (on another machine, say) would be written as other triangles,
     though sort_mesh gives it the same place. Every corner attribute (the corners' vertices and
-    edges, UVs, colours, UV selection) is turned with them, so each corner keeps its data."""
+    edges, UVs with their pins and selection, colours) is turned with them, so each corner keeps
+    its data."""
     count = len(mesh.loops)
     corner_verts = numpy.empty(count, dtype=numpy.int32)
     mesh.attributes[".corner_vert"].data.foreach_get("value", corner_verts)
@@ -139,12 +140,13 @@ def start_faces_at_lowest(mesh):
         order[start:start + total] = numpy.roll(order[start:start + total], -first)
     if (order == numpy.arange(count)).all():
         return
-    for attribute in list(mesh.attributes):
-        if attribute.domain != "CORNER":
-            continue
+    corners = [attribute for attribute in mesh.attributes if attribute.domain == "CORNER"]
+    # Checked before any is turned, so a refused mesh isn't left half turned.
+    for attribute in corners:
         if attribute.data_type not in CORNER_TYPES:
             raise RuntimeError("%s: start_faces_at_lowest can't carry %s's %s corners"
                                % (mesh.name, attribute.name, attribute.data_type))
+    for attribute in corners:
         width, field, kind = CORNER_TYPES[attribute.data_type]
         values = numpy.empty(count * width, dtype=kind)
         attribute.data.foreach_get(field, values)
