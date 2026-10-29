@@ -5,6 +5,9 @@ whose texels on the texture are black too), since only the texture's own faces c
 own way of marking them (marked_eyes.BEASTS, #1719) finds what `DARK` and `GLOW` miss: Fohossa's
 pale eyes on a head weighted under HEAD_WEIGHT, the Frostfire Hound's amber and ice ones on an ice
 blue head off the middle. And each predicate picks the colours it should, and not its neighbours'.
+`fit` sets our eyes where the marks it was given are, mirrored across the middle they were found
+across (#1735): on a ball centred on x = 0 with `DARK`'s ovals, and on one off the middle with the
+hound's.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_painted_eyes.py
@@ -17,7 +20,7 @@ import sys
 import bmesh
 import bpy
 import numpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Blender's own Python runs this, outside the uv environment: game_shared comes from its folder.
@@ -25,7 +28,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 
 from game_shared import log  # noqa: E402
-from lib import marked_eyes  # noqa: E402
+from lib import eyes, marked_eyes  # noqa: E402
 
 # The head: a ball this big, its texture this many texels square.
 RADIUS, SIZE = 0.5, 256
@@ -61,6 +64,18 @@ CASES = {
     "plain_hound": (None, False, 1.0, ICE, HOUND, True),
 }
 
+# Name: (the paint on the left eye and the right one, the skin's colour, and the beast in BEASTS
+# whose own marking finds them, or None for `DARK`): `fit` must set our eyes on these marks.
+FITS = {
+    "fit_middle": ((BLACK, BLACK), SKIN, None),
+    # Off the middle, mirrored across x = 0.068: our eyes mirrored across x = 0 would land that far
+    # off theirs (#1735).
+    "fit_hound": ((ICE_EYE, AMBER), ICE, HOUND),
+}
+# How far our eye's iris may lie from its mark's middle, as a share of the mark's width: the iris
+# stands a little out from the surface, and `clear` may move it a little further.
+FIT_NEAR = 0.2
+
 # Predicate: (colours it picks, colours it leaves).
 PICKS = {
     "DARK": (marked_eyes.DARK, [BLACK], [SKIN, GREY, ICE]),
@@ -88,15 +103,17 @@ def material(name, image=None, colour=(0.0, 0.0, 0.0)):
 
 
 def ball(name, radius, at, weight=1.0):
-    """A UV ball mesh object of `radius` at `at`, its every vertex weighted `weight` to "head"."""
+    """A UV ball mesh object of `radius` at `at`, its every vertex weighted `weight` to "head".
+    The mesh itself is moved there and the object left at the origin, as an adopted skin is (the
+    eyes look for the skin's surface in its own space)."""
     mesh = bpy.data.meshes.new(name)
     built = bmesh.new()
     built.loops.layers.uv.new("UVMap")
     bmesh.ops.create_uvsphere(built, u_segments=64, v_segments=32, radius=radius, calc_uvs=True)
     built.to_mesh(mesh)
     built.free()
+    mesh.transform(Matrix.Translation(at))
     obj = bpy.data.objects.new(name, mesh)
-    obj.location = at
     bpy.context.scene.collection.objects.link(obj)
     obj.vertex_groups.new(name="head").add(range(len(mesh.vertices)), weight, "REPLACE")
     return obj
@@ -138,6 +155,27 @@ def build(paint, ours, weight, colour, middle):
     return skin
 
 
+def fits(name, paint, colour, beast):
+    """Whether `fit` sets our left eye on the left mark and our right one on the right mark, on a
+    ball centred on the marking's middle, painted with `paint`."""
+    marked = marked_eyes.BEASTS[beast] if beast else marked_eyes.DARK
+    skin = build(paint, False, 1.0, colour, marked.middle)
+    marks = marked_eyes.find(marked_eyes.Head(skin, "head", marked.weight), marked)
+    mats = {"dark": material("dark", colour=BLACK), "glow": material("glow", colour=GLOW),
+            "skin": material("lid", colour=colour)}
+    pieces = marked_eyes.fit(skin, marks, mats, "head", marked.middle)
+    ok = True
+    for side, mark in zip("LR", marks):
+        iris = eyes.spot([piece for piece in pieces if piece.name.startswith("Eye.%s." % side)])
+        off = float(numpy.sqrt(((numpy.array(iris) - mark.middle) ** 2).sum()))
+        near = off <= FIT_NEAR * mark.width
+        ok = ok and near
+        (log.info if near else log.error)("%s %s: eye %s at %s, its mark at %s, %.3f off (at most %.3f)" % (
+            "ok" if near else "FAIL", name, side, tuple(round(v, 3) for v in iris),
+            tuple(round(float(v), 3) for v in mark.middle), off, FIT_NEAR * mark.width))
+    return ok
+
+
 def main():
     passed = True
     for name, (picks, yes, no) in PICKS.items():
@@ -153,6 +191,8 @@ def main():
         line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found
                                   else "nothing found", "should pass" if passes else "should fail")
         (log.info if ok else log.error)(line)
+    for name, (paint, colour, beast) in FITS.items():
+        passed = fits(name, paint, colour, beast) and passed
     log.info("PAINTED EYES TEST: %s" % ("PASS" if passed else "FAIL"))
     sys.exit(0 if passed else 1)
 
