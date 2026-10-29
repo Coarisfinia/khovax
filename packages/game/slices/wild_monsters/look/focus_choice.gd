@@ -31,7 +31,7 @@ static func nearest(state: GameState, tile: Vector2i) -> Array[int]:
 	if wild == null:
 		return near
 	for monster: int in wild.monsters:
-		if not state.concealed(monster) and Hex.distance(state.entity(monster).tile, tile) <= RANGE:
+		if Hex.distance(state.entity(monster).tile, tile) <= RANGE and not state.concealed(monster):
 			near.append(monster)
 	near.sort_custom(func(a: int, b: int) -> bool: return _closer(state, tile, a, b))
 	return near
