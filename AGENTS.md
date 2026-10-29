@@ -628,10 +628,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   the repository and what the owner makes or generates for it, such as a model generated on a paid
   Meshy plan with the Private licence (#1476); its `LICENSE.md` is a copy of the root `LICENSE`, and
   its `SOURCE.md` names the project (or its contributors) as the author and says how the asset was
-  made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in `assets/<pack>/`** with its
-  license file and a `SOURCE.md` (title, then `- **Author:**`, `- **Source:**`, `- **License:**`);
-  `CREDITS.md` is generated from those by `tools/godot/credits.gd`, and CI fails when it's out of
-  date (owner, #69/#70). Commit only what the game uses, not whole packs.
+  made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in
+  `assets/<pack>/`** with its license file and a `SOURCE.md` (title, then `- **Author:**`,
+  `- **Source:**`, `- **License:**`); `CREDITS.md` is generated from those by
+  `tools/godot/credits.gd`, and CI fails when it's out of date (owner, #69/#70). Commit only what the game uses, not whole packs.
 
 ### Testing and CI
 
