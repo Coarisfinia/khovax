@@ -58,13 +58,9 @@ SLICE_ORDER: tuple[str, ...] = (
 SLICE_EXEMPT: dict[str, int] = {
     "board>blueprints": 851, "board>controls": 851, "board>profile": 851,
     "controls>profile": 851, "controls>revive_items": 851,
-    
-    
     "hiding>wild_monsters": 851,
-    
     "menu>gear": 851, "menu>might": 851, "menu>quests": 851,
     "settings>damage_numbers": 851, "settings>menu": 851, "settings>survey": 851,
-    
     "survey>quests": 851,
 }  # fmt: skip
 
