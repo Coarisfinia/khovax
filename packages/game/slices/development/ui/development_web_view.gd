@@ -126,9 +126,10 @@ static func title_text() -> String:
 	return TranslationServer.tr("Development")
 
 
-## How many nodes, `left`, the monster may still take.
+## How many nodes, `left`, the monster may still take, through tr_n() so a language picks its
+## plural form by the count (#1709).
 static func picks_text(left: int) -> String:
-	return TranslationServer.tr("Nodes to take: %d") % left
+	return TranslationServer.tr_n("Nodes to take: %d", "Nodes to take: %d", left) % left
 
 
 ## That the monster has no node left to take and takes one at its next level.

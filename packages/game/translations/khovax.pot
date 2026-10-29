@@ -257,7 +257,9 @@ msgstr ""
 
 #: slices/development/ui/development_web_view.gd
 msgid "Nodes to take: %d"
-msgstr ""
+msgid_plural "Nodes to take: %d"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/development/ui/development_web_view.gd
 msgid "It takes a node each time it gains a level"
@@ -981,12 +983,40 @@ msgid "Collect %s"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "{count}/{total}"
-msgstr ""
+msgid "Open a chest  {count}/{total}"
+msgid_plural "Open a chest  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/quests/ui/quest_list_view.gd
-msgid "{asks}  {count}/{total}"
-msgstr ""
+msgid "Go to the {place}  {count}/{total}"
+msgid_plural "Go to the {place}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Enter {place}  {count}/{total}"
+msgid_plural "Enter {place}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Enter the {place}  {count}/{total}"
+msgid_plural "Enter the {place}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Collect {item}  {count}/{total}"
+msgid_plural "Collect {item}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "{count}/{total}"
+msgid_plural "{count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/quests/ui/quest_list_view.gd
 msgid "Dominate an %s"
@@ -1005,12 +1035,48 @@ msgid "Dominate a monster"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
+msgid "Dominate an {species}  {count}/{total}"
+msgid_plural "Dominate an {species}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate a {species}  {count}/{total}"
+msgid_plural "Dominate a {species}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate the {target}  {count}/{total}"
+msgid_plural "Dominate the {target}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Dominate a monster  {count}/{total}"
+msgid_plural "Dominate a monster  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
 msgid "Answer %s"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
 msgid "Tell {person}: \"{answer}\""
 msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Answer {answer}  {count}/{total}"
+msgid_plural "Answer {answer}  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "Tell {person}: \"{answer}\"  {count}/{total}"
+msgid_plural "Tell {person}: \"{answer}\"  {count}/{total}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/quests/ui/quest_list_view.gd
 msgid "Done"
@@ -1694,16 +1760,14 @@ msgid "Speed: %d"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Sight: you see %d steps further while you carry it"
-msgstr ""
-
-#: slices/species/ui/monster_details.gd
 msgid "Ascends into {species} at level {level}"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
 msgid "Given one {material}: you hold {count}"
-msgstr ""
+msgid_plural "Given one {material}: you hold {count}"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/species/ui/monster_details.gd
 msgid "{from} ascended into {into}!"
@@ -1712,6 +1776,12 @@ msgstr ""
 #: slices/species/ui/monster_details.gd
 msgid "Progress: {progress} of {needed} to level {level}"
 msgstr ""
+
+#: slices/species/ui/monster_details.gd
+msgid "Sight: you see %d step further while you carry it"
+msgid_plural "Sight: you see %d steps further while you carry it"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/survey/ui/survey_choice.gd
 msgid "Top left"
@@ -1738,8 +1808,10 @@ msgid "Opaque"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
-msgid "%d tiles across"
-msgstr ""
+msgid "%d tile across"
+msgid_plural "%d tiles across"
+msgstr[0] ""
+msgstr[1] ""
 
 #: slices/survey/ui/survey_choice.gd
 #: slices/survey/ui/survey_tab.gd

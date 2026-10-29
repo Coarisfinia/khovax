@@ -111,7 +111,9 @@ static func step_line(step: QuestStep, count: int) -> String:
 ## (#573) offers each of them, joined by "or". A new condition gets its own wording here; one
 ## without any shows only the count. Each wording is one whole sentence through `tr()`, the names
 ## filled in, so a language can order it its own way (#1655): a format with more than one value
-## names them (`{count}`), since `%` fills its values in order.
+## names them (`{count}`), since `%` fills its values in order. A step that counts up says so in
+## its own whole sentence through `tr_n()` by its total, the count, the total and the names as
+## named values, so a language picks its plural form and where the count goes (#1709).
 static func step_tagged(step: QuestStep, count: int) -> String:
 	if not step.choices.is_empty():
 		# Each way starts lower case, and the whole line upper case once joined, so the way a
@@ -126,30 +128,76 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 				var joined: Dictionary[String, String] = { "ways": ways, "way": way }
 				ways = TranslationServer.tr("{ways} or {way}").format(joined)
 		return ways.left(1).to_upper() + ways.substr(1)
-	var asks: String = ""
+	if step.count <= 1:
+		return _asks(step)
+	var parts: Dictionary[String, Variant] = { "count": count, "total": step.count }
+	return _asks_counted(step, parts)
+
+
+## What `step`, met once, asks.
+static func _asks(step: QuestStep) -> String:
 	match step.condition:
 		QuestStep.DOMINATED:
-			asks = _dominate_line(step.quarry)
+			return _dominate_line(step.quarry)
 		QuestStep.OPENED:
-			asks = TranslationServer.tr("Open a chest")
+			return TranslationServer.tr("Open a chest")
 		QuestStep.REACHED:
-			asks = TranslationServer.tr("Go to the %s") % _words(step.place)
+			return TranslationServer.tr("Go to the %s") % _words(step.place)
 		QuestStep.ENTERED:
 			if step.enters_instance():
-				asks = TranslationServer.tr("Enter %s") % QuestPill.place_tagged(step.instance)
-			else:
-				asks = TranslationServer.tr("Enter the %s") % _words(step.piece)
+				return TranslationServer.tr("Enter %s") % QuestPill.place_tagged(step.instance)
+			return TranslationServer.tr("Enter the %s") % _words(step.piece)
 		QuestStep.ANSWERED:
-			asks = _answer_line(step)
+			return _answer_line(step)
 		QuestStep.OBTAINED:
-			asks = TranslationServer.tr("Collect %s") % _words(step.item)
-	if step.count <= 1:
-		return asks
-	var parts: Dictionary[String, Variant] = { "asks": asks, "count": count, "total": step.count }
-	if asks.is_empty():
-		return TranslationServer.tr("{count}/{total}").format(parts)
-	# The count after the words, as one format, so a language can put it elsewhere.
-	return TranslationServer.tr("{asks}  {count}/{total}").format(parts)
+			return TranslationServer.tr("Collect %s") % _words(step.item)
+	return ""
+
+
+## What `step`, met more than once, asks, with `parts`' count so far and total. The English
+## singular and plural read alike, since the count follows the words.
+static func _asks_counted(step: QuestStep, parts: Dictionary[String, Variant]) -> String:
+	var total: int = step.count
+	match step.condition:
+		QuestStep.DOMINATED:
+			return _dominate_counted(step.quarry, total, parts)
+		QuestStep.OPENED:
+			return TranslationServer.tr_n(
+				"Open a chest  {count}/{total}",
+				"Open a chest  {count}/{total}",
+				total,
+			).format(parts)
+		QuestStep.REACHED:
+			parts["place"] = _words(step.place)
+			return TranslationServer.tr_n(
+				"Go to the {place}  {count}/{total}",
+				"Go to the {place}  {count}/{total}",
+				total,
+			).format(parts)
+		QuestStep.ENTERED:
+			if step.enters_instance():
+				parts["place"] = QuestPill.place_tagged(step.instance)
+				return TranslationServer.tr_n(
+					"Enter {place}  {count}/{total}",
+					"Enter {place}  {count}/{total}",
+					total,
+				).format(parts)
+			parts["place"] = _words(step.piece)
+			return TranslationServer.tr_n(
+				"Enter the {place}  {count}/{total}",
+				"Enter the {place}  {count}/{total}",
+				total,
+			).format(parts)
+		QuestStep.ANSWERED:
+			return _answer_counted(step, parts)
+		QuestStep.OBTAINED:
+			parts["item"] = _words(step.item)
+			return TranslationServer.tr_n(
+				"Collect {item}  {count}/{total}",
+				"Collect {item}  {count}/{total}",
+				total,
+			).format(parts)
+	return TranslationServer.tr_n("{count}/{total}", "{count}/{total}", total).format(parts)
 
 
 ## What a dominated step asks for, `quarry`: a species, after "a" or "an" by its English name's
@@ -158,12 +206,53 @@ static func _dominate_line(quarry: QuestQuarry) -> String:
 	if quarry.species != null:
 		var species_name: String = quarry.species.name
 		var shown_name: String = TranslationServer.tr(species_name)
-		if "aeiou".contains(species_name.left(1).to_lower()):
+		if _takes_an(species_name):
 			return TranslationServer.tr("Dominate an %s") % shown_name
 		return TranslationServer.tr("Dominate a %s") % shown_name
 	if not quarry.target.is_empty():
 		return TranslationServer.tr("Dominate the %s") % _words(quarry.target)
 	return TranslationServer.tr("Dominate a monster")
+
+
+## What a dominated step asks for, `quarry`, `total` times, with `parts`' count and total: a
+## species, after "a" or "an" as _dominate_line chooses, the quest's target (one monster, so its
+## content never counts it), or any monster.
+static func _dominate_counted(
+	quarry: QuestQuarry,
+	total: int,
+	parts: Dictionary[String, Variant],
+) -> String:
+	if quarry.species != null:
+		var species_name: String = quarry.species.name
+		parts["species"] = TranslationServer.tr(species_name)
+		if _takes_an(species_name):
+			return TranslationServer.tr_n(
+				"Dominate an {species}  {count}/{total}",
+				"Dominate an {species}  {count}/{total}",
+				total,
+			).format(parts)
+		return TranslationServer.tr_n(
+			"Dominate a {species}  {count}/{total}",
+			"Dominate a {species}  {count}/{total}",
+			total,
+		).format(parts)
+	if not quarry.target.is_empty():
+		parts["target"] = _words(quarry.target)
+		return TranslationServer.tr_n(
+			"Dominate the {target}  {count}/{total}",
+			"Dominate the {target}  {count}/{total}",
+			total,
+		).format(parts)
+	return TranslationServer.tr_n(
+		"Dominate a monster  {count}/{total}",
+		"Dominate a monster  {count}/{total}",
+		total,
+	).format(parts)
+
+
+## Whether English says "an" before `species_name`, by its first letter.
+static func _takes_an(species_name: String) -> bool:
+	return "aeiou".contains(species_name.left(1).to_lower())
 
 
 ## What an answered `step` asks (#636): the answer's text to its dialog's speaker, by the person's
@@ -176,6 +265,26 @@ static func _answer_line(step: QuestStep) -> String:
 	var answer: String = TranslationServer.tr(step.answer.text)
 	var parts: Dictionary[String, String] = { "person": speaker, "answer": answer }
 	return TranslationServer.tr("Tell {person}: \"{answer}\"").format(parts)
+
+
+## What an answered `step` asks more than once, as _answer_line words it, with `parts`' count and
+## total.
+static func _answer_counted(step: QuestStep, parts: Dictionary[String, Variant]) -> String:
+	var total: int = step.count
+	if step.answer.text.is_empty():
+		parts["answer"] = _words(step.answer.id)
+		return TranslationServer.tr_n(
+			"Answer {answer}  {count}/{total}",
+			"Answer {answer}  {count}/{total}",
+			total,
+		).format(parts)
+	parts["person"] = TextTags.tag(TextTags.PERSON, step.answer.speaker)
+	parts["answer"] = TranslationServer.tr(step.answer.text)
+	return TranslationServer.tr_n(
+		"Tell {person}: \"{answer}\"  {count}/{total}",
+		"Tell {person}: \"{answer}\"  {count}/{total}",
+		total,
+	).format(parts)
 
 
 ## An id (a place, a region piece, an item or a quest target) as words: they have no
