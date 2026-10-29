@@ -148,7 +148,7 @@ def build(out):
     skin.location = OFFSET
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     # The import keeps the file's normals as custom ones; smooth normals from the faces shade the
-    # same and bend with the skin (scene.sort_faces keeps no custom normals).
+    # same and bend with the skin (scene.sort_mesh keeps no custom normals).
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
     rig = hexapod.armature("DrakkudorRig", RIBWALKER)

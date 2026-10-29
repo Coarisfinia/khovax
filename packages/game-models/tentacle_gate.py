@@ -97,26 +97,9 @@ def cut_portal(skin, piece):
     mesh.from_mesh(skin.data)
     mesh.verts.ensure_lookup_table()
     edges = [edge for edge in mesh.edges if all(vertex.index in inside for vertex in edge.verts)]
-    count = len(mesh.verts)
+    # The cuts lay out their new vertices in an order that differs between machines (#1634):
+    # scene.export_glb sorts every mesh's vertices before it writes them (#1639).
     bmesh.ops.subdivide_edges(mesh, edges=edges, cuts=PORTAL_CUTS, use_grid_fill=True)
-    # The cuts lay out their new vertices in an order that differs between machines (CI's build
-    # had them reordered, #1634), and the export keeps the mesh's vertex order: the new ones are
-    # put in an order that depends only on where they lie, their UVs and their faces' facing (a
-    # seam splits one point into several).
-    uv = mesh.loops.layers.uv.active
-
-    def key(vertex):
-        if vertex.index < count:
-            return (0, vertex.index)
-        return (1, tuple(round(value, 5) for value in vertex.co),
-                tuple(sorted(tuple(round(value, 5) for value in loop[uv].uv) for loop in vertex.link_loops)),
-                tuple(sorted(tuple(round(value, 3) for value in face.normal) for face in vertex.link_faces)))
-
-    mesh.verts.index_update()
-    if len({key(vertex) for vertex in mesh.verts}) != len(mesh.verts):
-        raise RuntimeError("two of the portal's new vertices can't be told apart: their order would vary")
-    rank = {vertex.index: place for place, vertex in enumerate(sorted(mesh.verts, key=key))}
-    mesh.verts.sort(key=lambda vertex: rank[vertex.index])
     mesh.to_mesh(skin.data)
     mesh.free()
 
@@ -288,7 +271,7 @@ def build(out):
     skin.name = "TentacleGate"
     scene.select_only(skin)
     # The import keeps the file's normals as custom ones; smooth normals from the faces shade the
-    # same and bend with the skin (scene.sort_faces keeps no custom normals).
+    # same and bend with the skin (scene.sort_mesh keeps no custom normals).
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
     pieces = islands(skin)

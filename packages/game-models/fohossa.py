@@ -214,7 +214,7 @@ def build(out):
     rigged.flatten(rig, skin)
     scene.select_only(skin)
     # The import keeps the file's normals as custom ones; smooth normals from the faces shade the
-    # same and bend with the skin (scene.sort_faces keeps no custom normals).
+    # same and bend with the skin (scene.sort_mesh keeps no custom normals).
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
     rename(rig, skin)
