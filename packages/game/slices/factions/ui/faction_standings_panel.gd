@@ -25,8 +25,9 @@ const LINE_TEXT: String = "%s: %+d, %s"
 ## A faction's line when the content doesn't know it: its id in words and the standing.
 const UNKNOWN_TEXT: String = "%s: %+d"
 
-## Whose standings are shown: this machine's player's profile.
-var holder: ProfileHolder
+## This machine's player's standings (Standings), handed in by the profile (ProfilePanelsTie),
+## whose slice comes after this one; none without it.
+var standings: Callable = Callable()
 ## What the panel shows, one line per faction, in words. Kept here so tests can read it.
 var shown: Array[String] = []
 ## The lines as text with text tags, the faction's name tagged, as the rows show them.
@@ -59,10 +60,10 @@ func _process(_delta: float) -> void:
 ## Shows the standings as they are now; builds the rows anew only when they changed.
 func refresh() -> void:
 	var lines: Array[String] = []
-	if holder != null and holder.keeper != null:
-		var standings: Standings = holder.keeper.profile.standings
+	if standings.is_valid():
+		var held: Standings = standings.call()
 		var ids: Array[String] = []
-		ids.assign(standings.by_faction.keys())
+		ids.assign(held.by_faction.keys())
 		if met.is_valid():
 			for id: String in met.call():
 				if not ids.has(id):
@@ -70,8 +71,8 @@ func refresh() -> void:
 		ids.sort()
 		for id: String in ids:
 			# Neutral isn't listed, even a standing moved back to it from another start (#1378).
-			if standings.of(id) != 0:
-				lines.append(line_of(id, standings.of(id)))
+			if held.of(id) != 0:
+				lines.append(line_of(id, held.of(id)))
 	if lines.is_empty():
 		lines.append(NONE_TEXT)
 	if lines == tagged:
