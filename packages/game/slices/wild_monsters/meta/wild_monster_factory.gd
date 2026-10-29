@@ -15,5 +15,8 @@ static func build(setup: FeatureSetup) -> WildMonsterFeature:
 	var first_forms: Dictionary[String, String] = {}
 	for species_id: String in content.species:
 		strengths[species_id] = content.species[species_id].strength
-		first_forms[species_id] = content.first_form(species_id)
+		# Only ascensions that check out lead back to a first form: a chain that came back round
+		# would never end, so content that doesn't load has babies of their own species.
+		if content.problem.is_empty():
+			first_forms[species_id] = content.first_form(species_id)
 	return WildMonsterFeature.new(roster, weights, strengths, first_forms)
