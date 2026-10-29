@@ -639,7 +639,9 @@ def adopt(rig, skin, scale=1.0):
         short, reached, whole = is_short(chain, skin, bones)
         if not short:
             continue
-        siblings = [len(other.bones) for other in children(chain.parent, every) if other is not chain]
+        # A sibling planned already counts as it will be regrown, as when each was regrown in turn.
+        siblings = [len(plans[other][0]) if other in plans else len(other.bones)
+                    for other in children(chain.parent, every) if other is not chain]
         count = Counter(siblings).most_common(1)[0][0] if siblings else len(chain.bones)
         if _held(skin, chain) < EMPTY_END * len(chain.part.vertices):
             print("WEIGHTLESS %s: short (reaching %.2f of its part's %.2f), but its part moves with the body, "
