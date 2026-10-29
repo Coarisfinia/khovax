@@ -82,7 +82,10 @@ def decorations():
     names = set()
     for path in glob.glob(TILES):
         with open(path, encoding="utf-8") as text:
-            for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', text.read()):
+            # JSONC: a commented-out model names no decoration. A comment starts after a space or
+            # at a line's start, never in a path's `res://`.
+            body = re.sub(r"(?m)(^|\s)//.*$", "", re.sub(r"/\*.*?\*/", "", text.read(), flags=re.S))
+            for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', body):
                 names.add(os.path.splitext(os.path.basename(found.group(1)))[0])
     if not names:
         sys.exit("no tile blueprint names a model in %s: the path moved?" % TILES)

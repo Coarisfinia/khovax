@@ -243,11 +243,12 @@ jobs:
         id: models
         # The rebuild check below needs Blender, so it runs only where it can find something: a
         # change to the model scripts and their library, to a .glb or its .import (whose clip rate
-        # the checks sample at), or to Blender's pin, against the parent. A failing diff counts as
+        # the checks sample at), to Blender's pin, or to the tile blueprints (whose models the
+        # footprint check leaves out as decorations, #1651), against the parent. A failing diff counts as
         # a change, so the check runs rather than being skipped.
         run: |
           if git diff --quiet HEAD^1 -- ':(top)packages/game-models' ':(top)*.glb' ':(top)*.glb.import' \
-            ':(top).github/actions/setup-blender'; then
+            ':(top).github/actions/setup-blender' ':(top)packages/game/core/data/tiles'; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
