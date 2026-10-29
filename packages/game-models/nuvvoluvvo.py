@@ -73,7 +73,8 @@ CUBE = 0.012
 BELLY_FACING = 0.5
 
 # The night sky: a panorama around the trunk's middle (STARS_MIDDLE, metres), mapped onto the fur
-# where `STARS` places it, as on the starry egg (#1635): its size, seed and stars, sizes in
+# where `STARS` places it (all of it but its eyes, by default: the owner, on #1730), as on the
+# starry egg (#1635): its size, seed and stars, sizes in
 # radians seen from the middle.
 SKY_WIDTH, SKY_HEIGHT = 1024, 512
 SEED = 1620
@@ -88,12 +89,13 @@ SKY_GLOW = 0.8
 # Where the patch lies (STARS_AT), as smooth steps from 0 to 1 over (from, to): the trunk only,
 # between the shoulders and the rump (Y), and for `back` the faces looking up (their normal's Z),
 # for `flanks` an oval on each side (its middle's Y and Z, and its half length and height).
+# `all` covers everything but the eyes.
 TRUNK = ((-0.30, -0.22), (0.42, 0.34))
 BACK = (0.30, 0.62)
 FLANK = (0.04, 0.33, 0.27, 0.10)
 FLANK_EDGE = 0.35
-STARS_AT = ("back", "flanks")
-STARS = "back"
+STARS_AT = ("all", "back", "flanks")
+STARS = "all"
 
 # --- The rig -----------------------------------------------------------------------------------
 # The adopted rig's names (lib/rigged.py) to the library's quadruped scheme the clips key: the
@@ -185,33 +187,42 @@ if STARS not in STARS_AT:
 WALK_FRAMES = clips.cycle_frames(WALK_SPEED, TILE * WALK_TILES, FPS)
 RUN_FRAMES = clips.cycle_frames(RUN_SPEED, TILE * RUN_TILES, FPS)
 
-# How far its belly sinks as it faints or sleeps (metres), and where its paws go then (the left
-# one's shift from rest; the right mirrors it): its legs are short under a big body.
+# How far its belly sinks as it faints (metres), and how far its forepaws reach out then: its legs
+# are short under a big body.
 BELLY_HEIGHT = 0.12
 FAINT_FOREPAWS = 0.15
-SLEEP_PAWS = {"front_paw": (0.0, 0.0, 0.12), "hind_paw": (0.04, 0.0, -0.05)}
 # How far its head and neck turn in its long attack, a share of the wolf's: its head rears up past
 # its brows otherwise (the brow check).
 REAR = 0.7
 # The lids shut as it sinks into its faint (clips.faint's sinking, from its stagger to lying).
 FAINT_LIDS = (19, 32)
 
-# Rolling over (RollOver): how long it takes (frames), how far it turns onto its back, and the
-# frames it's on its back from and rolls back from. It tips over its right forepaw first (ROLL_PAW,
-# sideways and up from the root, metres) and turns about its trunk's middle (ROLL_MIDDLE up) only
-# by ROLL_TIP of the roll: rolled about its middle at once, it would roll over the paw and scrape
-# it along the ground. Its legs stay tucked up all the while (radians, the left leg's; the right
-# mirrors it), much as the library's sleeper on its back holds them (clips.on_back), the forelegs
-# folded over its chest and the hind legs drawn up, but higher and not splayed, so its paws stay
-# off the ground as it rolls.
-ROLL_FRAMES = 64
-ROLL_TURN = math.radians(150.0)
-ROLL_KEYS = (24, 36)
-ROLL_MIDDLE = 0.27
-ROLL_PAW = (-0.12, 0.03)
-ROLL_TIP = 0.9
+# It hovers (the owner, on #1730): every clip but its faint floats it HOVER (metres) over the
+# ground, its legs hanging free, and a loop bobs it BOB up and down about once every BOB_FRAMES
+# (a whole number of times a loop, so the seam stays exact). Its faint sinks it to the ground.
+HOVER = 0.22
+BOB, BOB_FRAMES = 0.025, 60
+
+# Asleep it curls up vertically (the owner, on #1730): its back bows, its head tucks down to its
+# chest and its tail curls under it toward its head, a round ball floating in the air, its legs
+# tucked in (radians about each bone's X; the legs' the left one's, the right
+# mirroring it, much as the library's sleeper on its back folds them, clips.on_back). Each breath
+# draws the curl a little tighter (CURL_BREATH of it).
+CURL = {"hips": -0.5, "spine_01": 0.5, "spine_02": 0.5, "neck": 1.0, "head": 0.8,
+        "tail_01": -0.5, "tail_02": -0.5, "tail_03": -0.5, "tail_04": -0.5, "ear.L": 0.6, "ear.R": 0.6}
+CURL_BREATH = 0.06
 TUCK = {"upper_arm": (-1.0, 0.0, 0.15), "forearm": (2.2, 0.0, 0.0), "front_paw": (-1.0, 0.0, 0.0),
         "thigh": (-0.8, 0.0, 0.0), "shin": (0.0, 0.0, 0.0), "hock": (-0.4, 0.0, 0.0), "hind_paw": (0.3, 0.0, 0.0)}
+
+# Rolling over (RollOver), in its sleep, curled up in the air: how long it takes (frames), how far
+# it turns about its length (onto its side), the frames it's turned from and turns back from, and
+# the height of the curled body's middle it turns about (metres, from the root). The overlap's
+# springs (motion.follow) read a bone turned past half a circle in all as turned the other way
+# round, so the roll and the curl down the tail stay short of that together.
+ROLL_FRAMES = 64
+ROLL_TURN = math.radians(70.0)
+ROLL_KEYS = (24, 36)
+ROLL_MIDDLE = 0.27
 
 
 # --- Paint -------------------------------------------------------------------------------------
@@ -243,6 +254,8 @@ def kinds(texels, before):
 def patch(texels):
     """How much of each texel the night sky covers (0..1), where STARS places it."""
     spots, normals = texels.spots, texels.normals
+    if STARS == "all":
+        return numpy.ones(len(spots))
     trunk = smooth_step(spots[:, 1], *TRUNK[0]) * smooth_step(-spots[:, 1], -TRUNK[1][0], -TRUNK[1][1])
     if STARS == "back":
         return trunk * smooth_step(normals[:, 2], *BACK)
@@ -265,8 +278,9 @@ def sky(texels):
     return numpy.clip(panorama.pixels[row, column], 0.0, 1.0)
 
 
-def paint(skin):
-    """The colour and the glow textures, painted from where each texel lies at rest."""
+def paint(skin, starry=True):
+    """The colour and the glow textures, painted from where each texel lies at rest; not `starry`,
+    without the night sky."""
     old = marked_eyes.texture(skin)
     width = old.size[0]
     before = numpy.array(old.pixels[:]).reshape(old.size[1], width, 4)[..., :3]
@@ -275,7 +289,7 @@ def paint(skin):
     kind = kinds(texels, before[texels.rows * width // TEXTURE, texels.columns * width // TEXTURE])
     flat = numpy.array((FUR, BELLY, EYE))[kind]
     night = sky(texels)
-    cover = patch(texels) * (kind == 0)
+    cover = patch(texels) * ((kind != 2) if STARS == "all" else (kind == 0)) * starry
     colour = flat + (night - flat) * cover[:, None]
     glow = night * (SKY_GLOW * cover)[:, None]
     covered = texels.covered()
@@ -455,39 +469,59 @@ def tucked(pose):
     return pose
 
 
+def curled(chest):
+    """Its sleeping pose at `chest` (0..1) of a breath: curled up vertically (CURL), its legs
+    tucked in."""
+    pose = {bone: ((1.0 + CURL_BREATH * chest) * turn, 0.0, 0.0) for bone, turn in CURL.items()}
+    return tucked(pose)
+
+
 def roll_over():
-    """Turning over in its sleep: lying curled as it sleeps, its legs tucked up, it rolls onto its
-    back, tipping over its right forepaw (ROLL_PAW) and then about the trunk's middle (ROLL_MIDDLE
-    up), lies there a moment with its paws in the air, and rolls back, easing in and out. It
-    never turns past ROLL_TURN: the overlap's springs (motion.follow) read a turn past half a
-    circle as one the other way round."""
-    lying = tucked(clips.curled(BELLY_HEIGHT)(0.0))
+    """Turning over in its sleep, curled up in the air: it rolls about its length, over and back
+    (ROLL_TURN), easing in and out, keyed every other frame along a smootherstep (legs.ease), so
+    it never jolts."""
+    lying = curled(0.0)
 
     def pose(share):
-        # The root turns about its foot, whose Y points up: the shift keeps the trunk's middle
-        # where it lay.
+        # The root turns about its foot, whose Y points up: the shift keeps the body's middle
+        # where it was.
         roll = ROLL_TURN * share
         posed = dict(lying)
-        x, y, z = posed.get("root_loc", (0.0, 0.0, 0.0))
-        # It tips over its right forepaw first, then rolls about its middle: the point it turns
-        # about moves from the one to the other as it goes over (ROLL_TIP), smoothly.
-        tip = legs.ease(share / ROLL_TIP)
-        a, b = (1.0 - tip) * ROLL_PAW[0], (1.0 - tip) * ROLL_PAW[1] + tip * ROLL_MIDDLE
-        posed["root_loc"] = (x + a - a * math.cos(roll) + b * math.sin(roll),
-                             y + b - a * math.sin(roll) - b * math.cos(roll), z)
+        posed["root_loc"] = (ROLL_MIDDLE * math.sin(roll), ROLL_MIDDLE * (1.0 - math.cos(roll)), 0.0)
         posed["root"] = (0.0, 0.0, roll)
         return posed
 
     over, back = ROLL_KEYS
     keys = []
-    # Over and back, keyed every other frame along a smootherstep (legs.ease), so it speeds up and
-    # slows down without a jolt.
     for start, end, there in ((1, over, True), (back, ROLL_FRAMES, False)):
         for frame in range(start, end, 2):
             u = legs.ease((frame - start) / (end - start))
             keys.append((frame, pose(u if there else 1.0 - u)))
         keys.append((end, pose(1.0 if there else 0.0)))
     return clips.Clip(keys, planted=False)
+
+
+def hover(name, poses, loop):
+    """An animate overlay (see HOVER): it floats every clip but Faint, which sinks to the ground
+    from its float, smoothly, as it falls."""
+    last = len(poses) - 1
+    bobs = max(1, round(last / BOB_FRAMES))
+    for index, (_frame, pose) in enumerate(poses):
+        if name == "Faint":
+            lift = HOVER * (1.0 - legs.ease(index / last))
+        elif loop:
+            lift = HOVER + BOB * math.sin(2.0 * math.pi * bobs * index / last)
+        else:
+            lift = HOVER
+        x, y, z = pose.get("root_loc", (0.0, 0.0, 0.0))
+        pose["root_loc"] = (x, y + lift, z)
+
+
+def afloat(made):
+    """The clips `made` (name: Clip) with their legs hanging free (no paw stands on the ground)."""
+    for clip in made.values():
+        clip.planted = False
+    return made
 
 
 def build(out):
@@ -504,17 +538,24 @@ def build(out):
     # same and bend with the skin (scene.sort_mesh keeps no custom normals).
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     bpy.ops.object.shade_smooth()
-    colour, glow = paint(skin)
+    # It wears the flat paint until our eyes are in: lib/marked_eyes.py finds the eyes by their
+    # dark paint, which the night sky would hide. Then the sky goes into the same images.
+    night = paint(skin)
+    colour, glow = paint(skin, starry=False)
     material(skin, colour, glow)
     rename(rig, skin)
     lids, eye_points = marked_eyes.replace(rig, skin, materials.palette(EYE_MATERIALS), FAINT_LIDS)
+    for image, starry in zip((colour, glow), night):
+        image.pixels.foreach_set(numpy.array(starry.pixels[:], dtype=numpy.float32))
+        image.pack()
+        bpy.data.images.remove(starry)
     attachments.add(rig, eye_points, [(MUZZLE, "head")])
 
     def shut(name, poses, loop):
         # Its eyes stay shut while it rolls over in its sleep, as they do while it sleeps.
         lids.shut("Sleep" if name == "RollOver" else name, poses, loop)
 
-    clips.animate(rig, {
+    clips.animate(rig, afloat({
         "Idle": clips.idle(),
         "Walk": paddle(WALK_FRAMES, TROT, 2, WALK_BOUNCE, WALK_SWING, WALK_FOLD, roll=WALK_ROLL),
         "Run": paddle(RUN_FRAMES, BOUND, 1, RUN_BOUNCE, RUN_SWING, RUN_FOLD, pitch=RUN_PITCH),
@@ -523,9 +564,9 @@ def build(out):
         "Faint": lesser(clips.faint(BELLY_HEIGHT, forepaws=FAINT_FOREPAWS)),
         **{name: lesser(clip, turns=REAR) for name, clip in clips.channel().items()},
         "Feed": clips.feed(forepaws=0.04),
-        "Sleep": clips.sleep(clips.curled(BELLY_HEIGHT), SLEEP_PAWS),
+        "Sleep": clips.sleep(curled, paws={}, planted=False),
         "RollOver": roll_over(),
-    }, SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig), overlays=[shut])
+    }), SCALE, ground_meshes=[skin], chains=FOLLOW, limbs=adopted.limbs(rig), overlays=[shut, hover])
     scene.export_glb(out)
     print("MODEL", out, "triangles", scene.triangles(skin), "bones", len(rig.data.bones),
           "materials", len(skin.data.materials))
