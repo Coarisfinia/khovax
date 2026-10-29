@@ -1,6 +1,6 @@
 // Kavrikka's development web (#677, #1733): a frost-and-fire pup, it leans into its nip and its
-// quickness and grows toward its elder's bulk. Its shifts and its stronger special are
-// placeholders to tune (#960).
+// quickness and grows toward its elder's bulk; its pack's deepest node grants a stronger special.
+// Its shifts and its stronger special are placeholders to tune (#960).
 {
 	"species": "kavrikka",
 	// Around the web: each direction sits beside the ones before and after it, the last beside the
@@ -9,8 +9,7 @@
 		{ "id": "sparking", "nodes": [
 			{ "leaning": { "strength": 50 } },
 			{ "leaning": { "strength": 60, "hp": 20 } },
-			{ "leaning": { "strength": 80, "speed": -30 } },
-			{ "special": 200 }
+			{ "leaning": { "strength": 80, "speed": -30 } }
 		] },
 		{ "id": "frosted", "nodes": [
 			{ "leaning": { "hp": 50 } },
@@ -25,7 +24,8 @@
 		{ "id": "pack", "nodes": [
 			{ "leaning": { "strength": 30, "speed": 30 } },
 			{ "leaning": { "strength": 40, "speed": 40, "hp": -20 } },
-			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } }
+			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } },
+			{ "special": 200 }
 		] }
 	],
 	"bridges": [["sparking_2", "frosted_2"], ["nimble_1", "pack_1"]],
