@@ -965,6 +965,14 @@ msgid "Collect %s"
 msgstr ""
 
 #: slices/quests/ui/quest_list_view.gd
+msgid "%d/%d"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
+msgid "%s  %d/%d"
+msgstr ""
+
+#: slices/quests/ui/quest_list_view.gd
 msgid "Dominate an %s"
 msgstr ""
 

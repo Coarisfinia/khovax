@@ -139,8 +139,11 @@ static func step_tagged(step: QuestStep, count: int) -> String:
 			asks = _answer_line(step)
 		QuestStep.OBTAINED:
 			asks = TranslationServer.tr("Collect %s") % _words(step.item)
+	if step.count > 1 and asks.is_empty():
+		return TranslationServer.tr("%d/%d") % [count, step.count]
 	if step.count > 1:
-		asks += ("  " if not asks.is_empty() else "") + "%d/%d" % [count, step.count]
+		# The count after the words, as one format, so a language can put it elsewhere.
+		return TranslationServer.tr("%s  %d/%d") % [asks, count, step.count]
 	return asks
 
 
