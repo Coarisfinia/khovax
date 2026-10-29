@@ -2,6 +2,7 @@
 
 import bmesh
 import bpy
+import numpy
 
 
 def reset(fps):
@@ -65,7 +66,8 @@ def sort_mesh(obj):
     Vertices are sorted by where they lie, then by their corners (every UV and colour layer, their
     faces' material, shading and facing), their skin weights and their neighbours' positions.
     Faces are then sorted by material and by their (sorted) vertices, each face read from its
-    lowest vertex on, keeping its winding. Two vertices or faces alike in all of that would keep
+    lowest vertex on, keeping its winding, and each face's corners are turned to start there too
+    (start_faces_at_lowest, #1662). Two vertices or faces alike in all of that would keep
     whatever order the operators left them in, so a mesh with such a pair is refused. The sorting
     goes through BMesh, which carries the skin weights, UVs, materials and smooth shading across;
     shape keys and custom normals no model has yet, so a mesh with them is refused rather than
@@ -105,7 +107,48 @@ def sort_mesh(obj):
     mesh.faces.sort(key=lambda face: rank[face.index])
     mesh.to_mesh(obj.data)
     mesh.free()
+    start_faces_at_lowest(obj.data)
     obj.data.update()
+
+
+# Each corner attribute's type: how many numbers a corner holds, the field foreach_get reads and
+# the array type that holds them. BYTE_COLOR is read as sRGB, which comes back as the same bytes.
+CORNER_TYPES = {
+    "FLOAT": (1, "value", numpy.float32), "INT": (1, "value", numpy.int32),
+    "INT8": (1, "value", numpy.int32), "BOOLEAN": (1, "value", bool),
+    "FLOAT2": (2, "vector", numpy.float32), "INT16_2D": (2, "value", numpy.int32),
+    "INT32_2D": (2, "value", numpy.int32), "FLOAT_VECTOR": (3, "vector", numpy.float32),
+    "FLOAT_COLOR": (4, "color", numpy.float32), "BYTE_COLOR": (4, "color_srgb", numpy.float32),
+    "QUATERNION": (4, "value", numpy.float32), "FLOAT4X4": (16, "value", numpy.float32),
+}
+
+
+def start_faces_at_lowest(mesh):
+    """Turns each face's corners so they start at its lowest vertex, keeping its winding (#1662).
+    The exporter splits a face into triangles from its first corner on, so a face whose corners
+    an operator started elsewhere (on another machine, say) would be written as other triangles,
+    though sort_mesh gives it the same place. Every corner attribute (the corners' vertices and
+    edges, UVs, colours, UV selection) is turned with them, so each corner keeps its data."""
+    count = len(mesh.loops)
+    corner_verts = numpy.empty(count, dtype=numpy.int32)
+    mesh.attributes[".corner_vert"].data.foreach_get("value", corner_verts)
+    order = numpy.arange(count)
+    for face in mesh.polygons:
+        start, total = face.loop_start, face.loop_total
+        first = int(numpy.argmin(corner_verts[start:start + total]))
+        order[start:start + total] = numpy.roll(order[start:start + total], -first)
+    if (order == numpy.arange(count)).all():
+        return
+    for attribute in list(mesh.attributes):
+        if attribute.domain != "CORNER":
+            continue
+        if attribute.data_type not in CORNER_TYPES:
+            raise RuntimeError("%s: start_faces_at_lowest can't carry %s's %s corners"
+                               % (mesh.name, attribute.name, attribute.data_type))
+        width, field, kind = CORNER_TYPES[attribute.data_type]
+        values = numpy.empty(count * width, dtype=kind)
+        attribute.data.foreach_get(field, values)
+        attribute.data.foreach_set(field, values.reshape(count, width)[order].ravel())
 
 
 def unique_rank(obj, what, elements, key):

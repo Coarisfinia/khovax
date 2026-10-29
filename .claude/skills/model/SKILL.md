@@ -327,8 +327,10 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
 - **Mesh health:** apply transforms, recalculate normals outside, no loose or non-manifold geometry.
 - **Reproducible (#1085):** a rebuild from an unchanged script gives the same file, byte for byte,
   so a pull request shows whether its build changed the model and two builds compare by hash.
-  `scene.export_glb` puts every mesh's faces in a fixed order first (Blender's UV sphere lays out
-  its faces in a different order on every run, and the exporter writes triangles in face order).
+  `scene.export_glb` puts every mesh's vertices and faces in a fixed order first, and starts each
+  face's corners at its lowest vertex (Blender's UV sphere lays out its faces in a different order
+  on every run, the exporter writes triangles in face order, and it splits a face into triangles
+  from its first corner on; #1639, #1662).
   A step that still varies between runs is a bug to fix in the library (a fixed seed, a sorted
   order), never something to commit whichever build came out. Step 14 checks it.
 
