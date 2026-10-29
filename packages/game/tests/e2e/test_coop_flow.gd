@@ -150,7 +150,7 @@ func _check_companion_glows(view: CompanionView, feature: CompanionFeature) -> S
 			return "player %d's companion's eyes don't glow in its type's colour" % (slot + 1)
 	if glows[0].color == glows[1].color:
 		return "two companions of different types glow in one colour"
-	var keeper: ProfileKeeper = _driver.holder.keeper
+	var keeper: ProfileKeeper = (_driver.holder as ProfileHolder).keeper
 	if keeper == null:
 		return "the co-op flow has no profile to lean"
 	var kept: PathLeaning = keeper.profile.leaning

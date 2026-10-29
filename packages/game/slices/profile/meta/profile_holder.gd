@@ -1,12 +1,13 @@
 class_name ProfileHolder
-extends Node
+extends SessionProfile
 ## Holds this machine's player's profile through a session (#37, #132): loaded at boot, what it
 ## gains taken over at once and saved debounced (ProfileKeeper, #73), and whatever is pending saved
 ## when the game quits or goes to the background. Its outbox (#771) and revive items (#656) change
 ## through what it's handed (ProfileTie, which ties it to the session, #831). The player's personal
 ## color (#391) is kept in it too, saved the same way. What later slices keep in the profile's file,
 ## like the player's quests, its `companions` read and write with it (#855). A save that can't be
-## read is reported and left alone, never overwritten.
+## read is reported and left alone, never overwritten. The session hands it out as the
+## SessionProfile the board knows (#1663).
 
 ## A change (`change`), like finishing a quest, changing gear or a session's start posted a
 ## request to the profile's outbox (#771, #818), for the session to send.

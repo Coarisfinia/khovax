@@ -65,8 +65,8 @@ func _ready() -> void:
 		start(new_seed())
 	if input != null:
 		sources.append(LocalSource.new(input as LocalInput, self))
-	if holder != null:
-		var _connected: int = holder.party_changed.connect(_catch_up_party)
+	if _profile() != null:
+		var _connected: int = _profile().party_changed.connect(_catch_up_party)
 
 
 func _process(delta: float) -> void:
@@ -131,13 +131,13 @@ func _begin_session() -> void:
 		keeper.world = world
 	var slot: int = input.slot if input != null else 0
 	# Before anything posts a request: its id goes above every one the world holds (#942).
-	if holder != null and world != null:
-		holder.catch_up_outbox(OutboxReceipts.highest(world.stores[slot]))
+	if _profile() != null and world != null:
+		_profile().catch_up_outbox(OutboxReceipts.highest(world.stores[slot]))
 	# The quests meet the world as it is: events raised before they came still count (#756).
 	if quest_tie != null and world != null:
 		quest_tie.catch_up(world.flags)
-	if holder != null and world != null:
-		holder.catch_up_gear(world.stores[slot])
+	if _profile() != null and world != null:
+		_profile().catch_up_gear(world.stores[slot])
 	_catch_up_party()
 
 
@@ -146,8 +146,15 @@ func _begin_session() -> void:
 ## change during it (#1459, #1478, #1485), so the run goes in their next commands instead of
 ## waiting for the next session.
 func _catch_up_party() -> void:
-	if holder != null and world != null:
-		holder.catch_up_party(world.stored(input.slot if input != null else 0, CompanionFeature.ID))
+	var held: ProfileHolder = _profile()
+	if held != null and world != null:
+		held.catch_up_party(world.stored(input.slot if input != null else 0, CompanionFeature.ID))
+
+
+## The session's holder as the profile slice's ProfileHolder (#1663), whose outbox, gear and party
+## the driver catches the world up with; null without one.
+func _profile() -> ProfileHolder:
+	return holder as ProfileHolder
 
 
 ## Holds the ticks while a menu is open (`on`, #302), or lets them run again: real time stops

@@ -14,8 +14,9 @@ signal ticked(tick: int, events: Array[RefCounted])
 ## This machine's player's input (the controls' LocalInput, #851): its slot, and whether it's heard.
 @export var input: SessionInput
 ## Holds this machine's player's profile, whose first carried monster is their companion (#338);
-## none in tests that build a driver alone, whose players then bring none.
-@export var holder: ProfileHolder
+## none in tests that build a driver alone, whose players then bring none. It's the profile slice's
+## ProfileHolder, which the slices after it cast to (#1663).
+@export var holder: SessionProfile
 
 ## The world: every instance it has loaded.
 var world: World

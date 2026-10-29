@@ -668,9 +668,9 @@ func _menu_development(tab: CharacterTab) -> String:
 	if not looks.is_empty():
 		return looks
 	view.buttons["sturdy_1"].pressed.emit()
-	var _flushed: String = tab.driver.holder.keeper.flush()
+	var _flushed: String = (tab.driver.holder as ProfileHolder).keeper.flush()
 	var kept: Array[String] = ProfileStore.load_from(PROFILE_PATH).monster_of(first).taken
-	var outbox: Outbox = tab.driver.holder.keeper.profile.outbox
+	var outbox: Outbox = (tab.driver.holder as ProfileHolder).keeper.profile.outbox
 	var problem: String = _sent_at_once(outbox) if kept == (["sturdy_1"] as Array[String]) else (
 		"pressing a node didn't take it, or it isn't kept: %s" % [kept]
 	)
@@ -685,7 +685,7 @@ func _menu_development(tab: CharacterTab) -> String:
 		return "a taken node doesn't say so in words: %s" % view.buttons["sturdy_1"].text
 	# With no level left, pressing an open node takes nothing.
 	view.buttons["heavy_1"].pressed.emit()
-	if (tab.driver.holder.keeper.profile.monster_of(first).taken.size() != 1
+	if ((tab.driver.holder as ProfileHolder).keeper.profile.monster_of(first).taken.size() != 1
 			or outbox.entries.size() != posted
 			or view.buttons["heavy_1"].focus_mode != Control.FOCUS_ALL):
 		return "a node was taken or sent with no level left, or can't take the focus"
@@ -742,10 +742,10 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 ## (#1485).
 func _menu_ascension(menu: GameMenu) -> String:
 	var tab: CharacterTab = menu.character
-	var profile: Profile = tab.driver.holder.keeper.profile
+	var profile: Profile = (tab.driver.holder as ProfileHolder).keeper.profile
 	var gain: Gain = Gain.new()
 	gain.dominated_species.assign(["vynnimu"])
-	tab.driver.holder.take(gain)
+	(tab.driver.holder as ProfileHolder).take(gain)
 	var pup: DominatedMonster = profile.dominated_monsters[profile.dominated_monsters.size() - 1]
 	tab.monsters.move(pup.short_id, 0)
 	tab.monsters.select(pup.short_id)
@@ -762,7 +762,7 @@ func _menu_ascension(menu: GameMenu) -> String:
 		return "a level 43 Vynnimu with a crystal can't press Ascend"
 	var posted: int = profile.outbox.entries.size()
 	details.ascend_button.pressed.emit()
-	var known: Bestiary = BestiaryKeeper.of(tab.driver.holder)
+	var known: Bestiary = BestiaryKeeper.of((tab.driver.holder as ProfileHolder))
 	if pup.species != "vynakiir" or profile.materials.has("arcane_crystal"):
 		return "pressing Ascend didn't make it a Vynakiir, or kept the crystal"
 	if not _sent_ascended(profile.outbox, posted, pup.short_id):
@@ -805,7 +805,7 @@ func _menu_development_scroll(menu: GameMenu) -> String:
 	var view: DevelopmentWebView = tab.find_children("*", "DevelopmentWebView", true, false)[0]
 	var first: String = tab.monsters.shown_ids[0]
 	# Two more levels: two nodes to take, beside the one taken already.
-	tab.driver.holder.keeper.profile.monster_of(first).level += 2
+	(tab.driver.holder as ProfileHolder).keeper.profile.monster_of(first).level += 2
 	# The menu lays itself out for the window every frame: it rests, so the phone's layout holds.
 	menu.set_process(false)
 	menu.lay_out(Vector2(360.0, 640.0))
@@ -1034,7 +1034,7 @@ func _menu_difficulty(menu: GameMenu, tab: SettingsTab) -> String:
 	if next.get_parent().has_node("Auto"):
 		return "the difficulty has an Auto button"
 	next.pressed.emit()
-	var outbox: Outbox = menu.driver.holder.keeper.profile.outbox
+	var outbox: Outbox = (menu.driver.holder as ProfileHolder).keeper.profile.outbox
 	var asked: bool = false
 	for request: OutboxEntry in outbox.entries:
 		asked = asked or request.kind == OutboxEntry.HOST_SETTING
