@@ -144,10 +144,14 @@ class Cells:
         for dx in reach:
             for dy in reach:
                 for dz in reach:
-                    at = numpy.clip(base + (dx, dy, dz), 0, numpy.array(self.shape) - 1)
+                    cube = base + (dx, dy, dz)
+                    # A cube off the grid has no point: clipping it back on would count an edge
+                    # cube's point twice, as both nearest and second nearest (a false crack).
+                    inside = ((cube >= 0) & (cube < numpy.array(self.shape))).all(axis=1)
+                    at = numpy.clip(cube, 0, numpy.array(self.shape) - 1)
                     index = (at[:, 0] * ny + at[:, 1]) * nz + at[:, 2]
                     offset = self.points[index] - spots
-                    distance = numpy.sqrt((offset * offset).sum(axis=1))
+                    distance = numpy.where(inside, numpy.sqrt((offset * offset).sum(axis=1)), numpy.inf)
                     closer = distance < first
                     second = numpy.where(closer, first, numpy.minimum(second, distance))
                     nearest = numpy.where(closer, index, nearest)
