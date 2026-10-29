@@ -60,7 +60,13 @@ def main():
             continue
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=glb)
-        lines = found(bpy.data.objects)
+        try:
+            lines = found(bpy.data.objects)
+        except ValueError as error:
+            # A head the check can't read (one taking two textures, say) fails its model, not the run.
+            failed += 1
+            log.error("PAINTED EYES can't check the head: %s" % error, glb)
+            continue
         if path in KNOWN:
             if lines:
                 log.info("PAINTED EYES %s: %s, known (%s)" % (path, "; ".join(lines), KNOWN[path]))

@@ -101,7 +101,6 @@ class Head:
         matrix = numpy.array(skin.matrix_world)
         corners = numpy.array([vertex.co[:] for vertex in data.vertices])
         corners = corners @ matrix[:3, :3].T + matrix[:3, 3]
-        uvs = data.uv_layers.active.data
         data.calc_loop_triangles()
         images = [image(material) for material in data.materials] or [None]
         mine = [triangle for triangle in data.loop_triangles
@@ -109,6 +108,7 @@ class Head:
                 and heads[list(triangle.vertices)].all()]
         if not mine:
             raise Unpainted("%s: no textured faces weighted to %s" % (skin.name, bone))
+        uvs = data.uv_layers.active.data
         # The texture the head's own faces take (a skin's body may use others).
         found = {images[min(triangle.material_index, len(images) - 1)] for triangle in mine}
         if len(found) != 1:
