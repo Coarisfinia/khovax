@@ -102,7 +102,7 @@ def main():
     egg = next(obj for obj in bpy.context.scene.objects if obj.type == "MESH")
     egg.name = egg.data.name = "StarryEgg"
     scene.select_only(egg)
-    # The source's normals come back as custom ones, which sort_faces refuses (model skill).
+    # The source's normals come back as custom ones, which sort_mesh refuses (model skill).
     bpy.ops.mesh.customdata_custom_splitnormals_clear()
     # The export split every vertex where its UVs part; welded again, the shell shades smooth
     # across those seams instead of in patches (UVs live on the corners, so they stay). The

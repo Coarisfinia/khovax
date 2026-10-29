@@ -258,7 +258,7 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   that blink need lids, so they must be ours (`lib.eyes`), not Meshy's: ask for a face without
   eyes and add them in the script (#1463's note on the eyelid slug).
 - **Custom normals:** Blender's glTF import keeps a file's normals as custom ones, the model
-  script's import of its source too, and `scene.sort_faces` (in `scene.export_glb`) refuses them:
+  script's import of its source too, and `scene.sort_mesh` (in `scene.export_glb`) refuses them:
   right after importing the source, clear them
   (`bpy.ops.mesh.customdata_custom_splitnormals_clear()`) and shade smooth, as `drakkudor.py`
   does.
