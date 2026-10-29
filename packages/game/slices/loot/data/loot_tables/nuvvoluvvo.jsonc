@@ -1,0 +1,10 @@
+// A placeholder species table, to tune (#960): what dominating a Nuvvoluvvo gives (#943, #1620), a
+// sprig of the moss it sleeps on, else a blank, which rolls on the instance's table instead.
+{
+	"id": "nuvvoluvvo",
+	"kind": "species",
+	"entries": [
+		{ "item": "moss", "chance": 800, "min": 1, "max": 2 }, // 80 %
+		{ "blank": true, "chance": 200 }
+	]
+}

@@ -1,0 +1,14 @@
+// The sleeper's roll (#1620). Its power and cooldown are placeholders to tune (#960).
+{
+	"id": "nuvvoluvvo_nulvo_nalvu",
+	"kind": "special",
+	"name": "Nulvo-nalvu",
+	"description": "The ${MONSTER:nuvvoluvvo} rolls over onto its target with all its soft, heavy weight.",
+	"codex": {
+		"entry": "The grunt of a heavy sleeper turning over, and the soft thud as it lands. Dominators said it of a beast that wins a fight without ever quite waking up.",
+		"gloss": "turn over, thud"
+	},
+	"power": 1800,
+	"cooldown_seconds": 12,
+	"strike_type": "might" // all weight (#626: a strike's type is its own)
+}
