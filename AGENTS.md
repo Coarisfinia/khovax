@@ -626,7 +626,7 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   here, kept next to it: CC0, CC BY with credit, or, for an asset the project owns, the
   **Unlicense**, the repository's own license (owner, #1511). The project owns what is built in
   the repository and what the owner makes or generates for it, such as a model generated on a paid
-  Meshy plan with the Private licence (#1476); its `LICENSE.md` is a copy of the root `LICENSE`, and
+  Meshy plan with the Private license (#1476); its `LICENSE.md` is a copy of the root `LICENSE`, and
   its `SOURCE.md` names the project (or its contributors) as the author and says how the asset was
   made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in
   `assets/<pack>/`** with its license file and a `SOURCE.md` (title, then `- **Author:**`,
