@@ -35,14 +35,25 @@ KNOWN = {
 
 
 def problem(names):
-    """What's wrong with a creature's eyes, from its nodes' `names`, or None."""
+    """What's wrong with a creature's eyes, from its joints' `names`, or None."""
     sides = sorted(name[len(EYE):] for name in names if name.startswith(EYE))
     if not sides:
         return "no eye points (eye.<side>)"
     lidless = [side for side in sides if LID + side not in names]
     if lidless:
         return "eyes without our lids: " + ", ".join(EYE + side for side in lidless)
+    # A lid needs its eye's point too: the game places the eye's effects there.
+    pointless = sorted(name for name in names if name.startswith(LID) and name[len(LID):] not in sides)
+    if pointless:
+        return "lids without their eye points: " + ", ".join(pointless)
     return None
+
+
+def joints(gltf):
+    """The names of the bones the model's skins carry: the game reads its eye points and lids as
+    skeleton bones, so a node outside the skeleton named like one doesn't count."""
+    nodes = gltf.get("nodes", [])
+    return {nodes[index].get("name", "") for skin in gltf.get("skins", []) for index in skin.get("joints", [])}
 
 
 def main() -> int:
@@ -53,7 +64,7 @@ def main() -> int:
         gltf, _binary = read_glb(Path(path))
         if not gltf.get("skins") or path in NOT_CREATURES:
             continue
-        names = {node.get("name", "") for node in gltf.get("nodes", [])}
+        names = joints(gltf)
         if path in EYELESS:
             if any(name.startswith((EYE, LID)) for name in names):
                 failed += 1

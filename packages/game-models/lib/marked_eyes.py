@@ -44,11 +44,14 @@ MIRROR, WIDER = 0.6, 2.0
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
+# How many texels the repaint blends at once.
+CHUNK = 1024
 # The eye's front, which the head's skin must not cover (`buried`): at most BURIED of its
 # vertices may lie under it (a vertex or two at the iris's very edge, where it meets the skin), and
-# `clear` tries the eye further out in STEPs of its size, at most OUT.
+# `clear` tries the eye further out and across the head in STEPs of its size, at most OUT out and
+# SHIFT across.
 FRONT = (".iris", ".pupil")
-BURIED, STEP, OUT = 0.02, 0.05, 0.5
+BURIED, STEP, OUT, SHIFT = 0.02, 0.05, 0.5, 0.2
 # Which way our eyes look, blended with the head's surface there (eyes.eye): ahead and a little
 # out on the left (+X); the right mirrors it.
 FORWARD = (0.25, -1.0, 0.0)
@@ -256,9 +259,12 @@ def repaint(head, marks, marked=DARK):
         rows, columns, spots = _texels(head, near)
         inside = mark.radii(spots) <= FILL
         rows, columns, spots = rows[inside], columns[inside], spots[inside]
-        offset = spots[:, None, :] - ring_points[None, :, :]
-        weight = 1.0 / ((offset * offset).sum(axis=2) + 1e-12)
-        head.pixels[rows, columns, :3] = (weight @ colours) / weight.sum(axis=1, keepdims=True)
+        # A CHUNK of texels at a time, so the texels-by-ring weights stay small on a large texture.
+        for start in range(0, len(spots), CHUNK):
+            offset = spots[start:start + CHUNK, None, :] - ring_points[None, :, :]
+            weight = 1.0 / ((offset * offset).sum(axis=2) + 1e-12)
+            head.pixels[rows[start:start + CHUNK], columns[start:start + CHUNK], :3] = (
+                (weight @ colours) / weight.sum(axis=1, keepdims=True))
     head.image.pixels.foreach_set(head.pixels.ravel())
     head.image.update()
     return numpy.concatenate(ring_colours).mean(axis=0)
@@ -294,7 +300,8 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, **shape):
 def buried(skin, pieces):
     """The share of the vertices on the face of an eye's front (its iris and pupil among
     `pieces`, the halves facing the way it looks) that lie under `skin`'s surface: the head's
-    skin cutting across the eye (#1690)."""
+    skin cutting across the eye (#1690). For a left eye, the worse of it and its mirror image on
+    the right (eyes.mirrored makes the right eye so), since a generated head is rarely symmetric."""
     look = eyes.look(pieces)
     spots = []
     for piece in (piece for piece in pieces if piece.name.endswith(FRONT)):
@@ -302,6 +309,13 @@ def buried(skin, pieces):
         # Its face toward the way the eye looks: the side of it that shows.
         spots += [spot for spot in (piece.matrix_world @ vertex.co for vertex in piece.data.vertices)
                   if (spot - middle).dot(look) > 0.0]
+    if middle.x <= 0.0:
+        return _under(skin, spots)
+    return max(_under(skin, spots), _under(skin, [Vector((-spot.x, spot.y, spot.z)) for spot in spots]))
+
+
+def _under(skin, spots):
+    """The share of `spots` under `skin`'s surface."""
     under = 0
     for spot in spots:
         found, location, normal, _index = skin.closest_point_on_mesh(spot)
@@ -311,29 +325,44 @@ def buried(skin, pieces):
 
 def clear(skin, pieces, size):
     """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
-    of its front, from where eyes.eye set it to OUT of its size further out along the way it
-    looks, in STEPs (the nearest such spot of the least), so on a curved head or a sculpted lid
-    the skin doesn't cut across it. Raises when more than BURIED of its front stays covered."""
-    look = eyes.look(pieces) * (size * STEP)
+    of its front and its mirror image's (buried): first up to OUT of its size further out along
+    the way it looks, in STEPs, the nearest such spot of the least. When that still leaves more
+    than BURIED covered (a head that isn't symmetric can bury the right eye), it tries up to SHIFT
+    of its size across the head too (sideways and up or down), the nearest spot within BURIED.
+    So on a curved head or a sculpted socket the skin doesn't cut across either eye. Raises when
+    more than BURIED stays covered."""
+    look = eyes.look(pieces)
+    side = look.cross(Vector((0.0, 0.0, 1.0))).normalized()
+    up = side.cross(look).normalized()
+    at = Vector()
 
-    def move(steps):
+    def place(move):
+        nonlocal at
+        spot = (look * move[0] + side * move[1] + up * move[2]) * (size * STEP)
+        shift, at = spot - at, spot
         for piece in pieces:
-            piece.location += look * steps
+            piece.location += shift
             if "hinge" in piece:
-                piece["hinge"] = tuple(Vector(piece["hinge"]) + look * steps)
+                piece["hinge"] = tuple(Vector(piece["hinge"]) + shift)
         bpy.context.view_layer.update()
+        return buried(skin, pieces)
 
-    covered = []
-    for step in range(round(OUT / STEP) + 1):
-        if step:
-            move(1)
-        covered.append(buried(skin, pieces))
-    best = min(range(len(covered)), key=lambda step: (covered[step], step))
-    move(best - (len(covered) - 1))
-    if covered[best] > BURIED:
-        raise ValueError("the head's skin covers %.0f%% of the eye's front, at best %.2f of its size out" % (
-            100 * covered[best], best * STEP))
-    print("EYES set %.2f of their size out; the skin covers %.1f%% of their front" % (best * STEP, 100 * covered[best]))
+    out = range(round(OUT / STEP) + 1)
+    best = min((place((step, 0, 0)), (step, 0, 0)) for step in out)
+    if best[0] > BURIED:
+        reach = range(-round(SHIFT / STEP), round(SHIFT / STEP) + 1)
+        for move in sorted(((step, across, upward) for step in out for across in reach for upward in reach),
+                           key=lambda move: (sum(axis * axis for axis in move), move)):
+            covered = place(move)
+            if covered < best[0]:
+                best = (covered, move)
+            if covered <= BURIED:
+                break
+    place(best[1])
+    if best[0] > BURIED:
+        raise ValueError("the head's skin covers %.0f%% of the eyes' front at best" % (100 * best[0]))
+    print("EYES moved %s steps of %.2f their size (out, across, up); the skin covers at most %.1f%% of "
+          "either one's front" % (best[1], STEP, 100 * best[0]))
 
 
 def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
