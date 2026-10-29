@@ -163,7 +163,7 @@ def fits(name, paint, colour, beast):
     marks = marked_eyes.find(marked_eyes.Head(skin, "head", marked.weight), marked)
     mats = {"dark": material("dark", colour=BLACK), "glow": material("glow", colour=GLOW),
             "skin": material("lid", colour=colour)}
-    pieces = marked_eyes.fit(skin, marks, mats, "head", marked.middle)
+    pieces = marked_eyes.fit(skin, marks, mats, "head", middle=marked.middle)
     ok = True
     for side, mark in zip("LR", marks):
         iris = eyes.spot([piece for piece in pieces if piece.name.startswith("Eye.%s." % side)])

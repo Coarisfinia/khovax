@@ -379,7 +379,7 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fit(skin, marks, mats, bone, middle=0.0, forward=FORWARD, ridge=True, **shape):
+def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
     position and size the mean of the left mark's and the right one's mirrored across the plane
     x = `middle` (the `Marked`'s that `find` paired them across, #1735), so the two mirror each
@@ -486,7 +486,7 @@ def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
     around = repaint(head, marks, marked)
     if "skin" not in mats:
         mats = dict(mats, skin=materials.material("EyeSkin", linear(around)))
-    pieces = fit(skin, marks, mats, bone, marked.middle, **shape)
+    pieces = fit(skin, marks, mats, bone, middle=marked.middle, **shape)
     points = {}
     for side in ("L", "R"):
         mine = [piece for piece in pieces if piece.name.startswith("Eye.%s." % side)]
