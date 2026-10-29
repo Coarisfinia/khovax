@@ -45,10 +45,12 @@ HEADER = (
 # The schema keyword that marks a player-facing text field.
 MARK = "x-translate"
 # A call whose first argument is the text: tr(text, context), tr_n(text, plural, n, context).
-CALL = re.compile(r"(?<!\w)(a?tr(?:_n)?)\(\s*r?$")
-# A comma alone between two string arguments; the second may be raw (r"…").
-COMMA = re.compile(r"\s*,\s*r?")
+CALL = re.compile(r"(?<!\w)(a?tr(?:_n)?)\(\s*&?r?$")
+# A comma alone between two string arguments; the second may be a StringName (&"…") or raw.
+COMMA = re.compile(r"\s*,\s*&?r?")
 RAW = re.compile(r"(?<!\w)r$")
+# A string argument's prefixes, which stay in the code before it: StringName (&) and raw (r).
+PREFIXES = re.compile(r"(?<![\w&])&?r?$")
 SCENE_TEXT = re.compile(
     r'^(?:[\w/]+/)?(?:text|placeholder_text|tooltip_text|title) = "((?:[^"\\]|\\.)*)"',
     re.MULTILINE | re.DOTALL,
@@ -152,8 +154,8 @@ def _plural_context(runs: list[Token], at: int) -> str:
                 return literal(run.text, before)
             continue
         before = run.text
-        # A raw string's prefix r is part of the context argument, not code before it.
-        for char in RAW.sub("", run.text):
+        # A string's prefixes are part of the context argument, not code before it.
+        for char in PREFIXES.sub("", run.text):
             if char in "([{":
                 depth += 1
             elif char in ")]}":
