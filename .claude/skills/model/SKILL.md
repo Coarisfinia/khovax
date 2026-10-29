@@ -29,7 +29,9 @@ for look-dev with the owner, but whatever it finds goes back into the script.
   `blender` on the PATH already picks the GPU (as on the owner's laptop).
   Never set it for the shell:
   Godot would pick it up, and on d3d12 its renderer breaks every skinned mesh. The MESA/ZINK/EGL
-  warnings are harmless; EEVEE still renders.
+  warnings are harmless. **Render with Cycles, never EEVEE** (#1676): Blender 5.2.2's EEVEE hangs at
+  render start under WSL (d3d12 and llvmpipe alike) and never ends, while Cycles on the CPU at a few
+  samples renders a sheet in seconds; `render_views.py` does so.
 - **Godot 4.7.2**, the CI's version: every Godot check runs in the game project itself, never in
   a scratch project, so the repo's import settings apply. It renders on the CPU (the software
   rasteriser), so `render_in_game.gd` turns off vsync and the frame cap itself: no waiting for

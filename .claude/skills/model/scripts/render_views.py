@@ -7,6 +7,8 @@
 # sheets, #1525). One pose (one clip, one frame) writes into <out_dir> itself;
 # several write each pose's views and sheet into <out_dir>/<Clip>_<frame>/ (`Attack_008`), all from
 # one Blender start, which is most of a render's cost (#1050).
+# It renders with Cycles on the CPU, at a few samples (#1676): Blender 5.2.2's EEVEE hangs at render
+# start under WSL, with d3d12 and with llvmpipe alike, and never ends.
 import math
 import os
 import re
@@ -84,11 +86,14 @@ def bounds(floor):
 # Neutral studio: a sun for shape, a world color for fill, and per pose a grey floor for the
 # silhouette.
 scene.world = bpy.data.worlds.new("studio")
-scene.world.color = (0.35, 0.35, 0.38)
+scene.world.use_nodes = True
+scene.world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.35, 0.35, 0.38, 1)
 bpy.ops.object.light_add(type="SUN", rotation=(math.radians(50), 0, math.radians(30)))
 bpy.context.object.data.energy = 3.0
 
-scene.render.engine = "BLENDER_EEVEE"
+scene.render.engine = "CYCLES"
+scene.cycles.device = "CPU"
+scene.cycles.samples = 16
 scene.render.resolution_x = 512
 scene.render.resolution_y = 512
 scene.render.film_transparent = False
