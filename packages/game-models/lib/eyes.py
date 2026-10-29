@@ -1,5 +1,5 @@
-"""Detailed eyes that hold up close: a dark eyeball, a glowing iris with a slit pupil, a glint, a
-glowing rim and a brow ridge over it, set into the head's surface and looking out and forward.
+"""Detailed eyes that hold up close: a dark eyeball, a glowing iris with a slit pupil (no glint,
+the owner on #1716), a glowing rim and a brow ridge over it, set into the head's surface and looking out and forward.
 `almond` narrows the eye's height (1 is round) and `tilt` lifts its outer corner, so a predator's
 eye reads sharp and angled rather than round.
 
@@ -22,7 +22,7 @@ LID = "lid."
 # eye's top, the dome tucked back into the head (and under a brow), so the open eye shows whole.
 OPEN = math.radians(160)
 # The lid's size against the eye's (sideways, up, out), the up share times `almond`: big enough
-# shut to cover the eyeball, iris, glint and the glowing rim round them. A round eye's lid is
+# shut to cover the eyeball, iris, pupil and the glowing rim round them. A round eye's lid is
 # deeper (DEEP times `almond`): halfway shut, its depth stands up over the eye, and must still
 # reach past the rim's top, or the rim shows above the lid in a blink (check_brows.py).
 LID_SIZE = (1.25, 1.25, 0.95)
@@ -40,8 +40,8 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
     `brow_size` scales the ridge (1 is a predator's heavy brow; less for a softer, younger face),
     whose top edge stays above the eye. `pupil` is the pupil's (width, height) as shares of the
     eye: a predator's upright slit by default, wide and round for a gentler creature.
-    `mats` needs "dark", "glow", "light" and "skin" (the brow). Returns its pieces, all weighted to
-    `bone`, and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it)."""
+    `mats` needs "dark", "glow" and "skin" (the brow). Returns its pieces, all weighted to `bone`,
+    and with a `lid` bone's name, the eye's lid, weighted to that bone (`Lids` adds it)."""
     found, location, normal, _index = body.closest_point_on_mesh(Vector(guess))
     normal = normal if found else Vector(forward)
     looking = (normal * 0.55 + Vector(forward).normalized() * 0.45).normalized()
@@ -67,7 +67,6 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
         ("eyeball", "uv_sphere", at(0, 0, 0), (1.0, almond, 0.75), rotation, "dark"),
         ("iris", "uv_sphere", at(0, 0, 0.5), (0.7, 0.7 * iris, 0.28), rotation, "glow"),
         ("pupil", "uv_sphere", at(0, 0, 0.66), (pupil[0], pupil[1] * iris, 0.16), rotation, "dark"),
-        ("glint", "uv_sphere", at(0.25, 0.25 * almond, 0.74), (0.15, 0.15, 0.1), rotation, "light"),
         ("brow", "uv_sphere", at(-0.05, 0.75 * almond + 0.12 + lift, 0.3), ridge,
          (turn @ Matrix.Rotation(brow * outer, 3, "Z")).to_euler(), "skin"),
     ]
@@ -83,9 +82,9 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
                    minor_segments=4)
     )
     if lid is not None:
-        # A narrow eye's lid is thin across: halfway shut, its edge faces out where the glint and
-        # the pupil stand out furthest, and they poke through it (#1690). It's grown taller (its
-        # depth, how far it bulges shut, stays) until nothing does.
+        # A narrow eye's lid is thin across: halfway shut, its edge faces out where the pupil and
+        # the iris stand out furthest, and they can poke through it (#1690). It's grown taller
+        # (its depth, how far it bulges shut, stays) until nothing does.
         grow = 1.0
         cover = _lid(name + ".lid", center, turn, size, almond, mats["skin"], lid, grow)
         for _round in range(GROWS):

@@ -67,7 +67,7 @@ a second model could use goes into the library or a generic tool, never into one
     `curl`), curling fur `tuft`s.
   - `surface`: patterns laid on a body and bending with it: glowing `vein`s, whose loose ends
     taper out to a point (`taper`, #1171), and `rune`s (`GLYPHS`).
-  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glint, glowing rim, brow), where
+  - `eyes`: a detailed `eye` (eyeball, glowing iris, slit pupil, glowing rim, brow; no glint, the owner on #1716), where
     it looks out from (`spot`) and which way (`look`); a smaller brow with `brow_size`, whose top
     edge stays over the eye (#1249); with `lid`, a lid on a bone of its own (#1304), which
     `Lids` adds to the rig and, as an `animate` overlay, shuts in Sleep, at Faint's end and in a
@@ -79,7 +79,7 @@ a second model could use goes into the library or a generic tool, never into one
     flat black ovals the prompt's eye sentence marked on the head (`GLOW` instead of `DARK` for a
     beast imported with glowing painted eyes), paints them over in the skin's colour around them,
     fits `eyes.eye` with lids there by their position, size and spacing (`clear` sets them out
-    along the way they look where the head's skin covers least of their iris, pupil and glint, and
+    along the way they look where the head's skin covers least of their iris and pupil, and
     fails the build past `BURIED`), joins them into the skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
     `attachments.add`). It prints an `EYES` line with what it found.
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's

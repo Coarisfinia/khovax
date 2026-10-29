@@ -47,7 +47,7 @@ FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
 # The eye's front, which the head's skin must not cover (`buried`): at most BURIED of its
 # vertices may lie under it (a vertex or two at the iris's very edge, where it meets the skin), and
 # `clear` tries the eye further out in STEPs of its size, at most OUT.
-FRONT = (".iris", ".pupil", ".glint")
+FRONT = (".iris", ".pupil")
 BURIED, STEP, OUT = 0.02, 0.05, 0.5
 # Which way our eyes look, blended with the head's surface there (eyes.eye): ahead and a little
 # out on the left (+X); the right mirrors it.
@@ -292,7 +292,7 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, **shape):
 
 
 def buried(skin, pieces):
-    """The share of the vertices on the face of an eye's front (its iris, pupil and glint among
+    """The share of the vertices on the face of an eye's front (its iris and pupil among
     `pieces`, the halves facing the way it looks) that lie under `skin`'s surface: the head's
     skin cutting across the eye (#1690)."""
     look = eyes.look(pieces)
@@ -339,7 +339,7 @@ def clear(skin, pieces, size):
 def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
     """Our eyes in place of the marked ones on an adopted `rig` and its weighted `skin` (`find`,
     `repaint`, `fit`), joined into the skin, their lids on bones of their own hung from `bone`.
-    `mats` needs "dark", "glow" and "light" (eyes.eye); "skin", the lids' and brows', is the
+    `mats` needs "dark" and "glow" (eyes.eye); "skin", the lids' and brows', is the
     skin's colour around the marks unless given. `faint` is Faint's (first frame, last frame) the
     lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose `shut` goes into clips.animate's
     overlays, and the eye points {side: (spot, bone, look)} for attachments.add."""
