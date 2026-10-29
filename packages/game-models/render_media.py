@@ -94,6 +94,10 @@ def main() -> int:
                         help=f"seconds a job may take before it's stopped as hung (default {TIMEOUT})")
     parser.add_argument("--no-publish", action="store_true", help="render only, print local paths")
     args = parser.parse_args()
+    # The jobs run in process groups of their own, which a SIGTERM or a closed terminal doesn't
+    # reach: both end the run through the same clean-up as Ctrl-C, which stops them.
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, lambda signum, _frame: sys.exit(128 + signum))
     # Progress shows as it happens, also when the output goes to a file (a background run's).
     sys.stdout.reconfigure(line_buffering=True)
 
@@ -221,15 +225,24 @@ def run(command: list[str], log_path: Path, timeout: float) -> int | None:
 
 
 def stop(process: subprocess.Popen) -> None:
-    """Ends the process's group: SIGTERM, a grace period, then SIGKILL for whatever is left, also
-    when the group's leader is already gone and a child of it isn't."""
-    signal_group(process, signal.SIGTERM)
-    try:
-        process.wait(timeout=GRACE)
-    except subprocess.TimeoutExpired:
-        pass
-    signal_group(process, signal.SIGKILL)
-    process.wait()
+    """Ends the process's group (see stop_all)."""
+    stop_all([process])
+
+
+def stop_all(processes: list[subprocess.Popen]) -> None:
+    """Ends every process's group: SIGTERM to all, one shared grace period, then SIGKILL for
+    whatever is left, also when a group's leader is already gone and a child of it isn't."""
+    for process in processes:
+        signal_group(process, signal.SIGTERM)
+    deadline = time.monotonic() + GRACE
+    for process in processes:
+        try:
+            process.wait(timeout=max(0.0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            pass
+    for process in processes:
+        signal_group(process, signal.SIGKILL)
+        process.wait()
 
 
 def signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
@@ -281,8 +294,7 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
             with RUNNING_LOCK:
                 INTERRUPTED.set()
                 running = list(RUNNING)
-            for process in running:
-                stop(process)
+            stop_all(running)
             raise
     return not failed
 
