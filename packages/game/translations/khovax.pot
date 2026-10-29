@@ -109,16 +109,16 @@ msgstr ""
 msgid "Codex"
 msgstr ""
 
+#: slices/credits/ui/credits_page.gd
+msgid "Credits"
+msgstr ""
+
 #: slices/credits/ui/credits_tab.gd
 msgid "The credits couldn't be read."
 msgstr ""
 
 #: slices/credits/ui/credits_tab.gd
 msgid "[b]Version:[/b] %s"
-msgstr ""
-
-#: slices/credits/ui/credits_tab.gd
-msgid "Credits"
 msgstr ""
 
 #: slices/credits/ui/credits_tab.gd

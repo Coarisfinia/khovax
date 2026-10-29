@@ -3,8 +3,10 @@
 [ext_resource type="Script" uid="uid://bdrj0d8so1a7f" path="res://slices/credits/ui/credits_tab.gd" id="1_credits"]
 [ext_resource type="Script" uid="uid://dabbkiqjwraij" path="res://slices/credits/ui/error_log_button.gd" id="2_log"]
 [ext_resource type="Script" uid="uid://c13ami2qsfvhi" path="res://slices/credits/ui/bug_report_button.gd" id="3_report"]
+[ext_resource type="Script" uid="uid://cn1v7aee4rh7e" path="res://slices/credits/ui/credits_page.gd" id="4_page"]
 
 [node name="Credits" type="VBoxContainer"]
+script = ExtResource("4_page")
 
 [node name="BugReport" type="Button" parent="."]
 layout_mode = 2
