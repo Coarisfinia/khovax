@@ -75,7 +75,9 @@ OPEN, CLOSE = "([{", ")]}"
 ASSIGN = {"=", ":=", "+="}
 DISABLED = 2
 # Keywords that come before a value: a ( or [ after one opens the value, not a call or index.
-KEYWORDS = {"if", "elif", "else", "and", "or", "not", "in", "is", "await", "return", "while"}
+KEYWORDS = {
+    "if", "elif", "else", "and", "or", "not", "in", "is", "await", "return", "while", "match", "func",
+}  # fmt: skip
 # The statements whose header ends in a colon, with their body after it or on the next lines.
 BLOCKS = {"if", "elif", "else", "for", "while", "func"}
 PRESENTATION = re.compile(r"(^|/)(game|ui|look)/")
