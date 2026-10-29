@@ -126,11 +126,12 @@ PROJECT = {
         '[node name="Player" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n\n'
         '[node name="Model" parent="Player" instance=ExtResource("2_figure")]\n'
         'transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)\n'),
-    # The view on the scene's root, its model a direct child.
+    # The view on the scene's root, scaled, its model a direct child drawn at the root's scale.
     "slices/people/look/person.tscn": (
         '[ext_resource type="Script" path="res://slices/figures/look/figure_view.gd" id="1_view"]\n'
         '[ext_resource type="PackedScene" path="res://person.glb" id="2_person"]\n\n'
-        '[node name="Person" type="Node3D"]\nscript = ExtResource("1_view")\n\n'
+        '[node name="Person" type="Node3D"]\nscript = ExtResource("1_view")\n'
+        'transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)\n\n'
         '[node name="Model" parent="." instance=ExtResource("2_person")]\n'),
 }
 # Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
@@ -139,7 +140,7 @@ VIEWS = {
     "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
     # Only a view in a slice's look/ counts: a tool that preloads a model is no view.
     "lamp": [],
-    "person": [("figure_view", 1.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
+    "person": [("figure_view", 1.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
     "pebble": [],
 }
 

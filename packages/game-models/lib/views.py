@@ -9,8 +9,8 @@ player): CI reruns the check when either changes. From it come, each from a
 constant of that name in the view, or the one of another script it uses as `Class.NAME` (a value
 may name another constant too, in the view or as `Class.NAME`):
 
-- `MODEL_SCALE`: the scale it draws the model at (1 without one), times the instance's own scale in
-  a scene;
+- `MODEL_SCALE`: the scale it draws the model at (1 without one), times the scale a scene draws the
+  instance at (its own and its ancestors');
 - `CLIPS`: the clips it plays (every clip without one, an empty list for none);
 - `IDLE`: the clip it stands in, measured in place of the rest pose (a figure's is a T-pose);
 - `HIDDEN_PARTS`: the parts it hides (the figure's weapons), left out of the measure.
@@ -163,8 +163,17 @@ def _instanced(game, scripts, scene, glb):
         if script is None:
             raise ValueError("%s: %s has no view script on its parent" % (_short(game, scene), path))
         res = resources[script.group(1)]
-        views.append(scripts.view(os.path.join(game, res[len("res://"):]), _scale(body)))
+        views.append(scripts.view(os.path.join(game, res[len("res://"):]), _drawn(nodes, path)))
     return views
+
+
+def _drawn(nodes, path):
+    """The scale the scene draws node `path` at: its own times every ancestor's."""
+    scale = _scale(nodes[path][1])
+    while path != ".":
+        path = path.rpartition("/")[0] if "/" in path else "."
+        scale *= _scale(nodes[path][1]) if path in nodes else 1.0
+    return scale
 
 
 def _scale(body):
