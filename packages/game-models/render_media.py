@@ -5,8 +5,9 @@ assets branch and prints the description's media block, ready to paste.
         packages/game/assets/<name>/<name>.glb --pr <n> [--tag v2] [--quick] [--out <folder>] \
         [--jobs 3] [--timeout 900] [--no-publish]
 
-It runs what a model pull request shows (the model skill's step 5), Blender (GPU) and Godot (CPU)
-side by side, and Godot only off the desktop, through offscreen.py:
+It runs what a model pull request shows (the model skill's step 5), Blender and Godot side by side
+(both on the CPU: Blender's sheets with Cycles, since EEVEE hangs under WSL, #1676), and Godot
+only off the desktop, through offscreen.py:
 - Blender, `render_views.py`: the sheet of every side at rest, and with every clip, each clip's
   middle pose as a sheet of its own (the pose sheets, for looking at, not published).
 - Godot, `render_in_game.gd`: the game camera and six sides on the desktop screen, the close-ups
@@ -30,6 +31,7 @@ never keeps the run waiting forever."""
 
 import argparse
 import concurrent.futures
+import math
 import os
 import signal
 import subprocess
@@ -88,7 +90,7 @@ def main() -> int:
     parser.add_argument("--quick", action="store_true", help="only the fast-feedback pictures")
     parser.add_argument("--out", type=Path, help="an empty or new folder to render into (a new temporary one by default)")
     parser.add_argument("--jobs", type=int, default=3, help="Godot renders at once")
-    parser.add_argument("--timeout", type=float, default=TIMEOUT,
+    parser.add_argument("--timeout", type=seconds, default=TIMEOUT,
                         help=f"seconds a job may take before it's stopped as hung (default {TIMEOUT})")
     parser.add_argument("--no-publish", action="store_true", help="render only, print local paths")
     args = parser.parse_args()
@@ -159,6 +161,17 @@ def main() -> int:
     print("\n----- media block -----\n")
     print(block(link, clips, args.quick))
     return 0
+
+
+def seconds(text: str) -> float:
+    """A timeout: a finite number of seconds above zero."""
+    try:
+        value = float(text)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value <= 0:
+        raise argparse.ArgumentTypeError(f"{text!r} isn't a number of seconds above zero")
+    return value
 
 
 def clips_of(model: Path) -> list[str]:
