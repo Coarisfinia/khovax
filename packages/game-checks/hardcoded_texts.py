@@ -5,22 +5,23 @@ A text is player-facing when it flows into what a Control shows:
 - assigned to text, tooltip_text, placeholder_text or title (also +=);
 - passed to Godot's text methods (set_text, add_item, add_tab, set_tab_title, append_text, …);
 - passed to a game function whose parameter flows into one of these (MenuWidgets.label's text,
-  NoticeScreen.notify's title), returned by a function whose result does, or put into a local or
-  a member (a line, an Array[String] of lines) that does. The flow is followed to a fixed point,
-  through the presentation's scripts only (game/, ui/, look/): the rules, meta and core hand it
-  data, and their strings are ids and error messages. A call names its function by its class,
-  by self or bare in its own script where it can, and only by name elsewhere; a shown parameter's
+  NoticeScreen.notify's title), returned by a function whose result does, or put into a local,
+  a member (a line, an Array[String] of lines) or, inside its function, a parameter that does.
+  The flow is followed to a fixed point, through the presentation's scripts only (game/, ui/,
+  look/): the rules, meta and core hand it data, and their strings are ids and error messages. A
+  call names its function by its class, by self or bare in its own script where it can, and only
+  by name elsewhere, even one named like a Godot text method (set_text); a shown parameter's
   default and a shown member's initializer count too, and a helper outside the presentation
   (TextTags.shown) passes on the parameters and locals handed to it, never its ids.
 In such an expression, a hit is a string literal outside tr() (formatted with % or as a value
 handed to String.format(), glued with +, in an array of lines), a constant the expression names,
-even inside tr() (the extractor reads only literals), through the constants it aliases: its
-string, its array's strings or its dictionary's string keys, and a name made from an id with
-capitalize(). A constant dictionary handed to format(), straight or through a local, member or
-parameter, counts by its values. Not a hit: a literal without a letter outside its format
-specifiers, BBCode and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath
-(&"…", ^"…"), the condition of an `x if c else y`, a dictionary's key (a format's placeholder) and
-a literal inside another call (a key, an id).
+even inside tr() (the extractor reads only literals), through the constants it aliases: its string,
+its array's strings or its dictionary's string keys, and a name made from an id with capitalize().
+A constant dictionary handed to format(), straight or through a local, member or parameter, or as
+an arm of `x if c else y`, counts by its values. Not a hit: a literal without a letter outside its
+format specifiers, BBCode and text tags (empty, numbers, symbols, "%s: %d"), a StringName or
+NodePath (&"…", ^"…"), the condition of an `x if c else y`, a dictionary's key (a format's
+placeholder) and a literal inside another call (a key, an id).
 In scenes: a text on a node whose auto_translate_mode is disabled, and a TabContainer's child,
 whose node name is its tab's title. A script that adds tabs to a TabContainer titles them with
 set_tab_title, since TabContainer titles a tab by its node's name, which no extractor sees.
@@ -460,6 +461,17 @@ class Flow:
         own = [func for func in script.funcs if func.name == name]
         return own or self.by_name.get(name, [])
 
+    def defined(self, script: Script, toks: list[Tok], at: int) -> list[Func]:
+        """The game's functions the call opening at `at` surely names: through self or a class,
+        or bare in a script that defines one of that name. None through another receiver (a
+        Control's own set_text)."""
+        if at >= 3 and toks[at - 2].text == ".":
+            receiver = toks[at - 3].text
+            if receiver != "self" and receiver not in self.by_class:
+                return []
+            return self.resolve(script, toks, at)
+        return [func for func in script.funcs if func.name == toks[at - 1].text]
+
     def mark(
         self, found: set[str] | set[int] | dict[int, set[int]], key: Any, value: int | None = None
     ) -> None:
@@ -488,10 +500,16 @@ class Flow:
         # A member that is shown carries what's assigned to it anywhere in its script.
         members = self.text_members.get(script.path, set()) - func.names
         format_locals = self.format_locals.setdefault(id(func), set())
-        format_carriers = format_locals | (
-            self.format_members.get(script.path, set()) - func.names
+        # A shown or format parameter carries what's assigned to it inside its function (#1749).
+        text_params = {func.params[i] for i in self.text_params.get(id(func), set())}
+        format_params = {func.params[i] for i in self.format_params.get(id(func), set())}
+        format_carriers = (
+            format_locals
+            | format_params
+            | (self.format_members.get(script.path, set()) - func.names)
         )
-        carriers = text_locals | members | format_carriers
+        text_carriers = text_locals | text_params | members
+        carriers = text_carriers | format_carriers
         if words[:1] == ["return"] and id(func) in self.text_funcs:
             self.expression(script, func, toks[1:])
         if words[:1] == ["for"] and len(words) > 3 and words[1] in text_locals:
@@ -512,7 +530,7 @@ class Flow:
             # `self.values = …` names the member even where a local shadows it.
             own_members = self.text_members.get(script.path, set())
             format_targets = format_carriers
-            text_targets = text_locals | members
+            text_targets = text_locals | text_params | members
             if self_target:
                 format_targets = self.format_members.get(script.path, set())
                 text_targets = own_members
@@ -547,12 +565,27 @@ class Flow:
             name = toks[i - 1].text
             args = split_args(toks, i)
             owner = toks[i - 3].text if i >= 3 and toks[i - 2].text == "." else None
-            if name in GODOT_TEXT_CALLS:
+            # `self.lines.append(…)` names the member even where a local shadows it (#1749).
+            appended, appended_formats = text_carriers, format_carriers
+            if i >= 5 and toks[i - 4].text == "." and toks[i - 5].text == "self":
+                appended = self.text_members.get(script.path, set())
+                appended_formats = self.format_members.get(script.path, set())
+            elif i >= 4 and toks[i - 4].text == ".":
+                appended = appended_formats = set()  # `other.lines.append(…)` is another's
+            # A game function named like a Godot text method (a script's own set_text) is
+            # followed as a game function; only where none is reached is it Godot's (#1749).
+            if name in GODOT_TEXT_CALLS and not self.defined(script, toks, i):
                 for arg in args:
                     self.expression(script, func, arg)
-            elif name in APPENDS and owner in carriers:
+            elif name in APPENDS and owner in appended | appended_formats:
                 for arg in args[-1:]:
-                    self.expression(script, func, arg)
+                    if owner in appended:
+                        self.expression(script, func, arg)
+                    elif name == "append_array" and self.array_items(arg):
+                        for item in self.array_items(arg):
+                            self.format_item(script, func, item)
+                    else:
+                        self.format_item(script, func, arg)
             else:
                 for reached in self.resolve(script, toks, i):
                     for index in sorted(self.text_params.get(id(reached), set())):
@@ -561,6 +594,18 @@ class Flow:
                     for index in sorted(self.format_params.get(id(reached), set())):
                         if index < len(args):
                             self.format_values(script, func, args[index])
+
+    @staticmethod
+    def array_items(toks: list[Tok]) -> list[list[Tok]]:
+        """The items of an array literal that is the whole expression, or nothing."""
+        whole = bool(toks) and toks[0].text == "[" and matching(toks, 0) == len(toks) - 1
+        return split_args(toks, 0) if whole else []
+
+    def format_item(self, script: Script, func: Func, item: list[Tok]) -> None:
+        """An item put into a format's values: of a [key, value] pair only the value, since the
+        key is its placeholder (#1755)."""
+        pair = self.array_items(item)
+        self.expression(script, func, pair[1] if len(pair) == 2 else item)
 
     @staticmethod
     def depth(toks: list[Tok], at: int) -> int:
@@ -655,6 +700,12 @@ class Flow:
         holding them, whose calls' arguments are (#1741)."""
         while len(arg) > 2 and arg[0].text == "(" and matching(arg, 0) == len(arg) - 1:
             arg = arg[1:-1]  # `(VALUES)` is VALUES
+        arms = self.conditional_arms(arg)
+        if arms:
+            # `FIRST if c else SECOND`: each arm fills it in, the condition never does (#1749).
+            for arm in arms:
+                self.format_values(script, func, arm, carry_only)
+            return
         word = arg[0].text if len(arg) == 1 and arg[0].kind == "id" else ""
         if [tok.text for tok in arg[:2]] == ["self", "."] and len(arg) == 3:
             word = arg[2].text if arg[2].text in script.members else ""
@@ -668,6 +719,23 @@ class Flow:
             self.mark(self.format_members.setdefault(script.path, set()), word)
         elif carry_only or not self.format_const(script, func, arg):
             self.expression(script, func, arg, carry_only)
+
+    @staticmethod
+    def conditional_arms(toks: list[Tok]) -> list[list[Tok]]:
+        """The two arms of an outer `x if c else y`, or nothing."""
+        depth = 0
+        if_at = None
+        for i, tok in enumerate(toks):
+            if tok.kind == "op" and tok.text in OPEN:
+                depth += 1
+            elif tok.kind == "op" and tok.text in CLOSE:
+                depth -= 1
+            elif depth == 0 and tok.kind == "id" and is_keyword(toks, i):
+                if tok.text == "if" and if_at is None and i > 0:
+                    if_at = i
+                elif tok.text == "else" and if_at is not None:
+                    return [toks[:if_at], toks[i + 1 :]]
+        return []
 
     def format_const(self, script: Script, func: Func, arg: list[Tok]) -> bool:
         """Whether a format()'s values are a constant dictionary, whose values are then hits and
