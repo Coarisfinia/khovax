@@ -133,6 +133,13 @@ jobs:
         # list only shrinks.
         run: uv run --locked --package khovax-game-checks ../game-checks/hardcoded_texts.py
 
+      - name: "🔢 Check every translated text with two or more values names them"
+        # % fills its values in order, which a translation can't change; such a text uses named
+        # placeholders filled with format() (#1704). The check's own test runs first.
+        run: |
+          uv run --locked --package khovax-game-checks ../game-checks/test_tr_placeholders.py
+          uv run --locked --package khovax-game-checks ../game-checks/tr_placeholders.py
+
       - name: "🐺 Check every creature model has every creature clip"
         # The set is named once, in the model library's lib/clip_set.py, which the build reads too (#1157).
         run: uv run --locked --package khovax-game-models ../game-models/check_clip_set.py

@@ -183,11 +183,11 @@ msgid "Your standing: neutral"
 msgstr ""
 
 #: slices/codex/ui/codex_page.gd
-msgid "%s: [i]%s[/i]"
+msgid "{name}: [i]{meaning}[/i]"
 msgstr ""
 
 #: slices/codex/ui/codex_page.gd
-msgid "Your standing: %+d, %s"
+msgid "Your standing: {standing}, {rank}"
 msgstr ""
 
 #: slices/credits/ui/credits_page.gd
@@ -1449,7 +1449,7 @@ msgid "Carried 1, companion: %s"
 msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd
-msgid "Carried %d: %s"
+msgid "Carried {place}: {monster}"
 msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd
@@ -1458,7 +1458,7 @@ msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd
 #: slices/species/ui/monster_details.gd
-msgid "%s, level %d"
+msgid "{species}, level {level}"
 msgstr ""
 
 #: slices/species/ui/dominated_monsters_list.gd
@@ -1502,19 +1502,19 @@ msgid "Sight: you see %d steps further while you carry it"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Ascends into %s at level %d"
+msgid "Ascends into {species} at level {level}"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Given one %s: you hold %d"
+msgid "Given one {material}: you hold {count}"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "%s ascended into %s!"
+msgid "{from} ascended into {into}!"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Progress: %d of %d to level %d"
+msgid "Progress: {progress} of {needed} to level {level}"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd

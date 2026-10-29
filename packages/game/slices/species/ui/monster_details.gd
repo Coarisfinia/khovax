@@ -71,14 +71,14 @@ func show_monster(
 	# A monster whose species the data lacks still shows, by its species id.
 	if monster != null and species == null:
 		lines = [
-			tr("%s, level %d") % [monster.species, monster.level],
+			_named(monster.species, monster.level),
 			_progress(monster),
 			tr("Its species' stats can't be read"),
 		]
 	if monster != null and species != null:
 		var player_passive: String = species.player_passive
 		lines = [
-			tr("%s, level %d") % [tr(species.name), monster.level],
+			_named(tr(species.name), monster.level),
 			_progress(monster),
 			_types_heading() + " " + ", ".join(species.types),
 			tr("HP: %d") % species.hp,
@@ -108,17 +108,22 @@ func show_monster(
 ## Its ascension (#1235): into which species, `into`, and at which `level`. With material_text, two
 ## short lines, since the menu's lines trim.
 static func ascension_text(into: String, level: int) -> String:
-	return TranslationServer.tr("Ascends into %s at level %d") % [into, level]
+	return TranslationServer.tr("Ascends into {species} at level {level}").format(
+		{ "species": into, "level": level }
+	)
 
 
 ## Its ascension's material, `given`, and how many of it the player `holds`.
 static func material_text(given: String, holds: int) -> String:
-	return TranslationServer.tr("Given one %s: you hold %d") % [given, holds]
+	return TranslationServer.tr("Given one {material}: you hold {count}").format(
+		{ "material": given, "count": holds }
+	)
 
 
 ## Said once a monster has ascended: from which species, `from`, into which, `into`.
 static func ascended_text(from: String, into: String) -> String:
-	return TranslationServer.tr("%s ascended into %s!") % [from, into]
+	var parts: Dictionary[String, String] = { "from": from, "into": into }
+	return TranslationServer.tr("{from} ascended into {into}!").format(parts)
 
 
 ## Says `text` below the pane, like that the monster shown just ascended, or nothing for "".
@@ -133,8 +138,17 @@ func tell_ascended(text: String) -> void:
 ## `monster`'s progress toward its next level, in words: what it has, what that level needs, and
 ## the level.
 func _progress(monster: DominatedMonster) -> String:
-	var needed: int = DominatedMonster.progress_needed(monster.level)
-	return tr("Progress: %d of %d to level %d") % [monster.progress, needed, monster.level + 1]
+	var parts: Dictionary[String, int] = {
+		"progress": monster.progress,
+		"needed": DominatedMonster.progress_needed(monster.level),
+		"level": monster.level + 1,
+	}
+	return tr("Progress: {progress} of {needed} to level {level}").format(parts)
+
+
+## The first line: the monster's species, as `species_name`, and its `level`.
+func _named(species_name: String, level: int) -> String:
+	return tr("{species}, level {level}").format({ "species": species_name, "level": level })
 
 
 ## The heading before its types.

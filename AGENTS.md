@@ -598,7 +598,10 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
   fails when it's out of date. CI also fails on a text shown to the player that doesn't go
   through `tr()` with a literal (`packages/game-checks/hardcoded_texts.py`, #1693): today's hits
   wait in its known list, each with the issue that moves it over, and that list only shrinks; a
-  deliberate exception goes into its allow list with a reason.
+  deliberate exception goes into its allow list with a reason. A text with two or more values
+  names them (`tr("{a} of {b}").format({…})`), so a translation can reorder them; CI fails on a
+  `tr()` literal with two or more `%` placeholders (`packages/game-checks/tr_placeholders.py`,
+  #1704).
 - **Never color alone** (owner's rule, #68): whatever the player tells apart by color (types,
   teams, states) also gets a symbol or a shape, so the game stays colorblind friendly. Every tile
   kind names its symbol in its data (#334; the schema requires it), which the Survey draws.
