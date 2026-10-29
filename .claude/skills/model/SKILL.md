@@ -182,7 +182,9 @@ a second model could use goes into the library or a generic tool, never into one
   rest, 1.30 in its Attack and 1.10 in its other clips (`lib/footprint.py`). A prop (a model
   without a rig or without a Walk clip, such as a gate or an egg) is held to limits of its own:
   0.95 at rest and 1.00 in every clip, a static one by its rest pose. Nothing is let off through
-  an exemption list (#1641): a model too big for its hex is shrunk in its script. Its `KNOWN` list
+  an exemption list (#1641): a model too big for its hex is shrunk in its script. A tile's
+  decoration (a model a tile blueprint names) is the tile's own look, not a thing on it, and isn't
+  measured (the owner, on #1651). Its `KNOWN` list
   is judged like the volume check's. `test_footprint.py` tests it on boxes that fit their hex or
   are too big for it.
 - **The dimensions check (#1299):** `packages/game-models/check_dimensions.py -- <model.glb> [...]`

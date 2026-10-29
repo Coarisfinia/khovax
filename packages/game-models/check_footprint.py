@@ -15,15 +15,20 @@ reach over the hex's inradius (1.00 at its edge; the limits are in lib/footprint
 It prints a line for the rest pose and one per clip (the largest reach and its frame, and the
 limit) and `FOOTPRINT CHECK: PASS` or `FAIL` (and exits 1 on a fail), through game_shared.log
 (#1115): a failing line is an error on the .glb. It checks every model built by a script here,
-monsters and props alike, a static one by its rest pose; nothing is let off (#1641). A pack's
-model has no script here and is sized by the view that shows it, so CI runs it on every .glb.
+monsters and props alike, a static one by its rest pose; nothing is let off through a list
+(#1641). Two kinds aren't things standing on a hex and are left out by what they are: a tile's
+decoration (a model a tile blueprint names), which is the tile's own look (the owner, on #1651),
+and a pack's model, which has no script here and is sized by the view that shows it (#1652). So CI
+runs it on every .glb.
 The clip rate comes from the .glb's .import, as the game imports it.
 
 A clip that still fails today waits in KNOWN with the issue that fixes it: it prints its numbers
 and doesn't fail the check. The list only shrinks: a clip on it that passes fails the check
 until it's taken off."""
 
+import glob
 import os
+import re
 import sys
 
 import bpy
@@ -36,13 +41,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(HERE), "game-shared"))
 from game_shared import log  # noqa: E402
 from lib import footprint, imported, known  # noqa: E402
 
+# The tile blueprints, whose `model` is the tile's decoration (TileDecorations shows it).
+TILES = os.path.join(os.path.dirname(HERE), "game", "core", "data", "tiles", "*.jsonc")
+
 # The models (by .glb name) of bosses, enraged or stronger monsters, which may reach past their hex.
 LARGE = {"fohossa"}
 
 # (model, clip or "rest" for the rest pose) that fails today, with the issue that fixes it; that
 # issue takes its entries off.
 KNOWN = {
-    ("mana_gems", "rest"): 1651,
     ("mana_wolf", "rest"): 1527,
     ("mana_wolf", "Attack"): 1527,
     ("mana_wolf", "Channel"): 1527,
@@ -70,11 +77,28 @@ KNOWN = {
 }
 
 
+def decorations():
+    """The names of the models the tile blueprints name as their decoration."""
+    names = set()
+    for path in glob.glob(TILES):
+        with open(path, encoding="utf-8") as text:
+            for found in re.finditer(r'"model"\s*:\s*"([^"]+)"', text.read()):
+                names.add(os.path.splitext(os.path.basename(found.group(1)))[0])
+    if not names:
+        sys.exit("no tile blueprint names a model in %s: the path moved?" % TILES)
+    return names
+
+
 def main():
     glbs = sys.argv[sys.argv.index("--") + 1:]
+    tile_looks = decorations()
     passed = True
     for glb in glbs:
         model = os.path.splitext(os.path.basename(glb))[0]
+        if model in tile_looks:
+            # The tile's own look, sized to its tile by TileDecorations, not a thing on the hex.
+            log.info("FOOTPRINT %s a tile's decoration: the tile's own look" % model)
+            continue
         if not os.path.exists(os.path.join(HERE, model + ".py")):
             # A pack's model (the players' and people's figures, the chest) has no script here: the
             # view that shows it sets its size.

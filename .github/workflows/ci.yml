@@ -334,7 +334,8 @@ jobs:
       - name: "⬡ Check every monster and prop stays within its hex"
         # Every frame of every clip of every .glb built by a script here, how far the mesh reaches
         # across the hex the game stands it on, seen from above (#1520); a prop is held to limits
-        # of its own, a static one by its rest pose, and none is let off (#1641).
+        # of its own, a static one by its rest pose, and none is let off through a list (#1641); a
+        # tile's decoration is the tile's own look and isn't measured (#1651).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |
