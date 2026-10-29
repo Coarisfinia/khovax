@@ -1,7 +1,8 @@
 class_name WildMonsterFactory
 extends RefCounted
 ## Builds an instance's wild monster feature (#823) from its blueprint's species weights and every
-## species' strength (#219); when the species don't load, its monsters push on nothing.
+## species' strength (#219) and the first form of its line (#1697); when the species don't load,
+## its monsters push on nothing, and its babies are of their own species.
 
 
 static func build(setup: FeatureSetup) -> WildMonsterFeature:
@@ -11,6 +12,8 @@ static func build(setup: FeatureSetup) -> WildMonsterFeature:
 	weights.assign(setup.wild_species.values())
 	var content: SpeciesContent = SpeciesContent.cached()
 	var strengths: Dictionary[String, int] = {}
+	var first_forms: Dictionary[String, String] = {}
 	for species_id: String in content.species:
 		strengths[species_id] = content.species[species_id].strength
-	return WildMonsterFeature.new(roster, weights, strengths)
+		first_forms[species_id] = content.first_form(species_id)
+	return WildMonsterFeature.new(roster, weights, strengths, first_forms)

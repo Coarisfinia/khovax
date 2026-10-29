@@ -53,6 +53,28 @@ func specials() -> Dictionary[String, Ability]:
 	return _specials
 
 
+## The first form of `species_id`'s line (#1697): the species it ascended from, and that one's,
+## back to one that ascends from none; the lowest id where two ascend into the same. Itself, for a
+## species nothing ascends into.
+func first_form(species_id: String) -> String:
+	var form: String = species_id
+	var before: String = _ascends_from(form)
+	# The chains never come back round (ascension_problem), so this ends.
+	while not before.is_empty():
+		form = before
+		before = _ascends_from(form)
+	return form
+
+
+## The lowest id of a species that ascends into `species_id`, or "" for none.
+func _ascends_from(species_id: String) -> String:
+	var found: String = ""
+	for from: String in ascensions:
+		if ascensions[from].into == species_id and (found.is_empty() or from < found):
+			found = from
+	return found
+
+
 ## Reads every species file in `directory`, then checks their ascensions against each other.
 func read(directory: String) -> void:
 	super.read(directory)

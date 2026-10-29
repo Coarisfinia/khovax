@@ -17,9 +17,13 @@ extends Node3D
 ## its grass or water (#1203, as a later slice tells it in `feeding`), it lowers its head and plays
 ## Feed, eased in and out. Its eyes glow (EyeGlow,
 ## #1008) in its type's colour (TypeGlow, #1063), with no leaning, as no player's: brighter while
-## it's enraged, flaring up as it strikes, and shut while it sleeps or once it fainted. It only
+## it's enraged, flaring up as it strikes, and shut while it sleeps or once it fainted. A baby
+## (#1697) is drawn smaller than a grown one, so it reads as young by its size, not by color. It
+## only
 ## reads the state and the tick's events.
 
+## How big a baby's figure is (#1697), as a share of a grown one's.
+const BABY_SCALE: float = 0.6
 ## How long a figure takes to shrink away once its wild monster is gone.
 const FADE_SECONDS: float = 0.4
 ## Its figures wear their species' models (SpeciesModels, #1223), not one of its own: the boot flow
@@ -136,6 +140,9 @@ func show_state() -> void:
 		var spot: Vector2i = driver.state.entity(entity_id).tile
 		if not figures.has(entity_id):
 			figures[entity_id] = _add_figure(feature.species_of(entity_id))
+			if feature.babies.has(entity_id):
+				var model: Node3D = figures[entity_id].get_child(0) as Node3D
+				model.scale *= BABY_SCALE
 			figures[entity_id].tile = spot
 			EyeGlow.of(figures[entity_id].get_child(0) as Node3D).color = TypeGlow.of(
 				feature.species_of(entity_id)
