@@ -623,7 +623,12 @@ devices -> slices/controls/input/ -> Command -> core/ + slices/*/rules/ -> GameS
 - **The look is cel-shaded eye candy** (owner, #69): monsters and what the camera shows up close
   are medium-poly; only small things that don't read from the top-down camera may be low poly.
   Low-poly packs are placeholders. Every asset in the repository has a license that allows it
-  here (CC0, CC BY with credit), kept next to it. **Each pack lives in `assets/<pack>/`** with its
+  here, kept next to it: CC0, CC BY with credit, or, for an asset the project owns, the
+  **Unlicense**, the repository's own license (owner, #1511). The project owns what is built in
+  the repository and what the owner makes or generates for it, such as a model generated on a paid
+  Meshy plan with the Private licence (#1476); its `LICENSE.md` is a copy of the root `LICENSE`, and
+  its `SOURCE.md` names the project (or its contributors) as the author and says how the asset was
+  made (the Fohossa, the Frostfire Hound and the Drakkudor show how). **Each pack lives in `assets/<pack>/`** with its
   license file and a `SOURCE.md` (title, then `- **Author:**`, `- **Source:**`, `- **License:**`);
   `CREDITS.md` is generated from those by `tools/godot/credits.gd`, and CI fails when it's out of
   date (owner, #69/#70). Commit only what the game uses, not whole packs.
