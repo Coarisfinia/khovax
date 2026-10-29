@@ -38,11 +38,9 @@ def placeholders(text: str) -> int:
         if match == "%%":
             continue
         indexed = INDEX.search(match)
-        if indexed is not None:
-            # A * before the index takes the next value in order, as an unindexed one does.
-            taken = match[: indexed.start()].count("*")
-            used.update(range(following, following + taken))
-            following += taken
+        # A * before the index makes the index hang on the width's value at run time (a negative
+        # one keeps it from selecting), so such a specifier counts as unindexed: every value in it.
+        if indexed is not None and "*" not in match[: indexed.start()]:
             used.add(int(indexed[1]) - 1)
             continue
         taken = 1 + match.count("*")
