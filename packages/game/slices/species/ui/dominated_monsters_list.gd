@@ -138,7 +138,8 @@ func _lines_of(ids: Array[String]) -> Array[String]:
 		if place == 0 and carrying > 0:
 			lines.append(tr("Carried 1, companion: %s") % described)
 		elif place < carrying:
-			lines.append(tr("Carried %d: %s") % [place + 1, described])
+			var parts: Dictionary[String, Variant] = { "place": place + 1, "monster": described }
+			lines.append(tr("Carried {place}: {monster}").format(parts))
 		else:
 			lines.append(tr("Not carried: %s") % described)
 	return lines
@@ -156,7 +157,8 @@ func move(short_id: String, place: int) -> void:
 func _described(monster: DominatedMonster) -> String:
 	var known: Species = _species.get(monster.species)
 	var species_name: String = tr(known.name) if known != null else monster.species
-	return tr("%s, level %d") % [species_name, monster.level]
+	var parts: Dictionary[String, Variant] = { "species": species_name, "level": monster.level }
+	return tr("{species}, level {level}").format(parts)
 
 
 ## Builds a row for each of `lines`, showing the monster of the same place in `ids`, if any, with

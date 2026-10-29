@@ -151,3 +151,9 @@ A new player-facing field in content data gets `"x-translate": true` in its sche
 script goes through `tr()` with a literal string, so the template picks it up. CI fails on a text shown
 to the player without it (`packages/game-checks/hardcoded_texts.py`, #1693); a deliberate
 exception goes into its `ALLOWED` list with a reason.
+
+A text with two or more values names them, so a translation can put them in its own order:
+`tr("Carried {place}: {monster}").format({"place": place, "monster": shown})`, never
+`tr("Carried %d: %s") % [place, shown]`, since `%` fills its values in the order written. A text
+with one value may keep its `%`. CI fails on a `tr()` literal with two or more `%` placeholders
+(`packages/game-checks/tr_placeholders.py`, #1704).

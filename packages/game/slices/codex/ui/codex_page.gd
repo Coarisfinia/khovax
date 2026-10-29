@@ -230,8 +230,10 @@ func _show_unique_item(item: GearItem) -> bool:
 func _show_name(kind: String, shown_name: String, meaning: String) -> void:
 	heading.text = heading_of(kind)
 	title.text = shown_name
-	var parts: Array[String] = [NameLinks.escaped(shown_name), NameLinks.escaped(meaning)]
-	gloss.text = tr("%s: [i]%s[/i]") % parts
+	var parts: Dictionary[String, String] = {
+		"name": NameLinks.escaped(shown_name), "meaning": NameLinks.escaped(meaning),
+	}
+	gloss.text = tr("{name}: [i]{meaning}[/i]").format(parts)
 	var bestiary: bool = kind == TextTags.MONSTER
 	entry.visible = not bestiary
 	standing.visible = kind == TextTags.FACTION
@@ -287,7 +289,8 @@ func _standing_line(faction: Faction) -> String:
 		return neutral_text()
 	# The standing with its sign, and the rank the faction names it.
 	var rank: String = TextTags.shown(tr(faction.rank_name(value)))
-	return tr("Your standing: %+d, %s") % [value, rank]
+	var parts: Dictionary[String, String] = { "standing": "%+d" % value, "rank": rank }
+	return tr("Your standing: {standing}, {rank}").format(parts)
 
 
 ## Eases the page in or out; the game hears no input while it's in.
