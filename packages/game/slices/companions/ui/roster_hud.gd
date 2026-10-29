@@ -96,14 +96,15 @@ func _input(event: InputEvent) -> void:
 	# A touch reaches here as itself, so the click Godot makes up from it is skipped.
 	elif click != null and click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
 		at = click.position if click.device != InputEvent.DEVICE_ID_EMULATION else at
+	var input: LocalInput = driver.input as LocalInput
 	for place: int in shown.size():
 		if rect_of(place).has_point(at):
 			if has_fainted(place):
-				driver.input.choose_revive(_short_ids[place])
+				input.choose_revive(_short_ids[place])
 			else:
 				# Swapping ends a pick for a revive item.
-				driver.input.revive_pick.drop()
-				driver.input.choose_swap(place + 1)
+				input.revive_pick.drop()
+				input.choose_swap(place + 1)
 			get_viewport().set_input_as_handled()
 			return
 
@@ -132,7 +133,7 @@ func show_state() -> void:
 		party_species = CompanionParty.carried_species(driver.state, slot)
 		companion = CompanionParty.companion(driver.state, slot)
 		down = _fainted_in(driver.state, slot, party)
-		picked = driver.input.revive_pick.picked
+		picked = (driver.input as LocalInput).revive_pick.picked
 	var changed: bool = party != _short_ids or party_species != shown or down != fainted
 	if changed or party.find(companion) != companion_place or party.find(picked) != picked_place:
 		_short_ids = party

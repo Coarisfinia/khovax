@@ -331,7 +331,7 @@ func _button_reaches(index: JoyButton, action: StringName) -> bool:
 ## region walk nowhere.
 func _check_tap_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
-	var input: LocalInput = _driver.input
+	var input: LocalInput = _driver.input as LocalInput
 	var target: Vector2i = _tap_target()
 	_place(Vector2i.ZERO)
 	# The instance shifted by a tile, as one beyond an exit is: the click is read in its own
@@ -385,7 +385,7 @@ func _check_tap_walk() -> String:
 ## let go at once still walks to its tile.
 func _check_hold_walk() -> String:
 	var picker: FocusPicker = _main.get_node("FocusPicker") as FocusPicker
-	var input: LocalInput = _driver.input
+	var input: LocalInput = _driver.input as LocalInput
 	var target: Vector2i = _tap_target()
 	picker.wild_view.visible = false
 	_place(Vector2i.ZERO)
@@ -444,7 +444,7 @@ func _check_drag_let_go_at_once() -> String:
 	picker._input(press)
 	_hold_frames(picker, ceili(MOVE_SECONDS / STEP) * 3 + 2)
 	picker.wild_view.visible = true
-	if _tile() == target or _driver.input.tap_walk.walking:
+	if _tile() == target or (_driver.input as LocalInput).tap_walk.walking:
 		return "a click dragged off and let go before the next frame still walked to its tile"
 	return ""
 
@@ -495,7 +495,7 @@ func _glide_marked(target: Vector2i) -> bool:
 	var gliding: int = 0
 	for _frame: int in ceili(MOVE_SECONDS / STEP) * 3 + 2:
 		_step()
-		if _driver.input.tap_walk.walking or not _glides():
+		if (_driver.input as LocalInput).tap_walk.walking or not _glides():
 			continue
 		gliding += 1
 		if _mark_on() != target:

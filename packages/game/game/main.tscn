@@ -95,9 +95,10 @@ keeper = NodePath("../WorldKeeper")
 quest_tie = NodePath("../QuestTie")
 holder = NodePath("../ProfileHolder")
 
-[node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("holder") unique_id=1290447713]
+[node name="LocalInput" type="Node" parent="." node_paths=PackedStringArray("acks", "revive") unique_id=1290447713]
 script = ExtResource("2_input")
-holder = NodePath("../ProfileHolder")
+acks = NodePath("../ProfileTie")
+revive = NodePath("../ReviveTie")
 
 [node name="FocusPicker" type="Node" parent="." node_paths=PackedStringArray("input", "camera", "wild_view", "instance")]
 script = ExtResource("36_focus_picker")

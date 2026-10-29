@@ -11,7 +11,7 @@ extends RefCounted
 ## the game calls `save_if_due` regularly with Time.get_ticks_msec().
 
 ## At most one save per this long.
-const SAVE_INTERVAL_MSEC: int = 30_000
+const SAVE_INTERVAL_MSEC: int = WorldKeeper.SAVE_INTERVAL_MSEC
 
 var profile: Profile
 var path: String = ProfileStore.PATH

@@ -35,7 +35,7 @@ func _process(_delta: float) -> void:
 func show_state() -> void:
 	var marked: Vector2i = TapWalk.NO_TILE
 	if driver != null and driver.state != null and driver.input != null:
-		var walk: TapWalk = driver.input.tap_walk
+		var walk: TapWalk = (driver.input as LocalInput).tap_walk
 		marked = walk.goal if walk.walking else walk.landing
 		if not walk.walking and not _gliding(driver.state, driver.input.slot):
 			marked = TapWalk.NO_TILE

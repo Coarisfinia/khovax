@@ -59,7 +59,7 @@ func _check_two_players_walk() -> String:
 	var east: Array[int] = []
 	for _tick: int in TICKS:
 		east.append(EAST)
-	_driver.sources = [LocalSource.new(_driver.input), ScriptedSource.new(1, east)]
+	_driver.sources = [LocalSource.new(_driver.input as LocalInput), ScriptedSource.new(1, east)]
 	var starts: Array[Vector2i] = [_driver.state.player(0).tile, _driver.state.player(1).tile]
 	Input.action_press("move_left")
 	_run_frames(DELAY)

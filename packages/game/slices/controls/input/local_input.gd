@@ -1,5 +1,5 @@
 class_name LocalInput
-extends Node
+extends SessionInput
 ## The local player's commands. Every device feeds the same movement actions (keys, the touch
 ## stick, a controller), and this turns them into one command per tick for the player in
 ## `slot`. A press of the special attack (#410) fires it in the next command: one press fires once,
@@ -36,30 +36,23 @@ const SWAP_ACTIONS: Array[StringName] = [&"swap_1", &"swap_2", &"swap_3"]
 const PRESSED_ONCE: Array[StringName] = [&"special_attack", &"respawn", &"interact"]
 const MOVE_ACTIONS: Array[StringName] = [&"move_left", &"move_right", &"move_up", &"move_down"]
 
-## The player slot this machine's player controls.
-@export_range(0, GameState.MAX_PLAYERS - 1) var slot: int = 0
-## This machine's player's profile, which holds their revive items (#656).
-@export var holder: ProfileHolder
+## What the requests it sends were acknowledged up to (#942): this machine's player's profile's,
+## through its tie (ProfileTie); none without one.
+@export var acks: RequestAcks
+## Which fainted monsters a revive item may go to (#656): those this machine's player's profile
+## holds one for, through the revive items' tie (ReviveTie); none without one.
+@export var revive: ReviveOffer
 
-## Whether the game hears no input, as while the menu is open over it (#362): the player stands.
-var blocked: bool = false
 ## The last frame whose presses are dropped (#1509): the frame after the game last heard no input
 ## too, since the key or button that closed the menu or a dialog (a controller's A is interact as
 ## well) still reads as just pressed in the frame it closed.
 var _deaf_through: int = -1
-## Whether a dialog is open on screen (#635): the player stands, as while blocked, and the d-pad,
-## the stick and A choose on the dialog screen instead. Its own flag, so the menu opening and
-## closing over a dialog doesn't let the player walk off.
-var in_dialog: bool = false
 ## The PRESSED_ONCE actions pressed since the last command.
 var _pressed: Dictionary[StringName, bool] = {}
 ## place_totem since the last command: TAPPED when pressed, or HELD_OVER while it has been held
 ## since the game last heard no input (#1509): held on over the menu or a dialog, it places nothing
 ## until it's let go or pressed again.
 var _totem: TotemPress = TotemPress.NONE
-## The wild monster the player focuses (#436), by entity id, or Command.NO_FOCUS; the special
-## attack strikes it. Views read it to mark it.
-var focus: int = Command.NO_FOCUS
 ## How far focus_next (+1) and focus_previous (-1) stepped the focus since the last command.
 var _focus_steps: int = 0
 ## The place in the carried order chosen since the last command (#540), from 1, or Command.NO_SWAP.
@@ -261,20 +254,16 @@ func _send_next(carrier: Command) -> void:
 	if not _requests.is_empty():
 		var next: OutboxEntry = _requests.pop_front()
 		next.fill(carrier)
-		carrier.acknowledged = holder.confirmed(next.kind) if holder != null else Command.NO_REQUEST
+		carrier.acknowledged = acks.confirmed(next.kind) if acks != null else Command.NO_REQUEST
 
 
 ## Uses a revive item on the fainted monster the player picked (#780), only while this player's
-## profile holds one (#656): whoever ties their profile to the session (ProfileTie) spends it and
-## posts it to the profile's outbox, which sends it in the next command.
+## profile holds one (#656, `revive`): the revive items' tie (ReviveTie) spends it and posts it to
+## the profile's outbox, which sends it in the next command.
 func _revive(state: GameState) -> void:
-	var holds: bool = ReviveItem.held(holder) > 0 and state.player(slot) != null
-	# One an item is already on its way to (#818) isn't offered again.
-	var fainted: PackedStringArray = PackedStringArray()
-	var on_the_way: PackedStringArray = ReviveItem.on_the_way(holder)
-	for short_id: String in ReviveItemFeature.fainted(state, slot):
-		if not on_the_way.has(short_id):
-			var _added: bool = fainted.append(short_id)
-	var reviving: String = revive_pick.chosen(fainted, holds)
+	var offered: PackedStringArray = PackedStringArray()
+	if revive != null and state.player(slot) != null:
+		offered = revive.offered(state, slot)
+	var reviving: String = revive_pick.chosen(offered, not offered.is_empty())
 	if not reviving.is_empty():
 		revive_chosen.emit(reviving)

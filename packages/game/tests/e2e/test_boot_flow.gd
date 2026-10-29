@@ -722,7 +722,7 @@ func _check_focus_mark(main: Node, driver: GameDriver) -> String:
 	Input.action_press("focus_next")
 	driver.input._process(0.0)
 	Input.action_release("focus_next")
-	var focus: int = driver.input.command(driver.state).focus
+	var focus: int = (driver.input as LocalInput).command(driver.state).focus
 	var nearest: Array[int] = FocusChoice.nearest(driver.state, tile)
 	if nearest.is_empty() or focus != nearest[0]:
 		return "a press of focus_next didn't focus the nearest wild monster"

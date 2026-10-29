@@ -1,5 +1,5 @@
 class_name ProfileTie
-extends Node
+extends RequestAcks
 ## Ties this machine's player's profile (ProfileHolder) to the running session (#831): every
 ## domination of that player, every wild monster their companion defeats (#1256), and their loot
 ## from every chest opened (#124) and every wild monster felled (#629) goes into the profile at
@@ -11,7 +11,8 @@ extends Node
 ## (RequestApplied). Using a revive item (#656) is such a request too (#818), posted by its own tie
 ## (ReviveTie) as the item is spent from the profile. Other players' dominations go into their own
 ## profiles on their own machines (#74). The holder keeps the profile and saves it; this only
-## listens and sends.
+## listens and sends, and tells the input what the requests it sends were acknowledged up to
+## (`confirmed`).
 
 ## Where this machine's player's dominations and finds come from (#184).
 @export var bus: EventBus
@@ -61,6 +62,12 @@ func _send_new() -> void:
 		if not _sent.has(request.id):
 			input.send(request)
 			_sent.append(request.id)
+
+
+## The code up to which this machine's player's profile saw every request of `kind` acknowledged
+## (#942, #968), for the command that carries one.
+func confirmed(kind: int) -> int:
+	return holder.confirmed(kind) if holder != null else Command.NO_REQUEST
 
 
 ## Drops a request of this player's the world acknowledged from the outbox (#771).

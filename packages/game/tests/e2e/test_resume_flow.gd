@@ -539,14 +539,15 @@ func _check_flush_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 func _check_dialog_waits(driver: GameDriver, keeper: WorldKeeper) -> String:
 	var greeting: String = "teska_na_amvrel_greeting"
 	var later: int = ProfileKeeper.SAVE_INTERVAL_MSEC * 10
-	driver.input.choose_answer(DialogFeature.code(greeting, "ask_about_lumwen_hoal"))
+	var input: LocalInput = driver.input as LocalInput
+	input.choose_answer(DialogFeature.code(greeting, "ask_about_lumwen_hoal"))
 	driver.advance(STEP)
 	var dialogs: DialogFeature = driver.state.feature(DialogFeature.ID) as DialogFeature
 	var before: int = _saved_tick()
 	var problem: String = keeper.save_if_due(later) + keeper.flush(later + 1)
 	if not problem.is_empty() or not dialogs.any_open() or _saved_tick() != before:
 		return "the world was saved with a dialog open: " + problem
-	driver.input.choose_answer(DialogFeature.code(greeting, "promise_to_look"))
+	input.choose_answer(DialogFeature.code(greeting, "promise_to_look"))
 	driver.advance(STEP)
 	problem = keeper.save_if_due(later + 2)
 	problem += keeper.save_if_due(later + 1 + WorldKeeper.AFTER_HOLD_MSEC)

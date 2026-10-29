@@ -807,7 +807,7 @@ func _check_territory_resent(
 	var acknowledged: Array = []
 	var heard: Callable = func(event: RequestApplied) -> void: acknowledged.append(event.request)
 	bus.subscribe(RequestApplied, heard)
-	driver.input.send(request)
+	(driver.input as LocalInput).send(request)
 	_tick(driver, bus)
 	if Territory.holder(driver.world.flags, forest) != "rivals" or acknowledged != [request.id]:
 		return "the hand-over sent again was handed over twice, or not acknowledged"
@@ -831,7 +831,7 @@ func _check_receipts_bounded(
 	var later: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, request.data)
 	if ShortId.code(later.id) <= ShortId.code(request.id):
 		return "the outbox drew %s after %s, not in order" % [later.id, request.id]
-	driver.input.send(later)
+	(driver.input as LocalInput).send(later)
 	_tick(driver, bus)
 	var applied: Array = driver.world.stored(0, TerritoryFeature.ID).get(OutboxReceipts.APPLIED, [])
 	if Territory.holder(driver.world.flags, forest) != GUILD or applied != [later.id]:
@@ -847,15 +847,15 @@ func _check_receipts_bounded(
 func _check_receipts_past_stuck(driver: GameDriver, bus: EventBus, profile: Profile) -> String:
 	# 1 is no territory's code (Territory.code), so no quest here hands it over.
 	var stuck: OutboxEntry = profile.outbox.post(OutboxEntry.TERRITORY, 1)
-	driver.input.send(stuck)
+	(driver.input as LocalInput).send(stuck)
 	_tick(driver, bus)
 	if profile.outbox.entries.size() != 1:
 		return "the hand-over of a territory no quest hands over left the outbox"
 	var first: OutboxEntry = profile.outbox.post(OutboxEntry.TRAP, CommandCodes.NONE)
-	driver.input.send(first)
+	(driver.input as LocalInput).send(first)
 	_tick(driver, bus)
 	var second: OutboxEntry = profile.outbox.post(OutboxEntry.TRAP, CommandCodes.NONE)
-	driver.input.send(second)
+	(driver.input as LocalInput).send(second)
 	_tick(driver, bus)
 	var applied: Array = driver.world.stored(0, SpikesFeature.ID).get(OutboxReceipts.APPLIED, [])
 	var _dropped: bool = profile.outbox.drop(stuck.id)

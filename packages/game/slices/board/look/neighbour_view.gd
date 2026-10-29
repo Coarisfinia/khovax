@@ -8,7 +8,8 @@ extends Node3D
 ##
 ## A loaded neighbour is drawn from its own region, so a tile a rule changed there in place shows
 ## next door too, easing into its new kind as the world hands the local instance the new ground
-## (#538). One not loaded is read with `InstanceBlueprints.region_of`, the world's seed for it and
+## (#538). One not loaded is read from the world's source (InstanceSource.region_of: the
+## blueprints', which the driver hands the world, #851), with the world's seed for it and
 ## its variant there (#529), never by loading the instance: the world's hash covers every loaded
 ## instance, so loading one from a view would change the simulation.
 
@@ -126,7 +127,7 @@ func _region_now(target: String) -> Region:
 	if _world.instances.has(target):
 		return _world.instances[target].region
 	var variant: String = WorldFlags.variant_of(_world, target)
-	return InstanceBlueprints.region_of(target, _world.seed_for(target), variant)
+	return _world.source.region_of(target, _world.seed_for(target), variant)
 
 
 ## The blueprint name `world` keeps `state` under, or "".

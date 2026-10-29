@@ -57,14 +57,14 @@ func _ready() -> void:
 		instance = start_instance
 	if instance.is_empty():
 		instance = Realms.start()
-	var saved: World = keeper.saved_world() if keeper != null else null
+	var saved: World = keeper.saved_world(BlueprintSource.new()) if keeper != null else null
 	var problem: String = resume(saved) if saved != null else ""
 	if not problem.is_empty():
 		push_warning("the saved world can't be resumed, so a fresh one starts: " + problem)
 	if saved == null or not problem.is_empty():
 		start(new_seed())
 	if input != null:
-		sources.append(LocalSource.new(input, self))
+		sources.append(LocalSource.new(input as LocalInput, self))
 	if holder != null:
 		var _connected: int = holder.party_changed.connect(_catch_up_party)
 
