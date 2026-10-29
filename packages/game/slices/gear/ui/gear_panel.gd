@@ -21,7 +21,8 @@ const ICONS: Dictionary[String, Texture2D] = {
 }
 
 ## Where the fight is: this machine's player's instance.
-var driver: Session
+@export var driver: Session
+
 ## This machine's player's gear (GearSlots), and what puts `gear_id` into their `slot` ("" empties
 ## it): handed in by the profile (ProfilePanelsTie), whose slice comes after this one; none without
 ## it.

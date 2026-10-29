@@ -21,6 +21,12 @@ extends Control
 signal name_selected(kind: String, id: String)
 ## A tab showed a name with a codex page: the player met it (#1174).
 signal name_shown(kind: String, id: String)
+## The tabs' rows were made `width` pixels wide (`lay_out`): the tabs handed in follow it.
+signal tabs_fitted(width: float)
+## How far the open button, its badge included, reaches down from the top of `side_column`, or 0
+## while it leaves the column's top free (`lay_out`): the quest list there makes room below it
+## (#1465).
+signal side_room(below: float)
 
 ## The pause setting and its choices, saved by number: never reorder.
 const PAUSE_SETTING: String = "pause_in_menu"
@@ -28,7 +34,7 @@ const PAUSE_CHOICES: Array[String] = ["Off", "On"]
 const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
-## The Character tab, laid out in its scene (#437). This tab and the Quests and Settings tabs are
+## The Character tab, laid out in its scene (#437). This tab and the Settings tab are
 ## loaded when the menu is built, not preloaded: their scripts name `GameMenu` (directly or through
 ## a panel), so a preload here makes a load cycle that Godot's script check reports as a scene
 ## referencing a non-existent script (#964).
@@ -37,8 +43,6 @@ const CHARACTER_TAB: String = "res://slices/menu/ui/character_tab.tscn"
 const CONTROLS_TAB: PackedScene = preload("res://slices/input_prompts/ui/controls_tab.tscn")
 ## The Credits tab, laid out in its scene (#437).
 const CREDITS_TAB: PackedScene = preload("res://slices/credits/ui/credits_tab.tscn")
-## The Quests tab, laid out in its scene (#437).
-const QUESTS_TAB: String = "res://slices/quests/ui/quests_tab.tscn"
 ## The Settings tab, laid out in its scene (#437).
 const SETTINGS_TAB: String = "res://slices/settings/ui/settings_tab.tscn"
 ## The Survey tab, laid out in its scene (#437).
@@ -72,10 +76,11 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
-## The quest list at the top's side, which the open button stands above on a screen held upright;
-## its keeper keeps the quests the Quests tab shows too.
-@export var quest_list: QuestListView
 
+## The column at the top's side that the open button stands above on a screen held upright, the
+## quest list's: given a screen's size, its place on it (#1465). game/ hands it in (#1614), since
+## the quests' slice comes after the menu's, and ties `side_room` to the list.
+var side_column: Callable
 ## The Character tab.
 var character: CharacterTab
 ## The Settings tab.
@@ -105,6 +110,11 @@ func _ready() -> void:
 	add_child(_open_button)
 	_build_sheet(more_tabs)
 	# Once the sheet is in the tree, so the Settings tab has its submenus.
+	if survey != null:
+		survey.add_rows(settings)
+	if graphics != null:
+		var pause: String = "Pause in single player"
+		settings.add_auto_row(SettingsTab.GAME, PAUSE_SETTING, pause, pause_label, step_pause)
 	_add_host_settings()
 	# Once the sheet is in the tree too: the Character tab builds its panels when it's ready.
 	for named: Control in [character.factions, survey_tab]:
@@ -192,15 +202,15 @@ func lay_out(screen: Vector2) -> void:
 	var beside: bool = screen.x > screen.y
 	character.fit_width(minf(2.0 * width, room) if beside else width)
 	character.place_details(beside)
-	quests_tab().fit(width)
+	tabs_fitted.emit(width)
 	controls_tab().fit(width)
 	_open_button.size = Vector2.ZERO
 	_open_button.position = Vector2((screen.x - _open_button.size.x) / 2.0, MARGIN)
-	if quest_list == null:
+	if not side_column.is_valid():
 		return
 	var list_room: float = 0.0
 	if screen.y > screen.x:
-		var column: Rect2 = quest_list.column_in(screen)
+		var column: Rect2 = side_column.call(screen)
 		var left: bool = column.get_center().x < screen.x / 2.0
 		# On the right, its glyph's badge hanging past its corner stays on the screen too.
 		var extent: Rect2 = with_badge(_open_button)
@@ -209,8 +219,8 @@ func lay_out(screen: Vector2) -> void:
 			column.position.y,
 		)
 		if _open_button.visible:
-			list_room = extent.end.y + QuestListView.GAP
-	quest_list.room_above = list_room
+			list_room = extent.end.y
+	side_room.emit(list_room)
 
 
 ## What `shown` covers, from its top left: itself and its glyph's badge hanging past its corner.
@@ -265,21 +275,15 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	survey_tab = SURVEY_TAB.instantiate() as SurveyTab
 	survey_tab.survey = survey
 	tabs.add_child(survey_tab)
-	var quests_tab_shown: QuestsTab = (load(QUESTS_TAB) as PackedScene).instantiate() as QuestsTab
-	quests_tab_shown.keeper = quest_list.keeper if quest_list != null else null
-	quests_tab_shown.driver = driver
-	tabs.add_child(quests_tab_shown)
-	# The tabs later slices add, like the codex book (#1174): game/ hands them over as the menu's
-	# own children in the main scene, so the menu never names a slice after it. Each is named by its
-	# node's name.
+	# The tabs later slices add, like the Quests tab and the codex book (#1174, #1614): game/ hands
+	# them over as the menu's own children in the main scene, so the menu never names a slice after
+	# it. Each is named by its node's name.
 	for more: Node in more_tabs:
 		remove_child(more)
 		tabs.add_child(more)
 	# The gameplay tabs first, then the system tabs (owner, #465).
 	settings = (load(SETTINGS_TAB) as PackedScene).instantiate() as SettingsTab
 	settings.graphics = graphics
-	settings.survey = survey
-	settings.menu = self
 	var _followed: int = settings.changed.connect(_follow)
 	tabs.add_child(settings)
 	tabs.add_child(CONTROLS_TAB.instantiate())
@@ -331,12 +335,7 @@ func _pause() -> SettingChoice:
 	return SettingChoice.new(kept_in, PAUSE_SETTING, PAUSE_CHOICES.size(), AUTO_PAUSE)
 
 
-## The Quests tab, found under the sheet rather than kept in a field of its own.
-func quests_tab() -> QuestsTab:
-	return _sheet.find_child("Quests", true, false) as QuestsTab
-
-
-## The Controls tab, found under the sheet like the Quests tab.
+## The Controls tab, found under the sheet rather than kept in a field of its own.
 func controls_tab() -> ControlsTab:
 	return _sheet.find_child("Controls", true, false) as ControlsTab
 
@@ -365,7 +364,7 @@ func open_button() -> Button:
 	return _open_button
 
 
-## The button at the top right that closes the menu, found like the Quests tab.
+## The button at the top right that closes the menu, found like the Controls tab.
 func close_button() -> Button:
 	return _sheet.find_child(CLOSE_NAME, true, false) as Button
 

@@ -432,22 +432,22 @@ func _check_quests_tab(menu: GameMenu, quests: QuestTracker, first: String) -> S
 	}
 	for id: String in entered:
 		quests.book[id] = QuestDefinition.parse(id, entered[id], {})
-	menu.quests_tab().refresh()
+	_quests_tab(menu).refresh()
 	var expected: Dictionary[String, String] = {
 		"enter_glade": "Now: Enter Lumwen Hoal",
 		"enter_thicket": "Now: Enter the thicket",
 		"first_domination": first,
 		"three_ombulumo": "Now: Dominate an Ombulumo  0/3",
 	}
-	var shown: Dictionary[String, String] = menu.quests_tab().shown
+	var shown: Dictionary[String, String] = _quests_tab(menu).shown
 	# Laid out in its scene (#437): it scrolls only up and down.
-	if menu.quests_tab().horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+	if _quests_tab(menu).horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
 		return "the Quests tab's scene scrolls sideways"
 	for id: String in entered:
 		var _unbooked: bool = quests.book.erase(id)
 	if shown != expected:
 		return "the Quests tab shows %s, not %s" % [shown, expected]
-	return _check_tab_follows(menu.quests_tab(), quests)
+	return _check_tab_follows(_quests_tab(menu), quests)
 
 
 ## The Quests tab's button beside the followed quest says so with its star and takes no press, and
@@ -700,7 +700,7 @@ func _check_territory(
 ## arrow while this player is in the glade, filled once they're in the forest; the pond's side
 ## quest's names the glade (#1282), filled while they're there, outlined once they're in the forest.
 func _check_pills(driver: GameDriver, list: QuestListView, quest: String) -> String:
-	var tab: QuestsTab = (list.get_parent().get_node("GameMenu") as GameMenu).quests_tab()
+	var tab: QuestsTab = _quests_tab(list.get_parent().get_node("GameMenu") as GameMenu)
 	var glade: String = FlowSteps.GLADE
 	var forest: String = FlowSteps.FOREST
 	tab.refresh()
@@ -2010,6 +2010,11 @@ func _gain(species: Array[String], chests: int) -> Array[QuestFact]:
 ## This player's domination of a wild monster of `species`.
 static func _dominated(species: String) -> WildMonsterDominated:
 	return WildMonsterDominated.new(1, 1, 0, Vector2i.ZERO, species)
+
+
+## The menu's Quests tab, which the main scene hands the menu (#1614).
+static func _quests_tab(menu: GameMenu) -> QuestsTab:
+	return menu.find_child("Quests", true, false) as QuestsTab
 
 
 ## A session whose player is in the instance `where`, for the pills (#794).

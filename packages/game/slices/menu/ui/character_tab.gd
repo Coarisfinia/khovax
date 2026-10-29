@@ -3,17 +3,21 @@ extends ScrollContainer
 ## The menu's Character tab (#391): the player's personal color (#233) on a freeform color wheel,
 ## with RGB sliders and a hex field to type it in, kept in their profile and shown on their circle
 ## at once. Its Auto button hands the color back to the world's default (PersonalColor.of), and a
-## line says which one is in use, in words (#68). Below it, the player's Might and its parts (#509,
-## MightPanel) and their standing with each faction (#533, FactionStandingsPanel), then their
-## dominated monsters (#400, DominatedMonstersList), with the selected one's stats in a pane beside
-## them, or below them on a phone held upright (MonsterDetails, #430), where it ascends (#1235),
-## and its development web, where the player takes its nodes (DevelopmentWebView, #679), then their
-## gear slots (#690, GearPanel) and their materials (MaterialsList, #295). Above them all, the
-## character's name
+## line says which one is in use, in words (#68). Below it, the player's standing with each faction
+## (#533, FactionStandingsPanel), then their dominated monsters (#400, DominatedMonstersList), with
+## the selected one's stats in a pane beside them, or below them on a phone held upright
+## (MonsterDetails, #430), where it ascends (#1235), and its development web, where the player takes
+## its nodes (DevelopmentWebView, #679), then their materials (MaterialsList, #295). The panels of
+## slices after the menu's (the player's Might above their standing, their gear above their
+## materials) are handed in by game/ (`add_panel`, #1614), so the menu never names those slices.
+## Above them all, the character's name
 ## (#399): typed into a field and kept once confirmed (Enter, or leaving the field), with a line
 ## that says in words why a name was refused. It scrolls when the screen is too short. Its layout
 ## lives in its scene, character_tab.tscn (#437): this script keeps only what it does, and adds the
 ## panels that are built from their own classes.
+
+## The tab's text was sized to `font` pixels (`fit`): the panels handed in follow it.
+signal fitted(font: int)
 
 ## The wheel's side, in font sizes, so it grows with the text on a phone.
 const WHEEL_FONTS: float = 10.0
@@ -28,12 +32,8 @@ var profile: CharacterProfile = CharacterProfile.new()
 var monsters: DominatedMonstersList
 ## What the tab says the color is now: AUTO_TEXT or CHOSEN_TEXT. Kept here so tests can read it.
 var shown: String = ""
-## The player's Might and its parts, above their monsters (#509).
-var might: MightPanel
 ## The player's standing with each faction, below their Might (#533).
 var factions: FactionStandingsPanel
-## The player's gear slots, below their monsters (#690).
-var gear: GearPanel
 ## The player's materials, below their gear (#295).
 var materials: MaterialsList
 ## The monsters and their detail pane, side by side or one above the other.
@@ -55,10 +55,6 @@ func _ready() -> void:
 	_set_up_name()
 	var _picked: int = picker.color_changed.connect(_on_picked)
 	var _auto: int = auto_button.pressed.connect(choose_auto)
-	might = MightPanel.new()
-	# The Might panel's slice comes after the menu's, and still finds the profile itself (#1614).
-	might.holder = driver.holder if driver != null else null
-	_column.add_child(might)
 	factions = FactionStandingsPanel.new()
 	_column.add_child(factions)
 	monsters = DominatedMonstersList.new()
@@ -78,9 +74,6 @@ func _ready() -> void:
 	_column.add_child(development)
 	var _followed: int = monsters.monster_shown.connect(development.show_monster)
 	var _chosen: int = development.node_chosen.connect(take_node)
-	gear = GearPanel.new()
-	gear.driver = driver
-	_column.add_child(gear)
 	materials = MaterialsList.new()
 	_column.add_child(materials)
 
@@ -153,12 +146,19 @@ func _set_up_name() -> void:
 	var _left: int = name_field.focus_exited.connect(func() -> void: choose_name(name_field.text))
 
 
-## Sizes the wheel for text of `font` pixels.
+## Sizes the wheel for text of `font` pixels, and tells the panels handed in (`fitted`).
 func fit(font: int) -> void:
 	var wheel: int = roundi(font * WHEEL_FONTS)
 	picker.add_theme_constant_override("sv_width", wheel)
 	picker.add_theme_constant_override("sv_height", wheel)
-	gear.fit(font)
+	fitted.emit(font)
+
+
+## Puts `panel`, from a slice after the menu's, in the column right above `below`, one of the
+## panels the tab builds itself (#1614).
+func add_panel(panel: Control, below: Control) -> void:
+	_column.add_child(panel)
+	_column.move_child(panel, below.get_index())
 
 
 ## Puts the detail pane beside the monsters (`beside`, on a landscape screen) or below them, on a

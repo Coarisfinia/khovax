@@ -72,7 +72,6 @@
 [ext_resource type="Script" path="res://slices/codex/ui/faction_met_tie.gd" id="62_faction_met_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/meta/move_hint_keeper.gd" id="63_move_hint_keeper"]
 [ext_resource type="Script" path="res://slices/move_hint/ui/move_hint.gd" id="64_move_hint"]
-[ext_resource type="Script" path="res://slices/codex/ui/quest_names_tie.gd" id="66_quest_names_tie"]
 [ext_resource type="Script" path="res://slices/move_hint/look/move_hint_tie.gd" id="65_move_hint_tie"]
 [ext_resource type="Script" path="res://slices/harvest/ui/interact_button.gd" id="67_interact_button"]
 [ext_resource type="Script" path="res://slices/controls/look/tap_walk_mark.gd" id="68_tap_walk_mark"]
@@ -80,6 +79,10 @@
 [ext_resource type="Script" path="res://slices/notices/ui/guide_notice_tie.gd" id="70_guide_notice_tie"]
 [ext_resource type="Script" path="res://slices/profile/ui/profile_panels_tie.gd" id="71_profile_panels_tie"]
 [ext_resource type="Script" path="res://game/survey_wiring.gd" id="73_survey_wiring"]
+[ext_resource type="PackedScene" path="res://slices/quests/ui/quests_tab.tscn" id="72_quests_tab"]
+[ext_resource type="Script" path="res://game/menu_wiring.gd" id="76_menu_wiring"]
+[ext_resource type="Script" path="res://slices/might/ui/might_panel.gd" id="74_might_panel"]
+[ext_resource type="Script" path="res://slices/gear/ui/gear_panel.gd" id="75_gear_panel"]
 
 [sub_resource type="Environment" id="Environment_daylight"]
 ambient_light_source = 2
@@ -479,7 +482,7 @@ driver = NodePath("../../Driver")
 [node name="NoticeScreen" parent="Hud" node_paths=PackedStringArray("menu") instance=ExtResource("69_notice")]
 menu = NodePath("../GameMenu")
 
-[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch", "quest_list") unique_id=3550355035]
+[node name="GameMenu" type="Control" parent="Hud" node_paths=PackedStringArray("driver", "input", "graphics", "survey", "stick", "pinch") unique_id=3550355035]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -494,7 +497,10 @@ graphics = NodePath("../../Graphics")
 survey = NodePath("../../SurveyChoice")
 stick = NodePath("../TouchStick")
 pinch = NodePath("../SurveyPinch")
-quest_list = NodePath("../QuestList")
+
+[node name="Quests" parent="Hud/GameMenu" node_paths=PackedStringArray("keeper", "driver") instance=ExtResource("72_quests_tab")]
+keeper = NodePath("../../../QuestKeeper")
+driver = NodePath("../../../Driver")
 
 [node name="Codex" parent="Hud/GameMenu" node_paths=PackedStringArray("keeper", "page") instance=ExtResource("56_codex_book")]
 keeper = NodePath("../../../CodexKeeper")
@@ -520,15 +526,26 @@ script = ExtResource("62_faction_met_tie")
 menu = NodePath("../Hud/GameMenu")
 keeper = NodePath("../CodexKeeper")
 
-[node name="ProfilePanelsTie" type="Node" parent="." node_paths=PackedStringArray("menu", "holder")]
+[node name="MenuWiring" type="Node" parent="." node_paths=PackedStringArray("menu", "quest_list", "might", "gear")]
+script = ExtResource("76_menu_wiring")
+menu = NodePath("../Hud/GameMenu")
+quest_list = NodePath("../Hud/QuestList")
+might = NodePath("Might")
+gear = NodePath("Gear")
+
+[node name="Might" type="VBoxContainer" parent="MenuWiring" node_paths=PackedStringArray("holder")]
+script = ExtResource("74_might_panel")
+holder = NodePath("../../ProfileHolder")
+
+[node name="Gear" type="VBoxContainer" parent="MenuWiring" node_paths=PackedStringArray("driver")]
+script = ExtResource("75_gear_panel")
+driver = NodePath("../../Driver")
+
+[node name="ProfilePanelsTie" type="Node" parent="." node_paths=PackedStringArray("menu", "holder", "gear")]
 script = ExtResource("71_profile_panels_tie")
 menu = NodePath("../Hud/GameMenu")
 holder = NodePath("../ProfileHolder")
-
-[node name="QuestNamesTie" type="Node" parent="." node_paths=PackedStringArray("menu", "page")]
-script = ExtResource("66_quest_names_tie")
-menu = NodePath("../Hud/GameMenu")
-page = NodePath("../Hud/CodexPage")
+gear = NodePath("../MenuWiring/Gear")
 
 [node name="GuideNoticeTie" type="Node" parent="." node_paths=PackedStringArray("driver", "input", "notice")]
 script = ExtResource("70_guide_notice_tie")
@@ -547,3 +564,5 @@ quest_keeper = NodePath("../QuestKeeper")
 [connection signal="name_selected" from="Hud/QuestList" to="Hud/CodexPage" method="open"]
 [connection signal="name_selected" from="Hud/GameMenu" to="Hud/CodexPage" method="open"]
 [connection signal="name_shown" from="Hud/GameMenu" to="CodexKeeper" method="meet"]
+[connection signal="tabs_fitted" from="Hud/GameMenu" to="Hud/GameMenu/Quests" method="fit"]
+[connection signal="name_selected" from="Hud/GameMenu/Quests" to="Hud/CodexPage" method="open"]
