@@ -30,8 +30,8 @@ INDEX = re.compile(r"(?<![0-9])0*([1-9][0-9]*)\$")
 def placeholders(text: str) -> int:
     """How many values the text's % fills, read left to right as Godot does: a specifier takes the
     next value, and one more for each * in it, which takes its width or precision from the values
-    too; an indexed one (%2$s) takes the value it names, its * included, so a repeated index fills
-    one value."""
+    too; an indexed one (%2$s) takes the value it names, a * after its index included, so a repeated
+    index fills one value."""
     used: set[int] = set()
     following = 0
     for match in SPECIFIER.findall(text):
@@ -39,6 +39,10 @@ def placeholders(text: str) -> int:
             continue
         indexed = INDEX.search(match)
         if indexed is not None:
+            # A * before the index takes the next value in order, as an unindexed one does.
+            taken = match[: indexed.start()].count("*")
+            used.update(range(following, following + taken))
+            following += taken
             used.add(int(indexed[1]) - 1)
             continue
         taken = 1 + match.count("*")

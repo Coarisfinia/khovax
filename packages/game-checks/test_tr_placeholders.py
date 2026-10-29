@@ -30,6 +30,8 @@ class TrPlaceholdersTest(unittest.TestCase):
         self.assertEqual(placeholders("%1$*d %1$s"), 1)
         self.assertEqual(placeholders("%1$s %s"), 1)
         self.assertEqual(placeholders("%1$s %s %s"), 2)
+        # A * before the index takes the next value in order.
+        self.assertEqual(placeholders("%*1$d %s"), 2)
 
     def test_refuses_two_positional_values(self) -> None:
         source = (
