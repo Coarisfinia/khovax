@@ -210,8 +210,35 @@ def is_call(toks: list[Tok], i: int) -> bool:
     before = toks[i - 1] if i > 0 else None
     return (
         toks[i].text == "(" and before is not None and before.kind == "id"
-        and before.text not in KEYWORDS
+        and not is_keyword(toks, i - 1)
     )  # fmt: skip
+
+
+def is_keyword(toks: list[Tok], at: int) -> bool:
+    """Whether the name at `at` is a keyword, not a method of the same name (String.match())."""
+    return toks[at].text in KEYWORDS and not (at > 0 and toks[at - 1].text == ".")
+
+
+def simple_statements(toks: list[Tok]) -> Iterator[list[Tok]]:
+    """A line's simple statements: its parts between semicolons at the outer level, and of each
+    block header with an inline body (`if c: for w in x: shown = w`), the header up to its colon
+    and then the body's own."""
+    depth = 0
+    start = 0
+    for i, tok in enumerate([*toks, Tok("op", ";", 0)]):
+        if tok.kind == "op" and tok.text in OPEN:
+            depth += 1
+        elif tok.kind == "op" and tok.text in CLOSE:
+            depth -= 1
+        elif depth == 0 and tok.kind == "op" and tok.text == ";":
+            part = toks[start:i]
+            start = i + 1
+            colon = header_colon(part)
+            if colon is not None and colon + 1 < len(part):
+                yield part[: colon + 1]
+                yield from simple_statements(part[colon + 1 :])
+            elif part:
+                yield part
 
 
 def header_colon(toks: list[Tok]) -> int | None:
@@ -298,9 +325,9 @@ def parse(path: str) -> Script:
                 if assign is not None:
                     func.defaults[index] = arg[assign + 1 :]
             for inner in body:
-                inner_words = [tok.text for tok in inner.toks]
-                if inner_words[:1] in (["var"], ["for"]) and len(inner_words) > 1:
-                    func.names.add(inner_words[1])
+                for part in simple_statements(inner.toks):
+                    if part[0].text in ("var", "for") and len(part) > 1:
+                        func.names.add(part[1].text)
             script.funcs.append(func)
             continue
         toks = without_annotations(statement.toks)
@@ -394,11 +421,14 @@ class Flow:
         return self.text_locals.setdefault(id(func), set())
 
     def statement(self, script: Script, func: Func, toks: list[Tok]) -> None:
+        parts = list(simple_statements(toks))
+        if parts != [toks]:
+            # Statements after a semicolon or in an inline body (`if c: shown = "x"`) each count
+            # on their own.
+            for part in parts:
+                self.statement(script, func, part)
+            return
         colon = header_colon(toks)
-        if colon is not None and colon + 1 < len(toks):
-            # An inline body (`if c: shown = "x"`) is a statement of its own.
-            self.statement(script, func, toks[colon + 1 :])
-            toks = toks[: colon + 1]
         words = [tok.text for tok in toks]
         text_locals = self.locals_of(func)
         # A member that is shown carries what's assigned to it anywhere in its script.
@@ -520,7 +550,7 @@ class Flow:
         if toks[at].text == "{":
             return True
         before = toks[at - 1] if at > 0 else None
-        if before is None or before.kind == "id" and before.text in KEYWORDS:
+        if before is None or before.kind == "id" and is_keyword(toks, at - 1):
             return False
         return before.kind in ("id", "str") or before.text in ")]"
 
