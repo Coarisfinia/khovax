@@ -5,12 +5,18 @@
 	"description": "A material (#774): an item the loot, harvest and chest tables may give that isn't a piece of gear, kept in the player's profile by its id with how many they have. One file per material, named after its id, so the content flow can refuse a table naming an item that doesn't exist. An id is never reused or changed once shipped.",
 	"type": "object",
 	"additionalProperties": false,
-	"required": ["id"],
+	"required": ["id", "name"],
 	"properties": {
 		"id": {
 			"description": "Stable, never reused: lowercase words joined by underscores.",
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9_]*$"
+		},
+		"name": {
+			"description": "The player-facing name (#1657), as the Character tab and a loot burst show it.",
+			"type": "string",
+			"x-translate": true,
+			"pattern": "\\S"
 		},
 		"model": {
 			"description": "Its 3D model (every item has one, #1579): a res:// path to a glTF model under assets/ that exists. Optional until every material has one (#1585, #1586).",

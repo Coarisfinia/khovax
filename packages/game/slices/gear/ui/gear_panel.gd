@@ -30,7 +30,7 @@ var shown: Array[String] = []
 var buttons: Dictionary[String, Button] = {}
 ## Each slot's picture of the gear in it, by slot.
 var pictures: Dictionary[String, ItemPicture] = {}
-## Every piece of gear's data, by id; a piece missing from the data shows its id.
+## Every piece of gear's data, by id; a piece missing from the data shows as unknown gear.
 var _items: Dictionary[String, GearItem] = {}
 var _note: Label
 
@@ -38,7 +38,7 @@ var _note: Label
 func _ready() -> void:
 	var content: GearContent = GearContent.cached()
 	if not content.problem.is_empty():
-		push_warning("the gear can't be read, so gear shows its ids: " + content.problem)
+		push_warning("the gear can't be read, so gear shows as unknown: " + content.problem)
 	_items = content.items
 	add_child(MenuWidgets.label(tr("Gear")))
 	for slot: String in GearSlots.SLOTS:
@@ -82,7 +82,7 @@ func refresh() -> void:
 	for slot: String in GearSlots.SLOTS:
 		var gear_id: String = _equipped().get(slot, "")
 		var line: String = tr("{slot}: {gear}").format(
-			{ "slot": slot.capitalize(), "gear": _described(gear_id) }
+			{ "slot": slot_name(slot), "gear": _described(gear_id) }
 		)
 		lines.append(line)
 		buttons[slot].text = line
@@ -95,6 +95,20 @@ func refresh() -> void:
 	)
 	lines.append(_note.text)
 	shown = lines
+
+
+## The name of `slot` (one of GearSlots.SLOTS) as the player reads it, translated (#1657): a literal
+## tr() each, so the translation template has them, in the context "gear slot" that tells them from
+## the verbs; "" for a slot that isn't one.
+static func slot_name(slot: String) -> String:
+	match slot:
+		"ward":
+			return TranslationServer.tr("Ward", "gear slot")
+		"trap":
+			return TranslationServer.tr("Trap", "gear slot")
+		"throw":
+			return TranslationServer.tr("Throw", "gear slot")
+	return ""
 
 
 ## Puts the next piece of the player's gear for `slot` into it, as its button does; nothing during a
@@ -143,9 +157,10 @@ func _model_of(gear_id: String) -> String:
 	return item.model if item != null else ""
 
 
-## The gear `gear_id`, in words: its name and rarity, its id where the data lacks it, or "empty".
+## The gear `gear_id`, in words: its name and rarity, "Unknown gear" where the data lacks it (a save
+## kept it after its file went, #1657), or "empty".
 func _described(gear_id: String) -> String:
 	if gear_id.is_empty():
 		return tr("empty")
 	var item: GearItem = _items.get(gear_id)
-	return item.described() if item != null else gear_id.capitalize()
+	return item.described() if item != null else tr("Unknown gear")

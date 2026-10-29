@@ -316,7 +316,8 @@ func _menu_monsters(menu: GameMenu, main: Node) -> String:
 
 ## The standings with the factions (#533): none listed while the player is neutral with all; then
 ## each one they aren't neutral with, in id order, with its name, signed standing and rank name, or
-## by its id in words once the content no longer has it; neutral again, it leaves the list.
+## as an unknown faction once the content no longer has it (#1657); neutral again, it leaves the
+## list.
 func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	var panel: FactionStandingsPanel = tab.factions
 	var neutral: Array[String] = ["No faction standings yet"]
@@ -335,7 +336,7 @@ func _menu_factions(tab: CharacterTab, main: Node) -> String:
 	panel.refresh()
 	var listed: Array[String] = [
 		"%s: +2, %s" % [faction.name, faction.rank_name(2)],
-		"Zz Vanished: -1",
+		"Unknown faction: -1",
 	]
 	if not changed.is_empty() or panel.shown != listed:
 		return "the Character tab's factions are %s, not %s" % [panel.shown, listed]
@@ -402,7 +403,7 @@ func _gear_starts_empty(panel: GearPanel) -> String:
 	panel.refresh()
 	var empty: Array[String] = []
 	for slot: String in GearSlots.SLOTS:
-		empty.append(slot.capitalize() + ": empty")
+		empty.append(GearPanel.slot_name(slot) + ": empty")
 		var button: Button = panel.buttons[slot]
 		if button.icon != GearPanel.ICONS[slot] or button.focus_mode != Control.FOCUS_ALL:
 			return "the %s slot's button lacks its icon or a controller's focus" % slot

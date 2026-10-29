@@ -82,8 +82,28 @@ func is_unique() -> bool:
 func described() -> String:
 	var shown: String = TextTags.shown(TranslationServer.tr(name))
 	return TranslationServer.tr("{name} ({rarity})").format(
-		{ "name": shown, "rarity": rarity.capitalize() }
+		{ "name": shown, "rarity": rarity_name(rarity) }
 	)
+
+
+## The name of `rank` (one of RARITIES) as the player reads it, translated (#1657): a literal tr()
+## each, so the translation template has them, in the context "gear rarity"; "" for a rarity that
+## isn't one.
+static func rarity_name(rank: String) -> String:
+	match rank:
+		"loose":
+			return TranslationServer.tr("Loose", "gear rarity")
+		"knotted":
+			return TranslationServer.tr("Knotted", "gear rarity")
+		"warded":
+			return TranslationServer.tr("Warded", "gear rarity")
+		"sealed":
+			return TranslationServer.tr("Sealed", "gear rarity")
+		"unbroken":
+			return TranslationServer.tr("Unbroken", "gear rarity")
+		"bound":
+			return TranslationServer.tr("Bound", "gear rarity")
+	return ""
 
 
 ## Why the read fields are wrong, or "".

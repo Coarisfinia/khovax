@@ -1473,7 +1473,8 @@ func _check_loot_refused() -> String:
 
 ## Every item a loot, harvest or chest table names exists (#774): a piece of gear or a material,
 ## each read from its own data. A table naming an item that's neither is refused, and so is a
-## material file with a wrong id or a field it can't have; then the gear's models (#1581).
+## material file with a wrong id, no name (#1657) or a field it can't have; then the gear's models
+## (#1581).
 func _check_loot_items() -> String:
 	var materials: MaterialContent = MaterialContent.load_materials()
 	if not materials.problem.is_empty():
@@ -1495,8 +1496,9 @@ func _check_loot_items() -> String:
 	if not made_up.problem.is_empty() or not problem.begins_with("x's table names mos,"):
 		return "a table naming an item there isn't was refused with %s" % problem
 	var cases: Dictionary[String, String] = {
-		"{\"id\": \"y\"}": "its id must",
-		"{\"id\": \"x\", \"name\": \"X\"}": "field name",
+		"{\"id\": \"y\", \"name\": \"Y\"}": "its id must",
+		"{\"id\": \"x\"}": "it needs a name",
+		"{\"id\": \"x\", \"name\": \"X\", \"slot\": \"throw\"}": "field slot",
 		"[\"x\"]": Content.NOT_AN_OBJECT,
 	}
 	var refusing: MaterialContent = MaterialContent.new()
@@ -1508,7 +1510,8 @@ func _check_loot_items() -> String:
 
 
 ## Every piece of gear loads with a model that exists (#1581): every item has one. A gear file
-## without one, or naming one that isn't a glTF model under assets/, is refused.
+## without one, or naming one that isn't a glTF model under assets/, is refused; then the gear's
+## names (#1657).
 func _check_gear_models() -> String:
 	var gear: GearContent = GearContent.load_gear()
 	if not gear.problem.is_empty() or gear.items.is_empty():
@@ -1524,7 +1527,26 @@ func _check_gear_models() -> String:
 		if not refused.problem.begins_with("it needs a model"):
 			return "gear with the model \"%s\" was refused with %s" % [model, refused.problem]
 	var kept: GearItem = GearItem.parse("x", text % (", \"model\": \"%s\"" % MODEL))
-	return "" if kept.problem.is_empty() else "gear with a model was refused: " + kept.problem
+	if not kept.problem.is_empty():
+		return "gear with a model was refused: " + kept.problem
+	return _check_gear_names()
+
+
+## Every gear slot and rarity has a name of its own (#1657), which the translation template holds,
+## as the Character tab and a piece of gear's description show them.
+func _check_gear_names() -> String:
+	var slot_names: Array[String] = []
+	for slot: String in GearSlots.SLOTS:
+		slot_names.append(GearPanel.slot_name(slot))
+	if slot_names != (["Ward", "Trap", "Throw"] as Array[String]):
+		return "the gear slots are named %s" % [slot_names]
+	var rarity_names: Array[String] = []
+	for rarity: String in GearItem.RARITIES:
+		rarity_names.append(GearItem.rarity_name(rarity))
+	var rarities: Array[String] = ["Loose", "Knotted", "Warded", "Sealed", "Unbroken", "Bound"]
+	if rarity_names != rarities:
+		return "the gear rarities are named %s" % [rarity_names]
+	return ""
 
 
 ## Why one of `tables` names an item that's neither a piece of `gear` nor one of `materials`, or "".

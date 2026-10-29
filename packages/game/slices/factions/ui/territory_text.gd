@@ -19,14 +19,18 @@ static func symbol_of(faction_id: String) -> String:
 
 
 ## The line saying the faction `faction_id` holds an instance, or that none does for "": a text
-## with text tags, the faction's name tagged; one the content doesn't know shows its id in words.
+## with text tags, the faction's name tagged; one the content doesn't know reads "Unknown faction"
+## (#1657).
 static func held_text(faction_id: String) -> String:
 	if faction_id.is_empty():
 		return TranslationServer.tr("Held by no faction")
 	var known: bool = _factions().factions.has(faction_id)
 	var tagged: String = TextTags.tag(TextTags.FACTION, faction_id)
 	return TranslationServer.tr("Held by {symbol} {faction}").format(
-		{ "symbol": symbol_of(faction_id), "faction": tagged if known else faction_id.capitalize() }
+		{
+			"symbol": symbol_of(faction_id),
+			"faction": tagged if known else TranslationServer.tr("Unknown faction"),
+		}
 	)
 
 

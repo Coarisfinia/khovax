@@ -11,6 +11,8 @@ const SCHEMA: String = "res://slices/loot/data/materials.schema.json"
 
 ## Every material's id, in file name order.
 var ids: Array[String] = []
+## Every material's player-facing name (#1657), by id, as its file gives it, untranslated.
+var names: Dictionary[String, String] = {}
 
 
 ## Every material file in `directory`, read and checked.
@@ -31,13 +33,26 @@ func add(file_id: String, text: String) -> String:
 		return Content.NOT_AN_OBJECT
 	var data: Dictionary = parsed
 	var id: String = Content.text_of(data.get("id"))
+	var name: String = Content.text_of(data.get("name"))
 	var why: String = Content.unknown_field(data, SchemaFields.at(SCHEMA))
 	if why.is_empty():
 		why = Content.id_problem(id, file_id)
+	if why.is_empty() and name.strip_edges().is_empty():
+		why = "it needs a name"
 	if (why.is_empty()
 			and data.has("model")
 			and not Content.is_model(Content.text_of(data["model"]))):
 		why = "its model is no glTF model under %s that exists (#1579)" % Content.MODELS
 	if why.is_empty():
 		ids.append(id)
+		names[id] = name
 	return why
+
+
+## The material `id`'s name as the player reads it, translated (its schema marks it, so the
+## translation template has it), or "Unknown material" for one the data lacks, such as one a save
+## kept after its file went.
+func name_of(id: String) -> String:
+	if not names.has(id):
+		return TranslationServer.tr("Unknown material")
+	return TranslationServer.tr(names[id])

@@ -43,6 +43,8 @@ const GLYPH_INSET: float = 0.03
 const NAME_SHARE: float = 0.3
 ## The fog around those letters, in pixels, so they read over the picture.
 const NAME_OUTLINE_PIXELS: int = 4
+## The letters of a species missing from the data, which has no name to take them from.
+const UNKNOWN_LETTERS: String = "?"
 ## The click's or tap's glyph right of the row, its side as a share of a square's.
 const POINTING_SHARE: float = 0.85
 
@@ -63,7 +65,8 @@ var _short_ids: PackedStringArray = PackedStringArray()
 ## The picture of each species shown, by id: rendered once, a still in a square, since a HUD
 ## that fidgets draws the eye and every frame costs on a phone.
 var _pictures: Dictionary[String, SpeciesStage] = {}
-## The letters shown for each species, by id; a species missing from the data shows its id's.
+## The letters shown for each species, by id, from its translated name (#1657); a species missing
+## from the data shows UNKNOWN_LETTERS.
 var _letters: Dictionary[String, String] = {}
 var _side: float = 0.0
 var _top: float = MARGIN
@@ -73,7 +76,7 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var species: SpeciesContent = SpeciesContent.cached()
 	for id: String in species.species:
-		_letters[id] = letters_of(species.species[id].name)
+		_letters[id] = letters_of(tr(species.species[id].name))
 
 
 func _process(_delta: float) -> void:
@@ -244,7 +247,7 @@ func _draw_square(place: int) -> void:
 	if picture != null:
 		draw_texture_rect(picture.get_texture(), area, false, Color(Color.WHITE, faded))
 	var ink: Color = Color(Toon.INK, faded)
-	var letters: String = _letters.get(shown[place], shown[place].left(2).capitalize())
+	var letters: String = _letters.get(shown[place], UNKNOWN_LETTERS)
 	_draw_letters(area, letters, ink)
 	draw_rect(area, ink, false, COMPANION_INK_PIXELS if chosen else INK_PIXELS)
 	_draw_corner(area, place, faded)
