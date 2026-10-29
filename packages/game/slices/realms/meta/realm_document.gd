@@ -1,15 +1,19 @@
 class_name RealmDocument
 extends RefCounted
-## A realm as a Markdown file, realms/<id>.md (#865): a title and prose explaining it, its
-## instances drawn as an EmojiGrid in the region files' style. Each legend entry is either
-## "the instance <id>", naming an instance blueprint, "the instance <id>, where the players start"
-## for the instance the world starts in, or "no instance", which fills the picture between them.
+## A realm as a Markdown file, realms/<id>.md (#865): a title, its player-facing name (#1710), and
+## prose explaining it, its instances drawn as an EmojiGrid in the region files' style. Each legend
+## entry is either "the instance <id>", naming an instance blueprint, "the instance <id>, where the
+## players start" for the instance the world starts in, or "no instance", which fills the picture
+## between them.
 ## Under `## Codex`, its codex entry (#959) is the item "- Entry: <text>" and its name's meaning
 ## the item "- Gloss: <text>"; a realm without both is refused. Under `## Day and night`, its look
 ## by day and at night (#1247) is the items "- Day light: #rrggbb", "- Day ambience: #rrggbb",
 ## "- Night light: #rrggbb" and "- Night ambience: #rrggbb"; a realm without all four is refused.
-## The realms are the files in DIR, found by listing it (Realms).
+## The realms are the files in DIR, found by listing it (Realms). A realm without a title is
+## refused.
 
+## What starts the title, the realm's name.
+const TITLE: String = "# "
 const INSTANCE: String = "the instance "
 const START: String = ", where the players start"
 const NO_INSTANCE: String = "no instance"
@@ -55,14 +59,30 @@ static func parse(text: String) -> Realm:
 		if not realm.has(realm.start):
 			realm.problem = "the players start in %s, which isn't drawn" % realm.start
 	if realm.problem.is_empty():
-		var codex: Dictionary[String, String] = _items(text, CODEX)
-		realm.codex_entry = codex.get(ENTRY, "")
-		realm.codex_gloss = codex.get(GLOSS, "")
-		if realm.codex_entry.is_empty() or realm.codex_gloss.is_empty():
-			realm.problem = "its codex entry and gloss are missing under %s (#959)" % CODEX
-	if realm.problem.is_empty():
-		realm.problem = _read_day_and_night(realm, _items(text, DAY_AND_NIGHT))
+		realm.problem = _read_words_and_look(realm, text)
 	return realm
+
+
+## Notes on `realm` what `text` says of it besides its picture: its codex entry and gloss (#959),
+## its look by day and at night (#1247) and its name (#1710); returns why it can't, or "".
+static func _read_words_and_look(realm: Realm, text: String) -> String:
+	var codex: Dictionary[String, String] = _items(text, CODEX)
+	realm.codex_entry = codex.get(ENTRY, "")
+	realm.codex_gloss = codex.get(GLOSS, "")
+	if realm.codex_entry.is_empty() or realm.codex_gloss.is_empty():
+		return "its codex entry and gloss are missing under %s (#959)" % CODEX
+	var look: String = _read_day_and_night(realm, _items(text, DAY_AND_NIGHT))
+	return look if not look.is_empty() else _read_name(realm, text)
+
+
+## Notes the name `text`'s title gives (#1710), its first line "# <name>", on `realm`; returns why
+## it can't, or "".
+static func _read_name(realm: Realm, text: String) -> String:
+	var first: String = text.strip_edges(true, false).get_slice("\n", 0).strip_edges()
+	realm.name = first.trim_prefix(TITLE).strip_edges() if first.begins_with(TITLE) else ""
+	if realm.name.is_empty():
+		return "its name, the title (%s<name>), is missing (#1710)" % TITLE
+	return ""
 
 
 ## Notes the look by day and at night listed in `items` on `realm`; returns why it can't, or "".

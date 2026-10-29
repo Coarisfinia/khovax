@@ -1,6 +1,7 @@
 // Hrunde Orl, a boss-style arena (#127): one region piece, played as it is drawn.
 {
 	"id": "hrunde_orl",
+	"name": "Hrunde Orl",
 	"codex": {
 		"entry": "A ring where a single beast waits to be fought. Its name is blunt and drumming, hr and nd; Orl is a ring.",
 		"gloss": "the drumming ring"

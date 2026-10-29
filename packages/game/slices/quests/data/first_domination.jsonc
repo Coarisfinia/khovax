@@ -6,7 +6,7 @@
 	"name": "Dominate your first monster",
 	"standing": { "faction": "amvrel_velmarai", "change": 1 },
 	"steps": [
-		{ "condition": "reached", "place": "beach", "instance": "lumwen_hoal" },
+		{ "condition": "reached", "place": "beach", "name": "beach", "instance": "lumwen_hoal" },
 		{ "condition": "dominated", "instance": "lumwen_hoal", "ends": "first_domination" }
 	]
 }

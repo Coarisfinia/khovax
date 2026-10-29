@@ -8,8 +8,8 @@
 	"steps": [
 		{
 			"choices": [
-				{ "condition": "entered", "piece": "pond", "instance": "lumwen_hoal", "next": "by_the_pond" },
-				{ "condition": "entered", "piece": "thicket", "instance": "lumwen_hoal", "next": "in_the_thicket" }
+				{ "condition": "entered", "piece": "pond", "name": "pond", "instance": "lumwen_hoal", "next": "by_the_pond" },
+				{ "condition": "entered", "piece": "thicket", "name": "thicket", "instance": "lumwen_hoal", "next": "in_the_thicket" }
 			]
 		},
 		{ "id": "by_the_pond", "condition": "opened", "instance": "lumwen_hoal", "ends": "lumwen_hoal_fork" },

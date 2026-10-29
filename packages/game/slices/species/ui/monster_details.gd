@@ -92,7 +92,8 @@ func show_monster(
 		if species.sight > 0:
 			lines.append(_sight_text(species.sight))
 		if ascends:
-			var given: String = ascension.material.replace("_", " ")
+			# Its material by its name (#1710), lower case in the middle of the line, as before.
+			var given: String = MaterialContent.cached().name_of(ascension.material).to_lower()
 			var grown: Species = SpeciesContent.cached().species.get(ascension.into)
 			var into: String = tr(grown.name) if grown != null else ascension.into
 			lines.append(ascension_text(into, ascension.level))

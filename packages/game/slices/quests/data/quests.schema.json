@@ -12,6 +12,12 @@
 			"description": "The event it emits once it's done, or taken on a choice (#575): any id, which can start a side quest waiting on it.",
 			"$ref": "#/$defs/id"
 		},
+		"name": {
+			"description": "The player-facing name of the place, region piece, quest target or item it asks for (#1710), as it reads in the middle of the step's line, after \"the\" for a place, piece or target: \"beach\" for \"Go to the beach\". Needed with any of them, and only there.",
+			"type": "string",
+			"x-translate": true,
+			"pattern": "\\S"
+		},
 		"somewhere": {
 			"description": "Being somewhere, met once, which a marker points at: reaching a place, or entering a region piece or an instance. A place or piece may name the instance it counts in (#769).",
 			"type": "object",
@@ -28,11 +34,14 @@
 					"anyOf": [{ "required": ["piece"] }, { "required": ["instance"] }]
 				}
 			],
+			"dependentRequired": { "place": ["name"], "piece": ["name"] },
+			"dependentSchemas": { "name": { "anyOf": [{ "required": ["place"] }, { "required": ["piece"] }] } },
 			"properties": {
 				"condition": { "enum": ["reached", "entered"] },
 				"place": { "$ref": "#/$defs/id" },
 				"piece": { "$ref": "#/$defs/id" },
-				"instance": { "$ref": "#/$defs/id" }
+				"instance": { "$ref": "#/$defs/id" },
+				"name": { "$ref": "#/$defs/name" }
 			}
 		},
 		"answered": {
@@ -139,6 +148,10 @@
 				"type": "object",
 				"additionalProperties": false,
 				"oneOf": [{ "required": ["condition"] }, { "required": ["choices"] }],
+				"dependentRequired": { "place": ["name"], "piece": ["name"], "target": ["name"], "item": ["name"] },
+				"dependentSchemas": {
+					"name": { "anyOf": [{ "required": ["place"] }, { "required": ["piece"] }, { "required": ["target"] }, { "required": ["item"] }] }
+				},
 				"allOf": [
 					{
 						"if": { "required": ["condition"], "properties": { "condition": { "const": "reached" } } },
@@ -204,6 +217,7 @@
 						"description": "On an entered step without a piece, the name of the instance blueprint it asks for; on any other step, the instance it counts in only (#769), which every step of a territory quest names: its territory.",
 						"$ref": "#/$defs/id"
 					},
+					"name": { "$ref": "#/$defs/name" },
 					"dialog": {
 						"description": "On an answered step, and only there, the id of the dialog it asks for an answer in.",
 						"$ref": "#/$defs/id"

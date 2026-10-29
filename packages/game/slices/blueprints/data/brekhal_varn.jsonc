@@ -3,6 +3,7 @@
 // Kalvrakkor, the frost-and-fire hound, lives here (#1692): a high, broken pass of frost and stone.
 {
 	"id": "brekhal_varn",
+	"name": "Brekhal Varn",
 	"codex": {
 		"entry": "The mountain pass southwest of Edhra Tewk. Its name is rocky to say, br and k, as the pass is to walk; Varn is the Land-speech word for a pass.",
 		"gloss": "the broken pass"

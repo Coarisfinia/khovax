@@ -8,8 +8,8 @@
 	"starts_on": { "condition": "entered", "instance": "morwe_wudhen" },
 	"territory": { "instance": "morwe_wudhen", "faction": "amvrel_velmarai" },
 	"steps": [
-		{ "condition": "entered", "piece": "stream", "instance": "morwe_wudhen" },
-		{ "condition": "entered", "piece": "grove", "instance": "morwe_wudhen" },
-		{ "condition": "entered", "piece": "felling", "instance": "morwe_wudhen", "ends": "guild_charts_morwe_wudhen" }
+		{ "condition": "entered", "piece": "stream", "name": "stream", "instance": "morwe_wudhen" },
+		{ "condition": "entered", "piece": "grove", "name": "grove", "instance": "morwe_wudhen" },
+		{ "condition": "entered", "piece": "felling", "name": "felling", "instance": "morwe_wudhen", "ends": "guild_charts_morwe_wudhen" }
 	]
 }

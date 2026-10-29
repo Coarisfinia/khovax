@@ -32,10 +32,14 @@ static func named(realm_id: String) -> Realm:
 	return null
 
 
-## The name the player reads for a realm or an instance with the id `id`: its id in words (#909),
-## "Lumwen Hoal" for lumwen_hoal.
-static func name_of(id: String) -> String:
-	return id.replace("_", " ").capitalize()
+## The name the player reads for the realm `realm_id`, translated: its file's title (#1710), or
+## "Unknown realm" for one there isn't. A place's name is its blueprint's
+## (InstanceBlueprints.name_of).
+static func name_of(realm_id: String) -> String:
+	var realm: Realm = named(realm_id)
+	if realm == null or realm.name.is_empty():
+		return TranslationServer.tr("Unknown realm")
+	return TranslationServer.tr(realm.name)
 
 
 ## The first realm, in file name order, that draws the instance `instance_id`, or null.

@@ -53,7 +53,8 @@ const TWO_STEPS: String = (
 ## A quest that asks to enter the glade's thicket.
 const ENTER_THICKET: String = (
 	"{\"id\": \"enter_thicket\", \"name\": \"Into the thicket\", \"steps\": ["
-	+ "{\"condition\": \"entered\", \"piece\": \"thicket\", \"ends\": \"enter_thicket\"}]}"
+	+ "{\"condition\": \"entered\", \"piece\": \"thicket\", "
+	+ "\"name\": \"thicket\", \"ends\": \"enter_thicket\"}]}"
 )
 ## A quest that asks to enter the glade.
 const ENTER_GLADE: String = (
@@ -65,7 +66,8 @@ const ENTER_GLADE: String = (
 ## A quest that asks to reach the beach.
 const REACH_BEACH: String = (
 	"{\"id\": \"reach_beach\", \"name\": \"Go to the beach\", \"steps\": ["
-	+ "{\"condition\": \"reached\", \"place\": \"beach\", \"ends\": \"reach_beach\"}]}"
+	+ "{\"condition\": \"reached\", \"place\": \"beach\", "
+	+ "\"name\": \"beach\", \"ends\": \"reach_beach\"}]}"
 )
 ## The escort's quest (#1592), its guide, the guide's pass and the dungeon behind their seal.
 const ESCORT: String = "tormaesk_escort"
@@ -97,7 +99,8 @@ const AFTER_BEACON: String = (
 ## A quest whose step emits that the bell rang (#755), once this player enters the bell tower.
 const RING_BELL: String = (
 	"{\"id\": \"ring_bell\", \"name\": \"Ring the bell\", \"steps\": [{\"condition\": \"entered\", "
-	+ "\"piece\": \"bell_tower\", \"emits\": \"bell_rung\", \"ends\": \"ring_bell\"}]}"
+	+ "\"piece\": \"bell_tower\", "
+	+ "\"name\": \"bell tower\", \"emits\": \"bell_rung\", \"ends\": \"ring_bell\"}]}"
 )
 ## A side quest that starts once the bell rang (#755).
 const AFTER_BELL: String = (
@@ -143,8 +146,8 @@ const PARTED: String = (
 ## A quest asking for feathers twice over (#686): five, then three more.
 const FEATHERS: String = (
 	"{\"id\": \"feathers\", \"name\": \"Feathers\", \"steps\": ["
-	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"count\": 5}, "
-	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"count\": 3, "
+	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"name\": \"feather\", \"count\": 5}, "
+	+ "{\"condition\": \"obtained\", \"item\": \"feather\", \"name\": \"feather\", \"count\": 3, "
 	+ "\"ends\": \"feathers\"}]}"
 )
 ## A quest's standing with a faction that doesn't exist.
@@ -167,7 +170,8 @@ const TARGET_REGION: String = (
 ## A quest that asks to dominate the quest target old_toad.
 const OLD_TOAD: String = (
 	"{\"id\": \"old_toad\", \"name\": \"The old toad\", \"steps\": ["
-	+ "{\"condition\": \"dominated\", \"target\": \"old_toad\", \"ends\": \"old_toad\"}]}"
+	+ "{\"condition\": \"dominated\", \"target\": \"old_toad\", "
+	+ "\"name\": \"old toad\", \"ends\": \"old_toad\"}]}"
 )
 
 
@@ -737,7 +741,7 @@ func _check_pill_opens(list: QuestListView, tab: QuestsTab, quest: String) -> St
 		pill.place_links().select(meta)
 		var opened: bool = (page.is_open()
 				and page.heading.text == CodexPage.heading_of(TextTags.PLACE)
-				and page.title.text == Realms.name_of(FlowSteps.FOREST))
+				and page.title.text == InstanceBlueprints.name_of(FlowSteps.FOREST))
 		page.close()
 		if not opened:
 			return "selecting %s in a quest's pill showed %s" % [meta, page.title.text]
@@ -759,7 +763,7 @@ static func _list_pill(list: QuestListView, id: String) -> QuestPill:
 func _check_pill(pill: QuestPill, where: String, here: bool) -> String:
 	var style: StyleBoxFlat = pill.get_theme_stylebox("panel") as StyleBoxFlat
 	if (not pill.visible or pill.instance_id != where or pill.here != here
-			or pill.shown_name() != Realms.name_of(where) or style.draw_center != here
+			or pill.shown_name() != InstanceBlueprints.name_of(where) or style.draw_center != here
 			or pill.place_links().links != [TextTags.PLACE + NameLinks.META_SEPARATOR + where]
 			or (pill.get_node("Row/Arrow") as Control).visible == here):
 		return "a quest's pill shows %s (here: %s), not %s, here: %s" % [
@@ -1179,7 +1183,7 @@ func _check_side_quest() -> String:
 	if not applied.is_empty() or not loaded.finished.has("pond_chest"):
 		return "a chest didn't finish the started pond side quest: " + applied
 	var text: String = "{\"id\": \"in_one\", \"name\": \"N\", \"starts_on\": %s, \"steps\": [%s]}"
-	var enter: String = "{\"condition\": \"entered\", \"piece\": \"pond\"}"
+	var enter: String = "{\"condition\": \"entered\", \"piece\": \"pond\", \"name\": \"pond\"}"
 	var at_once: QuestTracker = QuestTracker.new()
 	var ending: String = enter.replace("}", ", \"ends\": \"in_one\"}")
 	at_once.book["in_one"] = QuestDefinition.parse("in_one", text % [enter, ending], {})
@@ -1343,8 +1347,10 @@ func _check_pond_way(
 ## (#532) like any finished quest.
 func _check_branch_standing() -> String:
 	var text: String = "{\"id\": \"fork\", \"name\": \"N\", %s, \"steps\": [{\"choices\": ["
-	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\"}, "
-	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", \"next\": \"lost\"}]}, "
+	text += "{\"condition\": \"entered\", \"piece\": \"pond\", "
+	text += "\"name\": \"pond\", \"next\": \"won\"}, "
+	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", "
+	text += "\"name\": \"thicket\", \"next\": \"lost\"}]}, "
 	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\"}, "
 	text += "{\"id\": \"lost\", \"condition\": \"dominated\", \"ends\": \"fork\"}]}"
 	var profile: Profile = Profile.new()
@@ -1367,9 +1373,11 @@ func _check_branch_standing() -> String:
 ## itself.
 func _check_emitted() -> String:
 	var text: String = "{\"id\": \"fork\", \"name\": \"N\", \"steps\": [{\"choices\": ["
-	text += "{\"condition\": \"entered\", \"piece\": \"pond\", \"next\": \"won\", "
+	text += "{\"condition\": \"entered\", \"piece\": \"pond\", "
+	text += "\"name\": \"pond\", \"next\": \"won\", "
 	text += "\"emits\": \"took_pond\"}, "
-	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", \"next\": \"won\", "
+	text += "{\"condition\": \"entered\", \"piece\": \"thicket\", "
+	text += "\"name\": \"thicket\", \"next\": \"won\", "
 	text += "\"emits\": \"took_thicket\"}]}, "
 	text += "{\"id\": \"won\", \"condition\": \"opened\", \"ends\": \"fork\", \"emits\": \"won\"}]}"
 	var waiting: String = "{\"id\": \"%s\", \"name\": \"N\", "
