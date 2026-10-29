@@ -505,8 +505,12 @@ class Flow:
                 continue
             if tok.kind == "op" and tok.text == "(" and is_call(toks, i):
                 self.call(script, func, toks, i)
-                if toks[i - 1].text in PASS_THROUGH or self.is_format(toks, i):
+                if toks[i - 1].text in PASS_THROUGH:
                     for arg in split_args(toks, i):
+                        self.expression(script, func, arg, carry_only)
+                elif self.is_format(script, toks, i):
+                    # Only its values; a second argument is the placeholder's pattern.
+                    for arg in split_args(toks, i)[:1]:
                         self.expression(script, func, arg, carry_only)
                 elif self.outside(toks, i):
                     # Its literals and constants are ids (a tag's kind), but a parameter or
@@ -517,7 +521,7 @@ class Flow:
                 continue
             if tok.kind == "op" and tok.text == "{":
                 # A dictionary's keys are ids (a format's placeholders), but its values are shown
-                # when String.format() fills them in (#1715).
+                # when String.format() fills them in (#1715), or when one is looked up.
                 for value in self.dict_values(toks, i):
                     self.expression(script, func, value, carry_only)
                 i = matching(toks, i) + 1
@@ -552,11 +556,11 @@ class Flow:
                 return i + 1
         return len(toks)
 
-    @staticmethod
-    def is_format(toks: list[Tok], at: int) -> bool:
-        """Whether the call opening at `at` is a text's format(), whose values make up its result
-        (a dictionary's values or an array's items, #1715)."""
-        return toks[at - 1].text == "format" and at >= 2 and toks[at - 2].text == "."
+    def is_format(self, script: Script, toks: list[Tok], at: int) -> bool:
+        """Whether the call opening at `at` is a text's format(), not a game function of that
+        name: its values make up its result (a dictionary's values or an array's items, #1715)."""
+        method = toks[at - 1].text == "format" and at >= 2 and toks[at - 2].text == "."
+        return method and not self.resolve(script, toks, at)
 
     @staticmethod
     def dict_values(toks: list[Tok], at: int) -> Iterator[list[Tok]]:
