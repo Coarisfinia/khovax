@@ -155,9 +155,10 @@ func _draw_short_ids(rng: Rng) -> void:
 
 
 ## Each wild monster spot's species: the one its region names, else one rolled from the roster
-## with `rng`. Of the rolled ones, those WildBabies picks, from the babies' own stream, so the
+## with `rng`. Of the rolled ones whose species has an earlier form (owner, on #1722: a species
+## with none has no baby yet), those WildBabies picks, from the babies' own stream, so the
 ## species and the short ids stay as they were before there were babies (#1697), are the first
-## form of their line instead, and their spots go into `young`, in id order. Every species placed,
+## form of their line instead, and their spots go into `young`. Every species placed,
 ## listed or a listed one's first form is one this instance knows.
 func _species_at(
 	state: GameState,
@@ -167,14 +168,17 @@ func _species_at(
 ) -> Dictionary[Vector2i, String]:
 	var species_at: Dictionary[Vector2i, String] = {}
 	var rolled: Array[Vector2i] = []
+	var lined: Dictionary[Vector2i, bool] = {}
 	for spot: Vector2i in state.region.wild_monsters:
 		var named: WildSpot = WildSpot.read(placed[spot]) if placed.has(spot) else null
 		species_at[spot] = named.species if named != null else ""
 		if species_at[spot].is_empty() and not roster.is_empty():
 			species_at[spot] = roster[rng.pick_weighted(weights)]
 			rolled.append(spot)
+			if _first_form(species_at[spot]) != species_at[spot]:
+				lined[spot] = true
 	var baby_stream: int = StateHash.mix(stream(), StateHash.name_code("babies"))
-	young.append_array(WildBabies.chosen(rolled, Rng.new(state.rng_seed, baby_stream)))
+	young.append_array(WildBabies.chosen(rolled, lined, Rng.new(state.rng_seed, baby_stream)))
 	for spot: Vector2i in young:
 		species_at[spot] = _first_form(species_at[spot])
 	# A save's babies are of their line's first form, whichever this start rolled.

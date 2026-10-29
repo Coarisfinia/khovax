@@ -43,11 +43,12 @@ extends RefCounted
 ## next member, a pack down to one is gone, and a save plays on the same. The content's Vynakiir
 ## band in Ivenwhal Wudhen.
 ##
-## Babies live beside the grown ones (#1697): each bundle of rolled wild monsters holds babies in
-## WildBabies.CHANCE thousandths of cases, over many seeds within a tolerance; a baby is of the
-## first form of its line (level 1 and unevolved), a grown one keeps its species, a monster the
-## region names never starts as a baby, and a save gives the babies back, in the state hash. In
-## Hrovumel Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form.
+## Babies live beside the grown ones (#1697): each bundle of rolled wild monsters whose species has
+## an earlier form holds babies in WildBabies.CHANCE thousandths of cases, over many seeds within a
+## tolerance; a baby is of the first form of its line (level 1 and unevolved), a grown one keeps its
+## species, a monster the region names never starts as a baby, a species with no earlier form has
+## no babies (owner, on #1722), and a save gives the babies back, in the state hash. In Hrovumel
+## Stolm, a Vynakiir's baby is a Vynnimu, and every baby there is a first form with a later one.
 ##
 ## In its grazing hours a grazer walks to the nearest grass and eats there, and in its drinking
 ## hours a drinker finds its way round a rock wall to the nearest water and drinks (#1203).
@@ -131,6 +132,8 @@ const BABY_BUNDLES: Array[Array] = [
 const BABY_NAMED: Vector2i = Vector2i(-6, 1)
 const BABY_ADULT: String = "big"
 const BABY_FIRST_FORM: String = "pup"
+## A species with no earlier form (owner, on #1722): it has no babies.
+const BABY_LONE: String = "own"
 const BABY_SEEDS: int = 1000
 const BABY_TOLERANCE: int = 50
 ## How many seeds of Hrovumel Stolm the content's baby check plays.
@@ -1445,6 +1448,10 @@ func _check_wild_babies() -> String:
 			for spot: Vector2i in bundle.slice(0, bundle.size() - 1):
 				if wild.babies.has(at[spot]) or wild.species_of(at[spot]) != BABY_ADULT:
 					return "more than the last of a bundle of %d started as a baby" % bundle.size()
+	for seed_value: int in BABY_SEEDS:
+		var lone: GameState = _baby_state(seed_value, BABY_LONE)
+		if not (lone.feature(WildMonsterFeature.ID) as WildMonsterFeature).babies.is_empty():
+			return "a species with no earlier form had a baby (seed %d)" % seed_value
 	var share: int = Fixed.ratio(held, BABY_SEEDS * BABY_BUNDLES.size())
 	if absi(share - WildBabies.CHANCE) > BABY_TOLERANCE:
 		return "%d thousandths of the bundles held babies, not about %d" % [
@@ -1497,6 +1504,8 @@ func _check_content_babies() -> String:
 			var species: String = wild.species_of(monster)
 			if content.first_form(species) != species:
 				return "a baby in Hrovumel Stolm is a %s, which is no first form" % species
+			if not content.ascensions.has(species):
+				return "a baby in Hrovumel Stolm is a %s, which has no later form" % species
 			if species == "vynnimu":
 				pups += 1
 	if content.first_form("vynakiir") != "vynnimu":
@@ -1506,19 +1515,20 @@ func _check_content_babies() -> String:
 	return ""
 
 
-## A disc with the baby flow's bundles of rolled monsters (BABY_BUNDLES), all of BABY_ADULT, whose
-## line's first form is BABY_FIRST_FORM, and a monster the region names beside the first.
-static func _baby_state(seed_value: int) -> GameState:
+## A disc with the baby flow's bundles of rolled monsters (BABY_BUNDLES), all of `rolled`: by
+## default BABY_ADULT, whose line's first form is BABY_FIRST_FORM; and a monster the region names
+## beside the first.
+static func _baby_state(seed_value: int, rolled: String = BABY_ADULT) -> GameState:
 	var region: Region = Region.disc(10)
 	for bundle: Array in BABY_BUNDLES:
 		for spot: Vector2i in bundle:
 			region.wild_monsters.append(spot)
 	region.wild_monsters.append(BABY_NAMED)
 	region.add_placement(WildSpotPlacements.KIND, BABY_NAMED, WildSpot.NAMED + BABY_ADULT)
-	var roster: Array[String] = [BABY_ADULT]
+	var roster: Array[String] = [rolled]
 	var weights: Array[int] = [1]
 	var first_forms: Dictionary[String, String] = { BABY_ADULT: BABY_FIRST_FORM }
-	var hp: Dictionary[String, int] = { BABY_ADULT: 10, BABY_FIRST_FORM: 5 }
+	var hp: Dictionary[String, int] = { BABY_ADULT: 10, BABY_FIRST_FORM: 5, BABY_LONE: 10 }
 	var ordered: Array[Feature] = [
 		MovementFeature.new(),
 		KnockdownFeature.new(),

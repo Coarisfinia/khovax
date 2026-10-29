@@ -4,10 +4,12 @@ extends RefCounted
 ## and unevolved, living beside the grown ones. The spots whose species was rolled from the
 ## blueprint's list form bundles the way packs gather (PackFeature): in order, each spot not in a
 ## bundle yet leads one and gathers the nearest such spots within BUNDLE_REACH of it, the earlier
-## of the equally near first, up to BUNDLE_SIZE with itself. Each bundle holds babies in
-## CHANCE thousandths of cases, rolled once for it: then its last half, at least one, are babies,
-## each of the first form of its own species' line. A spot whose region names its species keeps
-## its grown monster, so a boss or a quest's monster never starts as a baby.
+## of the equally near first, up to BUNDLE_SIZE with itself. Only a monster whose species has an
+## earlier form, a baby species of its own (owner, on #1722), can be a baby; a bundle that has
+## one holds babies in CHANCE thousandths of cases, rolled once for it: then the last half of
+## those, at least one, are babies, each of the first form of its own species' line. A bundle
+## without one rolls nothing. A spot whose region names its species keeps its grown monster, so a
+## boss or a quest's monster never starts as a baby.
 
 ## How likely a bundle is to hold babies, in thousandths; its number is in Tuning.
 const CHANCE: int = Tuning.WILD_BABY_CHANCE
@@ -16,15 +18,23 @@ const BUNDLE_SIZE: int = Tuning.PACK_SIZE
 const BUNDLE_REACH: int = Tuning.PACK_REACH
 
 
-## The spots among `rolled`, in its order, that start as babies, with `rng`'s rolls.
-static func chosen(rolled: Array[Vector2i], rng: Rng) -> Array[Vector2i]:
+## The spots among `rolled`, in bundle order, that start as babies, with `rng`'s rolls: only those
+## `young` holds, the spots whose species has an earlier form.
+static func chosen(
+	rolled: Array[Vector2i],
+	young: Dictionary[Vector2i, bool],
+	rng: Rng,
+) -> Array[Vector2i]:
 	var babies: Array[Vector2i] = []
 	for bundle: Array in bundles(rolled):
-		if not rng.chance(CHANCE, Fixed.ONE):
+		var can: Array[Vector2i] = []
+		for spot: Vector2i in bundle:
+			if young.has(spot):
+				can.append(spot)
+		if can.is_empty() or not rng.chance(CHANCE, Fixed.ONE):
 			continue
-		var count: int = maxi(Fixed.div_floor(bundle.size(), 2), 1)
-		for baby: Vector2i in bundle.slice(bundle.size() - count):
-			babies.append(baby)
+		var count: int = maxi(Fixed.div_floor(can.size(), 2), 1)
+		babies.append_array(can.slice(can.size() - count))
 	return babies
 
 
