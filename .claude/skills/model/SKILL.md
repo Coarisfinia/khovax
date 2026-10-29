@@ -125,6 +125,12 @@ a second model could use goes into the library or a generic tool, never into one
     a steep brightness falloff, faint tints and a deep gradient with a haze band; `uv` maps a
     surface around its middle onto it, and `disc` paints a spot (an eye). Never a generated
     (AI) sky: its stars each have a different number of points.
+  - `repaint` (#1609): a generated model's texture painted anew from where each texel lies on
+    the body, for a download whose paint is a patchwork of islands: `Texels` gives every covered
+    texel its spot, face normal and face at rest, `pieces` the mesh's connected pieces (a tail, an
+    eye), `Cells` cellular noise from a fixed seed (cracked rock or ice running across the
+    islands' seams), and `image` the canvas as a packed image, its gaps filled from the islands'
+    edges (`dilate`).
   - `imported`: a built `.glb` read back as the game imports it (its clip rate and loops from
     the `.import`), for the checks and plots.
   - `symmetry`: `check` fails the build when a left part (`.L`) isn't its right twin (`.R`)
@@ -308,6 +314,19 @@ A model whose mesh and colour come from the owner's Meshy download (as Drakkudor
   chest's underside and a bowing neck pinches between the shoulders (the volume check).
 - **Reach:** its legs are short against its body, so the wolf's clips' body shifts, paw steps and
   tail swings are scaled down (`lesser`); the footprint and the legs' reach show by how much.
+
+**The traps found on the Frostfire Hound (#1609)**, a four-legged Meshy auto-rig with few bones:
+- **A white glow:** a download with an emissive map kept its white emissive factor once the map
+  was dropped, and glowed all over; `import_source.py` now turns the glow off.
+- **No parts at all:** where a fork's ball reaches past most of the legs (a long first leg bone
+  from the shoulder to the elbow), `rigged.adopt` finds no part outside the balls, prints
+  `UNMATCHED` for every chain and names them `chainN_NN`. Read each chain's bones and weights
+  (`inspect_meshy.py` on the source) and name them in the model script, as `frostfire_hound.py`
+  does.
+- **A stub of a thigh:** the auto-rig put the hind knee high under the hip (the dimensions check:
+  shin/thigh 1.58). Move the joint to where the mesh bends and give the skin above it to the
+  thigh.
+- **A messy paint:** repaint it by position with `lib/repaint.py` rather than editing the atlas.
 
 ## 1. Build (Blender script)
 - **Where:** `packages/game-models/<name>.py` builds the model, and
