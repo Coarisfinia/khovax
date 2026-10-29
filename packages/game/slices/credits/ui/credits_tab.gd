@@ -26,6 +26,12 @@ func _ready() -> void:
 	text = tr("[b]Version:[/b] %s") % BuildVersion.version() + "\n" + log_line() + credits
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Credits")
+
+
 ## The line naming where the error log is (ErrorLog), or "" where there's none to name (the web).
 ## Static, so it's translated through the TranslationServer rather than a node's tr().
 static func log_line() -> String:

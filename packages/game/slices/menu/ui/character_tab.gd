@@ -77,6 +77,12 @@ func _ready() -> void:
 	_column.add_child(materials)
 
 
+## The menu's title for this tab (#1677): a literal tr(), so the translation template has it; the
+## node keeps its English name, which the tests find it by.
+func tab_title() -> String:
+	return tr("Character")
+
+
 ## Shows the color in use, the player's own or the world's default while Auto picks it, and their
 ## monsters as they are now.
 func refresh() -> void:

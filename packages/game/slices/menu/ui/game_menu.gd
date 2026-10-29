@@ -280,7 +280,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_child(survey_tab)
 	# The tabs later slices add, like the Quests tab and the codex book (#1174, #1614): game/ hands
 	# them over as the menu's own children in the main scene, so the menu never names a slice after
-	# it. Each is named by its node's name.
+	# it. Each is titled by its tab_title() (#1677).
 	for more: Node in more_tabs:
 		remove_child(more)
 		tabs.add_child(more)
@@ -291,6 +291,11 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_child(settings)
 	tabs.add_child(CONTROLS_TAB.instantiate())
 	tabs.add_child(CREDITS_TAB.instantiate())
+	# Each tab names its title with a literal tr() (#1677), which the translation template sees; a
+	# tab without one keeps its node's name.
+	for tab: Node in tabs.get_children():
+		if tab.has_method(&"tab_title"):
+			tabs.set_tab_title(tab.get_index(), str(tab.call(&"tab_title")))
 	row.add_child(tabs)
 	var close: Button = MenuWidgets.icon_button(CLOSE_ICON, tr("Close the menu"), toggle)
 	close.name = CLOSE_NAME
