@@ -90,7 +90,7 @@ func show_monster(
 		]
 		# Its sight trait (#962), only for a species that has one.
 		if species.sight > 0:
-			lines.append(tr("Sight: you see %d steps further while you carry it") % species.sight)
+			lines.append(_sight_text(species.sight))
 		if ascends:
 			var given: String = ascension.material.replace("_", " ")
 			var grown: Species = SpeciesContent.cached().species.get(ascension.into)
@@ -113,11 +113,14 @@ static func ascension_text(into: String, level: int) -> String:
 	)
 
 
-## Its ascension's material, `given`, and how many of it the player `holds`.
+## Its ascension's material, `given`, and how many of it the player `holds`, through tr_n() so a
+## language picks its plural form by the count (#1709).
 static func material_text(given: String, holds: int) -> String:
-	return TranslationServer.tr("Given one {material}: you hold {count}").format(
-		{ "material": given, "count": holds }
-	)
+	return TranslationServer.tr_n(
+		"Given one {material}: you hold {count}",
+		"Given one {material}: you hold {count}",
+		holds,
+	).format({ "material": given, "count": holds })
 
 
 ## Said once a monster has ascended: from which species, `from`, into which, `into`.
@@ -144,6 +147,16 @@ func _progress(monster: DominatedMonster) -> String:
 		"level": monster.level + 1,
 	}
 	return tr("Progress: {progress} of {needed} to level {level}").format(parts)
+
+
+## Its sight trait (#962): how many `steps` further the player sees, through tr_n() so a language
+## picks its plural form by the count (#1709).
+func _sight_text(steps: int) -> String:
+	return tr_n(
+		"Sight: you see {steps} steps further while you carry it",
+		"Sight: you see {steps} steps further while you carry it",
+		steps,
+	).format({ "steps": steps })
 
 
 ## The first line: the monster's species, as `species_name`, and its `level`.
