@@ -387,6 +387,54 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
+def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
+    """Paints out what's left of the generator's eyes on `skin`'s head texture (#1737), for a
+    creature whose own colours have no black: the generator paints its eyes over many of the
+    texture's islands, and fragments `repaint` misses (a sliver across an island's seam, a pupil
+    on an island of its own, a dark smudge under the eye) still show where the old eyes were.
+    Every near-black texel (its brightest channel under `below`, sRGB) goes, and so does every
+    texel within `reach` of a sample of the head darker than `ratio` of the head's median, if it
+    is that dark too; with `grow` texels around each, they take the colour of the texels around
+    them, filled in from the edges inward. Returns how many texels it painted."""
+    head = Head(skin, bone)
+    pixels = head.pixels
+    height, width = pixels.shape[:2]
+    value = pixels[:, :, :3].max(axis=2)
+    dim = ratio * float(numpy.median(head.colours.max(axis=1)))
+    near = numpy.zeros((height, width), dtype=bool)
+    darker = head.colours.max(axis=1) < dim
+    near[head.texels[0][darker], head.texels[1][darker]] = True
+    for _ in range(reach):
+        near = _spread(near)
+    hole = (value < below) | (near & (value < dim))
+    for _ in range(grow):
+        hole = _spread(hole)
+    painted = int(hole.sum())
+    while hole.any():
+        known = ~hole
+        total = numpy.zeros((height, width, 3), dtype=numpy.float32)
+        count = numpy.zeros((height, width), dtype=numpy.float32)
+        for step in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            total += numpy.roll(pixels[:, :, :3] * known[:, :, None], step, axis=(0, 1))
+            count += numpy.roll(known, step, axis=(0, 1))
+        edge = hole & (count > 0)
+        if not edge.any():
+            break
+        pixels[edge, :3] = total[edge] / count[edge][:, None]
+        hole &= ~edge
+    head.image.pixels.foreach_set(pixels.ravel())
+    head.image.update()
+    return painted
+
+
+def _spread(mask):
+    """`mask` grown by one texel to each side."""
+    grown = mask.copy()
+    for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        grown |= numpy.roll(mask, (dy, dx), axis=(0, 1))
+    return grown
+
+
 def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, middle=0.0, upright=False,
         **shape):
     """Our eyes (eyes.eye, with lids) on `skin` where `marks` (left, right) are: the left one's
