@@ -1,6 +1,6 @@
 // Kalvrakkor's development web (#677, #1685): a heavy hound of frost and fire, it leans into its
 // bite and its bulk, and may grow quicker. Its shifts and its stronger special are placeholders to
-// tune (#960); its deepest nodes grant a stronger special.
+// tune (#960); its hunt's deepest node grants a stronger special.
 {
 	"species": "kalvrakkor",
 	// Around the web: each direction sits beside the ones before and after it, the last beside the
@@ -9,8 +9,7 @@
 		{ "id": "molten", "nodes": [
 			{ "leaning": { "strength": 50 } },
 			{ "leaning": { "strength": 60 } },
-			{ "leaning": { "strength": 80, "speed": -30 } },
-			{ "special": 200 }
+			{ "leaning": { "strength": 80, "speed": -30 } }
 		] },
 		{ "id": "frozen", "nodes": [
 			{ "leaning": { "hp": 60 } },
@@ -25,7 +24,8 @@
 		{ "id": "hunter", "nodes": [
 			{ "leaning": { "strength": 30, "speed": 30 } },
 			{ "leaning": { "strength": 40, "speed": 40, "hp": -20 } },
-			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } }
+			{ "leaning": { "strength": 60, "speed": 60, "hp": -40 } },
+			{ "special": 200 }
 		] }
 	],
 	"bridges": [["molten_2", "frozen_2"], ["swift_1", "hunter_1"]],
