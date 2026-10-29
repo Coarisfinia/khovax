@@ -1063,8 +1063,8 @@ jobs:
           retry() {
             local err try wait=15 pattern="$transient"
             # Once, creating the release failed with a 403 "Resource not accessible by integration",
-            # with Contents: write granted and the runs around it creating theirs: that call alone
-            # takes a 403 for GitHub's hiccup.
+            # with Contents: write granted and the runs around it creating theirs: the create and the
+            # uploads, the calls that write the release, take that 403 for GitHub's hiccup.
             if [ -n "${retry_403:-}" ]; then
               pattern+='|Resource not accessible by integration'
             fi
@@ -1151,6 +1151,6 @@ jobs:
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
           # what a broken upload left under its name.
           for file in "${files[@]}"; do
-            retry gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
+            retry_403=1 retry gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
           done
           retry gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
