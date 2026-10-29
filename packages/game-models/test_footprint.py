@@ -35,8 +35,13 @@ FITS, OVERSIZED = 1.10, 2.0
 # but within a monster's (1.05).
 SPREAD = 1.18
 
+# How much a figure's standing clip shrinks the oversized box: to the fitting box's width, the
+# way a figure's idle pose draws in its T-pose's arms.
+STANDS = FITS / OVERSIZED
+
 # Name: (box width, clips as {name: how much it widens}, or None for a static model, whether the
-# check passes it).
+# check passes it, and optionally the clips a view plays (None for every clip) and the clip it
+# stands in, as check_footprint.py passes them for a pack's model, #1652).
 MODELS = {
     "monster_fits": (FITS, {"Walk": SPREAD}, True),
     "monster_oversized": (OVERSIZED, {"Walk": 1.0}, False),
@@ -46,6 +51,12 @@ MODELS = {
     "prop_attacks": (FITS, {"Attack": SPREAD}, False),
     "static_fits": (FITS, None, True),
     "static_oversized": (OVERSIZED, None, False),
+    "figure_stands": (OVERSIZED, {"Idle": STANDS}, True, ["Idle"], "Idle"),
+    "figure_plays_only_its_clips": (OVERSIZED, {"Idle": STANDS, "Spin": 1.0}, True, ["Idle"], "Idle"),
+    "figure_plays_its_clips": (OVERSIZED, {"Idle": STANDS, "Spin": 1.0}, False, ["Idle", "Spin"], "Idle"),
+    "figure_plays_none": (FITS, {"Idle": SPREAD}, True, [], None),
+    "figure_lacks_a_clip": (FITS, {"Idle": 1.0}, False, ["Run"], None),
+    "figure_lacks_its_stance": (FITS, {"Idle": 1.0}, False, None, "Stand"),
 }
 
 
@@ -85,21 +96,22 @@ def build(width, clips):
     for name, widen in clips.items():
         rig.animation_data.action = bpy.data.actions.new(name)
         # Bone space: the bone runs up the world's Z along its Y, so its X and Z are the ground's.
-        for frame, share in ((1, 1.0), (5, widen)):
+        for frame, share in ((1, 1.0 if widen >= 1.0 else widen), (5, widen)):
             pose.scale = Vector((share, 1.0, share))
             pose.keyframe_insert("scale", frame=frame)
     pose.scale = Vector((1.0, 1.0, 1.0))
     return rig, [skin]
 
 
-# A tiny Godot project: a figure view with its constants, a chest view that preloads its model at a
-# scale and shares the figure's hidden parts, and a scene that instances the figure under the view.
+# A tiny Godot project: a figure view with its constants (a list over lines, with comments), a chest
+# view that preloads its model at a scale and shares the figure's hidden parts, a scene that
+# instances the figure under the view, and one whose root is the view.
 PROJECT = {
     "slices/figures/look/figure_view.gd": (
         'class_name FigureView\n'
         'const IDLE: StringName = &"Idle"\n'
         'const MOVE: StringName = &"Run"  # moving\n'
-        'const CLIPS: Array[StringName] = [IDLE, MOVE]\n'
+        'const CLIPS: Array[StringName] = [\n\tIDLE,  # standing, still\n\tMOVE,  # "moving", running\n]\n'
         'const HIDDEN_PARTS: Array[String] = [\n\t"Knife",\n\t"Bow",\n]\n'),
     "slices/chests/look/chest_view.gd": (
         'const MODEL: PackedScene = preload("res://chest.glb")\n'
@@ -114,6 +126,12 @@ PROJECT = {
         '[node name="Player" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n\n'
         '[node name="Model" parent="Player" instance=ExtResource("2_figure")]\n'
         'transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)\n'),
+    # The view on the scene's root, its model a direct child.
+    "slices/people/look/person.tscn": (
+        '[ext_resource type="Script" path="res://slices/figures/look/figure_view.gd" id="1_view"]\n'
+        '[ext_resource type="PackedScene" path="res://person.glb" id="2_person"]\n\n'
+        '[node name="Person" type="Node3D"]\nscript = ExtResource("1_view")\n\n'
+        '[node name="Model" parent="." instance=ExtResource("2_person")]\n'),
 }
 # Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
 VIEWS = {
@@ -121,6 +139,7 @@ VIEWS = {
     "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
     # Only a view in a slice's look/ counts: a tool that preloads a model is no view.
     "lamp": [],
+    "person": [("figure_view", 1.0, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
     "pebble": [],
 }
 
@@ -146,9 +165,10 @@ def views_read():
 
 def main():
     passed = views_read()
-    for name, (width, clips, passes) in sorted(MODELS.items()):
+    for name, (width, clips, passes, *view) in sorted(MODELS.items()):
         rig, meshes = build(width, clips)
-        lines, verdict = footprint.report(rig, meshes, footprint.limits(rig, large=False))
+        played, standing = view or (None, None)
+        lines, verdict = footprint.report(rig, meshes, footprint.limits(rig, large=False), played, standing)
         for line in lines:
             log.info("FOOTPRINT test %s %s" % (name, line))
         if verdict != passes:

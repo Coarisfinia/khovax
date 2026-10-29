@@ -150,14 +150,15 @@ def _instanced(game, scripts, scene, glb):
         head, body = found.group(1), found.group(2)
         name = re.search(r'name="([^"]+)"', head).group(1)
         parent = re.search(r'parent="([^"]+)"', head)
-        path = name if parent is None else (name if parent.group(1) == "." else parent.group(1) + "/" + name)
+        # The root is ".", its children their bare names, as scenes name their parents.
+        path = "." if parent is None else (name if parent.group(1) == "." else parent.group(1) + "/" + name)
         nodes[path] = (head, body)
     views = []
     for path, (head, body) in nodes.items():
         instance = re.search(r'instance=ExtResource\("([^"]+)"\)', head)
         if instance is None or instance.group(1) not in models:
             continue
-        parent = nodes.get(path.rpartition("/")[0]) if "/" in path else None
+        parent = None if path == "." else nodes.get(path.rpartition("/")[0] if "/" in path else ".")
         script = re.search(r'^script = ExtResource\("([^"]+)"\)', parent[1], re.M) if parent else None
         if script is None:
             raise ValueError("%s: %s has no view script on its parent" % (_short(game, scene), path))
@@ -176,29 +177,39 @@ def _scale(body):
 
 
 def _expression(text, start):
-    """The constant's value from `start`: up to the line's end, or past it while brackets are open."""
-    depth, end = 0, start
+    """The constant's value from `start`: up to the line's end, or past it while brackets are open,
+    without its comments (a `#` outside a string, at any depth)."""
+    depth, end, quoted, kept = 0, start, False, []
     while end < len(text):
         char = text[end]
-        if char in "([{":
-            depth += 1
-        elif char in ")]}":
-            depth -= 1
-        elif char == "#" and depth == 0:
-            break
-        elif char == "\n" and depth == 0:
-            break
+        if char == '"':
+            quoted = not quoted
+        elif not quoted:
+            if char == "#":
+                while end < len(text) and text[end] != "\n":
+                    end += 1
+                continue
+            if char in "([{":
+                depth += 1
+            elif char in ")]}":
+                depth -= 1
+            elif char == "\n" and depth <= 0:
+                break
+        kept.append(char)
         end += 1
-    return text[start:end]
+    return "".join(kept)
 
 
 def _items(text):
-    """A list's items, split at its top-level commas."""
-    items, depth, item = [], 0, ""
+    """A list's items, split at its top-level commas outside strings."""
+    items, depth, quoted, item = [], 0, False, ""
     for char in text:
-        depth += char in "([{"
-        depth -= char in ")]}"
-        if char == "," and depth == 0:
+        if char == '"':
+            quoted = not quoted
+        elif not quoted:
+            depth += char in "([{"
+            depth -= char in ")]}"
+        if char == "," and depth == 0 and not quoted:
             items.append(item)
             item = ""
         else:
