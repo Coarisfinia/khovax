@@ -174,7 +174,8 @@ func _stat_name(stat: String, short: bool) -> String:
 			return tr("Str") if short else tr("Strength")
 		"speed":
 			return tr("Spd") if short else tr("Speed")
-	return stat
+	# A stat the view doesn't know a word for yet (DevelopmentLeaning.STATS).
+	return tr("Unknown stat")
 
 
 ## Thousandths, as a percentage: a tenth shows only when there is one.

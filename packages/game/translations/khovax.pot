@@ -142,6 +142,7 @@ msgid "Found in: %s"
 msgstr ""
 
 #: slices/codex/ui/codex_book.gd
+#: slices/codex/ui/codex_page.gd
 msgid "Codex"
 msgstr ""
 
@@ -296,6 +297,10 @@ msgstr ""
 
 #: slices/development/ui/development_web_view.gd
 msgid "Speed"
+msgstr ""
+
+#: slices/development/ui/development_web_view.gd
+msgid "Unknown stat"
 msgstr ""
 
 #: slices/dialogs/data/teska_na_amvrel_greeting.jsonc

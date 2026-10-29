@@ -150,7 +150,8 @@ static func heading_of(kind: String) -> String:
 			return TranslationServer.tr("Places")
 		TextTags.UNIQUE_ITEM:
 			return TranslationServer.tr("Unique items")
-	return kind
+	# A kind without a page of its own (TextTags.CODEX_KINDS lists those that have one).
+	return TranslationServer.tr("Codex")
 
 
 ## The standing line while this machine's player is neutral with a faction.
