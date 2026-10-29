@@ -195,7 +195,7 @@ def main():
         own = marked_eyes.BEASTS[beast] if beast else None
         skin = build(paint, ours, weight, colour, own.middle if own else 0.0)
         found = marked_eyes.painted(skin, own=own)
-        if marked_eyes.fragments(skin):
+        if marked_eyes.fragments(skin, weight=own.weight if own else marked_eyes.HEAD_WEIGHT):
             found["FRAGMENTS"] = ()
         ok = (not found) == passes
         passed = passed and ok

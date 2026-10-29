@@ -49,12 +49,14 @@ def found(objects, path):
     line per mirrored pair of marked spots, with where they are and how wide, and a line per skin
     with the fragments of its eyes left beyond a pair (#1756)."""
     lines = []
+    own = marked_eyes.BEASTS.get(path)
     for skin in ground.skinned(objects):
-        for kind, marks in marked_eyes.painted(skin, own=marked_eyes.BEASTS.get(path)).items():
+        for kind, marks in marked_eyes.painted(skin, own=own).items():
             lines.append("%s: %s eyes at %s and %s, %.3f and %.3f wide" % (
                 skin.name, kind, tuple(round(float(v), 3) for v in marks[0].middle),
                 tuple(round(float(v), 3) for v in marks[1].middle), marks[0].width, marks[1].width))
-        left = sorted(marked_eyes.fragments(skin), key=lambda mark: -mark.count)
+        weight = own.weight if own is not None else marked_eyes.HEAD_WEIGHT
+        left = sorted(marked_eyes.fragments(skin, weight=weight), key=lambda mark: -mark.count)
         if left:
             lines.append("%s: %d dark fragments, the largest at %s" % (skin.name, len(left), ", ".join(
                 "%s (%d samples)" % (tuple(round(float(v), 3) for v in mark.middle), mark.count)

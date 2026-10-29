@@ -45,7 +45,7 @@ MIN_SAMPLES = 8
 # and how much wider one may be than the other.
 MIRROR, WIDER = 0.6, 2.0
 # A fragment of a generator's eye (`fragments`, #1756): a spot of at least FRAGMENT_SAMPLES of the
-# head's samples, each darker than FRAGMENT_RATIO of the head's median; a lone sample or two is a
+# head's distinct samples, each darker than FRAGMENT_RATIO of the head's median; a lone sample or two is a
 # speck of shading in the paint.
 FRAGMENT_RATIO, FRAGMENT_SAMPLES = 0.6, 3
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
@@ -391,18 +391,19 @@ def linear(colour):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in colour) + (1.0,)
 
 
-def fragments(skin, bone="head"):
+def fragments(skin, bone="head", weight=HEAD_WEIGHT):
     """What's left of the generator's eyes on `skin`'s texture over the head that `bone` moves,
     beyond a mirrored pair (#1756): the head's samples darker than FRAGMENT_RATIO of the head's
     median, grouped where they lie, each spot of at least FRAGMENT_SAMPLES as a `Mark` (a sliver
     across an island's seam, a pupil on an island of its own, a dark speck by the eye). The ratio
     is below `scrub`'s, so a head `scrub` has cleaned, whose filled texels may sit a little under
     its own threshold, passes. Our own eyes are plain colours, not the texture, so they never
-    count. Empty for a skin with no `bone` or no textured face on the head."""
+    count. The head is the faces weighted at least `weight` to `bone` (a beast's own `Marked`'s,
+    as `painted` takes). Empty for a skin with no `bone` or no textured face on the head."""
     if bone not in skin.vertex_groups:
         return []
     try:
-        head = Head(skin, bone)
+        head = Head(skin, bone, weight)
     except Unpainted:
         return []
     value = head.colours.max(axis=1)
@@ -411,8 +412,10 @@ def fragments(skin, bone="head"):
         return []
     points, normals = head.points[dark], head.normals[dark]
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
+    # A corner is sampled once per triangle it belongs to: a spot counts its distinct samples, so
+    # one dark texel at a shared corner is no fragment.
     return [Mark(points[group], normals[group]) for group in _spots(points, cell)
-            if len(group) >= FRAGMENT_SAMPLES]
+            if len(numpy.unique(points[group], axis=0)) >= FRAGMENT_SAMPLES]
 
 
 def scrub(skin, bone="head", below=DARK_VALUE, ratio=0.75, reach=6, grow=3):
