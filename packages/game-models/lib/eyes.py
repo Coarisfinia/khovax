@@ -13,6 +13,7 @@ import math
 
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 from . import parts, scene
 
@@ -26,6 +27,11 @@ OPEN = math.radians(160)
 # reach past the rim's top, or the rim shows above the lid in a blink (check_brows.py).
 LID_SIZE = (1.25, 1.25, 0.95)
 DEEP = 1.2
+# How many times `eye` grows a lid that something pokes through, and by how much more than it
+# pokes out (a share), so the lid clears it rather than touching it.
+GROWS, MARGIN = 8, 0.03
+# Marks a lid `mirrored` made from another (its custom property).
+MIRROR = "mirrored"
 
 def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow=0.0, brow_size=1.0,
         pupil=(0.16, 0.55), lid=None):
@@ -77,15 +83,29 @@ def eye(body, name, guess, forward, size, mats, bone, almond=1.0, tilt=0.0, brow
                    minor_segments=4)
     )
     if lid is not None:
-        made.append(_lid(name + ".lid", center, turn, size, almond, mats["skin"], lid))
+        # A narrow eye's lid is thin across: halfway shut, its edge faces out where the glint and
+        # the pupil stand out furthest, and they poke through it (#1690). It's grown taller (its
+        # depth, how far it bulges shut, stays) until nothing does.
+        grow = 1.0
+        cover = _lid(name + ".lid", center, turn, size, almond, mats["skin"], lid, grow)
+        for _round in range(GROWS):
+            reach = clipped(made + [cover])[0]
+            if reach <= 0.0:
+                break
+            bpy.data.objects.remove(cover, do_unlink=True)
+            grow *= (1.0 + reach) * (1.0 + MARGIN)
+            cover = _lid(name + ".lid", center, turn, size, almond, mats["skin"], lid, grow)
+        made.append(cover)
     return made
 
 
-def _lid(name, center, turn, size, almond, mat, bone):
+def _lid(name, center, turn, size, almond, mat, bone, grow=1.0):
     """The lid: the front half of a dome over the eye, flat across its back, turned OPEN up
-    and back about the eye's sideways axis. Remembers its hinge and that axis (Lids)."""
+    and back about the eye's sideways axis, its height times `grow`. Remembers its
+    hinge and that axis (Lids)."""
     width, height, depth = LID_SIZE
     depth = max(depth, DEEP * almond)
+    height = height * grow
     made = parts.part("uv_sphere", name, (0.0, 0.0, 0.0), (width * size, height * almond * size, depth * size),
                       mat=mat, bone=bone, segments=16, ring_count=8)
     # The back half pressed flat onto the front's rim: one closed piece, its faces as built, so
@@ -98,6 +118,49 @@ def _lid(name, center, turn, size, almond, mat, bone):
     return made
 
 
+# How far shut (shares of OPEN) `clipped` looks at a lid: open, every step of a blink, and shut.
+SHARES = tuple(step / 20.0 for step in range(21))
+# Closer to the lid than this share of its depth is touching it, not poking through (float noise
+# where the shut lid meets the eyeball).
+TOUCH = 1e-3
+
+
+def clipped(pieces):
+    """How far any piece of an eye built by `eye` with a lid pokes out through that lid at any
+    of SHARES of its swing (#1690): a vertex outside the lid's closed mesh (its dome and flat
+    back), on the side its dome covers, shows through it. Returns the worst as (how far out, a
+    share of the lid's depth; the piece; the share), (0, None, None) when nothing pokes out. The
+    eye `mirrored` makes is its left one's twin and isn't measured again; the brow lies over the
+    lid, not under it, and is left out."""
+    worst = (0.0, None, None)
+    for lid in (piece for piece in pieces if "hinge" in piece and MIRROR not in piece):
+        eye = lid.name[:-len("lid")]
+        corners = [lid.matrix_world @ vertex.co for vertex in lid.data.vertices]
+        shell = BVHTree.FromPolygons(corners, [polygon.vertices[:] for polygon in lid.data.polygons])
+        hinge, axis = Vector(lid["hinge"]), Vector(lid["axis"])
+        depth = max((corner - hinge).length for corner in corners)
+        # Which way its dome bulges from its flat back, through the hinge.
+        bulge = (sum(corners, Vector()) / len(corners) - hinge).normalized()
+        spots = [(piece.name, piece.matrix_world @ vertex.co) for piece in pieces
+                 if piece.name.startswith(eye) and piece is not lid and not piece.name.endswith(".brow")
+                 for vertex in piece.data.vertices]
+        for share in SHARES:
+            # The lid's bone turns it OPEN * share about its axis from where it was built: the
+            # pieces turned back as far meet the lid as built.
+            back = Matrix.Rotation(-OPEN * share, 3, axis)
+            for name, spot in spots:
+                moved = back @ (spot - hinge) + hinge
+                # Only where the dome covers it: behind the lid's flat back is the head, not the lid.
+                if (moved - hinge).dot(bulge) <= 0.0:
+                    continue
+                location, normal, _index, distance = shell.find_nearest(moved)
+                if location is None or (moved - location).dot(normal) <= 0.0:
+                    continue
+                if distance / depth > max(worst[0], TOUCH):
+                    worst = (distance / depth, name, share)
+    return worst
+
+
 def mirrored(pieces):
     """The right eye of a left one `eyes.eye` built ("Eye.L.*"), mirrored across X (parts.mirrored),
     its lid on the right lid's bone, hinged on the right eye's own sideways axis."""
@@ -105,6 +168,8 @@ def mirrored(pieces):
     for piece in pieces:
         twin = parts.mirrored(piece, piece.name.replace(".L.", ".R."))
         if "hinge" in twin:
+            # Its shape is the left lid's mirrored, which `clipped` measures there.
+            twin[MIRROR] = True
             twin.vertex_groups[LID + "L"].name = LID + "R"
             x, y, z = piece["hinge"]
             twin["hinge"] = (-x, y, z)
@@ -129,6 +194,9 @@ class Lids:
 
     def __init__(self, rig, pieces, parent, faint, blinks=(0.3, 0.7)):
         self.faint, self.blinks = faint, blinks
+        reach, piece, share = clipped(pieces)
+        if reach > 0.0:
+            raise ValueError("%s pokes %.0f%% out through its lid at %.2f shut" % (piece, 100 * reach, share))
         lids = sorted((piece for piece in pieces if "hinge" in piece), key=lambda piece: piece.name)
         self.names = [piece.vertex_groups[0].name for piece in lids]
         scene.select_only(rig)

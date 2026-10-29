@@ -22,6 +22,7 @@ build on another machine paints the same bytes (as lib/starfield.py)."""
 
 import bpy
 import numpy
+from mathutils import Vector
 
 from . import eyes, materials, scene
 
@@ -43,6 +44,11 @@ MIRROR, WIDER = 0.6, 2.0
 # The repaint, in the oval's own radii (1 at its edge): every texel inside FILL is painted over,
 # blended from the skin's samples between RING_IN and RING_OUT.
 FILL, RING_IN, RING_OUT = 1.35, 1.5, 2.3
+# The eye's front, which the head's skin must not cover (`buried`): at most BURIED of its
+# vertices may lie under it (a vertex or two at the iris's very edge, where it meets the skin), and
+# `clear` tries the eye further out in STEPs of its size, at most OUT.
+FRONT = (".iris", ".pupil", ".glint")
+BURIED, STEP, OUT = 0.02, 0.05, 0.5
 # Which way our eyes look, blended with the head's surface there (eyes.eye): ahead and a little
 # out on the left (+X); the right mirrors it.
 FORWARD = (0.25, -1.0, 0.0)
@@ -281,7 +287,53 @@ def fit(skin, marks, mats, bone, forward=FORWARD, ridge=True, **shape):
             bpy.data.objects.remove(piece, do_unlink=True)
         else:
             pieces.append(piece)
+    clear(skin, pieces, width / 2.0)
     return pieces + eyes.mirrored(pieces)
+
+
+def buried(skin, pieces):
+    """The share of the vertices on the face of an eye's front (its iris, pupil and glint among
+    `pieces`, the halves facing the way it looks) that lie under `skin`'s surface: the head's
+    skin cutting across the eye (#1690)."""
+    look = eyes.look(pieces)
+    spots = []
+    for piece in (piece for piece in pieces if piece.name.endswith(FRONT)):
+        middle = piece.matrix_world.translation
+        # Its face toward the way the eye looks: the side of it that shows.
+        spots += [spot for spot in (piece.matrix_world @ vertex.co for vertex in piece.data.vertices)
+                  if (spot - middle).dot(look) > 0.0]
+    under = 0
+    for spot in spots:
+        found, location, normal, _index = skin.closest_point_on_mesh(spot)
+        under += found and (spot - location).dot(normal) < 0.0
+    return under / len(spots)
+
+
+def clear(skin, pieces, size):
+    """Sets a left eye (`pieces`, its lid's hinge with it) where the head's skin covers the least
+    of its front, from where eyes.eye set it to OUT of its size further out along the way it
+    looks, in STEPs (the nearest such spot of the least), so on a curved head or a sculpted lid
+    the skin doesn't cut across it. Raises when more than BURIED of its front stays covered."""
+    look = eyes.look(pieces) * (size * STEP)
+
+    def move(steps):
+        for piece in pieces:
+            piece.location += look * steps
+            if "hinge" in piece:
+                piece["hinge"] = tuple(Vector(piece["hinge"]) + look * steps)
+        bpy.context.view_layer.update()
+
+    covered = []
+    for step in range(round(OUT / STEP) + 1):
+        if step:
+            move(1)
+        covered.append(buried(skin, pieces))
+    best = min(range(len(covered)), key=lambda step: (covered[step], step))
+    move(best - (len(covered) - 1))
+    if covered[best] > BURIED:
+        raise ValueError("the head's skin covers %.0f%% of the eye's front, at best %.2f of its size out" % (
+            100 * covered[best], best * STEP))
+    print("EYES set %.2f of their size out; the skin covers %.1f%% of their front" % (best * STEP, 100 * covered[best]))
 
 
 def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):

@@ -72,12 +72,15 @@ a second model could use goes into the library or a generic tool, never into one
     edge stays over the eye (#1249); with `lid`, a lid on a bone of its own (#1304), which
     `Lids` adds to the rig and, as an `animate` overlay, shuts in Sleep, at Faint's end and in a
     blink now and then in Idle (its bones go into `weights.bind`'s `rigid_bones`); `mirrored`
-    makes a right eye from a left one, lid included.
+    makes a right eye from a left one, lid included. Nothing of an eye pokes through its lid at
+    any point of its swing (#1690): `clipped` measures it against the lid's mesh, `eye` grows a
+    narrow eye's lid taller until nothing does, and `Lids` fails the build if anything still does.
   - `marked_eyes` (#1683): our eyes in place of a generated model's. `replace` finds the two
     flat black ovals the prompt's eye sentence marked on the head (`GLOW` instead of `DARK` for a
     beast imported with glowing painted eyes), paints them over in the skin's colour around them,
-    fits `eyes.eye` with lids there by their position, size and spacing, joins them into the
-    skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
+    fits `eyes.eye` with lids there by their position, size and spacing (`clear` sets them out
+    along the way they look where the head's skin covers least of their iris, pupil and glint, and
+    fails the build past `BURIED`), joins them into the skin, and returns the `Lids` (for `animate`'s overlays) and the eye points (for
     `attachments.add`). It prints an `EYES` line with what it found.
   - `muzzle` (#1026): a canine `Snout`: the brow, stop, bridge and lips melted into the head's
     `Blob` (`upper`), and its own pieces (`parts`): a soft lower jaw on the jaw bone, sized as
