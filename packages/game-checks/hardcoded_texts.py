@@ -12,12 +12,13 @@ A text is player-facing when it flows into what a Control shows:
   by self or bare in its own script where it can, and only by name elsewhere; a shown parameter's
   default and a shown member's initializer count too, and a helper outside the presentation
   (TextTags.shown) passes on the parameters and locals handed to it, never its ids.
-In such an expression, a hit is a string literal outside tr() (formatted with %, glued with +, in
-an array of lines), a constant the expression names, even inside tr() (the extractor reads only
+In such an expression, a hit is a string literal outside tr() (formatted with % or as a value
+handed to String.format(), glued with +, in an array of lines), a constant the expression names, even inside tr() (the extractor reads only
 literals): its string, its array's strings or its dictionary's string keys, and a name made from an
 id with capitalize(). Not a hit: a literal without a letter outside its format specifiers, BBCode
 and text tags (empty, numbers, symbols, "%s: %d"), a StringName or NodePath (&"…", ^"…"), the
-condition of an `x if c else y`, and a literal inside another call (a key, an id).
+condition of an `x if c else y`, a dictionary's key (a format's placeholder) and a literal inside
+another call (a key, an id).
 In scenes: a text on a node whose auto_translate_mode is disabled, and a TabContainer's child,
 whose node name is its tab's title. A script that adds tabs to a TabContainer titles them with
 set_tab_title, since TabContainer titles a tab by its node's name, which no extractor sees.
@@ -504,7 +505,7 @@ class Flow:
                 continue
             if tok.kind == "op" and tok.text == "(" and is_call(toks, i):
                 self.call(script, func, toks, i)
-                if toks[i - 1].text in PASS_THROUGH:
+                if toks[i - 1].text in PASS_THROUGH or self.is_format(toks, i):
                     for arg in split_args(toks, i):
                         self.expression(script, func, arg, carry_only)
                 elif self.outside(toks, i):
@@ -514,7 +515,14 @@ class Flow:
                         self.expression(script, func, arg, carry_only=True)
                 i = matching(toks, i) + 1
                 continue
-            if tok.kind == "op" and tok.text in "[{" and self.subscript_or_dict(toks, i):
+            if tok.kind == "op" and tok.text == "{":
+                # A dictionary's keys are ids (a format's placeholders), but its values are shown
+                # when String.format() fills them in (#1715).
+                for value in self.dict_values(toks, i):
+                    self.expression(script, func, value, carry_only)
+                i = matching(toks, i) + 1
+                continue
+            if tok.kind == "op" and tok.text == "[" and self.subscript(toks, i):
                 i = matching(toks, i) + 1
                 continue
             if carry_only and tok.kind != "id":
@@ -545,10 +553,29 @@ class Flow:
         return len(toks)
 
     @staticmethod
-    def subscript_or_dict(toks: list[Tok], at: int) -> bool:
-        """A [ after a value indexes it (a key), and a { holds a dictionary's keys."""
-        if toks[at].text == "{":
-            return True
+    def is_format(toks: list[Tok], at: int) -> bool:
+        """Whether the call opening at `at` is a text's format(), whose values make up its result
+        (a dictionary's values or an array's items, #1715)."""
+        return toks[at - 1].text == "format" and at >= 2 and toks[at - 2].text == "."
+
+    @staticmethod
+    def dict_values(toks: list[Tok], at: int) -> Iterator[list[Tok]]:
+        """The values of the dictionary opening at `at`: each entry after its key's : (or =)."""
+        for entry in split_args(toks, at):
+            colon = next(
+                (
+                    i
+                    for i, tok in enumerate(entry)
+                    if tok.kind == "op" and tok.text in (":", "=") and Flow.depth(entry, i) == 0
+                ),
+                None,
+            )
+            if colon is not None:
+                yield entry[colon + 1 :]
+
+    @staticmethod
+    def subscript(toks: list[Tok], at: int) -> bool:
+        """A [ after a value indexes it (a key)."""
         before = toks[at - 1] if at > 0 else None
         if before is None or before.kind == "id" and is_keyword(toks, at - 1):
             return False
