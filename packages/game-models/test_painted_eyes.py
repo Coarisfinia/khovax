@@ -1,7 +1,10 @@
 """Tests lib/marked_eyes.py's `painted`, which check_painted_eyes.py runs (#1688), on a textured
 ball for a head: two flat black ovals or two glowing ones painted on its texture fail; a plain
 texture passes, and so does one where our own eyes sit (pieces of plain dark colour joined in,
-whose texels on the texture are black too), since only the texture's own faces count.
+whose texels on the texture are black too), since only the texture's own faces count. A beast's
+own way of marking them (marked_eyes.BEASTS, #1719) finds what `DARK` and `GLOW` miss: Fohossa's
+pale eyes on a head weighted under HEAD_WEIGHT, the Frostfire Hound's amber and ice ones on an ice
+blue head off the middle. And each predicate picks the colours it should, and not its neighbours'.
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_painted_eyes.py
@@ -28,16 +31,46 @@ from lib import marked_eyes  # noqa: E402
 RADIUS, SIZE = 0.5, 256
 # The skin's colour, a painted eye's flat black and its glow (sRGB).
 SKIN, BLACK, GLOW = (0.55, 0.4, 0.3), (0.05, 0.05, 0.05), (1.0, 0.6, 0.1)
+# Fohossa's: its warm grey skin and pale lantern eyes.
+GREY, PALE = (0.84, 0.81, 0.78), (0.98, 0.95, 0.9)
+# The Frostfire Hound's (frostfire_hound.py): its ice blue skin, its amber eye and its ice one.
+ICE, AMBER, ICE_EYE = (0.36, 0.60, 0.88), (1.0, 0.78, 0.30), (0.62, 0.96, 1.0)
 # Where the left eye sits (the model faces -Y, its left is +X; the right one mirrors it), and how
 # far around it the paint reaches.
 EYE, EYE_RADIUS = Vector((0.35, -1.0, 0.3)).normalized() * RADIUS, 0.09
+FOHOSSA = "assets/fohossa/fohossa.glb"
+HOUND = "assets/frostfire_hound/frostfire_hound.glb"
 
-# Name: (the paint on the eyes, or None, whether our eyes are joined in, whether the check passes it).
+# Name: (the paint on the left eye and the right one, or None, whether our eyes are joined in,
+# the head's weight to "head", the skin's colour, the beast in BEASTS whose own marking the check
+# adds, or None, and whether the check passes it).
 CASES = {
-    "plain": (None, False, True),
-    "black_ovals": (BLACK, False, False),
-    "glowing_eyes": (GLOW, False, False),
-    "our_eyes": (None, True, True),
+    "plain": (None, False, 1.0, SKIN, None, True),
+    "black_ovals": ((BLACK, BLACK), False, 1.0, SKIN, None, False),
+    "glowing_eyes": ((GLOW, GLOW), False, 1.0, SKIN, None, False),
+    "our_eyes": (None, True, 1.0, SKIN, None, True),
+    # Pale eyes are neither black nor saturated: only Fohossa's own marking sees them, and only
+    # with its lower head weight.
+    "pale_eyes_unlisted": ((PALE, PALE), False, 0.4, GREY, None, True),
+    "pale_eyes_fohossa": ((PALE, PALE), False, 0.4, GREY, FOHOSSA, False),
+    "plain_fohossa": (None, False, 0.4, GREY, FOHOSSA, True),
+    # The ice blue glows all over, so `GLOW` sees one spot across the middle and no pair; the
+    # hound's own marking sees its amber eye and its ice one, mirrored across its middle.
+    "hound_eyes_unlisted": ((ICE_EYE, AMBER), False, 1.0, ICE, None, True),
+    "hound_eyes": ((ICE_EYE, AMBER), False, 1.0, ICE, HOUND, False),
+    "plain_hound": (None, False, 1.0, ICE, HOUND, True),
+}
+
+# Predicate: (colours it picks, colours it leaves).
+PICKS = {
+    "DARK": (marked_eyes.DARK, [BLACK], [SKIN, GREY, ICE]),
+    "GLOW": (marked_eyes.GLOW, [GLOW, AMBER, ICE], [SKIN, GREY, PALE, BLACK]),
+    "PALE": (marked_eyes.PALE, [PALE, (1.0, 1.0, 1.0)], [GREY, SKIN, ICE_EYE, AMBER, BLACK]),
+    "fohossa": (marked_eyes.BEASTS[FOHOSSA], [PALE], [GREY, SKIN, BLACK]),
+    # The amber one and the ice one, not the ice skin, the amber cracks' red rim, nor a red or a
+    # green glow.
+    "hound": (marked_eyes.BEASTS[HOUND], [AMBER, ICE_EYE],
+              [ICE, (0.42, 0.67, 0.92), (0.95, 0.38, 0.08), (1.0, 0.2, 0.2), (0.3, 1.0, 0.3), PALE]),
 }
 
 
@@ -54,8 +87,8 @@ def material(name, image=None, colour=(0.0, 0.0, 0.0)):
     return made
 
 
-def ball(name, radius, at):
-    """A UV ball mesh object of `radius` at `at`, its every vertex weighted to "head"."""
+def ball(name, radius, at, weight=1.0):
+    """A UV ball mesh object of `radius` at `at`, its every vertex weighted `weight` to "head"."""
     mesh = bpy.data.meshes.new(name)
     built = bmesh.new()
     built.loops.layers.uv.new("UVMap")
@@ -65,31 +98,33 @@ def ball(name, radius, at):
     obj = bpy.data.objects.new(name, mesh)
     obj.location = at
     bpy.context.scene.collection.objects.link(obj)
-    obj.vertex_groups.new(name="head").add(range(len(mesh.vertices)), 1.0, "REPLACE")
+    obj.vertex_groups.new(name="head").add(range(len(mesh.vertices)), weight, "REPLACE")
     return obj
 
 
-def build(paint, ours):
-    """The head: a ball with its texture, `paint` laid over both eyes' spots on it (or nothing),
-    and our eyes joined in when `ours`, their UVs on a black texel of the texture."""
+def build(paint, ours, weight, colour, middle):
+    """The head: a ball of `colour`, weighted `weight` to "head" and centred on x = `middle`, with
+    its texture, `paint`'s left and right colours laid over the eyes' spots on it (or nothing), and
+    our eyes joined in when `ours`, their UVs on a black texel of the texture."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     image = bpy.data.images.new("skin", SIZE, SIZE)
     pixels = numpy.empty((SIZE, SIZE, 4), dtype=numpy.float32)
-    pixels[:, :] = SKIN + (1.0,)
+    pixels[:, :] = colour + (1.0,)
     pixels[0, 0] = BLACK + (1.0,)
     image.pixels.foreach_set(pixels.ravel())
-    skin = ball("Head", RADIUS, (0.0, 0.0, 0.0))
+    skin = ball("Head", RADIUS, (middle, 0.0, 0.0), weight)
     skin.data.materials.append(material("skin", image))
+    spots = [Vector((middle + EYE.x, EYE.y, EYE.z)), Vector((middle - EYE.x, EYE.y, EYE.z))]
     if paint is not None:
-        head = marked_eyes.Head(skin, "head")
-        rows, columns, spots = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
-        for eye in (EYE, Vector((-EYE.x, EYE.y, EYE.z))):
-            inside = numpy.sqrt(((spots - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS
-            head.pixels[rows[inside], columns[inside], :3] = paint
+        head = marked_eyes.Head(skin, "head", weight)
+        rows, columns, texels = marked_eyes._texels(head, numpy.ones(len(head.spots), dtype=bool))
+        for eye, colour in zip(spots, paint):
+            inside = numpy.sqrt(((texels - numpy.array(eye)) ** 2).sum(axis=1)) <= EYE_RADIUS
+            head.pixels[rows[inside], columns[inside], :3] = colour
         image.pixels.foreach_set(head.pixels.ravel())
     if ours:
         dark = material("dark", colour=BLACK)
-        pieces = [ball("Eye", EYE_RADIUS, eye) for eye in (EYE, Vector((-EYE.x, EYE.y, EYE.z)))]
+        pieces = [ball("Eye", EYE_RADIUS, eye) for eye in spots]
         for piece in pieces:
             piece.data.materials.append(dark)
             for loop in piece.data.uv_layers.active.data:
@@ -105,8 +140,14 @@ def build(paint, ours):
 
 def main():
     passed = True
-    for name, (paint, ours, passes) in CASES.items():
-        found = marked_eyes.painted(build(paint, ours))
+    for name, (picks, yes, no) in PICKS.items():
+        got = picks(numpy.array(yes + no, dtype=float))
+        ok = got.tolist() == [True] * len(yes) + [False] * len(no)
+        passed = passed and ok
+        (log.info if ok else log.error)("%s %s picks %s" % ("ok" if ok else "FAIL", name, got.tolist()))
+    for name, (paint, ours, weight, colour, beast, passes) in CASES.items():
+        own = marked_eyes.BEASTS[beast] if beast else None
+        found = marked_eyes.painted(build(paint, ours, weight, colour, own.middle if own else 0.0), own=own)
         ok = (not found) == passes
         passed = passed and ok
         line = "%s %s: %s, %s" % ("ok" if ok else "FAIL", name, "found " + ", ".join(sorted(found)) if found

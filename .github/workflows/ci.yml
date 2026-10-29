@@ -313,7 +313,8 @@ jobs:
             --python ../game-models/check_brows.py --
 
       - name: "🧪 Test the painted-eye check on a ball"
-        # Painted black or glowing eyes fail it; a plain texture and our own eyes pass (#1688).
+        # Painted black or glowing eyes fail it, and a beast's own pale or hue-bounded ones (#1719);
+        # a plain texture and our own eyes pass (#1688).
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 2
         run: |
@@ -322,8 +323,8 @@ jobs:
 
       - name: "🎨 Check no generated eye is left in a creature's texture"
         # Each creature's head, its texture sampled for a mirrored pair of flat black ovals or
-        # glowing painted eyes, as lib/marked_eyes.py finds them on import (#1688); a model without
-        # a textured head passes.
+        # glowing painted eyes, or the beast's own marking (#1719), as lib/marked_eyes.py finds them
+        # on import (#1688); a model without a textured head passes.
         if: steps.models.outputs.changed == 'true'
         timeout-minutes: 5
         run: |

@@ -4,8 +4,8 @@ skill), which only marks where its eyes go and how big they are. On import, the 
 calls `replace` on its adopted rig and skin, which:
 
 - **finds** the two marked ovals on the head (`find`): spots of the base colour that `DARK` (or,
-  for a beast imported with glowing eyes before the rule, `GLOW`) picks out, grouped where they
-  lie, the pair that mirror each other across the middle best;
+  for a beast imported with its generator's eyes before the rule, its own `Marked` in `BEASTS`)
+  picks out, grouped where they lie, the pair that mirror each other across the middle best;
 - **repaints** them (`repaint`): every texel over each oval, with a margin for its soft edge, takes
   the colour of the skin around it, blended from that ring by distance, so no painted eye shows
   past ours;
@@ -30,6 +30,8 @@ from . import eyes, materials, scene
 DARK_VALUE = 0.2
 # A painted glowing eye (as inspect_meshy.py finds them): bright and saturated.
 GLOW_VALUE, GLOW_SATURATION = 0.75, 0.3
+# A painted pale eye (Fohossa's lanterns, #1719): near white, barely tinted.
+PALE_VALUE, PALE_SATURATION = 0.93, 0.2
 # A vertex is the head's when its weight to the head bone is at least this.
 HEAD_WEIGHT = 0.5
 # How finely each triangle is sampled: a grid of this many steps along each side.
@@ -59,16 +61,79 @@ FORWARD = (0.25, -1.0, 0.0)
 ALMOND = (0.5, 1.0)
 
 
-def DARK(colours):
-    """Which of `colours` (rows of sRGB) are a marked eye's flat black."""
+class Marked:
+    """How a head's eyes are marked on its texture: `picks` says which of some colours (rows of
+    sRGB, 0..1) are an eye's, and `find` looks for them on the faces weighted at least `weight` to
+    the head bone, as a pair mirroring each other across the plane x = `middle` within `mirror`
+    (MIRROR's share of their width). Calling it calls `picks`. `name` is what the check prints."""
+
+    def __init__(self, name, picks, weight=HEAD_WEIGHT, middle=0.0, mirror=MIRROR):
+        self.name, self.picks, self.weight, self.middle, self.mirror = name, picks, weight, middle, mirror
+
+    def __call__(self, colours):
+        return self.picks(colours)
+
+
+def _value_saturation(colours):
+    """Each of `colours`' value and saturation (as HSV's)."""
+    value = colours.max(axis=1)
+    return value, (value - colours.min(axis=1)) / numpy.maximum(value, 1e-6)
+
+
+def _hue(colours):
+    """Each of `colours`' hue, in degrees (0 red, 120 green, 240 blue); 0 for a grey."""
+    red, green, blue = colours[:, 0], colours[:, 1], colours[:, 2]
+    value, low = colours.max(axis=1), colours.min(axis=1)
+    span = numpy.maximum(value - low, 1e-6)
+    hue = numpy.where(value == red, (green - blue) / span,
+                      numpy.where(value == green, 2.0 + (blue - red) / span, 4.0 + (red - green) / span))
+    return numpy.where(value > low, (hue * 60.0) % 360.0, 0.0)
+
+
+def _dark(colours):
     return colours.max(axis=1) <= DARK_VALUE
 
 
-def GLOW(colours):
-    """Which of `colours` are a painted glowing eye's (bright and saturated)."""
-    value = colours.max(axis=1)
-    saturation = (value - colours.min(axis=1)) / numpy.maximum(value, 1e-6)
+def _glow(colours):
+    value, saturation = _value_saturation(colours)
     return (value >= GLOW_VALUE) & (saturation >= GLOW_SATURATION)
+
+
+def _pale(colours):
+    value, saturation = _value_saturation(colours)
+    return (value >= PALE_VALUE) & (saturation <= PALE_SATURATION)
+
+
+def glow(*hues):
+    """Which of some colours are a glowing eye's (`GLOW`) with a hue inside one of `hues`, each a
+    (low, high) span in degrees: an eye whose glow the head's own saturated colour around it would
+    swallow, as the Frostfire Hound's amber one on its ice blue (#1719)."""
+    def picks(colours):
+        hue = _hue(colours)
+        return _glow(colours) & numpy.any([(hue >= low) & (hue <= high) for low, high in hues], axis=0)
+    return picks
+
+
+# A marked eye's flat black, the generators' eyes since the rule (the model skill).
+DARK = Marked("DARK", _dark)
+# A painted glowing eye: bright and saturated.
+GLOW = Marked("GLOW", _glow)
+# A painted pale eye: near white and barely tinted.
+PALE = Marked("PALE", _pale)
+
+# The beasts imported with their generator's eyes before the rule (#1684), each with how its own
+# are marked: what the model script hands `replace` and check_painted_eyes.py looks for, keyed by
+# the .glb's path in the game's project folder.
+BEASTS = {
+    "assets/drakkudor/drakkudor.glb": GLOW,
+    # Pale lanterns, weighted only 0.41 to the head (the muzzle and neck hold the rest).
+    "assets/fohossa/fohossa.glb": Marked("PALE", _pale, weight=0.3),
+    # Two eye pieces painted by frostfire_hound.py, MAGMA_EYE's amber and ICE_EYE's pale cyan on a
+    # head of ice blue (hue about 210) and amber cracks. The generator set them off the middle, one
+    # ahead of the other: they mirror each other only roughly, across x = 0.068.
+    "assets/frostfire_hound/frostfire_hound.glb": Marked("AMBER/ICE", glow((36.0, 46.0), (180.0, 195.0)),
+                                                         middle=0.068, mirror=1.0),
+}
 
 
 class Unpainted(ValueError):
@@ -88,15 +153,15 @@ def image(material):
 
 
 class Head:
-    """The faces of `skin` that `bone` moves (each corner weighted to it at least HEAD_WEIGHT)
+    """The faces of `skin` that `bone` moves (each corner weighted to it at least `weight`)
     and the base colour texture paints (not our eyes' plain colours, once joined in), sampled:
     every sample's spot, its colour on the texture and its face's normal, and the texture's pixels
     (rows from the bottom, as Blender's run)."""
 
-    def __init__(self, skin, bone):
+    def __init__(self, skin, bone, weight=HEAD_WEIGHT):
         data = skin.data
         group = skin.vertex_groups[bone].index
-        heads = numpy.array([any(item.group == group and item.weight >= HEAD_WEIGHT for item in vertex.groups)
+        heads = numpy.array([any(item.group == group and item.weight >= weight for item in vertex.groups)
                              for vertex in data.vertices])
         matrix = numpy.array(skin.matrix_world)
         corners = numpy.array([vertex.co[:] for vertex in data.vertices])
@@ -195,9 +260,9 @@ def _spots(points, cell):
 
 
 def find(head, marked=DARK):
-    """The two marked eyes on `head` (a `Head`), left (+X) then right: of the spots `marked`
-    picks out, off the middle, the pair that mirror each other across it with the most samples.
-    Raises when there is none."""
+    """The two marked eyes on `head` (a `Head`), left (+X) then right: of the spots `marked` (a
+    `Marked`) picks out, off its middle, the pair that mirror each other across it with the most
+    samples. Raises when there is none."""
     picked = numpy.flatnonzero(marked(head.colours))
     points = head.points[picked]
     if len(points) == 0:
@@ -205,14 +270,15 @@ def find(head, marked=DARK):
     cell = numpy.ptp(head.points, axis=0).max() / CELLS
     marks = [Mark(points[group], head.normals[picked][group]) for group in _spots(points, cell)
              if len(group) >= MIN_SAMPLES]
+    middle = marked.middle
     # A spot across the middle (a mouth, a nose) is no eye.
-    marks = [mark for mark in marks if abs(mark.middle[0]) > mark.width / 2.0]
+    marks = [mark for mark in marks if abs(mark.middle[0] - middle) > mark.width / 2.0]
     best = None
-    for left in (mark for mark in marks if mark.middle[0] > 0.0):
-        for right in (mark for mark in marks if mark.middle[0] < 0.0):
-            mirrored = right.middle * (-1.0, 1.0, 1.0) - left.middle
+    for left in (mark for mark in marks if mark.middle[0] > middle):
+        for right in (mark for mark in marks if mark.middle[0] < middle):
+            mirrored = right.middle * (-1.0, 1.0, 1.0) + (2.0 * middle, 0.0, 0.0) - left.middle
             width = (left.width + right.width) / 2.0
-            close = numpy.sqrt((mirrored * mirrored).sum()) <= MIRROR * width
+            close = numpy.sqrt((mirrored * mirrored).sum()) <= marked.mirror * width
             alike = max(left.width, right.width) <= WIDER * min(left.width, right.width)
             if close and alike and (best is None or left.count + right.count > best[0].count + best[1].count):
                 best = (left, right)
@@ -221,22 +287,27 @@ def find(head, marked=DARK):
     return best
 
 
-def painted(skin, bone="head"):
+def painted(skin, bone="head", own=None):
     """The generator's eye areas still showing on `skin`'s texture over the head that `bone` moves
     (#1688): for each way they are marked (`DARK`'s flat black ovals, `GLOW`'s painted glowing
-    eyes), the pair `find` picks out, as {"DARK" or "GLOW": (left, right)}. Our own eyes are plain
-    colours, not the texture, so they never count. Empty for a skin with no `bone` or no textured
-    face on the head: nothing painted there."""
+    eyes, and the beast's `own` `Marked` from BEASTS if it has one, #1719), the pair `find` picks
+    out, as {its name: (left, right)}. Our own eyes are plain colours, not the texture, so they
+    never count. Empty for a skin with no `bone` or no textured face on the head: nothing painted
+    there."""
     if bone not in skin.vertex_groups:
         return {}
-    try:
-        head = Head(skin, bone)
-    except Unpainted:
-        return {}
+    heads = {}
     found = {}
-    for name, marked in (("DARK", DARK), ("GLOW", GLOW)):
+    for marked in [DARK, GLOW] + ([own] if own is not None else []):
+        if marked.weight not in heads:
+            try:
+                heads[marked.weight] = Head(skin, bone, marked.weight)
+            except Unpainted:
+                heads[marked.weight] = None
+        if heads[marked.weight] is None:
+            continue
         try:
-            found[name] = find(head, marked)
+            found[marked.name] = find(heads[marked.weight], marked)
         except ValueError:
             pass
     return found
@@ -398,13 +469,14 @@ def clear(skin, pieces, size):
 
 
 def replace(rig, skin, mats, faint, bone="head", marked=DARK, **shape):
-    """Our eyes in place of the marked ones on an adopted `rig` and its weighted `skin` (`find`,
-    `repaint`, `fit`), joined into the skin, their lids on bones of their own hung from `bone`.
+    """Our eyes in place of the ones `marked` (a `Marked`, a beast's own from BEASTS) picks out on
+    an adopted `rig` and its weighted `skin` (`find`, `repaint`, `fit`), joined into the skin,
+    their lids on bones of their own hung from `bone`.
     `mats` needs "dark" and "glow" (eyes.eye); "skin", the lids' and brows', is the
     skin's colour around the marks unless given. `faint` is Faint's (first frame, last frame) the
     lids shut over (eyes.Lids). Returns the `eyes.Lids`, whose `shut` goes into clips.animate's
     overlays, and the eye points {side: (spot, bone, look)} for attachments.add."""
-    head = Head(skin, bone)
+    head = Head(skin, bone, marked.weight)
     marks = find(head, marked)
     around = repaint(head, marks, marked)
     if "skin" not in mats:

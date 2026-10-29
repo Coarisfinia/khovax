@@ -1,7 +1,8 @@
 """Checks that no generator's eye area is left in a creature's texture (#1688): on the head of
 each creature model, neither a flat black oval nor a painted glowing eye, next to or under our own
 (check_eyes.py checks those are there). It samples the texture over the head's faces and looks
-for a mirrored pair as lib/marked_eyes.py's `find` does on import, with `DARK` and with `GLOW`.
+for a mirrored pair as lib/marked_eyes.py's `find` does on import, with `DARK`, with `GLOW` and
+with the beast's own way its eyes are marked, if marked_eyes.BEASTS lists it (#1719).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/check_painted_eyes.py -- <model.glb> [<model.glb> ...]
@@ -31,19 +32,19 @@ from lib import ground, marked_eyes  # noqa: E402
 GAME = os.path.join(os.path.dirname(HERE), "game")
 
 # Beasts whose texture still shows the generator's eyes, each with the issue that gives them ours.
-# Fohossa's and the Frostfire Hound's painted eyes are neither `DARK` nor `GLOW`, so the check
-# doesn't see them yet (#1719).
 KNOWN = {
     "assets/drakkudor/drakkudor.glb": "#1684",
+    "assets/fohossa/fohossa.glb": "#1684",
+    "assets/frostfire_hound/frostfire_hound.glb": "#1684",
 }
 
 
-def found(objects):
-    """What the generator left on the head of each skin among `objects`: a line per mirrored pair
-    of marked spots, with where they are and how wide."""
+def found(objects, path):
+    """What the generator left on the head of each skin among `objects` (the model at `path`): a
+    line per mirrored pair of marked spots, with where they are and how wide."""
     lines = []
     for skin in ground.skinned(objects):
-        for kind, marks in marked_eyes.painted(skin).items():
+        for kind, marks in marked_eyes.painted(skin, own=marked_eyes.BEASTS.get(path)).items():
             lines.append("%s: %s eyes at %s and %s, %.3f and %.3f wide" % (
                 skin.name, kind, tuple(round(float(v), 3) for v in marks[0].middle),
                 tuple(round(float(v), 3) for v in marks[1].middle), marks[0].width, marks[1].width))
@@ -61,7 +62,7 @@ def main():
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=glb)
         try:
-            lines = found(bpy.data.objects)
+            lines = found(bpy.data.objects, path)
         except ValueError as error:
             # A head the check can't read (one taking two textures, say) fails its model, not the run.
             failed += 1
