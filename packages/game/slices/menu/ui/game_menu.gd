@@ -28,9 +28,9 @@ signal tabs_fitted(width: float)
 ## (#1465).
 signal side_room(below: float)
 
-## The pause setting and its choices, saved by number: never reorder.
+## The pause setting, its choices (pause_choices) saved by number: never reorder them.
 const PAUSE_SETTING: String = "pause_in_menu"
-const PAUSE_CHOICES: Array[String] = ["Off", "On"]
+const PAUSE_COUNT: int = 2
 const PAUSE_ON: int = 1
 const AUTO_PAUSE: int = PAUSE_ON
 const FADE_SECONDS: float = 0.25
@@ -55,13 +55,11 @@ const WIDTH_FONTS: float = 24.0
 const MARGIN: float = SurveyChoice.MARGIN
 ## A button's smallest side, in font sizes, so a finger can hit it.
 const BUTTON_FONTS: float = 2.2
-const OPEN_TEXT: String = "Menu"
-const KNOT_TEXT: String = "Menu: " + KnotMark.TEXT
 ## The open and close buttons' icons (#459): white shapes, drawn in ink by the UI's theme.
 const OPEN_ICON: Texture2D = preload("res://assets/game-icons/hamburger-menu.svg")
 const CLOSE_ICON: Texture2D = preload("res://assets/game-icons/cancel.svg")
-## The close button's words on hover: it shows only its icon, and its glyph the key (#583).
-const CLOSE_TIP: String = "Close the menu"
+## The close button's node name; its words on hover (_build_sheet) say what it does, since it
+## shows only its icon, and its glyph the key (#583).
 const CLOSE_NAME: String = "Close"
 
 ## The driver, which holds its ticks while the menu pauses the game.
@@ -104,7 +102,7 @@ func _ready() -> void:
 	# A copy of the UI's theme: the menu scales its own font with the screen.
 	theme = UiTheme.theme().duplicate()
 	var more_tabs: Array[Node] = get_children()
-	_open_button = MenuWidgets.with_icon(MenuWidgets.button(OPEN_TEXT, toggle), OPEN_ICON)
+	_open_button = MenuWidgets.with_icon(MenuWidgets.button(open_text(), toggle), OPEN_ICON)
 	_open_button.visible = DisplayServer.is_touchscreen_available()
 	var _glyph: ActionGlyph = ActionGlyph.badge(_open_button, &"menu")
 	add_child(_open_button)
@@ -113,7 +111,7 @@ func _ready() -> void:
 	if survey != null:
 		survey.add_rows(settings)
 	if graphics != null:
-		var pause: String = "Pause in single player"
+		var pause: String = tr("Pause in single player")
 		settings.add_auto_row(SettingsTab.GAME, PAUSE_SETTING, pause, pause_label, step_pause)
 	_add_host_settings()
 	# Once the sheet is in the tree too: the Character tab builds its panels when it's ready.
@@ -171,7 +169,12 @@ func pauses() -> bool:
 ## The pause setting as the Settings tab shows it: "On", or "Auto (On)" while Auto picks it.
 func pause_label() -> String:
 	var pause: SettingChoice = _pause()
-	return pause.label(PAUSE_CHOICES[pause.value()])
+	return pause.label(pause_choices()[pause.value()])
+
+
+## The pause setting's choices as the Settings tab names them, in the order they're saved.
+func pause_choices() -> Array[String]:
+	return [tr("Off"), tr("On")]
 
 
 ## Steps the pause setting `steps` choices on, round after the last, and keeps it; returns why it
@@ -289,7 +292,7 @@ func _build_sheet(more_tabs: Array[Node]) -> void:
 	tabs.add_child(CONTROLS_TAB.instantiate())
 	tabs.add_child(CREDITS_TAB.instantiate())
 	row.add_child(tabs)
-	var close: Button = MenuWidgets.icon_button(CLOSE_ICON, CLOSE_TIP, toggle)
+	var close: Button = MenuWidgets.icon_button(CLOSE_ICON, tr("Close the menu"), toggle)
 	close.name = CLOSE_NAME
 	var _glyph: ActionGlyph = ActionGlyph.badge(close, &"ui_cancel")
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -309,12 +312,18 @@ func _relay_names(named: Control) -> void:
 func _add_host_settings() -> void:
 	if driver == null:
 		return
-	var difficulties: Array[String] = ["Easy", "Standard", "Hard"]
-	_add_host_row(SettingsTab.DIFFICULTY, HostSettings.DIFFICULTY, "Difficulty", difficulties)
-	var rates: Array[String] = ["50%", "Standard (100%)", "150%", "200%"]
-	_add_host_row(SettingsTab.WORLD, HostSettings.DROP_RATE, "Drop rate", rates)
-	var delays: Array[String] = ["15 min", "30 min", "Standard (1 hour)", "2 hours", "4 hours"]
-	_add_host_row(SettingsTab.WORLD, HostSettings.RESET_DELAY, "Instance reset delay", delays)
+	var difficulties: Array[String] = [tr("Easy"), tr("Standard"), tr("Hard")]
+	_add_host_row(SettingsTab.DIFFICULTY, HostSettings.DIFFICULTY, tr("Difficulty"), difficulties)
+	var rates: Array[String] = [tr("50%"), tr("Standard (100%)"), tr("150%"), tr("200%")]
+	_add_host_row(SettingsTab.WORLD, HostSettings.DROP_RATE, tr("Drop rate"), rates)
+	var delays: Array[String] = [
+		tr("15 min"),
+		tr("30 min"),
+		tr("Standard (1 hour)"),
+		tr("2 hours"),
+		tr("4 hours"),
+	]
+	_add_host_row(SettingsTab.WORLD, HostSettings.RESET_DELAY, tr("Instance reset delay"), delays)
 
 
 ## A row in the Settings tab's `submenu` for the host's `setting` (HostChoice), named `title`, its
@@ -327,12 +336,12 @@ func _add_host_row(submenu: String, setting: String, title: String, names: Array
 	var _row: HBoxContainer = settings.add_row(submenu, setting, title, choice.label, choice.step)
 
 
-## The pause setting, an index into PAUSE_CHOICES; Auto while there's no Graphics to keep it.
+## The pause setting, an index into pause_choices(); Auto while there's no Graphics to keep it.
 func _pause() -> SettingChoice:
 	var kept_in: Settings = null
 	if graphics != null:
 		kept_in = graphics.settings
-	return SettingChoice.new(kept_in, PAUSE_SETTING, PAUSE_CHOICES.size(), AUTO_PAUSE)
+	return SettingChoice.new(kept_in, PAUSE_SETTING, PAUSE_COUNT, AUTO_PAUSE)
 
 
 ## The Controls tab, found under the sheet rather than kept in a field of its own.
@@ -353,9 +362,19 @@ func knot_waits() -> bool:
 ## Marks the open button while a knot `waits` (#1443): it shows then on every device, in words and
 ## with the knot's shape.
 func show_knot(waits: bool) -> void:
-	_open_button.text = KNOT_TEXT if waits else OPEN_TEXT
+	_open_button.text = knot_text() if waits else open_text()
 	_open_button.icon = KnotMark.ICON if waits else OPEN_ICON
 	_open_button.visible = waits or DisplayServer.is_touchscreen_available()
+
+
+## What the open button says.
+func open_text() -> String:
+	return tr("Menu")
+
+
+## What the open button says while a knot waits (#1443), with the knot's mark in its words.
+func knot_text() -> String:
+	return tr("Menu: %s") % tr(KnotMark.TEXT)
 
 
 ## The button at the top that opens the menu on touch screens, and on every device while a knot

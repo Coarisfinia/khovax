@@ -21,8 +21,6 @@ signal game_started(game: Node)
 const GAME: String = "res://game/main.tscn"
 ## The fog's color (FogView.FOG).
 const FOG: Color = FogView.FOG
-## What the fog's caption says while the game loads.
-const LOADING: String = "Loading the world…"
 ## The caption's color and size: the web page's captions' (the web presets' head_include).
 const CAPTION_COLOR: Color = Color(0.29, 0.31, 0.38)
 const CAPTION_SIZE: int = 18
@@ -98,10 +96,15 @@ func _start(scene: PackedScene) -> void:
 	game_started.emit(game)
 
 
+## What the fog's caption says while the game loads.
+func loading_text() -> String:
+	return tr("Loading the world…")
+
+
 ## The caption, low on the fog where the web page's caption stands, so it reads as the same one.
 func _caption() -> Label:
 	caption = Label.new()
-	caption.text = LOADING
+	caption.text = loading_text()
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.add_theme_color_override("font_color", CAPTION_COLOR)
 	caption.add_theme_font_size_override("font_size", CAPTION_SIZE)

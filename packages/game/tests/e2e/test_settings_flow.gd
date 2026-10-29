@@ -238,7 +238,7 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 	if (tab.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED
 			or tab.picker.picker_shape != ColorPicker.SHAPE_HSV_WHEEL):
 		return "the Character tab's scene scrolls sideways or has no color wheel"
-	if tab.shown != CharacterTab.AUTO_TEXT or not tab.picker.color.is_equal_approx(default):
+	if tab.shown != tab.auto_text() or not tab.picker.color.is_equal_approx(default):
 		return "the Character tab doesn't start on Auto's color: %s" % tab.shown
 	var picked: Color = PersonalColor.of_number(PICKED)
 	tab.picker.color_changed.emit(picked)
@@ -247,7 +247,7 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 	# start instance's entry (#730), so the pick waits; flushing saves it, as quitting would.
 	var _flushed: String = holder.keeper.flush()
 	var kept: Profile = ProfileStore.load_from(PROFILE_PATH)
-	if (tab.shown != CharacterTab.CHOSEN_TEXT
+	if (tab.shown != tab.chosen_text()
 			or not player.circle.color.is_equal_approx(picked)
 			or kept.personal_color != PICKED):
 		return "a picked color isn't shown on the circle or kept: %s, %s, %x" % [
@@ -257,7 +257,7 @@ func _menu_character(menu: GameMenu, main: Node) -> String:
 		]
 	tab.auto_button.pressed.emit()
 	player.show_state()
-	if (tab.shown != CharacterTab.AUTO_TEXT
+	if (tab.shown != tab.auto_text()
 			or holder.personal_color() != Profile.AUTO_COLOR
 			or not tab.picker.color.is_equal_approx(default)
 			or not player.circle.color.is_equal_approx(default)):
@@ -723,7 +723,7 @@ func _knot_marks(tab: CharacterTab, waits: bool) -> String:
 		return "the menu doesn't see that a carried monster has a knot to take"
 	menu.show_knot(menu.knot_waits())
 	var button: Button = menu.open_button()
-	var text: String = GameMenu.KNOT_TEXT if waits else GameMenu.OPEN_TEXT
+	var text: String = menu.knot_text() if waits else menu.open_text()
 	var icon: Texture2D = KnotMark.ICON if waits else GameMenu.OPEN_ICON
 	# Headless has no touch screen: without a knot, the button hides again.
 	if button.text != text or button.icon != icon or button.visible != waits:
@@ -1154,7 +1154,7 @@ func _menu_readme(menu: GameMenu) -> String:
 		opened.append(url)
 		return OK
 	tab.readme_button.pressed.emit()
-	if (tab.readme_button.text != SettingsTab.README_TEXT
+	if (tab.readme_button.text != tab.readme_text()
 			or opened.size() != 1
 			or opened[0] != SettingsTab.README_URL):
 		return "the README button opened %s" % [opened]
