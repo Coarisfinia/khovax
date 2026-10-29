@@ -24,6 +24,8 @@ import random
 import bpy
 import numpy
 
+# How many cubes out each way the cellular noise looks for a spot's nearest feature points.
+REACH = 2
 # Vertices closer than this are one spot: the export splits a vertex wherever its UVs part.
 WELD = 5
 
@@ -136,9 +138,12 @@ class Cells:
         second = numpy.full(len(spots), numpy.inf)
         nearest = numpy.zeros(len(spots), dtype=numpy.int64)
         nx, ny, nz = self.shape
-        for dx in (-1, 0, 1):
-            for dy in (-1, 0, 1):
-                for dz in (-1, 0, 1):
+        # Two cubes out each way: a jittered point two cubes away can be nearer than every one
+        # beside the spot's own cube, the second nearest more often still.
+        reach = range(-REACH, REACH + 1)
+        for dx in reach:
+            for dy in reach:
+                for dz in reach:
                     at = numpy.clip(base + (dx, dy, dz), 0, numpy.array(self.shape) - 1)
                     index = (at[:, 0] * ny + at[:, 1]) * nz + at[:, 2]
                     offset = self.points[index] - spots
@@ -157,9 +162,13 @@ def dilate(canvas, covered, steps):
     for _step in range(steps):
         total = numpy.zeros_like(canvas)
         count = numpy.zeros(covered.shape)
+        # Padded rather than rolled, so nothing spreads across the texture's edge from the far side.
+        cover = numpy.pad(covered, 1)
+        paint = numpy.pad(canvas, ((1, 1), (1, 1), (0, 0)))
+        height, width = covered.shape
         for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            shifted = numpy.roll(numpy.roll(covered, dy, axis=0), dx, axis=1)
-            total += numpy.roll(numpy.roll(canvas, dy, axis=0), dx, axis=1) * shifted[..., None]
+            shifted = cover[1 + dy:1 + dy + height, 1 + dx:1 + dx + width]
+            total += paint[1 + dy:1 + dy + height, 1 + dx:1 + dx + width] * shifted[..., None]
             count += shifted
         grow = ~covered & (count > 0)
         canvas[grow] = total[grow] / count[grow][:, None]

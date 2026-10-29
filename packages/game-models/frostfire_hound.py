@@ -80,6 +80,8 @@ SOLE_HEIGHT = 0.06
 # Each tail turns out to its own side about where it grows from the rump (radians about Z), so
 # the two no longer lie one on the other: the magma tail to the right, the ice tail to the left.
 TAIL_SPREAD = math.radians(9.0)
+# How far back from its front tip (metres) a tail's vertices count as its root end.
+TAIL_ROOT = 0.02
 
 # --- The rig -----------------------------------------------------------------------------------
 # The generator's chains (import_source.py named them chainN_NN) to the library's quadruped scheme
@@ -101,9 +103,9 @@ RENAMES = {
 # the throat and the nape, below the head.
 NECK = (0.62, -0.19)
 # The generator put each hind knee high under the hip, which left a stub of a thigh above a long
-# shin (the dimensions check: shin/thigh 1.58); the knee moves down and forward to where the
-# stifle is (depth, height in metres; its side stays), and the shin's skin above it goes to the
-# thigh.
+# shin (the dimensions check: shin/thigh 1.58); the knee moves down, and a little forward (to a
+# smaller Y, still behind the hip), to where the stifle is (Y, height in metres; its side stays),
+# and the shin's skin above it goes to the thigh.
 KNEE = (0.31, 0.30)
 KNEE_BLEND = 0.02
 
@@ -229,7 +231,10 @@ def spread(skin, part):
         indices = sorted({index for face, owner in part.items() if owner == name
                           for index in skin.data.polygons[face].vertices})
         points = [skin.data.vertices[index].co for index in indices]
-        root = min(points, key=lambda point: point.y).copy()
+        # The pivot: the middle of the tail's root end, its vertices nearest the rump.
+        front = min(point.y for point in points)
+        ring = [point for point in points if point.y < front + TAIL_ROOT]
+        root = sum(ring, Vector()) / len(ring)
         # Turning to the right (-X) as it runs back (+Y) is a turn about +Z the other way.
         matrix = Matrix.Translation(root) @ Matrix.Rotation(-turn, 4, "Z") @ Matrix.Translation(-root)
         for index in indices:
