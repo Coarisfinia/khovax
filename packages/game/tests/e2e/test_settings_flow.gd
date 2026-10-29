@@ -183,6 +183,10 @@ func _open_menu(menu: GameMenu) -> String:
 		HostSettings.DROP_RATE,
 		HostSettings.RESET_DELAY,
 	]
+	# Every setting, whatever order their owners added their rows in (#1614): each row's submenu,
+	# and so where it shows, is checked on its own (_menu_submenus).
+	listed.sort()
+	settings.sort()
 	if listed != settings:
 		return "the Settings tab lists %s, not every setting" % [listed]
 	# The world's settings have no Auto: the world starts at Standard (#1315, #1316).
