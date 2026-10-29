@@ -25,6 +25,11 @@ class TrPlaceholdersTest(unittest.TestCase):
         # Unsigned and indexed specifiers are still positional %.
         self.assertEqual(placeholders("%ud %s"), 2)
         self.assertEqual(placeholders("%2$s, %1$d"), 2)
+        # A repeated index fills one value, its * included; unindexed ones go on in order.
+        self.assertEqual(placeholders("%1$s and %1$s"), 1)
+        self.assertEqual(placeholders("%1$*d %1$s"), 1)
+        self.assertEqual(placeholders("%1$s %s"), 1)
+        self.assertEqual(placeholders("%1$s %s %s"), 2)
 
     def test_refuses_two_positional_values(self) -> None:
         source = (

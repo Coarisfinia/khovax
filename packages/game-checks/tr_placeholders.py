@@ -23,12 +23,28 @@ from translations_pot import script_texts
 # (1$), width and precision (a bare "." or a "*" among them), then its conversion; or %%, a percent
 # sign, read first so "%%s" holds no value.
 SPECIFIER = re.compile(r"%%|%[-+u0-9$.*]*[scdoxXfv]")
+# An indexed specifier's value, counted from 1.
+INDEX = re.compile(r"(?<![0-9])0*([1-9][0-9]*)\$")
 
 
 def placeholders(text: str) -> int:
-    """How many values the text's % fills, read left to right: one per specifier, and one more for
-    each * in it, which takes its width or precision from the values too."""
-    return sum(1 + match.count("*") for match in SPECIFIER.findall(text) if match != "%%")
+    """How many values the text's % fills, read left to right as Godot does: a specifier takes the
+    next value, and one more for each * in it, which takes its width or precision from the values
+    too; an indexed one (%2$s) takes the value it names, its * included, so a repeated index fills
+    one value."""
+    used: set[int] = set()
+    following = 0
+    for match in SPECIFIER.findall(text):
+        if match == "%%":
+            continue
+        indexed = INDEX.search(match)
+        if indexed is not None:
+            used.add(int(indexed[1]) - 1)
+            continue
+        taken = 1 + match.count("*")
+        used.update(range(following, following + taken))
+        following += taken
+    return len(used)
 
 
 def crowded(source: str) -> Iterator[str]:
