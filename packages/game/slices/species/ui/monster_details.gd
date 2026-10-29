@@ -153,10 +153,10 @@ func _progress(monster: DominatedMonster) -> String:
 ## picks its plural form by the count (#1709).
 func _sight_text(steps: int) -> String:
 	return tr_n(
-		"Sight: you see %d step further while you carry it",
-		"Sight: you see %d steps further while you carry it",
+		"Sight: you see {steps} steps further while you carry it",
+		"Sight: you see {steps} steps further while you carry it",
 		steps,
-	) % steps
+	).format({ "steps": steps })
 
 
 ## The first line: the monster's species, as `species_name`, and its `level`.

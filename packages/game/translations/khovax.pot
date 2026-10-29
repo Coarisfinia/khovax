@@ -256,8 +256,8 @@ msgid "Development"
 msgstr ""
 
 #: slices/development/ui/development_web_view.gd
-msgid "Nodes to take: %d"
-msgid_plural "Nodes to take: %d"
+msgid "Nodes to take: {count}"
+msgid_plural "Nodes to take: {count}"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1778,8 +1778,8 @@ msgid "Progress: {progress} of {needed} to level {level}"
 msgstr ""
 
 #: slices/species/ui/monster_details.gd
-msgid "Sight: you see %d step further while you carry it"
-msgid_plural "Sight: you see %d steps further while you carry it"
+msgid "Sight: you see {steps} steps further while you carry it"
+msgid_plural "Sight: you see {steps} steps further while you carry it"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1808,8 +1808,8 @@ msgid "Opaque"
 msgstr ""
 
 #: slices/survey/ui/survey_choice.gd
-msgid "%d tile across"
-msgid_plural "%d tiles across"
+msgid "{across} tiles across"
+msgid_plural "{across} tiles across"
 msgstr[0] ""
 msgstr[1] ""
 

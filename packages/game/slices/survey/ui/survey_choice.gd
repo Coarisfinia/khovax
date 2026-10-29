@@ -93,8 +93,9 @@ func place_words(shown: Place) -> String:
 ## The zoom as a menu shows it: "20 tiles across", or "Auto (20 tiles across)" while Auto picks it.
 func zoom_label() -> String:
 	var across: int = roundi(ZOOMS[zoom_step()])
-	# Through tr_n(), so a language picks its plural form by the count (#1709).
-	return _zoom().label(tr_n("%d tile across", "%d tiles across", across) % across)
+	# Through tr_n(), so a language picks its plural form by the count (#1709); English reads alike.
+	var words: String = tr_n("{across} tiles across", "{across} tiles across", across)
+	return _zoom().label(words.format({ "across": across }))
 
 
 ## Shows the Survey `steps` places on (back for fewer), after the last one off again, and keeps
