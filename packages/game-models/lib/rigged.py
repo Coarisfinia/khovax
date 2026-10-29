@@ -458,6 +458,14 @@ def _held(skin, chain):
                if sum(weight for name, weight in _named(skin, index).items() if name in body) < 0.5)
 
 
+def _sibling_count(chain, every, plans):
+    """How many bones `chain` is regrown with: as many as most of its siblings have, a sibling
+    planned already counting as it will be regrown, as when each was regrown in turn."""
+    siblings = [len(plans[other][0]) if other in plans else len(other.bones)
+                for other in children(chain.parent, every) if other is not chain]
+    return Counter(siblings).most_common(1)[0][0] if siblings else len(chain.bones)
+
+
 def names(every, leaves, skin):
     """{old bone name: new name} for every bone, by what its chain moves; and each part's chain's
     label for the report. The trunk (the chain at the root) is `hips` and `spine_NN`; a part
@@ -639,10 +647,7 @@ def adopt(rig, skin, scale=1.0):
         short, reached, whole = is_short(chain, skin, bones)
         if not short:
             continue
-        # A sibling planned already counts as it will be regrown, as when each was regrown in turn.
-        siblings = [len(plans[other][0]) if other in plans else len(other.bones)
-                    for other in children(chain.parent, every) if other is not chain]
-        count = Counter(siblings).most_common(1)[0][0] if siblings else len(chain.bones)
+        count = _sibling_count(chain, every, plans)
         if _held(skin, chain) < EMPTY_END * len(chain.part.vertices):
             print("WEIGHTLESS %s: short (reaching %.2f of its part's %.2f), but its part moves with the body, "
                   "so regrown bones would weigh almost none of it; kept as it is: rig it by hand"
@@ -663,6 +668,13 @@ def adopt(rig, skin, scale=1.0):
             refused.update((chain, other))
     for chain in refused:
         plans.pop(chain, None)
+    if refused:
+        # A refused sibling keeps its bones, so the plans left count it so. The tip stays the
+        # part's far end whatever the count, so the twins' directions above still hold.
+        for chain in list(plans):
+            count = _sibling_count(chain, every, plans)
+            if count != len(plans[chain][0]):
+                plans[chain] = (regrown_joints(skin, chain, count),) + plans[chain][1:]
     for chain in leaves:
         if chain.part is None:
             print("UNMATCHED %s: no part of the mesh of its own; kept as it is" % chain.name)
