@@ -159,7 +159,9 @@ func node_text(node: String, short: bool = false) -> String:
 		var shift: int = leaning.get(stat)
 		if shift != 0:
 			var signed: String = ("+" if shift > 0 else "") + _percent(shift)
-			parts.append(tr("%s %s%%") % [_stat_name(stat, short), signed])
+			# Named, so a translation can put the value first.
+			var values: Dictionary = { "stat": _stat_name(stat, short), "shift": signed }
+			parts.append(tr("{stat} {shift}%").format(values))
 	return "\n".join(parts)
 
 

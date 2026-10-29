@@ -276,7 +276,7 @@ msgid "Passive"
 msgstr ""
 
 #: slices/development/ui/development_web_view.gd
-msgid "%s %s%%"
+msgid "{stat} {shift}%"
 msgstr ""
 
 #: slices/development/ui/development_web_view.gd
