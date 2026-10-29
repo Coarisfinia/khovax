@@ -62,30 +62,36 @@ def sort_mesh(obj):
     faces in a new order each time) or on another machine (bmesh's subdivide_edges put its new
     vertices in another order on CI than here, #1634).
 
-    Vertices are sorted by where they lie, then by their UVs, their faces' facing, their skin
-    weights and their neighbours' positions; vertices alike in all of that keep the order they
-    had. Faces are then sorted by material and by their (sorted) vertices, each face read from
-    its lowest vertex on, keeping its winding. The sorting goes through BMesh, which carries the
-    skin weights, UVs, materials and smooth shading across; shape keys and custom normals no model
-    has yet, so a mesh with them is refused rather than trusted to come back unchanged."""
+    Vertices are sorted by where they lie, then by their corners (every UV and colour layer, their
+    faces' material, shading and facing), their skin weights and their neighbours' positions.
+    Faces are then sorted by material and by their (sorted) vertices, each face read from its
+    lowest vertex on, keeping its winding. Two vertices or faces alike in all of that would keep
+    whatever order the operators left them in, so a mesh with such a pair is refused. The sorting
+    goes through BMesh, which carries the skin weights, UVs, materials and smooth shading across;
+    shape keys and custom normals no model has yet, so a mesh with them is refused rather than
+    trusted to come back unchanged."""
     if obj.data.shape_keys is not None or obj.data.has_custom_normals:
         raise RuntimeError("%s: sort_mesh doesn't keep shape keys or custom normals yet" % obj.name)
     mesh = bmesh.new()
     mesh.from_mesh(obj.data)
     mesh.verts.index_update()
-    uv = mesh.loops.layers.uv.active
+    mesh.faces.index_update()
+    uvs = list(mesh.loops.layers.uv.values())
+    colors = list(mesh.loops.layers.float_color.values()) + list(mesh.loops.layers.color.values())
     deform = mesh.verts.layers.deform.active
+
+    def corner(loop):
+        return (tuple(tuple(loop[layer].uv) for layer in uvs), tuple(tuple(loop[layer]) for layer in colors),
+                loop.face.material_index, loop.face.smooth, tuple(loop.face.normal))
 
     def vertex_key(vertex):
         return (tuple(vertex.co),
-                sorted(tuple(loop[uv].uv) for loop in vertex.link_loops) if uv else [],
-                sorted(tuple(face.normal) for face in vertex.link_faces),
+                sorted(corner(loop) for loop in vertex.link_loops),
                 sorted(vertex[deform].items()) if deform else [],
-                sorted(tuple(edge.other_vert(vertex).co) for edge in vertex.link_edges),
-                vertex.index)
+                sorted(tuple(edge.other_vert(vertex).co) for edge in vertex.link_edges))
 
     # BMesh sorts by a number, so each element's key becomes its rank.
-    rank = {vertex.index: place for place, vertex in enumerate(sorted(mesh.verts, key=vertex_key))}
+    rank = unique_rank(obj, "vertices", mesh.verts, vertex_key)
     mesh.verts.sort(key=lambda vertex: rank[vertex.index])
     mesh.verts.index_update()
     mesh.faces.index_update()
@@ -95,8 +101,18 @@ def sort_mesh(obj):
         first = corners.index(min(corners))
         return (face.material_index, corners[first:] + corners[:first])
 
-    rank = {face.index: place for place, face in enumerate(sorted(mesh.faces, key=face_key))}
+    rank = unique_rank(obj, "faces", mesh.faces, face_key)
     mesh.faces.sort(key=lambda face: rank[face.index])
     mesh.to_mesh(obj.data)
     mesh.free()
     obj.data.update()
+
+
+def unique_rank(obj, what, elements, key):
+    """Each element's place (by its index) when sorted by `key`; refuses two elements with one key,
+    because their order would be left to chance."""
+    keyed = sorted(((key(element), element.index) for element in elements), key=lambda pair: pair[0])
+    for (first, _), (second, _) in zip(keyed, keyed[1:]):
+        if first == second:
+            raise RuntimeError("%s: two %s can't be told apart, so their order would vary" % (obj.name, what))
+    return {index: place for place, (_, index) in enumerate(keyed)}
