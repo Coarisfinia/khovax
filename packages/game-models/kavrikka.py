@@ -69,7 +69,7 @@ EYE_SHAPE = {"pupil": (0.35, 0.45), "brow_size": 0.6}
 # its ball's size): as large, they stood out of the head like buttons. They sit this share of
 # their width further out than the balls' fronts, clear of the head's skin around the sockets,
 # which otherwise crossed the right eye's top (the brow check).
-EYE_SHARE, EYE_OUT = 0.7, 0.15
+EYE_SHARE, EYE_OUT = 0.85, 0.15
 # Faint's frames over which the lids shut (eyes.Lids): as it sinks.
 FAINT_LIDS = (14, 34)
 
