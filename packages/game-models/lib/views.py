@@ -168,11 +168,15 @@ def _instanced(game, scripts, scene, glb):
 
 
 def _drawn(nodes, path):
-    """The scale the scene draws node `path` at: its own times every ancestor's."""
-    scale = _scale(nodes[path][1])
-    while path != ".":
+    """The scale the scene draws node `path` at: its own times every ancestor's, up to the first
+    node that is `top_level` (it ignores its parents' transforms)."""
+    scale = 1.0
+    while path in nodes:
+        body = nodes[path][1]
+        scale *= _scale(body)
+        if path == "." or re.search(r"^top_level = true$", body, re.M):
+            break
         path = path.rpartition("/")[0] if "/" in path else "."
-        scale *= _scale(nodes[path][1]) if path in nodes else 1.0
     return scale
 
 

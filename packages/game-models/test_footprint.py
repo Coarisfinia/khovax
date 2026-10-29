@@ -132,7 +132,11 @@ PROJECT = {
         '[ext_resource type="PackedScene" path="res://person.glb" id="2_person"]\n\n'
         '[node name="Person" type="Node3D"]\nscript = ExtResource("1_view")\n'
         'transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)\n\n'
-        '[node name="Model" parent="." instance=ExtResource("2_person")]\n'),
+        '[node name="Model" parent="." instance=ExtResource("2_person")]\n\n'
+        # A top_level holder draws its own scale only, not the root's.
+        '[node name="Held" type="Node3D" parent="."]\nscript = ExtResource("1_view")\n'
+        'top_level = true\ntransform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)\n\n'
+        '[node name="Model" parent="Held" instance=ExtResource("2_person")]\n'),
 }
 # Per model: what its views read as (name, scale, clips, standing clip, hidden parts).
 VIEWS = {
@@ -140,7 +144,10 @@ VIEWS = {
     "chest": [("chest_view", 0.5, [], None, ["Knife", "Bow"])],
     # Only a view in a slice's look/ counts: a tool that preloads a model is no view.
     "lamp": [],
-    "person": [("figure_view", 1.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"])],
+    "person": [
+        ("figure_view", 0.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
+        ("figure_view", 1.5, ["Idle", "Run"], "Idle", ["Knife", "Bow"]),
+    ],
     "pebble": [],
 }
 
