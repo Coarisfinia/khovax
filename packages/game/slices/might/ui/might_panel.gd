@@ -11,6 +11,7 @@ const MONSTERS_TEXT: String = "From your carried monsters: %d"
 
 ## Whose Might is shown: this machine's player's profile.
 @export var holder: ProfileHolder
+
 ## What the panel shows, one line each. Kept here so tests can read it.
 var shown: Array[String] = []
 var _species: Dictionary[String, Species] = {}

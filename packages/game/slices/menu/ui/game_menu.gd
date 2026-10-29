@@ -76,6 +76,7 @@ const CLOSE_NAME: String = "Close"
 ## rest while it's open.
 @export var stick: TouchStick
 @export var pinch: SurveyPinch
+
 ## The column at the top's side that the open button stands above on a screen held upright, the
 ## quest list's: given a screen's size, its place on it (#1465). game/ hands it in (#1614), since
 ## the quests' slice comes after the menu's, and ties `side_room` to the list.
