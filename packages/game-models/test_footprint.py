@@ -1,8 +1,8 @@
 """Tests lib/footprint.py's judgement on models built here (#1641): boxes standing on the hex,
 each as a monster (rigged, with a Walk clip) or a prop (rigged with only an Idle clip, or static),
 inside their hex or too big for it. The ones that fit pass; an oversized one fails whatever it
-is, and a prop whose clip spreads past the hex's edge fails, though a monster may do so (props
-have limits of their own, never an exemption).
+is, and a prop whose clip spreads past the hex's edge fails, even one it calls Attack, though a
+monster may do so (props have limits of their own, never an exemption).
 
     uv run --locked packages/game-models/blender.py --background --factory-startup \
         --python packages/game-models/test_footprint.py
@@ -39,6 +39,7 @@ MODELS = {
     "prop_fits": (FITS, {"Idle": 1.0}, True),
     "prop_oversized": (OVERSIZED, {"Idle": 1.0}, False),
     "prop_spreads": (FITS, {"Idle": SPREAD}, False),
+    "prop_attacks": (FITS, {"Attack": SPREAD}, False),
     "static_fits": (FITS, None, True),
     "static_oversized": (OVERSIZED, None, False),
 }

@@ -100,8 +100,8 @@ def fit(rest, limits):
 def report(rig, meshes, limits):
     """The reach in the rig's rest pose, then for every clip, every frame: the largest reach and
     the frame it's on. The rest pose fails past the first of `limits` (rest, clips), a clip past
-    the second, an attack past `ATTACK`. `rig` is None for a static model, which has only its rest
-    pose. Returns (lines, passed); a model without a mesh fails, rather than passing unseen."""
+    the second, a monster's attack past `ATTACK`. `rig` is None for a static model, which has only
+    its rest pose. Returns (lines, passed); a model without a mesh fails, rather than passing unseen."""
     if not meshes:
         return ["FAIL no mesh to measure"], False
     rest_limit, clip_limit = limits
@@ -117,7 +117,8 @@ def report(rig, meshes, limits):
     rig.data.pose_position = "POSE"
     for action in sorted(bpy.data.actions, key=lambda a: a.name):
         start, end = imported.play(rig, action)
-        limit = ATTACK if action.name in ATTACKS else clip_limit
+        # A prop strikes nothing, so a clip it calls Attack gets no lunge past its hex.
+        limit = ATTACK if action.name in ATTACKS and limits != PROP else clip_limit
         far, at = 0.0, start
         for number in range(start, end + 1):
             scene.frame_set(number)
