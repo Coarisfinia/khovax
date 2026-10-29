@@ -50,6 +50,13 @@ jobs:
             last_sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${last_tag}" --jq .sha)
           fi
           if [ "$last_sha" = "$GITHUB_SHA" ]; then
+            # This run's commit is fixed when it starts: one that waited behind another nightly may
+            # find main moved on since, which it can't build, so it fails rather than skip that.
+            main_sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+            if [ "$main_sha" != "$GITHUB_SHA" ]; then
+              echo "::error::main moved on to ${main_sha} since this run started at ${GITHUB_SHA}, which ${last_tag} already built: run the nightly again"
+              exit 1
+            fi
             echo "::notice::main hasn't changed since the last nightly, ${last_tag}: nothing to build"
           elif [ "$last_date" = "$date" ]; then
             echo "::notice::today's nightly, ${last_tag}, is out already: the next one comes tomorrow"
