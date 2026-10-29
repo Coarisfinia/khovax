@@ -262,7 +262,8 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
     def one(job: Job, stagger: bool) -> None:
         if stagger:
             with starting:
-                time.sleep(STAGGER)
+                if INTERRUPTED.wait(STAGGER):  # an interrupted run starts nothing new
+                    return
         began = time.monotonic()
         log.info(f"{job.name}: rendering into {job.out}")
         code = run(job.command, logs / f"{job.name}.log", timeout)
@@ -290,11 +291,11 @@ def run_all(blender: list[Job], godot: list[Job], logs: Path, jobs: int, timeout
                 future.result()
         except BaseException:
             # Ctrl-C: nothing new starts, and what runs is stopped, else the pools wait for it.
-            for future in futures:
-                future.cancel()
             with RUNNING_LOCK:
                 INTERRUPTED.set()
                 running = list(RUNNING)
+            for pool in (blender_pool, godot_pool):
+                pool.shutdown(wait=False, cancel_futures=True)
             stop_all(running)
             raise
     return not failed
