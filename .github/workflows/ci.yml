@@ -1020,7 +1020,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, linux-e2e, web-e2e]
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       # Creating the release creates its tag. A tag made with the workflow's token starts no
       # workflow, so release.yml doesn't run for it either.
@@ -1047,13 +1047,27 @@ jobs:
           # The tag is the version the export job stamped into these builds (#744).
           tag="$TAG"
           # GitHub fails a call now and then on its own side (#1745): a 408 or a stalled upload, a 5xx,
-          # a rate limit, a dropped connection, and once a 403 "Resource not accessible by
-          # integration" on creating the release, with Contents: write granted and the runs around
-          # it creating theirs. Those are tried again, four tries in all with a growing wait; any
-          # other error fails the job at once.
-          transient='HTTP (408|429|5[0-9][0-9])|Resource not accessible by integration|rate limit|timeout|timed out|connection reset|unexpected EOF|deadline exceeded'
+          # a rate limit, a dropped connection. Those are tried again, four tries in all with a
+          # growing wait, while the job has time left for them; any other error fails the job at
+          # once. Every gh call has a time limit, so a hung upload is a timeout too.
+          transient='HTTP (408|429|5[0-9][0-9])|rate limit|timeout|timed out|deadline exceeded|EOF|connection (reset|refused)|broken pipe|no such host'
+          gh() {
+            local status=0
+            # timeout runs the gh program, not this function.
+            timeout 300 gh "$@" || status=$?
+            if [ "$status" = 124 ]; then
+              echo "gh timed out after 300s" >&2
+            fi
+            return "$status"
+          }
           retry() {
-            local err try wait=15
+            local err try wait=15 pattern="$transient"
+            # Once, creating the release failed with a 403 "Resource not accessible by integration",
+            # with Contents: write granted and the runs around it creating theirs: that call alone
+            # takes a 403 for GitHub's hiccup.
+            if [ -n "${retry_403:-}" ]; then
+              pattern+='|Resource not accessible by integration'
+            fi
             err=$(mktemp)
             for try in 1 2 3 4; do
               if "$@" 2> "$err"; then
@@ -1063,7 +1077,8 @@ jobs:
               cat "$err" >&2
               # Kept in a file: a call inside $(...) runs in a subshell, which can't set a variable.
               cp "$err" "$RUNNER_TEMP/last-error"
-              if [ "$try" = 4 ] || ! grep -Eqi "$transient" "$err"; then
+              # No new try past 20 minutes: the job's 30-minute limit keeps the rest for the uploads.
+              if [ "$try" = 4 ] || [ $((SECONDS + wait)) -gt 1200 ] || ! grep -Eqi "$pattern" "$err"; then
                 return 1
               fi
               echo "::warning::try ${try} of 4 failed on GitHub's side: $(head -n 1 "$err"); trying again in ${wait}s" >&2
@@ -1132,7 +1147,7 @@ jobs:
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
           }
-          retry create_draft
+          retry_403=1 retry create_draft
           # One file at a time, so a failed upload sends only that file again; --clobber replaces
           # what a broken upload left under its name.
           for file in "${files[@]}"; do
