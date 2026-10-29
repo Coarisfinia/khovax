@@ -1020,7 +1020,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [headless, models, export, apk-e2e, linux-e2e, web-e2e]
     runs-on: ubuntu-26.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       # Creating the release creates its tag. A tag made with the workflow's token starts no
       # workflow, so release.yml doesn't run for it either.
@@ -1046,14 +1046,47 @@ jobs:
         run: |
           # The tag is the version the export job stamped into these builds (#744).
           tag="$TAG"
+          # GitHub fails a call now and then on its own side (#1745): a 408 or a stalled upload, a 5xx,
+          # a rate limit, a dropped connection, and once a 403 "Resource not accessible by
+          # integration" on creating the release, with Contents: write granted and the runs around
+          # it creating theirs. Those are tried again, four tries in all with a growing wait; any
+          # other error fails the job at once.
+          transient='HTTP (408|429|5[0-9][0-9])|Resource not accessible by integration|rate limit|timeout|timed out|connection reset|unexpected EOF|deadline exceeded'
+          retry() {
+            local err try wait=15
+            err=$(mktemp)
+            for try in 1 2 3 4; do
+              if "$@" 2> "$err"; then
+                cat "$err" >&2
+                return 0
+              fi
+              cat "$err" >&2
+              # Kept in a file: a call inside $(...) runs in a subshell, which can't set a variable.
+              cp "$err" "$RUNNER_TEMP/last-error"
+              if [ "$try" = 4 ] || ! grep -Eqi "$transient" "$err"; then
+                return 1
+              fi
+              echo "::warning::try ${try} of 4 failed on GitHub's side: $(head -n 1 "$err"); trying again in ${wait}s" >&2
+              sleep "$wait"
+              wait=$((wait * 2))
+            done
+          }
+          # Every draft of this tag: a failed run's, or one a create made before its answer got lost.
+          # Called inside retry, so it doesn't retry by itself.
+          drop_drafts() {
+            local ids id
+            ids=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq ".[] | select(.draft and .tag_name == \"${tag}\") | .id") || return 1
+            for id in $ids; do
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/${id}" || return 1
+            done
+          }
           # A rerun of this run finds its release already published, or the draft a failed upload
-          # left, which has no tag yet and is made again. Any error but "release not found" (a rate
-          # limit, an outage) fails the job, so it is never mistaken for "none".
-          if draft=$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft \
-            2> "$RUNNER_TEMP/release-view.err"); then
+          # left, which has no tag yet and is made again. Any error but "release not found" fails
+          # the job, so it is never mistaken for "none".
+          if draft=$(retry gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft); then
             :
-          elif [ "$(< "$RUNNER_TEMP/release-view.err")" != 'release not found' ]; then
-            cat "$RUNNER_TEMP/release-view.err" >&2
+          elif [ "$(< "$RUNNER_TEMP/last-error")" != 'release not found' ]; then
             exit 1
           else
             draft=
@@ -1062,7 +1095,7 @@ jobs:
             echo "${tag} already exists"
             exit 0
           elif [ "$draft" = true ]; then
-            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes
+            retry drop_drafts
           fi
           # Named after the game's display name, as release.yml names its files.
           name=$(awk -F'"' '/^\[/ { section = $0 } section == "[application]" && /^config\/name="/ { print $2 }' \
@@ -1081,14 +1114,28 @@ jobs:
           notes="Dev build of ${GITHUB_SHA}, made by [this CI run](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}).
           The Android APK is signed with a throwaway debug key: uninstall an older build before installing it. The Linux file needs \`chmod +x\` after downloading. The web build is playable at ${pages}; its files here run when served from one folder."
           # The changes since the previous dev release; the very first lists none, not the whole history.
-          previous=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 100 --json tagName \
+          previous=$(retry gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 100 --json tagName \
             --jq '[.[] | select(.tagName | test("^v[0-9]+[.][0-9]+[.][0-9]+-dev[.][0-9]+$"))][0].tagName // empty')
           start=()
           if [ -n "$previous" ]; then
             start=(--generate-notes --notes-start-tag "$previous")
           fi
           # A draft until every file is up: the tag, which can't be moved or deleted, comes with
-          # publishing it.
-          gh release create "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
-          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
+          # publishing it. A try after a failed create first drops what that create may have made,
+          # so no second draft of the tag appears.
+          creates=0
+          create_draft() {
+            creates=$((creates + 1))
+            if [ "$creates" -gt 1 ]; then
+              drop_drafts || return 1
+            fi
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --draft --prerelease --title "$tag" --notes "$notes" "${start[@]}"
+          }
+          retry create_draft
+          # One file at a time, so a failed upload sends only that file again; --clobber replaces
+          # what a broken upload left under its name.
+          for file in "${files[@]}"; do
+            retry gh release upload "$tag" "$file" --repo "$GITHUB_REPOSITORY" --clobber
+          done
+          retry gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false
