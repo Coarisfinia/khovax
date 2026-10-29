@@ -500,16 +500,24 @@ class Flow:
             None,
         )
         if assign is not None:
-            target = toks[2:assign] if words[:2] == ["self", "."] else toks[:assign]
+            self_target = words[:2] == ["self", "."]
+            target = toks[2:assign] if self_target else toks[:assign]
             value = toks[assign + 1 :]
+            # `self.values = …` names the member even where a local shadows it.
+            own_members = self.text_members.get(script.path, set())
+            format_targets = format_carriers
+            text_targets = text_locals | members
+            if self_target:
+                format_targets = self.format_members.get(script.path, set())
+                text_targets = own_members
             if words[0] == "var" and len(words) > 1:
                 if words[1] in text_locals:
                     self.expression(script, func, value)
                 if words[1] in format_locals:
                     self.format_values(script, func, value)
-            elif len(target) == 1 and target[0].text in format_carriers:
+            elif len(target) == 1 and target[0].text in format_targets:
                 self.format_values(script, func, value)
-                if target[0].text in text_locals | members:
+                if target[0].text in text_targets:
                     self.expression(script, func, value)
             elif target[0].text in carriers and (
                 len(target) == 1
