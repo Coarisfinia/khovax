@@ -655,26 +655,30 @@ def adopt(rig, skin, scale=1.0):
             continue
         plans[chain] = (regrown_joints(skin, chain, count), reached, whole)
     starts = {chain: bones[chain.bones[0]].head_local.copy() for chain in leaves}
-    ends = {chain: plans[chain][0] if chain in plans else _joints(chain, bones) for chain in leaves}
-    refused = set()
-    for chain in plans:
-        other = twin.get(chain)
-        if other is None:
-            continue
-        turn = _direction(starts[chain], ends[chain]).angle(_mirrored(_direction(starts[other], ends[other])), 0.0)
-        if turn > TWIN_TURN or (other.part is not None and is_short(other, skin, bones)[0] and other not in plans):
-            print("TWINS %s would be regrown %.0f degrees off its twin %s's way, or its twin isn't; "
-                  "neither is regrown" % (chain.name, math.degrees(turn), other.name))
-            refused.update((chain, other))
-    for chain in refused:
-        plans.pop(chain, None)
-    if refused:
-        # A refused sibling keeps its bones, so the plans left count it so. The tip stays the
-        # part's far end whatever the count, so the twins' directions above still hold.
+    # A refused twin keeps its bones, so the plans left are counted again, and a new count moves a
+    # plan's tip, so the twins are checked again: until nothing changes (plans only drop or settle).
+    for _round in range(len(leaves) + 1):
+        ends = {chain: plans[chain][0] if chain in plans else _joints(chain, bones) for chain in leaves}
+        refused = set()
+        for chain in plans:
+            other = twin.get(chain)
+            if other is None or other in refused:
+                continue
+            turn = _direction(starts[chain], ends[chain]).angle(_mirrored(_direction(starts[other], ends[other])), 0.0)
+            if turn > TWIN_TURN or (other.part is not None and is_short(other, skin, bones)[0] and other not in plans):
+                print("TWINS %s would be regrown %.0f degrees off its twin %s's way, or its twin isn't; "
+                      "neither is regrown" % (chain.name, math.degrees(turn), other.name))
+                refused.update((chain, other))
+        for chain in refused:
+            plans.pop(chain, None)
+        recounted = False
         for chain in list(plans):
             count = _sibling_count(chain, every, plans)
             if count != len(plans[chain][0]):
                 plans[chain] = (regrown_joints(skin, chain, count),) + plans[chain][1:]
+                recounted = True
+        if not refused and not recounted:
+            break
     for chain in leaves:
         if chain.part is None:
             print("UNMATCHED %s: no part of the mesh of its own; kept as it is" % chain.name)
